@@ -71,16 +71,77 @@ Keep instructions to 1 sentence. Highlight only the relevant UI element per step
 
 **Speculative screenshot:** grabbed the instant push-to-talk starts, not after VAD fires. This means vision context is ready when the transcript lands. ~200ms savings.
 
+### Prompt Caching — Correct Pattern
+
+The Vercel AI SDK `streamText` `system:` string parameter cannot carry `providerOptions`, so caching must be applied via the `messages` array:
+
+```ts
+import { createAnthropic } from "@ai-sdk/anthropic"
+
+const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const MODEL = process.env.FAST_PATH_MODEL || "claude-haiku-4-5-20251001"
+
+streamText({
+  model: anthropic(MODEL),
+  messages: [
+    {
+      role: "system",
+      content: [{
+        type: "text",
+        text: SYSTEM_PROMPT,
+        providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } },
+      }],
+    },
+    { role: "user", content },
+  ],
+  maxTokens: 800,
+})
+```
+
+Cache hits require the same model + same system prompt text across calls. Haiku requires ≥1024 tokens to cache; pad the system prompt with `yomi.md` context to meet the threshold. First call pays full cost; subsequent calls with the same system prompt pay only for new tokens.
+
+### LLM Provider
+
+**Primary:** `createAnthropic` with `claude-haiku-4-5-20251001`. Set `ANTHROPIC_API_KEY` to use direct Anthropic.
+
+**Fallback / dev testing:** Set `OPENROUTER_API_KEY` + `LLM_BASE_URL=https://openrouter.ai/api/v1` to route through OpenRouter via `@ai-sdk/openai` with a custom base URL. This lets you test any model before committing to a direct provider subscription. When `LLM_BASE_URL` is set, the pipeline uses `createOpenAI({ baseURL: LLM_BASE_URL })` instead of `createAnthropic`.
+
+```ts
+const model = process.env.LLM_BASE_URL
+  ? createOpenAI({ apiKey: process.env.OPENROUTER_API_KEY, baseURL: process.env.LLM_BASE_URL })(MODEL)
+  : createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })(MODEL)
+```
+
+Default model: `FAST_PATH_MODEL || "claude-haiku-4-5-20251001"`. Prompt caching only applies when using Anthropic directly — OpenRouter does not support `cacheControl`.
+
+### STT Provider
+
+**Primary (cloud):** ElevenLabs STT — `POST /v1/speech-to-text`, model `scribe_v1`. Requires `ELEVENLABS_API_KEY`.
+
+**Fallback (local/offline):** `whisper.cpp` — bundled with the desktop app, runs on-device. Activated when `ELEVENLABS_API_KEY` is absent or when the user enables "local mode" in settings. Latency is higher (~500ms on CPU) but works without internet. See spec 04 for the full STT provider abstraction.
+
+### TTS Provider
+
+**Primary:** ElevenLabs TTS streaming — `POST /v1/text-to-speech/:voice_id/stream`, model `eleven_flash_v2_5`. Streams MP3 chunks; the desktop begins playback before generation completes.
+
+**Fallbacks:**
+- `edge-tts` — Microsoft Edge cloud TTS, free, no API key. Lower quality but zero cost.
+- `Piper` — fully local neural TTS, bundled with the app. Works offline. See spec 05 for the full TTS provider abstraction.
+
 ## Files to change
 
 - `apps/sidecar/src/index.ts` — Hono server entry point, route registration
+- `apps/sidecar/src/pipeline/fast.ts` — Switch from `createOpenAI`/OpenRouter to `createAnthropic` + caching
+- `apps/sidecar/src/pipeline/visual-guide.ts` — Same model switch
 - `packages/shared/src/index.ts` — IPC type definitions
 
 ## Files to create
 
-- `apps/sidecar/src/pipeline/fast.ts` — Fast pipeline (STT → LLM → TTS → SSE)
-- `apps/sidecar/src/pipeline/visual-guide.ts` — Visual guidance mode
+_(already created in the sidecar-fast-pipeline PR — listed for reference)_
+- `apps/sidecar/src/pipeline/fast.ts`
+- `apps/sidecar/src/pipeline/visual-guide.ts`
 
 ## Open Questions
 
 - Sentence-boundary detection for TTS: `. ` and `\n` are good defaults, but mid-sentence pauses (commas, clauses) may improve perceived naturalness.
+- Streaming TTS: `audio_chunk` SSE event type is defined in shared types but ElevenLabs TTS integration is not yet wired in the sidecar. TTS streaming is a follow-on task.
