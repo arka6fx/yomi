@@ -90,4 +90,21 @@ Key non-obvious conventions:
 
 ## Specs
 
-Detailed design docs live in `specs/` — read the relevant one when modifying a subsystem.
+Detailed design docs live in `specs/`, numbered in implementation order. Read the relevant spec before modifying a subsystem.
+
+| Spec | Contents |
+|---|---|
+| [00-overview](specs/00-overview.md) | Principles, moat, glossary — reference |
+| [01-architecture](specs/01-architecture.md) | 4-layer diagram, IPC contracts — reference |
+| [02-sidecar-fast-pipeline](specs/02-sidecar-fast-pipeline.md) | Fast pipeline, Anthropic + caching, visual guidance ← current |
+| [03-desktop-shell](specs/03-desktop-shell.md) | Electron main process, sidecar lifecycle, IPC bridge, hotkey |
+| [04-desktop-ui](specs/04-desktop-ui.md) | Floating overlay, Zustand store, audio capture |
+| [05-speech-stt](specs/05-speech-stt.md) | STT: ElevenLabs, whisper.cpp, VAD |
+| [06-speech-tts](specs/06-speech-tts.md) | TTS: ElevenLabs, edge-tts, Piper |
+| [07-sidecar-router](specs/07-sidecar-router.md) | Intent router (fast vs agent) |
+| [08-sidecar-agent](specs/08-sidecar-agent.md) | ReAct loop, tools, subagents, sandbox |
+| [09-harness](specs/09-harness.md) | System prompt, hooks, guards |
+| [10-memory](specs/10-memory.md) | Notepad (~/.yomi/), compaction, retrieval |
+| [11-database](specs/11-database.md) | Drizzle schema + Neon |
+| [12-backend](specs/12-backend.md) | Hono routes, Better Auth, LLM proxy, metering |
+| [13-pricing](specs/13-pricing.md) | Plans, Stripe, metering |

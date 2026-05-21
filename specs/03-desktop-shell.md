@@ -1,4 +1,4 @@
-# Spec 12 — Desktop: Shell
+# Spec 03 — Desktop: Shell
 
 ## Purpose
 
@@ -169,7 +169,7 @@ while (true) {
 
 **STT provider selection** — mirrors the sidecar provider logic (spec 02):
 - If `ELEVENLABS_API_KEY` is set: call ElevenLabs REST directly (`POST /v1/speech-to-text`, model `scribe_v1`). The `elevenlabs` npm SDK v0.17 has no `speechToText` method — use `fetch`.
-- Fallback: run `whisper.cpp` on the assembled WAV file (bundled binary, see spec 04 for the full STT abstraction).
+- Fallback: run `whisper.cpp` on the assembled WAV file (bundled binary, see spec 05 for the full STT abstraction).
 
 ```ts
 // ElevenLabs path:
@@ -223,7 +223,7 @@ When the overlay displays a response, call `overlay.setIgnoreMouseEvents(false)`
 - `apps/desktop/src/main/capture.ts` — `captureScreen()` via desktopCapturer
 - `apps/desktop/src/main/hotkey.ts` — Toggle-to-talk via globalShortcut
 - `apps/desktop/src/main/ipc.ts` — IPC bridge: ElevenLabs STT + sidecar SSE + renderer events
-- `apps/desktop/src/main/platform/mac.ts` — macOS: NSStatusItem, notch pill _(after spec 13)_
+- `apps/desktop/src/main/platform/mac.ts` — macOS: NSStatusItem, notch pill _(after spec 04)_
 - `apps/desktop/src/main/platform/windows.ts` — Windows: Tray, toast notifications _(cross-platform spec)_
 - `apps/desktop/src/main/platform/linux.ts` — Linux: Waybar module, AppIndicator _(cross-platform spec)_
 
@@ -231,4 +231,4 @@ When the overlay displays a response, call `overlay.setIgnoreMouseEvents(false)`
 
 - Auto-update: `electron-updater` for staged rollouts. Spec this separately before launch.
 - Tauri port: evaluate based on Electron pain points. Capture + hotkeys are the most native-sensitive parts. Spec separately.
-- Mic capture in main vs renderer: current design streams PCM from renderer `getUserMedia` via IPC. Native mic capture in main process (spec 04) avoids renderer overhead — migrate when spec 04 ships.
+- Mic capture in main vs renderer: current design streams PCM from renderer `getUserMedia` via IPC. Native mic capture in main process (spec 05) avoids renderer overhead — migrate when spec 05 ships.

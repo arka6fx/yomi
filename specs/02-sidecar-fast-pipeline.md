@@ -118,7 +118,7 @@ Default model: `FAST_PATH_MODEL || "claude-haiku-4-5-20251001"`. Prompt caching 
 
 **Primary (cloud):** ElevenLabs STT — `POST /v1/speech-to-text`, model `scribe_v1`. Requires `ELEVENLABS_API_KEY`.
 
-**Fallback (local/offline):** `whisper.cpp` — bundled with the desktop app, runs on-device. Activated when `ELEVENLABS_API_KEY` is absent or when the user enables "local mode" in settings. Latency is higher (~500ms on CPU) but works without internet. See spec 04 for the full STT provider abstraction.
+**Fallback (local/offline):** `whisper.cpp` — bundled with the desktop app, runs on-device. Activated when `ELEVENLABS_API_KEY` is absent or when the user enables "local mode" in settings. Latency is higher (~500ms on CPU) but works without internet. See spec 05 for the full STT provider abstraction.
 
 ### TTS Provider
 
@@ -126,7 +126,7 @@ Default model: `FAST_PATH_MODEL || "claude-haiku-4-5-20251001"`. Prompt caching 
 
 **Fallbacks:**
 - `edge-tts` — Microsoft Edge cloud TTS, free, no API key. Lower quality but zero cost.
-- `Piper` — fully local neural TTS, bundled with the app. Works offline. See spec 05 for the full TTS provider abstraction.
+- `Piper` — fully local neural TTS, bundled with the app. Works offline. See spec 06 for the full TTS provider abstraction.
 
 ## Files to change
 
