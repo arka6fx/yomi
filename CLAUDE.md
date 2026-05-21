@@ -57,7 +57,8 @@ cd apps/desktop  && bun run dev   # Electron
 
 - LLM keys (Anthropic etc.) live ONLY in the cloud backend — never in desktop/sidecar bundle.
 - Desktop auth: system-browser OAuth + deep-link back to app. Never embed login in Electron window.
-- **OpenRouter:** set `OPENROUTER_API_KEY` + `LLM_BASE_URL=https://openrouter.ai/api/v1` to test with any model before you have a direct provider subscription. The Vercel AI SDK uses `@ai-sdk/openai` with a custom base URL for OpenRouter.
+- **Primary LLM:** `@ai-sdk/anthropic` with `claude-haiku-4-5-20251001` (fast path). Set `ANTHROPIC_API_KEY`.
+- **OpenRouter fallback:** set `OPENROUTER_API_KEY` + `LLM_BASE_URL=https://openrouter.ai/api/v1` to route through OpenRouter via `@ai-sdk/openai` with a custom base URL. Use this to test any model before committing to a direct provider subscription. Prompt caching is Anthropic-only — unavailable via OpenRouter.
 
 ---
 
@@ -150,16 +151,24 @@ hook_logs      id, user_id, run_id, hook, tool, decision, payload_redacted, crea
 
 ---
 
-## Phases
+## Implementation Order (specs/)
 
-| Phase | Scope | Wks |
+Specs are numbered in the order they should be implemented. 00 and 01 are reference docs.
+
+| Spec | File | Scope |
 |---|---|---|
-| 0 — Spike | hotkey → Whisper → screenshot → 1 LLM call → TTS. No accounts. | 1–2 |
-| 1 — Buddy | floating UI · tray/menubar · notepad · prompt caching · permissions | 3–6 |
-| 2 — Agent | router · ReAct loop · hooks · MCP (calendar, email, browser) · subagents | 7–12 |
-| 3 — Accounts | Hono · Better Auth · Drizzle/Neon · Stripe · Vercel AI SDK proxy · cloud sync | 13–15 |
-| 4 — X-platform | Windows tray · Omarchy Waybar · Electron vs Tauri decision | 16–20 |
-| 5 — Launch | Next.js landing · waitlist → download · pricing · Discord | 21–22 |
+| 02 | `02-sidecar-fast-pipeline` | Switch to Anthropic + prompt caching; fast path + visual guide ← **current** |
+| 03 | `03-desktop-shell` | Electron main: sidecar spawn, hotkey, desktopCapturer, IPC bridge, overlay window |
+| 04 | `04-desktop-ui` | Renderer: floating overlay, Zustand store, audio capture, streaming response |
+| 05 | `05-speech-stt` | STT abstraction: ElevenLabs + whisper.cpp VAD |
+| 06 | `06-speech-tts` | TTS abstraction: ElevenLabs streaming + edge-tts + Piper |
+| 07 | `07-sidecar-router` | Intent router: fast vs agent classification |
+| 08 | `08-sidecar-agent` | ReAct loop, tools, MCP, subagents, sandbox |
+| 09 | `09-harness` | System prompt, hooks, loop guards |
+| 10 | `10-memory` | Notepad (~/.yomi/), compaction, retrieval |
+| 11 | `11-database` | Drizzle schema + Neon client |
+| 12 | `12-backend` | Hono routes, Better Auth, LLM proxy, metering |
+| 13 | `13-pricing` | Plans, Stripe, metering logic |
 
 ---
 

@@ -80,7 +80,7 @@ The LLM layer uses the **Vercel AI SDK** (`ai` package), so you can swap provide
 
 ## LLM provider switching
 
-The sidecar uses `@ai-sdk/openai` with a configurable base URL. To switch providers, set env vars — no code changes needed:
+The sidecar uses `@ai-sdk/anthropic` by default, with OpenRouter as a fallback for testing any model. Switch providers via env vars — no code changes needed:
 
 ```bash
 # Anthropic (direct)
@@ -144,24 +144,24 @@ cd apps/backend && bun run db:studio     # Drizzle Studio UI
 
 ## Specs
 
-Detailed design docs live in [`specs/`](./specs/):
+Detailed design docs live in [`specs/`](./specs/), ordered by implementation sequence:
 
 | # | Doc | Contents |
 |---|---|---|
-| 0 | [00-overview](specs/00-overview.md) | Principles, moat, glossary |
-| 1 | [01-architecture](specs/01-architecture.md) | 4-layer diagram, IPC contracts |
-| 2 | [02-sidecar-fast-pipeline](specs/02-sidecar-fast-pipeline.md) | Fast linear pipeline, visual guidance |
-| 3 | [03-sidecar-router](specs/03-sidecar-router.md) | Intent router (fast vs agent) |
-| 4 | [04-speech-stt](specs/04-speech-stt.md) | STT: ElevenLabs, whisper.cpp, VAD |
-| 5 | [05-speech-tts](specs/05-speech-tts.md) | TTS: ElevenLabs, edge-tts, Piper |
-| 6 | [06-sidecar-agent](specs/06-sidecar-agent.md) | ReAct loop, tools, subagents, sandbox |
-| 7 | [07-harness](specs/07-harness.md) | System prompt, hooks, guards |
-| 8 | [08-memory](specs/08-memory.md) | Notepad, compaction, retrieval |
-| 9 | [09-backend](specs/09-backend.md) | Hono routes, auth, LLM proxy, metering |
-| 10 | [10-database](specs/10-database.md) | Full Drizzle schema |
-| 11 | [11-pricing](specs/11-pricing.md) | Plans, Stripe, metering logic |
-| 12 | [12-desktop-shell](specs/12-desktop-shell.md) | Electron process, platform adapters, capture |
-| 13 | [13-desktop-ui](specs/13-desktop-ui.md) | Floating UI, status pill, guide overlay |
+| 00 | [00-overview](specs/00-overview.md) | Principles, moat, glossary — reference |
+| 01 | [01-architecture](specs/01-architecture.md) | 4-layer diagram, IPC contracts — reference |
+| 02 | [02-sidecar-fast-pipeline](specs/02-sidecar-fast-pipeline.md) | Fast linear pipeline, Anthropic + caching, visual guidance |
+| 03 | [03-desktop-shell](specs/03-desktop-shell.md) | Electron main process, sidecar lifecycle, IPC bridge, hotkey |
+| 04 | [04-desktop-ui](specs/04-desktop-ui.md) | Floating overlay, Zustand store, audio capture, guide overlay |
+| 05 | [05-speech-stt](specs/05-speech-stt.md) | STT abstraction: ElevenLabs, whisper.cpp, VAD |
+| 06 | [06-speech-tts](specs/06-speech-tts.md) | TTS abstraction: ElevenLabs, edge-tts, Piper |
+| 07 | [07-sidecar-router](specs/07-sidecar-router.md) | Intent router (fast vs agent) |
+| 08 | [08-sidecar-agent](specs/08-sidecar-agent.md) | ReAct loop, tools, subagents, sandbox |
+| 09 | [09-harness](specs/09-harness.md) | System prompt, hooks, guards |
+| 10 | [10-memory](specs/10-memory.md) | Notepad (~/.yomi/), compaction, retrieval |
+| 11 | [11-database](specs/11-database.md) | Full Drizzle schema (Neon) |
+| 12 | [12-backend](specs/12-backend.md) | Hono routes, Better Auth, LLM proxy, metering |
+| 13 | [13-pricing](specs/13-pricing.md) | Plans, Stripe, metering logic |
 
 ---
 

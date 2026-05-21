@@ -27,7 +27,7 @@ apps/desktop/src/renderer/
     GuideStep.tsx        Single step highlight with label
 ```
 
-### Overlay (`app.tsx` — spec 12 + 13)
+### Overlay (`app.tsx` — spec 03 + 04)
 
 Before the full BuddyWindow exists, `app.tsx` is the entire UI — a single floating overlay that collapses to a status pill and expands to show the streaming response.
 
@@ -72,7 +72,7 @@ declare global {
 
 ### Floating Window (BuddyWindow)
 
-The main interaction surface. A small, draggable, always-on-top window. _(after spec 13 ships)_
+The main interaction surface. A small, draggable, always-on-top window. _(after spec 04 ships)_
 
 - Quick ask input (mic button + optional text field)
 - Streaming transcript display
@@ -148,14 +148,14 @@ interface GuideStep {
 ## Files to create
 
 - `apps/desktop/src/renderer/global.d.ts` — `window.yomi` TypeScript interface
-- `apps/desktop/src/renderer/components/BuddyWindow.tsx` — Main floating window _(after spec 13 ships)_
-- `apps/desktop/src/renderer/components/StatusPill.tsx` — Notch/tray status indicator _(after spec 13 ships)_
-- `apps/desktop/src/renderer/components/Settings.tsx` — Settings panel _(after spec 13 ships)_
-- `apps/desktop/src/renderer/components/GuideOverlay.tsx` — Visual guide overlay _(after spec 06 agent loop)_
-- `apps/desktop/src/renderer/components/GuideStep.tsx` — Single step highlight _(after spec 06 agent loop)_
+- `apps/desktop/src/renderer/components/BuddyWindow.tsx` — Main floating window _(after spec 04 ships)_
+- `apps/desktop/src/renderer/components/StatusPill.tsx` — Notch/tray status indicator _(after spec 04 ships)_
+- `apps/desktop/src/renderer/components/Settings.tsx` — Settings panel _(after spec 04 ships)_
+- `apps/desktop/src/renderer/components/GuideOverlay.tsx` — Visual guide overlay _(after spec 08 agent loop)_
+- `apps/desktop/src/renderer/components/GuideStep.tsx` — Single step highlight _(after spec 08 agent loop)_
 
 ## Open Questions
 
 - ~~State management: React context vs Zustand vs Jotai~~ — **decided: Zustand** (`src/renderer/store.ts`). Single `useYomiStore` with `hotkeyState`, `responseText`, `guideSteps`, `transcript`, `error`. `handleSseEvent` drives all state transitions from SSE events.
 - Overlay multi-monitor support: position overlay across all screens vs only the active screen.
-- `ScriptProcessorNode` deprecation: migrate to `AudioWorkletNode` when spec 04 STT abstraction ships.
+- `ScriptProcessorNode` deprecation: migrate to `AudioWorkletNode` when spec 05 STT abstraction ships.
