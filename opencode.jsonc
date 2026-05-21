@@ -3,8 +3,11 @@
   "mcp": {
     "github": {
       "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/github"],
-      "enabled": true
+      "command": ["npx", "-y", "@modelcontextprotocol/server-github"],
+      "enabled": true,
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
     }
   }
 }
