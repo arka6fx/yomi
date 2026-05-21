@@ -13,6 +13,7 @@
   "dependencies": {
     "@yomi/shared": "workspace:*",
     "electron-updater": "^6.0.0",
+    "elevenlabs": "^0.17.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "zustand": "^5.0.13"

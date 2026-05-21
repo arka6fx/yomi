@@ -1,3 +1,23 @@
-import { contextBridge } from "electron";
+import { contextBridge, ipcRenderer } from "electron"
+import type { SseEvent } from "@yomi/shared"
 
-contextBridge.exposeInMainWorld("yomi", {});
+type HotkeyState = "idle" | "listening" | "processing"
+
+contextBridge.exposeInMainWorld("yomi", {
+  // Returns a cleanup function suitable for React useEffect teardown
+  onEvent(cb: (e: SseEvent) => void): () => void {
+    const h = (_: Electron.IpcRendererEvent, e: SseEvent) => cb(e)
+    ipcRenderer.on("yomi:event", h)
+    return () => ipcRenderer.off("yomi:event", h)
+  },
+
+  onStateChange(cb: (s: HotkeyState) => void): () => void {
+    const h = (_: Electron.IpcRendererEvent, s: HotkeyState) => cb(s)
+    ipcRenderer.on("yomi:state", h)
+    return () => ipcRenderer.off("yomi:state", h)
+  },
+
+  sendAudioChunk(pcm: ArrayBuffer, sampleRate: number): void {
+    ipcRenderer.send("yomi:audio-chunk", pcm, sampleRate)
+  },
+})
