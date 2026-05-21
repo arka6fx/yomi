@@ -1,0 +1,115 @@
+# Spec 13 — Desktop: UI
+
+## Purpose
+
+Define the renderer process: floating buddy window, status pill, settings panel, and visual guide overlay. All UI components are React running in an Electron renderer process.
+
+## Invariants
+
+- The UI never calls the sidecar directly — all IPC goes through the preload bridge.
+- The visual guide overlay is a separate transparent window with mouse passthrough.
+- Status indicator always shows current Yomi state (listening / thinking / idle / error).
+
+## Detailed Design
+
+### Renderer Structure
+
+```
+apps/desktop/src/renderer/
+  index.html        Shell HTML
+  app.tsx           React root — routing, state management
+  components/
+    BuddyWindow.tsx      Main floating window
+    StatusPill.tsx       Notch / tray status indicator
+    Settings.tsx         Settings panel
+    GuideOverlay.tsx     Transparent overlay with step arrows
+    GuideStep.tsx        Single step highlight with label
+```
+
+### Floating Window (BuddyWindow)
+
+The main interaction surface. A small, draggable, always-on-top window.
+
+- Quick ask input (mic button + optional text field)
+- Streaming transcript display
+- Agent task progress (status updates, tool calls)
+- Settings gear icon → opens Settings panel
+
+### Status Indicator (StatusPill)
+
+A minimal visual indicator shown in the notch (macOS) or tray area. Shows current state:
+
+| State | Appearance |
+|---|---|
+| Idle | Dim indicator |
+| Listening | Pulsing recording dot |
+| Thinking | Spinner |
+| Speaking | Audio waveform |
+| Error | Red indicator |
+
+Rendered as a small always-on-top `BrowserWindow` or embedded in the tray icon depending on platform.
+
+### Settings Panel
+
+Slide-out panel with:
+- Account section (sign in/out, plan info)
+- Voice settings (TTS provider, voice selection)
+- Microphone device selection
+- Hotkey configuration
+- Permissions status (mic, screen recording)
+- About / version
+
+### Visual Guide Overlay
+
+Rendered as a separate transparent click-through `BrowserWindow` positioned at (0,0) spanning the full screen. Mouse events pass through to the underlying app.
+
+```
+┌─────────────────────────────────────────────┐
+│  ← Step 2 of 4 →  ✕                        │  nav bar
+│                                              │
+│        ┌──────────────┐                     │
+│        │ Messages tab  │ ← ─ ─ ─ ─ ─ ─      │  highlighted element
+│        │ ┌───┐        │                     │  with arrow + label
+│        │ │ 3 │        │                     │
+│        │ └───┘        │                     │
+│        └──────────────┘                     │
+│                                              │
+│  Click the Messages tab at the top left      │  instruction text
+└─────────────────────────────────────────────┘
+```
+
+```typescript
+interface GuideElement {
+  label: string
+  bbox: { x: number; y: number; width: number; height: number }
+}
+
+interface GuideStep {
+  instruction: string
+  elements: GuideElement[]
+}
+```
+
+**Implementation:**
+- `BrowserWindow` with `transparent: true`, `frame: false`, `alwaysOnTop: true`, mouse passthrough
+- React renders SVG arrows + labels at bbox coordinates from the sidecar
+- Nav bar (Step X of Y, Prev/Next, Close) is the only interactive region
+- On Close or last step, overlay is hidden
+- Refresh button to re-screenshot and recalculate if target window moves
+
+## Files to change
+
+- `apps/desktop/src/renderer/app.tsx` — React root component
+
+## Files to create
+
+- `apps/desktop/src/renderer/components/BuddyWindow.tsx` — Main floating window
+- `apps/desktop/src/renderer/components/StatusPill.tsx` — Notch/tray status indicator
+- `apps/desktop/src/renderer/components/Settings.tsx` — Settings panel
+- `apps/desktop/src/renderer/components/GuideOverlay.tsx` — Visual guide overlay
+- `apps/desktop/src/renderer/components/GuideStep.tsx` — Single step highlight
+
+## Open Questions
+
+- State management: React context vs Zustand vs Jotai for sharing sidecar state across components.
+- Overlay multi-monitor support: position overlay across all screens vs only the active screen.

@@ -1,4 +1,4 @@
-# Spec 03 — Harness
+# Spec 07 — Harness
 
 ## Purpose
 

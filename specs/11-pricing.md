@@ -1,4 +1,4 @@
-# Spec 09 — Pricing & Billing
+# Spec 11 — Pricing & Billing
 
 ## Purpose
 

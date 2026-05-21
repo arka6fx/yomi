@@ -1,4 +1,4 @@
-# Spec 07 — Database
+# Spec 10 — Database
 
 ## Purpose
 

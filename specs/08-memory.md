@@ -1,4 +1,4 @@
-# Spec 04 — Memory (Notepad)
+# Spec 08 — Memory (Notepad)
 
 ## Purpose
 

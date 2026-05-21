@@ -146,31 +146,22 @@ cd apps/backend && bun run db:studio     # Drizzle Studio UI
 
 Detailed design docs live in [`specs/`](./specs/):
 
-| Doc | Contents |
-|---|---|
-| [00-overview](specs/00-overview.md) | Principles, moat, glossary |
-| [01-architecture](specs/01-architecture.md) | 4-layer diagram, IPC contracts |
-| [02-sidecar](specs/02-sidecar.md) | Router, fast pipeline, ReAct loop |
-| [03-harness](specs/03-harness.md) | System prompt, tools, hooks, guards |
-| [04-memory](specs/04-memory.md) | Notepad system, compaction, retrieval |
-| [05-desktop](specs/05-desktop.md) | Electron, platform adapters, capture |
-| [06-backend](specs/06-backend.md) | Hono routes, auth, LLM proxy, metering |
-| [07-database](specs/07-database.md) | Full Drizzle schema |
-| [08-speech](specs/08-speech.md) | ElevenLabs, whisper.cpp, latency budget |
-| [09-pricing](specs/09-pricing.md) | Plans, Stripe, metering logic |
-
----
-
-## Phase roadmap
-
-| Phase | Scope |
-|---|---|
-| **0 — Spike** | hotkey → ElevenLabs STT → screenshot → 1 LLM call → ElevenLabs TTS |
-| **1 — Buddy** | floating UI, tray/menubar, notepad, prompt caching, permissions |
-| **2 — Agent** | router, ReAct loop, hooks, MCP connectors, subagents |
-| **3 — Accounts** | auth, Stripe billing, LLM proxy, cloud sync |
-| **4 — X-platform** | Windows, Linux/Omarchy |
-| **5 — Launch** | landing, pricing, Discord |
+| # | Doc | Contents |
+|---|---|---|
+| 0 | [00-overview](specs/00-overview.md) | Principles, moat, glossary |
+| 1 | [01-architecture](specs/01-architecture.md) | 4-layer diagram, IPC contracts |
+| 2 | [02-sidecar-fast-pipeline](specs/02-sidecar-fast-pipeline.md) | Fast linear pipeline, visual guidance |
+| 3 | [03-sidecar-router](specs/03-sidecar-router.md) | Intent router (fast vs agent) |
+| 4 | [04-speech-stt](specs/04-speech-stt.md) | STT: ElevenLabs, whisper.cpp, VAD |
+| 5 | [05-speech-tts](specs/05-speech-tts.md) | TTS: ElevenLabs, edge-tts, Piper |
+| 6 | [06-sidecar-agent](specs/06-sidecar-agent.md) | ReAct loop, tools, subagents, sandbox |
+| 7 | [07-harness](specs/07-harness.md) | System prompt, hooks, guards |
+| 8 | [08-memory](specs/08-memory.md) | Notepad, compaction, retrieval |
+| 9 | [09-backend](specs/09-backend.md) | Hono routes, auth, LLM proxy, metering |
+| 10 | [10-database](specs/10-database.md) | Full Drizzle schema |
+| 11 | [11-pricing](specs/11-pricing.md) | Plans, Stripe, metering logic |
+| 12 | [12-desktop-shell](specs/12-desktop-shell.md) | Electron process, platform adapters, capture |
+| 13 | [13-desktop-ui](specs/13-desktop-ui.md) | Floating UI, status pill, guide overlay |
 
 ---
 
