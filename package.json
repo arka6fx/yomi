@@ -1,0 +1,23 @@
+{
+  "name": "yomi",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "clean": "turbo clean && find . -name 'node_modules' -type d -prune -exec rm -rf '{}' +"
+  },
+  "devDependencies": {
+    "@yomi/eslint-config": "workspace:*",
+    "@yomi/typescript-config": "workspace:*",
+    "turbo": "^2.3.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=20",
+    "bun": ">=1.1.0"
+  },
+  "packageManager": "bun@1.1.38"
+}

@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Bun
+bun.lockb
+
+# Build outputs
+dist/
+.next/
+out/
+build/
+
+# Turbo cache
+.turbo/
+
+# Environment — never commit real secrets
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Yomi runtime data (lives in user home, not repo)
+.yomi/

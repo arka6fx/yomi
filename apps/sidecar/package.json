@@ -1,0 +1,27 @@
+{
+  "name": "@yomi/sidecar",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target bun",
+    "start": "bun run dist/index.js",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^1.0.0",
+    "@ai-sdk/openai": "^1.0.0",
+    "@yomi/shared": "workspace:*",
+    "ai": "^4.0.0",
+    "elevenlabs": "^0.17.0",
+    "hono": "^4.5.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.0",
+    "@yomi/eslint-config": "workspace:*",
+    "@yomi/typescript-config": "workspace:*",
+    "typescript": "^5.5.0"
+  }
+}

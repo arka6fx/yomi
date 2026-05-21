@@ -1,0 +1,27 @@
+{
+  "name": "@yomi/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.9.0",
+    "drizzle-orm": "^0.31.0"
+  },
+  "devDependencies": {
+    "@yomi/eslint-config": "workspace:*",
+    "@yomi/typescript-config": "workspace:*",
+    "drizzle-kit": "^0.22.0",
+    "typescript": "^5.5.0"
+  }
+}
