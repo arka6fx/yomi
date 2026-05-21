@@ -1,8 +1,10 @@
 {
   "extends": "@yomi/typescript-config/base.json",
   "compilerOptions": {
-    "module": "CommonJS",
-    "moduleResolution": "Node",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
     "outDir": "dist"
   },
   "include": ["src"],
