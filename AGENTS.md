@@ -19,6 +19,7 @@ bun install && bun run dev        # install + run all apps in watch
 turbo lint         # lint all
 turbo typecheck    # typecheck all (depends on build)
 turbo build        # build all
+turbo test         # run all bun test suites in parallel, cached per-package
 ```
 
 ## Database (Drizzle + Neon)
@@ -45,6 +46,7 @@ packages/db       ← Drizzle schema + Neon client
 - Desktop uses `electron-vite` (not raw electron)
 - **Test runner:** `bun test` (Bun built-in, no extra deps needed)
 - .env.example has full reference for env vars
+- **Comments:** keep small, purposeful comments throughout. One-liners on non-obvious logic, short section headers where useful. No multi-line docstrings.
 
 ## Stack (settled — preserve existing choices)
 

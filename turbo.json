@@ -17,6 +17,11 @@
     "typecheck": {
       "dependsOn": ["^build", "^typecheck"]
     },
+    "test": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "bunfig.toml", "*.test.ts"],
+      "cache": true
+    },
     "clean": {
       "cache": false
     }

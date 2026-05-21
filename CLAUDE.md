@@ -191,3 +191,9 @@ Heavy:      claude-opus-4-7
 ```
 
 Always enable Anthropic SDK prompt caching. Cache system prompt + `yomi.md` across turns to minimise cost.
+
+---
+
+## Code comments
+
+Keep small, purposeful comments throughout the codebase. A one-liner on non-obvious logic, a short section header where a file has distinct regions, a brief note on a workaround or constraint. Comments should be short — never multi-line blocks or docstrings. The goal is to make the code scannable and self-explaining without over-documenting obvious things.
