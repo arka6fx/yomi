@@ -1,13 +1,19 @@
 import { streamText } from "ai"
+import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
 import type { GuideResponse } from "@yomi/shared"
 
-const openai = createOpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY,
-  baseURL: process.env.LLM_BASE_URL || "https://openrouter.ai/api/v1",
-})
+const MODEL = process.env.FAST_PATH_MODEL || "claude-haiku-4-5-20251001"
 
-const MODEL = process.env.FAST_PATH_MODEL || "openai/gpt-4o"
+function createModel() {
+  if (process.env.LLM_BASE_URL) {
+    return createOpenAI({
+      apiKey: process.env.OPENROUTER_API_KEY,
+      baseURL: process.env.LLM_BASE_URL,
+    })(MODEL)
+  }
+  return createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })(MODEL)
+}
 
 const GUIDE_SYSTEM_PROMPT = `You are in guide mode. The user wants step-by-step visual guidance.
 For each step, return a JSON object with a \`steps\` array.
@@ -36,23 +42,24 @@ export async function generateGuide(
   screenshotB64: string,
   userQuery: string,
 ): Promise<GuideResponse> {
-  const messages: any[] = [
-    { role: "system", content: GUIDE_SYSTEM_PROMPT },
-    {
-      role: "user",
-      content: [
-        { type: "text", text: userQuery },
-        {
-          type: "image",
-          image: `data:image/png;base64,${screenshotB64}`,
-        },
-      ],
-    },
-  ]
-
   const result = streamText({
-    model: openai(MODEL),
-    messages,
+    model: createModel(),
+    messages: [
+      {
+        role: "system" as const,
+        content: GUIDE_SYSTEM_PROMPT,
+        ...(process.env.LLM_BASE_URL
+          ? {}
+          : { experimental_providerMetadata: { anthropic: { cacheControl: { type: "ephemeral" } } } }),
+      },
+      {
+        role: "user" as const,
+        content: [
+          { type: "text" as const, text: userQuery },
+          { type: "image" as const, image: `data:image/png;base64,${screenshotB64}` },
+        ],
+      },
+    ],
     maxTokens: 2000,
   })
 

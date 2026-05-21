@@ -1,14 +1,20 @@
 import { streamText } from "ai";
+import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import type { FastQueryRequest, GuideElement, SseEvent } from "@yomi/shared";
 import { generateGuide } from "./visual-guide.js";
 
-const openai = createOpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY,
-  baseURL: process.env.LLM_BASE_URL || "https://openrouter.ai/api/v1",
-});
+const MODEL = process.env.FAST_PATH_MODEL || "claude-haiku-4-5-20251001";
 
-const MODEL = process.env.FAST_PATH_MODEL || "openai/gpt-4o";
+function createModel() {
+  if (process.env.LLM_BASE_URL) {
+    return createOpenAI({
+      apiKey: process.env.OPENROUTER_API_KEY,
+      baseURL: process.env.LLM_BASE_URL,
+    })(MODEL);
+  }
+  return createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })(MODEL);
+}
 
 const ANSWER_SYSTEM_PROMPT = `You are a helpful desktop AI assistant.
 You see the user's screen and hear their voice.
@@ -29,9 +35,17 @@ async function* answerPipeline(
   }
 
   const result = streamText({
-    model: openai(MODEL),
-    system: ANSWER_SYSTEM_PROMPT,
-    messages: [{ role: "user", content }],
+    model: createModel(),
+    messages: [
+      {
+        role: "system" as const,
+        content: ANSWER_SYSTEM_PROMPT,
+        ...(process.env.LLM_BASE_URL
+          ? {}
+          : { experimental_providerMetadata: { anthropic: { cacheControl: { type: "ephemeral" } } } }),
+      },
+      { role: "user" as const, content },
+    ],
     maxTokens: 800,
   });
 
