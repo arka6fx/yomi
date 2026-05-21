@@ -5,21 +5,16 @@ import { fastPipeline } from "./pipeline/fast.js"
 
 const app = new Hono()
 
-const SIDECAR_SECRET = process.env.SIDECAR_SECRET
 const VERSION = "0.1.0"
 
 function authMiddleware(c: any, next: any) {
+  // Read lazily so tests can manipulate the env var at runtime
+  const secret = process.env.SIDECAR_SECRET
   const header = c.req.header("x-sidecar-secret")
-  if (SIDECAR_SECRET && header !== SIDECAR_SECRET) {
+  if (secret && header !== secret) {
     return c.json({ error: "Unauthorized" }, 401)
   }
   return next()
-}
-
-async function* toLines(iterable: AsyncIterable<SseEvent>): AsyncGenerator<string> {
-  for await (const event of iterable) {
-    yield `data: ${JSON.stringify(event)}\n\n`
-  }
 }
 
 app.use("/query/*", authMiddleware)

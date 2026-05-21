@@ -1,0 +1,6 @@
+[test]
+preload = []
+
+[test.env]
+SIDECAR_SECRET = "test-secret"
+ANTHROPIC_API_KEY = "test-key"

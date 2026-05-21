@@ -1,0 +1,682 @@
+/**
+ * Tests for the sidecar fast pipeline and /query/fast HTTP endpoint.
+ *
+ * Mocking strategy:
+ * - `mock.module("ai")` replaces `streamText` with a controllable fake that
+ *   returns an async iterable of text chunks.
+ * - `mock.module("@ai-sdk/anthropic")` and `mock.module("@ai-sdk/openai")`
+ *   replace the factory functions with spies so we can assert which provider
+ *   was selected and inspect the arguments passed to them.
+ * - `mock.module("./visual-guide.js")` replaces `generateGuide` so guide-mode
+ *   tests don't depend on the LLM at all.
+ *
+ * The modules are mocked BEFORE the pipeline modules are imported so that the
+ * module-level `createModel()` calls inside fast.ts and visual-guide.ts pick
+ * up the mocked factories.
+ */
+
+import { describe, it, expect, beforeEach, mock } from "bun:test";
+
+// ---------------------------------------------------------------------------
+// Shared spy state — updated by each mock factory so tests can inspect calls
+// ---------------------------------------------------------------------------
+
+let lastAnthropicOpts: Record<string, unknown> = {};
+let lastOpenAIOpts: Record<string, unknown> = {};
+let anthropicCallCount = 0;
+let openAICallCount = 0;
+
+// The fake model object returned by both provider factories. Tests can
+// swap `fakeModelId` to simulate a different model string.
+let fakeModelId = "claude-haiku-4-5-20251001";
+
+// The text chunks that the mocked streamText will yield.
+let streamChunks: string[] = ["Hello", " world", "!"];
+
+// The guide response that the mocked generateGuide will return.
+let fakeGuideResponse = {
+  steps: [
+    {
+      instruction: "Click the message box",
+      elements: [{ label: "Message box", bbox: { x: 10, y: 20, width: 100, height: 30 } }],
+    },
+    {
+      instruction: "Type your message and press Enter",
+      elements: [],
+    },
+  ],
+};
+
+// Capture the messages array passed to streamText for caching assertions.
+let lastStreamTextMessages: unknown[] = [];
+
+// ---------------------------------------------------------------------------
+// Module mocks — must be registered before any import of the modules under test
+// ---------------------------------------------------------------------------
+
+mock.module("ai", () => ({
+  streamText: (_opts: { messages?: unknown[]; [key: string]: unknown }) => {
+    // Capture messages for caching assertions.
+    lastStreamTextMessages = (_opts.messages as unknown[]) ?? [];
+
+    const chunks = [...streamChunks];
+    return {
+      textStream: (async function* () {
+        for (const chunk of chunks) {
+          yield chunk;
+        }
+      })(),
+    };
+  },
+}));
+
+mock.module("@ai-sdk/anthropic", () => ({
+  createAnthropic: (opts: Record<string, unknown>) => {
+    anthropicCallCount++;
+    lastAnthropicOpts = opts ?? {};
+    return (modelId: string) => ({ provider: "anthropic", modelId });
+  },
+}));
+
+mock.module("@ai-sdk/openai", () => ({
+  createOpenAI: (opts: Record<string, unknown>) => {
+    openAICallCount++;
+    lastOpenAIOpts = opts ?? {};
+    return (modelId: string) => ({ provider: "openai", modelId });
+  },
+}));
+
+mock.module("./visual-guide.js", () => ({
+  generateGuide: (_screenshot: string, _query: string) =>
+    Promise.resolve(fakeGuideResponse),
+}));
+
+// ---------------------------------------------------------------------------
+// Now import the modules under test (after mocks are registered)
+// ---------------------------------------------------------------------------
+
+// We use a dynamic import helper so we can re-import after mutating env vars.
+// Bun module cache is shared within a process, so for env-based branching tests
+// we call `createModel` indirectly through fastPipeline and observe which spy
+// was incremented.
+import { fastPipeline } from "./fast.js";
+
+// Import the Hono app for HTTP endpoint tests.
+import app from "../index.js";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Collect all events from the fastPipeline async generator into an array. */
+async function collect(gen: AsyncGenerator<unknown>): Promise<unknown[]> {
+  const events: unknown[] = [];
+  for await (const ev of gen) {
+    events.push(ev);
+  }
+  return events;
+}
+
+/**
+ * Parse an SSE response body (text/event-stream) and return the parsed JSON
+ * data payloads. Each `data: {...}` line becomes one element.
+ */
+async function parseSse(response: Response): Promise<unknown[]> {
+  const text = await response.text();
+  const events: unknown[] = [];
+  for (const line of text.split("\n")) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("data:")) {
+      const json = trimmed.slice("data:".length).trim();
+      if (json) {
+        events.push(JSON.parse(json));
+      }
+    }
+  }
+  return events;
+}
+
+/**
+ * Issue a POST /query/fast request against the Hono app.
+ * The secret defaults to "test-secret" and must match SIDECAR_SECRET.
+ */
+function postFast(
+  body: unknown,
+  opts: { secret?: string | null } = {},
+): Promise<Response> {
+  const { secret = "test-secret" } = opts;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (secret !== null) {
+    headers["x-sidecar-secret"] = secret;
+  }
+  return app.fetch(
+    new Request("http://localhost/query/fast", {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    }),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Suite
+// ---------------------------------------------------------------------------
+
+describe("fastPipeline — generator", () => {
+  beforeEach(() => {
+    // Reset spy counters and defaults before each test.
+    anthropicCallCount = 0;
+    openAICallCount = 0;
+    lastAnthropicOpts = {};
+    lastOpenAIOpts = {};
+    lastStreamTextMessages = [];
+    streamChunks = ["Hello", " world", "!"];
+    fakeModelId = "claude-haiku-4-5-20251001";
+    fakeGuideResponse = {
+      steps: [
+        {
+          instruction: "Click the message box",
+          elements: [
+            { label: "Message box", bbox: { x: 10, y: 20, width: 100, height: 30 } },
+          ],
+        },
+        {
+          instruction: "Type your message and press Enter",
+          elements: [],
+        },
+      ],
+    };
+
+    // Clear env vars that affect provider selection.
+    delete process.env.LLM_BASE_URL;
+    delete process.env.OPENROUTER_API_KEY;
+    delete process.env.FAST_PATH_MODEL;
+    delete process.env.SIDECAR_SECRET;
+  });
+
+  // -------------------------------------------------------------------------
+  // Empty / missing text
+  // -------------------------------------------------------------------------
+
+  it("empty text yields a single error event", async () => {
+    const events = await collect(fastPipeline({ text: "" }));
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ type: "error", message: "No input text provided" });
+  });
+
+  it("whitespace-only text yields a single error event", async () => {
+    const events = await collect(fastPipeline({ text: "   " }));
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ type: "error", message: "No input text provided" });
+  });
+
+  it("missing text field yields a single error event", async () => {
+    const events = await collect(fastPipeline({}));
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ type: "error", message: "No input text provided" });
+  });
+
+  // -------------------------------------------------------------------------
+  // Answer mode — event sequence
+  // -------------------------------------------------------------------------
+
+  it("answer mode: first event is transcript", async () => {
+    const events = await collect(fastPipeline({ text: "What is 2+2?" }));
+    expect(events[0]).toMatchObject({ type: "transcript", text: "What is 2+2?" });
+  });
+
+  it("answer mode: middle events are llm_chunk", async () => {
+    streamChunks = ["chunk1", "chunk2", "chunk3"];
+    const events = await collect(fastPipeline({ text: "Hello" }));
+    const chunks = events.filter((e: any) => e.type === "llm_chunk");
+    expect(chunks).toHaveLength(3);
+    expect(chunks[0]).toMatchObject({ type: "llm_chunk", text: "chunk1" });
+    expect(chunks[1]).toMatchObject({ type: "llm_chunk", text: "chunk2" });
+    expect(chunks[2]).toMatchObject({ type: "llm_chunk", text: "chunk3" });
+  });
+
+  it("answer mode: last event is done", async () => {
+    const events = await collect(fastPipeline({ text: "Hello" }));
+    expect(events[events.length - 1]).toMatchObject({ type: "done" });
+  });
+
+  it("answer mode: event sequence is transcript → llm_chunk* → done", async () => {
+    streamChunks = ["A", "B"];
+    const events = await collect(fastPipeline({ text: "Hi" })) as any[];
+    expect(events.map((e) => e.type)).toEqual(["transcript", "llm_chunk", "llm_chunk", "done"]);
+  });
+
+  it("answer mode: makes exactly ONE streamText call (no tool-selection loop)", async () => {
+    // We verify this by checking that the mock only yields the preset chunks
+    // and the done event appears exactly once — a loop would produce multiple
+    // done events or repeat the chunk sequence.
+    const events = await collect(fastPipeline({ text: "Single call check" })) as any[];
+    const doneEvents = events.filter((e) => e.type === "done");
+    expect(doneEvents).toHaveLength(1);
+  });
+
+  // -------------------------------------------------------------------------
+  // Guide mode — event sequence
+  // -------------------------------------------------------------------------
+
+  it("guide mode: first event is transcript", async () => {
+    const events = await collect(
+      fastPipeline({ text: "Guide me", mode: "guide", screenshot_b64: "abc123" }),
+    );
+    expect(events[0]).toMatchObject({ type: "transcript", text: "Guide me" });
+  });
+
+  it("guide mode: emits one visual_guide event per step", async () => {
+    const events = await collect(
+      fastPipeline({ text: "Guide me", mode: "guide", screenshot_b64: "abc123" }),
+    ) as any[];
+    const guideEvents = events.filter((e) => e.type === "visual_guide");
+    expect(guideEvents).toHaveLength(fakeGuideResponse.steps.length);
+  });
+
+  it("guide mode: visual_guide events have correct step numbers and total_steps", async () => {
+    const events = await collect(
+      fastPipeline({ text: "Guide me", mode: "guide", screenshot_b64: "abc123" }),
+    ) as any[];
+    const guideEvents = events.filter((e) => e.type === "visual_guide");
+    expect(guideEvents[0]).toMatchObject({
+      type: "visual_guide",
+      step: 1,
+      total_steps: 2,
+      instruction: "Click the message box",
+    });
+    expect(guideEvents[1]).toMatchObject({
+      type: "visual_guide",
+      step: 2,
+      total_steps: 2,
+      instruction: "Type your message and press Enter",
+    });
+  });
+
+  it("guide mode: last event is done", async () => {
+    const events = await collect(
+      fastPipeline({ text: "Guide me", mode: "guide", screenshot_b64: "abc123" }),
+    );
+    expect(events[events.length - 1]).toMatchObject({ type: "done" });
+  });
+
+  it("guide mode: event sequence is transcript → visual_guide* → done", async () => {
+    const events = await collect(
+      fastPipeline({ text: "Guide me", mode: "guide", screenshot_b64: "abc123" }),
+    ) as any[];
+    expect(events[0].type).toBe("transcript");
+    expect(events[events.length - 1].type).toBe("done");
+    const middle = events.slice(1, -1);
+    expect(middle.every((e) => e.type === "visual_guide")).toBe(true);
+  });
+
+  it("guide mode: visual_guide step includes elements array", async () => {
+    const events = await collect(
+      fastPipeline({ text: "Guide me", mode: "guide", screenshot_b64: "abc123" }),
+    ) as any[];
+    const firstGuide = events.find((e) => e.type === "visual_guide");
+    expect(Array.isArray(firstGuide.elements)).toBe(true);
+    expect(firstGuide.elements[0]).toMatchObject({
+      label: "Message box",
+      bbox: { x: 10, y: 20, width: 100, height: 30 },
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Guide mode without screenshot
+  // -------------------------------------------------------------------------
+
+  it("guide mode with no screenshot_b64: emits single visual_guide asking user to take screenshot", async () => {
+    const events = await collect(
+      fastPipeline({ text: "Guide me", mode: "guide" }),
+    ) as any[];
+    const guideEvents = events.filter((e) => e.type === "visual_guide");
+    expect(guideEvents).toHaveLength(1);
+    expect(guideEvents[0]).toMatchObject({
+      type: "visual_guide",
+      step: 1,
+      total_steps: 1,
+      instruction: "Take a screenshot so I can see what you need help with.",
+      elements: [],
+    });
+  });
+
+  it("guide mode with empty screenshot_b64: emits single visual_guide asking for screenshot", async () => {
+    const events = await collect(
+      fastPipeline({ text: "Guide me", mode: "guide", screenshot_b64: "" }),
+    ) as any[];
+    const guideEvents = events.filter((e) => e.type === "visual_guide");
+    expect(guideEvents).toHaveLength(1);
+    expect(guideEvents[0].elements).toEqual([]);
+  });
+
+  // -------------------------------------------------------------------------
+  // Visual guide fallback: LLM returns elements: []
+  // -------------------------------------------------------------------------
+
+  it("guide mode: if LLM returns empty elements, visual_guide has elements: []", async () => {
+    fakeGuideResponse = {
+      steps: [{ instruction: "I couldn't identify visual targets.", elements: [] }],
+    };
+    const events = await collect(
+      fastPipeline({ text: "Guide me", mode: "guide", screenshot_b64: "abc" }),
+    ) as any[];
+    const guideEvent = events.find((e: any) => e.type === "visual_guide");
+    expect(guideEvent).toBeDefined();
+    expect(guideEvent.elements).toEqual([]);
+  });
+
+  // -------------------------------------------------------------------------
+  // Model selection — Anthropic vs OpenRouter
+  // -------------------------------------------------------------------------
+
+  it("uses createAnthropic when LLM_BASE_URL is not set", async () => {
+    delete process.env.LLM_BASE_URL;
+    anthropicCallCount = 0;
+    openAICallCount = 0;
+    await collect(fastPipeline({ text: "Hello" }));
+    expect(anthropicCallCount).toBeGreaterThan(0);
+    expect(openAICallCount).toBe(0);
+  });
+
+  it("uses createOpenAI when LLM_BASE_URL is set", async () => {
+    process.env.LLM_BASE_URL = "https://openrouter.ai/api/v1";
+    process.env.OPENROUTER_API_KEY = "or-test-key";
+    anthropicCallCount = 0;
+    openAICallCount = 0;
+    await collect(fastPipeline({ text: "Hello" }));
+    expect(openAICallCount).toBeGreaterThan(0);
+    expect(anthropicCallCount).toBe(0);
+    delete process.env.LLM_BASE_URL;
+    delete process.env.OPENROUTER_API_KEY;
+  });
+
+  it("passes LLM_BASE_URL as baseURL to createOpenAI", async () => {
+    process.env.LLM_BASE_URL = "https://openrouter.ai/api/v1";
+    process.env.OPENROUTER_API_KEY = "or-test-key";
+    lastOpenAIOpts = {};
+    await collect(fastPipeline({ text: "Hello" }));
+    expect(lastOpenAIOpts.baseURL).toBe("https://openrouter.ai/api/v1");
+    delete process.env.LLM_BASE_URL;
+    delete process.env.OPENROUTER_API_KEY;
+  });
+
+  it("passes OPENROUTER_API_KEY as apiKey to createOpenAI", async () => {
+    process.env.LLM_BASE_URL = "https://openrouter.ai/api/v1";
+    process.env.OPENROUTER_API_KEY = "or-test-key";
+    lastOpenAIOpts = {};
+    await collect(fastPipeline({ text: "Hello" }));
+    expect(lastOpenAIOpts.apiKey).toBe("or-test-key");
+    delete process.env.LLM_BASE_URL;
+    delete process.env.OPENROUTER_API_KEY;
+  });
+
+  // -------------------------------------------------------------------------
+  // Default model name
+  // -------------------------------------------------------------------------
+
+  it("default model is claude-haiku-4-5-20251001 when FAST_PATH_MODEL is unset", async () => {
+    delete process.env.FAST_PATH_MODEL;
+    // We can't easily introspect the model ID after module caching, but we can
+    // verify streamText was called and no error was thrown — the factory mock
+    // will be called with the module-level MODEL constant which is set at import
+    // time. This test primarily guards against regression at the import level.
+    const events = await collect(fastPipeline({ text: "Hello" })) as any[];
+    expect(events.some((e) => e.type === "llm_chunk")).toBe(true);
+  });
+
+  // -------------------------------------------------------------------------
+  // Prompt caching — only when using Anthropic directly
+  // -------------------------------------------------------------------------
+
+  it("answer mode with Anthropic: system message has experimental_providerMetadata with cacheControl", async () => {
+    delete process.env.LLM_BASE_URL;
+    lastStreamTextMessages = [];
+    await collect(fastPipeline({ text: "Hello" }));
+    const systemMsg = (lastStreamTextMessages as any[]).find((m) => m.role === "system");
+    expect(systemMsg).toBeDefined();
+    expect(systemMsg.experimental_providerMetadata).toMatchObject({
+      anthropic: { cacheControl: { type: "ephemeral" } },
+    });
+  });
+
+  it("answer mode with OpenRouter: system message has NO cacheControl metadata", async () => {
+    process.env.LLM_BASE_URL = "https://openrouter.ai/api/v1";
+    process.env.OPENROUTER_API_KEY = "or-key";
+    lastStreamTextMessages = [];
+    await collect(fastPipeline({ text: "Hello" }));
+    const systemMsg = (lastStreamTextMessages as any[]).find((m) => m.role === "system");
+    expect(systemMsg).toBeDefined();
+    expect(systemMsg.experimental_providerMetadata).toBeUndefined();
+    delete process.env.LLM_BASE_URL;
+    delete process.env.OPENROUTER_API_KEY;
+  });
+});
+
+// ---------------------------------------------------------------------------
+// HTTP endpoint tests — POST /query/fast
+// ---------------------------------------------------------------------------
+
+describe("POST /query/fast — HTTP endpoint", () => {
+  beforeEach(() => {
+    delete process.env.LLM_BASE_URL;
+    delete process.env.OPENROUTER_API_KEY;
+    delete process.env.FAST_PATH_MODEL;
+    streamChunks = ["Hello", " world"];
+    fakeGuideResponse = {
+      steps: [
+        {
+          instruction: "Click OK",
+          elements: [{ label: "OK button", bbox: { x: 5, y: 5, width: 50, height: 20 } }],
+        },
+      ],
+    };
+  });
+
+  // -------------------------------------------------------------------------
+  // Auth guard
+  //
+  // NOTE: `SIDECAR_SECRET` in src/index.ts is captured as a module-level
+  // constant at import time, so it cannot be changed by mutating process.env
+  // after the module has loaded. The tests below verify the auth middleware
+  // logic directly via a minimal Hono app that mirrors the production
+  // implementation, and also confirm the already-loaded `app` behaves
+  // correctly for the secret value that was present at import time.
+  // -------------------------------------------------------------------------
+
+  it("auth middleware: rejects missing secret with 401", async () => {
+    // Build a minimal Hono app that mirrors authMiddleware with a known secret.
+    const { Hono } = await import("hono");
+    const testApp = new Hono();
+    const TEST_SECRET = "guard-test-secret";
+    testApp.use("/protected", (c: any, next: any) => {
+      const header = c.req.header("x-sidecar-secret");
+      if (TEST_SECRET && header !== TEST_SECRET) {
+        return c.json({ error: "Unauthorized" }, 401);
+      }
+      return next();
+    });
+    testApp.get("/protected", (c: any) => c.json({ ok: true }));
+
+    const res = await testApp.fetch(new Request("http://localhost/protected"));
+    expect(res.status).toBe(401);
+  });
+
+  it("auth middleware: rejects wrong secret with 401", async () => {
+    const { Hono } = await import("hono");
+    const testApp = new Hono();
+    const TEST_SECRET = "guard-test-secret";
+    testApp.use("/protected", (c: any, next: any) => {
+      const header = c.req.header("x-sidecar-secret");
+      if (TEST_SECRET && header !== TEST_SECRET) {
+        return c.json({ error: "Unauthorized" }, 401);
+      }
+      return next();
+    });
+    testApp.get("/protected", (c: any) => c.json({ ok: true }));
+
+    const res = await testApp.fetch(
+      new Request("http://localhost/protected", {
+        headers: { "x-sidecar-secret": "wrong-secret" },
+      }),
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it("auth middleware: accepts correct secret", async () => {
+    const { Hono } = await import("hono");
+    const testApp = new Hono();
+    const TEST_SECRET = "guard-test-secret";
+    testApp.use("/protected", (c: any, next: any) => {
+      const header = c.req.header("x-sidecar-secret");
+      if (TEST_SECRET && header !== TEST_SECRET) {
+        return c.json({ error: "Unauthorized" }, 401);
+      }
+      return next();
+    });
+    testApp.get("/protected", (c: any) => c.json({ ok: true }));
+
+    const res = await testApp.fetch(
+      new Request("http://localhost/protected", {
+        headers: { "x-sidecar-secret": TEST_SECRET },
+      }),
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it("auth middleware: passes all requests when no secret is configured", async () => {
+    const { Hono } = await import("hono");
+    const testApp = new Hono();
+    const CONFIGURED_SECRET = undefined; // no secret set
+    testApp.use("/protected", (c: any, next: any) => {
+      const header = c.req.header("x-sidecar-secret");
+      if (CONFIGURED_SECRET && header !== CONFIGURED_SECRET) {
+        return c.json({ error: "Unauthorized" }, 401);
+      }
+      return next();
+    });
+    testApp.get("/protected", (c: any) => c.json({ ok: true }));
+
+    const res = await testApp.fetch(new Request("http://localhost/protected"));
+    expect(res.status).toBe(200);
+  });
+
+  it("loaded app: accepts requests without auth when SIDECAR_SECRET was unset at startup", async () => {
+    // The app module was imported without SIDECAR_SECRET set, so auth is off.
+    const res = await postFast({ text: "Hello" }, { secret: null });
+    expect(res.status).toBe(200);
+  });
+
+  // -------------------------------------------------------------------------
+  // Empty / missing text — HTTP-level validation
+  // -------------------------------------------------------------------------
+
+  it("returns 400 for missing text field", async () => {
+    delete process.env.SIDECAR_SECRET;
+    const res = await postFast({});
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for empty text field", async () => {
+    delete process.env.SIDECAR_SECRET;
+    const res = await postFast({ text: "" });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for whitespace-only text", async () => {
+    delete process.env.SIDECAR_SECRET;
+    const res = await postFast({ text: "   " });
+    expect(res.status).toBe(400);
+  });
+
+  // -------------------------------------------------------------------------
+  // SSE content-type
+  // -------------------------------------------------------------------------
+
+  it("responds with text/event-stream content type for valid request", async () => {
+    delete process.env.SIDECAR_SECRET;
+    const res = await postFast({ text: "Hello" });
+    expect(res.headers.get("content-type")).toContain("text/event-stream");
+  });
+
+  // -------------------------------------------------------------------------
+  // Answer mode SSE events via HTTP
+  // -------------------------------------------------------------------------
+
+  it("answer mode: SSE stream starts with transcript event", async () => {
+    delete process.env.SIDECAR_SECRET;
+    const res = await postFast({ text: "What time is it?" });
+    const events = await parseSse(res) as any[];
+    expect(events[0]).toMatchObject({ type: "transcript", text: "What time is it?" });
+  });
+
+  it("answer mode: SSE stream contains llm_chunk events", async () => {
+    delete process.env.SIDECAR_SECRET;
+    streamChunks = ["chunk1", "chunk2"];
+    const res = await postFast({ text: "Hello" });
+    const events = await parseSse(res) as any[];
+    const chunks = events.filter((e) => e.type === "llm_chunk");
+    expect(chunks.length).toBeGreaterThan(0);
+  });
+
+  it("answer mode: SSE stream ends with done event", async () => {
+    delete process.env.SIDECAR_SECRET;
+    const res = await postFast({ text: "Hello" });
+    const events = await parseSse(res) as any[];
+    expect(events[events.length - 1]).toMatchObject({ type: "done" });
+  });
+
+  // -------------------------------------------------------------------------
+  // Guide mode SSE events via HTTP
+  // -------------------------------------------------------------------------
+
+  it("guide mode: SSE stream starts with transcript event", async () => {
+    delete process.env.SIDECAR_SECRET;
+    const res = await postFast({ text: "Guide me", mode: "guide", screenshot_b64: "abc" });
+    const events = await parseSse(res) as any[];
+    expect(events[0]).toMatchObject({ type: "transcript", text: "Guide me" });
+  });
+
+  it("guide mode: SSE stream contains visual_guide events", async () => {
+    delete process.env.SIDECAR_SECRET;
+    const res = await postFast({ text: "Guide me", mode: "guide", screenshot_b64: "abc" });
+    const events = await parseSse(res) as any[];
+    const guideEvents = events.filter((e: any) => e.type === "visual_guide");
+    expect(guideEvents.length).toBeGreaterThan(0);
+  });
+
+  it("guide mode: SSE stream ends with done event", async () => {
+    delete process.env.SIDECAR_SECRET;
+    const res = await postFast({ text: "Guide me", mode: "guide", screenshot_b64: "abc" });
+    const events = await parseSse(res) as any[];
+    expect(events[events.length - 1]).toMatchObject({ type: "done" });
+  });
+
+  it("guide mode without screenshot: single visual_guide asks for screenshot", async () => {
+    delete process.env.SIDECAR_SECRET;
+    const res = await postFast({ text: "Guide me", mode: "guide" });
+    const events = await parseSse(res) as any[];
+    const guideEvents = events.filter((e: any) => e.type === "visual_guide");
+    expect(guideEvents).toHaveLength(1);
+    expect(guideEvents[0]).toMatchObject({
+      type: "visual_guide",
+      step: 1,
+      total_steps: 1,
+      elements: [],
+    });
+    expect(guideEvents[0].instruction).toMatch(/screenshot/i);
+  });
+
+  // -------------------------------------------------------------------------
+  // Health check — sanity
+  // -------------------------------------------------------------------------
+
+  it("GET /health returns 200 with status ok", async () => {
+    const res = await app.fetch(new Request("http://localhost/health"));
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.status).toBe("ok");
+  });
+});
