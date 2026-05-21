@@ -1,36 +1,68 @@
-import { app, BrowserWindow } from "electron";
-import path from "path";
+import { app, BrowserWindow } from "electron"
+import path from "node:path"
+import { SidecarManager } from "./sidecar"
+import { initHotkey } from "./hotkey"
+import { initIpc } from "./ipc"
 
-let mainWindow: BrowserWindow | null = null;
+let overlayWin: BrowserWindow | null = null
+const sidecar = new SidecarManager()
 
-function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+app.whenReady().then(async () => {
+  // Platform setup: tray, dock visibility
+  if (process.platform === "darwin") {
+    const { setupMac } = await import("./platform/mac")
+    setupMac()
+  } else if (process.platform === "win32") {
+    const { setupWindows } = await import("./platform/windows")
+    setupWindows()
+  } else {
+    const { setupLinux } = await import("./platform/linux")
+    setupLinux()
+  }
+
+  // Start sidecar and wait until healthy before opening the window
+  await sidecar.start()
+
+  // Overlay window — frameless, transparent, always-on-top
+  overlayWin = new BrowserWindow({
+    width: 480,
+    height: 200,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    show: false, // shown explicitly after setContentProtection
     webPreferences: {
       preload: path.join(__dirname, "../preload/index.js"),
       contextIsolation: true,
       nodeIntegration: false,
     },
-  });
+  })
+
+  // Must be called BEFORE win.show() — excludes overlay from screen recordings
+  overlayWin.setContentProtection(true)
+  overlayWin.setIgnoreMouseEvents(true, { forward: true }) // click-through when idle
+  overlayWin.setVisibleOnAllWorkspaces(true) // visible across macOS Spaces
 
   if (process.env.ELECTRON_RENDERER_URL) {
-    mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
+    overlayWin.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
-    mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
+    overlayWin.loadFile(path.join(__dirname, "../renderer/index.html"))
   }
-}
+  overlayWin.once("ready-to-show", () => overlayWin!.show())
 
-app.whenReady().then(createWindow);
+  // Wire IPC bridge (audio chunks, STT, sidecar SSE)
+  const { onListenStop } = initIpc(sidecar, overlayWin)
 
+  // Register global hotkeys (must be after whenReady)
+  initHotkey({
+    onStateChange: (s) => overlayWin!.webContents.send("yomi:state", s),
+    onListenStop,
+  })
+})
+
+// macOS: keep process alive when all windows are hidden (tray-only app)
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
-});
-
-app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
-});
+  if (process.platform !== "darwin") app.quit()
+})
