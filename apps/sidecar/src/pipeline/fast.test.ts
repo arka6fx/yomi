@@ -19,6 +19,27 @@ import { whisperMock } from "../speech/__test-mocks.js";
 import { describe, it, expect, beforeEach, mock } from "bun:test";
 
 // ---------------------------------------------------------------------------
+// TTS mock state — controls the mocked resolver below
+// ---------------------------------------------------------------------------
+
+type FakeTtsEngine = "elevenlabs" | "edge-tts" | "piper" | "none";
+const ttsMock = {
+  engine: "none" as FakeTtsEngine,
+  // Bytes the mocked synthesize() yields, one Uint8Array per chunk.
+  chunks: [] as Uint8Array[],
+  // Text passed to each synthesize() call — assert sentence-boundary splitting.
+  calls: [] as string[],
+  // If true, the mocked synthesize() throws on first iteration.
+  shouldThrow: false,
+  reset(): void {
+    this.engine = "none";
+    this.chunks = [];
+    this.calls = [];
+    this.shouldThrow = false;
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Shared spy state — updated by each mock factory so tests can inspect calls
 // ---------------------------------------------------------------------------
 
@@ -84,6 +105,15 @@ mock.module("@ai-sdk/openai", () => ({
 mock.module("./visual-guide.js", () => ({
   generateGuide: (_screenshot: string, _query: string) =>
     Promise.resolve(fakeGuideResponse),
+}));
+
+mock.module("./tts.js", () => ({
+  resolveTts: () => ttsMock.engine,
+  synthesize: async function* (text: string) {
+    ttsMock.calls.push(text);
+    if (ttsMock.shouldThrow) throw new Error("tts boom");
+    for (const chunk of ttsMock.chunks) yield chunk;
+  },
 }));
 
 // ---------------------------------------------------------------------------
@@ -193,6 +223,8 @@ describe("fastPipeline — generator", () => {
     delete process.env.ELEVENLABS_API_KEY;
     whisperMock.reset();
     whisperMock.result = "transcribed from audio";
+    // TTS disabled by default so existing event-sequence tests are unaffected.
+    ttsMock.reset();
   });
 
   // -------------------------------------------------------------------------
@@ -477,6 +509,84 @@ describe("fastPipeline — generator", () => {
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({ type: "error", message: "whisper error" });
   });
+
+  // -------------------------------------------------------------------------
+  // TTS — sentence-boundary synthesis + audio_chunk events
+  // -------------------------------------------------------------------------
+
+  it("TTS disabled: no audio_chunk events, synthesize never called", async () => {
+    ttsMock.engine = "none";
+    ttsMock.chunks = [new Uint8Array([1, 2, 3])];
+    streamChunks = ["Hello world.", " More text."];
+    const events = await collect(fastPipeline({ text: "hi" })) as any[];
+    expect(events.some((e) => e.type === "audio_chunk")).toBe(false);
+    expect(ttsMock.calls).toEqual([]);
+  });
+
+  it("TTS enabled: emits audio_chunk events with base64-encoded bytes", async () => {
+    ttsMock.engine = "elevenlabs";
+    ttsMock.chunks = [new Uint8Array([0xde, 0xad, 0xbe, 0xef])];
+    streamChunks = ["One sentence."];
+    const events = await collect(fastPipeline({ text: "hi" })) as any[];
+    const audio = events.filter((e) => e.type === "audio_chunk");
+    expect(audio.length).toBeGreaterThan(0);
+    expect(audio[0].base64).toBe(Buffer.from([0xde, 0xad, 0xbe, 0xef]).toString("base64"));
+  });
+
+  it("TTS: synthesize called once per sentence boundary", async () => {
+    ttsMock.engine = "elevenlabs";
+    ttsMock.chunks = [new Uint8Array([1])];
+    // Three sentences. Match the regex `[.!?]\s` so boundaries fire mid-stream.
+    streamChunks = ["First sentence. ", "Second one! ", "And third?"];
+    await collect(fastPipeline({ text: "hi" }));
+    expect(ttsMock.calls).toEqual(["First sentence.", "Second one!", "And third?"]);
+  });
+
+  it("TTS: tail without trailing whitespace is still synthesized at end", async () => {
+    ttsMock.engine = "elevenlabs";
+    ttsMock.chunks = [new Uint8Array([1])];
+    // No trailing space after the final period — won't hit the regex mid-stream,
+    // so it falls through to the end-of-stream flush.
+    streamChunks = ["No trailing space."];
+    await collect(fastPipeline({ text: "hi" }));
+    expect(ttsMock.calls).toEqual(["No trailing space."]);
+  });
+
+  it("TTS: empty/whitespace-only buffer at end is not synthesized", async () => {
+    ttsMock.engine = "elevenlabs";
+    ttsMock.chunks = [new Uint8Array([1])];
+    streamChunks = ["One sentence. "]; // boundary cuts cleanly, no tail text
+    await collect(fastPipeline({ text: "hi" }));
+    expect(ttsMock.calls).toEqual(["One sentence."]);
+  });
+
+  it("TTS: yields multiple audio_chunk events per sentence when synth returns multiple chunks", async () => {
+    ttsMock.engine = "elevenlabs";
+    ttsMock.chunks = [new Uint8Array([1]), new Uint8Array([2]), new Uint8Array([3])];
+    streamChunks = ["One sentence."];
+    const events = await collect(fastPipeline({ text: "hi" })) as any[];
+    const audio = events.filter((e) => e.type === "audio_chunk");
+    expect(audio).toHaveLength(3);
+  });
+
+  it("TTS: done is still the last event when audio is present", async () => {
+    ttsMock.engine = "elevenlabs";
+    ttsMock.chunks = [new Uint8Array([1, 2])];
+    streamChunks = ["Hello world."];
+    const events = await collect(fastPipeline({ text: "hi" })) as any[];
+    expect(events[events.length - 1]).toMatchObject({ type: "done" });
+  });
+
+  it("TTS: synthesis errors are swallowed, text response still completes", async () => {
+    ttsMock.engine = "elevenlabs";
+    ttsMock.shouldThrow = true;
+    streamChunks = ["Hello world."];
+    const events = await collect(fastPipeline({ text: "hi" })) as any[];
+    // No error event, has llm_chunks, ends with done.
+    expect(events.some((e) => e.type === "error")).toBe(false);
+    expect(events.some((e) => e.type === "llm_chunk")).toBe(true);
+    expect(events[events.length - 1]).toMatchObject({ type: "done" });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -492,6 +602,7 @@ describe("POST /query/fast — HTTP endpoint", () => {
     streamChunks = ["Hello", " world"];
     whisperMock.reset();
     whisperMock.result = "transcribed from audio";
+    ttsMock.reset();
     fakeGuideResponse = {
       steps: [
         {

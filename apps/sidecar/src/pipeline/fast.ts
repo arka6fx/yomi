@@ -4,6 +4,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import type { FastQueryRequest, GuideElement, SseEvent } from "@yomi/shared";
 import { generateGuide } from "./visual-guide.js";
 import { transcribe } from "../speech/transcribe.js";
+import { synthesize, resolveTts } from "./tts.js";
 
 const MODEL = process.env.FAST_PATH_MODEL || "claude-haiku-4-5-20251001";
 
@@ -21,6 +22,46 @@ const ANSWER_SYSTEM_PROMPT = `You are a helpful desktop AI assistant.
 You see the user's screen and hear their voice.
 Answer their question concisely in 1-3 sentences.
 If they ask you to show them how to do something, say "I'll guide you through this" and wait for guide mode.`;
+
+// Tiny single-consumer queue so multiple async producers (LLM text + N concurrent
+// TTS streams) can interleave events into one async generator.
+class EventQueue {
+  private events: SseEvent[] = [];
+  private waiter: (() => void) | null = null;
+  private closed = false;
+
+  push(ev: SseEvent): void {
+    this.events.push(ev);
+    this.waiter?.();
+    this.waiter = null;
+  }
+
+  close(): void {
+    this.closed = true;
+    this.waiter?.();
+    this.waiter = null;
+  }
+
+  async *drain(): AsyncGenerator<SseEvent> {
+    while (true) {
+      if (this.events.length > 0) {
+        yield this.events.shift()!;
+      } else if (this.closed) {
+        return;
+      } else {
+        await new Promise<void>((r) => { this.waiter = r; });
+      }
+    }
+  }
+}
+
+// Sentence boundary: punctuation followed by whitespace. Returns the
+// length-of-prefix that includes the punctuation, or -1 if no boundary.
+function findSentenceEnd(buf: string): number {
+  const m = buf.match(/[.!?]\s/);
+  if (!m || m.index === undefined) return -1;
+  return m.index + 1;
+}
 
 async function* answerPipeline(
   text: string,
@@ -50,10 +91,53 @@ async function* answerPipeline(
     maxTokens: 800,
   });
 
-  for await (const chunk of result.textStream) {
-    if (chunk) yield { type: "llm_chunk", text: chunk };
+  const ttsEnabled = resolveTts() !== "none";
+  const queue = new EventQueue();
+  const ttsTasks: Promise<void>[] = [];
+
+  async function speakSentence(sentence: string): Promise<void> {
+    const trimmed = sentence.trim();
+    if (!trimmed) return;
+    try {
+      for await (const audio of synthesize(trimmed)) {
+        queue.push({
+          type: "audio_chunk",
+          base64: Buffer.from(audio).toString("base64"),
+        });
+      }
+    } catch (err) {
+      // Audio failure should never kill the text response.
+      console.warn("[yomi/tts] synthesis failed:", err);
+    }
   }
 
+  const producer = (async () => {
+    let buffer = "";
+    for await (const chunk of result.textStream) {
+      if (!chunk) continue;
+      queue.push({ type: "llm_chunk", text: chunk });
+      if (!ttsEnabled) continue;
+      buffer += chunk;
+      let cutAt = findSentenceEnd(buffer);
+      while (cutAt !== -1) {
+        const sentence = buffer.slice(0, cutAt);
+        buffer = buffer.slice(cutAt + 1);
+        ttsTasks.push(speakSentence(sentence));
+        cutAt = findSentenceEnd(buffer);
+      }
+    }
+    if (ttsEnabled && buffer.trim().length > 0) {
+      ttsTasks.push(speakSentence(buffer));
+    }
+    await Promise.all(ttsTasks);
+  })();
+
+  producer.then(() => queue.close(), (err) => {
+    queue.push({ type: "error", message: err instanceof Error ? err.message : String(err) });
+    queue.close();
+  });
+
+  yield* queue.drain();
   yield { type: "done" };
 }
 
