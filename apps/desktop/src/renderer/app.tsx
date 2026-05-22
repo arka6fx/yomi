@@ -83,9 +83,10 @@ function ResponseCard({
 const App: React.FC = () => {
   const { hotkeyState, responseText, error, handleSseEvent, setHotkeyState, reset } = useYomiStore()
 
-  const streamRef    = useRef<MediaStream | null>(null)
-  const processorRef = useRef<ScriptProcessorNode | null>(null)
-  const ctxRef       = useRef<AudioContext | null>(null)
+  const streamRef        = useRef<MediaStream | null>(null)
+  const processorRef     = useRef<AudioWorkletNode | null>(null)
+  const ctxRef           = useRef<AudioContext | null>(null)
+  const workletReadyRef  = useRef<Promise<void> | null>(null)
 
   // Wire IPC: SSE events and hotkey state from main process
   useEffect(() => {
@@ -93,6 +94,39 @@ const App: React.FC = () => {
     const cleanState = window.yomi.onStateChange(setHotkeyState)
     return () => { cleanEvent(); cleanState() }
   }, [handleSseEvent, setHotkeyState])
+
+  // Create AudioContext + load the PCM worklet processor once on mount.
+  // Inline blob avoids needing a separate bundled worklet file in Vite.
+  useEffect(() => {
+    const ctx = new AudioContext({ sampleRate: 16000 })
+    ctxRef.current = ctx
+
+    const workletCode = `
+      class PCMProcessor extends AudioWorkletProcessor {
+        process(inputs) {
+          const input = inputs[0] && inputs[0][0]
+          if (input && input.length > 0) {
+            // Copy: input buffer is reused on the next process() call
+            const copy = new Float32Array(input)
+            this.port.postMessage(copy.buffer, [copy.buffer])
+          }
+          return true
+        }
+      }
+      registerProcessor('pcm-processor', PCMProcessor)
+    `
+    const blob = new Blob([workletCode], { type: "application/javascript" })
+    const blobUrl = URL.createObjectURL(blob)
+    workletReadyRef.current = ctx.audioWorklet
+      .addModule(blobUrl)
+      .finally(() => URL.revokeObjectURL(blobUrl))
+
+    return () => {
+      ctx.close().catch(() => {})
+      ctxRef.current = null
+      workletReadyRef.current = null
+    }
+  }, [])
 
   // Acquire mic on mount — keep stream alive; only capture during listening
   useEffect(() => {
@@ -104,26 +138,44 @@ const App: React.FC = () => {
 
   // Start/stop PCM streaming when hotkey state changes
   useEffect(() => {
-    if (hotkeyState === "listening") {
+    if (hotkeyState !== "listening") {
+      processorRef.current?.disconnect()
+      processorRef.current = null
+      return
+    }
+
+    let cancelled = false
+    let source: MediaStreamAudioSourceNode | null = null
+    let processor: AudioWorkletNode | null = null
+
+    ;(async () => {
+      await workletReadyRef.current
+      if (cancelled) return
+
       const stream = streamRef.current
-      if (!stream) return
-      const ctx = new AudioContext({ sampleRate: 16000 })
-      ctxRef.current = ctx
-      const source    = ctx.createMediaStreamSource(stream)
-      // ScriptProcessorNode is deprecated but universally supported without AudioWorklet complexity
-      const processor = ctx.createScriptProcessor(4096, 1, 1)
-      processor.onaudioprocess = (e) => {
-        const pcm = e.inputBuffer.getChannelData(0)
-        window.yomi.sendAudioChunk(pcm.buffer.slice(0) as ArrayBuffer, 16000)
+      const ctx = ctxRef.current
+      if (!stream || !ctx) return
+
+      // Chrome autoplay policy: resume if suspended (hotkey counts as user gesture)
+      if (ctx.state === "suspended") await ctx.resume()
+      if (cancelled) return
+
+      source = ctx.createMediaStreamSource(stream)
+      processor = new AudioWorkletNode(ctx, "pcm-processor")
+      processor.port.onmessage = (e) => {
+        window.yomi.sendAudioChunk(e.data as ArrayBuffer, 16000)
       }
       source.connect(processor)
+      // Processor must be connected for process() to run; outputs are silent.
       processor.connect(ctx.destination)
       processorRef.current = processor
-    } else {
-      processorRef.current?.disconnect()
-      ctxRef.current?.close()
+    })()
+
+    return () => {
+      cancelled = true
+      source?.disconnect()
+      processor?.disconnect()
       processorRef.current = null
-      ctxRef.current       = null
     }
   }, [hotkeyState])
 
