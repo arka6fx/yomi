@@ -1,4 +1,4 @@
-# Spec 13 — Desktop: UI
+# Spec 04 — Desktop: UI
 
 ## Purpose
 
@@ -59,12 +59,15 @@ Start capturing only when state transitions to `listening`. `ScriptProcessorNode
 
 ```ts
 import type { SseEvent } from "@yomi/shared"
+
+type HotkeyState = "idle" | "listening" | "processing"
+
 declare global {
   interface Window {
     yomi: {
       sendAudioChunk(pcm: ArrayBuffer, sampleRate: number): void
       onEvent(cb: (e: SseEvent) => void): () => void
-      onState(cb: (s: string) => void): () => void
+      onStateChange(cb: (s: HotkeyState) => void): () => void
     }
   }
 }

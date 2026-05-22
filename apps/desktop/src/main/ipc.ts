@@ -22,11 +22,11 @@ export function initIpc(
     onListenStop: async () => {
       const chunks = pcmChunks.splice(0) // drain accumulator for this cycle
       try {
-        const [wavBuffer, screenshotB64] = await Promise.all([
-          Promise.resolve(buildWav(chunks, capturedSampleRate)),
+        const wav = buildWav(chunks, capturedSampleRate)
+        const [transcript, screenshotB64] = await Promise.all([
+          transcribe(wav, sidecar),
           captureScreen(),
         ])
-        const transcript = await transcribe(wavBuffer)
         await streamQuery(sidecar, overlayWin, transcript, screenshotB64)
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error"
@@ -74,19 +74,16 @@ function buildWav(chunks: Float32Array[], sampleRate: number): Buffer {
   return Buffer.concat([header, data])
 }
 
-// ElevenLabs SDK v0.17 has no speechToText method — use raw fetch
-async function transcribe(wav: Buffer): Promise<string> {
-  const key = process.env.ELEVENLABS_API_KEY
-  if (!key) throw new Error("ELEVENLABS_API_KEY not set — STT unavailable")
+// STT is handled by the sidecar — it tries ElevenLabs then falls back to local Whisper
+async function transcribe(wav: Buffer, sidecar: SidecarManager): Promise<string> {
   const form = new FormData()
   form.append("audio", new Blob([new Uint8Array(wav)], { type: "audio/wav" }), "audio.wav")
-  form.append("model_id", "scribe_v1")
-  const res = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
+  const res = await fetch(`${sidecar.baseUrl}/stt`, {
     method: "POST",
-    headers: { "xi-api-key": key },
+    headers: { "x-sidecar-secret": sidecar.secret },
     body: form,
   })
-  if (!res.ok) throw new Error(`ElevenLabs STT ${res.status}`)
+  if (!res.ok) throw new Error(`Sidecar STT ${res.status}`)
   return ((await res.json()) as { text: string }).text
 }
 
