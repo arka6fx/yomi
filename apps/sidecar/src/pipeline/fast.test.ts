@@ -15,20 +15,16 @@
  * up the mocked factories.
  */
 
+import { whisperMock } from "../speech/__test-mocks.js";
 import { describe, it, expect, beforeEach, mock } from "bun:test";
 
 // ---------------------------------------------------------------------------
 // Shared spy state — updated by each mock factory so tests can inspect calls
 // ---------------------------------------------------------------------------
 
-let lastAnthropicOpts: Record<string, unknown> = {};
 let lastOpenAIOpts: Record<string, unknown> = {};
 let anthropicCallCount = 0;
 let openAICallCount = 0;
-
-// The fake model object returned by both provider factories. Tests can
-// swap `fakeModelId` to simulate a different model string.
-let fakeModelId = "claude-haiku-4-5-20251001";
 
 // The text chunks that the mocked streamText will yield.
 let streamChunks: string[] = ["Hello", " world", "!"];
@@ -71,9 +67,8 @@ mock.module("ai", () => ({
 }));
 
 mock.module("@ai-sdk/anthropic", () => ({
-  createAnthropic: (opts: Record<string, unknown>) => {
+  createAnthropic: (_opts: Record<string, unknown>) => {
     anthropicCallCount++;
-    lastAnthropicOpts = opts ?? {};
     return (modelId: string) => ({ provider: "anthropic", modelId });
   },
 }));
@@ -151,12 +146,14 @@ function postFast(
   if (secret !== null) {
     headers["x-sidecar-secret"] = secret;
   }
-  return app.fetch(
-    new Request("http://localhost/query/fast", {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-    }),
+  return Promise.resolve(
+    app.fetch(
+      new Request("http://localhost/query/fast", {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+      }),
+    ),
   );
 }
 
@@ -169,11 +166,9 @@ describe("fastPipeline — generator", () => {
     // Reset spy counters and defaults before each test.
     anthropicCallCount = 0;
     openAICallCount = 0;
-    lastAnthropicOpts = {};
     lastOpenAIOpts = {};
     lastStreamTextMessages = [];
     streamChunks = ["Hello", " world", "!"];
-    fakeModelId = "claude-haiku-4-5-20251001";
     fakeGuideResponse = {
       steps: [
         {
@@ -194,6 +189,10 @@ describe("fastPipeline — generator", () => {
     delete process.env.OPENROUTER_API_KEY;
     delete process.env.FAST_PATH_MODEL;
     delete process.env.SIDECAR_SECRET;
+    // Reset STT spy state — Whisper branch is exercised (no ELEVENLABS_API_KEY).
+    delete process.env.ELEVENLABS_API_KEY;
+    whisperMock.reset();
+    whisperMock.result = "transcribed from audio";
   });
 
   // -------------------------------------------------------------------------
@@ -453,6 +452,31 @@ describe("fastPipeline — generator", () => {
     delete process.env.LLM_BASE_URL;
     delete process.env.OPENROUTER_API_KEY;
   });
+
+  // -------------------------------------------------------------------------
+  // audio_b64 path — STT integration
+  // -------------------------------------------------------------------------
+
+  it("audio_b64 with no text: emits transcript with STT result, then LLM chunks", async () => {
+    const dummyWav = Buffer.alloc(44).toString("base64");
+    const events = await collect(fastPipeline({ audio_b64: dummyWav })) as any[];
+    expect(events[0]).toMatchObject({ type: "transcript", text: "transcribed from audio" });
+    expect(events.some((e) => e.type === "llm_chunk")).toBe(true);
+  });
+
+  it("audio_b64 path: text field takes precedence over audio_b64 when both present", async () => {
+    const dummyWav = Buffer.alloc(44).toString("base64");
+    const events = await collect(fastPipeline({ text: "explicit text", audio_b64: dummyWav })) as any[];
+    expect(events[0]).toMatchObject({ type: "transcript", text: "explicit text" });
+  });
+
+  it("audio_b64 path: yields error event when STT throws", async () => {
+    whisperMock.shouldThrow = true;
+    const dummyWav = Buffer.alloc(44).toString("base64");
+    const events = await collect(fastPipeline({ audio_b64: dummyWav })) as any[];
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ type: "error", message: "whisper error" });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -464,7 +488,10 @@ describe("POST /query/fast — HTTP endpoint", () => {
     delete process.env.LLM_BASE_URL;
     delete process.env.OPENROUTER_API_KEY;
     delete process.env.FAST_PATH_MODEL;
+    delete process.env.ELEVENLABS_API_KEY;
     streamChunks = ["Hello", " world"];
+    whisperMock.reset();
+    whisperMock.result = "transcribed from audio";
     fakeGuideResponse = {
       steps: [
         {
@@ -667,6 +694,27 @@ describe("POST /query/fast — HTTP endpoint", () => {
       elements: [],
     });
     expect(guideEvents[0].instruction).toMatch(/screenshot/i);
+  });
+
+  // -------------------------------------------------------------------------
+  // audio_b64 path — HTTP
+  // -------------------------------------------------------------------------
+
+  it("returns 400 when both text and audio_b64 are absent", async () => {
+    delete process.env.SIDECAR_SECRET;
+    const res = await postFast({});
+    expect(res.status).toBe(400);
+    const body = await res.json() as any;
+    expect(body.error).toMatch(/text or audio_b64/);
+  });
+
+  it("accepts audio_b64 without text and streams transcript event", async () => {
+    delete process.env.SIDECAR_SECRET;
+    const dummyWav = Buffer.alloc(44).toString("base64");
+    const res = await postFast({ audio_b64: dummyWav });
+    expect(res.status).toBe(200);
+    const events = await parseSse(res) as any[];
+    expect(events[0]).toMatchObject({ type: "transcript", text: "transcribed from audio" });
   });
 
   // -------------------------------------------------------------------------
