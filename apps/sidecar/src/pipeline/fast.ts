@@ -1,22 +1,11 @@
 import { streamText } from "ai";
-import { createAnthropic } from "@ai-sdk/anthropic";
-import { createOpenAI } from "@ai-sdk/openai";
 import type { FastQueryRequest, GuideElement, SseEvent } from "@yomi/shared";
 import { generateGuide } from "./visual-guide.js";
 import { transcribe } from "../speech/transcribe.js";
 import { synthesize, resolveTts } from "./tts.js";
+import { createModel } from "./model.js";
 
 const MODEL = process.env.FAST_PATH_MODEL || "claude-haiku-4-5-20251001";
-
-function createModel() {
-  if (process.env.LLM_BASE_URL) {
-    return createOpenAI({
-      apiKey: process.env.OPENROUTER_API_KEY,
-      baseURL: process.env.LLM_BASE_URL,
-    })(MODEL);
-  }
-  return createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })(MODEL);
-}
 
 const ANSWER_SYSTEM_PROMPT = `You are a helpful desktop AI assistant.
 You see the user's screen and hear their voice.
@@ -77,7 +66,7 @@ async function* answerPipeline(
   }
 
   const result = streamText({
-    model: createModel(),
+    model: createModel(MODEL),
     messages: [
       {
         role: "system" as const,
