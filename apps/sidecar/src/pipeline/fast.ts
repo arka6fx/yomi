@@ -172,19 +172,29 @@ async function* guidePipeline(
   yield { type: "done" };
 }
 
+// Resolves user text from the text field or by transcribing audio_b64.
+// Exported so /query can normalise input before classifying intent, then pass
+// the resolved text back into fastPipeline (skipping a second STT call).
+export async function resolveText(
+  req: Pick<FastQueryRequest, "text" | "audio_b64">,
+): Promise<string | null> {
+  if (req.text?.trim()) return req.text.trim();
+  if (req.audio_b64) {
+    const wavBytes = Uint8Array.from(Buffer.from(req.audio_b64, "base64"));
+    return await transcribe(wavBytes);
+  }
+  return null;
+}
+
 export async function* fastPipeline(
   req: FastQueryRequest,
 ): AsyncGenerator<SseEvent> {
-  let text = req.text?.trim();
-
-  if (!text && req.audio_b64) {
-    const wavBytes = Uint8Array.from(Buffer.from(req.audio_b64, "base64"));
-    try {
-      text = await transcribe(wavBytes);
-    } catch (err) {
-      yield { type: "error", message: err instanceof Error ? err.message : "STT failed" };
-      return;
-    }
+  let text: string | null;
+  try {
+    text = await resolveText(req);
+  } catch (err) {
+    yield { type: "error", message: err instanceof Error ? err.message : "STT failed" };
+    return;
   }
 
   if (!text) {
