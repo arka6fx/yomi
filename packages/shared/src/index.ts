@@ -47,5 +47,10 @@ export type SseEvent =
   | { type: "audio_chunk"; base64: string }
   | { type: "visual_guide"; step: number; total_steps: number; instruction: string; elements: GuideElement[] }
   | { type: "router_decision"; path: IntentPath; confidence: number; reason: string; source: "heuristic" | "llm" }
+  // Agent-path events
+  | { type: "agent_text"; text: string }
+  | { type: "agent_tool_call"; tool: string; args: Record<string, unknown> }
+  | { type: "agent_tool_result"; tool: string; result: unknown }
+  | { type: "agent_step"; iteration: number; max: number }
   | { type: "done" }
   | { type: "error"; message: string }
