@@ -1,56 +1,140 @@
-# Spec 03 — Sidecar: Intent Router
+# Spec 07 — Sidecar: Intent Router
 
 ## Purpose
 
-Define the intent router that classifies every user request as either `fast` or `agent` at the start of each turn. The router is the first step in every query and determines which pipeline handles it.
+Define the intent router that classifies every user request as either `fast` or `agent` at the start of each turn. The router is the first step inside the sidecar for every query — it commits to a pipeline once, then hands off. It exists so we never lose prompt-cache or thrash tool vocabularies by switching models mid-turn.
 
 ## Invariants
 
-- The router runs at the START of every turn. It classifies once and commits — never switch mid-turn.
-- Default to fast path on ambiguity (bias toward latency).
-- The router call must complete in < 100ms (uses a small/fast model or heuristic).
+- Runs at the START of every turn. Classifies once, commits — never switch mid-turn.
+- Default to `fast` on ambiguity (bias toward latency; agent runs are expensive).
+- Heuristic path must complete in < 5ms; LLM-classifier path must complete in < 250ms p95.
+- The router lives in the sidecar only. The desktop shell never classifies — it just forwards the transcript + screenshot to the sidecar.
+- Router decision is logged with `reason` for later evaluation, but never persisted off-device beyond aggregated usage metering.
 
 ## Detailed Design
 
-### Intent Router
+### Decision contract
 
-A lightweight classification call made before routing. Uses a small/fast model or heuristic classifier.
+```ts
+// packages/shared/src/index.ts
+export type IntentPath = "fast" | "agent"
 
+export interface IntentClassification {
+  path: IntentPath
+  confidence: number   // 0..1
+  reason: string       // short human-readable explanation
+  source: "heuristic" | "llm"
+}
+
+export interface RouterInput {
+  text: string
+  screenshot_b64?: string
+  history?: { role: "user" | "assistant"; text: string }[]  // last 2 turns max
+}
 ```
-Input:  transcript + screenshot (if available) + last 2 turns of history
-Output: { path: "fast" | "agent", confidence: number, reason: string }
+
+### Two-stage router
+
+**Stage 1 — heuristic (always runs):**
+Cheap deterministic rules. Resolves the vast majority of turns without an LLM call. Returns a classification with `source: "heuristic"` and a confidence score derived from how many signals fired. If confidence ≥ `HEURISTIC_CONFIDENCE_THRESHOLD` (default `0.8`), commit and return.
+
+**Stage 2 — LLM classifier (only on low-confidence heuristic):**
+A forced-tool-call to a small model. Returns `source: "llm"`. Bounded by `ROUTER_LLM_TIMEOUT_MS` (default `250`); on timeout, fall back to the heuristic's tentative answer.
+
+### Heuristic signals
+
+**Strong `fast` signals (each +0.3):**
+- Starts with a question word: `what`, `how`, `why`, `when`, `where`, `who`, `which`.
+- Single-clause, ≤ 12 words.
+- Contains explanation/translation/summary verbs: `translate`, `summarise`, `summarize`, `explain`, `define`, `read`.
+
+**Strong `agent` signals (each +0.4):**
+- Explicit trigger: matches `/^yomi[, ]+agent[, ]?/i`.
+- Action verbs anywhere: `research`, `draft`, `send`, `schedule`, `book`, `create`, `open`, `file`, `download`, `install`, `deploy`, `commit`, `push`, `email`, `dm`, `message`.
+- Multi-step connectives: `and then`, `after that`, `also`, `finally`, `then `.
+- Length > 30 words (long requests are usually multi-step).
+
+**Tie-break:** if both sides have signals, take the higher score. If equal, return `fast` (invariant).
+
+The heuristic is pure and lives in `apps/sidecar/src/router/heuristic.ts` so it's trivially unit-testable.
+
+### LLM classifier (Vercel AI SDK)
+
+Uses the same provider abstraction as the fast pipeline (`@ai-sdk/anthropic` direct, or `@ai-sdk/openai` with `LLM_BASE_URL` for OpenRouter). Model defaults to `claude-haiku-4-5-20251001` — the cheapest Anthropic option and small enough to hit the latency budget.
+
+```ts
+import { generateObject } from "ai"
+import { z } from "zod"
+
+const RouterDecision = z.object({
+  path: z.enum(["fast", "agent"]),
+  confidence: z.number().min(0).max(1),
+  reason: z.string().max(120),
+})
+
+const result = await generateObject({
+  model: createModel(),  // shared with pipeline/fast.ts
+  schema: RouterDecision,
+  system: ROUTER_SYSTEM_PROMPT,
+  prompt: buildClassifierPrompt(input),
+  abortSignal: AbortSignal.timeout(ROUTER_LLM_TIMEOUT_MS),
+  maxTokens: 80,
+})
 ```
 
-**Fast path signals:**
-- Question form ("what", "how", "explain", "what does this mean")
-- Single-step request ("translate this", "summarise this text")
-- No verbs implying multi-step action ("research", "draft", "send", "schedule", "create")
+The classifier prompt is short and stable so it benefits from prompt caching when running against Anthropic directly. Cache the system prompt with `providerOptions.anthropic.cacheControl: { type: "ephemeral" }` the same way `pipeline/fast.ts` does.
 
-**Agent path signals:**
-- Action verbs: "research", "draft", "send", "schedule", "book", "create", "open", "file"
-- Explicit trigger: "Yomi agent, ..."
-- Multi-part: "and then", "also", "after that"
+### Wiring
 
-Default to fast path on ambiguity.
+The sidecar currently exposes only `/query/fast` (see `apps/sidecar/src/index.ts:28`). Once the agent pipeline lands (spec 08), the router becomes the entry point and chooses between the two pipelines. Until then, the router still runs on `/query/fast` requests so we can:
 
-### Router Implementation Options
+1. Log decisions and validate the heuristic against real traffic.
+2. Surface a `router_decision` SSE event to the desktop for UX (e.g. show a hint when a user request would be better served by the agent).
 
-**Option A — Dedicated classifier call (Phase 0):**
-A tiny LLM call (e.g. `claude-haiku`) with a forced tool call. Simple, accurate, but adds one round-trip (~150ms).
+```ts
+// apps/sidecar/src/index.ts (sketch)
+app.post("/query", authMiddleware, async (c) => {
+  const body = await c.req.json<FastQueryRequest>()
+  // normalize → run STT if needed (extract from pipeline/fast.ts) → classify
+  const decision = await classifyIntent({ text, screenshot_b64, history })
+  return streamSSE(c, async (stream) => {
+    await stream.writeSSE({ data: JSON.stringify({ type: "router_decision", ...decision }) })
+    const pipeline = decision.path === "agent" ? agentPipeline : fastPipeline
+    for await (const ev of pipeline(body)) {
+      await stream.writeSSE({ data: JSON.stringify(ev) })
+    }
+  })
+})
+```
 
-**Option B — First-token classification (Phase 1+):**
-Embed the classification in the first generated token of the pipeline model. Saves a round-trip. More complex to implement — requires streaming the first token as a routing decision before the actual response begins.
+`/query/fast` and `/query/agent` remain available for tests and for desktop-side overrides (e.g. a "force agent" toggle in dev).
 
-Start with Option A; migrate to Option B when latency becomes a measured bottleneck.
+### Implementation phases
+
+**Phase 0 (this spec):** heuristic only. The LLM classifier is wired but disabled via `ROUTER_LLM_ENABLED=false` until we measure heuristic accuracy against logged traffic.
+
+**Phase 1:** enable LLM classifier for low-confidence cases.
+
+**Phase 2 (deferred):** first-token classification embedded in the pipeline model. Saves a round-trip but couples router and response generation. Revisit only if the LLM classifier turns into a measurable bottleneck.
 
 ## Files to change
 
-- `apps/sidecar/src/index.ts` — register router middleware before pipeline routes
+- `apps/sidecar/src/index.ts` — add `/query` route that calls the router, plus a `router_decision` SSE event passthrough.
+- `apps/sidecar/src/pipeline/fast.ts` — extract the STT-normalisation step so the router and the fast pipeline can share it (avoids running STT twice).
+- `packages/shared/src/index.ts` — add `IntentPath`, `IntentClassification`, `RouterInput`, and a new SSE variant `{ type: "router_decision", path, confidence, reason, source }`.
 
 ## Files to create
 
-- `apps/sidecar/src/router/intent.ts` — Intent router (classifies fast vs agent)
+- `apps/sidecar/src/router/intent.ts` — public `classifyIntent(input: RouterInput): Promise<IntentClassification>`; orchestrates heuristic → LLM fallback.
+- `apps/sidecar/src/router/heuristic.ts` — pure heuristic scorer.
+- `apps/sidecar/src/router/llm.ts` — `generateObject` classifier with timeout + abort handling.
+- `apps/sidecar/src/router/heuristic.test.ts` — table-driven tests covering the signal matrix and ambiguity tie-breaks.
+- `apps/sidecar/src/router/intent.test.ts` — integration test that mocks `generateObject` and verifies heuristic-skip, LLM-fallback, and timeout-fallback paths.
 
 ## Open Questions
 
-- Option B feasibility: can the first token reliably encode a routing decision without biasing the subsequent response? Requires testing with the chosen model.
+- Confidence threshold (`0.8` initial) needs tuning against logged real traffic before enabling the LLM stage.
+- Should the router consider the last 2 turns of history, or only the current transcript? History adds context but also adds tokens and latency. Current plan: pass `history` through the contract but ignore it in Phase 0.
+- Desktop UX for `router_decision`: silently log, or surface a "this looks like an agent task — run it in the background?" hint? Deferred to spec 04 follow-ups.
+- First-token classification (Option B) feasibility: needs an offline evaluation before we even prototype.
