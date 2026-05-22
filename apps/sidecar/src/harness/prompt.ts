@@ -1,11 +1,14 @@
 import { readFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { join } from "node:path"
+import { loadMemorySummary, loadMemoryIndex } from "../memory/loader.js"
 
 export interface PromptContext {
   userName?: string
   os?: string
   yomiMd?: string
+  memorySummary?: string
+  memoryIndex?: string
 }
 
 // Read ~/.yomi/yomi.md at call time; returns empty string if absent.
@@ -17,13 +20,29 @@ export async function loadYomiMd(): Promise<string> {
   }
 }
 
+// Load all always-preloaded memory files in parallel.
+export async function loadMemoryContext(): Promise<{ memorySummary: string; memoryIndex: string }> {
+  const [memorySummary, memoryIndex] = await Promise.all([loadMemorySummary(), loadMemoryIndex()])
+  return { memorySummary, memoryIndex }
+}
+
 // Resolve userName and os from env/process when not supplied by caller.
 function resolveCtx(ctx: PromptContext): Required<PromptContext> {
   return {
     userName: ctx.userName ?? process.env.USER ?? "user",
     os: ctx.os ?? process.platform,
     yomiMd: ctx.yomiMd ?? "",
+    memorySummary: ctx.memorySummary ?? "",
+    memoryIndex: ctx.memoryIndex ?? "",
   }
+}
+
+function buildMemoryBlock(memorySummary: string, memoryIndex: string): string {
+  if (!memorySummary && !memoryIndex) return ""
+  const parts: string[] = []
+  if (memoryIndex) parts.push(`<index>\n${memoryIndex.trim()}\n</index>`)
+  if (memorySummary) parts.push(`<summary>\n${memorySummary.trim()}\n</summary>`)
+  return `<memory>\n${parts.join("\n")}\n</memory>\n\n`
 }
 
 const FAST_EXAMPLES = `\
@@ -38,10 +57,9 @@ const AGENT_EXAMPLES = `\
 5. File operation: "move all screenshots to ~/Desktop/screenshots" → bash + confirm`
 
 export function buildFastPrompt(ctx: PromptContext): string {
-  const { userName, os, yomiMd } = resolveCtx(ctx)
-  const userCtx = yomiMd
-    ? `<user_context>\n${yomiMd}\n</user_context>\n\n`
-    : ""
+  const { userName, os, yomiMd, memorySummary, memoryIndex } = resolveCtx(ctx)
+  const userCtx = yomiMd ? `<user_context>\n${yomiMd}\n</user_context>\n\n` : ""
+  const memCtx = buildMemoryBlock(memorySummary, memoryIndex)
 
   return `\
 <identity>
@@ -50,7 +68,7 @@ You see their screen and hear their voice.
 Answer directly. Be brief. Ask only when blocked.
 </identity>
 
-${userCtx}<capabilities>
+${userCtx}${memCtx}<capabilities>
 You answer questions, explain what's on screen, or guide the user through a task.
 Tools available: look_at_screen, speak.
 </capabilities>
@@ -66,10 +84,9 @@ ${FAST_EXAMPLES}
 }
 
 export function buildAgentPrompt(ctx: PromptContext): string {
-  const { userName, os, yomiMd } = resolveCtx(ctx)
-  const userCtx = yomiMd
-    ? `<user_context>\n${yomiMd}\n</user_context>\n\n`
-    : ""
+  const { userName, os, yomiMd, memorySummary, memoryIndex } = resolveCtx(ctx)
+  const userCtx = yomiMd ? `<user_context>\n${yomiMd}\n</user_context>\n\n` : ""
+  const memCtx = buildMemoryBlock(memorySummary, memoryIndex)
 
   return `\
 <identity>
@@ -78,9 +95,9 @@ You see their screen, hear their voice, and act on their behalf.
 Resolve the user's intent directly. Be useful. Be brief. Ask only when blocked.
 </identity>
 
-${userCtx}<capabilities>
+${userCtx}${memCtx}<capabilities>
 You research, draft, file, and schedule — multi-step tasks run to completion.
-Tools: look_at_screen, bash (sandboxed), web_search, fetch_url, read_file, write_file, MCP servers.
+Tools: look_at_screen, bash (sandboxed), web_search, fetch_url, read_file, write_file, list_files, search, MCP servers.
 </capabilities>
 
 <examples>

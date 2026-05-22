@@ -4,17 +4,16 @@ import { generateGuide } from "./visual-guide.js";
 import { transcribe } from "../speech/transcribe.js";
 import { synthesize, resolveTts } from "./tts.js";
 import { createModel } from "./model.js";
-import { buildFastPrompt, loadYomiMd } from "../harness/prompt.js";
+import { buildFastPrompt, loadYomiMd, loadMemoryContext } from "../harness/prompt.js";
 
 const MODEL = process.env.FAST_PATH_MODEL || "claude-haiku-4-5-20251001";
 
-// Cached per-process; yomi.md is stable for the lifetime of a sidecar session.
-let cachedFastPrompt: string | null = null
+// yomi.md is stable per-session; memory files change after compaction so load fresh each turn.
+let cachedYomiMd: string | null = null
 async function getFastPrompt(): Promise<string> {
-  if (!cachedFastPrompt) {
-    cachedFastPrompt = buildFastPrompt({ yomiMd: await loadYomiMd() })
-  }
-  return cachedFastPrompt
+  if (cachedYomiMd === null) cachedYomiMd = await loadYomiMd()
+  const { memorySummary, memoryIndex } = await loadMemoryContext()
+  return buildFastPrompt({ yomiMd: cachedYomiMd, memorySummary, memoryIndex })
 }
 
 // Tiny single-consumer queue so multiple async producers (LLM text + N concurrent

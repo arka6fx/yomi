@@ -5,6 +5,10 @@ import { fastPipeline, resolveText } from "./pipeline/fast.js"
 import { agentPipeline } from "./pipeline/agent.js"
 import { transcribe } from "./stt.js"
 import { classifyIntent } from "./router/intent.js"
+import { initMemoryDir } from "./memory/loader.js"
+
+// Ensure ~/.yomi/ directory tree exists before serving any requests.
+initMemoryDir().catch(err => console.warn("[yomi] memory init failed:", err))
 
 const app = new Hono()
 
