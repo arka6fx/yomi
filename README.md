@@ -121,7 +121,7 @@ FAST_PATH_MODEL=llama-3.1-8b-instant
 | LLM SDK | Vercel AI SDK + `@ai-sdk/anthropic` + `@ai-sdk/openai` (OpenRouter compat) |
 | Speech | ElevenLabs STT + TTS (whisper.cpp local fallback) |
 | Backend | Hono on Bun |
-| Auth | Better Auth |
+| Auth | Better Auth — Google OAuth, GitHub OAuth |
 | DB | Postgres (Neon) + Drizzle ORM |
 | Billing | Stripe |
 | Desktop | Electron v1 |

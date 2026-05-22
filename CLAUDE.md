@@ -46,7 +46,7 @@ cd apps/desktop  && bun run dev   # Electron
 | Backend | Hono on Bun |
 | Database | Postgres — Neon (serverless) |
 | ORM | Drizzle |
-| Auth | Better Auth (Drizzle adapter, orgs plugin for Team tier) |
+| Auth | Better Auth (Drizzle adapter, orgs plugin for Team tier) — Google + GitHub OAuth |
 | Billing | Stripe |
 | LLM SDK | Vercel AI SDK (`ai` package) — unified interface for Anthropic, OpenAI, Groq, OpenRouter |
 | Speech STT | ElevenLabs STT (cloud); whisper.cpp (local/offline fallback) |

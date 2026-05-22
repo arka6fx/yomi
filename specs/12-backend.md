@@ -65,8 +65,8 @@ export const auth = betterAuth({
     organization(),           // Team tier: orgs + members + roles
   ],
   socialProviders: {
-    google: { clientId, clientSecret },
-    github: { clientId, clientSecret },
+    google: { clientId, clientSecret },   // GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET
+    github: { clientId, clientSecret },   // GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET
   },
   advanced: {
     customSession: async (session) => ({
