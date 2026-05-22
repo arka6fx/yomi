@@ -4,8 +4,9 @@ import { tmpdir } from "os"
 import { join } from "path"
 import { randomBytes } from "crypto"
 
-// base.en: ~75 MB, downloaded once by nodejs-whisper on first use
-const WHISPER_MODEL = "base.en"
+// Configurable via WHISPER_MODEL env var. small.en (~244 MB) is a good default
+// for accuracy; base.en (~75 MB) is faster but noticeably less accurate.
+const WHISPER_MODEL = process.env.WHISPER_MODEL ?? "small.en"
 
 // Writes to a temp file, runs whisper.cpp via subprocess, then cleans up.
 export async function transcribeWhisper(wav: Uint8Array): Promise<string> {
