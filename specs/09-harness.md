@@ -1,4 +1,4 @@
-# Spec 07 — Harness
+# Spec 09 — Harness
 
 ## Purpose
 
@@ -134,13 +134,15 @@ interface Hooks {
 
 **Default hook implementations:**
 
-`onPreToolUse`: check bash command against allowlist/denylist. Deny `rm -rf /`, `sudo rm`, etc.
+`onPreToolUse`: check bash command against denylist regexes. Deny `rm -rf /`, `sudo rm`, `curl|sh`, `chmod 777`. Stub exists in `harness/hooks.ts` as `preToolUse` — rename to match interface.
 
-`onPostToolUse`: if `result.tokens > TOOL_OUTPUT_MAX_TOKENS`, trim middle (keep first 30% + last 20% of content). Log trim.
+`onPostToolUse`: if output text > 16 000 chars (~4 000 tokens), trim middle (keep first 50% + last 30%). Log trim. Stub exists as `postToolUse` — rename.
 
-`onStop`: append one-line summary to today's session file at `~/.yomi/sessions/YYYY-MM-DD-dev.md`. Write scratchpad.
+`onStop`: append one-line summary to `~/.yomi/sessions/YYYY-MM-DD-dev.md`. Create file if absent.
 
-`onSessionEnd`: if `memory.md` approaches size threshold (default: 50KB), run compaction.
+`onSessionEnd`: if `~/.yomi/memory.md` > 50 KB, log a compaction-needed warning (actual compaction is spec 10).
+
+`onSessionStart` / `onUserPromptSubmit`: no-ops for now; hook points must exist for spec 10 to attach to.
 
 ### Anti-Hallucination / Runaway-Loop Guards
 
@@ -152,18 +154,31 @@ interface Hooks {
 
 ## Files to change
 
-- `apps/sidecar/src/pipeline/fast.ts` — system prompt for fast path
-- `apps/sidecar/src/pipeline/agent.ts` — system prompt + tools for agent path
+- `apps/sidecar/src/pipeline/fast.ts` — replace inline `ANSWER_SYSTEM_PROMPT` with `buildFastPrompt()` from `harness/prompt.ts`
+- `apps/sidecar/src/pipeline/agent.ts` — replace inline `AGENT_SYSTEM_PROMPT` with `buildAgentPrompt()` from `harness/prompt.ts`; wire `onStop` / `onSessionEnd` hooks
+- `apps/sidecar/src/harness/hooks.ts` — expand stub (from spec 08) with full `Hooks` interface: add `onSessionStart`, `onUserPromptSubmit`, `onStop` (session file append), `onSessionEnd` (compaction trigger); rename exported object fields to match the interface
 
 ## Files to create
 
-- `apps/sidecar/src/harness/prompt.ts` — System prompt template
-- `apps/sidecar/src/harness/tools.ts` — Tool schema definitions
-- `apps/sidecar/src/harness/hooks.ts` — Hook interface + default implementations
-- `apps/sidecar/src/harness/state-machine.ts` — Session lifecycle state machine
-- `apps/sidecar/src/harness/guards.ts` — Anti-hallucination guards (iteration cap, progress gate, trim, duplicate detection)
+- `apps/sidecar/src/harness/prompt.ts` — `buildFastPrompt(ctx)` and `buildAgentPrompt(ctx)` where `ctx = { userName, os, yomiMd }`. Returns string with `<identity>`, `<user_context>`, `<capabilities>`, `<examples>`, `<rules>` sections. Anthropic cache-control applied to system messages by callers.
+- `apps/sidecar/src/harness/tools.ts` — canonical tool-schema objects for `lookAtScreen`, `transcribe`, `speak` (fast path) and `bash`, `webSearch`, `fetchUrl`, `writeFile` (agent additions). Re-export from `tools/index.ts` where overlapping.
+- `apps/sidecar/src/harness/state-machine.ts` — `SessionState` enum + `SessionMachine` class with `transition(event)`. States: `IDLE → LISTENING → ROUTING → FAST_PIPELINE | AGENT_RUNNING → COMPACTING → IDLE`. Fires the `Hooks` callbacks at each boundary.
+- `apps/sidecar/src/harness/guards.ts` — `LoopGuards` class consumed by `agentPipeline`. Guards: iteration cap (hard stop at `MAX_ITERATIONS=20`), progress gate (check every 5 steps, break after 2 stalled checks), duplicate-tool detection (same name+args 3× in a row → break), tool-output trim (already in `hooks.postToolUse` — delegate there, don't duplicate).
+
+## Current Codebase State (as of spec 08)
+
+| File | Status |
+|---|---|
+| `apps/sidecar/src/harness/hooks.ts` | Stub — `preToolUse` + `postToolUse` only; no full `Hooks` interface |
+| `apps/sidecar/src/pipeline/fast.ts` | Uses inline `ANSWER_SYSTEM_PROMPT`; no harness template |
+| `apps/sidecar/src/pipeline/agent.ts` | Uses inline `AGENT_SYSTEM_PROMPT`; already imports `hooks` from harness |
+| `apps/sidecar/src/harness/prompt.ts` | Does not exist |
+| `apps/sidecar/src/harness/tools.ts` | Does not exist |
+| `apps/sidecar/src/harness/state-machine.ts` | Does not exist |
+| `apps/sidecar/src/harness/guards.ts` | Does not exist |
 
 ## Open Questions
 
 - Example selection: static set vs dynamically retrieved from memory based on the current task type.
+- Progress gate (guard #2): heuristic (count open sub-tasks in scratchpad) vs. small LLM call to classify progress. Heuristic preferred to avoid cost.
 - Hook persistence: hooks run in-process in the sidecar (Phase 2); consider out-of-process for isolation (Phase 3+).
