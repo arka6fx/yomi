@@ -33,8 +33,8 @@ app.post("/query/fast", async (c) => {
     return c.json({ error: "Invalid JSON body" }, 400)
   }
 
-  if (!body.text?.trim()) {
-    return c.json({ error: "text field is required" }, 400)
+  if (!body.text?.trim() && !body.audio_b64) {
+    return c.json({ error: "text or audio_b64 field is required" }, 400)
   }
 
   return streamSSE(c, async (stream) => {

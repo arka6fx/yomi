@@ -14,6 +14,7 @@ export interface GuideResponse {
 
 export interface FastQueryRequest {
   text?: string
+  audio_b64?: string       // base64-encoded WAV; sidecar runs STT before LLM
   screenshot_b64?: string
   mode?: "answer" | "guide"
 }
