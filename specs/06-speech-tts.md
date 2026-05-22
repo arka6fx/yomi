@@ -1,4 +1,4 @@
-# Spec 05 — Speech: TTS
+# Spec 06 — Speech: TTS
 
 ## Purpose
 
@@ -89,6 +89,8 @@ function resolveTts(): TtsEngine {
 
 ### Sentence-Boundary TTS
 
+The fast pipeline (`apps/sidecar/src/pipeline/fast.ts`) already streams `llm_chunk` events and `ANSWER_SYSTEM_PROMPT` constrains responses to 1-3 sentences. TTS hooks in between the existing `result.textStream` loop and the `llm_chunk` yield: buffer chunks, flush at each sentence boundary into `queueTts`, and emit the resulting audio as `audio_chunk` SSE events (already defined in `packages/shared/src/index.ts`).
+
 ```typescript
 let buffer = ""
 for await (const chunk of llmStream) {
@@ -102,6 +104,8 @@ for await (const chunk of llmStream) {
 }
 if (buffer.length > 0) queueTts(buffer)
 ```
+
+`queueTts` runs synthesis for the resolved engine and yields `{ type: "audio_chunk", base64 }` for each output chunk, in parallel with the `llm_chunk` text stream so the desktop UI can render text and play audio together.
 
 ### Latency Budget (TTS portion)
 
@@ -121,7 +125,8 @@ if (buffer.length > 0) queueTts(buffer)
 
 ## Files to change
 
-- `apps/sidecar/src/pipeline/fast.ts` — integrate TTS into fast pipeline
+- `apps/sidecar/src/pipeline/fast.ts` — sentence-boundary buffer around the existing `textStream` loop in `answerPipeline`; emit `audio_chunk` events alongside `llm_chunk`
+- `apps/sidecar/src/pipeline/fast.test.ts` — extend mocks to assert TTS chunks are yielded on sentence boundaries
 
 ## Open Questions
 
