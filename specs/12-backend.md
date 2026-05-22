@@ -1,4 +1,4 @@
-# Spec 09 — Cloud Backend
+# Spec 12 — Cloud Backend
 
 ## Purpose
 
@@ -53,6 +53,8 @@ GET  /api/billing/subscription        Current subscription + usage this period
 PUT  /api/memory/:path                Upload/update a memory blob
 GET  /api/memory/:path                Download a memory blob
 GET  /api/memory                      List all blobs (path + hash + updated_at)
+  Note: DB stores metadata only (path, content_hash, size_bytes). Actual content
+  lives in object storage (R2 or S3-compatible). Phase 3 adds storage adapter.
 ```
 
 ### Better Auth Configuration
@@ -88,7 +90,7 @@ app.post("/api/llm/stream", authenticate, rateLimit, async (c) => {
   const user = c.get("user")
 
   // Route to provider
-  const provider = resolveProvider(model)   // anthropic | openrouter | groq
+  const provider = resolveProvider(model)   // anthropic | openrouter
 
   // Meter BEFORE streaming (estimate input tokens)
   const inputTokens = estimateTokens(messages)
@@ -112,11 +114,24 @@ app.post("/api/llm/stream", authenticate, rateLimit, async (c) => {
 ```
 
 **Provider resolution:**
+
+OpenRouter is accessed via `@ai-sdk/openai` with a custom base URL — not a separate SDK package.
+Groq requires adding `@ai-sdk/groq` to `apps/backend/package.json` before enabling.
+
 ```typescript
+import { createAnthropic } from "@ai-sdk/anthropic"
+import { createOpenAI } from "@ai-sdk/openai"
+
+const anthropic = createAnthropic({ apiKey: process.env["ANTHROPIC_API_KEY"] })
+// OpenRouter: any model via @ai-sdk/openai + LLM_BASE_URL
+const openrouter = createOpenAI({
+  baseURL: process.env["LLM_BASE_URL"] ?? "https://openrouter.ai/api/v1",
+  apiKey: process.env["OPENROUTER_API_KEY"],
+})
+
 function resolveProvider(model: string) {
   if (model.startsWith("claude-")) return anthropic
   if (model.includes("/")) return openrouter   // e.g. "anthropic/claude-haiku-4-5"
-  if (model.startsWith("llama-") || model.startsWith("mixtral-")) return groq
   return anthropic  // default
 }
 ```
@@ -155,24 +170,48 @@ app.post("/api/billing/webhook", async (c) => {
 })
 ```
 
+## Environment Variables
+
+All secrets live in the backend. These must be set:
+
+```
+DATABASE_URL              Neon serverless Postgres URL
+BETTER_AUTH_SECRET        Random secret for Better Auth session signing
+BETTER_AUTH_URL           https://api.yomi.app (or http://localhost:3001 in dev)
+GOOGLE_CLIENT_ID          OAuth — Google
+GOOGLE_CLIENT_SECRET
+GITHUB_CLIENT_ID          OAuth — GitHub
+GITHUB_CLIENT_SECRET
+ANTHROPIC_API_KEY         Primary LLM key
+OPENROUTER_API_KEY        Optional — OpenRouter fallback
+LLM_BASE_URL              https://openrouter.ai/api/v1 (set together with OPENROUTER_API_KEY)
+ELEVENLABS_API_KEY        STT + TTS proxy
+STRIPE_SECRET_KEY         Stripe server-side key
+STRIPE_WEBHOOK_SECRET     Stripe webhook signing secret
+ENCRYPTION_KEY            32-byte hex key for AES-256-GCM (encrypt OAuth tokens in DB)
+SIDECAR_SECRET            Shared secret for desktop ↔ backend calls
+```
+
+`@yomi/db` exports `db` (Drizzle client), `encryptTokens`, `decryptTokens` — import from there.
+
 ## Files to change
 
 - `apps/backend/src/index.ts` — Hono app entry point, route registration
 
 ## Files to create
 
-- `apps/backend/src/auth.ts` — Better Auth configuration + middleware
+- `apps/backend/src/auth.ts` — Better Auth configuration + `authenticate` middleware
+- `apps/backend/src/providers.ts` — LLM provider resolution (anthropic / openrouter via @ai-sdk/openai)
 - `apps/backend/src/routes/llm.ts` — POST /api/llm/stream proxy
 - `apps/backend/src/routes/stt.ts` — POST /api/stt proxy
 - `apps/backend/src/routes/usage.ts` — POST /api/usage
-- `apps/backend/src/routes/billing.ts` — Stripe checkout, portal, webhook
+- `apps/backend/src/routes/billing.ts` — Stripe checkout, portal, webhook, helpers
 - `apps/backend/src/routes/auth-routes.ts` — Device-code flow for desktop
-- `apps/backend/src/routes/memory.ts` — Memory sync (Phase 3+)
-- `apps/backend/src/middleware/auth.ts` — JWT verification middleware
-- `apps/backend/src/middleware/rate-limit.ts` — Per-user rate limiting
-- `apps/backend/src/providers.ts` — LLM provider resolution (anthropic, openrouter, groq)
+- `apps/backend/src/routes/memory.ts` — Memory sync (Phase 3+, stub only for now)
+- `apps/backend/src/middleware/rate-limit.ts` — Per-user in-memory token bucket
 
 ## Open Questions
 
 - Rate limiting: per-user token bucket in memory (Phase 3) vs Redis (Phase 4+). Start in-memory.
 - STT proxy: proxy ElevenLabs STT through the backend (same key management pattern as LLM) OR allow the sidecar to call ElevenLabs directly with a restricted key. Lean toward proxy for uniform key management.
+- Groq support: `@ai-sdk/groq` not yet in `package.json`. Add only if Groq models are needed.
