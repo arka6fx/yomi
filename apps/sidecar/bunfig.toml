@@ -1,5 +1,4 @@
 [test]
-preload = []
 
 [test.env]
 SIDECAR_SECRET = "test-secret"

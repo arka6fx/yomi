@@ -3,6 +3,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import type { FastQueryRequest, GuideElement, SseEvent } from "@yomi/shared";
 import { generateGuide } from "./visual-guide.js";
+import { transcribe } from "../speech/transcribe.js";
 
 const MODEL = process.env.FAST_PATH_MODEL || "claude-haiku-4-5-20251001";
 
@@ -90,7 +91,18 @@ async function* guidePipeline(
 export async function* fastPipeline(
   req: FastQueryRequest,
 ): AsyncGenerator<SseEvent> {
-  const text = req.text?.trim();
+  let text = req.text?.trim();
+
+  if (!text && req.audio_b64) {
+    const wavBytes = Uint8Array.from(Buffer.from(req.audio_b64, "base64"));
+    try {
+      text = await transcribe(wavBytes);
+    } catch (err) {
+      yield { type: "error", message: err instanceof Error ? err.message : "STT failed" };
+      return;
+    }
+  }
+
   if (!text) {
     yield { type: "error", message: "No input text provided" };
     return;
