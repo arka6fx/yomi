@@ -4,36 +4,38 @@ import { SidecarManager } from "./sidecar"
 import { initHotkey } from "./hotkey"
 import { initIpc } from "./ipc"
 
-if (process.platform === "linux") {
-  app.commandLine.appendSwitch("ozone-platform-hint", "auto")
+// Transparent frameless windows need software compositing on some GPU/driver combos
+if (process.platform === "win32") {
+  app.commandLine.appendSwitch("enable-transparent-visuals")
+  app.commandLine.appendSwitch("disable-gpu-program-cache")
 }
 
 let overlayWin: BrowserWindow | null = null
 const sidecar = new SidecarManager()
 
 app.whenReady().then(async () => {
-  // Platform setup: tray, dock visibility
   if (process.platform === "darwin") {
     const { setupMac } = await import("./platform/mac")
     setupMac()
-  } else if (process.platform === "win32") {
+  } else {
     const { setupWindows } = await import("./platform/windows")
     setupWindows()
-  } else {
-    const { setupLinux } = await import("./platform/linux")
-    setupLinux()
   }
 
-  // Start sidecar and wait until healthy before opening the window
   try {
     await sidecar.start()
   } catch (err) {
-    console.error("[yomi] sidecar failed to start — retrying in 3s", err)
-    await new Promise((r) => setTimeout(r, 3000))
-    await sidecar.start()
+    if (process.env.YOMI_DEV === "true") {
+      console.warn("[yomi] sidecar not running in dev — start it separately: cd apps/sidecar && bun run dev")
+    } else {
+      console.error("[yomi] sidecar failed to start — retrying in 3s", err)
+      await new Promise((r) => setTimeout(r, 3000))
+      try { await sidecar.start() } catch (e) {
+        console.error("[yomi] sidecar retry also failed — continuing without sidecar", e)
+      }
+    }
   }
 
-  // Overlay window — frameless, transparent, always-on-top
   overlayWin = new BrowserWindow({
     width: 480,
     height: 200,
@@ -42,7 +44,10 @@ app.whenReady().then(async () => {
     alwaysOnTop: true,
     skipTaskbar: true,
     resizable: false,
-    show: false, // shown explicitly after setContentProtection
+    show: true,
+    backgroundColor: "#00000000",
+    hasShadow: false,
+    type: "tooltip",
     webPreferences: {
       preload: path.join(__dirname, "../preload/index.js"),
       contextIsolation: true,
@@ -50,33 +55,25 @@ app.whenReady().then(async () => {
     },
   })
 
-  // Must be called BEFORE win.show() — excludes overlay from screen recordings
   overlayWin.setContentProtection(true)
-  overlayWin.setVisibleOnAllWorkspaces(true) // visible across macOS Spaces
+  overlayWin.setVisibleOnAllWorkspaces(true)
 
   if (process.env.ELECTRON_RENDERER_URL) {
     overlayWin.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
     overlayWin.loadFile(path.join(__dirname, "../renderer/index.html"))
   }
-  overlayWin.once("ready-to-show", () => overlayWin!.show())
 
-  // Wire IPC bridge (audio chunks, STT, sidecar SSE)
   const { onListenStop } = initIpc(sidecar, overlayWin)
 
-  // Register global hotkeys (must be after whenReady)
   initHotkey({
     onStateChange: (s) => {
       overlayWin!.webContents.send("yomi:state", s)
-      if (process.platform === "linux") {
-        import("./platform/linux").then((m) => m.writeWaybar(s))
-      }
     },
     onListenStop,
   })
 })
 
-// macOS: keep process alive when all windows are hidden (tray-only app)
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit()
 })

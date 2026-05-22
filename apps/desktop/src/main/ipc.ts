@@ -91,7 +91,7 @@ function buildWav(chunks: Float32Array[], sampleRate: number): Buffer {
   return Buffer.concat([header, data])
 }
 
-// STT is handled by the sidecar — it tries ElevenLabs then falls back to local Whisper
+// STT proxied through sidecar to OpenAI Whisper
 async function transcribe(wav: Buffer, sidecar: SidecarManager): Promise<string> {
   const form = new FormData()
   form.append("audio", new Blob([new Uint8Array(wav)], { type: "audio/wav" }), "audio.wav")

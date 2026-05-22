@@ -27,7 +27,7 @@ You are a code quality mentor for the Yomi AI desktop buddy project (TypeScript 
 - **Backend:** `apps/backend/` — Hono on :3001 — auth, billing, LLM proxy
 - **Desktop:** `apps/desktop/` — Electron, NO AI logic
 - **Shared types:** `packages/shared/` — IPC contracts
-- **Stack:** Bun, Hono, Vercel AI SDK, Better Auth, Drizzle, ElevenLabs, Electron
+- **Stack:** Bun, Hono, Vercel AI SDK, Better Auth, Drizzle, OpenAI, Razorpay, Electron
 
 ## Core Quality Checklist
 

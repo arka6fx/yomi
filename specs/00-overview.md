@@ -15,13 +15,13 @@ Single source of truth for Yomi's identity, principles, and phase map. Every oth
 
 ### What is Yomi
 
-Cross-platform AI buddy (Mac menu bar, Windows tray, Linux/Omarchy Waybar) that routes requests between a fast linear pipeline and a background ReAct agent loop. The differentiating insight: fast responses and autonomous tasks have opposite latency budgets, so they need different architectures — but users want both.
+Cross-platform AI buddy (Mac menu bar, Windows tray) that routes requests between a fast linear pipeline and a background ReAct agent loop. The differentiating insight: fast responses and autonomous tasks have opposite latency budgets, so they need different architectures — but users want both.
 
 ### Moat
 
 | Advantage | Detail |
 |---|---|
-| Cross-platform | Mac menu bar + Windows tray + Linux/Omarchy Waybar |
+| Cross-platform | Mac menu bar + Windows tray |
 | Dual architecture | Router chooses fast linear pipeline OR ReAct agent loop per request |
 | Persistent memory | Filesystem notepad (`~/.yomi/`) — survives reboots, agent-curated |
 | Background agent | Autonomous tasks with ReAct loop + subagents |
@@ -45,11 +45,11 @@ Cross-platform AI buddy (Mac menu bar, Windows tray, Linux/Omarchy Waybar) that 
 
 | Phase | Scope | Weeks |
 |---|---|---|
-| 0 — Spike | hotkey → ElevenLabs STT → screenshot → 1 LLM call → ElevenLabs TTS | 1–2 |
+| 0 — Spike | hotkey → OpenAI Whisper STT → screenshot → 1 LLM call → OpenAI TTS | 1–2 |
 | 1 — Buddy | floating UI, tray/menubar shell, notepad init, prompt caching, permissions | 3–6 |
 | 2 — Agent | intent router, ReAct loop, hooks lifecycle, MCP (calendar, email, browser), subagents | 7–12 |
-| 3 — Accounts | Hono backend, Better Auth, Drizzle/Neon, Stripe, LLM proxy (Vercel AI SDK), cloud sync | 13–15 |
-| 4 — X-platform | Windows tray, Omarchy Waybar, Electron vs Tauri decision | 16–20 |
+| 3 — Accounts | Hono backend, Better Auth, Drizzle/Neon, Razorpay, LLM proxy (Vercel AI SDK), cloud sync | 13–15 |
+| 4 — X-platform | Windows tray, Electron vs Tauri decision | 16–20 |
 | 5 — Launch | Next.js landing, waitlist → download, pricing page, Discord | 21–22 |
 
 ## Files to change

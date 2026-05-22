@@ -12,13 +12,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^1.0.0",
     "@ai-sdk/openai": "^1.0.0",
     "@yomi/shared": "workspace:*",
     "ai": "^4.0.0",
-    "elevenlabs": "^0.17.0",
     "hono": "^4.5.0",
-    "nodejs-whisper": "^0.3.0"
+    "openai": "^4.0.0"
   },
   "devDependencies": {
     "@types/bun": "^1.1.0",

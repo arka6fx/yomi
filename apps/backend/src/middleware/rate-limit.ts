@@ -6,9 +6,9 @@ const buckets = new Map<string, { tokens: number; lastRefill: number }>()
 // Requests per minute by plan
 const LIMITS: Record<string, number> = {
   free: 10,
-  pro: 60,
-  max: 120,
-  team: 120,
+  basic: 30,
+  standard: 60,
+  genesis: 120,
 }
 
 export async function rateLimit(c: Context, next: Next) {

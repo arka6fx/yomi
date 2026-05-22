@@ -28,7 +28,7 @@ export const users = pgTable("user", {
 export const devices = pgTable("devices", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  os: text("os").notNull(),           // "macos" | "windows" | "linux"
+  os: text("os").notNull(),           // "macos" | "windows"
   appVersion: text("app_version").notNull(),
   lastSeen: timestamp("last_seen").notNull().defaultNow(),
 })
@@ -36,9 +36,9 @@ export const devices = pgTable("devices", {
 export const subscriptions = pgTable("subscriptions", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id),
-  stripeCustomerId: text("stripe_customer_id").notNull(),
-  stripeSubId: text("stripe_sub_id"),             // null = free tier
-  plan: text("plan").notNull().default("free"),   // "free" | "pro" | "max" | "team"
+  razorpayCustomerId: text("razorpay_customer_id").notNull().default(""),
+  razorpaySubId: text("razorpay_sub_id"),
+  plan: text("plan").notNull().default("free"),   // "free" | "basic" | "standard" | "genesis"
   status: text("status").notNull().default("active"),
   currentPeriodEnd: timestamp("current_period_end"),
   cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),

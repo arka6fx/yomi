@@ -1,5 +1,4 @@
 import { generateObject, jsonSchema } from "ai"
-import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
 import type { IntentClassification, RouterInput } from "@yomi/shared"
 
@@ -20,16 +19,15 @@ const RouterDecision = jsonSchema<{ path: "fast" | "agent"; confidence: number; 
 })
 
 const TIMEOUT_MS = parseInt(process.env.ROUTER_LLM_TIMEOUT_MS || "250", 10)
-const MODEL = process.env.FAST_PATH_MODEL || "claude-haiku-4-5-20251001"
+const MODEL = process.env.FAST_PATH_MODEL || "gpt-4.1-mini"
+
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  baseURL: process.env.OPENAI_BASE_URL,
+})
 
 function createModel() {
-  if (process.env.LLM_BASE_URL) {
-    return createOpenAI({
-      apiKey: process.env.OPENROUTER_API_KEY,
-      baseURL: process.env.LLM_BASE_URL,
-    })(MODEL)
-  }
-  return createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })(MODEL)
+  return openai(MODEL)
 }
 
 function buildPrompt(input: RouterInput): string {

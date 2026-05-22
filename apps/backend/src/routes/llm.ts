@@ -9,9 +9,9 @@ import { resolveProvider } from "../providers.js"
 // Plan daily token hard/soft caps
 const PLAN_CAPS: Record<string, { soft: number; hard: number }> = {
   free: { soft: 50_000, hard: 100_000 },
-  pro: { soft: 1_000_000, hard: 2_000_000 },
-  max: { soft: 5_000_000, hard: 10_000_000 },
-  team: { soft: 5_000_000, hard: 10_000_000 },
+  basic: { soft: 500_000, hard: 1_000_000 },
+  standard: { soft: 2_000_000, hard: 5_000_000 },
+  genesis: { soft: 10_000_000, hard: 20_000_000 },
 }
 
 // Rough char-based token estimate (4 chars ≈ 1 token)

@@ -12,6 +12,10 @@ dist/
 out/
 build/
 
+# Cloudflare / OpenNext
+.open-next/
+.dev.vars
+
 # Turbo cache
 .turbo/
 

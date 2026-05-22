@@ -1,21 +1,21 @@
 # Yomi
 
-Cross-platform AI buddy that lives on your desktop. Sees your screen, hears your voice, and acts so you touch your laptop less.
+AI buddy that lives on your desktop. Sees your screen, hears your voice, and acts so you touch your laptop less.
 
-**Mac** (menu bar / notch) · **Windows** (system tray) · **Linux/Omarchy** (Waybar)
+**Mac** (menu bar / notch) · **Windows** (system tray)
 
 ---
 
 ## How it works
 
-Every request is routed to one of two architectures:
+Every request is routed to one of two pipelines:
 
 | Type | Path | Latency |
 |---|---|---|
 | Quick ask / screen Q&A | Linear pipeline: STT → screenshot → 1 LLM call → TTS | < 2 s |
 | Autonomous task | ReAct agent loop + subagents + MCP tools | seconds–minutes (background) |
 
-The **local sidecar** is the brain. The **Electron shell** is just capture + UI. LLM keys never touch the device.
+The **local sidecar** is the brain. The **Electron shell** is just capture + UI. LLM keys live only in the cloud backend, never on-device.
 
 ---
 
@@ -23,7 +23,7 @@ The **local sidecar** is the brain. The **Electron shell** is just capture + UI.
 
 ```
 apps/
-  backend/    Hono on Bun  — auth, billing, LLM proxy, usage metering
+  backend/    Hono on Bun  — auth, billing (Razorpay), LLM proxy, usage metering
   desktop/    Electron v1  — tray/menubar, hotkeys, screen+mic capture, floating UI
   landing/    Next.js 16   — marketing site + waitlist (Vercel)
   sidecar/    Bun service  — intent router, fast pipeline, ReAct loop, notepad memory
@@ -63,54 +63,56 @@ Individual apps run on:
 Copy `.env.example` → `.env`. Minimum keys to start:
 
 ```bash
-# No Claude subscription? Use OpenRouter instead:
-OPENROUTER_API_KEY=sk-or-...
-LLM_BASE_URL=https://openrouter.ai/api/v1
-
-# ElevenLabs for STT + TTS (optional — local whisper fallback works without it)
-ELEVENLABS_API_KEY=...
+# OpenAI (all AI routing uses OpenAI models)
+OPENAI_API_KEY=sk-...
 
 # Database (Neon free tier works)
 DATABASE_URL=postgres://...
+
+# Razorpay (billing)
+RAZORPAY_KEY_ID=rzp_...
+RAZORPAY_KEY_SECRET=...
 ```
 
-The LLM layer uses the **Vercel AI SDK** (`ai` package), so you can swap providers without changing code — OpenRouter, Anthropic, OpenAI, Groq all work.
+All AI routing — chat, reasoning, STT, TTS, image understanding — runs through OpenAI models via the Vercel AI SDK. No other providers are used.
 
 ---
 
-## LLM provider switching
+## Plans
 
-The sidecar uses `@ai-sdk/anthropic` by default, with OpenRouter as a fallback for testing any model. Switch providers via env vars — no code changes needed:
+| Plan | Price | Highlights |
+|---|---|---|
+| Free | $0 | Fast AI chat, basic memory, voice input, standard AI usage |
+| Basic | $4/mo | + Screenshot understanding, standard response priority |
+| Standard | $9/mo | + Faster responses, better memory, priority AI access, enhanced personalization |
+| Genesis | $19/mo | Advanced reasoning mode, premium voice, long-context, experimental features |
 
-```bash
-# Anthropic (direct)
-ANTHROPIC_API_KEY=sk-ant-...
-# unset LLM_BASE_URL
+Billing is handled by **Razorpay** (UPI, cards, international payments). Subscription management flows through webhook-verified payments.
 
-# OpenRouter (test any model, no direct subscription required)
-OPENROUTER_API_KEY=sk-or-...
-LLM_BASE_URL=https://openrouter.ai/api/v1
-FAST_PATH_MODEL=anthropic/claude-haiku-4-5       # or mistralai/mistral-7b-instruct
-AGENT_PATH_MODEL=anthropic/claude-sonnet-4-6
+---
 
-# Groq (ultra-fast, free tier available)
-GROQ_API_KEY=gsk_...
-LLM_BASE_URL=https://api.groq.com/openai/v1
-FAST_PATH_MODEL=llama-3.1-8b-instant
-```
+## AI model routing
+
+All requests are sent to OpenAI models by default:
+
+| Task | Model |
+|---|---|
+| Normal chat / assistant | `gpt-4.1-mini` |
+| Advanced reasoning | `gpt-4.1` |
+| Speech-to-text | `whisper-1` |
+| Voice output (TTS) | `gpt-4o-mini-tts` |
+| Image understanding | `gpt-4.1-mini` |
+| Image generation | `gpt-image-1` |
+
+Override via env vars: `FAST_PATH_MODEL`, `AGENT_PATH_MODEL`, `STT_MODEL`, `TTS_MODEL`.
 
 ---
 
 ## Speech
 
-**STT** is handled by the sidecar (`POST /stt`). It tries providers in order:
+**STT** uses OpenAI Whisper (`whisper-1`) via the sidecar (`POST /stt`). No local fallback — requires `OPENAI_API_KEY`.
 
-1. **ElevenLabs** (`scribe_v1`) — cloud, fast, requires `ELEVENLABS_API_KEY`
-2. **whisper.cpp** (`tiny.en`, via `nodejs-whisper`) — on-device, no API key needed; model downloads ~77 MB on first use to the local node_modules cache
-
-`ELEVENLABS_API_KEY` is optional — the local fallback works without it.
-
-**TTS** uses ElevenLabs streaming (`POST /v1/text-to-speech/:voice_id/stream`). Local TTS fallback (edge-tts / Piper) is planned for spec 06.
+**TTS** uses OpenAI (`gpt-4o-mini-tts`) with the Alloy voice. Configurable via `TTS_MODEL` and `TTS_ENGINE` env vars.
 
 ---
 
@@ -118,12 +120,12 @@ FAST_PATH_MODEL=llama-3.1-8b-instant
 
 | Layer | Choice |
 |---|---|
-| LLM SDK | Vercel AI SDK + `@ai-sdk/anthropic` + `@ai-sdk/openai` (OpenRouter compat) |
-| Speech | ElevenLabs STT + TTS (whisper.cpp local fallback) |
+| LLM SDK | Vercel AI SDK + `@ai-sdk/openai` |
+| Speech | OpenAI Whisper (STT) + OpenAI TTS |
 | Backend | Hono on Bun |
 | Auth | Better Auth — Google OAuth, GitHub OAuth |
 | DB | Postgres (Neon) + Drizzle ORM |
-| Billing | Stripe |
+| Billing | Razorpay |
 | Desktop | Electron v1 |
 | Landing | Next.js 16 (Vercel) |
 
@@ -150,26 +152,28 @@ Detailed design docs live in [`specs/`](./specs/), ordered by implementation seq
 
 | # | Doc | Contents |
 |---|---|---|
-| 00 | [00-overview](specs/00-overview.md) | Principles, moat, glossary — reference |
-| 01 | [01-architecture](specs/01-architecture.md) | 4-layer diagram, IPC contracts — reference |
+| 00 | [00-overview](specs/00-overview.md) | Principles, identity, invariants, phase map |
+| 01 | [01-architecture](specs/01-architecture.md) | Four-layer architecture, IPC contracts, data flows |
 | 02 | [02-sidecar-fast-pipeline](specs/02-sidecar-fast-pipeline.md) | Fast linear pipeline, Anthropic + caching, visual guidance |
-| 03 | [03-desktop-shell](specs/03-desktop-shell.md) | Electron main process, sidecar lifecycle, IPC bridge, hotkey |
-| 04 | [04-desktop-ui](specs/04-desktop-ui.md) | Floating overlay, Zustand store, audio capture, guide overlay |
-| 05 | [05-speech-stt](specs/05-speech-stt.md) | STT abstraction: ElevenLabs, whisper.cpp, VAD |
-| 06 | [06-speech-tts](specs/06-speech-tts.md) | TTS abstraction: ElevenLabs, edge-tts, Piper |
-| 07 | [07-sidecar-router](specs/07-sidecar-router.md) | Intent router (fast vs agent) |
-| 08 | [08-sidecar-agent](specs/08-sidecar-agent.md) | ReAct loop, tools, subagents, sandbox |
-| 09 | [09-harness](specs/09-harness.md) | System prompt, hooks, guards |
-| 10 | [10-memory](specs/10-memory.md) | Notepad (~/.yomi/), compaction, retrieval |
-| 11 | [11-database](specs/11-database.md) | Full Drizzle schema (Neon) |
-| 12 | [12-backend](specs/12-backend.md) | Hono routes, Better Auth, LLM proxy, metering |
-| 13 | [13-pricing](specs/13-pricing.md) | Plans, Stripe, metering logic |
+| 03 | [03-desktop-shell](specs/03-desktop-shell.md) | Electron main process, platform adapters, sidecar lifecycle, capture abstraction |
+| 04 | [04-desktop-ui](specs/04-desktop-ui.md) | Floating buddy window, status pill, settings, guide overlay |
+| 05 | [05-speech-stt](specs/05-speech-stt.md) | STT: ElevenLabs + whisper.cpp with streaming partials |
+| 06 | [06-speech-tts](specs/06-speech-tts.md) | TTS: ElevenLabs, edge-tts, Piper (three tiers) |
+| 07 | [07-sidecar-router](specs/07-sidecar-router.md) | Intent router classifying fast vs agent per turn |
+| 08 | [08-sidecar-agent](specs/08-sidecar-agent.md) | ReAct loop, tools, subagents, sandboxed bash |
+| 09 | [09-harness](specs/09-harness.md) | System prompt, tool schemas, state machine, hooks, guards |
+| 10 | [10-memory](specs/10-memory.md) | Filesystem notepad (~/.yomi/), compaction, retrieval |
+| 11 | [11-database](specs/11-database.md) | Drizzle schema, migrations, indexes, encryption |
+| 12 | [12-backend](specs/12-backend.md) | Hono routes, Better Auth, LLM proxy, metering, Stripe |
+| 13 | [13-pricing](specs/13-pricing.md) | Plans, Stripe integration, metering, cap enforcement |
+| 14 | [14-landing-page](specs/14-landing-page.md) | Marketing site + conversion funnel (Next.js 16, Vercel) |
+| 15 | [15-deploy](specs/15-deploy.md) | Backend → Cloudflare Workers, landing → Cloudflare Pages |
 
 ---
 
 ## Privacy
 
-- **Local-by-default:** STT and screen analysis run on-device; only the distilled prompt leaves.
+- **Local-by-default:** screen analysis runs on-device; only the distilled prompt leaves.
 - **Visible status:** tray/notch pill always shows when Yomi is listening or capturing.
 - **Per-app blocklist:** password managers and banking apps are never captured.
 - **Encrypted sync:** memory files encrypted in transit and at rest.

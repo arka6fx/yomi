@@ -15,14 +15,13 @@
  * up the mocked factories.
  */
 
-import { whisperMock } from "../speech/__test-mocks.js";
 import { describe, it, expect, beforeEach, mock } from "bun:test";
 
 // ---------------------------------------------------------------------------
 // TTS mock state — controls the mocked resolver below
 // ---------------------------------------------------------------------------
 
-type FakeTtsEngine = "elevenlabs" | "edge-tts" | "piper" | "none";
+type FakeTtsEngine = "openai" | "none";
 const ttsMock = {
   engine: "none" as FakeTtsEngine,
   // Bytes the mocked synthesize() yields, one Uint8Array per chunk.
@@ -44,7 +43,6 @@ const ttsMock = {
 // ---------------------------------------------------------------------------
 
 let lastOpenAIOpts: Record<string, unknown> = {};
-let anthropicCallCount = 0;
 let openAICallCount = 0;
 
 // The text chunks that the mocked streamText will yield.
@@ -87,18 +85,21 @@ mock.module("ai", () => ({
   },
 }));
 
-mock.module("@ai-sdk/anthropic", () => ({
-  createAnthropic: (_opts: Record<string, unknown>) => {
-    anthropicCallCount++;
-    return (modelId: string) => ({ provider: "anthropic", modelId });
-  },
-}));
-
 mock.module("@ai-sdk/openai", () => ({
   createOpenAI: (opts: Record<string, unknown>) => {
     openAICallCount++;
     lastOpenAIOpts = opts ?? {};
     return (modelId: string) => ({ provider: "openai", modelId });
+  },
+}));
+
+mock.module("openai", () => ({
+  default: class {
+    audio = {
+      transcriptions: {
+        create: async () => ({ text: "transcribed from audio" }),
+      },
+    }
   },
 }));
 
@@ -193,8 +194,6 @@ function postFast(
 
 describe("fastPipeline — generator", () => {
   beforeEach(() => {
-    // Reset spy counters and defaults before each test.
-    anthropicCallCount = 0;
     openAICallCount = 0;
     lastOpenAIOpts = {};
     lastStreamTextMessages = [];
@@ -214,16 +213,9 @@ describe("fastPipeline — generator", () => {
       ],
     };
 
-    // Clear env vars that affect provider selection.
-    delete process.env.LLM_BASE_URL;
-    delete process.env.OPENROUTER_API_KEY;
     delete process.env.FAST_PATH_MODEL;
     delete process.env.SIDECAR_SECRET;
-    // Reset STT spy state — Whisper branch is exercised (no ELEVENLABS_API_KEY).
-    delete process.env.ELEVENLABS_API_KEY;
-    whisperMock.reset();
-    whisperMock.result = "transcribed from audio";
-    // TTS disabled by default so existing event-sequence tests are unaffected.
+    delete process.env.OPENAI_API_KEY;
     ttsMock.reset();
   });
 
@@ -400,89 +392,13 @@ describe("fastPipeline — generator", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Model selection — Anthropic vs OpenRouter
+  // Model selection
   // -------------------------------------------------------------------------
 
-  it("uses createAnthropic when LLM_BASE_URL is not set", async () => {
-    delete process.env.LLM_BASE_URL;
-    anthropicCallCount = 0;
-    openAICallCount = 0;
-    await collect(fastPipeline({ text: "Hello" }));
-    expect(anthropicCallCount).toBeGreaterThan(0);
-    expect(openAICallCount).toBe(0);
-  });
-
-  it("uses createOpenAI when LLM_BASE_URL is set", async () => {
-    process.env.LLM_BASE_URL = "https://openrouter.ai/api/v1";
-    process.env.OPENROUTER_API_KEY = "or-test-key";
-    anthropicCallCount = 0;
-    openAICallCount = 0;
-    await collect(fastPipeline({ text: "Hello" }));
-    expect(openAICallCount).toBeGreaterThan(0);
-    expect(anthropicCallCount).toBe(0);
-    delete process.env.LLM_BASE_URL;
-    delete process.env.OPENROUTER_API_KEY;
-  });
-
-  it("passes LLM_BASE_URL as baseURL to createOpenAI", async () => {
-    process.env.LLM_BASE_URL = "https://openrouter.ai/api/v1";
-    process.env.OPENROUTER_API_KEY = "or-test-key";
-    lastOpenAIOpts = {};
-    await collect(fastPipeline({ text: "Hello" }));
-    expect(lastOpenAIOpts.baseURL).toBe("https://openrouter.ai/api/v1");
-    delete process.env.LLM_BASE_URL;
-    delete process.env.OPENROUTER_API_KEY;
-  });
-
-  it("passes OPENROUTER_API_KEY as apiKey to createOpenAI", async () => {
-    process.env.LLM_BASE_URL = "https://openrouter.ai/api/v1";
-    process.env.OPENROUTER_API_KEY = "or-test-key";
-    lastOpenAIOpts = {};
-    await collect(fastPipeline({ text: "Hello" }));
-    expect(lastOpenAIOpts.apiKey).toBe("or-test-key");
-    delete process.env.LLM_BASE_URL;
-    delete process.env.OPENROUTER_API_KEY;
-  });
-
-  // -------------------------------------------------------------------------
-  // Default model name
-  // -------------------------------------------------------------------------
-
-  it("default model is claude-haiku-4-5-20251001 when FAST_PATH_MODEL is unset", async () => {
+  it("default model is gpt-4.1-mini when FAST_PATH_MODEL is unset", async () => {
     delete process.env.FAST_PATH_MODEL;
-    // We can't easily introspect the model ID after module caching, but we can
-    // verify streamText was called and no error was thrown — the factory mock
-    // will be called with the module-level MODEL constant which is set at import
-    // time. This test primarily guards against regression at the import level.
     const events = await collect(fastPipeline({ text: "Hello" })) as any[];
     expect(events.some((e) => e.type === "llm_chunk")).toBe(true);
-  });
-
-  // -------------------------------------------------------------------------
-  // Prompt caching — only when using Anthropic directly
-  // -------------------------------------------------------------------------
-
-  it("answer mode with Anthropic: system message has experimental_providerMetadata with cacheControl", async () => {
-    delete process.env.LLM_BASE_URL;
-    lastStreamTextMessages = [];
-    await collect(fastPipeline({ text: "Hello" }));
-    const systemMsg = (lastStreamTextMessages as any[]).find((m) => m.role === "system");
-    expect(systemMsg).toBeDefined();
-    expect(systemMsg.experimental_providerMetadata).toMatchObject({
-      anthropic: { cacheControl: { type: "ephemeral" } },
-    });
-  });
-
-  it("answer mode with OpenRouter: system message has NO cacheControl metadata", async () => {
-    process.env.LLM_BASE_URL = "https://openrouter.ai/api/v1";
-    process.env.OPENROUTER_API_KEY = "or-key";
-    lastStreamTextMessages = [];
-    await collect(fastPipeline({ text: "Hello" }));
-    const systemMsg = (lastStreamTextMessages as any[]).find((m) => m.role === "system");
-    expect(systemMsg).toBeDefined();
-    expect(systemMsg.experimental_providerMetadata).toBeUndefined();
-    delete process.env.LLM_BASE_URL;
-    delete process.env.OPENROUTER_API_KEY;
   });
 
   // -------------------------------------------------------------------------
@@ -502,14 +418,6 @@ describe("fastPipeline — generator", () => {
     expect(events[0]).toMatchObject({ type: "transcript", text: "explicit text" });
   });
 
-  it("audio_b64 path: yields error event when STT throws", async () => {
-    whisperMock.shouldThrow = true;
-    const dummyWav = Buffer.alloc(44).toString("base64");
-    const events = await collect(fastPipeline({ audio_b64: dummyWav })) as any[];
-    expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({ type: "error", message: "whisper error" });
-  });
-
   // -------------------------------------------------------------------------
   // TTS — sentence-boundary synthesis + audio_chunk events
   // -------------------------------------------------------------------------
@@ -524,7 +432,7 @@ describe("fastPipeline — generator", () => {
   });
 
   it("TTS enabled: emits audio_chunk events with base64-encoded bytes", async () => {
-    ttsMock.engine = "elevenlabs";
+    ttsMock.engine = "openai";
     ttsMock.chunks = [new Uint8Array([0xde, 0xad, 0xbe, 0xef])];
     streamChunks = ["One sentence."];
     const events = await collect(fastPipeline({ text: "hi" })) as any[];
@@ -534,7 +442,7 @@ describe("fastPipeline — generator", () => {
   });
 
   it("TTS: synthesize called once per sentence boundary", async () => {
-    ttsMock.engine = "elevenlabs";
+    ttsMock.engine = "openai";
     ttsMock.chunks = [new Uint8Array([1])];
     // Three sentences. Match the regex `[.!?]\s` so boundaries fire mid-stream.
     streamChunks = ["First sentence. ", "Second one! ", "And third?"];
@@ -543,7 +451,7 @@ describe("fastPipeline — generator", () => {
   });
 
   it("TTS: tail without trailing whitespace is still synthesized at end", async () => {
-    ttsMock.engine = "elevenlabs";
+    ttsMock.engine = "openai";
     ttsMock.chunks = [new Uint8Array([1])];
     // No trailing space after the final period — won't hit the regex mid-stream,
     // so it falls through to the end-of-stream flush.
@@ -553,7 +461,7 @@ describe("fastPipeline — generator", () => {
   });
 
   it("TTS: empty/whitespace-only buffer at end is not synthesized", async () => {
-    ttsMock.engine = "elevenlabs";
+    ttsMock.engine = "openai";
     ttsMock.chunks = [new Uint8Array([1])];
     streamChunks = ["One sentence. "]; // boundary cuts cleanly, no tail text
     await collect(fastPipeline({ text: "hi" }));
@@ -561,7 +469,7 @@ describe("fastPipeline — generator", () => {
   });
 
   it("TTS: yields multiple audio_chunk events per sentence when synth returns multiple chunks", async () => {
-    ttsMock.engine = "elevenlabs";
+    ttsMock.engine = "openai";
     ttsMock.chunks = [new Uint8Array([1]), new Uint8Array([2]), new Uint8Array([3])];
     streamChunks = ["One sentence."];
     const events = await collect(fastPipeline({ text: "hi" })) as any[];
@@ -570,7 +478,7 @@ describe("fastPipeline — generator", () => {
   });
 
   it("TTS: done is still the last event when audio is present", async () => {
-    ttsMock.engine = "elevenlabs";
+    ttsMock.engine = "openai";
     ttsMock.chunks = [new Uint8Array([1, 2])];
     streamChunks = ["Hello world."];
     const events = await collect(fastPipeline({ text: "hi" })) as any[];
@@ -578,7 +486,7 @@ describe("fastPipeline — generator", () => {
   });
 
   it("TTS: synthesis errors are swallowed, text response still completes", async () => {
-    ttsMock.engine = "elevenlabs";
+    ttsMock.engine = "openai";
     ttsMock.shouldThrow = true;
     streamChunks = ["Hello world."];
     const events = await collect(fastPipeline({ text: "hi" })) as any[];
@@ -595,13 +503,9 @@ describe("fastPipeline — generator", () => {
 
 describe("POST /query/fast — HTTP endpoint", () => {
   beforeEach(() => {
-    delete process.env.LLM_BASE_URL;
-    delete process.env.OPENROUTER_API_KEY;
     delete process.env.FAST_PATH_MODEL;
-    delete process.env.ELEVENLABS_API_KEY;
+    delete process.env.OPENAI_API_KEY;
     streamChunks = ["Hello", " world"];
-    whisperMock.reset();
-    whisperMock.result = "transcribed from audio";
     ttsMock.reset();
     fakeGuideResponse = {
       steps: [

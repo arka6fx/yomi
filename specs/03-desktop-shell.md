@@ -2,12 +2,12 @@
 
 ## Purpose
 
-Define the Electron main process structure, platform adapters (macOS / Windows / Linux), capture abstraction, sidecar lifecycle management, and deep-link auth flow. The shell is pure OS integration — no AI logic lives here.
+Define the Electron main process structure, platform adapters (macOS / Windows), capture abstraction, sidecar lifecycle management, and deep-link auth flow. The shell is pure OS integration — no AI logic lives here.
 
 ## Invariants
 
 - The desktop app makes NO direct LLM calls. Everything goes to the sidecar.
-- One capture abstraction, three thin platform adapters. No forks per OS.
+- One capture abstraction, two thin platform adapters. No forks per OS.
 - Login happens in the system browser, never in an embedded Electron window.
 - The sidecar must be running before the desktop window opens. If not, restart it.
 
@@ -26,7 +26,6 @@ apps/desktop/src/
     platform/
       mac.ts          NSStatusItem, notch pill, permissions prompt.
       windows.ts      Tray icon, toast notifications.
-      linux.ts        Waybar module socket, AppIndicator fallback.
   preload/
     index.ts          Expose safe IPC methods to renderer via contextBridge.
 ```
@@ -43,12 +42,6 @@ apps/desktop/src/
 - Toast notifications via `electron.Notification` for agent task completion.
 - Global hotkey via `electron.globalShortcut`.
 
-**Linux / Omarchy (`platform/linux.ts`):**
-- Waybar custom module: writes JSON to `/tmp/yomi-waybar.json`; Waybar reads via `exec` module.
-- On click: `hyprctl dispatch exec` to open the buddy window.
-- Fallback: `AppIndicator` (libayatana) for non-Waybar desktops.
-- Ship `hyprland.conf` snippet in `docs/hyprland-keybind.md`.
-
 ### Capture Abstraction
 
 ```typescript
@@ -59,7 +52,7 @@ interface CaptureProvider {
 }
 ```
 
-Platform implementations: macOS (ScreenCaptureKit + AVAudioEngine), Windows (DXGI + WASAPI), Linux (PipeWire + X11/Wayland).
+Platform implementations: macOS (ScreenCaptureKit + AVAudioEngine), Windows (DXGI + WASAPI).
 
 #### MVP Screenshot Implementation (`capture.ts`)
 
@@ -128,7 +121,6 @@ Orchestrates the full pipeline on `onListenStop`:
 ```
 PCM chunks (from renderer, via yomi:audio-chunk IPC) → WAV buffer
 Screenshot base64 (grabbed at onListenStart)
-→ ElevenLabs STT REST API → transcript
 → POST /query/fast to sidecar { text, screenshot_b64 }
 → SSE stream (Node fetch + ReadableStream.getReader())
 → overlayWin.webContents.send("yomi:event", sseEvent)
@@ -167,21 +159,7 @@ while (true) {
 }
 ```
 
-**STT provider selection** — mirrors the sidecar provider logic (spec 02):
-- If `ELEVENLABS_API_KEY` is set: call ElevenLabs REST directly (`POST /v1/speech-to-text`, model `scribe_v1`). The `elevenlabs` npm SDK v0.17 has no `speechToText` method — use `fetch`.
-- Fallback: run `whisper.cpp` on the assembled WAV file (bundled binary, see spec 05 for the full STT abstraction).
-
-```ts
-// ElevenLabs path:
-// 1. Assemble Float32Array PCM chunks → 16-bit WAV Buffer (44-byte RIFF header + PCM16 data)
-//    Float32 → Int16: Math.max(-32768, Math.min(32767, sample * 32768))
-// 2. POST https://api.elevenlabs.io/v1/speech-to-text
-//    multipart/form-data: audio=<wav>, model_id=scribe_v1
-//    Header: xi-api-key: ELEVENLABS_API_KEY
-// 3. Returns { text: string }
-```
-
-**Add `elevenlabs` to `apps/desktop/package.json` dependencies** (used for TTS playback; STT uses direct `fetch`).
+**STT:** The sidecar handles STT using OpenAI Whisper. The desktop sends raw audio bytes and the sidecar returns the transcript.
 
 ### Auth Flow (deep-link)
 
@@ -215,17 +193,15 @@ When the overlay displays a response, call `overlay.setIgnoreMouseEvents(false)`
 
 - `apps/desktop/src/main/index.ts` — Rewrite: tray, overlay window, content protection, wire all modules
 - `apps/desktop/src/preload/index.ts` — Rewrite: full contextBridge API
-- `apps/desktop/package.json` — Add `elevenlabs` dependency
 
 ## Files to create
 
 - `apps/desktop/src/main/sidecar.ts` — SidecarManager: spawn + health-check + restart
 - `apps/desktop/src/main/capture.ts` — `captureScreen()` via desktopCapturer
 - `apps/desktop/src/main/hotkey.ts` — Toggle-to-talk via globalShortcut
-- `apps/desktop/src/main/ipc.ts` — IPC bridge: ElevenLabs STT + sidecar SSE + renderer events
+- `apps/desktop/src/main/ipc.ts` — IPC bridge: sidecar SSE + renderer events
 - `apps/desktop/src/main/platform/mac.ts` — macOS: NSStatusItem, notch pill _(after spec 04)_
-- `apps/desktop/src/main/platform/windows.ts` — Windows: Tray, toast notifications _(cross-platform spec)_
-- `apps/desktop/src/main/platform/linux.ts` — Linux: Waybar module, AppIndicator _(cross-platform spec)_
+- `apps/desktop/src/main/platform/windows.ts` — Windows: Tray, toast notifications
 
 ## Open Questions
 

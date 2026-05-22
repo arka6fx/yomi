@@ -84,7 +84,7 @@ describe("POST /query/fast", () => {
 ### Mocking
 
 - LLM calls: `mock()` the `ai` package's `streamText`/`generateText`
-- ElevenLabs: mock `ElevenLabsClient`
+- OpenAI: mock `OpenAI` client
 - Database: mock Drizzle client
 - Filesystem: use `Bun.write()` to temp dirs, clean up in `afterEach`
 - Auth: mock `c.get("user")` with test user object

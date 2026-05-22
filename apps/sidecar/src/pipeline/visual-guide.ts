@@ -1,18 +1,16 @@
 import { streamText } from "ai"
-import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
 import type { GuideResponse } from "@yomi/shared"
 
-const MODEL = process.env.FAST_PATH_MODEL || "claude-haiku-4-5-20251001"
+const MODEL = process.env.FAST_PATH_MODEL || "gpt-4.1-mini"
+
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  baseURL: process.env.OPENAI_BASE_URL,
+})
 
 function createModel() {
-  if (process.env.LLM_BASE_URL) {
-    return createOpenAI({
-      apiKey: process.env.OPENROUTER_API_KEY,
-      baseURL: process.env.LLM_BASE_URL,
-    })(MODEL)
-  }
-  return createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })(MODEL)
+  return openai(MODEL)
 }
 
 const GUIDE_SYSTEM_PROMPT = `You are in guide mode. The user wants step-by-step visual guidance.
@@ -45,13 +43,7 @@ export async function generateGuide(
   const result = streamText({
     model: createModel(),
     messages: [
-      {
-        role: "system" as const,
-        content: GUIDE_SYSTEM_PROMPT,
-        ...(process.env.LLM_BASE_URL
-          ? {}
-          : { experimental_providerMetadata: { anthropic: { cacheControl: { type: "ephemeral" } } } }),
-      },
+      { role: "system" as const, content: GUIDE_SYSTEM_PROMPT },
       {
         role: "user" as const,
         content: [

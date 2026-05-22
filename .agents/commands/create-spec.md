@@ -65,14 +65,15 @@ Anything not yet decided.
 
 ## Step 8 — Save
 
-Save to `specs/<feature_slug>.md`.
+Determine the next serial number by running `ls specs/*.md | wc -l` and zero-padding to 2 digits. Save to `specs/<NN>-<feature_slug>.md`.
 
 ## Step 9 — Report
 
 ```
 Branch:    feature/<feature_slug>
-Spec file: specs/<feature_slug>.md
+Spec file: specs/<NN>-<feature_slug>.md
 Title:     <feature_title>
+Status:    spec created — new (#NN)
 ```
 
-Then tell the user: "Review the spec at `specs/<feature_slug>.md` then start implementing."
+Then tell the user: "Review the spec at `specs/<NN>-<feature_slug>.md` then start implementing."

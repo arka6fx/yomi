@@ -5,13 +5,12 @@ import Nav from "@/components/Nav"
 import Footer from "@/components/Footer"
 import Link from "next/link"
 
-type Platform = "mac" | "windows" | "linux" | "unknown"
+type Platform = "mac" | "windows" | "unknown"
 
 function detectPlatform(): Platform {
   const ua = navigator.userAgent.toLowerCase()
   if (ua.includes("mac")) return "mac"
   if (ua.includes("win")) return "windows"
-  if (ua.includes("linux")) return "linux"
   return "unknown"
 }
 
@@ -74,38 +73,9 @@ const platforms: Record<
       "Press the hotkey to start",
     ],
   },
-  linux: {
-    title: "Linux",
-    icon: "◈",
-    options: [
-      {
-        label: "AppImage",
-        arch: ".AppImage",
-        href: "https://github.com/arka6fx/yomi/releases/latest",
-        note: "Universal",
-      },
-      {
-        label: "Debian / Ubuntu",
-        arch: ".deb",
-        href: "https://github.com/arka6fx/yomi/releases/latest",
-      },
-      {
-        label: "Fedora / RHEL",
-        arch: ".rpm",
-        href: "https://github.com/arka6fx/yomi/releases/latest",
-      },
-    ],
-    instructions: [
-      "AppImage: chmod +x Yomi.AppImage && ./Yomi.AppImage",
-      "Debian: sudo dpkg -i yomi.deb",
-      "Fedora: sudo rpm -i yomi.rpm",
-      "Add Yomi to your Waybar config for the tray icon",
-      "Set your hotkey via Yomi settings",
-    ],
-  },
 }
 
-const allPlatforms: Exclude<Platform, "unknown">[] = ["mac", "windows", "linux"]
+const allPlatforms: Exclude<Platform, "unknown">[] = ["mac", "windows"]
 
 export default function DownloadPage() {
   const [detected, setDetected] = useState<Platform>("unknown")

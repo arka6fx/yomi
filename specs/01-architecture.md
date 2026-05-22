@@ -112,9 +112,9 @@ Response: 204
 [Hotkey press]
   → Desktop captures mic stream + screenshot (parallel)
   → POST /query/fast to sidecar (audio + screenshot)
-    → Sidecar: ElevenLabs STT (streaming partial transcripts)
+    → Sidecar: OpenAI Whisper STT
     → Sidecar: Vercel AI SDK streamText (cached system prompt + yomi.md)
-    → Sidecar: ElevenLabs TTS streaming
+    → Sidecar: OpenAI TTS streaming
   → Desktop receives audio_chunk stream → plays audio
 Total budget: < 2s to first audio byte
 ```

@@ -87,7 +87,7 @@ For each failure:
 
 ## Yomi Guardrails
 
-- Tests making real API calls (LLM, ElevenLabs) instead of mocks — flag immediately
+- Tests making real API calls (LLM, OpenAI) instead of mocks — flag immediately
 - Wrong import paths across monorepo — use `@yomi/shared`, `@yomi/db`
 - Using `fetch()` instead of `app.request()` for Hono route tests
 - Not cleaning up temp files/dirs after filesystem tests

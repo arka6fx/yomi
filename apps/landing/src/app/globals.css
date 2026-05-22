@@ -3,8 +3,24 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --canvas: #09090f;
+    --panel: #11111e;
+    --panel-2: #181828;
+    --accent: #2dd4bf;
+    --accent-warm: #f59e0b;
+    --label: #eeeef8;
+    --caption: #5f5f90;
+    --edge: #1e1e38;
+  }
+
   html {
     scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont,
+      "Helvetica Neue", Helvetica, Arial, sans-serif;
   }
 
   ::selection {

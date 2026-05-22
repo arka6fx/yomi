@@ -1,10 +1,11 @@
 import Link from "next/link"
+import { buttonVariants } from "@/components/ui/button"
 
 export default function Nav() {
   return (
     <nav className="fixed top-0 inset-x-0 z-50 bg-canvas/80 backdrop-blur-md border-b border-edge/60">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        <Link href="/" className="font-display text-xl font-bold tracking-tight">
+        <Link href="/" className="text-xl font-semibold tracking-tight">
           y<span className="text-accent">o</span>mi
         </Link>
 
@@ -23,7 +24,7 @@ export default function Nav() {
           </Link>
           <Link
             href="/#waitlist"
-            className="text-sm font-medium px-4 py-2 rounded-lg bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20 transition-all"
+            className={buttonVariants({ size: "sm" })}
           >
             Get early access
           </Link>

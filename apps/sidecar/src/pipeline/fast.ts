@@ -6,7 +6,7 @@ import { synthesize, resolveTts } from "./tts.js";
 import { createModel } from "./model.js";
 import { buildFastPrompt, loadYomiMd, loadMemoryContext } from "../harness/prompt.js";
 
-const MODEL = process.env.FAST_PATH_MODEL || "claude-haiku-4-5-20251001";
+const MODEL = process.env.FAST_PATH_MODEL || "gpt-4.1-mini";
 
 // yomi.md is stable per-session; memory files change after compaction so load fresh each turn.
 let cachedYomiMd: string | null = null
@@ -74,13 +74,7 @@ async function* answerPipeline(
   const result = streamText({
     model: createModel(MODEL),
     messages: [
-      {
-        role: "system" as const,
-        content: systemPrompt,
-        ...(process.env.LLM_BASE_URL
-          ? {}
-          : { experimental_providerMetadata: { anthropic: { cacheControl: { type: "ephemeral" } } } }),
-      },
+      { role: "system" as const, content: systemPrompt },
       { role: "user" as const, content },
     ],
     maxTokens: 800,

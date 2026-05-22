@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 
 interface WaitlistFormProps {
   compact?: boolean
@@ -52,22 +54,20 @@ export default function WaitlistForm({ compact = false }: WaitlistFormProps) {
         onSubmit={handleSubmit}
         className={compact ? "flex gap-2" : "flex flex-col sm:flex-row gap-3"}
       >
-        <input
+        <Input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
           required
           disabled={status === "loading"}
-          className="flex-1 px-4 py-3 rounded-xl bg-panel border border-edge text-label placeholder:text-caption text-sm focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all disabled:opacity-50"
         />
-        <button
+        <Button
           type="submit"
           disabled={status === "loading"}
-          className="px-6 py-3 rounded-xl bg-accent text-canvas font-semibold text-sm hover:bg-accent/90 active:scale-[0.98] transition-all disabled:opacity-50 whitespace-nowrap"
         >
           {status === "loading" ? "Joining…" : "Join waitlist"}
-        </button>
+        </Button>
       </form>
       {status === "error" && (
         <p className="text-xs text-red-400 pl-1">{message}</p>

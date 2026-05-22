@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define the intent router that classifies every user request as either `fast` or `agent` at the start of each turn. The router is the first step inside the sidecar for every query — it commits to a pipeline once, then hands off. It exists so we never lose prompt-cache or thrash tool vocabularies by switching models mid-turn.
+Define the intent router that classifies every user request as either `fast` or `agent` at the start of every turn. The router is the first step inside the sidecar for every query — it commits to a pipeline once, then hands off. It exists so we never lose prompt-cache or thrash tool vocabularies by switching models mid-turn.
 
 ## Invariants
 
@@ -57,11 +57,9 @@ A forced-tool-call to a small model. Returns `source: "llm"`. Bounded by `ROUTER
 
 **Tie-break:** if both sides have signals, take the higher score. If equal, return `fast` (invariant).
 
-The heuristic is pure and lives in `apps/sidecar/src/router/heuristic.ts` so it's trivially unit-testable.
-
 ### LLM classifier (Vercel AI SDK)
 
-Uses the same provider abstraction as the fast pipeline (`@ai-sdk/anthropic` direct, or `@ai-sdk/openai` with `LLM_BASE_URL` for OpenRouter). Model defaults to `claude-haiku-4-5-20251001` — the cheapest Anthropic option and small enough to hit the latency budget.
+Uses the same OpenAI provider as the fast pipeline (`@ai-sdk/openai`). Model defaults to `gpt-4.1-mini`.
 
 ```ts
 import { generateObject } from "ai"
@@ -83,40 +81,9 @@ const result = await generateObject({
 })
 ```
 
-The classifier prompt is short and stable so it benefits from prompt caching when running against Anthropic directly. Cache the system prompt with `providerOptions.anthropic.cacheControl: { type: "ephemeral" }` the same way `pipeline/fast.ts` does.
-
 ### Wiring
 
-The sidecar currently exposes only `/query/fast` (see `apps/sidecar/src/index.ts:28`). Once the agent pipeline lands (spec 08), the router becomes the entry point and chooses between the two pipelines. Until then, the router still runs on `/query/fast` requests so we can:
-
-1. Log decisions and validate the heuristic against real traffic.
-2. Surface a `router_decision` SSE event to the desktop for UX (e.g. show a hint when a user request would be better served by the agent).
-
-```ts
-// apps/sidecar/src/index.ts (sketch)
-app.post("/query", authMiddleware, async (c) => {
-  const body = await c.req.json<FastQueryRequest>()
-  // normalize → run STT if needed (extract from pipeline/fast.ts) → classify
-  const decision = await classifyIntent({ text, screenshot_b64, history })
-  return streamSSE(c, async (stream) => {
-    await stream.writeSSE({ data: JSON.stringify({ type: "router_decision", ...decision }) })
-    const pipeline = decision.path === "agent" ? agentPipeline : fastPipeline
-    for await (const ev of pipeline(body)) {
-      await stream.writeSSE({ data: JSON.stringify(ev) })
-    }
-  })
-})
-```
-
-`/query/fast` and `/query/agent` remain available for tests and for desktop-side overrides (e.g. a "force agent" toggle in dev).
-
-### Implementation phases
-
-**Phase 0 (this spec):** heuristic only. The LLM classifier is wired but disabled via `ROUTER_LLM_ENABLED=false` until we measure heuristic accuracy against logged traffic.
-
-**Phase 1:** enable LLM classifier for low-confidence cases.
-
-**Phase 2 (deferred):** first-token classification embedded in the pipeline model. Saves a round-trip but couples router and response generation. Revisit only if the LLM classifier turns into a measurable bottleneck.
+The sidecar exposes `/query` as the unified entry point that classifies intent then routes to the appropriate pipeline. `/query/fast` and `/query/agent` remain available for tests and for desktop-side overrides.
 
 ## Files to change
 
@@ -135,6 +102,5 @@ app.post("/query", authMiddleware, async (c) => {
 ## Open Questions
 
 - Confidence threshold (`0.8` initial) needs tuning against logged real traffic before enabling the LLM stage.
-- Should the router consider the last 2 turns of history, or only the current transcript? History adds context but also adds tokens and latency. Current plan: pass `history` through the contract but ignore it in Phase 0.
-- Desktop UX for `router_decision`: silently log, or surface a "this looks like an agent task — run it in the background?" hint? Deferred to spec 04 follow-ups.
-- First-token classification (Option B) feasibility: needs an offline evaluation before we even prototype.
+- Should the router consider the last 2 turns of history, or only the current transcript? Current plan: pass `history` through the contract but ignore it in Phase 0.
+- First-token classification feasibility: needs an offline evaluation before we even prototype.

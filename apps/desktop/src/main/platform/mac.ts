@@ -6,7 +6,7 @@ let tray: Tray | null = null
 export function setupMac(): void {
   app.dock?.hide() // tray-only app — no Dock icon
 
-  tray = new Tray(path.join(__dirname, "../../../resources/tray-icon.png"))
+  tray = new Tray(path.join(__dirname, "../../resources/tray-icon.png"))
   tray.setToolTip("Yomi")
   tray.setContextMenu(
     Menu.buildFromTemplate([

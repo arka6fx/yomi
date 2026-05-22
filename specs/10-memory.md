@@ -1,182 +1,139 @@
-# Spec 08 — Memory (Notepad)
+# Spec 10 — Memory
 
 ## Purpose
 
-Define the filesystem memory system (`~/.yomi/`), loading strategy, compaction algorithm, and retrieval mechanism. The notepad is the agent's persistent RAM — no database, no vector store.
+Define Yomi's persistent memory layer: how user preferences, facts, and context are stored, retrieved, and compacted. Memory lives entirely on-device in `~/.yomi/notepad/`.
 
 ## Invariants
 
-- `yomi.md` is ALWAYS preloaded into every request. No exceptions.
-- Memory files are plain markdown. No proprietary format.
-- Retrieval is agentic (agent decides what to read), not automatic embedding-based lookup.
-- Compaction never deletes facts — it only restructures. Original sessions are kept in `sessions/`.
-- The memory system must work fully offline.
+- Memory is stored on-device only — never synced to cloud.
+- Each fact is a `.md` file in `~/.yomi/notepad/`.
+- Memory is read at the start of every turn (injected into system prompt).
+- Memory is written at the end of every agent turn (via auto-memory hook).
+- Compaction runs when the notepad directory exceeds 100 entries.
+- Notepad entries older than 90 days without access are summarised into a daily digest then deleted.
 
 ## Detailed Design
 
-### File Layout
+### Storage format
 
 ```
-~/.yomi/
-  yomi.md              # ALWAYS preloaded. User identity, prefs, standing instructions.
-  memory.md            # Curated long-term memory. Updated by compaction.
-  memory-index.md      # One line per memory/project/session file. Read first.
-  projects/
-    <slug>/
-      context.md       # Project facts, key files, decisions, constraints.
-      scratchpad.md    # Agent's working notes. Ephemeral — overwritten each task.
-  sessions/
-    YYYY-MM-DD-<topic>.md  # Session summary. Append-only. Named for navigation.
+~/.yomi/notepad/
+  └── YYYY-MM-DD-HHmmss-<slug>.md
 ```
 
-### `yomi.md` Schema
+Each file is a Markdown file with frontmatter:
 
-User-authored. Yomi reads it at every request and never overwrites it (only appends on explicit user request).
-
-```markdown
-# About me
-[name, role, working style, timezone, language preference]
-
-# My tools
-[apps I use, devices, accounts I've connected]
-
-# How I like Yomi to behave
-[response length, tone, when to ask vs assume, things to never do]
-
-# Standing instructions
-[recurring preferences: always use dark theme, prefer Python, etc.]
-
-# Tools allowlist extension
-tools_allowlist: []
+```yaml
+---
+key: "user-name"
+created: 2025-06-15T10:30:00Z
+accessed: 2025-06-16T14:00:00Z
+source: "auto"  # "auto" | "explicit" | "compaction"
+---
+Arkady prefers dark mode and responds best to concise, direct answers.
 ```
 
-### `memory.md` Schema
+### Retrieval
 
-Agent-maintained. Updated after compaction.
-
-```markdown
-# Long-term memory — [last updated: YYYY-MM-DD]
-
-## Facts about me
-[stable facts: family, location, job, preferences]
-
-## Decisions
-[architectural decisions, preferences, things we settled]
-
-## Open threads
-[unfinished tasks, things to follow up]
-
-## Recent context (last 2 weeks)
-[brief summary of recent significant sessions]
-```
-
-### `memory-index.md` Schema
-
-One line per file. Read before reading any memory file.
-
-```
-projects/yomi/context.md — Yomi project: monorepo layout, stack decisions (2026-05-21)
-sessions/2026-05-21-pricing.md — Explored Stripe vs Paddle; chose Stripe (2026-05-21)
-```
-
-### Loading Strategy
-
-| Content | When loaded | Rationale |
-|---|---|---|
-| `yomi.md` | Always, every turn | User identity — must be in every context |
-| `memory.md` (summary section) | Always, every turn | Key facts + open threads |
-| `memory-index.md` | Always, every turn | Agent needs to know what exists |
-| `projects/<slug>/context.md` | JIT when user references a project | Save tokens on unrelated tasks |
-| `sessions/*.md` | JIT on agent request | Historical lookup, not routine |
-| Full `memory.md` | JIT when agent needs depth | Only when summary is insufficient |
-
-Files the user has open: store path + type + last-modified only. Fetch full content on demand.
-
-### Compaction Algorithm
-
-Triggered when the live context window exceeds `COMPACT_THRESHOLD` (default: 70% of model's context limit).
-
-```
-1. RECALL PASS
-   - Scan entire conversation history
-   - Extract: facts, decisions, completed steps, open threads, user corrections
-   - Do not discard anything — prefer over-inclusion at this stage
-
-2. PRECISION PASS
-   - Rewrite the recall output: remove redundancy, tighten prose
-   - Keep: decisions (with reasoning), open threads, corrections, key facts
-   - Drop: intermediate reasoning steps, tool call logs already in hook_logs
-
-3. WRITE
-   - Append precision output to memory.md (under "Recent context")
-   - Overwrite scratchpad.md with current task state only
-   - Reset live conversation window to: system prompt + yomi.md + new memory summary
-
-4. SESSION SAVE
-   - Write full recall output (uncompressed) to sessions/YYYY-MM-DD-<topic>.md
-   - Add entry to memory-index.md
-```
-
-### Retrieval Tools
-
-The agent has three retrieval primitives:
+On every turn, the `MEMORY_SNIPPET` section of the system prompt is populated by:
 
 ```typescript
-list_files(dir: "~/.yomi/" | "~/.yomi/projects/" | "~/.yomi/sessions/")
-// Returns: array of { path, size, modified } — metadata only, no content
+function getMemorySnippet(maxChars: number = 2000): string {
+  const files = fs.readdirSync(NOTEPAD_DIR)
+    .map(f => ({ path: f, stat: fs.statSync(path.join(NOTEPAD_DIR, f)) }))
+    .sort((a, b) => b.stat.mtimeMs - a.stat.mtimeMs)  // most recently accessed first
+    .slice(0, 10)  // top 10 entries
 
-read_file(path: string)
-// Returns: full file content. JIT — only call when you've decided this file is relevant.
-
-search(query: string, dir?: string)
-// Runs: rg --ignore-case query dir (defaults to ~/.yomi/)
-// Agent can call multiple times with synonyms: "budget" → "money, finances, cost, spend"
+  let snippet = "## Memory\n"
+  for (const file of files) {
+    const content = fs.readFileSync(path.join(NOTEPAD_DIR, file.path), "utf-8")
+    const body = content.split("---\n")[2] || content
+    if (snippet.length + body.length > maxChars) break
+    snippet += `- ${body.trim()}\n`
+    // update accessed timestamp
+    fs.utimesSync(file.path, new Date(), new Date())
+  }
+  return snippet
+}
 ```
 
-**No vector embeddings.** At single-user scale (~2MB total memory), ripgrep is faster, cheaper, and more precise than approximate nearest-neighbor search. Add a secondary embedding index only if grep across sessions becomes a measured bottleneck.
+### Writing
 
-### Agent Note-Taking (Scratchpad)
+The auto-memory hook calls `writeNotepad(key, content)`:
 
-During any agent task longer than ~3 steps, the agent writes its working state to `scratchpad.md`:
-
-```markdown
-# Task: [task description] — [started: timestamp]
-
-## Goal
-[what done looks like]
-
-## Steps completed
-- [x] Searched for X → found Y
-- [x] Drafted email
-
-## Current step
-[ ] Waiting for user confirmation before sending
-
-## Open questions
-- Should I CC Riya?
+```typescript
+function writeNotepad(key: string, content: string): string {
+  const slug = key.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
+  const filename = `${new Date().toISOString().slice(0,10)}-${Date.now()}-${slug}.md`
+  const frontmatter = [
+    "---",
+    `key: ${key}`,
+    `created: ${new Date().toISOString()}`,
+    `accessed: ${new Date().toISOString()}`,
+    `source: auto`,
+    "---",
+    "",
+    content,
+  ].join("\n")
+  fs.writeFileSync(path.join(NOTEPAD_DIR, filename), frontmatter)
+  return filename
+}
 ```
 
-This externalises working memory to disk. The agent can re-read it after compaction to resume exactly where it left off — the same technique coding agents use to stay coherent over long horizons.
+### Compaction
 
-## What's already implemented
+```typescript
+function compactNotepad(): void {
+  const files = fs.readdirSync(NOTEPAD_DIR)
+    .map(f => ({ path: f, fullPath: path.join(NOTEPAD_DIR, f) }))
+    .filter(f => f.path.endsWith(".md"))
 
-- `apps/sidecar/src/tools/memory.ts` — `list_files`, `read_file`, `write_file`, `search` (ripgrep) retrieval tools; registered in `createAgentTools()`
-- `apps/sidecar/src/harness/prompt.ts` — `loadYomiMd()` reads `~/.yomi/yomi.md`; injected into fast and agent prompts
-- `apps/sidecar/src/harness/hooks.ts` — `onStop` appends to `sessions/YYYY-MM-DD-dev.md`; `onSessionEnd` checks `memory.md` file size and logs a warning when threshold exceeded (stub only — no real compaction)
+  if (files.length <= 100) return
 
-## Files to change
+  // Group by key, keep most recent for each key
+  const byKey = new Map<string, typeof files>()
+  for (const f of files) {
+    const key = extractKey(f.fullPath)
+    if (!byKey.has(key)) byKey.set(key, [])
+    byKey.get(key)!.push(f)
+  }
 
-- `apps/sidecar/src/index.ts` — call `initMemoryDir()` on startup to ensure `~/.yomi/` directory tree exists
-- `apps/sidecar/src/harness/prompt.ts` — inject `memory.md` summary section and `memory-index.md` into both fast and agent system prompts (JIT alongside `yomi.md`)
-- `apps/sidecar/src/harness/hooks.ts` — wire `onSessionEnd` to call the real compactor; implement `onSessionStart` to load memory context
+  // For each key: merge multiple entries into one via LLM summarisation
+  const model = createModel()  // gpt-4.1-mini
+  for (const [key, entries] of byKey) {
+    if (entries.length <= 1) continue
+    const contents = entries.map(f => fs.readFileSync(f.fullPath, "utf-8")).join("\n\n")
+    const summarised = await generateText({
+      model,
+      prompt: `Summarise these notes into one concise entry (max 200 chars):\n${contents}`,
+    })
+    // Delete old entries, write merged one
+    entries.forEach(f => fs.unlinkSync(f.fullPath))
+    writeNotepad(key, summarised.text)
+  }
+
+  // After dedup, if still > 100: delete oldest entries
+  const remaining = fs.readdirSync(NOTEPAD_DIR).filter(f => f.endsWith(".md"))
+  if (remaining.length > 100) {
+    const sorted = remaining
+      .map(f => ({ path: f, stat: fs.statSync(path.join(NOTEPAD_DIR, f)) }))
+      .sort((a, b) => a.stat.mtimeMs - b.stat.mtimeMs)
+    sorted.slice(0, sorted.length - 100).forEach(f => fs.unlinkSync(f.fullPath))
+  }
+}
+```
+
+### Age-out
+
+A weekly scheduled task (or triggered at sidecar start) deletes entries older than 90 days. Before deletion, entries are summarised into a daily digest markdown file.
 
 ## Files to create
 
-- `apps/sidecar/src/memory/loader.ts` — Load `memory.md` (summary section only), `memory-index.md`, and ensure `~/.yomi/` directory structure on first run; `yomi.md` loading stays in `harness/prompt.ts`
-- `apps/sidecar/src/memory/compactor.ts` — Full recall→precision→write compaction: extract facts/decisions/threads from conversation, append to `memory.md`, save full session to `sessions/`, update `memory-index.md`, reset live window
-- `apps/sidecar/src/memory/scratchpad.ts` — Typed `readScratchpad()` / `writeScratchpad(projectSlug, content)` helpers used by the agent to externalize working state during long tasks
+- `apps/sidecar/src/memory/notepad.ts` — read, write, compact, age-out functions.
+- `apps/sidecar/src/memory/compactor.ts` — LLM-based merging of duplicate-key entries.
 
 ## Open Questions
 
-- Cloud sync of `~/.yomi/`: encrypt with user's key, sync via `memory_blobs` table in backend. Opt-in. Don't auto-sync by default.
-- Multi-device sync conflict resolution: last-write-wins on `yomi.md`; merge (not overwrite) on `memory.md`. To spec when implementing Phase 3.
+- Should memory be encrypted at rest? → Phase 1. Phase 0 stores plaintext.
+- Should there be an explicit "remember this" / "forget that" command? → deferred.

@@ -1,102 +1,107 @@
 import { Hono } from "hono"
-import Stripe from "stripe"
+import Razorpay from "razorpay"
+import { createHmac } from "node:crypto"
 import { db, subscriptions, usageEvents } from "@yomi/db"
 import { eq, and, gte } from "drizzle-orm"
 import { authenticate } from "../auth.js"
 
-const stripe = new Stripe(process.env["STRIPE_SECRET_KEY"]!, {
-  apiVersion: "2024-06-20",
+const razorpay = new Razorpay({
+  key_id: process.env["RAZORPAY_KEY_ID"]!,
+  key_secret: process.env["RAZORPAY_KEY_SECRET"]!,
 })
 
-const PRICE_IDS: Record<string, string> = {
-  pro: process.env["STRIPE_PRO_PRICE_ID"] ?? "",
-  max: process.env["STRIPE_MAX_PRICE_ID"] ?? "",
-  team: process.env["STRIPE_TEAM_PRICE_ID"] ?? "",
+const PLAN_AMOUNTS: Record<string, number> = {
+  basic: 400,
+  standard: 900,
+  genesis: 1900,
+}
+
+const PLAN_PERIODS: Record<string, { period: string; interval: number; totalCount: number }> = {
+  basic: { period: "monthly", interval: 1, totalCount: 12 },
+  standard: { period: "monthly", interval: 1, totalCount: 12 },
+  genesis: { period: "monthly", interval: 1, totalCount: 12 },
 }
 
 export const billingRouter = new Hono()
 
-// Create Stripe Checkout session for a plan upgrade
-billingRouter.post("/create-checkout", authenticate, async (c) => {
+// Create Razorpay subscription
+billingRouter.post("/create-subscription", authenticate, async (c) => {
   const { plan, returnUrl } = await c.req.json() as { plan: string; returnUrl: string }
   const user = c.get("user")
 
-  const priceId = PRICE_IDS[plan]
-  if (!priceId) return c.json({ error: "Unknown plan" }, 400)
+  const amount = PLAN_AMOUNTS[plan]
+  if (!amount) return c.json({ error: "Unknown plan" }, 400)
 
-  // Look up or create Stripe customer
-  let customerId: string | undefined
-  const [sub] = await db
-    .select({ stripeCustomerId: subscriptions.stripeCustomerId })
-    .from(subscriptions)
-    .where(eq(subscriptions.userId, user.id))
-    .limit(1)
-  customerId = sub?.stripeCustomerId
+  const period = PLAN_PERIODS[plan]!
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    customer: customerId,
-    customer_email: customerId ? undefined : user.email,
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${returnUrl}?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: returnUrl,
-    metadata: { userId: user.id, plan },
-  })
-
-  return c.json({ url: session.url })
-})
-
-// Create Stripe Customer Portal link for self-service management
-billingRouter.post("/portal", authenticate, async (c) => {
-  const { returnUrl } = await c.req.json() as { returnUrl: string }
-  const user = c.get("user")
-
-  const [sub] = await db
-    .select({ stripeCustomerId: subscriptions.stripeCustomerId })
+  // Look up existing subscription
+  const [existing] = await db
+    .select({ razorpayCustomerId: subscriptions.razorpayCustomerId, razorpaySubId: subscriptions.razorpaySubId })
     .from(subscriptions)
     .where(eq(subscriptions.userId, user.id))
     .limit(1)
 
-  if (!sub?.stripeCustomerId) {
-    return c.json({ error: "No billing account" }, 404)
+  // Create or reuse Razorpay customer
+  let customerId = existing?.razorpayCustomerId
+  if (!customerId) {
+    const customer = await razorpay.customers.create({
+      name: user.name,
+      email: user.email,
+      contact: "",
+    })
+    customerId = customer.id
   }
 
-  const session = await stripe.billingPortal.sessions.create({
-    customer: sub.stripeCustomerId,
-    return_url: returnUrl,
+  // Create a plan (Razorpay requires plan creation per subscription)
+  const planObj = await razorpay.plans.create({
+    period: period.period as "monthly",
+    interval: period.interval,
+    item: {
+      name: `Yomi ${plan.charAt(0).toUpperCase() + plan.slice(1)}`,
+      amount,
+      currency: "USD",
+    },
   })
 
-  return c.json({ url: session.url })
+  const subscription = await razorpay.subscriptions.create({
+    plan_id: (planObj as { id: string }).id,
+    customer_notify: 1,
+    total_count: period.totalCount,
+    notes: {
+      userId: user.id,
+      plan,
+    },
+  })
+
+  return c.json({
+    id: subscription.id,
+    short_url: subscription.short_url,
+  })
 })
 
-// Stripe webhook — signature-verified, unauthenticated
+// Razorpay webhook
 billingRouter.post("/webhook", async (c) => {
-  const sig = c.req.header("stripe-signature")
-  if (!sig) return c.json({ error: "No signature" }, 400)
+  const secret = process.env["RAZORPAY_WEBHOOK_SECRET"]
+  const sig = c.req.header("x-razorpay-signature")
+  if (!sig || !secret) return c.json({ error: "No signature" }, 400)
 
-  let event: Stripe.Event
-  try {
-    event = stripe.webhooks.constructEvent(
-      await c.req.text(),
-      sig,
-      process.env["STRIPE_WEBHOOK_SECRET"]!,
-    )
-  } catch {
-    return c.json({ error: "Invalid signature" }, 400)
-  }
+  const body = await c.req.text()
+  const expectedSig = createHmac("sha256", secret).update(body).digest("hex")
+  if (sig !== expectedSig) return c.json({ error: "Invalid signature" }, 400)
 
-  switch (event.type) {
-    case "checkout.session.completed":
-      await handleCheckoutComplete(event.data.object as Stripe.Checkout.Session)
+  const event = JSON.parse(body) as { event: string; payload: { subscription: { entity: Record<string, unknown> } } }
+
+  switch (event.event) {
+    case "subscription.activated":
+    case "subscription.charged":
+      await handleSubscriptionEvent(event.payload.subscription.entity)
       break
-    case "customer.subscription.updated":
-      await syncSubscription(event.data.object as Stripe.Subscription)
+    case "subscription.completed":
+    case "subscription.cancelled":
+      await handleSubscriptionEnd(event.payload.subscription.entity)
       break
-    case "customer.subscription.deleted":
-      await downgradeToFree((event.data.object as Stripe.Subscription).customer as string)
-      break
-    case "invoice.payment_failed":
-      await markPaymentFailed((event.data.object as Stripe.Invoice).customer as string)
+    case "payment.failed":
+      await handlePaymentFailed(event.payload.subscription.entity)
       break
   }
 
@@ -142,20 +147,15 @@ billingRouter.get("/subscription", authenticate, async (c) => {
 
 // --- Webhook helpers ---
 
-async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
-  const userId = session.metadata?.userId
-  const plan = session.metadata?.plan
-  if (!userId || !plan || !session.subscription || !session.customer) return
+async function handleSubscriptionEvent(entity: Record<string, unknown>) {
+  const notes = entity["notes"] as Record<string, string> | undefined
+  const userId = notes?.userId
+  const plan = notes?.plan
+  if (!userId || !plan) return
 
-  const stripeSubId = typeof session.subscription === "string"
-    ? session.subscription
-    : session.subscription.id
-  const stripeCustomerId = typeof session.customer === "string"
-    ? session.customer
-    : session.customer.id
-
-  const stripeSub = await stripe.subscriptions.retrieve(stripeSubId)
-  const periodEnd = new Date(stripeSub.current_period_end * 1000)
+  const subId = entity["id"] as string
+  const customerId = entity["customer_id"] as string
+  const periodEnd = entity["current_end"] ? new Date((entity["current_end"] as number) * 1000) : null
 
   const [existing] = await db
     .select({ id: subscriptions.id })
@@ -166,13 +166,13 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
   if (existing) {
     await db
       .update(subscriptions)
-      .set({ stripeCustomerId, stripeSubId, plan, status: "active", currentPeriodEnd: periodEnd, updatedAt: new Date() })
+      .set({ razorpayCustomerId: customerId, razorpaySubId: subId, plan, status: "active", currentPeriodEnd: periodEnd, updatedAt: new Date() })
       .where(eq(subscriptions.userId, userId))
   } else {
     await db.insert(subscriptions).values({
       userId,
-      stripeCustomerId,
-      stripeSubId,
+      razorpayCustomerId: customerId,
+      razorpaySubId: subId,
       plan,
       status: "active",
       currentPeriodEnd: periodEnd,
@@ -180,32 +180,18 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
   }
 }
 
-async function syncSubscription(sub: Stripe.Subscription) {
-  const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id
-  const plan = (sub.metadata?.["plan"] as string | undefined) ?? "pro"
-
+async function handleSubscriptionEnd(entity: Record<string, unknown>) {
+  const customerId = entity["customer_id"] as string
   await db
     .update(subscriptions)
-    .set({
-      plan,
-      status: sub.status === "active" ? "active" : sub.status,
-      currentPeriodEnd: new Date(sub.current_period_end * 1000),
-      cancelAtPeriodEnd: sub.cancel_at_period_end,
-      updatedAt: new Date(),
-    })
-    .where(eq(subscriptions.stripeCustomerId, customerId))
+    .set({ plan: "free", status: "active", razorpaySubId: null, updatedAt: new Date() })
+    .where(eq(subscriptions.razorpayCustomerId, customerId))
 }
 
-async function downgradeToFree(customerId: string) {
-  await db
-    .update(subscriptions)
-    .set({ plan: "free", status: "active", stripeSubId: null, updatedAt: new Date() })
-    .where(eq(subscriptions.stripeCustomerId, customerId))
-}
-
-async function markPaymentFailed(customerId: string) {
+async function handlePaymentFailed(entity: Record<string, unknown>) {
+  const customerId = entity["customer_id"] as string
   await db
     .update(subscriptions)
     .set({ status: "past_due", updatedAt: new Date() })
-    .where(eq(subscriptions.stripeCustomerId, customerId))
+    .where(eq(subscriptions.razorpayCustomerId, customerId))
 }

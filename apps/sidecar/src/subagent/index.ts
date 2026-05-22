@@ -6,7 +6,7 @@ import { createModel } from "../pipeline/model.js"
 import { createMemoryTools } from "../tools/memory.js"
 import { createWebTools } from "../tools/web.js"
 
-const SUBAGENT_MODEL = process.env.AGENT_PATH_MODEL || "claude-sonnet-4-6"
+const SUBAGENT_MODEL = process.env.AGENT_PATH_MODEL || "gpt-4.1"
 const NOTEPAD = join(homedir(), ".yomi")
 
 // Spawn an isolated subagent for a subtask. Only the final text result is returned

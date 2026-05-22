@@ -40,20 +40,19 @@ Before the full BuddyWindow exists, `app.tsx` is the entire UI — a single floa
 **Audio capture (renderer-side):**
 
 ```ts
-// Request mic permission at app start (keep stream alive)
 const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
 const ctx = new AudioContext({ sampleRate: 16000 })
 const source = ctx.createMediaStreamSource(stream)
 const processor = ctx.createScriptProcessor(4096, 1, 1)
 processor.onaudioprocess = (e) => {
   const pcm = e.inputBuffer.getChannelData(0)
-  window.yomi.sendAudioChunk(pcm.buffer.slice(0), 16000)  // copy buffer — reused by AudioContext
+  window.yomi.sendAudioChunk(pcm.buffer.slice(0), 16000)
 }
 source.connect(processor)
 processor.connect(ctx.destination)
 ```
 
-Start capturing only when state transitions to `listening`. `ScriptProcessorNode` is deprecated but universally supported without AudioWorklet complexity.
+Start capturing only when state transitions to `listening`.
 
 **Type declarations** (`renderer/global.d.ts`):
 
@@ -100,7 +99,7 @@ Rendered as a small always-on-top `BrowserWindow` or embedded in the tray icon d
 
 Slide-out panel with:
 - Account section (sign in/out, plan info)
-- Voice settings (TTS provider, voice selection)
+- Voice settings (TTS engine, voice selection)
 - Microphone device selection
 - Hotkey configuration
 - Permissions status (mic, screen recording)
@@ -109,21 +108,6 @@ Slide-out panel with:
 ### Visual Guide Overlay
 
 Rendered as a separate transparent click-through `BrowserWindow` positioned at (0,0) spanning the full screen. Mouse events pass through to the underlying app.
-
-```
-┌─────────────────────────────────────────────┐
-│  ← Step 2 of 4 →  ✕                        │  nav bar
-│                                              │
-│        ┌──────────────┐                     │
-│        │ Messages tab  │ ← ─ ─ ─ ─ ─ ─      │  highlighted element
-│        │ ┌───┐        │                     │  with arrow + label
-│        │ │ 3 │        │                     │
-│        │ └───┘        │                     │
-│        └──────────────┘                     │
-│                                              │
-│  Click the Messages tab at the top left      │  instruction text
-└─────────────────────────────────────────────┘
-```
 
 ```typescript
 interface GuideElement {
@@ -161,4 +145,3 @@ interface GuideStep {
 
 - ~~State management: React context vs Zustand vs Jotai~~ — **decided: Zustand** (`src/renderer/store.ts`). Single `useYomiStore` with `hotkeyState`, `responseText`, `guideSteps`, `transcript`, `error`. `handleSseEvent` drives all state transitions from SSE events.
 - Overlay multi-monitor support: position overlay across all screens vs only the active screen.
-- `ScriptProcessorNode` deprecation: migrate to `AudioWorkletNode` when spec 05 STT abstraction ships.

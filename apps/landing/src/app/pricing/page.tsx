@@ -8,55 +8,49 @@ const plans = [
     name: "Free",
     price: "Free",
     features: [
-      "50 fast queries / day",
-      "1 agent run / month",
-      "Local STT + TTS",
-      "Bring your own key",
+      "10 LLM calls / day",
+      "2 STT minutes / day",
+      "TTS included",
+      "Standard support",
     ],
     cta: "Join waitlist",
     ctaHref: "/#waitlist",
   },
   {
-    name: "Pro",
-    price: "$20",
+    name: "Basic",
+    price: "$4",
     features: [
-      "Unlimited fast queries",
-      "100 agent runs / month",
-      "Cloud STT + TTS",
-      "MCP connectors",
-      "Cloud sync",
-      "2 months free annually",
+      "500 LLM calls / day",
+      "30 STT minutes / day",
+      "Screenshot analysis",
+      "Email support",
     ],
     cta: "Join waitlist",
     ctaHref: "/#waitlist",
     popular: true,
   },
   {
-    name: "Max",
-    price: "$50",
+    name: "Standard",
+    price: "$9",
     features: [
-      "Unlimited fast queries",
-      "500 agent runs / month",
-      "Cloud STT + TTS",
-      "Priority latency",
-      "Cloud subagents",
-      "2 months free annually",
+      "2,000 LLM calls / day",
+      "120 STT minutes / day",
+      "Agent pipeline",
+      "Screenshot analysis",
     ],
     cta: "Join waitlist",
     ctaHref: "/#waitlist",
   },
   {
-    name: "Team",
-    price: "$30",
-    period: "/user/mo",
+    name: "Genesis",
+    price: "$19",
     features: [
-      "Everything in Pro",
-      "SSO + admin console",
-      "Shared MCP connectors",
-      "500 agent runs / user / mo",
-      "2 months free annually",
+      "10,000 LLM calls / day",
+      "600 STT minutes / day",
+      "Agent pipeline",
+      "Priority support",
     ],
-    cta: "Contact us",
+    cta: "Join waitlist",
     ctaHref: "/#waitlist",
   },
 ]
@@ -66,24 +60,18 @@ type CheckVal = "✓" | "✗" | string
 interface ComparisonRow {
   label: string
   free: CheckVal
-  pro: CheckVal
-  max: CheckVal
-  team: CheckVal
+  basic: CheckVal
+  standard: CheckVal
+  genesis: CheckVal
 }
 
 const rows: ComparisonRow[] = [
-  { label: "Fast queries", free: "50 / day", pro: "Unlimited", max: "Unlimited", team: "Unlimited" },
-  { label: "Agent runs", free: "1 / mo", pro: "100 / mo", max: "500 / mo", team: "500 / user / mo" },
-  { label: "STT", free: "Local", pro: "Cloud", max: "Cloud", team: "Cloud" },
-  { label: "TTS", free: "Local", pro: "Cloud", max: "Cloud", team: "Cloud" },
-  { label: "MCP connectors", free: "✗", pro: "✓", max: "✓", team: "✓" },
-  { label: "Cloud sync", free: "✗", pro: "✓", max: "✓", team: "✓" },
-  { label: "Bring your own key", free: "✓", pro: "✓", max: "✓", team: "✓" },
-  { label: "Priority latency", free: "✗", pro: "✗", max: "✓", team: "✗" },
-  { label: "Cloud subagents", free: "✗", pro: "✗", max: "✓", team: "✗" },
-  { label: "SSO + admin console", free: "✗", pro: "✗", max: "✗", team: "✓" },
-  { label: "Shared connectors", free: "✗", pro: "✗", max: "✗", team: "✓" },
-  { label: "Annual discount", free: "—", pro: "2 months free", max: "2 months free", team: "2 months free" },
+  { label: "LLM calls / day", free: "10", basic: "500", standard: "2,000", genesis: "10,000" },
+  { label: "STT minutes / day", free: "2", basic: "30", standard: "120", genesis: "600" },
+  { label: "TTS", free: "✓", basic: "✓", standard: "✓", genesis: "✓" },
+  { label: "Screenshot analysis", free: "✗", basic: "✓", standard: "✓", genesis: "✓" },
+  { label: "Agent pipeline", free: "✗", basic: "✗", standard: "✓", genesis: "✓" },
+  { label: "Support", free: "Standard", basic: "Email", standard: "Email", genesis: "Priority" },
 ]
 
 function Cell({ val }: { val: CheckVal }) {
@@ -115,7 +103,9 @@ export default function PricingPage() {
             <span className="text-accent">Powerful AI.</span>
           </h1>
           <p className="text-caption max-w-md mx-auto px-6">
-            Start free. Upgrade when you need more. Annual plans save 2 months.
+            Start free. Upgrade when you need more.
+            <br />
+            Paid via Razorpay — cards, UPI, and international payments.
           </p>
         </section>
 
@@ -143,13 +133,13 @@ export default function PricingPage() {
                     Free
                   </th>
                   <th className="text-center px-4 py-4 text-sm font-display font-semibold text-accent">
-                    Pro
+                    Basic
                   </th>
                   <th className="text-center px-4 py-4 text-sm font-display font-semibold text-label">
-                    Max
+                    Standard
                   </th>
                   <th className="text-center px-4 py-4 text-sm font-display font-semibold text-label">
-                    Team
+                    Genesis
                   </th>
                 </tr>
               </thead>
@@ -166,13 +156,13 @@ export default function PricingPage() {
                       <Cell val={row.free} />
                     </td>
                     <td className="px-4 py-4 text-center bg-accent/5">
-                      <Cell val={row.pro} />
+                      <Cell val={row.basic} />
                     </td>
                     <td className="px-4 py-4 text-center">
-                      <Cell val={row.max} />
+                      <Cell val={row.standard} />
                     </td>
                     <td className="px-4 py-4 text-center">
-                      <Cell val={row.team} />
+                      <Cell val={row.genesis} />
                     </td>
                   </tr>
                 ))}
@@ -181,7 +171,7 @@ export default function PricingPage() {
           </div>
 
           <p className="text-center mt-8 text-caption text-sm">
-            All plans include BYOK support. Prices are in USD.{" "}
+            All plans use OpenAI. No BYOK needed.{" "}
             <Link href="/#waitlist" className="text-accent hover:text-accent/80 transition-colors">
               Join the waitlist →
             </Link>

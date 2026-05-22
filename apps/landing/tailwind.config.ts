@@ -15,9 +15,9 @@ const config: Config = {
         edge: "rgb(30 30 56 / <alpha-value>)",
       },
       fontFamily: {
-        display: ["var(--font-syne)", "sans-serif"],
-        sans: ["var(--font-jakarta)", "sans-serif"],
-        mono: ["var(--font-mono)", "monospace"],
+        sans: ["var(--font-sans)", "SF Pro Text", "SF Pro Display", "-apple-system", "BlinkMacSystemFont", "Helvetica Neue", "Helvetica", "Arial", "sans-serif"],
+        display: ["var(--font-caveat)", "cursive"],
+        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
       keyframes: {
         "fade-up": {

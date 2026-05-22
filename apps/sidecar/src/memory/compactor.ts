@@ -4,7 +4,7 @@ import { join } from "node:path"
 import { createModel } from "../pipeline/model.js"
 import { NOTEPAD } from "./loader.js"
 
-const COMPACT_MODEL = process.env.COMPACT_MODEL || "claude-haiku-4-5-20251001"
+const COMPACT_MODEL = process.env.COMPACT_MODEL || "gpt-4.1-mini"
 // Minimum session log size before we bother calling the LLM.
 const MIN_SESSION_CHARS = 200
 

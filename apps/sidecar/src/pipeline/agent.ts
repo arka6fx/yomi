@@ -7,7 +7,7 @@ import { buildAgentPrompt, loadYomiMd, loadMemoryContext } from "../harness/prom
 import { LoopGuards } from "../harness/guards.js"
 import { compact } from "../memory/compactor.js"
 
-const AGENT_PATH_MODEL = process.env.AGENT_PATH_MODEL || "claude-sonnet-4-6"
+const AGENT_PATH_MODEL = process.env.AGENT_PATH_MODEL || "gpt-4.1"
 const MAX_STEPS = parseInt(process.env.AGENT_MAX_STEPS || "20", 10)
 
 // yomi.md is stable per-session; memory files change after compaction so load fresh each turn.
