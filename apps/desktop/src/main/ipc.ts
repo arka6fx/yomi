@@ -3,7 +3,7 @@ import type { BrowserWindow } from "electron"
 import type { SseEvent } from "@yomi/shared"
 import { captureScreen } from "./capture"
 import type { SidecarManager } from "./sidecar"
-import { resetToIdle } from "./hotkey"
+import { resetToIdle, activateProcessing } from "./hotkey"
 
 let pcmChunks: Float32Array[] = []
 let capturedSampleRate = 16000
@@ -11,7 +11,7 @@ let capturedSampleRate = 16000
 export function initIpc(
   sidecar: SidecarManager,
   overlayWin: BrowserWindow,
-): { onListenStop: () => Promise<void> } {
+): { onListenStop: () => Promise<void>; onTextQuery: () => void } {
   ipcMain.on("yomi:resize", (_e, w: number, h: number) => {
     overlayWin.setSize(Math.max(240, w), Math.max(80, h))
   })
@@ -35,9 +35,23 @@ export function initIpc(
     capturedSampleRate = sampleRate
   })
 
+  // Text query submitted from renderer (typed, no audio)
+  ipcMain.on("yomi:text-query", async (_e, text: string) => {
+    if (!text?.trim()) { resetToIdle(); return }
+    activateProcessing()
+    try {
+      const screenshotB64 = await captureScreen()
+      await streamQuery(sidecar, overlayWin, text.trim(), screenshotB64)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error"
+      send(overlayWin, { type: "error", message })
+      resetToIdle()
+    }
+  })
+
   return {
     onListenStop: async () => {
-      const chunks = pcmChunks.splice(0) // drain accumulator for this cycle
+      const chunks = pcmChunks.splice(0)
       try {
         const wav = buildWav(chunks, capturedSampleRate)
         const [transcript, screenshotB64] = await Promise.all([
@@ -51,6 +65,8 @@ export function initIpc(
         resetToIdle()
       }
     },
+    // Renderer calls this to tell main a text query was submitted (state → processing)
+    onTextQuery: () => { /* state already set to text-input via hotkey transition */ },
   }
 }
 

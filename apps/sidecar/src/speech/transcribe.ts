@@ -1,7 +1,11 @@
 import OpenAI, { toFile } from "openai"
 
+// STT uses its own key/URL so audio can go to real OpenAI while LLM uses a proxy
 function getOpenAI(): OpenAI {
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  return new OpenAI({
+    apiKey: process.env.STT_API_KEY || process.env.OPENAI_API_KEY,
+    baseURL: process.env.STT_BASE_URL,
+  })
 }
 
 export async function transcribe(wav: Uint8Array): Promise<string> {

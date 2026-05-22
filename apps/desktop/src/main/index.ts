@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from "electron"
+import { app, BrowserWindow, globalShortcut, screen } from "electron"
 import path from "node:path"
 import { SidecarManager } from "./sidecar"
 import { initHotkey } from "./hotkey"
@@ -37,8 +37,8 @@ app.whenReady().then(async () => {
   }
 
   overlayWin = new BrowserWindow({
-    width: 480,
-    height: 200,
+    width: 520,
+    height: 46,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -64,13 +64,39 @@ app.whenReady().then(async () => {
     overlayWin.loadFile(path.join(__dirname, "../renderer/index.html"))
   }
 
-  const { onListenStop } = initIpc(sidecar, overlayWin)
+  const { onListenStop, onTextQuery } = initIpc(sidecar, overlayWin)
 
   initHotkey({
     onStateChange: (s) => {
       overlayWin!.webContents.send("yomi:state", s)
     },
     onListenStop,
+    onTextQuery,
+  })
+
+  // Ctrl+Arrow — nudge overlay position (30px steps)
+  const STEP = 30
+  const nudge = (dx: number, dy: number) => {
+    if (!overlayWin) return
+    const [x, y] = overlayWin.getPosition()
+    const { width, height } = screen.getPrimaryDisplay().workAreaSize
+    overlayWin.setPosition(
+      Math.max(0, Math.min(width  - 520, x + dx)),
+      Math.max(0, Math.min(height - 46,  y + dy)),
+    )
+  }
+  globalShortcut.register("Ctrl+Up",    () => nudge(0, -STEP))
+  globalShortcut.register("Ctrl+Down",  () => nudge(0,  STEP))
+  globalShortcut.register("Ctrl+Left",  () => nudge(-STEP, 0))
+  globalShortcut.register("Ctrl+Right", () => nudge( STEP, 0))
+
+  // Ctrl+Shift+H — toggle overlay visibility
+  let visible = true
+  globalShortcut.register("Ctrl+Shift+H", () => {
+    if (!overlayWin) return
+    visible = !visible
+    if (visible) overlayWin.show()
+    else overlayWin.hide()
   })
 })
 

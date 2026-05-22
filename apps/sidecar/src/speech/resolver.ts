@@ -1,7 +1,11 @@
 import OpenAI from "openai"
 
+// TTS uses its own key/URL so audio can go to real OpenAI while LLM uses a proxy
 function getOpenAI(): OpenAI {
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  return new OpenAI({
+    apiKey: process.env.TTS_API_KEY || process.env.OPENAI_API_KEY,
+    baseURL: process.env.TTS_BASE_URL,
+  })
 }
 
 export type TtsEngine = "openai" | "none"

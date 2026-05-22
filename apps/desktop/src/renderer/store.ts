@@ -1,7 +1,7 @@
 import { create } from "zustand"
 import type { GuideStep, SseEvent } from "@yomi/shared"
 
-export type HotkeyState = "idle" | "listening" | "processing"
+export type HotkeyState = "idle" | "listening" | "processing" | "text-input"
 
 export interface ChatEntry {
   id: number
@@ -76,13 +76,24 @@ export const useYomiStore = create<YomiState>((set) => ({
         }))
         break
       case "error":
-        set((s) => ({
-          hotkeyState: "idle",
-          entries: s.entries.map((e) =>
-            e.id === s.activeId ? { ...e, error: event.message, isStreaming: false } : e
-          ),
-          activeId: null,
-        }))
+        set((s) => {
+          if (s.activeId !== null) {
+            return {
+              hotkeyState: "idle",
+              entries: s.entries.map((e) =>
+                e.id === s.activeId ? { ...e, error: event.message, isStreaming: false } : e
+              ),
+              activeId: null,
+            }
+          }
+          // Error before transcript (e.g. STT failure) — create a standalone error card
+          const id = nextId++
+          return {
+            hotkeyState: "idle",
+            entries: [...s.entries, { id, transcript: "", text: "", error: event.message, isStreaming: false }],
+            activeId: null,
+          }
+        })
         break
     }
   },

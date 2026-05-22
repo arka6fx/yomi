@@ -10,6 +10,7 @@ declare global {
       startDrag(offsetX: number, offsetY: number): void
       moveDrag(screenX: number, screenY: number): void
       resize(w: number, h: number): void
+      submitTextQuery(text: string): void
     }
   }
 }

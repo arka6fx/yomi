@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron"
 import type { SseEvent } from "@yomi/shared"
 
-type HotkeyState = "idle" | "listening" | "processing"
+type HotkeyState = "idle" | "listening" | "processing" | "text-input"
 
 contextBridge.exposeInMainWorld("yomi", {
   // Returns a cleanup function suitable for React useEffect teardown
@@ -31,5 +31,9 @@ contextBridge.exposeInMainWorld("yomi", {
 
   resize(w: number, h: number): void {
     ipcRenderer.send("yomi:resize", w, h)
+  },
+
+  submitTextQuery(text: string): void {
+    ipcRenderer.send("yomi:text-query", text)
   },
 })
