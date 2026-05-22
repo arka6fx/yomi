@@ -4,13 +4,18 @@ import { generateGuide } from "./visual-guide.js";
 import { transcribe } from "../speech/transcribe.js";
 import { synthesize, resolveTts } from "./tts.js";
 import { createModel } from "./model.js";
+import { buildFastPrompt, loadYomiMd } from "../harness/prompt.js";
 
 const MODEL = process.env.FAST_PATH_MODEL || "claude-haiku-4-5-20251001";
 
-const ANSWER_SYSTEM_PROMPT = `You are a helpful desktop AI assistant.
-You see the user's screen and hear their voice.
-Answer their question concisely in 1-3 sentences.
-If they ask you to show them how to do something, say "I'll guide you through this" and wait for guide mode.`;
+// Cached per-process; yomi.md is stable for the lifetime of a sidecar session.
+let cachedFastPrompt: string | null = null
+async function getFastPrompt(): Promise<string> {
+  if (!cachedFastPrompt) {
+    cachedFastPrompt = buildFastPrompt({ yomiMd: await loadYomiMd() })
+  }
+  return cachedFastPrompt
+}
 
 // Tiny single-consumer queue so multiple async producers (LLM text + N concurrent
 // TTS streams) can interleave events into one async generator.
@@ -65,12 +70,14 @@ async function* answerPipeline(
     });
   }
 
+  const systemPrompt = await getFastPrompt();
+
   const result = streamText({
     model: createModel(MODEL),
     messages: [
       {
         role: "system" as const,
-        content: ANSWER_SYSTEM_PROMPT,
+        content: systemPrompt,
         ...(process.env.LLM_BASE_URL
           ? {}
           : { experimental_providerMetadata: { anthropic: { cacheControl: { type: "ephemeral" } } } }),
