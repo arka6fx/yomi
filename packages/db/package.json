@@ -19,6 +19,7 @@
     "drizzle-orm": "^0.31.0"
   },
   "devDependencies": {
+    "@types/bun": "^1.1.0",
     "@yomi/eslint-config": "workspace:*",
     "@yomi/typescript-config": "workspace:*",
     "drizzle-kit": "^0.22.0",
