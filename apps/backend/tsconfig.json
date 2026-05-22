@@ -1,7 +1,9 @@
 {
   "extends": "@yomi/typescript-config/base.json",
   "compilerOptions": {
-    "outDir": "dist"
+    "outDir": "dist",
+    "declaration": false,
+    "declarationMap": false
   },
   "include": ["src"],
   "exclude": ["dist", "node_modules"]
