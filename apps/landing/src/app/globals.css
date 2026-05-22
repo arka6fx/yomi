@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  ::selection {
+    background: rgba(45, 212, 191, 0.2);
+    color: #eeeef8;
+  }
+
+  ::-webkit-scrollbar {
+    width: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #09090f;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1e1e38;
+    border-radius: 3px;
+  }
+}

@@ -1,0 +1,171 @@
+import type { Metadata } from "next"
+import Nav from "@/components/Nav"
+import Footer from "@/components/Footer"
+
+export const metadata: Metadata = {
+  title: "Terms of Service — Yomi",
+}
+
+export default function TermsPage() {
+  return (
+    <>
+      <Nav />
+      <main className="pt-16">
+        <div className="max-w-3xl mx-auto px-6 py-24">
+          <p className="font-mono text-xs text-caption uppercase tracking-widest mb-3">
+            Legal
+          </p>
+          <h1 className="font-display text-4xl font-extrabold mb-2">Terms of Service</h1>
+          <p className="text-caption text-sm mb-16">Last updated: May 2025</p>
+
+          <div className="space-y-10 text-caption leading-relaxed">
+            <Section title="Acceptance">
+              <p>
+                By downloading, installing, or using Yomi, you agree to these Terms of Service.
+                If you do not agree, do not use Yomi.
+              </p>
+            </Section>
+
+            <Section title="Description of service">
+              <p>
+                Yomi is an AI assistant application that integrates with your operating system to
+                provide context-aware responses to queries, autonomous task execution, and
+                persistent memory. The service includes a desktop application, a local sidecar
+                process, and optional cloud features.
+              </p>
+            </Section>
+
+            <Section title="Accounts and eligibility">
+              <ul>
+                <li>You must be 16 years or older to use Yomi.</li>
+                <li>You are responsible for maintaining the security of your account.</li>
+                <li>One account per person. No account sharing.</li>
+                <li>
+                  Accounts are authenticated via Google or GitHub OAuth. We do not store
+                  passwords.
+                </li>
+              </ul>
+            </Section>
+
+            <Section title="Acceptable use">
+              <p>You agree not to use Yomi to:</p>
+              <ul>
+                <li>Violate any applicable law or regulation</li>
+                <li>Infringe intellectual property rights of others</li>
+                <li>Generate, distribute, or store illegal content</li>
+                <li>
+                  Circumvent rate limits, quotas, or metering through automated means
+                </li>
+                <li>Reverse-engineer or extract model weights or prompts</li>
+                <li>Use Yomi to spy on or surveil others without their consent</li>
+              </ul>
+            </Section>
+
+            <Section title="Subscriptions and billing">
+              <ul>
+                <li>
+                  Paid plans are billed monthly or annually via Stripe. Prices are listed at
+                  yomi.app/pricing.
+                </li>
+                <li>
+                  Annual plans are prepaid. If you cancel an annual plan, you retain access until
+                  the end of the billing period — no prorated refunds.
+                </li>
+                <li>
+                  Monthly plans can be cancelled at any time. Access continues until the end of
+                  the current billing cycle.
+                </li>
+                <li>
+                  We reserve the right to change pricing with 30 days notice. Existing
+                  subscriptions are grandfathered at the locked price for 6 months after a price
+                  change.
+                </li>
+              </ul>
+            </Section>
+
+            <Section title="Free tier and limits">
+              <p>
+                The Free tier is provided as-is. We may adjust Free tier limits at any time.
+                Sustained abuse of the Free tier (e.g., circumventing limits) may result in
+                account suspension.
+              </p>
+            </Section>
+
+            <Section title="Bring your own key (BYOK)">
+              <p>
+                If you provide your own API key, you are responsible for all costs incurred
+                through that key. Yomi stores your key encrypted at rest and never logs prompt
+                content. You can remove your key at any time from Settings.
+              </p>
+            </Section>
+
+            <Section title="Intellectual property">
+              <p>
+                Yomi and its source code are proprietary. The application is licensed to you for
+                personal or organizational use under your subscription. You may not redistribute
+                or sublicense the application.
+              </p>
+              <p>
+                Content you create using Yomi (outputs, generated text, task results) belongs to
+                you.
+              </p>
+            </Section>
+
+            <Section title="Disclaimer of warranties">
+              <p>
+                YOMI IS PROVIDED &quot;AS IS&quot; WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+                IMPLIED. WE DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, ERROR-FREE, OR
+                THAT AI OUTPUTS WILL BE ACCURATE. USE AI OUTPUTS AT YOUR OWN JUDGMENT.
+              </p>
+            </Section>
+
+            <Section title="Limitation of liability">
+              <p>
+                TO THE MAXIMUM EXTENT PERMITTED BY LAW, YOMI&apos;S LIABILITY IS LIMITED TO THE
+                AMOUNT YOU PAID IN THE PAST 12 MONTHS. WE ARE NOT LIABLE FOR INDIRECT,
+                INCIDENTAL, OR CONSEQUENTIAL DAMAGES.
+              </p>
+            </Section>
+
+            <Section title="Termination">
+              <p>
+                We may suspend or terminate accounts that violate these Terms. You may delete your
+                account at any time from Settings → Account → Delete account. Upon deletion, your
+                data is purged within 30 days.
+              </p>
+            </Section>
+
+            <Section title="Changes">
+              <p>
+                We may update these Terms. Material changes will be emailed to you 14 days in
+                advance. Continued use after changes take effect constitutes acceptance.
+              </p>
+            </Section>
+
+            <Section title="Contact">
+              <p>
+                Questions about these Terms? Email{" "}
+                <a href="mailto:legal@yomi.app" className="text-accent">
+                  legal@yomi.app
+                </a>
+                .
+              </p>
+            </Section>
+          </div>
+        </div>
+      </main>
+      <Footer />
+    </>
+  )
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-3">
+      <h2 className="font-display text-lg font-semibold text-label">{title}</h2>
+      <div className="space-y-3 [&_ul]:list-none [&_ul]:space-y-1.5 [&_li]:pl-4 [&_li]:relative [&_li]:before:content-['▸'] [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-accent [&_li]:before:text-xs [&_a]:text-accent [&_a]:hover:text-accent/80 [&_a]:transition-colors">
+        {children}
+      </div>
+    </div>
+  )
+}
