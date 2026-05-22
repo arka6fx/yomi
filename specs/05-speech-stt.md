@@ -67,14 +67,20 @@ Use WebRTC VAD (via `@ricky0123/vad-node` or similar) to detect end-of-speech. D
 | VAD → ElevenLabs STT final | < 400ms | Streaming, parallel to LLM start |
 | Whisper STT (base.en) | ~700ms | Local CPU, no network |
 
+## Interim implementation (shipped in spec 04)
+
+`apps/sidecar/src/stt.ts` + `POST /stt` route provide a working ElevenLabs → whisper.cpp fallback
+using `nodejs-whisper` (`tiny.en`). This covers the fast path until spec 05 adds streaming VAD.
+
 ## Files to create
 
 - `apps/sidecar/src/speech/stt-elevenlabs.ts` — ElevenLabs STT streaming client
-- `apps/sidecar/src/speech/stt-whisper.ts` — whisper.cpp local fallback
+- `apps/sidecar/src/speech/stt-whisper.ts` — whisper.cpp local fallback (replace `stt.ts`)
 - `apps/sidecar/src/speech/vad.ts` — WebRTC VAD for end-of-speech detection
 
 ## Files to change
 
+- `apps/sidecar/src/stt.ts` — replace with proper speech/ module once VAD lands
 - `apps/sidecar/src/pipeline/fast.ts` — integrate STT into fast pipeline
 
 ## Open Questions
