@@ -42,7 +42,7 @@ cd apps/desktop  && bun run dev   # Electron
 
 | Layer | Choice |
 |---|---|
-| Landing | Next.js 14 / Vercel |
+| Landing | Next.js 16 / Vercel |
 | Backend | Hono on Bun |
 | Database | Postgres — Neon (serverless) |
 | ORM | Drizzle |

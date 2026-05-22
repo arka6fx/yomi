@@ -2,6 +2,7 @@ import { Hono } from "hono"
 import { streamSSE } from "hono/streaming"
 import type { FastQueryRequest, SseEvent } from "@yomi/shared"
 import { fastPipeline } from "./pipeline/fast.js"
+import { transcribe } from "./stt.js"
 
 const app = new Hono()
 
@@ -18,6 +19,7 @@ function authMiddleware(c: any, next: any) {
 }
 
 app.use("/query/*", authMiddleware)
+app.use("/stt", authMiddleware)
 
 app.get("/health", (c) => {
   return c.json({ status: "ok", version: VERSION })
@@ -45,6 +47,15 @@ app.post("/query/fast", async (c) => {
       await stream.writeSSE({ data: JSON.stringify({ type: "error", message } satisfies SseEvent) })
     }
   })
+})
+
+app.post("/stt", async (c) => {
+  const form = await c.req.formData()
+  const audio = form.get("audio")
+  if (!audio || typeof audio === "string") return c.json({ error: "audio file required" }, 400)
+  const bytes = new Uint8Array(await audio.arrayBuffer())
+  const text = await transcribe(bytes)
+  return c.json({ text })
 })
 
 app.onError((err, c) => {
