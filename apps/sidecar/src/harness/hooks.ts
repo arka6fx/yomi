@@ -1,6 +1,7 @@
-import { appendFile, mkdir, stat } from "node:fs/promises"
+import { appendFile, mkdir } from "node:fs/promises"
 import { homedir } from "node:os"
 import { join } from "node:path"
+import { initMemoryDir } from "../memory/loader.js"
 
 export interface Hooks {
   onSessionStart(): Promise<void>
@@ -21,7 +22,6 @@ const DENYLIST = [
 
 // ~4000 tokens at ~4 chars/token
 const TOOL_OUTPUT_MAX_CHARS = 16_000
-const MEMORY_COMPACTION_THRESHOLD = 50 * 1024 // 50 KB
 
 function trimMiddle(text: string, maxChars: number): string {
   const head = Math.floor(maxChars * 0.5)
@@ -37,11 +37,11 @@ function todaySessionPath(): string {
 
 export const hooks: Hooks = {
   async onSessionStart() {
-    // no-op — hook point for spec 10
+    await initMemoryDir()
   },
 
   async onUserPromptSubmit(_prompt: string) {
-    // no-op — hook point for spec 10
+    // reserved for future use (e.g. per-prompt context injection)
   },
 
   async onPreToolUse(toolName, args) {
@@ -82,14 +82,6 @@ export const hooks: Hooks = {
   },
 
   async onSessionEnd() {
-    const memPath = join(homedir(), ".yomi", "memory.md")
-    try {
-      const { size } = await stat(memPath)
-      if (size > MEMORY_COMPACTION_THRESHOLD) {
-        console.warn(`[yomi/hooks] memory.md is ${size} bytes — compaction needed (spec 10)`)
-      }
-    } catch {
-      // memory.md doesn't exist yet — nothing to compact
-    }
+    // Compaction is triggered directly from agentPipeline after each run.
   },
 }
