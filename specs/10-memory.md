@@ -158,16 +158,23 @@ During any agent task longer than ~3 steps, the agent writes its working state t
 
 This externalises working memory to disk. The agent can re-read it after compaction to resume exactly where it left off — the same technique coding agents use to stay coherent over long horizons.
 
+## What's already implemented
+
+- `apps/sidecar/src/tools/memory.ts` — `list_files`, `read_file`, `write_file`, `search` (ripgrep) retrieval tools; registered in `createAgentTools()`
+- `apps/sidecar/src/harness/prompt.ts` — `loadYomiMd()` reads `~/.yomi/yomi.md`; injected into fast and agent prompts
+- `apps/sidecar/src/harness/hooks.ts` — `onStop` appends to `sessions/YYYY-MM-DD-dev.md`; `onSessionEnd` checks `memory.md` file size and logs a warning when threshold exceeded (stub only — no real compaction)
+
 ## Files to change
 
-- `apps/sidecar/src/index.ts` — initialize memory on startup
+- `apps/sidecar/src/index.ts` — call `initMemoryDir()` on startup to ensure `~/.yomi/` directory tree exists
+- `apps/sidecar/src/harness/prompt.ts` — inject `memory.md` summary section and `memory-index.md` into both fast and agent system prompts (JIT alongside `yomi.md`)
+- `apps/sidecar/src/harness/hooks.ts` — wire `onSessionEnd` to call the real compactor; implement `onSessionStart` to load memory context
 
 ## Files to create
 
-- `apps/sidecar/src/memory/loader.ts` — Load yomi.md, memory.md summary, memory-index.md
-- `apps/sidecar/src/memory/compactor.ts` — Compaction algorithm (recall → precision → write)
-- `apps/sidecar/src/memory/retrieval.ts` — list_files, read_file, search (ripgrep)
-- `apps/sidecar/src/memory/scratchpad.ts` — Scratchpad read/write for long tasks
+- `apps/sidecar/src/memory/loader.ts` — Load `memory.md` (summary section only), `memory-index.md`, and ensure `~/.yomi/` directory structure on first run; `yomi.md` loading stays in `harness/prompt.ts`
+- `apps/sidecar/src/memory/compactor.ts` — Full recall→precision→write compaction: extract facts/decisions/threads from conversation, append to `memory.md`, save full session to `sessions/`, update `memory-index.md`, reset live window
+- `apps/sidecar/src/memory/scratchpad.ts` — Typed `readScratchpad()` / `writeScratchpad(projectSlug, content)` helpers used by the agent to externalize working state during long tasks
 
 ## Open Questions
 

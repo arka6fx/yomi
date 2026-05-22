@@ -3,19 +3,19 @@ import type { AgentQueryRequest, SseEvent } from "@yomi/shared"
 import { createModel } from "./model.js"
 import { createAgentTools } from "../tools/index.js"
 import { hooks } from "../harness/hooks.js"
-import { buildAgentPrompt, loadYomiMd } from "../harness/prompt.js"
+import { buildAgentPrompt, loadYomiMd, loadMemoryContext } from "../harness/prompt.js"
 import { LoopGuards } from "../harness/guards.js"
+import { compact } from "../memory/compactor.js"
 
 const AGENT_PATH_MODEL = process.env.AGENT_PATH_MODEL || "claude-sonnet-4-6"
 const MAX_STEPS = parseInt(process.env.AGENT_MAX_STEPS || "20", 10)
 
-// Cached per-process; yomi.md is stable for the lifetime of a sidecar session.
-let cachedAgentPrompt: string | null = null
+// yomi.md is stable per-session; memory files change after compaction so load fresh each turn.
+let cachedYomiMd: string | null = null
 async function getAgentPrompt(): Promise<string> {
-  if (!cachedAgentPrompt) {
-    cachedAgentPrompt = buildAgentPrompt({ yomiMd: await loadYomiMd() })
-  }
-  return cachedAgentPrompt
+  if (cachedYomiMd === null) cachedYomiMd = await loadYomiMd()
+  const { memorySummary, memoryIndex } = await loadMemoryContext()
+  return buildAgentPrompt({ yomiMd: cachedYomiMd, memorySummary, memoryIndex })
 }
 
 // Wrap all tool execute functions with PreToolUse / PostToolUse hook calls.
@@ -94,5 +94,7 @@ export async function* agentPipeline(req: AgentQueryRequest): AsyncGenerator<Sse
 
   const summary = textTail.replace(/\n/g, " ").trim() || "agent task complete"
   await hooks.onStop(summary)
+  // Fire compaction after each agent run; it no-ops if the session log is too short.
+  compact().catch(err => console.warn("[yomi/agent] compaction error:", err))
   yield { type: "done" }
 }
