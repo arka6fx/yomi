@@ -108,8 +108,10 @@ async function* answerPipeline(
 
   const producer = (async () => {
     let buffer = "";
+    let gotChunk = false;
     for await (const chunk of result.textStream) {
       if (!chunk) continue;
+      gotChunk = true;
       queue.push({ type: "llm_chunk", text: chunk });
       if (!ttsEnabled) continue;
       buffer += chunk;
@@ -120,6 +122,9 @@ async function* answerPipeline(
         ttsTasks.push(speakSentence(sentence));
         cutAt = findSentenceEnd(buffer);
       }
+    }
+    if (!gotChunk) {
+      throw new Error("LLM returned empty response (likely rate-limited or quota exceeded)")
     }
     if (ttsEnabled && buffer.trim().length > 0) {
       ttsTasks.push(speakSentence(buffer));

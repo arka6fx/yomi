@@ -12,6 +12,23 @@ export function initIpc(
   sidecar: SidecarManager,
   overlayWin: BrowserWindow,
 ): { onListenStop: () => Promise<void> } {
+  ipcMain.on("yomi:resize", (_e, w: number, h: number) => {
+    overlayWin.setSize(Math.max(240, w), Math.max(80, h))
+  })
+
+  let dragStart = { winX: 0, winY: 0, mouseX: 0, mouseY: 0 }
+
+  ipcMain.on("yomi:drag-start", (_e, mouseX: number, mouseY: number) => {
+    const pos = overlayWin.getPosition()
+    dragStart = { winX: pos[0] ?? 0, winY: pos[1] ?? 0, mouseX, mouseY }
+  })
+
+  ipcMain.on("yomi:drag-move", (_e, mouseX: number, mouseY: number) => {
+    const dx = mouseX - dragStart.mouseX
+    const dy = mouseY - dragStart.mouseY
+    overlayWin.setPosition(dragStart.winX + dx, dragStart.winY + dy)
+  })
+
   // Renderer streams raw PCM Float32 chunks while in "listening" state
   ipcMain.on("yomi:audio-chunk", (_e, pcm: ArrayBuffer, sampleRate: number) => {
     pcmChunks.push(new Float32Array(pcm))
@@ -119,7 +136,6 @@ async function streamQuery(
       const event = JSON.parse(line.slice(6)) as SseEvent
       send(overlayWin, event)
       if (event.type === "done") {
-        overlayWin.setIgnoreMouseEvents(false) // allow dismiss clicks on response
         resetToIdle()
       }
       if (event.type === "error") resetToIdle()

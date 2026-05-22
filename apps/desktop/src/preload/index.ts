@@ -20,4 +20,16 @@ contextBridge.exposeInMainWorld("yomi", {
   sendAudioChunk(pcm: ArrayBuffer, sampleRate: number): void {
     ipcRenderer.send("yomi:audio-chunk", pcm, sampleRate)
   },
+
+  startDrag(offsetX: number, offsetY: number): void {
+    ipcRenderer.send("yomi:drag-start", offsetX, offsetY)
+  },
+
+  moveDrag(screenX: number, screenY: number): void {
+    ipcRenderer.send("yomi:drag-move", screenX, screenY)
+  },
+
+  resize(w: number, h: number): void {
+    ipcRenderer.send("yomi:resize", w, h)
+  },
 })

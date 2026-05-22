@@ -4,7 +4,7 @@
   "private": true,
   "main": "out/main/index.js",
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "ELECTRON_OZONE_PLATFORM_HINT=auto YOMI_DEV=true electron-vite dev",
     "build": "electron-vite build && electron-builder",
     "preview": "electron-vite preview",
     "lint": "eslint src",

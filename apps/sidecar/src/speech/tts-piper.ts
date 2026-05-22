@@ -1,15 +1,33 @@
 import { spawn } from "child_process"
 
-// Piper offline TTS. Streams raw PCM (signed 16-bit, 22050 Hz mono by default
-// for most lessac voices) on stdout. The caller is responsible for either
-// playing PCM directly or wrapping in a WAV header before MP3 conversion.
-
 const DEFAULT_VOICE = "en_US-lessac-medium"
 
 export interface PiperOptions {
   voice?: string
   sentenceSilence?: number
   binary?: string
+}
+
+function buildWavHeader(sampleRate: number, bitsPerSample: number, channels: number, dataLength: number): Buffer {
+  const header = Buffer.alloc(44)
+  const byteRate = sampleRate * channels * (bitsPerSample / 8)
+  const blockAlign = channels * (bitsPerSample / 8)
+  const totalDataLen = dataLength + 36
+
+  header.write("RIFF", 0)
+  header.writeUInt32LE(totalDataLen, 4)
+  header.write("WAVE", 8)
+  header.write("fmt ", 12)
+  header.writeUInt32LE(16, 16)
+  header.writeUInt16LE(1, 20)
+  header.writeUInt16LE(channels, 22)
+  header.writeUInt32LE(sampleRate, 24)
+  header.writeUInt32LE(byteRate, 28)
+  header.writeUInt16LE(blockAlign, 32)
+  header.writeUInt16LE(bitsPerSample, 34)
+  header.write("data", 36)
+  header.writeUInt32LE(dataLength, 40)
+  return header
 }
 
 export async function* synthesizePiper(
@@ -24,26 +42,32 @@ export async function* synthesizePiper(
     "--model", voice,
     "--output-raw",
     "--sentence-silence", String(sentenceSilence),
-  ], { stdio: ["pipe", "pipe", "pipe"] })
+  ], { stdio: ["pipe", "pipe", "pipe"], shell: true })
 
-  // Surface spawn errors (e.g. ENOENT when piper isn't installed).
   const errorPromise = new Promise<never>((_, reject) => {
     proc.on("error", reject)
     proc.on("exit", (code) => {
       if (code !== 0 && code !== null) reject(new Error(`piper exited with code ${code}`))
     })
   })
-  errorPromise.catch(() => { /* surfaced via the iterator below */ })
+  errorPromise.catch(() => {})
 
   proc.stdin.write(text + "\n")
   proc.stdin.end()
 
+  const pcmChunks: Buffer[] = []
   try {
     for await (const chunk of proc.stdout) {
       const buf = chunk as Buffer
-      if (buf.byteLength > 0) yield new Uint8Array(buf)
+      if (buf.byteLength > 0) pcmChunks.push(buf)
     }
   } finally {
     if (!proc.killed) proc.kill()
+  }
+
+  if (pcmChunks.length > 0) {
+    const pcmData = Buffer.concat(pcmChunks)
+    const header = buildWavHeader(22050, 16, 1, pcmData.length)
+    yield new Uint8Array(Buffer.concat([header, pcmData]))
   }
 }

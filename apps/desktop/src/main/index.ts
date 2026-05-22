@@ -4,6 +4,10 @@ import { SidecarManager } from "./sidecar"
 import { initHotkey } from "./hotkey"
 import { initIpc } from "./ipc"
 
+if (process.platform === "linux") {
+  app.commandLine.appendSwitch("ozone-platform-hint", "auto")
+}
+
 let overlayWin: BrowserWindow | null = null
 const sidecar = new SidecarManager()
 
@@ -21,7 +25,13 @@ app.whenReady().then(async () => {
   }
 
   // Start sidecar and wait until healthy before opening the window
-  await sidecar.start()
+  try {
+    await sidecar.start()
+  } catch (err) {
+    console.error("[yomi] sidecar failed to start — retrying in 3s", err)
+    await new Promise((r) => setTimeout(r, 3000))
+    await sidecar.start()
+  }
 
   // Overlay window — frameless, transparent, always-on-top
   overlayWin = new BrowserWindow({
@@ -42,7 +52,6 @@ app.whenReady().then(async () => {
 
   // Must be called BEFORE win.show() — excludes overlay from screen recordings
   overlayWin.setContentProtection(true)
-  overlayWin.setIgnoreMouseEvents(true, { forward: true }) // click-through when idle
   overlayWin.setVisibleOnAllWorkspaces(true) // visible across macOS Spaces
 
   if (process.env.ELECTRON_RENDERER_URL) {
@@ -57,7 +66,12 @@ app.whenReady().then(async () => {
 
   // Register global hotkeys (must be after whenReady)
   initHotkey({
-    onStateChange: (s) => overlayWin!.webContents.send("yomi:state", s),
+    onStateChange: (s) => {
+      overlayWin!.webContents.send("yomi:state", s)
+      if (process.platform === "linux") {
+        import("./platform/linux").then((m) => m.writeWaybar(s))
+      }
+    },
     onListenStop,
   })
 })

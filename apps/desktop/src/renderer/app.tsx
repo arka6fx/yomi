@@ -8,6 +8,8 @@ const styleEl = document.createElement("style")
 styleEl.textContent = `
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
   @keyframes spin  { to{transform:rotate(360deg)} }
+  .drag { -webkit-app-region: drag; app-region: drag; }
+  .no-drag { -webkit-app-region: no-drag; app-region: no-drag; }
 `
 document.head.appendChild(styleEl)
 
@@ -19,14 +21,12 @@ function StatusPill({ state }: { state: HotkeyState }) {
     <div style={{
       display: "flex", alignItems: "center", gap: 8,
       padding: "8px 14px", borderRadius: 20,
-      background: "rgba(10,10,10,0.82)",
-      border: "1px solid rgba(255,255,255,0.12)",
-      backdropFilter: "blur(12px)",
+      background: "rgba(0,0,0,0.04)",
+      border: "1px solid rgba(255,255,255,0.03)",
       color: "#fff", fontSize: 13, fontFamily: FONT,
       userSelect: "none", letterSpacing: "-0.01em",
-      boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
       WebkitUserSelect: "none",
-    }}>
+    }} className="drag">
       {state === "listening" && (
         <div style={{
           width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
@@ -54,14 +54,12 @@ function ResponseCard({
   return (
     <div style={{
       width: "100%", padding: 14, borderRadius: 12, boxSizing: "border-box",
-      background: "rgba(10,10,10,0.88)",
-      border: "1px solid rgba(255,255,255,0.1)",
-      backdropFilter: "blur(16px)",
-      color: "#f0f0f0", fontSize: 14, fontFamily: FONT,
+      background: "rgba(0,0,0,0.06)",
+      border: "1px solid rgba(255,255,255,0.03)",
+      color: "#e0e0e0", fontSize: 14, fontFamily: FONT,
       lineHeight: 1.5, letterSpacing: "-0.01em",
-      boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
       position: "relative", maxHeight: 120, overflowY: "auto",
-    }}>
+    }} className="drag">
       <button
         onClick={onDismiss}
         aria-label="Dismiss"
@@ -70,8 +68,9 @@ function ResponseCard({
           background: "none", border: "none",
           color: "rgba(255,255,255,0.4)", cursor: "pointer",
           fontSize: 18, lineHeight: 1, padding: 2,
-        }}
-      >×</button>
+        }} className="no-drag">
+        ×
+      </button>
       {error
         ? <p style={{ margin: 0, paddingRight: 24, color: "#f87171" }}>⚠ {error}</p>
         : <p style={{ margin: 0, paddingRight: 24, whiteSpace: "pre-wrap" }}>{text}</p>
@@ -81,12 +80,43 @@ function ResponseCard({
 }
 
 const App: React.FC = () => {
-  const { hotkeyState, responseText, error, handleSseEvent, setHotkeyState, reset } = useYomiStore()
+  const { hotkeyState, entries, audioQueue, handleSseEvent, setHotkeyState, dismissEntry } = useYomiStore()
 
   const streamRef        = useRef<MediaStream | null>(null)
   const processorRef     = useRef<AudioWorkletNode | null>(null)
   const ctxRef           = useRef<AudioContext | null>(null)
   const workletReadyRef  = useRef<Promise<void> | null>(null)
+  const audioPlayingRef  = useRef(false)
+  const audioQueueRef    = useRef<string[]>([])
+  const audioSourceRef   = useRef<AudioBufferSourceNode | null>(null)
+
+  // Manual drag (Wayland-safe — CSS app-region unreliable)
+  const draggingRef = useRef(false)
+
+  useEffect(() => {
+    const onMouseDown = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest(".drag") || target.closest(".no-drag")) return
+      draggingRef.current = true
+      window.yomi.startDrag(e.screenX, e.screenY)
+    }
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!draggingRef.current) return
+      window.yomi.moveDrag(e.screenX, e.screenY)
+    }
+
+    const onMouseUp = () => { draggingRef.current = false }
+
+    document.addEventListener("mousedown", onMouseDown)
+    document.addEventListener("mousemove", onMouseMove)
+    document.addEventListener("mouseup", onMouseUp)
+    return () => {
+      document.removeEventListener("mousedown", onMouseDown)
+      document.removeEventListener("mousemove", onMouseMove)
+      document.removeEventListener("mouseup", onMouseUp)
+    }
+  }, [])
 
   // Wire IPC: SSE events and hotkey state from main process
   useEffect(() => {
@@ -127,6 +157,39 @@ const App: React.FC = () => {
       workletReadyRef.current = null
     }
   }, [])
+
+  // Play audio chunks sequentially from the queue
+  useEffect(() => {
+    audioQueueRef.current = audioQueue
+    if (audioQueue.length === 0 || audioPlayingRef.current) return
+    const ctx = ctxRef.current
+    if (!ctx) return
+
+    audioPlayingRef.current = true
+    const playNext = async () => {
+      while (audioQueueRef.current.length > 0) {
+        const base64 = audioQueueRef.current.shift()!
+        const binary = atob(base64)
+        const bytes = new Uint8Array(binary.length)
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+        try {
+          const audioBuf = await ctx.decodeAudioData(bytes.buffer)
+          const src = ctx.createBufferSource()
+          audioSourceRef.current = src
+          src.buffer = audioBuf
+          src.connect(ctx.destination)
+          src.start()
+          await new Promise<void>((r) => {
+            src.onended = () => { if (audioSourceRef.current === src) audioSourceRef.current = null; r() }
+          })
+        } catch {
+          // skip unplayable chunk
+        }
+      }
+      audioPlayingRef.current = false
+    }
+    playNext()
+  }, [audioQueue])
 
   // Acquire mic on mount — keep stream alive; only capture during listening
   useEffect(() => {
@@ -179,28 +242,54 @@ const App: React.FC = () => {
     }
   }, [hotkeyState])
 
-  // Auto-dismiss response 8s after pipeline completes
+  // Escape: stop audio and dismiss latest entry
   useEffect(() => {
-    if (hotkeyState === "idle" && (responseText || error)) {
-      const t = setTimeout(reset, 8_000)
-      return () => clearTimeout(t)
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return
+      audioSourceRef.current?.stop()
+      audioSourceRef.current = null
+      audioPlayingRef.current = false
+      audioQueueRef.current = []
+      if (entries.length > 0) dismissEntry(entries[entries.length - 1]!.id)
     }
-  }, [hotkeyState, responseText, error, reset])
-
-  const showResponse = !!(responseText || error)
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [entries, dismissEntry])
 
   return (
-    <div style={{
-      position: "fixed", bottom: 16, right: 16, left: 16,
-      display: "flex", flexDirection: "column", alignItems: "stretch", gap: 8,
-    }}>
-      {showResponse && (
-        <ResponseCard text={responseText} error={error} onDismiss={reset} />
-      )}
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <StatusPill state={hotkeyState} />
+    <>
+      <div style={{
+        position: "fixed", bottom: 16, right: 16, left: 16, top: 16,
+        display: "flex", flexDirection: "column", alignItems: "stretch", gap: 8,
+        overflowY: "auto",
+      }} className="drag">
+        {entries.map((e) => (
+          <ResponseCard key={e.id} text={e.text} error={e.error} onDismiss={() => dismissEntry(e.id)} />
+        ))}
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <StatusPill state={hotkeyState} />
+        </div>
       </div>
-    </div>
+      <div className="no-drag" style={{
+        position: "fixed", bottom: 6, right: 6, display: "flex", gap: 4, zIndex: 999,
+      }}>
+        <button className="no-drag" onClick={() => window.yomi.resize(360, 150)} style={{
+          background: "rgba(255,255,255,0.1)", border: "none",
+          color: "rgba(255,255,255,0.5)", borderRadius: 4,
+          cursor: "pointer", fontSize: 11, padding: "2px 6px",
+        }}>S</button>
+        <button className="no-drag" onClick={() => window.yomi.resize(480, 200)} style={{
+          background: "rgba(255,255,255,0.1)", border: "none",
+          color: "rgba(255,255,255,0.5)", borderRadius: 4,
+          cursor: "pointer", fontSize: 11, padding: "2px 6px",
+        }}>M</button>
+        <button className="no-drag" onClick={() => window.yomi.resize(640, 300)} style={{
+          background: "rgba(255,255,255,0.1)", border: "none",
+          color: "rgba(255,255,255,0.5)", borderRadius: 4,
+          cursor: "pointer", fontSize: 11, padding: "2px 6px",
+        }}>L</button>
+      </div>
+    </>
   )
 }
 

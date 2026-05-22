@@ -3,56 +3,61 @@ import type { GuideStep, SseEvent } from "@yomi/shared"
 
 export type HotkeyState = "idle" | "listening" | "processing"
 
-interface YomiState {
-  // Hotkey / pipeline state
-  hotkeyState: HotkeyState
-
-  // Current response
+export interface ChatEntry {
+  id: number
   transcript: string
-  responseText: string
+  text: string
+  error: string | null
   isStreaming: boolean
+}
 
-  // Guide mode
+interface YomiState {
+  hotkeyState: HotkeyState
+  entries: ChatEntry[]
+  activeId: number | null
+  audioQueue: string[]
   guideSteps: GuideStep[]
   guideCurrentStep: number
   guideTotalSteps: number
 
-  // Error
-  error: string | null
-
-  // Actions
   setHotkeyState: (state: HotkeyState) => void
   handleSseEvent: (event: SseEvent) => void
-  reset: () => void
-  dismissGuide: () => void
+  dismissEntry: (id: number) => void
 }
 
-const initialState = {
-  hotkeyState: "idle" as HotkeyState,
-  transcript: "",
-  responseText: "",
-  isStreaming: false,
+let nextId = 1
+
+export const useYomiStore = create<YomiState>((set) => ({
+  hotkeyState: "idle",
+  entries: [],
+  activeId: null,
+  audioQueue: [],
   guideSteps: [],
   guideCurrentStep: 0,
   guideTotalSteps: 0,
-  error: null,
-}
-
-export const useYomiStore = create<YomiState>((set) => ({
-  ...initialState,
 
   setHotkeyState: (hotkeyState) => set({ hotkeyState }),
 
   handleSseEvent: (event) => {
     switch (event.type) {
       case "transcript":
-        set({ transcript: event.text })
+        set((s) => {
+          const id = nextId++
+          return {
+            entries: [...s.entries, { id, transcript: event.text, text: "", error: null, isStreaming: true }],
+            activeId: id,
+          }
+        })
         break
       case "llm_chunk":
-        set((s) => ({ responseText: s.responseText + event.text, isStreaming: true }))
+        set((s) => ({
+          entries: s.entries.map((e) =>
+            e.id === s.activeId ? { ...e, text: e.text + event.text, isStreaming: true } : e
+          ),
+        }))
         break
       case "audio_chunk":
-        // audio playback handled in ipc.ts — no UI state needed
+        set((s) => ({ audioQueue: [...s.audioQueue, event.base64] }))
         break
       case "visual_guide":
         set((s) => ({
@@ -62,16 +67,29 @@ export const useYomiStore = create<YomiState>((set) => ({
         }))
         break
       case "done":
-        set({ isStreaming: false, hotkeyState: "idle" })
+        set((s) => ({
+          hotkeyState: "idle",
+          entries: s.entries.map((e) =>
+            e.id === s.activeId ? { ...e, isStreaming: false } : e
+          ),
+          activeId: null,
+        }))
         break
       case "error":
-        set({ error: event.message, isStreaming: false, hotkeyState: "idle" })
+        set((s) => ({
+          hotkeyState: "idle",
+          entries: s.entries.map((e) =>
+            e.id === s.activeId ? { ...e, error: event.message, isStreaming: false } : e
+          ),
+          activeId: null,
+        }))
         break
     }
   },
 
-  reset: () => set(initialState),
-
-  dismissGuide: () =>
-    set({ guideSteps: [], guideCurrentStep: 0, guideTotalSteps: 0 }),
+  dismissEntry: (id) =>
+    set((s) => ({ entries: s.entries.filter((e) => e.id !== id) })),
 }))
+
+export const dismissGuide = () =>
+  useYomiStore.setState({ guideSteps: [], guideCurrentStep: 0, guideTotalSteps: 0 })

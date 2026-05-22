@@ -1,4 +1,8 @@
 import { spawn } from "child_process"
+import { readFile, unlink } from "fs/promises"
+import { tmpdir } from "os"
+import { join } from "path"
+import { randomBytes } from "crypto"
 
 // Microsoft edge-tts via the `edge-tts` Python CLI. Streams MP3 on stdout.
 // No API key required; network access required.
@@ -17,26 +21,26 @@ export async function* synthesizeEdgeTts(
   const voice = opts.voice ?? process.env.EDGE_TTS_VOICE ?? DEFAULT_VOICE
   const binary = opts.binary ?? process.env.EDGE_TTS_BIN ?? "edge-tts"
 
+  // Write to temp file then read back — avoids /dev/stdout issues with mise-managed Python
+  const tmp = join(tmpdir(), `yomi-tts-${randomBytes(4).toString("hex")}.mp3`)
   const proc = spawn(binary, [
     "--text", text,
     "--voice", voice,
-    "--write-media", "/dev/stdout",
+    "--write-media", tmp,
   ], { stdio: ["ignore", "pipe", "pipe"] })
 
-  const errorPromise = new Promise<never>((_, reject) => {
+  const exitPromise = new Promise<number>((resolve, reject) => {
     proc.on("error", reject)
-    proc.on("exit", (code) => {
-      if (code !== 0 && code !== null) reject(new Error(`edge-tts exited with code ${code}`))
-    })
+    proc.on("exit", (code) => resolve(code ?? 1))
   })
-  errorPromise.catch(() => { /* surfaced via the iterator below */ })
 
   try {
-    for await (const chunk of proc.stdout) {
-      const buf = chunk as Buffer
-      if (buf.byteLength > 0) yield new Uint8Array(buf)
-    }
+    const code = await exitPromise
+    if (code !== 0) throw new Error(`edge-tts exited with code ${code}`)
+    const buf = await readFile(tmp)
+    if (buf.byteLength > 0) yield new Uint8Array(buf)
   } finally {
     if (!proc.killed) proc.kill()
+    await unlink(tmp).catch(() => {})
   }
 }

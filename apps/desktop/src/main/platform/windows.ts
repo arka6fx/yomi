@@ -4,7 +4,7 @@ import path from "node:path"
 let tray: Tray | null = null
 
 export function setupWindows(): void {
-  tray = new Tray(path.join(__dirname, "../../../resources/tray-icon.ico"))
+  tray = new Tray(path.join(__dirname, "../../../resources/tray-icon.png"))
   tray.setToolTip("Yomi")
   tray.setContextMenu(
     Menu.buildFromTemplate([
