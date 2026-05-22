@@ -25,7 +25,7 @@ The **local sidecar** is the brain. The **Electron shell** is just capture + UI.
 apps/
   backend/    Hono on Bun  — auth, billing, LLM proxy, usage metering
   desktop/    Electron v1  — tray/menubar, hotkeys, screen+mic capture, floating UI
-  landing/    Next.js 14   — marketing site + waitlist (Vercel)
+  landing/    Next.js 16   — marketing site + waitlist (Vercel)
   sidecar/    Bun service  — intent router, fast pipeline, ReAct loop, notepad memory
 packages/
   db/         Drizzle schema + Neon client
@@ -67,7 +67,7 @@ Copy `.env.example` → `.env`. Minimum keys to start:
 OPENROUTER_API_KEY=sk-or-...
 LLM_BASE_URL=https://openrouter.ai/api/v1
 
-# ElevenLabs for STT + TTS
+# ElevenLabs for STT + TTS (optional — local whisper fallback works without it)
 ELEVENLABS_API_KEY=...
 
 # Database (Neon free tier works)
@@ -101,14 +101,16 @@ FAST_PATH_MODEL=llama-3.1-8b-instant
 
 ---
 
-## Speech (ElevenLabs)
+## Speech
 
-Yomi uses **ElevenLabs** for both STT and TTS:
+**STT** is handled by the sidecar (`POST /stt`). It tries providers in order:
 
-- **STT:** `POST /v1/speech-to-text` — cloud transcription with streaming partial results
-- **TTS:** `POST /v1/text-to-speech/:voice_id/stream` — streaming audio starts before full response
+1. **ElevenLabs** (`scribe_v1`) — cloud, fast, requires `ELEVENLABS_API_KEY`
+2. **whisper.cpp** (`tiny.en`, via `nodejs-whisper`) — on-device, no API key needed; model downloads ~77 MB on first use to the local node_modules cache
 
-Local **whisper.cpp** is the offline fallback when no ElevenLabs key is set.
+`ELEVENLABS_API_KEY` is optional — the local fallback works without it.
+
+**TTS** uses ElevenLabs streaming (`POST /v1/text-to-speech/:voice_id/stream`). Local TTS fallback (edge-tts / Piper) is planned for spec 06.
 
 ---
 
@@ -123,7 +125,7 @@ Local **whisper.cpp** is the offline fallback when no ElevenLabs key is set.
 | DB | Postgres (Neon) + Drizzle ORM |
 | Billing | Stripe |
 | Desktop | Electron v1 |
-| Landing | Next.js 14 (Vercel) |
+| Landing | Next.js 16 (Vercel) |
 
 ---
 
