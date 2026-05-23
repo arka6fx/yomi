@@ -7,6 +7,9 @@
     "dev": "bun run --env-file ../../.env --watch src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target bun",
     "start": "bun run dist/index.js",
+    "cf:deploy": "wrangler deploy",
+    "cf:deploy:preview": "wrangler deploy --env preview",
+    "cf:dev": "wrangler dev",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit"
   },
@@ -19,8 +22,7 @@
     "better-auth": "^1.0.0",
     "drizzle-orm": "^0.31.0",
     "hono": "^4.5.0",
-    "openai": "^4.0.0",
-    "razorpay": "^2.9.0"
+    "openai": "^4.0.0"
   },
   "devDependencies": {
     "@types/bun": "^1.1.0",

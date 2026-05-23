@@ -1,0 +1,4 @@
+# Allow build/ (contains entitlements, icons — not build artifacts)
+!build/
+out/
+release/

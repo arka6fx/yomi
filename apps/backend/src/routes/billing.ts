@@ -1,21 +1,8 @@
 import { Hono } from "hono"
-import Razorpay from "razorpay"
 import { createHmac } from "node:crypto"
 import { db, subscriptions, usageEvents } from "@yomi/db"
 import { eq, and, gte } from "drizzle-orm"
 import { authenticate } from "../auth.js"
-
-// Lazy init — Razorpay throws at construction if key is missing
-let _razorpay: Razorpay | null = null
-function getRazorpay(): Razorpay {
-  if (!_razorpay) {
-    const key_id = process.env["RAZORPAY_KEY_ID"]
-    const key_secret = process.env["RAZORPAY_KEY_SECRET"]
-    if (!key_id || !key_secret) throw new Error("Razorpay credentials not configured")
-    _razorpay = new Razorpay({ key_id, key_secret })
-  }
-  return _razorpay
-}
 
 const PLAN_AMOUNTS: Record<string, number> = {
   basic: 400,
@@ -29,11 +16,32 @@ const PLAN_PERIODS: Record<string, { period: string; interval: number; totalCoun
   genesis: { period: "monthly", interval: 1, totalCount: 12 },
 }
 
+// Razorpay REST API via fetch — no Node.js http module, works on CF Workers
+function rzpAuth(): string {
+  const id = process.env["RAZORPAY_KEY_ID"]
+  const secret = process.env["RAZORPAY_KEY_SECRET"]
+  if (!id || !secret) throw new Error("Razorpay credentials not configured")
+  return "Basic " + btoa(`${id}:${secret}`)
+}
+
+async function rzp<T>(path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`https://api.razorpay.com/v1${path}`, {
+    method: body !== undefined ? "POST" : "GET",
+    headers: {
+      Authorization: rzpAuth(),
+      "Content-Type": "application/json",
+    },
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  })
+  if (!res.ok) throw new Error(`Razorpay ${path} → ${res.status}: ${await res.text()}`)
+  return res.json() as Promise<T>
+}
+
 export const billingRouter = new Hono()
 
 // Create Razorpay subscription
 billingRouter.post("/create-subscription", authenticate, async (c) => {
-  const { plan, returnUrl } = await c.req.json() as { plan: string; returnUrl: string }
+  const { plan } = await c.req.json() as { plan: string; returnUrl: string }
   const user = c.get("user")
 
   const amount = PLAN_AMOUNTS[plan]
@@ -41,17 +49,15 @@ billingRouter.post("/create-subscription", authenticate, async (c) => {
 
   const period = PLAN_PERIODS[plan]!
 
-  // Look up existing subscription
   const [existing] = await db
-    .select({ razorpayCustomerId: subscriptions.razorpayCustomerId, razorpaySubId: subscriptions.razorpaySubId })
+    .select({ razorpayCustomerId: subscriptions.razorpayCustomerId })
     .from(subscriptions)
     .where(eq(subscriptions.userId, user.id))
     .limit(1)
 
-  // Create or reuse Razorpay customer
   let customerId = existing?.razorpayCustomerId
   if (!customerId) {
-    const customer = await getRazorpay().customers.create({
+    const customer = await rzp<{ id: string }>("/customers", {
       name: user.name,
       email: user.email,
       contact: "",
@@ -59,9 +65,8 @@ billingRouter.post("/create-subscription", authenticate, async (c) => {
     customerId = customer.id
   }
 
-  // Create a plan (Razorpay requires plan creation per subscription)
-  const planObj = await getRazorpay().plans.create({
-    period: period.period as "monthly",
+  const planObj = await rzp<{ id: string }>("/plans", {
+    period: period.period,
     interval: period.interval,
     item: {
       name: `Yomi ${plan.charAt(0).toUpperCase() + plan.slice(1)}`,
@@ -70,20 +75,14 @@ billingRouter.post("/create-subscription", authenticate, async (c) => {
     },
   })
 
-  const subscription = await getRazorpay().subscriptions.create({
-    plan_id: (planObj as { id: string }).id,
+  const subscription = await rzp<{ id: string; short_url: string }>("/subscriptions", {
+    plan_id: planObj.id,
     customer_notify: 1,
     total_count: period.totalCount,
-    notes: {
-      userId: user.id,
-      plan,
-    },
+    notes: { userId: user.id, plan },
   })
 
-  return c.json({
-    id: subscription.id,
-    short_url: subscription.short_url,
-  })
+  return c.json({ id: subscription.id, short_url: subscription.short_url })
 })
 
 // Razorpay webhook
@@ -96,7 +95,10 @@ billingRouter.post("/webhook", async (c) => {
   const expectedSig = createHmac("sha256", secret).update(body).digest("hex")
   if (sig !== expectedSig) return c.json({ error: "Invalid signature" }, 400)
 
-  const event = JSON.parse(body) as { event: string; payload: { subscription: { entity: Record<string, unknown> } } }
+  const event = JSON.parse(body) as {
+    event: string
+    payload: { subscription: { entity: Record<string, unknown> } }
+  }
 
   switch (event.event) {
     case "subscription.activated":
@@ -132,12 +134,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
   const usageRows = await db
     .select({ inputTokens: usageEvents.inputTokens, outputTokens: usageEvents.outputTokens })
     .from(usageEvents)
-    .where(
-      and(
-        eq(usageEvents.userId, user.id),
-        gte(usageEvents.createdAt, periodStart),
-      ),
-    )
+    .where(and(eq(usageEvents.userId, user.id), gte(usageEvents.createdAt, periodStart)))
 
   const totalTokens = usageRows.reduce(
     (sum, r) => sum + (r.inputTokens ?? 0) + (r.outputTokens ?? 0),
@@ -176,14 +173,7 @@ async function handleSubscriptionEvent(entity: Record<string, unknown>) {
       .set({ razorpayCustomerId: customerId, razorpaySubId: subId, plan, status: "active", currentPeriodEnd: periodEnd, updatedAt: new Date() })
       .where(eq(subscriptions.userId, userId))
   } else {
-    await db.insert(subscriptions).values({
-      userId,
-      razorpayCustomerId: customerId,
-      razorpaySubId: subId,
-      plan,
-      status: "active",
-      currentPeriodEnd: periodEnd,
-    })
+    await db.insert(subscriptions).values({ userId, razorpayCustomerId: customerId, razorpaySubId: subId, plan, status: "active", currentPeriodEnd: periodEnd })
   }
 }
 

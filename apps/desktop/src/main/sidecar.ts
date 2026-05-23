@@ -1,6 +1,19 @@
 import { spawn } from "node:child_process"
 import { randomUUID } from "node:crypto"
+import path from "node:path"
+import { app } from "electron"
 import type { ChildProcess } from "node:child_process"
+
+// Resolve the compiled sidecar binary for the current platform/arch.
+// In production the binary lives in <resources>/sidecar/ (extraResources in electron-builder.yml).
+// In development it is expected at apps/sidecar/dist/ (built separately via `bun run build`).
+function sidecarBinPath(): string {
+  const ext = process.platform === "win32" ? ".exe" : ""
+  const name = `sidecar-${process.platform}-${process.arch}${ext}`
+  return app.isPackaged
+    ? path.join(process.resourcesPath, "sidecar", name)
+    : path.join(__dirname, "../../../sidecar/dist", name)
+}
 
 const HEALTH_INTERVAL_MS = 10_000
 const HEALTH_FAIL_THRESHOLD = 3
@@ -13,9 +26,8 @@ export class SidecarManager {
 
   async start(): Promise<void> {
     if (process.env.YOMI_DEV !== "true") {
-      // In production, SIDECAR_ENTRY should be set to the bundled sidecar path
-      const entry = process.env.SIDECAR_ENTRY ?? "apps/sidecar/src/index.ts"
-      this.proc = spawn("bun", ["run", entry], {
+      const bin = sidecarBinPath()
+      this.proc = spawn(bin, [], {
         env: { ...process.env, SIDECAR_SECRET: this.secret },
         stdio: "inherit",
       })

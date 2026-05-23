@@ -1,0 +1,40 @@
+appId: com.yomi.app
+productName: Yomi
+copyright: Copyright © 2025 Yomi
+
+directories:
+  output: release
+
+# Sidecar binaries bundled into every platform package
+extraResources:
+  - from: ../sidecar/dist/
+    to: sidecar
+
+mac:
+  category: public.app-category.productivity
+  icon: resources/icon.icns
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+
+dmg:
+  writeUpdateInfo: false
+
+win:
+  icon: resources/icon.ico
+  target:
+    - target: nsis
+      arch: [x64]
+  signingHashAlgorithms: [sha256]
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+
+publish:
+  provider: github
+  releaseType: release
