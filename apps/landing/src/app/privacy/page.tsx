@@ -3,7 +3,7 @@ import Nav from "@/components/Nav"
 import Footer from "@/components/Footer"
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — Yomi",
+  title: "Privacy Policy",
 }
 
 export default function PrivacyPage() {
@@ -12,13 +12,13 @@ export default function PrivacyPage() {
       <Nav />
       <main className="pt-16">
         <div className="max-w-3xl mx-auto px-6 py-24">
-          <p className="font-mono text-xs text-caption uppercase tracking-widest mb-3">
+          <p className="font-mono text-xs text-white/40 uppercase tracking-widest mb-3">
             Legal
           </p>
-          <h1 className="font-display text-4xl font-extrabold mb-2">Privacy Policy</h1>
-          <p className="text-caption text-sm mb-16">Last updated: May 2025</p>
+          <h1 className="text-4xl font-light text-white mb-2" style={{ letterSpacing: "-0.03em" }}>Privacy Policy</h1>
+          <p className="text-white/40 text-sm mb-16">Last updated: May 2025</p>
 
-          <div className="prose prose-sm max-w-none space-y-10 text-caption leading-relaxed">
+          <div className="prose prose-sm max-w-none space-y-10 text-white/50 leading-relaxed">
             <Section title="Overview">
               <p>
                 Yomi is designed to be private by default. Screen and audio data is processed
@@ -75,11 +75,11 @@ export default function PrivacyPage() {
                   respective privacy policies. We do not enable training data use.
                 </li>
                 <li>
-                  <strong className="text-label">ElevenLabs</strong> — cloud STT and TTS on Pro+
+                  <strong className="text-label">ElevenLabs</strong> — cloud STT and TTS on Basic+
                   plans.
                 </li>
                 <li>
-                  <strong className="text-label">Stripe</strong> — payment processing. We never
+                  <strong className="text-label">Razorpay</strong> — payment processing. We never
                   store card details.
                 </li>
                 <li>
@@ -158,8 +158,8 @@ export default function PrivacyPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-3">
-      <h2 className="font-display text-lg font-semibold text-label">{title}</h2>
-      <div className="space-y-3 [&_ul]:list-none [&_ul]:space-y-1.5 [&_li]:pl-4 [&_li]:relative [&_li]:before:content-['▸'] [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-accent [&_li]:before:text-xs [&_a]:text-accent [&_a]:hover:text-accent/80 [&_a]:transition-colors">
+      <h2 className="text-base font-medium text-white/80">{title}</h2>
+      <div className="space-y-3 [&_ul]:list-none [&_ul]:space-y-1.5 [&_li]:pl-4 [&_li]:relative [&_li]:before:content-['▸'] [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-accent [&_li]:before:text-xs [&_strong]:text-white/80 [&_strong]:font-medium [&_a]:text-accent [&_a]:hover:text-accent/80 [&_a]:transition-colors">
         {children}
       </div>
     </div>

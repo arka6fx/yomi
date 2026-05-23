@@ -5,10 +5,17 @@ import { db, subscriptions, usageEvents } from "@yomi/db"
 import { eq, and, gte } from "drizzle-orm"
 import { authenticate } from "../auth.js"
 
-const razorpay = new Razorpay({
-  key_id: process.env["RAZORPAY_KEY_ID"]!,
-  key_secret: process.env["RAZORPAY_KEY_SECRET"]!,
-})
+// Lazy init — Razorpay throws at construction if key is missing
+let _razorpay: Razorpay | null = null
+function getRazorpay(): Razorpay {
+  if (!_razorpay) {
+    const key_id = process.env["RAZORPAY_KEY_ID"]
+    const key_secret = process.env["RAZORPAY_KEY_SECRET"]
+    if (!key_id || !key_secret) throw new Error("Razorpay credentials not configured")
+    _razorpay = new Razorpay({ key_id, key_secret })
+  }
+  return _razorpay
+}
 
 const PLAN_AMOUNTS: Record<string, number> = {
   basic: 400,
@@ -44,7 +51,7 @@ billingRouter.post("/create-subscription", authenticate, async (c) => {
   // Create or reuse Razorpay customer
   let customerId = existing?.razorpayCustomerId
   if (!customerId) {
-    const customer = await razorpay.customers.create({
+    const customer = await getRazorpay().customers.create({
       name: user.name,
       email: user.email,
       contact: "",
@@ -53,7 +60,7 @@ billingRouter.post("/create-subscription", authenticate, async (c) => {
   }
 
   // Create a plan (Razorpay requires plan creation per subscription)
-  const planObj = await razorpay.plans.create({
+  const planObj = await getRazorpay().plans.create({
     period: period.period as "monthly",
     interval: period.interval,
     item: {
@@ -63,7 +70,7 @@ billingRouter.post("/create-subscription", authenticate, async (c) => {
     },
   })
 
-  const subscription = await razorpay.subscriptions.create({
+  const subscription = await getRazorpay().subscriptions.create({
     plan_id: (planObj as { id: string }).id,
     customer_notify: 1,
     total_count: period.totalCount,

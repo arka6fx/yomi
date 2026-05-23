@@ -109,4 +109,4 @@ Detailed design docs live in `specs/`, numbered in implementation order. Read th
 | [10-memory](specs/10-memory.md) | Notepad (~/.yomi/), compaction, retrieval |
 | [11-database](specs/11-database.md) | Drizzle schema + Neon |
 | [12-backend](specs/12-backend.md) | Hono routes, Better Auth, LLM proxy, metering |
-| [13-pricing](specs/13-pricing.md) | Plans, Stripe, metering |
+| [13-pricing](specs/13-pricing.md) | Plans, Razorpay, metering |

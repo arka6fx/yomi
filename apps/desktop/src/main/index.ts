@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut, screen } from "electron"
+import { app, BrowserWindow, globalShortcut } from "electron"
 import path from "node:path"
 import { SidecarManager } from "./sidecar"
 import { initHotkey } from "./hotkey"
@@ -37,7 +37,7 @@ app.whenReady().then(async () => {
   }
 
   overlayWin = new BrowserWindow({
-    width: 520,
+    width: 680,
     height: 46,
     frame: false,
     transparent: true,
@@ -74,21 +74,48 @@ app.whenReady().then(async () => {
     onTextQuery,
   })
 
-  // Ctrl+Arrow — nudge overlay position (30px steps)
-  const STEP = 30
-  const nudge = (dx: number, dy: number) => {
-    if (!overlayWin) return
-    const [x, y] = overlayWin.getPosition()
-    const { width, height } = screen.getPrimaryDisplay().workAreaSize
-    overlayWin.setPosition(
-      Math.max(0, Math.min(width  - 520, x + dx)),
-      Math.max(0, Math.min(height - 46,  y + dy)),
-    )
+  // Ctrl+Shift+Arrow — smooth overlay movement
+  // globalShortcut fires on every OS key-repeat, so we use it as a heartbeat:
+  // start a 16ms velocity loop on first press, reset a "released" timeout on each repeat,
+  // and stop when no repeat arrives within 150ms (key was released).
+  const NUDGE_DIRS: [string, number, number][] = [
+    ["Ctrl+Shift+Left",  -1,  0],
+    ["Ctrl+Shift+Right",  1,  0],
+    ["Ctrl+Shift+Up",     0, -1],
+    ["Ctrl+Shift+Down",   0,  1],
+  ]
+  let nudgeDir = { x: 0, y: 0 }
+  let nudgeVel = { x: 0, y: 0 }
+  let nudgeTick: ReturnType<typeof setInterval> | null = null
+  let nudgeStop: ReturnType<typeof setTimeout> | null = null
+  const NUDGE_MAX = 24, NUDGE_ACCEL = 3
+
+  const stopNudging = () => {
+    if (nudgeTick) { clearInterval(nudgeTick); nudgeTick = null }
+    if (nudgeStop) { clearTimeout(nudgeStop); nudgeStop = null }
+    nudgeDir = { x: 0, y: 0 }
+    nudgeVel = { x: 0, y: 0 }
   }
-  globalShortcut.register("Ctrl+Up",    () => nudge(0, -STEP))
-  globalShortcut.register("Ctrl+Down",  () => nudge(0,  STEP))
-  globalShortcut.register("Ctrl+Left",  () => nudge(-STEP, 0))
-  globalShortcut.register("Ctrl+Right", () => nudge( STEP, 0))
+
+  for (const [combo, dx, dy] of NUDGE_DIRS) {
+    globalShortcut.register(combo, () => {
+      if (!overlayWin) return
+      nudgeDir = { x: dx, y: dy }
+      // Each repeat resets the "key released" deadline
+      if (nudgeStop) clearTimeout(nudgeStop)
+      nudgeStop = setTimeout(stopNudging, 150)
+      // Start the smooth loop once per hold session
+      if (!nudgeTick) {
+        nudgeTick = setInterval(() => {
+          if (!overlayWin) { stopNudging(); return }
+          nudgeVel.x = nudgeDir.x === 0 ? 0 : Math.min(Math.abs(nudgeVel.x) + NUDGE_ACCEL, NUDGE_MAX) * Math.sign(nudgeDir.x)
+          nudgeVel.y = nudgeDir.y === 0 ? 0 : Math.min(Math.abs(nudgeVel.y) + NUDGE_ACCEL, NUDGE_MAX) * Math.sign(nudgeDir.y)
+          const [x, y] = overlayWin.getPosition()
+          overlayWin.setPosition(Math.round((x ?? 0) + nudgeVel.x), Math.round((y ?? 0) + nudgeVel.y))
+        }, 16)
+      }
+    })
+  }
 
   // Ctrl+Shift+H — toggle overlay visibility
   let visible = true
@@ -98,6 +125,9 @@ app.whenReady().then(async () => {
     if (visible) overlayWin.show()
     else overlayWin.hide()
   })
+
+  // Ctrl+Shift+Q — quit Yomi entirely
+  globalShortcut.register("Ctrl+Shift+Q", () => app.quit())
 })
 
 app.on("window-all-closed", () => {

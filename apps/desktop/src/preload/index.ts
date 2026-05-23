@@ -36,4 +36,8 @@ contextBridge.exposeInMainWorld("yomi", {
   submitTextQuery(text: string): void {
     ipcRenderer.send("yomi:text-query", text)
   },
+
+  nudge(dx: number, dy: number): void {
+    ipcRenderer.send("yomi:nudge", dx, dy)
+  },
 })

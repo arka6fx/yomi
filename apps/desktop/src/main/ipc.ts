@@ -29,6 +29,11 @@ export function initIpc(
     overlayWin.setPosition(dragStart.winX + dx, dragStart.winY + dy)
   })
 
+  ipcMain.on("yomi:nudge", (_e, dx: number, dy: number) => {
+    const [x, y] = overlayWin.getPosition()
+    overlayWin.setPosition((x ?? 0) + dx, (y ?? 0) + dy)
+  })
+
   // Renderer streams raw PCM Float32 chunks while in "listening" state
   ipcMain.on("yomi:audio-chunk", (_e, pcm: ArrayBuffer, sampleRate: number) => {
     pcmChunks.push(new Float32Array(pcm))

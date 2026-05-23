@@ -11,6 +11,7 @@ declare global {
       moveDrag(screenX: number, screenY: number): void
       resize(w: number, h: number): void
       submitTextQuery(text: string): void
+      nudge(dx: number, dy: number): void
     }
   }
 }

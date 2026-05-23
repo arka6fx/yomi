@@ -3,7 +3,7 @@ import Nav from "@/components/Nav"
 import Footer from "@/components/Footer"
 
 export const metadata: Metadata = {
-  title: "Terms of Service — Yomi",
+  title: "Terms of Service",
 }
 
 export default function TermsPage() {
@@ -12,13 +12,13 @@ export default function TermsPage() {
       <Nav />
       <main className="pt-16">
         <div className="max-w-3xl mx-auto px-6 py-24">
-          <p className="font-mono text-xs text-caption uppercase tracking-widest mb-3">
+          <p className="font-mono text-xs text-white/40 uppercase tracking-widest mb-3">
             Legal
           </p>
-          <h1 className="font-display text-4xl font-extrabold mb-2">Terms of Service</h1>
-          <p className="text-caption text-sm mb-16">Last updated: May 2025</p>
+          <h1 className="text-4xl font-light text-white mb-2" style={{ letterSpacing: "-0.03em" }}>Terms of Service</h1>
+          <p className="text-white/40 text-sm mb-16">Last updated: May 2025</p>
 
-          <div className="space-y-10 text-caption leading-relaxed">
+          <div className="space-y-10 text-white/50 leading-relaxed">
             <Section title="Acceptance">
               <p>
                 By downloading, installing, or using Yomi, you agree to these Terms of Service.
@@ -64,16 +64,12 @@ export default function TermsPage() {
             <Section title="Subscriptions and billing">
               <ul>
                 <li>
-                  Paid plans are billed monthly or annually via Stripe. Prices are listed at
+                  Paid plans are billed monthly via Razorpay. Prices are listed at
                   yomi.app/pricing.
                 </li>
                 <li>
-                  Annual plans are prepaid. If you cancel an annual plan, you retain access until
-                  the end of the billing period — no prorated refunds.
-                </li>
-                <li>
-                  Monthly plans can be cancelled at any time. Access continues until the end of
-                  the current billing cycle.
+                  Monthly plans can be cancelled at any time via the Razorpay customer portal.
+                  Access continues until the end of the current billing cycle.
                 </li>
                 <li>
                   We reserve the right to change pricing with 30 days notice. Existing
@@ -162,7 +158,7 @@ export default function TermsPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-3">
-      <h2 className="font-display text-lg font-semibold text-label">{title}</h2>
+      <h2 className="text-base font-medium text-white/80">{title}</h2>
       <div className="space-y-3 [&_ul]:list-none [&_ul]:space-y-1.5 [&_li]:pl-4 [&_li]:relative [&_li]:before:content-['▸'] [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-accent [&_li]:before:text-xs [&_a]:text-accent [&_a]:hover:text-accent/80 [&_a]:transition-colors">
         {children}
       </div>

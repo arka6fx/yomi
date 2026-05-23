@@ -6,9 +6,9 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-accent text-canvas hover:bg-accent/90",
-        outline: "border border-edge bg-panel text-label hover:border-accent/30 hover:text-accent",
-        ghost: "text-caption hover:text-label hover:bg-panel/50",
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        outline: "border border-border bg-card text-foreground hover:bg-muted/60 hover:text-foreground",
+        ghost: "text-muted-foreground hover:text-foreground hover:bg-muted/50",
       },
       size: {
         default: "h-9 gap-2 px-4",

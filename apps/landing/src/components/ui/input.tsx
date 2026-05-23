@@ -6,7 +6,7 @@ function Input({ className, type, ...props }: React.InputHTMLAttributes<HTMLInpu
       type={type}
       data-slot="input"
       className={cn(
-        "flex h-9 w-full rounded-xl border border-edge bg-panel px-3 py-1 text-sm text-label transition-colors placeholder:text-caption focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 disabled:opacity-50",
+        "flex h-9 w-full rounded-xl border border-input bg-transparent px-3 py-1 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:outline-none focus:border-ring/60 focus:ring-1 focus:ring-ring/20 disabled:opacity-50",
         className,
       )}
       {...props}

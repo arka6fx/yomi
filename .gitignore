@@ -32,6 +32,9 @@ Thumbs.db
 .vscode/settings.json
 .idea/
 
+# Claude Code local overrides (may contain secrets)
+.claude/settings.local.json
+
 # Logs
 *.log
 npm-debug.log*

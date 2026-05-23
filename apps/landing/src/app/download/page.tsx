@@ -1,9 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import Nav from "@/components/Nav"
 import Footer from "@/components/Footer"
 import Link from "next/link"
+import { Download, ArrowRight } from "lucide-react"
 
 type Platform = "mac" | "windows" | "unknown"
 
@@ -44,7 +46,7 @@ const platforms: Record<
     ],
     instructions: [
       "Open the downloaded .dmg file",
-      'Drag Yomi to your Applications folder',
+      "Drag Yomi to your Applications folder",
       "Open Yomi from Applications",
       "Grant screen recording permission when prompted",
       "Yomi appears in your menu bar",
@@ -92,110 +94,167 @@ export default function DownloadPage() {
   return (
     <>
       <Nav />
-      <main className="pt-16">
+      <main className="pt-6">
         {/* Header */}
-        <section
-          className="py-24 text-center"
-          style={{
-            background:
-              "radial-gradient(ellipse 800px 500px at 50% 0%, rgba(45,212,191,0.06) 0%, transparent 70%)",
-          }}
-        >
-          <p className="font-mono text-xs text-caption uppercase tracking-widest mb-3">
+        <section className="py-20 text-center px-6">
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3"
+          >
             Download
-          </p>
-          <h1 className="font-display text-5xl sm:text-6xl font-extrabold mb-4">
+          </motion.p>
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.05 }}
+            className="text-5xl sm:text-6xl font-light text-foreground mb-4"
+            style={{ letterSpacing: "-0.04em" }}
+          >
             Get Yomi.
-          </h1>
-          <p className="text-caption max-w-sm mx-auto px-6">
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.15 }}
+            className="text-muted-foreground max-w-sm mx-auto text-sm leading-relaxed"
+          >
             {detected !== "unknown"
               ? `We detected ${platforms[detected as Exclude<Platform, "unknown">]?.title}. Ready to download.`
               : "Choose your platform below."}
-          </p>
+          </motion.p>
         </section>
 
-        <section className="max-w-3xl mx-auto px-6 pb-24 space-y-10">
+        <section className="max-w-2xl mx-auto px-6 pb-24 space-y-10">
           {/* Platform tabs */}
-          <div className="flex gap-2 p-1 rounded-xl bg-panel border border-edge w-fit mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+            className="flex gap-1 p-1 rounded-xl bg-muted border border-border w-fit mx-auto"
+          >
             {allPlatforms.map((p) => (
               <button
                 key={p}
                 onClick={() => setActive(p)}
-                className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                className={`relative px-5 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
                   active === p
-                    ? "bg-panel-2 text-label border border-edge"
-                    : "text-caption hover:text-label"
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {platforms[p].icon} {platforms[p].title}
-                {detected === p && (
-                  <span className="ml-2 text-[10px] text-accent font-mono">(detected)</span>
+                {active === p && (
+                  <motion.span
+                    layoutId="tab-pill"
+                    className="absolute inset-0 rounded-lg bg-card border border-border shadow-sm"
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
                 )}
+                <span className="relative z-10">
+                  {platforms[p].icon} {platforms[p].title}
+                  {detected === p && (
+                    <span className="ml-2 text-[10px] text-primary font-mono">(detected)</span>
+                  )}
+                </span>
               </button>
             ))}
-          </div>
+          </motion.div>
 
           {/* Download options */}
-          <div className="space-y-3">
-            <h2 className="font-display text-xl font-bold">{current.title} downloads</h2>
-            <div className="grid sm:grid-cols-2 gap-3">
-              {current.options.map((opt) => (
-                <a
-                  key={opt.label}
-                  href={opt.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-between p-4 rounded-xl bg-panel border border-edge hover:border-accent/30 hover:bg-panel/80 transition-all group"
-                >
-                  <div>
-                    <p className="font-medium text-sm text-label">{opt.label}</p>
-                    {opt.note && (
-                      <p className="text-xs text-caption mt-0.5">{opt.note}</p>
-                    )}
-                  </div>
-                  <span className="font-mono text-xs text-caption group-hover:text-accent transition-colors border border-edge group-hover:border-accent/30 px-2 py-1 rounded">
-                    {opt.arch}
-                  </span>
-                </a>
-              ))}
-            </div>
-          </div>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={active}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25 }}
+              className="space-y-3"
+            >
+              <h2
+                className="text-xl font-light text-foreground"
+                style={{ letterSpacing: "-0.03em" }}
+              >
+                {current.title} downloads
+              </h2>
+              <div className="grid sm:grid-cols-2 gap-3">
+                {current.options.map((opt) => (
+                  <a
+                    key={opt.label}
+                    href={opt.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-4 rounded-xl bg-card border border-border hover:border-primary/40 transition-colors group"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <Download size={14} className="text-muted-foreground group-hover:text-primary transition-colors" />
+                        <p className="font-medium text-sm text-foreground">{opt.label}</p>
+                      </div>
+                      {opt.note && (
+                        <p className="text-xs text-muted-foreground pl-5">{opt.note}</p>
+                      )}
+                    </div>
+                    <span className="font-mono text-xs text-muted-foreground group-hover:text-primary transition-colors border border-border group-hover:border-primary/40 px-2 py-1 rounded-lg">
+                      {opt.arch}
+                    </span>
+                  </a>
+                ))}
+              </div>
 
-          {/* Instructions */}
-          <div className="space-y-3">
-            <h2 className="font-display text-xl font-bold">Install instructions</h2>
-            <ol className="space-y-2.5">
-              {current.instructions.map((step, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <span className="font-mono text-xs text-accent bg-accent/10 border border-accent/20 w-6 h-6 flex items-center justify-center rounded flex-shrink-0 mt-0.5">
-                    {i + 1}
-                  </span>
-                  <span className="text-sm text-caption leading-relaxed font-mono">{step}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
+              {/* Instructions */}
+              <div className="pt-4 space-y-3">
+                <h2
+                  className="text-xl font-light text-foreground"
+                  style={{ letterSpacing: "-0.03em" }}
+                >
+                  Install instructions
+                </h2>
+                <ol className="space-y-3">
+                  {current.instructions.map((step, i) => (
+                    <motion.li
+                      key={step}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: i * 0.06 }}
+                      className="flex items-start gap-3"
+                    >
+                      <span className="text-xs font-mono text-primary bg-primary/10 w-6 h-6 flex items-center justify-center rounded-lg flex-shrink-0 mt-0.5">
+                        {i + 1}
+                      </span>
+                      <span className="text-sm text-muted-foreground leading-relaxed">{step}</span>
+                    </motion.li>
+                  ))}
+                </ol>
+              </div>
+            </motion.div>
+          </AnimatePresence>
 
           {/* GitHub note */}
-          <div className="rounded-xl border border-edge p-4 bg-panel flex items-start gap-3">
-            <span className="text-caption text-lg">ℹ</span>
-            <div className="text-sm text-caption leading-relaxed">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="rounded-xl border border-border bg-card p-4 flex items-start gap-3"
+          >
+            <span className="text-muted-foreground text-base leading-none mt-0.5 shrink-0">ℹ</span>
+            <p className="text-sm text-muted-foreground leading-relaxed">
               Downloads come directly from{" "}
               <a
                 href="https://github.com/arka6fx/yomi/releases"
-                className="text-accent hover:text-accent/80 transition-colors"
+                className="text-primary hover:underline"
                 target="_blank"
                 rel="noopener noreferrer"
               >
                 GitHub Releases
               </a>
-              . Yomi is pre-release — join the{" "}
-              <Link href="/#waitlist" className="text-accent hover:text-accent/80 transition-colors">
-                waitlist
-              </Link>{" "}
-              for early access.
-            </div>
-          </div>
+              . Yomi is pre-release —{" "}
+              <Link href="/signup" className="text-primary hover:underline">
+                sign up for early access
+                <ArrowRight size={12} className="inline ml-0.5" />
+              </Link>
+            </p>
+          </motion.div>
         </section>
       </main>
       <Footer />
