@@ -7,7 +7,6 @@ import { sttRouter } from "./routes/stt.js"
 import { usageRouter } from "./routes/usage.js"
 import { billingRouter } from "./routes/billing.js"
 import { authRoutesRouter } from "./routes/auth-routes.js"
-import { memoryRouter } from "./routes/memory.js"
 
 const app = new Hono()
 
@@ -30,7 +29,6 @@ app.route("/api/llm", llmRouter)
 app.route("/api/stt", sttRouter)
 app.route("/api/usage", usageRouter)
 app.route("/api/billing", billingRouter)
-app.route("/api/memory", memoryRouter)
 
 const PORT = Number(process.env["PORT"] ?? 3001)
 export default {

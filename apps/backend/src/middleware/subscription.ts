@@ -4,13 +4,13 @@ import type { Context, Next } from "hono"
 import { db } from "@yomi/db"
 import * as authSchema from "../auth-schema.js"
 
-export type AccessKind = "chat" | "voice" | "image" | "agent"
+export type AccessKind = "chat" | "voice" | "agent"
 
 // Daily limits by plan for Pro/Max — owners bypass this entirely
 const DAILY_LIMITS: Record<string, Record<AccessKind, number>> = {
-  explore: { chat: 10000, voice: 10000, image: 10000, agent: 0 },
-  pro:     { chat: 10000, voice: 200,   image: 200,   agent: 0 },
-  max:     { chat: 10000, voice: 10000, image: 10000, agent: 10000 },
+  explore: { chat: 10000, voice: 10000, agent: 0 },
+  pro:     { chat: 10000, voice: 200,   agent: 0 },
+  max:     { chat: 10000, voice: 10000, agent: 10000 },
 }
 
 function todayUtc(): string {
@@ -93,13 +93,12 @@ async function incrementInteraction(userId: string) {
 }
 
 function getDailyCount(
-  user: { dailyChatCount: number; dailyVoiceCount: number; dailyImageCount: number; agentUsageCount: number },
+  user: { dailyChatCount: number; dailyVoiceCount: number; agentUsageCount: number },
   kind: AccessKind,
 ): number {
   switch (kind) {
     case "chat":  return user.dailyChatCount
     case "voice": return user.dailyVoiceCount
-    case "image": return user.dailyImageCount
     case "agent": return user.agentUsageCount
   }
 }
@@ -109,7 +108,6 @@ async function incrementCount(userId: string, kind: AccessKind, reset: boolean, 
     await db.update(authSchema.user).set({
       dailyChatCount:  kind === "chat"  ? 1 : 0,
       dailyVoiceCount: kind === "voice" ? 1 : 0,
-      dailyImageCount: kind === "image" ? 1 : 0,
       agentUsageCount: kind === "agent" ? 1 : 0,
       dailyResetDate:  today,
     }).where(eq(authSchema.user.id, userId))
@@ -125,7 +123,6 @@ function kindColumn(kind: AccessKind): string {
   switch (kind) {
     case "chat":  return "dailyChatCount"
     case "voice": return "dailyVoiceCount"
-    case "image": return "dailyImageCount"
     case "agent": return "agentUsageCount"
   }
 }

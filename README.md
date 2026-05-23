@@ -75,21 +75,15 @@ Copy `.env.example` → `.env`. Minimum keys to get voice + AI working:
 OPENAI_API_KEY=sk-...
 OPENAI_BASE_URL=https://api.openai.com/v1   # or your proxy
 
-# STT — Groq Whisper (free tier) recommended; falls back to OPENAI_API_KEY
-STT_API_KEY=gsk_...
-STT_BASE_URL=https://api.groq.com/openai/v1
-STT_MODEL=whisper-large-v3-turbo
-
-# TTS — optional; set TTS_ENGINE=none to disable voice output
-TTS_ENGINE=none   # or: openai (requires TTS_API_KEY pointing to real OpenAI)
+# STT + TTS — Sarvam AI (Indian-English voice models)
+SARVAM_API_KEY=...
 
 # Database (Neon free tier works)
 DATABASE_URL=postgres://...
 ```
 
-> **Note:** `OPENAI_BASE_URL` is for LLM chat only. STT and TTS use separate
-> `STT_BASE_URL` / `TTS_BASE_URL` vars so they can hit a different endpoint
-> (e.g. Groq for STT, real OpenAI for TTS, while LLM goes through a proxy).
+> **Note:** `OPENAI_BASE_URL` is for LLM chat only. STT and TTS use
+> Sarvam AI via `SARVAM_API_KEY`. Set `TTS_ENGINE=none` to disable voice output.
 
 ---
 
@@ -115,16 +109,16 @@ DATABASE_URL=postgres://...
 |---|---|---|
 | Fast chat / vision | `gpt-4.1-mini` | `FAST_PATH_MODEL` |
 | Agent / reasoning | `gpt-4.1` | `AGENT_PATH_MODEL` |
-| Speech-to-text | `whisper-large-v3-turbo` (Groq) | `STT_MODEL` |
-| Voice output (TTS) | `gpt-4o-mini-tts` | `TTS_MODEL` |
+| Speech-to-text | `saarika:v2.5` (Sarvam AI) | — |
+| Voice output (TTS) | `bulbul:v2`, speaker `arya` (Sarvam AI) | `TTS_ENGINE` |
 
 ---
 
 ## Speech
 
-**STT** is proxied through the sidecar (`POST /stt`). Uses `STT_API_KEY` / `STT_BASE_URL` — defaults to Groq Whisper (free tier, ~7,200 s/day). Falls back to `OPENAI_API_KEY` if no STT key is set.
+**STT** runs through the sidecar (`POST /stt`) using Sarvam AI's `saarika:v2.5` model. Configured via `SARVAM_API_KEY`.
 
-**TTS** uses `TTS_API_KEY` / `TTS_BASE_URL`. Set `TTS_ENGINE=none` to disable. When disabled, responses still stream as text in the overlay.
+**TTS** uses Sarvam AI's `bulbul:v2` model with the `arya` speaker. Set `TTS_ENGINE=none` to disable. When disabled, responses still stream as text in the overlay.
 
 ---
 
@@ -133,8 +127,8 @@ DATABASE_URL=postgres://...
 | Layer | Choice |
 |---|---|
 | LLM SDK | Vercel AI SDK + `@ai-sdk/openai` |
-| STT | Groq Whisper (`whisper-large-v3-turbo`) via OpenAI-compatible API |
-| TTS | OpenAI TTS (optional) |
+| STT | Sarvam AI (`saarika:v2.5`) |
+| TTS | Sarvam AI (`bulbul:v2`, speaker `arya`) |
 | Backend | Hono on Bun |
 | Auth | Better Auth - Google + GitHub OAuth |
 | DB | Postgres (Neon) + Drizzle ORM |
@@ -189,8 +183,8 @@ Design docs in [`specs/`](./specs/), ordered by implementation:
 | 02 | [02-sidecar-fast-pipeline](specs/02-sidecar-fast-pipeline.md) | Fast linear pipeline, prompt caching, visual guidance |
 | 03 | [03-desktop-shell](specs/03-desktop-shell.md) | Electron main: sidecar spawn, hotkeys, capture, IPC |
 | 04 | [04-desktop-ui](specs/04-desktop-ui.md) | Floating overlay, Zustand store, audio, streaming UI |
-| 05 | [05-speech-stt](specs/05-speech-stt.md) | STT abstraction: Groq Whisper + whisper.cpp fallback |
-| 06 | [06-speech-tts](specs/06-speech-tts.md) | TTS abstraction: OpenAI TTS streaming |
+| 05 | [05-speech-stt](specs/05-speech-stt.md) | STT: Sarvam AI `saarika:v2.5` + VAD |
+| 06 | [06-speech-tts](specs/06-speech-tts.md) | TTS: Sarvam AI `bulbul:v2` |
 | 07 | [07-sidecar-router](specs/07-sidecar-router.md) | Intent router: fast vs agent classification |
 | 08 | [08-sidecar-agent](specs/08-sidecar-agent.md) | ReAct loop, tools, MCP, subagents, sandbox |
 | 09 | [09-harness](specs/09-harness.md) | System prompt, hooks, loop guards |
