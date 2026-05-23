@@ -1,0 +1,11 @@
+node_modules/
+dist/
+out/
+.next/
+.open-next/
+.turbo/
+bun.lockb
+*.lock
+*.enc
+*.plist
+drizzle/

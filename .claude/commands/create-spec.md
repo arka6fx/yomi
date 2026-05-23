@@ -1,95 +1,84 @@
 ---
-description: Create or update a spec file and feature branch for a Yomi feature
+description: Create a spec file + feature branch — /create-spec sidecar-visual-guide
+allowed-tools: Bash, Read, Write, Glob
 ---
-Create or update a spec file for a new Yomi sub-feature or component. Pass the name as argument e.g. /create-spec sidecar-visual-guide
 
-## Step 1 — Check working directory is clean
+Create or update a spec for `$ARGUMENTS` (required). Format: kebab-case slug, e.g. `sidecar-visual-guide`.
 
-Run `git status`. If uncommitted/unstaged/untracked files exist, stop and tell the user to commit or stash first. DO NOT CONTINUE until clean.
+If `$ARGUMENTS` is empty, stop: "Usage: /create-spec <slug> — e.g. /create-spec sidecar-visual-guide"
 
-## Step 2 — Parse the arguments
+## 1 — Clean working tree check
 
-From $ARGUMENTS extract:
-1. `feature_slug` — lowercase, kebab-case, max 40 chars (e.g. `sidecar-visual-guide`)
-2. `feature_title` — human readable Title Case (e.g. "Sidecar Visual Guide")
-
-If unclear, ask the user to clarify.
-
-## Step 3 — Check branch name is not taken
-
-Run `git branch`. If `feature/<feature_slug>` is taken, append a number.
-
-## Step 4 — Switch to main and pull
-
+```bash
+git status --porcelain
 ```
+
+If output is non-empty, stop: "Uncommitted changes detected. Commit or stash before creating a spec branch."
+
+## 2 — Parse slug and title
+
+- `slug` = `$ARGUMENTS` lowercased, spaces→hyphens, max 40 chars
+- `title` = Title Case of the slug words
+
+## 3 — Create feature branch
+
+```bash
 git checkout main && git pull origin main
+git checkout -b feature/<slug>
 ```
 
-## Step 5 — Create feature branch
+If the branch exists, append `-2` etc.
 
+## 4 — Check if spec already exists
+
+```bash
+ls specs/<slug>.md 2>/dev/null
 ```
-git checkout -b feature/<feature_slug>
-```
 
-## Step 6 — Check if spec already exists
+**If it exists**: read it, check each section against the current source files in `apps/` and `packages/`. Update stale file paths and implementation details. Report what changed. Done.
 
-Check if `specs/<feature_slug>.md` already exists.
+**If it does not exist**: continue to step 5.
 
-### If the spec exists:
-- Read the existing spec file
-- Compare it against the current codebase state — check if any sections (Files to change, Files to create, implementation details) are outdated
-- Make only the necessary updates to bring it in sync
-- Report what was changed
-- Skip to Step 9 (do not overwrite the whole file unnecessarily)
-
-### If the spec does NOT exist:
-Continue to Step 7.
-
-## Step 7 — Research the codebase
+## 5 — Research
 
 Read:
-- `CLAUDE.md` — project invariants, stack, models
-- `specs/00-overview.md` — phase map, glossary
-- Existing specs in `specs/` — avoid duplication
-- Relevant source files in `apps/` and `packages/` for the feature area
+- `CLAUDE.md` — architecture, constraints, model choices
+- `specs/00-overview.md` if it exists — phase map and glossary
+- Source files in `apps/` and `packages/` relevant to `<slug>`
 
-## Step 8 — Write the spec
+## 6 — Write spec
 
-Use this structure:
+Save to `specs/<slug>.md` using this template:
 
-```
-# Spec: <feature_title>
+```markdown
+# Spec: <Title>
 
 ## Purpose
-One paragraph describing what this feature does and why.
+<One paragraph: what this feature does and why it exists.>
 
 ## Invariants
-Non-negotiable rules this feature must respect.
-Always include Yomi-specific invariants: key isolation, privacy, no AI logic in desktop.
+- <Non-negotiable rule — e.g. "LLM keys stay in backend only">
+- <Privacy / security constraint>
 
 ## Detailed Design
-How it works. Code snippets, data flow, interfaces. Be specific.
+<Data flow, interfaces, sequences. Include code snippets where helpful.>
 
 ## Files to change
-Every file that will be modified.
+- `path/to/file.ts` — what changes
 
 ## Files to create
-Every new file.
+- `path/to/new-file.ts` — what it does
 
-## Open Questions
-Anything not yet decided.
+## Open questions
+- <Unresolved decision>
 ```
 
-Save to `specs/<feature_slug>.md`.
-
-## Step 9 — Report
+## 7 — Report
 
 ```
-Branch:    feature/<feature_slug>
-Spec file: specs/<feature_slug>.md
-Title:     <feature_title>
+Branch:    feature/<slug>
+Spec file: specs/<slug>.md
+Title:     <Title>
+
+Review the spec, then start implementing. Use /check-arch before opening a PR.
 ```
-
-If spec already existed: append `(updated)` to the spec file line.
-
-Then tell the user: "Review the spec at `specs/<feature_slug>.md` then start implementing."

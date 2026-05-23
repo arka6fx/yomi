@@ -1,58 +1,53 @@
 ---
-description: Write and run tests for a feature (invokes yomi-test-writer + yomi-test-runner)
----
-Write and run tests for the feature specified in $ARGUMENTS.
-
-If no argument is provided, stop and say:
-"Please provide a spec name. Usage: /test-feature <name> e.g. /test-feature sidecar-fast-pipeline"
-
-If the spec file at `specs/$ARGUMENTS.md` does not exist, stop and say: "Spec file not found at specs/$ARGUMENTS.md."
-
+description: Run bun test for an app or file — /test-feature backend or /test-feature sidecar/route
+allowed-tools: Bash, Read, Glob
 ---
 
-## Step 1: Write Tests
+Run the test suite for `$ARGUMENTS`. Scope can be an app name, a file glob, or empty for all.
 
-Invoke **yomi-test-writer** with:
-- Spec file: `specs/$ARGUMENTS.md`
-- Source files to read for structure: relevant files in `apps/` based on the spec
-- Output test file: place next to source files with `.test.ts` suffix (Bun convention)
-- Instruction: Write tests based on what the spec says the feature SHOULD do. Cover happy paths, edge cases, auth guards, validation errors, and state changes.
+## 1 — Resolve scope
 
-Wait for yomi-test-writer to fully complete before proceeding to Step 2.
+| `$ARGUMENTS` | Command |
+|---|---|
+| empty | `cd <root> && bun test` (all workspaces) |
+| `backend` | `cd apps/backend && bun test` |
+| `sidecar` | `cd apps/sidecar && bun test` |
+| `desktop` | `cd apps/desktop && bun test` |
+| `db` | `cd packages/db && bun test` |
+| `shared` | `cd packages/shared && bun test` |
+| a file path | `bun test <path>` |
 
----
+If no test files exist in the target scope, report: "No test files found in <scope>. Create a `*.test.ts` file next to the source file you want to test."
 
-## Step 2: Run Tests
+## 2 — Run
 
-Invoke **yomi-test-runner** with:
-- The test file(s) created in Step 1
-- Spec file: `specs/$ARGUMENTS.md`
-- Run command: `bun test <path-to-test-file>`
-- Instruction: Run ONLY the specified test file. Analyze failures by cross-referencing the test code, the spec, and source files.
+```bash
+bun test [scope]
+```
 
----
+Capture stdout and stderr. Note the pass/fail counts.
 
-## Handoff Rules
+## 3 — On failure
 
-- Do NOT start Step 2 until Step 1 is fully complete
-- Do NOT attempt to fix any code regardless of test results
-- Do NOT run tests beyond the ones created in Step 1
-- If yomi-test-writer could not write the test file, stop and report the reason
-
----
-
-## Final Output
+Read each failing test file. Cross-reference with the source file it tests. Report:
 
 ```
-Testing Pipeline Report — $ARGUMENTS
+Test Results — <scope>
 
-Step 1 — Tests Written
-[List each test with a one-line description of which spec requirement it validates]
+✓ <N> passed
+✗ <N> failed
 
-Step 2 — Test Results
-[from yomi-test-runner's structured report]
+Failures:
+  <test name> — <file>:<line>
+  Expected: <value>
+  Received: <value>
+  Likely cause: <one line>
+```
 
-Verdict
-✅ Ready for code review — all tests pass
-❌ Needs fixes — list failing tests and root causes
+Do **not** edit source files. Report findings only.
+
+## 4 — On pass
+
+```
+✓ All <N> tests passed in <scope>
 ```

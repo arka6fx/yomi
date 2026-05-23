@@ -11,6 +11,8 @@
     "build": "bun run build:darwin-arm64 && bun run build:darwin-x64 && bun run build:win32-x64",
     "test": "bun test",
     "lint": "eslint src",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

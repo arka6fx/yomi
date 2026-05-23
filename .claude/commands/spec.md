@@ -1,21 +1,51 @@
 ---
-description: Look up a spec by subsystem name (e.g. /spec sidecar)
+description: Look up or list specs — /spec sidecar or /spec (list all)
+allowed-tools: Bash, Read, Glob
 ---
-Look up the spec for the subsystem named "$ARGUMENTS".
 
-Map the name to the correct spec file:
-- overview / principles → specs/00-overview.md
-- architecture / arch / ipc / layers → specs/01-architecture.md
-- sidecar / router / pipeline / react / agent → specs/02-sidecar.md
-- harness / prompt / tools / hooks / guards → specs/03-harness.md
-- memory / notepad / compaction / retrieval → specs/04-memory.md
-- desktop / electron / tray / menubar / capture → specs/05-desktop.md
-- backend / hono / auth / proxy / metering → specs/06-backend.md
-- database / db / schema / drizzle → specs/07-database.md
-- speech / stt / tts / elevenlabs / whisper → specs/08-speech.md
-- pricing / billing / stripe / plans → specs/09-pricing.md
+Look up a spec file. `$ARGUMENTS` is a keyword (subsystem name or partial file name). If empty, list all specs.
 
-Read the matched file and summarise:
-1. Purpose (1 sentence)
-2. Key invariants (bullet list)
-3. The section most relevant to the current task
+## If `$ARGUMENTS` is empty — list all specs
+
+```bash
+ls specs/
+```
+
+Print each spec file with its first `## Purpose` paragraph (one line). Let the user pick.
+
+## If `$ARGUMENTS` is provided — find and read
+
+1. Glob `specs/**` for files whose name contains `$ARGUMENTS` (case-insensitive).
+2. If multiple match, list them and ask the user to pick.
+3. If exactly one matches, read it in full.
+4. If none match, try common aliases:
+
+| Alias | File pattern |
+|---|---|
+| overview, intro | `00-overview*` |
+| arch, ipc, layers | `01-architecture*` |
+| sidecar, router, pipeline, agent | `02-sidecar*` |
+| harness, hooks, prompt | `03-harness*` |
+| memory, notepad, compaction | `04-memory*` |
+| desktop, electron, tray | `05-desktop*` |
+| backend, hono, auth, proxy | `06-backend*` |
+| db, database, drizzle, schema | `07-database*` |
+| speech, stt, tts, whisper | `08-speech*` |
+| pricing, billing, plans | `09-pricing*` |
+
+If still no match, say: "No spec found for '$ARGUMENTS'. Run `/create-spec $ARGUMENTS` to create one."
+
+## Output format
+
+```
+Spec: <filename>
+
+Purpose
+<one paragraph>
+
+Key invariants
+<bullet list>
+
+Design summary
+<most relevant section — truncated to ~40 lines>
+```

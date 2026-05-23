@@ -7,11 +7,14 @@
     "dev": "bun run --env-file ../../.env --watch src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target bun",
     "start": "bun run dist/index.js",
+    "test": "bun test",
+    "lint": "eslint src",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
     "cf:deploy": "wrangler deploy",
     "cf:deploy:preview": "wrangler deploy --env preview",
-    "cf:dev": "wrangler dev",
-    "lint": "eslint src",
-    "typecheck": "tsc --noEmit"
+    "cf:dev": "wrangler dev"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.0.0",
@@ -29,6 +32,7 @@
     "@yomi/eslint-config": "workspace:*",
     "@yomi/typescript-config": "workspace:*",
     "drizzle-kit": "^0.22.0",
-    "typescript": "^5.5.0"
+    "typescript": "^5.5.0",
+    "wrangler": "^4.0.0"
   }
 }

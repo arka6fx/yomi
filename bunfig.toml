@@ -1,0 +1,4 @@
+[test]
+# Test files must end in .test.ts or .spec.ts
+include = ["**/*.test.ts", "**/*.spec.ts"]
+timeout = 5000

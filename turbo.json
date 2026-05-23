@@ -19,8 +19,14 @@
     },
     "test": {
       "dependsOn": ["^build"],
-      "inputs": ["src/**", "bunfig.toml", "*.test.ts"],
+      "inputs": ["src/**/*.ts", "src/**/*.tsx", "**/*.test.ts", "**/*.spec.ts", "bunfig.toml"],
       "cache": true
+    },
+    "format": {
+      "cache": false
+    },
+    "format:check": {
+      "cache": false
     },
     "clean": {
       "cache": false

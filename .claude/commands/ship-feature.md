@@ -1,113 +1,61 @@
 ---
-description: Commit, push, create PR, merge, clean up via GitHub MCP
----
-Commit, push, create PR via GitHub MCP, merge, and clean up after a feature is complete.
-
+description: Commit staged changes and push — /ship-feature "feat: my message"
+allowed-tools: Bash
 ---
 
-## Step 1 — Identify current branch
+Commit and push the current working tree. `$ARGUMENTS` is the commit message body (optional — auto-generate from diff if omitted).
 
-```
-git branch --show-current
-```
+## 1 — Sanity check
 
-Store as CURRENT_BRANCH.
-
----
-
-## Step 2 — Generate commit message
-
-Run:
-```
+```bash
+git status
 git diff --staged
 git diff
-git log main..HEAD --oneline
 ```
 
-Read relevant spec from `specs/` for the current feature.
+If everything is clean with no staged or unstaged changes, stop and say "Nothing to commit."
 
-Generate a Conventional Commit message:
-- `feat:` new feature
+## 2 — Stage all tracked changes
+
+```bash
+git add -u
+```
+
+Do **not** use `git add .` — untracked files (secrets, generated assets) must be added explicitly by the user.
+
+## 3 — Generate or use commit message
+
+If `$ARGUMENTS` is non-empty, use it verbatim as the commit message subject.
+
+If `$ARGUMENTS` is empty, read `git diff --staged` and write a Conventional Commit subject line:
+- `feat:` new capability  
 - `fix:` bug fix  
-- `chore:` config or tooling
-- Under 72 characters, no period, describes what the user can now do
+- `chore:` config / tooling  
+- `refactor:` internal restructure  
+- `docs:` documentation  
+Under 72 chars, imperative mood, no trailing period.
 
----
+## 4 — Commit
 
-## Step 3 — Commit
-
-```
-git add . && git commit -m "<message>"
-```
-
----
-
-## Step 4 — Push
-
-```
-git push -u origin CURRENT_BRANCH
+```bash
+git commit -m "<subject>"
 ```
 
----
+If the pre-commit hook fails, report the error — do not use `--no-verify`.
 
-## Step 5 — Create PR via GitHub MCP
+## 5 — Push
 
-Use the **github** MCP server to create a pull request from CURRENT_BRANCH into `main`.
-
-Title: plain English feature name (no conventional commit prefix)
-Body: include what this PR does, list of changes, and how to test
-
----
-
-## Step 6 — Merge PR via GitHub MCP
-
-Use the **github** MCP server to merge the pull request just created. Use squash merge.
-
----
-
-## Step 7 — Delete remote branch via GitHub MCP
-
-Use the **github** MCP server to delete CURRENT_BRANCH from GitHub after the merge.
-
----
-
-## Step 8 — Switch to main and pull
-
-```
-git checkout main && git pull origin main
+```bash
+git push
 ```
 
----
+If the branch has no upstream, run `git push -u origin HEAD`.
 
-## Step 9 — Delete local feature branch
-
-```
-git branch -D CURRENT_BRANCH
-```
-
----
-
-## Final summary
+## 6 — Summary
 
 ```
-/ship-feature complete
-
 ✓ Committed — <message>
-✓ Pushed — <branch>
-✓ PR created and merged via MCP
-✓ Remote branch deleted
-✓ Switched to main
-✓ Local branch deleted
+✓ Pushed    — <branch> → origin
 
-Next: /create-spec or /phase for the next feature
+Next: /pr to open a pull request, or keep working.
 ```
-
----
-
-## Rules
-
-- Never commit directly to main
-- Always squash merge
-- Always delete both remote and local branch after merge
-- If GitHub MCP is not connected, stop and say: "GitHub MCP is not connected. Run `opencode mcp auth github` first."
-- Never proceed to merge if PR creation fails
