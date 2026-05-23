@@ -2,9 +2,11 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { Zap, Monitor, Shield, Check, ArrowRight, Mic, Menu, X } from "lucide-react"
+import { Zap, Monitor, Shield, Check, ArrowRight, Mic, Menu, X, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { authClient } from "@/lib/auth-client"
 import { HandWrittenTitle } from "@/components/ui/hand-writing-text"
 import Footer from "@/components/Footer"
 
@@ -38,6 +40,7 @@ const FEATURES = [
 
 const PLANS = [
   {
+    key: "free",
     name: "Free",
     price: "$0",
     period: "/month",
@@ -49,10 +52,10 @@ const PLANS = [
       "macOS + Windows",
     ],
     cta: "Get started",
-    href: "/signup",
     popular: false,
   },
   {
+    key: "basic",
     name: "Basic",
     price: "$4",
     period: "/month",
@@ -65,10 +68,10 @@ const PLANS = [
       "Email support",
     ],
     cta: "Start free trial",
-    href: "/signup",
     popular: false,
   },
   {
+    key: "standard",
     name: "Standard",
     price: "$9",
     period: "/month",
@@ -82,10 +85,10 @@ const PLANS = [
       "Email support",
     ],
     cta: "Start free trial",
-    href: "/signup",
     popular: true,
   },
   {
+    key: "genesis",
     name: "Genesis",
     price: "$19",
     period: "/month",
@@ -99,7 +102,6 @@ const PLANS = [
       "Priority support",
     ],
     cta: "Get Genesis",
-    href: "/signup",
     popular: false,
   },
 ]
@@ -173,6 +175,33 @@ function Keys({ keys }: { keys: { sym: string; label: string }[] }) {
 
 export function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [billingLoading, setBillingLoading] = useState<string | null>(null)
+  const { data: session } = authClient.useSession()
+  const router = useRouter()
+
+  async function handlePlanClick(planKey: string) {
+    if (planKey === "free") {
+      router.push(session ? "/dashboard" : "/signup")
+      return
+    }
+    if (!session) {
+      router.push(`/signup?plan=${planKey}`)
+      return
+    }
+    setBillingLoading(planKey)
+    try {
+      const res = await fetch("/api/billing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: planKey }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? "Billing error")
+      window.location.href = data.short_url
+    } catch {
+      setBillingLoading(null)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -214,18 +243,37 @@ export function LandingPage() {
             </nav>
 
             <div className="flex items-center gap-1">
-              <Link
-                href="/signin"
-                className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-xl hover:bg-muted/50"
-              >
-                Sign in
-              </Link>
-              <Link
-                href="/signup"
-                className="bg-primary text-primary-foreground text-sm font-medium px-4 py-1.5 rounded-xl hover:bg-primary/90 transition-colors"
-              >
-                Get started
-              </Link>
+              {session ? (
+                <>
+                  <Link
+                    href="/dashboard"
+                    className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-xl hover:bg-muted/50"
+                  >
+                    Dashboard
+                  </Link>
+                  <button
+                    onClick={() => authClient.signOut().then(() => router.push("/"))}
+                    className="bg-primary text-primary-foreground text-sm font-medium px-4 py-1.5 rounded-xl hover:bg-primary/90 transition-colors"
+                  >
+                    Sign out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/signin"
+                    className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-xl hover:bg-muted/50"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="bg-primary text-primary-foreground text-sm font-medium px-4 py-1.5 rounded-xl hover:bg-primary/90 transition-colors"
+                  >
+                    Get started
+                  </Link>
+                </>
+              )}
               <button
                 className="md:hidden ml-1 text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted/50 transition-colors"
                 onClick={() => setMenuOpen(v => !v)}
@@ -555,16 +603,18 @@ export function LandingPage() {
                 ))}
               </ul>
 
-              <Link
-                href={plan.href}
-                className={`block text-center rounded-xl font-medium py-2.5 text-sm transition-colors ${
+              <button
+                onClick={() => handlePlanClick(plan.key)}
+                disabled={billingLoading !== null}
+                className={`w-full flex items-center justify-center gap-2 rounded-xl font-medium py-2.5 text-sm transition-colors disabled:opacity-70 ${
                   plan.popular
                     ? "bg-primary text-primary-foreground hover:bg-primary/90"
                     : "border border-border text-foreground hover:bg-muted/50"
                 }`}
               >
-                {plan.cta}
-              </Link>
+                {billingLoading === plan.key && <Loader2 size={14} className="animate-spin" />}
+                {billingLoading === plan.key ? "Redirecting…" : plan.cta}
+              </button>
             </motion.div>
           ))}
         </div>
