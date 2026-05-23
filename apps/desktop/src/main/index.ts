@@ -1,7 +1,7 @@
-import { app, BrowserWindow, globalShortcut, ipcMain, shell, screen } from "electron"
+import { app, BrowserWindow, globalShortcut, ipcMain, screen, shell } from "electron"
 import path from "node:path"
 import { SidecarManager } from "./sidecar"
-import { checkStoredToken, startDeviceCodeFlow, clearToken } from "./auth"
+import { checkStoredToken, startDeviceCodeFlow, clearToken, loadToken, BACKEND_URL } from "./auth"
 import { initHotkey, enableHotkeys, disableHotkeys } from "./hotkey"
 import { initSidecarIpc } from "./ipc"
 
@@ -99,8 +99,30 @@ app.whenReady().then(async () => {
 
   ipcMain.on("yomi:sign-out", () => {
     clearToken()
-    disableHotkeys()  // Block Ctrl+Shift+Space/Enter immediately
+    disableHotkeys()
     overlayWin?.webContents.send("yomi:auth-needed")
+  })
+
+  // Handle 401 from subscription check — triggers re-auth
+  ipcMain.handle("yomi:get-subscription-info", async () => {
+    const token = loadToken()
+    if (!token) return null
+    try {
+      const backendUrl = process.env["BACKEND_URL"] ?? process.env["YOMI_BACKEND_URL"] ?? "http://localhost:3001"
+      const res = await fetch(`${backendUrl}/api/billing/subscription`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.status === 401) {
+        clearToken()
+        disableHotkeys()
+        overlayWin?.webContents.send("yomi:auth-needed")
+        return null
+      }
+      if (!res.ok) return null
+      return res.json()
+    } catch {
+      return null
+    }
   })
 
   // ── Load overlay ────────────────────────────────────────────────────────────
@@ -174,6 +196,27 @@ app.whenReady().then(async () => {
   globalShortcut.register("Ctrl+Shift+Q", () => app.quit())
 })
 
+// Session validation — periodically check the token is still valid.
+// Catches cross-device sign-out (landing page → desktop re-auth).
+function startSessionValidation() {
+  setInterval(async () => {
+    const token = loadToken()
+    if (!token) return
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/billing/subscription`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.status === 401) {
+        clearToken()
+        disableHotkeys()
+        overlayWin?.webContents.send("yomi:auth-needed")
+      }
+    } catch {
+      // Network error — ignore, retry next interval
+    }
+  }, 30_000)
+}
+
 // Called after a valid token is obtained.
 // First call: starts sidecar, registers IPC handlers, registers shortcuts.
 // Subsequent calls (re-auth after sign-out): just re-enables the shortcuts.
@@ -206,6 +249,8 @@ async function completeSetup(token: string) {
       onTextQuery,
       onAbort,
     })
+
+    startSessionValidation()
   } else {
     // Re-auth after sign-out: sidecar already running, just unlock shortcuts
     enableHotkeys()

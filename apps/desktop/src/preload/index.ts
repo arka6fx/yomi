@@ -4,6 +4,20 @@ import type { SseEvent } from "@yomi/shared"
 type HotkeyState = "idle" | "listening" | "processing" | "text-input"
 type AuthStatus = "ok" | "needed" | "waiting" | "error"
 
+export interface SubscriptionInfo {
+  role: string
+  plan: string
+  status: string
+  trialEndDate: string | null
+  currentPeriodEnd: string | null
+  trialInteractionUsed: number
+  trialInteractionLimit: number
+  dailyChatUsed: number
+  dailyVoiceUsed: number
+  dailyImageUsed: number
+  tokensUsedThisPeriod: number
+}
+
 contextBridge.exposeInMainWorld("yomi", {
   // ── Auth ──────────────────────────────────────────────────────────────────
 
@@ -74,5 +88,17 @@ contextBridge.exposeInMainWorld("yomi", {
 
   submitTextQuery(text: string): void {
     ipcRenderer.send("yomi:text-query", text)
+  },
+
+  // ── Subscription ──────────────────────────────────────────────────────────
+
+  getSubscriptionInfo(): Promise<SubscriptionInfo> {
+    return ipcRenderer.invoke("yomi:get-subscription-info")
+  },
+
+  onSubscriptionUpdate(cb: (info: SubscriptionInfo) => void): () => void {
+    const h = (_: Electron.IpcRendererEvent, info: SubscriptionInfo) => cb(info)
+    ipcRenderer.on("yomi:subscription-update", h)
+    return () => ipcRenderer.off("yomi:subscription-update", h)
   },
 })

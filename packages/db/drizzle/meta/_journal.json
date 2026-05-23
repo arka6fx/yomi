@@ -23,6 +23,13 @@
       "when": 1748008300000,
       "tag": "0002_user_role_plan",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1748008400000,
+      "tag": "0003_trial_interactions",
+      "breakpoints": true
     }
   ]
 }

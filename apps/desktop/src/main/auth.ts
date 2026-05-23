@@ -2,13 +2,13 @@ import { app } from "electron"
 import path from "node:path"
 import fs from "node:fs"
 
-const BACKEND_URL = process.env["YOMI_BACKEND_URL"] ?? "https://api.yomi.app"
+export const BACKEND_URL = process.env["YOMI_BACKEND_URL"] ?? "https://api.yomi.app"
 
 function tokenPath() {
   return path.join(app.getPath("userData"), "session.enc")
 }
 
-function loadToken(): string | null {
+export function loadToken(): string | null {
   try {
     const { safeStorage } = require("electron") as typeof import("electron")
     if (!safeStorage.isEncryptionAvailable()) return null
@@ -46,8 +46,8 @@ export async function checkStoredToken(): Promise<string | null> {
   }
 }
 
-// Runs the device-code OAuth flow.
-// provider hint is appended to the URL so the browser can pre-select the OAuth provider.
+// Runs the device-code OAuth flow (RFC 8628).
+// Opens the browser silently — the device page auto-confirms if already logged in.
 export async function startDeviceCodeFlow(
   provider: string | undefined,
   onDeviceUrl: (url: string) => void,

@@ -521,7 +521,7 @@ function Chip({ label, keys, hot }: { label:string; keys:string[]; hot:boolean }
   )
 }
 
-function Toolbar({ state }: { state:HotkeyState }) {
+function Toolbar({ state, plan, interactionInfo }: { state:HotkeyState; plan?:string; interactionInfo?:string }) {
   return (
     <div style={{
       display:"flex", alignItems:"center", justifyContent:"space-between",
@@ -583,16 +583,51 @@ function Toolbar({ state }: { state:HotkeyState }) {
         }}>
           {state==="listening" ? "Listening…" : state==="processing" ? "Thinking…" : "Yomi"}
         </span>
+        {/* Plan badge */}
+        {plan && state==="idle" && (
+          <span style={{
+            fontSize:9, fontFamily:UI_FONT, letterSpacing:"0.06em",
+            color:"rgba(175,155,115,0.35)",
+            border:"1px solid rgba(255,224,194,0.08)",
+            borderRadius:4, padding:"0 6px", lineHeight:"16px",
+            textTransform:"capitalize",
+          }}>
+            {plan}
+          </span>
+        )}
+        {/* Interaction usage for trial */}
+        {interactionInfo && state==="idle" && (
+          <span style={{
+            fontSize:9, fontFamily:UI_FONT, letterSpacing:"0.02em",
+            color:"rgba(255,200,130,0.3)",
+          }}>
+            {interactionInfo}
+          </span>
+        )}
       </div>
 
       {/* Right: shortcut chips */}
-      <div style={{ display:"flex", gap:4 }} className="no-drag">
+      <div style={{ display:"flex", gap:4, alignItems:"center" }} className="no-drag">
         {state==="idle" && <>
           <Chip label="Voice" keys={["⌃⇧","Spc"]} hot={false} />
           <Chip label="Type"  keys={["⌃⇧","↵"]}   hot={false} />
           <Chip label="Move"  keys={["⌃⇧","↑↓←→"]} hot={false} />
           <Chip label="Hide"  keys={["⌃⇧","H"]}   hot={false} />
           <Chip label="Quit"  keys={["⌃⇧","Q"]}   hot={false} />
+          <div style={{ width:1, height:16, background:"rgba(255,224,194,0.07)", margin:"0 4px" }} />
+          <button
+            onClick={() => window.yomi.signOut()}
+            style={{
+              background:"none", border:"none",
+              fontSize:9, fontFamily:UI_FONT, letterSpacing:"0.04em",
+              color:"rgba(175,155,115,0.35)", cursor:"pointer",
+              padding:"0 2px", transition:"color .15s",
+            }}
+            onMouseEnter={e=>{e.currentTarget.style.color="rgba(255,224,194,0.5)"}}
+            onMouseLeave={e=>{e.currentTarget.style.color="rgba(175,155,115,0.35)"}}
+          >
+            Sign out
+          </button>
         </>}
         {state==="listening" && <>
           <Chip label="Stop"   keys={["⌃⇧","Spc"]} hot={true}  />
@@ -612,13 +647,13 @@ function Toolbar({ state }: { state:HotkeyState }) {
 // ── Sign-In Panel ──────────────────────────────────────────────────────────────
 
 const GitHubIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
     <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
   </svg>
 )
 
 const GoogleIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden>
+  <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden>
     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
     <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
     <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
@@ -640,20 +675,20 @@ function OAuthButton({ icon, label, loading, disabled, onClick }: {
       className="no-drag"
       style={{
         display:"flex", alignItems:"center", justifyContent:"center", gap:10,
-        width:"100%", padding:"11px 16px", borderRadius:10,
+        width:"100%", padding:"13px 18px", borderRadius:10,
         background:"rgba(255,224,194,0.05)", border:"1px solid rgba(255,224,194,0.12)",
-        fontSize:13, fontWeight:500, color:"var(--text)", fontFamily:UI_FONT,
+        fontSize:13.5, fontWeight:500, color:"var(--text)", fontFamily:UI_FONT,
         cursor: disabled ? "default" : "pointer",
-        transition:"background .15s, border-color .15s",
+        transition:"all .15s",
         opacity: disabled ? 0.5 : 1,
       }}
-      onMouseEnter={e=>{ if (!disabled) { e.currentTarget.style.background="rgba(255,224,194,0.1)"; e.currentTarget.style.borderColor="rgba(255,224,194,0.22)" }}}
+      onMouseEnter={e=>{ if (!disabled) { e.currentTarget.style.background="rgba(255,224,194,0.1)"; e.currentTarget.style.borderColor="rgba(255,200,130,0.35)" }}}
       onMouseLeave={e=>{ if (!disabled) { e.currentTarget.style.background="rgba(255,224,194,0.05)"; e.currentTarget.style.borderColor="rgba(255,224,194,0.12)" }}}
     >
       {loading ? (
         <div style={{
-          width:15, height:15, borderRadius:"50%",
-          border:"1.5px solid rgba(255,224,194,0.15)",
+          width:17, height:17, borderRadius:"50%",
+          border:"2px solid rgba(255,224,194,0.12)",
           borderTopColor:"rgba(255,200,130,0.8)",
           animation:"spin .75s linear infinite", flexShrink:0,
         }} />
@@ -674,91 +709,95 @@ function SignInPanel({ isWaiting, loadingProvider, error, lastProvider, onSignIn
 
   return (
     <div style={{
-      flex:1, display:"flex", alignItems:"center", justifyContent:"center",
-      padding:"20px 16px 24px",
+      flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+      padding:"0 28px",
     }}>
+      {/* Accent glow at top */}
       <div style={{
-        width:380, display:"flex", flexDirection:"column", alignItems:"center",
-        background:"var(--surface)",
-        border:"1px solid var(--border-hi)",
-        borderRadius:16, padding:"30px 26px 26px",
-        boxShadow:"0 12px 48px rgba(0,0,0,0.55)",
+        position:"absolute", top:0, left:0, right:0, height:1,
+        background:"linear-gradient(90deg, transparent, rgba(255,200,130,0.3), transparent)",
+      }} />
+
+      {/* Yomi logo — bigger */}
+      <div style={{
+        fontFamily:DISPLAY_FONT, fontSize:44, fontWeight:700,
+        color:"var(--accent)", letterSpacing:"-0.02em", marginBottom:6,
       }} className="drag">
-
-        {/* Yomi logo */}
-        <div style={{
-          fontFamily:DISPLAY_FONT, fontSize:34, fontWeight:700,
-          color:"var(--accent)", letterSpacing:"-0.02em", marginBottom:8,
-        }}>
-          Yomi
-        </div>
-
-        {isWaiting ? (
-          <>
-            <div style={{
-              width:22, height:22, borderRadius:"50%",
-              border:"2px solid rgba(255,224,194,0.12)",
-              borderTopColor:"rgba(255,200,130,0.8)",
-              animation:"spin .75s linear infinite",
-              margin:"18px 0 16px",
-            }} />
-            <div style={{ fontSize:13, color:"var(--dim)", textAlign:"center", lineHeight:1.65, marginBottom:18 }}>
-              Your browser has been opened.<br />Sign in there to connect Yomi.
-            </div>
-            <button
-              onClick={() => onSignIn(lastProvider ?? "github")}
-              className="no-drag"
-              style={{
-                background:"none", border:"1px solid rgba(255,175,80,0.3)",
-                borderRadius:7, padding:"5px 16px",
-                fontSize:11, color:"rgba(255,175,80,0.85)", fontFamily:UI_FONT,
-                cursor:"pointer", transition:"background .15s",
-              }}
-              onMouseEnter={e=>{ e.currentTarget.style.background="rgba(255,175,80,0.1)" }}
-              onMouseLeave={e=>{ e.currentTarget.style.background="none" }}
-            >
-              Open browser again
-            </button>
-          </>
-        ) : (
-          <>
-            <div style={{ fontSize:14, fontWeight:600, color:"var(--text)", marginBottom:5 }}>
-              Welcome back
-            </div>
-            <div style={{
-              fontSize:11.5, color:"rgba(175,163,145,0.75)", textAlign:"center",
-              marginBottom:22, lineHeight:1.65,
-            }}>
-              Sign in to your Yomi account.
-            </div>
-
-            <div style={{ display:"flex", flexDirection:"column", gap:10, width:"100%" }}>
-              <OAuthButton
-                icon={<GitHubIcon />}
-                label="Continue with GitHub"
-                loading={loadingProvider === "github"}
-                disabled={busy}
-                onClick={() => onSignIn("github")}
-              />
-              <OAuthButton
-                icon={<GoogleIcon />}
-                label="Continue with Google"
-                loading={loadingProvider === "google"}
-                disabled={busy}
-                onClick={() => onSignIn("google")}
-              />
-            </div>
-
-            {error && (
-              <div style={{
-                fontSize:11, color:"var(--error)", textAlign:"center", marginTop:14, lineHeight:1.5,
-              }}>
-                {error}
-              </div>
-            )}
-          </>
-        )}
+        Yomi
       </div>
+
+      <div style={{
+        fontSize:11, color:"rgba(175,163,145,0.45)", textAlign:"center",
+        marginBottom:20, letterSpacing:"0.03em", fontWeight:400,
+      }}>
+        your AI buddy
+      </div>
+
+      {isWaiting ? (
+        <>
+          <div style={{
+            width:28, height:28, borderRadius:"50%",
+            border:"2.5px solid rgba(255,224,194,0.1)",
+            borderTopColor:"rgba(255,200,130,0.8)",
+            animation:"spin .75s linear infinite",
+            margin:"0 0 20px",
+          }} />
+          <div style={{ fontSize:14, color:"var(--dim)", textAlign:"center", lineHeight:1.7, marginBottom:18 }}>
+            Opening your browser to sign in…
+          </div>
+          <button
+            onClick={() => onSignIn(lastProvider ?? "github")}
+            className="no-drag"
+            style={{
+              background:"rgba(255,175,80,0.08)", border:"1px solid rgba(255,175,80,0.3)",
+              borderRadius:8, padding:"8px 22px",
+              fontSize:12, color:"rgba(255,175,80,0.9)", fontFamily:UI_FONT,
+              cursor:"pointer", transition:"background .15s",
+            }}
+            onMouseEnter={e=>{ e.currentTarget.style.background="rgba(255,175,80,0.15)" }}
+            onMouseLeave={e=>{ e.currentTarget.style.background="rgba(255,175,80,0.08)" }}
+          >
+            Open browser again
+          </button>
+        </>
+      ) : (
+        <>
+          <div style={{ fontSize:16, fontWeight:600, color:"var(--text)", marginBottom:3 }}>
+            Welcome back
+          </div>
+          <div style={{
+            fontSize:12.5, color:"rgba(175,163,145,0.7)", textAlign:"center",
+            marginBottom:30, lineHeight:1.6,
+          }}>
+            Sign in to your Yomi account.
+          </div>
+
+          <div style={{ display:"flex", flexDirection:"column", gap:12, width:"100%", maxWidth:320 }}>
+            <OAuthButton
+              icon={<GitHubIcon />}
+              label="Continue with GitHub"
+              loading={loadingProvider === "github"}
+              disabled={busy}
+              onClick={() => onSignIn("github")}
+            />
+            <OAuthButton
+              icon={<GoogleIcon />}
+              label="Continue with Google"
+              loading={loadingProvider === "google"}
+              disabled={busy}
+              onClick={() => onSignIn("google")}
+            />
+          </div>
+
+          {error && (
+            <div style={{
+              fontSize:12, color:"var(--error)", textAlign:"center", marginTop:18, lineHeight:1.5,
+            }}>
+              {error}
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }
@@ -768,8 +807,9 @@ function SignInPanel({ isWaiting, loadingProvider, error, lastProvider, onSignIn
 const App: React.FC = () => {
   const {
     authState, authError, setAuthState,
-    hotkeyState, entries, audioQueue,
+    hotkeyState, entries, audioQueue, subscription,
     handleSseEvent, setHotkeyState, dismissEntry,
+    setSubscription, setSubscriptionLoading,
   } = useYomiStore()
 
   const [loadingProvider, setLoadingProvider] = React.useState<"github" | "google" | null>(null)
@@ -803,6 +843,25 @@ const App: React.FC = () => {
     setAuthState("waiting")
     window.yomi.startAuth(provider)
   }, [setAuthState])
+
+  // Fetch subscription info when authenticated
+  useEffect(()=>{
+    if (authState !== "authenticated") return
+    setSubscriptionLoading(true)
+    window.yomi.getSubscriptionInfo().then(info => {
+      setSubscription(info)
+      setSubscriptionLoading(false)
+    }).catch(() => {
+      setSubscriptionLoading(false)
+    })
+  }, [authState, setSubscription, setSubscriptionLoading])
+
+  // Listen for subscription updates from main
+  useEffect(()=>{
+    return window.yomi.onSubscriptionUpdate(info => {
+      setSubscription(info)
+    })
+  }, [setSubscription])
 
   // Resize window based on auth + content state
   useEffect(()=>{
@@ -965,6 +1024,7 @@ const App: React.FC = () => {
         boxShadow:"0 16px 60px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(255,224,194,0.04)",
         backdropFilter:"blur(28px) saturate(160%)",
         WebkitBackdropFilter:"blur(28px) saturate(160%)",
+        position:"relative",
       }}>
         <SignInPanel
           isWaiting={authState === "waiting"}
@@ -1003,7 +1063,11 @@ const App: React.FC = () => {
         minWidth:680,
       }}
     >
-      <Toolbar state={hotkeyState} />
+      <Toolbar
+        state={hotkeyState}
+        plan={subscription?.plan}
+        interactionInfo={subscription?.plan === "explore" ? `${subscription.trialInteractionUsed}/${subscription.trialInteractionLimit}` : undefined}
+      />
 
       {hotkeyState==="text-input" && (
         <div style={{ padding:"6px 7px 7px", flexShrink:0 }}>

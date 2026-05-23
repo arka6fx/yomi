@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { LogOut, Check, Zap, Crown, Loader2, Download, Shield, Clock } from "lucide-react"
+import { LogOut, Check, Zap, Crown, Loader2, Download, Shield, Clock, Sparkles, Cuboid } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
 
@@ -14,6 +14,8 @@ type Sub = {
   status: string
   trialEndDate: string | null
   currentPeriodEnd: string | null
+  trialInteractionUsed: number
+  trialInteractionLimit: number
   dailyChatUsed: number
   dailyVoiceUsed: number
   dailyImageUsed: number
@@ -27,23 +29,41 @@ const PLANS = [
     price: "Free",
     priceSub: "30-day trial",
     desc: "Try everything Yomi has to offer.",
-    features: ["50 chats / day", "10 voice interactions / day", "10 screenshot analyses / day"],
+    icon: Sparkles,
+    features: [
+      "Voice & text interaction",
+      "Screenshot analysis",
+      "150 total interactions",
+      "Memory & personalization",
+    ],
   },
   {
     key: "pro",
     name: "Pro",
-    price: "$8.99",
+    price: "$9.99",
     priceSub: "/ mo",
-    desc: "For everyday use.",
-    features: ["Unlimited conversations", "200 voice interactions / day", "200 screenshot analyses / day", "Priority compute"],
+    desc: "Unlimited interaction for everyday use.",
+    icon: Crown,
+    features: [
+      "Everything in Explore",
+      "Unlimited standard interactions",
+      "Priority compute",
+      "Enhanced personalization",
+    ],
   },
   {
     key: "max",
     name: "Max",
-    price: "$18.99",
+    price: "$24.99",
     priceSub: "/ mo",
-    desc: "For power users and creators.",
-    features: ["Everything in Pro", "Background agents", "Autonomous workflows", "Early access features"],
+    desc: "Full agentic capabilities for creators.",
+    icon: Cuboid,
+    features: [
+      "Everything in Pro",
+      "Background agents",
+      "Autonomous workflows",
+      "Early access features",
+    ],
   },
 ]
 
@@ -78,13 +98,13 @@ function DashboardContent() {
         setSub({
           role: "user", plan: "explore", status: "inactive",
           trialEndDate: null, currentPeriodEnd: null,
+          trialInteractionUsed: 0, trialInteractionLimit: 150,
           dailyChatUsed: 0, dailyVoiceUsed: 0, dailyImageUsed: 0, tokensUsedThisPeriod: 0,
         }),
       )
       .finally(() => setSubPending(false))
   }, [session])
 
-  // Auto-upgrade if ?plan= arrives after auth
   useEffect(() => {
     const plan = searchParams.get("plan")
     if (!plan || !session || subPending || !sub) return
@@ -201,17 +221,24 @@ function DashboardContent() {
                   {trialExpired ? "Trial expired — upgrade to continue" : `${daysLeft} day${daysLeft === 1 ? "" : "s"} left in free trial`}
                 </p>
               )}
+              {/* Interaction usage for explore */}
+              {!subPending && !isOwner && currentPlanKey === "explore" && sub && (
+                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                  <Zap size={11} />
+                  {sub.trialInteractionUsed} / {sub.trialInteractionLimit} interactions used
+                </p>
+              )}
               {/* Renewal date */}
               {sub?.currentPeriodEnd && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground mt-1">
                   Renews{" "}
                   {new Date(sub.currentPeriodEnd).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </p>
               )}
             </div>
 
-            {/* Daily usage */}
-            {!subPending && sub && !isOwner && (
+            {/* Daily usage for paid plans */}
+            {!subPending && sub && !isOwner && currentPlanKey !== "explore" && (
               <div className="text-right space-y-1">
                 <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">Today&apos;s usage</p>
                 <div className="flex items-center gap-1.5 justify-end text-xs text-muted-foreground">
@@ -300,7 +327,7 @@ function DashboardContent() {
               <p className="text-xs text-muted-foreground mt-0.5">Get the desktop app for Mac or Windows.</p>
             </div>
             <Link
-              href="/download"
+              href="/#download"
               className="flex items-center gap-2 bg-primary text-primary-foreground rounded-xl font-medium px-4 py-2 text-sm hover:bg-primary/90 transition-colors whitespace-nowrap"
             >
               <Download size={14} />

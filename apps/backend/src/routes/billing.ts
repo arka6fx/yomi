@@ -5,10 +5,10 @@ import { eq, and, gte } from "drizzle-orm"
 import { authenticate } from "../auth.js"
 import * as authSchema from "../auth-schema.js"
 
-// Plans: explore (free trial), pro ($8.99), max ($18.99)
+// Plans: explore (free trial), pro ($9.99), max ($24.99)
 const PLAN_AMOUNTS: Record<string, number> = {
-  pro: 899,
-  max: 1899,
+  pro: 999,
+  max: 2499,
 }
 
 const PLAN_PERIODS: Record<string, { period: string; interval: number; totalCount: number }> = {
@@ -130,14 +130,16 @@ billingRouter.get("/subscription", authenticate, async (c) => {
   )
 
   return c.json({
-    role:               user.role,
-    plan:               user.plan,
-    status:             user.subscriptionStatus,
-    trialEndDate:       user.trialEndDate,
-    currentPeriodEnd:   user.currentPeriodEnd,
-    dailyChatUsed:      user.dailyChatCount,
-    dailyVoiceUsed:     user.dailyVoiceCount,
-    dailyImageUsed:     user.dailyImageCount,
+    role:                user.role,
+    plan:                user.plan,
+    status:              user.subscriptionStatus,
+    trialEndDate:        user.trialEndDate,
+    currentPeriodEnd:    user.currentPeriodEnd,
+    trialInteractionUsed:  user.trialInteractionUsed,
+    trialInteractionLimit: user.trialInteractionLimit,
+    dailyChatUsed:       user.dailyChatCount,
+    dailyVoiceUsed:      user.dailyVoiceCount,
+    dailyImageUsed:      user.dailyImageCount,
     tokensUsedThisPeriod,
   })
 })

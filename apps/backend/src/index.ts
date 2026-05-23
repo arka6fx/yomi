@@ -1,6 +1,7 @@
 import { Hono } from "hono"
 import { cors } from "hono/cors"
 import { auth } from "./auth.js"
+import { errorHandler } from "./middleware/error-handler.js"
 import { llmRouter } from "./routes/llm.js"
 import { sttRouter } from "./routes/stt.js"
 import { usageRouter } from "./routes/usage.js"
@@ -9,6 +10,8 @@ import { authRoutesRouter } from "./routes/auth-routes.js"
 import { memoryRouter } from "./routes/memory.js"
 
 const app = new Hono()
+
+app.onError(errorHandler)
 
 app.use("*", cors({
   origin: process.env["BETTER_AUTH_URL"] ?? "http://localhost:3000",
