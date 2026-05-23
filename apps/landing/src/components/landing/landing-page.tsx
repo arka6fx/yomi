@@ -117,9 +117,12 @@ export function LandingPage() {
           className="max-w-5xl mx-auto rounded-2xl border border-border bg-card/80 backdrop-blur-xl shadow-sm"
         >
           <div className="flex items-center justify-between px-4 md:px-6 py-3">
-            <Link href="/" className="font-display text-2xl font-bold text-foreground select-none">
+            <button
+              onClick={() => scrollTo("hero")}
+              className="font-display text-2xl font-bold text-foreground select-none"
+            >
               Yomi
-            </Link>
+            </button>
 
             <nav className="hidden md:flex items-center gap-7">
               {NAV_LINKS.map(link => link.scrollTo ? (
