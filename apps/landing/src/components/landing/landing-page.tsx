@@ -83,7 +83,7 @@ const FEATURES = [
   {
     icon: Shield,
     title: "Private by default",
-    description: "Local STT, on-device screen analysis, encrypted memory sync. Your data stays on your machine.",
+    description: "Screenshots are used only for your query and never stored by Yomi. No background recording, no silent capture.",
   },
 ]
 

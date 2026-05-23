@@ -21,9 +21,9 @@ export default function PrivacyPage() {
           <div className="prose prose-sm max-w-none space-y-10 text-white/50 leading-relaxed">
             <Section title="Overview">
               <p>
-                Yomi is designed to be private by default. Screen and audio data is processed
-                locally on your device whenever possible. Only the distilled prompt — never raw
-                screenshots or audio recordings — leaves your machine when using cloud features.
+                Yomi is designed to be private by default. Screenshots are sent to our LLM proxy
+                only when you trigger a query — never stored, never used for training. Audio is
+                transcribed via cloud STT and discarded immediately after.
               </p>
             </Section>
 
@@ -58,11 +58,11 @@ export default function PrivacyPage() {
               </ul>
             </Section>
 
-            <Section title="Local processing">
+            <Section title="Data handling during queries">
               <p>
-                By default, STT transcription and screen analysis happen on-device. Only a
-                structured description of your screen and transcribed text are sent to our LLM
-                proxy when processing a query. On the Free plan, all speech processing is local.
+                When you trigger a query, your screenshot and transcribed voice text are sent to
+                our LLM proxy to generate a response. Neither is stored after the request
+                completes. Yomi never captures your screen or microphone in the background.
               </p>
             </Section>
 
@@ -75,8 +75,7 @@ export default function PrivacyPage() {
                   respective privacy policies. We do not enable training data use.
                 </li>
                 <li>
-                  <strong className="text-label">ElevenLabs</strong> — cloud STT and TTS on Basic+
-                  plans.
+                  <strong className="text-label">ElevenLabs</strong> — cloud STT and TTS for voice features.
                 </li>
                 <li>
                   <strong className="text-label">Razorpay</strong> — payment processing. We never
