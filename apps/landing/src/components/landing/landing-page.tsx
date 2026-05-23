@@ -293,9 +293,9 @@ export function LandingPage() {
             className="text-lg text-muted-foreground mb-10 max-w-xl mx-auto leading-relaxed"
           >
             Press{" "}
-            <Keys keys={["⌘", "Shift", "Space"]} />
+            <Keys keys={["⌘", "⇧", "␣"]} />
             {" "}on Mac or{" "}
-            <Keys keys={["Ctrl", "Shift", "Space"]} />
+            <Keys keys={["^", "⇧", "␣"]} />
             {" "}on Windows. Yomi sees your screen, hears your voice, and acts — so you touch your laptop less.
           </motion.p>
 
