@@ -1,8 +1,8 @@
-import { app, BrowserWindow, globalShortcut, ipcMain, screen, shell } from "electron"
+import { app, BrowserWindow, desktopCapturer, globalShortcut, ipcMain, screen, shell } from "electron"
 import path from "node:path"
 import { SidecarManager } from "./sidecar"
 import { checkStoredToken, startDeviceCodeFlow, clearToken, loadToken, BACKEND_URL } from "./auth"
-import { initHotkey, enableHotkeys, disableHotkeys } from "./hotkey"
+import { initHotkey, enableHotkeys, disableHotkeys, triggerEscape } from "./hotkey"
 import { initSidecarIpc } from "./ipc"
 
 // Transparent frameless windows need software compositing on some GPU/driver combos
@@ -57,6 +57,16 @@ app.whenReady().then(async () => {
   overlayWin.setVisibleOnAllWorkspaces(true)
 
   // ── Overlay window control IPCs (no auth required) ─────────────────────────
+
+  // Renderer-side ESC fallback — fires when globalShortcut("Escape") fails to register.
+  // triggerEscape() internally calls onAnyEscape (stop-audio), so no extra send needed.
+  ipcMain.on("yomi:escape", () => triggerEscape())
+
+  // Returns the first screen source ID for system audio loopback capture in the renderer
+  ipcMain.handle("yomi:get-desktop-source-id", async () => {
+    const sources = await desktopCapturer.getSources({ types: ["screen"] })
+    return sources[0]?.id ?? null
+  })
 
   ipcMain.on("yomi:resize", (_e, w: number, h: number) => {
     if (!overlayWin) return
@@ -241,13 +251,23 @@ async function completeSetup(token: string) {
 
     initHotkey({
       onStateChange: (s) => {
-        // Focus overlay so the text input field can receive keyboard input immediately
-        if (s === "text-input") overlayWin?.focus()
+        if (s === "text-input") {
+          // Ensure overlay is visible before focusing, then focus so the
+          // input field can receive keyboard input immediately.
+          overlayWin?.show()
+          overlayWin?.focus()
+        } else if (s === "listening") {
+          // Show overlay so the user sees the recording indicator and ESC hint.
+          overlayWin?.show()
+        }
         overlayWin?.webContents.send("yomi:state", s)
       },
       onListenStop,
       onTextQuery,
       onAbort,
+      // Fires on every ESC press regardless of state — stops TTS playback even
+      // when the pipeline has already finished and state is back to idle.
+      onAnyEscape: () => overlayWin?.webContents.send("yomi:stop-audio"),
     })
 
     startSessionValidation()

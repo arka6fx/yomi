@@ -372,7 +372,7 @@ export function LandingPage() {
         <div className="grid sm:grid-cols-3 gap-4">
           <InteractionCard
             type="A"
-            hotkey={[{ sym: "⇧", label: "Shift" }, { sym: "␣", label: "Space" }]}
+            hotkey={[{ sym: "^", label: "Ctrl" }, { sym: "⇧", label: "Shift" }, { sym: "␣", label: "Space" }]}
             label="Voice + Screen"
             description="Speak your question. Yomi hears you, sees your screen, and responds with text and voice."
           />

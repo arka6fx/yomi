@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   },
   description:
     "Yomi sees your screen, hears your voice, and acts — so you touch your laptop less.",
-  icons: { icon: "/favicon.jpg" },
+  icons: { icon: "/favicon.png" },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
