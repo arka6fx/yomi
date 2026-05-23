@@ -101,4 +101,18 @@ contextBridge.exposeInMainWorld("yomi", {
     ipcRenderer.on("yomi:subscription-update", h)
     return () => ipcRenderer.off("yomi:subscription-update", h)
   },
+
+  onStopAudio(cb: () => void): () => void {
+    const h = () => cb()
+    ipcRenderer.on("yomi:stop-audio", h)
+    return () => ipcRenderer.off("yomi:stop-audio", h)
+  },
+
+  getDesktopSourceId(): Promise<string | null> {
+    return ipcRenderer.invoke("yomi:get-desktop-source-id")
+  },
+
+  requestEscape(): void {
+    ipcRenderer.send("yomi:escape")
+  },
 })

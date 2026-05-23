@@ -10,6 +10,7 @@ let onStateChange: ((s: HotkeyState) => void) | null = null
 let onListenStop: (() => void) | null = null
 let onTextQuery: (() => void) | null = null
 let onAbort: (() => void) | null = null
+let onAnyEscape: (() => void) | null = null  // fired on every ESC, regardless of state
 
 // Called once after first successful auth. Safe to call again on re-auth —
 // subsequent calls update the callbacks and re-enable without re-registering shortcuts.
@@ -18,11 +19,13 @@ export function initHotkey(opts: {
   onListenStop: () => void
   onTextQuery: () => void
   onAbort: () => void
+  onAnyEscape?: () => void
 }): void {
   onStateChange = opts.onStateChange
   onListenStop  = opts.onListenStop
   onTextQuery   = opts.onTextQuery
   onAbort       = opts.onAbort
+  onAnyEscape   = opts.onAnyEscape ?? null
 
   if (!initialized) {
     initialized = true
@@ -47,16 +50,11 @@ export function initHotkey(opts: {
       }
     })
 
-    // Escape — cancel listening/text-input; abort stream if processing
-    globalShortcut.register("Escape", () => {
-      if (!enabled) return
-      if (state === "listening" || state === "text-input") {
-        transition("idle")
-      } else if (state === "processing") {
-        onAbort?.()
-        transition("idle")
-      }
-    })
+    // Escape — cancel listening/text-input; abort stream if processing.
+    // globalShortcut.register("Escape") can fail silently on some Windows setups;
+    // triggerEscape() below provides an IPC fallback for when the window is focused.
+    const escOk = globalShortcut.register("Escape", () => triggerEscape())
+    if (!escOk) console.warn("[yomi/hotkey] Escape global shortcut failed to register — IPC fallback active")
 
     app.on("will-quit", () => globalShortcut.unregisterAll())
   }
@@ -75,6 +73,19 @@ export function disableHotkeys(): void {
   if (state !== "idle") transition("idle")
 }
 
+// IPC fallback for when globalShortcut("Escape") fails to register.
+// Called directly by the main-process IPC handler when the renderer sends yomi:escape.
+export function triggerEscape(): void {
+  onAnyEscape?.()  // always fires — stops TTS even when state is idle
+  if (!enabled) return
+  if (state === "listening" || state === "text-input") {
+    transition("idle")
+  } else if (state === "processing") {
+    onAbort?.()
+    transition("idle")
+  }
+}
+
 // Called by ipc.ts when a pipeline finishes or errors.
 export function resetToIdle(): void {
   transition("idle")
@@ -86,6 +97,20 @@ export function activateProcessing(): void {
 }
 
 function transition(next: HotkeyState): void {
+  const prev = state
   state = next
+
+  // Register Enter as an alternative stop-recording key only while listening,
+  // so it never captures Enter globally during normal app usage.
+  if (next === "listening") {
+    globalShortcut.register("Return", () => {
+      if (!enabled || state !== "listening") return
+      transition("processing")
+      onListenStop?.()
+    })
+  } else if (prev === "listening") {
+    globalShortcut.unregister("Return")
+  }
+
   onStateChange?.(next)
 }

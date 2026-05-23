@@ -7,12 +7,23 @@ import { resetToIdle, activateProcessing } from "./hotkey"
 
 let pcmChunks: Float32Array[] = []
 let capturedSampleRate = 16000
-let currentAbort: AbortController | null = null
 
-// Abort any in-flight sidecar stream immediately.
+// One controller covers the entire pipeline: screenshot/STT → sidecar SSE stream.
+// Created at the top of each pipeline so ESC aborts any step, not just the fetch.
+let pipelineCtrl: AbortController | null = null
+
+function startPipeline(): AbortController {
+  pipelineCtrl?.abort()           // cancel any in-flight pipeline
+  const ctrl = new AbortController()
+  pipelineCtrl = ctrl
+  return ctrl
+}
+
+// Called by hotkey.ts onAbort (Escape during processing or listening).
 export function abortCurrent(): void {
-  currentAbort?.abort()
-  currentAbort = null
+  pipelineCtrl?.abort()
+  pipelineCtrl = null
+  pcmChunks = []                  // discard any buffered voice chunks
 }
 
 // Registers sidecar-dependent IPC handlers. Called once after first auth.
@@ -28,10 +39,12 @@ export function initSidecarIpc(
   // Text query: text-only output (no TTS)
   ipcMain.on("yomi:text-query", async (_e, text: string) => {
     if (!text?.trim()) { resetToIdle(); return }
+    const ctrl = startPipeline()
     activateProcessing()
     try {
       const screenshotB64 = await captureScreen()
-      await streamQuery(sidecar, overlayWin, text.trim(), screenshotB64, false)
+      if (ctrl.signal.aborted) { resetToIdle(); return }
+      await streamQuery(sidecar, overlayWin, text.trim(), screenshotB64, false, ctrl)
     } catch (err) {
       if ((err as Error).name === "AbortError") return
       send(overlayWin, { type: "error", message: err instanceof Error ? err.message : "Unknown error" })
@@ -40,16 +53,26 @@ export function initSidecarIpc(
   })
 
   return {
-    // Voice query: voice + text output (TTS enabled)
+    // Voice query: STT → LLM → TTS
     onListenStop: async () => {
+      const ctrl = startPipeline()
       const chunks = pcmChunks.splice(0)
+
+      // Nothing recorded — user pressed stop immediately. Quietly reset.
+      if (chunks.length === 0) { resetToIdle(); return }
+
       try {
         const wav = buildWav(chunks, capturedSampleRate)
         const [transcript, screenshotB64] = await Promise.all([
-          transcribe(wav, sidecar),
+          transcribe(wav, sidecar, ctrl.signal),
           captureScreen(),
         ])
-        await streamQuery(sidecar, overlayWin, transcript, screenshotB64, true)
+        if (ctrl.signal.aborted) return
+
+        // STT returned silence/empty — quietly reset instead of showing an error.
+        if (!transcript.trim()) { resetToIdle(); return }
+
+        await streamQuery(sidecar, overlayWin, transcript, screenshotB64, true, ctrl)
       } catch (err) {
         if ((err as Error).name === "AbortError") return
         send(overlayWin, { type: "error", message: err instanceof Error ? err.message : "Unknown error" })
@@ -93,13 +116,14 @@ function buildWav(chunks: Float32Array[], sampleRate: number): Buffer {
   return Buffer.concat([header, data])
 }
 
-async function transcribe(wav: Buffer, sidecar: SidecarManager): Promise<string> {
+async function transcribe(wav: Buffer, sidecar: SidecarManager, signal: AbortSignal): Promise<string> {
   const form = new FormData()
   form.append("audio", new Blob([new Uint8Array(wav)], { type: "audio/wav" }), "audio.wav")
   const res = await fetch(`${sidecar.baseUrl}/stt`, {
     method: "POST",
     headers: { "x-sidecar-secret": sidecar.secret },
     body: form,
+    signal,
   })
   if (!res.ok) throw new Error(`Sidecar STT ${res.status}`)
   return ((await res.json()) as { text: string }).text
@@ -111,17 +135,17 @@ async function streamQuery(
   text: string,
   screenshot_b64: string,
   tts: boolean,
+  ctrl: AbortController,
 ): Promise<void> {
-  const abort = new AbortController()
-  currentAbort = abort
+  pipelineCtrl = ctrl   // keep reference current (startPipeline may have rotated it)
 
   const res = await fetch(`${sidecar.baseUrl}/query/fast`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-sidecar-secret": sidecar.secret },
     body: JSON.stringify({ text, screenshot_b64, mode: "answer", tts }),
-    signal: abort.signal,
+    signal: ctrl.signal,
   })
-  if (!res.ok || !res.body) { currentAbort = null; throw new Error(`Sidecar ${res.status}`) }
+  if (!res.ok || !res.body) { pipelineCtrl = null; throw new Error(`Sidecar ${res.status}`) }
 
   const reader = res.body.getReader()
   const decoder = new TextDecoder()
@@ -147,7 +171,7 @@ async function streamQuery(
     if ((err as Error).name === "AbortError") { resetToIdle(); return }
     throw err
   } finally {
-    currentAbort = null
+    pipelineCtrl = null
   }
 
   if (!sawDone) resetToIdle()

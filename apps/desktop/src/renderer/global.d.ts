@@ -26,6 +26,10 @@ declare global {
       // Subscription
       getSubscriptionInfo(): Promise<SubscriptionInfo>
       onSubscriptionUpdate(cb: (info: SubscriptionInfo) => void): () => void
+      // Audio control
+      onStopAudio(cb: () => void): () => void
+      getDesktopSourceId(): Promise<string | null>
+      requestEscape(): void
     }
   }
 }

@@ -109,9 +109,59 @@ const TK_COLOR: Record<TK,string> = {
   comment:"var(--cmt)", fn:"var(--fn)", plain:"var(--code-text)",
 }
 
+// ── Answer Block (MCQ / definite answer) ──────────────────────────────────────
+
+function AnswerBlock({ answer }: { answer:string }) {
+  const [copied, setCopied] = React.useState(false)
+  const copy = () => {
+    navigator.clipboard.writeText(answer).then(() => { setCopied(true); setTimeout(()=>setCopied(false),2000) })
+  }
+  return (
+    <div style={{
+      background:"rgba(255,200,130,0.07)",
+      border:"1px solid rgba(255,200,130,0.28)",
+      borderRadius:8, overflow:"hidden", margin:"6px 0",
+      fontSize:12, fontFamily:CODE_FONT,
+    }} className="no-drag">
+      <div style={{
+        display:"flex", alignItems:"center", justifyContent:"space-between",
+        padding:"4px 8px 4px 12px",
+        borderBottom:"1px solid rgba(255,200,130,0.1)",
+        background:"rgba(255,200,130,0.04)",
+      }}>
+        <span style={{ fontSize:9, color:"rgba(255,200,130,0.45)", textTransform:"uppercase", letterSpacing:"0.12em" }}>
+          answer
+        </span>
+        <button
+          onClick={copy}
+          style={{
+            background: copied ? "rgba(255,224,194,0.12)" : "none",
+            border:`1px solid ${copied ? "rgba(255,224,194,0.25)" : "rgba(255,224,194,0.08)"}`,
+            borderRadius:3, padding:"1px 7px", fontSize:9,
+            color: copied ? "rgba(255,224,194,0.85)" : "rgba(175,155,125,0.45)",
+            cursor:"pointer", fontFamily:UI_FONT, transition:"all .2s",
+          }}
+          onMouseEnter={e=>{ if (!copied){ e.currentTarget.style.color="rgba(255,224,194,0.7)"; e.currentTarget.style.borderColor="rgba(255,224,194,0.2)" }}}
+          onMouseLeave={e=>{ if (!copied){ e.currentTarget.style.color="rgba(175,155,125,0.45)"; e.currentTarget.style.borderColor="rgba(255,224,194,0.08)" }}}
+        >
+          {copied ? "✓ copied" : "copy"}
+        </button>
+      </div>
+      <div style={{
+        padding:"14px 18px",
+        fontSize:14.5, fontFamily:UI_FONT, fontWeight:600,
+        color:"rgba(255,224,194,0.92)", textAlign:"center", letterSpacing:"0.01em",
+      }}>
+        {answer}
+      </div>
+    </div>
+  )
+}
+
 // ── CodeBlock ──────────────────────────────────────────────────────────────────
 
 function CodeBlock({ code, lang }: { code:string; lang:string }) {
+  if (lang === "answer") return <AnswerBlock answer={code.trim()} />
   const lines = code.split("\n")
   if (lines.at(-1)==="") lines.pop()
   const numW = String(lines.length).length * 8 + 12
@@ -235,8 +285,8 @@ function parseBlocks(raw:string): Block[] {
   return out
 }
 
-function Blocks({ text, isStreaming }: { text:string; isStreaming:boolean }) {
-  const blocks = useMemo(()=>parseBlocks(text), [text])
+// Renders pre-parsed blocks. Shared by Blocks and CodeAnswerLayout.
+function RenderBlocks({ blocks, isStreaming }: { blocks:Block[]; isStreaming:boolean }) {
   return (
     <div>
       {blocks.map((b,idx) => {
@@ -293,6 +343,133 @@ function Blocks({ text, isStreaming }: { text:string; isStreaming:boolean }) {
   )
 }
 
+// When the response contains code blocks: reasoning (top) · code (middle) · complexity (bottom).
+// All wrapped in an amber-tinted border, mirroring the code-block card aesthetic.
+function ComplexityDisplay({ blocks, isStreaming }: { blocks:Block[]; isStreaming:boolean }) {
+  const raw = blocks.filter(b => b.kind === "p").map(b => (b as Extract<Block,{kind:"p"}>).text).join(" ")
+  if (!raw) return <RenderBlocks blocks={blocks} isStreaming={isStreaming} />
+
+  const parseOne = (label: string, stopLabel: string) => {
+    const idx = raw.search(new RegExp(label + "[:\\s]", "i"))
+    if (idx < 0) return null
+    const seg = raw.slice(idx)
+    const m = seg.match(/O\([^)]+\)/)
+    if (!m) return null
+    const after = seg.slice(seg.indexOf(m[0]) + m[0].length)
+    const stopRe = stopLabel ? new RegExp(stopLabel + "[:\\s]", "i") : null
+    const stopIdx = stopRe ? after.search(stopRe) : -1
+    const note = (stopIdx >= 0 ? after.slice(0, stopIdx) : after)
+      .replace(/^\s*[—–\-|,]+\s*/, "").trim()
+    return { notation: m[0], note }
+  }
+
+  const time  = parseOne("time",  "space")
+  const space = parseOne("space", "")
+  if (!time && !space) return <RenderBlocks blocks={blocks} isStreaming={isStreaming} />
+
+  const Pill = ({ label, notation, note }: { label:string; notation:string; note:string }) => (
+    <div style={{
+      flex:1, minWidth:120,
+      background:"rgba(255,200,130,0.04)",
+      border:"1px solid rgba(255,200,130,0.14)",
+      borderRadius:6, padding:"5px 9px",
+    }}>
+      <div style={{ display:"flex", alignItems:"baseline", gap:6 }}>
+        <span style={{
+          fontSize:8, fontWeight:700, letterSpacing:"0.14em",
+          color:"rgba(255,200,130,0.35)", fontFamily:UI_FONT, userSelect:"none",
+        }}>{label}</span>
+        <span style={{ fontFamily:CODE_FONT, fontSize:12, color:"rgba(255,200,130,0.85)" }}>
+          {notation}
+        </span>
+      </div>
+      {note && (
+        <div style={{
+          fontSize:10.5, fontFamily:UI_FONT, marginTop:2, lineHeight:1.4,
+          color:"rgba(200,180,155,0.55)",
+        }}>{note}</div>
+      )}
+    </div>
+  )
+
+  return (
+    <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+      {time  && <Pill label="TIME"  notation={time.notation}  note={time.note}  />}
+      {space && <Pill label="SPACE" notation={space.notation} note={space.note} />}
+    </div>
+  )
+}
+
+function CodeAnswerLayout({ blocks, isStreaming }: { blocks:Block[]; isStreaming:boolean }) {
+  const codeIdxs = blocks.map((b,i) => b.kind==="code" ? i : -1).filter(i => i>=0)
+  if (codeIdxs.length===0) return <RenderBlocks blocks={blocks} isStreaming={isStreaming} />
+
+  const firstCode = codeIdxs[0]!
+  const lastCode  = codeIdxs[codeIdxs.length-1]!
+
+  const reasoningBlocks  = blocks.slice(0, firstCode)
+  const codeBlocks       = blocks.slice(firstCode, lastCode+1)
+  const complexityBlocks = blocks.slice(lastCode+1)
+
+  const sectionLabel = (text: string) => (
+    <div style={{
+      fontSize:8.5, fontFamily:UI_FONT, fontWeight:700, letterSpacing:"0.14em",
+      color:"rgba(255,200,130,0.35)", marginBottom:6, userSelect:"none",
+    }}>{text}</div>
+  )
+
+  return (
+    <div style={{
+      border:"1px solid rgba(255,200,130,0.22)",
+      borderRadius:9, overflow:"hidden",
+      background:"rgba(255,200,130,0.015)",
+    }}>
+      {/* Reasoning */}
+      {reasoningBlocks.length>0 && (
+        <div style={{ padding:"8px 12px 6px", borderBottom:"1px solid rgba(255,200,130,0.08)" }}>
+          {sectionLabel("REASONING")}
+          <RenderBlocks blocks={reasoningBlocks} isStreaming={isStreaming && codeBlocks.length===0} />
+        </div>
+      )}
+
+      {/* Code block(s) */}
+      <div>
+        {codeBlocks.map((b,i) =>
+          b.kind==="code" ? <CodeBlock key={i} code={b.code} lang={b.lang} /> : null
+        )}
+        {isStreaming && codeBlocks.length===0 && reasoningBlocks.length===0 && (
+          <div style={{ padding:"8px 12px" }}>
+            <span style={{
+              display:"inline-block", width:2, height:"0.85em",
+              background:"var(--accent)", verticalAlign:"text-bottom",
+              animation:"blink 1s step-end infinite", borderRadius:1, opacity:0.7,
+            }} />
+          </div>
+        )}
+      </div>
+
+      {/* Complexity */}
+      {complexityBlocks.length>0 && (
+        <div style={{
+          padding:"6px 12px 8px",
+          borderTop:"1px solid rgba(255,200,130,0.08)",
+          background:"rgba(255,200,130,0.02)",
+        }}>
+          {sectionLabel("COMPLEXITY")}
+          <ComplexityDisplay blocks={complexityBlocks} isStreaming={isStreaming} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Blocks({ text, isStreaming }: { text:string; isStreaming:boolean }) {
+  const blocks = useMemo(()=>parseBlocks(text), [text])
+  const hasCode = blocks.some(b => b.kind==="code")
+  if (hasCode) return <CodeAnswerLayout blocks={blocks} isStreaming={isStreaming} />
+  return <RenderBlocks blocks={blocks} isStreaming={isStreaming} />
+}
+
 // ── Copy Button ────────────────────────────────────────────────────────────────
 
 function CopyButton({ text }: { text:string }) {
@@ -322,28 +499,42 @@ function CopyButton({ text }: { text:string }) {
 
 // ── Text Input ─────────────────────────────────────────────────────────────────
 
-const SCREEN_PROMPT = "Look at my screen. Tell me what's going on and what I should know right now. If there's a question visible, answer it. If there's an error, explain it. If there's code, break it down. Keep it short and direct."
+const SCREEN_PROMPT = `Analyze what's on my screen.
+
+If you see a CODING or ALGORITHM problem, respond in exactly this structure:
+
+[2-3 sentence reasoning paragraph]
+
+\`\`\`python
+# complete solution — use Python unless the problem or visible code specifies another language
+\`\`\`
+
+Time: O(?) — one-line reason
+Space: O(?) — one-line reason
+
+If you see a MULTIPLE CHOICE QUESTION (MCQ) or a question with a single definite answer, respond in exactly this structure:
+
+[2-3 sentence explanation of why the answer is correct]
+
+\`\`\`answer
+[letter and answer text, e.g. "B. The mitochondria"]
+\`\`\`
+
+If there is no question, describe what's on the screen concisely.`
 
 function TextInputPanel() {
   const [value, setValue] = React.useState("")
   const inputRef = useRef<HTMLInputElement>(null)
   const valueRef = useRef("")
   useEffect(()=>{ valueRef.current=value }, [value])
-  useEffect(()=>{ inputRef.current?.focus() }, [])
+  // Use rAF so the OS-level window focus transfer completes before the DOM focus call.
+  useEffect(()=>{ requestAnimationFrame(()=>{ inputRef.current?.focus() }) }, [])
 
   const submit = React.useCallback(()=>{
     const text = valueRef.current.trim() || SCREEN_PROMPT
     setValue(""); valueRef.current=""
-    window.yomi.submitTextQuery(text)  // Main process transitions to processing
+    window.yomi.submitTextQuery(text)
   }, [])
-
-  useEffect(()=>{
-    const onKey=(e:KeyboardEvent)=>{
-      if (e.key==="Enter"&&!e.ctrlKey&&!e.shiftKey&&!e.altKey) { e.preventDefault(); submit() }
-    }
-    document.addEventListener("keydown",onKey)
-    return ()=>document.removeEventListener("keydown",onKey)
-  }, [submit])
 
   return (
     <div style={{
@@ -406,7 +597,8 @@ function ResponsePanel({ entry, onDismiss, isActive }: { entry:ChatEntry; onDism
       animation:"slideUp 0.22s cubic-bezier(0.16,1,0.3,1)",
       boxShadow:"0 6px 30px rgba(0,0,0,0.45), 0 0 0 0.5px rgba(255,224,194,0.03)",
       position:"relative",
-      ...(isActive ? { display:"flex", flexDirection:"column", flex:1, minHeight:0 } : {}),
+      display:"flex", flexDirection:"column",
+      maxHeight:300,
     }} className="drag">
 
       {/* Warm amber left accent bar */}
@@ -460,16 +652,15 @@ function ResponsePanel({ entry, onDismiss, isActive }: { entry:ChatEntry; onDism
         </div>
       )}
 
-      {/* Body — flex:1 + scrollable when active, compact when old */}
+      {/* Body — scrollable vertically and horizontally within the capped panel */}
       {!entry.error && entry.text !== "" && (
         <div
           className="no-drag"
           style={{
-            padding:"10px 12px 4px 14px",
+            flex:1, minHeight:0,
+            overflowY:"auto", overflowX:"auto",
             overscrollBehavior:"contain",
-            ...(isActive
-              ? { flex:1, minHeight:0, overflowY:"auto", overflowX:"auto" }
-              : { maxHeight:88, overflowY:"auto", overflowX:"auto" }),
+            padding:"10px 12px 4px 14px",
           }}
         >
           <Blocks text={entry.text} isStreaming={entry.isStreaming} />
@@ -630,8 +821,9 @@ function Toolbar({ state, plan, interactionInfo }: { state:HotkeyState; plan?:st
           </button>
         </>}
         {state==="listening" && <>
-          <Chip label="Stop"   keys={["⌃⇧","Spc"]} hot={true}  />
-          <Chip label="Cancel" keys={["Esc"]}       hot={false} />
+          <Chip label="Stop"   keys={["↵"]}   hot={true}  />
+          <Chip label="Stop"   keys={["⌃⇧","Spc"]} hot={false} />
+          <Chip label="Cancel" keys={["Esc"]} hot={false} />
         </>}
         {state==="text-input" && (
           <Chip label="Cancel" keys={["Esc"]} hot={false} />
@@ -818,6 +1010,7 @@ const App: React.FC = () => {
   const rootRef         = useRef<HTMLDivElement>(null)
   const entriesRef      = useRef<HTMLDivElement>(null)
   const streamRef       = useRef<MediaStream|null>(null)
+  const sysStreamRef    = useRef<MediaStream|null>(null)
   const processorRef    = useRef<AudioWorkletNode|null>(null)
   const ctxRef          = useRef<AudioContext|null>(null)
   const workletReadyRef = useRef<Promise<void>|null>(null)
@@ -966,12 +1159,38 @@ const App: React.FC = () => {
     return ()=>{ streamRef.current?.getTracks().forEach(t=>t.stop()) }
   }, [])
 
+  // Grab system audio (loopback) once on mount — works on Windows via desktopCapturer.
+  // Fails gracefully on macOS without a virtual audio device; mic-only is the fallback.
+  useEffect(()=>{
+    let active=true
+    ;(async()=>{
+      try {
+        const id = await window.yomi.getDesktopSourceId()
+        if (!id || !active) return
+        const s = await navigator.mediaDevices.getUserMedia({
+          audio: { mandatory: { chromeMediaSource:"desktop", chromeMediaSourceId:id } } as MediaTrackConstraints,
+          video: { mandatory: { chromeMediaSource:"desktop", chromeMediaSourceId:id } } as MediaTrackConstraints,
+        })
+        // Drop video tracks — we only want the audio loopback
+        s.getVideoTracks().forEach(t=>t.stop())
+        if (active) sysStreamRef.current=s
+        else s.getAudioTracks().forEach(t=>t.stop())
+      } catch { /* macOS/no-permission: silently fall back to mic-only */ }
+    })()
+    return ()=>{
+      active=false
+      sysStreamRef.current?.getTracks().forEach(t=>t.stop())
+      sysStreamRef.current=null
+    }
+  }, [])
+
   useEffect(()=>{
     if (hotkeyState!=="listening") {
       processorRef.current?.disconnect(); processorRef.current=null; return
     }
     let cancelled=false
-    let src: MediaStreamAudioSourceNode|null=null
+    let micSrc: MediaStreamAudioSourceNode|null=null
+    let sysSrc: MediaStreamAudioSourceNode|null=null
     let proc: AudioWorkletNode|null=null
     ;(async()=>{
       await workletReadyRef.current; if (cancelled) return
@@ -979,28 +1198,40 @@ const App: React.FC = () => {
       if (!stream||!ctx) return
       if (ctx.state==="suspended") await ctx.resume()
       if (cancelled) return
-      src=ctx.createMediaStreamSource(stream)
       proc=new AudioWorkletNode(ctx,"pcm-processor")
       proc.port.onmessage=e=>window.yomi.sendAudioChunk(e.data as ArrayBuffer, 16000)
-      src.connect(proc); proc.connect(ctx.destination); processorRef.current=proc
+      // Mic input (always present)
+      micSrc=ctx.createMediaStreamSource(stream)
+      micSrc.connect(proc)
+      // System audio input — mixed in automatically by Web Audio when connected to the same proc input
+      if (sysStreamRef.current) {
+        try {
+          sysSrc=ctx.createMediaStreamSource(sysStreamRef.current)
+          sysSrc.connect(proc)
+        } catch { /* stream may have ended; ignore */ }
+      }
+      proc.connect(ctx.destination); processorRef.current=proc
     })()
-    return ()=>{ cancelled=true; src?.disconnect(); proc?.disconnect(); processorRef.current=null }
+    return ()=>{ cancelled=true; micSrc?.disconnect(); sysSrc?.disconnect(); proc?.disconnect(); processorRef.current=null }
   }, [hotkeyState])
 
+  // Global shortcuts consume Escape before the renderer sees it, so we get a
+  // dedicated IPC instead.  Stop audio and dismiss the active streaming entry.
   useEffect(()=>{
-    const onKey=(e:KeyboardEvent)=>{
-      if (e.key!=="Escape") return
-      // Stop any playing audio immediately
+    return window.yomi.onStopAudio(()=>{
       audioSourceRef.current?.stop(); audioSourceRef.current=null
       audioPlayingRef.current=false; localAudioQueue.current=[]
-      // Dismiss the latest entry (partial or complete)
-      if (entries.length) dismissEntry(entries.at(-1)!.id)
-      // If generating, the global hotkey already called onAbort in main process;
-      // nothing extra needed here — main resets state to idle.
-    }
-    document.addEventListener("keydown",onKey)
-    return ()=>document.removeEventListener("keydown",onKey)
-  }, [entries, dismissEntry])
+    })
+  }, [])
+
+  // Fallback: if globalShortcut("Escape") failed to register (common on some Windows setups),
+  // the keypress reaches the window when focused — forward it to main via IPC.
+  // When the global shortcut IS registered it consumes the key and this never fires.
+  useEffect(()=>{
+    const onKey=(e:KeyboardEvent)=>{ if(e.key==="Escape") window.yomi.requestEscape() }
+    window.addEventListener("keydown", onKey)
+    return ()=>window.removeEventListener("keydown", onKey)
+  }, [])
 
 
   const hasContent = entries.length>0 || hotkeyState==="text-input"
@@ -1081,29 +1312,14 @@ const App: React.FC = () => {
           className="no-drag"
           style={{
             flex:1, minHeight:0,
+            overflowY:"auto", overflowX:"hidden",
             display:"flex", flexDirection:"column", gap:5,
             padding:"6px 7px 7px",
           }}
         >
-          {(()=>{
-            const reversed = [...entries].reverse()
-            const active = reversed[0]!
-            const old = reversed.slice(1)
-            return <>
-              <ResponsePanel key={active.id} entry={active} isActive={true} onDismiss={()=>dismissEntry(active.id)} />
-              {old.length>0 && (
-                <div style={{
-                  display:"flex", flexDirection:"column", gap:5,
-                  overflowY:"auto", overflowX:"hidden",
-                  flexShrink:0, maxHeight:260, scrollbarWidth:"thin",
-                }}>
-                  {old.map(e=>(
-                    <ResponsePanel key={e.id} entry={e} isActive={false} onDismiss={()=>dismissEntry(e.id)} />
-                  ))}
-                </div>
-              )}
-            </>
-          })()}
+          {[...entries].reverse().map((e,i) => (
+            <ResponsePanel key={e.id} entry={e} isActive={i===0} onDismiss={()=>dismissEntry(e.id)} />
+          ))}
         </div>
       )}
     </div>
