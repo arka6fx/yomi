@@ -5,12 +5,39 @@ export type HotkeyState = "idle" | "listening" | "processing" | "text-input"
 let state: HotkeyState = "idle"
 let enabled = false      // Gated by auth — false while signed out
 let initialized = false  // Shortcuts registered once at first auth
+let suspended = false    // True while overlay is hidden — shortcuts fully unregistered
 
 let onStateChange: ((s: HotkeyState) => void) | null = null
 let onListenStop: (() => void) | null = null
 let onTextQuery: (() => void) | null = null
 let onAbort: (() => void) | null = null
 let onAnyEscape: (() => void) | null = null  // fired on every ESC, regardless of state
+
+// Register the three AI-interaction shortcuts.
+// Called on init and again on resumeHotkeys() after a hide.
+function registerAiShortcuts(): void {
+  globalShortcut.register("Ctrl+Shift+Space", () => {
+    if (!enabled) return
+    if (state === "idle") {
+      transition("listening")
+    } else if (state === "listening") {
+      transition("processing")
+      onListenStop?.()
+    }
+  })
+
+  globalShortcut.register("Ctrl+Shift+Return", () => {
+    if (!enabled) return
+    if (state === "idle") {
+      transition("text-input")
+      onTextQuery?.()
+    }
+  })
+
+  // Escape — can fail silently on some Windows setups; IPC fallback covers that case.
+  const escOk = globalShortcut.register("Escape", () => triggerEscape())
+  if (!escOk) console.warn("[yomi/hotkey] Escape global shortcut failed to register — IPC fallback active")
+}
 
 // Called once after first successful auth. Safe to call again on re-auth —
 // subsequent calls update the callbacks and re-enable without re-registering shortcuts.
@@ -29,33 +56,7 @@ export function initHotkey(opts: {
 
   if (!initialized) {
     initialized = true
-
-    // Ctrl+Shift+Space — voice recording toggle
-    globalShortcut.register("Ctrl+Shift+Space", () => {
-      if (!enabled) return
-      if (state === "idle") {
-        transition("listening")
-      } else if (state === "listening") {
-        transition("processing")
-        onListenStop?.()
-      }
-    })
-
-    // Ctrl+Shift+Enter — open text input
-    globalShortcut.register("Ctrl+Shift+Return", () => {
-      if (!enabled) return
-      if (state === "idle") {
-        transition("text-input")
-        onTextQuery?.()
-      }
-    })
-
-    // Escape — cancel listening/text-input; abort stream if processing.
-    // globalShortcut.register("Escape") can fail silently on some Windows setups;
-    // triggerEscape() below provides an IPC fallback for when the window is focused.
-    const escOk = globalShortcut.register("Escape", () => triggerEscape())
-    if (!escOk) console.warn("[yomi/hotkey] Escape global shortcut failed to register — IPC fallback active")
-
+    registerAiShortcuts()
     app.on("will-quit", () => globalShortcut.unregisterAll())
   }
 
@@ -71,6 +72,26 @@ export function enableHotkeys(): void {
 export function disableHotkeys(): void {
   enabled = false
   if (state !== "idle") transition("idle")
+}
+
+// Unregister all AI shortcuts so the underlying app receives them while hidden.
+export function suspendHotkeys(): void {
+  if (suspended) return
+  suspended = true
+  enabled = false
+  if (state !== "idle") transition("idle")
+  globalShortcut.unregister("Ctrl+Shift+Space")
+  globalShortcut.unregister("Ctrl+Shift+Return")
+  globalShortcut.unregister("Escape")
+  globalShortcut.unregister("Return")  // defensive — may be registered if state was listening
+}
+
+// Re-register AI shortcuts when the overlay becomes visible again.
+export function resumeHotkeys(): void {
+  if (!suspended) return
+  suspended = false
+  registerAiShortcuts()
+  enabled = true
 }
 
 // IPC fallback for when globalShortcut("Escape") fails to register.

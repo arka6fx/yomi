@@ -301,10 +301,8 @@ export function LandingPage() {
             className="text-base sm:text-lg text-muted-foreground mb-10 max-w-xl mx-auto leading-relaxed"
           >
             Press{" "}
-            <Keys keys={[{ sym: "⌘", label: "Cmd" }, { sym: "⇧", label: "Shift" }, { sym: "␣", label: "Space" }]} />
-            {" "}on Mac or{" "}
             <Keys keys={[{ sym: "^", label: "Ctrl" }, { sym: "⇧", label: "Shift" }, { sym: "␣", label: "Space" }]} />
-            {" "}on Windows. Yomi sees your screen, hears your voice, and acts — so you touch your laptop less.
+            {" "}on Mac or Windows. Yomi sees your screen, hears your voice, and acts — so you touch your laptop less.
           </motion.p>
 
           <motion.div
@@ -374,7 +372,7 @@ export function LandingPage() {
             type="A"
             hotkey={[{ sym: "^", label: "Ctrl" }, { sym: "⇧", label: "Shift" }, { sym: "␣", label: "Space" }]}
             label="Voice + Screen"
-            description="Speak your question. Yomi hears you, sees your screen, and responds with text and voice."
+            description="Hold to record. Yomi transcribes your voice, captures your screen, and responds with text and audio."
           />
           <InteractionCard
             type="B"
@@ -386,7 +384,7 @@ export function LandingPage() {
             type="C"
             hotkey={[{ sym: "^", label: "Ctrl" }, { sym: "⇧", label: "Shift" }, { sym: "↵", label: "Enter" }]}
             label="Just Screen"
-            description="Press Ctrl+Shift+Enter, then press Enter again with an empty input. Yomi studies your screen and tells you what's on it."
+            description="Open the text panel and press Enter with an empty input. Yomi analyzes your screen and tells you what's on it."
           />
         </div>
       </section>
