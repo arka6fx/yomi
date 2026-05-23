@@ -100,7 +100,7 @@ DATABASE_URL=postgres://...
 | `Ctrl+Shift+Space` | Start / stop voice recording |
 | `Ctrl+Shift+Enter` | Open text input (type instead of talk) |
 | `Ctrl+Shift+H` | Show / hide overlay |
-| `Ctrl+Arrow` | Nudge overlay position (30 px steps) |
+| `Ctrl+Shift+Arrow` | Nudge overlay position (smooth) |
 | `Esc` | Cancel voice or text input |
 
 **Text input mode:** press `Ctrl+Shift+Enter`, type your question, press `Enter`. If you press `Enter` without typing, Yomi takes a screenshot and comprehends whatever is on screen.

@@ -274,7 +274,7 @@ export function LandingPage() {
           >
             Press{" "}
             <kbd className="font-mono text-xs bg-muted border border-border px-1.5 py-0.5 rounded text-foreground">
-              ⌘Space
+              ⌘⇧Space
             </kbd>
             {" "}on Mac or{" "}
             <kbd className="font-mono text-xs bg-muted border border-border px-1.5 py-0.5 rounded text-foreground">
