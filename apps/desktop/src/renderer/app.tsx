@@ -598,7 +598,8 @@ function ResponsePanel({ entry, onDismiss, isActive }: { entry:ChatEntry; onDism
       boxShadow:"0 6px 30px rgba(0,0,0,0.45), 0 0 0 0.5px rgba(255,224,194,0.03)",
       position:"relative",
       display:"flex", flexDirection:"column",
-      maxHeight:300,
+      flexShrink:0,
+      maxHeight: isActive ? undefined : 300,
     }} className="drag">
 
       {/* Warm amber left accent bar */}
@@ -652,16 +653,15 @@ function ResponsePanel({ entry, onDismiss, isActive }: { entry:ChatEntry; onDism
         </div>
       )}
 
-      {/* Body — scrollable vertically and horizontally within the capped panel */}
+      {/* Body — active entry expands to full content height (outer list scrolls);
+               older entries scroll individually within their 300px cap */}
       {!entry.error && entry.text !== "" && (
         <div
           className="no-drag"
-          style={{
-            flex:1, minHeight:0,
-            overflowY:"auto", overflowX:"auto",
-            overscrollBehavior:"contain",
-            padding:"10px 12px 4px 14px",
-          }}
+          style={isActive
+            ? { overflowX:"auto", overscrollBehavior:"contain", padding:"10px 12px 4px 14px" }
+            : { flex:1, minHeight:0, overflowY:"auto", overflowX:"auto", overscrollBehavior:"contain", padding:"10px 12px 4px 14px" }
+          }
         >
           <Blocks text={entry.text} isStreaming={entry.isStreaming} />
         </div>
@@ -1315,6 +1315,7 @@ const App: React.FC = () => {
             overflowY:"auto", overflowX:"hidden",
             display:"flex", flexDirection:"column", gap:5,
             padding:"6px 7px 7px",
+            overscrollBehavior:"contain",
           }}
         >
           {[...entries].reverse().map((e,i) => (
