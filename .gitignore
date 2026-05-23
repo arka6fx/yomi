@@ -4,7 +4,10 @@ node_modules/
 .pnp.js
 
 # Bun
-bun.lockb
+bun.lock
+
+# TypeScript incremental build info
+*.tsbuildinfo
 
 # Build outputs
 dist/
