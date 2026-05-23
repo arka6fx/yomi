@@ -102,13 +102,14 @@ const PLANS = [
   },
 ]
 
-function Keys({ keys }: { keys: string[] }) {
+function Keys({ keys }: { keys: { sym: string; label: string }[] }) {
   return (
     <span className="inline-flex items-center gap-1">
-      {keys.map((k, i) => (
+      {keys.map(({ sym, label }, i) => (
         <span key={i} className="inline-flex items-center gap-1">
-          <kbd className="font-mono text-xs bg-muted border border-border px-1.5 py-0.5 rounded text-foreground">
-            {k}
+          <kbd className="inline-flex items-center gap-1 font-mono text-xs bg-muted border border-border px-1.5 py-0.5 rounded text-foreground">
+            <span>{sym}</span>
+            <span className="text-muted-foreground font-sans">{label}</span>
           </kbd>
           {i < keys.length - 1 && (
             <span className="text-muted-foreground text-xs">+</span>
@@ -293,9 +294,9 @@ export function LandingPage() {
             className="text-lg text-muted-foreground mb-10 max-w-xl mx-auto leading-relaxed"
           >
             Press{" "}
-            <Keys keys={["⌘", "⇧", "␣"]} />
+            <Keys keys={[{ sym: "⌘", label: "Cmd" }, { sym: "⇧", label: "Shift" }, { sym: "␣", label: "Space" }]} />
             {" "}on Mac or{" "}
-            <Keys keys={["^", "⇧", "␣"]} />
+            <Keys keys={[{ sym: "^", label: "Ctrl" }, { sym: "⇧", label: "Shift" }, { sym: "␣", label: "Space" }]} />
             {" "}on Windows. Yomi sees your screen, hears your voice, and acts — so you touch your laptop less.
           </motion.p>
 
