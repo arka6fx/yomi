@@ -57,7 +57,7 @@ function HandWrittenTitle({
       </div>
       <div className="relative text-center z-10 flex flex-col items-center justify-center py-16">
         <motion.p
-          className="text-2xl md:text-3xl font-light text-foreground/90 tracking-tight"
+          className="font-display text-3xl md:text-4xl text-foreground/90"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6, duration: 0.8 }}

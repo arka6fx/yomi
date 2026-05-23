@@ -59,6 +59,7 @@ function findSentenceEnd(buf: string): number {
 async function* answerPipeline(
   text: string,
   screenshotB64?: string,
+  tts = true,
 ): AsyncGenerator<SseEvent> {
   const content: any[] = [{ type: "text" as const, text }];
 
@@ -80,7 +81,7 @@ async function* answerPipeline(
     maxTokens: 800,
   });
 
-  const ttsEnabled = resolveTts() !== "none";
+  const ttsEnabled = tts && resolveTts() !== "none";
   const queue = new EventQueue();
   const ttsTasks: Promise<void>[] = [];
 
@@ -95,8 +96,8 @@ async function* answerPipeline(
         });
       }
     } catch (err) {
-      // Audio failure should never kill the text response.
-      console.warn("[yomi/tts] synthesis failed:", err);
+      // TTS failure never kills the text response.
+      console.warn("[yomi/tts] synthesis failed:", err instanceof Error ? err.message : err);
     }
   }
 
@@ -202,7 +203,7 @@ export async function* fastPipeline(
     if (req.mode === "guide") {
       yield* guidePipeline(text, req.screenshot_b64 ?? "");
     } else {
-      yield* answerPipeline(text, req.screenshot_b64);
+      yield* answerPipeline(text, req.screenshot_b64, req.tts !== false);
     }
   } catch (err) {
     const message =

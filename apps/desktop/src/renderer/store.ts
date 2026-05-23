@@ -2,6 +2,7 @@ import { create } from "zustand"
 import type { GuideStep, SseEvent } from "@yomi/shared"
 
 export type HotkeyState = "idle" | "listening" | "processing" | "text-input"
+export type AuthState = "checking" | "unauthenticated" | "waiting" | "authenticated"
 
 export interface ChatEntry {
   id: number
@@ -12,6 +13,8 @@ export interface ChatEntry {
 }
 
 interface YomiState {
+  authState: AuthState
+  authError: string
   hotkeyState: HotkeyState
   entries: ChatEntry[]
   activeId: number | null
@@ -20,6 +23,7 @@ interface YomiState {
   guideCurrentStep: number
   guideTotalSteps: number
 
+  setAuthState: (s: AuthState, error?: string) => void
   setHotkeyState: (state: HotkeyState) => void
   handleSseEvent: (event: SseEvent) => void
   dismissEntry: (id: number) => void
@@ -28,6 +32,8 @@ interface YomiState {
 let nextId = 1
 
 export const useYomiStore = create<YomiState>((set) => ({
+  authState: "checking",
+  authError: "",
   hotkeyState: "idle",
   entries: [],
   activeId: null,
@@ -36,6 +42,7 @@ export const useYomiStore = create<YomiState>((set) => ({
   guideCurrentStep: 0,
   guideTotalSteps: 0,
 
+  setAuthState: (authState, error = "") => set({ authState, authError: error }),
   setHotkeyState: (hotkeyState) => set({ hotkeyState }),
 
   handleSseEvent: (event) => {
@@ -46,6 +53,7 @@ export const useYomiStore = create<YomiState>((set) => ({
           return {
             entries: [...s.entries, { id, transcript: event.text, text: "", error: null, isStreaming: true }],
             activeId: id,
+            audioQueue: [],  // Reset audio queue for new query
           }
         })
         break

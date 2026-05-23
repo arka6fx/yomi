@@ -1,22 +1,21 @@
 import { Hono } from "hono"
 import { createHmac } from "node:crypto"
-import { db, subscriptions, usageEvents } from "@yomi/db"
+import { db, usageEvents } from "@yomi/db"
 import { eq, and, gte } from "drizzle-orm"
 import { authenticate } from "../auth.js"
+import * as authSchema from "../auth-schema.js"
 
+// Plans: explore (free trial), pro ($8.99), max ($18.99)
 const PLAN_AMOUNTS: Record<string, number> = {
-  basic: 400,
-  standard: 900,
-  genesis: 1900,
+  pro: 899,
+  max: 1899,
 }
 
 const PLAN_PERIODS: Record<string, { period: string; interval: number; totalCount: number }> = {
-  basic: { period: "monthly", interval: 1, totalCount: 12 },
-  standard: { period: "monthly", interval: 1, totalCount: 12 },
-  genesis: { period: "monthly", interval: 1, totalCount: 12 },
+  pro: { period: "monthly", interval: 1, totalCount: 12 },
+  max: { period: "monthly", interval: 1, totalCount: 12 },
 }
 
-// Razorpay REST API via fetch — no Node.js http module, works on CF Workers
 function rzpAuth(): string {
   const id = process.env["RAZORPAY_KEY_ID"]
   const secret = process.env["RAZORPAY_KEY_SECRET"]
@@ -27,10 +26,7 @@ function rzpAuth(): string {
 async function rzp<T>(path: string, body?: unknown): Promise<T> {
   const res = await fetch(`https://api.razorpay.com/v1${path}`, {
     method: body !== undefined ? "POST" : "GET",
-    headers: {
-      Authorization: rzpAuth(),
-      "Content-Type": "application/json",
-    },
+    headers: { Authorization: rzpAuth(), "Content-Type": "application/json" },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   })
   if (!res.ok) throw new Error(`Razorpay ${path} → ${res.status}: ${await res.text()}`)
@@ -41,7 +37,7 @@ export const billingRouter = new Hono()
 
 // Create Razorpay subscription
 billingRouter.post("/create-subscription", authenticate, async (c) => {
-  const { plan } = await c.req.json() as { plan: string; returnUrl: string }
+  const { plan } = await c.req.json() as { plan: string }
   const user = c.get("user")
 
   const amount = PLAN_AMOUNTS[plan]
@@ -49,13 +45,8 @@ billingRouter.post("/create-subscription", authenticate, async (c) => {
 
   const period = PLAN_PERIODS[plan]!
 
-  const [existing] = await db
-    .select({ razorpayCustomerId: subscriptions.razorpayCustomerId })
-    .from(subscriptions)
-    .where(eq(subscriptions.userId, user.id))
-    .limit(1)
-
-  let customerId = existing?.razorpayCustomerId
+  // Reuse existing customer ID if present, otherwise create one
+  let customerId = user.razorpayCustomerId ?? ""
   if (!customerId) {
     const customer = await rzp<{ id: string }>("/customers", {
       name: user.name,
@@ -63,6 +54,9 @@ billingRouter.post("/create-subscription", authenticate, async (c) => {
       contact: "",
     })
     customerId = customer.id
+    await db.update(authSchema.user)
+      .set({ razorpayCustomerId: customerId })
+      .where(eq(authSchema.user.id, user.id))
   }
 
   const planObj = await rzp<{ id: string }>("/plans", {
@@ -85,7 +79,7 @@ billingRouter.post("/create-subscription", authenticate, async (c) => {
   return c.json({ id: subscription.id, short_url: subscription.short_url })
 })
 
-// Razorpay webhook
+// Razorpay webhook — update user plan on subscription events
 billingRouter.post("/webhook", async (c) => {
   const secret = process.env["RAZORPAY_WEBHOOK_SECRET"]
   const sig = c.req.header("x-razorpay-signature")
@@ -103,7 +97,7 @@ billingRouter.post("/webhook", async (c) => {
   switch (event.event) {
     case "subscription.activated":
     case "subscription.charged":
-      await handleSubscriptionEvent(event.payload.subscription.entity)
+      await handleSubscriptionActive(event.payload.subscription.entity)
       break
     case "subscription.completed":
     case "subscription.cancelled":
@@ -117,18 +111,12 @@ billingRouter.post("/webhook", async (c) => {
   return c.json({ ok: true })
 })
 
-// Current subscription + usage this billing period
+// Current subscription info for the dashboard
 billingRouter.get("/subscription", authenticate, async (c) => {
   const user = c.get("user")
 
-  const [sub] = await db
-    .select()
-    .from(subscriptions)
-    .where(eq(subscriptions.userId, user.id))
-    .limit(1)
-
-  const periodStart = sub?.currentPeriodEnd
-    ? new Date(sub.currentPeriodEnd.getTime() - 30 * 24 * 60 * 60 * 1000)
+  const periodStart = user.currentPeriodEnd
+    ? new Date(user.currentPeriodEnd.getTime() - 30 * 24 * 60 * 60 * 1000)
     : new Date(0)
 
   const usageRows = await db
@@ -136,22 +124,27 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     .from(usageEvents)
     .where(and(eq(usageEvents.userId, user.id), gte(usageEvents.createdAt, periodStart)))
 
-  const totalTokens = usageRows.reduce(
+  const tokensUsedThisPeriod = usageRows.reduce(
     (sum, r) => sum + (r.inputTokens ?? 0) + (r.outputTokens ?? 0),
     0,
   )
 
   return c.json({
-    plan: sub?.plan ?? "free",
-    status: sub?.status ?? "active",
-    currentPeriodEnd: sub?.currentPeriodEnd,
-    tokensUsedThisPeriod: totalTokens,
+    role:               user.role,
+    plan:               user.plan,
+    status:             user.subscriptionStatus,
+    trialEndDate:       user.trialEndDate,
+    currentPeriodEnd:   user.currentPeriodEnd,
+    dailyChatUsed:      user.dailyChatCount,
+    dailyVoiceUsed:     user.dailyVoiceCount,
+    dailyImageUsed:     user.dailyImageCount,
+    tokensUsedThisPeriod,
   })
 })
 
 // --- Webhook helpers ---
 
-async function handleSubscriptionEvent(entity: Record<string, unknown>) {
+async function handleSubscriptionActive(entity: Record<string, unknown>) {
   const notes = entity["notes"] as Record<string, string> | undefined
   const userId = notes?.userId
   const plan = notes?.plan
@@ -161,34 +154,33 @@ async function handleSubscriptionEvent(entity: Record<string, unknown>) {
   const customerId = entity["customer_id"] as string
   const periodEnd = entity["current_end"] ? new Date((entity["current_end"] as number) * 1000) : null
 
-  const [existing] = await db
-    .select({ id: subscriptions.id })
-    .from(subscriptions)
-    .where(eq(subscriptions.userId, userId))
-    .limit(1)
-
-  if (existing) {
-    await db
-      .update(subscriptions)
-      .set({ razorpayCustomerId: customerId, razorpaySubId: subId, plan, status: "active", currentPeriodEnd: periodEnd, updatedAt: new Date() })
-      .where(eq(subscriptions.userId, userId))
-  } else {
-    await db.insert(subscriptions).values({ userId, razorpayCustomerId: customerId, razorpaySubId: subId, plan, status: "active", currentPeriodEnd: periodEnd })
-  }
+  await db.update(authSchema.user).set({
+    plan,
+    subscriptionStatus:  "active",
+    razorpayCustomerId:  customerId,
+    razorpaySubId:       subId,
+    currentPeriodEnd:    periodEnd,
+  }).where(eq(authSchema.user.id, userId))
 }
 
 async function handleSubscriptionEnd(entity: Record<string, unknown>) {
-  const customerId = entity["customer_id"] as string
-  await db
-    .update(subscriptions)
-    .set({ plan: "free", status: "active", razorpaySubId: null, updatedAt: new Date() })
-    .where(eq(subscriptions.razorpayCustomerId, customerId))
+  const notes = entity["notes"] as Record<string, string> | undefined
+  const userId = notes?.userId
+  if (!userId) return
+
+  await db.update(authSchema.user).set({
+    plan:               "explore",
+    subscriptionStatus: "inactive",
+    razorpaySubId:      null,
+    currentPeriodEnd:   null,
+  }).where(eq(authSchema.user.id, userId))
 }
 
 async function handlePaymentFailed(entity: Record<string, unknown>) {
-  const customerId = entity["customer_id"] as string
-  await db
-    .update(subscriptions)
-    .set({ status: "past_due", updatedAt: new Date() })
-    .where(eq(subscriptions.razorpayCustomerId, customerId))
+  const notes = entity["notes"] as Record<string, string> | undefined
+  const userId = notes?.userId
+  if (!userId) return
+
+  await db.update(authSchema.user).set({ subscriptionStatus: "past_due" })
+    .where(eq(authSchema.user.id, userId))
 }

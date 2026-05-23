@@ -1,3 +1,7 @@
+export type UserRole = "user" | "owner"
+export type Plan = "explore" | "pro" | "max"
+export type SubscriptionStatus = "inactive" | "active" | "past_due"
+
 export interface GuideElement {
   label: string
   bbox: { x: number; y: number; width: number; height: number }
@@ -32,6 +36,7 @@ export interface FastQueryRequest {
   audio_b64?: string       // base64-encoded WAV; sidecar runs STT before LLM
   screenshot_b64?: string
   mode?: "answer" | "guide"
+  tts?: boolean            // true = voice output; false = text only (default: true)
   history?: { role: "user" | "assistant"; text: string }[]
 }
 

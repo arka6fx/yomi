@@ -17,11 +17,11 @@ app.use("*", cors({
 
 app.get("/health", (c) => c.json({ status: "ok", version: "0.1.0" }))
 
-// Better Auth handles all /api/auth/* routes
-app.on(["GET", "POST"], "/api/auth/**", (c) => auth.handler(c.req.raw))
-
-// Device-code flow (custom routes on top of Better Auth)
+// Custom auth routes first (device-code flow)
 app.route("/api/auth", authRoutesRouter)
+
+// Better Auth handles all remaining /api/auth/* routes
+app.on(["GET", "POST"], "/api/auth/*", (c) => auth.handler(c.req.raw))
 
 app.route("/api/llm", llmRouter)
 app.route("/api/stt", sttRouter)

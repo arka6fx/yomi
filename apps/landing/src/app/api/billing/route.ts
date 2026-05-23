@@ -1,59 +1,39 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
 
-export const runtime = "nodejs"
+const BACKEND = process.env.BACKEND_URL ?? "http://localhost:3001"
 
-const BACKEND = process.env.BACKEND_URL ?? ""
-
-async function sessionToken(req: NextRequest): Promise<string | null> {
-  try {
-    const session = await auth.api.getSession({ headers: req.headers })
-    return session?.session?.token ?? null
-  } catch {
-    return null
-  }
+function authHeader(req: NextRequest) {
+  return req.headers.get("authorization") ?? ""
 }
 
-// GET /api/billing — current subscription + usage
 export async function GET(req: NextRequest) {
-  const token = await sessionToken(req)
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const auth = authHeader(req)
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  // Backend not configured — return free defaults so dashboard still loads in dev
-  if (!BACKEND) {
-    return NextResponse.json({
-      plan: "free",
-      status: "active",
-      tokensUsedThisPeriod: 0,
-      currentPeriodEnd: null,
-    })
-  }
-
+  // Dev fallback — return free defaults if backend not reachable
   try {
     const res = await fetch(`${BACKEND}/api/billing/subscription`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: auth },
     })
     return NextResponse.json(await res.json(), { status: res.status })
   } catch {
-    return NextResponse.json({ plan: "free", status: "active", tokensUsedThisPeriod: 0, currentPeriodEnd: null })
+    return NextResponse.json({
+      role: "user", plan: "explore", status: "inactive",
+      trialEndDate: null, currentPeriodEnd: null,
+      dailyChatUsed: 0, dailyVoiceUsed: 0, dailyImageUsed: 0, tokensUsedThisPeriod: 0,
+    })
   }
 }
 
-// POST /api/billing — create Razorpay subscription
 export async function POST(req: NextRequest) {
-  const token = await sessionToken(req)
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-
-  if (!BACKEND) return NextResponse.json({ error: "Backend not configured" }, { status: 503 })
+  const auth = authHeader(req)
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const body = await req.json()
   try {
     const res = await fetch(`${BACKEND}/api/billing/create-subscription`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: auth, "Content-Type": "application/json" },
       body: JSON.stringify(body),
     })
     return NextResponse.json(await res.json(), { status: res.status })

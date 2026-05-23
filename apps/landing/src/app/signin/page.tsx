@@ -5,9 +5,9 @@ export const metadata = { title: "Sign in" }
 export default async function SignInPage({
   searchParams,
 }: {
-  searchParams: Promise<{ plan?: string }>
+  searchParams: Promise<{ plan?: string; redirect?: string }>
 }) {
-  const { plan } = await searchParams
+  const { plan, redirect } = await searchParams
 
   return (
     <main className="min-h-dvh bg-background flex flex-col items-center justify-center px-6">
@@ -18,7 +18,7 @@ export default async function SignInPage({
             "radial-gradient(ellipse 800px 600px at 50% 30%, rgba(255,224,194,0.08) 0%, transparent 70%)",
         }}
       />
-      <AuthCard defaultMode="signin" plan={plan} />
+      <AuthCard defaultMode="signin" plan={plan} callbackURL={redirect} />
     </main>
   )
 }
