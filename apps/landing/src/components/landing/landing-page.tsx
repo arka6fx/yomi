@@ -102,6 +102,23 @@ const PLANS = [
   },
 ]
 
+function Keys({ keys }: { keys: string[] }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      {keys.map((k, i) => (
+        <span key={i} className="inline-flex items-center gap-1">
+          <kbd className="font-mono text-xs bg-muted border border-border px-1.5 py-0.5 rounded text-foreground">
+            {k}
+          </kbd>
+          {i < keys.length - 1 && (
+            <span className="text-muted-foreground text-xs">+</span>
+          )}
+        </span>
+      ))}
+    </span>
+  )
+}
+
 export function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -276,13 +293,9 @@ export function LandingPage() {
             className="text-lg text-muted-foreground mb-10 max-w-xl mx-auto leading-relaxed"
           >
             Press{" "}
-            <kbd className="font-mono text-xs bg-muted border border-border px-1.5 py-0.5 rounded text-foreground">
-              ⌘⇧Space
-            </kbd>
+            <Keys keys={["⌘", "Shift", "Space"]} />
             {" "}on Mac or{" "}
-            <kbd className="font-mono text-xs bg-muted border border-border px-1.5 py-0.5 rounded text-foreground">
-              Ctrl+Shift+Space
-            </kbd>
+            <Keys keys={["Ctrl", "Shift", "Space"]} />
             {" "}on Windows. Yomi sees your screen, hears your voice, and acts — so you touch your laptop less.
           </motion.p>
 
