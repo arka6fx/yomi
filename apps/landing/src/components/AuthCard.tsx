@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { ArrowLeft } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 
 interface AuthCardProps {
@@ -14,6 +15,14 @@ export default function AuthCard({ defaultMode }: AuthCardProps) {
 
   return (
     <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8">
+      <Link
+        href="/"
+        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-6"
+      >
+        <ArrowLeft size={13} />
+        Back to home
+      </Link>
+
       <Link
         href="/"
         className="font-display text-2xl font-bold text-foreground block text-center mb-6 select-none"

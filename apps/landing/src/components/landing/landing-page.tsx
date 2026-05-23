@@ -4,6 +4,8 @@ import { useState } from "react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { Zap, Monitor, Shield, Check, ArrowRight, Mic, Menu, X } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { HandWrittenTitle } from "@/components/ui/hand-writing-text"
 import Footer from "@/components/Footer"
 
 const NAV_LINKS: { label: string; href?: string; scrollTo?: string }[] = [
@@ -101,6 +103,55 @@ const PLANS = [
     popular: false,
   },
 ]
+
+function ElegantShape({
+  className,
+  delay = 0,
+  width = 400,
+  height = 100,
+  rotate = 0,
+  gradient = "from-amber-300/[0.08]",
+}: {
+  className?: string
+  delay?: number
+  width?: number
+  height?: number
+  rotate?: number
+  gradient?: string
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -100, rotate: rotate - 15 }}
+      animate={{ opacity: 1, y: 0, rotate }}
+      transition={{
+        duration: 2.4,
+        delay,
+        ease: [0.23, 0.86, 0.39, 0.96],
+        opacity: { duration: 1.2 },
+      }}
+      className={cn("absolute", className)}
+    >
+      <motion.div
+        animate={{ y: [0, 16, 0] }}
+        transition={{ duration: 13, repeat: Infinity, ease: "easeInOut" }}
+        style={{ width, height }}
+        className="relative"
+      >
+        <div
+          className={cn(
+            "absolute inset-0 rounded-full",
+            "bg-gradient-to-r to-transparent",
+            gradient,
+            "backdrop-blur-[1px] border border-white/[0.06]",
+            "shadow-[0_4px_32px_0_rgba(255,180,80,0.04)]",
+            "after:absolute after:inset-0 after:rounded-full",
+            "after:bg-[radial-gradient(circle_at_50%_50%,rgba(255,200,100,0.05),transparent_70%)]"
+          )}
+        />
+      </motion.div>
+    </motion.div>
+  )
+}
 
 function Keys({ keys }: { keys: { sym: string; label: string }[] }) {
   return (
@@ -241,26 +292,72 @@ export function LandingPage() {
         id="hero"
         className="relative min-h-[calc(100vh-64px)] flex items-center justify-center overflow-hidden py-28"
       >
-        {/* Gradient mesh */}
+        {/* Multi-layer gradient background */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div
-            className="absolute -top-32 left-1/4 w-[600px] h-[600px] rounded-full blur-[140px]"
-            style={{ background: "radial-gradient(circle, rgba(255,224,194,0.12), transparent 70%)" }}
+            className="absolute -top-32 left-1/4 w-[700px] h-[700px] rounded-full blur-[150px]"
+            style={{ background: "radial-gradient(circle, rgba(255,175,80,0.09), transparent 65%)" }}
           />
           <div
-            className="absolute bottom-0 right-1/4 w-[500px] h-[500px] rounded-full blur-[120px]"
-            style={{ background: "radial-gradient(circle, rgba(255,200,140,0.08), transparent 70%)" }}
+            className="absolute bottom-0 right-1/4 w-[600px] h-[600px] rounded-full blur-[130px]"
+            style={{ background: "radial-gradient(circle, rgba(255,130,100,0.06), transparent 65%)" }}
           />
           <div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[400px] rounded-full blur-[160px]"
-            style={{ background: "radial-gradient(circle, rgba(255,224,194,0.06), transparent 70%)" }}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[420px] rounded-full blur-[200px]"
+            style={{ background: "radial-gradient(circle, rgba(255,205,120,0.04), transparent 65%)" }}
           />
           <div
-            className="absolute inset-0 opacity-[0.035]"
+            className="absolute inset-0 opacity-[0.03]"
             style={{
               backgroundImage: "radial-gradient(circle, hsl(var(--foreground)) 1px, transparent 1px)",
-              backgroundSize: "32px 32px",
+              backgroundSize: "28px 28px",
             }}
+          />
+          {/* top/bottom vignette */}
+          <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-transparent to-background/80 pointer-events-none" />
+        </div>
+
+        {/* Floating geometric shapes */}
+        <div className="absolute inset-0 overflow-hidden">
+          <ElegantShape
+            delay={0.2}
+            width={520}
+            height={130}
+            rotate={12}
+            gradient="from-amber-400/[0.10]"
+            className="left-[-8%] md:left-[-4%] top-[18%] md:top-[22%]"
+          />
+          <ElegantShape
+            delay={0.45}
+            width={400}
+            height={100}
+            rotate={-16}
+            gradient="from-rose-400/[0.07]"
+            className="right-[-4%] md:right-[0%] top-[58%] md:top-[64%]"
+          />
+          <ElegantShape
+            delay={0.35}
+            width={260}
+            height={68}
+            rotate={-10}
+            gradient="from-orange-300/[0.09]"
+            className="left-[6%] md:left-[10%] bottom-[6%] md:bottom-[12%]"
+          />
+          <ElegantShape
+            delay={0.6}
+            width={180}
+            height={50}
+            rotate={22}
+            gradient="from-amber-200/[0.07]"
+            className="right-[16%] md:right-[22%] top-[8%] md:top-[14%]"
+          />
+          <ElegantShape
+            delay={0.7}
+            width={130}
+            height={36}
+            rotate={-26}
+            gradient="from-yellow-300/[0.06]"
+            className="left-[20%] md:left-[26%] top-[3%] md:top-[7%]"
           />
         </div>
 
@@ -268,30 +365,34 @@ export function LandingPage() {
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-4 py-1.5 text-xs text-muted-foreground mb-8 backdrop-blur-sm"
+            transition={{ duration: 0.6, delay: 0.1, ease: [0.25, 0.4, 0.25, 1] }}
+            className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-1.5 text-xs text-muted-foreground mb-8 backdrop-blur-sm"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
             Now in early access
           </motion.div>
 
           <motion.h1
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 28 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.2 }}
-            className="text-5xl sm:text-6xl md:text-7xl font-light text-foreground mb-6"
+            transition={{ duration: 0.9, delay: 0.2, ease: [0.25, 0.4, 0.25, 1] }}
+            className="text-5xl sm:text-6xl md:text-7xl font-light mb-6"
             style={{ letterSpacing: "-0.04em", lineHeight: 1.08 }}
           >
-            Your AI buddy,
+            <span className="bg-clip-text text-transparent bg-gradient-to-b from-foreground to-foreground/75">
+              Your AI buddy,
+            </span>
             <br />
-            <span className="text-primary">on every screen.</span>
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-200 via-orange-200 to-rose-200">
+              on every screen.
+            </span>
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.3 }}
-            className="text-lg text-muted-foreground mb-10 max-w-xl mx-auto leading-relaxed"
+            transition={{ duration: 0.8, delay: 0.35, ease: [0.25, 0.4, 0.25, 1] }}
+            className="text-base sm:text-lg text-muted-foreground mb-10 max-w-xl mx-auto leading-relaxed"
           >
             Press{" "}
             <Keys keys={[{ sym: "⌘", label: "Cmd" }, { sym: "⇧", label: "Shift" }, { sym: "␣", label: "Space" }]} />
@@ -301,21 +402,34 @@ export function LandingPage() {
           </motion.p>
 
           <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 0.4 }}
+            className="-mb-2"
+          >
+            <HandWrittenTitle
+              title="free to start"
+              subtitle="no credit card needed"
+              className="max-w-xs mx-auto"
+            />
+          </motion.div>
+
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.4 }}
+            transition={{ duration: 0.8, delay: 0.45, ease: [0.25, 0.4, 0.25, 1] }}
             className="flex flex-wrap items-center justify-center gap-3"
           >
             <Link
               href="/signup"
-              className="flex items-center gap-2 bg-primary text-primary-foreground rounded-xl font-medium px-7 py-3 hover:bg-primary/90 transition-colors"
+              className="group flex items-center gap-2 bg-primary text-primary-foreground rounded-xl font-medium px-7 py-3 hover:bg-primary/90 transition-all shadow-[0_0_28px_-4px_hsl(var(--primary)/0.5)] hover:shadow-[0_0_40px_-4px_hsl(var(--primary)/0.7)]"
             >
               Get early access
-              <ArrowRight size={16} />
+              <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
             </Link>
             <button
               onClick={() => scrollTo("pricing")}
-              className="flex items-center gap-2 rounded-xl border border-border bg-card/60 backdrop-blur-sm text-foreground font-medium px-7 py-3 hover:bg-card transition-colors"
+              className="flex items-center gap-2 rounded-xl border border-border bg-card/40 backdrop-blur-sm text-foreground font-medium px-7 py-3 hover:bg-card/60 transition-all"
             >
               See plans
             </button>
@@ -324,7 +438,7 @@ export function LandingPage() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
+            transition={{ duration: 0.9, delay: 0.6 }}
             className="flex flex-wrap items-center justify-center gap-5 mt-14 text-sm text-muted-foreground"
           >
             <span className="flex items-center gap-1.5">
