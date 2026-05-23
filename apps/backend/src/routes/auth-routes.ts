@@ -22,7 +22,7 @@ authRoutesRouter.post("/device-code", async (c) => {
   return c.json({
     device_code: deviceCode,
     user_code: userCode,
-    verification_uri: `${process.env["BETTER_AUTH_URL"]}/device`,
+    verification_uri: `${process.env["NEXT_PUBLIC_APP_URL"] ?? "http://localhost:3000"}/device`,
     expires_in: 300,
     interval: 5,
   })

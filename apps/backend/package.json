@@ -24,8 +24,7 @@
     "ai": "^4.0.0",
     "better-auth": "^1.0.0",
     "drizzle-orm": "^0.31.0",
-    "hono": "^4.5.0",
-    "openai": "^4.0.0"
+    "hono": "^4.5.0"
   },
   "devDependencies": {
     "@types/bun": "^1.1.0",

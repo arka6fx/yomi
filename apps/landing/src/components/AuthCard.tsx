@@ -2,60 +2,32 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { ArrowLeft, Loader2 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
-import { Input } from "@/components/ui/input"
 
 interface AuthCardProps {
   defaultMode: "signin" | "signup"
   plan?: string
+  callbackURL?: string
 }
 
-export default function AuthCard({ defaultMode, plan }: AuthCardProps) {
-  const router = useRouter()
-  const [loading, setLoading] = useState<"github" | "google" | "email" | null>(null)
+export default function AuthCard({ defaultMode, plan, callbackURL }: AuthCardProps) {
+  const [loading, setLoading] = useState<"github" | "google" | null>(null)
   const [error, setError] = useState("")
-  const [form, setForm] = useState({ name: "", email: "", password: "" })
 
-  const redirectTo = plan ? `/dashboard?plan=${plan}` : "/dashboard"
+  const redirectTo = callbackURL ?? (plan ? `/dashboard?plan=${plan}` : "/dashboard")
   const busy = loading !== null
 
   async function handleOAuth(provider: "github" | "google") {
     setError("")
     setLoading(provider)
-    await authClient.signIn.social({ provider, callbackURL: redirectTo })
-  }
-
-  async function handleEmail(e: React.FormEvent) {
-    e.preventDefault()
-    setError("")
-    setLoading("email")
-
-    const { data, error: authError } =
-      defaultMode === "signup"
-        ? await authClient.signUp.email({
-            email: form.email,
-            password: form.password,
-            name: form.name || form.email.split("@")[0],
-          })
-        : await authClient.signIn.email({
-            email: form.email,
-            password: form.password,
-          })
-
-    if (authError) {
-      setError(authError.message ?? "Something went wrong.")
+    try {
+      await authClient.signIn.social({ provider, callbackURL: `${window.location.origin}${redirectTo}` })
+    } catch {
+      setError("Something went wrong. Please try again.")
       setLoading(null)
-      return
     }
-    if (data) router.push(redirectTo)
   }
-
-  const switchHref =
-    defaultMode === "signup"
-      ? plan ? `/signin?plan=${plan}` : "/signin"
-      : plan ? `/signup?plan=${plan}` : "/signup"
 
   return (
     <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8">
@@ -83,8 +55,7 @@ export default function AuthCard({ defaultMode, plan }: AuthCardProps) {
           : "Sign in to your Yomi account."}
       </p>
 
-      {/* OAuth */}
-      <div className="flex flex-col gap-3 mb-5">
+      <div className="flex flex-col gap-3">
         <button
           onClick={() => handleOAuth("github")}
           disabled={busy}
@@ -119,66 +90,7 @@ export default function AuthCard({ defaultMode, plan }: AuthCardProps) {
         </button>
       </div>
 
-      {/* Divider */}
-      <div className="relative mb-5">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border" />
-        </div>
-        <div className="relative flex justify-center">
-          <span className="bg-card px-3 text-xs text-muted-foreground">or continue with email</span>
-        </div>
-      </div>
-
-      {/* Email / password form */}
-      <form onSubmit={handleEmail} className="flex flex-col gap-3">
-        {defaultMode === "signup" && (
-          <Input
-            type="text"
-            placeholder="Full name"
-            value={form.name}
-            onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-            disabled={busy}
-            autoComplete="name"
-          />
-        )}
-        <Input
-          type="email"
-          placeholder="Email"
-          value={form.email}
-          onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-          required
-          disabled={busy}
-          autoComplete="email"
-        />
-        <Input
-          type="password"
-          placeholder="Password"
-          value={form.password}
-          onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-          required
-          disabled={busy}
-          autoComplete={defaultMode === "signup" ? "new-password" : "current-password"}
-          minLength={8}
-        />
-
-        {error && <p className="text-xs text-destructive">{error}</p>}
-
-        <button
-          type="submit"
-          disabled={busy}
-          className="flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-xl font-medium py-3 text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 mt-1"
-        >
-          {loading === "email" && <Loader2 size={14} className="animate-spin" />}
-          {defaultMode === "signup" ? "Create account" : "Sign in"}
-        </button>
-      </form>
-
-      <p className="text-center text-sm text-muted-foreground mt-6">
-        {defaultMode === "signup" ? "Already have an account?" : "Don't have an account?"}{" "}
-        <Link href={switchHref} className="text-primary hover:underline font-medium">
-          {defaultMode === "signup" ? "Sign in" : "Sign up"}
-        </Link>
-      </p>
+      {error && <p className="text-xs text-destructive text-center mt-4">{error}</p>}
     </div>
   )
 }

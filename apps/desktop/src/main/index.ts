@@ -1,9 +1,9 @@
-import { app, BrowserWindow, globalShortcut } from "electron"
+import { app, BrowserWindow, globalShortcut, ipcMain, shell, screen } from "electron"
 import path from "node:path"
 import { SidecarManager } from "./sidecar"
-import { ensureAuthenticated } from "./auth"
-import { initHotkey } from "./hotkey"
-import { initIpc } from "./ipc"
+import { checkStoredToken, startDeviceCodeFlow, clearToken } from "./auth"
+import { initHotkey, enableHotkeys, disableHotkeys } from "./hotkey"
+import { initSidecarIpc } from "./ipc"
 
 // Transparent frameless windows need software compositing on some GPU/driver combos
 if (process.platform === "win32") {
@@ -12,19 +12,10 @@ if (process.platform === "win32") {
 }
 
 let overlayWin: BrowserWindow | null = null
+let sidecarStarted = false  // Sidecar + IPC + hotkeys initialised (once ever)
 
 app.whenReady().then(async () => {
-  // Auth gate — must succeed before any UI is shown
-  let sessionToken: string
-  try {
-    sessionToken = await ensureAuthenticated()
-  } catch (err) {
-    console.error("[yomi] auth failed:", err)
-    app.quit()
-    return
-  }
-
-  const sidecar = new SidecarManager(sessionToken)
+  // Platform-specific tray/menubar setup
   if (process.platform === "darwin") {
     const { setupMac } = await import("./platform/mac")
     setupMac()
@@ -33,32 +24,25 @@ app.whenReady().then(async () => {
     setupWindows()
   }
 
-  try {
-    await sidecar.start()
-  } catch (err) {
-    if (process.env.YOMI_DEV === "true") {
-      console.warn("[yomi] sidecar not running in dev — start it separately: cd apps/sidecar && bun run dev")
-    } else {
-      console.error("[yomi] sidecar failed to start — retrying in 3s", err)
-      await new Promise((r) => setTimeout(r, 3000))
-      try { await sidecar.start() } catch (e) {
-        console.error("[yomi] sidecar retry also failed — continuing without sidecar", e)
-      }
-    }
-  }
+  // Position overlay at top-center of primary display
+  const { width: screenW } = screen.getPrimaryDisplay().workAreaSize
+  const overlayW = 680
+  const overlayX = Math.round((screenW - overlayW) / 2)
 
   overlayWin = new BrowserWindow({
-    width: 680,
+    width: overlayW,
     height: 46,
+    x: overlayX,
+    y: 8,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
     skipTaskbar: true,
     resizable: false,
-    show: true,
+    show: false,
     backgroundColor: "#00000000",
     hasShadow: false,
-    type: "tooltip",
+    ...(process.platform === "darwin" ? { type: "tooltip" as const } : {}),
     webPreferences: {
       preload: path.join(__dirname, "../preload/index.js"),
       contextIsolation: true,
@@ -66,8 +50,60 @@ app.whenReady().then(async () => {
     },
   })
 
+  if (process.platform !== "darwin") {
+    overlayWin.setAlwaysOnTop(true, "screen-saver")
+  }
   overlayWin.setContentProtection(true)
   overlayWin.setVisibleOnAllWorkspaces(true)
+
+  // ── Overlay window control IPCs (no auth required) ─────────────────────────
+
+  ipcMain.on("yomi:resize", (_e, w: number, h: number) => {
+    if (!overlayWin) return
+    overlayWin.setSize(Math.max(240, w), Math.max(46, h))
+  })
+
+  let dragStart = { winX: 0, winY: 0, mouseX: 0, mouseY: 0 }
+  ipcMain.on("yomi:drag-start", (_e, mouseX: number, mouseY: number) => {
+    const pos = overlayWin?.getPosition() ?? [0, 0]
+    dragStart = { winX: pos[0] ?? 0, winY: pos[1] ?? 0, mouseX, mouseY }
+  })
+  ipcMain.on("yomi:drag-move", (_e, mouseX: number, mouseY: number) => {
+    const dx = mouseX - dragStart.mouseX
+    const dy = mouseY - dragStart.mouseY
+    overlayWin?.setPosition(dragStart.winX + dx, dragStart.winY + dy)
+  })
+  ipcMain.on("yomi:nudge", (_e, dx: number, dy: number) => {
+    const [x, y] = overlayWin?.getPosition() ?? [0, 0]
+    overlayWin?.setPosition((x ?? 0) + dx, (y ?? 0) + dy)
+  })
+
+  // ── Auth IPC ────────────────────────────────────────────────────────────────
+
+  ipcMain.handle("yomi:start-auth", async (_e, provider?: string) => {
+    if (!overlayWin) return
+    try {
+      const token = await startDeviceCodeFlow(provider, (deviceUrl) => {
+        shell.openExternal(deviceUrl)
+        overlayWin?.webContents.send("yomi:auth-waiting")
+      })
+      await completeSetup(token)
+      overlayWin?.webContents.send("yomi:auth-ok")
+    } catch (err) {
+      overlayWin?.webContents.send(
+        "yomi:auth-error",
+        err instanceof Error ? err.message : "Sign-in failed",
+      )
+    }
+  })
+
+  ipcMain.on("yomi:sign-out", () => {
+    clearToken()
+    disableHotkeys()  // Block Ctrl+Shift+Space/Enter immediately
+    overlayWin?.webContents.send("yomi:auth-needed")
+  })
+
+  // ── Load overlay ────────────────────────────────────────────────────────────
 
   if (process.env.ELECTRON_RENDERER_URL) {
     overlayWin.loadURL(process.env.ELECTRON_RENDERER_URL)
@@ -75,20 +111,21 @@ app.whenReady().then(async () => {
     overlayWin.loadFile(path.join(__dirname, "../renderer/index.html"))
   }
 
-  const { onListenStop, onTextQuery } = initIpc(sidecar, overlayWin)
-
-  initHotkey({
-    onStateChange: (s) => {
-      overlayWin!.webContents.send("yomi:state", s)
-    },
-    onListenStop,
-    onTextQuery,
+  overlayWin.once("ready-to-show", async () => {
+    overlayWin?.show()
+    // Check for a stored token in the background — renderer is already showing "checking" state
+    const token = await checkStoredToken()
+    if (token) {
+      await completeSetup(token)
+      overlayWin?.webContents.send("yomi:auth-ok")
+    } else {
+      overlayWin?.webContents.send("yomi:auth-needed")
+    }
   })
 
+  // ── Overlay keyboard shortcuts (no auth required) ───────────────────────────
+
   // Ctrl+Shift+Arrow — smooth overlay movement
-  // globalShortcut fires on every OS key-repeat, so we use it as a heartbeat:
-  // start a 16ms velocity loop on first press, reset a "released" timeout on each repeat,
-  // and stop when no repeat arrives within 150ms (key was released).
   const NUDGE_DIRS: [string, number, number][] = [
     ["Ctrl+Shift+Left",  -1,  0],
     ["Ctrl+Shift+Right",  1,  0],
@@ -112,10 +149,8 @@ app.whenReady().then(async () => {
     globalShortcut.register(combo, () => {
       if (!overlayWin) return
       nudgeDir = { x: dx, y: dy }
-      // Each repeat resets the "key released" deadline
       if (nudgeStop) clearTimeout(nudgeStop)
       nudgeStop = setTimeout(stopNudging, 150)
-      // Start the smooth loop once per hold session
       if (!nudgeTick) {
         nudgeTick = setInterval(() => {
           if (!overlayWin) { stopNudging(); return }
@@ -128,7 +163,6 @@ app.whenReady().then(async () => {
     })
   }
 
-  // Ctrl+Shift+H — toggle overlay visibility
   let visible = true
   globalShortcut.register("Ctrl+Shift+H", () => {
     if (!overlayWin) return
@@ -137,10 +171,49 @@ app.whenReady().then(async () => {
     else overlayWin.hide()
   })
 
-  // Ctrl+Shift+Q — quit Yomi entirely
   globalShortcut.register("Ctrl+Shift+Q", () => app.quit())
 })
+
+// Called after a valid token is obtained.
+// First call: starts sidecar, registers IPC handlers, registers shortcuts.
+// Subsequent calls (re-auth after sign-out): just re-enables the shortcuts.
+async function completeSetup(token: string) {
+  if (!overlayWin) return
+
+  if (!sidecarStarted) {
+    sidecarStarted = true
+
+    const sidecar = new SidecarManager(token)
+    try {
+      await sidecar.start()
+    } catch (err) {
+      if (process.env.YOMI_DEV === "true") {
+        console.warn("[yomi] sidecar not running — start it separately: cd apps/sidecar && bun run dev")
+      } else {
+        console.error("[yomi] sidecar failed to start:", err)
+      }
+    }
+
+    const { onListenStop, onTextQuery, onAbort } = initSidecarIpc(sidecar, overlayWin)
+
+    initHotkey({
+      onStateChange: (s) => {
+        // Focus overlay so the text input field can receive keyboard input immediately
+        if (s === "text-input") overlayWin?.focus()
+        overlayWin?.webContents.send("yomi:state", s)
+      },
+      onListenStop,
+      onTextQuery,
+      onAbort,
+    })
+  } else {
+    // Re-auth after sign-out: sidecar already running, just unlock shortcuts
+    enableHotkeys()
+  }
+}
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit()
 })
+
+app.on("will-quit", () => globalShortcut.unregisterAll())

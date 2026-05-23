@@ -5,16 +5,17 @@ const buckets = new Map<string, { tokens: number; lastRefill: number }>()
 
 // Requests per minute by plan
 const LIMITS: Record<string, number> = {
-  free: 10,
-  basic: 30,
-  standard: 60,
-  genesis: 120,
+  explore: 10,
+  pro:     30,
+  max:     120,
 }
 
 export async function rateLimit(c: Context, next: Next) {
   const user = c.get("user")
-  const plan = user.plan ?? "free"
-  const limit = LIMITS[plan] ?? 10
+  // Owners have no rate limit
+  if (user.role === "owner") return next()
+
+  const limit = LIMITS[user.plan] ?? 10
   const now = Date.now()
   const key = user.id
 
@@ -24,7 +25,6 @@ export async function rateLimit(c: Context, next: Next) {
     buckets.set(key, bucket)
   }
 
-  // Refill: one full refill per minute
   const elapsed = (now - bucket.lastRefill) / 60_000
   if (elapsed >= 1) {
     bucket.tokens = limit

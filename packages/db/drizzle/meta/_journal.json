@@ -8,6 +8,21 @@
       "when": 1779445291573,
       "tag": "0000_wild_stature",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1748008200000,
+      "tag": "0001_stripe_to_razorpay",
+      "breakpoints": true
+    }
+    ,
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1748008300000,
+      "tag": "0002_user_role_plan",
+      "breakpoints": true
     }
   ]
 }

@@ -1,22 +1,14 @@
-import { describe, it, expect, beforeEach, mock } from "bun:test"
+import { describe, it, expect, mock } from "bun:test"
 import { transcribe, transcribeStreaming } from "./transcribe.js"
 
 const DUMMY_WAV = new Uint8Array(44)
 
-mock.module("openai", () => {
-  return {
-    default: class {
-      audio = {
-        transcriptions: {
-          create: async () => ({ text: "transcribed text" }),
-        },
-      }
-    },
-  }
-})
+mock.module("../services/sarvam/stt.js", () => ({
+  sarvamTranscribe: async () => ({ transcript: "transcribed text", language_code: "en-IN" }),
+}))
 
 describe("transcribe", () => {
-  it("returns transcribed text from OpenAI", async () => {
+  it("returns transcript from Sarvam", async () => {
     const text = await transcribe(DUMMY_WAV)
     expect(text).toBe("transcribed text")
   })
