@@ -1,4 +1,7 @@
 import { Hono } from "hono"
+import { db } from "@yomi/db"
+import { eq } from "drizzle-orm"
+import * as authSchema from "../auth-schema.js"
 import { auth } from "../auth.js"
 
 // Device-code flow for desktop OAuth (thin wrapper — Better Auth handles the heavy lifting)
@@ -60,6 +63,16 @@ authRoutesRouter.post("/device-code/confirm", async (c) => {
     }
   }
   return c.json({ error: "invalid_user_code" }, 400)
+})
+
+// Sign-out from ALL devices — ensures signing out from the landing page also revokes
+// the desktop session token. Call this AFTER Better Auth's own sign-out.
+authRoutesRouter.post("/sign-out-all", async (c) => {
+  const session = await auth.api.getSession({ headers: c.req.raw.headers })
+  if (!session) return c.json({ error: "Not authenticated" }, 401)
+  await db.delete(authSchema.session)
+    .where(eq(authSchema.session.userId, session.user.id))
+  return c.json({ ok: true })
 })
 
 type PendingEntry = { userCode: string; clientId: string; expiresAt: number; token: string | null }

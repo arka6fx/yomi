@@ -4,9 +4,6 @@
   "workspaces": {
     "": {
       "name": "yomi",
-      "dependencies": {
-        "@turbo/windows-64": "2.9.14",
-      },
       "devDependencies": {
         "@yomi/eslint-config": "workspace:*",
         "@yomi/typescript-config": "workspace:*",

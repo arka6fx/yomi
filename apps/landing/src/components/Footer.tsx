@@ -2,7 +2,7 @@ import Link from "next/link"
 
 const links = [
   { label: "Pricing",  href: "/#pricing",  external: false },
-  { label: "Download", href: "/download",  external: false },
+  { label: "Download", href: "/#download", external: false },
   { label: "Privacy",  href: "/privacy",   external: false },
   { label: "Terms",    href: "/terms",     external: false },
   { label: "GitHub",   href: "https://github.com/arka6fx/yomi", external: true },

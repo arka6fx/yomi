@@ -136,11 +136,30 @@ DATABASE_URL=postgres://...
 | STT | Groq Whisper (`whisper-large-v3-turbo`) via OpenAI-compatible API |
 | TTS | OpenAI TTS (optional) |
 | Backend | Hono on Bun |
-| Auth | Better Auth — Google + GitHub OAuth |
+| Auth | Better Auth - Google + GitHub OAuth |
 | DB | Postgres (Neon) + Drizzle ORM |
 | Billing | Razorpay |
 | Desktop | Electron |
 | Landing | Next.js 16 (Vercel) |
+
+---
+
+## Authentication
+
+Desktop and web share sessions through Better Auth:
+
+| Flow | How it works |
+|---|---|
+| **Desktop sign-in** | Device-code flow (RFC 8628). Click sign-in, your browser opens the device page, and if you are already signed in it auto-confirms. The desktop polls for a session token and stores it encrypted via `safeStorage`. |
+| **Landing sign-in** | Direct OAuth via Google/GitHub through Better Auth's client SDK. |
+| **Cross-device sign-out** | Signing out from the landing page calls `POST /api/auth/sign-out-all` which revokes all sessions for the user. The desktop detects the invalidated token within 30 seconds and shows the sign-in page. |
+| **Session validation** | Desktop checks token validity every 30 seconds against the billing endpoint. A 401 response triggers automatic sign-out. |
+
+Desktop tokens are stored encrypted at:
+- **macOS:** `~/Library/Application Support/Yomi/session.enc`
+- **Windows:** `%APPDATA%/Yomi/session.enc`
+
+No secrets leave the encrypted storage - not even the app reads the raw token except to attach it as a Bearer header.
 
 ---
 

@@ -6,9 +6,9 @@ import * as authSchema from "../auth-schema.js"
 
 export type AccessKind = "chat" | "voice" | "image" | "agent"
 
-// Daily limits by plan — owners bypass this entirely
+// Daily limits by plan for Pro/Max — owners bypass this entirely
 const DAILY_LIMITS: Record<string, Record<AccessKind, number>> = {
-  explore: { chat: 50,    voice: 10,    image: 10,    agent: 0 },
+  explore: { chat: 10000, voice: 10000, image: 10000, agent: 0 },
   pro:     { chat: 10000, voice: 200,   image: 200,   agent: 0 },
   max:     { chat: 10000, voice: 10000, image: 10000, agent: 10000 },
 }
@@ -18,7 +18,7 @@ function todayUtc(): string {
 }
 
 function isTrialActive(user: { plan: string; subscriptionStatus: string; trialEndDate: Date | null }): boolean {
-  if (user.plan !== "explore") return true
+  if (user.plan !== "explore") return false
   if (!user.trialEndDate) return false
   return new Date() < user.trialEndDate
 }
@@ -57,22 +57,39 @@ export function requireAccess(kind: AccessKind) {
       return c.json({ error: "Yomi Max required for agents", code: "upgrade_required" }, 403)
     }
 
-    // Daily rate limit
-    const limits = DAILY_LIMITS[user.plan] ?? DAILY_LIMITS.explore!
-    const limit = limits[kind]!
-    const today = todayUtc()
-    const needsReset = user.dailyResetDate !== today
-    const currentCount = needsReset ? 0 : getDailyCount(user, kind)
+    // Explore plan uses shared interaction pool (150 total across Type A/B/C)
+    if (user.plan === "explore") {
+      const used = user.trialInteractionUsed ?? 0
+      const limit = user.trialInteractionLimit ?? 150
+      if (used >= limit) {
+        return c.json({ error: "Trial interaction limit reached — please upgrade", code: "interaction_limit_reached" }, 429)
+      }
+      // Increment shared interaction counter
+      incrementInteraction(user.id).catch(() => {})
+    } else {
+      // Pro/Max use daily rate limits per kind
+      const limits = DAILY_LIMITS[user.plan] ?? DAILY_LIMITS.pro!
+      const limit = limits[kind]!
+      const today = todayUtc()
+      const needsReset = user.dailyResetDate !== today
+      const currentCount = needsReset ? 0 : getDailyCount(user, kind)
 
-    if (currentCount >= limit) {
-      return c.json({ error: "Daily limit reached", code: "rate_limited" }, 429)
+      if (currentCount >= limit) {
+        return c.json({ error: "Daily limit reached", code: "rate_limited" }, 429)
+      }
+
+      // Increment counter (async — don't block the response)
+      incrementCount(user.id, kind, needsReset, today).catch(() => {})
     }
-
-    // Increment counter (async — don't block the response)
-    incrementCount(user.id, kind, needsReset, today).catch(() => {})
 
     await next()
   }
+}
+
+async function incrementInteraction(userId: string) {
+  await db.update(authSchema.user)
+    .set({ trialInteractionUsed: sql`${authSchema.user.trialInteractionUsed} + 1` })
+    .where(eq(authSchema.user.id, userId))
 }
 
 function getDailyCount(
@@ -89,7 +106,6 @@ function getDailyCount(
 
 async function incrementCount(userId: string, kind: AccessKind, reset: boolean, today: string) {
   if (reset) {
-    // New UTC day — zero all counters and start fresh
     await db.update(authSchema.user).set({
       dailyChatCount:  kind === "chat"  ? 1 : 0,
       dailyVoiceCount: kind === "voice" ? 1 : 0,

@@ -1,20 +1,69 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { Zap, Monitor, Shield, Check, ArrowRight, Mic, Menu, X, Loader2 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { Zap, Monitor, Shield, Check, ArrowRight, Mic, Loader2, Download, Crown, Sparkles, Cuboid } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
-import { HandWrittenTitle } from "@/components/ui/hand-writing-text"
+
+import Nav from "@/components/Nav"
 import Footer from "@/components/Footer"
 
-const NAV_LINKS: { label: string; href?: string; scrollTo?: string }[] = [
-  { label: "Features", scrollTo: "features" },
-  { label: "Pricing",  scrollTo: "pricing" },
-  { label: "Download", href: "/download" },
-]
+type Platform = "mac" | "windows" | "unknown"
+
+function detectPlatform(): Platform {
+  if (typeof navigator === "undefined") return "unknown"
+  const ua = navigator.userAgent.toLowerCase()
+  if (ua.includes("mac")) return "mac"
+  if (ua.includes("win")) return "windows"
+  return "unknown"
+}
+
+interface DownloadOption {
+  label: string
+  arch: string
+  href: string
+  note?: string
+}
+
+const platforms: Record<
+  Exclude<Platform, "unknown">,
+  { title: string; icon: string; options: DownloadOption[]; instructions: string[] }
+> = {
+  mac: {
+    title: "macOS",
+    icon: "⌘",
+    options: [
+      { label: "Apple Silicon", arch: ".dmg", href: "https://github.com/arka6fx/yomi/releases/latest", note: "M1 / M2 / M3" },
+      { label: "Intel", arch: ".dmg", href: "https://github.com/arka6fx/yomi/releases/latest", note: "x86_64" },
+    ],
+    instructions: [
+      "Open the downloaded .dmg file",
+      "Drag Yomi to your Applications folder",
+      "Open Yomi from Applications",
+      "Grant screen recording permission when prompted",
+      "Yomi appears in your menu bar",
+    ],
+  },
+  windows: {
+    title: "Windows",
+    icon: "⊞",
+    options: [
+      { label: "Installer", arch: ".exe", href: "https://github.com/arka6fx/yomi/releases/latest" },
+      { label: "MSI package", arch: ".msi", href: "https://github.com/arka6fx/yomi/releases/latest" },
+    ],
+    instructions: [
+      "Run the installer and follow the prompts",
+      "Yomi will start automatically after install",
+      "Find the Yomi icon in your system tray",
+      "Grant microphone and screen permissions when prompted",
+      "Press the hotkey to start",
+    ],
+  },
+}
+
+const allPlatforms: Exclude<Platform, "unknown">[] = ["mac", "windows"]
 
 function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" })
@@ -40,120 +89,64 @@ const FEATURES = [
 
 const PLANS = [
   {
-    key: "free",
-    name: "Free",
+    key: "explore",
+    name: "Explore",
     price: "$0",
-    period: "/month",
-    description: "Local AI assistance, no card required.",
+    period: "/ month",
+    badge: "30-day trial",
+    description: "Try everything Yomi has to offer — no card needed.",
     features: [
-      "10 LLM calls / day",
-      "2 STT minutes / day",
-      "Text-to-speech",
-      "macOS + Windows",
+      "Voice & text interaction",
+      "Screenshot analysis",
+      "Memory & personalization",
+      "Voice input & output",
+      "Window controls & docking",
+      "Streaming responses",
+      "150 total interactions",
     ],
-    cta: "Get started",
+    cta: "Get started free",
     popular: false,
+    icon: Sparkles,
   },
   {
-    key: "basic",
-    name: "Basic",
-    price: "$4",
-    period: "/month",
-    description: "More calls and screenshot analysis for daily use.",
+    key: "pro",
+    name: "Pro",
+    price: "$9.99",
+    period: "/ month",
+    badge: "Most Popular",
+    description: "Unlimited interaction for everyday use.",
     features: [
-      "500 LLM calls / day",
-      "30 STT minutes / day",
-      "Text-to-speech",
-      "Screenshot analysis",
-      "Email support",
+      "Everything in Explore",
+      "Unlimited standard interactions*",
+      "Better memory",
+      "Faster response queue",
+      "Priority compute",
+      "Enhanced personalization",
     ],
-    cta: "Start free trial",
-    popular: false,
-  },
-  {
-    key: "standard",
-    name: "Standard",
-    price: "$9",
-    period: "/month",
-    description: "Full agent pipeline for power users.",
-    features: [
-      "2 000 LLM calls / day",
-      "120 STT minutes / day",
-      "Text-to-speech",
-      "Screenshot analysis",
-      "Agent pipeline",
-      "Email support",
-    ],
-    cta: "Start free trial",
+    cta: "Subscribe",
     popular: true,
+    icon: Crown,
   },
   {
-    key: "genesis",
-    name: "Genesis",
-    price: "$19",
-    period: "/month",
-    description: "Maximum capacity and priority support.",
+    key: "max",
+    name: "Max",
+    price: "$24.99",
+    period: "/ month",
+    badge: "Power User",
+    description: "Full agentic capabilities for creators.",
     features: [
-      "10 000 LLM calls / day",
-      "600 STT minutes / day",
-      "Text-to-speech",
-      "Screenshot analysis",
-      "Agent pipeline",
-      "Priority support",
+      "Everything in Pro",
+      "Spawn agents & sub-agents",
+      "Background execution",
+      "Long-running tasks",
+      "Autonomous workflows",
+      "Experimental features first",
     ],
-    cta: "Get Genesis",
+    cta: "Subscribe",
     popular: false,
+    icon: Cuboid,
   },
 ]
-
-function ElegantShape({
-  className,
-  delay = 0,
-  width = 400,
-  height = 100,
-  rotate = 0,
-  gradient = "from-amber-300/[0.08]",
-}: {
-  className?: string
-  delay?: number
-  width?: number
-  height?: number
-  rotate?: number
-  gradient?: string
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: -100, rotate: rotate - 15 }}
-      animate={{ opacity: 1, y: 0, rotate }}
-      transition={{
-        duration: 2.4,
-        delay,
-        ease: [0.23, 0.86, 0.39, 0.96],
-        opacity: { duration: 1.2 },
-      }}
-      className={cn("absolute", className)}
-    >
-      <motion.div
-        animate={{ y: [0, 16, 0] }}
-        transition={{ duration: 13, repeat: Infinity, ease: "easeInOut" }}
-        style={{ width, height }}
-        className="relative"
-      >
-        <div
-          className={cn(
-            "absolute inset-0 rounded-full",
-            "bg-gradient-to-r to-transparent",
-            gradient,
-            "backdrop-blur-[1px] border border-white/[0.06]",
-            "shadow-[0_4px_32px_0_rgba(255,180,80,0.04)]",
-            "after:absolute after:inset-0 after:rounded-full",
-            "after:bg-[radial-gradient(circle_at_50%_50%,rgba(255,200,100,0.05),transparent_70%)]"
-          )}
-        />
-      </motion.div>
-    </motion.div>
-  )
-}
 
 function Keys({ keys }: { keys: { sym: string; label: string }[] }) {
   return (
@@ -173,14 +166,51 @@ function Keys({ keys }: { keys: { sym: string; label: string }[] }) {
   )
 }
 
+function InteractionCard({ type, hotkey, label, description }: {
+  type: string
+  hotkey: { sym: string; label: string }[]
+  label: string
+  description: string
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.5 }}
+      className="rounded-2xl border border-border bg-card p-5 flex flex-col gap-3"
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-mono text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+          Type {type}
+        </span>
+        <Keys keys={hotkey} />
+      </div>
+      <p className="text-sm font-medium text-foreground">{label}</p>
+      <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>
+    </motion.div>
+  )
+}
+
 export function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [billingLoading, setBillingLoading] = useState<string | null>(null)
   const { data: session } = authClient.useSession()
   const router = useRouter()
 
+  const [detected, setDetected] = useState<Platform>("unknown")
+  const [active, setActive] = useState<Exclude<Platform, "unknown">>("mac")
+
+  useEffect(() => {
+    const p = detectPlatform()
+    setDetected(p)
+    if (p !== "unknown") setActive(p)
+  }, [])
+
+  const current = platforms[active]
+
   async function handlePlanClick(planKey: string) {
-    if (planKey === "free") {
+    if (planKey === "explore") {
       router.push(session ? "/dashboard" : "/signup")
       return
     }
@@ -206,134 +236,7 @@ export function LandingPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
 
-      {/* ── Floating navbar ─────────────────────────────────────────── */}
-      <div className="sticky top-3 z-50 px-4">
-        <motion.header
-          initial={{ opacity: 0, y: -14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className="max-w-5xl mx-auto rounded-2xl border border-border bg-card/80 backdrop-blur-xl shadow-sm"
-        >
-          <div className="flex items-center justify-between px-4 md:px-6 py-3">
-            <button
-              onClick={() => scrollTo("hero")}
-              className="font-display text-2xl font-bold text-foreground select-none"
-            >
-              Yomi
-            </button>
-
-            <nav className="hidden md:flex items-center gap-7">
-              {NAV_LINKS.map(link => link.scrollTo ? (
-                <button
-                  key={link.label}
-                  onClick={() => scrollTo(link.scrollTo!)}
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {link.label}
-                </button>
-              ) : (
-                <Link
-                  key={link.label}
-                  href={link.href!}
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
-
-            <div className="flex items-center gap-1">
-              {session ? (
-                <>
-                  <Link
-                    href="/dashboard"
-                    className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-xl hover:bg-muted/50"
-                  >
-                    Dashboard
-                  </Link>
-                  <button
-                    onClick={() => authClient.signOut().then(() => router.push("/"))}
-                    className="bg-primary text-primary-foreground text-sm font-medium px-4 py-1.5 rounded-xl hover:bg-primary/90 transition-colors"
-                  >
-                    Sign out
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link
-                    href="/signin"
-                    className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-xl hover:bg-muted/50"
-                  >
-                    Sign in
-                  </Link>
-                  <Link
-                    href="/signup"
-                    className="bg-primary text-primary-foreground text-sm font-medium px-4 py-1.5 rounded-xl hover:bg-primary/90 transition-colors"
-                  >
-                    Get started
-                  </Link>
-                </>
-              )}
-              <button
-                className="md:hidden ml-1 text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted/50 transition-colors"
-                onClick={() => setMenuOpen(v => !v)}
-                aria-label="Toggle menu"
-              >
-                {menuOpen ? <X size={18} /> : <Menu size={18} />}
-              </button>
-            </div>
-          </div>
-
-          <AnimatePresence>
-            {menuOpen && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-                className="overflow-hidden border-t border-border"
-              >
-                <div className="px-4 py-3 flex flex-col gap-0.5">
-                  {NAV_LINKS.map(link => link.scrollTo ? (
-                    <button
-                      key={link.label}
-                      onClick={() => { scrollTo(link.scrollTo!); setMenuOpen(false) }}
-                      className="py-2.5 px-3 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors text-left"
-                    >
-                      {link.label}
-                    </button>
-                  ) : (
-                    <Link
-                      key={link.label}
-                      href={link.href!}
-                      onClick={() => setMenuOpen(false)}
-                      className="py-2.5 px-3 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                  <div className="flex gap-2 mt-2 pt-2 border-t border-border">
-                    <Link
-                      href="/signin"
-                      onClick={() => setMenuOpen(false)}
-                      className="flex-1 text-center py-2 rounded-xl text-sm text-muted-foreground border border-border hover:bg-muted/50 transition-colors"
-                    >
-                      Sign in
-                    </Link>
-                    <Link
-                      href="/signup"
-                      onClick={() => setMenuOpen(false)}
-                      className="flex-1 text-center py-2 rounded-xl text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                    >
-                      Sign up
-                    </Link>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.header>
-      </div>
+      <Nav />
 
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <section
@@ -361,59 +264,14 @@ export function LandingPage() {
               backgroundSize: "28px 28px",
             }}
           />
-          {/* top/bottom vignette */}
           <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-transparent to-background/80 pointer-events-none" />
-        </div>
-
-        {/* Floating geometric shapes */}
-        <div className="absolute inset-0 overflow-hidden">
-          <ElegantShape
-            delay={0.2}
-            width={520}
-            height={130}
-            rotate={12}
-            gradient="from-amber-400/[0.10]"
-            className="left-[-8%] md:left-[-4%] top-[18%] md:top-[22%]"
-          />
-          <ElegantShape
-            delay={0.45}
-            width={400}
-            height={100}
-            rotate={-16}
-            gradient="from-rose-400/[0.07]"
-            className="right-[-4%] md:right-[0%] top-[58%] md:top-[64%]"
-          />
-          <ElegantShape
-            delay={0.35}
-            width={260}
-            height={68}
-            rotate={-10}
-            gradient="from-orange-300/[0.09]"
-            className="left-[6%] md:left-[10%] bottom-[6%] md:bottom-[12%]"
-          />
-          <ElegantShape
-            delay={0.6}
-            width={180}
-            height={50}
-            rotate={22}
-            gradient="from-amber-200/[0.07]"
-            className="right-[16%] md:right-[22%] top-[8%] md:top-[14%]"
-          />
-          <ElegantShape
-            delay={0.7}
-            width={130}
-            height={36}
-            rotate={-26}
-            gradient="from-yellow-300/[0.06]"
-            className="left-[20%] md:left-[26%] top-[3%] md:top-[7%]"
-          />
         </div>
 
         <div className="relative z-10 max-w-3xl mx-auto px-6 text-center">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1, ease: [0.25, 0.4, 0.25, 1] }}
+            transition={{ duration: 0.6, delay: 0.1 }}
             className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-1.5 text-xs text-muted-foreground mb-8 backdrop-blur-sm"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
@@ -423,7 +281,7 @@ export function LandingPage() {
           <motion.h1
             initial={{ opacity: 0, y: 28 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.9, delay: 0.2, ease: [0.25, 0.4, 0.25, 1] }}
+            transition={{ duration: 0.9, delay: 0.2 }}
             className="text-5xl sm:text-6xl md:text-7xl font-light mb-6"
             style={{ letterSpacing: "-0.04em", lineHeight: 1.08 }}
           >
@@ -439,7 +297,7 @@ export function LandingPage() {
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.35, ease: [0.25, 0.4, 0.25, 1] }}
+            transition={{ duration: 0.8, delay: 0.35 }}
             className="text-base sm:text-lg text-muted-foreground mb-10 max-w-xl mx-auto leading-relaxed"
           >
             Press{" "}
@@ -450,22 +308,9 @@ export function LandingPage() {
           </motion.p>
 
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1, delay: 0.4 }}
-            className="-mb-2"
-          >
-            <HandWrittenTitle
-              title="free to start"
-              subtitle="no credit card needed"
-              className="max-w-xs mx-auto"
-            />
-          </motion.div>
-
-          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.45, ease: [0.25, 0.4, 0.25, 1] }}
+            transition={{ duration: 0.8, delay: 0.45 }}
             className="flex flex-wrap items-center justify-center gap-3"
           >
             <Link
@@ -507,8 +352,8 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ── Features ─────────────────────────────────────────────────── */}
-      <section id="features" className="py-24 max-w-5xl mx-auto px-6">
+      {/* ── How it works: Interaction Types ──────────────────────────── */}
+      <section className="py-24 max-w-5xl mx-auto px-6" id="how-it-works">
         <div className="text-center mb-14">
           <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
             How it works
@@ -517,7 +362,46 @@ export function LandingPage() {
             className="text-3xl sm:text-4xl font-light text-foreground"
             style={{ letterSpacing: "-0.03em" }}
           >
-            Built to disappear.
+            Three ways to interact.
+          </h2>
+          <p className="text-muted-foreground mt-3 text-sm max-w-md mx-auto">
+            Voice, type, or just press enter — every interaction counts the same.
+          </p>
+        </div>
+
+        <div className="grid sm:grid-cols-3 gap-4">
+          <InteractionCard
+            type="A"
+            hotkey={[{ sym: "⇧", label: "Shift" }, { sym: "␣", label: "Space" }]}
+            label="Voice + Screen"
+            description="Speak your question. Yomi hears you, sees your screen, and responds with text and voice."
+          />
+          <InteractionCard
+            type="B"
+            hotkey={[{ sym: "^", label: "Ctrl" }, { sym: "⇧", label: "Shift" }, { sym: "↵", label: "Enter" }]}
+            label="Type + Screen"
+            description="Type a question. Yomi captures your screen and returns a text response."
+          />
+          <InteractionCard
+            type="C"
+            hotkey={[{ sym: "^", label: "Ctrl" }, { sym: "⇧", label: "Shift" }, { sym: "↵", label: "Enter" }]}
+            label="Just Screen"
+            description="Press Ctrl+Shift+Enter, then press Enter again with an empty input. Yomi studies your screen and tells you what's on it."
+          />
+        </div>
+      </section>
+
+      {/* ── Features ─────────────────────────────────────────────────── */}
+      <section id="features" className="py-24 max-w-5xl mx-auto px-6">
+        <div className="text-center mb-14">
+          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
+            Built to disappear
+          </p>
+          <h2
+            className="text-3xl sm:text-4xl font-light text-foreground"
+            style={{ letterSpacing: "-0.03em" }}
+          >
+            Everything you need, nothing you don't.
           </h2>
         </div>
 
@@ -554,69 +438,248 @@ export function LandingPage() {
             Simple, honest pricing.
           </h2>
           <p className="text-muted-foreground mt-3 text-sm">
-            All plans include a 14-day free trial.
+            Start free. Upgrade when you outgrow it.
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {PLANS.map((plan, i) => (
-            <motion.div
-              key={plan.name}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-              className={`relative rounded-2xl border p-6 flex flex-col ${
-                plan.popular
-                  ? "border-primary bg-card shadow-[0_0_40px_-12px_hsl(var(--primary)/0.4)]"
-                  : "border-border bg-card"
-              }`}
-            >
-              {plan.popular && (
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                  <span className="bg-primary text-primary-foreground text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap">
-                    Most Popular
-                  </span>
-                </div>
-              )}
-
-              <div className="mb-5">
-                <p className="text-sm font-medium text-muted-foreground mb-1">{plan.name}</p>
-                <div className="flex items-baseline gap-1 mb-2">
-                  <span
-                    className="text-4xl font-light text-foreground"
-                    style={{ letterSpacing: "-0.03em" }}
-                  >
-                    {plan.price}
-                  </span>
-                  <span className="text-sm text-muted-foreground">{plan.period}</span>
-                </div>
-                <p className="text-sm text-muted-foreground">{plan.description}</p>
-              </div>
-
-              <ul className="space-y-3 mb-8 flex-1">
-                {plan.features.map(f => (
-                  <li key={f} className="flex items-start gap-2.5 text-sm text-muted-foreground">
-                    <Check size={14} className="text-primary mt-0.5 shrink-0" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-
-              <button
-                onClick={() => handlePlanClick(plan.key)}
-                disabled={billingLoading !== null}
-                className={`w-full flex items-center justify-center gap-2 rounded-xl font-medium py-2.5 text-sm transition-colors disabled:opacity-70 ${
+        <div className="grid sm:grid-cols-3 gap-5 max-w-4xl mx-auto">
+          {PLANS.map((plan, i) => {
+            const Icon = plan.icon
+            return (
+              <motion.div
+                key={plan.name}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                className={`relative rounded-2xl border p-6 flex flex-col ${
                   plan.popular
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                    : "border border-border text-foreground hover:bg-muted/50"
+                    ? "border-primary bg-card shadow-[0_0_40px_-12px_hsl(var(--primary)/0.4)]"
+                    : "border-border bg-card"
                 }`}
               >
-                {billingLoading === plan.key && <Loader2 size={14} className="animate-spin" />}
-                {billingLoading === plan.key ? "Redirecting…" : plan.cta}
+                {plan.popular && (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                    <span className="bg-primary text-primary-foreground text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap">
+                      {plan.badge}
+                    </span>
+                  </div>
+                )}
+
+                <div className="mb-5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Icon size={18} className="text-primary" />
+                    <p className="text-sm font-medium text-foreground">{plan.name}</p>
+                    {!plan.popular && plan.badge && (
+                      <span className="text-[10px] text-muted-foreground border border-border px-1.5 py-0.5 rounded-full">
+                        {plan.badge}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-baseline gap-1 mb-2">
+                    <span
+                      className="text-4xl font-light text-foreground"
+                      style={{ letterSpacing: "-0.03em" }}
+                    >
+                      {plan.price}
+                    </span>
+                    <span className="text-sm text-muted-foreground">{plan.period}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{plan.description}</p>
+                </div>
+
+                <ul className="space-y-2.5 mb-8 flex-1">
+                  {plan.features.map(f => (
+                    <li key={f} className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                      <Check size={14} className="text-primary mt-0.5 shrink-0" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  onClick={() => handlePlanClick(plan.key)}
+                  disabled={billingLoading !== null}
+                  className={`w-full flex items-center justify-center gap-2 rounded-xl font-medium py-2.5 text-sm transition-colors disabled:opacity-70 ${
+                    plan.popular
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                      : "border border-border text-foreground hover:bg-muted/50"
+                  }`}
+                >
+                  {billingLoading === plan.key && <Loader2 size={14} className="animate-spin" />}
+                  {billingLoading === plan.key ? "Redirecting…" : plan.cta}
+                </button>
+              </motion.div>
+            )
+          })}
+        </div>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          className="text-center text-xs text-muted-foreground mt-8"
+        >
+          * Fair usage protection applies. All plans include a 30-day free trial on Explore.
+        </motion.p>
+      </section>
+
+      {/* ── Download ─────────────────────────────────────────────────── */}
+      <section id="download" className="py-24 max-w-5xl mx-auto px-6">
+        <div className="text-center mb-14">
+          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
+            Download
+          </p>
+          <h2
+            className="text-3xl sm:text-4xl font-light text-foreground"
+            style={{ letterSpacing: "-0.03em" }}
+          >
+            Get Yomi.
+          </h2>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.15 }}
+            className="text-muted-foreground mt-3 text-sm"
+          >
+            {detected !== "unknown"
+              ? `We detected ${platforms[detected as Exclude<Platform, "unknown">]?.title}. Ready to download.`
+              : "Choose your platform below."}
+          </motion.p>
+        </div>
+
+        <div className="max-w-2xl mx-auto space-y-10">
+          {/* Platform tabs */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+            className="flex gap-1 p-1 rounded-xl bg-muted border border-border w-fit mx-auto"
+          >
+            {allPlatforms.map((p) => (
+              <button
+                key={p}
+                onClick={() => setActive(p)}
+                className={`relative px-5 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                  active === p
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {active === p && (
+                  <motion.span
+                    layoutId="tab-pill"
+                    className="absolute inset-0 rounded-lg bg-card border border-border shadow-sm"
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
+                <span className="relative z-10">
+                  {platforms[p].icon} {platforms[p].title}
+                  {detected === p && (
+                    <span className="ml-2 text-[10px] text-primary font-mono">(detected)</span>
+                  )}
+                </span>
               </button>
+            ))}
+          </motion.div>
+
+          {/* Download options */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={active}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25 }}
+              className="space-y-3"
+            >
+              <h2
+                className="text-xl font-light text-foreground"
+                style={{ letterSpacing: "-0.03em" }}
+              >
+                {current.title} downloads
+              </h2>
+              <div className="grid sm:grid-cols-2 gap-3">
+                {current.options.map((opt) => (
+                  <a
+                    key={opt.label}
+                    href={opt.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-4 rounded-xl bg-card border border-border hover:border-primary/40 transition-colors group"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <Download size={14} className="text-muted-foreground group-hover:text-primary transition-colors" />
+                        <p className="font-medium text-sm text-foreground">{opt.label}</p>
+                      </div>
+                      {opt.note && (
+                        <p className="text-xs text-muted-foreground pl-5">{opt.note}</p>
+                      )}
+                    </div>
+                    <span className="font-mono text-xs text-muted-foreground group-hover:text-primary transition-colors border border-border group-hover:border-primary/40 px-2 py-1 rounded-lg">
+                      {opt.arch}
+                    </span>
+                  </a>
+                ))}
+              </div>
+
+              {/* Instructions */}
+              <div className="pt-4 space-y-3">
+                <h2
+                  className="text-xl font-light text-foreground"
+                  style={{ letterSpacing: "-0.03em" }}
+                >
+                  Install instructions
+                </h2>
+                <ol className="space-y-3">
+                  {current.instructions.map((step, i) => (
+                    <motion.li
+                      key={step}
+                      initial={{ opacity: 0, x: -8 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.3, delay: i * 0.06 }}
+                      className="flex items-start gap-3"
+                    >
+                      <span className="text-xs font-mono text-primary bg-primary/10 w-6 h-6 flex items-center justify-center rounded-lg flex-shrink-0 mt-0.5">
+                        {i + 1}
+                      </span>
+                      <span className="text-sm text-muted-foreground leading-relaxed">{step}</span>
+                    </motion.li>
+                  ))}
+                </ol>
+              </div>
             </motion.div>
-          ))}
+          </AnimatePresence>
+
+          {/* GitHub note */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="rounded-xl border border-border bg-card p-4 flex items-start gap-3"
+          >
+            <span className="text-muted-foreground text-base leading-none mt-0.5 shrink-0">ℹ</span>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Downloads come directly from{" "}
+              <a
+                href="https://github.com/arka6fx/yomi/releases"
+                className="text-primary hover:underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                GitHub Releases
+              </a>
+              . Yomi is pre-release —{" "}
+              <Link href="/signup" className="text-primary hover:underline">
+                sign up for early access
+                <ArrowRight size={12} className="inline ml-0.5" />
+              </Link>
+            </p>
+          </motion.div>
         </div>
       </section>
 

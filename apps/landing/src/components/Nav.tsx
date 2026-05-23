@@ -2,19 +2,25 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter, usePathname } from "next/navigation"
 import { Menu, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import { authClient } from "@/lib/auth-client"
 
 const NAV_LINKS = [
-  { label: "Features", href: "/features" },
-  { label: "Pricing",  href: "/pricing"  },
-  { label: "Download", href: "/download" },
-  { label: "Privacy",  href: "/privacy" },
-  { label: "Terms",    href: "/terms" },
+  { label: "Features", href: "/#features" },
+  { label: "Pricing",  href: "/#pricing"  },
+  { label: "Download", href: "/#download" },
+  { label: "Privacy",  href: "/privacy"   },
+  { label: "Terms",    href: "/terms"     },
 ]
 
 export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const { data: session } = authClient.useSession()
+  const router = useRouter()
+  const pathname = usePathname()
+  const isHome = pathname === "/"
 
   return (
     <div className="sticky top-3 z-50 px-4">
@@ -42,18 +48,37 @@ export default function Nav() {
           </nav>
 
           <div className="flex items-center gap-1">
-            <Link
-              href="/signin"
-              className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-xl hover:bg-muted/50"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/signup"
-              className="bg-primary text-primary-foreground text-sm font-medium px-4 py-1.5 rounded-xl hover:bg-primary/90 transition-colors"
-            >
-              Get started
-            </Link>
+            {session ? (
+              <>
+                <Link
+                  href="/dashboard"
+                  className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-xl hover:bg-muted/50"
+                >
+                  Dashboard
+                </Link>
+                <button
+                  onClick={() => authClient.signOut().then(() => router.push("/"))}
+                  className="bg-primary text-primary-foreground text-sm font-medium px-4 py-1.5 rounded-xl hover:bg-primary/90 transition-colors"
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/signin"
+                  className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-xl hover:bg-muted/50"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/signup"
+                  className="bg-primary text-primary-foreground text-sm font-medium px-4 py-1.5 rounded-xl hover:bg-primary/90 transition-colors"
+                >
+                  Get started
+                </Link>
+              </>
+            )}
             <button
               className="md:hidden ml-1 text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted/50 transition-colors"
               onClick={() => setMenuOpen(v => !v)}
@@ -85,20 +110,40 @@ export default function Nav() {
                   </Link>
                 ))}
                 <div className="flex gap-2 mt-2 pt-2 border-t border-border">
-                  <Link
-                    href="/signin"
-                    onClick={() => setMenuOpen(false)}
-                    className="flex-1 text-center py-2 rounded-xl text-sm text-muted-foreground border border-border hover:bg-muted/50 transition-colors"
-                  >
-                    Sign in
-                  </Link>
-                  <Link
-                    href="/signup"
-                    onClick={() => setMenuOpen(false)}
-                    className="flex-1 text-center py-2 rounded-xl text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                  >
-                    Sign up
-                  </Link>
+                  {session ? (
+                    <>
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex-1 text-center py-2 rounded-xl text-sm text-muted-foreground border border-border hover:bg-muted/50 transition-colors"
+                      >
+                        Dashboard
+                      </Link>
+                      <button
+                        onClick={() => { setMenuOpen(false); authClient.signOut().then(() => router.push("/")) }}
+                        className="flex-1 text-center py-2 rounded-xl text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                      >
+                        Sign out
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        href="/signin"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex-1 text-center py-2 rounded-xl text-sm text-muted-foreground border border-border hover:bg-muted/50 transition-colors"
+                      >
+                        Sign in
+                      </Link>
+                      <Link
+                        href="/signup"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex-1 text-center py-2 rounded-xl text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                      >
+                        Sign up
+                      </Link>
+                    </>
+                  )}
                 </div>
               </div>
             </motion.div>

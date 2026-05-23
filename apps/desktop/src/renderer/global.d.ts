@@ -1,5 +1,6 @@
 import type { SseEvent } from "@yomi/shared"
 import type { HotkeyState } from "./store"
+import type { SubscriptionInfo } from "../preload/index"
 
 type AuthStatus = "ok" | "needed" | "waiting" | "error"
 
@@ -22,6 +23,9 @@ declare global {
       nudge(dx: number, dy: number): void
       // Queries
       submitTextQuery(text: string): void
+      // Subscription
+      getSubscriptionInfo(): Promise<SubscriptionInfo>
+      onSubscriptionUpdate(cb: (info: SubscriptionInfo) => void): () => void
     }
   }
 }

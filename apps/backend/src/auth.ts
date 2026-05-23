@@ -13,17 +13,19 @@ const TRIAL_DAYS = 30
 async function getUserFields(userId: string) {
   const [row] = await db
     .select({
-      role:               authSchema.user.role,
-      plan:               authSchema.user.plan,
-      subscriptionStatus: authSchema.user.subscriptionStatus,
-      trialEndDate:       authSchema.user.trialEndDate,
-      currentPeriodEnd:   authSchema.user.currentPeriodEnd,
-      razorpayCustomerId: authSchema.user.razorpayCustomerId,
-      dailyChatCount:     authSchema.user.dailyChatCount,
-      dailyVoiceCount:    authSchema.user.dailyVoiceCount,
-      dailyImageCount:    authSchema.user.dailyImageCount,
-      agentUsageCount:    authSchema.user.agentUsageCount,
-      dailyResetDate:     authSchema.user.dailyResetDate,
+      role:                 authSchema.user.role,
+      plan:                 authSchema.user.plan,
+      subscriptionStatus:   authSchema.user.subscriptionStatus,
+      trialEndDate:         authSchema.user.trialEndDate,
+      currentPeriodEnd:     authSchema.user.currentPeriodEnd,
+      razorpayCustomerId:   authSchema.user.razorpayCustomerId,
+      trialInteractionUsed: authSchema.user.trialInteractionUsed,
+      trialInteractionLimit: authSchema.user.trialInteractionLimit,
+      dailyChatCount:       authSchema.user.dailyChatCount,
+      dailyVoiceCount:      authSchema.user.dailyVoiceCount,
+      dailyImageCount:      authSchema.user.dailyImageCount,
+      agentUsageCount:      authSchema.user.agentUsageCount,
+      dailyResetDate:       authSchema.user.dailyResetDate,
     })
     .from(authSchema.user)
     .where(eq(authSchema.user.id, userId))
@@ -72,6 +74,8 @@ export const auth = betterAuth({
           trialEndDate:       fields?.trialEndDate       ?? null,
           currentPeriodEnd:   fields?.currentPeriodEnd   ?? null,
           razorpayCustomerId: fields?.razorpayCustomerId ?? null,
+          trialInteractionUsed: fields?.trialInteractionUsed ?? 0,
+          trialInteractionLimit: fields?.trialInteractionLimit ?? 150,
           dailyChatCount:     fields?.dailyChatCount      ?? 0,
           dailyVoiceCount:    fields?.dailyVoiceCount     ?? 0,
           dailyImageCount:    fields?.dailyImageCount     ?? 0,
@@ -94,17 +98,19 @@ export const auth = betterAuth({
 })
 
 export type SessionUser = typeof auth.$Infer.Session.user & {
-  role:               string
-  plan:               string
-  subscriptionStatus: string
-  trialEndDate:       Date | null
-  currentPeriodEnd:   Date | null
-  razorpayCustomerId: string | null
-  dailyChatCount:     number
-  dailyVoiceCount:    number
-  dailyImageCount:    number
-  agentUsageCount:    number
-  dailyResetDate:     string | null
+  role:                 string
+  plan:                 string
+  subscriptionStatus:   string
+  trialEndDate:         Date | null
+  currentPeriodEnd:     Date | null
+  razorpayCustomerId:   string | null
+  trialInteractionUsed: number
+  trialInteractionLimit: number
+  dailyChatCount:       number
+  dailyVoiceCount:      number
+  dailyImageCount:      number
+  agentUsageCount:      number
+  dailyResetDate:       string | null
 }
 
 // Hono middleware — validates Better Auth session (cookie or Bearer token)

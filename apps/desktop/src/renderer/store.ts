@@ -12,6 +12,20 @@ export interface ChatEntry {
   isStreaming: boolean
 }
 
+export interface SubscriptionInfo {
+  role: string
+  plan: string
+  status: string
+  trialEndDate: string | null
+  currentPeriodEnd: string | null
+  trialInteractionUsed: number
+  trialInteractionLimit: number
+  dailyChatUsed: number
+  dailyVoiceUsed: number
+  dailyImageUsed: number
+  tokensUsedThisPeriod: number
+}
+
 interface YomiState {
   authState: AuthState
   authError: string
@@ -22,11 +36,15 @@ interface YomiState {
   guideSteps: GuideStep[]
   guideCurrentStep: number
   guideTotalSteps: number
+  subscription: SubscriptionInfo | null
+  subscriptionLoading: boolean
 
   setAuthState: (s: AuthState, error?: string) => void
   setHotkeyState: (state: HotkeyState) => void
   handleSseEvent: (event: SseEvent) => void
   dismissEntry: (id: number) => void
+  setSubscription: (info: SubscriptionInfo | null) => void
+  setSubscriptionLoading: (loading: boolean) => void
 }
 
 let nextId = 1
@@ -41,6 +59,8 @@ export const useYomiStore = create<YomiState>((set) => ({
   guideSteps: [],
   guideCurrentStep: 0,
   guideTotalSteps: 0,
+  subscription: null,
+  subscriptionLoading: false,
 
   setAuthState: (authState, error = "") => set({ authState, authError: error }),
   setHotkeyState: (hotkeyState) => set({ hotkeyState }),
@@ -53,7 +73,7 @@ export const useYomiStore = create<YomiState>((set) => ({
           return {
             entries: [...s.entries, { id, transcript: event.text, text: "", error: null, isStreaming: true }],
             activeId: id,
-            audioQueue: [],  // Reset audio queue for new query
+            audioQueue: [],
           }
         })
         break
@@ -94,7 +114,6 @@ export const useYomiStore = create<YomiState>((set) => ({
               activeId: null,
             }
           }
-          // Error before transcript (e.g. STT failure) — create a standalone error card
           const id = nextId++
           return {
             hotkeyState: "idle",
@@ -108,6 +127,9 @@ export const useYomiStore = create<YomiState>((set) => ({
 
   dismissEntry: (id) =>
     set((s) => ({ entries: s.entries.filter((e) => e.id !== id) })),
+
+  setSubscription: (subscription) => set({ subscription }),
+  setSubscriptionLoading: (subscriptionLoading) => set({ subscriptionLoading }),
 }))
 
 export const dismissGuide = () =>
