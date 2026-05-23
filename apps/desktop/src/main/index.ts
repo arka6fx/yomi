@@ -2,7 +2,7 @@ import { app, BrowserWindow, desktopCapturer, globalShortcut, ipcMain, screen, s
 import path from "node:path"
 import { SidecarManager } from "./sidecar"
 import { checkStoredToken, startDeviceCodeFlow, clearToken, loadToken, BACKEND_URL } from "./auth"
-import { initHotkey, enableHotkeys, disableHotkeys, triggerEscape } from "./hotkey"
+import { initHotkey, enableHotkeys, disableHotkeys, suspendHotkeys, resumeHotkeys, triggerEscape } from "./hotkey"
 import { initSidecarIpc } from "./ipc"
 
 // Transparent frameless windows need software compositing on some GPU/driver combos
@@ -199,8 +199,13 @@ app.whenReady().then(async () => {
   globalShortcut.register("Ctrl+Shift+H", () => {
     if (!overlayWin) return
     visible = !visible
-    if (visible) overlayWin.show()
-    else overlayWin.hide()
+    if (visible) {
+      overlayWin.show()
+      resumeHotkeys()
+    } else {
+      overlayWin.hide()
+      suspendHotkeys()
+    }
   })
 
   globalShortcut.register("Ctrl+Shift+Q", () => app.quit())
