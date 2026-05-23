@@ -73,7 +73,7 @@ const FEATURES = [
   {
     icon: Monitor,
     title: "Sees your screen",
-    description: "Yomi captures context from whatever you're looking at. No copy-pasting, no describing — it just knows.",
+    description: "Yomi captures context from whatever you're looking at. No copy-pasting, no describing. It just knows.",
   },
   {
     icon: Mic,
@@ -94,7 +94,7 @@ const PLANS = [
     price: "$0",
     period: "/ month",
     badge: "30-day trial",
-    description: "Try everything Yomi has to offer — no card needed.",
+    description: "Try everything Yomi has to offer. No card needed.",
     features: [
       "Voice & text interaction",
       "Screenshot analysis",
@@ -282,7 +282,7 @@ export function LandingPage() {
             initial={{ opacity: 0, y: 28 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.9, delay: 0.2 }}
-            className="text-5xl sm:text-6xl md:text-7xl font-light mb-6"
+            className="text-5xl sm:text-6xl md:text-7xl font-bold mb-6 font-display"
             style={{ letterSpacing: "-0.04em", lineHeight: 1.08 }}
           >
             <span className="bg-clip-text text-transparent bg-gradient-to-b from-foreground to-foreground/75">
@@ -302,7 +302,7 @@ export function LandingPage() {
           >
             Press{" "}
             <Keys keys={[{ sym: "^", label: "Ctrl" }, { sym: "⇧", label: "Shift" }, { sym: "␣", label: "Space" }]} />
-            {" "}on Mac or Windows. Yomi sees your screen, hears your voice, and acts — so you touch your laptop less.
+            {" "}on Mac or Windows. Yomi sees your screen, hears your voice, and acts so you touch your laptop less.
           </motion.p>
 
           <motion.div
@@ -363,7 +363,7 @@ export function LandingPage() {
             Three ways to interact.
           </h2>
           <p className="text-muted-foreground mt-3 text-sm max-w-md mx-auto">
-            Voice, type, or just press enter — every interaction counts the same.
+            Voice, type, or just press enter. Every interaction counts the same.
           </p>
         </div>
 
@@ -671,7 +671,7 @@ export function LandingPage() {
               >
                 GitHub Releases
               </a>
-              . Yomi is pre-release —{" "}
+              . Yomi is pre-release.{" "}
               <Link href="/signup" className="text-primary hover:underline">
                 sign up for early access
                 <ArrowRight size={12} className="inline ml-0.5" />
