@@ -1,25 +1,50 @@
 ---
-description: Look up a spec by subsystem name (e.g. /spec sidecar)
+description: Look up or list specs — /spec sidecar or /spec (list all)
 ---
-Look up the spec for the subsystem named "$ARGUMENTS".
 
-Map the name to the correct spec file (ordered by implementation):
-- overview / principles → specs/00-overview.md
-- architecture / arch / ipc / layers → specs/01-architecture.md
-- fast-pipeline / pipeline / fast → specs/02-sidecar-fast-pipeline.md
-- desktop-shell / shell / electron / main / preload / capture → specs/03-desktop-shell.md
-- desktop-ui / ui / overlay / guide / buddy / floating-window → specs/04-desktop-ui.md
-- stt / speech-to-text / whisper / transcribe → specs/05-speech-stt.md
-- tts / text-to-speech / resolver / openai-tts → specs/06-speech-tts.md
-- router / intent / classify → specs/07-sidecar-router.md
-- agent / react / tools / subagent / sandbox → specs/08-sidecar-agent.md
-- harness / prompt / hooks / guards → specs/09-harness.md
-- memory / notepad / compaction / retrieval → specs/10-memory.md
-- database / db / schema / drizzle → specs/11-database.md
-- backend / hono / auth / proxy / metering → specs/12-backend.md
-- pricing / billing / razorpay / plans → specs/13-pricing.md
+Look up a spec file. `$ARGUMENTS` is a keyword (subsystem name or partial file name). If empty, list all specs.
 
-Read the matched file and summarise:
-1. Purpose (1 sentence)
-2. Key invariants (bullet list)
-3. The section most relevant to the current task
+## If `$ARGUMENTS` is empty — list all
+
+```bash
+ls specs/
+```
+
+Print each spec file with its first `## Purpose` paragraph (one line). Let the user pick.
+
+## If `$ARGUMENTS` is provided — find and read
+
+1. Glob `specs/**` for files whose name contains `$ARGUMENTS` (case-insensitive).
+2. If multiple match, list them and ask the user to pick.
+3. If exactly one matches, read it in full.
+4. If none match, try common aliases:
+
+| Alias | File pattern |
+|---|---|
+| overview, intro | `00-overview*` |
+| arch, ipc, layers | `01-architecture*` |
+| sidecar, router, pipeline, agent | `02-sidecar*` |
+| harness, hooks, prompt | `03-harness*` |
+| memory, notepad, compaction | `04-memory*` |
+| desktop, electron, tray | `05-desktop*` |
+| backend, hono, auth, proxy | `06-backend*` |
+| db, database, drizzle, schema | `07-database*` |
+| speech, stt, tts, whisper | `08-speech*` |
+| pricing, billing, plans | `09-pricing*` |
+
+If still no match: "No spec found for '$ARGUMENTS'. Run `/create-spec $ARGUMENTS` to create one."
+
+## Output
+
+```
+Spec: <filename>
+
+Purpose
+<one paragraph>
+
+Key invariants
+<bullet list>
+
+Design summary
+<most relevant section — ~40 lines max>
+```

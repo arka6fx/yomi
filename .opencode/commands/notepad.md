@@ -1,13 +1,49 @@
 ---
-description: Load Yomi's notepad context (~/.yomi/) before a long task
+description: Load ~/.yomi/ notepad context before a long session
 ---
-Load Yomi's notepad context before starting a long task.
 
-Steps:
-1. Check if `~/.yomi/yomi.md` exists. If yes, read it (user identity, prefs, standing instructions).
-2. Check if `~/.yomi/memory.md` exists. If yes, read it (long-term memory summary).
-3. Check if `~/.yomi/memory-index.md` exists. List the entries.
-4. Find today's session log: `~/.yomi/sessions/$(date +%Y-%m-%d)-*.md`. Read if exists.
-5. Summarise what you learned: user context, relevant past decisions, open threads.
+Load the Yomi notepad before starting a complex task.
 
-If `~/.yomi/` doesn't exist yet (first run), say so and suggest running the Phase 1 setup to initialise the notepad.
+## 1 — User identity and prefs
+
+```bash
+cat ~/.yomi/yomi.md 2>/dev/null
+```
+
+If missing: "~/.yomi/yomi.md not found — create it to store your identity, preferences, and standing instructions."
+
+## 2 — Long-term memory
+
+```bash
+cat ~/.yomi/memory.md 2>/dev/null
+```
+
+If missing, skip silently.
+
+## 3 — Memory index
+
+```bash
+cat ~/.yomi/memory-index.md 2>/dev/null
+```
+
+Print the index entries so you know what detailed memories are available on demand.
+
+## 4 — Today's session log
+
+```bash
+ls ~/.yomi/sessions/ 2>/dev/null | grep "$(date +%Y-%m-%d)" | tail -1
+```
+
+If a session log exists for today, read it.
+
+## 5 — Summary
+
+```
+Notepad loaded
+
+User context:   <one line from yomi.md>
+Memory entries: <N from memory-index.md>
+Open threads:   <any unresolved items from today's session log>
+```
+
+If `~/.yomi/` doesn't exist: "Notepad not initialised. Create `~/.yomi/yomi.md` with your identity and standing instructions."

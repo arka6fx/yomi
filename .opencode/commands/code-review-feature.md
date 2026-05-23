@@ -1,67 +1,56 @@
 ---
-description: Run parallel security + quality code review on changed code
----
-Run the full code review pipeline for the feature specified in $ARGUMENTS.
-
-If no argument is provided, stop and say:
-"Please provide a spec name. Usage: /code-review-feature <name> e.g. /code-review-feature sidecar-fast-pipeline"
-
-## Pre-flight Check
-
-Collect the diff:
-- Run `git diff` for unstaged changes
-- Run `git diff --staged` for staged changes
-- Combine both into a single diff
-
-If both are empty, stop and say: "No changes detected. Implement the feature before running code review."
-
-If the spec file at `specs/$ARGUMENTS.md` does not exist, stop and say: "Spec file not found at specs/$ARGUMENTS.md."
-
+description: Review the current diff for security, quality, and arch invariants
 ---
 
-## Step 1: Parallel Review
+Review all staged and unstaged changes. `$ARGUMENTS` is an optional focus area (e.g. `auth`, `billing`, `sidecar`).
 
-Invoke **yomi-security-reviewer** and **yomi-quality-reviewer** simultaneously with:
-- The combined diff
-- The spec file at `specs/$ARGUMENTS.md`
-- Source files: relevant files in `apps/` and `packages/` touched by the diff
+## 1 — Collect diff
 
-Both must run in parallel. Do not wait for one before starting the other.
-
----
-
-## Step 2: Unified Report
-
-Combine findings into a single report:
-
-```
-Code Review Report — $ARGUMENTS
-
-## Security Findings
-[from yomi-security-reviewer]
-
-## Quality Findings  
-[from yomi-quality-reviewer]
-
-## Combined Action Plan
-Ordered checklist by severity (security critical first, quality improvements last)
-
-## Verdict
-APPROVED | APPROVED WITH SUGGESTIONS | CHANGES REQUESTED
+```bash
+git diff --staged
+git diff
 ```
 
----
+If both are empty, stop: "No changes to review. Stage or make changes first."
 
-## Step 3: Ask for Approval
+## 2 — Architecture invariants (blockers)
 
-After presenting the report, ask: "Do you want me to implement the action plan now?"
+Check the diff against `CLAUDE.md` hard invariants:
 
-Wait for explicit user confirmation before making any changes. Do not edit files until approved.
+1. **Key isolation** — LLM API keys must not appear in `apps/desktop/` or `apps/sidecar/`
+2. **Fast-path purity** — the fast path must not add a tool-selection loop or extra LLM calls
+3. **Brain placement** — router and ReAct loop belong in `apps/sidecar/`, not `apps/desktop/`
+4. **Intent router** — must fire at turn START and never mid-conversation
+5. **Privacy** — no silent capture; no password-manager content leaving the device
 
----
+Report each as **PASS / FAIL / N/A**.
 
-## Rules
-- Do NOT edit files before user approval
-- Do NOT start one reviewer before the other — both in parallel
-- Do NOT skip the pre-flight diff check
-- If either subagent fails, report it — do not present a partial review as complete
+## 3 — Security scan
+
+Invoke **yomi-security-reviewer** with the diff and relevant source files.
+
+## 4 — Quality check
+
+Invoke **yomi-quality-reviewer** with the diff and relevant source files.
+
+Both reviewers run in parallel.
+
+## 5 — Unified report
+
+```
+Code Review — <focus or "full diff">
+
+Architecture: PASS | FAIL (list blockers)
+
+Security findings:
+  [CRITICAL] <description> — <file>:<line>
+  [WARN]     <description> — <file>:<line>
+
+Quality findings:
+  [WARN] <description> — <file>:<line>
+
+Verdict: APPROVED | APPROVED WITH SUGGESTIONS | CHANGES REQUESTED
+```
+
+Ask: "Should I implement the suggested fixes?"
+Wait for explicit yes before editing anything.
