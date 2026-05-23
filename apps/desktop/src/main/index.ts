@@ -1,6 +1,7 @@
 import { app, BrowserWindow, globalShortcut } from "electron"
 import path from "node:path"
 import { SidecarManager } from "./sidecar"
+import { ensureAuthenticated } from "./auth"
 import { initHotkey } from "./hotkey"
 import { initIpc } from "./ipc"
 
@@ -11,9 +12,19 @@ if (process.platform === "win32") {
 }
 
 let overlayWin: BrowserWindow | null = null
-const sidecar = new SidecarManager()
 
 app.whenReady().then(async () => {
+  // Auth gate — must succeed before any UI is shown
+  let sessionToken: string
+  try {
+    sessionToken = await ensureAuthenticated()
+  } catch (err) {
+    console.error("[yomi] auth failed:", err)
+    app.quit()
+    return
+  }
+
+  const sidecar = new SidecarManager(sessionToken)
   if (process.platform === "darwin") {
     const { setupMac } = await import("./platform/mac")
     setupMac()

@@ -23,12 +23,17 @@ export class SidecarManager {
   readonly baseUrl = "http://127.0.0.1:3002"
   private proc: ChildProcess | null = null
   private failCount = 0
+  private sessionToken: string
+
+  constructor(sessionToken: string) {
+    this.sessionToken = sessionToken
+  }
 
   async start(): Promise<void> {
     if (process.env.YOMI_DEV !== "true") {
       const bin = sidecarBinPath()
       this.proc = spawn(bin, [], {
-        env: { ...process.env, SIDECAR_SECRET: this.secret },
+        env: { ...process.env, SIDECAR_SECRET: this.secret, YOMI_SESSION_TOKEN: this.sessionToken },
         stdio: "inherit",
       })
       this.proc.on("error", (err) => console.error("[sidecar] spawn error", err))
