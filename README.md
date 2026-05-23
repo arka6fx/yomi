@@ -2,7 +2,7 @@
 
 AI buddy that lives on your desktop. Sees your screen, hears your voice, and acts so you touch your laptop less.
 
-**Mac** (menu bar / notch) · **Windows** (system tray) · **Linux** (Waybar)
+**Mac** (menu bar / notch) · **Windows** (system tray)
 
 ---
 

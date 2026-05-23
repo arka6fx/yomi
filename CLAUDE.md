@@ -1,6 +1,6 @@
 # Yomi — CLAUDE.md
 
-Cross-platform AI buddy. Sees your screen, hears your voice, acts so you touch your laptop less. Mac (menu bar / notch), Windows (system tray), Linux/Omarchy (Waybar).
+Cross-platform AI buddy. Sees your screen, hears your voice, acts so you touch your laptop less. Mac (menu bar / notch), Windows (system tray).
 
 ---
 
@@ -66,7 +66,7 @@ cd apps/desktop  && bun run dev   # Electron
 
 ```
 DESKTOP SHELL  (apps/desktop — Electron)
-  tray/menubar/Waybar · global hotkey · push-to-talk
+  tray/menubar · global hotkey · push-to-talk
   screen + mic capture · floating UI · deep-link auth
   ↕  local socket  (low-latency authenticated IPC)
 LOCAL SIDECAR  (apps/sidecar — Bun)

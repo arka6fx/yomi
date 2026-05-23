@@ -56,11 +56,6 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
       }),
       execute: async ({ x, y }) => {
         const os = platform()
-        if (os === "linux") {
-          const proc = Bun.spawn(["xdotool", "mousemove", String(x), String(y)], { stdout: "pipe", stderr: "pipe" })
-          await proc.exited
-          return { ok: true }
-        }
         if (os === "darwin") {
           const proc = Bun.spawn(["cliclick", `m:${x},${y}`], { stdout: "pipe", stderr: "pipe" })
           await proc.exited
@@ -81,12 +76,6 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
       }),
       execute: async ({ button = "left" }) => {
         const os = platform()
-        if (os === "linux") {
-          const btnNum = button === "left" ? "1" : button === "right" ? "3" : "2"
-          const proc = Bun.spawn(["xdotool", "click", btnNum], { stdout: "pipe", stderr: "pipe" })
-          await proc.exited
-          return { ok: true }
-        }
         if (os === "darwin") {
           const flag = button === "left" ? "c" : button === "right" ? "rc" : "mc"
           const proc = Bun.spawn(["cliclick", flag], { stdout: "pipe", stderr: "pipe" })
