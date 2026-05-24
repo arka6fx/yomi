@@ -106,8 +106,8 @@ NEXT_PUBLIC_BACKEND_URL = https://yomi-backend.railway.app
 | `GITHUB_CLIENT_ID` | ✓ | — | yes |
 | `GITHUB_CLIENT_SECRET` | ✓ | — | yes |
 | `ENCRYPTION_KEY` | ✓ | — | yes |
-| `OPENAI_API_KEY` | ✓ | — | yes |
-| `OPENAI_BASE_URL` | ✓ (opt) | — | no |
+| `OPENAI_API_KEY` | ✓ | — | yes; AI Credits API key |
+| `OPENAI_BASE_URL` | ✓ | — | AI Credits OpenAI-compatible base URL |
 | `RAZORPAY_KEY_ID` | ✓ | — | yes |
 | `RAZORPAY_KEY_SECRET` | ✓ | — | yes |
 | `RAZORPAY_WEBHOOK_SECRET` | ✓ | — | yes |
@@ -134,7 +134,7 @@ bun run dev   # :3000
 ```bash
 # 1. Deploy backend — set all secrets in Railway dashboard
 cd apps/backend
-# Set DATABASE_URL, OPENAI_API_KEY, RAZORPAY_*, etc. in Railway
+# Set DATABASE_URL, OPENAI_API_KEY, OPENAI_BASE_URL, RAZORPAY_*, etc. in Railway
 # Connect repo → Railway auto-deploys on main branch push
 # Note the deployed URL: https://yomi-backend.up.railway.app
 

@@ -48,17 +48,17 @@ cd apps/desktop  && bun run dev   # Electron
 | ORM | Drizzle |
 | Auth | Better Auth (Drizzle adapter, orgs plugin for Team tier) — Google + GitHub OAuth |
 | Billing | Razorpay |
-| LLM SDK | Vercel AI SDK (`ai` package) — unified interface for Anthropic, OpenAI, Groq, OpenRouter |
-| Speech STT | Sarvam `saarika:v2.5` (cloud); whisper.cpp (local/offline fallback) |
+| LLM SDK | Vercel AI SDK (`ai` package) with `@ai-sdk/openai` |
+| Speech STT | Sarvam `saarika:v2.5` |
 | Speech TTS | Sarvam `bulbul:v3` (streaming, 16 kHz) |
 | Desktop | Electron v1 (Tauri-ready — brain stays in sidecar) |
 | Sidecar | Bun service (ships with desktop app) |
 | Packages | Bun workspaces + Turborepo |
 
-- LLM keys (Anthropic etc.) live ONLY in the cloud backend — never in desktop/sidecar bundle.
-- Desktop auth: system-browser OAuth + deep-link back to app. Never embed login in Electron window.
-- **Primary LLM:** `@ai-sdk/anthropic` with `claude-haiku-4-5-20251001` (fast path). Set `ANTHROPIC_API_KEY`.
-- **OpenRouter fallback:** set `OPENROUTER_API_KEY` + `LLM_BASE_URL=https://openrouter.ai/api/v1` to route through OpenRouter via `@ai-sdk/openai` with a custom base URL. Use this to test any model before committing to a direct provider subscription. Prompt caching is Anthropic-only — unavailable via OpenRouter.
+- LLM routing uses an OpenAI-compatible API through AI Credits. Set `OPENAI_API_KEY` and `OPENAI_BASE_URL`.
+- Desktop auth: system-browser device-code flow. Never embed login in Electron window.
+- **Primary LLM provider:** AI Credits/OpenAI-compatible endpoint via `@ai-sdk/openai`.
+- Do not add alternate LLM provider routing unless explicitly requested.
 
 ---
 
@@ -67,11 +67,11 @@ cd apps/desktop  && bun run dev   # Electron
 ```
 DESKTOP SHELL  (apps/desktop — Electron)
   tray/menubar · global hotkey · push-to-talk
-  screen + mic capture · floating UI · deep-link auth
+  screen + mic capture · floating UI · device-code auth
   ↕  local socket  (low-latency authenticated IPC)
 LOCAL SIDECAR  (apps/sidecar — Bun)
   intent router · fast pipeline (STT → vision → LLM → TTS)
-  ReAct agent loop · MCP + subagents · notepad memory · whisper.cpp
+  ReAct agent loop · MCP + subagents · notepad memory
   ↕  authenticated HTTPS
 CLOUD BACKEND  (apps/backend — Hono/Bun)
   Better Auth · Razorpay webhooks · LLM proxy · usage metering · memory sync
@@ -170,10 +170,10 @@ Specs are numbered in the order they should be implemented. 00 and 01 are refere
 
 | Spec | File | Scope |
 |---|---|---|
-| 02 | `02-sidecar-fast-pipeline` | Switch to Anthropic + prompt caching; fast path + visual guide ← **current** |
+| 02 | `02-sidecar-fast-pipeline` | OpenAI-compatible fast path + visual guide ← **current** |
 | 03 | `03-desktop-shell` | Electron main: sidecar spawn, hotkey, desktopCapturer, IPC bridge, overlay window |
 | 04 | `04-desktop-ui` | Renderer: floating overlay, Zustand store, audio capture, streaming response |
-| 05 | `05-speech-stt` | STT abstraction: Sarvam saarika:v2.5 + whisper.cpp VAD fallback |
+| 05 | `05-speech-stt` | STT abstraction: Sarvam saarika:v2.5 + VAD |
 | 06 | `06-speech-tts` | TTS abstraction: Sarvam bulbul:v3 streaming (16 kHz) |
 | 07 | `07-sidecar-router` | Intent router: fast vs agent classification |
 | 08 | `08-sidecar-agent` | ReAct loop, tools, MCP, subagents, sandbox |
@@ -198,12 +198,12 @@ Specs are numbered in the order they should be implemented. 00 and 01 are refere
 ## Models (2026-05)
 
 ```
-Fast path:  claude-haiku-4-5-20251001
-Agent path: claude-sonnet-4-6
-Heavy:      claude-opus-4-7
+Fast path:  gpt-4.1-mini
+Agent path: gpt-4.1
+Heavy:      gpt-4.1
 ```
 
-Always enable Anthropic SDK prompt caching. Cache system prompt + `yomi.md` across turns to minimise cost.
+Use the AI Credits/OpenAI-compatible endpoint for LLM calls. Keep Sarvam as the only STT/TTS provider unless explicitly changed.
 
 ---
 

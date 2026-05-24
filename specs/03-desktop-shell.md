@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define the Electron main process structure, platform adapters (macOS / Windows), capture abstraction, sidecar lifecycle management, and deep-link auth flow. The shell is pure OS integration — no AI logic lives here.
+Define the Electron main process structure, platform adapters (macOS / Windows), capture abstraction, sidecar lifecycle management, and device-code auth flow. The shell is pure OS integration — no AI logic lives here.
 
 ## Invariants
 
@@ -159,16 +159,16 @@ while (true) {
 }
 ```
 
-**STT:** The sidecar handles STT using OpenAI Whisper. The desktop sends raw audio bytes and the sidecar returns the transcript.
+**STT:** The sidecar handles STT using Sarvam `saarika:v2.5`. The desktop sends raw audio bytes and the sidecar returns the transcript.
 
-### Auth Flow (deep-link)
+### Auth Flow (device-code)
 
-1. User clicks "Sign in" → `shell.openExternal(backendUrl + /auth/signin?redirect=yomi://auth/callback)`.
-2. Better Auth handles OAuth in system browser.
-3. Backend redirects to `yomi://auth/callback?token=<jwt>`.
-4. Electron registers `yomi://` protocol handler. On callback, extract token.
-5. Store token in OS keychain (keytar / libsecret).
-6. Pass token to sidecar via secure IPC on each request.
+1. User clicks "Sign in" and desktop requests `/api/auth/device-code`.
+2. Desktop opens the system browser to the device confirmation page.
+3. Landing confirms the code through the backend once the user is signed in.
+4. Desktop polls `/api/auth/device-code/token` until it receives a session token.
+5. Store token encrypted with Electron `safeStorage`.
+6. Pass token to sidecar startup env and attach it to backend requests.
 
 ### Overlay Window
 

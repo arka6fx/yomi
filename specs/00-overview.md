@@ -45,8 +45,8 @@ Cross-platform AI buddy (Mac menu bar, Windows tray) that routes requests betwee
 
 | Phase | Scope | Weeks |
 |---|---|---|
-| 0 — Spike | hotkey → OpenAI Whisper STT → screenshot → 1 LLM call → OpenAI TTS | 1–2 |
-| 1 — Buddy | floating UI, tray/menubar shell, notepad init, prompt caching, permissions | 3–6 |
+| 0 — Spike | hotkey → Sarvam STT → screenshot → 1 LLM call → Sarvam TTS | 1–2 |
+| 1 — Buddy | floating UI, tray/menubar shell, notepad init, permissions | 3–6 |
 | 2 — Agent | intent router, ReAct loop, hooks lifecycle, MCP (calendar, email, browser), subagents | 7–12 |
 | 3 — Accounts | Hono backend, Better Auth, Drizzle/Neon, Razorpay, LLM proxy (Vercel AI SDK), cloud sync | 13–15 |
 | 4 — X-platform | Windows tray, Electron vs Tauri decision | 16–20 |
