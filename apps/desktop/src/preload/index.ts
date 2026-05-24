@@ -80,6 +80,10 @@ contextBridge.exposeInMainWorld("yomi", {
     ipcRenderer.send("yomi:resize", w, h)
   },
 
+  setMouseEventsIgnored(ignored: boolean): void {
+    ipcRenderer.send("yomi:set-ignore-mouse-events", ignored)
+  },
+
   nudge(dx: number, dy: number): void {
     ipcRenderer.send("yomi:nudge", dx, dy)
   },

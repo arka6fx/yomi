@@ -20,6 +20,7 @@ declare global {
       startDrag(offsetX: number, offsetY: number): void
       moveDrag(screenX: number, screenY: number): void
       resize(w: number, h: number): void
+      setMouseEventsIgnored(ignored: boolean): void
       nudge(dx: number, dy: number): void
       // Queries
       submitTextQuery(text: string): void
