@@ -197,3 +197,23 @@ Always enable Anthropic SDK prompt caching. Cache system prompt + `yomi.md` acro
 ## Code comments
 
 Keep small, purposeful comments throughout the codebase. A one-liner on non-obvious logic, a short section header where a file has distinct regions, a brief note on a workaround or constraint. Comments should be short — never multi-line blocks or docstrings. The goal is to make the code scannable and self-explaining without over-documenting obvious things.
+
+---
+
+## Commit messages
+
+Use conventional commits. Pick the right prefix:
+
+| Prefix | When |
+|---|---|
+| `feat:` | new user-facing feature |
+| `fix:` | bug fix |
+| `refactor:` | code restructure, no behaviour change |
+| `perf:` | performance improvement |
+| `style:` | formatting, naming, no logic change |
+| `test:` | adding or updating tests |
+| `chore:` | deps, config, tooling, CI |
+| `docs:` | documentation only |
+
+Message style: short, human, lowercase — describe the *what* in 3–6 words. No full stops.
+Examples: `feat: speaker mute toggle`, `fix: tts playback order`, `chore: upgrade sarvam to v3`
