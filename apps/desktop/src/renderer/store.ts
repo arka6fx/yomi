@@ -33,6 +33,7 @@ interface YomiState {
   entries: ChatEntry[]
   activeId: number | null
   audioQueue: string[]
+  ttsEnabled: boolean
   guideSteps: GuideStep[]
   guideCurrentStep: number
   guideTotalSteps: number
@@ -43,6 +44,7 @@ interface YomiState {
   setHotkeyState: (state: HotkeyState) => void
   handleSseEvent: (event: SseEvent) => void
   dismissEntry: (id: number) => void
+  toggleTts: () => void
   setSubscription: (info: SubscriptionInfo | null) => void
   setSubscriptionLoading: (loading: boolean) => void
 }
@@ -56,6 +58,7 @@ export const useYomiStore = create<YomiState>((set) => ({
   entries: [],
   activeId: null,
   audioQueue: [],
+  ttsEnabled: true,
   guideSteps: [],
   guideCurrentStep: 0,
   guideTotalSteps: 0,
@@ -85,7 +88,7 @@ export const useYomiStore = create<YomiState>((set) => ({
         }))
         break
       case "audio_chunk":
-        set((s) => ({ audioQueue: [...s.audioQueue, event.base64] }))
+        set((s) => s.ttsEnabled ? { audioQueue: [...s.audioQueue, event.base64] } : {})
         break
       case "visual_guide":
         set((s) => ({
@@ -127,6 +130,8 @@ export const useYomiStore = create<YomiState>((set) => ({
 
   dismissEntry: (id) =>
     set((s) => ({ entries: s.entries.filter((e) => e.id !== id) })),
+
+  toggleTts: () => set((s) => ({ ttsEnabled: !s.ttsEnabled })),
 
   setSubscription: (subscription) => set({ subscription }),
   setSubscriptionLoading: (subscriptionLoading) => set({ subscriptionLoading }),
