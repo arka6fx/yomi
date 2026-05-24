@@ -4,9 +4,8 @@
  * Mocking strategy:
  * - `mock.module("ai")` replaces `streamText` with a controllable fake that
  *   returns an async iterable of text chunks.
- * - `mock.module("@ai-sdk/anthropic")` and `mock.module("@ai-sdk/openai")`
- *   replace the factory functions with spies so we can assert which provider
- *   was selected and inspect the arguments passed to them.
+ * - `mock.module("@ai-sdk/openai")` replaces the factory function with a spy
+ *   so we can inspect the arguments passed to it.
  * - `mock.module("./visual-guide.js")` replaces `generateGuide` so guide-mode
  *   tests don't depend on the LLM at all.
  *
