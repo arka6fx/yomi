@@ -1,112 +1,219 @@
 # Yomi — AGENTS.md
 
-## Quick start
+Cross-platform AI buddy. Sees your screen, hears your voice, acts so you touch your laptop less. Mac (menu bar / notch), Windows (system tray).
 
-```bash
-bun install && bun run dev        # install + run all apps in watch
-```
+---
 
-| App | Port | Command |
+## Design principle
+
+| Request type | Architecture | Budget |
 |---|---|---|
-| `apps/backend` | :3001 | `cd apps/backend && bun run dev` |
-| `apps/sidecar` | :3002 | `cd apps/sidecar && bun run dev` |
-| `apps/landing` | :3000 | `cd apps/landing && bun run dev` |
-| `apps/desktop` | Electron | `cd apps/desktop && bun run dev` |
+| Quick ask / screen Q&A | Linear pipeline | < 2 s |
+| Screen-aware guidance | Linear pipeline + vision | < 3 s |
+| Autonomous task | ReAct loop + subagents | seconds–minutes, background |
 
-## Verify commands (turbo)
+**Intent router** decides fast vs agent at the START of every turn. Never route mid-turn — switching models loses the prompt cache and causes tool-vocab mismatch.
 
-```bash
-turbo lint         # lint all
-turbo typecheck    # typecheck all (depends on build)
-turbo build        # build all
-turbo test         # run all bun test suites in parallel, cached per-package
+---
+
+## Monorepo
+
+```
+apps/backend/   Hono/Bun — auth, billing, LLM proxy, metering
+apps/desktop/   Electron — tray/menubar, hotkeys, capture, floating UI
+apps/landing/   Next.js  — marketing + waitlist (Vercel)
+apps/sidecar/   Bun      — router, fast pipeline, agent loop, notepad
+packages/db/    Drizzle schema + Neon
+packages/shared TypeScript contracts (desktop ↔ sidecar ↔ backend)
+packages/config tsconfig + eslint presets
 ```
 
-## Database (Drizzle + Neon)
-
-All DB commands run from `apps/backend/`:
-
 ```bash
-bun run db:generate   # generate migrations
-bun run db:migrate    # run migrations
-bun run db:studio     # Drizzle Studio UI
+bun install && bun run dev        # install + run all in watch mode
+cd apps/backend  && bun run dev   # :3001
+cd apps/sidecar  && bun run dev   # :3002
+cd apps/landing  && bun run dev   # :3000
+cd apps/desktop  && bun run dev   # Electron
 ```
 
-Or from `packages/db/` — both have identical scripts.
+---
+
+## Stack (settled — do not relitigate)
+
+| Layer | Choice |
+|---|---|
+| Landing | Next.js 16 / Vercel |
+| Backend | Hono on Bun |
+| Database | Postgres — Neon (serverless) |
+| ORM | Drizzle |
+| Auth | Better Auth (Drizzle adapter, orgs plugin for Team tier) — Google + GitHub OAuth |
+| Billing | Razorpay |
+| LLM SDK | Vercel AI SDK (`ai` package) — unified interface for Anthropic, OpenAI, Groq, OpenRouter |
+| Speech STT | ElevenLabs STT (cloud); whisper.cpp (local/offline fallback) |
+| Speech TTS | ElevenLabs TTS (streaming) |
+| Desktop | Electron v1 (Tauri-ready — brain stays in sidecar) |
+| Sidecar | Bun service (ships with desktop app) |
+| Packages | Bun workspaces + Turborepo |
+
+- LLM keys (Anthropic etc.) live ONLY in the cloud backend — never in desktop/sidecar bundle.
+- Desktop auth: system-browser OAuth + deep-link back to app. Never embed login in Electron window.
+- **Primary LLM:** `@ai-sdk/anthropic` with `claude-haiku-4-5-20251001` (fast path). Set `ANTHROPIC_API_KEY`.
+- **OpenRouter fallback:** set `OPENROUTER_API_KEY` + `LLM_BASE_URL=https://openrouter.ai/api/v1` to route through OpenRouter via `@ai-sdk/openai` with a custom base URL. Use this to test any model before committing to a direct provider subscription. Prompt caching is Anthropic-only — unavailable via OpenRouter.
+
+---
 
 ## Architecture
 
 ```
-desktop (Electron) ↔ sidecar (Bun, :3002) ↔ backend (Hono, :3001)
-packages/shared   ← TypeScript contracts across all three
-packages/db       ← Drizzle schema + Neon client
+DESKTOP SHELL  (apps/desktop — Electron)
+  tray/menubar · global hotkey · push-to-talk
+  screen + mic capture · floating UI · deep-link auth
+  ↕  local socket  (low-latency authenticated IPC)
+LOCAL SIDECAR  (apps/sidecar — Bun)
+  intent router · fast pipeline (STT → vision → LLM → TTS)
+  ReAct agent loop · MCP + subagents · notepad memory · whisper.cpp
+  ↕  authenticated HTTPS
+CLOUD BACKEND  (apps/backend — Hono/Bun)
+  Better Auth · Razorpay webhooks · LLM proxy · usage metering · memory sync
 ```
 
-- LLM keys live ONLY in backend env — never shipped to desktop/sidecar
-- Desktop uses `electron-vite` (not raw electron)
-- **Test runner:** `bun test` (Bun built-in, no extra deps needed)
-- .env.example has full reference for env vars
-- **Comments:** keep small, purposeful comments throughout. One-liners on non-obvious logic, short section headers where useful. No multi-line docstrings.
+---
 
-## Stack (settled — preserve existing choices)
+## Harness (where 80% of engineering effort goes)
 
-| Concern | Choice |
+`harness = system prompt + tools/MCP + memory + code execution + hooks`
+
+**Fast path:** `STT → speculative screenshot → 1 LLM call (cached system prompt + yomi.md) → TTS`
+Tools: `look_at_screen`, `transcribe`, `speak`. No tool-selection loop.
+
+**Agent path:** filesystem r/w · bash (sandboxed) · web search/fetch · cursor automation · MCP servers (calendar, email, Notion, Slack, browser).
+
+**Session lifecycle:**
+```
+SessionStart → UserPromptSubmit
+  → [per-tool] PreToolUse → Tool → PostToolUse → (loop or next)
+  → Stop → SessionEnd
+```
+
+**Hooks:** `PreToolUse` (block dangerous calls) · `PostToolUse` (log, trim >N tokens) · `Stop` (flush scratchpad) · `SessionEnd` (compact memory.md)
+
+**Loop guards:** cap ReAct iterations · trim tool output middle if >N tokens · progress check every few steps · never switch models mid-turn
+
+---
+
+## Notepad (`~/.yomi/`)
+
+```
+yomi.md          ALWAYS preloaded — user identity, prefs, standing instructions
+memory.md        Long-term memory (curated, compacted)
+memory-index.md  One-line manifest per memory file
+projects/<proj>/
+  context.md     Project facts + decisions
+  scratchpad.md  Agent working notes (ephemeral)
+sessions/
+  YYYY-MM-DD-topic.md  Session summaries
+```
+
+**Load:** always preload `yomi.md`; JIT-load everything else on demand; metadata-only by default.
+**Compact:** recall pass → precision pass → write to `memory.md`, reset live window.
+**Retrieve:** agent reads index → `list_files` → `read_file` → `search` (ripgrep). No vector DB needed at single-user scale.
+
+---
+
+## Database
+
+Better Auth generates `user / session / account / verification`. App tables:
+
+```
+devices        id, user_id, os, app_version, last_seen
+subscriptions  id, user_id, razorpay_customer_id, razorpay_sub_id,
+               plan, status, current_period_end
+usage_events   id, user_id, device_id, kind(stt|fast_query|agent_run|tts),
+               model, input_tokens, output_tokens, cost_cents, created_at
+memory_blobs   id, user_id, path, content_hash, updated_at
+agent_runs     id, user_id, status, task, started_at, ended_at, summary
+mcp_connections id, user_id, provider, oauth_tokens(encrypted), scopes
+hook_logs      id, user_id, run_id, hook, tool, decision, payload_redacted, created_at
+```
+
+`usage_events` append-only · `oauth_tokens` encrypted at rest · PII redacted in `hook_logs`.
+
+---
+
+## Plans
+
+| Plan | Price | Key limits |
+|---|---|---|
+| Free | $0/mo | 10 LLM calls/day; 2 STT min/day; TTS; no screenshot analysis |
+| Basic | $4/mo | 500 LLM calls/day; 30 STT min/day; screenshot analysis; email support |
+| Standard | $9/mo | 2 000 LLM calls/day; 120 STT min/day; agent pipeline; email support |
+| Genesis | $19/mo | 10 000 LLM calls/day; 600 STT min/day; agent pipeline; priority support |
+
+---
+
+## Implementation Order (specs/)
+
+Specs are numbered in the order they should be implemented. 00 and 01 are reference docs.
+
+| Spec | File | Scope |
+|---|---|---|
+| 02 | `02-sidecar-fast-pipeline` | Switch to Anthropic + prompt caching; fast path + visual guide ← **current** |
+| 03 | `03-desktop-shell` | Electron main: sidecar spawn, hotkey, desktopCapturer, IPC bridge, overlay window |
+| 04 | `04-desktop-ui` | Renderer: floating overlay, Zustand store, audio capture, streaming response |
+| 05 | `05-speech-stt` | STT abstraction: ElevenLabs + whisper.cpp VAD |
+| 06 | `06-speech-tts` | TTS abstraction: ElevenLabs streaming + edge-tts + Piper |
+| 07 | `07-sidecar-router` | Intent router: fast vs agent classification |
+| 08 | `08-sidecar-agent` | ReAct loop, tools, MCP, subagents, sandbox |
+| 09 | `09-harness` | System prompt, hooks, loop guards |
+| 10 | `10-memory` | Notepad (~/.yomi/), compaction, retrieval |
+| 11 | `11-database` | Drizzle schema + Neon client |
+| 12 | `12-backend` | Hono routes, Better Auth, LLM proxy, metering |
+| 13 | `13-pricing` | Plans, Razorpay, metering logic |
+
+---
+
+## Privacy (non-negotiable)
+
+- Local-by-default: STT + screen analysis on-device; only the distilled prompt leaves the machine.
+- Visible status: tray/notch pill always shows when Yomi is listening or capturing. No silent recording.
+- Per-app blocklist: password managers and banking apps are never captured.
+- Window content-protection: Yomi's own window excluded from screen-shares.
+- Encrypted memory sync; user-owned export/delete; clear data-retention policy.
+
+---
+
+## Models (2026-05)
+
+```
+Fast path:  claude-haiku-4-5-20251001
+Agent path: claude-sonnet-4-6
+Heavy:      claude-opus-4-7
+```
+
+Always enable Anthropic SDK prompt caching. Cache system prompt + `yomi.md` across turns to minimise cost.
+
+---
+
+## Code comments
+
+Keep small, purposeful comments throughout the codebase. A one-liner on non-obvious logic, a short section header where a file has distinct regions, a brief note on a workaround or constraint. Comments should be short — never multi-line blocks or docstrings. The goal is to make the code scannable and self-explaining without over-documenting obvious things.
+
+---
+
+## Commit messages
+
+Use conventional commits. Pick the right prefix:
+
+| Prefix | When |
 |---|---|
-| LLM SDK | Vercel AI SDK (`ai` package) |
-| Backend | Hono on Bun |
-| Auth | Better Auth |
-| ORM | Drizzle |
-| Desktop | Electron + electron-vite |
-| Sidecar | Bun + Hono |
-| DB | Postgres (Neon serverless) |
+| `feat:` | new user-facing feature |
+| `fix:` | bug fix |
+| `refactor:` | code restructure, no behaviour change |
+| `perf:` | performance improvement |
+| `style:` | formatting, naming, no logic change |
+| `test:` | adding or updating tests |
+| `chore:` | deps, config, tooling, CI |
+| `docs:` | documentation only |
 
-## Available skills
-
-Agent skills live in `.agents/skills/` (also mirrored to `.claude/skills/`):
-- `ai-sdk` — Vercel AI SDK usage
-- `electron` — Electron development
-- `frontend-design` — UI/UX components
-- `turborepo` — Turbo monorepo config
-- `workers-best-practices` — Cloudflare Workers
-- `wrangler` — Wrangler CLI
-
-## Available subagents
-
-Subagents are defined in `.opencode/agents/` — invoke them with `@name` in the TUI:
-- `@yomi-test-writer` — Write spec-driven `bun test` tests for Yomi features
-- `@yomi-test-runner` — Run tests and analyze results
-- `@yomi-security-reviewer` — Security review (API keys, IPC auth, privacy)
-- `@yomi-quality-reviewer` — Code quality review (TypeScript, Hono, monorepo)
-
-Commands in `.opencode/commands/` orchestrate these subagents (e.g. `/code-review-feature` runs security + quality reviewers in parallel).
-
-## Important CLAUDE.md rules
-
-Read `CLAUDE.md` at root — it contains detailed intent routing, harness, notepad, privacy, model choices, and pricing. Preserve its guidance when editing.
-
-Key non-obvious conventions:
-- **Intent router** decides fast vs agent path at START of every turn. Never switch mid-turn.
-- **Models (2026-05):** Fast path `claude-haiku-4-5-20251001`, Agent path `claude-sonnet-4-6`
-- **Prompt caching** always enabled for Anthropic SDK
-- **Privacy:** STT + screen analysis on-device; only distilled prompt leaves. Tray pill always shows capture state. Per-app blocklist for password managers/banking.
-
-## Specs
-
-Detailed design docs live in `specs/`, numbered in implementation order. Read the relevant spec before modifying a subsystem.
-
-| Spec | Contents |
-|---|---|
-| [00-overview](specs/00-overview.md) | Principles, moat, glossary — reference |
-| [01-architecture](specs/01-architecture.md) | 4-layer diagram, IPC contracts — reference |
-| [02-sidecar-fast-pipeline](specs/02-sidecar-fast-pipeline.md) | Fast pipeline, Anthropic + caching, visual guidance ← current |
-| [03-desktop-shell](specs/03-desktop-shell.md) | Electron main process, sidecar lifecycle, IPC bridge, hotkey |
-| [04-desktop-ui](specs/04-desktop-ui.md) | Floating overlay, Zustand store, audio capture |
-| [05-speech-stt](specs/05-speech-stt.md) | STT: ElevenLabs, whisper.cpp, VAD |
-| [06-speech-tts](specs/06-speech-tts.md) | TTS: ElevenLabs, edge-tts, Piper |
-| [07-sidecar-router](specs/07-sidecar-router.md) | Intent router (fast vs agent) |
-| [08-sidecar-agent](specs/08-sidecar-agent.md) | ReAct loop, tools, subagents, sandbox |
-| [09-harness](specs/09-harness.md) | System prompt, hooks, guards |
-| [10-memory](specs/10-memory.md) | Notepad (~/.yomi/), compaction, retrieval |
-| [11-database](specs/11-database.md) | Drizzle schema + Neon |
-| [12-backend](specs/12-backend.md) | Hono routes, Better Auth, LLM proxy, metering |
-| [13-pricing](specs/13-pricing.md) | Plans, Razorpay, metering |
+Message style: short, human, lowercase — describe the *what* in 3–6 words. No full stops.
+Examples: `feat: speaker mute toggle`, `fix: tts playback order`, `chore: upgrade sarvam to v3`
