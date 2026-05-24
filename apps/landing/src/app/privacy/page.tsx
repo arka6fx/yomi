@@ -10,15 +10,15 @@ export default function PrivacyPage() {
   return (
     <>
       <Nav />
-      <main className="pt-16">
-        <div className="max-w-3xl mx-auto px-6 py-24">
-          <p className="font-mono text-xs text-white/40 uppercase tracking-widest mb-3">
+      <main className="bg-[#090a09] pt-16">
+        <div className="mx-auto max-w-3xl px-6 py-24">
+          <p className="mb-3 font-mono text-xs uppercase tracking-widest text-amber-100/50">
             Legal
           </p>
-          <h1 className="text-4xl font-light text-white mb-2" style={{ letterSpacing: "-0.03em" }}>Privacy Policy</h1>
-          <p className="text-white/40 text-sm mb-16">Last updated: May 2025</p>
+          <h1 className="mb-2 font-accent text-5xl font-medium text-[#f3f0df]">Privacy Policy</h1>
+          <p className="mb-16 text-sm text-white/40">Last updated: May 2025</p>
 
-          <div className="prose prose-sm max-w-none space-y-10 text-white/50 leading-relaxed">
+          <div className="max-w-none space-y-10 text-sm leading-7 text-white/55">
             <Section title="Overview">
               <p>
                 Yomi is designed to be private by default. Screenshots are sent to our LLM proxy
@@ -53,16 +53,18 @@ export default function PrivacyPage() {
               <ul>
                 <li>Raw screenshots or screen recordings</li>
                 <li>Raw audio recordings</li>
-                <li>Prompt content or conversation history (unless you explicitly enable cloud memory)</li>
+                <li>
+                  Prompt content or conversation history (unless you explicitly enable cloud memory)
+                </li>
                 <li>Content from blocklisted apps (password managers, banking apps)</li>
               </ul>
             </Section>
 
             <Section title="Data handling during queries">
               <p>
-                When you trigger a query, your screenshot and transcribed voice text are sent to
-                our LLM proxy to generate a response. Neither is stored after the request
-                completes. Yomi never captures your screen or microphone in the background.
+                When you trigger a query, your screenshot and transcribed voice text are sent to our
+                LLM proxy to generate a response. Neither is stored after the request completes.
+                Yomi never captures your screen or microphone in the background.
               </p>
             </Section>
 
@@ -70,12 +72,13 @@ export default function PrivacyPage() {
               <p>We use the following third-party services:</p>
               <ul>
                 <li>
-                  <strong className="text-label">Anthropic / OpenAI / Groq</strong> — LLM
-                  inference via our proxy. Prompts sent to these providers are subject to their
-                  respective privacy policies. We do not enable training data use.
+                  <strong className="text-label">Anthropic / OpenAI / Groq</strong> — LLM inference
+                  via our proxy. Prompts sent to these providers are subject to their respective
+                  privacy policies. We do not enable training data use.
                 </li>
                 <li>
-                  <strong className="text-label">ElevenLabs</strong> — cloud STT and TTS for voice features.
+                  <strong className="text-label">ElevenLabs</strong> — cloud STT and TTS for voice
+                  features.
                 </li>
                 <li>
                   <strong className="text-label">Razorpay</strong> — payment processing. We never
@@ -123,8 +126,8 @@ export default function PrivacyPage() {
 
             <Section title="Changes to this policy">
               <p>
-                We will notify users of material changes via email at least 14 days before they
-                take effect. The latest version is always at yomi.app/privacy.
+                We will notify users of material changes via email at least 14 days before they take
+                effect. The latest version is always at yomi.app/privacy.
               </p>
             </Section>
 
@@ -157,8 +160,8 @@ export default function PrivacyPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-3">
-      <h2 className="text-base font-medium text-white/80">{title}</h2>
-      <div className="space-y-3 [&_ul]:list-none [&_ul]:space-y-1.5 [&_li]:pl-4 [&_li]:relative [&_li]:before:content-['▸'] [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-accent [&_li]:before:text-xs [&_strong]:text-white/80 [&_strong]:font-medium [&_a]:text-accent [&_a]:hover:text-accent/80 [&_a]:transition-colors">
+      <h2 className="font-accent text-2xl font-medium text-[#f3f0df]">{title}</h2>
+      <div className="space-y-3 [&_a]:text-amber-100 [&_a]:transition-colors [&_a]:hover:text-white [&_li]:relative [&_li]:pl-4 [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-xs [&_li]:before:text-amber-100 [&_li]:before:content-['›'] [&_strong]:font-medium [&_strong]:text-white/80 [&_ul]:list-none [&_ul]:space-y-1.5">
         {children}
       </div>
     </div>

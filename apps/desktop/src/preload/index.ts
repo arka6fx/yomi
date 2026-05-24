@@ -115,4 +115,16 @@ contextBridge.exposeInMainWorld("yomi", {
   requestEscape(): void {
     ipcRenderer.send("yomi:escape")
   },
+
+  quit(): void {
+    ipcRenderer.send("yomi:quit")
+  },
+
+  openUpgrade(): void {
+    ipcRenderer.send("yomi:open-upgrade")
+  },
+
+  setOpacity(value: number): void {
+    ipcRenderer.send("yomi:set-opacity", value)
+  },
 })

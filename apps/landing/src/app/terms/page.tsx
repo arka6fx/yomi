@@ -10,19 +10,19 @@ export default function TermsPage() {
   return (
     <>
       <Nav />
-      <main className="pt-16">
-        <div className="max-w-3xl mx-auto px-6 py-24">
-          <p className="font-mono text-xs text-white/40 uppercase tracking-widest mb-3">
+      <main className="bg-[#090a09] pt-16">
+        <div className="mx-auto max-w-3xl px-6 py-24">
+          <p className="mb-3 font-mono text-xs uppercase tracking-widest text-amber-100/50">
             Legal
           </p>
-          <h1 className="text-4xl font-light text-white mb-2" style={{ letterSpacing: "-0.03em" }}>Terms of Service</h1>
-          <p className="text-white/40 text-sm mb-16">Last updated: May 2025</p>
+          <h1 className="mb-2 font-accent text-5xl font-medium text-[#f3f0df]">Terms of Service</h1>
+          <p className="mb-16 text-sm text-white/40">Last updated: May 2025</p>
 
-          <div className="space-y-10 text-white/50 leading-relaxed">
+          <div className="space-y-10 text-sm leading-7 text-white/55">
             <Section title="Acceptance">
               <p>
-                By downloading, installing, or using Yomi, you agree to these Terms of Service.
-                If you do not agree, do not use Yomi.
+                By downloading, installing, or using Yomi, you agree to these Terms of Service. If
+                you do not agree, do not use Yomi.
               </p>
             </Section>
 
@@ -41,8 +41,7 @@ export default function TermsPage() {
                 <li>You are responsible for maintaining the security of your account.</li>
                 <li>One account per person. No account sharing.</li>
                 <li>
-                  Accounts are authenticated via Google or GitHub OAuth. We do not store
-                  passwords.
+                  Accounts are authenticated via Google or GitHub OAuth. We do not store passwords.
                 </li>
               </ul>
             </Section>
@@ -53,9 +52,7 @@ export default function TermsPage() {
                 <li>Violate any applicable law or regulation</li>
                 <li>Infringe intellectual property rights of others</li>
                 <li>Generate, distribute, or store illegal content</li>
-                <li>
-                  Circumvent rate limits, quotas, or metering through automated means
-                </li>
+                <li>Circumvent rate limits, quotas, or metering through automated means</li>
                 <li>Reverse-engineer or extract model weights or prompts</li>
                 <li>Use Yomi to spy on or surveil others without their consent</li>
               </ul>
@@ -64,17 +61,15 @@ export default function TermsPage() {
             <Section title="Subscriptions and billing">
               <ul>
                 <li>
-                  Paid plans are billed monthly via Razorpay. Prices are listed at
-                  yomi.app/pricing.
+                  Paid plans are billed monthly via Razorpay. Prices are listed at yomi.app/pricing.
                 </li>
                 <li>
                   Monthly plans can be cancelled at any time via the Razorpay customer portal.
                   Access continues until the end of the current billing cycle.
                 </li>
                 <li>
-                  We reserve the right to change pricing with 30 days notice. Existing
-                  subscriptions are grandfathered at the locked price for 6 months after a price
-                  change.
+                  We reserve the right to change pricing with 30 days notice. Existing subscriptions
+                  are grandfathered at the locked price for 6 months after a price change.
                 </li>
               </ul>
             </Section>
@@ -82,24 +77,24 @@ export default function TermsPage() {
             <Section title="Free tier and limits">
               <p>
                 The Free tier is provided as-is. We may adjust Free tier limits at any time.
-                Sustained abuse of the Free tier (e.g., circumventing limits) may result in
-                account suspension.
+                Sustained abuse of the Free tier (e.g., circumventing limits) may result in account
+                suspension.
               </p>
             </Section>
 
             <Section title="Bring your own key (BYOK)">
               <p>
-                If you provide your own API key, you are responsible for all costs incurred
-                through that key. Yomi stores your key encrypted at rest and never logs prompt
-                content. You can remove your key at any time from Settings.
+                If you provide your own API key, you are responsible for all costs incurred through
+                that key. Yomi stores your key encrypted at rest and never logs prompt content. You
+                can remove your key at any time from Settings.
               </p>
             </Section>
 
             <Section title="Intellectual property">
               <p>
                 Yomi and its source code are proprietary. The application is licensed to you for
-                personal or organizational use under your subscription. You may not redistribute
-                or sublicense the application.
+                personal or organizational use under your subscription. You may not redistribute or
+                sublicense the application.
               </p>
               <p>
                 Content you create using Yomi (outputs, generated text, task results) belongs to
@@ -109,17 +104,17 @@ export default function TermsPage() {
 
             <Section title="Disclaimer of warranties">
               <p>
-                YOMI IS PROVIDED &quot;AS IS&quot; WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-                IMPLIED. WE DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, ERROR-FREE, OR
-                THAT AI OUTPUTS WILL BE ACCURATE. USE AI OUTPUTS AT YOUR OWN JUDGMENT.
+                YOMI IS PROVIDED &quot;AS IS&quot; WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
+                WE DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, ERROR-FREE, OR THAT AI
+                OUTPUTS WILL BE ACCURATE. USE AI OUTPUTS AT YOUR OWN JUDGMENT.
               </p>
             </Section>
 
             <Section title="Limitation of liability">
               <p>
                 TO THE MAXIMUM EXTENT PERMITTED BY LAW, YOMI&apos;S LIABILITY IS LIMITED TO THE
-                AMOUNT YOU PAID IN THE PAST 12 MONTHS. WE ARE NOT LIABLE FOR INDIRECT,
-                INCIDENTAL, OR CONSEQUENTIAL DAMAGES.
+                AMOUNT YOU PAID IN THE PAST 12 MONTHS. WE ARE NOT LIABLE FOR INDIRECT, INCIDENTAL,
+                OR CONSEQUENTIAL DAMAGES.
               </p>
             </Section>
 
@@ -158,8 +153,8 @@ export default function TermsPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-3">
-      <h2 className="text-base font-medium text-white/80">{title}</h2>
-      <div className="space-y-3 [&_ul]:list-none [&_ul]:space-y-1.5 [&_li]:pl-4 [&_li]:relative [&_li]:before:content-['▸'] [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-accent [&_li]:before:text-xs [&_a]:text-accent [&_a]:hover:text-accent/80 [&_a]:transition-colors">
+      <h2 className="font-accent text-2xl font-medium text-[#f3f0df]">{title}</h2>
+      <div className="space-y-3 [&_a]:text-amber-100 [&_a]:transition-colors [&_a]:hover:text-white [&_li]:relative [&_li]:pl-4 [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-xs [&_li]:before:text-amber-100 [&_li]:before:content-['›'] [&_ul]:list-none [&_ul]:space-y-1.5">
         {children}
       </div>
     </div>

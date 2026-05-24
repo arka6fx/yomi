@@ -30,6 +30,10 @@ declare global {
       onStopAudio(cb: () => void): () => void
       getDesktopSourceId(): Promise<string | null>
       requestEscape(): void
+      // App control
+      quit(): void
+      openUpgrade(): void
+      setOpacity(value: number): void
     }
   }
 }
