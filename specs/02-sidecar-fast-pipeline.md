@@ -1,79 +1,54 @@
-# Spec 02 — Sidecar: Fast Pipeline
+# Spec 02 - Sidecar: Fast Pipeline
 
 ## Purpose
 
-Define the fast linear pipeline (STT → LLM → TTS → SSE), visual guidance mode, and model configuration. This is the hot path — every quick ask flows through here with a < 2s budget.
+Define the fast linear pipeline, visual guidance mode, and model configuration. This is the hot path: every quick ask should stay near the 2 second budget.
 
 ## Invariants
 
 - The fast path never enters a tool-selection loop. It makes exactly one LLM call.
-- The speculative screenshot is grabbed at hotkey press, not after VAD fires (~200ms savings).
-- TTS streaming begins on the first sentence boundary — the user hears audio before the LLM finishes.
+- The intent router decides fast vs agent before pipeline execution.
+- Screenshot capture should happen as early as possible in the desktop flow.
+- TTS starts on the first sentence boundary so the user hears audio before the LLM finishes.
 
-## Detailed Design
+## Fast Pipeline
 
-### Fast Pipeline
-
-```
-OpenAI Whisper STT
-  ↓
-Speculative screenshot (grabbed at hotkey press, parallel to STT)
-  ↓
-Vercel AI SDK streamText
-  model: FAST_PATH_MODEL (default: gpt-4.1-mini)
-  system: cached system prompt + yomi.md
-  messages: [{ role: "user", content: [text, image_url] }]
-  maxTokens: 800
-  ↓
-OpenAI TTS streaming
-  ↓
-SSE audio_chunk stream to desktop
+```text
+Sarvam STT (`saarika:v2.5`)
+  -> screenshot context when needed
+  -> Vercel AI SDK `streamText`
+     model: FAST_PATH_MODEL (default: gpt-4.1-mini)
+     provider: @ai-sdk/openai via AI Credits/OpenAI-compatible endpoint
+     maxTokens: 800
+  -> Sarvam TTS (`bulbul:v3`, 16 kHz)
+  -> SSE events to desktop
 ```
 
-### Visual Guidance Mode
+The sidecar includes screenshots only when the query appears screen-aware. This avoids anchoring general questions on irrelevant visual context.
 
-When the user asks for step-by-step guidance ("show me how to...", "guide me through..."), the fast path runs in `guide` mode. It produces a visual overlay on the user's screen with arrows and labels pointing to UI elements.
+## Visual Guidance Mode
 
-**Flow:**
-```
-1. User: "guide me through sending a message in Discord"
-2. Screenshot captured (current state of the app)
-3. LLM call with structured output schema:
-   {
-     steps: [
-       {
-         instruction: string,
-         elements: {
-           label: string,
-           bbox: { x, y, width, height }
-         }[]
-       }
-     ]
-   }
-4. Sidecar emits SSE visual_guide chunks, one per step
-5. Desktop renders a transparent overlay with arrows/labels at each bbox
-6. User presses Next/Prev to step through
+When the user asks for step-by-step guidance, the fast path runs in `guide` mode and returns structured visual guide steps.
+
+```typescript
+interface GuideResponse {
+  steps: {
+    instruction: string
+    elements: {
+      label: string
+      bbox: { x: number; y: number; width: number; height: number }
+    }[]
+  }[]
+}
 ```
 
-**LLM prompt guide mode:** append to the system prompt:
-```
-You are in guide mode. The user wants you to show them how to do something step by step.
-For each step, return:
-- instruction: a short instruction the user can follow
-- elements: UI elements from the screenshot to highlight, with bounding box coordinates
+If visual targets cannot be identified, emit a text-only guide step with `elements: []`.
 
-Keep instructions to 1 sentence. Highlight only the relevant UI element per step.
-```
+## LLM Provider
 
-**Fallback:** if the LLM cannot identify UI elements, fall back to text-only instructions. Emit `visual_guide` with `elements: []`. The desktop shows just the text step.
+All LLM routing uses an OpenAI-compatible API through `@ai-sdk/openai`.
 
-**Speculative screenshot:** grabbed the instant push-to-talk starts, not after VAD fires. This means vision context is ready when the transcript lands. ~200ms savings.
-
-### LLM Provider
-
-All AI routing uses OpenAI models via `@ai-sdk/openai`. Set `OPENAI_API_KEY` to use. Optional: `OPENAI_BASE_URL` for custom endpoints.
-
-```ts
+```typescript
 import { createOpenAI } from "@ai-sdk/openai"
 
 const openai = createOpenAI({
@@ -88,27 +63,22 @@ export function createModel(modelId: string) {
 
 Default model: `FAST_PATH_MODEL || "gpt-4.1-mini"`.
 
-### STT Provider
+## Speech Providers
 
-**Primary:** OpenAI Whisper (`whisper-1`) via the OpenAI SDK. Requires `OPENAI_API_KEY`.
+- STT: Sarvam `saarika:v2.5`, configured by `SARVAM_API_KEY`.
+- TTS: Sarvam `bulbul:v3`, 16 kHz, default speaker `shreya`.
+- Disable TTS with `TTS_ENGINE=none`.
 
-### TTS Provider
+## Files
 
-**Primary:** OpenAI TTS (`gpt-4o-mini-tts`) via the OpenAI SDK. Uses Alloy voice by default. Configurable via `TTS_MODEL` and `TTS_ENGINE` env vars.
-
-## Files to change
-
-- `apps/sidecar/src/index.ts` — Hono server entry point, route registration
-- `apps/sidecar/src/pipeline/fast.ts` — Pipeline implementation
-- `apps/sidecar/src/pipeline/visual-guide.ts` — Visual guide implementation
-- `packages/shared/src/index.ts` — IPC type definitions
-
-## Files to create
-
-_(already created — listed for reference)_
-- `apps/sidecar/src/pipeline/fast.ts`
-- `apps/sidecar/src/pipeline/visual-guide.ts`
+- `apps/sidecar/src/index.ts` - Hono server and `/query`, `/query/fast`, `/stt` routes.
+- `apps/sidecar/src/pipeline/fast.ts` - fast pipeline implementation.
+- `apps/sidecar/src/pipeline/visual-guide.ts` - visual guide implementation.
+- `apps/sidecar/src/pipeline/model.ts` - OpenAI-compatible model factory.
+- `apps/sidecar/src/services/sarvam/stt.ts` - STT client.
+- `apps/sidecar/src/services/sarvam/tts.ts` - TTS client.
+- `packages/shared/src/index.ts` - shared IPC/SSE contracts.
 
 ## Open Questions
 
-- Sentence-boundary detection for TTS: `. ` and `\n` are good defaults, but mid-sentence pauses (commas, clauses) may improve perceived naturalness.
+- Sentence-boundary detection currently uses punctuation plus whitespace. Mid-sentence pauses may improve perceived latency later.

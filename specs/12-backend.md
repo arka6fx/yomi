@@ -32,14 +32,14 @@ Body: `{ plan_id: string, customer_id: string }`
 
 - Proxies LLM client calls from sidecar through the backend.
 - Checks user plan caps: `basic: 500 requests/day, standard: 2000, genesis: 10000`.
-- Injects `OPENAI_API_KEY` from backend env into the LLM request.
+- Injects the AI Credits key from `OPENAI_API_KEY` into the LLM request.
 - Returns response as text/event-stream.
 
 #### `POST /api/v1/stt/transcribe`
 
-- Proxies OpenAI Whisper STT requests from sidecar.
+- Proxies Sarvam STT requests from sidecar when speech is routed through the backend.
 - Checks user plan caps.
-- Injects `OPENAI_API_KEY` from backend env.
+- Injects `SARVAM_API_KEY` from backend env.
 - Returns transcript text.
 
 ### Rate limiting
@@ -80,7 +80,7 @@ app.post("/api/v1/stt/transcribe", sttProxyHandler)
 
 - `apps/backend/src/index.ts` — register new routes.
 - `apps/backend/src/middleware/rate-limit.ts` — per-plan rate limiter.
-- `apps/backend/package.json` — add `razorpay` and `openai` dependencies; remove `stripe` and `@ai-sdk/anthropic`.
+- `apps/backend/package.json` — add `razorpay` and OpenAI-compatible provider dependencies; remove `stripe`.
 
 ## Files to create
 

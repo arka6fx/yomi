@@ -1,48 +1,46 @@
-# Spec 05 — Speech: STT
+# Spec 05 - Speech: STT
 
 ## Purpose
 
-Define the speech-to-text pipeline using OpenAI Whisper as the primary cloud provider. Local whisper.cpp fallback is removed — all STT goes through OpenAI.
+Define the speech-to-text pipeline using Sarvam `saarika:v2.5` as the cloud provider.
 
 ## Invariants
 
-- OpenAI Whisper (`whisper-1`) is the only cloud STT provider.
-- VAD (voice activity detection) determines end-of-speech — never a fixed timeout.
-- Audio format: PCM 16kHz mono internal standard, converted as needed per provider.
-- Requires `OPENAI_API_KEY`.
+- Sarvam `saarika:v2.5` is the cloud STT provider.
+- VAD determines end-of-speech; never use a fixed timeout.
+- Audio format: WAV / PCM 16 kHz mono internal standard.
+- Requires `SARVAM_API_KEY`.
 
 ## Detailed Design
 
-### STT: OpenAI Whisper
+### STT: Sarvam
 
 ```typescript
-const transcript = await openai.audio.transcriptions.create({
-  model: process.env.STT_MODEL || "whisper-1",
-  file: await toFile(wavBuffer, "audio.wav"),
+const result = await sarvamTranscribe(wavBytes, {
+  model: "saarika:v2.5",
 })
+const transcript = result.transcript
 ```
 
-### VAD (Voice Activity Detection)
+### VAD
 
-Use WebRTC VAD to detect end-of-speech. Do not use a fixed timeout — VAD fires in ~50ms of silence after speech ends.
+Use local voice activity detection to detect end-of-speech. Do not use a fixed timeout. VAD should fire shortly after silence following speech.
 
-### Latency Budget (STT portion)
+### Latency Budget
 
 | Step | Target | Technique |
 |---|---|---|
-| Hotkey → mic starts | < 20ms | Pre-init audio context on app start |
-| Speech → VAD fires | < 50ms after silence | WebRTC VAD |
-| VAD → Whisper STT final | < 500ms | OpenAI API, streaming not required |
+| Hotkey to mic starts | < 20 ms | Pre-init audio context on app start |
+| Speech to VAD fires | < 50 ms after silence | Local VAD |
+| VAD to STT final | < 500 ms | Sarvam API |
 
-## Files to create
+## Files
 
-- `apps/sidecar/src/speech/transcribe.ts` — OpenAI Whisper STT
-- `apps/sidecar/src/speech/vad.ts` — WebRTC VAD for end-of-speech detection
-
-## Files to change
-
-- `apps/sidecar/src/pipeline/fast.ts` — integrate STT into fast pipeline
+- `apps/sidecar/src/speech/transcribe.ts` - Sarvam STT wrapper.
+- `apps/sidecar/src/services/sarvam/stt.ts` - Sarvam HTTP client.
+- `apps/sidecar/src/speech/vad.ts` - local VAD helpers.
+- `apps/sidecar/src/pipeline/fast.ts` - integrates STT into the fast pipeline.
 
 ## Open Questions
 
-- Audio format: PCM 16kHz mono is standard. OpenAI Whisper accepts various formats.
+- Offline fallback is not part of the current implementation.
