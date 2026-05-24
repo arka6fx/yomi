@@ -791,7 +791,7 @@ function MenuCard({ plan, onSignOut, onClose, onHoverEnter, onHoverLeave, closin
   return (
     <>
     <div
-      className="no-drag"
+      className="no-drag yomi-hit-area"
       onMouseEnter={onHoverEnter}
       onMouseLeave={onHoverLeave}
       style={{
@@ -800,7 +800,7 @@ function MenuCard({ plan, onSignOut, onClose, onHoverEnter, onHoverLeave, closin
       }}
     />
     <div
-      className="no-drag"
+      className="no-drag yomi-hit-area"
       onMouseEnter={onHoverEnter}
       onMouseLeave={onHoverLeave}
       style={{
@@ -940,7 +940,7 @@ function Toolbar({ state, plan, interactionInfo, onSignOut, menuOpen, menuClosin
         gap:10,
         position: "relative",
         zIndex: 999,
-      }} className="drag">
+      }} className="drag yomi-hit-area">
 
         {/* Left: brand + state indicator */}
         <div style={{ display:"flex", alignItems:"center", gap:9 }}>
@@ -1017,11 +1017,10 @@ function Toolbar({ state, plan, interactionInfo, onSignOut, menuOpen, menuClosin
 
         {/* Right: controls */}
         <div style={{ display:"flex", gap:5, alignItems:"center" }} className="no-drag">
-          {/* TTS toggle — hover to toggle, shows current state as text */}
+          {/* TTS toggle */}
           <button
             onClick={toggleTts}
             onMouseEnter={e => {
-              toggleTts()
               e.currentTarget.style.color = "rgba(255,224,194,0.9)"
               e.currentTarget.style.background = "rgba(255,224,194,0.07)"
             }}
@@ -1327,6 +1326,7 @@ const App: React.FC = () => {
   const audioConsumedRef   = useRef(0)             // How many items from audioQueue state we've enqueued
   const audioSourceRef  = useRef<AudioBufferSourceNode|null>(null)
   const draggingRef     = useRef(false)
+  const mouseEventsIgnoredRef = useRef(false)
 
   // Restore saved window opacity on mount
   useEffect(()=>{
@@ -1564,6 +1564,32 @@ const App: React.FC = () => {
 
   const hasContent = entries.length>0 || hotkeyState==="text-input"
   const isListening = hotkeyState==="listening"
+
+  const setMouseEventsIgnored = useCallback((ignored: boolean) => {
+    if (mouseEventsIgnoredRef.current === ignored) return
+    mouseEventsIgnoredRef.current = ignored
+    window.yomi.setMouseEventsIgnored(ignored)
+  }, [])
+
+  useEffect(() => {
+    if (authState !== "authenticated" || hasContent) {
+      setMouseEventsIgnored(false)
+      return
+    }
+
+    setMouseEventsIgnored(true)
+
+    const onMove = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null
+      setMouseEventsIgnored(!target?.closest(".yomi-hit-area"))
+    }
+
+    window.addEventListener("mousemove", onMove)
+    return () => {
+      window.removeEventListener("mousemove", onMove)
+      setMouseEventsIgnored(false)
+    }
+  }, [authState, hasContent, setMouseEventsIgnored])
 
   // ── Sign-in states ──────────────────────────────────────────────────────────
 

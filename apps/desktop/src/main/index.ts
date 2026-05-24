@@ -73,6 +73,12 @@ app.whenReady().then(async () => {
     overlayWin.setSize(Math.max(240, w), Math.max(46, h))
   })
 
+  ipcMain.on("yomi:set-ignore-mouse-events", (_e, ignored: boolean) => {
+    if (!overlayWin) return
+    if (ignored) overlayWin.setIgnoreMouseEvents(true, { forward: true })
+    else overlayWin.setIgnoreMouseEvents(false)
+  })
+
   let dragStart = { winX: 0, winY: 0, mouseX: 0, mouseY: 0 }
   ipcMain.on("yomi:drag-start", (_e, mouseX: number, mouseY: number) => {
     const pos = overlayWin?.getPosition() ?? [0, 0]
