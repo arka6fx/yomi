@@ -10,10 +10,10 @@ const MODEL = process.env.FAST_PATH_MODEL || "gpt-4.1-mini";
 
 // yomi.md is stable per-session; memory files change after compaction so load fresh each turn.
 let cachedYomiMd: string | null = null
-async function getFastPrompt(): Promise<string> {
+async function getFastPrompt(hasScreen: boolean): Promise<string> {
   if (cachedYomiMd === null) cachedYomiMd = await loadYomiMd()
   const { memorySummary, memoryIndex } = await loadMemoryContext()
-  return buildFastPrompt({ yomiMd: cachedYomiMd, memorySummary, memoryIndex })
+  return buildFastPrompt({ yomiMd: cachedYomiMd, memorySummary, memoryIndex, hasScreen })
 }
 
 // Tiny single-consumer queue so multiple async producers (LLM text + N concurrent
@@ -48,6 +48,49 @@ class EventQueue {
   }
 }
 
+// Decides whether the query actually needs the screenshot in context.
+// Errs toward inclusion — missing visual context hurts more than a few extra tokens.
+function needsScreenContext(text: string): boolean {
+  const q = text.toLowerCase().trim()
+
+  // Unambiguous UI/visual vocabulary
+  if (/\b(screen|window|tab|page|app|application|browser|display|monitor|icon|button|popup|dialog|notification|menu|toolbar|sidebar|panel|image|photo|picture|video)\b/.test(q))
+    return true
+
+  // Demonstratives or spatial words implying the user is pointing at something visible
+  if (/\b(this|that|these|those|here)\b/.test(q))
+    return true
+
+  // Phrases that explicitly describe looking at something
+  if (/\b(i (can )?see|can you see|what'?s (on|shown|visible|showing)|i'?m (looking|staring) at|what am i (looking|seeing)|what'?s going on (here|there))\b/.test(q))
+    return true
+
+  // Personal scheduling / task management — clearly off-screen
+  if (/\b(remind me|set (a )?timer|add to (my )?(calendar|list|todo|reminders)|schedule (a )?(meeting|call|event|appointment)|send (an? )?(email|message|text)|book (a )?(meeting|call|flight|hotel))\b/.test(q))
+    return false
+
+  // Social acknowledgements
+  if (/^(thanks|thank you|ok(ay)?|yes|no|sure|yep|nope|sounds good|perfect|great|got it|cool|awesome|nice|bye|goodbye|hello|hi|hey)\b/.test(q))
+    return false
+
+  // Self-contained knowledge question with a named subject (≥3-char word after verb)
+  if (/^(what (is|are|was|were|does|do|did) \S{3,}|who (is|was|are|were|invented|created|made|wrote|founded|discovered) \S{3,}|when (was|did|is|are) \S{3,}|where (is|was|are) \S{3,}|why (is|was|does|do|did) \S{3,}|how (does|do|did|can|would|should|to) \S{3,}|explain \S{3,}|define \S{3,}|describe \S{3,})/.test(q))
+    return false
+
+  // Creative / generative with a clear non-visual output type
+  if (/^(write|draft|compose|create|generate|make|build)\b.{3,}\b(poem|song|email|message|essay|story|article|code|function|script|program|test|class|component|list|outline|summary|plan)\b/.test(q))
+    return false
+
+  // Math
+  if (/\b(calculate|compute|what'?s \d|how (many|much) (is )?\d|convert \d+|\d+ (plus|minus|times|divided|percent))\b/.test(q))
+    return false
+
+  // Default: no screen context — positive signals must justify including the screenshot.
+  // False negatives (missed visual query) are better than false positives (LLM
+  // anchoring on an irrelevant image and giving a wrong answer).
+  return false
+}
+
 // Sentence boundary: punctuation followed by whitespace. Returns the
 // length-of-prefix that includes the punctuation, or -1 if no boundary.
 function findSentenceEnd(buf: string): number {
@@ -63,14 +106,15 @@ async function* answerPipeline(
 ): AsyncGenerator<SseEvent> {
   const content: any[] = [{ type: "text" as const, text }];
 
-  if (screenshotB64) {
+  const hasScreen = !!(screenshotB64 && needsScreenContext(text));
+  if (hasScreen) {
     content.push({
       type: "image" as const,
       image: `data:image/png;base64,${screenshotB64}`,
     });
   }
 
-  const systemPrompt = await getFastPrompt();
+  const systemPrompt = await getFastPrompt(hasScreen);
 
   const result = streamText({
     model: createModel(MODEL),
@@ -83,27 +127,36 @@ async function* answerPipeline(
 
   const ttsEnabled = tts && resolveTts() !== "none";
   const queue = new EventQueue();
-  const ttsTasks: Promise<void>[] = [];
 
-  async function speakSentence(sentence: string): Promise<void> {
-    const trimmed = sentence.trim();
-    if (!trimmed) return;
+  // Fetch all audio chunks for one sentence — starts immediately so synthesis
+  // runs in parallel with the LLM stream and subsequent sentences.
+  async function fetchAudio(sentence: string): Promise<Uint8Array[]> {
+    const chunks: Uint8Array[] = [];
     try {
-      for await (const audio of synthesize(trimmed)) {
-        queue.push({
-          type: "audio_chunk",
-          base64: Buffer.from(audio).toString("base64"),
-        });
-      }
+      for await (const audio of synthesize(sentence.trim())) chunks.push(audio);
     } catch (err) {
-      // TTS failure never kills the text response.
       console.warn("[yomi/tts] synthesis failed:", err instanceof Error ? err.message : err);
     }
+    return chunks;
   }
 
   const producer = (async () => {
     let buffer = "";
     let gotChunk = false;
+    // audioChain enforces ordering: synthesis runs concurrently but each
+    // sentence's chunks are pushed only after the previous sentence's chunks
+    // are fully in the queue, so playback always follows text order.
+    let audioChain = Promise.resolve();
+
+    function enqueueSentence(sentence: string) {
+      const audioPromise = fetchAudio(sentence); // start immediately
+      audioChain = audioChain.then(async () => {
+        for (const chunk of await audioPromise) {
+          queue.push({ type: "audio_chunk", base64: Buffer.from(chunk).toString("base64") });
+        }
+      });
+    }
+
     for await (const chunk of result.textStream) {
       if (!chunk) continue;
       gotChunk = true;
@@ -112,19 +165,16 @@ async function* answerPipeline(
       buffer += chunk;
       let cutAt = findSentenceEnd(buffer);
       while (cutAt !== -1) {
-        const sentence = buffer.slice(0, cutAt);
+        enqueueSentence(buffer.slice(0, cutAt));
         buffer = buffer.slice(cutAt + 1);
-        ttsTasks.push(speakSentence(sentence));
         cutAt = findSentenceEnd(buffer);
       }
     }
     if (!gotChunk) {
       throw new Error("LLM returned empty response (likely rate-limited or quota exceeded)")
     }
-    if (ttsEnabled && buffer.trim().length > 0) {
-      ttsTasks.push(speakSentence(buffer));
-    }
-    await Promise.all(ttsTasks);
+    if (ttsEnabled && buffer.trim().length > 0) enqueueSentence(buffer);
+    await audioChain;
   })();
 
   producer.then(() => queue.close(), (err) => {

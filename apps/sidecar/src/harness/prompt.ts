@@ -9,6 +9,7 @@ export interface PromptContext {
   yomiMd?: string
   memorySummary?: string
   memoryIndex?: string
+  hasScreen?: boolean  // whether a screenshot is attached to this turn
 }
 
 // Read ~/.yomi/yomi.md at call time; returns empty string if absent.
@@ -34,6 +35,7 @@ function resolveCtx(ctx: PromptContext): Required<PromptContext> {
     yomiMd: ctx.yomiMd ?? "",
     memorySummary: ctx.memorySummary ?? "",
     memoryIndex: ctx.memoryIndex ?? "",
+    hasScreen: ctx.hasScreen ?? false,
   }
 }
 
@@ -57,16 +59,28 @@ const AGENT_EXAMPLES = `\
 5. File operation: "move all screenshots to ~/Desktop/screenshots" → bash + confirm`
 
 export function buildFastPrompt(ctx: PromptContext): string {
-  const { userName, os, yomiMd, memorySummary, memoryIndex } = resolveCtx(ctx)
+  const { userName, os, yomiMd, memorySummary, memoryIndex, hasScreen } = resolveCtx(ctx)
   const userCtx = yomiMd ? `<user_context>\n${yomiMd}\n</user_context>\n\n` : ""
   const memCtx = buildMemoryBlock(memorySummary, memoryIndex)
+
+  const screenLine = hasScreen
+    ? "A screenshot of their current screen is attached — use it to answer."
+    : "No screenshot is attached this turn — answer from your own knowledge."
+
+  const capLine = hasScreen
+    ? "You answer questions, explain what's on screen, and guide the user step by step."
+    : "You answer questions and help the user step by step. Do not reference any image or screen."
 
   return `\
 <identity>
 You are Yomi, ${userName}'s sharp, friendly AI companion on their ${os} desktop.
-You can see their screen and you speak aloud — so your answers are heard, not read.
+You speak aloud — so your answers are heard, not read.
 Be warm, direct, and genuinely helpful. Sound like a smart friend, not a search engine.
 </identity>
+
+<screen_context>
+${screenLine}
+</screen_context>
 
 ${userCtx}${memCtx}<voice_rules>
 CRITICAL — your response is converted to speech:
@@ -78,7 +92,7 @@ CRITICAL — your response is converted to speech:
 </voice_rules>
 
 <capabilities>
-You answer questions, explain what's on screen, and guide the user step by step.
+${capLine}
 </capabilities>
 
 <examples>
