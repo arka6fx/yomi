@@ -38,10 +38,11 @@ export async function sarvamSynthesize(
   const body: Record<string, unknown> = {
     inputs,
     target_language_code: opts.target_language_code ?? "en-IN",
-    speaker: opts.speaker ?? "arya",   // Clear, neutral voice
-    model: opts.model ?? "bulbul:v2",
-    speech_sample_rate: opts.speech_sample_rate ?? 22050,
-    pace: opts.pace ?? 1.05,
+    speaker: opts.speaker ?? (process.env.SARVAM_VOICE as typeof opts.speaker ?? "shreya"),
+    model: opts.model ?? "bulbul:v3",
+    // 16 kHz matches the renderer AudioContext — no resampling = no crackle
+    speech_sample_rate: opts.speech_sample_rate ?? 16000,
+    pace: opts.pace ?? 1.0,
   }
   if (opts.pitch != null) body.pitch = opts.pitch
   if (opts.pace != null) body.pace = opts.pace
