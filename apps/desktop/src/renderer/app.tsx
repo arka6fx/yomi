@@ -692,6 +692,18 @@ function Key({ label }: { label:string }) {
   )
 }
 
+const SpeakerOnSVG = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+  </svg>
+)
+
+const SpeakerOffSVG = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+  </svg>
+)
+
 function Chip({ label, keys, hot }: { label:string; keys:string[]; hot:boolean }) {
   return (
     <div style={{
@@ -713,6 +725,7 @@ function Chip({ label, keys, hot }: { label:string; keys:string[]; hot:boolean }
 }
 
 function Toolbar({ state, plan, interactionInfo }: { state:HotkeyState; plan?:string; interactionInfo?:string }) {
+  const { ttsEnabled, toggleTts } = useYomiStore()
   return (
     <div style={{
       display:"flex", alignItems:"center", justifyContent:"space-between",
@@ -799,6 +812,24 @@ function Toolbar({ state, plan, interactionInfo }: { state:HotkeyState; plan?:st
 
       {/* Right: shortcut chips */}
       <div style={{ display:"flex", gap:4, alignItems:"center" }} className="no-drag">
+        {/* TTS output toggle — always visible */}
+        <button
+          onClick={toggleTts}
+          style={{
+            background:"none", border:"none",
+            cursor:"pointer", padding:"2px 3px",
+            color: ttsEnabled ? "rgba(255,224,194,0.45)" : "rgba(175,155,115,0.22)",
+            transition:"color .15s",
+            display:"flex", alignItems:"center",
+            flexShrink:0,
+          }}
+          onMouseEnter={e=>{ e.currentTarget.style.color="rgba(255,224,194,0.85)" }}
+          onMouseLeave={e=>{ e.currentTarget.style.color=ttsEnabled ? "rgba(255,224,194,0.45)" : "rgba(175,155,115,0.22)" }}
+          title={ttsEnabled ? "Mute voice output" : "Unmute voice output"}
+        >
+          {ttsEnabled ? <SpeakerOnSVG /> : <SpeakerOffSVG />}
+        </button>
+
         {state==="idle" && <>
           <Chip label="Voice" keys={["⌃⇧","Spc"]} hot={false} />
           <Chip label="Type"  keys={["⌃⇧","↵"]}   hot={false} />
@@ -999,7 +1030,7 @@ function SignInPanel({ isWaiting, loadingProvider, error, lastProvider, onSignIn
 const App: React.FC = () => {
   const {
     authState, authError, setAuthState,
-    hotkeyState, entries, audioQueue, subscription,
+    hotkeyState, entries, audioQueue, ttsEnabled, subscription,
     handleSseEvent, setHotkeyState, dismissEntry,
     setSubscription, setSubscriptionLoading,
   } = useYomiStore()
@@ -1214,6 +1245,14 @@ const App: React.FC = () => {
     })()
     return ()=>{ cancelled=true; micSrc?.disconnect(); sysSrc?.disconnect(); proc?.disconnect(); processorRef.current=null }
   }, [hotkeyState])
+
+  // Stop in-flight audio immediately when TTS is toggled off.
+  useEffect(()=>{
+    if (!ttsEnabled) {
+      audioSourceRef.current?.stop(); audioSourceRef.current=null
+      audioPlayingRef.current=false; localAudioQueue.current=[]
+    }
+  }, [ttsEnabled])
 
   // Global shortcuts consume Escape before the renderer sees it, so we get a
   // dedicated IPC instead.  Stop audio and dismiss the active streaming entry.
