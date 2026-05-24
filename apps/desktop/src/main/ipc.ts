@@ -89,10 +89,18 @@ function send(win: BrowserWindow, event: SseEvent): void {
 }
 
 function buildWav(chunks: Float32Array[], sampleRate: number): Buffer {
-  const total = chunks.reduce((s, c) => s + c.length, 0)
+  const MAX_SAMPLES = sampleRate * 30  // Sarvam STT hard limit: 30 s
+  const rawTotal = chunks.reduce((s, c) => s + c.length, 0)
+  const total = Math.min(rawTotal, MAX_SAMPLES)
+  if (rawTotal > MAX_SAMPLES)
+    console.warn(`[yomi/stt] audio trimmed to 30 s (recorded ${(rawTotal / sampleRate).toFixed(1)} s)`)
   const merged = new Float32Array(total)
   let off = 0
-  for (const c of chunks) { merged.set(c, off); off += c.length }
+  for (const c of chunks) {
+    if (off >= total) break
+    const slice = off + c.length > total ? c.subarray(0, total - off) : c
+    merged.set(slice, off); off += slice.length
+  }
 
   const int16 = new Int16Array(total)
   for (let i = 0; i < total; i++)
