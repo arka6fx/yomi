@@ -49,8 +49,8 @@ cd apps/desktop  && bun run dev   # Electron
 | Auth | Better Auth (Drizzle adapter, orgs plugin for Team tier) — Google + GitHub OAuth |
 | Billing | Razorpay |
 | LLM SDK | Vercel AI SDK (`ai` package) — unified interface for Anthropic, OpenAI, Groq, OpenRouter |
-| Speech STT | ElevenLabs STT (cloud); whisper.cpp (local/offline fallback) |
-| Speech TTS | ElevenLabs TTS (streaming) |
+| Speech STT | Sarvam `saarika:v2.5` (cloud); whisper.cpp (local/offline fallback) |
+| Speech TTS | Sarvam `bulbul:v3` (streaming, 16 kHz) |
 | Desktop | Electron v1 (Tauri-ready — brain stays in sidecar) |
 | Sidecar | Bun service (ships with desktop app) |
 | Packages | Bun workspaces + Turborepo |
@@ -122,18 +122,28 @@ sessions/
 
 ## Database
 
-Better Auth generates `user / session / account / verification`. App tables:
+Better Auth generates `user / session / account / verification`. User table extended with:
 
 ```
-devices        id, user_id, os, app_version, last_seen
-subscriptions  id, user_id, razorpay_customer_id, razorpay_sub_id,
-               plan, status, current_period_end
-usage_events   id, user_id, device_id, kind(stt|fast_query|agent_run|tts),
-               model, input_tokens, output_tokens, cost_cents, created_at
-memory_blobs   id, user_id, path, content_hash, updated_at
-agent_runs     id, user_id, status, task, started_at, ended_at, summary
+plan                  "explore" | "pro" | "max"  (default "explore")
+subscription_status   "active" | "trialing" | "past_due" | "canceled" | null
+trial_ends_at         timestamp — 30-day explore trial end
+daily_interaction_count  int, resets midnight UTC
+daily_interaction_date   date
+```
+
+App tables (Drizzle schema in `packages/db/src/schema.ts`):
+
+```
+devices         id, user_id, os, app_version, last_seen
+subscriptions   id, user_id, razorpay_customer_id, razorpay_sub_id,
+                plan, status, current_period_end
+usage_events    id, user_id, device_id, kind(stt|fast_query|agent_run|tts),
+                model, input_tokens, output_tokens, cost_cents, created_at
+memory_blobs    id, user_id, path, content_hash, updated_at
+agent_runs      id, user_id, status, task, started_at, ended_at, summary
 mcp_connections id, user_id, provider, oauth_tokens(encrypted), scopes
-hook_logs      id, user_id, run_id, hook, tool, decision, payload_redacted, created_at
+hook_logs       id, user_id, run_id, hook, tool, decision, payload_redacted, created_at
 ```
 
 `usage_events` append-only · `oauth_tokens` encrypted at rest · PII redacted in `hook_logs`.
@@ -144,10 +154,13 @@ hook_logs      id, user_id, run_id, hook, tool, decision, payload_redacted, crea
 
 | Plan | Price | Key limits |
 |---|---|---|
-| Free | $0/mo | 10 LLM calls/day; 2 STT min/day; TTS; no screenshot analysis |
-| Basic | $4/mo | 500 LLM calls/day; 30 STT min/day; screenshot analysis; email support |
-| Standard | $9/mo | 2 000 LLM calls/day; 120 STT min/day; agent pipeline; email support |
-| Genesis | $19/mo | 10 000 LLM calls/day; 600 STT min/day; agent pipeline; priority support |
+| Explore | $0/mo | 30-day trial; 150 total interactions; voice + screen; no agents |
+| Pro | $9.99/mo | Unlimited standard interactions*; voice 200/day; screen analysis; no agents |
+| Max | $24.99/mo | Everything in Pro + agents/sub-agents; 10 000 agent runs/day; background execution |
+
+\* Fair-use: chat 10 000/day. Voice capped at 200/day on Pro, 10 000/day on Max.
+
+Razorpay plan amounts: Pro = ₹999, Max = ₹2 499 (cents). Set `RAZORPAY_KEY_ID` + `RAZORPAY_KEY_SECRET`.
 
 ---
 
@@ -160,8 +173,8 @@ Specs are numbered in the order they should be implemented. 00 and 01 are refere
 | 02 | `02-sidecar-fast-pipeline` | Switch to Anthropic + prompt caching; fast path + visual guide ← **current** |
 | 03 | `03-desktop-shell` | Electron main: sidecar spawn, hotkey, desktopCapturer, IPC bridge, overlay window |
 | 04 | `04-desktop-ui` | Renderer: floating overlay, Zustand store, audio capture, streaming response |
-| 05 | `05-speech-stt` | STT abstraction: ElevenLabs + whisper.cpp VAD |
-| 06 | `06-speech-tts` | TTS abstraction: ElevenLabs streaming + edge-tts + Piper |
+| 05 | `05-speech-stt` | STT abstraction: Sarvam saarika:v2.5 + whisper.cpp VAD fallback |
+| 06 | `06-speech-tts` | TTS abstraction: Sarvam bulbul:v3 streaming (16 kHz) |
 | 07 | `07-sidecar-router` | Intent router: fast vs agent classification |
 | 08 | `08-sidecar-agent` | ReAct loop, tools, MCP, subagents, sandbox |
 | 09 | `09-harness` | System prompt, hooks, loop guards |
