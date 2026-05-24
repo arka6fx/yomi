@@ -41,9 +41,19 @@ const config: Config = {
         ring: "hsl(var(--ring))",
       },
       fontFamily: {
-        sans: ["var(--font-inter)", "var(--font-sans)", "Inter", "sans-serif"],
+        sans: ["var(--font-sans)", "Geist", "sans-serif"],
+        accent: ["var(--font-accent)", "EB Garamond", "serif"],
         display: ["var(--font-caveat)", "cursive"],
-        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+        mono: [
+          "var(--font-mono)",
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "Monaco",
+          "Consolas",
+          '"Courier New"',
+          "monospace",
+        ],
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -113,6 +113,17 @@ app.whenReady().then(async () => {
     overlayWin?.webContents.send("yomi:auth-needed")
   })
 
+  ipcMain.on("yomi:quit", () => app.quit())
+
+  ipcMain.on("yomi:open-upgrade", () => {
+    const base = process.env["YOMI_LANDING_URL"] ?? "http://localhost:3000"
+    shell.openExternal(`${base}/pricing`)
+  })
+
+  ipcMain.on("yomi:set-opacity", (_e, value: number) => {
+    overlayWin?.setOpacity(Math.max(0.1, Math.min(1, value)))
+  })
+
   // Handle 401 from subscription check — triggers re-auth
   ipcMain.handle("yomi:get-subscription-info", async () => {
     const token = loadToken()

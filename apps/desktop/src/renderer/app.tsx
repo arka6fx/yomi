@@ -13,8 +13,9 @@ styleEl.textContent = `
   @keyframes glow   { 0%,100%{box-shadow:0 0 6px 1px rgba(255,210,150,0.5)} 50%{box-shadow:0 0 14px 3px rgba(255,210,150,0.15)} }
   @keyframes spin   { to{transform:rotate(360deg)} }
   @keyframes blink  { 0%,100%{opacity:1} 50%{opacity:0} }
-  @keyframes slideUp{ from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:translateY(0)} }
-  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  @keyframes slideUp  { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes slideDown{ from{opacity:1;transform:translateY(0)} to{opacity:0;transform:translateY(6px)} }
+  @keyframes fadeIn   { from{opacity:0} to{opacity:1} }
 
   * { box-sizing:border-box; margin:0; padding:0; }
   :root {
@@ -48,6 +49,20 @@ styleEl.textContent = `
   button { cursor:pointer; font-family:inherit; }
   kbd    { font-family:'Cascadia Code','Fira Code','JetBrains Mono','Consolas',monospace; }
   ::selection { background:rgba(255,224,194,0.2); color:#fff; }
+  input[type=range] { -webkit-appearance:none; appearance:none; background:transparent; cursor:pointer; }
+  input[type=range]::-webkit-slider-runnable-track {
+    height:3px; border-radius:2px; background:rgba(255,224,194,0.1);
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance:none; appearance:none;
+    width:12px; height:12px; border-radius:50%; margin-top:-4.5px;
+    background:rgba(255,224,194,0.75); border:1.5px solid rgba(255,200,130,0.4);
+    box-shadow:0 0 4px rgba(255,200,130,0.3); transition:background .15s,box-shadow .15s;
+  }
+  input[type=range]:hover::-webkit-slider-thumb {
+    background:rgba(255,224,194,1); box-shadow:0 0 8px rgba(255,200,130,0.55);
+  }
+  ::placeholder { color:rgba(200,185,160,0.45) !important; }
 `
 document.head.appendChild(styleEl)
 
@@ -545,7 +560,7 @@ function TextInputPanel() {
       animation:"slideUp 0.2s cubic-bezier(0.16,1,0.3,1)",
     }} className="drag">
       <div style={{ padding:"8px 10px", display:"flex", alignItems:"center", gap:8 }}>
-        <span style={{ fontSize:9, color:"rgba(255,200,130,0.5)", letterSpacing:"0.14em", fontFamily:UI_FONT, fontWeight:600, flexShrink:0 }}>
+        <span style={{ fontSize:10.5, color:"rgba(255,200,130,0.75)", letterSpacing:"0.12em", fontFamily:UI_FONT, fontWeight:700, flexShrink:0 }}>
           ASK
         </span>
         <input
@@ -567,8 +582,8 @@ function TextInputPanel() {
           style={{
             background:"rgba(255,224,194,0.1)",
             border:"1px solid rgba(255,224,194,0.22)",
-            borderRadius:4, padding:"2px 9px", fontSize:10,
-            color:"rgba(255,224,194,0.8)", fontFamily:UI_FONT,
+            borderRadius:4, padding:"3px 10px", fontSize:11.5,
+            color:"rgba(255,224,194,0.9)", fontFamily:UI_FONT,
             cursor:"pointer", flexShrink:0, transition:"all .15s",
           }}
           onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,224,194,0.17)"; e.currentTarget.style.color="rgba(255,224,194,1)"}}
@@ -578,7 +593,7 @@ function TextInputPanel() {
         </button>
       </div>
       <div style={{ height:1, background:"rgba(255,224,194,0.05)" }} />
-      <div style={{ padding:"4px 12px 5px", fontSize:9, color:"rgba(175,155,115,0.35)", fontFamily:UI_FONT }}>
+      <div style={{ padding:"5px 12px 6px", fontSize:11, color:"rgba(185,170,145,0.65)", fontFamily:UI_FONT }}>
         Empty → analyze screen · Esc to cancel · text only, no voice
       </div>
     </div>
@@ -623,14 +638,14 @@ function ResponsePanel({ entry, onDismiss, isActive }: { entry:ChatEntry; onDism
           flexShrink:0,
         }}>
           <span style={{
-            fontSize:8.5, letterSpacing:"0.14em", fontFamily:UI_FONT, fontWeight:700, flexShrink:0,
-            color: entry.error ? "rgba(255,140,101,0.6)" : "rgba(255,200,130,0.45)",
+            fontSize:10, letterSpacing:"0.12em", fontFamily:UI_FONT, fontWeight:700, flexShrink:0,
+            color: entry.error ? "rgba(255,140,101,0.85)" : "rgba(255,200,130,0.7)",
           }}>
             {entry.error ? "ERR" : "YOU"}
           </span>
           <span style={{
-            fontSize:11.5, fontFamily:UI_FONT,
-            color: entry.error ? "var(--error)" : "var(--dim)",
+            fontSize:13, fontFamily:UI_FONT,
+            color: entry.error ? "var(--error)" : "rgba(200,190,175,0.9)",
             fontStyle:entry.error?"normal":"italic",
             flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
           }}>
@@ -683,11 +698,12 @@ function Key({ label }: { label:string }) {
   return (
     <kbd style={{
       display:"inline-flex", alignItems:"center", justifyContent:"center",
-      background:"rgba(255,224,194,0.05)",
-      border:"1px solid rgba(255,224,194,0.1)",
-      borderBottom:"2px solid rgba(255,224,194,0.12)",
-      borderRadius:4, padding:"0 4px", fontSize:9,
-      color:"rgba(255,255,255,0.5)", minWidth:14, height:15,
+      background:"rgba(255,224,194,0.08)",
+      border:"1px solid rgba(255,224,194,0.16)",
+      borderBottom:"2px solid rgba(255,224,194,0.2)",
+      borderRadius:4, padding:"0 6px", fontSize:10,
+      color:"rgba(255,224,194,0.8)", minWidth:18, height:17,
+      fontWeight:500,
     }}>{label}</kbd>
   )
 }
@@ -704,6 +720,179 @@ const SpeakerOffSVG = () => (
   </svg>
 )
 
+const HamburgerIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor" aria-hidden>
+    <rect y="1.5" width="13" height="1.5" rx="0.75" />
+    <rect y="5.75" width="13" height="1.5" rx="0.75" />
+    <rect y="10" width="13" height="1.5" rx="0.75" />
+  </svg>
+)
+
+// ── Menu Card ──────────────────────────────────────────────────────────────────
+
+function MenuCard({ plan, onSignOut, onClose, onHoverEnter, onHoverLeave, closing }: {
+  plan?: string
+  onSignOut: () => void
+  onClose: () => void
+  onHoverEnter: () => void
+  onHoverLeave: () => void
+  closing: boolean
+}) {
+  const [opacity, setOpacity] = React.useState(() => {
+    const saved = localStorage.getItem("yomi:opacity")
+    return saved ? parseFloat(saved) : 1.0
+  })
+
+  const handleOpacity = (val: number) => {
+    setOpacity(val)
+    localStorage.setItem("yomi:opacity", String(val))
+    window.yomi.setOpacity(val)
+  }
+
+
+
+  const shortcuts = [
+    { label: "Voice",  keys: ["Ctrl", "Shift", "Space"]  },
+    { label: "Type",   keys: ["Ctrl", "Shift", "Enter"]  },
+    { label: "Move",   keys: ["Ctrl", "Shift", "Arrows"] },
+    { label: "Hide",   keys: ["Ctrl", "Shift", "H"]      },
+    { label: "Quit",   keys: ["Ctrl", "Shift", "Q"]      },
+  ]
+
+  const upgradeLabel = plan === "explore" ? "Upgrade to Pro"
+    : plan === "pro" ? "Upgrade to Max"
+    : null
+
+  const MenuBtn = ({ label, danger, onClick }: { label: string; danger?: boolean; onClick: () => void }) => (
+    <button
+      onClick={onClick}
+      className="no-drag"
+      style={{
+        width: "100%", textAlign: "left",
+        background: "none", border: "none",
+        padding: "7px 12px", borderRadius: 6,
+        fontSize: 12, fontFamily: UI_FONT, cursor: "pointer",
+        color: danger ? "rgba(255,120,90,0.85)" : "rgba(220,210,195,0.88)",
+        transition: "background .12s, color .12s", fontWeight: 500,
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.background = danger ? "rgba(255,100,70,0.1)" : "rgba(255,224,194,0.09)"
+        e.currentTarget.style.color = danger ? "rgba(255,120,90,1)" : "rgba(255,240,220,1)"
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.background = "none"
+        e.currentTarget.style.color = danger ? "rgba(255,120,90,0.85)" : "rgba(220,210,195,0.88)"
+      }}
+    >
+      {label}
+    </button>
+  )
+
+  return (
+    <>
+    <div
+      className="no-drag"
+      onMouseEnter={onHoverEnter}
+      onMouseLeave={onHoverLeave}
+      style={{
+        position: "fixed", top: 34, right: 8, zIndex: 1000,
+        width: 216, height: 16,
+      }}
+    />
+    <div
+      className="no-drag"
+      onMouseEnter={onHoverEnter}
+      onMouseLeave={onHoverLeave}
+      style={{
+        position: "fixed", top: 46, right: 8, zIndex: 1000,
+        width: 216,
+        background: "rgba(13,11,8,0.94)",
+        border: "1px solid rgba(255,224,194,0.1)",
+        borderRadius: 10,
+        boxShadow: "0 12px 40px rgba(0,0,0,0.65), 0 0 0 0.5px rgba(255,224,194,0.04)",
+        backdropFilter: "blur(28px) saturate(160%)",
+        WebkitBackdropFilter: "blur(28px) saturate(160%)",
+        animation: closing
+          ? "slideDown 0.2s cubic-bezier(0.4,0,1,1) forwards"
+          : "slideUp 0.22s cubic-bezier(0.16,1,0.3,1)",
+        overflow: "hidden",
+      }}
+    >
+      {/* Shortcuts */}
+      <div style={{ padding: "10px 14px 10px" }}>
+        <div style={{
+          fontSize: 10, fontFamily: UI_FONT, fontWeight: 700,
+          letterSpacing: "0.1em", color: "rgba(255,200,130,0.6)",
+          marginBottom: 10,
+        }}>
+          SHORTCUTS
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+          {shortcuts.map(({ label, keys }) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: 13, fontFamily: UI_FONT, color: "rgba(210,200,185,0.9)", fontWeight:500 }}>
+                {label}
+              </span>
+              <div style={{ display: "flex", gap: 3 }}>
+                {keys.map((k, i) => <Key key={i} label={k} />)}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ height: 1, background: "rgba(255,224,194,0.06)" }} />
+
+      {/* Opacity slider */}
+      <div style={{ padding: "10px 14px 10px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <span style={{ fontSize: 10, fontFamily: UI_FONT, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,200,130,0.6)" }}>
+            OPACITY
+          </span>
+          <span style={{ fontSize: 11, fontFamily: UI_FONT, color: "rgba(200,185,155,0.8)", fontWeight: 500 }}>
+            {Math.round(opacity * 100)}%
+          </span>
+        </div>
+        <input
+          type="range" min={20} max={100} step={1}
+          value={Math.round(opacity * 100)}
+          onChange={e => handleOpacity(parseInt(e.target.value) / 100)}
+          className="no-drag"
+          style={{ width: "100%", margin: 0 }}
+        />
+      </div>
+
+      <div style={{ height: 1, background: "rgba(255,224,194,0.06)" }} />
+
+      {/* Actions */}
+      <div style={{ padding: "5px" }}>
+        {upgradeLabel && (
+          <button
+            onClick={() => { window.yomi.openUpgrade(); onClose() }}
+            className="no-drag"
+            style={{
+              width: "100%", textAlign: "left",
+              background: "rgba(255,200,130,0.07)",
+              border: "1px solid rgba(255,200,130,0.2)",
+              padding: "8px 12px", borderRadius: 6, marginBottom: 4,
+              fontSize: 13, fontFamily: UI_FONT, cursor: "pointer",
+              color: "rgba(255,210,140,0.95)", fontWeight: 600,
+              transition: "background .12s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,200,130,0.13)" }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,200,130,0.07)" }}
+          >
+            ✦ {upgradeLabel}
+          </button>
+        )}
+        <MenuBtn label="Sign out" onClick={() => { onSignOut(); onClose() }} />
+        <MenuBtn label="Quit" danger onClick={() => { window.yomi.quit(); onClose() }} />
+      </div>
+    </div>
+    </>
+  )
+}
+
 function Chip({ label, keys, hot }: { label:string; keys:string[]; hot:boolean }) {
   return (
     <div style={{
@@ -713,9 +902,9 @@ function Chip({ label, keys, hot }: { label:string; keys:string[]; hot:boolean }
       borderRadius:5, padding:"2px 7px 2px 6px", transition:"all .2s",
     }}>
       <span style={{
-        fontSize:10, fontFamily:UI_FONT,
-        color: hot ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.65)",
-        letterSpacing:"0.01em",
+        fontSize:11.5, fontFamily:UI_FONT,
+        color: hot ? "rgba(255,224,194,1)" : "rgba(220,210,195,0.8)",
+        letterSpacing:"0.01em", fontWeight:500,
       }}>{label}</span>
       <div style={{ display:"flex", gap:2 }}>
         {keys.map((k,i)=><Key key={i} label={k} />)}
@@ -724,146 +913,194 @@ function Chip({ label, keys, hot }: { label:string; keys:string[]; hot:boolean }
   )
 }
 
-function Toolbar({ state, plan, interactionInfo }: { state:HotkeyState; plan?:string; interactionInfo?:string }) {
+function Toolbar({ state, plan, interactionInfo, onSignOut, menuOpen, menuClosing, onMenuToggle, onMenuClose, onMenuOpen, onMenuScheduleClose, onMenuCancelClose }: {
+  state: HotkeyState; plan?: string; interactionInfo?: string; onSignOut: () => void
+  menuOpen: boolean; menuClosing: boolean; onMenuToggle: () => void; onMenuClose: () => void
+  onMenuOpen: () => void; onMenuScheduleClose: () => void; onMenuCancelClose: () => void
+}) {
   const { ttsEnabled, toggleTts } = useYomiStore()
-  return (
-    <div style={{
-      display:"flex", alignItems:"center", justifyContent:"space-between",
-      padding:"0 10px",
-      height:46,
-      background:"var(--bg)",
-      borderBottom: state!=="idle" ? "1px solid rgba(255,224,194,0.07)" : "1px solid rgba(255,224,194,0.04)",
-      borderRadius: "10px 10px 0 0",
-      gap:10,
-    }} className="drag">
 
-      {/* Left: brand + state indicator */}
-      <div style={{ display:"flex", alignItems:"center", gap:9 }}>
-        {/* Drag grip dots */}
-        <div style={{ display:"flex", flexDirection:"column", gap:2.5, opacity:0.2, flexShrink:0 }}>
-          {[0,1,2].map(i=>(
-            <div key={i} style={{ display:"flex", gap:2.5 }}>
-              <div style={{ width:2, height:2, borderRadius:"50%", background:"rgba(255,224,194,1)" }} />
-              <div style={{ width:2, height:2, borderRadius:"50%", background:"rgba(255,224,194,1)" }} />
-            </div>
-          ))}
+  return (
+    <>
+      {/* Backdrop — captures outside clicks to close the menu */}
+      {menuOpen && (
+        <div
+          onClick={onMenuClose}
+          style={{ position: "fixed", inset: 0, zIndex: 998 }}
+        />
+      )}
+
+      <div style={{
+        display:"flex", alignItems:"center", justifyContent:"space-between",
+        padding:"0 10px",
+        height:46,
+        background:"rgba(13,11,8,0.94)",
+        borderBottom: state!=="idle" ? "1px solid rgba(255,224,194,0.07)" : "1px solid rgba(255,224,194,0.04)",
+        borderRadius: "10px 10px 0 0",
+        gap:10,
+        position: "relative",
+        zIndex: 999,
+      }} className="drag">
+
+        {/* Left: brand + state indicator */}
+        <div style={{ display:"flex", alignItems:"center", gap:9 }}>
+          {/* Drag grip dots */}
+          <div style={{ display:"flex", flexDirection:"column", gap:2.5, opacity:0.2, flexShrink:0 }}>
+            {[0,1,2].map(i=>(
+              <div key={i} style={{ display:"flex", gap:2.5 }}>
+                <div style={{ width:2, height:2, borderRadius:"50%", background:"rgba(255,224,194,1)" }} />
+                <div style={{ width:2, height:2, borderRadius:"50%", background:"rgba(255,224,194,1)" }} />
+              </div>
+            ))}
+          </div>
+
+          {/* State dot */}
+          {state==="listening" ? (
+            <div style={{
+              width:7, height:7, borderRadius:"50%", flexShrink:0,
+              background:"#ffe0c2",
+              boxShadow:"0 0 8px 2px rgba(255,200,130,0.6)",
+              animation:"pulse 1.2s ease-in-out infinite",
+            }} />
+          ) : state==="processing" ? (
+            <div style={{
+              width:10, height:10, borderRadius:"50%", flexShrink:0,
+              border:"1.5px solid rgba(255,224,194,0.08)",
+              borderTopColor:"rgba(255,200,130,0.8)",
+              animation:"spin .75s linear infinite",
+            }} />
+          ) : (
+            <div style={{
+              width:6, height:6, borderRadius:"50%", flexShrink:0,
+              background:"rgba(255,224,194,0.18)",
+            }} />
+          )}
+
+          {/* Label */}
+          <span style={{
+            fontSize: state==="idle" ? 20 : 12,
+            fontWeight: state==="idle" ? 700 : 600,
+            fontFamily: state==="idle" ? DISPLAY_FONT : UI_FONT,
+            letterSpacing: state==="idle" ? "-0.01em" : "-0.02em",
+            lineHeight: 1,
+            color: state==="idle"
+              ? "rgba(255,224,194,0.55)"
+              : state==="listening"
+                ? "rgba(255,220,180,0.92)"
+                : "rgba(225,210,185,0.85)",
+            transition:"color .25s, font-size .25s, font-family .25s",
+          }}>
+            {state==="listening" ? "Listening…" : state==="processing" ? "Thinking…" : "Yomi"}
+          </span>
+          {/* Plan badge */}
+          {plan && state==="idle" && (
+            <span style={{
+              fontSize:10.5, fontFamily:UI_FONT, letterSpacing:"0.05em",
+              color:"rgba(200,185,155,0.65)",
+              border:"1px solid rgba(255,224,194,0.15)",
+              borderRadius:4, padding:"0 7px", lineHeight:"18px",
+              textTransform:"capitalize", fontWeight:500,
+            }}>
+              {plan}
+            </span>
+          )}
+          {/* Interaction usage for trial */}
+          {interactionInfo && state==="idle" && (
+            <span style={{
+              fontSize:10.5, fontFamily:UI_FONT, letterSpacing:"0.02em",
+              color:"rgba(255,200,130,0.6)",
+            }}>
+              {interactionInfo}
+            </span>
+          )}
         </div>
 
-        {/* State dot */}
-        {state==="listening" ? (
-          <div style={{
-            width:7, height:7, borderRadius:"50%", flexShrink:0,
-            background:"#ffe0c2",
-            boxShadow:"0 0 8px 2px rgba(255,200,130,0.6)",
-            animation:"pulse 1.2s ease-in-out infinite",
-          }} />
-        ) : state==="processing" ? (
-          <div style={{
-            width:10, height:10, borderRadius:"50%", flexShrink:0,
-            border:"1.5px solid rgba(255,224,194,0.08)",
-            borderTopColor:"rgba(255,200,130,0.8)",
-            animation:"spin .75s linear infinite",
-          }} />
-        ) : (
-          <div style={{
-            width:6, height:6, borderRadius:"50%", flexShrink:0,
-            background:"rgba(255,224,194,0.18)",
-          }} />
-        )}
-
-        {/* Label */}
-        <span style={{
-          fontSize: state==="idle" ? 20 : 12,
-          fontWeight: state==="idle" ? 700 : 600,
-          fontFamily: state==="idle" ? DISPLAY_FONT : UI_FONT,
-          letterSpacing: state==="idle" ? "-0.01em" : "-0.02em",
-          lineHeight: 1,
-          color: state==="idle"
-            ? "rgba(255,224,194,0.55)"
-            : state==="listening"
-              ? "rgba(255,220,180,0.92)"
-              : "rgba(225,210,185,0.85)",
-          transition:"color .25s, font-size .25s, font-family .25s",
-        }}>
-          {state==="listening" ? "Listening…" : state==="processing" ? "Thinking…" : "Yomi"}
-        </span>
-        {/* Plan badge */}
-        {plan && state==="idle" && (
-          <span style={{
-            fontSize:9, fontFamily:UI_FONT, letterSpacing:"0.06em",
-            color:"rgba(175,155,115,0.35)",
-            border:"1px solid rgba(255,224,194,0.08)",
-            borderRadius:4, padding:"0 6px", lineHeight:"16px",
-            textTransform:"capitalize",
-          }}>
-            {plan}
-          </span>
-        )}
-        {/* Interaction usage for trial */}
-        {interactionInfo && state==="idle" && (
-          <span style={{
-            fontSize:9, fontFamily:UI_FONT, letterSpacing:"0.02em",
-            color:"rgba(255,200,130,0.3)",
-          }}>
-            {interactionInfo}
-          </span>
-        )}
-      </div>
-
-      {/* Right: shortcut chips */}
-      <div style={{ display:"flex", gap:4, alignItems:"center" }} className="no-drag">
-        {/* TTS output toggle — always visible */}
-        <button
-          onClick={toggleTts}
-          style={{
-            background:"none", border:"none",
-            cursor:"pointer", padding:"2px 3px",
-            color: ttsEnabled ? "rgba(255,224,194,0.45)" : "rgba(175,155,115,0.22)",
-            transition:"color .15s",
-            display:"flex", alignItems:"center",
-            flexShrink:0,
-          }}
-          onMouseEnter={e=>{ e.currentTarget.style.color="rgba(255,224,194,0.85)" }}
-          onMouseLeave={e=>{ e.currentTarget.style.color=ttsEnabled ? "rgba(255,224,194,0.45)" : "rgba(175,155,115,0.22)" }}
-          title={ttsEnabled ? "Mute voice output" : "Unmute voice output"}
-        >
-          {ttsEnabled ? <SpeakerOnSVG /> : <SpeakerOffSVG />}
-        </button>
-
-        {state==="idle" && <>
-          <Chip label="Voice" keys={["⌃⇧","Spc"]} hot={false} />
-          <Chip label="Type"  keys={["⌃⇧","↵"]}   hot={false} />
-          <Chip label="Move"  keys={["⌃⇧","↑↓←→"]} hot={false} />
-          <Chip label="Hide"  keys={["⌃⇧","H"]}   hot={false} />
-          <Chip label="Quit"  keys={["⌃⇧","Q"]}   hot={false} />
-          <div style={{ width:1, height:16, background:"rgba(255,224,194,0.07)", margin:"0 4px" }} />
+        {/* Right: controls */}
+        <div style={{ display:"flex", gap:5, alignItems:"center" }} className="no-drag">
+          {/* TTS toggle — hover to toggle, shows current state as text */}
           <button
-            onClick={() => window.yomi.signOut()}
-            style={{
-              background:"none", border:"none",
-              fontSize:9, fontFamily:UI_FONT, letterSpacing:"0.04em",
-              color:"rgba(175,155,115,0.35)", cursor:"pointer",
-              padding:"0 2px", transition:"color .15s",
+            onClick={toggleTts}
+            onMouseEnter={e => {
+              toggleTts()
+              e.currentTarget.style.color = "rgba(255,224,194,0.9)"
+              e.currentTarget.style.background = "rgba(255,224,194,0.07)"
             }}
-            onMouseEnter={e=>{e.currentTarget.style.color="rgba(255,224,194,0.5)"}}
-            onMouseLeave={e=>{e.currentTarget.style.color="rgba(175,155,115,0.35)"}}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = ttsEnabled ? "rgba(255,224,194,0.6)" : "rgba(175,155,115,0.35)"
+              e.currentTarget.style.background = "none"
+            }}
+            style={{
+              background: "none", border: "none",
+              cursor: "pointer", padding: "2px 6px",
+              color: ttsEnabled ? "rgba(255,224,194,0.6)" : "rgba(175,155,115,0.35)",
+              transition: "color .15s, background .15s",
+              display: "flex", alignItems: "center", gap: 4,
+              flexShrink: 0, borderRadius: 4,
+            }}
           >
-            Sign out
+            {ttsEnabled ? <SpeakerOnSVG /> : <SpeakerOffSVG />}
+            <span style={{ fontSize: 11, fontFamily: UI_FONT, letterSpacing: "0.03em", fontWeight:500 }}>
+              {ttsEnabled ? "Sound" : "Muted"}
+            </span>
           </button>
-        </>}
-        {state==="listening" && <>
-          <Chip label="Stop"   keys={["↵"]}   hot={true}  />
-          <Chip label="Stop"   keys={["⌃⇧","Spc"]} hot={false} />
-          <Chip label="Cancel" keys={["Esc"]} hot={false} />
-        </>}
-        {state==="text-input" && (
-          <Chip label="Cancel" keys={["Esc"]} hot={false} />
-        )}
-        {state==="processing" && (
-          <span style={{ fontSize:10, color:"rgba(175,155,115,0.3)", fontFamily:UI_FONT }}>processing…</span>
-        )}
+
+          {/* State-specific chips */}
+          {state==="listening" && <>
+            <Chip label="Stop"   keys={["↵"]}        hot={true}  />
+            <Chip label="Stop"   keys={["⌃⇧","Spc"]} hot={false} />
+            <Chip label="Cancel" keys={["Esc"]}       hot={false} />
+          </>}
+          {state==="text-input" && (
+            <Chip label="Cancel" keys={["Esc"]} hot={false} />
+          )}
+          {state==="processing" && (
+            <span style={{ fontSize:11.5, color:"rgba(185,170,145,0.65)", fontFamily:UI_FONT }}>processing…</span>
+          )}
+
+          {/* Hamburger menu button — opens on hover */}
+          <button
+            onClick={onMenuToggle}
+            onMouseEnter={e => {
+              onMenuOpen()
+              e.currentTarget.style.color = "rgba(255,224,194,1)"
+              e.currentTarget.style.background = "rgba(255,224,194,0.12)"
+              e.currentTarget.style.borderColor = "rgba(255,224,194,0.28)"
+            }}
+            onMouseLeave={e => {
+              onMenuScheduleClose()
+              if (!menuOpen) {
+                e.currentTarget.style.color = "rgba(255,224,194,0.7)"
+                e.currentTarget.style.background = "rgba(255,224,194,0.06)"
+                e.currentTarget.style.borderColor = "rgba(255,224,194,0.18)"
+              }
+            }}
+            style={{
+              background: menuOpen ? "rgba(255,224,194,0.12)" : "rgba(255,224,194,0.06)",
+              border: `1px solid ${menuOpen ? "rgba(255,224,194,0.28)" : "rgba(255,224,194,0.18)"}`,
+              borderRadius: 5, cursor: "pointer",
+              color: menuOpen ? "rgba(255,224,194,1)" : "rgba(255,224,194,0.7)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              width: 26, height: 22, flexShrink: 0,
+              transition: "all .15s",
+            }}
+            title="Menu"
+          >
+            <HamburgerIcon />
+          </button>
+
+          {menuOpen && (
+            <MenuCard
+              plan={plan}
+              onSignOut={onSignOut}
+              onClose={onMenuClose}
+              onHoverEnter={onMenuCancelClose}
+              onHoverLeave={onMenuScheduleClose}
+              closing={menuClosing}
+            />
+          )}
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -1037,6 +1274,46 @@ const App: React.FC = () => {
 
   const [loadingProvider, setLoadingProvider] = React.useState<"github" | "google" | null>(null)
   const [lastProvider, setLastProvider] = React.useState<"github" | "google" | null>(null)
+  const [menuOpen, setMenuOpen] = React.useState(false)
+  const [menuClosing, setMenuClosing] = React.useState(false)
+  const menuCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const menuAnimTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const openMenu = useCallback(() => {
+    if (menuCloseTimerRef.current) { clearTimeout(menuCloseTimerRef.current); menuCloseTimerRef.current = null }
+    if (menuAnimTimerRef.current)  { clearTimeout(menuAnimTimerRef.current);  menuAnimTimerRef.current  = null }
+    setMenuClosing(false)
+    setMenuOpen(open => open ? open : true)
+  }, [])
+
+  // Called when cursor leaves the button, bridge, or card.
+  const scheduleMenuClose = useCallback(() => {
+    if (menuCloseTimerRef.current) clearTimeout(menuCloseTimerRef.current)
+    menuCloseTimerRef.current = setTimeout(() => {
+      setMenuClosing(true)
+      menuAnimTimerRef.current = setTimeout(() => {
+        setMenuOpen(false)
+        setMenuClosing(false)
+      }, 200)
+    }, 120)
+  }, [])
+
+  const cancelMenuClose = useCallback(() => {
+    if (menuCloseTimerRef.current) { clearTimeout(menuCloseTimerRef.current); menuCloseTimerRef.current = null }
+    if (menuAnimTimerRef.current)  { clearTimeout(menuAnimTimerRef.current);  menuAnimTimerRef.current  = null }
+    setMenuClosing(false)
+  }, [])
+
+  // Immediate animated close (backdrop click, action buttons)
+  const closeMenuNow = useCallback(() => {
+    if (menuCloseTimerRef.current) { clearTimeout(menuCloseTimerRef.current); menuCloseTimerRef.current = null }
+    if (menuAnimTimerRef.current)  { clearTimeout(menuAnimTimerRef.current);  menuAnimTimerRef.current  = null }
+    setMenuClosing(true)
+    menuAnimTimerRef.current = setTimeout(() => {
+      setMenuOpen(false)
+      setMenuClosing(false)
+    }, 200)
+  }, [])
 
   const rootRef         = useRef<HTMLDivElement>(null)
   const entriesRef      = useRef<HTMLDivElement>(null)
@@ -1050,6 +1327,12 @@ const App: React.FC = () => {
   const audioConsumedRef   = useRef(0)             // How many items from audioQueue state we've enqueued
   const audioSourceRef  = useRef<AudioBufferSourceNode|null>(null)
   const draggingRef     = useRef(false)
+
+  // Restore saved window opacity on mount
+  useEffect(()=>{
+    const saved = localStorage.getItem("yomi:opacity")
+    if (saved) window.yomi.setOpacity(parseFloat(saved))
+  }, [])
 
   // Listen to auth status events from main process
   useEffect(()=>{
@@ -1087,7 +1370,7 @@ const App: React.FC = () => {
     })
   }, [setSubscription])
 
-  // Resize window based on auth + content state
+  // Resize window based on auth + content + menu state
   useEffect(()=>{
     if (authState === "checking") {
       window.yomi.resize(680, 46)
@@ -1099,9 +1382,11 @@ const App: React.FC = () => {
       const MAX_ENTRIES = 640
       const textInputH = hotkeyState === "text-input" ? 88 : 0
       const entriesH = entries.length > 0 ? MAX_ENTRIES : 0
-      window.yomi.resize(680, Math.max(46, 46 + textInputH + entriesH))
+      // Menu card starts at top:50px and is ~330px tall — window must be at least 380px
+      const menuMin = menuOpen ? 380 : 0
+      window.yomi.resize(680, Math.max(46, 46 + textInputH + entriesH, menuMin))
     }
-  }, [authState, entries, hotkeyState])
+  }, [authState, entries, hotkeyState, menuOpen])
 
   useEffect(()=>{
     const onDown=(e:MouseEvent)=>{
@@ -1341,6 +1626,14 @@ const App: React.FC = () => {
         state={hotkeyState}
         plan={subscription?.plan}
         interactionInfo={subscription?.plan === "explore" ? `${subscription.trialInteractionUsed}/${subscription.trialInteractionLimit}` : undefined}
+        onSignOut={() => window.yomi.signOut()}
+        menuOpen={menuOpen}
+        menuClosing={menuClosing}
+        onMenuToggle={() => menuOpen ? closeMenuNow() : openMenu()}
+        onMenuClose={closeMenuNow}
+        onMenuOpen={openMenu}
+        onMenuScheduleClose={scheduleMenuClose}
+        onMenuCancelClose={cancelMenuClose}
       />
 
       {hotkeyState==="text-input" && (

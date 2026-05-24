@@ -54,7 +54,9 @@
   }
 
   body {
-    font-family: var(--font-inter), 'Inter', sans-serif;
+    font-family: var(--font-sans), Geist, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   ::selection {
@@ -98,7 +100,7 @@
   }
 
   .liquid-glass::before {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
     border-radius: inherit;
@@ -127,5 +129,77 @@
   .animate-blur-fade-up {
     animation: blurFadeUp 1s ease-out forwards;
     opacity: 0;
+  }
+
+  .hero-grid {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.5) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.5) 1px, transparent 1px);
+    background-size: 42px 42px;
+  }
+
+  .perspective-hero {
+    perspective: 1200px;
+  }
+
+  .hero-grain {
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.22) 0 1px, transparent 1px),
+      radial-gradient(circle at 70% 60%, rgba(255, 255, 255, 0.16) 0 1px, transparent 1px);
+    background-size:
+      3px 3px,
+      5px 5px;
+    mix-blend-mode: screen;
+  }
+
+  .site-texture-bg {
+    position: relative;
+    isolation: isolate;
+    background: #090a09;
+  }
+
+  .site-texture-bg::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        ellipse at 18% 12%,
+        rgba(239, 196, 147, 0.54) 0%,
+        rgba(137, 76, 52, 0.18) 24%,
+        transparent 48%
+      ),
+      radial-gradient(
+        ellipse at 78% 68%,
+        rgba(193, 99, 57, 0.4) 0%,
+        rgba(64, 36, 30, 0.2) 32%,
+        transparent 62%
+      ),
+      radial-gradient(
+        ellipse at 45% 42%,
+        rgba(7, 8, 9, 0.88) 0%,
+        rgba(12, 13, 14, 0.72) 34%,
+        transparent 60%
+      ),
+      linear-gradient(135deg, #07090b 0%, #141413 44%, #08090a 100%);
+    filter: saturate(0.95) contrast(1.05);
+  }
+
+  .site-texture-bg::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.16;
+    background-image:
+      radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.9) 0 0.7px, transparent 0.8px),
+      radial-gradient(circle at 72% 48%, rgba(255, 255, 255, 0.55) 0 0.7px, transparent 0.8px);
+    background-size:
+      2.5px 2.5px,
+      3.5px 3.5px;
+    mix-blend-mode: overlay;
   }
 }
