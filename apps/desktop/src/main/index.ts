@@ -55,6 +55,12 @@ app.whenReady().then(async () => {
   }
   overlayWin.setContentProtection(true)
   overlayWin.setVisibleOnAllWorkspaces(true)
+  overlayWin.webContents.on("before-input-event", (event, input) => {
+    const key = input.key.toLowerCase()
+    if ((input.control || input.meta) && (key === "r" || key === "f5")) {
+      event.preventDefault()
+    }
+  })
 
   // ── Overlay window control IPCs (no auth required) ─────────────────────────
 
