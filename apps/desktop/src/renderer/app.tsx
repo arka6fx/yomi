@@ -1219,6 +1219,10 @@ const App: React.FC = () => {
     if (hotkeyState!=="listening") {
       processorRef.current?.disconnect(); processorRef.current=null; return
     }
+    // Starting a new voice query: stop any in-progress TTS and always enable audio output
+    audioSourceRef.current?.stop(); audioSourceRef.current=null
+    audioPlayingRef.current=false; localAudioQueue.current=[]
+    useYomiStore.setState({ ttsEnabled: true })
     let cancelled=false
     let micSrc: MediaStreamAudioSourceNode|null=null
     let sysSrc: MediaStreamAudioSourceNode|null=null
