@@ -3,6 +3,7 @@ import { db, usageEvents } from "@yomi/db"
 import { and, eq, gt, sql } from "drizzle-orm"
 import { authenticate } from "../auth.js"
 import * as authSchema from "../auth-schema.js"
+import { effectivePlanForUser, isOwnerUser } from "../entitlements.js"
 
 export const usageRouter = new Hono()
 
@@ -19,6 +20,10 @@ type UsageEventBody = {
 
 type ReserveInteractionBody = {
   kind?: ReserveKind
+}
+
+function trialRemaining(used: number, limit: number): number {
+  return Math.max(limit - used, 0)
 }
 
 const DAILY_LIMITS: Record<string, Record<ReserveKind, number>> = {
@@ -59,21 +64,24 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
     return c.json({ error: "kind must be chat or voice", code: "invalid_usage_kind" }, 400)
   }
 
-  if (user.role === "owner") {
+  const effectivePlan = effectivePlanForUser(user)
+
+  if (isOwnerUser(user)) {
     return c.json({
       ok: true,
-      plan: user.plan,
+      plan: effectivePlan,
       trialInteractionUsed: user.trialInteractionUsed,
       trialInteractionLimit: user.trialInteractionLimit,
+      trialInteractionsRemaining: trialRemaining(user.trialInteractionUsed, user.trialInteractionLimit),
     })
   }
 
-  if (user.plan !== "explore") {
-    if (user.plan === "max") {
+  if (effectivePlan !== "explore") {
+    if (effectivePlan === "max") {
       return c.json({ error: "Yomi Max is coming soon", code: "plan_unavailable" }, 403)
     }
 
-    if (!PAID_PLANS.has(user.plan)) {
+    if (!PAID_PLANS.has(effectivePlan)) {
       return c.json({ error: "Invalid subscription plan", code: "invalid_plan" }, 403)
     }
 
@@ -81,7 +89,7 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
       return c.json({ error: "Subscription required", code: "subscription_required" }, 403)
     }
 
-    const limits = DAILY_LIMITS[user.plan]!
+    const limits = DAILY_LIMITS[effectivePlan]!
     const limit = limits[kind]
     const today = todayUtc()
     const countColumn = counterColumn(kind)
@@ -94,7 +102,7 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
       })
       .where(and(
         eq(authSchema.user.id, user.id),
-        eq(authSchema.user.plan, user.plan),
+        eq(authSchema.user.plan, effectivePlan),
         eq(authSchema.user.subscriptionStatus, "active"),
         sql`(${authSchema.user.dailyResetDate} is null or ${authSchema.user.dailyResetDate} <> ${today} or ${countColumn} < ${limit})`,
       ))
@@ -110,7 +118,11 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
       return c.json({ error: "Daily limit reached", code: "rate_limited" }, 429)
     }
 
-    return c.json({ ok: true, ...reserved })
+    return c.json({
+      ok: true,
+      ...reserved,
+      trialInteractionsRemaining: trialRemaining(reserved.trialInteractionUsed, reserved.trialInteractionLimit),
+    })
   }
 
   const trialEnd = trialActiveUntil(user)
@@ -137,7 +149,11 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
     return c.json({ error: "Trial interaction limit reached - please upgrade", code: "interaction_limit_reached" }, 429)
   }
 
-  return c.json({ ok: true, ...reserved })
+  return c.json({
+    ok: true,
+    ...reserved,
+    trialInteractionsRemaining: trialRemaining(reserved.trialInteractionUsed, reserved.trialInteractionLimit),
+  })
 })
 
 usageRouter.post("/", authenticate, async (c) => {

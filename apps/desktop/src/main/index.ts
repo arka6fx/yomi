@@ -158,6 +158,32 @@ app.whenReady().then(async () => {
     }
   })
 
+  ipcMain.handle("yomi:update-profile-name", async (_e, name: string) => {
+    const token = loadToken()
+    if (!token) throw new Error("Please sign in again")
+
+    const backendUrl = process.env["BACKEND_URL"] ?? process.env["YOMI_BACKEND_URL"] ?? "http://localhost:3001"
+    const res = await fetch(`${backendUrl}/api/user/profile`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ name }),
+    })
+    const data = await res.json().catch(() => ({})) as { name?: string; email?: string; error?: string }
+
+    if (res.status === 401) {
+      clearToken()
+      disableHotkeys()
+      overlayWin?.webContents.send("yomi:auth-needed")
+      throw new Error("Please sign in again")
+    }
+    if (!res.ok || !data.name || !data.email) {
+      throw new Error(data.error ?? "Could not update profile")
+    }
+
+    overlayWin?.webContents.send("yomi:subscription-update", data)
+    return { name: data.name, email: data.email }
+  })
+
   // ── Load overlay ────────────────────────────────────────────────────────────
 
   if (process.env.ELECTRON_RENDERER_URL) {

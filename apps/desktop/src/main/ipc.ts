@@ -4,7 +4,7 @@ import type { SseEvent } from "@yomi/shared"
 import { captureScreen } from "./capture"
 import type { SidecarManager } from "./sidecar"
 import { resetToIdle, activateProcessing } from "./hotkey"
-import { loadToken } from "./auth"
+import { BACKEND_URL, loadToken } from "./auth"
 
 type Plan = "explore" | "pro" | "max"
 
@@ -101,21 +101,18 @@ type ReserveResponse = {
   plan?: Plan
   trialInteractionUsed?: number
   trialInteractionLimit?: number
+  trialInteractionsRemaining?: number
   dailyChatUsed?: number
   dailyVoiceUsed?: number
 }
 
 type ReserveKind = "chat" | "voice"
 
-function backendUrl(): string {
-  return process.env["BACKEND_URL"] ?? process.env["YOMI_BACKEND_URL"] ?? "http://localhost:3001"
-}
-
 async function reserveInteraction(win: BrowserWindow, kind: ReserveKind, signal: AbortSignal): Promise<Plan> {
   const token = loadToken()
   if (!token) throw new Error("Please sign in again")
 
-  const res = await fetch(`${backendUrl()}/api/usage/interactions/reserve`, {
+  const res = await fetch(`${BACKEND_URL}/api/usage/interactions/reserve`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ kind }),
@@ -133,12 +130,13 @@ async function reserveInteraction(win: BrowserWindow, kind: ReserveKind, signal:
       plan: data.plan,
       trialInteractionUsed: data.trialInteractionUsed,
       trialInteractionLimit: data.trialInteractionLimit,
+      trialInteractionsRemaining: data.trialInteractionsRemaining,
       dailyChatUsed: data.dailyChatUsed,
       dailyVoiceUsed: data.dailyVoiceUsed,
     })
   }
 
-  const sub = await fetch(`${backendUrl()}/api/billing/subscription`, {
+  const sub = await fetch(`${BACKEND_URL}/api/billing/subscription`, {
     headers: { Authorization: `Bearer ${token}` },
     signal,
   })

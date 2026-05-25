@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useMemo, useCallback } from "react"
 import { createRoot } from "react-dom/client"
 import { useYomiStore } from "./store"
-import type { HotkeyState, ChatEntry } from "./store"
+import type { HotkeyState, ChatEntry, SubscriptionInfo } from "./store"
 
 // ── Theme System ───────────────────────────────────────────────────────────────
 
@@ -1106,10 +1106,19 @@ const HamburgerIcon = () => (
   </svg>
 )
 
+function initialsFor(name?: string, email?: string): string {
+  const source = name?.trim() || email?.split("@")[0] || "Y"
+  const parts = source.split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) return `${parts[0]![0]}${parts[1]![0]}`.toUpperCase()
+  return source.slice(0, 2).toUpperCase()
+}
+
 // ── Menu Card ──────────────────────────────────────────────────────────────────
 
-function MenuCard({ plan, onSignOut, onClose, onHoverEnter, onHoverLeave, closing }: {
+function MenuCard({ subscription, plan, onProfileNameSave, onSignOut, onClose, onHoverEnter, onHoverLeave, closing }: {
+  subscription: SubscriptionInfo | null
   plan?: string
+  onProfileNameSave: (name: string) => Promise<void>
   onSignOut: () => void
   onClose: () => void
   onHoverEnter: () => void
@@ -1117,16 +1126,44 @@ function MenuCard({ plan, onSignOut, onClose, onHoverEnter, onHoverLeave, closin
   closing: boolean
 }) {
   const { theme: t, setTheme } = React.useContext(ThemeCtx)
+  const [nameDraft, setNameDraft] = React.useState(subscription?.name ?? "")
+  const [profileEditing, setProfileEditing] = React.useState(false)
+  const [profileSaving, setProfileSaving] = React.useState(false)
+  const [profileError, setProfileError] = React.useState("")
 
   const [opacity, setOpacity] = React.useState(() => {
     const saved = localStorage.getItem("yomi:opacity")
     return saved ? parseFloat(saved) : 1.0
   })
 
+  React.useEffect(() => {
+    setNameDraft(subscription?.name ?? "")
+    setProfileEditing(false)
+    setProfileError("")
+  }, [subscription?.name])
+
   const handleOpacity = (val: number) => {
     setOpacity(val)
     localStorage.setItem("yomi:opacity", String(val))
     window.yomi.setOpacity(val)
+  }
+
+  const saveProfileName = async () => {
+    const nextName = nameDraft.trim()
+    if (!nextName) {
+      setNameDraft(subscription?.name ?? "")
+      return
+    }
+    setProfileSaving(true)
+    setProfileError("")
+    try {
+      await onProfileNameSave(nextName)
+      setProfileEditing(false)
+    } catch (err) {
+      setProfileError(err instanceof Error ? err.message : "Could not save")
+    } finally {
+      setProfileSaving(false)
+    }
   }
 
   const shortcuts = [
@@ -1167,13 +1204,13 @@ function MenuCard({ plan, onSignOut, onClose, onHoverEnter, onHoverLeave, closin
   return (
     <>
     <div
-      className="no-drag yomi-hit-area"
+      className="no-drag yomi-hit-area yomi-menu-zone"
       onMouseEnter={onHoverEnter}
       onMouseLeave={onHoverLeave}
       style={{ position:"fixed", top:34, right:8, zIndex:1000, width:250, height:16 }}
     />
     <div
-      className="no-drag yomi-hit-area"
+      className="no-drag yomi-hit-area yomi-menu-zone"
       onMouseEnter={onHoverEnter}
       onMouseLeave={onHoverLeave}
       style={{
@@ -1191,6 +1228,121 @@ function MenuCard({ plan, onSignOut, onClose, onHoverEnter, onHoverLeave, closin
         overflow:"hidden",
       }}
     >
+      {/* Profile */}
+      <div style={{ padding:"12px 14px 10px" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10, minWidth:0 }}>
+          <div style={{
+            width:34, height:34, borderRadius:8,
+            display:"flex", alignItems:"center", justifyContent:"center",
+            background:t.accentD, border:`1px solid ${t.borderHi}`,
+            color:t.accent, fontSize:12, fontFamily:UI_FONT, fontWeight:800,
+            flexShrink:0,
+          }}>
+            {initialsFor(subscription?.name, subscription?.email)}
+          </div>
+          <div style={{ flex:1, minWidth:0 }}>
+            {profileEditing ? (
+              <div style={{ display:"flex", alignItems:"center", gap:6, minWidth:0 }}>
+                <input
+                  value={nameDraft}
+                  onChange={e => setNameDraft(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === "Enter") saveProfileName()
+                    if (e.key === "Escape") {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setNameDraft(subscription?.name ?? "")
+                      setProfileError("")
+                      setProfileEditing(false)
+                      e.currentTarget.blur()
+                    }
+                  }}
+                  disabled={profileSaving}
+                  autoFocus
+                  className="no-drag"
+                  maxLength={80}
+                  style={{
+                    flex:1, minWidth:0, boxSizing:"border-box",
+                    background:t.kbdBg, border:`1px solid ${t.kbdBorder}`,
+                    borderRadius:6, outline:"none",
+                    padding:"5px 8px", margin:0, color:t.text, fontSize:13,
+                    fontFamily:UI_FONT, fontWeight:700,
+                  }}
+                />
+                <button
+                  onMouseDown={e => e.preventDefault()}
+                  onClick={saveProfileName}
+                  disabled={profileSaving}
+                  className="no-drag"
+                  style={{
+                    background:t.upgradeBg, border:`1px solid ${t.upgradeBorder}`,
+                    color:t.upgradeText, borderRadius:6,
+                    padding:"5px 8px", fontSize:10.5,
+                    fontFamily:UI_FONT, fontWeight:700,
+                    cursor:profileSaving ? "default" : "pointer",
+                    opacity:profileSaving ? 0.65 : 1,
+                    flexShrink:0,
+                  }}
+                >
+                  {profileSaving ? "Saving..." : "Save"}
+                </button>
+              </div>
+            ) : (
+              <div style={{ display:"flex", alignItems:"center", gap:7, minWidth:0 }}>
+                <div style={{
+                  color:t.text, fontSize:13, fontFamily:UI_FONT,
+                  fontWeight:700, overflow:"hidden", textOverflow:"ellipsis",
+                  whiteSpace:"nowrap", minWidth:0,
+                }}>
+                  {subscription?.name || "Yomi user"}
+                </div>
+                <button
+                  onClick={() => {
+                    setNameDraft(subscription?.name ?? "")
+                    setProfileError("")
+                    setProfileEditing(true)
+                  }}
+                  className="no-drag"
+                  style={{
+                    background:t.kbdBg, border:`1px solid ${t.kbdBorder}`,
+                    color:t.btnText, borderRadius:6, padding:"3px 7px",
+                    fontSize:10.5, fontFamily:UI_FONT, fontWeight:700,
+                    cursor:"pointer", flexShrink:0,
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = t.btnHoverBg
+                    e.currentTarget.style.color = t.btnHoverText
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = t.kbdBg
+                    e.currentTarget.style.color = t.btnText
+                  }}
+                >
+                  Edit
+                </button>
+              </div>
+            )}
+            <div style={{
+              fontSize:11, fontFamily:UI_FONT, color:t.dim,
+              overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+              marginTop:2,
+            }}>
+              {subscription?.email || "Signed in"}
+            </div>
+          </div>
+        </div>
+        {(profileSaving || profileError) && (
+          <div style={{
+            marginTop:7, fontSize:10.5, fontFamily:UI_FONT,
+            color: profileError ? t.error : t.sectionLabel,
+          }}>
+            {profileError || "Saving..."}
+          </div>
+        )}
+      </div>
+
+      <div style={{ height:1, background: t.menuSep }} />
+
       {/* Shortcuts */}
       <div style={{ padding:"10px 14px" }}>
         <div style={{
@@ -1317,8 +1469,9 @@ function Chip({ label, keys, hot }: { label:string; keys:string[]; hot:boolean }
   )
 }
 
-function Toolbar({ state, plan, interactionInfo, onSignOut, menuOpen, menuClosing, onMenuToggle, onMenuClose, onMenuOpen, onMenuScheduleClose, onMenuCancelClose }: {
-  state: HotkeyState; plan?: string; interactionInfo?: string; onSignOut: () => void
+function Toolbar({ state, plan, subscription, interactionInfo, onProfileNameSave, onSignOut, menuOpen, menuClosing, onMenuToggle, onMenuClose, onMenuOpen, onMenuScheduleClose, onMenuCancelClose }: {
+  state: HotkeyState; plan?: string; subscription: SubscriptionInfo | null; interactionInfo?: string
+  onProfileNameSave: (name: string) => Promise<void>; onSignOut: () => void
   menuOpen: boolean; menuClosing: boolean; onMenuToggle: () => void; onMenuClose: () => void
   onMenuOpen: () => void; onMenuScheduleClose: () => void; onMenuCancelClose: () => void
 }) {
@@ -1447,6 +1600,7 @@ function Toolbar({ state, plan, interactionInfo, onSignOut, menuOpen, menuClosin
           )}
 
           <button
+            className="no-drag yomi-menu-zone"
             onClick={onMenuToggle}
             onMouseEnter={e => {
               onMenuOpen()
@@ -1477,7 +1631,9 @@ function Toolbar({ state, plan, interactionInfo, onSignOut, menuOpen, menuClosin
 
           {menuOpen && (
             <MenuCard
+              subscription={subscription}
               plan={plan}
+              onProfileNameSave={onProfileNameSave}
               onSignOut={onSignOut}
               onClose={onMenuClose}
               onHoverEnter={onMenuCancelClose}
@@ -1677,12 +1833,14 @@ const App: React.FC = () => {
   const scheduleMenuClose = useCallback(() => {
     if (menuCloseTimerRef.current) clearTimeout(menuCloseTimerRef.current)
     menuCloseTimerRef.current = setTimeout(() => {
+      menuCloseTimerRef.current = null
+      if (document.querySelector(".yomi-menu-zone:hover")) return
       setMenuClosing(true)
       menuAnimTimerRef.current = setTimeout(() => {
         setMenuOpen(false)
         setMenuClosing(false)
       }, 200)
-    }, 120)
+    }, 220)
   }, [])
 
   const cancelMenuClose = useCallback(() => {
@@ -1770,8 +1928,8 @@ const App: React.FC = () => {
       const MAX_ENTRIES = 640
       const textInputH = hotkeyState === "text-input" ? 88 : 0
       const entriesH = entries.length > 0 ? MAX_ENTRIES : 0
-      // Menu card starts at top:46px and is ~420px tall — window must be at least 520px
-      const menuMin = menuOpen ? 520 : 0
+      // Profile row makes the menu taller than the toolbar-only overlay.
+      const menuMin = menuOpen ? 610 : 0
       window.yomi.resize(680, Math.max(46, 46 + textInputH + entriesH, menuMin))
     }
   }, [authState, entries, hotkeyState, menuOpen])
@@ -1960,6 +2118,11 @@ const App: React.FC = () => {
     window.yomi.setMouseEventsIgnored(ignored)
   }, [])
 
+  const handleProfileNameSave = useCallback(async (name: string) => {
+    const updated = await window.yomi.updateProfileName(name)
+    setSubscription(updated)
+  }, [setSubscription])
+
   useEffect(() => {
     if (authState !== "authenticated" || hasContent) {
       setMouseEventsIgnored(false)
@@ -2032,7 +2195,9 @@ const App: React.FC = () => {
       <Toolbar
         state={hotkeyState}
         plan={subscription?.plan}
-        interactionInfo={subscription?.plan === "explore" ? `${subscription.trialInteractionUsed}/${subscription.trialInteractionLimit}` : undefined}
+        subscription={subscription}
+        interactionInfo={subscription?.plan === "explore" ? `${subscription.trialInteractionUsed}/${subscription.trialInteractionLimit} used` : undefined}
+        onProfileNameSave={handleProfileNameSave}
         onSignOut={() => window.yomi.signOut()}
         menuOpen={menuOpen}
         menuClosing={menuClosing}

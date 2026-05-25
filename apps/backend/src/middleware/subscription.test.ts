@@ -3,6 +3,7 @@ import { Hono } from "hono"
 
 type TestUser = {
   id: string
+  email: string
   role: string
   plan: string
   subscriptionStatus: string
@@ -33,6 +34,7 @@ const { requireAccess } = await import("./subscription.js")
 function user(overrides: Partial<TestUser> = {}): TestUser {
   return {
     id: "user_1",
+    email: "user@example.com",
     role: "user",
     plan: "explore",
     subscriptionStatus: "inactive",
@@ -64,6 +66,15 @@ describe("requireAccess", () => {
 
     expect(res.status).toBe(200)
     expect(updateCalls).toBe(1)
+  })
+
+  it("lets owner accounts use Max access even when stored as Explore", async () => {
+    currentUser = user({ role: "owner", plan: "explore" })
+
+    const res = await app("agent").request("/")
+
+    expect(res.status).toBe(200)
+    expect(updateCalls).toBe(0)
   })
 
   it("blocks Explore agents without consuming an interaction", async () => {
@@ -99,6 +110,15 @@ describe("requireAccess", () => {
 
   it("lets owners bypass unavailable Max checks", async () => {
     currentUser = user({ role: "owner", plan: "max", subscriptionStatus: "active" })
+
+    const res = await app("agent").request("/")
+
+    expect(res.status).toBe(200)
+    expect(updateCalls).toBe(0)
+  })
+
+  it("lets the default owner email bypass Explore limits", async () => {
+    currentUser = user({ email: "owner@example.com", plan: "explore" })
 
     const res = await app("agent").request("/")
 

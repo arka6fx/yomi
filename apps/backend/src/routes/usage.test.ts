@@ -3,6 +3,7 @@ import { Hono } from "hono"
 
 type TestUser = {
   id: string
+  email: string
   role: string
   plan: string
   subscriptionStatus: string
@@ -17,6 +18,7 @@ type ReserveBody = {
   plan?: string
   trialInteractionUsed?: number
   trialInteractionLimit?: number
+  trialInteractionsRemaining?: number
   dailyChatUsed?: number
   dailyVoiceUsed?: number
 }
@@ -72,6 +74,7 @@ function reserve(kind: "chat" | "voice" = "chat") {
 function user(overrides: Partial<TestUser> = {}): TestUser {
   return {
     id: "user_1",
+    email: "user@example.com",
     role: "user",
     plan: "explore",
     subscriptionStatus: "inactive",
@@ -97,7 +100,7 @@ describe("POST /api/usage/interactions/reserve", () => {
     const body = await res.json() as ReserveBody
 
     expect(res.status).toBe(200)
-    expect(body).toEqual({ ok: true, plan: "explore", trialInteractionUsed: 150, trialInteractionLimit: 150 })
+    expect(body).toEqual({ ok: true, plan: "explore", trialInteractionUsed: 150, trialInteractionLimit: 150, trialInteractionsRemaining: 0 })
     expect(updateCalls).toBe(1)
   })
 
@@ -112,6 +115,7 @@ describe("POST /api/usage/interactions/reserve", () => {
     expect(body.plan).toBe("explore")
     expect(body.trialInteractionUsed).toBe(42)
     expect(body.trialInteractionLimit).toBe(150)
+    expect(body.trialInteractionsRemaining).toBe(108)
   })
 
   it("rejects Explore after the interaction pool is exhausted", async () => {
@@ -155,14 +159,29 @@ describe("POST /api/usage/interactions/reserve", () => {
     expect(updateCalls).toBe(1)
   })
 
-  it("allows owners without consuming Explore interactions", async () => {
-    currentUser = user({ role: "owner", plan: "max", subscriptionStatus: "active", trialInteractionUsed: 12 })
+  it("gives owner accounts effective Max access even when stored as Explore", async () => {
+    currentUser = user({ role: "owner", plan: "explore", trialInteractionUsed: 12 })
 
     const res = await reserve()
     const body = await res.json() as ReserveBody
 
     expect(res.status).toBe(200)
+    expect(body.plan).toBe("max")
     expect(body.trialInteractionUsed).toBe(12)
+    expect(body.trialInteractionsRemaining).toBe(138)
+    expect(updateCalls).toBe(0)
+  })
+
+  it("gives allowlisted owner emails effective Max access", async () => {
+    currentUser = user({ email: "owner@example.com", plan: "explore", trialInteractionUsed: 12 })
+
+    const res = await reserve()
+    const body = await res.json() as ReserveBody
+
+    expect(res.status).toBe(200)
+    expect(body.plan).toBe("max")
+    expect(body.trialInteractionUsed).toBe(12)
+    expect(body.trialInteractionsRemaining).toBe(138)
     expect(updateCalls).toBe(0)
   })
 
