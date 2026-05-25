@@ -159,9 +159,9 @@ const PLANS = [
   {
     key: "max",
     name: "Max",
-    price: "$24.99",
-    period: "/ month",
-    badge: "Power User",
+    price: "Coming soon",
+    period: "",
+    badge: "Coming soon",
     description: "Full agentic capabilities for creators.",
     features: [
       "Everything in Pro",
@@ -171,9 +171,10 @@ const PLANS = [
       "Autonomous workflows",
       "Experimental features first",
     ],
-    cta: "Subscribe",
+    cta: "Coming soon",
     popular: false,
     icon: Cuboid,
+    comingSoon: true,
   },
 ]
 
@@ -240,6 +241,7 @@ export function LandingPage() {
   const current = platforms[active]
 
   async function handlePlanClick(planKey: string) {
+    if (planKey === "max") return
     if (planKey === "explore") {
       router.push(session ? "/dashboard" : "/signup")
       return
@@ -467,7 +469,9 @@ export function LandingPage() {
                 className={`relative flex flex-col rounded-2xl border p-6 ${
                   plan.popular
                     ? "border-primary bg-card shadow-[0_0_40px_-12px_hsl(var(--primary)/0.4)]"
-                    : "border-border bg-card"
+                    : plan.comingSoon
+                      ? "border-border bg-card opacity-75"
+                      : "border-border bg-card"
                 }`}
               >
                 {plan.popular && (
@@ -508,7 +512,7 @@ export function LandingPage() {
 
                 <button
                   onClick={() => handlePlanClick(plan.key)}
-                  disabled={billingLoading !== null}
+                  disabled={billingLoading !== null || plan.comingSoon}
                   className={`flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium transition-colors disabled:opacity-70 ${
                     plan.popular
                       ? "bg-primary text-primary-foreground hover:bg-primary/90"

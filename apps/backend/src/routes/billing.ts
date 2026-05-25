@@ -5,15 +5,13 @@ import { eq, and, gte } from "drizzle-orm"
 import { authenticate } from "../auth.js"
 import * as authSchema from "../auth-schema.js"
 
-// Plans: explore (free trial), pro ($9.99), max ($24.99)
+// Plans: explore (free trial), pro ($9.99). Max is not purchasable yet.
 const PLAN_AMOUNTS: Record<string, number> = {
   pro: 999,
-  max: 2499,
 }
 
 const PLAN_PERIODS: Record<string, { period: string; interval: number; totalCount: number }> = {
   pro: { period: "monthly", interval: 1, totalCount: 12 },
-  max: { period: "monthly", interval: 1, totalCount: 12 },
 }
 
 function rzpAuth(): string {
@@ -39,6 +37,10 @@ export const billingRouter = new Hono()
 billingRouter.post("/create-subscription", authenticate, async (c) => {
   const { plan } = await c.req.json() as { plan: string }
   const user = c.get("user")
+
+  if (plan === "max") {
+    return c.json({ error: "Yomi Max is coming soon", code: "plan_unavailable" }, 403)
+  }
 
   const amount = PLAN_AMOUNTS[plan]
   if (!amount) return c.json({ error: "Unknown plan" }, 400)
@@ -113,7 +115,26 @@ billingRouter.post("/webhook", async (c) => {
 
 // Current subscription info for the dashboard
 billingRouter.get("/subscription", authenticate, async (c) => {
-  const user = c.get("user")
+  const sessionUser = c.get("user")
+  const [user] = await db
+    .select({
+      id:                    authSchema.user.id,
+      role:                  authSchema.user.role,
+      plan:                  authSchema.user.plan,
+      subscriptionStatus:    authSchema.user.subscriptionStatus,
+      trialEndDate:          authSchema.user.trialEndDate,
+      currentPeriodEnd:      authSchema.user.currentPeriodEnd,
+      trialInteractionUsed:  authSchema.user.trialInteractionUsed,
+      trialInteractionLimit: authSchema.user.trialInteractionLimit,
+      dailyChatCount:        authSchema.user.dailyChatCount,
+      dailyVoiceCount:       authSchema.user.dailyVoiceCount,
+      dailyImageCount:       authSchema.user.dailyImageCount,
+    })
+    .from(authSchema.user)
+    .where(eq(authSchema.user.id, sessionUser.id))
+    .limit(1)
+
+  if (!user) return c.json({ error: "User not found" }, 404)
 
   const periodStart = user.currentPeriodEnd
     ? new Date(user.currentPeriodEnd.getTime() - 30 * 24 * 60 * 60 * 1000)
@@ -151,6 +172,7 @@ async function handleSubscriptionActive(entity: Record<string, unknown>) {
   const userId = notes?.userId
   const plan = notes?.plan
   if (!userId || !plan) return
+  if (plan === "max") return
 
   const subId = entity["id"] as string
   const customerId = entity["customer_id"] as string

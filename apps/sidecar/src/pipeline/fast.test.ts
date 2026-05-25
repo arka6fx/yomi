@@ -63,6 +63,9 @@ let fakeGuideResponse = {
 
 // Capture the messages array passed to streamText for caching assertions.
 let lastStreamTextMessages: unknown[] = [];
+let lastStreamTextOptions: Record<string, unknown> = {};
+let appendSessionCalls = 0;
+let loadRecentSessionCalls = 0;
 
 // ---------------------------------------------------------------------------
 // Module mocks — must be registered before any import of the modules under test
@@ -72,6 +75,7 @@ mock.module("ai", () => ({
   streamText: (_opts: { messages?: unknown[]; [key: string]: unknown }) => {
     // Capture messages for caching assertions.
     lastStreamTextMessages = (_opts.messages as unknown[]) ?? [];
+    lastStreamTextOptions = _opts;
 
     const chunks = [...streamChunks];
     return {
@@ -102,6 +106,13 @@ mock.module("openai", () => ({
   },
 }));
 
+mock.module("../services/sarvam/stt.js", () => ({
+  sarvamTranscribe: async () => ({
+    transcript: "transcribed from audio",
+    language_code: "en-IN",
+  }),
+}));
+
 mock.module("./visual-guide.js", () => ({
   generateGuide: (_screenshot: string, _query: string) =>
     Promise.resolve(fakeGuideResponse),
@@ -114,6 +125,18 @@ mock.module("./tts.js", () => ({
     if (ttsMock.shouldThrow) throw new Error("tts boom");
     for (const chunk of ttsMock.chunks) yield chunk;
   },
+}));
+
+mock.module("../memory/session.js", () => ({
+  appendSessionTurn: async () => { appendSessionCalls++; },
+  loadRecentSession: async () => {
+    loadRecentSessionCalls++;
+    return "User: remember my project\nAssistant: It is Yomi.";
+  },
+}));
+
+mock.module("../memory/compactor.js", () => ({
+  compact: async () => {},
 }));
 
 // ---------------------------------------------------------------------------
@@ -196,6 +219,9 @@ describe("fastPipeline — generator", () => {
     openAICallCount = 0;
     lastOpenAIOpts = {};
     lastStreamTextMessages = [];
+    lastStreamTextOptions = {};
+    appendSessionCalls = 0;
+    loadRecentSessionCalls = 0;
     streamChunks = ["Hello", " world", "!"];
     fakeGuideResponse = {
       steps: [
@@ -277,6 +303,33 @@ describe("fastPipeline — generator", () => {
     const events = await collect(fastPipeline({ text: "Single call check" })) as any[];
     const doneEvents = events.filter((e) => e.type === "done");
     expect(doneEvents).toHaveLength(1);
+  });
+
+  it("answer mode: gives long writing requests a moderate output budget", async () => {
+    await collect(fastPipeline({ text: "write an application for leave" }));
+
+    expect(lastStreamTextOptions.maxTokens).toBe(1400);
+  });
+
+  it("answer mode: keeps ordinary questions on the small output budget", async () => {
+    await collect(fastPipeline({ text: "what is photosynthesis" }));
+
+    expect(lastStreamTextOptions.maxTokens).toBe(800);
+  });
+
+  it("explore plan does not load or write memory", async () => {
+    await collect(fastPipeline({ text: "remember this", plan: "explore" }));
+
+    expect(loadRecentSessionCalls).toBe(0);
+    expect(appendSessionCalls).toBe(0);
+  });
+
+  it("pro plan loads recent memory and writes the completed turn", async () => {
+    await collect(fastPipeline({ text: "remember this", plan: "pro" }));
+
+    expect(loadRecentSessionCalls).toBe(1);
+    expect(appendSessionCalls).toBe(1);
+    expect(JSON.stringify(lastStreamTextMessages)).toContain("remember my project");
   });
 
   // -------------------------------------------------------------------------
@@ -447,6 +500,20 @@ describe("fastPipeline — generator", () => {
     streamChunks = ["First sentence. ", "Second one! ", "And third?"];
     await collect(fastPipeline({ text: "hi" }));
     expect(ttsMock.calls).toEqual(["First sentence.", "Second one!", "And third?"]);
+  });
+
+  it("TTS: skips fenced answer blocks while keeping them in the UI stream", async () => {
+    ttsMock.engine = "openai";
+    ttsMock.chunks = [new Uint8Array([1])];
+    streamChunks = ["Reason first. \n```answer\nB. Correct choice.\n```\nDone."];
+    const events = await collect(fastPipeline({ text: "hi" })) as any[];
+
+    const uiText = events
+      .filter((event) => event.type === "llm_chunk")
+      .map((event) => event.text)
+      .join("");
+    expect(uiText).toContain("```answer");
+    expect(ttsMock.calls).toEqual(["Reason first.", "Done."]);
   });
 
   it("TTS: tail without trailing whitespace is still synthesized at end", async () => {

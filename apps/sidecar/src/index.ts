@@ -69,7 +69,7 @@ app.post("/query", async (c) => {
     })
 
     if (decision.path === "agent") {
-      const agentReq: AgentQueryRequest = { text, screenshot_b64: body.screenshot_b64 }
+      const agentReq: AgentQueryRequest = { text, screenshot_b64: body.screenshot_b64, plan: body.plan }
       try {
         for await (const event of agentPipeline(agentReq)) {
           await stream.writeSSE({ data: JSON.stringify(event) })

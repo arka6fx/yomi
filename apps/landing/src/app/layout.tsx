@@ -28,7 +28,13 @@ export const metadata: Metadata = {
     default: "Yomi - Your AI buddy on every screen",
   },
   description: "Yomi sees your screen, hears your voice, and acts so you touch your laptop less.",
-  icons: { icon: "/favicon.png" },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon.png", type: "image/png", sizes: "256x256" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
