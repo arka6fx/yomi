@@ -2,10 +2,6 @@
 
 AI buddy that lives on your desktop. Sees your screen, hears your voice, and acts so you touch your laptop less.
 
-**Mac** (menu bar / notch) · **Windows** (system tray)
-
----
-
 ## How it works
 
 Every request is routed to one of two pipelines:
@@ -24,7 +20,7 @@ The **local sidecar** (Bun) is the brain. The **Electron shell** is capture + UI
 ```
 apps/
   backend/    Hono on Bun  — auth, billing (Razorpay), LLM proxy, usage metering
-  desktop/    Electron     — tray, hotkeys, screen+mic capture, floating overlay UI
+  desktop/    Electron     — hotkeys, screen+mic capture, floating overlay UI
   landing/    Next.js 16   — marketing site + waitlist (Vercel)
   sidecar/    Bun service  — intent router, fast pipeline, ReAct loop, notepad memory
 packages/
