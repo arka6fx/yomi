@@ -4,6 +4,7 @@ import { db, usageEvents } from "@yomi/db"
 import { eq, and, gte } from "drizzle-orm"
 import { authenticate } from "../auth.js"
 import * as authSchema from "../auth-schema.js"
+import { effectivePlanForUser, effectiveRoleForUser } from "../entitlements.js"
 
 // Plans: explore (free trial), pro ($9.99). Max is not purchasable yet.
 const PLAN_AMOUNTS: Record<string, number> = {
@@ -119,6 +120,8 @@ billingRouter.get("/subscription", authenticate, async (c) => {
   const [user] = await db
     .select({
       id:                    authSchema.user.id,
+      name:                  authSchema.user.name,
+      email:                 authSchema.user.email,
       role:                  authSchema.user.role,
       plan:                  authSchema.user.plan,
       subscriptionStatus:    authSchema.user.subscriptionStatus,
@@ -149,15 +152,19 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     (sum, r) => sum + (r.inputTokens ?? 0) + (r.outputTokens ?? 0),
     0,
   )
+  const trialInteractionsRemaining = Math.max(user.trialInteractionLimit - user.trialInteractionUsed, 0)
 
   return c.json({
-    role:                user.role,
-    plan:                user.plan,
+    name:                user.name,
+    email:               user.email,
+    role:                effectiveRoleForUser(user),
+    plan:                effectivePlanForUser(user),
     status:              user.subscriptionStatus,
     trialEndDate:        user.trialEndDate,
     currentPeriodEnd:    user.currentPeriodEnd,
     trialInteractionUsed:  user.trialInteractionUsed,
     trialInteractionLimit: user.trialInteractionLimit,
+    trialInteractionsRemaining,
     dailyChatUsed:       user.dailyChatCount,
     dailyVoiceUsed:      user.dailyVoiceCount,
     dailyImageUsed:      user.dailyImageCount,

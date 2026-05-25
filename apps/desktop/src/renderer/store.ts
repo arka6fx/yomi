@@ -13,6 +13,8 @@ export interface ChatEntry {
 }
 
 export interface SubscriptionInfo {
+  name: string
+  email: string
   role: string
   plan: string
   status: string
@@ -20,6 +22,7 @@ export interface SubscriptionInfo {
   currentPeriodEnd: string | null
   trialInteractionUsed: number
   trialInteractionLimit: number
+  trialInteractionsRemaining: number
   dailyChatUsed: number
   dailyVoiceUsed: number
   dailyImageUsed: number
@@ -140,9 +143,19 @@ export const useYomiStore = create<YomiState>((set) => ({
     const clean = Object.fromEntries(
       Object.entries(subscription).filter(([, value]) => value !== undefined),
     ) as SubscriptionUpdate
-    if (s.subscription) return { subscription: { ...s.subscription, ...clean } }
+    if (s.subscription) {
+      const next = { ...s.subscription, ...clean }
+      return {
+        subscription: {
+          ...next,
+          trialInteractionsRemaining: clean.trialInteractionsRemaining ?? Math.max(next.trialInteractionLimit - next.trialInteractionUsed, 0),
+        },
+      }
+    }
     return {
       subscription: {
+        name: clean.name ?? "",
+        email: clean.email ?? "",
         role: clean.role ?? "user",
         plan: clean.plan ?? "explore",
         status: clean.status ?? "inactive",
@@ -150,6 +163,7 @@ export const useYomiStore = create<YomiState>((set) => ({
         currentPeriodEnd: clean.currentPeriodEnd ?? null,
         trialInteractionUsed: clean.trialInteractionUsed ?? 0,
         trialInteractionLimit: clean.trialInteractionLimit ?? 150,
+        trialInteractionsRemaining: clean.trialInteractionsRemaining ?? Math.max((clean.trialInteractionLimit ?? 150) - (clean.trialInteractionUsed ?? 0), 0),
         dailyChatUsed: clean.dailyChatUsed ?? 0,
         dailyVoiceUsed: clean.dailyVoiceUsed ?? 0,
         dailyImageUsed: clean.dailyImageUsed ?? 0,

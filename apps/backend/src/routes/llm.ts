@@ -6,6 +6,7 @@ import { authenticate } from "../auth.js"
 import { rateLimit } from "../middleware/rate-limit.js"
 import { requireAccess } from "../middleware/subscription.js"
 import { resolveProvider } from "../providers.js"
+import { effectivePlanForUser } from "../entitlements.js"
 
 // Soft/hard daily token caps by plan (secondary guard — primary is requireAccess chat limit)
 const PLAN_CAPS: Record<string, { soft: number; hard: number }> = {
@@ -23,7 +24,7 @@ export const llmRouter = new Hono()
 llmRouter.post("/stream", authenticate, requireAccess("chat"), rateLimit, async (c) => {
   const { model, messages, tools, maxTokens } = await c.req.json()
   const user = c.get("user")
-  const caps = PLAN_CAPS[user.plan] ?? PLAN_CAPS.explore!
+  const caps = PLAN_CAPS[effectivePlanForUser(user)] ?? PLAN_CAPS.explore!
 
   // Token hard-cap (rough estimate — actual metering happens post-stream)
   const inputTokens = estimateTokens(messages as unknown[])

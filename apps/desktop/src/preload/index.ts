@@ -5,6 +5,8 @@ type HotkeyState = "idle" | "listening" | "processing" | "text-input"
 type AuthStatus = "ok" | "needed" | "waiting" | "error"
 
 export interface SubscriptionInfo {
+  name: string
+  email: string
   role: string
   plan: string
   status: string
@@ -12,6 +14,7 @@ export interface SubscriptionInfo {
   currentPeriodEnd: string | null
   trialInteractionUsed: number
   trialInteractionLimit: number
+  trialInteractionsRemaining: number
   dailyChatUsed: number
   dailyVoiceUsed: number
   dailyImageUsed: number
@@ -100,8 +103,12 @@ contextBridge.exposeInMainWorld("yomi", {
 
   // ── Subscription ──────────────────────────────────────────────────────────
 
-  getSubscriptionInfo(): Promise<SubscriptionInfo> {
+  getSubscriptionInfo(): Promise<SubscriptionInfo | null> {
     return ipcRenderer.invoke("yomi:get-subscription-info")
+  },
+
+  updateProfileName(name: string): Promise<{ name: string; email: string }> {
+    return ipcRenderer.invoke("yomi:update-profile-name", name)
   },
 
   onSubscriptionUpdate(cb: (info: SubscriptionUpdate) => void): () => void {

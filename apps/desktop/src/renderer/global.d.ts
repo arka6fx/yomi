@@ -25,7 +25,8 @@ declare global {
       // Queries
       submitTextQuery(text: string): void
       // Subscription
-      getSubscriptionInfo(): Promise<SubscriptionInfo>
+      getSubscriptionInfo(): Promise<SubscriptionInfo | null>
+      updateProfileName(name: string): Promise<{ name: string; email: string }>
       onSubscriptionUpdate(cb: (info: SubscriptionUpdate) => void): () => void
       // Audio control
       onStopAudio(cb: () => void): () => void

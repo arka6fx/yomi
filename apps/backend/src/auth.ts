@@ -7,6 +7,7 @@ import { db } from "@yomi/db"
 import { eq } from "drizzle-orm"
 import type { Context, Next } from "hono"
 import * as authSchema from "./auth-schema.js"
+import { effectivePlanForUser, effectiveRoleForUser, isOwnerUser } from "./entitlements.js"
 
 const TRIAL_DAYS = 30
 
@@ -42,8 +43,7 @@ export const auth = betterAuth({
       create: {
         // Set role, plan, and trial dates right after the user row is inserted
         after: async (createdUser) => {
-          const ownerEmail = process.env["OWNER_EMAIL"]
-          const isOwner = !!ownerEmail && createdUser.email === ownerEmail
+          const isOwner = isOwnerUser(createdUser)
           const now = new Date()
           const trialEnd = new Date(now.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000)
 
@@ -64,12 +64,13 @@ export const auth = betterAuth({
     bearer(),        // Accept Authorization: Bearer <token> from sidecar/landing proxy
     customSession(async (session) => {
       const fields = await getUserFields(session.user.id)
+      const mergedUser = { ...session.user, ...(fields ?? {}) }
       return {
         ...session,
         user: {
           ...session.user,
-          role:               fields?.role               ?? "user",
-          plan:               fields?.plan               ?? "explore",
+          role:               effectiveRoleForUser(mergedUser),
+          plan:               effectivePlanForUser(mergedUser),
           subscriptionStatus: fields?.subscriptionStatus ?? "inactive",
           trialEndDate:       fields?.trialEndDate       ?? null,
           currentPeriodEnd:   fields?.currentPeriodEnd   ?? null,

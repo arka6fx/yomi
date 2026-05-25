@@ -2,6 +2,7 @@ import { and, eq, gt, sql } from "drizzle-orm"
 import type { Context, Next } from "hono"
 import { db } from "@yomi/db"
 import * as authSchema from "../auth-schema.js"
+import { effectivePlanForUser, isOwnerUser } from "../entitlements.js"
 
 export type AccessKind = "chat" | "voice" | "agent"
 
@@ -43,10 +44,11 @@ function dailyCountSql(kind: AccessKind, activeKind: AccessKind, today: string) 
 export function requireAccess(kind: AccessKind) {
   return async (c: Context, next: Next) => {
     const user = c.get("user")
+    const effectivePlan = effectivePlanForUser(user)
 
-    if (user.role === "owner") return next()
+    if (isOwnerUser(user)) return next()
 
-    if (user.plan === "max") {
+    if (effectivePlan === "max") {
       return c.json({ error: "Yomi Max is coming soon", code: "plan_unavailable" }, 403)
     }
 
@@ -54,7 +56,7 @@ export function requireAccess(kind: AccessKind) {
       return c.json({ error: "Yomi Max required for agents", code: "upgrade_required" }, 403)
     }
 
-    if (user.plan === "explore") {
+    if (effectivePlan === "explore") {
       const trialEnd = trialActiveUntil(user)
       if (!trialEnd) {
         return c.json({ error: "Free trial expired - please upgrade", code: "trial_expired" }, 403)
@@ -77,7 +79,7 @@ export function requireAccess(kind: AccessKind) {
       return next()
     }
 
-    if (!PAID_PLANS.has(user.plan)) {
+    if (!PAID_PLANS.has(effectivePlan)) {
       return c.json({ error: "Invalid subscription plan", code: "invalid_plan" }, 403)
     }
 
@@ -85,7 +87,7 @@ export function requireAccess(kind: AccessKind) {
       return c.json({ error: "Subscription required", code: "subscription_required" }, 403)
     }
 
-    const limits = DAILY_LIMITS[user.plan]!
+    const limits = DAILY_LIMITS[effectivePlan]!
     const limit = limits[kind]
     const today = todayUtc()
     const countColumn = counterColumn(kind)
@@ -99,7 +101,7 @@ export function requireAccess(kind: AccessKind) {
       })
       .where(and(
         eq(authSchema.user.id, user.id),
-        eq(authSchema.user.plan, user.plan),
+        eq(authSchema.user.plan, effectivePlan),
         eq(authSchema.user.subscriptionStatus, "active"),
         sql`(${authSchema.user.dailyResetDate} is null or ${authSchema.user.dailyResetDate} <> ${today} or ${countColumn} < ${limit})`,
       ))

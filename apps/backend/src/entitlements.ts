@@ -1,0 +1,40 @@
+const DEFAULT_OWNER_EMAILS = ["arkagarai292@gmail.com"]
+
+type EntitlementUser = {
+  id?: string | null
+  email?: string | null
+  role?: string | null
+  plan?: string | null
+}
+
+function parseList(value: string | undefined): string[] {
+  return value?.split(",").map((item) => item.trim()).filter(Boolean) ?? []
+}
+
+function ownerEmails(): Set<string> {
+  return new Set([
+    ...DEFAULT_OWNER_EMAILS,
+    ...parseList(process.env["OWNER_EMAIL"]),
+    ...parseList(process.env["OWNER_EMAILS"]),
+  ].map((email) => email.toLowerCase()))
+}
+
+function ownerUserIds(): Set<string> {
+  return new Set(parseList(process.env["OWNER_USER_IDS"]))
+}
+
+export function isOwnerUser(user: EntitlementUser): boolean {
+  if (user.role === "owner") return true
+  const email = user.email?.toLowerCase()
+  if (email && ownerEmails().has(email)) return true
+  const id = user.id ?? undefined
+  return !!id && ownerUserIds().has(id)
+}
+
+export function effectiveRoleForUser(user: EntitlementUser): string {
+  return isOwnerUser(user) ? "owner" : (user.role ?? "user")
+}
+
+export function effectivePlanForUser(user: EntitlementUser): string {
+  return isOwnerUser(user) ? "max" : (user.plan ?? "explore")
+}
