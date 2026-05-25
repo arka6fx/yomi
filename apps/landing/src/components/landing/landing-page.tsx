@@ -211,7 +211,7 @@ function InteractionCard({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5 }}
-      className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-5"
+      className="flex flex-col gap-3 rounded-2xl glass-card p-5"
     >
       <div className="flex items-center justify-between">
         <span className="rounded-full bg-primary/10 px-2 py-0.5 font-mono text-xs text-primary">
@@ -462,7 +462,7 @@ export function LandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
-              className="rounded-2xl border border-border bg-card p-6"
+              className="rounded-2xl glass-card p-6"
             >
               <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
                 <feature.icon size={20} className="text-primary" />
@@ -497,12 +497,12 @@ export function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.1 }}
-                className={`relative flex flex-col rounded-2xl border p-6 ${
+                className={`relative flex flex-col rounded-2xl glass-card p-6 ${
                   plan.popular
-                    ? "border-primary bg-card shadow-[0_0_40px_-12px_hsl(var(--primary)/0.4)]"
+                    ? "border-primary shadow-[0_0_40px_-12px_hsl(var(--primary)/0.4)]"
                     : plan.comingSoon
-                      ? "border-border bg-card opacity-75"
-                      : "border-border bg-card"
+                      ? "opacity-75"
+                      : ""
                 }`}
               >
                 {plan.popular && (
@@ -640,7 +640,7 @@ export function LandingPage() {
                     href={opt.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group flex items-center justify-between rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/40"
+                    className="group flex items-center justify-between rounded-xl glass-card p-4 transition-colors hover:border-primary/40"
                   >
                     <div>
                       <div className="mb-0.5 flex items-center gap-2">
@@ -689,7 +689,7 @@ export function LandingPage() {
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="flex items-start gap-3 rounded-xl border border-border bg-card p-4"
+            className="flex items-start gap-3 rounded-xl glass-card p-4"
           >
             <span className="mt-0.5 shrink-0 text-base leading-none text-muted-foreground">ℹ</span>
             <p className="text-sm leading-relaxed text-muted-foreground">

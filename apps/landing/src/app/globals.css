@@ -90,6 +90,16 @@
 }
 
 @layer components {
+  .glass-card {
+    background: rgba(10, 14, 28, 0.58);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
   .liquid-glass {
     background: rgba(255, 255, 255, 0.05);
     -webkit-backdrop-filter: blur(4px);
@@ -181,25 +191,37 @@
     pointer-events: none;
     background:
       radial-gradient(
-        ellipse at 18% 12%,
-        rgba(78, 158, 255, 0.48) 0%,
-        rgba(35, 78, 162, 0.22) 24%,
-        transparent 48%
+        ellipse 40% 32% at 3% 3%,
+        rgba(125, 211, 252, 0.52) 0%,
+        rgba(56, 189, 248, 0.22) 40%,
+        transparent 70%
+      ),
+      radial-gradient(
+        ellipse 75% 60% at 8% 8%,
+        rgba(56, 189, 248, 0.38) 0%,
+        rgba(37, 99, 235, 0.18) 38%,
+        transparent 68%
+      ),
+      linear-gradient(
+        140deg,
+        rgba(56, 189, 248, 0.1) 0%,
+        rgba(37, 99, 235, 0.04) 28%,
+        transparent 52%
       ),
       radial-gradient(
         ellipse at 78% 68%,
-        rgba(31, 102, 255, 0.34) 0%,
-        rgba(15, 42, 94, 0.26) 32%,
+        rgba(31, 102, 255, 0.28) 0%,
+        rgba(15, 42, 94, 0.18) 36%,
         transparent 62%
       ),
       radial-gradient(
         ellipse at 45% 42%,
-        rgba(3, 8, 20, 0.88) 0%,
-        rgba(7, 16, 36, 0.72) 34%,
+        rgba(3, 8, 20, 0.82) 0%,
+        rgba(7, 16, 36, 0.65) 34%,
         transparent 60%
       ),
       linear-gradient(135deg, #020617 0%, #071225 44%, #030711 100%);
-    filter: saturate(0.95) contrast(1.05);
+    filter: saturate(1.1) contrast(1.08);
   }
 
   .site-texture-bg::after {
