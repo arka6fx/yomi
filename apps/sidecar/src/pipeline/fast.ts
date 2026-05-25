@@ -1,19 +1,28 @@
 import { streamText } from "ai";
-import type { FastQueryRequest, GuideElement, SseEvent } from "@yomi/shared";
+import type { FastQueryRequest, GuideElement, Plan, SseEvent } from "@yomi/shared";
 import { generateGuide } from "./visual-guide.js";
 import { transcribe } from "../speech/transcribe.js";
 import { synthesize, resolveTts } from "./tts.js";
 import { createModel } from "./model.js";
 import { buildFastPrompt, loadYomiMd, loadMemoryContext } from "../harness/prompt.js";
+import { compact } from "../memory/compactor.js";
+import { appendSessionTurn, loadRecentSession } from "../memory/session.js";
 
 const MODEL = process.env.FAST_PATH_MODEL || "gpt-4.1-mini";
 
 // yomi.md is stable per-session; memory files change after compaction so load fresh each turn.
 let cachedYomiMd: string | null = null
-async function getFastPrompt(hasScreen: boolean): Promise<string> {
+function memoryEnabled(plan: Plan | undefined): boolean {
+  return plan === "pro" || plan === "max"
+}
+
+async function getFastPrompt(hasScreen: boolean, plan: Plan | undefined): Promise<string> {
   if (cachedYomiMd === null) cachedYomiMd = await loadYomiMd()
-  const { memorySummary, memoryIndex } = await loadMemoryContext()
-  return buildFastPrompt({ yomiMd: cachedYomiMd, memorySummary, memoryIndex, hasScreen })
+  const memory = memoryEnabled(plan)
+  const [{ memorySummary, memoryIndex }, recentSession] = memory
+    ? await Promise.all([loadMemoryContext(), loadRecentSession()])
+    : [{ memorySummary: "", memoryIndex: "" }, ""]
+  return buildFastPrompt({ yomiMd: cachedYomiMd, memorySummary, memoryIndex, recentSession, hasScreen })
 }
 
 // Tiny single-consumer queue so multiple async producers (LLM text + N concurrent
@@ -99,10 +108,37 @@ function findSentenceEnd(buf: string): number {
   return m.index + 1;
 }
 
+function sanitizeSentenceForSpeech(sentence: string): string {
+  return sentence
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^\s*[-*]\s+/gm, "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\bTime:\s*O\(([^)]+)\)/gi, "Time complexity O($1)")
+    .replace(/\bSpace:\s*O\(([^)]+)\)/gi, "Space complexity O($1)")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+function maxOutputTokensFor(text: string): number {
+  const q = text.toLowerCase()
+  if (/\b(application|letter|biography|bio|essay|article|story|speech|report|write|draft|compose)\b/.test(q)) {
+    return 1400
+  }
+  if (/\b(code|program|function|algorithm|leetcode|solution|complexity|debug)\b/.test(q)) {
+    return 1200
+  }
+  if (/\b(explain in detail|walkthrough|step by step|detailed|briefly but complete)\b/.test(q)) {
+    return 1100
+  }
+  return 800
+}
+
 async function* answerPipeline(
   text: string,
   screenshotB64?: string,
   tts = true,
+  plan?: Plan,
 ): AsyncGenerator<SseEvent> {
   const content: any[] = [{ type: "text" as const, text }];
 
@@ -114,7 +150,7 @@ async function* answerPipeline(
     });
   }
 
-  const systemPrompt = await getFastPrompt(hasScreen);
+  const systemPrompt = await getFastPrompt(hasScreen, plan);
 
   const result = streamText({
     model: createModel(MODEL),
@@ -122,7 +158,7 @@ async function* answerPipeline(
       { role: "system" as const, content: systemPrompt },
       { role: "user" as const, content },
     ],
-    maxTokens: 800,
+    maxTokens: maxOutputTokensFor(text),
   });
 
   const ttsEnabled = tts && resolveTts() !== "none";
@@ -143,13 +179,36 @@ async function* answerPipeline(
   const producer = (async () => {
     let buffer = "";
     let gotChunk = false;
+    let speechFenceOpen = false;
     // audioChain enforces ordering: synthesis runs concurrently but each
     // sentence's chunks are pushed only after the previous sentence's chunks
     // are fully in the queue, so playback always follows text order.
     let audioChain = Promise.resolve();
 
+    function visibleSpeechText(chunk: string): string {
+      let out = "";
+      let rest = chunk;
+      while (rest.length > 0) {
+        const fenceAt = rest.indexOf("```");
+        if (fenceAt === -1) {
+          if (!speechFenceOpen) out += rest;
+          break;
+        }
+        if (!speechFenceOpen) out += rest.slice(0, fenceAt);
+        rest = rest.slice(fenceAt + 3);
+        if (!speechFenceOpen) {
+          const firstNewline = rest.indexOf("\n");
+          rest = firstNewline === -1 ? "" : rest.slice(firstNewline + 1);
+        }
+        speechFenceOpen = !speechFenceOpen;
+      }
+      return out;
+    }
+
     function enqueueSentence(sentence: string) {
-      const audioPromise = fetchAudio(sentence); // start immediately
+      const speech = sanitizeSentenceForSpeech(sentence)
+      if (!speech) return
+      const audioPromise = fetchAudio(speech); // start immediately
       audioChain = audioChain.then(async () => {
         for (const chunk of await audioPromise) {
           queue.push({ type: "audio_chunk", base64: Buffer.from(chunk).toString("base64") });
@@ -162,7 +221,7 @@ async function* answerPipeline(
       gotChunk = true;
       queue.push({ type: "llm_chunk", text: chunk });
       if (!ttsEnabled) continue;
-      buffer += chunk;
+      buffer += visibleSpeechText(chunk);
       let cutAt = findSentenceEnd(buffer);
       while (cutAt !== -1) {
         enqueueSentence(buffer.slice(0, cutAt));
@@ -250,10 +309,22 @@ export async function* fastPipeline(
   yield { type: "transcript", text };
 
   try {
+    let output = "";
     if (req.mode === "guide") {
-      yield* guidePipeline(text, req.screenshot_b64 ?? "");
+      for await (const event of guidePipeline(text, req.screenshot_b64 ?? "")) {
+        if (event.type === "visual_guide") output += `${event.instruction}\n`
+        yield event
+      }
     } else {
-      yield* answerPipeline(text, req.screenshot_b64, req.tts !== false);
+      for await (const event of answerPipeline(text, req.screenshot_b64, req.tts !== false, req.plan)) {
+        if (event.type === "llm_chunk") output += event.text
+        yield event
+      }
+    }
+    if (memoryEnabled(req.plan) && output.trim()) {
+      appendSessionTurn({ kind: "fast", mode: req.mode ?? "answer", input: text, output })
+        .then(() => compact())
+        .catch(err => console.warn("[yomi/fast] memory write failed:", err))
     }
   } catch (err) {
     const message =

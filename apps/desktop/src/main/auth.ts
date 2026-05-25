@@ -2,7 +2,10 @@ import { app } from "electron"
 import path from "node:path"
 import fs from "node:fs"
 
-export const BACKEND_URL = process.env["YOMI_BACKEND_URL"] ?? "https://api.yomi.app"
+export const BACKEND_URL =
+  process.env["YOMI_BACKEND_URL"] ??
+  process.env["BACKEND_URL"] ??
+  (process.env["YOMI_DEV"] === "true" ? "http://localhost:3001" : "https://api.yomi.app")
 
 function tokenPath() {
   return path.join(app.getPath("userData"), "session.enc")

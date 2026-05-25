@@ -13,7 +13,8 @@ export async function POST(req: NextRequest) {
       headers: { Authorization: auth, "Content-Type": "application/json" },
       body: JSON.stringify(body),
     })
-    return NextResponse.json(await res.json(), { status: res.status })
+    const data = await res.json().catch(() => ({ error: "Device confirmation failed" }))
+    return NextResponse.json(data, { status: res.status })
   } catch {
     return NextResponse.json({ error: "Backend unreachable" }, { status: 502 })
   }

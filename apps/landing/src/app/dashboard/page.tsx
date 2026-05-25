@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, Suspense } from "react"
+import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
@@ -54,8 +54,8 @@ const PLANS = [
   {
     key: "max",
     name: "Max",
-    price: "$24.99",
-    priceSub: "/ mo",
+    price: "Coming soon",
+    priceSub: "",
     desc: "Full agentic capabilities for creators.",
     icon: Cuboid,
     features: [
@@ -64,6 +64,7 @@ const PLANS = [
       "Autonomous workflows",
       "Early access features",
     ],
+    comingSoon: true,
   },
 ]
 
@@ -113,6 +114,10 @@ function DashboardContent() {
 
   async function handleUpgrade(planKey: string) {
     if (planKey === "explore") return
+    if (planKey === "max") {
+      setBillingError("Yomi Max is coming soon")
+      return
+    }
     setBillingError("")
     setBillingLoading(planKey)
     try {
@@ -265,13 +270,14 @@ function DashboardContent() {
               {PLANS.map((plan, i) => {
                 const isCurrent = plan.key === currentPlanKey
                 const isUpgrade = i > currentPlanIdx
+                const isComingSoon = "comingSoon" in plan && plan.comingSoon
 
                 return (
                   <div
                     key={plan.key}
                     className={cn(
                       "rounded-xl border p-4 flex flex-col gap-3 transition-colors",
-                      isCurrent ? "border-primary bg-primary/5" : "border-border bg-card",
+                      isCurrent ? "border-primary bg-primary/5" : isComingSoon ? "border-border bg-card opacity-75" : "border-border bg-card",
                     )}
                   >
                     <div className="flex-1">
@@ -296,6 +302,8 @@ function DashboardContent() {
 
                     {isCurrent ? (
                       <span className="text-xs text-primary font-medium">Current plan</span>
+                    ) : isComingSoon ? (
+                      <span className="text-xs text-muted-foreground font-medium">Coming soon</span>
                     ) : isUpgrade ? (
                       <button
                         onClick={() => handleUpgrade(plan.key)}
@@ -341,9 +349,5 @@ function DashboardContent() {
 }
 
 export default function DashboardPage() {
-  return (
-    <Suspense>
-      <DashboardContent />
-    </Suspense>
-  )
+  return <DashboardContent />
 }

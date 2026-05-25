@@ -133,18 +133,18 @@ function AnswerBlock({ answer }: { answer:string }) {
   }
   return (
     <div style={{
-      background:"rgba(255,200,130,0.07)",
-      border:"1px solid rgba(255,200,130,0.28)",
+      background:"var(--code-bg)",
+      border:"1px solid rgba(255,224,194,0.08)",
       borderRadius:8, overflow:"hidden", margin:"6px 0",
-      fontSize:12, fontFamily:CODE_FONT,
+      fontSize:12, fontFamily:UI_FONT,
     }} className="no-drag">
       <div style={{
         display:"flex", alignItems:"center", justifyContent:"space-between",
         padding:"4px 8px 4px 12px",
-        borderBottom:"1px solid rgba(255,200,130,0.1)",
-        background:"rgba(255,200,130,0.04)",
+        borderBottom:"1px solid rgba(255,224,194,0.05)",
+        background:"rgba(255,224,194,0.025)",
       }}>
-        <span style={{ fontSize:9, color:"rgba(255,200,130,0.45)", textTransform:"uppercase", letterSpacing:"0.12em" }}>
+        <span style={{ fontSize:9, color:"rgba(255,200,140,0.34)", textTransform:"uppercase", letterSpacing:"0.12em" }}>
           answer
         </span>
         <button
@@ -163,9 +163,16 @@ function AnswerBlock({ answer }: { answer:string }) {
         </button>
       </div>
       <div style={{
-        padding:"14px 18px",
-        fontSize:14.5, fontFamily:UI_FONT, fontWeight:600,
-        color:"rgba(255,224,194,0.92)", textAlign:"center", letterSpacing:"0.01em",
+        padding:"12px 16px 14px",
+        fontSize:13.5,
+        fontFamily:UI_FONT,
+        fontWeight:450,
+        lineHeight:1.58,
+        color:"rgba(238,233,224,0.94)",
+        textAlign:"left",
+        letterSpacing:0,
+        whiteSpace:"pre-wrap",
+        overflowWrap:"anywhere",
       }}>
         {answer}
       </div>
@@ -514,11 +521,11 @@ function CopyButton({ text }: { text:string }) {
 
 // ── Text Input ─────────────────────────────────────────────────────────────────
 
-const SCREEN_PROMPT = `Analyze what's on my screen.
+const SCREEN_PROMPT = `Analyze what's on my screen and use the standard answer-block format.
 
 If you see a CODING or ALGORITHM problem, respond in exactly this structure:
 
-[2-3 sentence reasoning paragraph]
+[short introduction to the problem and approach]
 
 \`\`\`python
 # complete solution — use Python unless the problem or visible code specifies another language
@@ -527,15 +534,26 @@ If you see a CODING or ALGORITHM problem, respond in exactly this structure:
 Time: O(?) — one-line reason
 Space: O(?) — one-line reason
 
+Example: include useful examples from the screen when they are visible.
+
 If you see a MULTIPLE CHOICE QUESTION (MCQ) or a question with a single definite answer, respond in exactly this structure:
 
-[2-3 sentence explanation of why the answer is correct]
+[1-3 sentence explanation of why the answer is correct]
 
 \`\`\`answer
 [letter and answer text, e.g. "B. The mitochondria"]
 \`\`\`
 
-If there is no question, describe what's on the screen concisely.`
+If you see a writing task, briefly state what you drafted, then put the exact copy-ready response in an answer block:
+
+\`\`\`answer
+[the actual written response]
+\`\`\`
+
+For applications and letters, use proper letter format: date, recipient, subject, salutation, body paragraphs, closing, and sender name when appropriate.
+For biographies or long paragraph answers, use a clear title, sections, and readable paragraphs. Make it complete without padding.
+
+If there is no question, describe what's on the screen concisely and put the main takeaway in an answer block.`
 
 function TextInputPanel() {
   const [value, setValue] = React.useState("")
@@ -759,8 +777,7 @@ function MenuCard({ plan, onSignOut, onClose, onHoverEnter, onHoverLeave, closin
     { label: "Quit",   keys: ["Ctrl", "Shift", "Q"]      },
   ]
 
-  const upgradeLabel = plan === "explore" ? "Upgrade to Pro"
-    : plan === "pro" ? "Upgrade to Max"
+  const upgradeLabel = plan === "explore" || plan === "pro" ? "Upgrade"
     : null
 
   const MenuBtn = ({ label, danger, onClick }: { label: string; danger?: boolean; onClick: () => void }) => (

@@ -1,6 +1,6 @@
 import type { SseEvent } from "@yomi/shared"
 import type { HotkeyState } from "./store"
-import type { SubscriptionInfo } from "../preload/index"
+import type { SubscriptionInfo, SubscriptionUpdate } from "../preload/index"
 
 type AuthStatus = "ok" | "needed" | "waiting" | "error"
 
@@ -26,7 +26,7 @@ declare global {
       submitTextQuery(text: string): void
       // Subscription
       getSubscriptionInfo(): Promise<SubscriptionInfo>
-      onSubscriptionUpdate(cb: (info: SubscriptionInfo) => void): () => void
+      onSubscriptionUpdate(cb: (info: SubscriptionUpdate) => void): () => void
       // Audio control
       onStopAudio(cb: () => void): () => void
       getDesktopSourceId(): Promise<string | null>

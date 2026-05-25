@@ -4,6 +4,9 @@ import type { SseEvent } from "@yomi/shared"
 import { captureScreen } from "./capture"
 import type { SidecarManager } from "./sidecar"
 import { resetToIdle, activateProcessing } from "./hotkey"
+import { loadToken } from "./auth"
+
+type Plan = "explore" | "pro" | "max"
 
 let pcmChunks: Float32Array[] = []
 let capturedSampleRate = 16000
@@ -42,9 +45,11 @@ export function initSidecarIpc(
     const ctrl = startPipeline()
     activateProcessing()
     try {
+      const plan = await reserveInteraction(overlayWin, "chat", ctrl.signal)
+      if (ctrl.signal.aborted) { resetToIdle(); return }
       const screenshotB64 = await captureScreen()
       if (ctrl.signal.aborted) { resetToIdle(); return }
-      await streamQuery(sidecar, overlayWin, text.trim(), screenshotB64, false, ctrl)
+      await streamQuery(sidecar, overlayWin, text.trim(), screenshotB64, false, plan, ctrl)
     } catch (err) {
       if ((err as Error).name === "AbortError") return
       send(overlayWin, { type: "error", message: err instanceof Error ? err.message : "Unknown error" })
@@ -62,6 +67,8 @@ export function initSidecarIpc(
       if (chunks.length === 0) { resetToIdle(); return }
 
       try {
+        const plan = await reserveInteraction(overlayWin, "voice", ctrl.signal)
+        if (ctrl.signal.aborted) return
         const wav = buildWav(chunks, capturedSampleRate)
         const [transcript, screenshotB64] = await Promise.all([
           transcribe(wav, sidecar, ctrl.signal),
@@ -72,7 +79,7 @@ export function initSidecarIpc(
         // STT returned silence/empty — quietly reset instead of showing an error.
         if (!transcript.trim()) { resetToIdle(); return }
 
-        await streamQuery(sidecar, overlayWin, transcript, screenshotB64, true, ctrl)
+        await streamQuery(sidecar, overlayWin, transcript, screenshotB64, true, plan, ctrl)
       } catch (err) {
         if ((err as Error).name === "AbortError") return
         send(overlayWin, { type: "error", message: err instanceof Error ? err.message : "Unknown error" })
@@ -86,6 +93,59 @@ export function initSidecarIpc(
 
 function send(win: BrowserWindow, event: SseEvent): void {
   if (!win.isDestroyed()) win.webContents.send("yomi:event", event)
+}
+
+type ReserveResponse = {
+  ok?: boolean
+  error?: string
+  plan?: Plan
+  trialInteractionUsed?: number
+  trialInteractionLimit?: number
+  dailyChatUsed?: number
+  dailyVoiceUsed?: number
+}
+
+type ReserveKind = "chat" | "voice"
+
+function backendUrl(): string {
+  return process.env["BACKEND_URL"] ?? process.env["YOMI_BACKEND_URL"] ?? "http://localhost:3001"
+}
+
+async function reserveInteraction(win: BrowserWindow, kind: ReserveKind, signal: AbortSignal): Promise<Plan> {
+  const token = loadToken()
+  if (!token) throw new Error("Please sign in again")
+
+  const res = await fetch(`${backendUrl()}/api/usage/interactions/reserve`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ kind }),
+    signal,
+  })
+
+  const data = await res.json().catch(() => ({})) as ReserveResponse
+  if (!res.ok) {
+    throw new Error(data.error ?? `Usage check failed (${res.status})`)
+  }
+
+  // Apply the reservation result immediately; the subscription fetch below is a DB-backed refresh.
+  if (data.plan) {
+    win.webContents.send("yomi:subscription-update", {
+      plan: data.plan,
+      trialInteractionUsed: data.trialInteractionUsed,
+      trialInteractionLimit: data.trialInteractionLimit,
+      dailyChatUsed: data.dailyChatUsed,
+      dailyVoiceUsed: data.dailyVoiceUsed,
+    })
+  }
+
+  const sub = await fetch(`${backendUrl()}/api/billing/subscription`, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal,
+  })
+  if (sub.ok) {
+    win.webContents.send("yomi:subscription-update", await sub.json())
+  }
+  return data.plan ?? "explore"
 }
 
 function buildWav(chunks: Float32Array[], sampleRate: number): Buffer {
@@ -143,6 +203,7 @@ async function streamQuery(
   text: string,
   screenshot_b64: string,
   tts: boolean,
+  plan: Plan,
   ctrl: AbortController,
 ): Promise<void> {
   pipelineCtrl = ctrl   // keep reference current (startPipeline may have rotated it)
@@ -150,7 +211,7 @@ async function streamQuery(
   const res = await fetch(`${sidecar.baseUrl}/query/fast`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-sidecar-secret": sidecar.secret },
-    body: JSON.stringify({ text, screenshot_b64, mode: "answer", tts }),
+    body: JSON.stringify({ text, screenshot_b64, mode: "answer", tts, plan }),
     signal: ctrl.signal,
   })
   if (!res.ok || !res.body) { pipelineCtrl = null; throw new Error(`Sidecar ${res.status}`) }
