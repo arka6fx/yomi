@@ -6,6 +6,7 @@ import { useRouter, usePathname } from "next/navigation"
 import { Menu, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { authClient } from "@/lib/auth-client"
+import { BrandMark } from "@/components/BrandMark"
 
 const NAV_LINKS = [
   { label: "Features", href: "/#features" },
@@ -31,9 +32,7 @@ export default function Nav() {
         className="max-w-5xl mx-auto rounded-2xl border border-border bg-card/80 backdrop-blur-xl shadow-sm"
       >
         <div className="flex items-center justify-between px-4 md:px-6 py-3">
-          <Link href="/" className="font-display text-2xl font-bold text-foreground select-none">
-            Yomi
-          </Link>
+          <BrandMark size="md" />
 
           <nav className="hidden md:flex items-center gap-7">
             {NAV_LINKS.map(link => (

@@ -225,6 +225,25 @@ function InteractionCard({
   )
 }
 
+function WindowsMark() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path d="M1.5 2.25 7.25 1.5v6H1.5v-5.25ZM8.75 1.3l5.75-.8v7H8.75v-6.2ZM1.5 8.5h5.75v6L1.5 13.7V8.5ZM8.75 8.5h5.75v7l-5.75-.8V8.5Z" fill="currentColor" />
+    </svg>
+  )
+}
+
+function AppleMark() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d="M10.65 1.1c.07.9-.25 1.77-.78 2.39-.55.65-1.43 1.16-2.28 1.09-.09-.86.3-1.77.8-2.34.56-.65 1.52-1.14 2.26-1.14Zm2.47 10.24c-.34.78-.5 1.13-.94 1.82-.61.93-1.47 2.08-2.54 2.09-.48.01-.8-.14-1.15-.3-.37-.17-.77-.35-1.38-.35-.64 0-1.06.18-1.44.35-.34.15-.65.29-1.11.31-.98.04-1.73-1-2.34-1.93-1.28-1.95-1.41-4.24-.62-5.45.56-.86 1.45-1.37 2.29-1.39.55-.01 1.07.2 1.53.39.35.14.66.27.91.27.22 0 .54-.13.91-.28.58-.23 1.3-.52 2.03-.44.5.02 1.9.2 2.8 1.52-2.46 1.34-2.06 4.79.04 5.5Z"
+        fill="currentColor"
+      />
+    </svg>
+  )
+}
+
 export function LandingPage() {
   const [billingLoading, setBillingLoading] = useState<string | null>(null)
   const { data: session } = authClient.useSession()
@@ -239,6 +258,9 @@ export function LandingPage() {
   }, [])
 
   const current = platforms[active]
+  const heroPlatform = detected === "unknown" ? "windows" : detected
+  const heroDownloadLabel =
+    heroPlatform === "mac" ? "Get for macOS" : heroPlatform === "windows" ? "Get for Windows" : "Download"
 
   async function handlePlanClick(planKey: string) {
     if (planKey === "max") return
@@ -269,16 +291,16 @@ export function LandingPage() {
     <div className="site-texture-bg min-h-screen text-foreground">
       <Nav />
 
-      <section id="hero" className="px-4 pb-10 pt-4 sm:px-6 lg:pb-12">
+      <section id="hero" className="px-4 pb-10 pt-6 sm:px-6 lg:pb-12">
         <div className="relative mx-auto min-h-[calc(100vh-96px)] max-w-7xl overflow-hidden rounded-[28px] border border-white/10 bg-zinc-950 shadow-2xl shadow-black/50 sm:rounded-[36px]">
           <div
-            className="absolute inset-0 scale-105 bg-cover bg-center opacity-75"
+            className="absolute inset-0 scale-105 bg-cover bg-[center_34%] opacity-90"
             style={{
               backgroundImage:
-                "url('https://images.unsplash.com/photo-1498050108023-c5249f4df0852?auto=format&fit=crop&w=2200&q=85')",
+                "url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2400&q=88')",
             }}
           />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_52%_38%,rgba(251,191,36,0.14),transparent_24%),linear-gradient(180deg,rgba(6,7,6,0.2)_0%,rgba(6,7,6,0.5)_42%,rgba(6,7,6,0.96)_100%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_64%_18%,rgba(219,234,254,0.22),transparent_20%),linear-gradient(180deg,rgba(8,31,66,0.04)_0%,rgba(8,31,66,0.22)_34%,rgba(3,8,20,0.74)_72%,rgba(3,8,20,0.98)_100%)]" />
           <div className="absolute inset-0 opacity-[0.16] hero-grain" />
           <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-black/65 to-transparent" />
 
@@ -293,7 +315,7 @@ export function LandingPage() {
                 Early access
               </span>
               <span className="flex items-center gap-1.5">
-                <Zap size={14} className="fill-amber-200 text-amber-200" />
+                <Zap size={14} className="fill-sky-200 text-sky-200" />
                 &lt; 2s fast path
               </span>
               <span className="hidden h-1 w-1 rounded-full bg-white/30 sm:block" />
@@ -305,7 +327,7 @@ export function LandingPage() {
                 initial={{ opacity: 0, y: 28 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.9, delay: 0.2 }}
-                className="font-accent text-[4.8rem] font-medium leading-[0.82] tracking-normal text-[#f3f0df] sm:text-[7.2rem] md:text-[9rem] lg:text-[11.2rem]"
+                className="font-accent text-[4.8rem] font-medium leading-[0.82] tracking-normal text-[#eaf4ff] sm:text-[7.2rem] md:text-[9rem] lg:text-[11.2rem]"
               >
                 Yomi
               </motion.h1>
@@ -317,27 +339,36 @@ export function LandingPage() {
                 className="pb-1 lg:pb-6"
               >
                 <div className="mb-6 flex items-start gap-5">
-                  <span className="font-accent text-5xl leading-none text-[#f3f0df]">*</span>
+                  <span className="font-accent text-5xl leading-none text-[#eaf4ff]">*</span>
                   <p className="max-w-sm text-sm leading-5 text-white/78 sm:text-base sm:leading-6">
                     Yomi is a cross-platform AI buddy that sees your screen, hears your voice, and
                     helps you move through laptop work without breaking flow.
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <Link
-                    href="/signup"
-                    className="group inline-flex h-12 items-center gap-4 rounded-full bg-[#f3f0df] px-6 text-sm font-semibold text-zinc-950 transition hover:bg-white"
-                  >
-                    Get started
-                    <span className="grid h-8 w-8 place-items-center rounded-full bg-zinc-950 text-white transition group-hover:translate-x-1">
-                      <ArrowRight size={16} />
-                    </span>
-                  </Link>
+                <div className="flex flex-col items-start gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Link
+                      href="/signup"
+                      className="group inline-flex h-12 items-center gap-4 rounded-full bg-[#eaf4ff] px-6 text-sm font-semibold text-slate-950 transition hover:bg-white"
+                    >
+                      Get started
+                      <span className="grid h-8 w-8 place-items-center rounded-full bg-zinc-950 text-white transition group-hover:translate-x-1">
+                        <ArrowRight size={16} />
+                      </span>
+                    </Link>
+                    <button
+                      onClick={() => scrollTo("how-it-works")}
+                      className="inline-flex h-12 items-center rounded-full border border-white/15 bg-white/10 px-6 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/15"
+                    >
+                      See how it works
+                    </button>
+                  </div>
                   <button
-                    onClick={() => scrollTo("how-it-works")}
-                    className="inline-flex h-12 items-center rounded-full border border-white/15 bg-white/10 px-6 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/15"
+                    onClick={() => scrollTo("download")}
+                    className="inline-flex h-12 items-center gap-2 self-center rounded-lg border border-sky-200/40 bg-[linear-gradient(135deg,#38bdf8_0%,#2563eb_100%)] px-5 text-sm font-semibold text-white shadow-[0_10px_28px_rgba(37,99,235,0.36),inset_0_1px_0_rgba(255,255,255,0.28)] transition hover:scale-[1.02] hover:shadow-[0_14px_36px_rgba(37,99,235,0.48),inset_0_1px_0_rgba(255,255,255,0.34)]"
                   >
-                    See how it works
+                    {heroPlatform === "mac" ? <AppleMark /> : <WindowsMark />}
+                    {heroDownloadLabel}
                   </button>
                 </div>
               </motion.div>
@@ -350,15 +381,15 @@ export function LandingPage() {
               className="mt-6 grid gap-3 border-t border-white/10 pt-4 text-sm text-white/62 sm:grid-cols-3"
             >
               <span className="flex items-center gap-2">
-                <Monitor size={15} className="text-amber-100" />
+                <Monitor size={15} className="text-sky-100" />
                 Screen-aware responses
               </span>
               <span className="flex items-center gap-2">
-                <Mic size={15} className="text-amber-100" />
+                <Mic size={15} className="text-sky-100" />
                 Voice and text hotkeys
               </span>
               <span className="flex items-center gap-2">
-                <Shield size={15} className="text-amber-100" />
+                <Shield size={15} className="text-sky-100" />
                 Visible capture states
               </span>
             </motion.div>

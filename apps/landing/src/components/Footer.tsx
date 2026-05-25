@@ -13,12 +13,9 @@ export default function Footer() {
   const year = new Date().getFullYear()
 
   return (
-    <footer className="border-t border-white/10 bg-[#090a09]">
+    <footer className="border-t border-white/10 bg-[#050914]">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-6 py-10 sm:flex-row">
         <div className="flex flex-wrap items-center justify-center gap-6 sm:justify-start">
-          <Link href="/" className="select-none">
-            <span className="font-display text-xl font-bold text-white">Yomi</span>
-          </Link>
           {links.map((link) => (
             <Link
               key={link.label}
