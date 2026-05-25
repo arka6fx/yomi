@@ -16,6 +16,7 @@ type Sub = {
   currentPeriodEnd: string | null
   trialInteractionUsed: number
   trialInteractionLimit: number
+  trialInteractionsRemaining?: number
   dailyChatUsed: number
   dailyVoiceUsed: number
   dailyImageUsed: number
@@ -99,7 +100,7 @@ function DashboardContent() {
         setSub({
           role: "user", plan: "explore", status: "inactive",
           trialEndDate: null, currentPeriodEnd: null,
-          trialInteractionUsed: 0, trialInteractionLimit: 150,
+          trialInteractionUsed: 0, trialInteractionLimit: 150, trialInteractionsRemaining: 150,
           dailyChatUsed: 0, dailyVoiceUsed: 0, dailyImageUsed: 0, tokensUsedThisPeriod: 0,
         }),
       )
@@ -230,7 +231,7 @@ function DashboardContent() {
               {!subPending && !isOwner && currentPlanKey === "explore" && sub && (
                 <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                   <Zap size={11} />
-                  {sub.trialInteractionUsed} / {sub.trialInteractionLimit} interactions used
+                  {(sub.trialInteractionsRemaining ?? Math.max(sub.trialInteractionLimit - sub.trialInteractionUsed, 0))} / {sub.trialInteractionLimit} interactions left
                 </p>
               )}
               {/* Renewal date */}
