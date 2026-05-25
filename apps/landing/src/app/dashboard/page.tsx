@@ -168,7 +168,7 @@ function DashboardContent() {
               {session.user.email}
             </span>
             {isOwner && (
-              <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 font-medium">
+              <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 font-medium">
                 <Shield size={11} />
                 Owner
               </span>
@@ -209,10 +209,10 @@ function DashboardContent() {
                     className={cn(
                       "text-xs px-2 py-0.5 rounded-full font-medium",
                       isOwner
-                        ? "bg-amber-500/10 text-amber-400"
+                        ? "bg-sky-500/10 text-sky-300"
                         : sub.status === "active"
                           ? "bg-emerald-500/10 text-emerald-400"
-                          : "bg-amber-500/10 text-amber-400",
+                          : "bg-sky-500/10 text-sky-300",
                     )}
                   >
                     {isOwner ? "owner" : sub.status}
