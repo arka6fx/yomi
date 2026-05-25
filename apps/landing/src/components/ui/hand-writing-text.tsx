@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import type { Variants } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface HandWrittenTitleProps {
@@ -16,13 +17,13 @@ function HandWrittenTitle({
   className,
   strokeClassName = "text-primary",
 }: HandWrittenTitleProps) {
-  const draw = {
+  const draw: Variants = {
     hidden: { pathLength: 0, opacity: 0 },
     visible: {
       pathLength: 1,
       opacity: 1,
       transition: {
-        pathLength: { duration: 2.5, ease: [0.43, 0.13, 0.23, 0.96] },
+        pathLength: { duration: 2.5, ease: [0.43, 0.13, 0.23, 0.96] as const },
         opacity: { duration: 0.5 },
       },
     },

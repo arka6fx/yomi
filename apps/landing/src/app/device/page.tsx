@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, Suspense } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Loader2, Check, MonitorSmartphone } from "lucide-react"
@@ -9,7 +9,7 @@ import Link from "next/link"
 
 function DeviceContent() {
   const searchParams = useSearchParams()
-  const urlCode = searchParams.get("code")
+  const urlCode = searchParams.get("code")?.trim().toUpperCase() ?? null
   const router = useRouter()
 
   const { data: session, isPending } = authClient.useSession()
@@ -18,6 +18,21 @@ function DeviceContent() {
   const [done, setDone] = useState(false)
   const [error, setError] = useState("")
   const confirmedRef = useRef(false)
+
+  function friendlyDeviceError(raw: string): string {
+    switch (raw) {
+      case "invalid_user_code":
+        return "That code is not active. Restart sign-in from the desktop app and use the new code."
+      case "expired_user_code":
+        return "That code expired. Restart sign-in from the desktop app to get a fresh code."
+      case "Not authenticated":
+        return "Sign in first, then connect the desktop app."
+      case "Backend unreachable":
+        return "Cannot reach the Yomi backend. Check that the backend and landing app use the same environment."
+      default:
+        return raw || "Failed to connect the desktop app."
+    }
+  }
 
   async function confirmCode(codeToConfirm: string, token: string) {
     setLoading(true)
@@ -32,7 +47,7 @@ function DeviceContent() {
       if (!res.ok) throw new Error(data.error ?? "Failed to confirm device")
       setDone(true)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong")
+      setError(friendlyDeviceError(err instanceof Error ? err.message : "Something went wrong"))
     } finally {
       setLoading(false)
     }
@@ -42,7 +57,8 @@ function DeviceContent() {
   useEffect(() => {
     if (!session || !urlCode || done || confirmedRef.current) return
     confirmedRef.current = true
-    confirmCode(urlCode.trim().toUpperCase(), session.session.token)
+    setCode(urlCode)
+    confirmCode(urlCode, session.session.token)
   }, [session, urlCode, done])
 
   // Not logged in + code in URL → send to sign-in, preserving the code in redirect
@@ -153,7 +169,7 @@ function DeviceContent() {
                 className="w-full rounded-xl border border-border bg-background px-4 py-3 text-center text-2xl font-mono font-bold tracking-[0.2em] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/50 uppercase"
               />
               {error && (
-                <p className="text-xs text-destructive text-center">{error}</p>
+                <p className="text-xs text-destructive text-center leading-5">{error}</p>
               )}
               <button
                 type="submit"
@@ -185,15 +201,7 @@ export default function DevicePage() {
             "radial-gradient(ellipse 800px 600px at 50% 30%, rgba(255,224,194,0.07) 0%, transparent 70%)",
         }}
       />
-      <Suspense
-        fallback={
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="animate-spin text-muted-foreground" size={20} />
-          </div>
-        }
-      >
-        <DeviceContent />
-      </Suspense>
+      <DeviceContent />
     </main>
   )
 }

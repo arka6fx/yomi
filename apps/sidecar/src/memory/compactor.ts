@@ -2,7 +2,7 @@ import { generateText } from "ai"
 import { readFile, writeFile, appendFile } from "node:fs/promises"
 import { join } from "node:path"
 import { createModel } from "../pipeline/model.js"
-import { NOTEPAD } from "./loader.js"
+import { notepadDir } from "./loader.js"
 
 const COMPACT_MODEL = process.env.COMPACT_MODEL || "gpt-4.1-mini"
 // Minimum session log size before we bother calling the LLM.
@@ -13,7 +13,7 @@ function todayISO(): string {
 }
 
 function sessionPath(date: string): string {
-  return join(NOTEPAD, "sessions", `${date}-dev.md`)
+  return join(notepadDir(), "sessions", `${date}-dev.md`)
 }
 
 export async function compact(): Promise<void> {
@@ -22,7 +22,7 @@ export async function compact(): Promise<void> {
   const sessionLog = await readFile(sessionPath(today), "utf-8").catch(() => "")
   if (sessionLog.length < MIN_SESSION_CHARS) return
 
-  const currentMemory = await readFile(join(NOTEPAD, "memory.md"), "utf-8").catch(() => "")
+  const currentMemory = await readFile(join(notepadDir(), "memory.md"), "utf-8").catch(() => "")
 
   // Guard: don't compact the same day twice.
   if (currentMemory.includes(`## Recent context (${today})`)) return
@@ -56,7 +56,7 @@ If nothing new worth adding, respond with exactly: NOTHING_NEW`,
 
   if (text.trim() === "NOTHING_NEW") return
 
-  const memPath = join(NOTEPAD, "memory.md")
+  const memPath = join(notepadDir(), "memory.md")
   if (!currentMemory.trim()) {
     await writeFile(memPath, `# Long-term memory — [last updated: ${today}]\n\n${text.trim()}\n`, "utf-8")
   } else {
@@ -64,7 +64,7 @@ If nothing new worth adding, respond with exactly: NOTHING_NEW`,
   }
 
   // Add session entry to memory-index.md if not already present.
-  const indexPath = join(NOTEPAD, "memory-index.md")
+  const indexPath = join(notepadDir(), "memory-index.md")
   const indexEntry = `sessions/${today}-dev.md — Session summaries for ${today}\n`
   const existing = await readFile(indexPath, "utf-8").catch(() => "")
   if (!existing.includes(`sessions/${today}-dev.md`)) {

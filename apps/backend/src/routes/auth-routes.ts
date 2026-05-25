@@ -55,13 +55,26 @@ authRoutesRouter.post("/device-code/confirm", async (c) => {
   if (!session) return c.json({ error: "Not authenticated" }, 401)
 
   const { user_code } = await c.req.json() as { user_code: string }
+  const normalizedCode = user_code?.trim().toUpperCase()
+  if (!normalizedCode) return c.json({ error: "user_code required" }, 400)
+
+  let foundExpired = false
   for (const [deviceCode, entry] of pendingDeviceCodes) {
-    if (entry.userCode === user_code && Date.now() < entry.expiresAt) {
+    if (entry.userCode !== normalizedCode) continue
+    if (Date.now() >= entry.expiresAt) {
+      foundExpired = true
+      pendingDeviceCodes.delete(deviceCode)
+      continue
+    }
+
+    {
       entry.token = session.session.token
       pendingDeviceCodes.set(deviceCode, entry)
       return c.json({ ok: true })
     }
   }
+
+  if (foundExpired) return c.json({ error: "expired_user_code" }, 400)
   return c.json({ error: "invalid_user_code" }, 400)
 })
 

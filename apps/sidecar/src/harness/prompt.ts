@@ -3,12 +3,16 @@ import { homedir } from "node:os"
 import { join } from "node:path"
 import { loadMemorySummary, loadMemoryIndex } from "../memory/loader.js"
 
+const MAX_MEMORY_SUMMARY_CHARS = 4000
+const MAX_MEMORY_INDEX_CHARS = 2000
+
 export interface PromptContext {
   userName?: string
   os?: string
   yomiMd?: string
   memorySummary?: string
   memoryIndex?: string
+  recentSession?: string
   hasScreen?: boolean  // whether a screenshot is attached to this turn
 }
 
@@ -24,7 +28,10 @@ export async function loadYomiMd(): Promise<string> {
 // Load all always-preloaded memory files in parallel.
 export async function loadMemoryContext(): Promise<{ memorySummary: string; memoryIndex: string }> {
   const [memorySummary, memoryIndex] = await Promise.all([loadMemorySummary(), loadMemoryIndex()])
-  return { memorySummary, memoryIndex }
+  return {
+    memorySummary: memorySummary.slice(0, MAX_MEMORY_SUMMARY_CHARS),
+    memoryIndex: memoryIndex.slice(0, MAX_MEMORY_INDEX_CHARS),
+  }
 }
 
 // Resolve userName and os from env/process when not supplied by caller.
@@ -35,15 +42,17 @@ function resolveCtx(ctx: PromptContext): Required<PromptContext> {
     yomiMd: ctx.yomiMd ?? "",
     memorySummary: ctx.memorySummary ?? "",
     memoryIndex: ctx.memoryIndex ?? "",
+    recentSession: ctx.recentSession ?? "",
     hasScreen: ctx.hasScreen ?? false,
   }
 }
 
-function buildMemoryBlock(memorySummary: string, memoryIndex: string): string {
-  if (!memorySummary && !memoryIndex) return ""
+function buildMemoryBlock(memorySummary: string, memoryIndex: string, recentSession: string): string {
+  if (!memorySummary && !memoryIndex && !recentSession) return ""
   const parts: string[] = []
   if (memoryIndex) parts.push(`<index>\n${memoryIndex.trim()}\n</index>`)
   if (memorySummary) parts.push(`<summary>\n${memorySummary.trim()}\n</summary>`)
+  if (recentSession) parts.push(`<recent_chat>\n${recentSession.trim()}\n</recent_chat>`)
   return `<memory>\n${parts.join("\n")}\n</memory>\n\n`
 }
 
@@ -58,10 +67,42 @@ const AGENT_EXAMPLES = `\
 4. Schedule: "book lunch with Riya on Friday" → calendar MCP → confirm slot → create event
 5. File operation: "move all screenshots to ~/Desktop/screenshots" → bash + confirm`
 
+const ANSWER_FORMAT_RULES = `\
+<answer_format>
+Always separate the actual answer from explanation so the app can render it clearly.
+
+For coding or algorithm problems:
+- Start with a short introduction to the problem and approach.
+- Then provide the complete solution in one fenced code block using the requested or visible language. Default to Python if no language is clear.
+- Then include "Time: O(...)" and "Space: O(...)" with one-line reasons.
+- Add one or two examples when useful, especially examples visible on the screen.
+
+For MCQ or single definite-answer questions:
+- Explain the reason first in one to three sentences.
+- Then render only the final choice in this exact block:
+\`\`\`answer
+[letter and answer text]
+\`\`\`
+
+For writing tasks, such as an email, leave application, message, essay, or draft:
+- Briefly say what you drafted.
+- Then put the exact copy-ready deliverable in this exact block:
+\`\`\`answer
+[the actual written answer]
+\`\`\`
+- Format applications and letters properly with date, recipient, subject, salutation, clear paragraphs, closing, and sender name when appropriate.
+- Format biographies and long explanations with a title, short sections, readable paragraphs, and bullets only where they improve scanning.
+- Do not compress long-form writing into a tiny answer. Make it complete, but avoid padding.
+
+For ordinary questions:
+- Give a brief reason or context first.
+- Then put the direct final answer in an answer block when there is a concrete answer to copy, choose, or act on.
+</answer_format>`
+
 export function buildFastPrompt(ctx: PromptContext): string {
-  const { userName, os, yomiMd, memorySummary, memoryIndex, hasScreen } = resolveCtx(ctx)
+  const { userName, os, yomiMd, memorySummary, memoryIndex, recentSession, hasScreen } = resolveCtx(ctx)
   const userCtx = yomiMd ? `<user_context>\n${yomiMd}\n</user_context>\n\n` : ""
-  const memCtx = buildMemoryBlock(memorySummary, memoryIndex)
+  const memCtx = buildMemoryBlock(memorySummary, memoryIndex, recentSession)
 
   const screenLine = hasScreen
     ? "A screenshot of their current screen is attached — use it to answer."
@@ -82,9 +123,13 @@ Be warm, direct, and genuinely helpful. Sound like a smart friend, not a search 
 ${screenLine}
 </screen_context>
 
-${userCtx}${memCtx}<voice_rules>
+${userCtx}${memCtx}${ANSWER_FORMAT_RULES}
+
+<voice_rules>
 CRITICAL — your response is converted to speech:
-- Write in plain spoken English. No markdown, no bullet points, no asterisks, no headers.
+- Keep explanation in plain spoken English outside fenced blocks.
+- Use fenced answer/code blocks exactly when the answer format rules require them.
+- Avoid decorative markdown, bullet-heavy formatting, asterisks, and headers.
 - Use short sentences. Break long thoughts into two sentences instead of one.
 - Numbers: write "three" not "3", "fifty percent" not "50%", unless it's code.
 - If you must list steps, say "First... then... finally..." — not numbered lists.
@@ -100,15 +145,15 @@ ${FAST_EXAMPLES}
 </examples>
 
 <rules>
-- Keep it to 1–3 sentences unless the user explicitly asks for a walkthrough.
+- Keep it to 1–3 sentences unless the user asks for code, an application, a biography, a draft, or a walkthrough.
 - Never fabricate file contents or URLs. Use look_at_screen to verify.
 </rules>`
 }
 
 export function buildAgentPrompt(ctx: PromptContext): string {
-  const { userName, os, yomiMd, memorySummary, memoryIndex } = resolveCtx(ctx)
+  const { userName, os, yomiMd, memorySummary, memoryIndex, recentSession } = resolveCtx(ctx)
   const userCtx = yomiMd ? `<user_context>\n${yomiMd}\n</user_context>\n\n` : ""
-  const memCtx = buildMemoryBlock(memorySummary, memoryIndex)
+  const memCtx = buildMemoryBlock(memorySummary, memoryIndex, recentSession)
 
   return `\
 <identity>
@@ -117,7 +162,9 @@ You can see their screen, hear their voice, and act on their behalf.
 Be warm, direct, and genuinely helpful. Sound like a smart friend getting things done.
 </identity>
 
-${userCtx}${memCtx}<capabilities>
+${userCtx}${memCtx}${ANSWER_FORMAT_RULES}
+
+<capabilities>
 You research, draft, file, and schedule — multi-step tasks run to completion.
 Tools: look_at_screen, bash (sandboxed), web_search, fetch_url, read_file, write_file, list_files, search, MCP servers.
 </capabilities>
