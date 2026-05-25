@@ -189,7 +189,6 @@ Design docs in [`specs/`](./specs/), ordered by implementation:
 | 12 | [12-backend](specs/12-backend.md) | Hono routes, Better Auth, LLM proxy, metering |
 | 13 | [13-pricing](specs/13-pricing.md) | Plans, Razorpay, metering, cap enforcement |
 | 14 | [14-landing-page](specs/14-landing-page.md) | Marketing site (Next.js 16, Vercel) |
-| 15 | [15-deploy](specs/15-deploy.md) | Deploy spec — Cloudflare Workers + Pages |
 
 ---
 
