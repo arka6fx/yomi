@@ -37,6 +37,7 @@ export interface FastQueryRequest {
   screenshot_b64?: string
   mode?: "answer" | "guide"
   tts?: boolean            // true = voice output; false = text only (default: true)
+  plan?: Plan              // controls local-only memory injection/writes
   history?: { role: "user" | "assistant"; text: string }[]
 }
 
@@ -44,6 +45,7 @@ export interface AgentQueryRequest {
   text: string
   screenshot_b64?: string
   task?: string
+  plan?: Plan              // controls local-only memory injection/writes
 }
 
 export type SseEvent =

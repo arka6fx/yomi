@@ -18,6 +18,10 @@ export interface SubscriptionInfo {
   tokensUsedThisPeriod: number
 }
 
+export type SubscriptionUpdate = Partial<SubscriptionInfo> & {
+  plan?: string
+}
+
 contextBridge.exposeInMainWorld("yomi", {
   // ── Auth ──────────────────────────────────────────────────────────────────
 
@@ -100,8 +104,8 @@ contextBridge.exposeInMainWorld("yomi", {
     return ipcRenderer.invoke("yomi:get-subscription-info")
   },
 
-  onSubscriptionUpdate(cb: (info: SubscriptionInfo) => void): () => void {
-    const h = (_: Electron.IpcRendererEvent, info: SubscriptionInfo) => cb(info)
+  onSubscriptionUpdate(cb: (info: SubscriptionUpdate) => void): () => void {
+    const h = (_: Electron.IpcRendererEvent, info: SubscriptionUpdate) => cb(info)
     ipcRenderer.on("yomi:subscription-update", h)
     return () => ipcRenderer.off("yomi:subscription-update", h)
   },

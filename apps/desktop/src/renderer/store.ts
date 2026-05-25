@@ -26,6 +26,8 @@ export interface SubscriptionInfo {
   tokensUsedThisPeriod: number
 }
 
+export type SubscriptionUpdate = Partial<SubscriptionInfo>
+
 interface YomiState {
   authState: AuthState
   authError: string
@@ -45,7 +47,7 @@ interface YomiState {
   handleSseEvent: (event: SseEvent) => void
   dismissEntry: (id: number) => void
   toggleTts: () => void
-  setSubscription: (info: SubscriptionInfo | null) => void
+  setSubscription: (info: SubscriptionUpdate | null) => void
   setSubscriptionLoading: (loading: boolean) => void
 }
 
@@ -133,7 +135,28 @@ export const useYomiStore = create<YomiState>((set) => ({
 
   toggleTts: () => set((s) => ({ ttsEnabled: !s.ttsEnabled })),
 
-  setSubscription: (subscription) => set({ subscription }),
+  setSubscription: (subscription) => set((s) => {
+    if (subscription === null) return { subscription: null }
+    const clean = Object.fromEntries(
+      Object.entries(subscription).filter(([, value]) => value !== undefined),
+    ) as SubscriptionUpdate
+    if (s.subscription) return { subscription: { ...s.subscription, ...clean } }
+    return {
+      subscription: {
+        role: clean.role ?? "user",
+        plan: clean.plan ?? "explore",
+        status: clean.status ?? "inactive",
+        trialEndDate: clean.trialEndDate ?? null,
+        currentPeriodEnd: clean.currentPeriodEnd ?? null,
+        trialInteractionUsed: clean.trialInteractionUsed ?? 0,
+        trialInteractionLimit: clean.trialInteractionLimit ?? 150,
+        dailyChatUsed: clean.dailyChatUsed ?? 0,
+        dailyVoiceUsed: clean.dailyVoiceUsed ?? 0,
+        dailyImageUsed: clean.dailyImageUsed ?? 0,
+        tokensUsedThisPeriod: clean.tokensUsedThisPeriod ?? 0,
+      },
+    }
+  }),
   setSubscriptionLoading: (subscriptionLoading) => set({ subscriptionLoading }),
 }))
 
