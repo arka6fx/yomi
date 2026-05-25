@@ -33,33 +33,24 @@ export default function AuthCard({ defaultMode, plan, callbackURL }: AuthCardPro
     <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8">
       <Link
         href="/"
-        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-6"
+        className="mb-6 inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft size={13} />
         Back to home
       </Link>
 
-      <Link
-        href="/"
-        className="font-display text-2xl font-bold text-foreground block text-center mb-6 select-none"
-      >
-        Yomi
-      </Link>
-
-      <h1 className="text-xl font-medium text-foreground text-center mb-1">
+      <h1 className="mb-1 text-center text-xl font-medium text-foreground">
         {defaultMode === "signup" ? "Create an account" : "Welcome back"}
       </h1>
-      <p className="text-sm text-muted-foreground text-center mb-7">
-        {defaultMode === "signup"
-          ? "Start for free, upgrade anytime."
-          : "Sign in to your Yomi account."}
+      <p className="mb-7 text-center text-sm text-muted-foreground">
+        {defaultMode === "signup" ? "Start for free, upgrade anytime." : "Sign in to your Yomi account."}
       </p>
 
       <div className="flex flex-col gap-3">
         <button
           onClick={() => handleOAuth("github")}
           disabled={busy}
-          className="flex items-center justify-center gap-3 rounded-xl border border-border bg-background hover:bg-muted/50 transition-colors py-3 text-sm font-medium text-foreground disabled:opacity-50"
+          className="flex items-center justify-center gap-3 rounded-xl border border-border bg-background py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/50 disabled:opacity-50"
         >
           {loading === "github" ? (
             <Loader2 size={15} className="animate-spin" />
@@ -74,7 +65,7 @@ export default function AuthCard({ defaultMode, plan, callbackURL }: AuthCardPro
         <button
           onClick={() => handleOAuth("google")}
           disabled={busy}
-          className="flex items-center justify-center gap-3 rounded-xl border border-border bg-background hover:bg-muted/50 transition-colors py-3 text-sm font-medium text-foreground disabled:opacity-50"
+          className="flex items-center justify-center gap-3 rounded-xl border border-border bg-background py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/50 disabled:opacity-50"
         >
           {loading === "google" ? (
             <Loader2 size={15} className="animate-spin" />
@@ -90,7 +81,7 @@ export default function AuthCard({ defaultMode, plan, callbackURL }: AuthCardPro
         </button>
       </div>
 
-      {error && <p className="text-xs text-destructive text-center mt-4">{error}</p>}
+      {error && <p className="mt-4 text-center text-xs text-destructive">{error}</p>}
     </div>
   )
 }

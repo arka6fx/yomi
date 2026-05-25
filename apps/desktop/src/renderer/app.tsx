@@ -3,6 +3,370 @@ import { createRoot } from "react-dom/client"
 import { useYomiStore } from "./store"
 import type { HotkeyState, ChatEntry } from "./store"
 
+// ── Theme System ───────────────────────────────────────────────────────────────
+
+type ThemeId = "amber" | "blue" | "green" | "violet" | "hotpink" | "purple" | "black"
+interface Theme {
+  id: ThemeId; label: string
+  bg: string; surface: string; border: string; borderHi: string
+  text: string; dim: string
+  accent: string; accentD: string; accentG: string
+  error: string; errorD: string
+  codeBg: string; kw: string; str: string; num: string; cmt: string; fn: string; codeText: string
+  toolbarBg: string; menuBg: string; menuBorder: string; menuShadow: string; menuSep: string
+  sectionLabel: string
+  btnText: string; btnHoverBg: string; btnHoverText: string
+  dangerText: string; dangerHoverBg: string
+  upgradeText: string; upgradeBg: string; upgradeBgHover: string; upgradeBorder: string
+  dotIdle: string; dotPulse: string; dotPulseGlow: string; dotSpinFaint: string; dotSpinBright: string
+  lblIdle: string; lblActive: string; lblProcessing: string
+  planText: string; planBorder: string
+  ttsOn: string; ttsOff: string; ttsHoverBg: string
+  hambBg: string; hambBgActive: string; hambBorder: string; hambBorderActive: string
+  hambColor: string; hambColorActive: string
+  chipBgHot: string; chipBgCold: string; chipBorderHot: string; chipBorderCold: string
+  chipTextHot: string; chipTextCold: string
+  kbdBg: string; kbdBorder: string; kbdBorderB: string; kbdText: string
+  dragDot: string
+  appBorder: string; appBorderListen: string; appShadow: string; appShadowListen: string
+  scrollThumb: string; scrollThumbHover: string
+  sliderTrack: string; sliderThumb: string; sliderThumbBorder: string
+  sliderShadow: string; sliderHoverShadow: string
+  selectionBg: string; placeholder: string
+}
+
+const AMBER: Theme = {
+  id:"amber", label:"Amber",
+  bg:"rgba(11,10,8,0.72)", surface:"rgba(20,18,13,0.78)",
+  border:"rgba(255,224,194,0.09)", borderHi:"rgba(255,224,194,0.18)",
+  text:"rgba(238,233,224,1)", dim:"rgba(175,163,145,0.9)",
+  accent:"#ffe0c2", accentD:"rgba(255,224,194,0.1)", accentG:"rgba(255,200,130,0.22)",
+  error:"#ff8c65", errorD:"rgba(255,140,101,0.12)",
+  codeBg:"rgba(9,8,6,1)", kw:"#ffd099", str:"#a3c9a8", num:"#ffb870",
+  cmt:"rgba(145,128,95,0.65)", fn:"#ffe0c2", codeText:"rgba(208,196,178,1)",
+  toolbarBg:"rgba(13,11,8,0.94)", menuBg:"rgba(13,11,8,0.94)",
+  menuBorder:"rgba(255,224,194,0.1)",
+  menuShadow:"0 12px 40px rgba(0,0,0,0.65), 0 0 0 0.5px rgba(255,224,194,0.04)",
+  menuSep:"rgba(255,224,194,0.06)", sectionLabel:"rgba(255,200,130,0.6)",
+  btnText:"rgba(220,210,195,0.88)", btnHoverBg:"rgba(255,224,194,0.09)", btnHoverText:"rgba(255,240,220,1)",
+  dangerText:"rgba(255,120,90,0.85)", dangerHoverBg:"rgba(255,100,70,0.1)",
+  upgradeText:"rgba(255,210,140,0.95)", upgradeBg:"rgba(255,200,130,0.07)",
+  upgradeBgHover:"rgba(255,200,130,0.13)", upgradeBorder:"rgba(255,200,130,0.2)",
+  dotIdle:"rgba(255,224,194,0.18)", dotPulse:"#ffe0c2",
+  dotPulseGlow:"0 0 8px 2px rgba(255,200,130,0.6)",
+  dotSpinFaint:"rgba(255,224,194,0.08)", dotSpinBright:"rgba(255,200,130,0.8)",
+  lblIdle:"rgba(255,224,194,0.55)", lblActive:"rgba(255,220,180,0.92)", lblProcessing:"rgba(225,210,185,0.85)",
+  planText:"rgba(200,185,155,0.65)", planBorder:"rgba(255,224,194,0.15)",
+  ttsOn:"rgba(255,224,194,0.6)", ttsOff:"rgba(175,155,115,0.35)", ttsHoverBg:"rgba(255,224,194,0.07)",
+  hambBg:"rgba(255,224,194,0.06)", hambBgActive:"rgba(255,224,194,0.12)",
+  hambBorder:"rgba(255,224,194,0.18)", hambBorderActive:"rgba(255,224,194,0.28)",
+  hambColor:"rgba(255,224,194,0.7)", hambColorActive:"rgba(255,224,194,1)",
+  chipBgHot:"rgba(255,224,194,0.08)", chipBgCold:"rgba(255,224,194,0.03)",
+  chipBorderHot:"rgba(255,200,130,0.28)", chipBorderCold:"rgba(255,224,194,0.07)",
+  chipTextHot:"rgba(255,224,194,1)", chipTextCold:"rgba(220,210,195,0.8)",
+  kbdBg:"rgba(255,224,194,0.08)", kbdBorder:"rgba(255,224,194,0.16)",
+  kbdBorderB:"rgba(255,224,194,0.2)", kbdText:"rgba(255,224,194,0.8)",
+  dragDot:"rgba(255,224,194,1)",
+  appBorder:"1px solid rgba(255,224,194,0.09)", appBorderListen:"1px solid rgba(255,200,130,0.22)",
+  appShadow:"0 16px 60px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(255,224,194,0.04)",
+  appShadowListen:"0 0 0 1px rgba(255,200,130,0.06), 0 16px 60px rgba(0,0,0,0.65)",
+  scrollThumb:"rgba(255,224,194,0.18)", scrollThumbHover:"rgba(255,224,194,0.35)",
+  sliderTrack:"rgba(255,224,194,0.1)", sliderThumb:"rgba(255,224,194,0.75)",
+  sliderThumbBorder:"rgba(255,200,130,0.4)",
+  sliderShadow:"0 0 4px rgba(255,200,130,0.3)", sliderHoverShadow:"0 0 8px rgba(255,200,130,0.55)",
+  selectionBg:"rgba(255,224,194,0.2)", placeholder:"rgba(200,185,160,0.45)",
+}
+
+const BLUE: Theme = {
+  id:"blue", label:"Blue",
+  bg:"rgba(5,9,20,0.82)", surface:"rgba(8,14,30,0.85)",
+  border:"rgba(59,130,246,0.14)", borderHi:"rgba(59,130,246,0.28)",
+  text:"rgba(226,232,240,1)", dim:"rgba(148,163,184,0.9)",
+  accent:"#93C5FD", accentD:"rgba(59,130,246,0.12)", accentG:"rgba(59,130,246,0.2)",
+  error:"#f87171", errorD:"rgba(239,68,68,0.12)",
+  codeBg:"rgba(3,7,18,1)", kw:"#7DD3FC", str:"#86EFAC", num:"#FCA5A5",
+  cmt:"rgba(100,116,139,0.7)", fn:"#C4B5FD", codeText:"rgba(203,213,225,1)",
+  toolbarBg:"rgba(5,9,22,0.96)", menuBg:"rgba(5,9,22,0.96)",
+  menuBorder:"rgba(59,130,246,0.2)",
+  menuShadow:"0 12px 40px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(59,130,246,0.06)",
+  menuSep:"rgba(59,130,246,0.1)", sectionLabel:"rgba(96,165,250,0.7)",
+  btnText:"rgba(203,213,225,0.88)", btnHoverBg:"rgba(59,130,246,0.1)", btnHoverText:"rgba(226,232,240,1)",
+  dangerText:"rgba(252,165,165,0.85)", dangerHoverBg:"rgba(239,68,68,0.1)",
+  upgradeText:"rgba(147,197,253,0.95)", upgradeBg:"rgba(59,130,246,0.08)",
+  upgradeBgHover:"rgba(59,130,246,0.16)", upgradeBorder:"rgba(59,130,246,0.3)",
+  dotIdle:"rgba(59,130,246,0.35)", dotPulse:"#60A5FA",
+  dotPulseGlow:"0 0 8px 2px rgba(59,130,246,0.6)",
+  dotSpinFaint:"rgba(59,130,246,0.1)", dotSpinBright:"rgba(96,165,250,0.85)",
+  lblIdle:"rgba(96,165,250,0.6)", lblActive:"rgba(147,197,253,0.92)", lblProcessing:"rgba(186,200,220,0.85)",
+  planText:"rgba(148,163,184,0.65)", planBorder:"rgba(59,130,246,0.2)",
+  ttsOn:"rgba(96,165,250,0.7)", ttsOff:"rgba(71,85,105,0.5)", ttsHoverBg:"rgba(59,130,246,0.08)",
+  hambBg:"rgba(59,130,246,0.07)", hambBgActive:"rgba(59,130,246,0.16)",
+  hambBorder:"rgba(59,130,246,0.22)", hambBorderActive:"rgba(59,130,246,0.4)",
+  hambColor:"rgba(96,165,250,0.75)", hambColorActive:"rgba(147,197,253,1)",
+  chipBgHot:"rgba(59,130,246,0.14)", chipBgCold:"rgba(59,130,246,0.05)",
+  chipBorderHot:"rgba(96,165,250,0.35)", chipBorderCold:"rgba(59,130,246,0.14)",
+  chipTextHot:"rgba(147,197,253,1)", chipTextCold:"rgba(186,200,220,0.8)",
+  kbdBg:"rgba(59,130,246,0.1)", kbdBorder:"rgba(59,130,246,0.22)",
+  kbdBorderB:"rgba(59,130,246,0.32)", kbdText:"rgba(147,197,253,0.85)",
+  dragDot:"rgba(96,165,250,1)",
+  appBorder:"1px solid rgba(59,130,246,0.14)", appBorderListen:"1px solid rgba(96,165,250,0.32)",
+  appShadow:"0 16px 60px rgba(0,0,0,0.65), 0 0 0 0.5px rgba(59,130,246,0.06)",
+  appShadowListen:"0 0 0 1px rgba(96,165,250,0.1), 0 16px 60px rgba(0,0,0,0.7)",
+  scrollThumb:"rgba(59,130,246,0.25)", scrollThumbHover:"rgba(96,165,250,0.45)",
+  sliderTrack:"rgba(59,130,246,0.15)", sliderThumb:"rgba(96,165,250,0.85)",
+  sliderThumbBorder:"rgba(59,130,246,0.5)",
+  sliderShadow:"0 0 4px rgba(59,130,246,0.4)", sliderHoverShadow:"0 0 8px rgba(96,165,250,0.65)",
+  selectionBg:"rgba(59,130,246,0.25)", placeholder:"rgba(148,163,184,0.45)",
+}
+
+const GREEN: Theme = {
+  id:"green", label:"Green",
+  bg:"rgba(2,10,4,0.85)", surface:"rgba(4,15,6,0.88)",
+  border:"rgba(34,197,94,0.15)", borderHi:"rgba(34,197,94,0.3)",
+  text:"rgba(220,252,231,1)", dim:"rgba(134,168,145,0.9)",
+  accent:"#86efac", accentD:"rgba(34,197,94,0.12)", accentG:"rgba(34,197,94,0.22)",
+  error:"#f87171", errorD:"rgba(239,68,68,0.12)",
+  codeBg:"rgba(1,8,3,1)", kw:"#86efac", str:"#fde68a", num:"#fca5a5",
+  cmt:"rgba(74,120,84,0.7)", fn:"#bbf7d0", codeText:"rgba(187,247,208,0.85)",
+  toolbarBg:"rgba(2,12,4,0.96)", menuBg:"rgba(2,12,4,0.96)",
+  menuBorder:"rgba(34,197,94,0.2)",
+  menuShadow:"0 12px 40px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(34,197,94,0.06)",
+  menuSep:"rgba(34,197,94,0.1)", sectionLabel:"rgba(74,222,128,0.7)",
+  btnText:"rgba(187,247,208,0.88)", btnHoverBg:"rgba(34,197,94,0.1)", btnHoverText:"rgba(220,252,231,1)",
+  dangerText:"rgba(252,165,165,0.85)", dangerHoverBg:"rgba(239,68,68,0.1)",
+  upgradeText:"rgba(134,239,172,0.95)", upgradeBg:"rgba(34,197,94,0.08)",
+  upgradeBgHover:"rgba(34,197,94,0.16)", upgradeBorder:"rgba(34,197,94,0.3)",
+  dotIdle:"rgba(34,197,94,0.35)", dotPulse:"#4ade80",
+  dotPulseGlow:"0 0 8px 2px rgba(34,197,94,0.6)",
+  dotSpinFaint:"rgba(34,197,94,0.1)", dotSpinBright:"rgba(74,222,128,0.85)",
+  lblIdle:"rgba(74,222,128,0.6)", lblActive:"rgba(134,239,172,0.92)", lblProcessing:"rgba(167,220,182,0.85)",
+  planText:"rgba(134,168,145,0.65)", planBorder:"rgba(34,197,94,0.2)",
+  ttsOn:"rgba(74,222,128,0.7)", ttsOff:"rgba(52,90,62,0.5)", ttsHoverBg:"rgba(34,197,94,0.08)",
+  hambBg:"rgba(34,197,94,0.07)", hambBgActive:"rgba(34,197,94,0.16)",
+  hambBorder:"rgba(34,197,94,0.22)", hambBorderActive:"rgba(34,197,94,0.4)",
+  hambColor:"rgba(74,222,128,0.75)", hambColorActive:"rgba(134,239,172,1)",
+  chipBgHot:"rgba(34,197,94,0.14)", chipBgCold:"rgba(34,197,94,0.05)",
+  chipBorderHot:"rgba(74,222,128,0.35)", chipBorderCold:"rgba(34,197,94,0.14)",
+  chipTextHot:"rgba(134,239,172,1)", chipTextCold:"rgba(187,247,208,0.8)",
+  kbdBg:"rgba(34,197,94,0.1)", kbdBorder:"rgba(34,197,94,0.22)",
+  kbdBorderB:"rgba(34,197,94,0.32)", kbdText:"rgba(134,239,172,0.85)",
+  dragDot:"rgba(74,222,128,1)",
+  appBorder:"1px solid rgba(34,197,94,0.15)", appBorderListen:"1px solid rgba(74,222,128,0.32)",
+  appShadow:"0 16px 60px rgba(0,0,0,0.65), 0 0 0 0.5px rgba(34,197,94,0.06)",
+  appShadowListen:"0 0 0 1px rgba(74,222,128,0.1), 0 16px 60px rgba(0,0,0,0.7)",
+  scrollThumb:"rgba(34,197,94,0.25)", scrollThumbHover:"rgba(74,222,128,0.45)",
+  sliderTrack:"rgba(34,197,94,0.15)", sliderThumb:"rgba(74,222,128,0.85)",
+  sliderThumbBorder:"rgba(34,197,94,0.5)",
+  sliderShadow:"0 0 4px rgba(34,197,94,0.4)", sliderHoverShadow:"0 0 8px rgba(74,222,128,0.65)",
+  selectionBg:"rgba(34,197,94,0.25)", placeholder:"rgba(134,168,145,0.45)",
+}
+
+const VIOLET: Theme = {
+  id:"violet", label:"Violet",
+  bg:"rgba(6,3,14,0.85)", surface:"rgba(10,5,22,0.88)",
+  border:"rgba(139,92,246,0.16)", borderHi:"rgba(139,92,246,0.32)",
+  text:"rgba(237,233,254,1)", dim:"rgba(167,153,210,0.9)",
+  accent:"#c4b5fd", accentD:"rgba(139,92,246,0.12)", accentG:"rgba(139,92,246,0.2)",
+  error:"#f87171", errorD:"rgba(239,68,68,0.12)",
+  codeBg:"rgba(4,2,10,1)", kw:"#c4b5fd", str:"#86efac", num:"#fca5a5",
+  cmt:"rgba(100,80,150,0.7)", fn:"#ddd6fe", codeText:"rgba(221,214,254,0.85)",
+  toolbarBg:"rgba(6,3,16,0.96)", menuBg:"rgba(6,3,16,0.96)",
+  menuBorder:"rgba(139,92,246,0.22)",
+  menuShadow:"0 12px 40px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(139,92,246,0.06)",
+  menuSep:"rgba(139,92,246,0.1)", sectionLabel:"rgba(167,139,250,0.7)",
+  btnText:"rgba(221,214,254,0.88)", btnHoverBg:"rgba(139,92,246,0.1)", btnHoverText:"rgba(237,233,254,1)",
+  dangerText:"rgba(252,165,165,0.85)", dangerHoverBg:"rgba(239,68,68,0.1)",
+  upgradeText:"rgba(196,181,253,0.95)", upgradeBg:"rgba(139,92,246,0.08)",
+  upgradeBgHover:"rgba(139,92,246,0.16)", upgradeBorder:"rgba(139,92,246,0.3)",
+  dotIdle:"rgba(139,92,246,0.35)", dotPulse:"#a78bfa",
+  dotPulseGlow:"0 0 8px 2px rgba(139,92,246,0.6)",
+  dotSpinFaint:"rgba(139,92,246,0.1)", dotSpinBright:"rgba(167,139,250,0.85)",
+  lblIdle:"rgba(167,139,250,0.6)", lblActive:"rgba(196,181,253,0.92)", lblProcessing:"rgba(200,190,230,0.85)",
+  planText:"rgba(167,153,210,0.65)", planBorder:"rgba(139,92,246,0.2)",
+  ttsOn:"rgba(167,139,250,0.7)", ttsOff:"rgba(70,50,110,0.5)", ttsHoverBg:"rgba(139,92,246,0.08)",
+  hambBg:"rgba(139,92,246,0.07)", hambBgActive:"rgba(139,92,246,0.16)",
+  hambBorder:"rgba(139,92,246,0.22)", hambBorderActive:"rgba(139,92,246,0.4)",
+  hambColor:"rgba(167,139,250,0.75)", hambColorActive:"rgba(196,181,253,1)",
+  chipBgHot:"rgba(139,92,246,0.14)", chipBgCold:"rgba(139,92,246,0.05)",
+  chipBorderHot:"rgba(167,139,250,0.35)", chipBorderCold:"rgba(139,92,246,0.14)",
+  chipTextHot:"rgba(196,181,253,1)", chipTextCold:"rgba(221,214,254,0.8)",
+  kbdBg:"rgba(139,92,246,0.1)", kbdBorder:"rgba(139,92,246,0.22)",
+  kbdBorderB:"rgba(139,92,246,0.32)", kbdText:"rgba(196,181,253,0.85)",
+  dragDot:"rgba(167,139,250,1)",
+  appBorder:"1px solid rgba(139,92,246,0.16)", appBorderListen:"1px solid rgba(167,139,250,0.32)",
+  appShadow:"0 16px 60px rgba(0,0,0,0.65), 0 0 0 0.5px rgba(139,92,246,0.06)",
+  appShadowListen:"0 0 0 1px rgba(167,139,250,0.1), 0 16px 60px rgba(0,0,0,0.7)",
+  scrollThumb:"rgba(139,92,246,0.25)", scrollThumbHover:"rgba(167,139,250,0.45)",
+  sliderTrack:"rgba(139,92,246,0.15)", sliderThumb:"rgba(167,139,250,0.85)",
+  sliderThumbBorder:"rgba(139,92,246,0.5)",
+  sliderShadow:"0 0 4px rgba(139,92,246,0.4)", sliderHoverShadow:"0 0 8px rgba(167,139,250,0.65)",
+  selectionBg:"rgba(139,92,246,0.25)", placeholder:"rgba(167,153,210,0.45)",
+}
+
+const HOTPINK: Theme = {
+  id:"hotpink", label:"Hot Pink",
+  bg:"rgba(14,2,8,0.85)", surface:"rgba(20,4,12,0.88)",
+  border:"rgba(236,72,153,0.16)", borderHi:"rgba(236,72,153,0.32)",
+  text:"rgba(253,242,248,1)", dim:"rgba(210,140,175,0.9)",
+  accent:"#f9a8d4", accentD:"rgba(236,72,153,0.12)", accentG:"rgba(236,72,153,0.2)",
+  error:"#f87171", errorD:"rgba(239,68,68,0.12)",
+  codeBg:"rgba(10,2,6,1)", kw:"#f9a8d4", str:"#86efac", num:"#fca5a5",
+  cmt:"rgba(150,70,110,0.7)", fn:"#fbcfe8", codeText:"rgba(251,207,232,0.85)",
+  toolbarBg:"rgba(14,2,9,0.96)", menuBg:"rgba(14,2,9,0.96)",
+  menuBorder:"rgba(236,72,153,0.22)",
+  menuShadow:"0 12px 40px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(236,72,153,0.06)",
+  menuSep:"rgba(236,72,153,0.1)", sectionLabel:"rgba(244,114,182,0.7)",
+  btnText:"rgba(251,207,232,0.88)", btnHoverBg:"rgba(236,72,153,0.1)", btnHoverText:"rgba(253,242,248,1)",
+  dangerText:"rgba(252,165,165,0.85)", dangerHoverBg:"rgba(239,68,68,0.1)",
+  upgradeText:"rgba(249,168,212,0.95)", upgradeBg:"rgba(236,72,153,0.08)",
+  upgradeBgHover:"rgba(236,72,153,0.16)", upgradeBorder:"rgba(236,72,153,0.3)",
+  dotIdle:"rgba(236,72,153,0.35)", dotPulse:"#f472b6",
+  dotPulseGlow:"0 0 8px 2px rgba(236,72,153,0.6)",
+  dotSpinFaint:"rgba(236,72,153,0.1)", dotSpinBright:"rgba(244,114,182,0.85)",
+  lblIdle:"rgba(244,114,182,0.6)", lblActive:"rgba(249,168,212,0.92)", lblProcessing:"rgba(230,180,210,0.85)",
+  planText:"rgba(210,140,175,0.65)", planBorder:"rgba(236,72,153,0.2)",
+  ttsOn:"rgba(244,114,182,0.7)", ttsOff:"rgba(110,40,75,0.5)", ttsHoverBg:"rgba(236,72,153,0.08)",
+  hambBg:"rgba(236,72,153,0.07)", hambBgActive:"rgba(236,72,153,0.16)",
+  hambBorder:"rgba(236,72,153,0.22)", hambBorderActive:"rgba(236,72,153,0.4)",
+  hambColor:"rgba(244,114,182,0.75)", hambColorActive:"rgba(249,168,212,1)",
+  chipBgHot:"rgba(236,72,153,0.14)", chipBgCold:"rgba(236,72,153,0.05)",
+  chipBorderHot:"rgba(244,114,182,0.35)", chipBorderCold:"rgba(236,72,153,0.14)",
+  chipTextHot:"rgba(249,168,212,1)", chipTextCold:"rgba(251,207,232,0.8)",
+  kbdBg:"rgba(236,72,153,0.1)", kbdBorder:"rgba(236,72,153,0.22)",
+  kbdBorderB:"rgba(236,72,153,0.32)", kbdText:"rgba(249,168,212,0.85)",
+  dragDot:"rgba(244,114,182,1)",
+  appBorder:"1px solid rgba(236,72,153,0.16)", appBorderListen:"1px solid rgba(244,114,182,0.32)",
+  appShadow:"0 16px 60px rgba(0,0,0,0.65), 0 0 0 0.5px rgba(236,72,153,0.06)",
+  appShadowListen:"0 0 0 1px rgba(244,114,182,0.1), 0 16px 60px rgba(0,0,0,0.7)",
+  scrollThumb:"rgba(236,72,153,0.25)", scrollThumbHover:"rgba(244,114,182,0.45)",
+  sliderTrack:"rgba(236,72,153,0.15)", sliderThumb:"rgba(244,114,182,0.85)",
+  sliderThumbBorder:"rgba(236,72,153,0.5)",
+  sliderShadow:"0 0 4px rgba(236,72,153,0.4)", sliderHoverShadow:"0 0 8px rgba(244,114,182,0.65)",
+  selectionBg:"rgba(236,72,153,0.25)", placeholder:"rgba(210,140,175,0.45)",
+}
+
+const PURPLE: Theme = {
+  id:"purple", label:"Purple",
+  bg:"rgba(9,3,14,0.85)", surface:"rgba(14,5,21,0.88)",
+  border:"rgba(168,85,247,0.16)", borderHi:"rgba(168,85,247,0.32)",
+  text:"rgba(243,232,255,1)", dim:"rgba(192,150,230,0.9)",
+  accent:"#d8b4fe", accentD:"rgba(168,85,247,0.12)", accentG:"rgba(168,85,247,0.2)",
+  error:"#f87171", errorD:"rgba(239,68,68,0.12)",
+  codeBg:"rgba(6,2,10,1)", kw:"#d8b4fe", str:"#86efac", num:"#fca5a5",
+  cmt:"rgba(120,80,170,0.7)", fn:"#e9d5ff", codeText:"rgba(233,213,255,0.85)",
+  toolbarBg:"rgba(9,3,15,0.96)", menuBg:"rgba(9,3,15,0.96)",
+  menuBorder:"rgba(168,85,247,0.22)",
+  menuShadow:"0 12px 40px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(168,85,247,0.06)",
+  menuSep:"rgba(168,85,247,0.1)", sectionLabel:"rgba(192,132,252,0.7)",
+  btnText:"rgba(233,213,255,0.88)", btnHoverBg:"rgba(168,85,247,0.1)", btnHoverText:"rgba(243,232,255,1)",
+  dangerText:"rgba(252,165,165,0.85)", dangerHoverBg:"rgba(239,68,68,0.1)",
+  upgradeText:"rgba(216,180,254,0.95)", upgradeBg:"rgba(168,85,247,0.08)",
+  upgradeBgHover:"rgba(168,85,247,0.16)", upgradeBorder:"rgba(168,85,247,0.3)",
+  dotIdle:"rgba(168,85,247,0.35)", dotPulse:"#c084fc",
+  dotPulseGlow:"0 0 8px 2px rgba(168,85,247,0.6)",
+  dotSpinFaint:"rgba(168,85,247,0.1)", dotSpinBright:"rgba(192,132,252,0.85)",
+  lblIdle:"rgba(192,132,252,0.6)", lblActive:"rgba(216,180,254,0.92)", lblProcessing:"rgba(210,180,240,0.85)",
+  planText:"rgba(192,150,230,0.65)", planBorder:"rgba(168,85,247,0.2)",
+  ttsOn:"rgba(192,132,252,0.7)", ttsOff:"rgba(80,40,120,0.5)", ttsHoverBg:"rgba(168,85,247,0.08)",
+  hambBg:"rgba(168,85,247,0.07)", hambBgActive:"rgba(168,85,247,0.16)",
+  hambBorder:"rgba(168,85,247,0.22)", hambBorderActive:"rgba(168,85,247,0.4)",
+  hambColor:"rgba(192,132,252,0.75)", hambColorActive:"rgba(216,180,254,1)",
+  chipBgHot:"rgba(168,85,247,0.14)", chipBgCold:"rgba(168,85,247,0.05)",
+  chipBorderHot:"rgba(192,132,252,0.35)", chipBorderCold:"rgba(168,85,247,0.14)",
+  chipTextHot:"rgba(216,180,254,1)", chipTextCold:"rgba(233,213,255,0.8)",
+  kbdBg:"rgba(168,85,247,0.1)", kbdBorder:"rgba(168,85,247,0.22)",
+  kbdBorderB:"rgba(168,85,247,0.32)", kbdText:"rgba(216,180,254,0.85)",
+  dragDot:"rgba(192,132,252,1)",
+  appBorder:"1px solid rgba(168,85,247,0.16)", appBorderListen:"1px solid rgba(192,132,252,0.32)",
+  appShadow:"0 16px 60px rgba(0,0,0,0.65), 0 0 0 0.5px rgba(168,85,247,0.06)",
+  appShadowListen:"0 0 0 1px rgba(192,132,252,0.1), 0 16px 60px rgba(0,0,0,0.7)",
+  scrollThumb:"rgba(168,85,247,0.25)", scrollThumbHover:"rgba(192,132,252,0.45)",
+  sliderTrack:"rgba(168,85,247,0.15)", sliderThumb:"rgba(192,132,252,0.85)",
+  sliderThumbBorder:"rgba(168,85,247,0.5)",
+  sliderShadow:"0 0 4px rgba(168,85,247,0.4)", sliderHoverShadow:"0 0 8px rgba(192,132,252,0.65)",
+  selectionBg:"rgba(168,85,247,0.25)", placeholder:"rgba(192,150,230,0.45)",
+}
+
+const BLACK: Theme = {
+  id:"black", label:"Black",
+  bg:"rgba(0,0,0,0.92)", surface:"rgba(8,8,8,0.95)",
+  border:"rgba(255,255,255,0.1)", borderHi:"rgba(255,255,255,0.2)",
+  text:"rgba(226,232,240,1)", dim:"rgba(148,163,184,0.9)",
+  accent:"#e2e8f0", accentD:"rgba(255,255,255,0.08)", accentG:"rgba(255,255,255,0.12)",
+  error:"#f87171", errorD:"rgba(239,68,68,0.12)",
+  codeBg:"rgba(0,0,0,1)", kw:"#93c5fd", str:"#86efac", num:"#fca5a5",
+  cmt:"rgba(100,116,139,0.7)", fn:"#c4b5fd", codeText:"rgba(203,213,225,1)",
+  toolbarBg:"rgba(0,0,0,0.98)", menuBg:"rgba(4,4,4,0.98)",
+  menuBorder:"rgba(255,255,255,0.12)",
+  menuShadow:"0 12px 40px rgba(0,0,0,0.9), 0 0 0 0.5px rgba(255,255,255,0.06)",
+  menuSep:"rgba(255,255,255,0.07)", sectionLabel:"rgba(200,200,200,0.6)",
+  btnText:"rgba(200,200,200,0.88)", btnHoverBg:"rgba(255,255,255,0.08)", btnHoverText:"rgba(226,232,240,1)",
+  dangerText:"rgba(252,165,165,0.85)", dangerHoverBg:"rgba(239,68,68,0.1)",
+  upgradeText:"rgba(226,232,240,0.95)", upgradeBg:"rgba(255,255,255,0.06)",
+  upgradeBgHover:"rgba(255,255,255,0.12)", upgradeBorder:"rgba(255,255,255,0.2)",
+  dotIdle:"rgba(255,255,255,0.2)", dotPulse:"#cbd5e1",
+  dotPulseGlow:"0 0 8px 2px rgba(255,255,255,0.3)",
+  dotSpinFaint:"rgba(255,255,255,0.08)", dotSpinBright:"rgba(203,213,225,0.8)",
+  lblIdle:"rgba(226,232,240,0.4)", lblActive:"rgba(226,232,240,0.85)", lblProcessing:"rgba(200,200,200,0.75)",
+  planText:"rgba(148,163,184,0.65)", planBorder:"rgba(255,255,255,0.15)",
+  ttsOn:"rgba(200,210,220,0.7)", ttsOff:"rgba(100,100,100,0.5)", ttsHoverBg:"rgba(255,255,255,0.07)",
+  hambBg:"rgba(255,255,255,0.05)", hambBgActive:"rgba(255,255,255,0.12)",
+  hambBorder:"rgba(255,255,255,0.14)", hambBorderActive:"rgba(255,255,255,0.28)",
+  hambColor:"rgba(200,200,200,0.7)", hambColorActive:"rgba(226,232,240,1)",
+  chipBgHot:"rgba(255,255,255,0.1)", chipBgCold:"rgba(255,255,255,0.04)",
+  chipBorderHot:"rgba(255,255,255,0.25)", chipBorderCold:"rgba(255,255,255,0.1)",
+  chipTextHot:"rgba(226,232,240,1)", chipTextCold:"rgba(200,200,200,0.8)",
+  kbdBg:"rgba(255,255,255,0.08)", kbdBorder:"rgba(255,255,255,0.16)",
+  kbdBorderB:"rgba(255,255,255,0.22)", kbdText:"rgba(203,213,225,0.85)",
+  dragDot:"rgba(200,200,200,1)",
+  appBorder:"1px solid rgba(255,255,255,0.1)", appBorderListen:"1px solid rgba(255,255,255,0.2)",
+  appShadow:"0 16px 60px rgba(0,0,0,0.9), 0 0 0 0.5px rgba(255,255,255,0.04)",
+  appShadowListen:"0 0 0 1px rgba(255,255,255,0.08), 0 16px 60px rgba(0,0,0,0.9)",
+  scrollThumb:"rgba(255,255,255,0.15)", scrollThumbHover:"rgba(255,255,255,0.3)",
+  sliderTrack:"rgba(255,255,255,0.1)", sliderThumb:"rgba(200,210,220,0.85)",
+  sliderThumbBorder:"rgba(255,255,255,0.3)",
+  sliderShadow:"0 0 4px rgba(255,255,255,0.2)", sliderHoverShadow:"0 0 8px rgba(255,255,255,0.35)",
+  selectionBg:"rgba(255,255,255,0.15)", placeholder:"rgba(148,163,184,0.45)",
+}
+
+const THEMES: Record<ThemeId, Theme> = {
+  amber: AMBER, blue: BLUE, green: GREEN, violet: VIOLET,
+  hotpink: HOTPINK, purple: PURPLE, black: BLACK,
+}
+
+const ThemeCtx = React.createContext<{ theme: Theme; setTheme: (id: ThemeId) => void }>({
+  theme: AMBER, setTheme: () => {},
+})
+
+const themeStyleEl = document.createElement("style")
+document.head.appendChild(themeStyleEl)
+
+function applyTheme(t: Theme) {
+  const r = document.documentElement.style
+  r.setProperty("--bg", t.bg); r.setProperty("--surface", t.surface)
+  r.setProperty("--border", t.border); r.setProperty("--border-hi", t.borderHi)
+  r.setProperty("--text", t.text); r.setProperty("--dim", t.dim)
+  r.setProperty("--accent", t.accent); r.setProperty("--accent-d", t.accentD); r.setProperty("--accent-g", t.accentG)
+  r.setProperty("--error", t.error); r.setProperty("--error-d", t.errorD)
+  r.setProperty("--code-bg", t.codeBg)
+  r.setProperty("--kw", t.kw); r.setProperty("--str", t.str); r.setProperty("--num", t.num)
+  r.setProperty("--cmt", t.cmt); r.setProperty("--fn", t.fn); r.setProperty("--code-text", t.codeText)
+  themeStyleEl.textContent = `
+    ::-webkit-scrollbar-thumb { background:${t.scrollThumb}; border-radius:3px; }
+    ::-webkit-scrollbar-thumb:hover { background:${t.scrollThumbHover}; }
+    ::selection { background:${t.selectionBg}; color:#fff; }
+    ::placeholder { color:${t.placeholder} !important; }
+    input[type=range]::-webkit-slider-runnable-track { height:3px; border-radius:2px; background:${t.sliderTrack}; }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance:none; appearance:none;
+      width:12px; height:12px; border-radius:50%; margin-top:-4.5px;
+      background:${t.sliderThumb}; border:1.5px solid ${t.sliderThumbBorder};
+      box-shadow:${t.sliderShadow}; transition:background .15s,box-shadow .15s;
+    }
+    input[type=range]:hover::-webkit-slider-thumb { box-shadow:${t.sliderHoverShadow}; }
+  `
+}
+
 // ── Global styles ──────────────────────────────────────────────────────────────
 
 const styleEl = document.createElement("style")
@@ -18,51 +382,15 @@ styleEl.textContent = `
   @keyframes fadeIn   { from{opacity:0} to{opacity:1} }
 
   * { box-sizing:border-box; margin:0; padding:0; }
-  :root {
-    --bg:        rgba(11,10,8,0.72);
-    --surface:   rgba(20,18,13,0.78);
-    --border:    rgba(255,224,194,0.09);
-    --border-hi: rgba(255,224,194,0.18);
-    --text:      rgba(238,233,224,1);
-    --dim:       rgba(175,163,145,0.9);
-    --accent:    #ffe0c2;
-    --accent-d:  rgba(255,224,194,0.1);
-    --accent-g:  rgba(255,200,130,0.22);
-    --error:     #ff8c65;
-    --error-d:   rgba(255,140,101,0.12);
-    --code-bg:   rgba(9,8,6,1);
-    --kw:        #ffd099;
-    --str:       #a3c9a8;
-    --num:       #ffb870;
-    --cmt:       rgba(145,128,95,0.65);
-    --fn:        #ffe0c2;
-    --code-text: rgba(208,196,178,1);
-  }
   html, body { background: transparent !important; height:100%; margin:0; overflow:hidden; }
   #root { height:100%; display:flex; flex-direction:column; }
   .drag    { -webkit-app-region:drag;    app-region:drag;    }
   .no-drag { -webkit-app-region:no-drag; app-region:no-drag; }
   ::-webkit-scrollbar { width:3px; }
   ::-webkit-scrollbar-track { background:transparent; }
-  ::-webkit-scrollbar-thumb { background:rgba(255,224,194,0.18); border-radius:3px; }
-  ::-webkit-scrollbar-thumb:hover { background:rgba(255,224,194,0.35); }
   button { cursor:pointer; font-family:inherit; }
   kbd    { font-family:'Cascadia Code','Fira Code','JetBrains Mono','Consolas',monospace; }
-  ::selection { background:rgba(255,224,194,0.2); color:#fff; }
   input[type=range] { -webkit-appearance:none; appearance:none; background:transparent; cursor:pointer; }
-  input[type=range]::-webkit-slider-runnable-track {
-    height:3px; border-radius:2px; background:rgba(255,224,194,0.1);
-  }
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance:none; appearance:none;
-    width:12px; height:12px; border-radius:50%; margin-top:-4.5px;
-    background:rgba(255,224,194,0.75); border:1.5px solid rgba(255,200,130,0.4);
-    box-shadow:0 0 4px rgba(255,200,130,0.3); transition:background .15s,box-shadow .15s;
-  }
-  input[type=range]:hover::-webkit-slider-thumb {
-    background:rgba(255,224,194,1); box-shadow:0 0 8px rgba(255,200,130,0.55);
-  }
-  ::placeholder { color:rgba(200,185,160,0.45) !important; }
 `
 document.head.appendChild(styleEl)
 
@@ -710,17 +1038,49 @@ function ResponsePanel({ entry, onDismiss, isActive }: { entry:ChatEntry; onDism
   )
 }
 
+// ── Yomi Logo Mark ─────────────────────────────────────────────────────────────
+
+function YomiLogoMark({ size = 18 }: { size?: number }) {
+  return (
+    <svg
+      width={size} height={size}
+      viewBox="-3 -3 30 30"
+      fill="none"
+      aria-hidden="true"
+      style={{ flexShrink:0, display:"block" }}
+    >
+      <rect x="-3" y="-3" width="30" height="30" rx="7" fill="url(#ym-lg-bg)" />
+      <rect x="-3" y="-3" width="30" height="11" rx="7" fill="url(#ym-lg-shine)" />
+      <path
+        fillRule="evenodd" clipRule="evenodd" fill="white"
+        d="M12 2c-.791 0-1.55.314-2.11.874l-.893.893a.985.985 0 0 1-.696.288H7.04A2.984 2.984 0 0 0 4.055 7.04v1.262a.986.986 0 0 1-.288.696l-.893.893a2.984 2.984 0 0 0 0 4.22l.893.893a.985.985 0 0 1 .288.696v1.262a2.984 2.984 0 0 0 2.984 2.984h1.262c.261 0 .512.104.696.288l.893.893a2.984 2.984 0 0 0 4.22 0l.893-.893a.985.985 0 0 1 .696-.288h1.262a2.984 2.984 0 0 0 2.984-2.984V15.7c0-.261.104-.512.288-.696l.893-.893a2.984 2.984 0 0 0 0-4.22l-.893-.893a.985.985 0 0 1-.288-.696V7.04a2.984 2.984 0 0 0-2.984-2.984h-1.262a.985.985 0 0 1-.696-.288l-.893-.893A2.984 2.984 0 0 0 12 2Zm3.683 7.73a1 1 0 1 0-1.414-1.413l-4.253 4.253-1.277-1.277a1 1 0 0 0-1.415 1.414l1.985 1.984a1 1 0 0 0 1.414 0l4.96-4.96Z"
+      />
+      <defs>
+        <linearGradient id="ym-lg-bg" x1="-3" y1="-3" x2="27" y2="27" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#60A5FA" />
+          <stop offset="100%" stopColor="#3B5BDB" />
+        </linearGradient>
+        <linearGradient id="ym-lg-shine" x1="0" y1="-3" x2="0" y2="8" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="white" stopOpacity="0.22" />
+          <stop offset="100%" stopColor="white" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+    </svg>
+  )
+}
+
 // ── Toolbar ────────────────────────────────────────────────────────────────────
 
 function Key({ label }: { label:string }) {
+  const { theme: t } = React.useContext(ThemeCtx)
   return (
     <kbd style={{
       display:"inline-flex", alignItems:"center", justifyContent:"center",
-      background:"rgba(255,224,194,0.08)",
-      border:"1px solid rgba(255,224,194,0.16)",
-      borderBottom:"2px solid rgba(255,224,194,0.2)",
+      background: t.kbdBg,
+      border:`1px solid ${t.kbdBorder}`,
+      borderBottom:`2px solid ${t.kbdBorderB}`,
       borderRadius:4, padding:"0 6px", fontSize:10,
-      color:"rgba(255,224,194,0.8)", minWidth:18, height:17,
+      color: t.kbdText, minWidth:18, height:17,
       fontWeight:500,
     }}>{label}</kbd>
   )
@@ -756,6 +1116,8 @@ function MenuCard({ plan, onSignOut, onClose, onHoverEnter, onHoverLeave, closin
   onHoverLeave: () => void
   closing: boolean
 }) {
+  const { theme: t, setTheme } = React.useContext(ThemeCtx)
+
   const [opacity, setOpacity] = React.useState(() => {
     const saved = localStorage.getItem("yomi:opacity")
     return saved ? parseFloat(saved) : 1.0
@@ -767,8 +1129,6 @@ function MenuCard({ plan, onSignOut, onClose, onHoverEnter, onHoverLeave, closin
     window.yomi.setOpacity(val)
   }
 
-
-
   const shortcuts = [
     { label: "Voice",  keys: ["Ctrl", "Shift", "Space"]  },
     { label: "Type",   keys: ["Ctrl", "Shift", "Enter"]  },
@@ -777,28 +1137,27 @@ function MenuCard({ plan, onSignOut, onClose, onHoverEnter, onHoverLeave, closin
     { label: "Quit",   keys: ["Ctrl", "Shift", "Q"]      },
   ]
 
-  const upgradeLabel = plan === "explore" || plan === "pro" ? "Upgrade"
-    : null
+  const upgradeLabel = plan === "explore" || plan === "pro" ? "Upgrade" : null
 
   const MenuBtn = ({ label, danger, onClick }: { label: string; danger?: boolean; onClick: () => void }) => (
     <button
       onClick={onClick}
       className="no-drag"
       style={{
-        width: "100%", textAlign: "left",
-        background: "none", border: "none",
-        padding: "7px 12px", borderRadius: 6,
-        fontSize: 12, fontFamily: UI_FONT, cursor: "pointer",
-        color: danger ? "rgba(255,120,90,0.85)" : "rgba(220,210,195,0.88)",
-        transition: "background .12s, color .12s", fontWeight: 500,
+        width:"100%", textAlign:"left",
+        background:"none", border:"none",
+        padding:"7px 12px", borderRadius:6,
+        fontSize:12, fontFamily:UI_FONT, cursor:"pointer",
+        color: danger ? t.dangerText : t.btnText,
+        transition:"background .12s, color .12s", fontWeight:500,
       }}
       onMouseEnter={e => {
-        e.currentTarget.style.background = danger ? "rgba(255,100,70,0.1)" : "rgba(255,224,194,0.09)"
-        e.currentTarget.style.color = danger ? "rgba(255,120,90,1)" : "rgba(255,240,220,1)"
+        e.currentTarget.style.background = danger ? t.dangerHoverBg : t.btnHoverBg
+        e.currentTarget.style.color = danger ? t.dangerText : t.btnHoverText
       }}
       onMouseLeave={e => {
         e.currentTarget.style.background = "none"
-        e.currentTarget.style.color = danger ? "rgba(255,120,90,0.85)" : "rgba(220,210,195,0.88)"
+        e.currentTarget.style.color = danger ? t.dangerText : t.btnText
       }}
     >
       {label}
@@ -811,46 +1170,42 @@ function MenuCard({ plan, onSignOut, onClose, onHoverEnter, onHoverLeave, closin
       className="no-drag yomi-hit-area"
       onMouseEnter={onHoverEnter}
       onMouseLeave={onHoverLeave}
-      style={{
-        position: "fixed", top: 34, right: 8, zIndex: 1000,
-        width: 216, height: 16,
-      }}
+      style={{ position:"fixed", top:34, right:8, zIndex:1000, width:250, height:16 }}
     />
     <div
       className="no-drag yomi-hit-area"
       onMouseEnter={onHoverEnter}
       onMouseLeave={onHoverLeave}
       style={{
-        position: "fixed", top: 46, right: 8, zIndex: 1000,
-        width: 216,
-        background: "rgba(13,11,8,0.94)",
-        border: "1px solid rgba(255,224,194,0.1)",
-        borderRadius: 10,
-        boxShadow: "0 12px 40px rgba(0,0,0,0.65), 0 0 0 0.5px rgba(255,224,194,0.04)",
-        backdropFilter: "blur(28px) saturate(160%)",
-        WebkitBackdropFilter: "blur(28px) saturate(160%)",
+        position:"fixed", top:46, right:8, zIndex:1000,
+        width:250,
+        background: t.menuBg,
+        border:`1px solid ${t.menuBorder}`,
+        borderRadius:10,
+        boxShadow: t.menuShadow,
+        backdropFilter:"blur(28px) saturate(160%)",
+        WebkitBackdropFilter:"blur(28px) saturate(160%)",
         animation: closing
           ? "slideDown 0.2s cubic-bezier(0.4,0,1,1) forwards"
           : "slideUp 0.22s cubic-bezier(0.16,1,0.3,1)",
-        overflow: "hidden",
+        overflow:"hidden",
       }}
     >
       {/* Shortcuts */}
-      <div style={{ padding: "10px 14px 10px" }}>
+      <div style={{ padding:"10px 14px" }}>
         <div style={{
-          fontSize: 10, fontFamily: UI_FONT, fontWeight: 700,
-          letterSpacing: "0.1em", color: "rgba(255,200,130,0.6)",
-          marginBottom: 10,
+          fontSize:10, fontFamily:UI_FONT, fontWeight:700,
+          letterSpacing:"0.1em", color: t.sectionLabel, marginBottom:10,
         }}>
           SHORTCUTS
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+        <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
           {shortcuts.map(({ label, keys }) => (
-            <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontSize: 13, fontFamily: UI_FONT, color: "rgba(210,200,185,0.9)", fontWeight:500 }}>
+            <div key={label} style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <span style={{ fontSize:13, fontFamily:UI_FONT, color: t.btnText, fontWeight:500 }}>
                 {label}
               </span>
-              <div style={{ display: "flex", gap: 3 }}>
+              <div style={{ display:"flex", gap:3 }}>
                 {keys.map((k, i) => <Key key={i} label={k} />)}
               </div>
             </div>
@@ -858,15 +1213,48 @@ function MenuCard({ plan, onSignOut, onClose, onHoverEnter, onHoverLeave, closin
         </div>
       </div>
 
-      <div style={{ height: 1, background: "rgba(255,224,194,0.06)" }} />
+      <div style={{ height:1, background: t.menuSep }} />
+
+      {/* Theme switcher */}
+      <div style={{ padding:"10px 14px" }}>
+        <div style={{
+          fontSize:10, fontFamily:UI_FONT, fontWeight:700,
+          letterSpacing:"0.1em", color: t.sectionLabel, marginBottom:9,
+        }}>
+          THEME
+        </div>
+        <div style={{ position:"relative" }}>
+          <select
+            value={t.id}
+            onChange={e => setTheme(e.target.value as ThemeId)}
+            className="no-drag"
+            style={{
+              width:"100%", padding:"7px 28px 7px 10px",
+              background: t.kbdBg, border:`1px solid ${t.kbdBorder}`,
+              borderRadius:7, cursor:"pointer",
+              fontSize:12, fontFamily:UI_FONT, color:t.btnText,
+              outline:"none", WebkitAppearance:"none", appearance:"none",
+            }}
+          >
+            {(Object.keys(THEMES) as ThemeId[]).map(id => (
+              <option key={id} value={id} style={{ background:"#0a0a0a", color:"#e2e8f0" }}>
+                {THEMES[id].label}
+              </option>
+            ))}
+          </select>
+          <span style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", pointerEvents:"none", width:0, height:0, borderLeft:"4px solid transparent", borderRight:"4px solid transparent", borderTop:`5px solid ${t.dim}` }} />
+        </div>
+      </div>
+
+      <div style={{ height:1, background: t.menuSep }} />
 
       {/* Opacity slider */}
-      <div style={{ padding: "10px 14px 10px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-          <span style={{ fontSize: 10, fontFamily: UI_FONT, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,200,130,0.6)" }}>
+      <div style={{ padding:"10px 14px" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+          <span style={{ fontSize:10, fontFamily:UI_FONT, fontWeight:700, letterSpacing:"0.1em", color: t.sectionLabel }}>
             OPACITY
           </span>
-          <span style={{ fontSize: 11, fontFamily: UI_FONT, color: "rgba(200,185,155,0.8)", fontWeight: 500 }}>
+          <span style={{ fontSize:11, fontFamily:UI_FONT, color: t.btnText, fontWeight:500 }}>
             {Math.round(opacity * 100)}%
           </span>
         </div>
@@ -875,29 +1263,27 @@ function MenuCard({ plan, onSignOut, onClose, onHoverEnter, onHoverLeave, closin
           value={Math.round(opacity * 100)}
           onChange={e => handleOpacity(parseInt(e.target.value) / 100)}
           className="no-drag"
-          style={{ width: "100%", margin: 0 }}
+          style={{ width:"100%", margin:0 }}
         />
       </div>
 
-      <div style={{ height: 1, background: "rgba(255,224,194,0.06)" }} />
+      <div style={{ height:1, background: t.menuSep }} />
 
       {/* Actions */}
-      <div style={{ padding: "5px" }}>
+      <div style={{ padding:"5px" }}>
         {upgradeLabel && (
           <button
             onClick={() => { window.yomi.openUpgrade(); onClose() }}
             className="no-drag"
             style={{
-              width: "100%", textAlign: "left",
-              background: "rgba(255,200,130,0.07)",
-              border: "1px solid rgba(255,200,130,0.2)",
-              padding: "8px 12px", borderRadius: 6, marginBottom: 4,
-              fontSize: 13, fontFamily: UI_FONT, cursor: "pointer",
-              color: "rgba(255,210,140,0.95)", fontWeight: 600,
-              transition: "background .12s",
+              width:"100%", textAlign:"left",
+              background: t.upgradeBg, border:`1px solid ${t.upgradeBorder}`,
+              padding:"8px 12px", borderRadius:6, marginBottom:4,
+              fontSize:13, fontFamily:UI_FONT, cursor:"pointer",
+              color: t.upgradeText, fontWeight:600, transition:"background .12s",
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,200,130,0.13)" }}
-            onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,200,130,0.07)" }}
+            onMouseEnter={e => { e.currentTarget.style.background = t.upgradeBgHover }}
+            onMouseLeave={e => { e.currentTarget.style.background = t.upgradeBg }}
           >
             ✦ {upgradeLabel}
           </button>
@@ -911,16 +1297,17 @@ function MenuCard({ plan, onSignOut, onClose, onHoverEnter, onHoverLeave, closin
 }
 
 function Chip({ label, keys, hot }: { label:string; keys:string[]; hot:boolean }) {
+  const { theme: t } = React.useContext(ThemeCtx)
   return (
     <div style={{
       display:"flex", alignItems:"center", gap:5,
-      background: hot ? "rgba(255,224,194,0.08)" : "rgba(255,224,194,0.03)",
-      border:`1px solid ${hot ? "rgba(255,200,130,0.28)" : "rgba(255,224,194,0.07)"}`,
+      background: hot ? t.chipBgHot : t.chipBgCold,
+      border:`1px solid ${hot ? t.chipBorderHot : t.chipBorderCold}`,
       borderRadius:5, padding:"2px 7px 2px 6px", transition:"all .2s",
     }}>
       <span style={{
         fontSize:11.5, fontFamily:UI_FONT,
-        color: hot ? "rgba(255,224,194,1)" : "rgba(220,210,195,0.8)",
+        color: hot ? t.chipTextHot : t.chipTextCold,
         letterSpacing:"0.01em", fontWeight:500,
       }}>{label}</span>
       <div style={{ display:"flex", gap:2 }}>
@@ -936,37 +1323,31 @@ function Toolbar({ state, plan, interactionInfo, onSignOut, menuOpen, menuClosin
   onMenuOpen: () => void; onMenuScheduleClose: () => void; onMenuCancelClose: () => void
 }) {
   const { ttsEnabled, toggleTts } = useYomiStore()
+  const { theme: t } = React.useContext(ThemeCtx)
 
   return (
     <>
-      {/* Backdrop — captures outside clicks to close the menu */}
       {menuOpen && (
-        <div
-          onClick={onMenuClose}
-          style={{ position: "fixed", inset: 0, zIndex: 998 }}
-        />
+        <div onClick={onMenuClose} style={{ position:"fixed", inset:0, zIndex:998 }} />
       )}
 
       <div style={{
         display:"flex", alignItems:"center", justifyContent:"space-between",
-        padding:"0 10px",
-        height:46,
-        background:"rgba(13,11,8,0.94)",
-        borderBottom: state!=="idle" ? "1px solid rgba(255,224,194,0.07)" : "1px solid rgba(255,224,194,0.04)",
-        borderRadius: "10px 10px 0 0",
-        gap:10,
-        position: "relative",
-        zIndex: 999,
+        padding:"0 10px", height:46,
+        background: t.toolbarBg,
+        borderBottom:`1px solid ${state!=="idle" ? t.borderHi : t.border}`,
+        borderRadius:"10px 10px 0 0",
+        gap:10, position:"relative", zIndex:999,
       }} className="drag yomi-hit-area">
 
         {/* Left: brand + state indicator */}
         <div style={{ display:"flex", alignItems:"center", gap:9 }}>
-          {/* Drag grip dots */}
+          {/* Drag grip */}
           <div style={{ display:"flex", flexDirection:"column", gap:2.5, opacity:0.2, flexShrink:0 }}>
             {[0,1,2].map(i=>(
               <div key={i} style={{ display:"flex", gap:2.5 }}>
-                <div style={{ width:2, height:2, borderRadius:"50%", background:"rgba(255,224,194,1)" }} />
-                <div style={{ width:2, height:2, borderRadius:"50%", background:"rgba(255,224,194,1)" }} />
+                <div style={{ width:2, height:2, borderRadius:"50%", background: t.dragDot }} />
+                <div style={{ width:2, height:2, borderRadius:"50%", background: t.dragDot }} />
               </div>
             ))}
           </div>
@@ -975,58 +1356,55 @@ function Toolbar({ state, plan, interactionInfo, onSignOut, menuOpen, menuClosin
           {state==="listening" ? (
             <div style={{
               width:7, height:7, borderRadius:"50%", flexShrink:0,
-              background:"#ffe0c2",
-              boxShadow:"0 0 8px 2px rgba(255,200,130,0.6)",
+              background: t.dotPulse, boxShadow: t.dotPulseGlow,
               animation:"pulse 1.2s ease-in-out infinite",
             }} />
           ) : state==="processing" ? (
             <div style={{
               width:10, height:10, borderRadius:"50%", flexShrink:0,
-              border:"1.5px solid rgba(255,224,194,0.08)",
-              borderTopColor:"rgba(255,200,130,0.8)",
+              border:`1.5px solid ${t.dotSpinFaint}`,
+              borderTopColor: t.dotSpinBright,
               animation:"spin .75s linear infinite",
             }} />
           ) : (
-            <div style={{
-              width:6, height:6, borderRadius:"50%", flexShrink:0,
-              background:"rgba(255,224,194,0.18)",
-            }} />
+            <div style={{ width:6, height:6, borderRadius:"50%", flexShrink:0, background: t.dotIdle }} />
           )}
 
-          {/* Label */}
-          <span style={{
-            fontSize: state==="idle" ? 20 : 12,
-            fontWeight: state==="idle" ? 700 : 600,
-            fontFamily: state==="idle" ? DISPLAY_FONT : UI_FONT,
-            letterSpacing: state==="idle" ? "-0.01em" : "-0.02em",
-            lineHeight: 1,
-            color: state==="idle"
-              ? "rgba(255,224,194,0.55)"
-              : state==="listening"
-                ? "rgba(255,220,180,0.92)"
-                : "rgba(225,210,185,0.85)",
-            transition:"color .25s, font-size .25s, font-family .25s",
-          }}>
-            {state==="listening" ? "Listening…" : state==="processing" ? "Thinking…" : "Yomi"}
-          </span>
-          {/* Plan badge */}
+          {/* Label — logo + name when idle, status text when active */}
+          {state === "idle" ? (
+            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+              <YomiLogoMark size={20} />
+              <span style={{
+                fontSize:20, fontWeight:700, fontFamily:DISPLAY_FONT,
+                letterSpacing:"-0.01em", lineHeight:1,
+                color: t.lblIdle, transition:"color .25s",
+              }}>
+                Yomi
+              </span>
+            </div>
+          ) : (
+            <span style={{
+              fontSize:12, fontWeight:600, fontFamily:UI_FONT,
+              letterSpacing:"-0.02em", lineHeight:1,
+              color: state==="listening" ? t.lblActive : t.lblProcessing,
+              transition:"color .25s",
+            }}>
+              {state==="listening" ? "Listening…" : "Thinking…"}
+            </span>
+          )}
+
           {plan && state==="idle" && (
             <span style={{
               fontSize:10.5, fontFamily:UI_FONT, letterSpacing:"0.05em",
-              color:"rgba(200,185,155,0.65)",
-              border:"1px solid rgba(255,224,194,0.15)",
+              color: t.planText, border:`1px solid ${t.planBorder}`,
               borderRadius:4, padding:"0 7px", lineHeight:"18px",
               textTransform:"capitalize", fontWeight:500,
             }}>
               {plan}
             </span>
           )}
-          {/* Interaction usage for trial */}
           {interactionInfo && state==="idle" && (
-            <span style={{
-              fontSize:10.5, fontFamily:UI_FONT, letterSpacing:"0.02em",
-              color:"rgba(255,200,130,0.6)",
-            }}>
+            <span style={{ fontSize:10.5, fontFamily:UI_FONT, letterSpacing:"0.02em", color: t.sectionLabel }}>
               {interactionInfo}
             </span>
           )}
@@ -1034,70 +1412,63 @@ function Toolbar({ state, plan, interactionInfo, onSignOut, menuOpen, menuClosin
 
         {/* Right: controls */}
         <div style={{ display:"flex", gap:5, alignItems:"center" }} className="no-drag">
-          {/* TTS toggle */}
           <button
             onClick={toggleTts}
             onMouseEnter={e => {
-              e.currentTarget.style.color = "rgba(255,224,194,0.9)"
-              e.currentTarget.style.background = "rgba(255,224,194,0.07)"
+              e.currentTarget.style.color = t.ttsOn
+              e.currentTarget.style.background = t.ttsHoverBg
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.color = ttsEnabled ? "rgba(255,224,194,0.6)" : "rgba(175,155,115,0.35)"
+              e.currentTarget.style.color = ttsEnabled ? t.ttsOn : t.ttsOff
               e.currentTarget.style.background = "none"
             }}
             style={{
-              background: "none", border: "none",
-              cursor: "pointer", padding: "2px 6px",
-              color: ttsEnabled ? "rgba(255,224,194,0.6)" : "rgba(175,155,115,0.35)",
-              transition: "color .15s, background .15s",
-              display: "flex", alignItems: "center", gap: 4,
-              flexShrink: 0, borderRadius: 4,
+              background:"none", border:"none", cursor:"pointer", padding:"2px 6px",
+              color: ttsEnabled ? t.ttsOn : t.ttsOff,
+              transition:"color .15s, background .15s",
+              display:"flex", alignItems:"center", gap:4,
+              flexShrink:0, borderRadius:4,
             }}
           >
             {ttsEnabled ? <SpeakerOnSVG /> : <SpeakerOffSVG />}
-            <span style={{ fontSize: 11, fontFamily: UI_FONT, letterSpacing: "0.03em", fontWeight:500 }}>
+            <span style={{ fontSize:11, fontFamily:UI_FONT, letterSpacing:"0.03em", fontWeight:500 }}>
               {ttsEnabled ? "Sound" : "Muted"}
             </span>
           </button>
 
-          {/* State-specific chips */}
           {state==="listening" && <>
             <Chip label="Stop"   keys={["↵"]}        hot={true}  />
             <Chip label="Stop"   keys={["⌃⇧","Spc"]} hot={false} />
             <Chip label="Cancel" keys={["Esc"]}       hot={false} />
           </>}
-          {state==="text-input" && (
-            <Chip label="Cancel" keys={["Esc"]} hot={false} />
-          )}
+          {state==="text-input" && <Chip label="Cancel" keys={["Esc"]} hot={false} />}
           {state==="processing" && (
-            <span style={{ fontSize:11.5, color:"rgba(185,170,145,0.65)", fontFamily:UI_FONT }}>processing…</span>
+            <span style={{ fontSize:11.5, color: t.dim, fontFamily:UI_FONT }}>processing…</span>
           )}
 
-          {/* Hamburger menu button — opens on hover */}
           <button
             onClick={onMenuToggle}
             onMouseEnter={e => {
               onMenuOpen()
-              e.currentTarget.style.color = "rgba(255,224,194,1)"
-              e.currentTarget.style.background = "rgba(255,224,194,0.12)"
-              e.currentTarget.style.borderColor = "rgba(255,224,194,0.28)"
+              e.currentTarget.style.color = t.hambColorActive
+              e.currentTarget.style.background = t.hambBgActive
+              e.currentTarget.style.borderColor = t.hambBorderActive
             }}
             onMouseLeave={e => {
               onMenuScheduleClose()
               if (!menuOpen) {
-                e.currentTarget.style.color = "rgba(255,224,194,0.7)"
-                e.currentTarget.style.background = "rgba(255,224,194,0.06)"
-                e.currentTarget.style.borderColor = "rgba(255,224,194,0.18)"
+                e.currentTarget.style.color = t.hambColor
+                e.currentTarget.style.background = t.hambBg
+                e.currentTarget.style.borderColor = t.hambBorder
               }
             }}
             style={{
-              background: menuOpen ? "rgba(255,224,194,0.12)" : "rgba(255,224,194,0.06)",
-              border: `1px solid ${menuOpen ? "rgba(255,224,194,0.28)" : "rgba(255,224,194,0.18)"}`,
-              borderRadius: 5, cursor: "pointer",
-              color: menuOpen ? "rgba(255,224,194,1)" : "rgba(255,224,194,0.7)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              width: 26, height: 22, flexShrink: 0,
-              transition: "all .15s",
+              background: menuOpen ? t.hambBgActive : t.hambBg,
+              border:`1px solid ${menuOpen ? t.hambBorderActive : t.hambBorder}`,
+              borderRadius:5, cursor:"pointer",
+              color: menuOpen ? t.hambColorActive : t.hambColor,
+              display:"flex", alignItems:"center", justifyContent:"center",
+              width:26, height:22, flexShrink:0, transition:"all .15s",
             }}
             title="Menu"
           >
@@ -1399,8 +1770,8 @@ const App: React.FC = () => {
       const MAX_ENTRIES = 640
       const textInputH = hotkeyState === "text-input" ? 88 : 0
       const entriesH = entries.length > 0 ? MAX_ENTRIES : 0
-      // Menu card starts at top:50px and is ~330px tall — window must be at least 380px
-      const menuMin = menuOpen ? 380 : 0
+      // Menu card starts at top:46px and is ~420px tall — window must be at least 520px
+      const menuMin = menuOpen ? 520 : 0
       window.yomi.resize(680, Math.max(46, 46 + textInputH + entriesH, menuMin))
     }
   }, [authState, entries, hotkeyState, menuOpen])
@@ -1581,6 +1952,7 @@ const App: React.FC = () => {
 
   const hasContent = entries.length>0 || hotkeyState==="text-input"
   const isListening = hotkeyState==="listening"
+  const { theme: t } = React.useContext(ThemeCtx)
 
   const setMouseEventsIgnored = useCallback((ignored: boolean) => {
     if (mouseEventsIgnoredRef.current === ignored) return
@@ -1623,7 +1995,7 @@ const App: React.FC = () => {
         background:"var(--bg)",
         borderRadius:10, overflow:"hidden",
         border:"1px solid var(--border)",
-        boxShadow:"0 16px 60px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(255,224,194,0.04)",
+        boxShadow: t.appShadow,
         backdropFilter:"blur(28px) saturate(160%)",
         WebkitBackdropFilter:"blur(28px) saturate(160%)",
         position:"relative",
@@ -1649,16 +2021,8 @@ const App: React.FC = () => {
         height:"100vh",
         background: hasContent ? "var(--bg)" : "transparent",
         borderRadius:10, overflow:"hidden",
-        border: hasContent
-          ? isListening
-            ? "1px solid rgba(255,200,130,0.22)"
-            : "1px solid var(--border)"
-          : "none",
-        boxShadow: hasContent
-          ? isListening
-            ? "0 0 0 1px rgba(255,200,130,0.06), 0 16px 60px rgba(0,0,0,0.65)"
-            : "0 16px 60px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(255,224,194,0.04)"
-          : "none",
+        border: hasContent ? (isListening ? t.appBorderListen : t.appBorder) : "none",
+        boxShadow: hasContent ? (isListening ? t.appShadowListen : t.appShadow) : "none",
         backdropFilter: hasContent ? "blur(28px) saturate(160%)" : "none",
         WebkitBackdropFilter: hasContent ? "blur(28px) saturate(160%)" : "none",
         transition:"border-color .3s, box-shadow .3s",
@@ -1706,7 +2070,30 @@ const App: React.FC = () => {
   )
 }
 
+// ── Theme Provider ─────────────────────────────────────────────────────────────
+
+function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [themeId, setThemeId] = React.useState<ThemeId>(() => {
+    const saved = localStorage.getItem("yomi:theme") as ThemeId | null
+    const id: ThemeId = (saved && saved in THEMES) ? saved : "amber"
+    applyTheme(THEMES[id])
+    return id
+  })
+
+  const handleSetTheme = React.useCallback((id: ThemeId) => {
+    setThemeId(id)
+    applyTheme(THEMES[id])
+    localStorage.setItem("yomi:theme", id)
+  }, [])
+
+  return (
+    <ThemeCtx.Provider value={{ theme: THEMES[themeId], setTheme: handleSetTheme }}>
+      {children}
+    </ThemeCtx.Provider>
+  )
+}
+
 // ── Mount ──────────────────────────────────────────────────────────────────────
 
 const root = document.getElementById("root")
-if (root) createRoot(root).render(<App />)
+if (root) createRoot(root).render(<ThemeProvider><App /></ThemeProvider>)
