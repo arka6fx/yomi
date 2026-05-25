@@ -10,10 +10,10 @@
     --card-foreground: 0 0% 13%;
     --popover: 0 0% 99%;
     --popover-foreground: 0 0% 13%;
-    --primary: 17 22% 32%;
+    --primary: 214 88% 54%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 34 100% 86%;
-    --secondary-foreground: 16 51% 23%;
+    --secondary: 214 100% 91%;
+    --secondary-foreground: 218 67% 24%;
     --muted: 0 0% 94%;
     --muted-foreground: 0 0% 39%;
     --accent: 0 0% 91%;
@@ -22,30 +22,30 @@
     --destructive-foreground: 0 0% 100%;
     --border: 0 0% 85%;
     --input: 0 0% 85%;
-    --ring: 17 22% 32%;
+    --ring: 214 88% 54%;
     --radius: 0.5rem;
   }
 
   .dark {
-    --background: 0 0% 7%;
+    --background: 222 47% 7%;
     --foreground: 0 0% 93%;
-    --card: 0 0% 10%;
+    --card: 222 39% 10%;
     --card-foreground: 0 0% 93%;
-    --popover: 0 0% 10%;
+    --popover: 222 39% 10%;
     --popover-foreground: 0 0% 93%;
-    --primary: 30 100% 88%;
-    --primary-foreground: 183 55% 7%;
-    --secondary: 28 18% 19%;
-    --secondary-foreground: 30 100% 88%;
-    --muted: 0 0% 13%;
+    --primary: 213 100% 76%;
+    --primary-foreground: 224 64% 8%;
+    --secondary: 218 39% 19%;
+    --secondary-foreground: 213 100% 82%;
+    --muted: 222 30% 13%;
     --muted-foreground: 0 0% 71%;
-    --accent: 0 0% 16%;
+    --accent: 220 28% 16%;
     --accent-foreground: 0 0% 93%;
     --destructive: 12 77% 54%;
     --destructive-foreground: 0 0% 100%;
-    --border: 45 14% 11%;
+    --border: 220 30% 17%;
     --input: 0 0% 28%;
-    --ring: 30 100% 88%;
+    --ring: 213 100% 76%;
     --radius: 0.5rem;
   }
 
@@ -152,10 +152,25 @@
     mix-blend-mode: screen;
   }
 
+  .auth-grid {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.12) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  .auth-scene-bg {
+    background:
+      linear-gradient(rgba(2, 6, 23, 0.2), rgba(2, 6, 23, 0.2)),
+      url("https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2400&q=88");
+    background-position: center;
+    background-size: cover;
+  }
+
   .site-texture-bg {
     position: relative;
     isolation: isolate;
-    background: #090a09;
+    background: #050914;
   }
 
   .site-texture-bg::before {
@@ -167,23 +182,23 @@
     background:
       radial-gradient(
         ellipse at 18% 12%,
-        rgba(239, 196, 147, 0.54) 0%,
-        rgba(137, 76, 52, 0.18) 24%,
+        rgba(78, 158, 255, 0.48) 0%,
+        rgba(35, 78, 162, 0.22) 24%,
         transparent 48%
       ),
       radial-gradient(
         ellipse at 78% 68%,
-        rgba(193, 99, 57, 0.4) 0%,
-        rgba(64, 36, 30, 0.2) 32%,
+        rgba(31, 102, 255, 0.34) 0%,
+        rgba(15, 42, 94, 0.26) 32%,
         transparent 62%
       ),
       radial-gradient(
         ellipse at 45% 42%,
-        rgba(7, 8, 9, 0.88) 0%,
-        rgba(12, 13, 14, 0.72) 34%,
+        rgba(3, 8, 20, 0.88) 0%,
+        rgba(7, 16, 36, 0.72) 34%,
         transparent 60%
       ),
-      linear-gradient(135deg, #07090b 0%, #141413 44%, #08090a 100%);
+      linear-gradient(135deg, #020617 0%, #071225 44%, #030711 100%);
     filter: saturate(0.95) contrast(1.05);
   }
 

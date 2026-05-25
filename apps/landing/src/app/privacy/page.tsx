@@ -10,12 +10,12 @@ export default function PrivacyPage() {
   return (
     <>
       <Nav />
-      <main className="bg-[#090a09] pt-16">
+      <main className="bg-[#050914] pt-16">
         <div className="mx-auto max-w-3xl px-6 py-24">
-          <p className="mb-3 font-mono text-xs uppercase tracking-widest text-amber-100/50">
+          <p className="mb-3 font-mono text-xs uppercase tracking-widest text-sky-100/50">
             Legal
           </p>
-          <h1 className="mb-2 font-accent text-5xl font-medium text-[#f3f0df]">Privacy Policy</h1>
+          <h1 className="mb-2 font-accent text-5xl font-medium text-[#eaf4ff]">Privacy Policy</h1>
           <p className="mb-16 text-sm text-white/40">Last updated: May 2025</p>
 
           <div className="max-w-none space-y-10 text-sm leading-7 text-white/55">
@@ -160,8 +160,8 @@ export default function PrivacyPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-3">
-      <h2 className="font-accent text-2xl font-medium text-[#f3f0df]">{title}</h2>
-      <div className="space-y-3 [&_a]:text-amber-100 [&_a]:transition-colors [&_a]:hover:text-white [&_li]:relative [&_li]:pl-4 [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-xs [&_li]:before:text-amber-100 [&_li]:before:content-['›'] [&_strong]:font-medium [&_strong]:text-white/80 [&_ul]:list-none [&_ul]:space-y-1.5">
+      <h2 className="font-accent text-2xl font-medium text-[#eaf4ff]">{title}</h2>
+      <div className="space-y-3 [&_a]:text-sky-100 [&_a]:transition-colors [&_a]:hover:text-white [&_li]:relative [&_li]:pl-4 [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-xs [&_li]:before:text-sky-100 [&_li]:before:content-['›'] [&_strong]:font-medium [&_strong]:text-white/80 [&_ul]:list-none [&_ul]:space-y-1.5">
         {children}
       </div>
     </div>
