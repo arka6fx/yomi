@@ -15,15 +15,6 @@ let overlayWin: BrowserWindow | null = null
 let sidecarStarted = false  // Sidecar + IPC + hotkeys initialised (once ever)
 
 app.whenReady().then(async () => {
-  // Platform-specific tray/menubar setup
-  if (process.platform === "darwin") {
-    const { setupMac } = await import("./platform/mac")
-    setupMac()
-  } else {
-    const { setupWindows } = await import("./platform/windows")
-    setupWindows()
-  }
-
   // Position overlay at top-center of primary display
   const { width: screenW } = screen.getPrimaryDisplay().workAreaSize
   const overlayW = 680
