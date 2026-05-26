@@ -2314,13 +2314,14 @@ const App: React.FC = () => {
         minWidth:680,
       }}
     >
-      {/* Chat UI — fades out when guide mode is active */}
+      {/* Chat UI — fades out when guide mode is active; visibility:hidden prevents
+          invisible toolbar from intercepting events while opacity is still animating */}
       <div style={{
         display:"flex", flexDirection:"column", flex:1,
         transition:"opacity 180ms ease, transform 180ms ease",
         opacity: guideMode ? 0 : 1,
         transform: guideMode ? "translateY(-6px)" : "translateY(0)",
-        pointerEvents: guideMode ? "none" : undefined,
+        visibility: guideMode ? "hidden" : undefined,
       }}>
         <Toolbar
           state={hotkeyState}
@@ -2365,20 +2366,16 @@ const App: React.FC = () => {
         )}
       </div>
 
-      {/* Guide cursor — slides up when guide mode is active */}
-      <div style={{
-        position:"absolute", inset:0,
-        transition:"opacity 180ms ease, transform 180ms ease",
-        opacity: guideMode ? 1 : 0,
-        transform: guideMode ? "translateY(0)" : "translateY(6px)",
-        pointerEvents: guideMode ? undefined : "none",
-      }}>
-        <GuideCursor
-          state={hotkeyState}
-          step={guideSteps[guideCurrentStep - 1]}
-          totalSteps={guideTotalSteps}
-        />
-      </div>
+      {/* Guide cursor — only mounted when active so it never blocks the chat UI */}
+      {guideMode && (
+        <div style={{ position:"absolute", inset:0, animation:"fadeIn 180ms ease" }}>
+          <GuideCursor
+            state={hotkeyState}
+            step={guideSteps[guideCurrentStep - 1]}
+            totalSteps={guideTotalSteps}
+          />
+        </div>
+      )}
     </div>
   )
 }
