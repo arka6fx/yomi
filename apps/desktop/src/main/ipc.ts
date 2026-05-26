@@ -5,7 +5,6 @@ import { captureScreen } from "./capture"
 import type { SidecarManager } from "./sidecar"
 import { resetToIdle, activateProcessing } from "./hotkey"
 import { BACKEND_URL, loadToken } from "./auth"
-import { loadDesktopSettings } from "./settings"
 
 type Plan = "explore" | "pro" | "max"
 
@@ -206,7 +205,6 @@ async function streamQuery(
   ctrl: AbortController,
 ): Promise<void> {
   pipelineCtrl = ctrl   // keep reference current (startPipeline may have rotated it)
-  const settings = await loadDesktopSettings()
 
   const res = await fetch(`${sidecar.baseUrl}/query/fast`, {
     method: "POST",
@@ -217,8 +215,6 @@ async function streamQuery(
       mode: "answer",
       tts,
       plan,
-      cloud_rag_enabled: settings.cloudRagEnabled,
-      auth_token: loadToken() ?? undefined,
     }),
     signal: ctrl.signal,
   })

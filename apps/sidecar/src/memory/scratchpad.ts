@@ -1,6 +1,7 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises"
 import { join } from "node:path"
 import { notepadDir } from "./loader.js"
+import { scheduleCloudRagSync } from "./cloud-rag.js"
 
 export async function readScratchpad(projectSlug = "default"): Promise<string> {
   try {
@@ -14,4 +15,5 @@ export async function writeScratchpad(projectSlug: string, content: string): Pro
   const dir = join(notepadDir(), "projects", projectSlug)
   await mkdir(dir, { recursive: true })
   await writeFile(join(dir, "scratchpad.md"), content, "utf-8")
+  scheduleCloudRagSync("scratchpad")
 }

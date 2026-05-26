@@ -2,15 +2,15 @@
 
 ## Purpose
 
-Define prompt construction, context assembly, guardrails, hooks, and tool wrapping. The harness lives in the sidecar and is the compilation layer that turns user input, local memory, screen state, and optional Cloud RAG into one model prompt.
+Define prompt construction, context assembly, guardrails, hooks, and tool wrapping. The harness lives in the sidecar and is the compilation layer that turns user input, local memory, local RAG, and screen state into one model prompt.
 
 ## Invariants
 
 - System prompts are constructed dynamically.
 - The fast path still makes exactly one answer-generation LLM call.
 - Context retrieval happens before prompt construction, not through a fast-path tool loop.
-- Local personal memory is distinct from Cloud RAG document context.
-- Cloud RAG failure is non-fatal; the sidecar falls back to local memory only.
+- Structured personal memory is distinct from local RAG archive context.
+- Local RAG failure is non-fatal; the sidecar falls back to structured local memory only.
 - Agent tools remain available only on the agent path.
 
 ## Prompt Assembly
@@ -25,7 +25,7 @@ type PromptContext = {
   memorySummary?: string
   memoryIndex?: string
   localMemory?: string
-  cloudRagContext?: string
+  localRagContext?: string
   recentSession?: string
   hasScreen?: boolean
 }
@@ -40,12 +40,12 @@ Rendered memory block:
 <index>...</index>
 <summary>...</summary>
 <local_retrieved>...</local_retrieved>
-<cloud_rag_context>...</cloud_rag_context>
+<local_rag_context>...</local_rag_context>
 <recent_chat>...</recent_chat>
 </memory>
 ```
 
-`<cloud_rag_context>` is included only when the user enables Cloud RAG and the backend search succeeds.
+`<local_rag_context>` is included only when the local RAG index returns relevant non-personal Yomi memory snippets.
 
 ## Context Builder
 
@@ -54,9 +54,9 @@ For Pro/Max fast turns, the sidecar loads context in parallel:
 - `loadYomiMd()`
 - `loadRichMemoryContext(userText)`
 - `loadRecentSession()`
-- `retrieveCloudRagContext(...)` when enabled
+- local RAG retrieval over Yomi session, project, and non-profile memory files
 
-`loadRichMemoryContext()` combines legacy `memory.md`/`memory-index.md` caps with the new local memory engine profiles and FTS retrieval.
+`loadRichMemoryContext()` combines legacy `memory.md`/`memory-index.md` caps with local memory engine profiles, structured FTS retrieval, and local RAG archive retrieval.
 
 ## Auto Memory
 
@@ -83,7 +83,7 @@ Fast path does not expose a tool-selection loop.
 |---|---|
 | Missing screen context | Answer from knowledge and do not reference a screen. |
 | Screenshot attached | Use it only for screen-aware queries. |
-| Cloud RAG unavailable | Continue without Cloud RAG. |
+| Local RAG unavailable | Continue without local RAG. |
 | Uncertain memory | Prefer omitting or marking uncertain over overwriting active memory. |
 | Destructive agent tool | Deny or require confirmation. |
 
@@ -95,3 +95,4 @@ Fast path does not expose a tool-selection loop.
 - `apps/sidecar/src/pipeline/fast.ts`
 - `apps/sidecar/src/pipeline/agent.ts`
 - `apps/sidecar/src/memory/engine.ts`
+- `apps/sidecar/src/memory/local-rag.ts`

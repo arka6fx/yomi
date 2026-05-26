@@ -28,14 +28,14 @@ Sections:
 
 1. Hero: Yomi as a desktop AI buddy for screen and voice.
 2. How it works: hotkey, screen/mic context, answer/action.
-3. Features: fast answers, screen-aware help, local memory, optional Cloud RAG, future agents.
+3. Features: fast answers, screen-aware help, local memory, cloud archive mirror, future agents.
 4. Pricing teaser: Explore, Pro, Max.
 5. Footer: privacy, terms, GitHub/community links.
 
 Privacy positioning:
 
 - local memory stays on device
-- Cloud RAG indexes only files the user chooses
+- cloud archive mirror indexes Yomi-generated notes and session summaries securely
 - visible capture/listening status
 - password managers and banking apps are blocked from capture
 
@@ -48,7 +48,7 @@ Privacy positioning:
 | Voice | trial-limited | 200/day | 10000/day |
 | Screen analysis | yes | yes | yes |
 | Local memory | no | yes | yes |
-| Cloud RAG | no | optional | optional |
+| Cloud archive mirror | no | yes | yes |
 | Agents | no | no | yes |
 
 CTA behavior:
