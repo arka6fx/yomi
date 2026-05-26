@@ -143,4 +143,14 @@ contextBridge.exposeInMainWorld("yomi", {
     ipcRenderer.send("yomi:set-opacity", value)
   },
 
+  setGuideMode(on: boolean): void {
+    ipcRenderer.send("yomi:guide-mode", on)
+  },
+
+  onGuideExit(cb: () => void): () => void {
+    const h = () => cb()
+    ipcRenderer.on("yomi:guide-exit", h)
+    return () => ipcRenderer.off("yomi:guide-exit", h)
+  },
+
 })
