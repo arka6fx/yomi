@@ -36,6 +36,9 @@ declare global {
       quit(): void
       openUpgrade(): void
       setOpacity(value: number): void
+      // Guide mode
+      setGuideMode(on: boolean): void
+      onGuideExit(cb: () => void): () => void
     }
   }
 }
