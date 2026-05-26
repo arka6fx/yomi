@@ -10,7 +10,7 @@
     "build:win32-x64":    "bun build src/index.ts --compile --target bun-windows-x64   --outfile dist/sidecar-win32-x64.exe",
     "build": "bun run build:darwin-arm64 && bun run build:darwin-x64 && bun run build:win32-x64",
     "build:ci": "bun build src/index.ts --outdir dist --target bun",
-    "test": "bun test --pass-with-no-tests",
+    "test": "bun test --pass-with-no-tests --isolate",
     "lint": "eslint src",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
