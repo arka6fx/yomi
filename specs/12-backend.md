@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define the Hono backend: Better Auth, billing, usage metering, LLM/STT proxying, and Cloud RAG APIs.
+Define the Hono backend: Better Auth, billing, usage metering, LLM/STT proxying, and cloud archive mirroring/search.
 
 ## Invariants
 
@@ -10,7 +10,7 @@ Define the Hono backend: Better Auth, billing, usage metering, LLM/STT proxying,
 - LLM and speech provider keys live only in backend/server environments.
 - Razorpay is the payment processor.
 - Usage and feature gates are enforced at backend API boundaries.
-- Cloud RAG stores explicit uploads only; it never reads desktop files directly.
+- Structured memory stays in the sidecar; the backend hosts the mirrored archive index for Cloud RAG search.
 
 ## Route Groups
 
@@ -76,24 +76,27 @@ The desktop never receives provider keys.
 
 ## Cloud RAG API
 
-All Cloud RAG routes require an authenticated Pro/Max user or owner/dev override.
+Cloud RAG mirrors Yomi-generated archive material from the sidecar into the backend and exposes search over the mirrored corpus.
+
+Routes in `apps/backend/src/routes/rag.ts`:
 
 | Route | Purpose |
 |---|---|
-| `POST /api/rag/sources` | Create a source row before indexing |
-| `GET /api/rag/sources` | List current user's sources |
-| `POST /api/rag/documents` | Upload extracted text, chunk it, embed it |
+| `POST /api/rag/sync` | Upsert mirrored archive sources and delete removed ones |
+| `GET /api/rag/sources` | List current user's mirrored and legacy sources |
 | `POST /api/rag/search` | Semantic search over ready chunks |
+| `POST /api/rag/sources` | Legacy/manual source creation path |
+| `POST /api/rag/documents` | Legacy/manual document upload path |
 | `DELETE /api/rag/sources/:id` | Delete one source and its indexed data |
 
-RAG indexing parameters:
+Mirror indexing parameters:
 
 - embedding model: `text-embedding-3-small`
 - max document chars: `120000`
 - chunk size: `1800` chars
 - chunk overlap: `220` chars
 
-Search returns compact snippets with source metadata. Backend failures are surfaced to the sidecar as normal API errors; the sidecar treats Cloud RAG as optional context and continues with local memory.
+Cloud search returns compact snippets with source metadata. The sidecar keeps a local archive fallback but treats cloud results as primary when available.
 
 ## Implemented Files
 
@@ -107,6 +110,4 @@ Search returns compact snippets with source metadata. Backend failures are surfa
 
 ## Future Work
 
-- Background job queue for long document indexing.
-- RAG evaluation endpoint and benchmark fixtures.
 - Self-serve Max launch switch.

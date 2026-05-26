@@ -7,7 +7,6 @@ import { createModel } from "./model.js";
 import { buildFastPrompt, loadYomiMd, loadRichMemoryContext } from "../harness/prompt.js";
 import { appendSessionTurn, loadRecentSession } from "../memory/session.js";
 import { captureTurnMemory } from "../memory/engine.js";
-import { retrieveCloudRagContext } from "../memory/cloud-rag.js";
 
 const MODEL = process.env.FAST_PATH_MODEL || "gpt-4.1-mini";
 
@@ -21,19 +20,16 @@ async function getFastPrompt(
   text: string,
   hasScreen: boolean,
   plan: Plan | undefined,
-  cloudRagEnabled?: boolean,
-  authToken?: string,
 ): Promise<string> {
   if (cachedYomiMd === null) cachedYomiMd = await loadYomiMd()
   const memory = memoryEnabled(plan)
-  const [localCtx, recentSession, cloudRagContext] = memory
+  const [localCtx, recentSession] = memory
     ? await Promise.all([
         loadRichMemoryContext(text),
         loadRecentSession(),
-        retrieveCloudRagContext({ query: text, enabled: cloudRagEnabled, authToken }),
       ])
-    : [{ memorySummary: "", memoryIndex: "", localMemory: "", staticProfile: "", dynamicProfile: "" }, "", ""]
-  return buildFastPrompt({ yomiMd: cachedYomiMd, ...localCtx, cloudRagContext, recentSession, hasScreen })
+    : [{ memorySummary: "", memoryIndex: "", localMemory: "", cloudRagContext: "", staticProfile: "", dynamicProfile: "" }, ""]
+  return buildFastPrompt({ yomiMd: cachedYomiMd, ...localCtx, recentSession, hasScreen })
 }
 
 // Tiny single-consumer queue so multiple async producers (LLM text + N concurrent
@@ -150,8 +146,6 @@ async function* answerPipeline(
   screenshotB64?: string,
   tts = true,
   plan?: Plan,
-  cloudRagEnabled?: boolean,
-  authToken?: string,
 ): AsyncGenerator<SseEvent> {
   const content: any[] = [{ type: "text" as const, text }];
 
@@ -163,7 +157,7 @@ async function* answerPipeline(
     });
   }
 
-  const systemPrompt = await getFastPrompt(text, hasScreen, plan, cloudRagEnabled, authToken);
+  const systemPrompt = await getFastPrompt(text, hasScreen, plan);
 
   const result = streamText({
     model: createModel(MODEL),
@@ -329,7 +323,7 @@ export async function* fastPipeline(
         yield event
       }
     } else {
-      for await (const event of answerPipeline(text, req.screenshot_b64, req.tts !== false, req.plan, req.cloud_rag_enabled, req.auth_token)) {
+      for await (const event of answerPipeline(text, req.screenshot_b64, req.tts !== false, req.plan)) {
         if (event.type === "llm_chunk") output += event.text
         yield event
       }

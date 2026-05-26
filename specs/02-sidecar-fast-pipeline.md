@@ -11,7 +11,7 @@ Define the fast linear pipeline, context assembly, visual guidance mode, and mod
 - Screenshot capture happens in desktop before the sidecar request.
 - Screenshots are attached to the model only when the query appears screen-aware.
 - Pro/Max context retrieval happens before the single answer LLM call.
-- Cloud RAG is optional and non-fatal.
+- Local RAG retrieval is optional and non-fatal.
 - TTS starts on sentence boundaries so the user hears audio before the LLM finishes.
 
 ## Fast Pipeline
@@ -22,7 +22,7 @@ text input or Sarvam STT
   -> Pro/Max context assembly
        local memory profiles + FTS snippets
        recent session tail
-       optional Cloud RAG snippets
+       local RAG snippets from Yomi memory files
   -> Vercel AI SDK streamText
        model: FAST_PATH_MODEL || gpt-4.1-mini
        provider: @ai-sdk/openai via AI Credits/OpenAI-compatible endpoint
@@ -30,7 +30,7 @@ text input or Sarvam STT
   -> SSE events to desktop
 ```
 
-Explore skips local memory and Cloud RAG context. Pro and Max load local memory. Cloud RAG is queried only when enabled by desktop settings and a bearer token is supplied.
+Explore skips local memory and local RAG context. Pro and Max load local memory plus local RAG snippets.
 
 ## Request Contract
 
@@ -43,12 +43,8 @@ interface FastQueryRequest {
   tts?: boolean
   plan?: "explore" | "pro" | "max"
   history?: { role: "user" | "assistant"; text: string }[]
-  cloud_rag_enabled?: boolean
-  auth_token?: string
 }
 ```
-
-`auth_token` is used only by the sidecar to call authenticated backend Cloud RAG search. It is not included in model prompts.
 
 ## Screen Context
 
@@ -63,9 +59,9 @@ For Pro/Max answer mode, `getFastPrompt` loads:
 - local SQLite FTS memory snippets
 - capped legacy `memory.md` / `memory-index.md`
 - recent session tail
-- optional Cloud RAG snippets
+- local RAG snippets from `~/.yomi/sessions`, `~/.yomi/projects`, and non-profile `~/.yomi/memory` files
 
-If Cloud RAG retrieval fails, the request continues with local memory only.
+If local RAG retrieval fails, the request continues with structured local memory only.
 
 ## Visual Guidance Mode
 
@@ -99,11 +95,11 @@ If visual targets cannot be identified, emit a text-only guide step with `elemen
 - `apps/sidecar/src/pipeline/tts.ts`
 - `apps/sidecar/src/pipeline/visual-guide.ts`
 - `apps/sidecar/src/memory/engine.ts`
-- `apps/sidecar/src/memory/cloud-rag.ts`
+- `apps/sidecar/src/memory/local-rag.ts`
 - `packages/shared/src/index.ts`
 
 ## Future Work
 
 - Better screenshot relevance evaluation.
-- Local semantic embeddings for memory retrieval.
+- Local semantic embeddings for memory retrieval beyond FTS.
 - More nuanced output budgets by request type.

@@ -1,5 +1,11 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test"
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
 import { Hono } from "hono"
+
+const mockRagSources = {}
+const mockRagDocuments = {}
+const mockRagChunks = {}
+const mockRagEmbeddings = {}
+const mockRagRetrievalLogs = {}
 
 type TestUser = {
   id: string
@@ -13,13 +19,16 @@ let currentUser: TestUser
 let insertValues: unknown[] = []
 let updateRows: unknown[] = []
 let executeRows: unknown[] = []
+let sourceRows: unknown[] = [{ id: "source_1" }]
+let documentRows: unknown[] = []
+const realFetch = globalThis.fetch
 
 const fakeDb = {
-  insert: () => ({
+  insert: (table?: unknown) => ({
     values: (value: unknown) => {
       insertValues.push(value)
       return {
-        returning: () => Promise.resolve([{ id: "source_1", ...(value as object) }]),
+        returning: () => Promise.resolve([{ id: table === mockRagChunks ? "chunk_1" : table === mockRagDocuments ? "document_1" : "source_1", ...(value as object) }]),
         onConflictDoUpdate: () => ({
           returning: () => Promise.resolve([{ id: "document_1" }]),
         }),
@@ -28,9 +37,9 @@ const fakeDb = {
     },
   }),
   select: () => ({
-    from: () => ({
+    from: (table: unknown) => ({
       where: () => ({
-        limit: () => Promise.resolve([{ id: "source_1" }]),
+        limit: () => Promise.resolve(table === mockRagDocuments ? documentRows : sourceRows),
       }),
     }),
   }),
@@ -49,11 +58,11 @@ const fakeDb = {
 
 mock.module("@yomi/db", () => ({
   db: fakeDb,
-  ragChunks: {},
-  ragDocuments: {},
-  ragEmbeddings: {},
-  ragRetrievalLogs: {},
-  ragSources: {},
+  ragChunks: mockRagChunks,
+  ragDocuments: mockRagDocuments,
+  ragEmbeddings: mockRagEmbeddings,
+  ragRetrievalLogs: mockRagRetrievalLogs,
+  ragSources: mockRagSources,
 }))
 
 mock.module("../auth.js", () => ({
@@ -84,11 +93,25 @@ function user(overrides: Partial<TestUser> = {}): TestUser {
 
 describe("Cloud RAG routes", () => {
   beforeEach(() => {
+    globalThis.fetch = (async (...args: Parameters<typeof fetch>) => {
+      const [input] = args
+      const url = typeof input === "string" ? input : input.toString()
+      if (url.includes("/embeddings")) {
+        return new Response(JSON.stringify({ data: [{ embedding: [0.1, 0.2, 0.3] }] }), { status: 200 })
+      }
+      return new Response("{}", { status: 200 })
+    }) as typeof fetch
     currentUser = user()
     insertValues = []
     updateRows = [{ id: "source_1" }]
     executeRows = []
+    sourceRows = [{ id: "source_1" }]
+    documentRows = []
     process.env["OPENAI_API_KEY"] = "test-key"
+  })
+
+  afterEach(() => {
+    globalThis.fetch = realFetch
   })
 
   it("blocks Explore users from creating sources", async () => {
@@ -131,6 +154,40 @@ describe("Cloud RAG routes", () => {
     expect(body.userId).toBe("user_1")
     expect(body.name).toBe("notes.md")
     expect(body.sourceType).toBe("upload")
+  })
+
+  it("syncs mirrored archive sources", async () => {
+    sourceRows = []
+    documentRows = []
+
+    const res = await app().request("/api/rag/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sources: [
+          {
+            path: "sessions/2026-05-26-dev.md",
+            title: "2026-05-26-dev.md",
+            content: "Mirror this archive note.",
+            contentHash: "ignored",
+            updatedAt: "2026-05-26T00:00:00.000Z",
+          },
+        ],
+        removedPaths: [],
+      }),
+    })
+    const body = await res.json() as { synced?: number; removed?: number }
+
+    expect(res.status).toBe(200)
+    expect(body.synced).toBe(1)
+    expect(body.removed).toBe(0)
+    expect(insertValues.length).toBeGreaterThan(0)
+    expect(insertValues[0]).toMatchObject({
+      userId: "user_1",
+      name: "2026-05-26-dev.md",
+      path: "sessions/2026-05-26-dev.md",
+      sourceType: "mirror",
+    })
   })
 
   it("requires document content before indexing", async () => {

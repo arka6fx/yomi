@@ -10,7 +10,7 @@ Single source of truth for Yomi's identity, principles, and phase map. Every oth
 - The desktop shell has no AI logic. It is capture + UI only.
 - LLM keys live in the cloud backend only.
 - The local memory engine (`~/.yomi/`) is the user's persistent personal memory. It is filesystem-first and is not synced to Neon by default.
-- Cloud RAG is separate from personal memory and indexes only files the user explicitly uploads.
+- Cloud RAG mirrors larger non-personal Yomi memory artifacts such as old sessions, project notes, scratchpads, long memory files, and historical decisions; local archive fallback remains available when needed.
 
 ## Detailed Design
 
@@ -25,7 +25,7 @@ Cross-platform AI buddy (Mac menu bar, Windows tray) that routes requests betwee
 | Cross-platform | Mac menu bar + Windows tray |
 | Dual architecture | Router chooses fast linear pipeline OR ReAct agent loop per request |
 | Persistent memory | Local memory engine (`~/.yomi/`) - survives reboots, agent-curated |
-| Optional document RAG | Cloud RAG on Neon for explicitly uploaded sources |
+| Cloud archive mirror | Backend search over mirrored non-personal Yomi memory files |
 | Background agent | Autonomous tasks with ReAct loop + subagents |
 | MCP ecosystem | Calendar, email, browser, Notion, Slack (Phase 2+) |
 | Proactive hooks | Opt-in screen-context triggers |
@@ -40,7 +40,7 @@ Cross-platform AI buddy (Mac menu bar, Windows tray) that routes requests betwee
 | **Agent path** | ReAct loop with tools, MCP servers, and subagents |
 | **Intent router** | First step of every turn. Returns `fast` or `agent`. |
 | **Local memory** | `~/.yomi/` filesystem memory plus local indexes/profiles. Not cloud-synced by default. |
-| **Cloud RAG** | Paid opt-in document retrieval over user-uploaded sources in Neon. |
+| **Cloud RAG** | Mirrored retrieval over Yomi-generated archive context, with local fallback when cloud search is unavailable. |
 | **Harness** | System prompt + tools + memory + code execution + hooks |
 | **Compaction** | Recall pass + precision pass → reset context window |
 
@@ -51,7 +51,7 @@ Cross-platform AI buddy (Mac menu bar, Windows tray) that routes requests betwee
 | 0 — Spike | hotkey → Sarvam STT → screenshot → 1 LLM call → Sarvam TTS | 1–2 |
 | 1 — Buddy | floating UI, tray/menubar shell, notepad init, permissions | 3–6 |
 | 2 — Agent | intent router, ReAct loop, hooks lifecycle, MCP (calendar, email, browser), subagents | 7–12 |
-| 3 — Accounts | Hono backend, Better Auth, Drizzle/Neon, Razorpay, LLM proxy (Vercel AI SDK), optional Cloud RAG | 13–15 |
+| 3 — Accounts | Hono backend, Better Auth, Drizzle/Neon, Razorpay, LLM proxy (Vercel AI SDK) | 13–15 |
 | 4 — X-platform | Windows tray, Electron vs Tauri decision | 16–20 |
 | 5 — Launch | Next.js landing, waitlist → download, pricing page, Discord | 21–22 |
 

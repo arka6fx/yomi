@@ -3,6 +3,7 @@ import { readFile, writeFile, appendFile } from "node:fs/promises"
 import { join } from "node:path"
 import { createModel } from "../pipeline/model.js"
 import { notepadDir } from "./loader.js"
+import { scheduleCloudRagSync } from "./cloud-rag.js"
 
 const COMPACT_MODEL = process.env.COMPACT_MODEL || "gpt-4.1-mini"
 // Minimum session log size before we bother calling the LLM.
@@ -70,4 +71,5 @@ If nothing new worth adding, respond with exactly: NOTHING_NEW`,
   if (!existing.includes(`sessions/${today}-dev.md`)) {
     await appendFile(indexPath, indexEntry, "utf-8")
   }
+  scheduleCloudRagSync("compact")
 }

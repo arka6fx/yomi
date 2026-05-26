@@ -3,6 +3,7 @@ import { homedir } from "node:os"
 import { join } from "node:path"
 import { loadMemorySummary, loadMemoryIndex } from "../memory/loader.js"
 import { readProfile, retrieveLocalMemoryContext } from "../memory/engine.js"
+import { retrieveCloudRagContext } from "../memory/cloud-rag.js"
 
 const MAX_MEMORY_SUMMARY_CHARS = 4000
 const MAX_MEMORY_INDEX_CHARS = 2000
@@ -43,16 +44,18 @@ export async function loadRichMemoryContext(query: string): Promise<{
   memorySummary: string
   memoryIndex: string
   localMemory: string
+  cloudRagContext: string
   staticProfile: string
   dynamicProfile: string
 }> {
-  const [base, localMemory, staticProfile, dynamicProfile] = await Promise.all([
+  const [base, localMemory, cloudRagContext, staticProfile, dynamicProfile] = await Promise.all([
     loadMemoryContext(),
     Promise.resolve(retrieveLocalMemoryContext(query, 3000)),
+    retrieveCloudRagContext(query, 3000),
     readProfile("static"),
     readProfile("dynamic"),
   ])
-  return { ...base, localMemory, staticProfile, dynamicProfile }
+  return { ...base, localMemory, cloudRagContext, staticProfile, dynamicProfile }
 }
 
 // Resolve userName and os from env/process when not supplied by caller.
