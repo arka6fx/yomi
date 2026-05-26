@@ -1,12 +1,6 @@
 import { readFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { join } from "node:path"
-import { loadMemorySummary, loadMemoryIndex } from "../memory/loader.js"
-import { readProfile, retrieveLocalMemoryContext } from "../memory/engine.js"
-import { retrieveCloudRagContext } from "../memory/cloud-rag.js"
-
-const MAX_MEMORY_SUMMARY_CHARS = 4000
-const MAX_MEMORY_INDEX_CHARS = 2000
 
 export interface PromptContext {
   userName?: string
@@ -29,33 +23,6 @@ export async function loadYomiMd(): Promise<string> {
   } catch {
     return ""
   }
-}
-
-// Load all always-preloaded memory files in parallel.
-export async function loadMemoryContext(): Promise<{ memorySummary: string; memoryIndex: string }> {
-  const [memorySummary, memoryIndex] = await Promise.all([loadMemorySummary(), loadMemoryIndex()])
-  return {
-    memorySummary: memorySummary.slice(0, MAX_MEMORY_SUMMARY_CHARS),
-    memoryIndex: memoryIndex.slice(0, MAX_MEMORY_INDEX_CHARS),
-  }
-}
-
-export async function loadRichMemoryContext(query: string): Promise<{
-  memorySummary: string
-  memoryIndex: string
-  localMemory: string
-  cloudRagContext: string
-  staticProfile: string
-  dynamicProfile: string
-}> {
-  const [base, localMemory, cloudRagContext, staticProfile, dynamicProfile] = await Promise.all([
-    loadMemoryContext(),
-    Promise.resolve(retrieveLocalMemoryContext(query, 3000)),
-    retrieveCloudRagContext(query, 3000),
-    readProfile("static"),
-    readProfile("dynamic"),
-  ])
-  return { ...base, localMemory, cloudRagContext, staticProfile, dynamicProfile }
 }
 
 // Resolve userName and os from env/process when not supplied by caller.
