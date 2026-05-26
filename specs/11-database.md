@@ -11,7 +11,7 @@ Define the Drizzle schema, Neon Postgres usage, and migration workflow. The back
 - `DATABASE_URL` is set only in backend/database environments.
 - Better Auth user IDs are text, so app tables use text `user_id`.
 - Personal local memory in `~/.yomi` is not synced to Neon.
-- Cloud RAG stores only user-selected uploaded documents.
+- Local RAG is sidecar-owned and stored in local SQLite, not Neon.
 
 ## Auth And Account Tables
 
@@ -48,11 +48,11 @@ Core app tables:
 
 ## Cloud RAG Tables
 
-Cloud RAG uses the existing Neon database and pgvector. A separate Neon project is not required.
+The schema contains the cloud archive mirror tables used by `/api/rag`. `rag_sources` carries the mirrored archive identity, while the documents/chunks/embeddings tables store the searchable corpus.
 
 | Table | Purpose |
 |---|---|
-| `rag_sources` | One user-selected uploaded source |
+| `rag_sources` | One mirrored archive source or legacy manual source |
 | `rag_documents` | Extracted text document per source |
 | `rag_chunks` | Chunked text windows for retrieval |
 | `rag_embeddings` | Embedding vector for each chunk |
@@ -61,12 +61,14 @@ Cloud RAG uses the existing Neon database and pgvector. A separate Neon project 
 Important fields:
 
 - `rag_sources.user_id`: owner, text foreign key to Better Auth user
+- `rag_sources.path`: relative `~/.yomi` archive path for mirrored files
+- `rag_sources.content_hash`: sha256 of the mirrored file content
 - `rag_sources.status`: `indexing`, `ready`, `error`, `deleted`
 - `rag_documents.content_hash`: dedupe/change detection
 - `rag_chunks.chunk_index`: stable order within a document
 - `rag_embeddings.embedding`: pgvector embedding, currently `text-embedding-3-small`
 
-Delete behavior: deleting a source removes its documents, chunks, and embeddings through backend logic and cascade relationships.
+Delete behavior removes a source's documents, chunks, and embeddings through backend logic and cascade relationships.
 
 ## Migration Workflow
 
@@ -82,10 +84,9 @@ Use the `source-command-db-migrate` workflow when generating new Drizzle migrati
 
 - `packages/db/src/schema.ts`
 - `packages/db/drizzle/0004_cloud_rag.sql`
+- `packages/db/drizzle/0005_cloud_rag_archive_mirror.sql`
 - `packages/db/drizzle/meta/_journal.json`
 
 ## Future Work
 
-- RAG evaluation tables for offline benchmarks.
-- Optional encrypted source payloads before storage.
-- A cleanup job for stale `indexing` sources after failed uploads.
+- Optional encryption at rest for local memory SQLite.

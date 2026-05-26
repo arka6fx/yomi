@@ -1,6 +1,7 @@
 import { appendFile, readFile, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { initMemoryDir, notepadDir } from "./loader.js"
+import { scheduleCloudRagSync } from "./cloud-rag.js"
 
 export type SessionTurnKind = "fast" | "agent"
 
@@ -48,6 +49,7 @@ export async function appendSessionTurn(turn: SessionTurn): Promise<void> {
   ]
 
   await appendFile(sessionPath(), `${parts.join("\n")}\n`, "utf-8")
+  scheduleCloudRagSync("session")
 }
 
 export async function loadRecentSession(maxChars = MAX_RECENT_CHARS): Promise<string> {
@@ -73,6 +75,7 @@ export async function remember(key: string, content: string): Promise<void> {
     : `# Long-term memory - [last updated: ${todayISO()}]\n\n${entry}\n`
 
   await writeFile(memPath, next, "utf-8")
+  scheduleCloudRagSync("remember")
 }
 
 export async function forget(query: string): Promise<number> {
@@ -84,6 +87,9 @@ export async function forget(query: string): Promise<number> {
   const lines = current.split("\n")
   const kept = lines.filter(line => !line.toLowerCase().includes(needle))
   const removed = lines.length - kept.length
-  if (removed > 0) await writeFile(memPath, kept.join("\n"), "utf-8")
+  if (removed > 0) {
+    await writeFile(memPath, kept.join("\n"), "utf-8")
+    scheduleCloudRagSync("forget")
+  }
   return removed
 }

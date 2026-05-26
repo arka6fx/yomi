@@ -8,7 +8,7 @@ Define the four-layer architecture, IPC contracts, data flows, and port assignme
 
 - The desktop shell NEVER makes direct LLM calls. All AI goes through the sidecar.
 - The sidecar NEVER holds API keys. It proxies requests to the backend.
-- Raw screen captures never leave the device. Audio is processed through the configured Sarvam STT path; only the resolved transcript, prompt context, and explicitly uploaded Cloud RAG documents are sent to backend/cloud services.
+- Raw screen captures never leave the device. Audio is processed through the configured Sarvam STT path; only the resolved transcript and prompt context needed for the model leave the machine.
 - The fast path has a strict < 2s budget end-to-end (hotkey press to first audio byte).
 
 ## Detailed Design
@@ -118,7 +118,7 @@ Response: { snippets: RagSearchResult[] }
   → Desktop captures mic stream + screenshot (parallel)
   → POST /query/fast to sidecar (audio + screenshot)
     → Sidecar: Sarvam STT (`saarika:v2.5`)
-    → Sidecar: local memory + optional Cloud RAG context
+    → Sidecar: structured local memory + local RAG archive context
     → Sidecar: Vercel AI SDK streamText (cached system prompt + context)
     → Sidecar: Sarvam TTS (`bulbul:v3`)
   → Desktop receives audio_chunk stream → plays audio

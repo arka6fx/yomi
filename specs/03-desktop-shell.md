@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define the Electron main process structure, platform adapters, capture abstraction, sidecar lifecycle, device-code auth, and Cloud RAG source-management bridge. The shell is OS integration only: no AI logic and no prompt construction lives here.
+Define the Electron main process structure, platform adapters, capture abstraction, sidecar lifecycle, and device-code auth. The shell is OS integration only: no AI logic, memory retrieval, or prompt construction lives here.
 
 ## Invariants
 
@@ -10,7 +10,7 @@ Define the Electron main process structure, platform adapters, capture abstracti
 - Login happens in the system browser, never in an embedded Electron window.
 - The sidecar must be healthy before the overlay becomes interactive.
 - Auth tokens are stored with Electron `safeStorage`.
-- Cloud RAG uploads are explicit user actions. The desktop never uploads `~/.yomi` memory files.
+- Local RAG is owned by the sidecar. The desktop does not expose file-upload RAG controls.
 
 ## Process Structure
 
@@ -23,7 +23,6 @@ apps/desktop/src/
     hotkey.ts      global shortcut registration
     ipc.ts         renderer <-> main <-> sidecar/backend bridge
     auth.ts        device-code auth and encrypted token storage
-    settings.ts    local desktop settings, including Cloud RAG toggle
   preload/
     index.ts       contextBridge API exposed to renderer
   renderer/
@@ -71,7 +70,7 @@ Hold-to-talk is not reliable across platforms, so voice uses toggle-to-talk.
 
 ## Fast Query Bridge
 
-On submit, the desktop collects text or audio, captures a screenshot, reads account/settings state, and sends:
+On submit, the desktop collects text or audio, captures a screenshot, reads account state, and sends:
 
 ```ts
 {
@@ -81,56 +80,11 @@ On submit, the desktop collects text or audio, captures a screenshot, reads acco
   mode: "answer",
   tts,
   plan,
-  history,
-  cloud_rag_enabled,
-  auth_token
+  history
 }
 ```
-
-`auth_token` is passed only so the sidecar can query authenticated backend routes. It is not injected into prompts.
 
 The response is an SSE stream from `/query/fast`; the main process forwards events to the renderer through `yomi:event`.
-
-## Desktop Settings
-
-Settings are stored locally under Electron `userData/settings.json`.
-
-```ts
-interface DesktopSettings {
-  cloudRagEnabled: boolean
-}
-```
-
-The Cloud RAG toggle affects future fast queries only. Turning it on does not upload files by itself.
-
-## Cloud RAG Source Management
-
-The desktop owns file picking and local file reading. The backend owns source/document/chunk persistence.
-
-IPC channels exposed through preload:
-
-| Channel | Purpose |
-|---|---|
-| `yomi:get-cloud-rag-enabled` | Read local toggle |
-| `yomi:set-cloud-rag-enabled` | Persist local toggle |
-| `yomi:pick-rag-files` | Open file picker for supported text files |
-| `yomi:index-rag-files` | Read selected files and upload to backend RAG APIs |
-| `yomi:list-rag-sources` | Fetch authenticated source list |
-| `yomi:delete-rag-source` | Delete one source and its chunks |
-
-Supported upload extensions:
-
-```text
-.txt .md .markdown .json .csv .log .tsv .yaml .yml
-```
-
-Guards:
-
-- reject files inside `~/.yomi`
-- reject binary files
-- reject oversized files before upload
-- require an authenticated Pro/Max session
-- keep source paths local; the backend stores metadata and document text, not arbitrary filesystem access
 
 ## Auth Flow
 
