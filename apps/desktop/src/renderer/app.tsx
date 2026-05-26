@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useMemo, useCallback } from "react"
 import { createRoot } from "react-dom/client"
 import { useYomiStore } from "./store"
+import type { RagIndexResult, RagSourceInfo } from "@yomi/shared"
 import type { HotkeyState, ChatEntry, SubscriptionInfo } from "./store"
 
 // ── Theme System ───────────────────────────────────────────────────────────────
@@ -1130,6 +1131,10 @@ function MenuCard({ subscription, plan, onProfileNameSave, onSignOut, onClose, o
   const [profileEditing, setProfileEditing] = React.useState(false)
   const [profileSaving, setProfileSaving] = React.useState(false)
   const [profileError, setProfileError] = React.useState("")
+  const [cloudRagEnabled, setCloudRagEnabled] = React.useState(false)
+  const [ragSources, setRagSources] = React.useState<RagSourceInfo[]>([])
+  const [ragBusy, setRagBusy] = React.useState(false)
+  const [ragMessage, setRagMessage] = React.useState("")
 
   const [opacity, setOpacity] = React.useState(() => {
     const saved = localStorage.getItem("yomi:opacity")
@@ -1141,6 +1146,11 @@ function MenuCard({ subscription, plan, onProfileNameSave, onSignOut, onClose, o
     setProfileEditing(false)
     setProfileError("")
   }, [subscription?.name])
+
+  React.useEffect(() => {
+    window.yomi.getCloudRagEnabled().then(setCloudRagEnabled).catch(() => {})
+    refreshRagSources()
+  }, [])
 
   const handleOpacity = (val: number) => {
     setOpacity(val)
@@ -1163,6 +1173,66 @@ function MenuCard({ subscription, plan, onProfileNameSave, onSignOut, onClose, o
       setProfileError(err instanceof Error ? err.message : "Could not save")
     } finally {
       setProfileSaving(false)
+    }
+  }
+
+  const toggleCloudRag = async () => {
+    if (!cloudAllowed) return
+    const next = !cloudRagEnabled
+    setCloudRagEnabled(next)
+    try {
+      setCloudRagEnabled(await window.yomi.setCloudRagEnabled(next))
+    } catch {
+      setCloudRagEnabled(!next)
+    }
+  }
+
+  const cloudAllowed = plan === "pro" || plan === "max"
+
+  const refreshRagSources = async () => {
+    try {
+      const data = await window.yomi.listRagSources()
+      setRagSources(data.sources)
+    } catch {
+      setRagSources([])
+    }
+  }
+
+  const addRagFiles = async () => {
+    if (!cloudAllowed || ragBusy) return
+    setRagBusy(true)
+    setRagMessage("Selecting files...")
+    try {
+      const files = await window.yomi.pickRagFiles()
+      if (files.length === 0) {
+        setRagMessage("")
+        return
+      }
+      setRagMessage(`Indexing ${files.length} file${files.length === 1 ? "" : "s"}...`)
+      const results = await window.yomi.indexRagFiles(files.map(f => f.path))
+      const failed = results.filter((r: RagIndexResult) => !r.ok)
+      const ok = results.length - failed.length
+      setRagMessage(failed.length ? `${ok} indexed, ${failed.length} failed` : `${ok} indexed`)
+      await refreshRagSources()
+    } catch (err) {
+      setRagMessage(err instanceof Error ? err.message : "Could not index files")
+    } finally {
+      setRagBusy(false)
+    }
+  }
+
+  const deleteRagSource = async (id: string) => {
+    if (ragBusy) return
+    setRagBusy(true)
+    setRagMessage("Deleting source...")
+    try {
+      await window.yomi.deleteRagSource(id)
+      await refreshRagSources()
+      setRagMessage("Source deleted")
+    } catch (err) {
+      setRagMessage(err instanceof Error ? err.message : "Could not delete source")
+    } finally {
+      setRagBusy(false)
     }
   }
 
@@ -1417,6 +1487,117 @@ function MenuCard({ subscription, plan, onProfileNameSave, onSignOut, onClose, o
           className="no-drag"
           style={{ width:"100%", margin:0 }}
         />
+      </div>
+
+      <div style={{ height:1, background: t.menuSep }} />
+
+      {/* Cloud RAG */}
+      <div style={{ padding:"10px 14px" }}>
+        <button
+          className="no-drag"
+          onClick={toggleCloudRag}
+          disabled={!cloudAllowed}
+          style={{
+            width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between",
+            gap:10, background:"none", border:"none", padding:0,
+            cursor:cloudAllowed ? "pointer" : "default",
+            color:t.btnText, fontFamily:UI_FONT,
+            opacity:cloudAllowed ? 1 : 0.55,
+          }}
+        >
+          <span style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", gap:2 }}>
+            <span style={{ fontSize:12, fontWeight:700 }}>Cloud RAG</span>
+            <span style={{ fontSize:10.5, color:t.dim, lineHeight:1.35, textAlign:"left" }}>
+              Search opted-in cloud docs. Local memory stays on this device.
+            </span>
+          </span>
+          <span style={{
+            width:34, height:18, borderRadius:999, padding:2, boxSizing:"border-box",
+            background: cloudRagEnabled ? t.upgradeBg : t.kbdBg,
+            border:`1px solid ${cloudRagEnabled ? t.upgradeBorder : t.kbdBorder}`,
+            flexShrink:0,
+          }}>
+            <span style={{
+              display:"block", width:12, height:12, borderRadius:999,
+              background: cloudRagEnabled ? t.upgradeText : t.dim,
+              transform:`translateX(${cloudRagEnabled ? 16 : 0}px)`,
+              transition:"transform .15s",
+            }} />
+          </span>
+        </button>
+        <div style={{ display:"flex", gap:6, marginTop:9 }}>
+          <button
+            className="no-drag"
+            onClick={addRagFiles}
+            disabled={!cloudAllowed || ragBusy}
+            style={{
+              flex:1, background:t.kbdBg, border:`1px solid ${t.kbdBorder}`,
+              color:t.btnText, borderRadius:6, padding:"6px 8px",
+              fontSize:11, fontFamily:UI_FONT, fontWeight:700,
+              cursor:cloudAllowed && !ragBusy ? "pointer" : "default",
+              opacity:cloudAllowed && !ragBusy ? 1 : 0.55,
+            }}
+          >
+            Add files
+          </button>
+          <button
+            className="no-drag"
+            onClick={refreshRagSources}
+            disabled={!cloudAllowed || ragBusy}
+            style={{
+              background:"none", border:`1px solid ${t.kbdBorder}`,
+              color:t.dim, borderRadius:6, padding:"6px 8px",
+              fontSize:11, fontFamily:UI_FONT, fontWeight:700,
+              cursor:cloudAllowed && !ragBusy ? "pointer" : "default",
+            }}
+          >
+            Refresh
+          </button>
+        </div>
+        {ragMessage && (
+          <div style={{ marginTop:7, fontSize:10.5, color:t.dim, fontFamily:UI_FONT, lineHeight:1.35 }}>
+            {ragMessage}
+          </div>
+        )}
+        {cloudAllowed && ragSources.length > 0 && (
+          <div style={{ marginTop:9, maxHeight:104, overflowY:"auto", display:"flex", flexDirection:"column", gap:5 }}>
+            {ragSources.slice(0, 4).map(source => (
+              <div
+                key={source.id}
+                style={{
+                  display:"flex", alignItems:"center", gap:7,
+                  background:t.kbdBg, border:`1px solid ${t.kbdBorder}`,
+                  borderRadius:6, padding:"6px 7px",
+                }}
+              >
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{
+                    color:t.text, fontSize:11.5, fontFamily:UI_FONT, fontWeight:700,
+                    overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+                  }}>
+                    {source.name}
+                  </div>
+                  <div style={{ color:t.dim, fontSize:10, fontFamily:UI_FONT, marginTop:1 }}>
+                    {source.documentCount} doc · {source.chunkCount} chunks
+                  </div>
+                </div>
+                <button
+                  className="no-drag"
+                  onClick={() => deleteRagSource(source.id)}
+                  disabled={ragBusy}
+                  style={{
+                    background:"none", border:"none", color:t.dangerText,
+                    fontSize:14, lineHeight:1, cursor:ragBusy ? "default" : "pointer",
+                    padding:"2px 4px", flexShrink:0,
+                  }}
+                  title="Delete source"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div style={{ height:1, background: t.menuSep }} />
@@ -1929,7 +2110,7 @@ const App: React.FC = () => {
       const textInputH = hotkeyState === "text-input" ? 88 : 0
       const entriesH = entries.length > 0 ? MAX_ENTRIES : 0
       // Profile row makes the menu taller than the toolbar-only overlay.
-      const menuMin = menuOpen ? 610 : 0
+      const menuMin = menuOpen ? 760 : 0
       window.yomi.resize(680, Math.max(46, 46 + textInputH + entriesH, menuMin))
     }
   }, [authState, entries, hotkeyState, menuOpen])

@@ -72,6 +72,9 @@ let loadRecentSessionCalls = 0;
 // ---------------------------------------------------------------------------
 
 mock.module("ai", () => ({
+  tool: (definition: unknown) => definition,
+  jsonSchema: (schema: unknown) => schema,
+  generateObject: async () => ({ object: {} }),
   streamText: (_opts: { messages?: unknown[]; [key: string]: unknown }) => {
     // Capture messages for caching assertions.
     lastStreamTextMessages = (_opts.messages as unknown[]) ?? [];

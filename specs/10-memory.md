@@ -1,139 +1,126 @@
-# Spec 10 — Memory
+# Spec 10 - Local Memory
 
 ## Purpose
 
-Define Yomi's persistent memory layer: how user preferences, facts, and context are stored, retrieved, and compacted. Memory lives entirely on-device in `~/.yomi/notepad/`.
+Define Yomi's local memory engine: how user preferences, facts, project context, and recent session context are stored, retrieved, updated, and injected into Pro/Max turns.
 
 ## Invariants
 
-- Memory is stored on-device only — never synced to cloud.
-- Each fact is a `.md` file in `~/.yomi/notepad/`.
-- Memory is read at the start of every turn (injected into system prompt).
-- Memory is written at the end of every agent turn (via auto-memory hook).
-- Compaction runs when the notepad directory exceeds 100 entries.
-- Notepad entries older than 90 days without access are summarised into a daily digest then deleted.
+- Personal memory is local-only and stored under `~/.yomi/`.
+- Personal memory is never synced to Neon and is never uploaded to Cloud RAG.
+- Explore does not load or write memory.
+- Pro and Max can load/write local memory.
+- Screenshots, audio, base64 payloads, secrets, and raw media are never persisted to memory.
+- Memory retrieval must be bounded before prompt injection.
+- Uncertain updates are not allowed to silently overwrite active memories.
 
-## Detailed Design
+## Storage Layout
 
-### Storage format
-
-```
-~/.yomi/notepad/
-  └── YYYY-MM-DD-HHmmss-<slug>.md
-```
-
-Each file is a Markdown file with frontmatter:
-
-```yaml
----
-key: "user-name"
-created: 2025-06-15T10:30:00Z
-accessed: 2025-06-16T14:00:00Z
-source: "auto"  # "auto" | "explicit" | "compaction"
----
-Arkady prefers dark mode and responds best to concise, direct answers.
+```text
+~/.yomi/
+  yomi.md
+  memory.db
+  memory/
+    profile.static.md
+    profile.dynamic.md
+  sessions/
+    YYYY-MM-DD-dev.md
 ```
 
-### Retrieval
+`memory.db` is a Bun SQLite database with an FTS index for local retrieval. Markdown profile files are human-readable summaries generated from active memories.
 
-On every turn, the `MEMORY_SNIPPET` section of the system prompt is populated by:
+## Memory Model
 
-```typescript
-function getMemorySnippet(maxChars: number = 2000): string {
-  const files = fs.readdirSync(NOTEPAD_DIR)
-    .map(f => ({ path: f, stat: fs.statSync(path.join(NOTEPAD_DIR, f)) }))
-    .sort((a, b) => b.stat.mtimeMs - a.stat.mtimeMs)  // most recently accessed first
-    .slice(0, 10)  // top 10 entries
+Memory kinds:
 
-  let snippet = "## Memory\n"
-  for (const file of files) {
-    const content = fs.readFileSync(path.join(NOTEPAD_DIR, file.path), "utf-8")
-    const body = content.split("---\n")[2] || content
-    if (snippet.length + body.length > maxChars) break
-    snippet += `- ${body.trim()}\n`
-    // update accessed timestamp
-    fs.utimesSync(file.path, new Date(), new Date())
-  }
-  return snippet
+```ts
+type MemoryKind =
+  | "preference"
+  | "fact"
+  | "project"
+  | "decision"
+  | "open_thread"
+  | "correction"
+```
+
+Memory statuses:
+
+```ts
+type MemoryStatus =
+  | "active"
+  | "superseded"
+  | "uncertain"
+  | "forgotten"
+```
+
+Core fields:
+
+```ts
+type MemoryRecord = {
+  id: string
+  kind: MemoryKind
+  scope: string
+  topic: string
+  content: string
+  status: MemoryStatus
+  confidence: number
+  sourcePath: string | null
+  sourceTurnId: string | null
+  supersededBy: string | null
+  createdAt: string
+  updatedAt: string
 }
 ```
 
-### Writing
+## Retrieval
 
-The auto-memory hook calls `writeNotepad(key, content)`:
+Before a Pro/Max fast-path turn, the sidecar retrieves:
 
-```typescript
-function writeNotepad(key: string, content: string): string {
-  const slug = key.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
-  const filename = `${new Date().toISOString().slice(0,10)}-${Date.now()}-${slug}.md`
-  const frontmatter = [
-    "---",
-    `key: ${key}`,
-    `created: ${new Date().toISOString()}`,
-    `accessed: ${new Date().toISOString()}`,
-    `source: auto`,
-    "---",
-    "",
-    content,
-  ].join("\n")
-  fs.writeFileSync(path.join(NOTEPAD_DIR, filename), frontmatter)
-  return filename
-}
-```
+- `~/.yomi/yomi.md`
+- static profile
+- dynamic profile
+- relevant local memories via SQLite FTS/BM25
+- recent session tail from today's session log
+- optional Cloud RAG snippets if explicitly enabled
 
-### Compaction
+Local retrieval is keyword/FTS based in v1. Query terms are sanitized before SQLite `MATCH`, including hyphenated terms, so values like `local-memory-saffron` do not break FTS syntax.
 
-```typescript
-function compactNotepad(): void {
-  const files = fs.readdirSync(NOTEPAD_DIR)
-    .map(f => ({ path: f, fullPath: path.join(NOTEPAD_DIR, f) }))
-    .filter(f => f.path.endsWith(".md"))
+Only active memories with sufficient confidence are injected. Retrieved snippets are capped by character budget before prompt assembly.
 
-  if (files.length <= 100) return
+## Writing
 
-  // Group by key, keep most recent for each key
-  const byKey = new Map<string, typeof files>()
-  for (const f of files) {
-    const key = extractKey(f.fullPath)
-    if (!byKey.has(key)) byKey.set(key, [])
-    byKey.get(key)!.push(f)
-  }
+After a completed Pro/Max turn, the sidecar:
 
-  // For each key: merge multiple entries into one via LLM summarisation
-  const model = createModel()  // gpt-4.1-mini
-  for (const [key, entries] of byKey) {
-    if (entries.length <= 1) continue
-    const contents = entries.map(f => fs.readFileSync(f.fullPath, "utf-8")).join("\n\n")
-    const summarised = await generateText({
-      model,
-      prompt: `Summarise these notes into one concise entry (max 200 chars):\n${contents}`,
-    })
-    // Delete old entries, write merged one
-    entries.forEach(f => fs.unlinkSync(f.fullPath))
-    writeNotepad(key, summarised.text)
-  }
+1. Appends a sanitized session turn to `~/.yomi/sessions/YYYY-MM-DD-dev.md`.
+2. Calls `captureTurnMemory({ input, output, mode })`.
+3. Uses the configured memory extraction model to produce structured memories.
+4. Inserts high-confidence memories into SQLite.
+5. Refreshes `profile.static.md` and `profile.dynamic.md`.
 
-  // After dedup, if still > 100: delete oldest entries
-  const remaining = fs.readdirSync(NOTEPAD_DIR).filter(f => f.endsWith(".md"))
-  if (remaining.length > 100) {
-    const sorted = remaining
-      .map(f => ({ path: f, stat: fs.statSync(path.join(NOTEPAD_DIR, f)) }))
-      .sort((a, b) => a.stat.mtimeMs - b.stat.mtimeMs)
-    sorted.slice(0, sorted.length - 100).forEach(f => fs.unlinkSync(f.fullPath))
-  }
-}
-```
+Extraction rules:
 
-### Age-out
+- Store durable preferences, facts, decisions, projects, open threads, and clear corrections.
+- Omit one-off trivia.
+- Omit uncertain or sensitive content.
+- Redact image/audio/base64-like payloads.
 
-A weekly scheduled task (or triggered at sidecar start) deletes entries older than 90 days. Before deletion, entries are summarised into a daily digest markdown file.
+## Updates and Forgetting
 
-## Files to create
+Clear corrections can supersede older memories by topic. Superseded memories remain in SQLite for traceability but are excluded from normal retrieval.
 
-- `apps/sidecar/src/memory/notepad.ts` — read, write, compact, age-out functions.
-- `apps/sidecar/src/memory/compactor.ts` — LLM-based merging of duplicate-key entries.
+`forgetLocalMemory(queryOrId)` marks matching memories as `forgotten` and refreshes profiles. Forgotten memories are excluded from retrieval.
 
-## Open Questions
+## Implemented Files
 
-- Should memory be encrypted at rest? → Phase 1. Phase 0 stores plaintext.
-- Should there be an explicit "remember this" / "forget that" command? → deferred.
+- `apps/sidecar/src/memory/engine.ts` - SQLite memory engine, extraction, retrieval, profiles, forget/reindex.
+- `apps/sidecar/src/memory/session.ts` - session turn log and legacy memory helpers.
+- `apps/sidecar/src/memory/cloud-rag.ts` - optional Cloud RAG retrieval client.
+- `apps/sidecar/src/harness/prompt.ts` - prompt assembly with local memory sections.
+- `apps/sidecar/src/pipeline/fast.ts` - Pro/Max memory load/write integration.
+
+## Future Work
+
+- Local embeddings for semantic recall.
+- User-visible memory browser/editor.
+- Stronger contradiction confirmation UX.
+- Optional encryption at rest for `memory.db` and profile files.

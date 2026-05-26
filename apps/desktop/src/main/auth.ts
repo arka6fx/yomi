@@ -1,4 +1,4 @@
-import { app } from "electron"
+import { app, safeStorage } from "electron"
 import path from "node:path"
 import fs from "node:fs"
 
@@ -13,7 +13,6 @@ function tokenPath() {
 
 export function loadToken(): string | null {
   try {
-    const { safeStorage } = require("electron") as typeof import("electron")
     if (!safeStorage.isEncryptionAvailable()) return null
     const buf = fs.readFileSync(tokenPath())
     return safeStorage.decryptString(buf)
@@ -23,7 +22,6 @@ export function loadToken(): string | null {
 }
 
 function saveToken(token: string): void {
-  const { safeStorage } = require("electron") as typeof import("electron")
   if (!safeStorage.isEncryptionAvailable()) return
   const enc = safeStorage.encryptString(token)
   fs.writeFileSync(tokenPath(), enc)

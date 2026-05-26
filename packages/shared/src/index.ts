@@ -39,6 +39,8 @@ export interface FastQueryRequest {
   tts?: boolean            // true = voice output; false = text only (default: true)
   plan?: Plan              // controls local-only memory injection/writes
   history?: { role: "user" | "assistant"; text: string }[]
+  cloud_rag_enabled?: boolean
+  auth_token?: string       // bearer token used by sidecar for opt-in cloud RAG search
 }
 
 export interface AgentQueryRequest {
@@ -46,6 +48,43 @@ export interface AgentQueryRequest {
   screenshot_b64?: string
   task?: string
   plan?: Plan              // controls local-only memory injection/writes
+  cloud_rag_enabled?: boolean
+  auth_token?: string
+}
+
+export interface CloudRagSnippet {
+  chunkId: string
+  documentId: string
+  sourceId: string
+  title: string
+  content: string
+  score: number
+}
+
+export interface RagSourceInfo {
+  id: string
+  name: string
+  sourceType: string
+  status: string
+  documentCount: number
+  chunkCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface RagUploadFile {
+  path: string
+  name: string
+  sizeBytes: number
+}
+
+export interface RagIndexResult {
+  path: string
+  name: string
+  ok: boolean
+  sourceId?: string
+  chunks?: number
+  error?: string
 }
 
 export type SseEvent =

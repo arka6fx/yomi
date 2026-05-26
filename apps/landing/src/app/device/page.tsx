@@ -1,19 +1,18 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { useSearchParams, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Loader2, Check, MonitorSmartphone } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import Link from "next/link"
 
 function DeviceContent() {
-  const searchParams = useSearchParams()
-  const urlCode = searchParams.get("code")?.trim().toUpperCase() ?? null
   const router = useRouter()
 
   const { data: session, isPending } = authClient.useSession()
-  const [code, setCode] = useState(urlCode ?? "")
+  const [urlCode, setUrlCode] = useState<string | null>(null)
+  const [code, setCode] = useState("")
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState("")
@@ -52,6 +51,12 @@ function DeviceContent() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    const codeParam = new URLSearchParams(window.location.search).get("code")?.trim().toUpperCase() ?? null
+    setUrlCode(codeParam)
+    if (codeParam) setCode(codeParam)
+  }, [])
 
   // Auto-confirm when user arrives with code in URL and is already logged in
   useEffect(() => {

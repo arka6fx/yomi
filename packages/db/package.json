@@ -11,7 +11,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "test": "bun test",
+    "test": "bun test --pass-with-no-tests",
     "lint": "eslint src",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

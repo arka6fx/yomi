@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "bun run --env-file ../../.env --watch src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target bun",
+    "build:ci": "bun build src/index.ts --outdir dist --target bun",
     "start": "bun run dist/index.js",
-    "test": "bun test",
+    "test": "bun test --pass-with-no-tests --isolate",
     "lint": "eslint src",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

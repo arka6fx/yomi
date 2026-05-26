@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron"
-import type { SseEvent } from "@yomi/shared"
+import type { RagIndexResult, RagSourceInfo, RagUploadFile, SseEvent } from "@yomi/shared"
 
 type HotkeyState = "idle" | "listening" | "processing" | "text-input"
 type AuthStatus = "ok" | "needed" | "waiting" | "error"
@@ -141,5 +141,29 @@ contextBridge.exposeInMainWorld("yomi", {
 
   setOpacity(value: number): void {
     ipcRenderer.send("yomi:set-opacity", value)
+  },
+
+  getCloudRagEnabled(): Promise<boolean> {
+    return ipcRenderer.invoke("yomi:get-cloud-rag-enabled")
+  },
+
+  setCloudRagEnabled(enabled: boolean): Promise<boolean> {
+    return ipcRenderer.invoke("yomi:set-cloud-rag-enabled", enabled)
+  },
+
+  listRagSources(): Promise<{ sources: RagSourceInfo[] }> {
+    return ipcRenderer.invoke("yomi:list-rag-sources")
+  },
+
+  pickRagFiles(): Promise<RagUploadFile[]> {
+    return ipcRenderer.invoke("yomi:pick-rag-files")
+  },
+
+  indexRagFiles(paths: string[]): Promise<RagIndexResult[]> {
+    return ipcRenderer.invoke("yomi:index-rag-files", paths)
+  },
+
+  deleteRagSource(id: string): Promise<{ ok: true }> {
+    return ipcRenderer.invoke("yomi:delete-rag-source", id)
   },
 })

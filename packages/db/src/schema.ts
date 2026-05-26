@@ -4,11 +4,21 @@ import {
   integer,
   jsonb,
   pgTable,
+  customType,
   text,
   timestamp,
   unique,
   uuid,
 } from "drizzle-orm/pg-core"
+
+const vector = customType<{ data: number[]; driverData: string }>({
+  dataType() {
+    return "vector(1536)"
+  },
+  toDriver(value: number[]) {
+    return `[${value.join(",")}]`
+  },
+})
 
 // --- Better Auth tables (auto-generated, stub for FK references only) ---
 
@@ -88,6 +98,71 @@ export const memoryBlobs = pgTable("memory_blobs", {
 }, (t) => ({
   userPathUnique: unique("memory_blobs_user_path_unique").on(t.userId, t.path),
   userPathIdx: index("memory_blobs_user_path_idx").on(t.userId, t.path),
+}))
+
+export const ragSources = pgTable("rag_sources", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id").notNull(),
+  name: text("name").notNull(),
+  sourceType: text("source_type").notNull(),       // "upload" | "url" | "folder" | "manual"
+  privacyScope: text("privacy_scope").notNull().default("cloud_rag"),
+  status: text("status").notNull().default("indexing"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  userIdx: index("rag_sources_user_idx").on(t.userId),
+}))
+
+export const ragDocuments = pgTable("rag_documents", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id").notNull(),
+  sourceId: uuid("source_id").notNull().references(() => ragSources.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  mimeType: text("mime_type").notNull().default("text/plain"),
+  contentHash: text("content_hash").notNull(),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  userIdx: index("rag_documents_user_idx").on(t.userId),
+  sourceIdx: index("rag_documents_source_idx").on(t.sourceId),
+  userHashUnique: unique("rag_documents_user_hash_unique").on(t.userId, t.contentHash),
+}))
+
+export const ragChunks = pgTable("rag_chunks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id").notNull(),
+  documentId: uuid("document_id").notNull().references(() => ragDocuments.id, { onDelete: "cascade" }),
+  chunkIndex: integer("chunk_index").notNull(),
+  content: text("content").notNull(),
+  tokenCount: integer("token_count").notNull().default(0),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  userIdx: index("rag_chunks_user_idx").on(t.userId),
+  documentIdx: index("rag_chunks_document_idx").on(t.documentId),
+}))
+
+export const ragEmbeddings = pgTable("rag_embeddings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id").notNull(),
+  chunkId: uuid("chunk_id").notNull().references(() => ragChunks.id, { onDelete: "cascade" }),
+  model: text("model").notNull(),
+  embedding: vector("embedding").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  userIdx: index("rag_embeddings_user_idx").on(t.userId),
+  chunkIdx: index("rag_embeddings_chunk_idx").on(t.chunkId),
+}))
+
+export const ragRetrievalLogs = pgTable("rag_retrieval_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id").notNull(),
+  queryHash: text("query_hash").notNull(),
+  matchedChunkIds: text("matched_chunk_ids").array().notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  userIdx: index("rag_retrieval_logs_user_idx").on(t.userId, t.createdAt),
 }))
 
 export const mcpConnections = pgTable("mcp_connections", {
