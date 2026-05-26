@@ -5,16 +5,10 @@ import { fastPipeline, resolveText } from "./pipeline/fast.js"
 import { agentPipeline } from "./pipeline/agent.js"
 import { transcribe } from "./stt.js"
 import { classifyIntent } from "./router/intent.js"
-import { initMemoryDir } from "./memory/loader.js"
-import { initMemoryEngine } from "./memory/engine.js"
-import { initLocalRag } from "./memory/local-rag.js"
-import { scheduleCloudRagSync } from "./memory/cloud-rag.js"
+import { initMemorySubsystem } from "./memory/subsystem.js"
 
 // Ensure ~/.yomi/ directory tree exists before serving any requests.
-initMemoryDir().catch(err => console.warn("[yomi] memory init failed:", err))
-initMemoryEngine().catch(err => console.warn("[yomi] memory engine init failed:", err))
-initLocalRag().catch(err => console.warn("[yomi] local RAG init failed:", err))
-scheduleCloudRagSync("startup")
+initMemorySubsystem().catch(err => console.warn("[yomi] memory subsystem init failed:", err))
 
 const app = new Hono()
 
