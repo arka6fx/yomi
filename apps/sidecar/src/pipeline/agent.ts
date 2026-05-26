@@ -3,10 +3,10 @@ import type { AgentQueryRequest, Plan, SseEvent } from "@yomi/shared"
 import { createModel } from "./model.js"
 import { createAgentTools } from "../tools/index.js"
 import { hooks } from "../harness/hooks.js"
-import { buildAgentPrompt, loadYomiMd, loadMemoryContext } from "../harness/prompt.js"
+import { buildAgentPrompt, loadYomiMd } from "../harness/prompt.js"
 import { LoopGuards } from "../harness/guards.js"
 import { compact } from "../memory/compactor.js"
-import { appendSessionTurn, loadRecentSession } from "../memory/session.js"
+import { loadMemoryContext, writeSessionTurn } from "../memory/subsystem.js"
 
 const AGENT_PATH_MODEL = process.env.AGENT_PATH_MODEL || "gpt-4.1"
 const MAX_STEPS = parseInt(process.env.AGENT_MAX_STEPS || "20", 10)
@@ -17,13 +17,13 @@ function memoryEnabled(plan: Plan | undefined): boolean {
   return plan === "pro" || plan === "max"
 }
 
-async function getAgentPrompt(plan: Plan | undefined): Promise<string> {
+async function getAgentPrompt(text: string, plan: Plan | undefined): Promise<string> {
   if (cachedYomiMd === null) cachedYomiMd = await loadYomiMd()
   const memory = memoryEnabled(plan)
-  const [{ memorySummary, memoryIndex }, recentSession] = memory
-    ? await Promise.all([loadMemoryContext(), loadRecentSession()])
-    : [{ memorySummary: "", memoryIndex: "" }, ""]
-  return buildAgentPrompt({ yomiMd: cachedYomiMd, memorySummary, memoryIndex, recentSession })
+  const memoryCtx = memory
+    ? await loadMemoryContext(text)
+    : { memorySummary: "", memoryIndex: "", localMemory: "", cloudRagContext: "", staticProfile: "", dynamicProfile: "", recentSession: "" }
+  return buildAgentPrompt({ yomiMd: cachedYomiMd, ...memoryCtx })
 }
 
 // Wrap all tool execute functions with PreToolUse / PostToolUse hook calls.
@@ -49,7 +49,7 @@ function applyHooks(tools: Record<string, any>): Record<string, any> {
 
 export async function* agentPipeline(req: AgentQueryRequest): AsyncGenerator<SseEvent> {
   const tools = applyHooks(createAgentTools({ screenshotB64: req.screenshot_b64 }))
-  const system = await getAgentPrompt(req.plan)
+  const system = await getAgentPrompt(req.text, req.plan)
   const guards = new LoopGuards()
 
   const result = streamText({
@@ -103,7 +103,7 @@ export async function* agentPipeline(req: AgentQueryRequest): AsyncGenerator<Sse
   const summary = textTail.replace(/\n/g, " ").trim() || "agent task complete"
   await hooks.onStop(summary)
   if (memoryEnabled(req.plan)) {
-    await appendSessionTurn({ kind: "agent", input: req.text, output: summary, summary })
+    await writeSessionTurn({ kind: "agent", input: req.text, output: summary, summary })
     // Fire compaction after each agent run; it no-ops if the session log is too short.
     compact().catch(err => console.warn("[yomi/agent] compaction error:", err))
   }

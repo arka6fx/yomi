@@ -35,6 +35,8 @@ Define Yomi's local memory engine: how user preferences, facts, project context,
 
 `memory.db` is a Bun SQLite database with FTS indexes for structured memory retrieval and local archive fallback. Markdown profile files are human-readable summaries generated from active memories.
 
+The sidecar talks to this layer through a narrow memory subsystem facade that loads prompt context, records completed turns, and hides the individual storage backends from the rest of the pipelines.
+
 ## Memory Model
 
 Memory kinds:
@@ -121,12 +123,13 @@ Clear corrections can supersede older memories by topic. Superseded memories rem
 
 ## Implemented Files
 
+- `apps/sidecar/src/memory/subsystem.ts` - subsystem facade for init, context loading, session writes, and memory retrieval.
 - `apps/sidecar/src/memory/engine.ts` - SQLite memory engine, extraction, retrieval, profiles, forget/reindex.
 - `apps/sidecar/src/memory/cloud-rag.ts` - cloud mirror sync and retrieval for archive files.
 - `apps/sidecar/src/memory/local-rag.ts` - local FTS archive index used as fallback and source scanner.
 - `apps/sidecar/src/memory/session.ts` - session turn log and legacy memory helpers.
-- `apps/sidecar/src/harness/prompt.ts` - prompt assembly with local memory sections.
-- `apps/sidecar/src/pipeline/fast.ts` - Pro/Max memory load/write integration.
+- `apps/sidecar/src/harness/prompt.ts` - prompt assembly with memory sections only; no storage access.
+- `apps/sidecar/src/pipeline/fast.ts` / `apps/sidecar/src/pipeline/agent.ts` - Pro/Max memory load/write integration through the subsystem facade.
 
 ## Future Work
 

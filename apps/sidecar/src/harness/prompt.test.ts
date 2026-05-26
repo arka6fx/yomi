@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test"
-import { buildFastPrompt, loadMemoryContext } from "./prompt.js"
+import { buildFastPrompt } from "./prompt.js"
+import { closeMemorySubsystem, loadMemoryContext } from "../memory/subsystem.js"
 import { mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -37,11 +38,12 @@ describe("prompt memory injection", () => {
       await writeFile(join(tempDir, "memory.md"), "a".repeat(5000), "utf-8")
       await writeFile(join(tempDir, "memory-index.md"), "b".repeat(3000), "utf-8")
 
-      const ctx = await loadMemoryContext()
+      const ctx = await loadMemoryContext("memory")
 
       expect(ctx.memorySummary.length).toBe(4000)
       expect(ctx.memoryIndex.length).toBe(2000)
     } finally {
+      closeMemorySubsystem()
       delete process.env["YOMI_NOTEPAD_DIR"]
       await rm(tempDir, { recursive: true, force: true })
     }

@@ -4,9 +4,8 @@ import { generateGuide } from "./visual-guide.js";
 import { transcribe } from "../speech/transcribe.js";
 import { synthesize, resolveTts } from "./tts.js";
 import { createModel } from "./model.js";
-import { buildFastPrompt, loadYomiMd, loadRichMemoryContext } from "../harness/prompt.js";
-import { appendSessionTurn, loadRecentSession } from "../memory/session.js";
-import { captureTurnMemory } from "../memory/engine.js";
+import { buildFastPrompt, loadYomiMd } from "../harness/prompt.js";
+import { captureStructuredMemory, loadMemoryContext, writeSessionTurn } from "../memory/subsystem.js";
 
 const MODEL = process.env.FAST_PATH_MODEL || "gpt-4.1-mini";
 
@@ -23,13 +22,10 @@ async function getFastPrompt(
 ): Promise<string> {
   if (cachedYomiMd === null) cachedYomiMd = await loadYomiMd()
   const memory = memoryEnabled(plan)
-  const [localCtx, recentSession] = memory
-    ? await Promise.all([
-        loadRichMemoryContext(text),
-        loadRecentSession(),
-      ])
-    : [{ memorySummary: "", memoryIndex: "", localMemory: "", cloudRagContext: "", staticProfile: "", dynamicProfile: "" }, ""]
-  return buildFastPrompt({ yomiMd: cachedYomiMd, ...localCtx, recentSession, hasScreen })
+  const localCtx = memory
+    ? await loadMemoryContext(text)
+    : { memorySummary: "", memoryIndex: "", localMemory: "", cloudRagContext: "", staticProfile: "", dynamicProfile: "", recentSession: "" }
+  return buildFastPrompt({ yomiMd: cachedYomiMd, ...localCtx, hasScreen })
 }
 
 // Tiny single-consumer queue so multiple async producers (LLM text + N concurrent
@@ -329,8 +325,8 @@ export async function* fastPipeline(
       }
     }
     if (memoryEnabled(req.plan) && output.trim()) {
-      appendSessionTurn({ kind: "fast", mode: req.mode ?? "answer", input: text, output })
-        .then(() => captureTurnMemory({ input: text, output, mode: req.mode ?? "answer" }))
+      writeSessionTurn({ kind: "fast", mode: req.mode ?? "answer", input: text, output })
+        .then(() => captureStructuredMemory({ input: text, output, mode: req.mode ?? "answer" }))
         .catch(err => console.warn("[yomi/fast] memory write failed:", err))
     }
   } catch (err) {
