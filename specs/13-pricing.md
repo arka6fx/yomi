@@ -12,15 +12,15 @@ Define Yomi's plans, feature gates, fair-use limits, and Razorpay billing behavi
 - Pro includes screen-aware chat and local memory, but no agents.
 - Max adds agents/subagents when launched.
 - Local memory stays local for all plans.
-- Cloud RAG is opt-in and available only to paid plans.
+- Cloud RAG mirrors non-personal Yomi memory artifacts for paid plans.
 
 ## Plan Matrix
 
 | Plan | Price | Core limits | Context | Agents |
 |---|---:|---|---|---|
 | Explore | $0 | 30-day trial, 150 total interactions | screen analysis only | no |
-| Pro | $9.99/mo | chat 10000/day, voice 200/day | local memory + optional Cloud RAG | no |
-| Max | $24.99/mo | chat/voice 10000/day | local memory + optional Cloud RAG | yes, 10000 runs/day |
+| Pro | $9.99/mo | chat 10000/day, voice 200/day | local memory + cloud archive mirror | no |
+| Max | $24.99/mo | chat/voice 10000/day | local memory + cloud archive mirror | yes, 10000 runs/day |
 
 Razorpay plan amounts:
 
@@ -39,8 +39,8 @@ The amount values are the smallest configured billing units used by the backend/
 | Voice | limited | 200/day | 10000/day |
 | Screen analysis | yes | yes | yes |
 | Local memory engine | no | yes | yes |
-| Cloud RAG retrieval | no | opt-in | opt-in |
-| Cloud RAG source upload | no | yes | yes |
+| Cloud archive mirror | no | yes | yes |
+| File upload RAG | no | no | no |
 | Agent mode | no | no | yes |
 
 Current implementation detail: normal Max purchase/access can remain blocked until launch while owner/dev accounts can test Max-gated paths.
@@ -66,7 +66,7 @@ Usage is enforced by backend APIs and shared usage helpers. Important behavior:
 - `usage_events` is append-only.
 - Daily counters reset by UTC date.
 - Voice and agent limits are separate from regular chat where applicable.
-- Cloud RAG source management is feature-gated, not counted as chat.
+- Local memory and cloud archive retrieval are sidecar context features, not separate billable events.
 
 ## Implemented Files
 

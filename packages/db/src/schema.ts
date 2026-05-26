@@ -104,6 +104,8 @@ export const ragSources = pgTable("rag_sources", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: text("user_id").notNull(),
   name: text("name").notNull(),
+  path: text("path"),
+  contentHash: text("content_hash"),
   sourceType: text("source_type").notNull(),       // "upload" | "url" | "folder" | "manual"
   privacyScope: text("privacy_scope").notNull().default("cloud_rag"),
   status: text("status").notNull().default("indexing"),
@@ -111,6 +113,7 @@ export const ragSources = pgTable("rag_sources", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (t) => ({
   userIdx: index("rag_sources_user_idx").on(t.userId),
+  userPathUnique: unique("rag_sources_user_path_unique").on(t.userId, t.path),
 }))
 
 export const ragDocuments = pgTable("rag_documents", {

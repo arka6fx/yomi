@@ -22,7 +22,7 @@ apps/
   backend/    Hono on Bun  — auth, billing (Razorpay), LLM proxy, usage metering
   desktop/    Electron     — hotkeys, screen+mic capture, floating overlay UI
   landing/    Next.js 16   — marketing site + waitlist (Vercel)
-  sidecar/    Bun service  — intent router, fast pipeline, ReAct loop, local memory
+  sidecar/    Bun service  — intent router, fast pipeline, ReAct loop, memory + archive sync
 packages/
   db/         Drizzle schema + Neon client
   shared/     TypeScript contracts across all apps
@@ -176,17 +176,17 @@ Design docs in [`specs/`](./specs/), ordered by implementation:
 |---|---|---|
 | 00 | [00-overview](specs/00-overview.md) | Principles, identity, invariants, phase map |
 | 01 | [01-architecture](specs/01-architecture.md) | Four-layer architecture, IPC contracts, data flows |
-| 02 | [02-sidecar-fast-pipeline](specs/02-sidecar-fast-pipeline.md) | Fast linear pipeline, local context, optional Cloud RAG, visual guidance |
-| 03 | [03-desktop-shell](specs/03-desktop-shell.md) | Electron main: sidecar spawn, hotkeys, capture, IPC, Cloud RAG bridge |
-| 04 | [04-desktop-ui](specs/04-desktop-ui.md) | Floating overlay, Zustand store, audio, streaming UI, Cloud RAG controls |
+| 02 | [02-sidecar-fast-pipeline](specs/02-sidecar-fast-pipeline.md) | Fast linear pipeline, local context, cloud archive mirror, visual guidance |
+| 03 | [03-desktop-shell](specs/03-desktop-shell.md) | Electron main: sidecar spawn, hotkeys, capture, IPC |
+| 04 | [04-desktop-ui](specs/04-desktop-ui.md) | Floating overlay, Zustand store, audio, streaming UI |
 | 05 | [05-speech-stt](specs/05-speech-stt.md) | STT: Sarvam AI `saarika:v2.5` + VAD |
 | 06 | [06-speech-tts](specs/06-speech-tts.md) | TTS: Sarvam AI `bulbul:v3` |
 | 07 | [07-sidecar-router](specs/07-sidecar-router.md) | Intent router: fast vs agent classification |
 | 08 | [08-sidecar-agent](specs/08-sidecar-agent.md) | ReAct loop, tools, MCP, subagents, sandbox |
 | 09 | [09-harness](specs/09-harness.md) | Prompt assembly, local context, hooks, loop guards |
 | 10 | [10-memory](specs/10-memory.md) | Local memory engine, retrieval, profiles, compaction |
-| 11 | [11-database](specs/11-database.md) | Drizzle schema, Neon, Cloud RAG tables |
-| 12 | [12-backend](specs/12-backend.md) | Hono routes, Better Auth, LLM proxy, metering, Cloud RAG APIs |
+| 11 | [11-database](specs/11-database.md) | Drizzle schema, Neon, cloud archive tables |
+| 12 | [12-backend](specs/12-backend.md) | Hono routes, Better Auth, LLM proxy, metering, cloud archive mirror/search |
 | 13 | [13-pricing](specs/13-pricing.md) | Plans, Razorpay, metering, cap enforcement |
 | 14 | [14-landing-page](specs/14-landing-page.md) | Marketing site (Next.js 16, Vercel) |
 
@@ -197,5 +197,5 @@ Design docs in [`specs/`](./specs/), ordered by implementation:
 - **Local-by-default:** screen analysis and STT run locally / on-device where possible; only the distilled prompt leaves.
 - **Visible status:** overlay always shows when Yomi is listening or capturing.
 - **Per-app blocklist:** password managers and banking apps are never captured.
-- **No hidden memory sync:** local memory stays on the device; Cloud RAG indexes only files you explicitly choose.
+- **No hidden memory sync:** local memory stays on the device; Cloud RAG mirrors Yomi-generated archive files and does not accept arbitrary user file uploads.
 - **Content protection:** overlay window is excluded from screen recordings and video calls.

@@ -9,8 +9,7 @@ import {
   ragRetrievalLogs,
   ragSources,
 } from "@yomi/db"
-import type { CloudRagSnippet } from "@yomi/shared"
-import type { RagSourceInfo } from "@yomi/shared"
+import type { CloudArchiveSource, CloudRagSnippet, CloudRagSyncRequest, RagSourceInfo } from "@yomi/shared"
 import { authenticate } from "../auth.js"
 import { effectivePlanForUser, isOwnerUser } from "../entitlements.js"
 
@@ -19,6 +18,7 @@ const EMBEDDING_DIMENSIONS = 1536
 const MAX_DOCUMENT_CHARS = 120_000
 const CHUNK_CHARS = 1800
 const CHUNK_OVERLAP = 220
+const MIRROR_SOURCE_TYPE = "mirror"
 
 type CreateSourceBody = {
   name?: string
@@ -101,6 +101,99 @@ function vectorLiteral(values: number[]): string {
   return `[${values.map((v) => Number.isFinite(v) ? v.toFixed(8) : "0").join(",")}]`
 }
 
+function sourceHash(source: CloudArchiveSource): string {
+  return hash(`${source.path}\0${source.content}`)
+}
+
+async function findSource(userId: string, name: string, sourceType = MIRROR_SOURCE_TYPE) {
+  const rows = await db
+    .select()
+    .from(ragSources)
+    .where(and(eq(ragSources.userId, userId), eq(ragSources.path, name), eq(ragSources.sourceType, sourceType)))
+    .limit(1)
+  return rows[0] ?? null
+}
+
+async function upsertMirrorSource(userId: string, source: CloudArchiveSource) {
+  const name = clean(source.path, 500)
+  const title = clean(source.title || source.path.split("/").pop() || source.path, 200)
+  const content = clean(source.content, MAX_DOCUMENT_CHARS)
+  const contentHash = sourceHash(source)
+  const existingSource = await findSource(userId, name)
+
+  const [mirroredSource] = existingSource
+    ? await db.update(ragSources)
+      .set({ name: title, path: name, contentHash, sourceType: MIRROR_SOURCE_TYPE, status: "ready", updatedAt: new Date() })
+      .where(eq(ragSources.id, existingSource.id))
+      .returning()
+    : await db.insert(ragSources).values({
+      userId,
+      name: title,
+      path: name,
+      contentHash,
+      sourceType: MIRROR_SOURCE_TYPE,
+      privacyScope: "cloud_rag",
+      status: "ready",
+    }).returning()
+
+  if (!mirroredSource) return false
+
+  const latestDoc = await db
+    .select({ contentHash: ragDocuments.contentHash })
+    .from(ragDocuments)
+    .where(eq(ragDocuments.sourceId, mirroredSource.id))
+    .limit(1)
+  if (latestDoc[0]?.contentHash === contentHash) {
+    await db.update(ragSources).set({ updatedAt: new Date() }).where(eq(ragSources.id, mirroredSource.id))
+    return true
+  }
+
+  await db.delete(ragDocuments).where(eq(ragDocuments.sourceId, mirroredSource.id))
+
+  const [document] = await db.insert(ragDocuments).values({
+    userId,
+    sourceId: mirroredSource.id,
+    title,
+    mimeType: "text/markdown",
+    contentHash,
+    metadata: { path: source.path, updatedAt: source.updatedAt, origin: "cloud_archive" },
+  }).returning()
+
+  if (!document) return false
+
+  const chunks = chunkText(content)
+  for (const [chunkIndex, chunk] of chunks.entries()) {
+    const [createdChunk] = await db.insert(ragChunks).values({
+      userId,
+      documentId: document.id,
+      chunkIndex,
+      content: chunk,
+      tokenCount: Math.ceil(chunk.length / 4),
+      metadata: { path: source.path, updatedAt: source.updatedAt },
+    }).returning({ id: ragChunks.id })
+    if (!createdChunk) continue
+    const embedding = await embedText(chunk)
+    await db.insert(ragEmbeddings).values({
+      userId,
+      chunkId: createdChunk.id,
+      model: EMBEDDING_MODEL,
+      embedding,
+    })
+  }
+
+  return true
+}
+
+async function deleteMirrorSource(userId: string, name: string): Promise<boolean> {
+  const source = await findSource(userId, name)
+  if (!source) return false
+  await db.delete(ragDocuments).where(eq(ragDocuments.sourceId, source.id))
+  await db.update(ragSources)
+    .set({ status: "deleted", updatedAt: new Date() })
+    .where(eq(ragSources.id, source.id))
+  return true
+}
+
 ragRouter.use("*", authenticate)
 
 ragRouter.post("/sources", async (c) => {
@@ -130,6 +223,8 @@ ragRouter.get("/sources", async (c) => {
     select
       s.id as "id",
       s.name as "name",
+      s.path as "path",
+      s.content_hash as "contentHash",
       s.source_type as "sourceType",
       s.status as "status",
       count(distinct d.id)::int as "documentCount",
@@ -147,6 +242,30 @@ ragRouter.get("/sources", async (c) => {
 
   const rows = Array.isArray(sources) ? sources : ((sources as { rows?: unknown[] }).rows ?? [])
   return c.json({ sources: rows })
+})
+
+ragRouter.post("/sync", async (c) => {
+  const user = c.get("user")
+  if (!ragAllowed(user)) return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
+
+  const body = await c.req.json().catch(() => ({})) as CloudRagSyncRequest
+  const sources = Array.isArray(body.sources) ? body.sources : []
+  const removedPaths = Array.isArray(body.removedPaths) ? body.removedPaths : []
+
+  let synced = 0
+  for (const source of sources) {
+    if (!clean(source.path, 500) || !clean(source.content, MAX_DOCUMENT_CHARS)) continue
+    const ok = await upsertMirrorSource(user.id, source)
+    if (ok) synced++
+  }
+
+  let removed = 0
+  for (const path of removedPaths) {
+    const ok = await deleteMirrorSource(user.id, clean(path, 500))
+    if (ok) removed++
+  }
+
+  return c.json({ synced, removed })
 })
 
 ragRouter.post("/documents", async (c) => {
@@ -221,6 +340,7 @@ ragRouter.post("/search", async (c) => {
       c.id as "chunkId",
       d.id as "documentId",
       s.id as "sourceId",
+      s.name as "sourceName",
       d.title as "title",
       c.content as "content",
       (1 - (e.embedding <=> ${embedding}::vector)) as "score"
