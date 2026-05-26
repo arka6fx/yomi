@@ -4,6 +4,7 @@ import { SidecarManager } from "./sidecar"
 import { checkStoredToken, startDeviceCodeFlow, clearToken, loadToken, BACKEND_URL } from "./auth"
 import { initHotkey, enableHotkeys, disableHotkeys, suspendHotkeys, resumeHotkeys, triggerEscape } from "./hotkey"
 import { initSidecarIpc } from "./ipc"
+import { createGuideOverlay, hideGuidePoint } from "./guide-overlay"
 
 // Transparent frameless windows need software compositing on some GPU/driver combos
 if (process.platform === "win32") {
@@ -175,6 +176,8 @@ app.whenReady().then(async () => {
     return { name: data.name, email: data.email }
   })
 
+  createGuideOverlay()
+
   // ── Load overlay ────────────────────────────────────────────────────────────
 
   if (process.env.ELECTRON_RENDERER_URL) {
@@ -312,7 +315,11 @@ async function completeSetup(token: string) {
       onAbort,
       // Fires on every ESC press regardless of state — stops TTS playback even
       // when the pipeline has already finished and state is back to idle.
-      onAnyEscape: () => overlayWin?.webContents.send("yomi:stop-audio"),
+      onAnyEscape: () => {
+        overlayWin?.webContents.send("yomi:stop-audio")
+        hideGuidePoint()
+        overlayWin?.webContents.send("yomi:guide-exit")
+      },
     })
 
     startSessionValidation()

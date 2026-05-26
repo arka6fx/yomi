@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useMemo, useCallback } from "react"
 import { createRoot } from "react-dom/client"
 import { useYomiStore } from "./store"
 import type { HotkeyState, ChatEntry, SubscriptionInfo } from "./store"
+import type { GuideStep } from "@yomi/shared"
 
 // ── Theme System ───────────────────────────────────────────────────────────────
 
@@ -380,6 +381,7 @@ styleEl.textContent = `
   @keyframes slideUp  { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:translateY(0)} }
   @keyframes slideDown{ from{opacity:1;transform:translateY(0)} to{opacity:0;transform:translateY(6px)} }
   @keyframes fadeIn   { from{opacity:0} to{opacity:1} }
+  @keyframes rippleOut { 0%{transform:scale(1);opacity:0.7} 100%{transform:scale(2.8);opacity:0} }
 
   * { box-sizing:border-box; margin:0; padding:0; }
   html, body { background: transparent !important; height:100%; margin:0; overflow:hidden; }
@@ -1468,8 +1470,86 @@ function Chip({ label, keys, hot }: { label:string; keys:string[]; hot:boolean }
   )
 }
 
-function Toolbar({ state, plan, subscription, interactionInfo, onProfileNameSave, onSignOut, menuOpen, menuClosing, onMenuToggle, onMenuClose, onMenuOpen, onMenuScheduleClose, onMenuCancelClose }: {
+// ── Guide Mode Components ──────────────────────────────────────────────────────
+
+const CursorArrowSVG = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+    <path d="M1.5 1L6.5 13L8.5 8.5L13 6.5L1.5 1Z" fill="currentColor" />
+  </svg>
+)
+
+function GuideCursor({ state, step, totalSteps }: {
+  state: HotkeyState
+  step?: GuideStep
+  totalSteps: number
+}) {
+  const { theme: t } = React.useContext(ThemeCtx)
+  const hasStep = !!step && state === "idle"
+
+  return (
+    <div style={{
+      display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+      height:"100%", gap:6, padding:"0 24px",
+    }} className="drag yomi-hit-area">
+      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+        <div style={{ position:"relative", width:20, height:20, flexShrink:0, color: t.accent }}>
+          <CursorArrowSVG />
+          {state === "listening" && <>
+            <div style={{
+              position:"absolute", top:"50%", left:"50%",
+              width:26, height:26, marginLeft:-13, marginTop:-13,
+              borderRadius:"50%", border:`1.5px solid ${t.accent}`,
+              animation:"rippleOut 1.5s ease-out infinite",
+              pointerEvents:"none",
+            }} />
+            <div style={{
+              position:"absolute", top:"50%", left:"50%",
+              width:26, height:26, marginLeft:-13, marginTop:-13,
+              borderRadius:"50%", border:`1.5px solid ${t.accent}`,
+              animation:"rippleOut 1.5s ease-out infinite .6s",
+              pointerEvents:"none",
+            }} />
+          </>}
+          {state === "processing" && (
+            <div style={{
+              position:"absolute", top:"50%", left:"50%",
+              width:28, height:28, marginLeft:-14, marginTop:-14,
+              borderRadius:"50%",
+              border:`1.5px solid ${t.dotSpinFaint}`,
+              borderTopColor: t.dotSpinBright,
+              animation:"spin .75s linear infinite",
+            }} />
+          )}
+        </div>
+        {state === "listening" && (
+          <span style={{ fontSize:12, fontWeight:600, color: t.lblActive, fontFamily:UI_FONT }}>
+            Listening…
+          </span>
+        )}
+        {state === "processing" && (
+          <span style={{ fontSize:12, fontWeight:600, color: t.lblProcessing, fontFamily:UI_FONT }}>
+            Thinking…
+          </span>
+        )}
+        {state === "idle" && !hasStep && (
+          <span style={{ fontSize:12, color: t.dim, fontFamily:UI_FONT }}>
+            Guide mode
+          </span>
+        )}
+      </div>
+      {hasStep && (
+        <div style={{ fontSize:12, color: t.text, fontFamily:UI_FONT, fontWeight:500, textAlign:"center", letterSpacing:"-0.01em" }}>
+          <span style={{ color: t.dim, marginRight:5 }}>{totalSteps > 1 ? `${totalSteps} steps —` : ""}</span>
+          {step.instruction}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Toolbar({ state, plan, subscription, interactionInfo, guideMode, onGuideToggle, onProfileNameSave, onSignOut, menuOpen, menuClosing, onMenuToggle, onMenuClose, onMenuOpen, onMenuScheduleClose, onMenuCancelClose }: {
   state: HotkeyState; plan?: string; subscription: SubscriptionInfo | null; interactionInfo?: string
+  guideMode: boolean; onGuideToggle: () => void
   onProfileNameSave: (name: string) => Promise<void>; onSignOut: () => void
   menuOpen: boolean; menuClosing: boolean; onMenuToggle: () => void; onMenuClose: () => void
   onMenuOpen: () => void; onMenuScheduleClose: () => void; onMenuCancelClose: () => void
@@ -1585,6 +1665,33 @@ function Toolbar({ state, plan, subscription, interactionInfo, onProfileNameSave
             {ttsEnabled ? <SpeakerOnSVG /> : <SpeakerOffSVG />}
             <span style={{ fontSize:11, fontFamily:UI_FONT, letterSpacing:"0.03em", fontWeight:500 }}>
               {ttsEnabled ? "Sound" : "Muted"}
+            </span>
+          </button>
+
+          <button
+            className="no-drag"
+            onClick={onGuideToggle}
+            title="Guide mode"
+            onMouseEnter={e => {
+              e.currentTarget.style.color = guideMode ? t.accent : t.ttsOn
+              e.currentTarget.style.background = t.ttsHoverBg
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = guideMode ? t.accent : t.ttsOff
+              e.currentTarget.style.background = guideMode ? t.accentD : "none"
+            }}
+            style={{
+              background: guideMode ? t.accentD : "none",
+              border: "none", cursor:"pointer", padding:"2px 6px",
+              color: guideMode ? t.accent : t.ttsOff,
+              transition:"color .15s, background .15s",
+              display:"flex", alignItems:"center", gap:4,
+              flexShrink:0, borderRadius:4,
+            }}
+          >
+            <CursorArrowSVG />
+            <span style={{ fontSize:11, fontFamily:UI_FONT, letterSpacing:"0.03em", fontWeight:500 }}>
+              Guide
             </span>
           </button>
 
@@ -1812,6 +1919,7 @@ const App: React.FC = () => {
     hotkeyState, entries, audioQueue, ttsEnabled, subscription,
     handleSseEvent, setHotkeyState, dismissEntry,
     setSubscription, setSubscriptionLoading,
+    guideMode, setGuideMode, guideSteps, guideCurrentStep, guideTotalSteps,
   } = useYomiStore()
 
   const [loadingProvider, setLoadingProvider] = React.useState<"github" | "google" | null>(null)
@@ -1915,7 +2023,17 @@ const App: React.FC = () => {
     })
   }, [setSubscription])
 
-  // Resize window based on auth + content + menu state
+  // Sync guide mode on/off to main process
+  useEffect(()=>{
+    window.yomi.setGuideMode(guideMode)
+  }, [guideMode])
+
+  // ESC from main exits guide mode
+  useEffect(()=>{
+    return window.yomi.onGuideExit(() => setGuideMode(false))
+  }, [setGuideMode])
+
+  // Resize window based on auth + content + guide + menu state
   useEffect(()=>{
     if (authState === "checking") {
       window.yomi.resize(680, 46)
@@ -1923,6 +2041,9 @@ const App: React.FC = () => {
       window.yomi.resize(680, 390)
     } else if (authState === "waiting") {
       window.yomi.resize(680, 240)
+    } else if (guideMode) {
+      const hasStep = guideCurrentStep > 0 && guideSteps.length > 0
+      window.yomi.resize(680, hasStep ? 64 : 46)
     } else {
       const MAX_ENTRIES = 640
       const textInputH = hotkeyState === "text-input" ? 88 : 0
@@ -1931,7 +2052,7 @@ const App: React.FC = () => {
       const menuMin = menuOpen ? 760 : 0
       window.yomi.resize(680, Math.max(46, 46 + textInputH + entriesH, menuMin))
     }
-  }, [authState, entries, hotkeyState, menuOpen])
+  }, [authState, entries, hotkeyState, menuOpen, guideMode, guideCurrentStep, guideSteps])
 
   useEffect(()=>{
     const onDown=(e:MouseEvent)=>{
@@ -2123,7 +2244,7 @@ const App: React.FC = () => {
   }, [setSubscription])
 
   useEffect(() => {
-    if (authState !== "authenticated" || hasContent) {
+    if (authState !== "authenticated" || hasContent || guideMode) {
       setMouseEventsIgnored(false)
       return
     }
@@ -2140,7 +2261,7 @@ const App: React.FC = () => {
       window.removeEventListener("mousemove", onMove)
       setMouseEventsIgnored(false)
     }
-  }, [authState, hasContent, setMouseEventsIgnored])
+  }, [authState, hasContent, guideMode, setMouseEventsIgnored])
 
   // ── Sign-in states ──────────────────────────────────────────────────────────
 
@@ -2175,61 +2296,89 @@ const App: React.FC = () => {
 
   // ── Authenticated UI ────────────────────────────────────────────────────────
 
+  const showPill = hasContent || guideMode
+
   return (
     <div
       ref={rootRef}
       style={{
         display:"flex", flexDirection:"column",
-        height:"100vh",
-        background: hasContent ? "var(--bg)" : "transparent",
+        height:"100vh", position:"relative",
+        background: showPill ? "var(--bg)" : "transparent",
         borderRadius:10, overflow:"hidden",
-        border: hasContent ? (isListening ? t.appBorderListen : t.appBorder) : "none",
-        boxShadow: hasContent ? (isListening ? t.appShadowListen : t.appShadow) : "none",
-        backdropFilter: hasContent ? "blur(28px) saturate(160%)" : "none",
-        WebkitBackdropFilter: hasContent ? "blur(28px) saturate(160%)" : "none",
+        border: showPill ? (isListening ? t.appBorderListen : t.appBorder) : "none",
+        boxShadow: showPill ? (isListening ? t.appShadowListen : t.appShadow) : "none",
+        backdropFilter: showPill ? "blur(28px) saturate(160%)" : "none",
+        WebkitBackdropFilter: showPill ? "blur(28px) saturate(160%)" : "none",
         transition:"border-color .3s, box-shadow .3s",
         minWidth:680,
       }}
     >
-      <Toolbar
-        state={hotkeyState}
-        plan={subscription?.plan}
-        subscription={subscription}
-        interactionInfo={subscription?.plan === "explore" ? `${subscription.trialInteractionUsed}/${subscription.trialInteractionLimit} used` : undefined}
-        onProfileNameSave={handleProfileNameSave}
-        onSignOut={() => window.yomi.signOut()}
-        menuOpen={menuOpen}
-        menuClosing={menuClosing}
-        onMenuToggle={() => menuOpen ? closeMenuNow() : openMenu()}
-        onMenuClose={closeMenuNow}
-        onMenuOpen={openMenu}
-        onMenuScheduleClose={scheduleMenuClose}
-        onMenuCancelClose={cancelMenuClose}
-      />
+      {/* Chat UI — fades out when guide mode is active */}
+      <div style={{
+        display:"flex", flexDirection:"column", flex:1,
+        transition:"opacity 180ms ease, transform 180ms ease",
+        opacity: guideMode ? 0 : 1,
+        transform: guideMode ? "translateY(-6px)" : "translateY(0)",
+        pointerEvents: guideMode ? "none" : undefined,
+      }}>
+        <Toolbar
+          state={hotkeyState}
+          plan={subscription?.plan}
+          subscription={subscription}
+          interactionInfo={subscription?.plan === "explore" ? `${subscription.trialInteractionUsed}/${subscription.trialInteractionLimit} used` : undefined}
+          guideMode={guideMode}
+          onGuideToggle={() => setGuideMode(!guideMode)}
+          onProfileNameSave={handleProfileNameSave}
+          onSignOut={() => window.yomi.signOut()}
+          menuOpen={menuOpen}
+          menuClosing={menuClosing}
+          onMenuToggle={() => menuOpen ? closeMenuNow() : openMenu()}
+          onMenuClose={closeMenuNow}
+          onMenuOpen={openMenu}
+          onMenuScheduleClose={scheduleMenuClose}
+          onMenuCancelClose={cancelMenuClose}
+        />
 
-      {hotkeyState==="text-input" && (
-        <div style={{ padding:"6px 7px 7px", flexShrink:0 }}>
-          <TextInputPanel />
-        </div>
-      )}
+        {hotkeyState==="text-input" && (
+          <div style={{ padding:"6px 7px 7px", flexShrink:0 }}>
+            <TextInputPanel />
+          </div>
+        )}
 
-      {entries.length>0 && (
-        <div
-          ref={entriesRef}
-          className="no-drag"
-          style={{
-            flex:1, minHeight:0,
-            overflowY:"auto", overflowX:"hidden",
-            display:"flex", flexDirection:"column", gap:5,
-            padding:"6px 7px 7px",
-            overscrollBehavior:"contain",
-          }}
-        >
-          {[...entries].reverse().map((e,i) => (
-            <ResponsePanel key={e.id} entry={e} isActive={i===0} onDismiss={()=>dismissEntry(e.id)} />
-          ))}
-        </div>
-      )}
+        {entries.length>0 && (
+          <div
+            ref={entriesRef}
+            className="no-drag"
+            style={{
+              flex:1, minHeight:0,
+              overflowY:"auto", overflowX:"hidden",
+              display:"flex", flexDirection:"column", gap:5,
+              padding:"6px 7px 7px",
+              overscrollBehavior:"contain",
+            }}
+          >
+            {[...entries].reverse().map((e,i) => (
+              <ResponsePanel key={e.id} entry={e} isActive={i===0} onDismiss={()=>dismissEntry(e.id)} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Guide cursor — slides up when guide mode is active */}
+      <div style={{
+        position:"absolute", inset:0,
+        transition:"opacity 180ms ease, transform 180ms ease",
+        opacity: guideMode ? 1 : 0,
+        transform: guideMode ? "translateY(0)" : "translateY(6px)",
+        pointerEvents: guideMode ? undefined : "none",
+      }}>
+        <GuideCursor
+          state={hotkeyState}
+          step={guideSteps[guideCurrentStep - 1]}
+          totalSteps={guideTotalSteps}
+        />
+      </div>
     </div>
   )
 }
