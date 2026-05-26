@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { LogOut, Check, Zap, Crown, Loader2, Download, Shield, Clock, Sparkles, Cuboid } from "lucide-react"
@@ -78,12 +78,12 @@ function trialDaysLeft(trialEndDate: string | null): number | null {
 function DashboardContent() {
   const { data: session, isPending } = authClient.useSession()
   const router = useRouter()
-  const searchParams = useSearchParams()
 
   const [sub, setSub] = useState<Sub | null>(null)
   const [subPending, setSubPending] = useState(true)
   const [billingLoading, setBillingLoading] = useState<string | null>(null)
   const [billingError, setBillingError] = useState("")
+  const [desiredPlan, setDesiredPlan] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isPending && !session) router.push("/signin")
@@ -108,10 +108,13 @@ function DashboardContent() {
   }, [session])
 
   useEffect(() => {
-    const plan = searchParams.get("plan")
-    if (!plan || !session || subPending || !sub) return
-    if (plan !== sub.plan && plan !== "explore") handleUpgrade(plan)
-  }, [session, subPending, sub]) // eslint-disable-line react-hooks/exhaustive-deps
+    setDesiredPlan(new URLSearchParams(window.location.search).get("plan"))
+  }, [])
+
+  useEffect(() => {
+    if (!desiredPlan || !session || subPending || !sub) return
+    if (desiredPlan !== sub.plan && desiredPlan !== "explore") handleUpgrade(desiredPlan)
+  }, [desiredPlan, session, subPending, sub])
 
   async function handleUpgrade(planKey: string) {
     if (planKey === "explore") return

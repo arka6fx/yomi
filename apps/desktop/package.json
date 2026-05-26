@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "cross-env ELECTRON_OZONE_PLATFORM_HINT=auto YOMI_DEV=true electron-vite dev",
     "build": "electron-vite build && electron-builder",
+    "build:ci": "electron-vite build",
     "preview": "electron-vite preview",
-    "test": "bun test",
+    "test": "bun test --pass-with-no-tests",
     "lint": "eslint src",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -21,6 +22,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@types/bun": "^1.1.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.0",

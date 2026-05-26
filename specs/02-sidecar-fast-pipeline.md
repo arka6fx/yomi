@@ -1,36 +1,77 @@
-# Spec 02 - Sidecar: Fast Pipeline
+# Spec 02 - Sidecar Fast Pipeline
 
 ## Purpose
 
-Define the fast linear pipeline, visual guidance mode, and model configuration. This is the hot path: every quick ask should stay near the 2 second budget.
+Define the fast linear pipeline, context assembly, visual guidance mode, and model configuration. This is the hot path: every quick ask should stay near the two second budget when external providers respond quickly.
 
 ## Invariants
 
-- The fast path never enters a tool-selection loop. It makes exactly one LLM call.
+- The fast path never enters a tool-selection loop.
 - The intent router decides fast vs agent before pipeline execution.
-- Screenshot capture should happen as early as possible in the desktop flow.
-- TTS starts on the first sentence boundary so the user hears audio before the LLM finishes.
+- Screenshot capture happens in desktop before the sidecar request.
+- Screenshots are attached to the model only when the query appears screen-aware.
+- Pro/Max context retrieval happens before the single answer LLM call.
+- Cloud RAG is optional and non-fatal.
+- TTS starts on sentence boundaries so the user hears audio before the LLM finishes.
 
 ## Fast Pipeline
 
 ```text
-Sarvam STT (`saarika:v2.5`)
-  -> screenshot context when needed
-  -> Vercel AI SDK `streamText`
-     model: FAST_PATH_MODEL (default: gpt-4.1-mini)
-     provider: @ai-sdk/openai via AI Credits/OpenAI-compatible endpoint
-     maxTokens: 800
-  -> Sarvam TTS (`bulbul:v3`, 16 kHz)
+text input or Sarvam STT
+  -> screen-aware screenshot inclusion check
+  -> Pro/Max context assembly
+       local memory profiles + FTS snippets
+       recent session tail
+       optional Cloud RAG snippets
+  -> Vercel AI SDK streamText
+       model: FAST_PATH_MODEL || gpt-4.1-mini
+       provider: @ai-sdk/openai via AI Credits/OpenAI-compatible endpoint
+  -> optional Sarvam TTS
   -> SSE events to desktop
 ```
 
-The sidecar includes screenshots only when the query appears screen-aware. This avoids anchoring general questions on irrelevant visual context.
+Explore skips local memory and Cloud RAG context. Pro and Max load local memory. Cloud RAG is queried only when enabled by desktop settings and a bearer token is supplied.
+
+## Request Contract
+
+```ts
+interface FastQueryRequest {
+  text?: string
+  audio_b64?: string
+  screenshot_b64?: string
+  mode?: "answer" | "guide"
+  tts?: boolean
+  plan?: "explore" | "pro" | "max"
+  history?: { role: "user" | "assistant"; text: string }[]
+  cloud_rag_enabled?: boolean
+  auth_token?: string
+}
+```
+
+`auth_token` is used only by the sidecar to call authenticated backend Cloud RAG search. It is not included in model prompts.
+
+## Screen Context
+
+The sidecar runs a local heuristic over the resolved text. It includes the screenshot only for screen/UI/image/spatial queries such as "what is this error?" or "what is on my screen?" Self-contained knowledge and writing requests do not include the screenshot.
+
+## Context Assembly
+
+For Pro/Max answer mode, `getFastPrompt` loads:
+
+- `yomi.md`
+- static/dynamic local memory profiles
+- local SQLite FTS memory snippets
+- capped legacy `memory.md` / `memory-index.md`
+- recent session tail
+- optional Cloud RAG snippets
+
+If Cloud RAG retrieval fails, the request continues with local memory only.
 
 ## Visual Guidance Mode
 
-When the user asks for step-by-step guidance, the fast path runs in `guide` mode and returns structured visual guide steps.
+Guide mode returns structured visual guide steps:
 
-```typescript
+```ts
 interface GuideResponse {
   steps: {
     instruction: string
@@ -44,41 +85,25 @@ interface GuideResponse {
 
 If visual targets cannot be identified, emit a text-only guide step with `elements: []`.
 
-## LLM Provider
-
-All LLM routing uses an OpenAI-compatible API through `@ai-sdk/openai`.
-
-```typescript
-import { createOpenAI } from "@ai-sdk/openai"
-
-const openai = createOpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL,
-})
-
-export function createModel(modelId: string) {
-  return openai(modelId)
-}
-```
-
-Default model: `FAST_PATH_MODEL || "gpt-4.1-mini"`.
-
 ## Speech Providers
 
-- STT: Sarvam `saarika:v2.5`, configured by `SARVAM_API_KEY`.
-- TTS: Sarvam `bulbul:v3`, 16 kHz, default speaker `shreya`.
-- Disable TTS with `TTS_ENGINE=none`.
+- STT: Sarvam `saarika:v2.5`
+- TTS: Sarvam `bulbul:v3`, 16 kHz
+- Disable TTS with `TTS_ENGINE=none`
 
-## Files
+## Implemented Files
 
-- `apps/sidecar/src/index.ts` - Hono server and `/query`, `/query/fast`, `/stt` routes.
-- `apps/sidecar/src/pipeline/fast.ts` - fast pipeline implementation.
-- `apps/sidecar/src/pipeline/visual-guide.ts` - visual guide implementation.
-- `apps/sidecar/src/pipeline/model.ts` - OpenAI-compatible model factory.
-- `apps/sidecar/src/services/sarvam/stt.ts` - STT client.
-- `apps/sidecar/src/services/sarvam/tts.ts` - TTS client.
-- `packages/shared/src/index.ts` - shared IPC/SSE contracts.
+- `apps/sidecar/src/index.ts`
+- `apps/sidecar/src/pipeline/fast.ts`
+- `apps/sidecar/src/pipeline/model.ts`
+- `apps/sidecar/src/pipeline/tts.ts`
+- `apps/sidecar/src/pipeline/visual-guide.ts`
+- `apps/sidecar/src/memory/engine.ts`
+- `apps/sidecar/src/memory/cloud-rag.ts`
+- `packages/shared/src/index.ts`
 
-## Open Questions
+## Future Work
 
-- Sentence-boundary detection currently uses punctuation plus whitespace. Mid-sentence pauses may improve perceived latency later.
+- Better screenshot relevance evaluation.
+- Local semantic embeddings for memory retrieval.
+- More nuanced output budgets by request type.

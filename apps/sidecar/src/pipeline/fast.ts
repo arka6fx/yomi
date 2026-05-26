@@ -4,9 +4,10 @@ import { generateGuide } from "./visual-guide.js";
 import { transcribe } from "../speech/transcribe.js";
 import { synthesize, resolveTts } from "./tts.js";
 import { createModel } from "./model.js";
-import { buildFastPrompt, loadYomiMd, loadMemoryContext } from "../harness/prompt.js";
-import { compact } from "../memory/compactor.js";
+import { buildFastPrompt, loadYomiMd, loadRichMemoryContext } from "../harness/prompt.js";
 import { appendSessionTurn, loadRecentSession } from "../memory/session.js";
+import { captureTurnMemory } from "../memory/engine.js";
+import { retrieveCloudRagContext } from "../memory/cloud-rag.js";
 
 const MODEL = process.env.FAST_PATH_MODEL || "gpt-4.1-mini";
 
@@ -16,13 +17,23 @@ function memoryEnabled(plan: Plan | undefined): boolean {
   return plan === "pro" || plan === "max"
 }
 
-async function getFastPrompt(hasScreen: boolean, plan: Plan | undefined): Promise<string> {
+async function getFastPrompt(
+  text: string,
+  hasScreen: boolean,
+  plan: Plan | undefined,
+  cloudRagEnabled?: boolean,
+  authToken?: string,
+): Promise<string> {
   if (cachedYomiMd === null) cachedYomiMd = await loadYomiMd()
   const memory = memoryEnabled(plan)
-  const [{ memorySummary, memoryIndex }, recentSession] = memory
-    ? await Promise.all([loadMemoryContext(), loadRecentSession()])
-    : [{ memorySummary: "", memoryIndex: "" }, ""]
-  return buildFastPrompt({ yomiMd: cachedYomiMd, memorySummary, memoryIndex, recentSession, hasScreen })
+  const [localCtx, recentSession, cloudRagContext] = memory
+    ? await Promise.all([
+        loadRichMemoryContext(text),
+        loadRecentSession(),
+        retrieveCloudRagContext({ query: text, enabled: cloudRagEnabled, authToken }),
+      ])
+    : [{ memorySummary: "", memoryIndex: "", localMemory: "", staticProfile: "", dynamicProfile: "" }, "", ""]
+  return buildFastPrompt({ yomiMd: cachedYomiMd, ...localCtx, cloudRagContext, recentSession, hasScreen })
 }
 
 // Tiny single-consumer queue so multiple async producers (LLM text + N concurrent
@@ -139,6 +150,8 @@ async function* answerPipeline(
   screenshotB64?: string,
   tts = true,
   plan?: Plan,
+  cloudRagEnabled?: boolean,
+  authToken?: string,
 ): AsyncGenerator<SseEvent> {
   const content: any[] = [{ type: "text" as const, text }];
 
@@ -150,7 +163,7 @@ async function* answerPipeline(
     });
   }
 
-  const systemPrompt = await getFastPrompt(hasScreen, plan);
+  const systemPrompt = await getFastPrompt(text, hasScreen, plan, cloudRagEnabled, authToken);
 
   const result = streamText({
     model: createModel(MODEL),
@@ -316,14 +329,14 @@ export async function* fastPipeline(
         yield event
       }
     } else {
-      for await (const event of answerPipeline(text, req.screenshot_b64, req.tts !== false, req.plan)) {
+      for await (const event of answerPipeline(text, req.screenshot_b64, req.tts !== false, req.plan, req.cloud_rag_enabled, req.auth_token)) {
         if (event.type === "llm_chunk") output += event.text
         yield event
       }
     }
     if (memoryEnabled(req.plan) && output.trim()) {
       appendSessionTurn({ kind: "fast", mode: req.mode ?? "answer", input: text, output })
-        .then(() => compact())
+        .then(() => captureTurnMemory({ input: text, output, mode: req.mode ?? "answer" }))
         .catch(err => console.warn("[yomi/fast] memory write failed:", err))
     }
   } catch (err) {

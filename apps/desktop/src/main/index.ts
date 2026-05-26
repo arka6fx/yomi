@@ -1,9 +1,13 @@
-import { app, BrowserWindow, desktopCapturer, globalShortcut, ipcMain, screen, shell } from "electron"
+import { app, BrowserWindow, desktopCapturer, dialog, globalShortcut, ipcMain, screen, shell } from "electron"
+import { stat } from "node:fs/promises"
 import path from "node:path"
+import type { RagIndexResult, RagUploadFile } from "@yomi/shared"
 import { SidecarManager } from "./sidecar"
 import { checkStoredToken, startDeviceCodeFlow, clearToken, loadToken, BACKEND_URL } from "./auth"
 import { initHotkey, enableHotkeys, disableHotkeys, suspendHotkeys, resumeHotkeys, triggerEscape } from "./hotkey"
 import { initSidecarIpc } from "./ipc"
+import { assertRagUploadPath, readRagFile } from "./rag-files"
+import { loadDesktopSettings, saveDesktopSettings } from "./settings"
 
 // Transparent frameless windows need software compositing on some GPU/driver combos
 if (process.platform === "win32") {
@@ -13,6 +17,21 @@ if (process.platform === "win32") {
 
 let overlayWin: BrowserWindow | null = null
 let sidecarStarted = false  // Sidecar + IPC + hotkeys initialised (once ever)
+
+async function ragFetch<T>(endpoint: string, init: RequestInit = {}): Promise<T> {
+  const token = loadToken()
+  if (!token) throw new Error("Please sign in again")
+  const res = await fetch(`${BACKEND_URL}${endpoint}`, {
+    ...init,
+    headers: {
+      ...(init.headers ?? {}),
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  const body = await res.json().catch(() => ({})) as { error?: string }
+  if (!res.ok) throw new Error(body.error ?? `Cloud RAG failed (${res.status})`)
+  return body as T
+}
 
 app.whenReady().then(async () => {
   // Position overlay at top-center of primary display
@@ -125,6 +144,80 @@ app.whenReady().then(async () => {
 
   ipcMain.on("yomi:set-opacity", (_e, value: number) => {
     overlayWin?.setOpacity(Math.max(0.1, Math.min(1, value)))
+  })
+
+  ipcMain.handle("yomi:get-cloud-rag-enabled", async () => {
+    return (await loadDesktopSettings()).cloudRagEnabled
+  })
+
+  ipcMain.handle("yomi:set-cloud-rag-enabled", async (_e, enabled: boolean) => {
+    const settings = await loadDesktopSettings()
+    const next = { ...settings, cloudRagEnabled: !!enabled }
+    await saveDesktopSettings(next)
+    return next.cloudRagEnabled
+  })
+
+  ipcMain.handle("yomi:list-rag-sources", async () => {
+    return ragFetch("/api/rag/sources")
+  })
+
+  ipcMain.handle("yomi:pick-rag-files", async () => {
+    if (!overlayWin) return []
+    const result = await dialog.showOpenDialog(overlayWin, {
+      title: "Add files to Cloud RAG",
+      properties: ["openFile", "multiSelections"],
+      filters: [
+        { name: "Text files", extensions: ["txt", "md", "markdown", "json", "csv", "log", "tsv", "yaml", "yml"] },
+      ],
+    })
+    if (result.canceled) return []
+
+    const files: RagUploadFile[] = []
+    for (const filePath of result.filePaths) {
+      assertRagUploadPath(filePath)
+      const info = await stat(filePath)
+      files.push({ path: filePath, name: path.basename(filePath), sizeBytes: info.size })
+    }
+    return files
+  })
+
+  ipcMain.handle("yomi:index-rag-files", async (_e, filePaths: string[]) => {
+    const results: RagIndexResult[] = []
+    for (const filePath of filePaths) {
+      let sourceId: string | undefined
+      const name = path.basename(filePath)
+      try {
+        const file = await readRagFile(filePath)
+        const source = await ragFetch<{ id: string }>("/api/rag/sources", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: file.name, sourceType: "upload" }),
+        })
+        sourceId = source.id
+        const indexed = await ragFetch<{ chunks: number }>("/api/rag/documents", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sourceId,
+            title: file.name,
+            mimeType: "text/plain",
+            content: file.content,
+            metadata: { originalPath: filePath, sizeBytes: file.sizeBytes },
+          }),
+        })
+        results.push({ path: filePath, name: file.name, ok: true, sourceId, chunks: indexed.chunks })
+      } catch (err) {
+        if (sourceId) {
+          await ragFetch(`/api/rag/sources/${sourceId}`, { method: "DELETE" }).catch(() => {})
+        }
+        results.push({ path: filePath, name, ok: false, error: err instanceof Error ? err.message : "Indexing failed" })
+      }
+    }
+    return results
+  })
+
+  ipcMain.handle("yomi:delete-rag-source", async (_e, id: string) => {
+    return ragFetch(`/api/rag/sources/${id}`, { method: "DELETE" })
   })
 
   // Handle 401 from subscription check — triggers re-auth

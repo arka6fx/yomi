@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { join } from "node:path"
 import { loadMemorySummary, loadMemoryIndex } from "../memory/loader.js"
+import { readProfile, retrieveLocalMemoryContext } from "../memory/engine.js"
 
 const MAX_MEMORY_SUMMARY_CHARS = 4000
 const MAX_MEMORY_INDEX_CHARS = 2000
@@ -12,6 +13,10 @@ export interface PromptContext {
   yomiMd?: string
   memorySummary?: string
   memoryIndex?: string
+  localMemory?: string
+  cloudRagContext?: string
+  staticProfile?: string
+  dynamicProfile?: string
   recentSession?: string
   hasScreen?: boolean  // whether a screenshot is attached to this turn
 }
@@ -34,6 +39,22 @@ export async function loadMemoryContext(): Promise<{ memorySummary: string; memo
   }
 }
 
+export async function loadRichMemoryContext(query: string): Promise<{
+  memorySummary: string
+  memoryIndex: string
+  localMemory: string
+  staticProfile: string
+  dynamicProfile: string
+}> {
+  const [base, localMemory, staticProfile, dynamicProfile] = await Promise.all([
+    loadMemoryContext(),
+    Promise.resolve(retrieveLocalMemoryContext(query, 3000)),
+    readProfile("static"),
+    readProfile("dynamic"),
+  ])
+  return { ...base, localMemory, staticProfile, dynamicProfile }
+}
+
 // Resolve userName and os from env/process when not supplied by caller.
 function resolveCtx(ctx: PromptContext): Required<PromptContext> {
   return {
@@ -42,17 +63,25 @@ function resolveCtx(ctx: PromptContext): Required<PromptContext> {
     yomiMd: ctx.yomiMd ?? "",
     memorySummary: ctx.memorySummary ?? "",
     memoryIndex: ctx.memoryIndex ?? "",
+    localMemory: ctx.localMemory ?? "",
+    cloudRagContext: ctx.cloudRagContext ?? "",
+    staticProfile: ctx.staticProfile ?? "",
+    dynamicProfile: ctx.dynamicProfile ?? "",
     recentSession: ctx.recentSession ?? "",
     hasScreen: ctx.hasScreen ?? false,
   }
 }
 
-function buildMemoryBlock(memorySummary: string, memoryIndex: string, recentSession: string): string {
-  if (!memorySummary && !memoryIndex && !recentSession) return ""
+function buildMemoryBlock(ctx: Pick<Required<PromptContext>, "memorySummary" | "memoryIndex" | "localMemory" | "cloudRagContext" | "staticProfile" | "dynamicProfile" | "recentSession">): string {
+  if (!ctx.memorySummary && !ctx.memoryIndex && !ctx.localMemory && !ctx.cloudRagContext && !ctx.staticProfile && !ctx.dynamicProfile && !ctx.recentSession) return ""
   const parts: string[] = []
-  if (memoryIndex) parts.push(`<index>\n${memoryIndex.trim()}\n</index>`)
-  if (memorySummary) parts.push(`<summary>\n${memorySummary.trim()}\n</summary>`)
-  if (recentSession) parts.push(`<recent_chat>\n${recentSession.trim()}\n</recent_chat>`)
+  if (ctx.staticProfile) parts.push(`<static_profile>\n${ctx.staticProfile.trim()}\n</static_profile>`)
+  if (ctx.dynamicProfile) parts.push(`<dynamic_profile>\n${ctx.dynamicProfile.trim()}\n</dynamic_profile>`)
+  if (ctx.memoryIndex) parts.push(`<index>\n${ctx.memoryIndex.trim()}\n</index>`)
+  if (ctx.memorySummary) parts.push(`<summary>\n${ctx.memorySummary.trim()}\n</summary>`)
+  if (ctx.localMemory) parts.push(`<local_retrieved>\n${ctx.localMemory.trim()}\n</local_retrieved>`)
+  if (ctx.cloudRagContext) parts.push(`<cloud_rag_context>\n${ctx.cloudRagContext.trim()}\n</cloud_rag_context>`)
+  if (ctx.recentSession) parts.push(`<recent_chat>\n${ctx.recentSession.trim()}\n</recent_chat>`)
   return `<memory>\n${parts.join("\n")}\n</memory>\n\n`
 }
 
@@ -100,9 +129,9 @@ For ordinary questions:
 </answer_format>`
 
 export function buildFastPrompt(ctx: PromptContext): string {
-  const { userName, os, yomiMd, memorySummary, memoryIndex, recentSession, hasScreen } = resolveCtx(ctx)
+  const { userName, os, yomiMd, hasScreen, ...memoryCtx } = resolveCtx(ctx)
   const userCtx = yomiMd ? `<user_context>\n${yomiMd}\n</user_context>\n\n` : ""
-  const memCtx = buildMemoryBlock(memorySummary, memoryIndex, recentSession)
+  const memCtx = buildMemoryBlock(memoryCtx)
 
   const screenLine = hasScreen
     ? "A screenshot of their current screen is attached — use it to answer."
@@ -151,9 +180,9 @@ ${FAST_EXAMPLES}
 }
 
 export function buildAgentPrompt(ctx: PromptContext): string {
-  const { userName, os, yomiMd, memorySummary, memoryIndex, recentSession } = resolveCtx(ctx)
+  const { userName, os, yomiMd, ...memoryCtx } = resolveCtx(ctx)
   const userCtx = yomiMd ? `<user_context>\n${yomiMd}\n</user_context>\n\n` : ""
-  const memCtx = buildMemoryBlock(memorySummary, memoryIndex, recentSession)
+  const memCtx = buildMemoryBlock(memoryCtx)
 
   return `\
 <identity>

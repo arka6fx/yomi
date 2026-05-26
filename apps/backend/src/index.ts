@@ -8,6 +8,7 @@ import { usageRouter } from "./routes/usage.js"
 import { billingRouter } from "./routes/billing.js"
 import { authRoutesRouter } from "./routes/auth-routes.js"
 import { profileRouter } from "./routes/profile.js"
+import { ragRouter } from "./routes/rag.js"
 
 const app = new Hono()
 
@@ -31,6 +32,7 @@ app.route("/api/stt", sttRouter)
 app.route("/api/usage", usageRouter)
 app.route("/api/billing", billingRouter)
 app.route("/api/user", profileRouter)
+app.route("/api/rag", ragRouter)
 
 const PORT = Number(process.env["PORT"] ?? 3001)
 export default {

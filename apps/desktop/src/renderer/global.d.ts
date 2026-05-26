@@ -1,4 +1,4 @@
-import type { SseEvent } from "@yomi/shared"
+import type { RagIndexResult, RagSourceInfo, RagUploadFile, SseEvent } from "@yomi/shared"
 import type { HotkeyState } from "./store"
 import type { SubscriptionInfo, SubscriptionUpdate } from "../preload/index"
 
@@ -36,6 +36,12 @@ declare global {
       quit(): void
       openUpgrade(): void
       setOpacity(value: number): void
+      getCloudRagEnabled(): Promise<boolean>
+      setCloudRagEnabled(enabled: boolean): Promise<boolean>
+      listRagSources(): Promise<{ sources: RagSourceInfo[] }>
+      pickRagFiles(): Promise<RagUploadFile[]>
+      indexRagFiles(paths: string[]): Promise<RagIndexResult[]>
+      deleteRagSource(id: string): Promise<{ ok: true }>
     }
   }
 }

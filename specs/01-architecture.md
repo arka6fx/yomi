@@ -8,7 +8,7 @@ Define the four-layer architecture, IPC contracts, data flows, and port assignme
 
 - The desktop shell NEVER makes direct LLM calls. All AI goes through the sidecar.
 - The sidecar NEVER holds API keys. It proxies requests to the backend.
-- Raw audio and screen captures NEVER leave the device (only the distilled text prompt is sent to the backend/cloud).
+- Raw screen captures never leave the device. Audio is processed through the configured Sarvam STT path; only the resolved transcript, prompt context, and explicitly uploaded Cloud RAG documents are sent to backend/cloud services.
 - The fast path has a strict < 2s budget end-to-end (hotkey press to first audio byte).
 
 ## Detailed Design
@@ -25,7 +25,7 @@ Define the four-layer architecture, IPC contracts, data flows, and port assignme
                    │  Auth: SIDECAR_SECRET header
 ┌──────────────────▼───────────────────────────────────┐
 │  LAYER 2: LOCAL SIDECAR  (apps/sidecar — Bun)        │
-│  Owns: router, fast pipeline, agent loop, notepad    │
+│  Owns: router, fast pipeline, agent loop, memory     │
 │  Does NOT own: API keys, accounts, billing           │
 └──────────────────┬───────────────────────────────────┘
                    │  HTTPS to cloud backend
@@ -95,6 +95,11 @@ POST /api/usage
 Auth: Bearer <user JWT>
 Body: UsageEvent
 Response: 204
+
+POST /api/rag/search
+Auth: Bearer <user JWT>
+Body: { query: string, limit?: number }
+Response: { snippets: RagSearchResult[] }
 ```
 
 ### Port Assignments
@@ -113,7 +118,8 @@ Response: 204
   → Desktop captures mic stream + screenshot (parallel)
   → POST /query/fast to sidecar (audio + screenshot)
     → Sidecar: Sarvam STT (`saarika:v2.5`)
-    → Sidecar: Vercel AI SDK streamText (cached system prompt + yomi.md)
+    → Sidecar: local memory + optional Cloud RAG context
+    → Sidecar: Vercel AI SDK streamText (cached system prompt + context)
     → Sidecar: Sarvam TTS (`bulbul:v3`)
   → Desktop receives audio_chunk stream → plays audio
 Total budget: < 2s to first audio byte

@@ -1,147 +1,121 @@
-# Spec 04 — Desktop: UI
+# Spec 04 - Desktop UI
 
 ## Purpose
 
-Define the renderer process: floating buddy window, status pill, settings panel, and visual guide overlay. All UI components are React running in an Electron renderer process.
+Define the Electron renderer UI: floating overlay, streaming response view, account controls, and Cloud RAG source-management UI. The renderer is React and talks only through the preload bridge.
 
 ## Invariants
 
-- The UI never calls the sidecar directly — all IPC goes through the preload bridge.
-- The visual guide overlay is a separate transparent window with mouse passthrough.
-- Status indicator always shows current Yomi state (listening / thinking / idle / error).
-- `html, body { background: transparent; margin: 0 }` is required — without this the BrowserWindow's `transparent: true` has no effect.
+- The UI never calls the sidecar or backend directly.
+- All privileged operations go through `window.yomi`.
+- The overlay always shows current state: idle, listening, processing, speaking, or error.
+- Cloud RAG is opt-in and source-based; no hidden memory sync.
+- `html, body { background: transparent; margin: 0 }` is required for transparent windows.
 
-## Detailed Design
+## Renderer Structure
 
-### Renderer Structure
-
-```
+```text
 apps/desktop/src/renderer/
-  index.html        Shell HTML
-  app.tsx           React root — routing, state management
-  components/
-    BuddyWindow.tsx      Main floating window
-    StatusPill.tsx       Notch / tray status indicator
-    Settings.tsx         Settings panel
-    GuideOverlay.tsx     Transparent overlay with step arrows
-    GuideStep.tsx        Single step highlight with label
+  app.tsx
+  store.ts
+  global.d.ts
 ```
 
-### Overlay (`app.tsx` — spec 03 + 04)
+The current renderer is intentionally compact. It combines overlay, text input, response stream, account status, settings, and Cloud RAG controls in one app surface.
 
-Before the full BuddyWindow exists, `app.tsx` is the entire UI — a single floating overlay that collapses to a status pill and expands to show the streaming response.
+## Main States
 
-**States:**
-- `idle` — small pill, `position: fixed; bottom: 24px; right: 24px`
-- `listening` — pill shows animated recording dot
-- `processing` — pill shows spinner, expands as `llm_chunk` events arrive
-- `done` — full response text, dismiss on click; auto-dismiss after 8s
-
-**Audio capture (renderer-side):**
-
-```ts
-const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-const ctx = new AudioContext({ sampleRate: 16000 })
-const source = ctx.createMediaStreamSource(stream)
-const processor = ctx.createScriptProcessor(4096, 1, 1)
-processor.onaudioprocess = (e) => {
-  const pcm = e.inputBuffer.getChannelData(0)
-  window.yomi.sendAudioChunk(pcm.buffer.slice(0), 16000)
-}
-source.connect(processor)
-processor.connect(ctx.destination)
-```
-
-Start capturing only when state transitions to `listening`.
-
-**Type declarations** (`renderer/global.d.ts`):
-
-```ts
-import type { SseEvent } from "@yomi/shared"
-
-type HotkeyState = "idle" | "listening" | "processing"
-
-declare global {
-  interface Window {
-    yomi: {
-      sendAudioChunk(pcm: ArrayBuffer, sampleRate: number): void
-      onEvent(cb: (e: SseEvent) => void): () => void
-      onStateChange(cb: (s: HotkeyState) => void): () => void
-    }
-  }
-}
-```
-
-### Floating Window (BuddyWindow)
-
-The main interaction surface. A small, draggable, always-on-top window. _(after spec 04 ships)_
-
-- Quick ask input (mic button + optional text field)
-- Streaming transcript display
-- Agent task progress (status updates, tool calls)
-- Settings gear icon → opens Settings panel
-
-### Status Indicator (StatusPill)
-
-A minimal visual indicator shown in the notch (macOS) or tray area. Shows current state:
-
-| State | Appearance |
+| State | UI behavior |
 |---|---|
-| Idle | Dim indicator |
-| Listening | Pulsing recording dot |
-| Thinking | Spinner |
-| Speaking | Audio waveform |
-| Error | Red indicator |
+| `idle` | Compact overlay, ready for hotkey or typed prompt |
+| `listening` | Recording indicator and cancel action |
+| `processing` | Streaming response card with spinner |
+| `speaking` | Response remains visible while TTS/audio chunks play |
+| `error` | Error message with recovery action |
 
-Rendered as a small always-on-top `BrowserWindow` or embedded in the tray icon depending on platform.
+## Query UI
 
-### Settings Panel
+Users can ask through voice or text. Text mode sends the typed prompt; an empty submit becomes a screen question and includes the current screenshot.
 
-Slide-out panel with:
-- Account section (sign in/out, plan info)
-- Voice settings (TTS engine, voice selection)
-- Microphone device selection
-- Hotkey configuration
-- Permissions status (mic, screen recording)
-- About / version
+The renderer receives SSE events from main:
 
-### Visual Guide Overlay
+```ts
+type SseEvent =
+  | { type: "transcript"; text: string }
+  | { type: "llm_chunk"; text: string }
+  | { type: "audio_chunk"; audio_b64: string }
+  | { type: "visual_guide"; ... }
+  | { type: "done" }
+  | { type: "error"; message: string }
+```
 
-Rendered as a separate transparent click-through `BrowserWindow` positioned at (0,0) spanning the full screen. Mouse events pass through to the underlying app.
+## Cloud RAG UI
 
-```typescript
-interface GuideElement {
-  label: string
-  bbox: { x: number; y: number; width: number; height: number }
+Cloud RAG controls live in the settings/menu surface, not in a separate admin page.
+
+Required controls:
+
+- toggle: enable/disable Cloud RAG retrieval for future questions
+- add files: opens the native file picker
+- refresh: reloads indexed source list
+- source list: filename, status, document count, chunk count, updated time
+- delete source: removes a source from the backend index
+- inline error/status messages for indexing failures
+
+Expected states:
+
+| State | UI copy/behavior |
+|---|---|
+| Signed out | Show sign-in prompt; disable source actions |
+| Explore plan | Explain that Cloud RAG requires Pro/Max; disable source actions |
+| Pro/Max signed in | Enable toggle and source management |
+| Indexing | Disable add/delete for the active upload and show progress state |
+| Empty | Show a compact empty source list state |
+
+Privacy copy should be direct: local memory is not uploaded; only files the user explicitly chooses are indexed.
+
+## Preload API
+
+```ts
+interface YomiApi {
+  sendAudioChunk(pcm: ArrayBuffer, sampleRate: number): void
+  submitText(text: string): Promise<void>
+  onEvent(cb: (event: SseEvent) => void): () => void
+  onStateChange(cb: (state: HotkeyState) => void): () => void
+  getCloudRagEnabled(): Promise<boolean>
+  setCloudRagEnabled(enabled: boolean): Promise<boolean>
+  pickRagFiles(): Promise<RagPickedFile[]>
+  indexRagFiles(files: RagPickedFile[]): Promise<RagIndexResult[]>
+  listRagSources(): Promise<RagSource[]>
+  deleteRagSource(sourceId: string): Promise<void>
 }
+```
 
+## Visual Guide Overlay
+
+Visual guide mode renders structured steps from the sidecar:
+
+```ts
 interface GuideStep {
   instruction: string
-  elements: GuideElement[]
+  elements: {
+    label: string
+    bbox: { x: number; y: number; width: number; height: number }
+  }[]
 }
 ```
 
-**Implementation:**
-- `BrowserWindow` with `transparent: true`, `frame: false`, `alwaysOnTop: true`, mouse passthrough
-- React renders SVG arrows + labels at bbox coordinates from the sidecar
-- Nav bar (Step X of Y, Prev/Next, Close) is the only interactive region
-- On Close or last step, overlay is hidden
-- Refresh button to re-screenshot and recalculate if target window moves
+The guide overlay remains transparent and click-through except for navigation controls.
 
-## Files to change
+## Implemented Files
 
-- `apps/desktop/src/renderer/app.tsx` — MVP overlay: status pill + streaming response
+- `apps/desktop/src/renderer/app.tsx`
+- `apps/desktop/src/renderer/store.ts`
+- `apps/desktop/src/renderer/global.d.ts`
+- `apps/desktop/src/preload/index.ts`
 
-## Files to create
+## Future Work
 
-- `apps/desktop/src/renderer/global.d.ts` — `window.yomi` TypeScript interface
-- `apps/desktop/src/renderer/components/BuddyWindow.tsx` — Main floating window _(after spec 04 ships)_
-- `apps/desktop/src/renderer/components/StatusPill.tsx` — Notch/tray status indicator _(after spec 04 ships)_
-- `apps/desktop/src/renderer/components/Settings.tsx` — Settings panel _(after spec 04 ships)_
-- `apps/desktop/src/renderer/components/GuideOverlay.tsx` — Visual guide overlay _(after spec 08 agent loop)_
-- `apps/desktop/src/renderer/components/GuideStep.tsx` — Single step highlight _(after spec 08 agent loop)_
-
-## Open Questions
-
-- ~~State management: React context vs Zustand vs Jotai~~ — **decided: Zustand** (`src/renderer/store.ts`). Single `useYomiStore` with `hotkeyState`, `responseText`, `guideSteps`, `transcript`, `error`. `handleSseEvent` drives all state transitions from SSE events.
-- Overlay multi-monitor support: position overlay across all screens vs only the active screen.
+- Split the current compact UI into reusable components once the surface grows.
+- Add per-source reindex action.
+- Add upload progress for very large text files.

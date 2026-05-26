@@ -6,9 +6,11 @@ import { agentPipeline } from "./pipeline/agent.js"
 import { transcribe } from "./stt.js"
 import { classifyIntent } from "./router/intent.js"
 import { initMemoryDir } from "./memory/loader.js"
+import { initMemoryEngine } from "./memory/engine.js"
 
 // Ensure ~/.yomi/ directory tree exists before serving any requests.
 initMemoryDir().catch(err => console.warn("[yomi] memory init failed:", err))
+initMemoryEngine().catch(err => console.warn("[yomi] memory engine init failed:", err))
 
 const app = new Hono()
 

@@ -1,59 +1,83 @@
-# Spec 13 — Pricing
+# Spec 13 - Pricing
 
 ## Purpose
 
-Define Yomi's pricing tiers, feature gates, and billing integration. All billing is handled via Razorpay with USD pricing.
+Define Yomi's plans, feature gates, fair-use limits, and Razorpay billing behavior.
 
 ## Invariants
 
-- All plans are billed monthly in USD.
-- Razorpay is the sole payment processor — Stripe is not used.
-- Free tier exists with limited daily usage.
-- Plans: Free, Basic ($4/mo), Standard ($9/mo), Genesis ($19/mo).
-- Payment methods: UPI, credit/debit cards, international cards (Razorpay supports all).
+- Plans are `explore`, `pro`, and `max`.
+- Razorpay is the sole payment processor.
+- Explore is a limited trial, not a forever unlimited free tier.
+- Pro includes screen-aware chat and local memory, but no agents.
+- Max adds agents/subagents when launched.
+- Local memory stays local for all plans.
+- Cloud RAG is opt-in and available only to paid plans.
 
-## Detailed Design
+## Plan Matrix
 
-### Plan table
+| Plan | Price | Core limits | Context | Agents |
+|---|---:|---|---|---|
+| Explore | $0 | 30-day trial, 150 total interactions | screen analysis only | no |
+| Pro | $9.99/mo | chat 10000/day, voice 200/day | local memory + optional Cloud RAG | no |
+| Max | $24.99/mo | chat/voice 10000/day | local memory + optional Cloud RAG | yes, 10000 runs/day |
 
-Plan | Price/mo | LLM calls/day | STT minutes/day | TTS | Screenshot analysis | Agent pipeline | Priority support
----|---|---|---|---|---|---|---
-Free | $0 | 10 | 2 | Yes | No | No | No
-Basic | $4 | 500 | 30 | Yes | Yes | No | Email
-Standard | $9 | 2000 | 120 | Yes | Yes | Yes | Email
-Genesis | $19 | 10000 | 600 | Yes | Yes | Yes | Priority
+Razorpay plan amounts:
 
-### Feature gates
+| Plan | Amount |
+|---|---:|
+| Pro | 999 |
+| Max | 2499 |
 
-The backend enforces plan caps at the API layer. Plans are stored in the `users.plan` column as enum values: `free | basic | standard | genesis`.
+The amount values are the smallest configured billing units used by the backend/Razorpay integration.
 
-### Billing flow
+## Feature Gates
 
-1. User clicks "Subscribe" on the pricing page.
-2. Frontend calls `POST /api/v1/billing/create-subscription` with their chosen plan.
-3. Backend creates a Razorpay subscription via `razorpay.subscriptions.create()`.
-4. Razorpay returns a `short_url` — user is redirected to Razorpay Checkout.
-5. After payment, Razorpay sends a `subscription.activated` webhook.
-6. Backend verifies webhook signature and upgrades the user's plan.
-7. User's plan is now active → daily limits apply per plan caps.
+| Feature | Explore | Pro | Max |
+|---|---|---|---|
+| Text chat | limited | yes | yes |
+| Voice | limited | 200/day | 10000/day |
+| Screen analysis | yes | yes | yes |
+| Local memory engine | no | yes | yes |
+| Cloud RAG retrieval | no | opt-in | opt-in |
+| Cloud RAG source upload | no | yes | yes |
+| Agent mode | no | no | yes |
 
-### Cancel flow
+Current implementation detail: normal Max purchase/access can remain blocked until launch while owner/dev accounts can test Max-gated paths.
 
-- User cancels via Razorpay Customer Portal or by emailing support.
-- Razorpay sends `subscription.cancelled` webhook.
-- Backend downgrades user to `free` plan.
+## Billing Flow
 
-## Files to change
+1. User starts checkout for Pro or Max.
+2. Backend creates a Razorpay subscription.
+3. User completes Razorpay checkout.
+4. Razorpay sends a webhook.
+5. Backend verifies the webhook signature.
+6. Backend updates the user plan and subscription status.
+7. Desktop sees the updated plan through auth/billing state refresh.
 
-- `apps/backend/src/index.ts` — register billing routes.
-- `apps/backend/src/middleware/rate-limit.ts` — use `plan` column for cap enforcement.
-- `apps/landing/src/app/pricing/page.tsx` — pricing page with plan cards and Razorpay Checkout button.
+## Cancellation And Downgrade
 
-## Files to create
+Canceled or failed subscriptions downgrade access back to Explore after the active period rules are applied. Paid-only context features stop being included in new sidecar requests.
 
-- `apps/backend/src/routes/billing.ts` — Razorpay subscription creation + webhook handler.
+## Metering
 
-## Open Questions
+Usage is enforced by backend APIs and shared usage helpers. Important behavior:
 
-- Should we support annual billing with a discount? → Phase 1.
-- Should we offer a self-serve cancel button? → Phase 0 uses email-based cancel; Phase 1 adds self-serve via Razorpay Customer Portal.
+- `usage_events` is append-only.
+- Daily counters reset by UTC date.
+- Voice and agent limits are separate from regular chat where applicable.
+- Cloud RAG source management is feature-gated, not counted as chat.
+
+## Implemented Files
+
+- `apps/backend/src/routes/billing.ts`
+- `apps/backend/src/routes/usage.ts`
+- `apps/backend/src/usage.ts`
+- `apps/landing/src/app/pricing/page.tsx`
+- `packages/shared/src/index.ts`
+
+## Future Work
+
+- Annual billing.
+- Self-serve cancellation portal.
+- Public Max launch flag.
