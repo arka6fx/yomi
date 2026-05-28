@@ -32,10 +32,16 @@ declare global {
       onStopAudio(cb: () => void): () => void
       getDesktopSourceId(): Promise<string | null>
       requestEscape(): void
+      triggerVoice(): void
+      triggerText(): void
+      stopListening(): void
       // App control
       quit(): void
       openUpgrade(): void
       setOpacity(value: number): void
+      // Guide mode
+      setGuideMode(on: boolean): void
+      onGuideExit(cb: () => void): () => void
     }
   }
 }

@@ -2,8 +2,9 @@ import { app, BrowserWindow, desktopCapturer, globalShortcut, ipcMain, screen, s
 import path from "node:path"
 import { SidecarManager } from "./sidecar"
 import { checkStoredToken, startDeviceCodeFlow, clearToken, loadToken, BACKEND_URL } from "./auth"
-import { initHotkey, enableHotkeys, disableHotkeys, suspendHotkeys, resumeHotkeys, triggerEscape } from "./hotkey"
+import { initHotkey, enableHotkeys, disableHotkeys, suspendHotkeys, resumeHotkeys, triggerEscape, triggerVoiceMode, triggerTextMode, triggerStopListening } from "./hotkey"
 import { initSidecarIpc } from "./ipc"
+import { createGuideOverlay, hideGuidePoint } from "./guide-overlay"
 
 // Transparent frameless windows need software compositing on some GPU/driver combos
 if (process.platform === "win32") {
@@ -17,12 +18,12 @@ let sidecarStarted = false  // Sidecar + IPC + hotkeys initialised (once ever)
 app.whenReady().then(async () => {
   // Position overlay at top-center of primary display
   const { width: screenW } = screen.getPrimaryDisplay().workAreaSize
-  const overlayW = 680
+  const overlayW = 780
   const overlayX = Math.round((screenW - overlayW) / 2)
 
   overlayWin = new BrowserWindow({
     width: overlayW,
-    height: 46,
+    height: 40,
     x: overlayX,
     y: 8,
     frame: false,
@@ -59,6 +60,11 @@ app.whenReady().then(async () => {
   // triggerEscape() internally calls onAnyEscape (stop-audio), so no extra send needed.
   ipcMain.on("yomi:escape", () => triggerEscape())
 
+  // Toolbar button triggers — mirror the Ctrl+Space / Ctrl+Enter shortcuts.
+  ipcMain.on("yomi:trigger-voice", () => triggerVoiceMode())
+  ipcMain.on("yomi:trigger-text", () => triggerTextMode())
+  ipcMain.on("yomi:stop-listening", () => triggerStopListening())
+
   // Returns the first screen source ID for system audio loopback capture in the renderer
   ipcMain.handle("yomi:get-desktop-source-id", async () => {
     const sources = await desktopCapturer.getSources({ types: ["screen"] })
@@ -67,7 +73,7 @@ app.whenReady().then(async () => {
 
   ipcMain.on("yomi:resize", (_e, w: number, h: number) => {
     if (!overlayWin) return
-    overlayWin.setSize(Math.max(240, w), Math.max(46, h))
+    overlayWin.setSize(Math.max(240, w), Math.max(40, h))
   })
 
   ipcMain.on("yomi:set-ignore-mouse-events", (_e, ignored: boolean) => {
@@ -175,6 +181,8 @@ app.whenReady().then(async () => {
     return { name: data.name, email: data.email }
   })
 
+  createGuideOverlay()
+
   // ── Load overlay ────────────────────────────────────────────────────────────
 
   if (process.env.ELECTRON_RENDERER_URL) {
@@ -197,12 +205,12 @@ app.whenReady().then(async () => {
 
   // ── Overlay keyboard shortcuts (no auth required) ───────────────────────────
 
-  // Ctrl+Shift+Arrow — smooth overlay movement
+  // Ctrl+Arrow — smooth overlay movement
   const NUDGE_DIRS: [string, number, number][] = [
-    ["Ctrl+Shift+Left",  -1,  0],
-    ["Ctrl+Shift+Right",  1,  0],
-    ["Ctrl+Shift+Up",     0, -1],
-    ["Ctrl+Shift+Down",   0,  1],
+    ["Ctrl+Left",  -1,  0],
+    ["Ctrl+Right",  1,  0],
+    ["Ctrl+Up",     0, -1],
+    ["Ctrl+Down",   0,  1],
   ]
   let nudgeDir = { x: 0, y: 0 }
   let nudgeVel = { x: 0, y: 0 }
@@ -236,7 +244,7 @@ app.whenReady().then(async () => {
   }
 
   let visible = true
-  globalShortcut.register("Ctrl+Shift+H", () => {
+  globalShortcut.register("Ctrl+H", () => {
     if (!overlayWin) return
     visible = !visible
     if (visible) {
@@ -248,7 +256,7 @@ app.whenReady().then(async () => {
     }
   })
 
-  globalShortcut.register("Ctrl+Shift+Q", () => app.quit())
+  globalShortcut.register("Ctrl+Q", () => app.quit())
 })
 
 // Session validation — periodically check the token is still valid.
@@ -312,7 +320,11 @@ async function completeSetup(token: string) {
       onAbort,
       // Fires on every ESC press regardless of state — stops TTS playback even
       // when the pipeline has already finished and state is back to idle.
-      onAnyEscape: () => overlayWin?.webContents.send("yomi:stop-audio"),
+      onAnyEscape: () => {
+        overlayWin?.webContents.send("yomi:stop-audio")
+        hideGuidePoint()
+        overlayWin?.webContents.send("yomi:guide-exit")
+      },
     })
 
     startSessionValidation()

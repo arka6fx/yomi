@@ -16,17 +16,12 @@ let onAnyEscape: (() => void) | null = null  // fired on every ESC, regardless o
 // Register the three AI-interaction shortcuts.
 // Called on init and again on resumeHotkeys() after a hide.
 function registerAiShortcuts(): void {
-  globalShortcut.register("Ctrl+Shift+Space", () => {
+  globalShortcut.register("Ctrl+Space", () => {
     if (!enabled) return
-    if (state === "idle") {
-      transition("listening")
-    } else if (state === "listening") {
-      transition("processing")
-      onListenStop?.()
-    }
+    if (state === "idle") transition("listening")
   })
 
-  globalShortcut.register("Ctrl+Shift+Return", () => {
+  globalShortcut.register("Ctrl+Return", () => {
     if (!enabled) return
     if (state === "idle") {
       transition("text-input")
@@ -80,8 +75,8 @@ export function suspendHotkeys(): void {
   suspended = true
   enabled = false
   if (state !== "idle") transition("idle")
-  globalShortcut.unregister("Ctrl+Shift+Space")
-  globalShortcut.unregister("Ctrl+Shift+Return")
+  globalShortcut.unregister("Ctrl+Space")
+  globalShortcut.unregister("Ctrl+Return")
   globalShortcut.unregister("Escape")
   globalShortcut.unregister("Return")  // defensive — may be registered if state was listening
 }
@@ -115,6 +110,26 @@ export function resetToIdle(): void {
 // Called by ipc.ts when a text query is submitted and processing begins.
 export function activateProcessing(): void {
   transition("processing")
+}
+
+// Called via IPC when the user clicks the Voice button in the toolbar.
+export function triggerVoiceMode(): void {
+  if (!enabled || state !== "idle") return
+  transition("listening")
+}
+
+// Called via IPC when the user clicks the Send/Enter chip while listening.
+export function triggerStopListening(): void {
+  if (!enabled || state !== "listening") return
+  transition("processing")
+  onListenStop?.()
+}
+
+// Called via IPC when the user clicks the Type button in the toolbar.
+export function triggerTextMode(): void {
+  if (!enabled || state !== "idle") return
+  transition("text-input")
+  onTextQuery?.()
 }
 
 function transition(next: HotkeyState): void {
