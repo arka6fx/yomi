@@ -131,6 +131,18 @@ contextBridge.exposeInMainWorld("yomi", {
     ipcRenderer.send("yomi:escape")
   },
 
+  triggerVoice(): void {
+    ipcRenderer.send("yomi:trigger-voice")
+  },
+
+  triggerText(): void {
+    ipcRenderer.send("yomi:trigger-text")
+  },
+
+  stopListening(): void {
+    ipcRenderer.send("yomi:stop-listening")
+  },
+
   quit(): void {
     ipcRenderer.send("yomi:quit")
   },

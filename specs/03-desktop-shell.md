@@ -59,14 +59,18 @@ Yomi windows call `setContentProtection(true)` before showing, so the overlay is
 
 Default shortcuts:
 
-| Shortcut | Action |
-|---|---|
-| `Ctrl+Shift+Space` | Start or stop voice capture |
-| `Ctrl+Shift+Enter` | Open text input |
-| `Ctrl+Shift+H` | Show or hide overlay |
-| `Esc` | Cancel active input |
+| Shortcut | State | Action |
+|---|---|---|
+| `Ctrl+Space` | idle | Start voice recording |
+| `Ctrl+Enter` | idle | Open text input |
+| `Enter` | listening | Send voice query (triggers STT + LLM) |
+| `Esc` | listening / text-input | Cancel and return to idle |
+| `Ctrl+H` | any | Show or hide overlay |
+| `Ctrl+Arrow` | any | Nudge overlay position |
 
-Hold-to-talk is not reliable across platforms, so voice uses toggle-to-talk.
+`Ctrl+Space` only starts listening — it no longer toggles stop. `Enter` is the submit key while recording; `Esc` cancels without submitting.
+
+The toolbar exposes **Voice** and **Type** buttons as on-screen equivalents of `Ctrl+Space` and `Ctrl+Enter`. While listening, **Send (Enter)** and **Stop (Esc)** chips appear as clickable shortcuts.
 
 ## Fast Query Bridge
 
