@@ -27,8 +27,8 @@ The current renderer is intentionally compact. It combines overlay, text input, 
 
 | State | UI behavior |
 |---|---|
-| `idle` | Compact overlay, ready for hotkey or typed prompt |
-| `listening` | Recording indicator and cancel action |
+| `idle` | Compact overlay; Voice and Type buttons in toolbar ready to trigger |
+| `listening` | Recording indicator; **Send (Enter)** chip to submit, **Stop (Esc)** chip to cancel — both clickable |
 | `processing` | Streaming response card with spinner |
 | `speaking` | Response remains visible while TTS/audio chunks play |
 | `error` | Error message with recovery action |

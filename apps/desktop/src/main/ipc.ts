@@ -2,9 +2,13 @@ import { ipcMain } from "electron"
 import type { BrowserWindow } from "electron"
 import type { SseEvent } from "@yomi/shared"
 import { captureScreen } from "./capture"
+import type { ScreenCapture } from "./capture"
+import { showGuidePoint, hideGuidePoint } from "./guide-overlay"
 import type { SidecarManager } from "./sidecar"
 import { resetToIdle, activateProcessing } from "./hotkey"
 import { BACKEND_URL, loadToken } from "./auth"
+
+let guideModeActive = false
 
 type Plan = "explore" | "pro" | "max"
 
@@ -34,6 +38,11 @@ export function initSidecarIpc(
   sidecar: SidecarManager,
   overlayWin: BrowserWindow,
 ): { onListenStop: () => Promise<void>; onTextQuery: () => void; onAbort: () => void } {
+  ipcMain.on("yomi:guide-mode", (_e, on: boolean) => {
+    guideModeActive = on
+    if (!on) hideGuidePoint()
+  })
+
   ipcMain.on("yomi:audio-chunk", (_e, pcm: ArrayBuffer, sampleRate: number) => {
     pcmChunks.push(new Float32Array(pcm))
     capturedSampleRate = sampleRate
@@ -47,9 +56,9 @@ export function initSidecarIpc(
     try {
       const plan = await reserveInteraction(overlayWin, "chat", ctrl.signal)
       if (ctrl.signal.aborted) { resetToIdle(); return }
-      const screenshotB64 = await captureScreen()
+      const capture = await captureScreen()
       if (ctrl.signal.aborted) { resetToIdle(); return }
-      await streamQuery(sidecar, overlayWin, text.trim(), screenshotB64, false, plan, ctrl)
+      await streamQuery(sidecar, overlayWin, text.trim(), capture, false, plan, ctrl)
     } catch (err) {
       if ((err as Error).name === "AbortError") return
       send(overlayWin, { type: "error", message: err instanceof Error ? err.message : "Unknown error" })
@@ -70,7 +79,7 @@ export function initSidecarIpc(
         const plan = await reserveInteraction(overlayWin, "voice", ctrl.signal)
         if (ctrl.signal.aborted) return
         const wav = buildWav(chunks, capturedSampleRate)
-        const [transcript, screenshotB64] = await Promise.all([
+        const [transcript, capture] = await Promise.all([
           transcribe(wav, sidecar, ctrl.signal),
           captureScreen(),
         ])
@@ -79,7 +88,7 @@ export function initSidecarIpc(
         // STT returned silence/empty — quietly reset instead of showing an error.
         if (!transcript.trim()) { resetToIdle(); return }
 
-        await streamQuery(sidecar, overlayWin, transcript, screenshotB64, true, plan, ctrl)
+        await streamQuery(sidecar, overlayWin, transcript, capture, true, plan, ctrl)
       } catch (err) {
         if ((err as Error).name === "AbortError") return
         send(overlayWin, { type: "error", message: err instanceof Error ? err.message : "Unknown error" })
@@ -199,20 +208,21 @@ async function streamQuery(
   sidecar: SidecarManager,
   overlayWin: BrowserWindow,
   text: string,
-  screenshot_b64: string,
+  capture: ScreenCapture,
   tts: boolean,
   plan: Plan,
   ctrl: AbortController,
 ): Promise<void> {
   pipelineCtrl = ctrl   // keep reference current (startPipeline may have rotated it)
+  hideGuidePoint()      // clear any stale dot from the previous query
 
   const res = await fetch(`${sidecar.baseUrl}/query/fast`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-sidecar-secret": sidecar.secret },
     body: JSON.stringify({
       text,
-      screenshot_b64,
-      mode: "answer",
+      screenshot_b64: capture.screenshot_b64,
+      mode: guideModeActive ? "guide" : "answer",
       tts,
       plan,
     }),
@@ -236,8 +246,16 @@ async function streamQuery(
         if (!line.startsWith("data: ")) continue
         const event = JSON.parse(line.slice(6)) as SseEvent
         send(overlayWin, event)
-        if (event.type === "done")  { sawDone = true; resetToIdle() }
-        if (event.type === "error") { sawDone = true; resetToIdle() }
+        if (event.type === "visual_guide") {
+          const el = event.elements?.[0]
+          if (el?.bbox) {
+            const x = Math.round((el.bbox.x + el.bbox.width / 2) * capture.screen_width)
+            const y = Math.round((el.bbox.y + el.bbox.height / 2) * capture.screen_height)
+            showGuidePoint(x, y)
+          }
+        }
+        if (event.type === "done")  { sawDone = true; hideGuidePoint(); resetToIdle() }
+        if (event.type === "error") { sawDone = true; hideGuidePoint(); resetToIdle() }
       }
     }
   } catch (err) {

@@ -42,6 +42,7 @@ interface YomiState {
   guideSteps: GuideStep[]
   guideCurrentStep: number
   guideTotalSteps: number
+  guideMode: boolean
   subscription: SubscriptionInfo | null
   subscriptionLoading: boolean
 
@@ -50,6 +51,7 @@ interface YomiState {
   handleSseEvent: (event: SseEvent) => void
   dismissEntry: (id: number) => void
   toggleTts: () => void
+  setGuideMode: (on: boolean) => void
   setSubscription: (info: SubscriptionUpdate | null) => void
   setSubscriptionLoading: (loading: boolean) => void
 }
@@ -67,6 +69,7 @@ export const useYomiStore = create<YomiState>((set) => ({
   guideSteps: [],
   guideCurrentStep: 0,
   guideTotalSteps: 0,
+  guideMode: false,
   subscription: null,
   subscriptionLoading: false,
 
@@ -82,6 +85,9 @@ export const useYomiStore = create<YomiState>((set) => ({
             entries: [...s.entries, { id, transcript: event.text, text: "", error: null, isStreaming: true }],
             activeId: id,
             audioQueue: [],
+            guideSteps: [],
+            guideCurrentStep: 0,
+            guideTotalSteps: 0,
           }
         })
         break
@@ -137,6 +143,11 @@ export const useYomiStore = create<YomiState>((set) => ({
     set((s) => ({ entries: s.entries.filter((e) => e.id !== id) })),
 
   toggleTts: () => set((s) => ({ ttsEnabled: !s.ttsEnabled })),
+
+  setGuideMode: (on) => set(on
+    ? { guideMode: true }
+    : { guideMode: false, guideSteps: [], guideCurrentStep: 0, guideTotalSteps: 0 }
+  ),
 
   setSubscription: (subscription) => set((s) => {
     if (subscription === null) return { subscription: null }
