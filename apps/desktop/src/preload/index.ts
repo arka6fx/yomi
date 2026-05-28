@@ -131,6 +131,18 @@ contextBridge.exposeInMainWorld("yomi", {
     ipcRenderer.send("yomi:escape")
   },
 
+  triggerVoice(): void {
+    ipcRenderer.send("yomi:trigger-voice")
+  },
+
+  triggerText(): void {
+    ipcRenderer.send("yomi:trigger-text")
+  },
+
+  stopListening(): void {
+    ipcRenderer.send("yomi:stop-listening")
+  },
+
   quit(): void {
     ipcRenderer.send("yomi:quit")
   },
@@ -141,6 +153,16 @@ contextBridge.exposeInMainWorld("yomi", {
 
   setOpacity(value: number): void {
     ipcRenderer.send("yomi:set-opacity", value)
+  },
+
+  setGuideMode(on: boolean): void {
+    ipcRenderer.send("yomi:guide-mode", on)
+  },
+
+  onGuideExit(cb: () => void): () => void {
+    const h = () => cb()
+    ipcRenderer.on("yomi:guide-exit", h)
+    return () => ipcRenderer.off("yomi:guide-exit", h)
   },
 
 })
