@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useMemo, useCallback } from "react"
 import { createRoot } from "react-dom/client"
+import { AnimatePresence, motion } from "framer-motion"
 import { useYomiStore } from "./store"
 import type { HotkeyState, ChatEntry, SubscriptionInfo } from "./store"
 import type { GuideStep } from "@yomi/shared"
@@ -372,7 +373,7 @@ function applyTheme(t: Theme) {
 
 const styleEl = document.createElement("style")
 styleEl.textContent = `
-  @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Caveat:wght@600;700&display=swap');
 
   @keyframes pulse  { 0%,100%{opacity:1;transform:scale(1)}   50%{opacity:.25;transform:scale(0.85)} }
   @keyframes glow   { 0%,100%{box-shadow:0 0 6px 1px rgba(255,210,150,0.5)} 50%{box-shadow:0 0 14px 3px rgba(255,210,150,0.15)} }
@@ -398,7 +399,7 @@ document.head.appendChild(styleEl)
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const UI_FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', sans-serif"
+const UI_FONT = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', sans-serif"
 const DISPLAY_FONT = "'Caveat', cursive"
 const CODE_FONT = "'Cascadia Code','Fira Code','JetBrains Mono','Consolas',monospace"
 
@@ -1108,6 +1109,18 @@ const HamburgerIcon = () => (
   </svg>
 )
 
+const MicSVG = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08C16.39 17.43 19 14.53 19 11h-2z"/>
+  </svg>
+)
+
+const TypeSVG = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <path d="M2.5 4v3h5v12h3V7h5V4h-13zm19 5h-9v3h3v7h3v-7h3V9z"/>
+  </svg>
+)
+
 function initialsFor(name?: string, email?: string): string {
   const source = name?.trim() || email?.split("@")[0] || "Y"
   const parts = source.split(/\s+/).filter(Boolean)
@@ -1117,7 +1130,7 @@ function initialsFor(name?: string, email?: string): string {
 
 // ── Menu Card ──────────────────────────────────────────────────────────────────
 
-function MenuCard({ subscription, plan, onProfileNameSave, onSignOut, onClose, onHoverEnter, onHoverLeave, closing }: {
+function MenuCard({ subscription, plan, onProfileNameSave, onSignOut, onClose, onHoverEnter, onHoverLeave }: {
   subscription: SubscriptionInfo | null
   plan?: string
   onProfileNameSave: (name: string) => Promise<void>
@@ -1125,7 +1138,6 @@ function MenuCard({ subscription, plan, onProfileNameSave, onSignOut, onClose, o
   onClose: () => void
   onHoverEnter: () => void
   onHoverLeave: () => void
-  closing: boolean
 }) {
   const { theme: t, setTheme } = React.useContext(ThemeCtx)
   const [nameDraft, setNameDraft] = React.useState(subscription?.name ?? "")
@@ -1169,11 +1181,11 @@ function MenuCard({ subscription, plan, onProfileNameSave, onSignOut, onClose, o
   }
 
   const shortcuts = [
-    { label: "Voice",  keys: ["Ctrl", "Shift", "Space"]  },
-    { label: "Type",   keys: ["Ctrl", "Shift", "Enter"]  },
-    { label: "Move",   keys: ["Ctrl", "Shift", "Arrows"] },
-    { label: "Hide",   keys: ["Ctrl", "Shift", "H"]      },
-    { label: "Quit",   keys: ["Ctrl", "Shift", "Q"]      },
+    { label: "Voice",  keys: ["Ctrl", "Space"]  },
+    { label: "Type",   keys: ["Ctrl", "Enter"]  },
+    { label: "Move",   keys: ["Ctrl", "Arrows"] },
+    { label: "Hide",   keys: ["Ctrl", "H"]      },
+    { label: "Quit",   keys: ["Ctrl", "Q"]      },
   ]
 
   const upgradeLabel = plan === "explore" || plan === "pro" ? "Upgrade" : null
@@ -1209,25 +1221,27 @@ function MenuCard({ subscription, plan, onProfileNameSave, onSignOut, onClose, o
       className="no-drag yomi-hit-area yomi-menu-zone"
       onMouseEnter={onHoverEnter}
       onMouseLeave={onHoverLeave}
-      style={{ position:"fixed", top:34, right:8, zIndex:1000, width:250, height:16 }}
+      style={{ position:"fixed", top:28, right:8, zIndex:1000, width:250, height:24 }}
     />
-    <div
+    <motion.div
       className="no-drag yomi-hit-area yomi-menu-zone"
       onMouseEnter={onHoverEnter}
       onMouseLeave={onHoverLeave}
+      initial={{ opacity: 0, scale: 0.95, y: -6 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95, y: -6 }}
+      transition={{ type: "spring", stiffness: 400, damping: 28 }}
       style={{
-        position:"fixed", top:46, right:8, zIndex:1000,
+        position:"fixed", top:52, right:8, zIndex:1000,
         width:250,
-        background: t.menuBg,
+        background: t.surface,
         border:`1px solid ${t.menuBorder}`,
         borderRadius:10,
         boxShadow: t.menuShadow,
         backdropFilter:"blur(28px) saturate(160%)",
         WebkitBackdropFilter:"blur(28px) saturate(160%)",
-        animation: closing
-          ? "slideDown 0.2s cubic-bezier(0.4,0,1,1) forwards"
-          : "slideUp 0.22s cubic-bezier(0.16,1,0.3,1)",
         overflow:"hidden",
+        transformOrigin:"top right",
       }}
     >
       {/* Profile */}
@@ -1444,20 +1458,28 @@ function MenuCard({ subscription, plan, onProfileNameSave, onSignOut, onClose, o
         <MenuBtn label="Sign out" onClick={() => { onSignOut(); onClose() }} />
         <MenuBtn label="Quit" danger onClick={() => { window.yomi.quit(); onClose() }} />
       </div>
-    </div>
+    </motion.div>
     </>
   )
 }
 
-function Chip({ label, keys, hot }: { label:string; keys:string[]; hot:boolean }) {
+function Chip({ label, keys, hot, onClick }: { label:string; keys:string[]; hot:boolean; onClick?: () => void }) {
   const { theme: t } = React.useContext(ThemeCtx)
+  const Tag = onClick ? "button" : "div"
   return (
-    <div style={{
-      display:"flex", alignItems:"center", gap:5,
-      background: hot ? t.chipBgHot : t.chipBgCold,
-      border:`1px solid ${hot ? t.chipBorderHot : t.chipBorderCold}`,
-      borderRadius:5, padding:"2px 7px 2px 6px", transition:"all .2s",
-    }}>
+    <Tag
+      {...(onClick ? { onClick } : {})}
+      onMouseEnter={onClick ? (e: React.MouseEvent<HTMLElement>) => { e.currentTarget.style.opacity = "0.75" } : undefined}
+      onMouseLeave={onClick ? (e: React.MouseEvent<HTMLElement>) => { e.currentTarget.style.opacity = "1" } : undefined}
+      style={{
+        display:"flex", alignItems:"center", gap:5,
+        background: hot ? t.chipBgHot : t.chipBgCold,
+        border:`1px solid ${hot ? t.chipBorderHot : t.chipBorderCold}`,
+        borderRadius:5, padding:"2px 7px 2px 6px", transition:"all .2s",
+        cursor: onClick ? "pointer" : "default",
+        ...(onClick ? { fontFamily:"inherit" } : {}),
+      }}
+    >
       <span style={{
         fontSize:11.5, fontFamily:UI_FONT,
         color: hot ? t.chipTextHot : t.chipTextCold,
@@ -1466,7 +1488,7 @@ function Chip({ label, keys, hot }: { label:string; keys:string[]; hot:boolean }
       <div style={{ display:"flex", gap:2 }}>
         {keys.map((k,i)=><Key key={i} label={k} />)}
       </div>
-    </div>
+    </Tag>
   )
 }
 
@@ -1547,11 +1569,10 @@ function GuideCursor({ state, step, totalSteps }: {
   )
 }
 
-function Toolbar({ state, plan, subscription, interactionInfo, guideMode, onGuideToggle, onProfileNameSave, onSignOut, menuOpen, menuClosing, onMenuToggle, onMenuClose, onMenuOpen, onMenuScheduleClose, onMenuCancelClose }: {
+function Toolbar({ state, plan, subscription, interactionInfo, onProfileNameSave, onSignOut, menuOpen, onMenuClose, onMenuOpen, onMenuScheduleClose, onMenuCancelClose }: {
   state: HotkeyState; plan?: string; subscription: SubscriptionInfo | null; interactionInfo?: string
-  guideMode: boolean; onGuideToggle: () => void
   onProfileNameSave: (name: string) => Promise<void>; onSignOut: () => void
-  menuOpen: boolean; menuClosing: boolean; onMenuToggle: () => void; onMenuClose: () => void
+  menuOpen: boolean; onMenuClose: () => void
   onMenuOpen: () => void; onMenuScheduleClose: () => void; onMenuCancelClose: () => void
 }) {
   const { ttsEnabled, toggleTts } = useYomiStore()
@@ -1559,21 +1580,16 @@ function Toolbar({ state, plan, subscription, interactionInfo, guideMode, onGuid
 
   return (
     <>
-      {menuOpen && (
-        <div onClick={onMenuClose} style={{ position:"fixed", inset:0, zIndex:998 }} />
-      )}
-
       <div style={{
         display:"flex", alignItems:"center", justifyContent:"space-between",
-        padding:"0 10px", height:46,
-        background: t.toolbarBg,
-        borderBottom:`1px solid ${state!=="idle" ? t.borderHi : t.border}`,
-        borderRadius:"10px 10px 0 0",
+        padding:"0 10px", height:40,
+        background: "transparent",
+        borderRadius:10,
         gap:10, position:"relative", zIndex:999,
       }} className="drag yomi-hit-area">
 
         {/* Left: brand + state indicator */}
-        <div style={{ display:"flex", alignItems:"center", gap:9 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:9, background:"rgba(0,0,0,0.22)", borderRadius:8, padding:"3px 8px 3px 6px" }}>
           {/* Drag grip */}
           <div style={{ display:"flex", flexDirection:"column", gap:2.5, opacity:0.2, flexShrink:0 }}>
             {[0,1,2].map(i=>(
@@ -1609,7 +1625,7 @@ function Toolbar({ state, plan, subscription, interactionInfo, guideMode, onGuid
               <span style={{
                 fontSize:20, fontWeight:700, fontFamily:DISPLAY_FONT,
                 letterSpacing:"-0.01em", lineHeight:1,
-                color: t.lblIdle, transition:"color .25s",
+                color: "rgba(255,255,255,0.88)", transition:"color .25s",
               }}>
                 Yomi
               </span>
@@ -1618,7 +1634,7 @@ function Toolbar({ state, plan, subscription, interactionInfo, guideMode, onGuid
             <span style={{
               fontSize:12, fontWeight:600, fontFamily:UI_FONT,
               letterSpacing:"-0.02em", lineHeight:1,
-              color: state==="listening" ? t.lblActive : t.lblProcessing,
+              color: "rgba(255,255,255,0.92)",
               transition:"color .25s",
             }}>
               {state==="listening" ? "Listening…" : "Thinking…"}
@@ -1643,24 +1659,85 @@ function Toolbar({ state, plan, subscription, interactionInfo, guideMode, onGuid
         </div>
 
         {/* Right: controls */}
-        <div style={{ display:"flex", gap:5, alignItems:"center" }} className="no-drag">
+        <div style={{ display:"flex", gap:5, alignItems:"center", background:"rgba(0,0,0,0.22)", borderRadius:8, padding:"3px 6px" }} className="no-drag">
+          {/* Voice mode button */}
+          <button
+            onClick={() => { if (state === "idle") window.yomi.triggerVoice() }}
+            onMouseEnter={e => {
+              if (state !== "idle") return
+              e.currentTarget.style.color = t.hambColorActive
+              e.currentTarget.style.background = t.hambBgActive
+              e.currentTarget.style.borderColor = t.hambBorderActive
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = state === "idle" ? t.hambColor : "rgba(255,255,255,0.22)"
+              e.currentTarget.style.background = t.hambBg
+              e.currentTarget.style.borderColor = t.hambBorder
+            }}
+            style={{
+              background: t.hambBg,
+              border: `1px solid ${t.hambBorder}`,
+              borderRadius:5, cursor: state === "idle" ? "pointer" : "default",
+              color: state === "idle" ? t.hambColor : "rgba(255,255,255,0.22)",
+              display:"flex", alignItems:"center", gap:4,
+              padding:"2px 7px", height:22, flexShrink:0, transition:"all .15s",
+            }}
+            title="Voice (Ctrl+Space)"
+          >
+            <MicSVG />
+            <span style={{ fontSize:11, fontFamily:UI_FONT, letterSpacing:"0.03em", fontWeight:500 }}>Voice</span>
+          </button>
+
+          {/* Type mode button */}
+          <button
+            onClick={() => { if (state === "idle") window.yomi.triggerText() }}
+            onMouseEnter={e => {
+              if (state !== "idle") return
+              e.currentTarget.style.color = t.hambColorActive
+              e.currentTarget.style.background = t.hambBgActive
+              e.currentTarget.style.borderColor = t.hambBorderActive
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = state === "idle" ? t.hambColor : "rgba(255,255,255,0.22)"
+              e.currentTarget.style.background = t.hambBg
+              e.currentTarget.style.borderColor = t.hambBorder
+            }}
+            style={{
+              background: t.hambBg,
+              border: `1px solid ${t.hambBorder}`,
+              borderRadius:5, cursor: state === "idle" ? "pointer" : "default",
+              color: state === "idle" ? t.hambColor : "rgba(255,255,255,0.22)",
+              display:"flex", alignItems:"center", gap:4,
+              padding:"2px 7px", height:22, flexShrink:0, transition:"all .15s",
+            }}
+            title="Type (Ctrl+Enter)"
+          >
+            <TypeSVG />
+            <span style={{ fontSize:11, fontFamily:UI_FONT, letterSpacing:"0.03em", fontWeight:500 }}>Type</span>
+          </button>
+
+          {/* Sound toggle button */}
           <button
             onClick={toggleTts}
             onMouseEnter={e => {
-              e.currentTarget.style.color = t.ttsOn
-              e.currentTarget.style.background = t.ttsHoverBg
+              e.currentTarget.style.color = t.hambColorActive
+              e.currentTarget.style.background = t.hambBgActive
+              e.currentTarget.style.borderColor = t.hambBorderActive
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.color = ttsEnabled ? t.ttsOn : t.ttsOff
-              e.currentTarget.style.background = "none"
+              e.currentTarget.style.color = ttsEnabled ? t.hambColor : "rgba(255,255,255,0.35)"
+              e.currentTarget.style.background = t.hambBg
+              e.currentTarget.style.borderColor = t.hambBorder
             }}
             style={{
-              background:"none", border:"none", cursor:"pointer", padding:"2px 6px",
-              color: ttsEnabled ? t.ttsOn : t.ttsOff,
-              transition:"color .15s, background .15s",
+              background: t.hambBg,
+              border: `1px solid ${t.hambBorder}`,
+              borderRadius:5, cursor:"pointer",
+              color: ttsEnabled ? t.hambColor : "rgba(255,255,255,0.35)",
               display:"flex", alignItems:"center", gap:4,
-              flexShrink:0, borderRadius:4,
+              padding:"2px 7px", height:22, flexShrink:0, transition:"all .15s",
             }}
+            title={ttsEnabled ? "Sound on" : "Muted"}
           >
             {ttsEnabled ? <SpeakerOnSVG /> : <SpeakerOffSVG />}
             <span style={{ fontSize:11, fontFamily:UI_FONT, letterSpacing:"0.03em", fontWeight:500 }}>
@@ -1668,46 +1745,18 @@ function Toolbar({ state, plan, subscription, interactionInfo, guideMode, onGuid
             </span>
           </button>
 
-          <button
-            className="no-drag"
-            onClick={onGuideToggle}
-            title="Guide mode"
-            onMouseEnter={e => {
-              e.currentTarget.style.color = guideMode ? t.accent : t.ttsOn
-              e.currentTarget.style.background = t.ttsHoverBg
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.color = guideMode ? t.accent : t.ttsOff
-              e.currentTarget.style.background = guideMode ? t.accentD : "none"
-            }}
-            style={{
-              background: guideMode ? t.accentD : "none",
-              border: "none", cursor:"pointer", padding:"2px 6px",
-              color: guideMode ? t.accent : t.ttsOff,
-              transition:"color .15s, background .15s",
-              display:"flex", alignItems:"center", gap:4,
-              flexShrink:0, borderRadius:4,
-            }}
-          >
-            <CursorArrowSVG />
-            <span style={{ fontSize:11, fontFamily:UI_FONT, letterSpacing:"0.03em", fontWeight:500 }}>
-              Guide
-            </span>
-          </button>
-
           {state==="listening" && <>
-            <Chip label="Stop"   keys={["↵"]}        hot={true}  />
-            <Chip label="Stop"   keys={["⌃⇧","Spc"]} hot={false} />
-            <Chip label="Cancel" keys={["Esc"]}       hot={false} />
+            <Chip label="Send"   keys={["Enter"]} hot={true}  onClick={() => window.yomi.stopListening()} />
+            <Chip label="Stop"   keys={["Esc"]}   hot={false} onClick={() => window.yomi.requestEscape()} />
           </>}
           {state==="text-input" && <Chip label="Cancel" keys={["Esc"]} hot={false} />}
           {state==="processing" && (
-            <span style={{ fontSize:11.5, color: t.dim, fontFamily:UI_FONT }}>processing…</span>
+            <span style={{ fontSize:11.5, color: "rgba(255,255,255,0.55)", fontFamily:UI_FONT }}>processing…</span>
           )}
 
           <button
             className="no-drag yomi-menu-zone"
-            onClick={onMenuToggle}
+            onClick={() => { if (!menuOpen) onMenuOpen() }}
             onMouseEnter={e => {
               onMenuOpen()
               e.currentTarget.style.color = t.hambColorActive
@@ -1735,18 +1784,6 @@ function Toolbar({ state, plan, subscription, interactionInfo, guideMode, onGuid
             <HamburgerIcon />
           </button>
 
-          {menuOpen && (
-            <MenuCard
-              subscription={subscription}
-              plan={plan}
-              onProfileNameSave={onProfileNameSave}
-              onSignOut={onSignOut}
-              onClose={onMenuClose}
-              onHoverEnter={onMenuCancelClose}
-              onHoverLeave={onMenuScheduleClose}
-              closing={menuClosing}
-            />
-          )}
         </div>
       </div>
     </>
@@ -1925,46 +1962,35 @@ const App: React.FC = () => {
   const [loadingProvider, setLoadingProvider] = React.useState<"github" | "google" | null>(null)
   const [lastProvider, setLastProvider] = React.useState<"github" | "google" | null>(null)
   const [menuOpen, setMenuOpen] = React.useState(false)
-  const [menuClosing, setMenuClosing] = React.useState(false)
   const menuCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const menuAnimTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const menuOpenedAtRef   = useRef<number>(0)
 
   const openMenu = useCallback(() => {
     if (menuCloseTimerRef.current) { clearTimeout(menuCloseTimerRef.current); menuCloseTimerRef.current = null }
-    if (menuAnimTimerRef.current)  { clearTimeout(menuAnimTimerRef.current);  menuAnimTimerRef.current  = null }
-    setMenuClosing(false)
+    menuOpenedAtRef.current = Date.now()
     setMenuOpen(open => open ? open : true)
   }, [])
 
   // Called when cursor leaves the button, bridge, or card.
   const scheduleMenuClose = useCallback(() => {
+    // Ignore spurious close calls within 400ms of open (e.g. OS mouseleave from window resize)
+    if (Date.now() - menuOpenedAtRef.current < 400) return
     if (menuCloseTimerRef.current) clearTimeout(menuCloseTimerRef.current)
     menuCloseTimerRef.current = setTimeout(() => {
       menuCloseTimerRef.current = null
       if (document.querySelector(".yomi-menu-zone:hover")) return
-      setMenuClosing(true)
-      menuAnimTimerRef.current = setTimeout(() => {
-        setMenuOpen(false)
-        setMenuClosing(false)
-      }, 200)
+      setMenuOpen(false)
     }, 220)
   }, [])
 
   const cancelMenuClose = useCallback(() => {
     if (menuCloseTimerRef.current) { clearTimeout(menuCloseTimerRef.current); menuCloseTimerRef.current = null }
-    if (menuAnimTimerRef.current)  { clearTimeout(menuAnimTimerRef.current);  menuAnimTimerRef.current  = null }
-    setMenuClosing(false)
   }, [])
 
-  // Immediate animated close (backdrop click, action buttons)
+  // Immediate close — framer-motion AnimatePresence handles the exit animation
   const closeMenuNow = useCallback(() => {
     if (menuCloseTimerRef.current) { clearTimeout(menuCloseTimerRef.current); menuCloseTimerRef.current = null }
-    if (menuAnimTimerRef.current)  { clearTimeout(menuAnimTimerRef.current);  menuAnimTimerRef.current  = null }
-    setMenuClosing(true)
-    menuAnimTimerRef.current = setTimeout(() => {
-      setMenuOpen(false)
-      setMenuClosing(false)
-    }, 200)
+    setMenuOpen(false)
   }, [])
 
   const rootRef         = useRef<HTMLDivElement>(null)
@@ -2036,21 +2062,22 @@ const App: React.FC = () => {
   // Resize window based on auth + content + guide + menu state
   useEffect(()=>{
     if (authState === "checking") {
-      window.yomi.resize(680, 46)
+      window.yomi.resize(780, 40)
     } else if (authState === "unauthenticated") {
-      window.yomi.resize(680, 390)
+      window.yomi.resize(780, 390)
     } else if (authState === "waiting") {
-      window.yomi.resize(680, 240)
+      window.yomi.resize(780, 240)
     } else if (guideMode) {
       const hasStep = guideCurrentStep > 0 && guideSteps.length > 0
-      window.yomi.resize(680, hasStep ? 64 : 46)
+      window.yomi.resize(780, hasStep ? 58 : 40)
     } else {
       const MAX_ENTRIES = 640
       const textInputH = hotkeyState === "text-input" ? 88 : 0
       const entriesH = entries.length > 0 ? MAX_ENTRIES : 0
+      const chatGap = (textInputH > 0 || entriesH > 0) ? 8 : 0
       // Profile row makes the menu taller than the toolbar-only overlay.
       const menuMin = menuOpen ? 760 : 0
-      window.yomi.resize(680, Math.max(46, 46 + textInputH + entriesH, menuMin))
+      window.yomi.resize(780, Math.max(40, 40 + chatGap + textInputH + entriesH, menuMin))
     }
   }, [authState, entries, hotkeyState, menuOpen, guideMode, guideCurrentStep, guideSteps])
 
@@ -2244,7 +2271,7 @@ const App: React.FC = () => {
   }, [setSubscription])
 
   useEffect(() => {
-    if (authState !== "authenticated" || hasContent || guideMode) {
+    if (authState !== "authenticated" || hasContent || guideMode || menuOpen) {
       setMouseEventsIgnored(false)
       return
     }
@@ -2261,7 +2288,7 @@ const App: React.FC = () => {
       window.removeEventListener("mousemove", onMove)
       setMouseEventsIgnored(false)
     }
-  }, [authState, hasContent, guideMode, setMouseEventsIgnored])
+  }, [authState, hasContent, guideMode, menuOpen, setMouseEventsIgnored])
 
   // ── Sign-in states ──────────────────────────────────────────────────────────
 
@@ -2275,12 +2302,10 @@ const App: React.FC = () => {
       <div style={{
         display:"flex", flexDirection:"column",
         height:"100vh",
-        background:"var(--bg)",
+        background: t.toolbarBg,
         borderRadius:10, overflow:"hidden",
         border:"1px solid var(--border)",
         boxShadow: t.appShadow,
-        backdropFilter:"blur(28px) saturate(160%)",
-        WebkitBackdropFilter:"blur(28px) saturate(160%)",
         position:"relative",
       }}>
         <SignInPanel
@@ -2296,77 +2321,80 @@ const App: React.FC = () => {
 
   // ── Authenticated UI ────────────────────────────────────────────────────────
 
-  const showPill = hasContent || guideMode
-
   return (
     <div
       ref={rootRef}
       style={{
         display:"flex", flexDirection:"column",
         height:"100vh", position:"relative",
-        background: showPill ? "var(--bg)" : "transparent",
-        borderRadius:10, overflow:"hidden",
-        border: showPill ? (isListening ? t.appBorderListen : t.appBorder) : "none",
-        boxShadow: showPill ? (isListening ? t.appShadowListen : t.appShadow) : "none",
-        backdropFilter: showPill ? "blur(28px) saturate(160%)" : "none",
-        WebkitBackdropFilter: showPill ? "blur(28px) saturate(160%)" : "none",
-        transition:"border-color .3s, box-shadow .3s",
-        minWidth:680,
+        minWidth:780,
       }}
     >
-      {/* Chat UI — fades out when guide mode is active; visibility:hidden prevents
-          invisible toolbar from intercepting events while opacity is still animating */}
+      {/* Toolbar pill — always visible, its own floating card */}
       <div style={{
-        display:"flex", flexDirection:"column", flex:1,
-        transition:"opacity 180ms ease, transform 180ms ease",
+        flexShrink:0,
+        margin:"0 20px",
+        background: t.bg,
+        border: isListening ? t.appBorderListen : t.appBorder,
+        borderRadius:10,
+        boxShadow: isListening ? t.appShadowListen : t.appShadow,
+        backdropFilter:"blur(28px) saturate(160%)",
+        WebkitBackdropFilter:"blur(28px) saturate(160%)",
+        overflow:"hidden",
+        transition:"border-color .3s, box-shadow .3s",
         opacity: guideMode ? 0 : 1,
-        transform: guideMode ? "translateY(-6px)" : "translateY(0)",
         visibility: guideMode ? "hidden" : undefined,
+        transform: guideMode ? "translateY(-6px)" : undefined,
       }}>
         <Toolbar
           state={hotkeyState}
           plan={subscription?.plan}
           subscription={subscription}
           interactionInfo={subscription?.plan === "explore" ? `${subscription.trialInteractionUsed}/${subscription.trialInteractionLimit} used` : undefined}
-          guideMode={guideMode}
-          onGuideToggle={() => setGuideMode(!guideMode)}
           onProfileNameSave={handleProfileNameSave}
           onSignOut={() => window.yomi.signOut()}
           menuOpen={menuOpen}
-          menuClosing={menuClosing}
-          onMenuToggle={() => menuOpen ? closeMenuNow() : openMenu()}
           onMenuClose={closeMenuNow}
           onMenuOpen={openMenu}
           onMenuScheduleClose={scheduleMenuClose}
           onMenuCancelClose={cancelMenuClose}
         />
-
-        {hotkeyState==="text-input" && (
-          <div style={{ padding:"6px 7px 7px", flexShrink:0 }}>
-            <TextInputPanel />
-          </div>
-        )}
-
-        {entries.length>0 && (
-          <div
-            ref={entriesRef}
-            className="no-drag"
-            style={{
-              flex:1, minHeight:0,
-              overflowY:"auto", overflowX:"hidden",
-              display:"flex", flexDirection:"column", gap:5,
-              padding:"6px 7px 7px",
-              overscrollBehavior:"contain",
-            }}
-          >
-            {[...entries].reverse().map((e,i) => (
-              <ResponsePanel key={e.id} entry={e} isActive={i===0} onDismiss={()=>dismissEntry(e.id)} />
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* Guide cursor — only mounted when active so it never blocks the chat UI */}
+      {/* Chat content — no wrapper card; ResponsePanel and TextInputPanel are self-styled */}
+      <AnimatePresence>
+      {hasContent && (
+        <motion.div
+          key="chat-card"
+          initial={{ y: 14, opacity: 0, scale: 0.99 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          exit={{ y: -8, opacity: 0, scale: 0.99 }}
+          transition={{ type: "spring", stiffness: 380, damping: 28 }}
+          style={{ marginTop:8, flex:1, minHeight:0, display:"flex", flexDirection:"column", gap:5 }}
+        >
+          {hotkeyState==="text-input" && <TextInputPanel />}
+
+          {entries.length>0 && (
+            <div
+              ref={entriesRef}
+              className="no-drag"
+              style={{
+                flex:1, minHeight:0,
+                overflowY:"auto", overflowX:"hidden",
+                display:"flex", flexDirection:"column", gap:5,
+                overscrollBehavior:"contain",
+              }}
+            >
+              {(() => { const e = entries[entries.length-1]!; return (
+                <ResponsePanel key={e.id} entry={e} isActive={true} onDismiss={()=>dismissEntry(e.id)} />
+              )})()}
+            </div>
+          )}
+        </motion.div>
+      )}
+      </AnimatePresence>
+
+      {/* Guide cursor — only mounted when active */}
       {guideMode && (
         <div style={{ position:"absolute", inset:0, animation:"fadeIn 180ms ease" }}>
           <GuideCursor
@@ -2376,6 +2404,26 @@ const App: React.FC = () => {
           />
         </div>
       )}
+
+      {/* Menu backdrop + card — rendered at App level so backdrop-filter on the
+          toolbar wrapper doesn't create a fixed-position containing block that clips them */}
+      {menuOpen && (
+        <div onClick={closeMenuNow} style={{ position:"fixed", inset:0, zIndex:998 }} />
+      )}
+      <AnimatePresence>
+        {menuOpen && (
+          <MenuCard
+            key="menu"
+            subscription={subscription}
+            plan={subscription?.plan}
+            onProfileNameSave={handleProfileNameSave}
+            onSignOut={() => window.yomi.signOut()}
+            onClose={closeMenuNow}
+            onHoverEnter={cancelMenuClose}
+            onHoverLeave={scheduleMenuClose}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

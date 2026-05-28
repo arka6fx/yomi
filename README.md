@@ -87,13 +87,18 @@ DATABASE_URL=postgres://...
 
 | Shortcut | Action |
 |---|---|
-| `Ctrl+Shift+Space` | Start / stop voice recording |
-| `Ctrl+Shift+Enter` | Open text input (type instead of talk) |
-| `Ctrl+Shift+H` | Show / hide overlay |
-| `Ctrl+Shift+Arrow` | Nudge overlay position (smooth) |
+| `Ctrl+Space` | Start voice recording |
+| `Ctrl+Enter` | Open text input (type instead of talk) |
+| `Ctrl+H` | Show / hide overlay |
+| `Ctrl+Arrow` | Nudge overlay position (smooth) |
+| `Enter` | Send voice query (while listening) |
 | `Esc` | Cancel voice or text input |
 
-**Text input mode:** press `Ctrl+Shift+Enter`, type your question, press `Enter`. If you press `Enter` without typing, Yomi takes a screenshot and comprehends whatever is on screen.
+The toolbar also has **Voice** and **Type** buttons that trigger the same actions as `Ctrl+Space` and `Ctrl+Enter`.
+
+**Voice mode:** press `Ctrl+Space` (or click **Voice**), speak your question, then press `Enter` or click **Send** to submit. Press `Esc` to cancel without sending.
+
+**Text input mode:** press `Ctrl+Enter` (or click **Type**), type your question, press `Enter`. An empty submit takes a screenshot and describes what is on screen.
 
 **Copy:** each response card has a **Copy** button. Code blocks have their own per-block copy button.
 

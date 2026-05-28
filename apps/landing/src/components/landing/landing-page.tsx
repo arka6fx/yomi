@@ -84,7 +84,7 @@ const platforms: Record<
       "Yomi will start automatically after install",
       "Find the Yomi icon in your system tray",
       "Grant microphone and screen permissions when prompted",
-      "Press the hotkey to start",
+      "Press Ctrl+Space to start voice, or Ctrl+Enter to type",
     ],
   },
 }
@@ -415,17 +415,15 @@ export function LandingPage() {
             type="A"
             hotkey={[
               { sym: "^", label: "Ctrl" },
-              { sym: "⇧", label: "Shift" },
               { sym: "␣", label: "Space" },
             ]}
             label="Voice + Screen"
-            description="Hold to record. Yomi transcribes your voice, captures your screen, and responds with text and audio."
+            description="Press to start recording, speak your question, then press Enter to send. Yomi captures your screen and responds with text and voice."
           />
           <InteractionCard
             type="B"
             hotkey={[
               { sym: "^", label: "Ctrl" },
-              { sym: "⇧", label: "Shift" },
               { sym: "↵", label: "Enter" },
             ]}
             label="Type + Screen"
@@ -435,7 +433,6 @@ export function LandingPage() {
             type="C"
             hotkey={[
               { sym: "^", label: "Ctrl" },
-              { sym: "⇧", label: "Shift" },
               { sym: "↵", label: "Enter" },
             ]}
             label="Just Screen"
