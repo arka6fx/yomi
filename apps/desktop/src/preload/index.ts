@@ -91,6 +91,10 @@ contextBridge.exposeInMainWorld("yomi", {
     ipcRenderer.send("yomi:set-ignore-mouse-events", ignored)
   },
 
+  setHitRegions(regions: { x: number; y: number; width: number; height: number }[]): void {
+    ipcRenderer.send("yomi:set-hit-regions", regions)
+  },
+
   nudge(dx: number, dy: number): void {
     ipcRenderer.send("yomi:nudge", dx, dy)
   },
@@ -157,6 +161,10 @@ contextBridge.exposeInMainWorld("yomi", {
 
   setGuideMode(on: boolean): void {
     ipcRenderer.send("yomi:guide-mode", on)
+  },
+
+  setPointingMode(on: boolean): void {
+    ipcRenderer.send("yomi:pointing-mode", on)
   },
 
   onGuideExit(cb: () => void): () => void {
