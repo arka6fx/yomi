@@ -113,16 +113,18 @@ export function activateProcessing(): void {
 }
 
 // Called via IPC when the user clicks the Voice button in the toolbar.
-export function triggerVoiceMode(): void {
-  if (!enabled || state !== "idle") return
+export function triggerVoiceMode(): boolean {
+  if (!enabled || state !== "idle") return false
   transition("listening")
+  return true
 }
 
 // Called via IPC when the user clicks the Send/Enter chip while listening.
-export function triggerStopListening(): void {
-  if (!enabled || state !== "listening") return
+export function triggerStopListening(): boolean {
+  if (!enabled || state !== "listening") return false
   transition("processing")
   onListenStop?.()
+  return true
 }
 
 // Called via IPC when the user clicks the Type button in the toolbar.
@@ -130,6 +132,10 @@ export function triggerTextMode(): void {
   if (!enabled || state !== "idle") return
   transition("text-input")
   onTextQuery?.()
+}
+
+export function getHotkeyState(): HotkeyState {
+  return state
 }
 
 function transition(next: HotkeyState): void {

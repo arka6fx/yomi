@@ -14,6 +14,34 @@ if (process.platform === "win32") {
 
 let overlayWin: BrowserWindow | null = null
 let sidecarStarted = false  // Sidecar + IPC + hotkeys initialised (once ever)
+let overlayHitRegions: { x: number; y: number; width: number; height: number }[] = []
+let overlayIgnoringMouse = false
+
+function setOverlayMouseIgnored(ignored: boolean): void {
+  if (!overlayWin || overlayWin.isDestroyed() || overlayIgnoringMouse === ignored) return
+  overlayIgnoringMouse = ignored
+  if (ignored) overlayWin.setIgnoreMouseEvents(true, { forward: true })
+  else overlayWin.setIgnoreMouseEvents(false)
+}
+
+function updateOverlayMousePassthrough(): void {
+  if (!overlayWin || overlayWin.isDestroyed() || !overlayWin.isVisible()) return
+  if (overlayHitRegions.length === 0) {
+    setOverlayMouseIgnored(false)
+    return
+  }
+  const cursor = screen.getCursorScreenPoint()
+  const bounds = overlayWin.getBounds()
+  const localX = cursor.x - bounds.x
+  const localY = cursor.y - bounds.y
+  const insideYomi = overlayHitRegions.some((r) =>
+    localX >= r.x &&
+    localX <= r.x + r.width &&
+    localY >= r.y &&
+    localY <= r.y + r.height
+  )
+  setOverlayMouseIgnored(!insideYomi)
+}
 
 app.whenReady().then(async () => {
   // Position overlay at top-center of primary display
@@ -34,7 +62,6 @@ app.whenReady().then(async () => {
     show: false,
     backgroundColor: "#00000000",
     hasShadow: false,
-    ...(process.platform === "darwin" ? { type: "tooltip" as const } : {}),
     webPreferences: {
       preload: path.join(__dirname, "../preload/index.js"),
       contextIsolation: true,
@@ -42,9 +69,7 @@ app.whenReady().then(async () => {
     },
   })
 
-  if (process.platform !== "darwin") {
-    overlayWin.setAlwaysOnTop(true, "screen-saver")
-  }
+  overlayWin.setAlwaysOnTop(true, "screen-saver")
   overlayWin.setContentProtection(true)
   overlayWin.setVisibleOnAllWorkspaces(true)
   overlayWin.webContents.on("before-input-event", (event, input) => {
@@ -77,9 +102,12 @@ app.whenReady().then(async () => {
   })
 
   ipcMain.on("yomi:set-ignore-mouse-events", (_e, ignored: boolean) => {
-    if (!overlayWin) return
-    if (ignored) overlayWin.setIgnoreMouseEvents(true, { forward: true })
-    else overlayWin.setIgnoreMouseEvents(false)
+    setOverlayMouseIgnored(ignored)
+  })
+
+  ipcMain.on("yomi:set-hit-regions", (_e, regions: { x: number; y: number; width: number; height: number }[]) => {
+    overlayHitRegions = regions.filter((r) => r.width > 0 && r.height > 0)
+    updateOverlayMousePassthrough()
   })
 
   let dragStart = { winX: 0, winY: 0, mouseX: 0, mouseY: 0 }
@@ -182,6 +210,7 @@ app.whenReady().then(async () => {
   })
 
   createGuideOverlay()
+  setInterval(updateOverlayMousePassthrough, 50)
 
   // ── Load overlay ────────────────────────────────────────────────────────────
 
@@ -335,7 +364,7 @@ async function completeSetup(token: string) {
 }
 
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") app.quit()
+  app.quit()
 })
 
 app.on("will-quit", () => globalShortcut.unregisterAll())
