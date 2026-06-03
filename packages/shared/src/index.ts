@@ -16,6 +16,22 @@ export interface GuideResponse {
   steps: GuideStep[]
 }
 
+export interface ScreenImage {
+  screen: number
+  screenshot_b64: string
+  width: number
+  height: number
+  is_cursor_screen?: boolean
+}
+
+export interface PointTarget {
+  x: number
+  y: number
+  label: string
+  screen?: number
+  coordinateSpace: "screenshot_pixels" | "normalized"
+}
+
 export type IntentPath = "fast" | "agent"
 
 export interface IntentClassification {
@@ -35,7 +51,9 @@ export interface FastQueryRequest {
   text?: string
   audio_b64?: string       // base64-encoded WAV; sidecar runs STT before LLM
   screenshot_b64?: string
+  screenshots?: ScreenImage[]
   mode?: "answer" | "guide"
+  pointing?: boolean          // true = include screen context and request a point target when useful
   tts?: boolean            // true = voice output; false = text only (default: true)
   plan?: Plan              // controls local-only memory injection/writes
   history?: { role: "user" | "assistant"; text: string }[]
@@ -88,7 +106,9 @@ export type SseEvent =
   | { type: "transcript"; text: string }
   | { type: "llm_chunk"; text: string }
   | { type: "audio_chunk"; base64: string }
+  | { type: "tts_error"; message: string }
   | { type: "visual_guide"; step: number; total_steps: number; instruction: string; elements: GuideElement[] }
+  | { type: "point_target"; target: PointTarget | null; reason?: string }
   | { type: "router_decision"; path: IntentPath; confidence: number; reason: string; source: "heuristic" | "llm" }
   // Agent-path events
   | { type: "agent_text"; text: string }

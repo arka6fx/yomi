@@ -399,7 +399,7 @@ document.head.appendChild(styleEl)
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const UI_FONT = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', sans-serif"
+const UI_FONT = "'Inter', 'Segoe UI Variable', 'Segoe UI', sans-serif"
 const DISPLAY_FONT = "'Caveat', cursive"
 const CODE_FONT = "'Cascadia Code','Fira Code','JetBrains Mono','Consolas',monospace"
 
@@ -907,7 +907,7 @@ function TextInputPanel() {
       borderRadius:9, overflow:"hidden",
       boxShadow:"0 8px 40px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(255,224,194,0.04)",
       animation:"slideUp 0.2s cubic-bezier(0.16,1,0.3,1)",
-    }} className="drag">
+    }} className="drag yomi-hit-area">
       <div style={{ padding:"8px 10px", display:"flex", alignItems:"center", gap:8 }}>
         <span style={{ fontSize:10.5, color:"rgba(255,200,130,0.75)", letterSpacing:"0.12em", fontFamily:UI_FONT, fontWeight:700, flexShrink:0 }}>
           ASK
@@ -964,7 +964,7 @@ function ResponsePanel({ entry, onDismiss, isActive }: { entry:ChatEntry; onDism
       display:"flex", flexDirection:"column",
       flexShrink:0,
       maxHeight: isActive ? undefined : 300,
-    }} className="drag">
+    }} className="drag yomi-hit-area">
 
       {/* Warm amber left accent bar */}
       <div style={{
@@ -1028,6 +1028,26 @@ function ResponsePanel({ entry, onDismiss, isActive }: { entry:ChatEntry; onDism
           }
         >
           <Blocks text={entry.text} isStreaming={entry.isStreaming} />
+        </div>
+      )}
+
+      {!entry.error && entry.ttsError && (
+        <div
+          className="no-drag"
+          style={{
+            margin:"0 12px 8px 14px",
+            padding:"5px 7px",
+            border:"1px solid rgba(255,180,90,0.16)",
+            borderRadius:4,
+            background:"rgba(255,180,90,0.055)",
+            color:"rgba(255,210,155,0.82)",
+            fontSize:11.5,
+            fontFamily:UI_FONT,
+            lineHeight:1.25,
+            flexShrink:0,
+          }}
+        >
+          {entry.ttsError}
         </div>
       )}
 
@@ -1575,7 +1595,7 @@ function Toolbar({ state, plan, subscription, interactionInfo, onProfileNameSave
   menuOpen: boolean; onMenuClose: () => void
   onMenuOpen: () => void; onMenuScheduleClose: () => void; onMenuCancelClose: () => void
 }) {
-  const { ttsEnabled, toggleTts } = useYomiStore()
+  const { ttsEnabled, toggleTts, pointingEnabled, togglePointing } = useYomiStore()
   const { theme: t } = React.useContext(ThemeCtx)
 
   return (
@@ -1742,6 +1762,43 @@ function Toolbar({ state, plan, subscription, interactionInfo, onProfileNameSave
             {ttsEnabled ? <SpeakerOnSVG /> : <SpeakerOffSVG />}
             <span style={{ fontSize:11, fontFamily:UI_FONT, letterSpacing:"0.03em", fontWeight:500 }}>
               {ttsEnabled ? "Sound" : "Muted"}
+            </span>
+          </button>
+
+          {/* Pointing toggle button */}
+          <button
+            onClick={togglePointing}
+            onMouseEnter={e => {
+              e.currentTarget.style.color = t.hambColorActive
+              e.currentTarget.style.background = t.hambBgActive
+              e.currentTarget.style.borderColor = t.hambBorderActive
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = pointingEnabled ? t.hambColor : "rgba(255,255,255,0.35)"
+              e.currentTarget.style.background = t.hambBg
+              e.currentTarget.style.borderColor = t.hambBorder
+            }}
+            style={{
+              background: pointingEnabled ? t.hambBgActive : t.hambBg,
+              border: `1px solid ${pointingEnabled ? t.hambBorderActive : t.hambBorder}`,
+              borderRadius:5, cursor:"pointer",
+              color: pointingEnabled ? t.hambColorActive : "rgba(255,255,255,0.35)",
+              display:"flex", alignItems:"center", gap:4,
+              padding:"2px 7px", height:22, flexShrink:0, transition:"all .15s",
+            }}
+            title={pointingEnabled ? "Pointing on. Ask with Voice or Type." : "Pointing off"}
+          >
+            <span style={{
+              width:5,
+              height:5,
+              borderRadius:"50%",
+              background: pointingEnabled ? t.dotPulse : "rgba(255,255,255,0.22)",
+              boxShadow: pointingEnabled ? t.dotPulseGlow : "none",
+              flexShrink:0,
+            }} />
+            <CursorArrowSVG />
+            <span style={{ fontSize:11, fontFamily:UI_FONT, letterSpacing:"0.03em", fontWeight:500 }}>
+              {pointingEnabled ? "Point on" : "Point off"}
             </span>
           </button>
 
@@ -1953,8 +2010,8 @@ function SignInPanel({ isWaiting, loadingProvider, error, lastProvider, onSignIn
 const App: React.FC = () => {
   const {
     authState, authError, setAuthState,
-    hotkeyState, entries, audioQueue, ttsEnabled, subscription,
-    handleSseEvent, setHotkeyState, dismissEntry,
+    hotkeyState, entries, ttsEnabled, pointingEnabled, subscription,
+    handleSseEvent, setHotkeyState, stopActivePlayback, dismissEntry,
     setSubscription, setSubscriptionLoading,
     guideMode, setGuideMode, guideSteps, guideCurrentStep, guideTotalSteps,
   } = useYomiStore()
@@ -2001,11 +2058,76 @@ const App: React.FC = () => {
   const ctxRef          = useRef<AudioContext|null>(null)
   const workletReadyRef = useRef<Promise<void>|null>(null)
   const audioPlayingRef    = useRef(false)
-  const localAudioQueue    = useRef<string[]>([])  // Mutable queue; NOT a mirror of React state
-  const audioConsumedRef   = useRef(0)             // How many items from audioQueue state we've enqueued
+  const localAudioQueue    = useRef<string[]>([])
   const audioSourceRef  = useRef<AudioBufferSourceNode|null>(null)
+  const audioTokenRef   = useRef(0)
   const draggingRef     = useRef(false)
   const mouseEventsIgnoredRef = useRef(false)
+
+  const resetAudioPlayback = useCallback(() => {
+    audioTokenRef.current += 1
+    localAudioQueue.current = []
+    const src = audioSourceRef.current
+    audioSourceRef.current = null
+    if (src) {
+      try { src.onended = null; src.stop() } catch { /* already stopped */ }
+      try { src.disconnect() } catch { /* already disconnected */ }
+    }
+    audioPlayingRef.current = false
+  }, [])
+
+  const playQueuedAudio = useCallback(() => {
+    if (audioPlayingRef.current) return
+    const ctx = ctxRef.current
+    if (!ctx) return
+
+    audioPlayingRef.current = true
+    const token = audioTokenRef.current
+
+    const playNext = async () => {
+      while (token === audioTokenRef.current && localAudioQueue.current.length > 0) {
+        const b64 = localAudioQueue.current.shift()!
+        const bin = atob(b64)
+        const buf = new Uint8Array(bin.length)
+        for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i)
+
+        try {
+          const ab = await ctx.decodeAudioData(buf.buffer)
+          if (token !== audioTokenRef.current) break
+
+          const src = ctx.createBufferSource()
+          audioSourceRef.current = src
+          src.buffer = ab
+          src.connect(ctx.destination)
+
+          if (ctx.state === "suspended") await ctx.resume()
+          if (token !== audioTokenRef.current) {
+            src.disconnect()
+            break
+          }
+
+          src.start()
+          await new Promise<void>((resolve) => {
+            src.onended = () => {
+              if (audioSourceRef.current === src) audioSourceRef.current = null
+              resolve()
+            }
+          })
+        } catch (e) {
+          if (token === audioTokenRef.current) console.warn("[yomi/audio] playback failed:", e)
+        }
+      }
+
+      if (token === audioTokenRef.current) audioPlayingRef.current = false
+    }
+
+    void playNext()
+  }, [])
+
+  const enqueueAudioChunk = useCallback((base64: string) => {
+    localAudioQueue.current.push(base64)
+    playQueuedAudio()
+  }, [playQueuedAudio])
 
   // Restore saved window opacity on mount
   useEffect(()=>{
@@ -2054,6 +2176,11 @@ const App: React.FC = () => {
     window.yomi.setGuideMode(guideMode)
   }, [guideMode])
 
+  // Sync spatial pointing on/off to main process.
+  useEffect(()=>{
+    window.yomi.setPointingMode(pointingEnabled)
+  }, [pointingEnabled])
+
   // ESC from main exits guide mode
   useEffect(()=>{
     return window.yomi.onGuideExit(() => setGuideMode(false))
@@ -2100,10 +2227,16 @@ const App: React.FC = () => {
   }, [])
 
   useEffect(()=>{
-    const c1=window.yomi.onEvent(handleSseEvent)
+    const c1=window.yomi.onEvent((event) => {
+      if (event.type === "transcript") resetAudioPlayback()
+      if (event.type === "audio_chunk" && useYomiStore.getState().ttsEnabled) {
+        enqueueAudioChunk(event.base64)
+      }
+      handleSseEvent(event)
+    })
     const c2=window.yomi.onStateChange(setHotkeyState)
     return ()=>{ c1(); c2() }
-  }, [handleSseEvent, setHotkeyState])
+  }, [enqueueAudioChunk, handleSseEvent, resetAudioPlayback, setHotkeyState])
 
   useEffect(()=>{
     const ctx=new AudioContext({ sampleRate:16000 }); ctxRef.current=ctx
@@ -2124,52 +2257,13 @@ const App: React.FC = () => {
   }, [])
 
   useEffect(()=>{
-    // Reset on new query (store sets audioQueue to [] on transcript)
-    if (audioQueue.length === 0) {
-      localAudioQueue.current = []
-      audioConsumedRef.current = 0
-      audioSourceRef.current?.stop(); audioSourceRef.current = null
-      audioPlayingRef.current = false
-      return
-    }
-
-    // Push only genuinely new chunks — avoid double-play when state ref is reassigned
-    for (let i = audioConsumedRef.current; i < audioQueue.length; i++) {
-      localAudioQueue.current.push(audioQueue[i]!)
-    }
-    audioConsumedRef.current = audioQueue.length
-
-    if (audioPlayingRef.current) return  // playNext loop already running
-    const ctx = ctxRef.current; if (!ctx) return
-    audioPlayingRef.current = true
-    const playNext = async () => {
-      while (localAudioQueue.current.length > 0) {
-        const b64 = localAudioQueue.current.shift()!
-        const bin = atob(b64); const buf = new Uint8Array(bin.length)
-        for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i)
-        try {
-          const ab = await ctx.decodeAudioData(buf.buffer)
-          const src = ctx.createBufferSource()
-          audioSourceRef.current = src; src.buffer = ab; src.connect(ctx.destination)
-          if (ctx.state === "suspended") await ctx.resume()
-          src.start()
-          await new Promise<void>(r => { src.onended = () => { if (audioSourceRef.current === src) audioSourceRef.current = null; r() } })
-        } catch (e) { console.warn("[yomi/audio] playback failed:", e) }
-      }
-      audioPlayingRef.current = false
-    }
-    playNext()
-  }, [audioQueue])
-
-  useEffect(()=>{
     navigator.mediaDevices.getUserMedia({audio:true})
       .then(s=>{ streamRef.current=s })
       .catch(()=>{})
     return ()=>{ streamRef.current?.getTracks().forEach(t=>t.stop()) }
   }, [])
 
-  // Grab system audio (loopback) once on mount — works on Windows via desktopCapturer.
-  // Fails gracefully on macOS without a virtual audio device; mic-only is the fallback.
+  // Grab Windows system audio loopback once on mount; mic-only is the fallback.
   useEffect(()=>{
     let active=true
     ;(async()=>{
@@ -2184,7 +2278,7 @@ const App: React.FC = () => {
         s.getVideoTracks().forEach(t=>t.stop())
         if (active) sysStreamRef.current=s
         else s.getAudioTracks().forEach(t=>t.stop())
-      } catch { /* macOS/no-permission: silently fall back to mic-only */ }
+      } catch { /* no permission: silently fall back to mic-only */ }
     })()
     return ()=>{
       active=false
@@ -2198,8 +2292,7 @@ const App: React.FC = () => {
       processorRef.current?.disconnect(); processorRef.current=null; return
     }
     // Starting a new voice query: stop any in-progress TTS and always enable audio output
-    audioSourceRef.current?.stop(); audioSourceRef.current=null
-    audioPlayingRef.current=false; localAudioQueue.current=[]
+    resetAudioPlayback()
     useYomiStore.setState({ ttsEnabled: true })
     let cancelled=false
     let micSrc: MediaStreamAudioSourceNode|null=null
@@ -2231,19 +2324,18 @@ const App: React.FC = () => {
   // Stop in-flight audio immediately when TTS is toggled off.
   useEffect(()=>{
     if (!ttsEnabled) {
-      audioSourceRef.current?.stop(); audioSourceRef.current=null
-      audioPlayingRef.current=false; localAudioQueue.current=[]
+      resetAudioPlayback()
     }
-  }, [ttsEnabled])
+  }, [ttsEnabled, resetAudioPlayback])
 
   // Global shortcuts consume Escape before the renderer sees it, so we get a
   // dedicated IPC instead.  Stop audio and dismiss the active streaming entry.
   useEffect(()=>{
     return window.yomi.onStopAudio(()=>{
-      audioSourceRef.current?.stop(); audioSourceRef.current=null
-      audioPlayingRef.current=false; localAudioQueue.current=[]
+      resetAudioPlayback()
+      stopActivePlayback()
     })
-  }, [])
+  }, [resetAudioPlayback, stopActivePlayback])
 
   // Fallback: if globalShortcut("Escape") failed to register (common on some Windows setups),
   // the keypress reaches the window when focused — forward it to main via IPC.
@@ -2271,24 +2363,34 @@ const App: React.FC = () => {
   }, [setSubscription])
 
   useEffect(() => {
-    if (authState !== "authenticated" || hasContent || guideMode || menuOpen) {
-      setMouseEventsIgnored(false)
-      return
+    const sendHitRegions = () => {
+      const regions = Array.from(document.querySelectorAll<HTMLElement>(".yomi-hit-area"))
+        .map((el) => {
+          const r = el.getBoundingClientRect()
+          return {
+            x: Math.round(r.x),
+            y: Math.round(r.y),
+            width: Math.round(r.width),
+            height: Math.round(r.height),
+          }
+        })
+        .filter((r) => r.width > 0 && r.height > 0)
+      window.yomi.setHitRegions(regions)
     }
 
-    setMouseEventsIgnored(true)
-
-    const onMove = (e: MouseEvent) => {
-      const target = e.target as HTMLElement | null
-      setMouseEventsIgnored(!target?.closest(".yomi-hit-area"))
-    }
-
-    window.addEventListener("mousemove", onMove)
+    const resizeObserver = new ResizeObserver(sendHitRegions)
+    const mutationObserver = new MutationObserver(sendHitRegions)
+    resizeObserver.observe(document.body)
+    mutationObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "style"] })
+    window.addEventListener("resize", sendHitRegions)
+    requestAnimationFrame(sendHitRegions)
     return () => {
-      window.removeEventListener("mousemove", onMove)
-      setMouseEventsIgnored(false)
+      resizeObserver.disconnect()
+      mutationObserver.disconnect()
+      window.removeEventListener("resize", sendHitRegions)
+      window.yomi.setHitRegions([])
     }
-  }, [authState, hasContent, guideMode, menuOpen, setMouseEventsIgnored])
+  }, [authState, entries.length, hotkeyState, guideMode, menuOpen])
 
   // ── Sign-in states ──────────────────────────────────────────────────────────
 
@@ -2299,7 +2401,7 @@ const App: React.FC = () => {
 
   if (authState === "unauthenticated" || authState === "waiting") {
     return (
-      <div style={{
+      <div className="yomi-hit-area" style={{
         display:"flex", flexDirection:"column",
         height:"100vh",
         background: t.toolbarBg,
@@ -2331,7 +2433,7 @@ const App: React.FC = () => {
       }}
     >
       {/* Toolbar pill — always visible, its own floating card */}
-      <div style={{
+      <div className="yomi-hit-area" style={{
         flexShrink:0,
         margin:"0 20px",
         background: t.bg,
