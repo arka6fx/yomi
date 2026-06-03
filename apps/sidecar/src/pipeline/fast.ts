@@ -1,5 +1,5 @@
 import { streamText } from "ai";
-import type { FastQueryRequest, GuideElement, Plan, SseEvent } from "@yomi/shared";
+import type { FastQueryRequest, GuideElement, Plan, PointTarget, ScreenImage, SseEvent } from "@yomi/shared";
 import { generateGuide } from "./visual-guide.js";
 import { transcribe } from "../speech/transcribe.js";
 import { synthesize, resolveTts } from "./tts.js";
@@ -66,7 +66,7 @@ function needsScreenContext(text: string): boolean {
   const q = text.toLowerCase().trim()
 
   // Unambiguous UI/visual vocabulary
-  if (/\b(screen|window|tab|page|app|application|browser|display|monitor|icon|button|popup|dialog|notification|menu|toolbar|sidebar|panel|image|photo|picture|video)\b/.test(q))
+  if (/\b(screen|window|tab|page|app|application|browser|display|monitor|icon|button|link|field|input|search|button|popup|dialog|notification|menu|toolbar|sidebar|panel|image|photo|picture|video)\b/.test(q))
     return true
 
   // Demonstratives or spatial words implying the user is pointing at something visible
@@ -123,6 +123,30 @@ function sanitizeSentenceForSpeech(sentence: string): string {
     .trim()
 }
 
+const POINT_TAIL_LIMIT = 96;
+const POINT_TAG_RE = /\[POINT:(?:none|(\d+)\s*,\s*(\d+)(?::([^\]:\s][^\]:]*?))?(?::screen(\d+))?)\]\s*$/i;
+
+function parsePointTag(text: string): { text: string; target: PointTarget | null; found: boolean } {
+  const match = text.match(POINT_TAG_RE);
+  if (!match) return { text, target: null, found: false };
+
+  const cleanText = text.slice(0, match.index).trimEnd();
+  const [, xRaw, yRaw, labelRaw, screenRaw] = match;
+  if (!xRaw || !yRaw) return { text: cleanText, target: null, found: true };
+
+  return {
+    text: cleanText,
+    found: true,
+    target: {
+      x: Number(xRaw),
+      y: Number(yRaw),
+      label: (labelRaw ?? "target").trim().slice(0, 48) || "target",
+      screen: screenRaw ? Number(screenRaw) : undefined,
+      coordinateSpace: "screenshot_pixels",
+    },
+  };
+}
+
 function maxOutputTokensFor(text: string): number {
   const q = text.toLowerCase()
   if (/\b(application|letter|biography|bio|essay|article|story|speech|report|write|draft|compose)\b/.test(q)) {
@@ -142,18 +166,57 @@ async function* answerPipeline(
   screenshotB64?: string,
   tts = true,
   plan?: Plan,
+  screenshots: ScreenImage[] = [],
+  pointing = false,
 ): AsyncGenerator<SseEvent> {
-  const content: any[] = [{ type: "text" as const, text }];
+  const content: Array<
+    | { type: "text"; text: string }
+    | { type: "image"; image: string }
+  > = [{ type: "text", text }];
 
-  const hasScreen = !!(screenshotB64 && needsScreenContext(text));
+  const images = screenshots.length > 0
+    ? screenshots
+    : screenshotB64
+      ? [{ screen: 1, screenshot_b64: screenshotB64, width: 0, height: 0 }]
+      : [];
+  const hasScreen = images.length > 0 && (pointing || needsScreenContext(text));
   if (hasScreen) {
-    content.push({
-      type: "image" as const,
-      image: `data:image/png;base64,${screenshotB64}`,
-    });
+    const labels = images.map((img) =>
+      `screen${img.screen}${img.is_cursor_screen ? " (cursor/focus screen)" : ""}: ${img.width || "unknown"}x${img.height || "unknown"} pixels`,
+    ).join("\n");
+    content[0] = {
+      type: "text",
+      text: `${text}\n\nScreenshots are labeled:\n${labels}`,
+    };
+    for (const img of images) {
+      content.push({
+        type: "image",
+        image: `data:image/jpeg;base64,${img.screenshot_b64}`,
+      });
+    }
   }
 
-  const systemPrompt = await getFastPrompt(text, hasScreen, plan);
+  let systemPrompt = await getFastPrompt(text, hasScreen, plan);
+  if (hasScreen) {
+    systemPrompt += `
+
+Spatial pointing:
+- The user has spatial pointing ${pointing ? "enabled" : "available"}.
+- You have a small blue cursor that can fly to and point at things on screen.
+- Use it whenever pointing would genuinely help: navigation, finding a button/menu/field, showing where to click, or explaining a visible UI.
+- Err on the side of pointing for on-screen tasks.
+- When you point, append exactly one coordinate tag at the very end, after the spoken text.
+- The screenshot images are labeled with their pixel dimensions. Use those dimensions as the coordinate space.
+- Origin is top-left. x increases rightward, y increases downward.
+- Put the coordinate at the visual center of the clickable control itself, not on nearby text, menu labels, shadows, or empty padding.
+- If a target is partly visible, point at the center of the visible clickable part.
+- Format: [POINT:x,y:label] or [POINT:x,y:label:screenN].
+- If the element is on the cursor/focus screen, you can omit the screen number. If it is on another screen, include :screenN.
+- If pointing would not help, append [POINT:none].
+- Do not mention the tag in the answer.
+- If the user asks where to click, how to navigate, or asks for directions on screen, you must point at the most relevant currently visible target.
+- For step-by-step guidance, give only the next actionable step for the current screenshot.`;
+  }
 
   const result = streamText({
     model: createModel(MODEL),
@@ -166,6 +229,7 @@ async function* answerPipeline(
 
   const ttsEnabled = tts && resolveTts() !== "none";
   const queue = new EventQueue();
+  let ttsErrorEmitted = false;
 
   // Fetch all audio chunks for one sentence — starts immediately so synthesis
   // runs in parallel with the LLM stream and subsequent sentences.
@@ -174,13 +238,19 @@ async function* answerPipeline(
     try {
       for await (const audio of synthesize(sentence.trim())) chunks.push(audio);
     } catch (err) {
-      console.warn("[yomi/tts] synthesis failed:", err instanceof Error ? err.message : err);
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn("[yomi/tts] synthesis failed:", message);
+      if (!ttsErrorEmitted) {
+        ttsErrorEmitted = true;
+        queue.push({ type: "tts_error", message: "Voice synthesis failed. Text response is still available." });
+      }
     }
     return chunks;
   }
 
   const producer = (async () => {
     let buffer = "";
+    let pointTail = "";
     let gotChunk = false;
     let speechFenceOpen = false;
     // audioChain enforces ordering: synthesis runs concurrently but each
@@ -219,12 +289,11 @@ async function* answerPipeline(
       });
     }
 
-    for await (const chunk of result.textStream) {
-      if (!chunk) continue;
-      gotChunk = true;
-      queue.push({ type: "llm_chunk", text: chunk });
-      if (!ttsEnabled) continue;
-      buffer += visibleSpeechText(chunk);
+    function flushVisibleText(textChunk: string) {
+      if (!textChunk) return;
+      queue.push({ type: "llm_chunk", text: textChunk });
+      if (!ttsEnabled) return;
+      buffer += visibleSpeechText(textChunk);
       let cutAt = findSentenceEnd(buffer);
       while (cutAt !== -1) {
         enqueueSentence(buffer.slice(0, cutAt));
@@ -232,8 +301,28 @@ async function* answerPipeline(
         cutAt = findSentenceEnd(buffer);
       }
     }
+
+    for await (const chunk of result.textStream) {
+      if (!chunk) continue;
+      gotChunk = true;
+      if (!hasScreen) {
+        flushVisibleText(chunk);
+        continue;
+      }
+      pointTail += chunk;
+      if (pointTail.length > POINT_TAIL_LIMIT) {
+        const flushLen = pointTail.length - POINT_TAIL_LIMIT;
+        flushVisibleText(pointTail.slice(0, flushLen));
+        pointTail = pointTail.slice(flushLen);
+      }
+    }
     if (!gotChunk) {
       throw new Error("LLM returned empty response (likely rate-limited or quota exceeded)")
+    }
+    if (hasScreen) {
+      const parsed = parsePointTag(pointTail);
+      flushVisibleText(parsed.text);
+      queue.push({ type: "point_target", target: parsed.target });
     }
     if (ttsEnabled && buffer.trim().length > 0) enqueueSentence(buffer);
     await audioChain;
@@ -319,7 +408,7 @@ export async function* fastPipeline(
         yield event
       }
     } else {
-      for await (const event of answerPipeline(text, req.screenshot_b64, req.tts !== false, req.plan)) {
+      for await (const event of answerPipeline(text, req.screenshot_b64, req.tts !== false, req.plan, req.screenshots ?? [], req.pointing === true)) {
         if (event.type === "llm_chunk") output += event.text
         yield event
       }

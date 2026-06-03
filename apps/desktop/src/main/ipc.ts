@@ -1,14 +1,35 @@
 import { ipcMain } from "electron"
 import type { BrowserWindow } from "electron"
-import type { SseEvent } from "@yomi/shared"
+import type { GuideElement, PointTarget, SseEvent } from "@yomi/shared"
 import { captureScreen } from "./capture"
 import type { ScreenCapture } from "./capture"
-import { showGuidePoint, hideGuidePoint } from "./guide-overlay"
+import { showGuideTarget, showGuideInstruction, hideGuidePoint } from "./guide-overlay"
 import type { SidecarManager } from "./sidecar"
-import { resetToIdle, activateProcessing } from "./hotkey"
+import { getHotkeyState, resetToIdle, activateProcessing, triggerStopListening, triggerVoiceMode } from "./hotkey"
 import { BACKEND_URL, loadToken } from "./auth"
+import { audioRms, GUIDE_SPEECH_RMS } from "./guide-audio"
+import { mapGuideElementToScreen, mapPointTargetToScreen } from "./spatial-mapping"
 
 let guideModeActive = false
+let pointingModeActive = true
+let hideGuideTimer: ReturnType<typeof setTimeout> | null = null
+let guideSequenceTimers: ReturnType<typeof setTimeout>[] = []
+let guideListenTimer: ReturnType<typeof setTimeout> | null = null
+let guideListenTimeoutTimer: ReturnType<typeof setTimeout> | null = null
+let guideSilenceTimer: ReturnType<typeof setTimeout> | null = null
+let guideMaxSpeechTimer: ReturnType<typeof setTimeout> | null = null
+let guideAutoListening = false
+let guideSpeechStarted = false
+let guideVoiceMs = 0
+let activeGuideTask: string | null = null
+
+const GUIDE_LISTEN_DELAY_MS = 2200
+const GUIDE_NO_SPEECH_TIMEOUT_MS = 12000
+const GUIDE_SILENCE_AFTER_SPEECH_MS = 900
+const GUIDE_SPEECH_MIN_MS = 80
+const GUIDE_MAX_AFTER_SPEECH_MS = 4500
+const GUIDE_LISTEN_RETRY_MS = 250
+const GUIDE_LISTEN_RETRIES = 10
 
 type Plan = "explore" | "pro" | "max"
 
@@ -31,6 +52,7 @@ export function abortCurrent(): void {
   pipelineCtrl?.abort()
   pipelineCtrl = null
   pcmChunks = []                  // discard any buffered voice chunks
+  stopGuideAutoListening()
 }
 
 // Registers sidecar-dependent IPC handlers. Called once after first auth.
@@ -40,12 +62,25 @@ export function initSidecarIpc(
 ): { onListenStop: () => Promise<void>; onTextQuery: () => void; onAbort: () => void } {
   ipcMain.on("yomi:guide-mode", (_e, on: boolean) => {
     guideModeActive = on
-    if (!on) hideGuidePoint()
+    if (!on) {
+      clearGuideTimers()
+      hideGuidePoint()
+    }
+  })
+
+  ipcMain.on("yomi:pointing-mode", (_e, on: boolean) => {
+    pointingModeActive = on
+    if (!on && !guideModeActive) {
+      clearGuideTimers()
+      hideGuidePoint()
+    }
   })
 
   ipcMain.on("yomi:audio-chunk", (_e, pcm: ArrayBuffer, sampleRate: number) => {
-    pcmChunks.push(new Float32Array(pcm))
+    const chunk = new Float32Array(pcm)
+    pcmChunks.push(chunk)
     capturedSampleRate = sampleRate
+    observeGuideAudio(chunk, sampleRate)
   })
 
   // Text query: text-only output (no TTS)
@@ -214,15 +249,32 @@ async function streamQuery(
   ctrl: AbortController,
 ): Promise<void> {
   pipelineCtrl = ctrl   // keep reference current (startPipeline may have rotated it)
+  clearGuideTimers()
   hideGuidePoint()      // clear any stale dot from the previous query
+  let persistentPointShown = false
+  let guideSequenceMs = 0
+  const guidedNavigation = guideModeActive || shouldUseGuidedNavigation(text) || shouldContinueGuide(text)
+  const queryText = guidedNavigation ? buildGuideQuery(text) : text
+  if (guidedNavigation) {
+    showGuideInstruction("Finding the next step on this screen...", 1, 1)
+    persistentPointShown = true
+  }
 
   const res = await fetch(`${sidecar.baseUrl}/query/fast`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-sidecar-secret": sidecar.secret },
     body: JSON.stringify({
-      text,
+      text: queryText,
       screenshot_b64: capture.screenshot_b64,
-      mode: guideModeActive ? "guide" : "answer",
+      screenshots: capture.displays.map(({ screen, screenshot_b64, imageWidth, imageHeight, isCursorScreen }) => ({
+        screen,
+        screenshot_b64,
+        width: imageWidth,
+        height: imageHeight,
+        is_cursor_screen: isCursorScreen,
+      })),
+      mode: "answer",
+      pointing: pointingModeActive,
       tts,
       plan,
     }),
@@ -245,16 +297,27 @@ async function streamQuery(
       for (const line of lines) {
         if (!line.startsWith("data: ")) continue
         const event = JSON.parse(line.slice(6)) as SseEvent
-        send(overlayWin, event)
         if (event.type === "visual_guide") {
-          const el = event.elements?.[0]
-          if (el?.bbox) {
-            const x = Math.round((el.bbox.x + el.bbox.width / 2) * capture.screen_width)
-            const y = Math.round((el.bbox.y + el.bbox.height / 2) * capture.screen_height)
-            showGuidePoint(x, y)
-          }
+          guideSequenceMs = scheduleVisualGuideEvent(event, capture, overlayWin)
+          persistentPointShown = true
+          continue
+        } else {
+          send(overlayWin, event)
         }
-        if (event.type === "done")  { sawDone = true; hideGuidePoint(); resetToIdle() }
+        if (event.type === "point_target") {
+          if (pointingModeActive && event.target) {
+            showPointTarget(event.target, capture)
+            persistentPointShown = true
+          }
+          else if (!guideModeActive) hideGuidePoint()
+        }
+        if (event.type === "done")  {
+          sawDone = true
+          if (persistentPointShown) scheduleGuideHide(guideSequenceMs)
+          else hideGuidePoint()
+          resetToIdle()
+          if (guidedNavigation) scheduleGuideListening()
+        }
         if (event.type === "error") { sawDone = true; hideGuidePoint(); resetToIdle() }
       }
     }
@@ -266,4 +329,176 @@ async function streamQuery(
   }
 
   if (!sawDone) resetToIdle()
+}
+
+function clearGuideTimers(): void {
+  if (hideGuideTimer) {
+    clearTimeout(hideGuideTimer)
+    hideGuideTimer = null
+  }
+  stopGuideAutoListening()
+  for (const timer of guideSequenceTimers) clearTimeout(timer)
+  guideSequenceTimers = []
+}
+
+function clearGuideListenTimers(): void {
+  if (guideListenTimer) {
+    clearTimeout(guideListenTimer)
+    guideListenTimer = null
+  }
+  if (guideListenTimeoutTimer) {
+    clearTimeout(guideListenTimeoutTimer)
+    guideListenTimeoutTimer = null
+  }
+  if (guideSilenceTimer) {
+    clearTimeout(guideSilenceTimer)
+    guideSilenceTimer = null
+  }
+  if (guideMaxSpeechTimer) {
+    clearTimeout(guideMaxSpeechTimer)
+    guideMaxSpeechTimer = null
+  }
+}
+
+function scheduleGuideHide(afterMs = 0): void {
+  if (hideGuideTimer) clearTimeout(hideGuideTimer)
+  hideGuideTimer = setTimeout(() => {
+    hideGuideTimer = null
+    hideGuidePoint()
+  }, afterMs + 6500)
+}
+
+function scheduleGuideListening(): void {
+  clearGuideListenTimers()
+  if (!pointingModeActive || !activeGuideTask) return
+  guideListenTimer = setTimeout(() => {
+    guideListenTimer = null
+    startGuideListeningAttempt(0)
+  }, GUIDE_LISTEN_DELAY_MS)
+}
+
+function startGuideListeningAttempt(attempt: number): void {
+  if (!pointingModeActive || !activeGuideTask) return
+  if (getHotkeyState() !== "idle") {
+    if (attempt >= GUIDE_LISTEN_RETRIES) {
+      showGuideInstruction('Say "next step" when ready.', 1, 1)
+      return
+    }
+    guideListenTimer = setTimeout(() => {
+      guideListenTimer = null
+      startGuideListeningAttempt(attempt + 1)
+    }, GUIDE_LISTEN_RETRY_MS)
+    return
+  }
+
+  const started = triggerVoiceMode()
+  if (!started || getHotkeyState() !== "listening") {
+    if (attempt >= GUIDE_LISTEN_RETRIES) {
+      showGuideInstruction('Say "next step" when ready.', 1, 1)
+      return
+    }
+    guideListenTimer = setTimeout(() => {
+      guideListenTimer = null
+      startGuideListeningAttempt(attempt + 1)
+    }, GUIDE_LISTEN_RETRY_MS)
+    return
+  }
+
+  guideAutoListening = true
+  guideSpeechStarted = false
+  guideVoiceMs = 0
+  pcmChunks = []
+  showGuideInstruction('Listening for next step...', 1, 1)
+  guideListenTimeoutTimer = setTimeout(() => {
+    stopGuideAutoListening()
+    pcmChunks = []
+    resetToIdle()
+    showGuideInstruction('Say "next step" when ready.', 1, 1)
+    scheduleGuideHide()
+  }, GUIDE_NO_SPEECH_TIMEOUT_MS)
+}
+
+function stopGuideAutoListening(): void {
+  clearGuideListenTimers()
+  guideAutoListening = false
+  guideSpeechStarted = false
+  guideVoiceMs = 0
+}
+
+function observeGuideAudio(chunk: Float32Array, sampleRate: number): void {
+  if (!guideAutoListening) return
+  const rms = audioRms(chunk)
+  if (rms >= GUIDE_SPEECH_RMS) {
+    guideVoiceMs += (chunk.length / Math.max(sampleRate, 1)) * 1000
+    if (guideVoiceMs >= GUIDE_SPEECH_MIN_MS) {
+      guideSpeechStarted = true
+      if (!guideMaxSpeechTimer) {
+        guideMaxSpeechTimer = setTimeout(() => {
+          stopGuideAutoListening()
+          triggerStopListening()
+        }, GUIDE_MAX_AFTER_SPEECH_MS)
+      }
+    }
+    if (guideSilenceTimer) {
+      clearTimeout(guideSilenceTimer)
+      guideSilenceTimer = null
+    }
+    return
+  }
+  if (!guideSpeechStarted || guideSilenceTimer) return
+  guideSilenceTimer = setTimeout(() => {
+    stopGuideAutoListening()
+    triggerStopListening()
+  }, GUIDE_SILENCE_AFTER_SPEECH_MS)
+}
+
+function shouldUseGuidedNavigation(text: string): boolean {
+  if (!pointingModeActive) return false
+  return /\b(step by step|guide me|show me how|how (do|to|can) i|where (do|should) i click|what (do|should) i click|directions?|navigate|save (my )?(project|file|work)|click first)\b/i.test(text)
+}
+
+function shouldContinueGuide(text: string): boolean {
+  if (!pointingModeActive || !activeGuideTask) return false
+  return /\b(continue|next( step)?|done|i did it|did it|go on|guide me further|where next|what next|what do i do next|where do i go next|show me the next step|next please|okay next|ok next)\b/i.test(text.trim())
+}
+
+function buildGuideQuery(text: string): string {
+  if (shouldContinueGuide(text) && activeGuideTask) {
+    return `Continue guiding me through this task: ${activeGuideTask}. I completed the previous step. Give only the next actionable step visible on the current screenshot. If there is a visible UI target, point at it. If the best action is a keyboard shortcut, say the shortcut.`
+  }
+  activeGuideTask = text.trim()
+  return `${text.trim()}\n\nGive only the next actionable step visible on the current screenshot. If there is a visible UI target, point at it. If the best action is a keyboard shortcut, say the shortcut.`
+}
+
+function scheduleVisualGuideEvent(event: Extract<SseEvent, { type: "visual_guide" }>, capture: ScreenCapture, win: BrowserWindow): number {
+  const delay = Math.max(0, event.step - 1) * 5200
+  const timer = setTimeout(() => {
+    send(win, event)
+    showVisualGuideTarget(event.elements?.[0], capture, event.step, event.total_steps, event.instruction)
+  }, delay)
+  guideSequenceTimers.push(timer)
+  return delay
+}
+
+function showVisualGuideTarget(
+  element: GuideElement | undefined,
+  capture: ScreenCapture,
+  step = 1,
+  total = 1,
+  instruction?: string,
+): void {
+  const point = mapGuideElementToScreen(element, capture)
+  const label = instruction ?? point?.label ?? "Follow this step"
+  const guidedLabel = `${label}  Say "next" when done.`
+  if (!point) {
+    showGuideInstruction(guidedLabel, step, total)
+    return
+  }
+  showGuideTarget(point.x, point.y, `Click this: ${guidedLabel}`, step, total)
+}
+
+function showPointTarget(target: PointTarget, capture: ScreenCapture): void {
+  const point = mapPointTargetToScreen(target, capture)
+  if (!point) return
+  showGuideTarget(point.x, point.y, `Click this: ${point.label}`)
 }

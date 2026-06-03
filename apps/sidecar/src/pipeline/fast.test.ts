@@ -29,11 +29,17 @@ const ttsMock = {
   calls: [] as string[],
   // If true, the mocked synthesize() throws on first iteration.
   shouldThrow: false,
+  // Optional per-call audio payloads for ordering tests.
+  chunkPlan: [] as Uint8Array[][],
+  // Optional per-call delay before yielding audio.
+  delaysMs: [] as number[],
   reset(): void {
     this.engine = "none";
     this.chunks = [];
     this.calls = [];
     this.shouldThrow = false;
+    this.chunkPlan = [];
+    this.delaysMs = [];
   },
 };
 
@@ -125,8 +131,12 @@ mock.module("./tts.js", () => ({
   resolveTts: () => ttsMock.engine,
   synthesize: async function* (text: string) {
     ttsMock.calls.push(text);
+    const callIndex = ttsMock.calls.length - 1;
     if (ttsMock.shouldThrow) throw new Error("tts boom");
-    for (const chunk of ttsMock.chunks) yield chunk;
+    const delay = ttsMock.delaysMs[callIndex] ?? 0;
+    if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
+    const chunks = ttsMock.chunkPlan[callIndex] ?? ttsMock.chunks;
+    for (const chunk of chunks) yield chunk;
   },
 }));
 
@@ -308,6 +318,86 @@ describe("fastPipeline — generator", () => {
     expect(doneEvents).toHaveLength(1);
   });
 
+  it("answer mode with screen: strips POINT tag and emits point_target", async () => {
+    streamChunks = ["Click the search bar. ", "[POINT:320,140:search bar:screen2]"];
+    const events = await collect(fastPipeline({
+      text: "where is the search bar",
+      screenshots: [
+        { screen: 1, screenshot_b64: "screen1", width: 1280, height: 720 },
+        { screen: 2, screenshot_b64: "screen2", width: 1280, height: 720 },
+      ],
+    })) as any[];
+
+    expect(events.map((e) => e.type)).toEqual(["transcript", "llm_chunk", "point_target", "done"]);
+    expect(events.find((e) => e.type === "llm_chunk").text).toBe("Click the search bar.");
+    expect(events.find((e) => e.type === "point_target").target).toMatchObject({
+      x: 320,
+      y: 140,
+      label: "search bar",
+      screen: 2,
+      coordinateSpace: "screenshot_pixels",
+    });
+  });
+
+  it("answer mode with pointing enabled: uses screen context even for generic directions prompts", async () => {
+    streamChunks = ["Start here. [POINT:100,200:first step]"];
+    const events = await collect(fastPipeline({
+      text: "give me directions",
+      pointing: true,
+      screenshots: [{ screen: 1, screenshot_b64: "screen1", width: 1280, height: 720 }],
+    })) as any[];
+
+    expect(JSON.stringify(lastStreamTextMessages)).toContain("screen1: 1280x720 pixels");
+    expect(events.find((e) => e.type === "llm_chunk").text).toBe("Start here.");
+    expect(events.find((e) => e.type === "point_target").target).toMatchObject({
+      x: 100,
+      y: 200,
+      label: "first step",
+    });
+  });
+
+  it("answer mode with pointing enabled: step guidance emits point_target instead of visual guide", async () => {
+    streamChunks = ["Click Save. [POINT:420,80:Save button]"];
+    const events = await collect(fastPipeline({
+      text: "show me how to save step by step",
+      pointing: true,
+      screenshots: [{ screen: 1, screenshot_b64: "screen1", width: 1280, height: 720 }],
+    })) as any[];
+
+    expect(events.some((e) => e.type === "visual_guide")).toBe(false);
+    expect(events.find((e) => e.type === "llm_chunk").text).toBe("Click Save.");
+    expect(events.find((e) => e.type === "point_target").target).toMatchObject({
+      x: 420,
+      y: 80,
+      label: "Save button",
+    });
+  });
+
+  it("answer mode with screen: POINT none emits null target", async () => {
+    streamChunks = ["HTML is the skeleton of a page. [POINT:none]"];
+    const events = await collect(fastPipeline({
+      text: "what is html on this screen",
+      screenshots: [{ screen: 1, screenshot_b64: "screen1", width: 1280, height: 720 }],
+    })) as any[];
+
+    expect(events.find((e) => e.type === "llm_chunk").text).toBe("HTML is the skeleton of a page.");
+    expect(events.find((e) => e.type === "point_target").target).toBeNull();
+  });
+
+  it("answer mode with TTS: does not speak POINT tags", async () => {
+    ttsMock.engine = "openai";
+    ttsMock.chunks = [new Uint8Array([1, 2, 3])];
+    streamChunks = ["Open the menu. [POINT:20,30:menu]"];
+
+    await collect(fastPipeline({
+      text: "what do I click on this screen",
+      screenshots: [{ screen: 1, screenshot_b64: "screen1", width: 1280, height: 720 }],
+      tts: true,
+    }));
+
+    expect(ttsMock.calls).toEqual(["Open the menu."]);
+  });
+
   it("answer mode: gives long writing requests a moderate output budget", async () => {
     await collect(fastPipeline({ text: "write an application for leave" }));
 
@@ -486,6 +576,15 @@ describe("fastPipeline — generator", () => {
     expect(ttsMock.calls).toEqual([]);
   });
 
+  it("TTS request false: no audio_chunk events even when a TTS engine is available", async () => {
+    ttsMock.engine = "openai";
+    ttsMock.chunks = [new Uint8Array([1, 2, 3])];
+    streamChunks = ["Hello world."];
+    const events = await collect(fastPipeline({ text: "hi", tts: false })) as any[];
+    expect(events.some((e) => e.type === "audio_chunk")).toBe(false);
+    expect(ttsMock.calls).toEqual([]);
+  });
+
   it("TTS enabled: emits audio_chunk events with base64-encoded bytes", async () => {
     ttsMock.engine = "openai";
     ttsMock.chunks = [new Uint8Array([0xde, 0xad, 0xbe, 0xef])];
@@ -546,6 +645,21 @@ describe("fastPipeline — generator", () => {
     expect(audio).toHaveLength(3);
   });
 
+  it("TTS: audio_chunk events preserve sentence order even when later synthesis finishes first", async () => {
+    ttsMock.engine = "openai";
+    ttsMock.chunkPlan = [
+      [new Uint8Array([1]), new Uint8Array([2])],
+      [new Uint8Array([3])],
+    ];
+    ttsMock.delaysMs = [20, 0];
+    streamChunks = ["First sentence. ", "Second sentence."];
+    const events = await collect(fastPipeline({ text: "hi" })) as any[];
+    const audio = events
+      .filter((e) => e.type === "audio_chunk")
+      .map((e) => Buffer.from(e.base64, "base64")[0]);
+    expect(audio).toEqual([1, 2, 3]);
+  });
+
   it("TTS: done is still the last event when audio is present", async () => {
     ttsMock.engine = "openai";
     ttsMock.chunks = [new Uint8Array([1, 2])];
@@ -554,14 +668,23 @@ describe("fastPipeline — generator", () => {
     expect(events[events.length - 1]).toMatchObject({ type: "done" });
   });
 
-  it("TTS: synthesis errors are swallowed, text response still completes", async () => {
+  it("TTS: synthesis errors emit diagnostics and text response still completes", async () => {
     ttsMock.engine = "openai";
     ttsMock.shouldThrow = true;
     streamChunks = ["Hello world."];
     const events = await collect(fastPipeline({ text: "hi" })) as any[];
-    // No error event, has llm_chunks, ends with done.
     expect(events.some((e) => e.type === "error")).toBe(false);
+    expect(events.some((e) => e.type === "tts_error")).toBe(true);
     expect(events.some((e) => e.type === "llm_chunk")).toBe(true);
+    expect(events[events.length - 1]).toMatchObject({ type: "done" });
+  });
+
+  it("TTS: repeated synthesis failures emit only one diagnostic event", async () => {
+    ttsMock.engine = "openai";
+    ttsMock.shouldThrow = true;
+    streamChunks = ["First sentence. ", "Second sentence."];
+    const events = await collect(fastPipeline({ text: "hi" })) as any[];
+    expect(events.filter((e) => e.type === "tts_error")).toHaveLength(1);
     expect(events[events.length - 1]).toMatchObject({ type: "done" });
   });
 });
