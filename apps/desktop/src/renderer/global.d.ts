@@ -21,6 +21,7 @@ declare global {
       moveDrag(screenX: number, screenY: number): void
       resize(w: number, h: number): void
       setMouseEventsIgnored(ignored: boolean): void
+      setHitRegions(regions: { x: number; y: number; width: number; height: number }[]): void
       nudge(dx: number, dy: number): void
       // Queries
       submitTextQuery(text: string): void
@@ -41,6 +42,7 @@ declare global {
       setOpacity(value: number): void
       // Guide mode
       setGuideMode(on: boolean): void
+      setPointingMode(on: boolean): void
       onGuideExit(cb: () => void): () => void
     }
   }

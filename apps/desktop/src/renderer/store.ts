@@ -9,6 +9,7 @@ export interface ChatEntry {
   transcript: string
   text: string
   error: string | null
+  ttsError: string | null
   isStreaming: boolean
 }
 
@@ -37,20 +38,22 @@ interface YomiState {
   hotkeyState: HotkeyState
   entries: ChatEntry[]
   activeId: number | null
-  audioQueue: string[]
   ttsEnabled: boolean
   guideSteps: GuideStep[]
   guideCurrentStep: number
   guideTotalSteps: number
   guideMode: boolean
+  pointingEnabled: boolean
   subscription: SubscriptionInfo | null
   subscriptionLoading: boolean
 
   setAuthState: (s: AuthState, error?: string) => void
   setHotkeyState: (state: HotkeyState) => void
   handleSseEvent: (event: SseEvent) => void
+  stopActivePlayback: () => void
   dismissEntry: (id: number) => void
   toggleTts: () => void
+  togglePointing: () => void
   setGuideMode: (on: boolean) => void
   setSubscription: (info: SubscriptionUpdate | null) => void
   setSubscriptionLoading: (loading: boolean) => void
@@ -64,12 +67,12 @@ export const useYomiStore = create<YomiState>((set) => ({
   hotkeyState: "idle",
   entries: [],
   activeId: null,
-  audioQueue: [],
   ttsEnabled: true,
   guideSteps: [],
   guideCurrentStep: 0,
   guideTotalSteps: 0,
   guideMode: false,
+  pointingEnabled: true,
   subscription: null,
   subscriptionLoading: false,
 
@@ -82,9 +85,8 @@ export const useYomiStore = create<YomiState>((set) => ({
         set((s) => {
           const id = nextId++
           return {
-            entries: [...s.entries, { id, transcript: event.text, text: "", error: null, isStreaming: true }],
+            entries: [...s.entries, { id, transcript: event.text, text: "", error: null, ttsError: null, isStreaming: true }],
             activeId: id,
-            audioQueue: [],
             guideSteps: [],
             guideCurrentStep: 0,
             guideTotalSteps: 0,
@@ -99,14 +101,31 @@ export const useYomiStore = create<YomiState>((set) => ({
         }))
         break
       case "audio_chunk":
-        set((s) => s.ttsEnabled ? { audioQueue: [...s.audioQueue, event.base64] } : {})
+        break
+      case "tts_error":
+        set((s) => ({
+          entries: s.entries.map((e) =>
+            e.id === s.activeId ? { ...e, ttsError: event.message } : e
+          ),
+        }))
         break
       case "visual_guide":
         set((s) => ({
           guideSteps: [...s.guideSteps, { instruction: event.instruction, elements: event.elements }],
           guideTotalSteps: event.total_steps,
           guideCurrentStep: event.step,
+          entries: s.entries.map((e) =>
+            e.id === s.activeId
+              ? {
+                  ...e,
+                  text: `${e.text}${e.text ? "\n" : ""}${event.total_steps > 1 ? `${event.step}. ` : ""}${event.instruction}`,
+                  isStreaming: true,
+                }
+              : e
+          ),
         }))
+        break
+      case "point_target":
         break
       case "done":
         set((s) => ({
@@ -120,6 +139,17 @@ export const useYomiStore = create<YomiState>((set) => ({
       case "error":
         set((s) => {
           if (s.activeId !== null) {
+            const activeEntry = s.entries.find((e) => e.id === s.activeId)
+            const isAbortLike = /abort|cancel|terminat/i.test(event.message)
+            if (activeEntry?.text && isAbortLike) {
+              return {
+                hotkeyState: "idle",
+                entries: s.entries.map((e) =>
+                  e.id === s.activeId ? { ...e, isStreaming: false } : e
+                ),
+                activeId: null,
+              }
+            }
             return {
               hotkeyState: "idle",
               entries: s.entries.map((e) =>
@@ -131,7 +161,7 @@ export const useYomiStore = create<YomiState>((set) => ({
           const id = nextId++
           return {
             hotkeyState: "idle",
-            entries: [...s.entries, { id, transcript: "", text: "", error: event.message, isStreaming: false }],
+            entries: [...s.entries, { id, transcript: "", text: "", error: event.message, ttsError: null, isStreaming: false }],
             activeId: null,
           }
         })
@@ -139,10 +169,21 @@ export const useYomiStore = create<YomiState>((set) => ({
     }
   },
 
+  stopActivePlayback: () =>
+    set((s) => ({
+      entries: s.activeId === null
+        ? s.entries
+        : s.entries.map((e) =>
+            e.id === s.activeId ? { ...e, isStreaming: false } : e
+          ),
+      activeId: null,
+    })),
+
   dismissEntry: (id) =>
     set((s) => ({ entries: s.entries.filter((e) => e.id !== id) })),
 
   toggleTts: () => set((s) => ({ ttsEnabled: !s.ttsEnabled })),
+  togglePointing: () => set((s) => ({ pointingEnabled: !s.pointingEnabled })),
 
   setGuideMode: (on) => set(on
     ? { guideMode: true }
