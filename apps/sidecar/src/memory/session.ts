@@ -85,7 +85,7 @@ export async function forget(query: string): Promise<number> {
   const memPath = join(notepadDir(), "memory.md")
   const current = await readFile(memPath, "utf-8").catch(() => "")
   const lines = current.split("\n")
-  const kept = lines.filter(line => !line.toLowerCase().includes(needle))
+  const kept = lines.filter((line) => !line.toLowerCase().includes(needle))
   const removed = lines.length - kept.length
   if (removed > 0) {
     await writeFile(memPath, kept.join("\n"), "utf-8")

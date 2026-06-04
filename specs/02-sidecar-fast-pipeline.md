@@ -2,17 +2,21 @@
 
 ## Purpose
 
-Define the fast linear pipeline, context assembly, visual guidance mode, and model configuration. This is the hot path: every quick ask should stay near the two second budget when external providers respond quickly.
+Define the fast linear pipeline, context assembly, visual guidance mode, and
+model configuration. This is the hot path: every quick ask should stay near the
+two second budget when external providers respond quickly.
 
 ## Invariants
 
 - The fast path never enters a tool-selection loop.
 - The intent router decides fast vs agent before pipeline execution.
 - Screenshot capture happens in desktop before the sidecar request.
-- Screenshots are attached to the model only when the query appears screen-aware.
+- Screenshots are attached to the model only when the query appears
+  screen-aware.
 - Pro/Max context retrieval happens before the single answer LLM call.
 - Local RAG retrieval is optional and non-fatal.
-- TTS starts on sentence boundaries so the user hears audio before the LLM finishes.
+- TTS starts on sentence boundaries so the user hears audio before the LLM
+  finishes.
 
 ## Fast Pipeline
 
@@ -30,7 +34,8 @@ text input or Sarvam STT
   -> SSE events to desktop
 ```
 
-Explore skips local memory and local RAG context. Pro and Max load local memory plus local RAG snippets.
+Explore skips local memory and local RAG context. Pro and Max load local memory
+plus local RAG snippets.
 
 ## Request Contract
 
@@ -48,7 +53,10 @@ interface FastQueryRequest {
 
 ## Screen Context
 
-The sidecar runs a local heuristic over the resolved text. It includes the screenshot only for screen/UI/image/spatial queries such as "what is this error?" or "what is on my screen?" Self-contained knowledge and writing requests do not include the screenshot.
+The sidecar runs a local heuristic over the resolved text. It includes the
+screenshot only for screen/UI/image/spatial queries such as "what is this
+error?" or "what is on my screen?" Self-contained knowledge and writing requests
+do not include the screenshot.
 
 ## Context Assembly
 
@@ -59,9 +67,11 @@ For Pro/Max answer mode, `getFastPrompt` loads:
 - local SQLite FTS memory snippets
 - capped legacy `memory.md` / `memory-index.md`
 - recent session tail
-- local RAG snippets from `~/.yomi/sessions`, `~/.yomi/projects`, and non-profile `~/.yomi/memory` files
+- local RAG snippets from `~/.yomi/sessions`, `~/.yomi/projects`, and
+  non-profile `~/.yomi/memory` files
 
-If local RAG retrieval fails, the request continues with structured local memory only.
+If local RAG retrieval fails, the request continues with structured local memory
+only.
 
 ## Visual Guidance Mode
 
@@ -79,7 +89,8 @@ interface GuideResponse {
 }
 ```
 
-If visual targets cannot be identified, emit a text-only guide step with `elements: []`.
+If visual targets cannot be identified, emit a text-only guide step with
+`elements: []`.
 
 ## Speech Providers
 

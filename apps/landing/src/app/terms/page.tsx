@@ -12,9 +12,7 @@ export default function TermsPage() {
       <Nav />
       <main className="bg-[#050914] pt-16">
         <div className="mx-auto max-w-3xl px-6 py-24">
-          <p className="mb-3 font-mono text-xs uppercase tracking-widest text-sky-100/50">
-            Legal
-          </p>
+          <p className="mb-3 font-mono text-xs uppercase tracking-widest text-sky-100/50">Legal</p>
           <h1 className="mb-2 font-accent text-5xl font-medium text-[#eaf4ff]">Terms of Service</h1>
           <p className="mb-16 text-sm text-white/40">Last updated: May 2025</p>
 

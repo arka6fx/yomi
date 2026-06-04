@@ -150,16 +150,30 @@ export function createGuideOverlay(): void {
   const maxY = Math.max(...displays.map((d) => d.bounds.y + d.bounds.height))
   overlayOrigin = { x: minX, y: minY }
   guideWin = new BrowserWindow({
-    width: maxX - minX, height: maxY - minY, x: minX, y: minY,
-    frame: false, transparent: true,
-    alwaysOnTop: true, skipTaskbar: true,
-    resizable: false, focusable: false,
+    width: maxX - minX,
+    height: maxY - minY,
+    x: minX,
+    y: minY,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    focusable: false,
     show: false,
-    backgroundColor: "#00000000", hasShadow: false,
-    webPreferences: { nodeIntegration: false, contextIsolation: true },
+    backgroundColor: "#00000000",
+    hasShadow: false,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+      webSecurity: true,
+    },
   })
   guideWin.setIgnoreMouseEvents(true)
   guideWin.setAlwaysOnTop(true, "screen-saver")
+  guideWin.webContents.setWindowOpenHandler(() => ({ action: "deny" }))
+  guideWin.webContents.on("will-navigate", (event) => event.preventDefault())
   const b64 = Buffer.from(HTML).toString("base64")
   guideWin.loadURL(`data:text/html;base64,${b64}`)
 }
@@ -173,18 +187,23 @@ export function showGuideTarget(x: number, y: number, label = "target", step = 1
   if (!guideWin.isVisible()) guideWin.show()
   const localX = Math.round(x - overlayOrigin.x)
   const localY = Math.round(y - overlayOrigin.y)
-  guideWin.webContents.executeJavaScript(`showTarget(${localX},${localY},${JSON.stringify(label)},${step},${total})`).catch(() => {})
+  guideWin.webContents
+    .executeJavaScript(`showTarget(${localX},${localY},${JSON.stringify(label)},${step},${total})`)
+    .catch(() => {})
 }
 
 export function showGuideInstruction(label: string, step = 1, total = 1): void {
   if (!guideWin || guideWin.isDestroyed()) return
   if (!guideWin.isVisible()) guideWin.show()
-  guideWin.webContents.executeJavaScript(`showInstruction(${JSON.stringify(label)},${step},${total})`).catch(() => {})
+  guideWin.webContents
+    .executeJavaScript(`showInstruction(${JSON.stringify(label)},${step},${total})`)
+    .catch(() => {})
 }
 
 export function hideGuidePoint(): void {
   if (!guideWin || guideWin.isDestroyed()) return
-  guideWin.webContents.executeJavaScript(`hideTarget()`)
+  guideWin.webContents
+    .executeJavaScript(`hideTarget()`)
     .then(() => guideWin?.hide())
     .catch(() => guideWin?.hide())
 }

@@ -1,9 +1,27 @@
-import { app, BrowserWindow, desktopCapturer, globalShortcut, ipcMain, screen, shell } from "electron"
+import {
+  app,
+  BrowserWindow,
+  desktopCapturer,
+  globalShortcut,
+  ipcMain,
+  screen,
+  shell,
+} from "electron"
 import type { Rectangle } from "electron"
 import path from "node:path"
 import { SidecarManager } from "./sidecar"
 import { checkStoredToken, startDeviceCodeFlow, clearToken, loadToken, BACKEND_URL } from "./auth"
-import { initHotkey, enableHotkeys, disableHotkeys, suspendHotkeys, resumeHotkeys, triggerEscape, triggerVoiceMode, triggerTextMode, triggerStopListening } from "./hotkey"
+import {
+  initHotkey,
+  enableHotkeys,
+  disableHotkeys,
+  suspendHotkeys,
+  resumeHotkeys,
+  triggerEscape,
+  triggerVoiceMode,
+  triggerTextMode,
+  triggerStopListening,
+} from "./hotkey"
 import { initSidecarIpc } from "./ipc"
 import { createGuideOverlay, hideGuidePoint } from "./guide-overlay"
 
@@ -14,7 +32,7 @@ if (process.platform === "win32") {
 }
 
 let overlayWin: BrowserWindow | null = null
-let sidecarStarted = false  // Sidecar + IPC + hotkeys initialised (once ever)
+let sidecarStarted = false // Sidecar + IPC + hotkeys initialised (once ever)
 let overlayHitRegions: { x: number; y: number; width: number; height: number }[] = []
 let overlayIgnoringMouse = false
 let companionOverlay = false
@@ -60,13 +78,20 @@ function updateOverlayMousePassthrough(): void {
   const bounds = overlayWin.getBounds()
   const localX = cursor.x - bounds.x
   const localY = cursor.y - bounds.y
-  const insideYomi = overlayHitRegions.some((r) =>
-    localX >= r.x &&
-    localX <= r.x + r.width &&
-    localY >= r.y &&
-    localY <= r.y + r.height
+  const insideYomi = overlayHitRegions.some(
+    (r) => localX >= r.x && localX <= r.x + r.width && localY >= r.y && localY <= r.y + r.height,
   )
   setOverlayMouseIgnored(!insideYomi)
+}
+
+function openTrustedExternal(rawUrl: string): void {
+  try {
+    const url = new URL(rawUrl)
+    if (url.protocol !== "https:" && url.hostname !== "localhost") return
+    shell.openExternal(url.toString())
+  } catch {
+    console.warn("[yomi] blocked invalid external url")
+  }
 }
 
 app.whenReady().then(async () => {
@@ -87,9 +112,13 @@ app.whenReady().then(async () => {
       preload: path.join(__dirname, "../preload/index.js"),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
+      webSecurity: true,
     },
   })
 
+  overlayWin.webContents.setWindowOpenHandler(() => ({ action: "deny" }))
+  overlayWin.webContents.on("will-navigate", (event) => event.preventDefault())
   overlayWin.setAlwaysOnTop(true, "screen-saver")
   overlayWin.setContentProtection(true)
   overlayWin.setVisibleOnAllWorkspaces(true)
@@ -131,10 +160,13 @@ app.whenReady().then(async () => {
     setOverlayMouseIgnored(ignored)
   })
 
-  ipcMain.on("yomi:set-hit-regions", (_e, regions: { x: number; y: number; width: number; height: number }[]) => {
-    overlayHitRegions = regions.filter((r) => r.width > 0 && r.height > 0)
-    updateOverlayMousePassthrough()
-  })
+  ipcMain.on(
+    "yomi:set-hit-regions",
+    (_e, regions: { x: number; y: number; width: number; height: number }[]) => {
+      overlayHitRegions = regions.filter((r) => r.width > 0 && r.height > 0)
+      updateOverlayMousePassthrough()
+    },
+  )
 
   let dragStart = { winX: 0, winY: 0, mouseX: 0, mouseY: 0 }
   ipcMain.on("yomi:drag-start", (_e, mouseX: number, mouseY: number) => {
@@ -157,7 +189,7 @@ app.whenReady().then(async () => {
     if (!overlayWin) return
     try {
       const token = await startDeviceCodeFlow(provider, (deviceUrl) => {
-        shell.openExternal(deviceUrl)
+        openTrustedExternal(deviceUrl)
         overlayWin?.webContents.send("yomi:auth-waiting")
       })
       await completeSetup(token)
@@ -180,7 +212,7 @@ app.whenReady().then(async () => {
 
   ipcMain.on("yomi:open-upgrade", () => {
     const base = process.env["YOMI_LANDING_URL"] ?? "http://localhost:3000"
-    shell.openExternal(`${base}/pricing`)
+    openTrustedExternal(`${base}/pricing`)
   })
 
   ipcMain.on("yomi:set-opacity", (_e, value: number) => {
@@ -192,7 +224,8 @@ app.whenReady().then(async () => {
     const token = loadToken()
     if (!token) return null
     try {
-      const backendUrl = process.env["BACKEND_URL"] ?? process.env["YOMI_BACKEND_URL"] ?? "http://localhost:3001"
+      const backendUrl =
+        process.env["BACKEND_URL"] ?? process.env["YOMI_BACKEND_URL"] ?? "http://localhost:3001"
       const res = await fetch(`${backendUrl}/api/billing/subscription`, {
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -213,13 +246,18 @@ app.whenReady().then(async () => {
     const token = loadToken()
     if (!token) throw new Error("Please sign in again")
 
-    const backendUrl = process.env["BACKEND_URL"] ?? process.env["YOMI_BACKEND_URL"] ?? "http://localhost:3001"
+    const backendUrl =
+      process.env["BACKEND_URL"] ?? process.env["YOMI_BACKEND_URL"] ?? "http://localhost:3001"
     const res = await fetch(`${backendUrl}/api/user/profile`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ name }),
     })
-    const data = await res.json().catch(() => ({})) as { name?: string; email?: string; error?: string }
+    const data = (await res.json().catch(() => ({}))) as {
+      name?: string
+      email?: string
+      error?: string
+    }
 
     if (res.status === 401) {
       clearToken()
@@ -262,20 +300,27 @@ app.whenReady().then(async () => {
 
   // Ctrl+Arrow — smooth overlay movement
   const NUDGE_DIRS: [string, number, number][] = [
-    ["Ctrl+Left",  -1,  0],
-    ["Ctrl+Right",  1,  0],
-    ["Ctrl+Up",     0, -1],
-    ["Ctrl+Down",   0,  1],
+    ["Ctrl+Left", -1, 0],
+    ["Ctrl+Right", 1, 0],
+    ["Ctrl+Up", 0, -1],
+    ["Ctrl+Down", 0, 1],
   ]
   let nudgeDir = { x: 0, y: 0 }
   let nudgeVel = { x: 0, y: 0 }
   let nudgeTick: ReturnType<typeof setInterval> | null = null
   let nudgeStop: ReturnType<typeof setTimeout> | null = null
-  const NUDGE_MAX = 24, NUDGE_ACCEL = 3
+  const NUDGE_MAX = 24,
+    NUDGE_ACCEL = 3
 
   const stopNudging = () => {
-    if (nudgeTick) { clearInterval(nudgeTick); nudgeTick = null }
-    if (nudgeStop) { clearTimeout(nudgeStop); nudgeStop = null }
+    if (nudgeTick) {
+      clearInterval(nudgeTick)
+      nudgeTick = null
+    }
+    if (nudgeStop) {
+      clearTimeout(nudgeStop)
+      nudgeStop = null
+    }
     nudgeDir = { x: 0, y: 0 }
     nudgeVel = { x: 0, y: 0 }
   }
@@ -288,11 +333,23 @@ app.whenReady().then(async () => {
       nudgeStop = setTimeout(stopNudging, 150)
       if (!nudgeTick) {
         nudgeTick = setInterval(() => {
-          if (!overlayWin) { stopNudging(); return }
-          nudgeVel.x = nudgeDir.x === 0 ? 0 : Math.min(Math.abs(nudgeVel.x) + NUDGE_ACCEL, NUDGE_MAX) * Math.sign(nudgeDir.x)
-          nudgeVel.y = nudgeDir.y === 0 ? 0 : Math.min(Math.abs(nudgeVel.y) + NUDGE_ACCEL, NUDGE_MAX) * Math.sign(nudgeDir.y)
+          if (!overlayWin) {
+            stopNudging()
+            return
+          }
+          nudgeVel.x =
+            nudgeDir.x === 0
+              ? 0
+              : Math.min(Math.abs(nudgeVel.x) + NUDGE_ACCEL, NUDGE_MAX) * Math.sign(nudgeDir.x)
+          nudgeVel.y =
+            nudgeDir.y === 0
+              ? 0
+              : Math.min(Math.abs(nudgeVel.y) + NUDGE_ACCEL, NUDGE_MAX) * Math.sign(nudgeDir.y)
           const [x, y] = overlayWin.getPosition()
-          overlayWin.setPosition(Math.round((x ?? 0) + nudgeVel.x), Math.round((y ?? 0) + nudgeVel.y))
+          overlayWin.setPosition(
+            Math.round((x ?? 0) + nudgeVel.x),
+            Math.round((y ?? 0) + nudgeVel.y),
+          )
         }, 16)
       }
     })
@@ -349,7 +406,9 @@ async function completeSetup(token: string) {
       await sidecar.start()
     } catch (err) {
       if (process.env.YOMI_DEV === "true") {
-        console.warn("[yomi] sidecar not running — start it separately: cd apps/sidecar && bun run dev")
+        console.warn(
+          "[yomi] sidecar not running — start it separately: cd apps/sidecar && bun run dev",
+        )
       } else {
         console.error("[yomi] sidecar failed to start:", err)
       }

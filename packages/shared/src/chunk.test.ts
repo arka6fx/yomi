@@ -8,7 +8,9 @@ describe("chunkMarkdown", () => {
   })
 
   it("packs small paragraphs into a single chunk", () => {
-    const chunks = chunkMarkdown("# Title\n\nFirst paragraph.\n\nSecond paragraph.", { targetChars: 1000 })
+    const chunks = chunkMarkdown("# Title\n\nFirst paragraph.\n\nSecond paragraph.", {
+      targetChars: 1000,
+    })
     expect(chunks).toHaveLength(1)
     expect(chunks[0]).toContain("# Title")
     expect(chunks[0]).toContain("First paragraph.")

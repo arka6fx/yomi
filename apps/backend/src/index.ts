@@ -14,10 +14,13 @@ const app = new Hono()
 
 app.onError(errorHandler)
 
-app.use("*", cors({
-  origin: process.env["BETTER_AUTH_URL"] ?? "http://localhost:3000",
-  credentials: true,
-}))
+app.use(
+  "*",
+  cors({
+    origin: process.env["BETTER_AUTH_URL"] ?? "http://localhost:3000",
+    credentials: true,
+  }),
+)
 
 app.get("/health", (c) => c.json({ status: "ok", version: "0.1.0" }))
 

@@ -3,12 +3,24 @@
 
 // Per-app blocklist (privacy non-negotiable): never enumerate or act on these.
 const BLOCKED_APPS = [
-  /1password/i, /bitwarden/i, /keepass/i, /lastpass/i, /dashlane/i, /nordpass/i,
-  /\bbank\b/i, /banking/i, /chase/i, /wells fargo/i, /citibank/i, /barclays/i, /hsbc/i,
+  /1password/i,
+  /bitwarden/i,
+  /keepass/i,
+  /lastpass/i,
+  /dashlane/i,
+  /nordpass/i,
+  /\bbank\b/i,
+  /banking/i,
+  /chase/i,
+  /wells fargo/i,
+  /citibank/i,
+  /barclays/i,
+  /hsbc/i,
 ]
 
 // Destructive verbs on a control label/name → irreversible enough to confirm first.
-const RISKY_LABEL = /\b(delete|remove|discard|erase|wipe|destroy|send|pay|buy|purchase|checkout|submit|format|uninstall|deactivate|reset)\b/i
+const RISKY_LABEL =
+  /\b(delete|remove|discard|erase|wipe|destroy|send|pay|buy|purchase|checkout|submit|format|uninstall|deactivate|reset)\b/i
 const CLOSE_WITHOUT_SAVE = /close without saving|don'?t save|do not save/i
 
 export function isBlockedApp(windowTitle: string): boolean {

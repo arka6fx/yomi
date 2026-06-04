@@ -8,15 +8,22 @@ type EntitlementUser = {
 }
 
 function parseList(value: string | undefined): string[] {
-  return value?.split(",").map((item) => item.trim()).filter(Boolean) ?? []
+  return (
+    value
+      ?.split(",")
+      .map((item) => item.trim())
+      .filter(Boolean) ?? []
+  )
 }
 
 function ownerEmails(): Set<string> {
-  return new Set([
-    ...DEFAULT_OWNER_EMAILS,
-    ...parseList(process.env["OWNER_EMAIL"]),
-    ...parseList(process.env["OWNER_EMAILS"]),
-  ].map((email) => email.toLowerCase()))
+  return new Set(
+    [
+      ...DEFAULT_OWNER_EMAILS,
+      ...parseList(process.env["OWNER_EMAIL"]),
+      ...parseList(process.env["OWNER_EMAILS"]),
+    ].map((email) => email.toLowerCase()),
+  )
 }
 
 function ownerUserIds(): Set<string> {

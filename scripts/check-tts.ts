@@ -30,14 +30,17 @@ async function checkSarvam(): Promise<void> {
     throw new Error(`Sarvam TTS ${res.status}: ${body}`)
   }
 
-  const data = await res.json() as { audios?: string[] }
+  const data = (await res.json()) as { audios?: string[] }
   const firstLen = data.audios?.[0]?.length ?? 0
-  console.log(`sarvam=status:${res.status} audios:${data.audios?.length ?? 0} first_len:${firstLen}`)
+  console.log(
+    `sarvam=status:${res.status} audios:${data.audios?.length ?? 0} first_len:${firstLen}`,
+  )
 }
 
 async function checkSidecar(): Promise<void> {
   const headers: Record<string, string> = { "Content-Type": "application/json" }
-  if (process.env.SIDECAR_SECRET?.trim()) headers["x-sidecar-secret"] = process.env.SIDECAR_SECRET.trim()
+  if (process.env.SIDECAR_SECRET?.trim())
+    headers["x-sidecar-secret"] = process.env.SIDECAR_SECRET.trim()
 
   const res = await fetch(`${SIDECAR_URL}/query/fast`, {
     method: "POST",
@@ -59,7 +62,9 @@ async function checkSidecar(): Promise<void> {
   const audioChunks = [...text.matchAll(/"type":"audio_chunk"/g)].length
   const ttsErrors = [...text.matchAll(/"type":"tts_error"/g)].length
   const llmChunks = [...text.matchAll(/"type":"llm_chunk"/g)].length
-  console.log(`sidecar=status:${res.status} llm_chunks:${llmChunks} audio_chunks:${audioChunks} tts_errors:${ttsErrors}`)
+  console.log(
+    `sidecar=status:${res.status} llm_chunks:${llmChunks} audio_chunks:${audioChunks} tts_errors:${ttsErrors}`,
+  )
 }
 
 try {

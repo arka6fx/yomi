@@ -55,7 +55,11 @@ describe("memory compactor", () => {
   })
 
   it("appends new memory from a meaningful session log", async () => {
-    await writeFile(join(tempDir, "sessions", `${todayISO()}-dev.md`), "User asked about Yomi memory. ".repeat(12), "utf-8")
+    await writeFile(
+      join(tempDir, "sessions", `${todayISO()}-dev.md`),
+      "User asked about Yomi memory. ".repeat(12),
+      "utf-8",
+    )
 
     await compact()
 
@@ -66,8 +70,16 @@ describe("memory compactor", () => {
   })
 
   it("does not compact the same day twice", async () => {
-    await writeFile(join(tempDir, "sessions", `${todayISO()}-dev.md`), "User asked about Yomi memory. ".repeat(12), "utf-8")
-    await writeFile(join(tempDir, "memory.md"), `# Long-term memory\n\n## Recent context (${todayISO()})\n- Existing.\n`, "utf-8")
+    await writeFile(
+      join(tempDir, "sessions", `${todayISO()}-dev.md`),
+      "User asked about Yomi memory. ".repeat(12),
+      "utf-8",
+    )
+    await writeFile(
+      join(tempDir, "memory.md"),
+      `# Long-term memory\n\n## Recent context (${todayISO()})\n- Existing.\n`,
+      "utf-8",
+    )
 
     await compact()
 

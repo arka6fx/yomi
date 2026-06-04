@@ -13,11 +13,11 @@ export interface Hooks {
 }
 
 const DENYLIST = [
-  /rm\s+-[rf]+\s+\//,              // rm -rf /
+  /rm\s+-[rf]+\s+\//, // rm -rf /
   /sudo\s+rm/,
-  /chmod\s+[0-7]*7[0-7][0-7]/,    // chmod 777 / world-writable
-  /curl[^|]+\|\s*(?:ba)?sh/,       // curl | sh
-  /wget[^|]+\|\s*(?:ba)?sh/,       // wget | sh
+  /chmod\s+[0-7]*7[0-7][0-7]/, // chmod 777 / world-writable
+  /curl[^|]+\|\s*(?:ba)?sh/, // curl | sh
+  /wget[^|]+\|\s*(?:ba)?sh/, // wget | sh
 ]
 
 // ~4000 tokens at ~4 chars/token
@@ -63,7 +63,9 @@ export const hooks: Hooks = {
     const text = typeof result === "string" ? result : JSON.stringify(result)
     if (text.length > TOOL_OUTPUT_MAX_CHARS) {
       const trimmed = trimMiddle(text, TOOL_OUTPUT_MAX_CHARS)
-      console.warn(`[yomi/hooks] trimmed ${toolName} output: ${text.length} → ${trimmed.length} chars`)
+      console.warn(
+        `[yomi/hooks] trimmed ${toolName} output: ${text.length} → ${trimmed.length} chars`,
+      )
       return trimmed
     }
     return result

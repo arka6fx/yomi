@@ -1,26 +1,65 @@
 appId: com.yomi.app
 productName: Yomi
-copyright: Copyright © 2025 Yomi
+copyright: Copyright © 2026 Yomi
 
 directories:
   output: release
+  buildResources: build
+
+files:
+  - out/**
+  - package.json
+  - "!**/*.map"
+  - "!**/*.test.*"
+  - "!node_modules/.vite/**"
+
+extraMetadata:
+  main: out/main/index.js
+
+asar: true
+compression: maximum
 
 extraResources:
   - from: ../sidecar/dist/
     to: sidecar
+    filter:
+      - sidecar-win32-x64.exe
   - from: ../uia-helper/dist/
     to: uia
+    filter:
+      - uia-helper.exe
 
 win:
-  icon: resources/icon.ico
+  icon: build/icon.ico
+  artifactName: ${productName}-${version}-${arch}.${ext}
   target:
     - target: nsis
       arch: [x64]
-  signingHashAlgorithms: [sha256]
+  requestedExecutionLevel: asInvoker
+  signAndEditExecutable: false
+  signExts: []
+  signtoolOptions:
+    sign: build/win-sign-noop.cjs
 
 nsis:
   oneClick: false
+  perMachine: false
   allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+
+mac:
+  category: public.app-category.productivity
+  target:
+    - dmg
+  hardenedRuntime: true
+  gatekeeperAssess: false
+
+linux:
+  category: Utility
+  target:
+    - AppImage
 
 publish:
   provider: github

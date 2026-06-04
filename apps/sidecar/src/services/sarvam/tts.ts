@@ -1,15 +1,50 @@
 const SARVAM_TTS_URL = "https://api.sarvam.ai/text-to-speech"
 
 export type SarvamSpeaker =
-  | "anushka" | "abhilash" | "manisha" | "vidya" | "arya"
-  | "karun" | "hitesh" | "aditya" | "ritu" | "priya"
-  | "neha" | "rahul" | "pooja" | "rohan" | "simran"
-  | "kavya" | "amit" | "dev" | "ishita" | "shreya"
-  | "ratan" | "varun" | "manan" | "sumit" | "roopa"
-  | "kabir" | "aayan" | "shubh" | "ashutosh" | "advait"
-  | "anand" | "tanya" | "tarun" | "sunny" | "mani"
-  | "gokul" | "vijay" | "shruti" | "suhani" | "mohit"
-  | "kavitha" | "rehan" | "soham" | "rupali"
+  | "anushka"
+  | "abhilash"
+  | "manisha"
+  | "vidya"
+  | "arya"
+  | "karun"
+  | "hitesh"
+  | "aditya"
+  | "ritu"
+  | "priya"
+  | "neha"
+  | "rahul"
+  | "pooja"
+  | "rohan"
+  | "simran"
+  | "kavya"
+  | "amit"
+  | "dev"
+  | "ishita"
+  | "shreya"
+  | "ratan"
+  | "varun"
+  | "manan"
+  | "sumit"
+  | "roopa"
+  | "kabir"
+  | "aayan"
+  | "shubh"
+  | "ashutosh"
+  | "advait"
+  | "anand"
+  | "tanya"
+  | "tarun"
+  | "sunny"
+  | "mani"
+  | "gokul"
+  | "vijay"
+  | "shruti"
+  | "suhani"
+  | "mohit"
+  | "kavitha"
+  | "rehan"
+  | "soham"
+  | "rupali"
 
 export interface SarvamTtsOptions {
   target_language_code?: string
@@ -38,7 +73,7 @@ export async function sarvamSynthesize(
   const body: Record<string, unknown> = {
     inputs,
     target_language_code: opts.target_language_code ?? "en-IN",
-    speaker: opts.speaker ?? (process.env.SARVAM_VOICE as typeof opts.speaker ?? "shreya"),
+    speaker: opts.speaker ?? (process.env.SARVAM_VOICE as typeof opts.speaker) ?? "shreya",
     model: opts.model ?? "bulbul:v3",
     // 16 kHz matches the renderer AudioContext — no resampling = no crackle
     speech_sample_rate: opts.speech_sample_rate ?? 16000,

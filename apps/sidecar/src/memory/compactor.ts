@@ -59,7 +59,11 @@ If nothing new worth adding, respond with exactly: NOTHING_NEW`,
 
   const memPath = join(notepadDir(), "memory.md")
   if (!currentMemory.trim()) {
-    await writeFile(memPath, `# Long-term memory — [last updated: ${today}]\n\n${text.trim()}\n`, "utf-8")
+    await writeFile(
+      memPath,
+      `# Long-term memory — [last updated: ${today}]\n\n${text.trim()}\n`,
+      "utf-8",
+    )
   } else {
     await appendFile(memPath, `\n\n${text.trim()}\n`, "utf-8")
   }
