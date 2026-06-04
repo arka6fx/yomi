@@ -1,16 +1,15 @@
-import { sarvamSynthesize } from "../services/sarvam/tts.js"
+import { elevenLabsSynthesize } from "../services/elevenlabs/tts.js"
 
-export type TtsEngine = "sarvam" | "none"
+export type TtsEngine = "elevenlabs" | "none"
 
 export function resolveTts(): TtsEngine {
   const explicit = process.env.TTS_ENGINE?.toLowerCase() as TtsEngine | undefined
-  if (explicit === "sarvam" || explicit === "none") return explicit
-  if (process.env.SARVAM_API_KEY) return "sarvam"
+  if (explicit === "elevenlabs" || explicit === "none") return explicit
+  if (process.env.ELEVENLABS_API_KEY) return "elevenlabs"
   return "none"
 }
 
 export async function* synthesize(text: string): AsyncGenerator<Uint8Array> {
   if (resolveTts() === "none") return
-  const audios = await sarvamSynthesize([text])
-  if (audios[0]) yield audios[0]
+  yield await elevenLabsSynthesize(text)
 }

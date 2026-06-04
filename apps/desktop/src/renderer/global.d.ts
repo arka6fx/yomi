@@ -33,6 +33,7 @@ declare global {
       onSubscriptionUpdate(cb: (info: SubscriptionUpdate) => void): () => void
       // Audio control
       onStopAudio(cb: () => void): () => void
+      onLoopContinue(cb: () => void): () => void
       getDesktopSourceId(): Promise<string | null>
       requestEscape(): void
       triggerVoice(): void
@@ -43,9 +44,6 @@ declare global {
       quit(): void
       openUpgrade(): void
       setOpacity(value: number): void
-      // Guide mode
-      setGuideMode(on: boolean): void
-      onGuideExit(cb: () => void): () => void
       // Act mode (Spec 16)
       confirmAct(id: string, approved: boolean): void
     }

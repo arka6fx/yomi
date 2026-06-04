@@ -1,3 +1,6 @@
+export { EnergyVad, detectSpeechEnd } from "./vad.js"
+export type { VadResult, VadOptions } from "./vad.js"
+
 export type UserRole = "user" | "owner"
 export type Plan = "explore" | "pro" | "max"
 export type SubscriptionStatus = "inactive" | "active" | "past_due"
@@ -56,34 +59,12 @@ export function chunkMarkdown(content: string, opts: ChunkOptions = {}): string[
   return chunks
 }
 
-export interface GuideElement {
-  label: string
-  bbox: { x: number; y: number; width: number; height: number }
-}
-
-export interface GuideStep {
-  instruction: string
-  elements: GuideElement[]
-}
-
-export interface GuideResponse {
-  steps: GuideStep[]
-}
-
 export interface ScreenImage {
   screen: number
   screenshot_b64: string
   width: number
   height: number
   is_cursor_screen?: boolean
-}
-
-export interface PointTarget {
-  x: number
-  y: number
-  label: string
-  screen?: number
-  coordinateSpace: "screenshot_pixels" | "normalized"
 }
 
 // UIA app automation (Spec 16) — shapes the uia-helper emits and the sidecar/desktop consume.
@@ -130,8 +111,6 @@ export interface FastQueryRequest {
   audio_b64?: string // base64-encoded WAV; sidecar runs STT before LLM
   screenshot_b64?: string
   screenshots?: ScreenImage[]
-  mode?: "answer" | "guide"
-  pointing?: boolean // true = include screen context and request a point target when useful
   tts?: boolean // true = voice output; false = text only (default: true)
   plan?: Plan // controls local-only memory injection/writes
   history?: { role: "user" | "assistant"; text: string }[]
@@ -187,14 +166,6 @@ export type SseEvent =
   | { type: "llm_chunk"; text: string }
   | { type: "audio_chunk"; base64: string }
   | { type: "tts_error"; message: string }
-  | {
-      type: "visual_guide"
-      step: number
-      total_steps: number
-      instruction: string
-      elements: GuideElement[]
-    }
-  | { type: "point_target"; target: PointTarget | null; reason?: string }
   | {
       type: "router_decision"
       path: IntentPath

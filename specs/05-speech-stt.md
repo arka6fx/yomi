@@ -2,25 +2,25 @@
 
 ## Purpose
 
-Define the speech-to-text pipeline using Sarvam `saarika:v2.5` as the cloud
+Define the speech-to-text pipeline using ElevenLabs `scribe_v2` as the cloud
 provider.
 
 ## Invariants
 
-- Sarvam `saarika:v2.5` is the cloud STT provider.
+- ElevenLabs `scribe_v2` is the cloud STT provider.
 - VAD determines end-of-speech; never use a fixed timeout.
 - Audio format: WAV / PCM 16 kHz mono internal standard.
-- Requires `SARVAM_API_KEY`.
+- Requires `ELEVENLABS_API_KEY`.
 
 ## Detailed Design
 
-### STT: Sarvam
+### STT: ElevenLabs
 
 ```typescript
-const result = await sarvamTranscribe(wavBytes, {
-  model: "saarika:v2.5",
+const result = await elevenLabsTranscribe(wavBytes, {
+  model_id: "scribe_v2",
 })
-const transcript = result.transcript
+const transcript = result.text
 ```
 
 ### VAD
@@ -34,12 +34,12 @@ timeout. VAD should fire shortly after silence following speech.
 | -------------------- | --------------------- | ----------------------------------- |
 | Hotkey to mic starts | < 20 ms               | Pre-init audio context on app start |
 | Speech to VAD fires  | < 50 ms after silence | Local VAD                           |
-| VAD to STT final     | < 500 ms              | Sarvam API                          |
+| VAD to STT final     | < 500 ms              | ElevenLabs API                      |
 
 ## Files
 
-- `apps/sidecar/src/speech/transcribe.ts` - Sarvam STT wrapper.
-- `apps/sidecar/src/services/sarvam/stt.ts` - Sarvam HTTP client.
+- `apps/sidecar/src/speech/transcribe.ts` - ElevenLabs STT wrapper.
+- `apps/sidecar/src/services/elevenlabs/stt.ts` - ElevenLabs HTTP client.
 - `apps/sidecar/src/speech/vad.ts` - local VAD helpers.
 - `apps/sidecar/src/pipeline/fast.ts` - integrates STT into the fast pipeline.
 

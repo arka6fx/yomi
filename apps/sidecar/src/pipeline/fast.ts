@@ -1,13 +1,5 @@
 import { streamText } from "ai"
-import type {
-  FastQueryRequest,
-  GuideElement,
-  Plan,
-  PointTarget,
-  ScreenImage,
-  SseEvent,
-} from "@yomi/shared"
-import { generateGuide } from "./visual-guide.js"
+import type { FastQueryRequest, Plan, ScreenImage, SseEvent } from "@yomi/shared"
 import { transcribe } from "../speech/transcribe.js"
 import { synthesize, resolveTts } from "./tts.js"
 import { createModel } from "./model.js"
@@ -159,6 +151,24 @@ function findSentenceEnd(buf: string): number {
   return m.index + 1
 }
 
+// The first spoken segment gets a looser boundary so audio starts sooner: cut at the
+// first clause boundary (comma/semicolon/colon) past a minimum length, or fall back to a
+// word boundary near the max. Only used for the opening segment — later segments use
+// full-sentence boundaries to keep prosody natural. Returns the slice length or -1.
+const FIRST_SEG_MIN = 12
+const FIRST_SEG_MAX = 64
+function findFirstSegmentCut(buf: string): number {
+  const clause = buf.slice(0, FIRST_SEG_MAX).match(/[,;:]\s/)
+  if (clause && clause.index !== undefined && clause.index >= FIRST_SEG_MIN) {
+    return clause.index + 1
+  }
+  if (buf.length >= FIRST_SEG_MAX) {
+    const lastSpace = buf.lastIndexOf(" ", FIRST_SEG_MAX)
+    if (lastSpace >= FIRST_SEG_MIN) return lastSpace
+  }
+  return -1
+}
+
 function sanitizeSentenceForSpeech(sentence: string): string {
   return sentence
     .replace(/`([^`]+)`/g, "$1")
@@ -169,31 +179,6 @@ function sanitizeSentenceForSpeech(sentence: string): string {
     .replace(/\bSpace:\s*O\(([^)]+)\)/gi, "Space complexity O($1)")
     .replace(/\s+/g, " ")
     .trim()
-}
-
-const POINT_TAIL_LIMIT = 96
-const POINT_TAG_RE =
-  /\[POINT:(?:none|(\d+)\s*,\s*(\d+)(?::([^\]:\s][^\]:]*?))?(?::screen(\d+))?)\]\s*$/i
-
-function parsePointTag(text: string): { text: string; target: PointTarget | null; found: boolean } {
-  const match = text.match(POINT_TAG_RE)
-  if (!match) return { text, target: null, found: false }
-
-  const cleanText = text.slice(0, match.index).trimEnd()
-  const [, xRaw, yRaw, labelRaw, screenRaw] = match
-  if (!xRaw || !yRaw) return { text: cleanText, target: null, found: true }
-
-  return {
-    text: cleanText,
-    found: true,
-    target: {
-      x: Number(xRaw),
-      y: Number(yRaw),
-      label: (labelRaw ?? "target").trim().slice(0, 48) || "target",
-      screen: screenRaw ? Number(screenRaw) : undefined,
-      coordinateSpace: "screenshot_pixels",
-    },
-  }
 }
 
 function maxOutputTokensFor(text: string): number {
@@ -220,7 +205,6 @@ async function* answerPipeline(
   tts = true,
   plan?: Plan,
   screenshots: ScreenImage[] = [],
-  pointing = false,
 ): AsyncGenerator<SseEvent> {
   const content: Array<{ type: "text"; text: string } | { type: "image"; image: string }> = [
     { type: "text", text },
@@ -232,7 +216,7 @@ async function* answerPipeline(
       : screenshotB64
         ? [{ screen: 1, screenshot_b64: screenshotB64, width: 0, height: 0 }]
         : []
-  const hasScreen = images.length > 0 && (pointing || needsScreenContext(text))
+  const hasScreen = images.length > 0 && needsScreenContext(text)
   if (hasScreen) {
     const labels = images
       .map(
@@ -252,27 +236,7 @@ async function* answerPipeline(
     }
   }
 
-  let systemPrompt = await getFastPrompt(text, hasScreen, plan)
-  if (hasScreen) {
-    systemPrompt += `
-
-Spatial pointing:
-- The user has spatial pointing ${pointing ? "enabled" : "available"}.
-- You have a small blue cursor that can fly to and point at things on screen.
-- Use it whenever pointing would genuinely help: navigation, finding a button/menu/field, showing where to click, or explaining a visible UI.
-- Err on the side of pointing for on-screen tasks.
-- When you point, append exactly one coordinate tag at the very end, after the spoken text.
-- The screenshot images are labeled with their pixel dimensions. Use those dimensions as the coordinate space.
-- Origin is top-left. x increases rightward, y increases downward.
-- Put the coordinate at the visual center of the clickable control itself, not on nearby text, menu labels, shadows, or empty padding.
-- If a target is partly visible, point at the center of the visible clickable part.
-- Format: [POINT:x,y:label] or [POINT:x,y:label:screenN].
-- If the element is on the cursor/focus screen, you can omit the screen number. If it is on another screen, include :screenN.
-- If pointing would not help, append [POINT:none].
-- Do not mention the tag in the answer.
-- If the user asks where to click, how to navigate, or asks for directions on screen, you must point at the most relevant currently visible target.
-- For step-by-step guidance, give only the next actionable step for the current screenshot.`
-  }
+  const systemPrompt = await getFastPrompt(text, hasScreen, plan)
 
   const result = streamText({
     model: createModel(MODEL),
@@ -309,9 +273,9 @@ Spatial pointing:
 
   const producer = (async () => {
     let buffer = ""
-    let pointTail = ""
     let gotChunk = false
     let speechFenceOpen = false
+    let firstSegment = true // opening segment flushes early for faster time-to-first-audio
     // audioChain enforces ordering: synthesis runs concurrently but each
     // sentence's chunks are pushed only after the previous sentence's chunks
     // are fully in the queue, so playback always follows text order.
@@ -354,9 +318,11 @@ Spatial pointing:
       if (!ttsEnabled) return
       buffer += visibleSpeechText(textChunk)
       let cutAt = findSentenceEnd(buffer)
+      if (cutAt === -1 && firstSegment) cutAt = findFirstSegmentCut(buffer)
       while (cutAt !== -1) {
         enqueueSentence(buffer.slice(0, cutAt))
         buffer = buffer.slice(cutAt + 1)
+        firstSegment = false
         cutAt = findSentenceEnd(buffer)
       }
     }
@@ -364,24 +330,10 @@ Spatial pointing:
     for await (const chunk of result.textStream) {
       if (!chunk) continue
       gotChunk = true
-      if (!hasScreen) {
-        flushVisibleText(chunk)
-        continue
-      }
-      pointTail += chunk
-      if (pointTail.length > POINT_TAIL_LIMIT) {
-        const flushLen = pointTail.length - POINT_TAIL_LIMIT
-        flushVisibleText(pointTail.slice(0, flushLen))
-        pointTail = pointTail.slice(flushLen)
-      }
+      flushVisibleText(chunk)
     }
     if (!gotChunk) {
       throw new Error("LLM returned empty response (likely rate-limited or quota exceeded)")
-    }
-    if (hasScreen) {
-      const parsed = parsePointTag(pointTail)
-      flushVisibleText(parsed.text)
-      queue.push({ type: "point_target", target: parsed.target })
     }
     if (ttsEnabled && buffer.trim().length > 0) enqueueSentence(buffer)
     await audioChain
@@ -396,34 +348,6 @@ Spatial pointing:
   )
 
   yield* queue.drain()
-  yield { type: "done" }
-}
-
-async function* guidePipeline(text: string, screenshotB64: string): AsyncGenerator<SseEvent> {
-  if (!screenshotB64) {
-    yield {
-      type: "visual_guide",
-      step: 1,
-      total_steps: 1,
-      instruction: "Take a screenshot so I can see what you need help with.",
-      elements: [],
-    }
-    yield { type: "done" }
-    return
-  }
-
-  const guide = await generateGuide(screenshotB64, text)
-
-  for (const [i, step] of guide.steps.entries()) {
-    yield {
-      type: "visual_guide",
-      step: i + 1,
-      total_steps: guide.steps.length,
-      instruction: step.instruction,
-      elements: step.elements as GuideElement[],
-    }
-  }
-
   yield { type: "done" }
 }
 
@@ -459,27 +383,19 @@ export async function* fastPipeline(req: FastQueryRequest): AsyncGenerator<SseEv
 
   try {
     let output = ""
-    if (req.mode === "guide") {
-      for await (const event of guidePipeline(text, req.screenshot_b64 ?? "")) {
-        if (event.type === "visual_guide") output += `${event.instruction}\n`
-        yield event
-      }
-    } else {
-      for await (const event of answerPipeline(
-        text,
-        req.screenshot_b64,
-        req.tts !== false,
-        req.plan,
-        req.screenshots ?? [],
-        req.pointing === true,
-      )) {
-        if (event.type === "llm_chunk") output += event.text
-        yield event
-      }
+    for await (const event of answerPipeline(
+      text,
+      req.screenshot_b64,
+      req.tts !== false,
+      req.plan,
+      req.screenshots ?? [],
+    )) {
+      if (event.type === "llm_chunk") output += event.text
+      yield event
     }
     if (memoryEnabled(req.plan) && output.trim()) {
-      writeSessionTurn({ kind: "fast", mode: req.mode ?? "answer", input: text, output })
-        .then(() => captureStructuredMemory({ input: text, output, mode: req.mode ?? "answer" }))
+      writeSessionTurn({ kind: "fast", mode: "answer", input: text, output })
+        .then(() => captureStructuredMemory({ input: text, output, mode: "answer" }))
         .catch((err) => console.warn("[yomi/fast] memory write failed:", err))
     }
   } catch (err) {

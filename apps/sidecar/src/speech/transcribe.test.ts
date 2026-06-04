@@ -3,12 +3,12 @@ import { transcribe, transcribeStreaming } from "./transcribe.js"
 
 const DUMMY_WAV = new Uint8Array(44)
 
-mock.module("../services/sarvam/stt.js", () => ({
-  sarvamTranscribe: async () => ({ transcript: "transcribed text", language_code: "en-IN" }),
+mock.module("../services/elevenlabs/stt.js", () => ({
+  elevenLabsTranscribe: async () => ({ text: "transcribed text", language_code: "en" }),
 }))
 
 describe("transcribe", () => {
-  it("returns transcript from Sarvam", async () => {
+  it("returns transcript from ElevenLabs", async () => {
     const text = await transcribe(DUMMY_WAV)
     expect(text).toBe("transcribed text")
   })

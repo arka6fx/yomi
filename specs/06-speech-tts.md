@@ -2,38 +2,37 @@
 
 ## Purpose
 
-Define the text-to-speech pipeline using Sarvam `bulbul:v3`. TTS starts on
+Define the text-to-speech pipeline using ElevenLabs `eleven_flash_v2_5`. TTS starts on
 sentence boundaries so audio begins before the full LLM response is generated.
 
 ## Invariants
 
 - TTS synthesis begins on the first sentence boundary; never wait for the full
   LLM response.
-- Sarvam `bulbul:v3` is the TTS provider.
-- Audio output is 16 kHz to match renderer playback.
-- Voice defaults to `shreya` and can be overridden with `SARVAM_VOICE`.
+- ElevenLabs `eleven_flash_v2_5` is the TTS provider.
+- Audio output is MP3 by default and decoded in the renderer.
+- Voice is configured with `ELEVENLABS_VOICE_ID`.
 - Set `TTS_ENGINE=none` to disable voice output.
 
 ## Detailed Design
 
-### TTS: Sarvam
+### TTS: ElevenLabs
 
 ```typescript
-const audios = await sarvamSynthesize([text], {
-  model: "bulbul:v3",
-  speaker: process.env.SARVAM_VOICE ?? "shreya",
-  speech_sample_rate: 16000,
+const audio = await elevenLabsSynthesize(text, {
+  model_id: "eleven_flash_v2_5",
+  voiceId: process.env.ELEVENLABS_VOICE_ID,
 })
 ```
 
 ### Provider Selection
 
 ```typescript
-type TtsEngine = "sarvam" | "none"
+type TtsEngine = "elevenlabs" | "none"
 
 function resolveTts(): TtsEngine {
   if (process.env.TTS_ENGINE === "none") return "none"
-  if (process.env.SARVAM_API_KEY) return "sarvam"
+  if (process.env.ELEVENLABS_API_KEY) return "elevenlabs"
   return "none"
 }
 ```
@@ -62,7 +61,7 @@ if (buffer.trim().length > 0) queueTts(buffer)
 
 - `apps/sidecar/src/speech/resolver.ts` - provider selection and synthesis
   dispatch.
-- `apps/sidecar/src/services/sarvam/tts.ts` - Sarvam TTS client.
+- `apps/sidecar/src/services/elevenlabs/tts.ts` - ElevenLabs TTS client.
 - `apps/sidecar/src/pipeline/fast.ts` - sentence-boundary buffering and
   `audio_chunk` SSE.
 - `apps/sidecar/src/pipeline/fast.test.ts` - tests for sentence-boundary audio
@@ -70,5 +69,5 @@ if (buffer.trim().length > 0) queueTts(buffer)
 
 ## Open Questions
 
-- Sarvam returns WAV bytes today. If the renderer changes playback format, add
-  conversion at the edge.
+- If the renderer starts consuming arbitrary streaming MP3 fragments, split
+  ElevenLabs output at codec-safe boundaries or switch to PCM output.
