@@ -9,8 +9,17 @@ export interface ChatEntry {
   transcript: string
   text: string
   error: string | null
+  // Soft, non-alarming notice (STT couldn't hear you, mic/audio capture hiccup).
+  // Rendered in the warm accent style instead of the red error style.
+  notice: string | null
   ttsError: string | null
   isStreaming: boolean
+}
+
+// STT / audio-capture hiccups are expected, recoverable, and the user's fault as
+// often as ours — show them as a gentle hint, not a red error.
+export function isSoftNotice(message: string): boolean {
+  return /didn'?t catch|microphone|mic permission|audio engine|\bstt\b/i.test(message)
 }
 
 export interface SubscriptionInfo {
@@ -36,6 +45,10 @@ interface YomiState {
   authState: AuthState
   authError: string
   hotkeyState: HotkeyState
+  // True for the whole voice turn (processing + TTS drain) — gates the
+  // "Talk to interrupt" label and the barge-in mic tap. Outlives `processing`
+  // because TTS keeps playing after the state returns to idle.
+  voiceTurnBusy: boolean
   entries: ChatEntry[]
   activeId: number | null
   ttsEnabled: boolean
@@ -45,6 +58,7 @@ interface YomiState {
 
   setAuthState: (s: AuthState, error?: string) => void
   setHotkeyState: (state: HotkeyState) => void
+  clearVoiceTurn: () => void
   handleSseEvent: (event: SseEvent) => void
   stopActivePlayback: () => void
   dismissEntry: (id: number) => void
@@ -60,6 +74,7 @@ export const useYomiStore = create<YomiState>((set) => ({
   authState: "checking",
   authError: "",
   hotkeyState: "idle",
+  voiceTurnBusy: false,
   entries: [],
   activeId: null,
   ttsEnabled: true,
@@ -68,7 +83,16 @@ export const useYomiStore = create<YomiState>((set) => ({
   subscriptionLoading: false,
 
   setAuthState: (authState, error = "") => set({ authState, authError: error }),
-  setHotkeyState: (hotkeyState) => set({ hotkeyState }),
+  // A voice turn (listening → processing) arms `voiceTurnBusy`, which the
+  // re-listen/barge-in (→ listening) later clears.
+  setHotkeyState: (next) =>
+    set((s) => {
+      const patch: Partial<YomiState> = { hotkeyState: next }
+      if (next === "processing" && s.hotkeyState === "listening") patch.voiceTurnBusy = true
+      else if (next === "listening") patch.voiceTurnBusy = false
+      return patch
+    }),
+  clearVoiceTurn: () => set({ voiceTurnBusy: false }),
 
   handleSseEvent: (event) => {
     switch (event.type) {
@@ -83,6 +107,7 @@ export const useYomiStore = create<YomiState>((set) => ({
                 transcript: event.text,
                 text: "",
                 error: null,
+                notice: null,
                 ttsError: null,
                 isStreaming: true,
               },
@@ -135,6 +160,7 @@ export const useYomiStore = create<YomiState>((set) => ({
         break
       case "error":
         set((s) => {
+          const soft = isSoftNotice(event.message)
           if (s.activeId !== null) {
             const activeEntry = s.entries.find((e) => e.id === s.activeId)
             const isAbortLike = /abort|cancel|terminat/i.test(event.message)
@@ -150,7 +176,11 @@ export const useYomiStore = create<YomiState>((set) => ({
             return {
               hotkeyState: "idle",
               entries: s.entries.map((e) =>
-                e.id === s.activeId ? { ...e, error: event.message, isStreaming: false } : e,
+                e.id === s.activeId
+                  ? soft
+                    ? { ...e, notice: event.message, isStreaming: false }
+                    : { ...e, error: event.message, isStreaming: false }
+                  : e,
               ),
               activeId: null,
             }
@@ -164,7 +194,8 @@ export const useYomiStore = create<YomiState>((set) => ({
                 id,
                 transcript: "",
                 text: "",
-                error: event.message,
+                error: soft ? null : event.message,
+                notice: soft ? event.message : null,
                 ttsError: null,
                 isStreaming: false,
               },

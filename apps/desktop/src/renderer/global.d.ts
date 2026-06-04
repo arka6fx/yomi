@@ -40,6 +40,7 @@ declare global {
       triggerText(): void
       triggerScreenshot(): void
       stopListening(): void
+      bargeIn(): void
       // App control
       quit(): void
       openUpgrade(): void
