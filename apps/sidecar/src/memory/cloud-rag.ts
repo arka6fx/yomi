@@ -8,6 +8,7 @@ const SEARCH_LIMIT = 8
 type CloudSource = {
   id: string
   name: string
+  path?: string | null
   sourceType: string
   status: string
   updatedAt?: string
@@ -103,7 +104,7 @@ export async function performCloudRagSync(): Promise<void> {
       const remoteSources = await fetchRemoteMirrorSources().catch(() => [])
       const currentPaths = new Set(localSources.map((source) => source.path))
       const removedPaths = remoteSources
-        .map((source) => source.name)
+        .map((source) => source.path ?? source.name)
         .filter((name) => !currentPaths.has(name))
 
       const payload = {

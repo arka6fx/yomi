@@ -160,7 +160,7 @@ export const ragDocuments = pgTable(
   (t) => ({
     userIdx: index("rag_documents_user_idx").on(t.userId),
     sourceIdx: index("rag_documents_source_idx").on(t.sourceId),
-    userHashUnique: unique("rag_documents_user_hash_unique").on(t.userId, t.contentHash),
+    sourceHashUnique: unique("rag_documents_source_hash_unique").on(t.sourceId, t.contentHash),
   }),
 )
 
