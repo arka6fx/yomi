@@ -12,9 +12,7 @@ export default function PrivacyPage() {
       <Nav />
       <main className="bg-[#050914] pt-16">
         <div className="mx-auto max-w-3xl px-6 py-24">
-          <p className="mb-3 font-mono text-xs uppercase tracking-widest text-sky-100/50">
-            Legal
-          </p>
+          <p className="mb-3 font-mono text-xs uppercase tracking-widest text-sky-100/50">Legal</p>
           <h1 className="mb-2 font-accent text-5xl font-medium text-[#eaf4ff]">Privacy Policy</h1>
           <p className="mb-16 text-sm text-white/40">Last updated: May 2025</p>
 
@@ -72,9 +70,9 @@ export default function PrivacyPage() {
               <p>We use the following third-party services:</p>
               <ul>
                 <li>
-                  <strong className="text-label">AI Credits / OpenAI-compatible API</strong> — LLM inference
-                  via our proxy. Prompts sent to these providers are subject to their respective
-                  privacy policies. We do not enable training data use.
+                  <strong className="text-label">AI Credits / OpenAI-compatible API</strong> — LLM
+                  inference via our proxy. Prompts sent to these providers are subject to their
+                  respective privacy policies. We do not enable training data use.
                 </li>
                 <li>
                   <strong className="text-label">Sarvam AI</strong> — cloud STT and TTS for voice

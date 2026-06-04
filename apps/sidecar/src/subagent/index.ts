@@ -14,8 +14,8 @@ const NOTEPAD = join(homedir(), ".yomi")
 export async function spawnSubagent(opts: {
   role: "researcher" | "writer" | "file-ops"
   task: string
-  tools?: string[]        // subset of tool names; defaults to all available
-  context?: string[]     // ~./yomi/ relative paths to preload into the system prompt
+  tools?: string[] // subset of tool names; defaults to all available
+  context?: string[] // ~./yomi/ relative paths to preload into the system prompt
   maxIterations?: number
 }): Promise<string> {
   const maxSteps = opts.maxIterations ?? 10
@@ -28,11 +28,11 @@ export async function spawnSubagent(opts: {
   let contextText = ""
   if (opts.context?.length) {
     const parts = await Promise.allSettled(
-      opts.context.map(p => readFile(join(NOTEPAD, p), "utf-8")),
+      opts.context.map((p) => readFile(join(NOTEPAD, p), "utf-8")),
     )
     contextText = parts
       .filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled")
-      .map(r => r.value)
+      .map((r) => r.value)
       .join("\n\n---\n\n")
   }
 

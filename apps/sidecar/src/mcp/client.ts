@@ -51,18 +51,27 @@ export async function getMcpTools(): Promise<McpToolSet> {
   if (!connecting) {
     connecting = connect()
       .catch((err) => {
-        console.warn("[yomi/mcp] browser MCP unavailable:", err instanceof Error ? err.message : err)
+        console.warn(
+          "[yomi/mcp] browser MCP unavailable:",
+          err instanceof Error ? err.message : err,
+        )
         toolsCache = {}
         return {}
       })
-      .finally(() => { connecting = null })
+      .finally(() => {
+        connecting = null
+      })
   }
   return connecting
 }
 
 // Close the MCP client and its child browser. Called on sidecar shutdown.
 export async function closeMcp(): Promise<void> {
-  try { await client?.close() } catch { /* already gone */ }
+  try {
+    await client?.close()
+  } catch {
+    /* already gone */
+  }
   client = null
   toolsCache = null
 }

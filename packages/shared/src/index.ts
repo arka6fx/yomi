@@ -22,7 +22,10 @@ export function chunkMarkdown(content: string, opts: ChunkOptions = {}): string[
   for (const block of text.split(/\n{2,}/)) {
     const trimmed = block.trim()
     if (!trimmed) continue
-    if (trimmed.length <= targetChars) { segments.push(trimmed); continue }
+    if (trimmed.length <= targetChars) {
+      segments.push(trimmed)
+      continue
+    }
     let start = 0
     while (start < trimmed.length) {
       const end = Math.min(trimmed.length, start + targetChars)
@@ -37,7 +40,10 @@ export function chunkMarkdown(content: string, opts: ChunkOptions = {}): string[
   const chunks: string[] = []
   let current = ""
   for (const seg of segments) {
-    if (!current) { current = seg; continue }
+    if (!current) {
+      current = seg
+      continue
+    }
     if (current.length + 2 + seg.length <= targetChars) {
       current += `\n\n${seg}`
     } else {
@@ -82,14 +88,14 @@ export interface PointTarget {
 
 // UIA app automation (Spec 16) — shapes the uia-helper emits and the sidecar/desktop consume.
 export interface UiaElement {
-  ref: string                  // stable within the latest snapshot only: "w<window>e<element>"
-  role: string                 // control type: "Button", "Edit", "MenuItem", ...
+  ref: string // stable within the latest snapshot only: "w<window>e<element>"
+  role: string // control type: "Button", "Edit", "MenuItem", ...
   name: string
   automationId?: string
-  rect: { x: number; y: number; width: number; height: number }  // physical screen px
-  patterns: string[]           // ["Invoke","Value","Toggle","ExpandCollapse","SelectionItem","Scroll","ScrollItem","LegacyIAccessible"]
+  rect: { x: number; y: number; width: number; height: number } // physical screen px
+  patterns: string[] // ["Invoke","Value","Toggle","ExpandCollapse","SelectionItem","Scroll","ScrollItem","LegacyIAccessible"]
   enabled: boolean
-  offscreen?: boolean          // rect is empty or outside the window — needs ScrollIntoView/vision
+  offscreen?: boolean // rect is empty or outside the window — needs ScrollIntoView/vision
   value?: string | null
 }
 
@@ -108,7 +114,7 @@ export type IntentPath = "fast" | "agent"
 
 export interface IntentClassification {
   path: IntentPath
-  confidence: number   // 0..1
+  confidence: number // 0..1
   reason: string
   source: "heuristic" | "llm"
 }
@@ -116,18 +122,18 @@ export interface IntentClassification {
 export interface RouterInput {
   text: string
   screenshot_b64?: string
-  history?: { role: "user" | "assistant"; text: string }[]  // last 2 turns max
+  history?: { role: "user" | "assistant"; text: string }[] // last 2 turns max
 }
 
 export interface FastQueryRequest {
   text?: string
-  audio_b64?: string       // base64-encoded WAV; sidecar runs STT before LLM
+  audio_b64?: string // base64-encoded WAV; sidecar runs STT before LLM
   screenshot_b64?: string
   screenshots?: ScreenImage[]
   mode?: "answer" | "guide"
-  pointing?: boolean          // true = include screen context and request a point target when useful
-  tts?: boolean            // true = voice output; false = text only (default: true)
-  plan?: Plan              // controls local-only memory injection/writes
+  pointing?: boolean // true = include screen context and request a point target when useful
+  tts?: boolean // true = voice output; false = text only (default: true)
+  plan?: Plan // controls local-only memory injection/writes
   history?: { role: "user" | "assistant"; text: string }[]
 }
 
@@ -135,8 +141,8 @@ export interface AgentQueryRequest {
   text: string
   screenshot_b64?: string
   task?: string
-  plan?: Plan              // controls local-only memory injection/writes
-  history?: { role: "user" | "assistant"; text: string }[]  // prior turns for the conversational act loop
+  plan?: Plan // controls local-only memory injection/writes
+  history?: { role: "user" | "assistant"; text: string }[] // prior turns for the conversational act loop
 }
 
 export interface CloudRagSnippet {
@@ -147,7 +153,7 @@ export interface CloudRagSnippet {
   title: string
   content: string
   score: number
-  marker: number   // 1-based citation index for inline [n] references
+  marker: number // 1-based citation index for inline [n] references
 }
 
 export interface CloudArchiveSource {
@@ -181,12 +187,31 @@ export type SseEvent =
   | { type: "llm_chunk"; text: string }
   | { type: "audio_chunk"; base64: string }
   | { type: "tts_error"; message: string }
-  | { type: "visual_guide"; step: number; total_steps: number; instruction: string; elements: GuideElement[] }
+  | {
+      type: "visual_guide"
+      step: number
+      total_steps: number
+      instruction: string
+      elements: GuideElement[]
+    }
   | { type: "point_target"; target: PointTarget | null; reason?: string }
-  | { type: "router_decision"; path: IntentPath; confidence: number; reason: string; source: "heuristic" | "llm" }
+  | {
+      type: "router_decision"
+      path: IntentPath
+      confidence: number
+      reason: string
+      source: "heuristic" | "llm"
+    }
   // Act loop (Spec 16) — propose an action (risky ones await voice confirm), then report the result.
   // `rect` (physical screen px) lets the desktop highlight the target before acting.
-  | { type: "act_proposed"; id: string; action: UiaAction; label: string; risky: boolean; rect?: { x: number; y: number; width: number; height: number } }
+  | {
+      type: "act_proposed"
+      id: string
+      action: UiaAction
+      label: string
+      risky: boolean
+      rect?: { x: number; y: number; width: number; height: number }
+    }
   | { type: "act_result"; ok: boolean; label: string; detail?: string }
   // Agent-path events
   | { type: "agent_text"; text: string }

@@ -10,9 +10,9 @@ import { effectivePlanForUser } from "../entitlements.js"
 
 // Soft/hard daily token caps by plan (secondary guard — primary is requireAccess chat limit)
 const PLAN_CAPS: Record<string, { soft: number; hard: number }> = {
-  explore: { soft: 100_000,  hard: 200_000 },
-  pro:     { soft: 2_000_000, hard: 5_000_000 },
-  max:     { soft: 10_000_000, hard: 20_000_000 },
+  explore: { soft: 100_000, hard: 200_000 },
+  pro: { soft: 2_000_000, hard: 5_000_000 },
+  max: { soft: 10_000_000, hard: 20_000_000 },
 }
 
 function estimateTokens(messages: unknown[]): number {
@@ -34,7 +34,15 @@ llmRouter.post("/stream", authenticate, requireAccess("chat"), rateLimit, async 
 
   const [event] = await db
     .insert(usageEvents)
-    .values({ userId: user.id, kind: "llm_stream", model: model as string, inputTokens, outputTokens: 0, costCents: 0, status: "started" })
+    .values({
+      userId: user.id,
+      kind: "llm_stream",
+      model: model as string,
+      inputTokens,
+      outputTokens: 0,
+      costCents: 0,
+      status: "started",
+    })
     .returning({ id: usageEvents.id })
 
   const provider = resolveProvider(model as string)
@@ -46,12 +54,15 @@ llmRouter.post("/stream", authenticate, requireAccess("chat"), rateLimit, async 
     maxTokens: maxTokens as number | undefined,
   })
 
-  result.usage.then(async (usage) => {
-    if (!event) return
-    await db.update(usageEvents)
-      .set({ outputTokens: usage.completionTokens, status: "done" })
-      .where(eq(usageEvents.id, event.id))
-  }).catch(() => {})
+  result.usage
+    .then(async (usage) => {
+      if (!event) return
+      await db
+        .update(usageEvents)
+        .set({ outputTokens: usage.completionTokens, status: "done" })
+        .where(eq(usageEvents.id, event.id))
+    })
+    .catch(() => {})
 
   if (inputTokens > caps.soft) {
     c.header("X-Yomi-Token-Warning", "Approaching daily limit")

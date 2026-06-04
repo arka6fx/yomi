@@ -97,10 +97,16 @@ describe("POST /api/usage/interactions/reserve", () => {
     updateRows = [{ plan: "explore", trialInteractionUsed: 150, trialInteractionLimit: 150 }]
 
     const res = await reserve()
-    const body = await res.json() as ReserveBody
+    const body = (await res.json()) as ReserveBody
 
     expect(res.status).toBe(200)
-    expect(body).toEqual({ ok: true, plan: "explore", trialInteractionUsed: 150, trialInteractionLimit: 150, trialInteractionsRemaining: 0 })
+    expect(body).toEqual({
+      ok: true,
+      plan: "explore",
+      trialInteractionUsed: 150,
+      trialInteractionLimit: 150,
+      trialInteractionsRemaining: 0,
+    })
     expect(updateCalls).toBe(1)
   })
 
@@ -109,7 +115,7 @@ describe("POST /api/usage/interactions/reserve", () => {
     updateRows = [{ plan: "explore", trialInteractionUsed: 42, trialInteractionLimit: 150 }]
 
     const res = await reserve()
-    const body = await res.json() as ReserveBody
+    const body = (await res.json()) as ReserveBody
 
     expect(res.status).toBe(200)
     expect(body.plan).toBe("explore")
@@ -122,7 +128,7 @@ describe("POST /api/usage/interactions/reserve", () => {
     currentUser = user({ trialInteractionUsed: 150 })
 
     const res = await reserve()
-    const body = await res.json() as ReserveBody
+    const body = (await res.json()) as ReserveBody
 
     expect(res.status).toBe(429)
     expect(body.code).toBe("interaction_limit_reached")
@@ -133,7 +139,7 @@ describe("POST /api/usage/interactions/reserve", () => {
     currentUser = user({ trialEndDate: new Date(Date.now() - 1000) })
 
     const res = await reserve()
-    const body = await res.json() as ReserveBody
+    const body = (await res.json()) as ReserveBody
 
     expect(res.status).toBe(403)
     expect(body.code).toBe("trial_expired")
@@ -142,16 +148,18 @@ describe("POST /api/usage/interactions/reserve", () => {
 
   it("allows active Pro without consuming Explore interactions", async () => {
     currentUser = user({ plan: "pro", subscriptionStatus: "active", trialInteractionUsed: 12 })
-    updateRows = [{
-      plan: "pro",
-      trialInteractionUsed: 12,
-      trialInteractionLimit: 150,
-      dailyChatUsed: 1,
-      dailyVoiceUsed: 0,
-    }]
+    updateRows = [
+      {
+        plan: "pro",
+        trialInteractionUsed: 12,
+        trialInteractionLimit: 150,
+        dailyChatUsed: 1,
+        dailyVoiceUsed: 0,
+      },
+    ]
 
     const res = await reserve()
-    const body = await res.json() as ReserveBody
+    const body = (await res.json()) as ReserveBody
 
     expect(res.status).toBe(200)
     expect(body.trialInteractionUsed).toBe(12)
@@ -163,7 +171,7 @@ describe("POST /api/usage/interactions/reserve", () => {
     currentUser = user({ role: "owner", plan: "explore", trialInteractionUsed: 12 })
 
     const res = await reserve()
-    const body = await res.json() as ReserveBody
+    const body = (await res.json()) as ReserveBody
 
     expect(res.status).toBe(200)
     expect(body.plan).toBe("max")
@@ -173,10 +181,14 @@ describe("POST /api/usage/interactions/reserve", () => {
   })
 
   it("gives allowlisted owner emails effective Max access", async () => {
-    currentUser = user({ email: "arkagarai292@gmail.com", plan: "explore", trialInteractionUsed: 12 })
+    currentUser = user({
+      email: "arkagarai292@gmail.com",
+      plan: "explore",
+      trialInteractionUsed: 12,
+    })
 
     const res = await reserve()
-    const body = await res.json() as ReserveBody
+    const body = (await res.json()) as ReserveBody
 
     expect(res.status).toBe(200)
     expect(body.plan).toBe("max")
@@ -189,7 +201,7 @@ describe("POST /api/usage/interactions/reserve", () => {
     currentUser = user({ plan: "max", subscriptionStatus: "active" })
 
     const res = await reserve("chat")
-    const body = await res.json() as ReserveBody
+    const body = (await res.json()) as ReserveBody
 
     expect(res.status).toBe(403)
     expect(body.code).toBe("plan_unavailable")
@@ -198,16 +210,18 @@ describe("POST /api/usage/interactions/reserve", () => {
 
   it("reserves the final Pro chat turn", async () => {
     currentUser = user({ plan: "pro", subscriptionStatus: "active" })
-    updateRows = [{
-      plan: "pro",
-      trialInteractionUsed: 0,
-      trialInteractionLimit: 150,
-      dailyChatUsed: 10000,
-      dailyVoiceUsed: 0,
-    }]
+    updateRows = [
+      {
+        plan: "pro",
+        trialInteractionUsed: 0,
+        trialInteractionLimit: 150,
+        dailyChatUsed: 10000,
+        dailyVoiceUsed: 0,
+      },
+    ]
 
     const res = await reserve("chat")
-    const body = await res.json() as ReserveBody
+    const body = (await res.json()) as ReserveBody
 
     expect(res.status).toBe(200)
     expect(body.dailyChatUsed).toBe(10000)
@@ -218,7 +232,7 @@ describe("POST /api/usage/interactions/reserve", () => {
     currentUser = user({ plan: "pro", subscriptionStatus: "active" })
 
     const res = await reserve("chat")
-    const body = await res.json() as ReserveBody
+    const body = (await res.json()) as ReserveBody
 
     expect(res.status).toBe(429)
     expect(body.code).toBe("rate_limited")
@@ -227,16 +241,18 @@ describe("POST /api/usage/interactions/reserve", () => {
 
   it("reserves the final Pro voice turn", async () => {
     currentUser = user({ plan: "pro", subscriptionStatus: "active" })
-    updateRows = [{
-      plan: "pro",
-      trialInteractionUsed: 0,
-      trialInteractionLimit: 150,
-      dailyChatUsed: 0,
-      dailyVoiceUsed: 200,
-    }]
+    updateRows = [
+      {
+        plan: "pro",
+        trialInteractionUsed: 0,
+        trialInteractionLimit: 150,
+        dailyChatUsed: 0,
+        dailyVoiceUsed: 200,
+      },
+    ]
 
     const res = await reserve("voice")
-    const body = await res.json() as ReserveBody
+    const body = (await res.json()) as ReserveBody
 
     expect(res.status).toBe(200)
     expect(body.dailyVoiceUsed).toBe(200)
@@ -247,7 +263,7 @@ describe("POST /api/usage/interactions/reserve", () => {
     currentUser = user({ plan: "pro", subscriptionStatus: "active" })
 
     const res = await reserve("voice")
-    const body = await res.json() as ReserveBody
+    const body = (await res.json()) as ReserveBody
 
     expect(res.status).toBe(429)
     expect(body.code).toBe("rate_limited")
@@ -258,7 +274,7 @@ describe("POST /api/usage/interactions/reserve", () => {
     currentUser = user({ plan: "pro", subscriptionStatus: "past_due" })
 
     const res = await reserve("chat")
-    const body = await res.json() as ReserveBody
+    const body = (await res.json()) as ReserveBody
 
     expect(res.status).toBe(403)
     expect(body.code).toBe("subscription_required")
@@ -269,7 +285,7 @@ describe("POST /api/usage/interactions/reserve", () => {
     currentUser = user({ plan: "enterprise", subscriptionStatus: "active" })
 
     const res = await reserve("chat")
-    const body = await res.json() as ReserveBody
+    const body = (await res.json()) as ReserveBody
 
     expect(res.status).toBe(403)
     expect(body.code).toBe("invalid_plan")
@@ -278,16 +294,18 @@ describe("POST /api/usage/interactions/reserve", () => {
 
   it("resets stale paid daily counters and counts the requested kind", async () => {
     currentUser = user({ plan: "pro", subscriptionStatus: "active" })
-    updateRows = [{
-      plan: "pro",
-      trialInteractionUsed: 0,
-      trialInteractionLimit: 150,
-      dailyChatUsed: 0,
-      dailyVoiceUsed: 1,
-    }]
+    updateRows = [
+      {
+        plan: "pro",
+        trialInteractionUsed: 0,
+        trialInteractionLimit: 150,
+        dailyChatUsed: 0,
+        dailyVoiceUsed: 1,
+      },
+    ]
 
     const res = await reserve("voice")
-    const body = await res.json() as ReserveBody
+    const body = (await res.json()) as ReserveBody
 
     expect(res.status).toBe(200)
     expect(body.dailyChatUsed).toBe(0)

@@ -89,8 +89,8 @@ describe("detectSpeechEnd", () => {
 
   it("returns correct sample index after speech + hangover", () => {
     // 500ms speech + 400ms silence; hangover=300ms → end at ~500ms+300ms = 800ms = 12800 samples
-    const speech = makeSpeech(SR / 2)    // 8000 samples
-    const silence = makeSilence(SR)      // 16000 samples
+    const speech = makeSpeech(SR / 2) // 8000 samples
+    const silence = makeSilence(SR) // 16000 samples
     const pcm = concat(speech, silence)
 
     const end = detectSpeechEnd(pcm, { sampleRate: SR, silenceHangoverMs: 300 })

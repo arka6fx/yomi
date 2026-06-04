@@ -1,17 +1,19 @@
 # Yomi
 
-AI buddy that lives on your desktop. Sees your screen, hears your voice, and acts so you touch your laptop less.
+AI buddy that lives on your desktop. Sees your screen, hears your voice, and
+acts so you touch your laptop less.
 
 ## How it works
 
 Every request is routed to one of two pipelines:
 
-| Type | Path | Latency |
-|---|---|---|
-| Quick ask / screen Q&A | STT → screenshot → 1 LLM call → TTS | < 2 s |
-| Autonomous task | ReAct agent loop + subagents + MCP tools | seconds–minutes (background) |
+| Type                   | Path                                     | Latency                      |
+| ---------------------- | ---------------------------------------- | ---------------------------- |
+| Quick ask / screen Q&A | STT → screenshot → 1 LLM call → TTS      | < 2 s                        |
+| Autonomous task        | ReAct agent loop + subagents + MCP tools | seconds–minutes (background) |
 
-The **local sidecar** (Bun) is the brain. The **Electron shell** is capture + UI only. LLM keys live in the cloud backend, never bundled in the desktop app.
+The **local sidecar** (Bun) is the brain. The **Electron shell** is capture + UI
+only. LLM keys live in the cloud backend, never bundled in the desktop app.
 
 ---
 
@@ -53,12 +55,12 @@ cd apps/sidecar && bun run dev   # :3002
 cd apps/desktop && bun run dev   # Electron window
 ```
 
-| App | Port / target |
-|---|---|
+| App            | Port / target         |
+| -------------- | --------------------- |
 | `apps/landing` | http://localhost:3000 |
 | `apps/backend` | http://localhost:3001 |
 | `apps/sidecar` | http://localhost:3002 |
-| `apps/desktop` | Electron window |
+| `apps/desktop` | Electron window       |
 
 ---
 
@@ -85,57 +87,67 @@ DATABASE_URL=postgres://...
 
 ## Overlay keyboard shortcuts
 
-| Shortcut | Action |
-|---|---|
-| `Ctrl+Space` | Start voice recording |
+| Shortcut     | Action                                 |
+| ------------ | -------------------------------------- |
+| `Ctrl+Space` | Start voice recording                  |
 | `Ctrl+Enter` | Open text input (type instead of talk) |
-| `Ctrl+H` | Show / hide overlay |
-| `Ctrl+Arrow` | Nudge overlay position (smooth) |
-| `Enter` | Send voice query (while listening) |
-| `Esc` | Cancel voice or text input |
+| `Ctrl+H`     | Show / hide overlay                    |
+| `Ctrl+Arrow` | Nudge overlay position (smooth)        |
+| `Enter`      | Send voice query (while listening)     |
+| `Esc`        | Cancel voice or text input             |
 
-The toolbar also has **Voice** and **Type** buttons that trigger the same actions as `Ctrl+Space` and `Ctrl+Enter`.
+The toolbar also has **Voice** and **Type** buttons that trigger the same
+actions as `Ctrl+Space` and `Ctrl+Enter`.
 
-**Voice mode:** press `Ctrl+Space` (or click **Voice**), speak your question, then press `Enter` or click **Send** to submit. Press `Esc` to cancel without sending.
+**Voice mode:** press `Ctrl+Space` (or click **Voice**), speak your question,
+then press `Enter` or click **Send** to submit. Press `Esc` to cancel without
+sending.
 
-**Text input mode:** press `Ctrl+Enter` (or click **Type**), type your question, press `Enter`. An empty submit takes a screenshot and describes what is on screen.
+**Text input mode:** press `Ctrl+Enter` (or click **Type**), type your question,
+press `Enter`. An empty submit takes a screenshot and describes what is on
+screen.
 
-**Copy:** each response card has a **Copy** button. Code blocks have their own per-block copy button.
+**Copy:** each response card has a **Copy** button. Code blocks have their own
+per-block copy button.
 
 ---
 
 ## AI model routing
 
-| Task | Default model | Override env var |
-|---|---|---|
-| Fast chat / vision | `gpt-4.1-mini` | `FAST_PATH_MODEL` |
-| Agent / reasoning | `gpt-4.1` | `AGENT_PATH_MODEL` |
-| Speech-to-text | `saarika:v2.5` (Sarvam AI) | — |
-| Voice output (TTS) | `bulbul:v3`, speaker `shreya` (Sarvam AI) | `TTS_ENGINE` |
+| Task               | Default model                             | Override env var   |
+| ------------------ | ----------------------------------------- | ------------------ |
+| Fast chat / vision | `gpt-4.1-mini`                            | `FAST_PATH_MODEL`  |
+| Agent / reasoning  | `gpt-4.1`                                 | `AGENT_PATH_MODEL` |
+| Speech-to-text     | `saarika:v2.5` (Sarvam AI)                | —                  |
+| Voice output (TTS) | `bulbul:v3`, speaker `shreya` (Sarvam AI) | `TTS_ENGINE`       |
 
 ---
 
 ## Speech
 
-**STT** runs through the sidecar (`POST /stt`) using Sarvam AI's `saarika:v2.5` model. Configured via `SARVAM_API_KEY`.
+**STT** runs through the sidecar (`POST /stt`) using Sarvam AI's `saarika:v2.5`
+model. Configured via `SARVAM_API_KEY`.
 
-**TTS** uses Sarvam AI's `bulbul:v3` model with the `shreya` speaker by default. Set `SARVAM_VOICE` to choose another Sarvam speaker, or `TTS_ENGINE=none` to disable voice output. When disabled, responses still stream as text in the overlay.
+**TTS** uses Sarvam AI's `bulbul:v3` model with the `shreya` speaker by default.
+Set `SARVAM_VOICE` to choose another Sarvam speaker, or `TTS_ENGINE=none` to
+disable voice output. When disabled, responses still stream as text in the
+overlay.
 
 ---
 
 ## Tech stack
 
-| Layer | Choice |
-|---|---|
-| LLM SDK | Vercel AI SDK + `@ai-sdk/openai` |
-| STT | Sarvam AI (`saarika:v2.5`) |
-| TTS | Sarvam AI (`bulbul:v3`, speaker `shreya`) |
-| Backend | Hono on Bun |
-| Auth | Better Auth - Google + GitHub OAuth |
-| DB | Postgres (Neon) + Drizzle ORM |
-| Billing | Razorpay |
-| Desktop | Electron |
-| Landing | Next.js 16 (Vercel) |
+| Layer   | Choice                                    |
+| ------- | ----------------------------------------- |
+| LLM SDK | Vercel AI SDK + `@ai-sdk/openai`          |
+| STT     | Sarvam AI (`saarika:v2.5`)                |
+| TTS     | Sarvam AI (`bulbul:v3`, speaker `shreya`) |
+| Backend | Hono on Bun                               |
+| Auth    | Better Auth - Google + GitHub OAuth       |
+| DB      | Postgres (Neon) + Drizzle ORM             |
+| Billing | Razorpay                                  |
+| Desktop | Electron                                  |
+| Landing | Next.js 16 (Vercel)                       |
 
 ---
 
@@ -143,18 +155,20 @@ The toolbar also has **Voice** and **Type** buttons that trigger the same action
 
 Desktop and web share sessions through Better Auth:
 
-| Flow | How it works |
-|---|---|
-| **Desktop sign-in** | Device-code flow (RFC 8628). Click sign-in, your browser opens the device page, and if you are already signed in it auto-confirms. The desktop polls for a session token and stores it encrypted via `safeStorage`. |
-| **Landing sign-in** | Direct OAuth via Google/GitHub through Better Auth's client SDK. |
-| **Cross-device sign-out** | Signing out from the landing page calls `POST /api/auth/sign-out-all` which revokes all sessions for the user. The desktop detects the invalidated token within 30 seconds and shows the sign-in page. |
-| **Session validation** | Desktop checks token validity every 30 seconds against the billing endpoint. A 401 response triggers automatic sign-out. |
+| Flow                      | How it works                                                                                                                                                                                                        |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Desktop sign-in**       | Device-code flow (RFC 8628). Click sign-in, your browser opens the device page, and if you are already signed in it auto-confirms. The desktop polls for a session token and stores it encrypted via `safeStorage`. |
+| **Landing sign-in**       | Direct OAuth via Google/GitHub through Better Auth's client SDK.                                                                                                                                                    |
+| **Cross-device sign-out** | Signing out from the landing page calls `POST /api/auth/sign-out-all` which revokes all sessions for the user. The desktop detects the invalidated token within 30 seconds and shows the sign-in page.              |
+| **Session validation**    | Desktop checks token validity every 30 seconds against the billing endpoint. A 401 response triggers automatic sign-out.                                                                                            |
 
 Desktop tokens are stored encrypted at:
+
 - **macOS:** `~/Library/Application Support/Yomi/session.enc`
 - **Windows:** `%APPDATA%/Yomi/session.enc`
 
-No secrets leave the encrypted storage - not even the app reads the raw token except to attach it as a Bearer header.
+No secrets leave the encrypted storage - not even the app reads the raw token
+except to attach it as a Bearer header.
 
 ---
 
@@ -177,30 +191,33 @@ cd apps/backend && bun run db:studio     # Drizzle Studio UI
 
 Design docs in [`specs/`](./specs/), ordered by implementation:
 
-| # | Doc | Contents |
-|---|---|---|
-| 00 | [00-overview](specs/00-overview.md) | Principles, identity, invariants, phase map |
-| 01 | [01-architecture](specs/01-architecture.md) | Four-layer architecture, IPC contracts, data flows |
-| 02 | [02-sidecar-fast-pipeline](specs/02-sidecar-fast-pipeline.md) | Fast linear pipeline, local context, cloud archive mirror, visual guidance |
-| 03 | [03-desktop-shell](specs/03-desktop-shell.md) | Electron main: sidecar spawn, hotkeys, capture, IPC |
-| 04 | [04-desktop-ui](specs/04-desktop-ui.md) | Floating overlay, Zustand store, audio, streaming UI |
-| 05 | [05-speech-stt](specs/05-speech-stt.md) | STT: Sarvam AI `saarika:v2.5` + VAD |
-| 06 | [06-speech-tts](specs/06-speech-tts.md) | TTS: Sarvam AI `bulbul:v3` |
-| 07 | [07-sidecar-router](specs/07-sidecar-router.md) | Intent router: fast vs agent classification |
-| 08 | [08-sidecar-agent](specs/08-sidecar-agent.md) | ReAct loop, tools, MCP, subagents, sandbox |
-| 09 | [09-harness](specs/09-harness.md) | Prompt assembly, local context, hooks, loop guards |
-| 10 | [10-memory](specs/10-memory.md) | Local memory engine, retrieval, profiles, compaction |
-| 11 | [11-database](specs/11-database.md) | Drizzle schema, Neon, cloud archive tables |
-| 12 | [12-backend](specs/12-backend.md) | Hono routes, Better Auth, LLM proxy, metering, cloud archive mirror/search |
-| 13 | [13-pricing](specs/13-pricing.md) | Plans, Razorpay, metering, cap enforcement |
-| 14 | [14-landing-page](specs/14-landing-page.md) | Marketing site (Next.js 16, Vercel) |
+| #   | Doc                                                           | Contents                                                                   |
+| --- | ------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| 00  | [00-overview](specs/00-overview.md)                           | Principles, identity, invariants, phase map                                |
+| 01  | [01-architecture](specs/01-architecture.md)                   | Four-layer architecture, IPC contracts, data flows                         |
+| 02  | [02-sidecar-fast-pipeline](specs/02-sidecar-fast-pipeline.md) | Fast linear pipeline, local context, cloud archive mirror, visual guidance |
+| 03  | [03-desktop-shell](specs/03-desktop-shell.md)                 | Electron main: sidecar spawn, hotkeys, capture, IPC                        |
+| 04  | [04-desktop-ui](specs/04-desktop-ui.md)                       | Floating overlay, Zustand store, audio, streaming UI                       |
+| 05  | [05-speech-stt](specs/05-speech-stt.md)                       | STT: Sarvam AI `saarika:v2.5` + VAD                                        |
+| 06  | [06-speech-tts](specs/06-speech-tts.md)                       | TTS: Sarvam AI `bulbul:v3`                                                 |
+| 07  | [07-sidecar-router](specs/07-sidecar-router.md)               | Intent router: fast vs agent classification                                |
+| 08  | [08-sidecar-agent](specs/08-sidecar-agent.md)                 | ReAct loop, tools, MCP, subagents, sandbox                                 |
+| 09  | [09-harness](specs/09-harness.md)                             | Prompt assembly, local context, hooks, loop guards                         |
+| 10  | [10-memory](specs/10-memory.md)                               | Local memory engine, retrieval, profiles, compaction                       |
+| 11  | [11-database](specs/11-database.md)                           | Drizzle schema, Neon, cloud archive tables                                 |
+| 12  | [12-backend](specs/12-backend.md)                             | Hono routes, Better Auth, LLM proxy, metering, cloud archive mirror/search |
+| 13  | [13-pricing](specs/13-pricing.md)                             | Plans, Razorpay, metering, cap enforcement                                 |
+| 14  | [14-landing-page](specs/14-landing-page.md)                   | Marketing site (Next.js 16, Vercel)                                        |
 
 ---
 
 ## Privacy
 
-- **Local-by-default:** screen analysis and STT run locally / on-device where possible; only the distilled prompt leaves.
+- **Local-by-default:** screen analysis and STT run locally / on-device where
+  possible; only the distilled prompt leaves.
 - **Visible status:** overlay always shows when Yomi is listening or capturing.
 - **Per-app blocklist:** password managers and banking apps are never captured.
-- **No hidden memory sync:** local memory stays on the device; Cloud RAG mirrors Yomi-generated archive files and does not accept arbitrary user file uploads.
-- **Content protection:** overlay window is excluded from screen recordings and video calls.
+- **No hidden memory sync:** local memory stays on the device; Cloud RAG mirrors
+  Yomi-generated archive files and does not accept arbitrary user file uploads.
+- **Content protection:** overlay window is excluded from screen recordings and
+  video calls.
