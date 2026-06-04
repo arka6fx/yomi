@@ -161,6 +161,14 @@ export function triggerVoiceMode(): boolean {
   return true
 }
 
+// Barge-in: the user spoke over Yomi while it was processing/speaking. Start a
+// fresh hands-free listening turn (the pipeline abort happens in ipc.ts).
+export function bargeInToListening(): void {
+  if (!enabled || suspended) return
+  voiceLoop = true
+  transition("listening")
+}
+
 // Called via IPC when the user clicks the Send/Enter chip while listening.
 export function triggerStopListening(): boolean {
   if (!enabled || state !== "listening") return false

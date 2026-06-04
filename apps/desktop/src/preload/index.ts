@@ -180,6 +180,12 @@ contextBridge.exposeInMainWorld("yomi", {
     ipcRenderer.send("yomi:stop-listening")
   },
 
+  // Barge-in: user spoke while Yomi was processing/speaking — abort the current
+  // turn and start listening for the new request.
+  bargeIn(): void {
+    ipcRenderer.send("yomi:barge-in")
+  },
+
   quit(): void {
     ipcRenderer.send("yomi:quit")
   },
