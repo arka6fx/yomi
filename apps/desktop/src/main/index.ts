@@ -23,7 +23,6 @@ import {
   triggerStopListening,
 } from "./hotkey"
 import { initSidecarIpc } from "./ipc"
-import { createGuideOverlay, hideGuidePoint } from "./guide-overlay"
 
 // Transparent frameless windows need software compositing on some GPU/driver combos
 if (process.platform === "win32") {
@@ -127,6 +126,22 @@ app.whenReady().then(async () => {
     if ((input.control || input.meta) && (key === "r" || key === "f5")) {
       event.preventDefault()
     }
+  })
+
+  // Grant mic + screen-capture permissions so renderer getUserMedia (voice + system
+  // audio loopback) actually resolves — without these, getUserMedia rejects silently.
+  const ses = overlayWin.webContents.session
+  const ALLOWED_MEDIA = new Set(["media", "audioCapture", "videoCapture", "display-capture"])
+  ses.setPermissionRequestHandler((_wc, permission, callback) => {
+    callback(ALLOWED_MEDIA.has(permission))
+  })
+  ses.setPermissionCheckHandler((_wc, permission) => ALLOWED_MEDIA.has(permission))
+  // getDisplayMedia path (some Chromium versions route loopback here).
+  ses.setDisplayMediaRequestHandler((_req, callback) => {
+    desktopCapturer
+      .getSources({ types: ["screen"] })
+      .then((sources) => callback(sources[0] ? { video: sources[0] } : {}))
+      .catch(() => callback({}))
   })
 
   // ── Overlay window control IPCs (no auth required) ─────────────────────────
@@ -273,7 +288,6 @@ app.whenReady().then(async () => {
     return { name: data.name, email: data.email }
   })
 
-  createGuideOverlay()
   setInterval(updateOverlayMousePassthrough, 50)
 
   // ── Load overlay ────────────────────────────────────────────────────────────
@@ -437,8 +451,11 @@ async function completeSetup(token: string) {
       // when the pipeline has already finished and state is back to idle.
       onAnyEscape: () => {
         overlayWin?.webContents.send("yomi:stop-audio")
-        hideGuidePoint()
-        overlayWin?.webContents.send("yomi:guide-exit")
+      },
+      // Hands-free loop: after a voice turn the renderer re-arms the mic (once
+      // any TTS playback has drained) by calling triggerVoice().
+      onLoopContinue: () => {
+        overlayWin?.webContents.send("yomi:loop-continue")
       },
     })
 

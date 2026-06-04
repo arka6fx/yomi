@@ -1,21 +1,13 @@
 import { ipcMain } from "electron"
 import type { BrowserWindow } from "electron"
-import type { GuideElement, PointTarget, SseEvent } from "@yomi/shared"
+import type { SseEvent } from "@yomi/shared"
 import { captureScreen } from "./capture"
 import type { ScreenCapture } from "./capture"
-import { showGuideTarget, showGuideInstruction, hideGuidePoint } from "./guide-overlay"
 import type { SidecarManager } from "./sidecar"
-import { getHotkeyState, resetToIdle, activateProcessing } from "./hotkey"
+import { getHotkeyState, resetToIdle, activateProcessing, endVoiceTurn } from "./hotkey"
 import { BACKEND_URL, loadToken } from "./auth"
-import { mapGuideElementToScreen, mapPointTargetToScreen } from "./spatial-mapping"
 
-// Guide overlay is driven by the renderer's guide UI; act/pointing are decided per-turn from
-// what the user said (no manual toggles). Pointing targets always render when the model emits one.
 // The mic only ever opens on the Voice button / Ctrl+Space — nothing here re-arms listening.
-let guideModeActive = false
-let hideGuideTimer: ReturnType<typeof setTimeout> | null = null
-let guideSequenceTimers: ReturnType<typeof setTimeout>[] = []
-let activeGuideTask: string | null = null
 // Conversation history for multi-turn act commands, sent with each agent query for context.
 let actHistory: { role: "user" | "assistant"; text: string }[] = []
 const ACT_HISTORY_MAX = 16 // last 8 turns (user + assistant each)
@@ -90,14 +82,6 @@ export function initSidecarIpc(
   onAbort: () => void
   onScreenshot: () => Promise<void>
 } {
-  ipcMain.on("yomi:guide-mode", (_e, on: boolean) => {
-    guideModeActive = on
-    if (!on) {
-      clearGuideTimers()
-      hideGuidePoint()
-    }
-  })
-
   // Forward the user's confirm/cancel for a risky action back to the sidecar (Spec 16).
   ipcMain.on("yomi:act-confirm", async (_e, id: string, approved: boolean) => {
     try {
@@ -194,10 +178,12 @@ export function initSidecarIpc(
     onListenStop: async () => {
       const ctrl = startPipeline()
       const chunks = pcmChunks.splice(0)
+      console.warn(`[yomi/voice] listen stop — captured ${chunks.length} pcm chunks`)
 
-      // Nothing recorded — user pressed stop immediately. Quietly reset.
+      // Nothing recorded — user pressed stop immediately, or capture never ran.
+      // In a hands-free session this re-listens; otherwise it quietly resets.
       if (chunks.length === 0) {
-        resetToIdle()
+        endVoiceTurn()
         return
       }
 
@@ -210,10 +196,15 @@ export function initSidecarIpc(
           captureScreen(),
         ])
         if (ctrl.signal.aborted) return
+        console.warn(
+          `[yomi/voice] transcript (${transcript.trim().length} chars): ${transcript.trim().slice(0, 80)}`,
+        )
 
-        // STT returned silence/empty — quietly reset instead of showing an error.
+        // STT heard nothing — give the user a brief, dismissable hint instead of silence.
+        // Re-listen if in a hands-free session (the inactivity guard stops an endless empty loop).
         if (!transcript.trim()) {
-          resetToIdle()
+          send(overlayWin, { type: "error", message: "Didn't catch that — try again." })
+          endVoiceTurn()
           return
         }
 
@@ -224,7 +215,7 @@ export function initSidecarIpc(
           type: "error",
           message: err instanceof Error ? err.message : "Unknown error",
         })
-        resetToIdle()
+        endVoiceTurn()
       }
     },
     onTextQuery: () => {
@@ -295,7 +286,7 @@ async function reserveInteraction(
 }
 
 function buildWav(chunks: Float32Array[], sampleRate: number): Buffer {
-  const MAX_SAMPLES = sampleRate * 30 // Sarvam STT hard limit: 30 s
+  const MAX_SAMPLES = sampleRate * 30 // Keep voice turns bounded for cloud STT.
   const rawTotal = chunks.reduce((s, c) => s + c.length, 0)
   const total = Math.min(rawTotal, MAX_SAMPLES)
   if (rawTotal > MAX_SAMPLES)
@@ -346,7 +337,10 @@ async function transcribe(
     body: form,
     signal,
   })
-  if (!res.ok) throw new Error(`Sidecar STT ${res.status}`)
+  if (!res.ok) {
+    console.error(`[yomi/voice] STT HTTP ${res.status}`)
+    throw new Error(`Sidecar STT ${res.status}`)
+  }
   return ((await res.json()) as { text: string }).text
 }
 
@@ -362,40 +356,26 @@ async function streamQuery(
   forceAnswer = false, // skip all intent routing — always the fast screen-answer path
 ): Promise<void> {
   pipelineCtrl = ctrl // keep reference current (startPipeline may have rotated it)
-  clearGuideTimers()
-  hideGuidePoint() // clear any stale dot from the previous query
-  let persistentPointShown = false
-  let guideSequenceMs = 0
-  // The mode is decided purely from what the user said — no manual toggles.
-  const guidedNavigation =
-    !forceAnswer &&
-    (guideModeActive || shouldUseGuidedNavigation(text) || shouldContinueGuide(text))
 
   // "…in the background" → spawn a detached, autonomous agent surfaced in the companion dock,
   // then free the toolbar immediately so the user can keep talking.
-  if (!forceAnswer && !guidedNavigation && shouldUseBackground(text)) {
+  if (!forceAnswer && shouldUseBackground(text)) {
     pipelineCtrl = null
     startBackgroundRun(sidecar, overlayWin, stripBackgroundPhrase(text), capture, plan)
-    resetToIdle()
+    endVoiceTurn() // free the toolbar; re-listen if hands-free
     return
   }
 
-  // Imperative/desktop commands route to the agent (it has the UIA tools). Guidance wins ties.
-  const useAgent =
-    !forceAnswer && !guidedNavigation && (shouldUseSystemAction(text) || shouldUseAgent(text))
-  const queryText = guidedNavigation ? buildGuideQuery(text) : text
-  if (guidedNavigation) {
-    showGuideInstruction("Finding the next step on this screen...", 1, 1)
-    persistentPointShown = true
-  }
+  // Imperative/desktop commands route to the agent (it has the UIA tools).
+  const useAgent = !forceAnswer && (shouldUseSystemAction(text) || shouldUseAgent(text))
 
   // Interactive actions are hands-free: no chat transcript unless an error/confirmation needs UI.
 
   const endpoint = useAgent ? "/query/agent" : "/query/fast"
   const body = useAgent
-    ? { text: queryText, screenshot_b64: capture.screenshot_b64, plan, history: actHistory.slice() }
+    ? { text, screenshot_b64: capture.screenshot_b64, plan, history: actHistory.slice() }
     : {
-        text: queryText,
+        text,
         screenshot_b64: capture.screenshot_b64,
         screenshots: capture.displays.map(
           ({ screen, screenshot_b64, imageWidth, imageHeight, isCursorScreen }) => ({
@@ -406,8 +386,6 @@ async function streamQuery(
             is_cursor_screen: isCursorScreen,
           }),
         ),
-        mode: "answer",
-        pointing: true,
         tts,
         plan,
       }
@@ -420,6 +398,7 @@ async function streamQuery(
   })
   if (!res.ok || !res.body) {
     pipelineCtrl = null
+    console.error(`[yomi/voice] ${endpoint} HTTP ${res.status}`)
     throw new Error(`Sidecar ${res.status}`)
   }
 
@@ -442,37 +421,24 @@ async function streamQuery(
         if (event.type === "agent_text") agentTextBuf += event.text
         // Show a short label in chat instead of a long synthetic prompt (e.g. screen analysis).
         if (event.type === "transcript" && transcriptLabel) event.text = transcriptLabel
-        if (event.type === "visual_guide") {
-          guideSequenceMs = scheduleVisualGuideEvent(event, capture, overlayWin)
-          persistentPointShown = true
-          continue
-        } else if (!useAgent || shouldShowInteractiveEvent(event)) {
+        if (!useAgent || shouldShowInteractiveEvent(event)) {
           send(overlayWin, event)
-        }
-        if (event.type === "point_target") {
-          if (event.target) {
-            showPointTarget(event.target, capture)
-            persistentPointShown = true
-          } else if (!guideModeActive) hideGuidePoint()
         }
         if (event.type === "done") {
           sawDone = true
-          if (persistentPointShown) scheduleGuideHide(guideSequenceMs)
-          else hideGuidePoint()
-          // Record this agent turn so a follow-up command (on a manual Voice press) has context.
+          // Record this agent turn so a follow-up command (next loop turn or manual Voice press) has context.
           if (useAgent) pushActTurn(text, agentTextBuf)
-          resetToIdle()
+          endVoiceTurn()
         }
         if (event.type === "error") {
           sawDone = true
-          hideGuidePoint()
-          resetToIdle()
+          endVoiceTurn()
         }
       }
     }
   } catch (err) {
     if ((err as Error).name === "AbortError") {
-      resetToIdle()
+      resetToIdle() // ESC aborts already cleared the loop
       return
     }
     throw err
@@ -480,7 +446,7 @@ async function streamQuery(
     pipelineCtrl = null
   }
 
-  if (!sawDone) resetToIdle()
+  if (!sawDone) endVoiceTurn()
 }
 
 // ── Background agents ──────────────────────────────────────────────────────────
@@ -552,35 +518,11 @@ function startBackgroundRun(
   })()
 }
 
-function clearGuideTimers(): void {
-  if (hideGuideTimer) {
-    clearTimeout(hideGuideTimer)
-    hideGuideTimer = null
-  }
-  for (const timer of guideSequenceTimers) clearTimeout(timer)
-  guideSequenceTimers = []
-}
-
-function scheduleGuideHide(afterMs = 0): void {
-  if (hideGuideTimer) clearTimeout(hideGuideTimer)
-  hideGuideTimer = setTimeout(() => {
-    hideGuideTimer = null
-    hideGuidePoint()
-  }, afterMs + 6500)
-}
-
 // Append a completed agent turn to the rolling history (used for follow-up commands on a manual press).
 function pushActTurn(userText: string, assistantText: string): void {
   actHistory.push({ role: "user", text: userText.trim() })
   actHistory.push({ role: "assistant", text: assistantText.trim() || "(done)" })
   if (actHistory.length > ACT_HISTORY_MAX) actHistory = actHistory.slice(-ACT_HISTORY_MAX)
-}
-
-// "Guide me" intent → visual step-by-step pointing on the user's screen.
-function shouldUseGuidedNavigation(text: string): boolean {
-  return /\b(step by step|guide me|show me how|how (do|to|can) i|where (do|should) i click|what (do|should) i click|directions?|navigate|save (my )?(project|file|work)|click first)\b/i.test(
-    text,
-  )
 }
 
 // "…in the background" intent → detached autonomous agent surfaced in the companion dock.
@@ -615,62 +557,4 @@ function shouldUseSystemAction(text: string): boolean {
 
 function shouldShowInteractiveEvent(event: SseEvent): boolean {
   return event.type === "act_proposed" || event.type === "error"
-}
-
-function shouldContinueGuide(text: string): boolean {
-  if (!activeGuideTask) return false
-  return /\b(continue|next( step)?|done|i did it|did it|go on|guide me further|where next|what next|what do i do next|where do i go next|show me the next step|next please|okay next|ok next)\b/i.test(
-    text.trim(),
-  )
-}
-
-function buildGuideQuery(text: string): string {
-  if (shouldContinueGuide(text) && activeGuideTask) {
-    return `Continue guiding me through this task: ${activeGuideTask}. I completed the previous step. Give only the next actionable step visible on the current screenshot. If there is a visible UI target, point at it. If the best action is a keyboard shortcut, say the shortcut.`
-  }
-  activeGuideTask = text.trim()
-  return `${text.trim()}\n\nGive only the next actionable step visible on the current screenshot. If there is a visible UI target, point at it. If the best action is a keyboard shortcut, say the shortcut.`
-}
-
-function scheduleVisualGuideEvent(
-  event: Extract<SseEvent, { type: "visual_guide" }>,
-  capture: ScreenCapture,
-  win: BrowserWindow,
-): number {
-  const delay = Math.max(0, event.step - 1) * 5200
-  const timer = setTimeout(() => {
-    send(win, event)
-    showVisualGuideTarget(
-      event.elements?.[0],
-      capture,
-      event.step,
-      event.total_steps,
-      event.instruction,
-    )
-  }, delay)
-  guideSequenceTimers.push(timer)
-  return delay
-}
-
-function showVisualGuideTarget(
-  element: GuideElement | undefined,
-  capture: ScreenCapture,
-  step = 1,
-  total = 1,
-  instruction?: string,
-): void {
-  const point = mapGuideElementToScreen(element, capture)
-  const label = instruction ?? point?.label ?? "Follow this step"
-  const guidedLabel = `${label}  Say "next" when done.`
-  if (!point) {
-    showGuideInstruction(guidedLabel, step, total)
-    return
-  }
-  showGuideTarget(point.x, point.y, `Click this: ${guidedLabel}`, step, total)
-}
-
-function showPointTarget(target: PointTarget, capture: ScreenCapture): void {
-  const point = mapPointTargetToScreen(target, capture)
-  if (!point) return
-  showGuideTarget(point.x, point.y, `Click this: ${point.label}`)
 }

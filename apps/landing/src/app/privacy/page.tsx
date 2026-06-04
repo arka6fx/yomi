@@ -75,7 +75,7 @@ export default function PrivacyPage() {
                   respective privacy policies. We do not enable training data use.
                 </li>
                 <li>
-                  <strong className="text-label">Sarvam AI</strong> — cloud STT and TTS for voice
+                  <strong className="text-label">ElevenLabs</strong> — cloud STT and TTS for voice
                   features.
                 </li>
                 <li>

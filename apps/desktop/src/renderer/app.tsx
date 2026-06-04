@@ -1,10 +1,19 @@
 import React, { useEffect, useRef, useMemo, useCallback } from "react"
 import { createRoot } from "react-dom/client"
+// Bundle Caveat locally — CSP blocks the Google Fonts @import in the Electron renderer
+import "@fontsource/caveat/latin-600.css"
+import "@fontsource/caveat/latin-700.css"
 import { AnimatePresence, motion } from "framer-motion"
 import { useYomiStore } from "./store"
 import type { HotkeyState, ChatEntry, SubscriptionInfo } from "./store"
-import type { GuideStep } from "@yomi/shared"
 import { YomiCompanion, type BackgroundAgentSignal } from "./companion/YomiCompanion"
+import { EnergyVad } from "@yomi/shared"
+
+// Hands-free voice loop tuning (renderer-side end-of-speech auto-stop).
+const VAD_SILENCE_HANGOVER_MS = 1500 // silence after speech before we auto-stop and process
+const VAD_MAX_UTTERANCE_MS = 15000 // hard cap on a single utterance
+const VAD_INACTIVITY_MS = 10000 // no speech at all → exit the loop back to idle
+const TTS_PLAYBACK_GAIN = 1.45
 
 // ── Theme System ───────────────────────────────────────────────────────────────
 
@@ -737,7 +746,7 @@ function applyTheme(t: Theme) {
 
 const styleEl = document.createElement("style")
 styleEl.textContent = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Caveat:wght@600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
   @keyframes pulse  { 0%,100%{opacity:1;transform:scale(1)}   50%{opacity:.25;transform:scale(0.85)} }
   @keyframes glow   { 0%,100%{box-shadow:0 0 6px 1px rgba(255,210,150,0.5)} 50%{box-shadow:0 0 14px 3px rgba(255,210,150,0.15)} }
@@ -2559,126 +2568,6 @@ function Chip({
   )
 }
 
-// ── Guide Mode Components ──────────────────────────────────────────────────────
-
-const CursorArrowSVG = () => (
-  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-    <path d="M1.5 1L6.5 13L8.5 8.5L13 6.5L1.5 1Z" fill="currentColor" />
-  </svg>
-)
-
-function GuideCursor({
-  state,
-  step,
-  totalSteps,
-}: {
-  state: HotkeyState
-  step?: GuideStep
-  totalSteps: number
-}) {
-  const { theme: t } = React.useContext(ThemeCtx)
-  const hasStep = !!step && state === "idle"
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        height: "100%",
-        gap: 6,
-        padding: "0 24px",
-      }}
-      className="drag yomi-hit-area"
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div
-          style={{ position: "relative", width: 20, height: 20, flexShrink: 0, color: t.accent }}
-        >
-          <CursorArrowSVG />
-          {state === "listening" && (
-            <>
-              <div
-                style={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  width: 26,
-                  height: 26,
-                  marginLeft: -13,
-                  marginTop: -13,
-                  borderRadius: "50%",
-                  border: `1.5px solid ${t.accent}`,
-                  animation: "rippleOut 1.5s ease-out infinite",
-                  pointerEvents: "none",
-                }}
-              />
-              <div
-                style={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  width: 26,
-                  height: 26,
-                  marginLeft: -13,
-                  marginTop: -13,
-                  borderRadius: "50%",
-                  border: `1.5px solid ${t.accent}`,
-                  animation: "rippleOut 1.5s ease-out infinite .6s",
-                  pointerEvents: "none",
-                }}
-              />
-            </>
-          )}
-          {state === "processing" && (
-            <div
-              style={{
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                width: 28,
-                height: 28,
-                marginLeft: -14,
-                marginTop: -14,
-                borderRadius: "50%",
-                border: `1.5px solid ${t.dotSpinFaint}`,
-                borderTopColor: t.dotSpinBright,
-                animation: "spin .75s linear infinite",
-              }}
-            />
-          )}
-        </div>
-        {state === "listening" && (
-          <span style={{ fontSize: 12, fontWeight: 600, color: t.lblActive, fontFamily: UI_FONT }}>
-            Listening…
-          </span>
-        )}
-        {state === "idle" && !hasStep && (
-          <span style={{ fontSize: 12, color: t.dim, fontFamily: UI_FONT }}>Guide mode</span>
-        )}
-      </div>
-      {hasStep && (
-        <div
-          style={{
-            fontSize: 12,
-            color: t.text,
-            fontFamily: UI_FONT,
-            fontWeight: 500,
-            textAlign: "center",
-            letterSpacing: "-0.01em",
-          }}
-        >
-          <span style={{ color: t.dim, marginRight: 5 }}>
-            {totalSteps > 1 ? `${totalSteps} steps —` : ""}
-          </span>
-          {step.instruction}
-        </div>
-      )}
-    </div>
-  )
-}
-
 function Toolbar({
   state,
   plan,
@@ -2810,7 +2699,10 @@ function Toolbar({
                 transition: "color .25s",
               }}
             >
-              Listening…
+              Listening…{" "}
+              <span style={{ fontWeight: 500, color: "rgba(255,255,255,0.55)" }}>
+                · Esc to stop
+              </span>
             </span>
           ) : null}
 
@@ -3458,11 +3350,6 @@ const App: React.FC = () => {
     dismissEntry,
     setSubscription,
     setSubscriptionLoading,
-    guideMode,
-    setGuideMode,
-    guideSteps,
-    guideCurrentStep,
-    guideTotalSteps,
   } = useYomiStore()
 
   const [loadingProvider, setLoadingProvider] = React.useState<"github" | "google" | null>(null)
@@ -3471,6 +3358,10 @@ const App: React.FC = () => {
   const [uiOpacity, setUiOpacity] = React.useState(readUiOpacity)
   const [backgroundAgentSignal, setBackgroundAgentSignal] =
     React.useState<BackgroundAgentSignal | null>(null)
+  // The floating Yomi only appears while a detached background task is running.
+  const [hasBgRun, setHasBgRun] = React.useState(false)
+  const bgRunsRef = useRef<Set<string>>(new Set())
+  const bgRemoveTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const menuCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const menuOpenedAtRef = useRef<number>(0)
 
@@ -3523,6 +3414,8 @@ const App: React.FC = () => {
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null)
   const audioTokenRef = useRef(0)
   const draggingRef = useRef(false)
+  // Hands-free loop: cancels a pending re-listen when the user presses ESC.
+  const cancelRelistenRef = useRef(false)
 
   const resetAudioPlayback = useCallback(() => {
     audioTokenRef.current += 1
@@ -3565,13 +3458,17 @@ const App: React.FC = () => {
           if (token !== audioTokenRef.current) break
 
           const src = ctx.createBufferSource()
+          const gain = ctx.createGain()
           audioSourceRef.current = src
           src.buffer = ab
-          src.connect(ctx.destination)
+          gain.gain.value = TTS_PLAYBACK_GAIN
+          src.connect(gain)
+          gain.connect(ctx.destination)
 
           if (ctx.state === "suspended") await ctx.resume()
           if (token !== audioTokenRef.current) {
             src.disconnect()
+            gain.disconnect()
             break
           }
 
@@ -3579,6 +3476,7 @@ const App: React.FC = () => {
           await new Promise<void>((resolve) => {
             src.onended = () => {
               if (audioSourceRef.current === src) audioSourceRef.current = null
+              gain.disconnect()
               resolve()
             }
           })
@@ -3661,27 +3559,46 @@ const App: React.FC = () => {
     })
   }, [setSubscription])
 
-  // Sync guide mode on/off to main process
-  useEffect(() => {
-    window.yomi.setGuideMode(guideMode)
-  }, [guideMode])
-
   // Background-agent updates from detached "…in the background" runs → companion dock.
   useEffect(() => {
     return window.yomi.onBackgroundAgent((sig) => setBackgroundAgentSignal(sig))
   }, [])
 
-  // ESC from main exits guide mode
+  // Spawn the floating Yomi only while a background task is active; retire it shortly after
+  // the run finishes so the user sees it complete, then it disappears.
   useEffect(() => {
-    return window.yomi.onGuideExit(() => setGuideMode(false))
-  }, [setGuideMode])
+    if (!backgroundAgentSignal) return
+    const { runId, done } = backgroundAgentSignal
+    const runs = bgRunsRef.current
+    const timers = bgRemoveTimersRef.current
+    if (done) {
+      if (!timers.has(runId)) {
+        timers.set(
+          runId,
+          setTimeout(() => {
+            runs.delete(runId)
+            timers.delete(runId)
+            setHasBgRun(runs.size > 0)
+          }, 1600),
+        )
+      }
+    } else {
+      const pending = timers.get(runId)
+      if (pending) {
+        clearTimeout(pending)
+        timers.delete(runId)
+      }
+      runs.add(runId)
+      setHasBgRun(true)
+    }
+  }, [backgroundAgentSignal])
 
   // Authenticated Yomi lives on a full-workarea transparent overlay.
   useEffect(() => {
     window.yomi.setCompanionOverlay(authState === "authenticated")
   }, [authState])
 
-  // Resize window based on auth + content + guide + menu state
+  // Resize window based on auth + content + menu state
   useEffect(() => {
     if (authState === "checking") {
       window.yomi.resize(780, 40)
@@ -3689,9 +3606,6 @@ const App: React.FC = () => {
       window.yomi.resize(780, 390)
     } else if (authState === "waiting") {
       window.yomi.resize(780, 240)
-    } else if (guideMode) {
-      const hasStep = guideCurrentStep > 0 && guideSteps.length > 0
-      window.yomi.resize(780, hasStep ? 58 : 40)
     } else {
       const MAX_ENTRIES = 600
       const textInputH = hotkeyState === "text-input" ? 88 : 0
@@ -3701,7 +3615,7 @@ const App: React.FC = () => {
       const menuMin = menuOpen ? 760 : 0
       window.yomi.resize(780, Math.max(40, 40 + chatGap + textInputH + entriesH, menuMin))
     }
-  }, [authState, entries, hotkeyState, menuOpen, guideMode, guideCurrentStep, guideSteps])
+  }, [authState, entries, hotkeyState, menuOpen])
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -3758,6 +3672,7 @@ const App: React.FC = () => {
     const url = URL.createObjectURL(blob)
     workletReadyRef.current = ctx.audioWorklet
       .addModule(url)
+      .catch((err) => console.error("[yomi/worklet] addModule failed:", err))
       .finally(() => URL.revokeObjectURL(url))
     return () => {
       ctx.close().catch(() => {})
@@ -3772,7 +3687,7 @@ const App: React.FC = () => {
       .then((s) => {
         streamRef.current = s
       })
-      .catch(() => {})
+      .catch((err) => console.error("[yomi/mic] getUserMedia(audio) failed:", err))
     return () => {
       streamRef.current?.getTracks().forEach((t) => t.stop())
     }
@@ -3819,38 +3734,101 @@ const App: React.FC = () => {
     useYomiStore.setState({ ttsEnabled: true })
     let cancelled = false
     let micSrc: MediaStreamAudioSourceNode | null = null
-    let sysSrc: MediaStreamAudioSourceNode | null = null
     let proc: AudioWorkletNode | null = null
+    // Mic-only VAD: a second worklet tap on the mic alone (not the system-audio
+    // loopback) so app/TTS sound can't fool end-of-speech detection.
+    let vadProc: AudioWorkletNode | null = null
+    let stopped = false // guard so we only auto-stop once per listening session
+    const vad = new EnergyVad({ sampleRate: 16000, silenceHangoverMs: VAD_SILENCE_HANGOVER_MS })
+    let maxTimer: ReturnType<typeof setTimeout> | null = null
+    let inactivityTimer: ReturnType<typeof setTimeout> | null = null
+    const clearTimers = () => {
+      if (maxTimer) clearTimeout(maxTimer)
+      if (inactivityTimer) clearTimeout(inactivityTimer)
+      maxTimer = inactivityTimer = null
+    }
+    const armInactivity = () => {
+      if (inactivityTimer) clearTimeout(inactivityTimer)
+      // No speech at all for a while → leave the hands-free loop entirely.
+      inactivityTimer = setTimeout(() => {
+        if (!stopped) {
+          stopped = true
+          clearTimers()
+          window.yomi.requestEscape()
+        }
+      }, VAD_INACTIVITY_MS)
+    }
     ;(async () => {
       await workletReadyRef.current
       if (cancelled) return
       const stream = streamRef.current,
         ctx = ctxRef.current
-      if (!stream || !ctx) return
+      if (!ctx) return
+      // No mic stream means getUserMedia failed (permission/device). Surface it instead
+      // of recording silence that later resets with no feedback.
+      if (!stream) {
+        console.error("[yomi/mic] no microphone stream available when listening started")
+        useYomiStore.getState().handleSseEvent({
+          type: "error",
+          message: "Microphone unavailable — check mic permissions.",
+        })
+        return
+      }
       if (ctx.state === "suspended") await ctx.resume()
       if (cancelled) return
-      proc = new AudioWorkletNode(ctx, "pcm-processor")
+      try {
+        proc = new AudioWorkletNode(ctx, "pcm-processor")
+      } catch (err) {
+        console.error("[yomi/worklet] failed to create AudioWorkletNode:", err)
+        useYomiStore
+          .getState()
+          .handleSseEvent({ type: "error", message: "Audio engine failed to start." })
+        return
+      }
       proc.port.onmessage = (e) => window.yomi.sendAudioChunk(e.data as ArrayBuffer, 16000)
       // Mic input (always present)
       micSrc = ctx.createMediaStreamSource(stream)
       micSrc.connect(proc)
-      // System audio input — mixed in automatically by Web Audio when connected to the same proc input
-      if (sysStreamRef.current) {
-        try {
-          sysSrc = ctx.createMediaStreamSource(sysStreamRef.current)
-          sysSrc.connect(proc)
-        } catch {
-          /* stream may have ended; ignore */
-        }
-      }
+      // Keep STT mic-only. Desktop loopback is too noisy for continuous hands-free mode:
+      // if Spotify is playing, mixed system audio drowns out the next command.
       proc.connect(ctx.destination)
       processorRef.current = proc
+
+      // Mic-only VAD tap → auto-stop on silence so the user never presses Enter.
+      try {
+        vadProc = new AudioWorkletNode(ctx, "pcm-processor")
+        vadProc.port.onmessage = (e) => {
+          if (stopped) return
+          const frame = new Float32Array(e.data as ArrayBuffer)
+          const { hasSpeech, speechEnd } = vad.processFrame(frame)
+          if (hasSpeech) armInactivity() // reset the "said nothing" timer while talking
+          if (speechEnd) {
+            stopped = true
+            clearTimers()
+            window.yomi.stopListening() // end this utterance and process it
+          }
+        }
+        micSrc.connect(vadProc) // mic only — sysSrc is deliberately NOT connected here
+        vadProc.connect(ctx.destination) // keeps the node pulled; emits silence
+        maxTimer = setTimeout(() => {
+          if (!stopped) {
+            stopped = true
+            clearTimers()
+            window.yomi.stopListening()
+          }
+        }, VAD_MAX_UTTERANCE_MS)
+        armInactivity()
+      } catch (err) {
+        // VAD is best-effort; manual Enter/Stop still works if the tap fails.
+        console.warn("[yomi/vad] mic VAD tap failed:", err)
+      }
     })()
     return () => {
       cancelled = true
+      clearTimers()
       micSrc?.disconnect()
-      sysSrc?.disconnect()
       proc?.disconnect()
+      vadProc?.disconnect()
       processorRef.current = null
     }
   }, [hotkeyState])
@@ -3866,10 +3844,33 @@ const App: React.FC = () => {
   // dedicated IPC instead.  Stop audio and dismiss the active streaming entry.
   useEffect(() => {
     return window.yomi.onStopAudio(() => {
+      cancelRelistenRef.current = true // ESC: drop any pending hands-free re-listen
       resetAudioPlayback()
       stopActivePlayback()
     })
   }, [resetAudioPlayback, stopActivePlayback])
+
+  // Hands-free loop: after a voice turn, re-arm the mic once any TTS playback has
+  // drained (agent turns have no audio, so this fires almost immediately).
+  useEffect(() => {
+    return window.yomi.onLoopContinue(() => {
+      cancelRelistenRef.current = false
+      const start = Date.now()
+      const tick = () => {
+        if (cancelRelistenRef.current) return
+        const draining = audioPlayingRef.current || localAudioQueue.current.length > 0
+        if (draining && Date.now() - start < 30000) {
+          setTimeout(tick, 120)
+          return
+        }
+        // Small grace so the mic doesn't catch the tail end of playback.
+        setTimeout(() => {
+          if (!cancelRelistenRef.current) window.yomi.triggerVoice()
+        }, 250)
+      }
+      setTimeout(tick, 120)
+    })
+  }, [])
 
   // Fallback: if globalShortcut("Escape") failed to register (common on some Windows setups),
   // the keypress reaches the window when focused — forward it to main via IPC.
@@ -3939,7 +3940,7 @@ const App: React.FC = () => {
       window.removeEventListener("resize", sendHitRegions)
       window.yomi.setHitRegions([])
     }
-  }, [authState, entries.length, hotkeyState, guideMode, menuOpen])
+  }, [authState, entries.length, hotkeyState, menuOpen])
 
   // ── Sign-in states ──────────────────────────────────────────────────────────
 
@@ -3992,7 +3993,7 @@ const App: React.FC = () => {
       }}
     >
       <YomiCompanion
-        enabled={authState === "authenticated"}
+        enabled={authState === "authenticated" && hasBgRun}
         hotkeyState={hotkeyState}
         backgroundAgentSignal={backgroundAgentSignal}
       />
@@ -4012,9 +4013,6 @@ const App: React.FC = () => {
           WebkitBackdropFilter: "blur(28px) saturate(160%)",
           overflow: "hidden",
           transition: "border-color .3s, box-shadow .3s",
-          opacity: guideMode ? 0 : 1,
-          visibility: guideMode ? "hidden" : undefined,
-          transform: guideMode ? "translateY(-6px)" : undefined,
         }}
       >
         <Toolbar
@@ -4087,17 +4085,6 @@ const App: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Guide cursor — only mounted when active */}
-      {guideMode && (
-        <div style={{ position: "absolute", inset: 0, animation: "fadeIn 180ms ease" }}>
-          <GuideCursor
-            state={hotkeyState}
-            step={guideSteps[guideCurrentStep - 1]}
-            totalSteps={guideTotalSteps}
-          />
-        </div>
-      )}
 
       {/* Menu backdrop + card — rendered at App level so backdrop-filter on the
           toolbar wrapper doesn't create a fixed-position containing block that clips them */}

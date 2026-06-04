@@ -44,3 +44,7 @@ npm-debug.log*
 
 # Yomi runtime data (lives in user home, not repo)
 .yomi/
+
+# Scratch / generated artifacts
+tmp/
+**/.playwright-mcp/
