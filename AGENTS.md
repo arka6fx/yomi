@@ -52,8 +52,8 @@ cd apps/desktop  && bun run dev   # Electron
 | Auth       | Better Auth (Drizzle adapter, orgs plugin for Team tier) — Google + GitHub OAuth |
 | Billing    | Razorpay                                                                         |
 | LLM SDK    | Vercel AI SDK (`ai` package) with `@ai-sdk/openai`                               |
-| Speech STT | Sarvam `saarika:v2.5`                                                            |
-| Speech TTS | Sarvam `bulbul:v3` (streaming, 16 kHz)                                           |
+| Speech STT | ElevenLabs `scribe_v2`                                                           |
+| Speech TTS | ElevenLabs `eleven_flash_v2_5` (MP3, premade voice)                              |
 | Desktop    | Electron v1 (Tauri-ready — brain stays in sidecar)                               |
 | Sidecar    | Bun service (ships with desktop app)                                             |
 | Packages   | Bun workspaces + Turborepo                                                       |
@@ -189,8 +189,8 @@ reference docs.
 | 02   | `02-sidecar-fast-pipeline` | OpenAI-compatible fast path + visual guide ← **current**                          |
 | 03   | `03-desktop-shell`         | Electron main: sidecar spawn, hotkey, desktopCapturer, IPC bridge, overlay window |
 | 04   | `04-desktop-ui`            | Renderer: floating overlay, Zustand store, audio capture, streaming response      |
-| 05   | `05-speech-stt`            | STT abstraction: Sarvam saarika:v2.5 + VAD                                        |
-| 06   | `06-speech-tts`            | TTS abstraction: Sarvam bulbul:v3 streaming (16 kHz)                              |
+| 05   | `05-speech-stt`            | STT abstraction: ElevenLabs scribe_v2 + VAD                                       |
+| 06   | `06-speech-tts`            | TTS abstraction: ElevenLabs eleven_flash_v2_5 (MP3)                               |
 | 07   | `07-sidecar-router`        | Intent router: fast vs agent classification                                       |
 | 08   | `08-sidecar-agent`         | ReAct loop, tools, MCP, subagents, sandbox                                        |
 | 09   | `09-harness`               | System prompt, hooks, loop guards                                                 |
@@ -221,8 +221,8 @@ Agent path: gpt-4.1
 Heavy:      gpt-4.1
 ```
 
-Use the AI Credits/OpenAI-compatible endpoint for LLM calls. Keep Sarvam as the
-only STT/TTS provider unless explicitly changed.
+Use the AI Credits/OpenAI-compatible endpoint for LLM calls. Keep ElevenLabs as
+the only STT/TTS provider unless explicitly changed.
 
 ---
 

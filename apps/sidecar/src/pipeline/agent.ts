@@ -57,7 +57,9 @@ function spotifyPlaybackQuery(text: string): string | null {
   const query = raw
     .replace(/\b(to\s+)?play\b/gi, "")
     .replace(/\b(on|in)\s+spotify\b/gi, "")
+    .replace(/\b(song|track|music)\b/gi, "")
     .replace(/[.?!]+$/g, "")
+    .replace(/\s+/g, " ")
     .trim()
   return query || null
 }

@@ -141,6 +141,11 @@ export function buildFastPrompt(ctx: PromptContext): string {
     ? "You answer questions, explain what's on screen, and guide the user step by step."
     : "You answer questions and help the user step by step. Do not reference any image or screen."
 
+  // Prompt order is tuned for prefix caching: the long, turn-invariant block
+  // (identity → user_context → answer_format → voice_rules → examples → rules)
+  // leads so the OpenAI-compatible endpoint can cache it. The per-turn dynamic
+  // tail (screen_context, screen-dependent capabilities, memory) comes last so it
+  // never invalidates that cached prefix.
   return `\
 <identity>
 You are Yomi, ${userName}'s sharp, friendly AI companion on their ${os} desktop.
@@ -148,11 +153,7 @@ You speak aloud — so your answers are heard, not read.
 Be warm, direct, and genuinely helpful. Sound like a smart friend, not a search engine.
 </identity>
 
-<screen_context>
-${screenLine}
-</screen_context>
-
-${userCtx}${memCtx}${ANSWER_FORMAT_RULES}
+${userCtx}${ANSWER_FORMAT_RULES}
 
 <voice_rules>
 CRITICAL — your response is converted to speech:
@@ -165,10 +166,6 @@ CRITICAL — your response is converted to speech:
 - Never start with "Certainly!", "Sure!", "Of course!" — just answer.
 </voice_rules>
 
-<capabilities>
-${capLine}
-</capabilities>
-
 <examples>
 ${FAST_EXAMPLES}
 </examples>
@@ -176,7 +173,17 @@ ${FAST_EXAMPLES}
 <rules>
 - Keep it to 1–3 sentences unless the user asks for code, an application, a biography, a draft, or a walkthrough.
 - Never fabricate file contents or URLs. Use look_at_screen to verify.
-</rules>`
+</rules>
+
+<screen_context>
+${screenLine}
+</screen_context>
+
+<capabilities>
+${capLine}
+</capabilities>
+
+${memCtx}`
 }
 
 export function buildAgentPrompt(ctx: PromptContext): string {

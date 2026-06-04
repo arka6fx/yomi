@@ -77,7 +77,7 @@ The desktop never receives provider keys.
 `POST /api/stt`
 
 - accepts audio payloads from the sidecar
-- calls Sarvam `saarika:v2.5`
+- calls ElevenLabs `scribe_v2`
 - enforces voice caps by plan
 
 ## Cloud RAG API

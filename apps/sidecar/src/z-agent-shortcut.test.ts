@@ -7,6 +7,7 @@ import type { Hooks } from "./harness/hooks.js"
 import { closeMemorySubsystem } from "./memory/subsystem.js"
 
 const sessionTurns: unknown[] = []
+const spotifyQueries: string[] = []
 let tempDir = ""
 
 const fakeHooks: Hooks = {
@@ -21,7 +22,10 @@ const fakeHooks: Hooks = {
 const fakeSystem = {
   adjustSystemVolume: async () => ({ ok: true }),
   adjustSpotifyVolume: async () => ({ ok: true }),
-  playSpotify: async () => ({ ok: true }),
+  playSpotify: async (query: string) => {
+    spotifyQueries.push(query)
+    return { ok: true }
+  },
   sendWhatsAppMessage: async () => ({ ok: true }),
 }
 
@@ -41,6 +45,7 @@ async function drain(input: Parameters<typeof agentPipeline>[0]) {
 describe("agent shortcut memory", () => {
   beforeEach(async () => {
     sessionTurns.length = 0
+    spotifyQueries.length = 0
     tempDir = await mkdtemp(join(tmpdir(), "yomi-agent-shortcut-"))
     process.env["YOMI_NOTEPAD_DIR"] = tempDir
     await mkdir(tempDir, { recursive: true })
@@ -71,6 +76,18 @@ describe("agent shortcut memory", () => {
       input: "play rain sounds on spotify",
       output: "Playing rain sounds on Spotify.",
       summary: "Playing rain sounds on Spotify.",
+    })
+  })
+
+  it("cleans filler words from Spotify song requests", async () => {
+    await drain({ text: "open spotify and play Stay song", plan: "max" })
+
+    expect(spotifyQueries).toEqual(["Stay"])
+    expect(sessionTurns).toContainEqual({
+      kind: "agent",
+      input: "open spotify and play Stay song",
+      output: "Playing Stay on Spotify.",
+      summary: "Playing Stay on Spotify.",
     })
   })
 

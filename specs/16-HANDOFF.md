@@ -7,6 +7,96 @@ typecheck, 137 sidecar tests pass, 0 lint errors**. Companion docs:
 
 ---
 
+## ADDENDUM (NEW, uncommitted) — Hands-free continuous voice loop
+
+Layered on top of the Spec 16 agent automation below. **Goal:** `Ctrl+Space` →
+speak → auto-stop on ~1.5 s silence → the agent executes the action hands-free
+(no chat bubble — already true for the agent path) → **auto re-listen for the
+next task** → … → `Esc` to stop. Turns a single-shot push-to-talk into a
+continuous hands-free session.
+
+**Design decisions (user-confirmed):** always loop after _any_ voice command;
+auto end-of-speech via VAD (~1.5 s); `Esc` exits; minimal status pill.
+
+**Verified:** 6/6 typecheck, **145 sidecar tests pass** (+2 new Float32 VAD
+tests), desktop lint clean, full `electron-vite` bundle (main/preload/renderer)
+builds. **Manual voice e2e not yet run** (needs a real mic) — that's the primary
+next step. (The full `electron-builder` `build` fails only at a pre-existing
+publish-metadata step — `Cannot detect repository by .git/config` → `channel`
+null — unrelated to this work; use `build:ci`/`build:app` to bundle.)
+
+### Ownership split (the key idea)
+
+- **MAIN** (`hotkey.ts`) owns the loop _flag_ + `Esc` (it owns the state machine
+  and global Escape).
+- **RENDERER** (`app.tsx`) owns end-of-speech (VAD) + re-listen _timing_ (only it
+  knows the mic stream and when TTS playback drains).
+- **Per-turn sequence:** `Ctrl+Space` → `listening` → (VAD 1.5 s silence) →
+  `stopListening()` → STT → `/query/agent` (UIA tools) → `done` → `endVoiceTurn()`
+  → `idle` + `yomi:loop-continue` → renderer waits for TTS to drain → `triggerVoice()`
+  → `listening` → …
+
+### Files changed
+
+- **`packages/shared/src/vad.ts` (NEW)** + `index.ts` export — moved
+  `EnergyVad`/`detectSpeechEnd` here from the sidecar so the renderer can reuse
+  them. Now **dBFS-normalized** and `processFrame` accepts `Int16Array` **or**
+  `Float32Array` (renderer mic frames).
+- **`apps/sidecar/src/speech/vad.ts`** — now a thin re-export shim of
+  `@yomi/shared` (keeps existing imports + `vad.test.ts` working). The sidecar
+  copy was only exported/tested, **never used at runtime**, so the normalization
+  change is safe. `vad.test.ts` got +2 Float32 end-of-speech tests.
+- **`apps/desktop/src/main/hotkey.ts`** — `voiceLoop` flag, `isVoiceLoopActive()`,
+  `endVoiceTurn()`. Set true on `Ctrl+Space` / `triggerVoiceMode`; cleared on
+  `Esc` / text / screenshot / `disableHotkeys` / `suspendHotkeys`. `endVoiceTurn()`
+  → `transition("idle")`, then `onLoopContinue?.()` if looping (else equivalent
+  to `resetToIdle`).
+- **`apps/desktop/src/main/index.ts`** — wires `onLoopContinue` →
+  `webContents.send("yomi:loop-continue")`.
+- **`apps/desktop/src/preload/index.ts`** + **`renderer/global.d.ts`** —
+  `onLoopContinue(cb)`.
+- **`apps/desktop/src/main/ipc.ts`** — voice-turn completion paths
+  (`done`/`error`/empty-STT/no-audio/stream-end/background) now call
+  `endVoiceTurn()` instead of `resetToIdle()`. Text-query + screenshot stay on
+  `resetToIdle()`; the `Esc`-abort path keeps `resetToIdle()` (loop already
+  cleared).
+- **`apps/desktop/src/renderer/app.tsx`** —
+  - **mic-only VAD:** a SECOND `pcm-processor` AudioWorklet tapped off `micSrc`
+    **only** (not `sysSrc`) so app/TTS loopback can't trigger false speech; feeds
+    `EnergyVad` (1.5 s hangover); `speechEnd` → `window.yomi.stopListening()`.
+  - **guards:** 15 s max-utterance cap → `stopListening()`; 10 s inactivity (no
+    speech at all) → `window.yomi.requestEscape()` to leave the loop.
+  - **re-listen:** `onLoopContinue` handler polls until TTS drains
+    (`audioPlayingRef` false + queue empty, +250 ms grace) then `triggerVoice()`.
+    `cancelRelistenRef` (set in the `onStopAudio`/Esc handler) cancels a pending
+    re-listen.
+  - **pill:** "Listening… · Esc to stop".
+
+### Open decision for Codex
+
+User chose **"always loop after voice"**, so chat (non-automation) answers ALSO
+re-listen after TTS finishes. If that feels too chatty in practice, gate the
+re-listen on the agent path only: track `useAgent` for the turn and have
+`endVoiceTurn()` loop only for automation turns (localized change in
+`ipc.ts` + `hotkey.ts`).
+
+### Verify
+
+```bash
+bun run typecheck                  # 6/6
+bun run test                       # 145 sidecar pass (incl. Float32 VAD)
+bun --filter @yomi/desktop build:ci  # bundles main/preload/renderer
+# then manual:
+bun --filter @yomi/desktop dev     # Ctrl+Space → "open Calculator" → pause →
+                                   # launches + auto re-listens; Esc exits.
+```
+
+Watch in the manual run: a chat answer's TTS must **finish** before the mic
+reopens (no self-cutoff, no re-hearing its own voice via the system-audio
+loopback).
+
+---
+
 ## Goal
 
 Let Yomi drive native Windows desktop apps from voice/type commands via

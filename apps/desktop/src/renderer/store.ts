@@ -1,5 +1,5 @@
 import { create } from "zustand"
-import type { GuideStep, SseEvent } from "@yomi/shared"
+import type { SseEvent } from "@yomi/shared"
 
 export type HotkeyState = "idle" | "listening" | "processing" | "text-input"
 export type AuthState = "checking" | "unauthenticated" | "waiting" | "authenticated"
@@ -39,10 +39,6 @@ interface YomiState {
   entries: ChatEntry[]
   activeId: number | null
   ttsEnabled: boolean
-  guideSteps: GuideStep[]
-  guideCurrentStep: number
-  guideTotalSteps: number
-  guideMode: boolean
   pendingAct: { id: string; label: string } | null
   subscription: SubscriptionInfo | null
   subscriptionLoading: boolean
@@ -54,7 +50,6 @@ interface YomiState {
   dismissEntry: (id: number) => void
   toggleTts: () => void
   clearPendingAct: () => void
-  setGuideMode: (on: boolean) => void
   setSubscription: (info: SubscriptionUpdate | null) => void
   setSubscriptionLoading: (loading: boolean) => void
 }
@@ -68,10 +63,6 @@ export const useYomiStore = create<YomiState>((set) => ({
   entries: [],
   activeId: null,
   ttsEnabled: true,
-  guideSteps: [],
-  guideCurrentStep: 0,
-  guideTotalSteps: 0,
-  guideMode: false,
   pendingAct: null,
   subscription: null,
   subscriptionLoading: false,
@@ -97,9 +88,6 @@ export const useYomiStore = create<YomiState>((set) => ({
               },
             ],
             activeId: id,
-            guideSteps: [],
-            guideCurrentStep: 0,
-            guideTotalSteps: 0,
           }
         })
         break
@@ -137,27 +125,6 @@ export const useYomiStore = create<YomiState>((set) => ({
             e.id === s.activeId ? { ...e, ttsError: event.message } : e,
           ),
         }))
-        break
-      case "visual_guide":
-        set((s) => ({
-          guideSteps: [
-            ...s.guideSteps,
-            { instruction: event.instruction, elements: event.elements },
-          ],
-          guideTotalSteps: event.total_steps,
-          guideCurrentStep: event.step,
-          entries: s.entries.map((e) =>
-            e.id === s.activeId
-              ? {
-                  ...e,
-                  text: `${e.text}${e.text ? "\n" : ""}${event.total_steps > 1 ? `${event.step}. ` : ""}${event.instruction}`,
-                  isStreaming: true,
-                }
-              : e,
-          ),
-        }))
-        break
-      case "point_target":
         break
       case "done":
         set((s) => ({
@@ -223,13 +190,6 @@ export const useYomiStore = create<YomiState>((set) => ({
   toggleTts: () => set((s) => ({ ttsEnabled: !s.ttsEnabled })),
   clearPendingAct: () => set({ pendingAct: null }),
 
-  setGuideMode: (on) =>
-    set(
-      on
-        ? { guideMode: true }
-        : { guideMode: false, guideSteps: [], guideCurrentStep: 0, guideTotalSteps: 0 },
-    ),
-
   setSubscription: (subscription) =>
     set((s) => {
       if (subscription === null) return { subscription: null }
@@ -270,6 +230,3 @@ export const useYomiStore = create<YomiState>((set) => ({
     }),
   setSubscriptionLoading: (subscriptionLoading) => set({ subscriptionLoading }),
 }))
-
-export const dismissGuide = () =>
-  useYomiStore.setState({ guideSteps: [], guideCurrentStep: 0, guideTotalSteps: 0 })
