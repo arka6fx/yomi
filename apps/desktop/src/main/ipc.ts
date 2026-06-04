@@ -4,7 +4,13 @@ import type { SseEvent } from "@yomi/shared"
 import { captureScreen } from "./capture"
 import type { ScreenCapture } from "./capture"
 import type { SidecarManager } from "./sidecar"
-import { getHotkeyState, resetToIdle, activateProcessing, endVoiceTurn } from "./hotkey"
+import {
+  getHotkeyState,
+  resetToIdle,
+  activateProcessing,
+  endVoiceTurn,
+  bargeInToListening,
+} from "./hotkey"
 import { BACKEND_URL, loadToken } from "./auth"
 
 // The mic only ever opens on the Voice button / Ctrl+Space — nothing here re-arms listening.
@@ -56,9 +62,13 @@ let capturedSampleRate = 16000
 // One controller covers the entire pipeline: screenshot/STT → sidecar SSE stream.
 // Created at the top of each pipeline so ESC aborts any step, not just the fetch.
 let pipelineCtrl: AbortController | null = null
+// True only while a barge-in abort is in flight, so streamQuery's AbortError
+// branch doesn't reset to idle and stomp the fresh listening state.
+let bargingIn = false
 
 function startPipeline(): AbortController {
   pipelineCtrl?.abort() // cancel any in-flight pipeline
+  bargingIn = false
   const ctrl = new AbortController()
   pipelineCtrl = ctrl
   return ctrl
@@ -171,6 +181,17 @@ export function initSidecarIpc(
   }
   ipcMain.on("yomi:trigger-screenshot", () => {
     void runScreenshot()
+  })
+
+  // Barge-in: abort the in-flight voice turn (if any) and start listening for the
+  // new request. During the TTS-drain tail the fetch is already done (pipelineCtrl
+  // null), so we just transition to listening.
+  ipcMain.on("yomi:barge-in", () => {
+    if (pipelineCtrl) {
+      bargingIn = true
+      abortCurrent()
+    }
+    bargeInToListening()
   })
 
   return {
@@ -438,7 +459,9 @@ async function streamQuery(
     }
   } catch (err) {
     if ((err as Error).name === "AbortError") {
-      resetToIdle() // ESC aborts already cleared the loop
+      // ESC resets to idle; a barge-in already transitioned to listening, so leave it.
+      if (!bargingIn) resetToIdle()
+      bargingIn = false
       return
     }
     throw err
