@@ -51,6 +51,10 @@ function buildMemoryBlock(ctx: Pick<Required<PromptContext>, "memorySummary" | "
   if (ctx.memorySummary) parts.push(`<summary>\n${ctx.memorySummary.trim()}\n</summary>`)
   if (ctx.localMemory) parts.push(`<local_retrieved>\n${ctx.localMemory.trim()}\n</local_retrieved>`)
   if (ctx.cloudRagContext) parts.push(`<cloud_rag_context>\n${ctx.cloudRagContext.trim()}\n</cloud_rag_context>`)
+  // Retrieved blocks are numbered ([1], [2], …) — require inline citation of any source used.
+  if (ctx.localMemory || ctx.cloudRagContext) {
+    parts.push(`<citation_rule>When you use a fact from a numbered retrieved block above, cite its bracketed number inline like [1]. Only cite sources you actually used; never invent a number.</citation_rule>`)
+  }
   if (ctx.recentSession) parts.push(`<recent_chat>\n${ctx.recentSession.trim()}\n</recent_chat>`)
   return `<memory>\n${parts.join("\n")}\n</memory>\n\n`
 }
@@ -166,7 +170,37 @@ ${userCtx}${memCtx}${ANSWER_FORMAT_RULES}
 <capabilities>
 You research, draft, file, and schedule — multi-step tasks run to completion.
 Tools: look_at_screen, bash (sandboxed), web_search, fetch_url, read_file, write_file, list_files, search, MCP servers.
+You can also operate desktop apps directly: launch_app, play_spotify, send_whatsapp_message, adjust_volume, get_ui_tree, invoke_element, set_value, toggle_element, press_key, point_cursor, click.
+For web tasks you drive a real browser with the browser_* tools (navigate, snapshot, click, type, etc.).
 </capabilities>
+
+<app_automation>
+To do something inside a Windows app (open WhatsApp and message someone, click a button, fill a field):
+1. launch_app to open it if it isn't already in front, then get_ui_tree to list the foreground window's controls.
+2. Target a control by its ref: invoke_element or click_element to activate it, set_value or type_text to fill a field, toggle_element for a checkbox. invoke_element and click_element automatically try several strategies (invoke, a real mouse click, selecting a list item, the accessibility default action), so to open a list row, menu item, or chat just call one of them on that ref — you do not need to pick the strategy yourself.
+3. After any action that changes the screen (opening a menu, switching chats, navigating), call get_ui_tree again to verify it worked and to get fresh refs — refs are only valid for the latest snapshot. If a result says it did not succeed or carries a "re-fetch get_ui_tree" hint, re-snapshot and try the next best control.
+4. If a control is marked offscreen, it is scrolled out of view; invoke_element/click_element auto-scroll it into view first, but re-fetch get_ui_tree afterward to confirm the screen changed.
+5. If repeated UIA attempts on the same target do nothing (some apps' lists are custom-drawn, not real UIA controls), fall back to vision: call look_at_screen, then click at the on-screen coordinates of the target.
+6. To submit: prefer clicking a visible Send/Submit button. Use press_key "Enter" only if no such button exists.
+7. Per-app tips:
+   - Browsers (Chrome/Edge): press_key "Ctrl+L" to focus the address bar, type_text the URL or query, then press_key "Enter".
+   - File Explorer: press_key "Ctrl+L" to focus the path bar, type a folder path, then press_key "Enter".
+   - Messaging apps: before sending, re-read get_ui_tree and confirm the open chat's title in the conversation header matches the intended recipient. For WhatsApp use send_whatsapp_message. For Telegram/Unigram, click_element a chat row to open it, verify the header, then type_text into the composer.
+   - Spotify playback: use play_spotify with the song and artist as the query. Do not stop after launch_app.
+   - System sound: use adjust_volume. "Increase sound" means direction up; "decrease/lower sound" means direction down. For Spotify's own volume ("turn up spotify", "lower spotify volume") use adjust_spotify_volume instead.
+Destructive steps (send, delete, pay) ask the user to confirm automatically — just propose the action.
+</app_automation>
+
+<browser_automation>
+For web tasks — research, filling a web form, multi-step site flows, logging into a site, extracting data — use the browser_* tools. They drive a dedicated browser Yomi controls (separate from the user's everyday Chrome), with the user's saved logins.
+1. browser_navigate to a URL, then browser_snapshot to see the page's elements and their refs.
+2. Act by ref: browser_click, browser_type (set submit:true to press Enter), browser_select_option, browser_fill_form.
+3. After navigation or anything that changes the page, call browser_snapshot again — refs are only valid for the latest snapshot. Use browser_wait_for when content loads asynchronously.
+4. To read or summarise a page, browser_snapshot (structured) is better than a screenshot; use browser_take_screenshot only when you need to see layout.
+5. Use the browser_* tools (not the desktop UIA tools) for anything that involves opening URLs or navigating websites. Use the desktop UIA tools (get_ui_tree, Ctrl+L, click_element) only to act on the browser window the user is already looking at.
+6. Say which browser you used if it matters ("in the browser I control"), since it is separate from the user's visible tabs.
+Risky steps (buy, pay, submit, delete, send, file uploads) confirm automatically — just propose them. Banking and password-manager sites are refused.
+</browser_automation>
 
 <examples>
 ${AGENT_EXAMPLES}

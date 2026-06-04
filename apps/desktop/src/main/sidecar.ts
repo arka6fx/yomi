@@ -4,15 +4,23 @@ import path from "node:path"
 import { app } from "electron"
 import type { ChildProcess } from "node:child_process"
 
-// Resolve the compiled sidecar binary for the current platform/arch.
+// Resolve the compiled Windows sidecar binary.
 // In production the binary lives in <resources>/sidecar/ (extraResources in electron-builder.yml).
 // In development it is expected at apps/sidecar/dist/ (built separately via `bun run build`).
 function sidecarBinPath(): string {
-  const ext = process.platform === "win32" ? ".exe" : ""
-  const name = `sidecar-${process.platform}-${process.arch}${ext}`
+  const name = "sidecar-win32-x64.exe"
   return app.isPackaged
     ? path.join(process.resourcesPath, "sidecar", name)
     : path.join(__dirname, "../../../sidecar/dist", name)
+}
+
+// Resolve the UIA helper exe (Spec 16). Packaged: <resources>/uia/ (extraResources).
+// Dev: apps/uia-helper/dist/ (built via `dotnet publish`). Passed to the sidecar as YOMI_UIA_HELPER.
+function uiaHelperPath(): string {
+  const name = "uia-helper.exe"
+  return app.isPackaged
+    ? path.join(process.resourcesPath, "uia", name)
+    : path.join(__dirname, "../../../uia-helper/dist", name)
 }
 
 const HEALTH_INTERVAL_MS = 10_000
@@ -33,7 +41,12 @@ export class SidecarManager {
     if (process.env.YOMI_DEV !== "true") {
       const bin = sidecarBinPath()
       this.proc = spawn(bin, [], {
-        env: { ...process.env, SIDECAR_SECRET: this.secret, YOMI_SESSION_TOKEN: this.sessionToken },
+        env: {
+          ...process.env,
+          SIDECAR_SECRET: this.secret,
+          YOMI_SESSION_TOKEN: this.sessionToken,
+          YOMI_UIA_HELPER: uiaHelperPath(),
+        },
         stdio: "inherit",
       })
       this.proc.on("error", (err) => console.error("[sidecar] spawn error", err))

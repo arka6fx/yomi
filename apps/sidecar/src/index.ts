@@ -6,6 +6,8 @@ import { agentPipeline } from "./pipeline/agent.js"
 import { transcribe } from "./stt.js"
 import { classifyIntent } from "./router/intent.js"
 import { initMemorySubsystem } from "./memory/subsystem.js"
+import { resolveConfirmation } from "./uia/act-bus.js"
+import { closeMcp } from "./mcp/client.js"
 
 // Ensure ~/.yomi/ directory tree exists before serving any requests.
 initMemorySubsystem().catch(err => console.warn("[yomi] memory subsystem init failed:", err))
@@ -27,6 +29,7 @@ function authMiddleware(c: any, next: any) {
 app.use("/query", authMiddleware)
 app.use("/query/*", authMiddleware)
 app.use("/stt", authMiddleware)
+app.use("/act/*", authMiddleware)
 
 app.get("/health", (c) => {
   return c.json({ status: "ok", version: VERSION })
@@ -70,8 +73,9 @@ app.post("/query", async (c) => {
 
     if (decision.path === "agent") {
       const agentReq: AgentQueryRequest = { text, screenshot_b64: body.screenshot_b64, plan: body.plan }
+      const emit = (e: SseEvent) => { void stream.writeSSE({ data: JSON.stringify(e) }) }
       try {
-        for await (const event of agentPipeline(agentReq)) {
+        for await (const event of agentPipeline(agentReq, { emit })) {
           await stream.writeSSE({ data: JSON.stringify(event) })
         }
       } catch (err) {
@@ -127,8 +131,9 @@ app.post("/query/agent", async (c) => {
   if (!body.text?.trim()) return c.json({ error: "text field is required" }, 400)
 
   return streamSSE(c, async (stream) => {
+    const emit = (e: SseEvent) => { void stream.writeSSE({ data: JSON.stringify(e) }) }
     try {
-      for await (const event of agentPipeline(body)) {
+      for await (const event of agentPipeline(body, { emit })) {
         await stream.writeSSE({ data: JSON.stringify(event) })
       }
     } catch (err) {
@@ -136,6 +141,19 @@ app.post("/query/agent", async (c) => {
       await stream.writeSSE({ data: JSON.stringify({ type: "error", message } satisfies SseEvent) })
     }
   })
+})
+
+// Act-mode confirmation callback (Spec 16): desktop posts the user's yes/no for a risky action.
+app.post("/act/confirm", async (c) => {
+  let body: { id?: string; approved?: boolean }
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400)
+  }
+  if (!body.id) return c.json({ error: "id required" }, 400)
+  const resolved = resolveConfirmation(body.id, body.approved === true)
+  return c.json({ ok: resolved })
 })
 
 app.post("/stt", async (c) => {
@@ -151,6 +169,11 @@ app.onError((err, c) => {
   console.error(err)
   return c.json({ error: "Internal server error" }, 500)
 })
+
+// Tear down the MCP client + its child browser on shutdown.
+for (const sig of ["SIGINT", "SIGTERM", "beforeExit"] as const) {
+  process.on(sig, () => { void closeMcp().finally(() => process.exit(0)) })
+}
 
 const port = parseInt(process.env.SIDECAR_PORT || "3002", 10)
 console.log(`Sidecar listening on :${port}`)

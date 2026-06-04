@@ -9,9 +9,11 @@ import {
   ragRetrievalLogs,
   ragSources,
 } from "@yomi/db"
+import { chunkMarkdown } from "@yomi/shared"
 import type { CloudArchiveSource, CloudRagSnippet, CloudRagSyncRequest, RagSourceInfo } from "@yomi/shared"
 import { authenticate } from "../auth.js"
 import { effectivePlanForUser, isOwnerUser } from "../entitlements.js"
+import { llmRerank, mmrRerank, parseVector, type RerankCandidate } from "../lib/rerank.js"
 
 const EMBEDDING_MODEL = process.env["EMBEDDING_MODEL"] ?? "text-embedding-3-small"
 const EMBEDDING_DIMENSIONS = 1536
@@ -19,6 +21,13 @@ const MAX_DOCUMENT_CHARS = 120_000
 const CHUNK_CHARS = 1800
 const CHUNK_OVERLAP = 220
 const MIRROR_SOURCE_TYPE = "mirror"
+
+// Hybrid retrieval knobs (safe defaults so unset env never breaks search).
+const RAG_CANDIDATES = Math.max(5, Number.parseInt(process.env["RAG_CANDIDATES"] ?? "30", 10) || 30)
+const RAG_RRF_K = Math.max(1, Number.parseInt(process.env["RAG_RRF_K"] ?? "60", 10) || 60)
+const RAG_MMR_LAMBDA = Number.isFinite(Number.parseFloat(process.env["RAG_MMR_LAMBDA"] ?? ""))
+  ? Number.parseFloat(process.env["RAG_MMR_LAMBDA"]!)
+  : 0.7
 
 type CreateSourceBody = {
   name?: string
@@ -61,16 +70,7 @@ function clean(value: string, max: number): string {
 }
 
 function chunkText(content: string): string[] {
-  const chunks: string[] = []
-  let start = 0
-  while (start < content.length) {
-    const end = Math.min(content.length, start + CHUNK_CHARS)
-    const chunk = content.slice(start, end).trim()
-    if (chunk) chunks.push(chunk)
-    if (end === content.length) break
-    start = Math.max(0, end - CHUNK_OVERLAP)
-  }
-  return chunks
+  return chunkMarkdown(content, { targetChars: CHUNK_CHARS, overlap: CHUNK_OVERLAP })
 }
 
 function embeddingUrl(): string {
@@ -333,9 +333,35 @@ ragRouter.post("/search", async (c) => {
   if (!query) return c.json({ error: "query is required", code: "invalid_query" }, 400)
   const limit = Math.max(1, Math.min(body.limit ?? 5, 10))
   const maxChars = Math.max(500, Math.min(body.maxChars ?? 3000, 8000))
-  const embedding = vectorLiteral(await embedText(query))
+  const queryVec = await embedText(query)
+  const embedding = vectorLiteral(queryVec)
 
-  const result = await db.execute(sql<CloudRagSnippet>`
+  // Hybrid candidate fetch: vector arm + keyword (FTS) arm fused with Reciprocal Rank Fusion.
+  // Each candidate carries its embedding (::text) so the reranker can run without another query.
+  type SearchRow = Omit<CloudRagSnippet, "marker"> & { embedding: string }
+  const result = await db.execute(sql`
+    with vec as (
+      select e.chunk_id, row_number() over (order by e.embedding <=> ${embedding}::vector) as rnk
+      from rag_embeddings e
+      where e.user_id = ${user.id}
+      order by e.embedding <=> ${embedding}::vector
+      limit ${RAG_CANDIDATES}
+    ),
+    kw as (
+      select c.id as chunk_id,
+             row_number() over (order by ts_rank_cd(c.content_tsv, websearch_to_tsquery('english', ${query})) desc) as rnk
+      from rag_chunks c
+      where c.user_id = ${user.id}
+        and c.content_tsv @@ websearch_to_tsquery('english', ${query})
+      limit ${RAG_CANDIDATES}
+    ),
+    fused as (
+      select chunk_id, sum(1.0 / (${RAG_RRF_K} + rnk)) as score
+      from (select chunk_id, rnk from vec union all select chunk_id, rnk from kw) u
+      group by chunk_id
+      order by score desc
+      limit ${RAG_CANDIDATES}
+    )
     select
       c.id as "chunkId",
       d.id as "documentId",
@@ -343,23 +369,45 @@ ragRouter.post("/search", async (c) => {
       s.name as "sourceName",
       d.title as "title",
       c.content as "content",
-      (1 - (e.embedding <=> ${embedding}::vector)) as "score"
-    from rag_embeddings e
-    join rag_chunks c on c.id = e.chunk_id
+      f.score as "score",
+      e.embedding::text as "embedding"
+    from fused f
+    join rag_chunks c on c.id = f.chunk_id
     join rag_documents d on d.id = c.document_id
     join rag_sources s on s.id = d.source_id
-    where e.user_id = ${user.id}
-      and s.status = 'ready'
-    order by e.embedding <=> ${embedding}::vector
-    limit ${limit}
+    join rag_embeddings e on e.chunk_id = c.id
+    where s.status = 'ready'
+    order by f.score desc
   `)
-  const rows = Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? [])
+  const rows = (Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? [])) as unknown as SearchRow[]
 
-  let used = 0
+  // Rerank: cheap MMR by default; optional LLM listwise rerank when enabled (falls back to MMR).
+  const candidates: RerankCandidate[] = rows.map((r) => ({
+    chunkId: r.chunkId,
+    content: r.content,
+    embedding: parseVector(r.embedding),
+  }))
+  const reranked = process.env["RAG_RERANK_LLM"] === "true"
+    ? (await llmRerank(query, candidates, limit)) ?? mmrRerank(queryVec, candidates, limit, RAG_MMR_LAMBDA)
+    : mmrRerank(queryVec, candidates, limit, RAG_MMR_LAMBDA)
+
+  const byId = new Map(rows.map((r) => [r.chunkId, r]))
   const snippets: CloudRagSnippet[] = []
-  for (const row of rows as unknown as CloudRagSnippet[]) {
+  let used = 0
+  for (const cand of reranked) {
+    const row = byId.get(cand.chunkId)
+    if (!row) continue
     if (used + row.content.length > maxChars) break
-    snippets.push(row)
+    snippets.push({
+      chunkId: row.chunkId,
+      documentId: row.documentId,
+      sourceId: row.sourceId,
+      sourceName: row.sourceName,
+      title: row.title,
+      content: row.content,
+      score: Number(row.score),
+      marker: snippets.length + 1,
+    })
     used += row.content.length
   }
 

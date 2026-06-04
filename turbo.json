@@ -7,6 +7,14 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**", "out/**"]
     },
+    "@yomi/uia-helper#build": {
+      "outputs": ["dist/**"]
+    },
+    "@yomi/desktop#build": {
+      "dependsOn": ["^build", "@yomi/uia-helper#build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**", "out/**", "release/**"]
+    },
     "build:ci": {
       "dependsOn": ["^build:ci"],
       "inputs": ["$TURBO_DEFAULT$"],

@@ -12,6 +12,7 @@ let onListenStop: (() => void) | null = null
 let onTextQuery: (() => void) | null = null
 let onAbort: (() => void) | null = null
 let onAnyEscape: (() => void) | null = null  // fired on every ESC, regardless of state
+let onScreenshot: (() => void) | null = null
 
 // Register the three AI-interaction shortcuts.
 // Called on init and again on resumeHotkeys() after a hide.
@@ -29,6 +30,13 @@ function registerAiShortcuts(): void {
     }
   })
 
+  // Screenshot — capture the screen and analyse it straight into chat (no state change here;
+  // the screenshot runner flips to processing itself).
+  globalShortcut.register("Ctrl+S", () => {
+    if (!enabled) return
+    if (state === "idle") onScreenshot?.()
+  })
+
   // Escape — can fail silently on some Windows setups; IPC fallback covers that case.
   const escOk = globalShortcut.register("Escape", () => triggerEscape())
   if (!escOk) console.warn("[yomi/hotkey] Escape global shortcut failed to register — IPC fallback active")
@@ -42,12 +50,14 @@ export function initHotkey(opts: {
   onTextQuery: () => void
   onAbort: () => void
   onAnyEscape?: () => void
+  onScreenshot?: () => void
 }): void {
   onStateChange = opts.onStateChange
   onListenStop  = opts.onListenStop
   onTextQuery   = opts.onTextQuery
   onAbort       = opts.onAbort
   onAnyEscape   = opts.onAnyEscape ?? null
+  onScreenshot  = opts.onScreenshot ?? null
 
   if (!initialized) {
     initialized = true
@@ -77,6 +87,7 @@ export function suspendHotkeys(): void {
   if (state !== "idle") transition("idle")
   globalShortcut.unregister("Ctrl+Space")
   globalShortcut.unregister("Ctrl+Return")
+  globalShortcut.unregister("Ctrl+S")
   globalShortcut.unregister("Escape")
   globalShortcut.unregister("Return")  // defensive — may be registered if state was listening
 }

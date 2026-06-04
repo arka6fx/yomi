@@ -5,33 +5,58 @@ import { captureScreen } from "./capture"
 import type { ScreenCapture } from "./capture"
 import { showGuideTarget, showGuideInstruction, hideGuidePoint } from "./guide-overlay"
 import type { SidecarManager } from "./sidecar"
-import { getHotkeyState, resetToIdle, activateProcessing, triggerStopListening, triggerVoiceMode } from "./hotkey"
+import { getHotkeyState, resetToIdle, activateProcessing } from "./hotkey"
 import { BACKEND_URL, loadToken } from "./auth"
-import { audioRms, GUIDE_SPEECH_RMS } from "./guide-audio"
 import { mapGuideElementToScreen, mapPointTargetToScreen } from "./spatial-mapping"
 
+// Guide overlay is driven by the renderer's guide UI; act/pointing are decided per-turn from
+// what the user said (no manual toggles). Pointing targets always render when the model emits one.
+// The mic only ever opens on the Voice button / Ctrl+Space — nothing here re-arms listening.
 let guideModeActive = false
-let pointingModeActive = true
 let hideGuideTimer: ReturnType<typeof setTimeout> | null = null
 let guideSequenceTimers: ReturnType<typeof setTimeout>[] = []
-let guideListenTimer: ReturnType<typeof setTimeout> | null = null
-let guideListenTimeoutTimer: ReturnType<typeof setTimeout> | null = null
-let guideSilenceTimer: ReturnType<typeof setTimeout> | null = null
-let guideMaxSpeechTimer: ReturnType<typeof setTimeout> | null = null
-let guideAutoListening = false
-let guideSpeechStarted = false
-let guideVoiceMs = 0
 let activeGuideTask: string | null = null
-
-const GUIDE_LISTEN_DELAY_MS = 2200
-const GUIDE_NO_SPEECH_TIMEOUT_MS = 12000
-const GUIDE_SILENCE_AFTER_SPEECH_MS = 900
-const GUIDE_SPEECH_MIN_MS = 80
-const GUIDE_MAX_AFTER_SPEECH_MS = 4500
-const GUIDE_LISTEN_RETRY_MS = 250
-const GUIDE_LISTEN_RETRIES = 10
+// Conversation history for multi-turn act commands, sent with each agent query for context.
+let actHistory: { role: "user" | "assistant"; text: string }[] = []
+const ACT_HISTORY_MAX = 16  // last 8 turns (user + assistant each)
 
 type Plan = "explore" | "pro" | "max"
+
+// Screen-analysis prompt for the Screenshot button / Ctrl+S. The chat shows SCREEN_LABEL instead.
+const SCREEN_PROMPT = `Analyze what's on my screen and use the standard answer-block format.
+
+If you see a CODING or ALGORITHM problem, respond in exactly this structure:
+
+[short introduction to the problem and approach]
+
+\`\`\`python
+# complete solution — use Python unless the problem or visible code specifies another language
+\`\`\`
+
+Time: O(?) — one-line reason
+Space: O(?) — one-line reason
+
+Example: include useful examples from the screen when they are visible.
+
+If you see a MULTIPLE CHOICE QUESTION (MCQ) or a question with a single definite answer, respond in exactly this structure:
+
+[1-3 sentence explanation of why the answer is correct]
+
+\`\`\`answer
+[letter and answer text, e.g. "B. The mitochondria"]
+\`\`\`
+
+If you see a writing task, briefly state what you drafted, then put the exact copy-ready response in an answer block:
+
+\`\`\`answer
+[the actual written response]
+\`\`\`
+
+For applications and letters, use proper letter format: date, recipient, subject, salutation, body paragraphs, closing, and sender name when appropriate.
+For biographies or long paragraph answers, use a clear title, sections, and readable paragraphs. Make it complete without padding.
+
+If there is no question, describe what's on the screen concisely and put the main takeaway in an answer block.`
+const SCREEN_LABEL = "Analyze my screen"
 
 let pcmChunks: Float32Array[] = []
 let capturedSampleRate = 16000
@@ -52,14 +77,14 @@ export function abortCurrent(): void {
   pipelineCtrl?.abort()
   pipelineCtrl = null
   pcmChunks = []                  // discard any buffered voice chunks
-  stopGuideAutoListening()
+  actHistory = []                 // drop the multi-turn act context too
 }
 
 // Registers sidecar-dependent IPC handlers. Called once after first auth.
 export function initSidecarIpc(
   sidecar: SidecarManager,
   overlayWin: BrowserWindow,
-): { onListenStop: () => Promise<void>; onTextQuery: () => void; onAbort: () => void } {
+): { onListenStop: () => Promise<void>; onTextQuery: () => void; onAbort: () => void; onScreenshot: () => Promise<void> } {
   ipcMain.on("yomi:guide-mode", (_e, on: boolean) => {
     guideModeActive = on
     if (!on) {
@@ -68,19 +93,22 @@ export function initSidecarIpc(
     }
   })
 
-  ipcMain.on("yomi:pointing-mode", (_e, on: boolean) => {
-    pointingModeActive = on
-    if (!on && !guideModeActive) {
-      clearGuideTimers()
-      hideGuidePoint()
+  // Forward the user's confirm/cancel for a risky action back to the sidecar (Spec 16).
+  ipcMain.on("yomi:act-confirm", async (_e, id: string, approved: boolean) => {
+    try {
+      await fetch(`${sidecar.baseUrl}/act/confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-sidecar-secret": sidecar.secret },
+        body: JSON.stringify({ id, approved }),
+      })
+    } catch (err) {
+      console.error("[yomi/act] confirm failed", err)
     }
   })
 
   ipcMain.on("yomi:audio-chunk", (_e, pcm: ArrayBuffer, sampleRate: number) => {
-    const chunk = new Float32Array(pcm)
-    pcmChunks.push(chunk)
+    pcmChunks.push(new Float32Array(pcm))
     capturedSampleRate = sampleRate
-    observeGuideAudio(chunk, sampleRate)
   })
 
   // Text query: text-only output (no TTS)
@@ -100,6 +128,28 @@ export function initSidecarIpc(
       resetToIdle()
     }
   })
+
+  // Capture the screen and stream a screen analysis straight into chat (no Enter).
+  // Shared by the Screenshot toolbar button and its global hotkey.
+  const runScreenshot = async (): Promise<void> => {
+    if (getHotkeyState() !== "idle") return
+    const ctrl = startPipeline()
+    activateProcessing()
+    try {
+      const plan = await reserveInteraction(overlayWin, "chat", ctrl.signal)
+      if (ctrl.signal.aborted) { resetToIdle(); return }
+      const capture = await captureScreen()
+      if (ctrl.signal.aborted) { resetToIdle(); return }
+      // transcriptLabel keeps the verbose prompt out of chat; forceAnswer skips intent routing
+      // (so words inside the prompt can't misroute it to the agent) and never re-arms the mic.
+      await streamQuery(sidecar, overlayWin, SCREEN_PROMPT, capture, false, plan, ctrl, SCREEN_LABEL, true)
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return
+      send(overlayWin, { type: "error", message: err instanceof Error ? err.message : "Unknown error" })
+      resetToIdle()
+    }
+  }
+  ipcMain.on("yomi:trigger-screenshot", () => { void runScreenshot() })
 
   return {
     // Voice query: STT → LLM → TTS
@@ -132,6 +182,7 @@ export function initSidecarIpc(
     },
     onTextQuery: () => { /* state managed by hotkey.ts transition */ },
     onAbort: abortCurrent,
+    onScreenshot: runScreenshot,
   }
 }
 
@@ -247,37 +298,59 @@ async function streamQuery(
   tts: boolean,
   plan: Plan,
   ctrl: AbortController,
+  transcriptLabel?: string,   // shown in chat instead of `text` (e.g. for the Screenshot button)
+  forceAnswer = false,        // skip all intent routing — always the fast screen-answer path
 ): Promise<void> {
   pipelineCtrl = ctrl   // keep reference current (startPipeline may have rotated it)
   clearGuideTimers()
   hideGuidePoint()      // clear any stale dot from the previous query
   let persistentPointShown = false
   let guideSequenceMs = 0
-  const guidedNavigation = guideModeActive || shouldUseGuidedNavigation(text) || shouldContinueGuide(text)
+  // The mode is decided purely from what the user said — no manual toggles.
+  const guidedNavigation = !forceAnswer && (guideModeActive || shouldUseGuidedNavigation(text) || shouldContinueGuide(text))
+
+  // "…in the background" → spawn a detached, autonomous agent surfaced in the companion dock,
+  // then free the toolbar immediately so the user can keep talking.
+  if (!forceAnswer && !guidedNavigation && shouldUseBackground(text)) {
+    pipelineCtrl = null
+    startBackgroundRun(sidecar, overlayWin, stripBackgroundPhrase(text), capture, plan)
+    resetToIdle()
+    return
+  }
+
+  // Imperative/desktop commands route to the agent (it has the UIA tools). Guidance wins ties.
+  const useAgent = !forceAnswer && !guidedNavigation && (shouldUseSystemAction(text) || shouldUseAgent(text))
   const queryText = guidedNavigation ? buildGuideQuery(text) : text
   if (guidedNavigation) {
     showGuideInstruction("Finding the next step on this screen...", 1, 1)
     persistentPointShown = true
   }
 
-  const res = await fetch(`${sidecar.baseUrl}/query/fast`, {
+  // Interactive actions are hands-free: no chat transcript unless an error/confirmation needs UI.
+
+  const endpoint = useAgent ? "/query/agent" : "/query/fast"
+  const body = useAgent
+    ? { text: queryText, screenshot_b64: capture.screenshot_b64, plan, history: actHistory.slice() }
+    : {
+        text: queryText,
+        screenshot_b64: capture.screenshot_b64,
+        screenshots: capture.displays.map(({ screen, screenshot_b64, imageWidth, imageHeight, isCursorScreen }) => ({
+          screen,
+          screenshot_b64,
+          width: imageWidth,
+          height: imageHeight,
+          is_cursor_screen: isCursorScreen,
+        })),
+        mode: "answer",
+        pointing: true,
+        tts,
+        plan,
+      }
+
+  const res = await fetch(`${sidecar.baseUrl}${endpoint}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-sidecar-secret": sidecar.secret },
-    body: JSON.stringify({
-      text: queryText,
-      screenshot_b64: capture.screenshot_b64,
-      screenshots: capture.displays.map(({ screen, screenshot_b64, imageWidth, imageHeight, isCursorScreen }) => ({
-        screen,
-        screenshot_b64,
-        width: imageWidth,
-        height: imageHeight,
-        is_cursor_screen: isCursorScreen,
-      })),
-      mode: "answer",
-      pointing: pointingModeActive,
-      tts,
-      plan,
-    }),
+    body: JSON.stringify(body),
     signal: ctrl.signal,
   })
   if (!res.ok || !res.body) { pipelineCtrl = null; throw new Error(`Sidecar ${res.status}`) }
@@ -286,6 +359,7 @@ async function streamQuery(
   const decoder = new TextDecoder()
   let buf = ""
   let sawDone = false
+  let agentTextBuf = ""   // accumulate the agent's reply to store in the Act loop history
 
   try {
     while (true) {
@@ -297,15 +371,18 @@ async function streamQuery(
       for (const line of lines) {
         if (!line.startsWith("data: ")) continue
         const event = JSON.parse(line.slice(6)) as SseEvent
+        if (event.type === "agent_text") agentTextBuf += event.text
+        // Show a short label in chat instead of a long synthetic prompt (e.g. screen analysis).
+        if (event.type === "transcript" && transcriptLabel) event.text = transcriptLabel
         if (event.type === "visual_guide") {
           guideSequenceMs = scheduleVisualGuideEvent(event, capture, overlayWin)
           persistentPointShown = true
           continue
-        } else {
+        } else if (!useAgent || shouldShowInteractiveEvent(event)) {
           send(overlayWin, event)
         }
         if (event.type === "point_target") {
-          if (pointingModeActive && event.target) {
+          if (event.target) {
             showPointTarget(event.target, capture)
             persistentPointShown = true
           }
@@ -315,8 +392,9 @@ async function streamQuery(
           sawDone = true
           if (persistentPointShown) scheduleGuideHide(guideSequenceMs)
           else hideGuidePoint()
+          // Record this agent turn so a follow-up command (on a manual Voice press) has context.
+          if (useAgent) pushActTurn(text, agentTextBuf)
           resetToIdle()
-          if (guidedNavigation) scheduleGuideListening()
         }
         if (event.type === "error") { sawDone = true; hideGuidePoint(); resetToIdle() }
       }
@@ -331,33 +409,78 @@ async function streamQuery(
   if (!sawDone) resetToIdle()
 }
 
+// ── Background agents ──────────────────────────────────────────────────────────
+// "…in the background" tasks run autonomously, detached from the foreground pipeline (their own
+// AbortController), so they survive the user starting another query. Progress surfaces in the
+// companion dock via the `yomi:background-agent` channel — one dock entry per runId.
+let backgroundSeq = 0
+let backgroundRunCounter = 0
+
+type BackgroundUpdate = {
+  state: "idle" | "thinking" | "working" | "waiting" | "error"
+  task: string
+  step?: number
+  max?: number
+  done?: boolean
+}
+
+function startBackgroundRun(
+  sidecar: SidecarManager,
+  overlayWin: BrowserWindow,
+  task: string,
+  capture: ScreenCapture,
+  plan: Plan,
+): void {
+  const runId = `bg-${++backgroundRunCounter}`
+  const ctrl = new AbortController()
+  const sendBg = (u: BackgroundUpdate): void => {
+    if (!overlayWin.isDestroyed()) {
+      overlayWin.webContents.send("yomi:background-agent", { seq: ++backgroundSeq, runId, ...u })
+    }
+  }
+
+  sendBg({ state: "thinking", task })
+
+  void (async () => {
+    try {
+      const res = await fetch(`${sidecar.baseUrl}/query/agent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-sidecar-secret": sidecar.secret },
+        body: JSON.stringify({ text: task, screenshot_b64: capture.screenshot_b64, plan }),
+        signal: ctrl.signal,
+      })
+      if (!res.ok || !res.body) { sendBg({ state: "error", task, done: true }); return }
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buf = ""
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += decoder.decode(value, { stream: true })
+        const lines = buf.split("\n")
+        buf = lines.pop()!
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue
+          const event = JSON.parse(line.slice(6)) as SseEvent
+          if (event.type === "agent_step") sendBg({ state: "working", task, step: event.iteration, max: event.max })
+          else if (event.type === "done") sendBg({ state: "idle", task, done: true })
+          else if (event.type === "error") sendBg({ state: "error", task, done: true })
+        }
+      }
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") sendBg({ state: "error", task, done: true })
+    }
+  })()
+}
+
 function clearGuideTimers(): void {
   if (hideGuideTimer) {
     clearTimeout(hideGuideTimer)
     hideGuideTimer = null
   }
-  stopGuideAutoListening()
   for (const timer of guideSequenceTimers) clearTimeout(timer)
   guideSequenceTimers = []
-}
-
-function clearGuideListenTimers(): void {
-  if (guideListenTimer) {
-    clearTimeout(guideListenTimer)
-    guideListenTimer = null
-  }
-  if (guideListenTimeoutTimer) {
-    clearTimeout(guideListenTimeoutTimer)
-    guideListenTimeoutTimer = null
-  }
-  if (guideSilenceTimer) {
-    clearTimeout(guideSilenceTimer)
-    guideSilenceTimer = null
-  }
-  if (guideMaxSpeechTimer) {
-    clearTimeout(guideMaxSpeechTimer)
-    guideMaxSpeechTimer = null
-  }
 }
 
 function scheduleGuideHide(afterMs = 0): void {
@@ -368,97 +491,44 @@ function scheduleGuideHide(afterMs = 0): void {
   }, afterMs + 6500)
 }
 
-function scheduleGuideListening(): void {
-  clearGuideListenTimers()
-  if (!pointingModeActive || !activeGuideTask) return
-  guideListenTimer = setTimeout(() => {
-    guideListenTimer = null
-    startGuideListeningAttempt(0)
-  }, GUIDE_LISTEN_DELAY_MS)
+// Append a completed agent turn to the rolling history (used for follow-up commands on a manual press).
+function pushActTurn(userText: string, assistantText: string): void {
+  actHistory.push({ role: "user", text: userText.trim() })
+  actHistory.push({ role: "assistant", text: assistantText.trim() || "(done)" })
+  if (actHistory.length > ACT_HISTORY_MAX) actHistory = actHistory.slice(-ACT_HISTORY_MAX)
 }
 
-function startGuideListeningAttempt(attempt: number): void {
-  if (!pointingModeActive || !activeGuideTask) return
-  if (getHotkeyState() !== "idle") {
-    if (attempt >= GUIDE_LISTEN_RETRIES) {
-      showGuideInstruction('Say "next step" when ready.', 1, 1)
-      return
-    }
-    guideListenTimer = setTimeout(() => {
-      guideListenTimer = null
-      startGuideListeningAttempt(attempt + 1)
-    }, GUIDE_LISTEN_RETRY_MS)
-    return
-  }
-
-  const started = triggerVoiceMode()
-  if (!started || getHotkeyState() !== "listening") {
-    if (attempt >= GUIDE_LISTEN_RETRIES) {
-      showGuideInstruction('Say "next step" when ready.', 1, 1)
-      return
-    }
-    guideListenTimer = setTimeout(() => {
-      guideListenTimer = null
-      startGuideListeningAttempt(attempt + 1)
-    }, GUIDE_LISTEN_RETRY_MS)
-    return
-  }
-
-  guideAutoListening = true
-  guideSpeechStarted = false
-  guideVoiceMs = 0
-  pcmChunks = []
-  showGuideInstruction('Listening for next step...', 1, 1)
-  guideListenTimeoutTimer = setTimeout(() => {
-    stopGuideAutoListening()
-    pcmChunks = []
-    resetToIdle()
-    showGuideInstruction('Say "next step" when ready.', 1, 1)
-    scheduleGuideHide()
-  }, GUIDE_NO_SPEECH_TIMEOUT_MS)
-}
-
-function stopGuideAutoListening(): void {
-  clearGuideListenTimers()
-  guideAutoListening = false
-  guideSpeechStarted = false
-  guideVoiceMs = 0
-}
-
-function observeGuideAudio(chunk: Float32Array, sampleRate: number): void {
-  if (!guideAutoListening) return
-  const rms = audioRms(chunk)
-  if (rms >= GUIDE_SPEECH_RMS) {
-    guideVoiceMs += (chunk.length / Math.max(sampleRate, 1)) * 1000
-    if (guideVoiceMs >= GUIDE_SPEECH_MIN_MS) {
-      guideSpeechStarted = true
-      if (!guideMaxSpeechTimer) {
-        guideMaxSpeechTimer = setTimeout(() => {
-          stopGuideAutoListening()
-          triggerStopListening()
-        }, GUIDE_MAX_AFTER_SPEECH_MS)
-      }
-    }
-    if (guideSilenceTimer) {
-      clearTimeout(guideSilenceTimer)
-      guideSilenceTimer = null
-    }
-    return
-  }
-  if (!guideSpeechStarted || guideSilenceTimer) return
-  guideSilenceTimer = setTimeout(() => {
-    stopGuideAutoListening()
-    triggerStopListening()
-  }, GUIDE_SILENCE_AFTER_SPEECH_MS)
-}
-
+// "Guide me" intent → visual step-by-step pointing on the user's screen.
 function shouldUseGuidedNavigation(text: string): boolean {
-  if (!pointingModeActive) return false
   return /\b(step by step|guide me|show me how|how (do|to|can) i|where (do|should) i click|what (do|should) i click|directions?|navigate|save (my )?(project|file|work)|click first)\b/i.test(text)
 }
 
+// "…in the background" intent → detached autonomous agent surfaced in the companion dock.
+function shouldUseBackground(text: string): boolean {
+  return /\b(in the background|in background|in the bg|in bg)\b/i.test(text)
+}
+
+// Strip the "in the background" framing so the agent receives a clean task.
+function stripBackgroundPhrase(text: string): string {
+  return text.replace(/\b(in the background|in background|in the bg|in bg)\b/gi, "").replace(/\s{2,}/g, " ").trim() || text.trim()
+}
+
+// Imperative UI commands → desktop automation tasks for the agent (Spec 16).
+function shouldUseAgent(text: string): boolean {
+  return /\b(open|click|press|type|enter|fill|select|choose|check|uncheck|toggle|close|switch|go to|navigate|delete|send|save|copy|paste|rename|create|run|play|pause|resume|spotify|volume|sound|audio|louder|quieter|mute|unmute|increase|decrease|lower|raise|inc|dec)\b/i.test(text)
+}
+
+function shouldUseSystemAction(text: string): boolean {
+  return /\b(volume|sound|audio|song|louder|quieter|mute|unmute|increase|decrease|lower|raise|inc|dec|spotify)\b/i.test(text)
+    || /\bplay\b.+\b(song|track|music|by)\b/i.test(text)
+}
+
+function shouldShowInteractiveEvent(event: SseEvent): boolean {
+  return event.type === "act_proposed" || event.type === "error"
+}
+
 function shouldContinueGuide(text: string): boolean {
-  if (!pointingModeActive || !activeGuideTask) return false
+  if (!activeGuideTask) return false
   return /\b(continue|next( step)?|done|i did it|did it|go on|guide me further|where next|what next|what do i do next|where do i go next|show me the next step|next please|okay next|ok next)\b/i.test(text.trim())
 }
 
