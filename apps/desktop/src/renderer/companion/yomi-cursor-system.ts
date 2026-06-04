@@ -18,10 +18,7 @@ export class YomiCursorSystem {
     this.hotspot = { ...initial }
     // Mascot rides on the pointer itself (it *is* the cursor) — no trailing offset.
     this.bodyOffset = { x: 0, y: 0 }
-    this.bodySpring = new SpringValue(
-      { ...initial },
-      { stiffness: 280, damping: 30, mass: 1 },
-    )
+    this.bodySpring = new SpringValue({ ...initial }, { stiffness: 280, damping: 30, mass: 1 })
     this.lastBody = { ...this.bodySpring.value }
   }
 

@@ -32,7 +32,7 @@ interface YomiCompanionProps {
 
 export interface BackgroundAgentSignal {
   seq: number
-  runId: string          // one detached background run; multiple can coexist
+  runId: string // one detached background run; multiple can coexist
   state: AgentState
   task: string
   step?: number
@@ -49,7 +49,10 @@ export function YomiCompanion({ enabled, hotkeyState, backgroundAgentSignal }: Y
   const [selectedAgent, setSelectedAgent] = React.useState<string | null>(null)
 
   if (!controllerRef.current && typeof window !== "undefined") {
-    controllerRef.current = new YomiController({ x: window.innerWidth * 0.28, y: window.innerHeight * 0.72 })
+    controllerRef.current = new YomiController({
+      x: window.innerWidth * 0.28,
+      y: window.innerHeight * 0.72,
+    })
   }
 
   React.useEffect(() => {
@@ -60,7 +63,8 @@ export function YomiCompanion({ enabled, hotkeyState, backgroundAgentSignal }: Y
   React.useEffect(() => {
     if (!enabled || !controllerRef.current) return
     const controller = controllerRef.current
-    const onMove = (event: PointerEvent) => controller.movePointer({ x: event.clientX, y: event.clientY })
+    const onMove = (event: PointerEvent) =>
+      controller.movePointer({ x: event.clientX, y: event.clientY })
     const onDown = (event: PointerEvent) => {
       if ((event.target as HTMLElement | null)?.closest(".yomi-companion-control")) return
       controller.movePointer({ x: event.clientX, y: event.clientY })
@@ -116,9 +120,11 @@ export function YomiCompanion({ enabled, hotkeyState, backgroundAgentSignal }: Y
   if (!enabled || !frame) return null
 
   const activeMascot =
-    hotkeyState === "processing" ? workingMascot :
-    hotkeyState === "listening" || hotkeyState === "text-input" ? thinkingMascot :
-    idleMascot
+    hotkeyState === "processing"
+      ? workingMascot
+      : hotkeyState === "listening" || hotkeyState === "text-input"
+        ? thinkingMascot
+        : idleMascot
 
   return (
     <div className="yomi-companion-layer" aria-hidden={false}>
@@ -149,11 +155,7 @@ export function YomiCompanion({ enabled, hotkeyState, backgroundAgentSignal }: Y
         {hotkeyState === "processing" ? <span className="yomi-working-aura" /> : null}
       </motion.div>
 
-      <AgentDock
-        agents={frame.agents}
-        selectedAgent={selectedAgent}
-        onSelect={selectAgent}
-      />
+      <AgentDock agents={frame.agents} selectedAgent={selectedAgent} onSelect={selectAgent} />
     </div>
   )
 }
@@ -206,7 +208,10 @@ function AgentDock({
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ type: "spring", stiffness: 420, damping: 30 }}
           >
-            <strong>{stateTask[selected.state]}{selected.detail ? ` · ${selected.detail}` : ""}</strong>
+            <strong>
+              {stateTask[selected.state]}
+              {selected.detail ? ` · ${selected.detail}` : ""}
+            </strong>
             <span>{selected.task}</span>
           </motion.div>
         )}
@@ -216,7 +221,14 @@ function AgentDock({
 }
 
 function AgentIndicator({ state }: { state: AgentState }) {
-  if (state === "thinking") return <span className="agent-thinking"><i /><i /><i /></span>
+  if (state === "thinking")
+    return (
+      <span className="agent-thinking">
+        <i />
+        <i />
+        <i />
+      </span>
+    )
   if (state === "working") return <span className="agent-working" />
   if (state === "waiting") return <span className="agent-waiting" />
   if (state === "error") return <span className="agent-error">!</span>

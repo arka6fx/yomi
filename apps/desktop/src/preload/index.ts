@@ -47,19 +47,19 @@ contextBridge.exposeInMainWorld("yomi", {
   },
 
   onAuthStatus(cb: (status: AuthStatus, detail?: string) => void): () => void {
-    const onOk      = () => cb("ok")
-    const onNeeded  = () => cb("needed")
+    const onOk = () => cb("ok")
+    const onNeeded = () => cb("needed")
     const onWaiting = () => cb("waiting")
-    const onError   = (_: Electron.IpcRendererEvent, msg: string) => cb("error", msg)
-    ipcRenderer.on("yomi:auth-ok",      onOk)
-    ipcRenderer.on("yomi:auth-needed",  onNeeded)
+    const onError = (_: Electron.IpcRendererEvent, msg: string) => cb("error", msg)
+    ipcRenderer.on("yomi:auth-ok", onOk)
+    ipcRenderer.on("yomi:auth-needed", onNeeded)
     ipcRenderer.on("yomi:auth-waiting", onWaiting)
-    ipcRenderer.on("yomi:auth-error",   onError)
+    ipcRenderer.on("yomi:auth-error", onError)
     return () => {
-      ipcRenderer.off("yomi:auth-ok",      onOk)
-      ipcRenderer.off("yomi:auth-needed",  onNeeded)
+      ipcRenderer.off("yomi:auth-ok", onOk)
+      ipcRenderer.off("yomi:auth-needed", onNeeded)
       ipcRenderer.off("yomi:auth-waiting", onWaiting)
-      ipcRenderer.off("yomi:auth-error",   onError)
+      ipcRenderer.off("yomi:auth-error", onError)
     }
   },
 
@@ -198,5 +198,4 @@ contextBridge.exposeInMainWorld("yomi", {
     ipcRenderer.on("yomi:guide-exit", h)
     return () => ipcRenderer.off("yomi:guide-exit", h)
   },
-
 })

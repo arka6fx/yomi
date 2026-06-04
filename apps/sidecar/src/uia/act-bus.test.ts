@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it } from "bun:test"
 import type { SseEvent, UiaAction } from "@yomi/shared"
-import { emitActResult, requestConfirmation, resolveConfirmation, setActEmitter } from "./act-bus.js"
+import {
+  emitActResult,
+  requestConfirmation,
+  resolveConfirmation,
+  setActEmitter,
+} from "./act-bus.js"
 
 const action: UiaAction = { kind: "invoke", ref: "w1e1" }
 

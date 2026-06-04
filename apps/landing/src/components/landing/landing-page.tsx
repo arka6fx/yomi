@@ -42,7 +42,13 @@ interface DownloadOption {
 
 const platforms: Record<
   Exclude<Platform, "unknown">,
-  { title: string; icon: string; options: DownloadOption[]; instructions: string[]; comingSoon?: boolean }
+  {
+    title: string
+    icon: string
+    options: DownloadOption[]
+    instructions: string[]
+    comingSoon?: boolean
+  }
 > = {
   mac: {
     title: "macOS",
@@ -223,7 +229,10 @@ function InteractionCard({
 function WindowsMark() {
   return (
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path d="M1.5 2.25 7.25 1.5v6H1.5v-5.25ZM8.75 1.3l5.75-.8v7H8.75v-6.2ZM1.5 8.5h5.75v6L1.5 13.7V8.5ZM8.75 8.5h5.75v7l-5.75-.8V8.5Z" fill="currentColor" />
+      <path
+        d="M1.5 2.25 7.25 1.5v6H1.5v-5.25ZM8.75 1.3l5.75-.8v7H8.75v-6.2ZM1.5 8.5h5.75v6L1.5 13.7V8.5ZM8.75 8.5h5.75v7l-5.75-.8V8.5Z"
+        fill="currentColor"
+      />
     </svg>
   )
 }
@@ -620,9 +629,7 @@ export function LandingPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 {current.options.map((opt) => {
                   const className = `group flex items-center justify-between rounded-xl glass-card p-4 transition-colors ${
-                    opt.disabled
-                      ? "cursor-not-allowed opacity-65"
-                      : "hover:border-primary/40"
+                    opt.disabled ? "cursor-not-allowed opacity-65" : "hover:border-primary/40"
                   }`
                   const content = (
                     <>
@@ -636,7 +643,9 @@ export function LandingPage() {
                           />
                           <p className="text-sm font-medium text-foreground">{opt.label}</p>
                         </div>
-                        {opt.note && <p className="pl-5 text-xs text-muted-foreground">{opt.note}</p>}
+                        {opt.note && (
+                          <p className="pl-5 text-xs text-muted-foreground">{opt.note}</p>
+                        )}
                       </div>
                       <span className="rounded-lg border border-border px-2 py-1 font-mono text-xs text-muted-foreground transition-colors group-hover:border-primary/40 group-hover:text-primary">
                         {opt.arch}

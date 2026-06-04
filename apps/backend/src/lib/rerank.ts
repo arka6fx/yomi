@@ -27,7 +27,10 @@ export function parseVector(value: unknown): number[] {
   if (typeof value !== "string") return []
   const inner = value.trim().replace(/^\[/, "").replace(/\]$/, "")
   if (!inner) return []
-  return inner.split(",").map((v) => Number.parseFloat(v)).filter((v) => Number.isFinite(v))
+  return inner
+    .split(",")
+    .map((v) => Number.parseFloat(v))
+    .filter((v) => Number.isFinite(v))
 }
 
 // Maximal Marginal Relevance: trade off query relevance against novelty vs already-picked chunks.
@@ -58,7 +61,10 @@ export function mmrRerank(
         maxSim = Math.max(maxSim, cosine(c.embedding, s.embedding))
       }
       const score = lambda * rel - (1 - lambda) * maxSim
-      if (score > bestScore) { bestScore = score; bestIdx = i }
+      if (score > bestScore) {
+        bestScore = score
+        bestIdx = i
+      }
     }
     selected.push(remaining.splice(bestIdx, 1)[0]!)
   }
@@ -75,7 +81,10 @@ export async function llmRerank(
   if (!apiKey || candidates.length <= 1) return null
   const model = process.env["RAG_RERANK_MODEL"] ?? "gpt-4.1-mini"
   const base = (process.env["OPENAI_BASE_URL"] ?? "https://api.openai.com/v1").replace(/\/$/, "")
-  const timeoutMs = Math.max(200, Number.parseInt(process.env["RAG_RERANK_TIMEOUT_MS"] ?? "800", 10) || 800)
+  const timeoutMs = Math.max(
+    200,
+    Number.parseInt(process.env["RAG_RERANK_TIMEOUT_MS"] ?? "800", 10) || 800,
+  )
 
   const list = candidates
     .map((c, i) => `[${i + 1}] ${c.content.slice(0, 500).replace(/\s+/g, " ")}`)
@@ -88,11 +97,15 @@ export async function llmRerank(
     const res = await fetch(`${base}/chat/completions`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({ model, temperature: 0, messages: [{ role: "user", content: prompt }] }),
+      body: JSON.stringify({
+        model,
+        temperature: 0,
+        messages: [{ role: "user", content: prompt }],
+      }),
       signal: ctrl.signal,
     })
     if (!res.ok) return null
-    const data = await res.json() as { choices?: { message?: { content?: string } }[] }
+    const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
     const text = data.choices?.[0]?.message?.content ?? ""
     const match = text.match(/\[[\s\S]*\]/)
     if (!match) return null
@@ -107,7 +120,9 @@ export async function llmRerank(
       }
     }
     // Append anything the model omitted, preserving the input (RRF) order.
-    candidates.forEach((c, i) => { if (!seen.has(i)) ranked.push(c) })
+    candidates.forEach((c, i) => {
+      if (!seen.has(i)) ranked.push(c)
+    })
     return ranked.slice(0, k)
   } catch {
     return null

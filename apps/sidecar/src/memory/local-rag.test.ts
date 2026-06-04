@@ -22,8 +22,16 @@ describe("local RAG memory index", () => {
   })
 
   it("indexes sessions and project memory files", async () => {
-    await writeFile(join(tempDir, "sessions", "2026-05-26-dev.md"), "User discussed local-rag-saffron retrieval for Yomi.", "utf-8")
-    await writeFile(join(tempDir, "projects", "yomi", "context.md"), "Yomi project uses local memory RAG for historical decisions.", "utf-8")
+    await writeFile(
+      join(tempDir, "sessions", "2026-05-26-dev.md"),
+      "User discussed local-rag-saffron retrieval for Yomi.",
+      "utf-8",
+    )
+    await writeFile(
+      join(tempDir, "projects", "yomi", "context.md"),
+      "Yomi project uses local memory RAG for historical decisions.",
+      "utf-8",
+    )
 
     await indexLocalRagSources()
     const context = await retrieveLocalRagContext("local-rag-saffron historical decisions")
@@ -34,8 +42,16 @@ describe("local RAG memory index", () => {
   })
 
   it("does not index personal profile files as RAG documents", async () => {
-    await writeFile(join(tempDir, "memory", "profile.static.md"), "Arkady prefers paprika memory answers.", "utf-8")
-    await writeFile(join(tempDir, "memory", "long-project-note.md"), "The archive includes turmeric project notes.", "utf-8")
+    await writeFile(
+      join(tempDir, "memory", "profile.static.md"),
+      "Arkady prefers paprika memory answers.",
+      "utf-8",
+    )
+    await writeFile(
+      join(tempDir, "memory", "long-project-note.md"),
+      "The archive includes turmeric project notes.",
+      "utf-8",
+    )
 
     const context = await retrieveLocalRagContext("paprika turmeric")
 
@@ -46,7 +62,11 @@ describe("local RAG memory index", () => {
   })
 
   it("caps returned snippets by maxChars", async () => {
-    await writeFile(join(tempDir, "sessions", "2026-05-26-dev.md"), `needle ${"long memory ".repeat(80)}`, "utf-8")
+    await writeFile(
+      join(tempDir, "sessions", "2026-05-26-dev.md"),
+      `needle ${"long memory ".repeat(80)}`,
+      "utf-8",
+    )
 
     const context = await retrieveLocalRagContext("needle", 80)
 

@@ -2,7 +2,9 @@
 
 ## Purpose
 
-Define the Drizzle schema, Neon Postgres usage, and migration workflow. The backend is the only process that talks to Neon. Desktop and sidecar access cloud data only through backend APIs.
+Define the Drizzle schema, Neon Postgres usage, and migration workflow. The
+backend is the only process that talks to Neon. Desktop and sidecar access cloud
+data only through backend APIs.
 
 ## Invariants
 
@@ -24,39 +26,41 @@ Better Auth owns the core auth tables:
 
 The `user` table is extended with product fields:
 
-| Column | Type | Notes |
-|---|---|---|
-| `plan` | `explore | pro | max` | Defaults to `explore` |
-| `subscription_status` | text/null | `active`, `trialing`, `past_due`, `canceled`, or null |
-| `trial_ends_at` | timestamp/null | Explore trial end |
-| `daily_interaction_count` | integer | Daily fair-use counter |
-| `daily_interaction_date` | date/null | UTC reset key |
+| Column                    | Type           | Notes                                                 |
+| ------------------------- | -------------- | ----------------------------------------------------- | ---- | --------------------- |
+| `plan`                    | `explore       | pro                                                   | max` | Defaults to `explore` |
+| `subscription_status`     | text/null      | `active`, `trialing`, `past_due`, `canceled`, or null |
+| `trial_ends_at`           | timestamp/null | Explore trial end                                     |
+| `daily_interaction_count` | integer        | Daily fair-use counter                                |
+| `daily_interaction_date`  | date/null      | UTC reset key                                         |
 
 ## App Tables
 
 Core app tables:
 
-| Table | Purpose |
-|---|---|
-| `devices` | Registered desktop installs and last-seen metadata |
-| `subscriptions` | Razorpay customer/subscription mapping |
-| `usage_events` | Append-only metering events |
-| `memory_blobs` | Legacy/future encrypted sync placeholder; not used for local memory by default |
-| `agent_runs` | Agent task history |
-| `mcp_connections` | Future OAuth MCP integrations |
-| `hook_logs` | Redacted hook audit events |
+| Table             | Purpose                                                                        |
+| ----------------- | ------------------------------------------------------------------------------ |
+| `devices`         | Registered desktop installs and last-seen metadata                             |
+| `subscriptions`   | Razorpay customer/subscription mapping                                         |
+| `usage_events`    | Append-only metering events                                                    |
+| `memory_blobs`    | Legacy/future encrypted sync placeholder; not used for local memory by default |
+| `agent_runs`      | Agent task history                                                             |
+| `mcp_connections` | Future OAuth MCP integrations                                                  |
+| `hook_logs`       | Redacted hook audit events                                                     |
 
 ## Cloud RAG Tables
 
-The schema contains the cloud archive mirror tables used by `/api/rag`. `rag_sources` carries the mirrored archive identity, while the documents/chunks/embeddings tables store the searchable corpus.
+The schema contains the cloud archive mirror tables used by `/api/rag`.
+`rag_sources` carries the mirrored archive identity, while the
+documents/chunks/embeddings tables store the searchable corpus.
 
-| Table | Purpose |
-|---|---|
-| `rag_sources` | One mirrored archive source or legacy manual source |
-| `rag_documents` | Extracted text document per source |
-| `rag_chunks` | Chunked text windows for retrieval |
-| `rag_embeddings` | Embedding vector for each chunk |
-| `rag_retrieval_logs` | Lightweight retrieval audit/metrics |
+| Table                | Purpose                                             |
+| -------------------- | --------------------------------------------------- |
+| `rag_sources`        | One mirrored archive source or legacy manual source |
+| `rag_documents`      | Extracted text document per source                  |
+| `rag_chunks`         | Chunked text windows for retrieval                  |
+| `rag_embeddings`     | Embedding vector for each chunk                     |
+| `rag_retrieval_logs` | Lightweight retrieval audit/metrics                 |
 
 Important fields:
 
@@ -66,9 +70,11 @@ Important fields:
 - `rag_sources.status`: `indexing`, `ready`, `error`, `deleted`
 - `rag_documents.content_hash`: dedupe/change detection
 - `rag_chunks.chunk_index`: stable order within a document
-- `rag_embeddings.embedding`: pgvector embedding, currently `text-embedding-3-small`
+- `rag_embeddings.embedding`: pgvector embedding, currently
+  `text-embedding-3-small`
 
-Delete behavior removes a source's documents, chunks, and embeddings through backend logic and cascade relationships.
+Delete behavior removes a source's documents, chunks, and embeddings through
+backend logic and cascade relationships.
 
 ## Migration Workflow
 
@@ -78,7 +84,8 @@ bun run db:migrate
 bun run db:studio
 ```
 
-Use the `source-command-db-migrate` workflow when generating new Drizzle migrations.
+Use the `source-command-db-migrate` workflow when generating new Drizzle
+migrations.
 
 ## Implemented Files
 

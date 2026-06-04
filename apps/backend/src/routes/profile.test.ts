@@ -63,7 +63,7 @@ describe("PATCH /api/user/profile", () => {
     updateRows = [{ name: "Arka", email: "arka@example.com" }]
 
     const res = await updateName("  Arka  ")
-    const body = await res.json() as { name?: string; email?: string }
+    const body = (await res.json()) as { name?: string; email?: string }
 
     expect(res.status).toBe(200)
     expect(updatePayload).toEqual({ name: "Arka" })
@@ -73,7 +73,7 @@ describe("PATCH /api/user/profile", () => {
 
   it("rejects empty display names", async () => {
     const res = await updateName("   ")
-    const body = await res.json() as { code?: string }
+    const body = (await res.json()) as { code?: string }
 
     expect(res.status).toBe(400)
     expect(body.code).toBe("invalid_name")

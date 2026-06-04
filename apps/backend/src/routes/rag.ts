@@ -1,16 +1,14 @@
 import { createHash } from "node:crypto"
 import { Hono } from "hono"
 import { and, eq, sql } from "drizzle-orm"
-import {
-  db,
-  ragChunks,
-  ragDocuments,
-  ragEmbeddings,
-  ragRetrievalLogs,
-  ragSources,
-} from "@yomi/db"
+import { db, ragChunks, ragDocuments, ragEmbeddings, ragRetrievalLogs, ragSources } from "@yomi/db"
 import { chunkMarkdown } from "@yomi/shared"
-import type { CloudArchiveSource, CloudRagSnippet, CloudRagSyncRequest, RagSourceInfo } from "@yomi/shared"
+import type {
+  CloudArchiveSource,
+  CloudRagSnippet,
+  CloudRagSyncRequest,
+  RagSourceInfo,
+} from "@yomi/shared"
 import { authenticate } from "../auth.js"
 import { effectivePlanForUser, isOwnerUser } from "../entitlements.js"
 import { llmRerank, mmrRerank, parseVector, type RerankCandidate } from "../lib/rerank.js"
@@ -50,7 +48,12 @@ type SearchBody = {
 
 export const ragRouter = new Hono()
 
-function ragAllowed(user: { plan?: string | null; role?: string | null; email?: string | null; id?: string | null }): boolean {
+function ragAllowed(user: {
+  plan?: string | null
+  role?: string | null
+  email?: string | null
+  id?: string | null
+}): boolean {
   const plan = effectivePlanForUser(user)
   return isOwnerUser(user) || plan === "pro" || plan === "max"
 }
@@ -91,14 +94,14 @@ async function embedText(input: string): Promise<number[]> {
     }),
   })
   if (!res.ok) throw new Error(`Embedding request failed (${res.status})`)
-  const data = await res.json() as { data?: { embedding?: number[] }[] }
+  const data = (await res.json()) as { data?: { embedding?: number[] }[] }
   const embedding = data.data?.[0]?.embedding
   if (!embedding?.length) throw new Error("Embedding response was empty")
   return embedding
 }
 
 function vectorLiteral(values: number[]): string {
-  return `[${values.map((v) => Number.isFinite(v) ? v.toFixed(8) : "0").join(",")}]`
+  return `[${values.map((v) => (Number.isFinite(v) ? v.toFixed(8) : "0")).join(",")}]`
 }
 
 function sourceHash(source: CloudArchiveSource): string {
@@ -109,7 +112,13 @@ async function findSource(userId: string, name: string, sourceType = MIRROR_SOUR
   const rows = await db
     .select()
     .from(ragSources)
-    .where(and(eq(ragSources.userId, userId), eq(ragSources.path, name), eq(ragSources.sourceType, sourceType)))
+    .where(
+      and(
+        eq(ragSources.userId, userId),
+        eq(ragSources.path, name),
+        eq(ragSources.sourceType, sourceType),
+      ),
+    )
     .limit(1)
   return rows[0] ?? null
 }
@@ -122,19 +131,30 @@ async function upsertMirrorSource(userId: string, source: CloudArchiveSource) {
   const existingSource = await findSource(userId, name)
 
   const [mirroredSource] = existingSource
-    ? await db.update(ragSources)
-      .set({ name: title, path: name, contentHash, sourceType: MIRROR_SOURCE_TYPE, status: "ready", updatedAt: new Date() })
-      .where(eq(ragSources.id, existingSource.id))
-      .returning()
-    : await db.insert(ragSources).values({
-      userId,
-      name: title,
-      path: name,
-      contentHash,
-      sourceType: MIRROR_SOURCE_TYPE,
-      privacyScope: "cloud_rag",
-      status: "ready",
-    }).returning()
+    ? await db
+        .update(ragSources)
+        .set({
+          name: title,
+          path: name,
+          contentHash,
+          sourceType: MIRROR_SOURCE_TYPE,
+          status: "ready",
+          updatedAt: new Date(),
+        })
+        .where(eq(ragSources.id, existingSource.id))
+        .returning()
+    : await db
+        .insert(ragSources)
+        .values({
+          userId,
+          name: title,
+          path: name,
+          contentHash,
+          sourceType: MIRROR_SOURCE_TYPE,
+          privacyScope: "cloud_rag",
+          status: "ready",
+        })
+        .returning()
 
   if (!mirroredSource) return false
 
@@ -144,33 +164,42 @@ async function upsertMirrorSource(userId: string, source: CloudArchiveSource) {
     .where(eq(ragDocuments.sourceId, mirroredSource.id))
     .limit(1)
   if (latestDoc[0]?.contentHash === contentHash) {
-    await db.update(ragSources).set({ updatedAt: new Date() }).where(eq(ragSources.id, mirroredSource.id))
+    await db
+      .update(ragSources)
+      .set({ updatedAt: new Date() })
+      .where(eq(ragSources.id, mirroredSource.id))
     return true
   }
 
   await db.delete(ragDocuments).where(eq(ragDocuments.sourceId, mirroredSource.id))
 
-  const [document] = await db.insert(ragDocuments).values({
-    userId,
-    sourceId: mirroredSource.id,
-    title,
-    mimeType: "text/markdown",
-    contentHash,
-    metadata: { path: source.path, updatedAt: source.updatedAt, origin: "cloud_archive" },
-  }).returning()
+  const [document] = await db
+    .insert(ragDocuments)
+    .values({
+      userId,
+      sourceId: mirroredSource.id,
+      title,
+      mimeType: "text/markdown",
+      contentHash,
+      metadata: { path: source.path, updatedAt: source.updatedAt, origin: "cloud_archive" },
+    })
+    .returning()
 
   if (!document) return false
 
   const chunks = chunkText(content)
   for (const [chunkIndex, chunk] of chunks.entries()) {
-    const [createdChunk] = await db.insert(ragChunks).values({
-      userId,
-      documentId: document.id,
-      chunkIndex,
-      content: chunk,
-      tokenCount: Math.ceil(chunk.length / 4),
-      metadata: { path: source.path, updatedAt: source.updatedAt },
-    }).returning({ id: ragChunks.id })
+    const [createdChunk] = await db
+      .insert(ragChunks)
+      .values({
+        userId,
+        documentId: document.id,
+        chunkIndex,
+        content: chunk,
+        tokenCount: Math.ceil(chunk.length / 4),
+        metadata: { path: source.path, updatedAt: source.updatedAt },
+      })
+      .returning({ id: ragChunks.id })
     if (!createdChunk) continue
     const embedding = await embedText(chunk)
     await db.insert(ragEmbeddings).values({
@@ -188,7 +217,8 @@ async function deleteMirrorSource(userId: string, name: string): Promise<boolean
   const source = await findSource(userId, name)
   if (!source) return false
   await db.delete(ragDocuments).where(eq(ragDocuments.sourceId, source.id))
-  await db.update(ragSources)
+  await db
+    .update(ragSources)
     .set({ status: "deleted", updatedAt: new Date() })
     .where(eq(ragSources.id, source.id))
   return true
@@ -198,26 +228,31 @@ ragRouter.use("*", authenticate)
 
 ragRouter.post("/sources", async (c) => {
   const user = c.get("user")
-  if (!ragAllowed(user)) return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
+  if (!ragAllowed(user))
+    return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
 
-  const body = await c.req.json().catch(() => ({})) as CreateSourceBody
+  const body = (await c.req.json().catch(() => ({}))) as CreateSourceBody
   const name = clean(body.name ?? "", 120)
   const sourceType = clean(body.sourceType ?? "manual", 40)
   if (!name) return c.json({ error: "name is required", code: "invalid_name" }, 400)
 
-  const [source] = await db.insert(ragSources).values({
-    userId: user.id,
-    name,
-    sourceType,
-    status: "ready",
-  }).returning()
+  const [source] = await db
+    .insert(ragSources)
+    .values({
+      userId: user.id,
+      name,
+      sourceType,
+      status: "ready",
+    })
+    .returning()
 
   return c.json(source)
 })
 
 ragRouter.get("/sources", async (c) => {
   const user = c.get("user")
-  if (!ragAllowed(user)) return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
+  if (!ragAllowed(user))
+    return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
 
   const sources = await db.execute(sql<RagSourceInfo>`
     select
@@ -246,9 +281,10 @@ ragRouter.get("/sources", async (c) => {
 
 ragRouter.post("/sync", async (c) => {
   const user = c.get("user")
-  if (!ragAllowed(user)) return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
+  if (!ragAllowed(user))
+    return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
 
-  const body = await c.req.json().catch(() => ({})) as CloudRagSyncRequest
+  const body = (await c.req.json().catch(() => ({}))) as CloudRagSyncRequest
   const sources = Array.isArray(body.sources) ? body.sources : []
   const removedPaths = Array.isArray(body.removedPaths) ? body.removedPaths : []
 
@@ -270,9 +306,10 @@ ragRouter.post("/sync", async (c) => {
 
 ragRouter.post("/documents", async (c) => {
   const user = c.get("user")
-  if (!ragAllowed(user)) return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
+  if (!ragAllowed(user))
+    return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
 
-  const body = await c.req.json().catch(() => ({})) as CreateDocumentBody
+  const body = (await c.req.json().catch(() => ({}))) as CreateDocumentBody
   const sourceId = body.sourceId
   const title = clean(body.title ?? "Untitled", 200)
   const content = clean(body.content ?? "", MAX_DOCUMENT_CHARS)
@@ -282,21 +319,31 @@ ragRouter.post("/documents", async (c) => {
   const [source] = await db
     .select({ id: ragSources.id })
     .from(ragSources)
-    .where(and(eq(ragSources.id, sourceId), eq(ragSources.userId, user.id), eq(ragSources.status, "ready")))
+    .where(
+      and(
+        eq(ragSources.id, sourceId),
+        eq(ragSources.userId, user.id),
+        eq(ragSources.status, "ready"),
+      ),
+    )
     .limit(1)
   if (!source) return c.json({ error: "Source not found", code: "source_not_found" }, 404)
 
-  const [document] = await db.insert(ragDocuments).values({
-    userId: user.id,
-    sourceId,
-    title,
-    mimeType: body.mimeType ?? "text/plain",
-    contentHash: hash(content),
-    metadata: body.metadata ?? null,
-  }).onConflictDoUpdate({
-    target: [ragDocuments.userId, ragDocuments.contentHash],
-    set: { title, updatedAt: new Date(), metadata: body.metadata ?? null },
-  }).returning()
+  const [document] = await db
+    .insert(ragDocuments)
+    .values({
+      userId: user.id,
+      sourceId,
+      title,
+      mimeType: body.mimeType ?? "text/plain",
+      contentHash: hash(content),
+      metadata: body.metadata ?? null,
+    })
+    .onConflictDoUpdate({
+      target: [ragDocuments.userId, ragDocuments.contentHash],
+      set: { title, updatedAt: new Date(), metadata: body.metadata ?? null },
+    })
+    .returning()
 
   if (!document) return c.json({ error: "Document insert failed" }, 500)
 
@@ -304,13 +351,16 @@ ragRouter.post("/documents", async (c) => {
 
   const chunks = chunkText(content)
   for (const [chunkIndex, chunk] of chunks.entries()) {
-    const [createdChunk] = await db.insert(ragChunks).values({
-      userId: user.id,
-      documentId: document.id,
-      chunkIndex,
-      content: chunk,
-      tokenCount: Math.ceil(chunk.length / 4),
-    }).returning({ id: ragChunks.id })
+    const [createdChunk] = await db
+      .insert(ragChunks)
+      .values({
+        userId: user.id,
+        documentId: document.id,
+        chunkIndex,
+        content: chunk,
+        tokenCount: Math.ceil(chunk.length / 4),
+      })
+      .returning({ id: ragChunks.id })
     if (!createdChunk) continue
     const embedding = await embedText(chunk)
     await db.insert(ragEmbeddings).values({
@@ -326,9 +376,10 @@ ragRouter.post("/documents", async (c) => {
 
 ragRouter.post("/search", async (c) => {
   const user = c.get("user")
-  if (!ragAllowed(user)) return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
+  if (!ragAllowed(user))
+    return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
 
-  const body = await c.req.json().catch(() => ({})) as SearchBody
+  const body = (await c.req.json().catch(() => ({}))) as SearchBody
   const query = clean(body.query ?? "", 1000)
   if (!query) return c.json({ error: "query is required", code: "invalid_query" }, 400)
   const limit = Math.max(1, Math.min(body.limit ?? 5, 10))
@@ -379,7 +430,9 @@ ragRouter.post("/search", async (c) => {
     where s.status = 'ready'
     order by f.score desc
   `)
-  const rows = (Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? [])) as unknown as SearchRow[]
+  const rows = (Array.isArray(result)
+    ? result
+    : ((result as { rows?: unknown[] }).rows ?? [])) as unknown as SearchRow[]
 
   // Rerank: cheap MMR by default; optional LLM listwise rerank when enabled (falls back to MMR).
   const candidates: RerankCandidate[] = rows.map((r) => ({
@@ -387,9 +440,11 @@ ragRouter.post("/search", async (c) => {
     content: r.content,
     embedding: parseVector(r.embedding),
   }))
-  const reranked = process.env["RAG_RERANK_LLM"] === "true"
-    ? (await llmRerank(query, candidates, limit)) ?? mmrRerank(queryVec, candidates, limit, RAG_MMR_LAMBDA)
-    : mmrRerank(queryVec, candidates, limit, RAG_MMR_LAMBDA)
+  const reranked =
+    process.env["RAG_RERANK_LLM"] === "true"
+      ? ((await llmRerank(query, candidates, limit)) ??
+        mmrRerank(queryVec, candidates, limit, RAG_MMR_LAMBDA))
+      : mmrRerank(queryVec, candidates, limit, RAG_MMR_LAMBDA)
 
   const byId = new Map(rows.map((r) => [r.chunkId, r]))
   const snippets: CloudRagSnippet[] = []
@@ -411,21 +466,26 @@ ragRouter.post("/search", async (c) => {
     used += row.content.length
   }
 
-  await db.insert(ragRetrievalLogs).values({
-    userId: user.id,
-    queryHash: hash(query),
-    matchedChunkIds: snippets.map((s) => s.chunkId),
-  }).catch(() => {})
+  await db
+    .insert(ragRetrievalLogs)
+    .values({
+      userId: user.id,
+      queryHash: hash(query),
+      matchedChunkIds: snippets.map((s) => s.chunkId),
+    })
+    .catch(() => {})
 
   return c.json({ snippets })
 })
 
 ragRouter.delete("/sources/:id", async (c) => {
   const user = c.get("user")
-  if (!ragAllowed(user)) return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
+  if (!ragAllowed(user))
+    return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
 
   const id = c.req.param("id")
-  const [source] = await db.update(ragSources)
+  const [source] = await db
+    .update(ragSources)
     .set({ status: "deleted", updatedAt: new Date() })
     .where(and(eq(ragSources.id, id), eq(ragSources.userId, user.id)))
     .returning({ id: ragSources.id })

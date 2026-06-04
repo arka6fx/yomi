@@ -10,7 +10,7 @@ export const authRoutesRouter = new Hono()
 
 // Initiate device-code flow: returns device_code, user_code, verification_uri
 authRoutesRouter.post("/device-code", async (c) => {
-  const { clientId } = await c.req.json() as { clientId: string }
+  const { clientId } = (await c.req.json()) as { clientId: string }
   if (!clientId) return c.json({ error: "clientId required" }, 400)
 
   // Generate device code + user code pair
@@ -33,7 +33,7 @@ authRoutesRouter.post("/device-code", async (c) => {
 
 // Desktop polls this to get the session token once the user has authenticated in the browser
 authRoutesRouter.post("/device-code/token", async (c) => {
-  const { device_code } = await c.req.json() as { device_code: string }
+  const { device_code } = (await c.req.json()) as { device_code: string }
   const entry = pendingDeviceCodes.get(device_code)
 
   if (!entry) return c.json({ error: "invalid_grant" }, 400)
@@ -54,7 +54,7 @@ authRoutesRouter.post("/device-code/confirm", async (c) => {
   const session = await auth.api.getSession({ headers: c.req.raw.headers })
   if (!session) return c.json({ error: "Not authenticated" }, 401)
 
-  const { user_code } = await c.req.json() as { user_code: string }
+  const { user_code } = (await c.req.json()) as { user_code: string }
   const normalizedCode = user_code?.trim().toUpperCase()
   if (!normalizedCode) return c.json({ error: "user_code required" }, 400)
 
@@ -83,8 +83,7 @@ authRoutesRouter.post("/device-code/confirm", async (c) => {
 authRoutesRouter.post("/sign-out-all", async (c) => {
   const session = await auth.api.getSession({ headers: c.req.raw.headers })
   if (!session) return c.json({ error: "Not authenticated" }, 401)
-  await db.delete(authSchema.session)
-    .where(eq(authSchema.session.userId, session.user.id))
+  await db.delete(authSchema.session).where(eq(authSchema.session.userId, session.user.id))
   return c.json({ ok: true })
 })
 

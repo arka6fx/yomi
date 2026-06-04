@@ -57,7 +57,10 @@ export class AgentManager {
 
   updateTask(id: string, task: string, detail?: string): void {
     const agent = this.agents.find((item) => item.id === id)
-    if (agent) { agent.task = task; agent.detail = detail }
+    if (agent) {
+      agent.task = task
+      agent.detail = detail
+    }
   }
 
   setState(id: string, state: AgentState): void {

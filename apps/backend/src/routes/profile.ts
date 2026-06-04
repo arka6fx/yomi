@@ -12,7 +12,7 @@ type ProfileBody = {
 
 profileRouter.patch("/profile", authenticate, async (c) => {
   const user = c.get("user")
-  const body = await c.req.json().catch(() => ({})) as ProfileBody
+  const body = (await c.req.json().catch(() => ({}))) as ProfileBody
   const name = body.name?.trim()
 
   if (!name) {

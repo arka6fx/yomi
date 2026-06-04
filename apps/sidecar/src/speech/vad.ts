@@ -3,16 +3,16 @@
 
 export interface VadResult {
   hasSpeech: boolean
-  speechEnd: boolean  // true when silence hangover fires after speech
+  speechEnd: boolean // true when silence hangover fires after speech
   energyDb: number
 }
 
 export interface VadOptions {
-  sampleRate?: number          // default 16000
-  frameSizeMs?: number         // default 30 (480 samples at 16kHz)
-  speechThresholdDb?: number   // default -35 dB
-  silenceThresholdDb?: number  // default -45 dB
-  silenceHangoverMs?: number   // default 300 ms
+  sampleRate?: number // default 16000
+  frameSizeMs?: number // default 30 (480 samples at 16kHz)
+  speechThresholdDb?: number // default -35 dB
+  silenceThresholdDb?: number // default -45 dB
+  silenceHangoverMs?: number // default 300 ms
 }
 
 export class EnergyVad {
@@ -28,7 +28,7 @@ export class EnergyVad {
     this.sampleRate = opts.sampleRate ?? 16000
     this.speechThresh = opts.speechThresholdDb ?? -35
     this.silenceThresh = opts.silenceThresholdDb ?? -45
-    this.hangoverSamples = Math.round((opts.silenceHangoverMs ?? 300) * this.sampleRate / 1000)
+    this.hangoverSamples = Math.round(((opts.silenceHangoverMs ?? 300) * this.sampleRate) / 1000)
   }
 
   processFrame(samples: Int16Array): VadResult {

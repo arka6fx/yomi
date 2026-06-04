@@ -3,7 +3,12 @@ import type { IntentClassification } from "@yomi/shared"
 
 // Track whether classifyWithLlm was called
 let llmCallCount = 0
-let llmResult: IntentClassification = { path: "agent", confidence: 0.9, reason: "mocked", source: "llm" }
+let llmResult: IntentClassification = {
+  path: "agent",
+  confidence: 0.9,
+  reason: "mocked",
+  source: "llm",
+}
 let llmShouldThrow = false
 
 mock.module("./llm.js", () => ({
@@ -72,7 +77,7 @@ describe("classifyIntent", () => {
     llmShouldThrow = true
     const result = await classifyIntent({ text: "hello" })
     expect(result.source).toBe("heuristic")
-    expect(llmCallCount).toBe(1)  // LLM was attempted
+    expect(llmCallCount).toBe(1) // LLM was attempted
   })
 
   it("returns the LLM result including its path when LLM is called", async () => {

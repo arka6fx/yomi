@@ -26,9 +26,12 @@ function paidPlanActive(user: { subscriptionStatus: string }): boolean {
 
 function counterColumn(kind: AccessKind) {
   switch (kind) {
-    case "chat": return authSchema.user.dailyChatCount
-    case "voice": return authSchema.user.dailyVoiceCount
-    case "agent": return authSchema.user.agentUsageCount
+    case "chat":
+      return authSchema.user.dailyChatCount
+    case "voice":
+      return authSchema.user.dailyVoiceCount
+    case "agent":
+      return authSchema.user.agentUsageCount
   }
 }
 
@@ -62,18 +65,27 @@ export function requireAccess(kind: AccessKind) {
         return c.json({ error: "Free trial expired - please upgrade", code: "trial_expired" }, 403)
       }
 
-      const [reserved] = await db.update(authSchema.user)
+      const [reserved] = await db
+        .update(authSchema.user)
         .set({ trialInteractionUsed: sql`${authSchema.user.trialInteractionUsed} + 1` })
-        .where(and(
-          eq(authSchema.user.id, user.id),
-          eq(authSchema.user.plan, "explore"),
-          gt(authSchema.user.trialEndDate, new Date()),
-          sql`${authSchema.user.trialInteractionUsed} < ${authSchema.user.trialInteractionLimit}`,
-        ))
+        .where(
+          and(
+            eq(authSchema.user.id, user.id),
+            eq(authSchema.user.plan, "explore"),
+            gt(authSchema.user.trialEndDate, new Date()),
+            sql`${authSchema.user.trialInteractionUsed} < ${authSchema.user.trialInteractionLimit}`,
+          ),
+        )
         .returning({ id: authSchema.user.id })
 
       if (!reserved) {
-        return c.json({ error: "Trial interaction limit reached - please upgrade", code: "interaction_limit_reached" }, 429)
+        return c.json(
+          {
+            error: "Trial interaction limit reached - please upgrade",
+            code: "interaction_limit_reached",
+          },
+          429,
+        )
       }
 
       return next()
@@ -92,19 +104,22 @@ export function requireAccess(kind: AccessKind) {
     const today = todayUtc()
     const countColumn = counterColumn(kind)
 
-    const [reserved] = await db.update(authSchema.user)
+    const [reserved] = await db
+      .update(authSchema.user)
       .set({
-        dailyChatCount:  dailyCountSql("chat", kind, today),
+        dailyChatCount: dailyCountSql("chat", kind, today),
         dailyVoiceCount: dailyCountSql("voice", kind, today),
         agentUsageCount: dailyCountSql("agent", kind, today),
-        dailyResetDate:  today,
+        dailyResetDate: today,
       })
-      .where(and(
-        eq(authSchema.user.id, user.id),
-        eq(authSchema.user.plan, effectivePlan),
-        eq(authSchema.user.subscriptionStatus, "active"),
-        sql`(${authSchema.user.dailyResetDate} is null or ${authSchema.user.dailyResetDate} <> ${today} or ${countColumn} < ${limit})`,
-      ))
+      .where(
+        and(
+          eq(authSchema.user.id, user.id),
+          eq(authSchema.user.plan, effectivePlan),
+          eq(authSchema.user.subscriptionStatus, "active"),
+          sql`(${authSchema.user.dailyResetDate} is null or ${authSchema.user.dailyResetDate} <> ${today} or ${countColumn} < ${limit})`,
+        ),
+      )
       .returning({ id: authSchema.user.id })
 
     if (!reserved) {

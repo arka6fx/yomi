@@ -1,14 +1,14 @@
-"use client";
+"use client"
 
-import { motion } from "framer-motion";
-import type { Variants } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { motion } from "framer-motion"
+import type { Variants } from "framer-motion"
+import { cn } from "@/lib/utils"
 
 interface HandWrittenTitleProps {
-  title?: string;
-  subtitle?: string;
-  className?: string;
-  strokeClassName?: string;
+  title?: string
+  subtitle?: string
+  className?: string
+  strokeClassName?: string
 }
 
 function HandWrittenTitle({
@@ -27,7 +27,7 @@ function HandWrittenTitle({
         opacity: { duration: 0.5 },
       },
     },
-  };
+  }
 
   return (
     <div className={cn("relative w-full max-w-4xl mx-auto", className)}>
@@ -77,7 +77,7 @@ function HandWrittenTitle({
         )}
       </div>
     </div>
-  );
+  )
 }
 
-export { HandWrittenTitle };
+export { HandWrittenTitle }

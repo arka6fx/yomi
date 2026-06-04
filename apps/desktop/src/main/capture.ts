@@ -13,7 +13,7 @@ export interface DisplayCapture extends ScreenImage {
 
 export interface ScreenCapture {
   screenshot_b64: string
-  screen_width: number   // physical pixels (bounds * scaleFactor, handles HiDPI + Retina)
+  screen_width: number // physical pixels (bounds * scaleFactor, handles HiDPI + Retina)
   screen_height: number
   displays: DisplayCapture[]
 }
@@ -21,7 +21,7 @@ export interface ScreenCapture {
 // main-process only — never import in preload or renderer
 export async function captureScreen(): Promise<ScreenCapture> {
   const primary = screen.getPrimaryDisplay()
-  const screen_width  = Math.round(primary.bounds.width  * primary.scaleFactor)
+  const screen_width = Math.round(primary.bounds.width * primary.scaleFactor)
   const screen_height = Math.round(primary.bounds.height * primary.scaleFactor)
   try {
     const displays = screen.getAllDisplays()
@@ -35,9 +35,7 @@ export async function captureScreen(): Promise<ScreenCapture> {
 
     for (const [index, source] of sources.entries()) {
       const display =
-        displays.find((d) => String(d.id) === source.display_id) ??
-        displays[index] ??
-        primary
+        displays.find((d) => String(d.id) === source.display_id) ?? displays[index] ?? primary
       const thumb: NativeImage = source.thumbnail
       const thumbSize = thumb.getSize()
       const targetWidth = Math.min(1280, thumbSize.width)

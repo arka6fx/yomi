@@ -2,7 +2,9 @@
 
 ## Purpose
 
-Define the public marketing site and conversion funnel. The landing app is Next.js and contains public pages, pricing, auth entry points, and downloads. It has no AI runtime logic.
+Define the public marketing site and conversion funnel. The landing app is
+Next.js and contains public pages, pricing, auth entry points, and downloads. It
+has no AI runtime logic.
 
 ## Invariants
 
@@ -28,28 +30,30 @@ Sections:
 
 1. Hero: Yomi as a desktop AI buddy for screen and voice.
 2. How it works: hotkey, screen/mic context, answer/action.
-3. Features: fast answers, screen-aware help, local memory, cloud archive mirror, future agents.
+3. Features: fast answers, screen-aware help, local memory, cloud archive
+   mirror, future agents.
 4. Pricing teaser: Explore, Pro, Max.
 5. Footer: privacy, terms, GitHub/community links.
 
 Privacy positioning:
 
 - local memory stays on device
-- cloud archive mirror indexes Yomi-generated notes and session summaries securely
+- cloud archive mirror indexes Yomi-generated notes and session summaries
+  securely
 - visible capture/listening status
 - password managers and banking apps are blocked from capture
 
 ## Pricing Page
 
-| | Explore | Pro | Max |
-|---|---|---|---|
-| Price | $0 | $9.99/mo | $24.99/mo |
-| Chat | 150 trial interactions | 10000/day | 10000/day |
-| Voice | trial-limited | 200/day | 10000/day |
-| Screen analysis | yes | yes | yes |
-| Local memory | no | yes | yes |
-| Cloud archive mirror | no | yes | yes |
-| Agents | no | no | yes |
+|                      | Explore                | Pro       | Max       |
+| -------------------- | ---------------------- | --------- | --------- |
+| Price                | $0                     | $9.99/mo  | $24.99/mo |
+| Chat                 | 150 trial interactions | 10000/day | 10000/day |
+| Voice                | trial-limited          | 200/day   | 10000/day |
+| Screen analysis      | yes                    | yes       | yes       |
+| Local memory         | no                     | yes       | yes       |
+| Cloud archive mirror | no                     | yes       | yes       |
+| Agents               | no                     | no        | yes       |
 
 CTA behavior:
 
@@ -60,7 +64,8 @@ CTA behavior:
 
 ## Auth And Checkout
 
-Landing auth uses Better Auth OAuth. Checkout and billing status are handled by backend routes under `/api/billing`.
+Landing auth uses Better Auth OAuth. Checkout and billing status are handled by
+backend routes under `/api/billing`.
 
 ## Downloads
 
@@ -69,7 +74,8 @@ macOS     .dmg builds
 Windows   .exe or .msi installer
 ```
 
-The page can detect platform with `navigator.userAgent` to highlight the recommended download.
+The page can detect platform with `navigator.userAgent` to highlight the
+recommended download.
 
 ## Implemented Files
 

@@ -28,7 +28,18 @@ const fakeDb = {
     values: (value: unknown) => {
       insertValues.push(value)
       return {
-        returning: () => Promise.resolve([{ id: table === mockRagChunks ? "chunk_1" : table === mockRagDocuments ? "document_1" : "source_1", ...(value as object) }]),
+        returning: () =>
+          Promise.resolve([
+            {
+              id:
+                table === mockRagChunks
+                  ? "chunk_1"
+                  : table === mockRagDocuments
+                    ? "document_1"
+                    : "source_1",
+              ...(value as object),
+            },
+          ]),
         onConflictDoUpdate: () => ({
           returning: () => Promise.resolve([{ id: "document_1" }]),
         }),
@@ -97,7 +108,9 @@ describe("Cloud RAG routes", () => {
       const [input] = args
       const url = typeof input === "string" ? input : input.toString()
       if (url.includes("/embeddings")) {
-        return new Response(JSON.stringify({ data: [{ embedding: [0.1, 0.2, 0.3] }] }), { status: 200 })
+        return new Response(JSON.stringify({ data: [{ embedding: [0.1, 0.2, 0.3] }] }), {
+          status: 200,
+        })
       }
       return new Response("{}", { status: 200 })
     }) as typeof fetch
@@ -122,7 +135,7 @@ describe("Cloud RAG routes", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: "notes.md" }),
     })
-    const body = await res.json() as { code?: string }
+    const body = (await res.json()) as { code?: string }
 
     expect(res.status).toBe(403)
     expect(body.code).toBe("upgrade_required")
@@ -135,7 +148,7 @@ describe("Cloud RAG routes", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: "   " }),
     })
-    const body = await res.json() as { code?: string }
+    const body = (await res.json()) as { code?: string }
 
     expect(res.status).toBe(400)
     expect(body.code).toBe("invalid_name")
@@ -148,7 +161,7 @@ describe("Cloud RAG routes", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: "notes.md", sourceType: "upload" }),
     })
-    const body = await res.json() as { userId?: string; name?: string; sourceType?: string }
+    const body = (await res.json()) as { userId?: string; name?: string; sourceType?: string }
 
     expect(res.status).toBe(200)
     expect(body.userId).toBe("user_1")
@@ -176,7 +189,7 @@ describe("Cloud RAG routes", () => {
         removedPaths: [],
       }),
     })
-    const body = await res.json() as { synced?: number; removed?: number }
+    const body = (await res.json()) as { synced?: number; removed?: number }
 
     expect(res.status).toBe(200)
     expect(body.synced).toBe(1)
@@ -196,7 +209,7 @@ describe("Cloud RAG routes", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sourceId: "source_1", content: "" }),
     })
-    const body = await res.json() as { code?: string }
+    const body = (await res.json()) as { code?: string }
 
     expect(res.status).toBe(400)
     expect(body.code).toBe("invalid_content")
@@ -208,7 +221,7 @@ describe("Cloud RAG routes", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query: "  " }),
     })
-    const body = await res.json() as { code?: string }
+    const body = (await res.json()) as { code?: string }
 
     expect(res.status).toBe(400)
     expect(body.code).toBe("invalid_query")
@@ -216,8 +229,26 @@ describe("Cloud RAG routes", () => {
 
   it("returns hybrid search results with citation markers", async () => {
     executeRows = [
-      { chunkId: "c1", documentId: "d1", sourceId: "s1", sourceName: "notes.md", title: "Notes", content: "Alpha content about widgets.", score: 0.9, embedding: "[0.1,0.2,0.3]" },
-      { chunkId: "c2", documentId: "d1", sourceId: "s1", sourceName: "notes.md", title: "Notes", content: "Beta content about gadgets.", score: 0.5, embedding: "[0.9,0.1,0.2]" },
+      {
+        chunkId: "c1",
+        documentId: "d1",
+        sourceId: "s1",
+        sourceName: "notes.md",
+        title: "Notes",
+        content: "Alpha content about widgets.",
+        score: 0.9,
+        embedding: "[0.1,0.2,0.3]",
+      },
+      {
+        chunkId: "c2",
+        documentId: "d1",
+        sourceId: "s1",
+        sourceName: "notes.md",
+        title: "Notes",
+        content: "Beta content about gadgets.",
+        score: 0.5,
+        embedding: "[0.9,0.1,0.2]",
+      },
     ]
 
     const res = await app().request("/api/rag/search", {
@@ -225,20 +256,24 @@ describe("Cloud RAG routes", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query: "widgets" }),
     })
-    const body = await res.json() as { snippets?: { chunkId: string; marker: number; content: string }[] }
+    const body = (await res.json()) as {
+      snippets?: { chunkId: string; marker: number; content: string }[]
+    }
 
     expect(res.status).toBe(200)
     expect(body.snippets).toHaveLength(2)
     expect(body.snippets!.map((s) => s.marker)).toEqual([1, 2])
     expect(body.snippets![0]!.content).toContain("widgets")
     // Retrieval is logged with the reranked chunk ids.
-    const log = insertValues.find((v) => v && typeof v === "object" && "matchedChunkIds" in v) as { matchedChunkIds: string[] } | undefined
+    const log = insertValues.find((v) => v && typeof v === "object" && "matchedChunkIds" in v) as
+      | { matchedChunkIds: string[] }
+      | undefined
     expect(log?.matchedChunkIds).toContain("c1")
   })
 
   it("soft-deletes a source owned by the current user", async () => {
     const res = await app().request("/api/rag/sources/source_1", { method: "DELETE" })
-    const body = await res.json() as { ok?: boolean }
+    const body = (await res.json()) as { ok?: boolean }
 
     expect(res.status).toBe(200)
     expect(body.ok).toBe(true)
@@ -248,7 +283,7 @@ describe("Cloud RAG routes", () => {
     updateRows = []
 
     const res = await app().request("/api/rag/sources/missing", { method: "DELETE" })
-    const body = await res.json() as { code?: string }
+    const body = (await res.json()) as { code?: string }
 
     expect(res.status).toBe(404)
     expect(body.code).toBe("source_not_found")

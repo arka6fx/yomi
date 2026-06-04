@@ -2,7 +2,10 @@
 
 ## Purpose
 
-Define the Electron main process structure, platform adapters, capture abstraction, sidecar lifecycle, and device-code auth. The shell is OS integration only: no AI logic, memory retrieval, or prompt construction lives here.
+Define the Electron main process structure, platform adapters, capture
+abstraction, sidecar lifecycle, and device-code auth. The shell is OS
+integration only: no AI logic, memory retrieval, or prompt construction lives
+here.
 
 ## Invariants
 
@@ -10,7 +13,8 @@ Define the Electron main process structure, platform adapters, capture abstracti
 - Login happens in the system browser, never in an embedded Electron window.
 - The sidecar must be healthy before the overlay becomes interactive.
 - Auth tokens are stored with Electron `safeStorage`.
-- Local RAG is owned by the sidecar. The desktop does not expose file-upload RAG controls.
+- Local RAG is owned by the sidecar. The desktop does not expose file-upload RAG
+  controls.
 
 ## Process Structure
 
@@ -31,7 +35,8 @@ apps/desktop/src/
 
 ## Sidecar Lifecycle
 
-The main process starts the sidecar in packaged mode and expects it to already be running in `YOMI_DEV=true`.
+The main process starts the sidecar in packaged mode and expects it to already
+be running in `YOMI_DEV=true`.
 
 ```ts
 class SidecarManager {
@@ -40,11 +45,13 @@ class SidecarManager {
 }
 ```
 
-Requests to the sidecar include `x-sidecar-secret`. Health is checked with `GET /health`; repeated failures restart the process.
+Requests to the sidecar include `x-sidecar-secret`. Health is checked with
+`GET /health`; repeated failures restart the process.
 
 ## Capture
 
-Electron `desktopCapturer` runs in the main process. The renderer never imports it.
+Electron `desktopCapturer` runs in the main process. The renderer never imports
+it.
 
 ```ts
 const sources = await desktopCapturer.getSources({
@@ -53,28 +60,33 @@ const sources = await desktopCapturer.getSources({
 })
 ```
 
-Yomi windows call `setContentProtection(true)` before showing, so the overlay is excluded from screenshots and screen shares.
+Yomi windows call `setContentProtection(true)` before showing, so the overlay is
+excluded from screenshots and screen shares.
 
 ## Hotkeys
 
 Default shortcuts:
 
-| Shortcut | State | Action |
-|---|---|---|
-| `Ctrl+Space` | idle | Start voice recording |
-| `Ctrl+Enter` | idle | Open text input |
-| `Enter` | listening | Send voice query (triggers STT + LLM) |
-| `Esc` | listening / text-input | Cancel and return to idle |
-| `Ctrl+H` | any | Show or hide overlay |
-| `Ctrl+Arrow` | any | Nudge overlay position |
+| Shortcut     | State                  | Action                                |
+| ------------ | ---------------------- | ------------------------------------- |
+| `Ctrl+Space` | idle                   | Start voice recording                 |
+| `Ctrl+Enter` | idle                   | Open text input                       |
+| `Enter`      | listening              | Send voice query (triggers STT + LLM) |
+| `Esc`        | listening / text-input | Cancel and return to idle             |
+| `Ctrl+H`     | any                    | Show or hide overlay                  |
+| `Ctrl+Arrow` | any                    | Nudge overlay position                |
 
-`Ctrl+Space` only starts listening — it no longer toggles stop. `Enter` is the submit key while recording; `Esc` cancels without submitting.
+`Ctrl+Space` only starts listening — it no longer toggles stop. `Enter` is the
+submit key while recording; `Esc` cancels without submitting.
 
-The toolbar exposes **Voice** and **Type** buttons as on-screen equivalents of `Ctrl+Space` and `Ctrl+Enter`. While listening, **Send (Enter)** and **Stop (Esc)** chips appear as clickable shortcuts.
+The toolbar exposes **Voice** and **Type** buttons as on-screen equivalents of
+`Ctrl+Space` and `Ctrl+Enter`. While listening, **Send (Enter)** and **Stop
+(Esc)** chips appear as clickable shortcuts.
 
 ## Fast Query Bridge
 
-On submit, the desktop collects text or audio, captures a screenshot, reads account state, and sends:
+On submit, the desktop collects text or audio, captures a screenshot, reads
+account state, and sends:
 
 ```ts
 {
@@ -88,7 +100,8 @@ On submit, the desktop collects text or audio, captures a screenshot, reads acco
 }
 ```
 
-The response is an SSE stream from `/query/fast`; the main process forwards events to the renderer through `yomi:event`.
+The response is an SSE stream from `/query/fast`; the main process forwards
+events to the renderer through `yomi:event`.
 
 ## Auth Flow
 
