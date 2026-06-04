@@ -103,7 +103,7 @@ app.post("/query", async (c) => {
     } else {
       const normalised: FastQueryRequest = { ...body, text }
       try {
-        for await (const event of fastPipeline(normalised)) {
+        for await (const event of fastPipeline(normalised, c.req.raw.signal)) {
           await stream.writeSSE({ data: JSON.stringify(event) })
         }
       } catch (err) {
@@ -130,7 +130,7 @@ app.post("/query/fast", async (c) => {
 
   return streamSSE(c, async (stream) => {
     try {
-      for await (const event of fastPipeline(body)) {
+      for await (const event of fastPipeline(body, c.req.raw.signal)) {
         await stream.writeSSE({ data: JSON.stringify(event) })
       }
     } catch (err) {

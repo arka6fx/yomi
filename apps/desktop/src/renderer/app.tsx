@@ -15,6 +15,14 @@ const VAD_MAX_UTTERANCE_MS = 15000 // hard cap on a single utterance
 const VAD_INACTIVITY_MS = 10000 // no speech at all → exit the loop back to idle
 const TTS_PLAYBACK_GAIN = 1.45
 
+// Barge-in tuning — a mic-only VAD tap runs while Yomi processes/speaks so the
+// user can talk over it. Thresholds are deliberately stricter than the listening
+// VAD to resist TTS leaking back through the mic (echo cancellation is on, but
+// not perfect): a higher dB floor + sustained speech + an arm delay.
+const BARGE_IN_SPEECH_DB = -28 // louder than the -35 dB listening threshold
+const BARGE_IN_SUSTAIN_MS = 350 // continuous speech required before we cut in
+const BARGE_IN_ARM_DELAY_MS = 400 // ignore the first moments (trailing speech / TTS onset)
+
 // ── Theme System ───────────────────────────────────────────────────────────────
 
 type ThemeId = "amber" | "blue" | "green" | "violet" | "hotpink" | "purple" | "black"
@@ -183,8 +191,8 @@ const AMBER: Theme = {
 const BLUE: Theme = {
   id: "blue",
   label: "Blue",
-  bg: "rgba(5,9,20,0.82)",
-  surface: "rgba(8,14,30,0.85)",
+  bg: "rgba(5,9,20,0.95)",
+  surface: "rgba(8,14,30,0.96)",
   border: "rgba(59,130,246,0.14)",
   borderHi: "rgba(59,130,246,0.28)",
   text: "rgba(226,232,240,1)",
@@ -201,8 +209,8 @@ const BLUE: Theme = {
   cmt: "rgba(100,116,139,0.7)",
   fn: "#C4B5FD",
   codeText: "rgba(203,213,225,1)",
-  toolbarBg: "rgba(5,9,22,0.96)",
-  menuBg: "rgba(5,9,22,0.96)",
+  toolbarBg: "rgba(5,9,22,0.98)",
+  menuBg: "rgba(5,9,22,0.98)",
   menuBorder: "rgba(59,130,246,0.2)",
   menuShadow: "0 12px 40px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(59,130,246,0.06)",
   menuSep: "rgba(59,130,246,0.1)",
@@ -264,8 +272,8 @@ const BLUE: Theme = {
 const GREEN: Theme = {
   id: "green",
   label: "Green",
-  bg: "rgba(2,10,4,0.85)",
-  surface: "rgba(4,15,6,0.88)",
+  bg: "rgba(2,10,4,0.95)",
+  surface: "rgba(4,15,6,0.96)",
   border: "rgba(34,197,94,0.15)",
   borderHi: "rgba(34,197,94,0.3)",
   text: "rgba(220,252,231,1)",
@@ -282,8 +290,8 @@ const GREEN: Theme = {
   cmt: "rgba(74,120,84,0.7)",
   fn: "#bbf7d0",
   codeText: "rgba(187,247,208,0.85)",
-  toolbarBg: "rgba(2,12,4,0.96)",
-  menuBg: "rgba(2,12,4,0.96)",
+  toolbarBg: "rgba(2,12,4,0.98)",
+  menuBg: "rgba(2,12,4,0.98)",
   menuBorder: "rgba(34,197,94,0.2)",
   menuShadow: "0 12px 40px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(34,197,94,0.06)",
   menuSep: "rgba(34,197,94,0.1)",
@@ -345,8 +353,8 @@ const GREEN: Theme = {
 const VIOLET: Theme = {
   id: "violet",
   label: "Violet",
-  bg: "rgba(6,3,14,0.85)",
-  surface: "rgba(10,5,22,0.88)",
+  bg: "rgba(6,3,14,0.95)",
+  surface: "rgba(10,5,22,0.96)",
   border: "rgba(139,92,246,0.16)",
   borderHi: "rgba(139,92,246,0.32)",
   text: "rgba(237,233,254,1)",
@@ -363,8 +371,8 @@ const VIOLET: Theme = {
   cmt: "rgba(100,80,150,0.7)",
   fn: "#ddd6fe",
   codeText: "rgba(221,214,254,0.85)",
-  toolbarBg: "rgba(6,3,16,0.96)",
-  menuBg: "rgba(6,3,16,0.96)",
+  toolbarBg: "rgba(6,3,16,0.98)",
+  menuBg: "rgba(6,3,16,0.98)",
   menuBorder: "rgba(139,92,246,0.22)",
   menuShadow: "0 12px 40px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(139,92,246,0.06)",
   menuSep: "rgba(139,92,246,0.1)",
@@ -426,8 +434,8 @@ const VIOLET: Theme = {
 const HOTPINK: Theme = {
   id: "hotpink",
   label: "Hot Pink",
-  bg: "rgba(14,2,8,0.85)",
-  surface: "rgba(20,4,12,0.88)",
+  bg: "rgba(14,2,8,0.95)",
+  surface: "rgba(20,4,12,0.96)",
   border: "rgba(236,72,153,0.16)",
   borderHi: "rgba(236,72,153,0.32)",
   text: "rgba(253,242,248,1)",
@@ -444,8 +452,8 @@ const HOTPINK: Theme = {
   cmt: "rgba(150,70,110,0.7)",
   fn: "#fbcfe8",
   codeText: "rgba(251,207,232,0.85)",
-  toolbarBg: "rgba(14,2,9,0.96)",
-  menuBg: "rgba(14,2,9,0.96)",
+  toolbarBg: "rgba(14,2,9,0.98)",
+  menuBg: "rgba(14,2,9,0.98)",
   menuBorder: "rgba(236,72,153,0.22)",
   menuShadow: "0 12px 40px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(236,72,153,0.06)",
   menuSep: "rgba(236,72,153,0.1)",
@@ -507,8 +515,8 @@ const HOTPINK: Theme = {
 const PURPLE: Theme = {
   id: "purple",
   label: "Purple",
-  bg: "rgba(9,3,14,0.85)",
-  surface: "rgba(14,5,21,0.88)",
+  bg: "rgba(9,3,14,0.95)",
+  surface: "rgba(14,5,21,0.96)",
   border: "rgba(168,85,247,0.16)",
   borderHi: "rgba(168,85,247,0.32)",
   text: "rgba(243,232,255,1)",
@@ -525,8 +533,8 @@ const PURPLE: Theme = {
   cmt: "rgba(120,80,170,0.7)",
   fn: "#e9d5ff",
   codeText: "rgba(233,213,255,0.85)",
-  toolbarBg: "rgba(9,3,15,0.96)",
-  menuBg: "rgba(9,3,15,0.96)",
+  toolbarBg: "rgba(9,3,15,0.98)",
+  menuBg: "rgba(9,3,15,0.98)",
   menuBorder: "rgba(168,85,247,0.22)",
   menuShadow: "0 12px 40px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(168,85,247,0.06)",
   menuSep: "rgba(168,85,247,0.1)",
@@ -704,6 +712,23 @@ function translucentColor(color: string, opacity: number, floor = 0.16): string 
   return `rgba(${match[1]},${match[2]},${match[3]},${Number(nextAlpha.toFixed(3))})`
 }
 
+// Glass treatment helpers — layered backgrounds in the active theme's accent.
+// `glassPanel` adds a soft top-left radial accent glow + a faint top sheen (for big
+// cards: login, menu). `glassBar` is sheen-only (for small/repeated surfaces:
+// toolbar, notch, chat) so the glow doesn't get noisy when stacked.
+function glassPanel(base: string, glow: string): string {
+  return `radial-gradient(140% 120% at 0% 0%, ${glow}, transparent 55%), linear-gradient(180deg, rgba(255,255,255,0.05), transparent 38%), ${base}`
+}
+function glassBar(base: string): string {
+  return `linear-gradient(180deg, rgba(255,255,255,0.05), transparent 42%), ${base}`
+}
+
+// Force a colour to full opacity (used for the solid sign-in card).
+function opaqueColor(color: string): string {
+  const m = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/)
+  return m ? `rgb(${m[1]},${m[2]},${m[3]})` : color
+}
+
 function applyTheme(t: Theme) {
   const r = document.documentElement.style
   r.setProperty("--bg", t.bg)
@@ -752,6 +777,7 @@ styleEl.textContent = `
   @keyframes glow   { 0%,100%{box-shadow:0 0 6px 1px rgba(255,210,150,0.5)} 50%{box-shadow:0 0 14px 3px rgba(255,210,150,0.15)} }
   @keyframes spin   { to{transform:rotate(360deg)} }
   @keyframes blink  { 0%,100%{opacity:1} 50%{opacity:0} }
+  @keyframes wave   { 0%,100%{transform:scaleY(0.35)} 50%{transform:scaleY(1)} }
   @keyframes slideUp  { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:translateY(0)} }
   @keyframes slideDown{ from{opacity:1;transform:translateY(0)} to{opacity:0;transform:translateY(6px)} }
   @keyframes fadeIn   { from{opacity:0} to{opacity:1} }
@@ -1725,15 +1751,17 @@ function ResponsePanel({
           width: 2,
           background: entry.error
             ? "var(--error)"
-            : entry.isStreaming
-              ? "linear-gradient(to bottom, var(--accent), var(--accent-d))"
-              : "var(--border-hi)",
+            : entry.notice
+              ? "var(--accent)"
+              : entry.isStreaming
+                ? "linear-gradient(to bottom, var(--accent), var(--accent-d))"
+                : "var(--border-hi)",
           transition: "background .3s",
         }}
       />
 
       {/* Transcript strip */}
-      {(entry.transcript || entry.error) && (
+      {(entry.transcript || entry.error || entry.notice) && (
         <div
           style={{
             display: "flex",
@@ -1752,24 +1780,28 @@ function ResponsePanel({
               fontFamily: UI_FONT,
               fontWeight: 700,
               flexShrink: 0,
-              color: entry.error ? "var(--error)" : "var(--section-label)",
+              color: entry.error
+                ? "var(--error)"
+                : entry.notice
+                  ? "var(--accent)"
+                  : "var(--section-label)",
             }}
           >
-            {entry.error ? "ERR" : "YOU"}
+            {entry.error ? "ERR" : entry.notice ? "YOMI" : "YOU"}
           </span>
           <span
             style={{
               fontSize: 13,
               fontFamily: UI_FONT,
-              color: entry.error ? "var(--error)" : "var(--dim)",
-              fontStyle: entry.error ? "normal" : "italic",
+              color: entry.error ? "var(--error)" : entry.notice ? "var(--accent)" : "var(--dim)",
+              fontStyle: entry.error || entry.notice ? "normal" : "italic",
               flex: 1,
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
             }}
           >
-            {entry.error ? `⚠ ${entry.error}` : entry.transcript}
+            {entry.error ? `⚠ ${entry.error}` : entry.notice ? entry.notice : entry.transcript}
           </span>
           <button
             onClick={onDismiss}
@@ -2048,6 +2080,7 @@ function MenuCard({
     { label: "Voice", keys: ["Ctrl", "Space"] },
     { label: "Type", keys: ["Ctrl", "Enter"] },
     { label: "Screen", keys: ["Ctrl", "S"] },
+    { label: "Stop / cancel", keys: ["Esc"] },
     { label: "Move", keys: ["Ctrl", "Arrows"] },
     { label: "Hide", keys: ["Ctrl", "H"] },
     { label: "Quit", keys: ["Ctrl", "Q"] },
@@ -2123,9 +2156,9 @@ function MenuCard({
           right: "max(8px, calc(50% - 382px))",
           zIndex: 1000,
           width: 250,
-          background: translucentColor(t.surface, opacity, 0.28),
-          border: `1px solid ${t.menuBorder}`,
-          borderRadius: 10,
+          background: glassPanel(translucentColor(t.surface, opacity, 0.28), t.accentG),
+          border: `1px solid ${t.borderHi}`,
+          borderRadius: 16,
           boxShadow: t.menuShadow,
           backdropFilter: "blur(28px) saturate(160%)",
           WebkitBackdropFilter: "blur(28px) saturate(160%)",
@@ -2505,66 +2538,60 @@ function MenuCard({
   )
 }
 
-function Chip({
-  label,
-  keys,
-  hot,
-  onClick,
-}: {
-  label: string
-  keys: string[]
-  hot: boolean
-  onClick?: () => void
-}) {
-  const { theme: t } = React.useContext(ThemeCtx)
-  const Tag = onClick ? "button" : "div"
-  return (
-    <Tag
-      {...(onClick ? { onClick } : {})}
-      onMouseEnter={
-        onClick
-          ? (e: React.MouseEvent<HTMLElement>) => {
-              e.currentTarget.style.opacity = "0.75"
-            }
-          : undefined
-      }
-      onMouseLeave={
-        onClick
-          ? (e: React.MouseEvent<HTMLElement>) => {
-              e.currentTarget.style.opacity = "1"
-            }
-          : undefined
-      }
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 5,
-        background: hot ? t.chipBgHot : t.chipBgCold,
-        border: `1px solid ${hot ? t.chipBorderHot : t.chipBorderCold}`,
-        borderRadius: 5,
-        padding: "2px 7px 2px 6px",
-        transition: "all .2s",
-        cursor: onClick ? "pointer" : "default",
-        ...(onClick ? { fontFamily: "inherit" } : {}),
-      }}
-    >
-      <span
+// ── Notch state loader ───────────────────────────────────────────────────────
+// Per-state micro-loader shown in the notch: waveform (listening), spinner
+// (processing), blinking caret (typing), equalizer (speaking).
+type LoaderKind = "listening" | "processing" | "typing" | "speaking"
+
+function StateLoader({ kind, accent, faint }: { kind: LoaderKind; accent: string; faint: string }) {
+  if (kind === "processing") {
+    return (
+      <div
         style={{
-          fontSize: 11.5,
-          fontFamily: UI_FONT,
-          color: hot ? t.chipTextHot : t.chipTextCold,
-          letterSpacing: "0.01em",
-          fontWeight: 500,
+          width: 13,
+          height: 13,
+          borderRadius: "50%",
+          flexShrink: 0,
+          border: `1.6px solid ${faint}`,
+          borderTopColor: accent,
+          animation: "spin .7s linear infinite",
         }}
-      >
-        {label}
-      </span>
-      <div style={{ display: "flex", gap: 2 }}>
-        {keys.map((k, i) => (
-          <Key key={i} label={k} />
-        ))}
-      </div>
-    </Tag>
+      />
+    )
+  }
+  if (kind === "typing") {
+    return (
+      <div
+        style={{
+          width: 2,
+          height: 13,
+          borderRadius: 1,
+          flexShrink: 0,
+          background: accent,
+          animation: "blink 1s step-end infinite",
+        }}
+      />
+    )
+  }
+  // listening = mic waveform (4 bars), speaking = denser/faster equalizer (5 bars)
+  const bars = kind === "speaking" ? 5 : 4
+  const dur = kind === "speaking" ? 0.7 : 0.95
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 2, height: 14, flexShrink: 0 }}>
+      {Array.from({ length: bars }).map((_, i) => (
+        <div
+          key={i}
+          style={{
+            width: 2.5,
+            height: 14,
+            borderRadius: 2,
+            background: accent,
+            transformOrigin: "center",
+            animation: `wave ${dur}s ease-in-out ${i * 0.12}s infinite`,
+          }}
+        />
+      ))}
+    </div>
   )
 }
 
@@ -2632,81 +2659,24 @@ function Toolbar({
             ))}
           </div>
 
-          {/* State dot */}
-          {state === "listening" ? (
-            <div
-              style={{
-                width: 7,
-                height: 7,
-                borderRadius: "50%",
-                flexShrink: 0,
-                background: t.dotPulse,
-                boxShadow: t.dotPulseGlow,
-                animation: "pulse 1.2s ease-in-out infinite",
-              }}
-            />
-          ) : state === "processing" ? (
-            <div
-              style={{
-                width: 10,
-                height: 10,
-                borderRadius: "50%",
-                flexShrink: 0,
-                border: `1.5px solid ${t.dotSpinFaint}`,
-                borderTopColor: t.dotSpinBright,
-                animation: "spin .75s linear infinite",
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                flexShrink: 0,
-                background: t.dotIdle,
-              }}
-            />
-          )}
-
-          {/* Label — logo + name when idle, status text when active */}
-          {state === "idle" ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <YomiLogoMark size={20} />
-              <span
-                style={{
-                  fontSize: 20,
-                  fontWeight: 700,
-                  fontFamily: DISPLAY_FONT,
-                  letterSpacing: "-0.01em",
-                  lineHeight: 1,
-                  color: "rgba(255,255,255,0.88)",
-                  transition: "color .25s",
-                }}
-              >
-                Yomi
-              </span>
-            </div>
-          ) : state === "listening" ? (
+          {/* Brand — always shown; live state lives on the notch below */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <YomiLogoMark size={20} />
             <span
               style={{
-                fontSize: 12,
-                fontWeight: 600,
-                fontFamily: UI_FONT,
-                letterSpacing: "-0.02em",
+                fontSize: 20,
+                fontWeight: 700,
+                fontFamily: DISPLAY_FONT,
+                letterSpacing: "-0.01em",
                 lineHeight: 1,
-                color: "rgba(255,255,255,0.92)",
-                transition: "color .25s",
+                color: "rgba(255,255,255,0.88)",
               }}
             >
-              Listening…{" "}
-              <span style={{ fontWeight: 500, color: "rgba(255,255,255,0.55)" }}>
-                · Esc to stop
-              </span>
+              Yomi
             </span>
-          ) : null}
+          </div>
 
-          {plan && state === "idle" && (
+          {plan && (
             <span
               style={{
                 fontSize: 10.5,
@@ -2724,7 +2694,7 @@ function Toolbar({
               {plan}
             </span>
           )}
-          {interactionInfo && state === "idle" && (
+          {interactionInfo && (
             <span
               style={{
                 fontSize: 10.5,
@@ -3060,6 +3030,193 @@ function Toolbar({
   )
 }
 
+// ── Notch — state display that hangs from the bottom of the toolbar ──────────────
+// Drops down when Yomi is active (listening / processing / typing / speaking) and
+// retracts when idle. Shows the per-state micro-loader + label + a dim context line.
+function Notch({ state, voiceTurnBusy }: { state: HotkeyState; voiceTurnBusy: boolean }) {
+  const { theme: t } = React.useContext(ThemeCtx)
+  const entries = useYomiStore((s) => s.entries)
+  const active = state !== "idle" || voiceTurnBusy
+
+  let statusLabel = ""
+  let loaderKind: LoaderKind = "processing"
+  if (state === "listening") {
+    statusLabel = "Listening"
+    loaderKind = "listening"
+  } else if (voiceTurnBusy) {
+    statusLabel = "Talk to interrupt"
+    loaderKind = "speaking"
+  } else if (state === "text-input") {
+    statusLabel = "Typing"
+    loaderKind = "typing"
+  } else if (state === "processing") {
+    statusLabel = "Processing"
+    loaderKind = "processing"
+  }
+
+  const latest = entries[entries.length - 1]
+  let contextText: string | null = null
+  if (state === "listening" || voiceTurnBusy) contextText = "Esc to stop"
+  else if (state === "text-input") contextText = "text only, no voice"
+  else if (state === "processing") contextText = latest?.transcript?.trim() || "Working on it"
+
+  const notchBg = t.toolbarBg
+  const EAR = 12 // concave-ear radius
+
+  return (
+    <AnimatePresence>
+      {active && (
+        <motion.div
+          key="notch"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ type: "spring", stiffness: 380, damping: 28 }}
+          // -1px overlap so the notch reads as fused to the toolbar's bottom edge.
+          style={{ position: "relative", marginTop: -1, flexShrink: 0, zIndex: 5 }}
+          className="yomi-hit-area no-drag"
+        >
+          {/* concave ears flare the tab up into the toolbar's bottom edge */}
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: -EAR,
+              width: EAR,
+              height: EAR,
+              background: `radial-gradient(circle at 0% 100%, transparent ${EAR}px, ${notchBg} ${EAR + 0.5}px)`,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              right: -EAR,
+              width: EAR,
+              height: EAR,
+              background: `radial-gradient(circle at 100% 100%, transparent ${EAR}px, ${notchBg} ${EAR + 0.5}px)`,
+            }}
+          />
+          {/* tab body — square top (meets the toolbar), rounded bottom */}
+          <div
+            style={{
+              minWidth: 200,
+              maxWidth: 320,
+              background: glassBar(notchBg),
+              backdropFilter: "blur(28px) saturate(160%)",
+              WebkitBackdropFilter: "blur(28px) saturate(160%)",
+              borderBottomLeftRadius: 18,
+              borderBottomRightRadius: 18,
+              boxShadow: state === "listening" ? t.appShadowListen : t.appShadow,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 3,
+              padding: "8px 18px 9px",
+            }}
+          >
+            {contextText && (
+              <span
+                style={{
+                  fontSize: 10.5,
+                  fontFamily: UI_FONT,
+                  letterSpacing: "0.01em",
+                  color: "rgba(255,255,255,0.45)",
+                  maxWidth: 280,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {contextText}
+              </span>
+            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <StateLoader kind={loaderKind} accent={t.dotPulse} faint={t.dotSpinFaint} />
+              <span
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  fontFamily: UI_FONT,
+                  letterSpacing: "-0.01em",
+                  lineHeight: 1,
+                  color: "rgba(255,255,255,0.95)",
+                }}
+              >
+                {statusLabel}
+              </span>
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+
+function Chip({
+  label,
+  keys,
+  hot,
+  onClick,
+}: {
+  label: string
+  keys: string[]
+  hot: boolean
+  onClick?: () => void
+}) {
+  const { theme: t } = React.useContext(ThemeCtx)
+  const Tag = onClick ? "button" : "div"
+  return (
+    <Tag
+      {...(onClick ? { onClick } : {})}
+      onMouseEnter={
+        onClick
+          ? (e: React.MouseEvent<HTMLElement>) => {
+              e.currentTarget.style.opacity = "0.75"
+            }
+          : undefined
+      }
+      onMouseLeave={
+        onClick
+          ? (e: React.MouseEvent<HTMLElement>) => {
+              e.currentTarget.style.opacity = "1"
+            }
+          : undefined
+      }
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 5,
+        background: hot ? t.chipBgHot : t.chipBgCold,
+        border: `1px solid ${hot ? t.chipBorderHot : t.chipBorderCold}`,
+        borderRadius: 5,
+        padding: "2px 7px 2px 6px",
+        transition: "all .2s",
+        cursor: onClick ? "pointer" : "default",
+        ...(onClick ? { fontFamily: "inherit" } : {}),
+      }}
+    >
+      <span
+        style={{
+          fontSize: 11.5,
+          fontFamily: UI_FONT,
+          color: hot ? t.chipTextHot : t.chipTextCold,
+          letterSpacing: "0.01em",
+          fontWeight: 500,
+        }}
+      >
+        {label}
+      </span>
+      <div style={{ display: "flex", gap: 2 }}>
+        {keys.map((k, i) => (
+          <Key key={i} label={k} />
+        ))}
+      </div>
+    </Tag>
+  )
+}
+
 // ── Sign-In Panel ──────────────────────────────────────────────────────────────
 
 const GitHubIcon = () => (
@@ -3175,129 +3332,77 @@ function SignInPanel({
 
   return (
     <div
+      className="no-drag"
       style={{
         flex: 1,
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
         justifyContent: "center",
-        padding: "0 28px",
+        padding: "0 40px",
       }}
     >
-      {/* Accent glow at top */}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 1,
-          background: "linear-gradient(90deg, transparent, rgba(255,200,130,0.3), transparent)",
-        }}
-      />
-
-      {/* Yomi logo — bigger */}
       <div
         style={{
           fontFamily: DISPLAY_FONT,
-          fontSize: 44,
+          fontSize: 30,
           fontWeight: 700,
-          color: "var(--accent)",
+          color: "var(--text)",
           letterSpacing: "-0.02em",
-          marginBottom: 6,
+          lineHeight: 1.1,
+          marginBottom: 7,
         }}
-        className="drag"
       >
-        Yomi
+        Get started
       </div>
-
       <div
         style={{
-          fontSize: 11,
-          color: "rgba(175,163,145,0.45)",
-          textAlign: "center",
-          marginBottom: 20,
-          letterSpacing: "0.03em",
-          fontWeight: 400,
+          fontSize: 12.5,
+          color: "rgba(175,163,145,0.7)",
+          lineHeight: 1.6,
+          marginBottom: 26,
         }}
       >
-        your AI buddy
+        Sign in to your Yomi account.
       </div>
 
       {isWaiting ? (
-        <>
+        <div
+          style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 16 }}
+        >
           <div
             style={{
-              width: 28,
-              height: 28,
+              width: 26,
+              height: 26,
               borderRadius: "50%",
-              border: "2.5px solid rgba(255,224,194,0.1)",
-              borderTopColor: "rgba(255,200,130,0.8)",
+              border: "2.5px solid rgba(255,255,255,0.1)",
+              borderTopColor: "var(--accent)",
               animation: "spin .75s linear infinite",
-              margin: "0 0 20px",
             }}
           />
-          <div
-            style={{
-              fontSize: 14,
-              color: "var(--dim)",
-              textAlign: "center",
-              lineHeight: 1.7,
-              marginBottom: 18,
-            }}
-          >
+          <div style={{ fontSize: 13.5, color: "var(--dim)", lineHeight: 1.6 }}>
             Opening your browser to sign in…
           </div>
           <button
             onClick={() => onSignIn(lastProvider ?? "github")}
             className="no-drag"
             style={{
-              background: "rgba(255,175,80,0.08)",
-              border: "1px solid rgba(255,175,80,0.3)",
+              background: "var(--accent-d)",
+              border: "1px solid var(--border-hi)",
               borderRadius: 8,
               padding: "8px 22px",
               fontSize: 12,
-              color: "rgba(255,175,80,0.9)",
+              color: "var(--accent)",
               fontFamily: UI_FONT,
               cursor: "pointer",
               transition: "background .15s",
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(255,175,80,0.15)"
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(255,175,80,0.08)"
-            }}
           >
             Open browser again
           </button>
-        </>
+        </div>
       ) : (
         <>
-          <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", marginBottom: 3 }}>
-            Welcome back
-          </div>
-          <div
-            style={{
-              fontSize: 12.5,
-              color: "rgba(175,163,145,0.7)",
-              textAlign: "center",
-              marginBottom: 30,
-              lineHeight: 1.6,
-            }}
-          >
-            Sign in to your Yomi account.
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 12,
-              width: "100%",
-              maxWidth: 320,
-            }}
-          >
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 340 }}>
             <OAuthButton
               icon={<GitHubIcon />}
               label="Continue with GitHub"
@@ -3319,9 +3424,9 @@ function SignInPanel({
               style={{
                 fontSize: 12,
                 color: "var(--error)",
-                textAlign: "center",
                 marginTop: 18,
                 lineHeight: 1.5,
+                maxWidth: 340,
               }}
             >
               {error}
@@ -3341,11 +3446,13 @@ const App: React.FC = () => {
     authError,
     setAuthState,
     hotkeyState,
+    voiceTurnBusy,
     entries,
     ttsEnabled,
     subscription,
     handleSseEvent,
     setHotkeyState,
+    clearVoiceTurn,
     stopActivePlayback,
     dismissEntry,
     setSubscription,
@@ -3602,10 +3709,9 @@ const App: React.FC = () => {
   useEffect(() => {
     if (authState === "checking") {
       window.yomi.resize(780, 40)
-    } else if (authState === "unauthenticated") {
-      window.yomi.resize(780, 390)
-    } else if (authState === "waiting") {
-      window.yomi.resize(780, 240)
+    } else if (authState === "unauthenticated" || authState === "waiting") {
+      // Two-panel "Get started" card needs room for the brand panel + form.
+      window.yomi.resize(780, 460)
     } else {
       const MAX_ENTRIES = 600
       const textInputH = hotkeyState === "text-input" ? 88 : 0
@@ -3833,6 +3939,65 @@ const App: React.FC = () => {
     }
   }, [hotkeyState])
 
+  // Barge-in: a mic-only VAD tap that runs across the whole voice turn (processing
+  // + TTS drain). When the user speaks over Yomi, cut the audio and tell main to
+  // abort + re-listen. Stricter than the listening VAD (higher dB floor, sustained
+  // speech, arm delay) so Yomi's own TTS leaking through the mic can't self-trigger.
+  useEffect(() => {
+    if (!voiceTurnBusy) return
+    let cancelled = false
+    let micSrc: MediaStreamAudioSourceNode | null = null
+    let tap: AudioWorkletNode | null = null
+    let fired = false
+    let speechMs = 0 // accumulated continuous-speech time
+    const armAt = Date.now() + BARGE_IN_ARM_DELAY_MS
+    const vad = new EnergyVad({ sampleRate: 16000, speechThresholdDb: BARGE_IN_SPEECH_DB })
+
+    const bargeIn = () => {
+      if (fired) return
+      fired = true
+      resetAudioPlayback() // stop Yomi mid-sentence
+      cancelRelistenRef.current = true // don't let the loop also re-arm
+      window.yomi.bargeIn() // main aborts the turn and starts listening
+    }
+
+    ;(async () => {
+      await workletReadyRef.current
+      if (cancelled) return
+      const stream = streamRef.current
+      const ctx = ctxRef.current
+      if (!ctx || !stream) return
+      if (ctx.state === "suspended") await ctx.resume()
+      if (cancelled) return
+      try {
+        tap = new AudioWorkletNode(ctx, "pcm-processor")
+      } catch (err) {
+        console.warn("[yomi/barge-in] tap failed:", err)
+        return
+      }
+      tap.port.onmessage = (e) => {
+        if (fired || Date.now() < armAt) return
+        const frame = new Float32Array(e.data as ArrayBuffer)
+        const { hasSpeech } = vad.processFrame(frame)
+        if (hasSpeech) {
+          speechMs += (frame.length / 16000) * 1000
+          if (speechMs >= BARGE_IN_SUSTAIN_MS) bargeIn()
+        } else {
+          speechMs = 0 // require *continuous* speech, not scattered blips
+        }
+      }
+      micSrc = ctx.createMediaStreamSource(stream) // mic only — never the loopback
+      micSrc.connect(tap)
+      tap.connect(ctx.destination) // keep the node pulled; emits silence
+    })()
+
+    return () => {
+      cancelled = true
+      micSrc?.disconnect()
+      tap?.disconnect()
+    }
+  }, [voiceTurnBusy, resetAudioPlayback])
+
   // Stop in-flight audio immediately when TTS is toggled off.
   useEffect(() => {
     if (!ttsEnabled) {
@@ -3847,8 +4012,9 @@ const App: React.FC = () => {
       cancelRelistenRef.current = true // ESC: drop any pending hands-free re-listen
       resetAudioPlayback()
       stopActivePlayback()
+      clearVoiceTurn() // exit the "Talk to interrupt" window
     })
-  }, [resetAudioPlayback, stopActivePlayback])
+  }, [resetAudioPlayback, stopActivePlayback, clearVoiceTurn])
 
   // Hands-free loop: after a voice turn, re-arm the mic once any TTS playback has
   // drained (agent turns have no audio, so this fires almost immediately).
@@ -3886,9 +4052,8 @@ const App: React.FC = () => {
   const hasContent = entries.length > 0 || hotkeyState === "text-input"
   const isListening = hotkeyState === "listening"
   const { theme: t } = React.useContext(ThemeCtx)
-  const shellBg = translucentColor(t.toolbarBg, uiOpacity, 0.26)
   const toolbarBg = translucentColor(t.bg, uiOpacity, 0.24)
-  const chatSurfaceBg = translucentColor(t.surface, uiOpacity, 0.28)
+  const chatSurfaceBg = glassBar(translucentColor(t.surface, uiOpacity, 0.28))
   const activeEntry = entries[entries.length - 1]
 
   useEffect(() => {
@@ -3952,19 +4117,57 @@ const App: React.FC = () => {
   if (authState === "unauthenticated" || authState === "waiting") {
     return (
       <div
-        className="yomi-hit-area"
+        className="yomi-hit-area drag"
         style={{
           display: "flex",
-          flexDirection: "column",
+          flexDirection: "row",
           height: "100vh",
-          background: shellBg,
-          borderRadius: 10,
+          background: glassPanel(opaqueColor(t.toolbarBg), t.accentG),
+          borderRadius: 18,
           overflow: "hidden",
-          border: "1px solid var(--border)",
+          border: `1px solid ${t.borderHi}`,
           boxShadow: t.appShadow,
+          backdropFilter: "blur(28px) saturate(160%)",
+          WebkitBackdropFilter: "blur(28px) saturate(160%)",
           position: "relative",
         }}
       >
+        {/* Left brand panel — mascot + wordmark on an accent glow */}
+        <div
+          className="drag"
+          style={{
+            flex: "0 0 44%",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+            padding: 24,
+            borderRight: `1px solid ${t.border}`,
+            background: `radial-gradient(120% 90% at 30% 25%, ${t.accentG}, transparent 60%)`,
+          }}
+        >
+          <div style={{ filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.45))" }}>
+            <YomiLogoMark size={116} />
+          </div>
+          <div
+            style={{
+              fontFamily: DISPLAY_FONT,
+              fontSize: 40,
+              fontWeight: 700,
+              color: "var(--accent)",
+              letterSpacing: "-0.02em",
+              lineHeight: 1,
+            }}
+          >
+            Yomi
+          </div>
+          <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", letterSpacing: "0.03em" }}>
+            your AI buddy
+          </div>
+        </div>
+
+        {/* Right form panel */}
         <SignInPanel
           isWaiting={authState === "waiting"}
           loadingProvider={loadingProvider}
@@ -4005,9 +4208,9 @@ const App: React.FC = () => {
           flexShrink: 0,
           width: 780,
           maxWidth: "calc(100vw - 40px)",
-          background: toolbarBg,
+          background: glassBar(toolbarBg),
           border: isListening ? t.appBorderListen : t.appBorder,
-          borderRadius: 10,
+          borderRadius: 12,
           boxShadow: isListening ? t.appShadowListen : t.appShadow,
           backdropFilter: "blur(28px) saturate(160%)",
           WebkitBackdropFilter: "blur(28px) saturate(160%)",
@@ -4028,6 +4231,9 @@ const App: React.FC = () => {
           onMenuScheduleClose={scheduleMenuClose}
         />
       </div>
+
+      {/* Notch — state display that hangs from the bottom of the toolbar */}
+      <Notch state={hotkeyState} voiceTurnBusy={voiceTurnBusy} />
 
       {/* Chat content — no wrapper card; ResponsePanel and TextInputPanel are self-styled */}
       <AnimatePresence>
@@ -4063,6 +4269,9 @@ const App: React.FC = () => {
                   display: "flex",
                   flexDirection: "column",
                   gap: 5,
+                  // Round the scroll viewport so the chat card keeps its rounded
+                  // corners while content scrolls (overflow clips to the radius).
+                  borderRadius: 9,
                   overscrollBehavior: "contain",
                   scrollBehavior: "smooth",
                   scrollbarGutter: "stable",

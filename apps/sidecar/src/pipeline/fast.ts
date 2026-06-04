@@ -205,6 +205,7 @@ async function* answerPipeline(
   tts = true,
   plan?: Plan,
   screenshots: ScreenImage[] = [],
+  signal?: AbortSignal,
 ): AsyncGenerator<SseEvent> {
   const content: Array<{ type: "text"; text: string } | { type: "image"; image: string }> = [
     { type: "text", text },
@@ -245,6 +246,7 @@ async function* answerPipeline(
       { role: "user" as const, content },
     ],
     maxTokens: maxOutputTokensFor(text),
+    abortSignal: signal, // barge-in / client disconnect cancels the LLM request
   })
 
   const ttsEnabled = tts && resolveTts() !== "none"
@@ -327,11 +329,18 @@ async function* answerPipeline(
       }
     }
 
-    for await (const chunk of result.textStream) {
-      if (!chunk) continue
-      gotChunk = true
-      flushVisibleText(chunk)
+    try {
+      for await (const chunk of result.textStream) {
+        if (signal?.aborted) break // barge-in: stop pulling tokens / starting TTS
+        if (!chunk) continue
+        gotChunk = true
+        flushVisibleText(chunk)
+      }
+    } catch (err) {
+      if (signal?.aborted) return // aborted mid-stream — stop quietly
+      throw err
     }
+    if (signal?.aborted) return
     if (!gotChunk) {
       throw new Error("LLM returned empty response (likely rate-limited or quota exceeded)")
     }
@@ -365,7 +374,10 @@ export async function resolveText(
   return null
 }
 
-export async function* fastPipeline(req: FastQueryRequest): AsyncGenerator<SseEvent> {
+export async function* fastPipeline(
+  req: FastQueryRequest,
+  signal?: AbortSignal,
+): AsyncGenerator<SseEvent> {
   let text: string | null
   try {
     text = await resolveText(req)
@@ -389,11 +401,14 @@ export async function* fastPipeline(req: FastQueryRequest): AsyncGenerator<SseEv
       req.tts !== false,
       req.plan,
       req.screenshots ?? [],
+      signal,
     )) {
+      if (signal?.aborted) break
       if (event.type === "llm_chunk") output += event.text
       yield event
     }
-    if (memoryEnabled(req.plan) && output.trim()) {
+    // Skip the memory write for a barged-in (partial) turn.
+    if (!signal?.aborted && memoryEnabled(req.plan) && output.trim()) {
       writeSessionTurn({ kind: "fast", mode: "answer", input: text, output })
         .then(() => captureStructuredMemory({ input: text, output, mode: "answer" }))
         .catch((err) => console.warn("[yomi/fast] memory write failed:", err))
