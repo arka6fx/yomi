@@ -38,7 +38,7 @@ export const users = pgTable("user", {
 export const devices = pgTable("devices", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  os: text("os").notNull(),           // "macos" | "windows"
+  os: text("os").notNull(),           // "windows"
   appVersion: text("app_version").notNull(),
   lastSeen: timestamp("last_seen").notNull().defaultNow(),
 })
@@ -138,6 +138,8 @@ export const ragChunks = pgTable("rag_chunks", {
   documentId: uuid("document_id").notNull().references(() => ragDocuments.id, { onDelete: "cascade" }),
   chunkIndex: integer("chunk_index").notNull(),
   content: text("content").notNull(),
+  // content_tsv (generated tsvector) + its GIN index live in migration 0006_rag_hybrid.sql,
+  // mirroring how the HNSW vector index is migration-only. Hybrid search references it via raw SQL.
   tokenCount: integer("token_count").notNull().default(0),
   metadata: jsonb("metadata"),
   createdAt: timestamp("created_at").notNull().defaultNow(),

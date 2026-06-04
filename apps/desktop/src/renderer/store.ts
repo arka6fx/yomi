@@ -43,7 +43,7 @@ interface YomiState {
   guideCurrentStep: number
   guideTotalSteps: number
   guideMode: boolean
-  pointingEnabled: boolean
+  pendingAct: { id: string; label: string } | null
   subscription: SubscriptionInfo | null
   subscriptionLoading: boolean
 
@@ -53,7 +53,7 @@ interface YomiState {
   stopActivePlayback: () => void
   dismissEntry: (id: number) => void
   toggleTts: () => void
-  togglePointing: () => void
+  clearPendingAct: () => void
   setGuideMode: (on: boolean) => void
   setSubscription: (info: SubscriptionUpdate | null) => void
   setSubscriptionLoading: (loading: boolean) => void
@@ -72,7 +72,7 @@ export const useYomiStore = create<YomiState>((set) => ({
   guideCurrentStep: 0,
   guideTotalSteps: 0,
   guideMode: false,
-  pointingEnabled: true,
+  pendingAct: null,
   subscription: null,
   subscriptionLoading: false,
 
@@ -94,9 +94,24 @@ export const useYomiStore = create<YomiState>((set) => ({
         })
         break
       case "llm_chunk":
+      case "agent_text":
         set((s) => ({
           entries: s.entries.map((e) =>
             e.id === s.activeId ? { ...e, text: e.text + event.text, isStreaming: true } : e
+          ),
+        }))
+        break
+      case "act_proposed":
+        // Risky actions wait for the user's go-ahead (Spec 16).
+        if (event.risky) set({ pendingAct: { id: event.id, label: event.label } })
+        break
+      case "act_result":
+        set((s) => ({
+          pendingAct: null,
+          entries: s.entries.map((e) =>
+            e.id === s.activeId
+              ? { ...e, text: `${e.text}${e.text ? "\n" : ""}${event.ok ? "✓" : "✗"} ${event.label}${event.detail ? ` — ${event.detail}` : ""}`, isStreaming: true }
+              : e
           ),
         }))
         break
@@ -183,7 +198,7 @@ export const useYomiStore = create<YomiState>((set) => ({
     set((s) => ({ entries: s.entries.filter((e) => e.id !== id) })),
 
   toggleTts: () => set((s) => ({ ttsEnabled: !s.ttsEnabled })),
-  togglePointing: () => set((s) => ({ pointingEnabled: !s.pointingEnabled })),
+  clearPendingAct: () => set({ pendingAct: null }),
 
   setGuideMode: (on) => set(on
     ? { guideMode: true }

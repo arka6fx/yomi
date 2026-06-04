@@ -18,6 +18,7 @@ type CloudSearchSnippet = {
   title: string
   content: string
   score: number
+  marker: number
 }
 
 type SyncResponse = {
@@ -142,15 +143,18 @@ async function searchCloudRag(query: string, maxChars: number): Promise<string> 
     const snippets = data?.snippets ?? []
     if (!snippets.length) return ""
 
+    // Numbered, attributed blocks so the model can cite sources inline as [n].
     const out: string[] = []
     let used = 0
     for (const row of snippets) {
-      const snippet = `- ${row.sourceName}: ${row.content}`
-      if (used + snippet.length > maxChars) break
-      out.push(snippet)
-      used += snippet.length
+      const marker = row.marker ?? out.length + 1
+      const header = `[${marker}] ${row.sourceName}${row.title && row.title !== row.sourceName ? ` — ${row.title}` : ""}`
+      const block = `${header}\n${row.content}`
+      if (used + block.length > maxChars) break
+      out.push(block)
+      used += block.length
     }
-    return out.join("\n")
+    return out.join("\n\n")
   } catch (err) {
     console.warn("[yomi/cloud-rag] search failed:", err instanceof Error ? err.message : err)
     return ""

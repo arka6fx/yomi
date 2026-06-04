@@ -37,35 +37,30 @@ interface DownloadOption {
   arch: string
   href: string
   note?: string
+  disabled?: boolean
 }
 
 const platforms: Record<
   Exclude<Platform, "unknown">,
-  { title: string; icon: string; options: DownloadOption[]; instructions: string[] }
+  { title: string; icon: string; options: DownloadOption[]; instructions: string[]; comingSoon?: boolean }
 > = {
   mac: {
     title: "macOS",
     icon: "⌘",
+    comingSoon: true,
     options: [
       {
-        label: "Apple Silicon",
-        arch: ".dmg",
-        href: "https://github.com/arka6fx/yomi/releases/latest",
-        note: "M1 / M2 / M3",
-      },
-      {
-        label: "Intel",
-        arch: ".dmg",
-        href: "https://github.com/arka6fx/yomi/releases/latest",
-        note: "x86_64",
+        label: "macOS app",
+        arch: "Soon",
+        href: "#",
+        note: "Coming soon",
+        disabled: true,
       },
     ],
     instructions: [
-      "Open the downloaded .dmg file",
-      "Drag Yomi to your Applications folder",
-      "Open Yomi from Applications",
-      "Grant screen recording permission when prompted",
-      "Yomi appears in your menu bar",
+      "macOS support is planned for a later release",
+      "Use the Windows installer today",
+      "Join early access to hear when macOS builds are available",
     ],
   },
   windows: {
@@ -233,34 +228,21 @@ function WindowsMark() {
   )
 }
 
-function AppleMark() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="M10.65 1.1c.07.9-.25 1.77-.78 2.39-.55.65-1.43 1.16-2.28 1.09-.09-.86.3-1.77.8-2.34.56-.65 1.52-1.14 2.26-1.14Zm2.47 10.24c-.34.78-.5 1.13-.94 1.82-.61.93-1.47 2.08-2.54 2.09-.48.01-.8-.14-1.15-.3-.37-.17-.77-.35-1.38-.35-.64 0-1.06.18-1.44.35-.34.15-.65.29-1.11.31-.98.04-1.73-1-2.34-1.93-1.28-1.95-1.41-4.24-.62-5.45.56-.86 1.45-1.37 2.29-1.39.55-.01 1.07.2 1.53.39.35.14.66.27.91.27.22 0 .54-.13.91-.28.58-.23 1.3-.52 2.03-.44.5.02 1.9.2 2.8 1.52-2.46 1.34-2.06 4.79.04 5.5Z"
-        fill="currentColor"
-      />
-    </svg>
-  )
-}
-
 export function LandingPage() {
   const [billingLoading, setBillingLoading] = useState<string | null>(null)
   const { data: session } = authClient.useSession()
   const router = useRouter()
   const [detected, setDetected] = useState<Platform>("unknown")
-  const [active, setActive] = useState<Exclude<Platform, "unknown">>("mac")
+  const [active, setActive] = useState<Exclude<Platform, "unknown">>("windows")
 
   useEffect(() => {
     const p = detectPlatform()
     setDetected(p)
-    if (p !== "unknown") setActive(p)
+    if (p === "windows") setActive(p)
   }, [])
 
   const current = platforms[active]
-  const heroPlatform = detected === "unknown" ? "windows" : detected
-  const heroDownloadLabel =
-    heroPlatform === "mac" ? "Get for macOS" : heroPlatform === "windows" ? "Get for Windows" : "Download"
+  const heroDownloadLabel = "Get for Windows"
 
   async function handlePlanClick(planKey: string) {
     if (planKey === "max") return
@@ -319,7 +301,7 @@ export function LandingPage() {
                 &lt; 2s fast path
               </span>
               <span className="hidden h-1 w-1 rounded-full bg-white/30 sm:block" />
-              <span>macOS + Windows</span>
+              <span>Windows now · macOS coming soon</span>
             </motion.div>
 
             <div className="grid items-end gap-8 lg:grid-cols-[1fr_360px]">
@@ -341,8 +323,8 @@ export function LandingPage() {
                 <div className="mb-6 flex items-start gap-5">
                   <span className="font-accent text-5xl leading-none text-[#eaf4ff]">*</span>
                   <p className="max-w-sm text-sm leading-5 text-white/78 sm:text-base sm:leading-6">
-                    Yomi is a cross-platform AI buddy that sees your screen, hears your voice, and
-                    helps you move through laptop work without breaking flow.
+                    Yomi is a Windows AI buddy that sees your screen, hears your voice, and helps
+                    you move through laptop work without breaking flow.
                   </p>
                 </div>
                 <div className="flex flex-col items-start gap-3">
@@ -367,7 +349,7 @@ export function LandingPage() {
                     onClick={() => scrollTo("download")}
                     className="inline-flex h-12 items-center gap-2 self-center rounded-lg border border-sky-200/40 bg-[linear-gradient(135deg,#38bdf8_0%,#2563eb_100%)] px-5 text-sm font-semibold text-white shadow-[0_10px_28px_rgba(37,99,235,0.36),inset_0_1px_0_rgba(255,255,255,0.28)] transition hover:scale-[1.02] hover:shadow-[0_14px_36px_rgba(37,99,235,0.48),inset_0_1px_0_rgba(255,255,255,0.34)]"
                   >
-                    {heroPlatform === "mac" ? <AppleMark /> : <WindowsMark />}
+                    <WindowsMark />
                     {heroDownloadLabel}
                   </button>
                 </div>
@@ -579,9 +561,9 @@ export function LandingPage() {
             transition={{ duration: 0.5, delay: 0.15 }}
             className="mt-3 text-sm text-muted-foreground"
           >
-            {detected !== "unknown"
-              ? `We detected ${platforms[detected as Exclude<Platform, "unknown">]?.title}. Ready to download.`
-              : "Choose your platform below."}
+            {detected === "windows"
+              ? "We detected Windows. Ready to download."
+              : "Windows is available now. macOS is coming soon."}
           </motion.p>
         </div>
 
@@ -610,6 +592,11 @@ export function LandingPage() {
                 )}
                 <span className="relative z-10">
                   {platforms[p].icon} {platforms[p].title}
+                  {platforms[p].comingSoon && (
+                    <span className="ml-2 font-mono text-[10px] text-muted-foreground">
+                      (coming soon)
+                    </span>
+                  )}
                   {detected === p && (
                     <span className="ml-2 font-mono text-[10px] text-primary">(detected)</span>
                   )}
@@ -631,29 +618,47 @@ export function LandingPage() {
                 {current.title} downloads
               </h2>
               <div className="grid gap-3 sm:grid-cols-2">
-                {current.options.map((opt) => (
-                  <a
-                    key={opt.label}
-                    href={opt.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-center justify-between rounded-xl glass-card p-4 transition-colors hover:border-primary/40"
-                  >
-                    <div>
-                      <div className="mb-0.5 flex items-center gap-2">
-                        <Download
-                          size={14}
-                          className="text-muted-foreground transition-colors group-hover:text-primary"
-                        />
-                        <p className="text-sm font-medium text-foreground">{opt.label}</p>
+                {current.options.map((opt) => {
+                  const className = `group flex items-center justify-between rounded-xl glass-card p-4 transition-colors ${
+                    opt.disabled
+                      ? "cursor-not-allowed opacity-65"
+                      : "hover:border-primary/40"
+                  }`
+                  const content = (
+                    <>
+                      <div>
+                        <div className="mb-0.5 flex items-center gap-2">
+                          <Download
+                            size={14}
+                            className={`text-muted-foreground transition-colors ${
+                              opt.disabled ? "" : "group-hover:text-primary"
+                            }`}
+                          />
+                          <p className="text-sm font-medium text-foreground">{opt.label}</p>
+                        </div>
+                        {opt.note && <p className="pl-5 text-xs text-muted-foreground">{opt.note}</p>}
                       </div>
-                      {opt.note && <p className="pl-5 text-xs text-muted-foreground">{opt.note}</p>}
+                      <span className="rounded-lg border border-border px-2 py-1 font-mono text-xs text-muted-foreground transition-colors group-hover:border-primary/40 group-hover:text-primary">
+                        {opt.arch}
+                      </span>
+                    </>
+                  )
+                  return opt.disabled ? (
+                    <div key={opt.label} aria-disabled="true" className={className}>
+                      {content}
                     </div>
-                    <span className="rounded-lg border border-border px-2 py-1 font-mono text-xs text-muted-foreground transition-colors group-hover:border-primary/40 group-hover:text-primary">
-                      {opt.arch}
-                    </span>
-                  </a>
-                ))}
+                  ) : (
+                    <a
+                      key={opt.label}
+                      href={opt.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={className}
+                    >
+                      {content}
+                    </a>
+                  )
+                })}
               </div>
 
               <div className="space-y-3 pt-4">
