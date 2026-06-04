@@ -2,7 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
 import { Hono } from "hono"
 
 const mockRagSources = {}
-const mockRagDocuments = {}
+const mockRagDocuments = {
+  userId: {},
+  sourceId: {},
+  contentHash: {},
+}
 const mockRagChunks = {}
 const mockRagEmbeddings = {}
 const mockRagRetrievalLogs = {}
@@ -21,6 +25,7 @@ let updateRows: unknown[] = []
 let executeRows: unknown[] = []
 let sourceRows: unknown[] = [{ id: "source_1" }]
 let documentRows: unknown[] = []
+let conflictTargets: unknown[][] = []
 const realFetch = globalThis.fetch
 
 const fakeDb = {
@@ -40,9 +45,12 @@ const fakeDb = {
               ...(value as object),
             },
           ]),
-        onConflictDoUpdate: () => ({
-          returning: () => Promise.resolve([{ id: "document_1" }]),
-        }),
+        onConflictDoUpdate: (config: { target?: unknown[] }) => {
+          conflictTargets.push(config.target ?? [])
+          return {
+            returning: () => Promise.resolve([{ id: "document_1" }]),
+          }
+        },
         catch: () => Promise.resolve(),
       }
     },
@@ -120,6 +128,7 @@ describe("Cloud RAG routes", () => {
     executeRows = []
     sourceRows = [{ id: "source_1" }]
     documentRows = []
+    conflictTargets = []
     process.env["OPENAI_API_KEY"] = "test-key"
   })
 
@@ -213,6 +222,24 @@ describe("Cloud RAG routes", () => {
 
     expect(res.status).toBe(400)
     expect(body.code).toBe("invalid_content")
+  })
+
+  it("dedupes manual documents only within the requested source", async () => {
+    const res = await app().request("/api/rag/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sourceId: "source_1",
+        title: "Notes",
+        content: "Same content should stay scoped to this source.",
+      }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(conflictTargets[0]).toEqual([
+      mockRagDocuments.sourceId,
+      mockRagDocuments.contentHash,
+    ])
   })
 
   it("requires a search query", async () => {

@@ -2,7 +2,7 @@ import { streamText, type ToolSet } from "ai"
 import type { AgentQueryRequest, Plan, SseEvent } from "@yomi/shared"
 import { createModel } from "./model.js"
 import { createAgentTools } from "../tools/index.js"
-import { hooks } from "../harness/hooks.js"
+import { hooks, type Hooks } from "../harness/hooks.js"
 import { buildAgentPrompt, loadYomiMd } from "../harness/prompt.js"
 import { LoopGuards } from "../harness/guards.js"
 import { compact } from "../memory/compactor.js"
@@ -97,6 +97,23 @@ function whatsAppMessageRequest(text: string): { recipient: string; message: str
   return message && recipient ? { recipient, message } : null
 }
 
+type WriteSessionTurn = typeof writeSessionTurn
+type ShortcutSystemActions = {
+  adjustSystemVolume: typeof adjustSystemVolume
+  adjustSpotifyVolume: typeof adjustSpotifyVolume
+  playSpotify: typeof playSpotify
+  sendWhatsAppMessage: typeof sendWhatsAppMessage
+}
+
+async function rememberAgentShortcut(
+  req: AgentQueryRequest,
+  output: string,
+  writeTurn: WriteSessionTurn,
+): Promise<void> {
+  if (!memoryEnabled(req.plan)) return
+  await writeTurn({ kind: "agent", input: req.text, output, summary: output })
+}
+
 type ExecutableTool = { execute?: (args: unknown, opts: unknown) => PromiseLike<unknown> }
 type AgentStreamEvent =
   | { type: "text-delta"; textDelta: string }
@@ -118,20 +135,20 @@ type AgentStreamEvent =
     }
 
 // Wrap all tool execute functions with PreToolUse / PostToolUse hook calls.
-function applyHooks(tools: ToolSet): ToolSet {
+function applyHooks(tools: ToolSet, activeHooks: Hooks): ToolSet {
   return Object.fromEntries(
     Object.entries(tools).map(([name, t]) => [
       name,
       {
         ...t,
         execute: async (args: unknown, opts: unknown) => {
-          const check = await hooks.onPreToolUse(name, args)
+          const check = await activeHooks.onPreToolUse(name, args)
           if (!check.ok) {
             console.warn(`[yomi/agent] denied: ${name} — ${check.reason}`)
             return `[DENIED: ${check.reason}]`
           }
           const result = await (t as ExecutableTool).execute?.(args, opts)
-          return hooks.onPostToolUse(name, result)
+          return activeHooks.onPostToolUse(name, result)
         },
       },
     ]),
@@ -141,10 +158,23 @@ function applyHooks(tools: ToolSet): ToolSet {
 // `emit` lets Act-mode tools push act_proposed/act_result onto the live SSE stream (Spec 16).
 export async function* agentPipeline(
   req: AgentQueryRequest,
-  opts?: { emit?: (e: SseEvent) => void },
+  opts?: {
+    emit?: (e: SseEvent) => void
+    hooks?: Hooks
+    system?: ShortcutSystemActions
+    writeSessionTurn?: WriteSessionTurn
+  },
 ): AsyncGenerator<SseEvent> {
   const system = await getAgentPrompt(req.text, req.plan)
   const guards = new LoopGuards()
+  const activeHooks = opts?.hooks ?? hooks
+  const systemActions = opts?.system ?? {
+    adjustSystemVolume,
+    adjustSpotifyVolume,
+    playSpotify,
+    sendWhatsAppMessage,
+  }
+  const writeTurn = opts?.writeSessionTurn ?? writeSessionTurn
   if (opts?.emit) setActEmitter(opts.emit)
 
   try {
@@ -154,26 +184,25 @@ export async function* agentPipeline(
       const toolName = spotify ? "adjust_spotify_volume" : "adjust_volume"
       const args = { direction: volume.direction, steps: volume.steps }
       yield { type: "agent_tool_call", tool: toolName, args }
-      const check = await hooks.onPreToolUse(toolName, args)
+      const check = await activeHooks.onPreToolUse(toolName, args)
       const result = check.ok
-        ? await hooks.onPostToolUse(
+        ? await activeHooks.onPostToolUse(
             toolName,
             spotify
-              ? await adjustSpotifyVolume(volume.direction, volume.steps)
-              : await adjustSystemVolume(volume.direction, volume.steps),
+              ? await systemActions.adjustSpotifyVolume(volume.direction, volume.steps)
+              : await systemActions.adjustSystemVolume(volume.direction, volume.steps),
           )
         : `[DENIED: ${check.reason}]`
       yield { type: "agent_tool_result", tool: toolName, result }
       const failed = typeof result === "object" && result !== null && "error" in result
-      yield {
-        type: "agent_text",
-        text: failed
-          ? "I could not adjust the volume."
-          : spotify
-            ? "Spotify volume adjusted."
-            : "Volume adjusted.",
-      }
-      await hooks.onStop(failed ? "volume adjustment failed" : "volume adjusted")
+      const output = failed
+        ? "I could not adjust the volume."
+        : spotify
+          ? "Spotify volume adjusted."
+          : "Volume adjusted."
+      yield { type: "agent_text", text: output }
+      await activeHooks.onStop(failed ? "volume adjustment failed" : "volume adjusted")
+      if (!failed) await rememberAgentShortcut(req, output, writeTurn)
       yield { type: "done" }
       return
     }
@@ -181,19 +210,21 @@ export async function* agentPipeline(
     const spotifyQuery = spotifyPlaybackQuery(req.text)
     if (spotifyQuery) {
       yield { type: "agent_tool_call", tool: "play_spotify", args: { query: spotifyQuery } }
-      const check = await hooks.onPreToolUse("play_spotify", { query: spotifyQuery })
+      const check = await activeHooks.onPreToolUse("play_spotify", { query: spotifyQuery })
       const result = check.ok
-        ? await hooks.onPostToolUse("play_spotify", await playSpotify(spotifyQuery))
+        ? await activeHooks.onPostToolUse(
+            "play_spotify",
+            await systemActions.playSpotify(spotifyQuery),
+          )
         : `[DENIED: ${check.reason}]`
       yield { type: "agent_tool_result", tool: "play_spotify", result }
       const failed = typeof result === "object" && result !== null && "error" in result
-      yield {
-        type: "agent_text",
-        text: failed
-          ? `I could not play ${spotifyQuery} on Spotify.`
-          : `Playing ${spotifyQuery} on Spotify.`,
-      }
-      await hooks.onStop(failed ? "spotify playback failed" : "spotify playback started")
+      const output = failed
+        ? `I could not play ${spotifyQuery} on Spotify.`
+        : `Playing ${spotifyQuery} on Spotify.`
+      yield { type: "agent_text", text: output }
+      await activeHooks.onStop(failed ? "spotify playback failed" : "spotify playback started")
+      if (!failed) await rememberAgentShortcut(req, output, writeTurn)
       yield { type: "done" }
       return
     }
@@ -201,22 +232,24 @@ export async function* agentPipeline(
     const whatsAppMessage = whatsAppMessageRequest(req.text)
     if (whatsAppMessage) {
       yield { type: "agent_tool_call", tool: "send_whatsapp_message", args: whatsAppMessage }
-      const check = await hooks.onPreToolUse("send_whatsapp_message", whatsAppMessage)
+      const check = await activeHooks.onPreToolUse("send_whatsapp_message", whatsAppMessage)
       const result = check.ok
-        ? await hooks.onPostToolUse(
+        ? await activeHooks.onPostToolUse(
             "send_whatsapp_message",
-            await sendWhatsAppMessage(whatsAppMessage.recipient, whatsAppMessage.message),
+            await systemActions.sendWhatsAppMessage(
+              whatsAppMessage.recipient,
+              whatsAppMessage.message,
+            ),
           )
         : `[DENIED: ${check.reason}]`
       yield { type: "agent_tool_result", tool: "send_whatsapp_message", result }
       const failed = typeof result === "object" && result !== null && "error" in result
-      yield {
-        type: "agent_text",
-        text: failed
-          ? `I could not send "${whatsAppMessage.message}" to ${whatsAppMessage.recipient} on WhatsApp.`
-          : `Sent "${whatsAppMessage.message}" to ${whatsAppMessage.recipient} on WhatsApp.`,
-      }
-      await hooks.onStop(failed ? "whatsapp send failed" : "whatsapp message sent")
+      const output = failed
+        ? `I could not send "${whatsAppMessage.message}" to ${whatsAppMessage.recipient} on WhatsApp.`
+        : `Sent "${whatsAppMessage.message}" to ${whatsAppMessage.recipient} on WhatsApp.`
+      yield { type: "agent_text", text: output }
+      await activeHooks.onStop(failed ? "whatsapp send failed" : "whatsapp message sent")
+      if (!failed) await rememberAgentShortcut(req, output, writeTurn)
       yield { type: "done" }
       return
     }
@@ -224,10 +257,13 @@ export async function* agentPipeline(
     // Build tools only for the full agent loop (not the fast-path returns above), so a "volume up"
     // command doesn't spawn the browser MCP. Browser tools merge in behind the same safety guard.
     const mcpTools = wrapBrowserTools(await getMcpTools())
-    const tools = applyHooks({
-      ...createAgentTools({ screenshotB64: req.screenshot_b64 }),
-      ...mcpTools,
-    })
+    const tools = applyHooks(
+      {
+        ...createAgentTools({ screenshotB64: req.screenshot_b64 }),
+        ...mcpTools,
+      },
+      activeHooks,
+    )
 
     const result = streamText({
       model: createModel(AGENT_PATH_MODEL),
@@ -260,7 +296,7 @@ export async function* agentPipeline(
           }
           if (guard.break) {
             yield { type: "error", message: guard.reason }
-            await hooks.onStop(guard.reason)
+            await activeHooks.onStop(guard.reason)
             return
           }
           break
@@ -274,7 +310,7 @@ export async function* agentPipeline(
           const guard = guards.onStep()
           if (guard.break) {
             yield { type: "error", message: guard.reason }
-            await hooks.onStop(guard.reason)
+            await activeHooks.onStop(guard.reason)
             return
           }
           break
@@ -289,9 +325,9 @@ export async function* agentPipeline(
     }
 
     const summary = textTail.replace(/\n/g, " ").trim() || "agent task complete"
-    await hooks.onStop(summary)
+    await activeHooks.onStop(summary)
     if (memoryEnabled(req.plan)) {
-      await writeSessionTurn({ kind: "agent", input: req.text, output: summary, summary })
+      await writeTurn({ kind: "agent", input: req.text, output: summary, summary })
       // Fire compaction after each agent run; it no-ops if the session log is too short.
       compact().catch((err) => console.warn("[yomi/agent] compaction error:", err))
     }

@@ -340,7 +340,7 @@ ragRouter.post("/documents", async (c) => {
       metadata: body.metadata ?? null,
     })
     .onConflictDoUpdate({
-      target: [ragDocuments.userId, ragDocuments.contentHash],
+      target: [ragDocuments.sourceId, ragDocuments.contentHash],
       set: { title, updatedAt: new Date(), metadata: body.metadata ?? null },
     })
     .returning()
