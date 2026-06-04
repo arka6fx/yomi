@@ -44,6 +44,13 @@
       "when": 1779840000000,
       "tag": "0005_cloud_rag_archive_mirror",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1779926400000,
+      "tag": "0006_rag_hybrid",
+      "breakpoints": true
     }
   ]
 }

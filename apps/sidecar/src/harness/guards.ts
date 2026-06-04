@@ -40,21 +40,24 @@ export class LoopGuards {
   // Call on every tool-call event (before execution).
   onToolCall(toolName: string, args: unknown): GuardResult {
     this.toolCallsInWindow++
-
-    const key = `${toolName}:${JSON.stringify(args)}`
-    this.recentCalls.push(key)
-    if (this.recentCalls.length > DUP_CALL_THRESHOLD) {
-      this.recentCalls.shift()
+    if (toolName === "get_ui_tree") {
+      return { break: false }
     }
 
+    const key = `${toolName}:${JSON.stringify(args)}`
     if (
-      this.recentCalls.length === DUP_CALL_THRESHOLD &&
+      this.recentCalls.length === DUP_CALL_THRESHOLD - 1 &&
       this.recentCalls.every(k => k === key)
     ) {
       return {
         break: true,
         reason: `duplicate: ${toolName} called ${DUP_CALL_THRESHOLD}× with identical args`,
       }
+    }
+
+    this.recentCalls.push(key)
+    if (this.recentCalls.length > DUP_CALL_THRESHOLD - 1) {
+      this.recentCalls.shift()
     }
 
     return { break: false }

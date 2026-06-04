@@ -4,6 +4,16 @@ import type { SseEvent } from "@yomi/shared"
 type HotkeyState = "idle" | "listening" | "processing" | "text-input"
 type AuthStatus = "ok" | "needed" | "waiting" | "error"
 
+export interface BackgroundAgentSignal {
+  seq: number
+  runId: string
+  state: "idle" | "thinking" | "working" | "waiting" | "error"
+  task: string
+  step?: number
+  max?: number
+  done?: boolean
+}
+
 export interface SubscriptionInfo {
   name: string
   email: string
@@ -67,6 +77,13 @@ contextBridge.exposeInMainWorld("yomi", {
     return () => ipcRenderer.off("yomi:state", h)
   },
 
+  // Detached background-agent updates → companion dock (one entry per runId).
+  onBackgroundAgent(cb: (sig: BackgroundAgentSignal) => void): () => void {
+    const h = (_: Electron.IpcRendererEvent, sig: BackgroundAgentSignal) => cb(sig)
+    ipcRenderer.on("yomi:background-agent", h)
+    return () => ipcRenderer.off("yomi:background-agent", h)
+  },
+
   // ── Audio ─────────────────────────────────────────────────────────────────
 
   sendAudioChunk(pcm: ArrayBuffer, sampleRate: number): void {
@@ -85,6 +102,10 @@ contextBridge.exposeInMainWorld("yomi", {
 
   resize(w: number, h: number): void {
     ipcRenderer.send("yomi:resize", w, h)
+  },
+
+  setCompanionOverlay(enabled: boolean): void {
+    ipcRenderer.send("yomi:set-companion-overlay", enabled)
   },
 
   setMouseEventsIgnored(ignored: boolean): void {
@@ -143,6 +164,11 @@ contextBridge.exposeInMainWorld("yomi", {
     ipcRenderer.send("yomi:trigger-text")
   },
 
+  // One-click screen analysis straight into chat (no Enter).
+  triggerScreenshot(): void {
+    ipcRenderer.send("yomi:trigger-screenshot")
+  },
+
   stopListening(): void {
     ipcRenderer.send("yomi:stop-listening")
   },
@@ -163,8 +189,8 @@ contextBridge.exposeInMainWorld("yomi", {
     ipcRenderer.send("yomi:guide-mode", on)
   },
 
-  setPointingMode(on: boolean): void {
-    ipcRenderer.send("yomi:pointing-mode", on)
+  confirmAct(id: string, approved: boolean): void {
+    ipcRenderer.send("yomi:act-confirm", id, approved)
   },
 
   onGuideExit(cb: () => void): () => void {

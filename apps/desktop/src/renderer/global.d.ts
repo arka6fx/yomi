@@ -1,6 +1,6 @@
 import type { SseEvent } from "@yomi/shared"
 import type { HotkeyState } from "./store"
-import type { SubscriptionInfo, SubscriptionUpdate } from "../preload/index"
+import type { SubscriptionInfo, SubscriptionUpdate, BackgroundAgentSignal } from "../preload/index"
 
 type AuthStatus = "ok" | "needed" | "waiting" | "error"
 
@@ -14,12 +14,14 @@ declare global {
       // Events
       onEvent(cb: (e: SseEvent) => void): () => void
       onStateChange(cb: (s: HotkeyState) => void): () => void
+      onBackgroundAgent(cb: (sig: BackgroundAgentSignal) => void): () => void
       // Audio
       sendAudioChunk(pcm: ArrayBuffer, sampleRate: number): void
       // Window control
       startDrag(offsetX: number, offsetY: number): void
       moveDrag(screenX: number, screenY: number): void
       resize(w: number, h: number): void
+      setCompanionOverlay(enabled: boolean): void
       setMouseEventsIgnored(ignored: boolean): void
       setHitRegions(regions: { x: number; y: number; width: number; height: number }[]): void
       nudge(dx: number, dy: number): void
@@ -35,6 +37,7 @@ declare global {
       requestEscape(): void
       triggerVoice(): void
       triggerText(): void
+      triggerScreenshot(): void
       stopListening(): void
       // App control
       quit(): void
@@ -42,8 +45,9 @@ declare global {
       setOpacity(value: number): void
       // Guide mode
       setGuideMode(on: boolean): void
-      setPointingMode(on: boolean): void
       onGuideExit(cb: () => void): () => void
+      // Act mode (Spec 16)
+      confirmAct(id: string, approved: boolean): void
     }
   }
 }

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 import { Database } from "bun:sqlite"
 import { readdir, readFile, stat } from "node:fs/promises"
 import { basename, join, relative } from "node:path"
+import { chunkMarkdown } from "@yomi/shared"
 import { initMemoryDir, notepadDir } from "./loader.js"
 
 export type ArchiveSource = {
@@ -89,16 +90,7 @@ function hash(value: string): string {
 }
 
 function chunkText(content: string): string[] {
-  const chunks: string[] = []
-  let start = 0
-  while (start < content.length) {
-    const end = Math.min(content.length, start + CHUNK_CHARS)
-    const chunk = content.slice(start, end).trim()
-    if (chunk) chunks.push(chunk)
-    if (end === content.length) break
-    start = Math.max(0, end - CHUNK_OVERLAP)
-  }
-  return chunks
+  return chunkMarkdown(content, { targetChars: CHUNK_CHARS, overlap: CHUNK_OVERLAP })
 }
 
 async function readMarkdownSource(absPath: string, root: string): Promise<ArchiveSource | null> {
@@ -241,15 +233,16 @@ export async function retrieveLocalRagContext(query: string, maxChars = 3000): P
       limit 8
     `).all(terms)
 
+    // Numbered, attributed blocks so the model can cite sources inline as [n].
     const out: string[] = []
     let used = 0
     for (const row of rows) {
-      const snippet = `- ${row.sourcePath}: ${row.content}`
-      if (used + snippet.length > maxChars) break
-      out.push(snippet)
-      used += snippet.length
+      const block = `[${out.length + 1}] ${row.sourcePath}\n${row.content}`
+      if (used + block.length > maxChars) break
+      out.push(block)
+      used += block.length
     }
-    return out.join("\n")
+    return out.join("\n\n")
   } catch (err) {
     console.warn("[yomi/local-rag] retrieval failed:", err instanceof Error ? err.message : err)
     return ""
