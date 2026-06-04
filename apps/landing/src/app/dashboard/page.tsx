@@ -336,7 +336,7 @@ function DashboardContent() {
           <div className="rounded-xl border border-border bg-card p-4 flex items-center justify-between gap-4">
             <div>
               <p className="text-sm font-medium text-foreground">Download Yomi</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Get the desktop app for Mac or Windows.</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Get the Windows desktop app.</p>
             </div>
             <Link
               href="/#download"

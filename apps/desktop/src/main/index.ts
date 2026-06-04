@@ -1,4 +1,5 @@
 import { app, BrowserWindow, desktopCapturer, globalShortcut, ipcMain, screen, shell } from "electron"
+import type { Rectangle } from "electron"
 import path from "node:path"
 import { SidecarManager } from "./sidecar"
 import { checkStoredToken, startDeviceCodeFlow, clearToken, loadToken, BACKEND_URL } from "./auth"
@@ -16,6 +17,31 @@ let overlayWin: BrowserWindow | null = null
 let sidecarStarted = false  // Sidecar + IPC + hotkeys initialised (once ever)
 let overlayHitRegions: { x: number; y: number; width: number; height: number }[] = []
 let overlayIgnoringMouse = false
+let companionOverlay = false
+const COMPACT_OVERLAY_W = 780
+
+function compactOverlayBounds(height = 40): Rectangle {
+  const { x, y, width } = screen.getPrimaryDisplay().workArea
+  return {
+    x: x + Math.round((width - COMPACT_OVERLAY_W) / 2),
+    y: y + 8,
+    width: COMPACT_OVERLAY_W,
+    height,
+  }
+}
+
+function companionOverlayBounds(): Rectangle {
+  return screen.getPrimaryDisplay().workArea
+}
+
+function setCompanionOverlay(enabled: boolean): void {
+  if (!overlayWin || overlayWin.isDestroyed() || companionOverlay === enabled) return
+  companionOverlay = enabled
+  overlayWin.setResizable(true)
+  overlayWin.setBounds(enabled ? companionOverlayBounds() : compactOverlayBounds(40), false)
+  overlayWin.setResizable(false)
+  updateOverlayMousePassthrough()
+}
 
 function setOverlayMouseIgnored(ignored: boolean): void {
   if (!overlayWin || overlayWin.isDestroyed() || overlayIgnoringMouse === ignored) return
@@ -27,7 +53,7 @@ function setOverlayMouseIgnored(ignored: boolean): void {
 function updateOverlayMousePassthrough(): void {
   if (!overlayWin || overlayWin.isDestroyed() || !overlayWin.isVisible()) return
   if (overlayHitRegions.length === 0) {
-    setOverlayMouseIgnored(false)
+    setOverlayMouseIgnored(companionOverlay)
     return
   }
   const cursor = screen.getCursorScreenPoint()
@@ -45,15 +71,10 @@ function updateOverlayMousePassthrough(): void {
 
 app.whenReady().then(async () => {
   // Position overlay at top-center of primary display
-  const { width: screenW } = screen.getPrimaryDisplay().workAreaSize
-  const overlayW = 780
-  const overlayX = Math.round((screenW - overlayW) / 2)
+  const initialBounds = compactOverlayBounds()
 
   overlayWin = new BrowserWindow({
-    width: overlayW,
-    height: 40,
-    x: overlayX,
-    y: 8,
+    ...initialBounds,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -98,7 +119,12 @@ app.whenReady().then(async () => {
 
   ipcMain.on("yomi:resize", (_e, w: number, h: number) => {
     if (!overlayWin) return
+    if (companionOverlay) return
     overlayWin.setSize(Math.max(240, w), Math.max(40, h))
+  })
+
+  ipcMain.on("yomi:set-companion-overlay", (_e, enabled: boolean) => {
+    setCompanionOverlay(enabled)
   })
 
   ipcMain.on("yomi:set-ignore-mouse-events", (_e, ignored: boolean) => {
@@ -329,7 +355,7 @@ async function completeSetup(token: string) {
       }
     }
 
-    const { onListenStop, onTextQuery, onAbort } = initSidecarIpc(sidecar, overlayWin)
+    const { onListenStop, onTextQuery, onAbort, onScreenshot } = initSidecarIpc(sidecar, overlayWin)
 
     initHotkey({
       onStateChange: (s) => {
@@ -347,6 +373,7 @@ async function completeSetup(token: string) {
       onListenStop,
       onTextQuery,
       onAbort,
+      onScreenshot,
       // Fires on every ESC press regardless of state — stops TTS playback even
       // when the pipeline has already finished and state is back to idle.
       onAnyEscape: () => {

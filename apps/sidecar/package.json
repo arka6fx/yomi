@@ -5,10 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "bun run --env-file ../../.env --watch src/index.ts",
-    "build:darwin-arm64": "bun build src/index.ts --compile --target bun-darwin-arm64  --outfile dist/sidecar-darwin-arm64",
-    "build:darwin-x64":   "bun build src/index.ts --compile --target bun-darwin-x64    --outfile dist/sidecar-darwin-x64",
     "build:win32-x64":    "bun build src/index.ts --compile --target bun-windows-x64   --outfile dist/sidecar-win32-x64.exe",
-    "build": "bun run build:darwin-arm64 && bun run build:darwin-x64 && bun run build:win32-x64",
+    "build": "bun run build:win32-x64",
     "build:ci": "bun build src/index.ts --outdir dist --target bun",
     "test": "bun test --pass-with-no-tests --isolate",
     "lint": "eslint src",
@@ -18,6 +16,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.0.0",
+    "@playwright/mcp": "^0.0.75",
     "@yomi/shared": "workspace:*",
     "ai": "^4.0.0",
     "hono": "^4.5.0"

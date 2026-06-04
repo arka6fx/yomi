@@ -214,6 +214,28 @@ describe("Cloud RAG routes", () => {
     expect(body.code).toBe("invalid_query")
   })
 
+  it("returns hybrid search results with citation markers", async () => {
+    executeRows = [
+      { chunkId: "c1", documentId: "d1", sourceId: "s1", sourceName: "notes.md", title: "Notes", content: "Alpha content about widgets.", score: 0.9, embedding: "[0.1,0.2,0.3]" },
+      { chunkId: "c2", documentId: "d1", sourceId: "s1", sourceName: "notes.md", title: "Notes", content: "Beta content about gadgets.", score: 0.5, embedding: "[0.9,0.1,0.2]" },
+    ]
+
+    const res = await app().request("/api/rag/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: "widgets" }),
+    })
+    const body = await res.json() as { snippets?: { chunkId: string; marker: number; content: string }[] }
+
+    expect(res.status).toBe(200)
+    expect(body.snippets).toHaveLength(2)
+    expect(body.snippets!.map((s) => s.marker)).toEqual([1, 2])
+    expect(body.snippets![0]!.content).toContain("widgets")
+    // Retrieval is logged with the reranked chunk ids.
+    const log = insertValues.find((v) => v && typeof v === "object" && "matchedChunkIds" in v) as { matchedChunkIds: string[] } | undefined
+    expect(log?.matchedChunkIds).toContain("c1")
+  })
+
   it("soft-deletes a source owned by the current user", async () => {
     const res = await app().request("/api/rag/sources/source_1", { method: "DELETE" })
     const body = await res.json() as { ok?: boolean }

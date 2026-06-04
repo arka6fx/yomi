@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion"
 import { useYomiStore } from "./store"
 import type { HotkeyState, ChatEntry, SubscriptionInfo } from "./store"
 import type { GuideStep } from "@yomi/shared"
+import { YomiCompanion, type BackgroundAgentSignal } from "./companion/YomiCompanion"
 
 // ── Theme System ───────────────────────────────────────────────────────────────
 
@@ -39,14 +40,14 @@ interface Theme {
 
 const AMBER: Theme = {
   id:"amber", label:"Amber",
-  bg:"rgba(11,10,8,0.72)", surface:"rgba(20,18,13,0.78)",
+  bg:"rgba(0,0,0,0.94)", surface:"rgba(1,1,1,0.96)",
   border:"rgba(255,224,194,0.09)", borderHi:"rgba(255,224,194,0.18)",
   text:"rgba(238,233,224,1)", dim:"rgba(175,163,145,0.9)",
   accent:"#ffe0c2", accentD:"rgba(255,224,194,0.1)", accentG:"rgba(255,200,130,0.22)",
   error:"#ff8c65", errorD:"rgba(255,140,101,0.12)",
   codeBg:"rgba(9,8,6,1)", kw:"#ffd099", str:"#a3c9a8", num:"#ffb870",
   cmt:"rgba(145,128,95,0.65)", fn:"#ffe0c2", codeText:"rgba(208,196,178,1)",
-  toolbarBg:"rgba(13,11,8,0.94)", menuBg:"rgba(13,11,8,0.94)",
+  toolbarBg:"rgba(0,0,0,0.99)", menuBg:"rgba(0,0,0,0.99)",
   menuBorder:"rgba(255,224,194,0.1)",
   menuShadow:"0 12px 40px rgba(0,0,0,0.65), 0 0 0 0.5px rgba(255,224,194,0.04)",
   menuSep:"rgba(255,224,194,0.06)", sectionLabel:"rgba(255,200,130,0.6)",
@@ -291,14 +292,14 @@ const PURPLE: Theme = {
 
 const BLACK: Theme = {
   id:"black", label:"Black",
-  bg:"rgba(0,0,0,0.92)", surface:"rgba(8,8,8,0.95)",
+  bg:"rgba(0,0,0,0.97)", surface:"rgba(1,1,1,0.98)",
   border:"rgba(255,255,255,0.1)", borderHi:"rgba(255,255,255,0.2)",
   text:"rgba(226,232,240,1)", dim:"rgba(148,163,184,0.9)",
   accent:"#e2e8f0", accentD:"rgba(255,255,255,0.08)", accentG:"rgba(255,255,255,0.12)",
   error:"#f87171", errorD:"rgba(239,68,68,0.12)",
   codeBg:"rgba(0,0,0,1)", kw:"#93c5fd", str:"#86efac", num:"#fca5a5",
   cmt:"rgba(100,116,139,0.7)", fn:"#c4b5fd", codeText:"rgba(203,213,225,1)",
-  toolbarBg:"rgba(0,0,0,0.98)", menuBg:"rgba(4,4,4,0.98)",
+  toolbarBg:"rgba(0,0,0,0.995)", menuBg:"rgba(0,0,0,0.995)",
   menuBorder:"rgba(255,255,255,0.12)",
   menuShadow:"0 12px 40px rgba(0,0,0,0.9), 0 0 0 0.5px rgba(255,255,255,0.06)",
   menuSep:"rgba(255,255,255,0.07)", sectionLabel:"rgba(200,200,200,0.6)",
@@ -337,11 +338,31 @@ const THEMES: Record<ThemeId, Theme> = {
 }
 
 const ThemeCtx = React.createContext<{ theme: Theme; setTheme: (id: ThemeId) => void }>({
-  theme: AMBER, setTheme: () => {},
+  theme: BLACK, setTheme: () => {},
 })
 
 const themeStyleEl = document.createElement("style")
 document.head.appendChild(themeStyleEl)
+
+const OPACITY_STORAGE_KEY = "yomi:opacity"
+const UI_OPACITY_EVENT = "yomi:opacity-change"
+
+function clampUiOpacity(value: number): number {
+  return Number.isFinite(value) ? Math.min(1, Math.max(0.2, value)) : 1
+}
+
+function readUiOpacity(): number {
+  const saved = localStorage.getItem(OPACITY_STORAGE_KEY)
+  return saved ? clampUiOpacity(parseFloat(saved)) : 1
+}
+
+function translucentColor(color: string, opacity: number, floor = 0.16): string {
+  const match = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/)
+  if (!match) return color
+  const alpha = match[4] ? parseFloat(match[4]) : 1
+  const nextAlpha = Math.max(floor, Math.min(alpha, alpha * clampUiOpacity(opacity)))
+  return `rgba(${match[1]},${match[2]},${match[3]},${Number(nextAlpha.toFixed(3))})`
+}
 
 function applyTheme(t: Theme) {
   const r = document.documentElement.style
@@ -353,6 +374,7 @@ function applyTheme(t: Theme) {
   r.setProperty("--code-bg", t.codeBg)
   r.setProperty("--kw", t.kw); r.setProperty("--str", t.str); r.setProperty("--num", t.num)
   r.setProperty("--cmt", t.cmt); r.setProperty("--fn", t.fn); r.setProperty("--code-text", t.codeText)
+  r.setProperty("--section-label", t.sectionLabel); r.setProperty("--menu-sep", t.menuSep)
   themeStyleEl.textContent = `
     ::-webkit-scrollbar-thumb { background:${t.scrollThumb}; border-radius:3px; }
     ::-webkit-scrollbar-thumb:hover { background:${t.scrollThumbHover}; }
@@ -465,30 +487,30 @@ function AnswerBlock({ answer }: { answer:string }) {
   return (
     <div style={{
       background:"var(--code-bg)",
-      border:"1px solid rgba(255,224,194,0.08)",
+      border:"1px solid var(--border)",
       borderRadius:8, overflow:"hidden", margin:"6px 0",
       fontSize:12, fontFamily:UI_FONT,
     }} className="no-drag">
       <div style={{
         display:"flex", alignItems:"center", justifyContent:"space-between",
         padding:"4px 8px 4px 12px",
-        borderBottom:"1px solid rgba(255,224,194,0.05)",
-        background:"rgba(255,224,194,0.025)",
+        borderBottom:"1px solid var(--menu-sep)",
+        background:"var(--accent-d)",
       }}>
-        <span style={{ fontSize:9, color:"rgba(255,200,140,0.34)", textTransform:"uppercase", letterSpacing:"0.12em" }}>
+        <span style={{ fontSize:9, color:"var(--section-label)", textTransform:"uppercase", letterSpacing:"0.12em" }}>
           answer
         </span>
         <button
           onClick={copy}
           style={{
-            background: copied ? "rgba(255,224,194,0.12)" : "none",
-            border:`1px solid ${copied ? "rgba(255,224,194,0.25)" : "rgba(255,224,194,0.08)"}`,
+            background: copied ? "var(--accent-d)" : "none",
+            border:`1px solid ${copied ? "var(--border-hi)" : "var(--border)"}`,
             borderRadius:3, padding:"1px 7px", fontSize:9,
-            color: copied ? "rgba(255,224,194,0.85)" : "rgba(175,155,125,0.45)",
+            color: copied ? "var(--accent)" : "var(--dim)",
             cursor:"pointer", fontFamily:UI_FONT, transition:"all .2s",
           }}
-          onMouseEnter={e=>{ if (!copied){ e.currentTarget.style.color="rgba(255,224,194,0.7)"; e.currentTarget.style.borderColor="rgba(255,224,194,0.2)" }}}
-          onMouseLeave={e=>{ if (!copied){ e.currentTarget.style.color="rgba(175,155,125,0.45)"; e.currentTarget.style.borderColor="rgba(255,224,194,0.08)" }}}
+          onMouseEnter={e=>{ if (!copied){ e.currentTarget.style.color="var(--accent)"; e.currentTarget.style.borderColor="var(--border-hi)" }}}
+          onMouseLeave={e=>{ if (!copied){ e.currentTarget.style.color="var(--dim)"; e.currentTarget.style.borderColor="var(--border)" }}}
         >
           {copied ? "✓ copied" : "copy"}
         </button>
@@ -499,7 +521,7 @@ function AnswerBlock({ answer }: { answer:string }) {
         fontFamily:UI_FONT,
         fontWeight:450,
         lineHeight:1.58,
-        color:"rgba(238,233,224,0.94)",
+        color:"var(--text)",
         textAlign:"left",
         letterSpacing:0,
         whiteSpace:"pre-wrap",
@@ -529,30 +551,30 @@ function CodeBlock({ code, lang }: { code:string; lang:string }) {
   return (
     <div style={{
       background:"var(--code-bg)", borderRadius:8, overflow:"hidden",
-      margin:"6px 0", border:"1px solid rgba(255,224,194,0.06)",
+      margin:"6px 0", border:"1px solid var(--border)",
       fontSize:12, fontFamily:CODE_FONT,
     }} className="no-drag">
       {/* Header */}
       <div style={{
         display:"flex", alignItems:"center", justifyContent:"space-between",
         padding:"4px 8px 4px 12px",
-        borderBottom:"1px solid rgba(255,224,194,0.04)",
-        background:"rgba(255,224,194,0.02)",
+        borderBottom:"1px solid var(--menu-sep)",
+        background:"var(--accent-d)",
       }}>
-        <span style={{ fontSize:9, color:"rgba(255,200,140,0.3)", textTransform:"uppercase", letterSpacing:"0.12em" }}>
+        <span style={{ fontSize:9, color:"var(--section-label)", textTransform:"uppercase", letterSpacing:"0.12em" }}>
           {lang || "code"}
         </span>
         <button
           onClick={copyCode}
           style={{
-            background: copied ? "rgba(255,224,194,0.12)" : "none",
-            border:`1px solid ${copied ? "rgba(255,224,194,0.25)" : "rgba(255,224,194,0.08)"}`,
+            background: copied ? "var(--accent-d)" : "none",
+            border:`1px solid ${copied ? "var(--border-hi)" : "var(--border)"}`,
             borderRadius:3, padding:"1px 7px", fontSize:9,
-            color: copied ? "rgba(255,224,194,0.85)" : "rgba(175,155,125,0.45)",
+            color: copied ? "var(--accent)" : "var(--dim)",
             cursor:"pointer", fontFamily:UI_FONT, transition:"all .2s",
           }}
-          onMouseEnter={e=>{ if (!copied){ e.currentTarget.style.color="rgba(255,224,194,0.7)"; e.currentTarget.style.borderColor="rgba(255,224,194,0.2)" }}}
-          onMouseLeave={e=>{ if (!copied){ e.currentTarget.style.color="rgba(175,155,125,0.45)"; e.currentTarget.style.borderColor="rgba(255,224,194,0.08)" }}}
+          onMouseEnter={e=>{ if (!copied){ e.currentTarget.style.color="var(--accent)"; e.currentTarget.style.borderColor="var(--border-hi)" }}}
+          onMouseLeave={e=>{ if (!copied){ e.currentTarget.style.color="var(--dim)"; e.currentTarget.style.borderColor="var(--border)" }}}
         >
           {copied ? "✓ copied" : "copy"}
         </button>
@@ -561,7 +583,7 @@ function CodeBlock({ code, lang }: { code:string; lang:string }) {
         {lines.map((line,idx) => (
           <div key={idx} style={{ display:"flex", alignItems:"flex-start", padding:"1.5px 14px 1.5px 10px", minHeight:18 }}>
             <span style={{
-              color:"rgba(255,224,194,0.1)", userSelect:"none",
+              color:"var(--border-hi)", userSelect:"none",
               minWidth:numW, textAlign:"right", marginRight:14, flexShrink:0, lineHeight:"18px",
             }}>
               {idx+1}
@@ -586,9 +608,9 @@ function Inline({ text }: { text:string }) {
   let last=0, m: RegExpExecArray|null, k=0
   while ((m=re.exec(text)) !== null) {
     if (m.index>last) parts.push(text.slice(last,m.index))
-    if (m[2])      parts.push(<strong key={k++} style={{ fontWeight:600, color:"rgba(238,233,224,1)" }}>{m[2]}</strong>)
-    else if (m[3]) parts.push(<code key={k++} style={{ fontFamily:CODE_FONT, fontSize:"0.87em", background:"rgba(255,224,194,0.07)", borderRadius:3, padding:"1px 5px", color:"var(--str)" }}>{m[3]}</code>)
-    else if (m[4]) parts.push(<em key={k++} style={{ fontStyle:"italic", color:"rgba(200,185,160,0.85)" }}>{m[4]}</em>)
+    if (m[2])      parts.push(<strong key={k++} style={{ fontWeight:600, color:"var(--text)" }}>{m[2]}</strong>)
+    else if (m[3]) parts.push(<code key={k++} style={{ fontFamily:CODE_FONT, fontSize:"0.87em", background:"var(--accent-d)", borderRadius:3, padding:"1px 5px", color:"var(--str)" }}>{m[3]}</code>)
+    else if (m[4]) parts.push(<em key={k++} style={{ fontStyle:"italic", color:"var(--dim)" }}>{m[4]}</em>)
     last=m.index+m[0].length
   }
   if (last<text.length) parts.push(text.slice(last))
@@ -648,10 +670,10 @@ function RenderBlocks({ blocks, isStreaming }: { blocks:Block[]; isStreaming:boo
           return (
             <div key={idx} style={{
               fontSize:sz, fontWeight:600, fontFamily:UI_FONT,
-              color:"rgba(238,228,210,0.95)", letterSpacing:"-0.01em",
+              color:"var(--text)", letterSpacing:"0",
               margin:idx===0?"0 0 8px":"12px 0 5px",
               paddingBottom:b.level===1?5:0,
-              borderBottom:b.level===1?"1px solid rgba(255,224,194,0.07)":"none",
+              borderBottom:b.level===1?"1px solid var(--menu-sep)":"none",
             }}>
               {b.text}
             </div>
@@ -696,8 +718,7 @@ function RenderBlocks({ blocks, isStreaming }: { blocks:Block[]; isStreaming:boo
   )
 }
 
-// When the response contains code blocks: reasoning (top) · code (middle) · complexity (bottom).
-// All wrapped in an amber-tinted border, mirroring the code-block card aesthetic.
+// When code includes complexity notes, keep them readable instead of code-like.
 function ComplexityDisplay({ blocks, isStreaming }: { blocks:Block[]; isStreaming:boolean }) {
   const raw = blocks.filter(b => b.kind === "p").map(b => (b as Extract<Block,{kind:"p"}>).text).join(" ")
   if (!raw) return <RenderBlocks blocks={blocks} isStreaming={isStreaming} />
@@ -720,35 +741,27 @@ function ComplexityDisplay({ blocks, isStreaming }: { blocks:Block[]; isStreamin
   const space = parseOne("space", "")
   if (!time && !space) return <RenderBlocks blocks={blocks} isStreaming={isStreaming} />
 
-  const Pill = ({ label, notation, note }: { label:string; notation:string; note:string }) => (
-    <div style={{
-      flex:1, minWidth:120,
-      background:"rgba(255,200,130,0.04)",
-      border:"1px solid rgba(255,200,130,0.14)",
-      borderRadius:6, padding:"5px 9px",
+  const Row = ({ label, notation, note }: { label:string; notation:string; note:string }) => (
+    <p style={{
+      margin:"0 0 4px",
+      fontSize:12.5,
+      lineHeight:1.55,
+      fontFamily:UI_FONT,
+      color:"rgba(255,255,255,0.92)",
     }}>
-      <div style={{ display:"flex", alignItems:"baseline", gap:6 }}>
-        <span style={{
-          fontSize:8, fontWeight:700, letterSpacing:"0.14em",
-          color:"rgba(255,200,130,0.35)", fontFamily:UI_FONT, userSelect:"none",
-        }}>{label}</span>
-        <span style={{ fontFamily:CODE_FONT, fontSize:12, color:"rgba(255,200,130,0.85)" }}>
-          {notation}
-        </span>
-      </div>
-      {note && (
-        <div style={{
-          fontSize:10.5, fontFamily:UI_FONT, marginTop:2, lineHeight:1.4,
-          color:"rgba(200,180,155,0.55)",
-        }}>{note}</div>
-      )}
-    </div>
+      <strong style={{ color:"rgba(255,255,255,0.98)", fontWeight:650 }}>{label}:</strong>{" "}
+      <span>{notation}</span>
+      {note ? <span style={{ color:"var(--dim)" }}> - {note}</span> : null}
+    </p>
   )
 
   return (
-    <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-      {time  && <Pill label="TIME"  notation={time.notation}  note={time.note}  />}
-      {space && <Pill label="SPACE" notation={space.notation} note={space.note} />}
+    <div>
+      {time  && <Row label="Time"  notation={time.notation}  note={time.note}  />}
+      {space && <Row label="Space" notation={space.notation} note={space.note} />}
+      {isStreaming && (
+        <span style={{ display:"inline-block", width:2, height:"0.85em", background:"var(--accent)", animation:"blink 1s step-end infinite", borderRadius:1, opacity:0.7 }} />
+      )}
     </div>
   )
 }
@@ -767,19 +780,19 @@ function CodeAnswerLayout({ blocks, isStreaming }: { blocks:Block[]; isStreaming
   const sectionLabel = (text: string) => (
     <div style={{
       fontSize:8.5, fontFamily:UI_FONT, fontWeight:700, letterSpacing:"0.14em",
-      color:"rgba(255,200,130,0.35)", marginBottom:6, userSelect:"none",
+      color:"var(--section-label)", marginBottom:6, userSelect:"none",
     }}>{text}</div>
   )
 
   return (
     <div style={{
-      border:"1px solid rgba(255,200,130,0.22)",
+      border:"1px solid var(--border-hi)",
       borderRadius:9, overflow:"hidden",
-      background:"rgba(255,200,130,0.015)",
+      background:"rgba(255,255,255,0.015)",
     }}>
       {/* Reasoning */}
       {reasoningBlocks.length>0 && (
-        <div style={{ padding:"8px 12px 6px", borderBottom:"1px solid rgba(255,200,130,0.08)" }}>
+        <div style={{ padding:"8px 12px 6px", borderBottom:"1px solid var(--menu-sep)" }}>
           {sectionLabel("REASONING")}
           <RenderBlocks blocks={reasoningBlocks} isStreaming={isStreaming && codeBlocks.length===0} />
         </div>
@@ -805,8 +818,8 @@ function CodeAnswerLayout({ blocks, isStreaming }: { blocks:Block[]; isStreaming
       {complexityBlocks.length>0 && (
         <div style={{
           padding:"6px 12px 8px",
-          borderTop:"1px solid rgba(255,200,130,0.08)",
-          background:"rgba(255,200,130,0.02)",
+          borderTop:"1px solid var(--menu-sep)",
+          background:"rgba(255,255,255,0.018)",
         }}>
           {sectionLabel("COMPLEXITY")}
           <ComplexityDisplay blocks={complexityBlocks} isStreaming={isStreaming} />
@@ -835,15 +848,15 @@ function CopyButton({ text }: { text:string }) {
       onClick={copy}
       style={{
         display:"flex", alignItems:"center", gap:4,
-        background: copied ? "rgba(255,224,194,0.12)" : "rgba(255,224,194,0.05)",
-        border:`1px solid ${copied ? "rgba(255,224,194,0.28)" : "rgba(255,224,194,0.1)"}`,
+        background: copied ? "var(--accent-d)" : "rgba(255,255,255,0.035)",
+        border:`1px solid ${copied ? "var(--border-hi)" : "var(--border)"}`,
         borderRadius:5, padding:"3px 9px",
         fontSize:10, fontFamily:UI_FONT, letterSpacing:"0.02em",
-        color: copied ? "rgba(255,224,194,0.9)" : "rgba(175,155,125,0.55)",
+        color: copied ? "var(--accent)" : "var(--dim)",
         cursor:"pointer", transition:"all .2s",
       }}
-      onMouseEnter={e=>{ if(!copied){e.currentTarget.style.background="rgba(255,224,194,0.09)"; e.currentTarget.style.color="rgba(255,224,194,0.75)"}}}
-      onMouseLeave={e=>{ if(!copied){e.currentTarget.style.background="rgba(255,224,194,0.05)"; e.currentTarget.style.color="rgba(175,155,125,0.55)"}}}
+      onMouseEnter={e=>{ if(!copied){e.currentTarget.style.background="var(--accent-d)"; e.currentTarget.style.color="var(--accent)"}}}
+      onMouseLeave={e=>{ if(!copied){e.currentTarget.style.background="rgba(255,255,255,0.035)"; e.currentTarget.style.color="var(--dim)"}}}
     >
       {copied ? "✓ Copied" : "Copy"}
     </button>
@@ -852,41 +865,7 @@ function CopyButton({ text }: { text:string }) {
 
 // ── Text Input ─────────────────────────────────────────────────────────────────
 
-const SCREEN_PROMPT = `Analyze what's on my screen and use the standard answer-block format.
-
-If you see a CODING or ALGORITHM problem, respond in exactly this structure:
-
-[short introduction to the problem and approach]
-
-\`\`\`python
-# complete solution — use Python unless the problem or visible code specifies another language
-\`\`\`
-
-Time: O(?) — one-line reason
-Space: O(?) — one-line reason
-
-Example: include useful examples from the screen when they are visible.
-
-If you see a MULTIPLE CHOICE QUESTION (MCQ) or a question with a single definite answer, respond in exactly this structure:
-
-[1-3 sentence explanation of why the answer is correct]
-
-\`\`\`answer
-[letter and answer text, e.g. "B. The mitochondria"]
-\`\`\`
-
-If you see a writing task, briefly state what you drafted, then put the exact copy-ready response in an answer block:
-
-\`\`\`answer
-[the actual written response]
-\`\`\`
-
-For applications and letters, use proper letter format: date, recipient, subject, salutation, body paragraphs, closing, and sender name when appropriate.
-For biographies or long paragraph answers, use a clear title, sections, and readable paragraphs. Make it complete without padding.
-
-If there is no question, describe what's on the screen concisely and put the main takeaway in an answer block.`
-
-function TextInputPanel() {
+function TextInputPanel({ surfaceBg }: { surfaceBg: string }) {
   const [value, setValue] = React.useState("")
   const inputRef = useRef<HTMLInputElement>(null)
   const valueRef = useRef("")
@@ -895,21 +874,24 @@ function TextInputPanel() {
   useEffect(()=>{ requestAnimationFrame(()=>{ inputRef.current?.focus() }) }, [])
 
   const submit = React.useCallback(()=>{
-    const text = valueRef.current.trim() || SCREEN_PROMPT
+    const text = valueRef.current.trim()
+    if (!text) return   // empty does nothing — screen analysis lives on the Screenshot button
     setValue(""); valueRef.current=""
     window.yomi.submitTextQuery(text)
   }, [])
 
   return (
     <div style={{
-      background:"var(--surface)",
+      background: surfaceBg,
       border:"1px solid var(--border-hi)",
       borderRadius:9, overflow:"hidden",
-      boxShadow:"0 8px 40px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(255,224,194,0.04)",
+      backdropFilter:"blur(28px) saturate(150%)",
+      WebkitBackdropFilter:"blur(28px) saturate(150%)",
+      boxShadow:"0 8px 40px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(255,255,255,0.04)",
       animation:"slideUp 0.2s cubic-bezier(0.16,1,0.3,1)",
     }} className="drag yomi-hit-area">
       <div style={{ padding:"8px 10px", display:"flex", alignItems:"center", gap:8 }}>
-        <span style={{ fontSize:10.5, color:"rgba(255,200,130,0.75)", letterSpacing:"0.12em", fontFamily:UI_FONT, fontWeight:700, flexShrink:0 }}>
+        <span style={{ fontSize:10.5, color:"var(--section-label)", letterSpacing:"0.12em", fontFamily:UI_FONT, fontWeight:700, flexShrink:0 }}>
           ASK
         </span>
         <input
@@ -929,21 +911,21 @@ function TextInputPanel() {
           onClick={submit}
           className="no-drag"
           style={{
-            background:"rgba(255,224,194,0.1)",
-            border:"1px solid rgba(255,224,194,0.22)",
+            background:"var(--accent-d)",
+            border:"1px solid var(--border-hi)",
             borderRadius:4, padding:"3px 10px", fontSize:11.5,
-            color:"rgba(255,224,194,0.9)", fontFamily:UI_FONT,
+            color:"var(--accent)", fontFamily:UI_FONT,
             cursor:"pointer", flexShrink:0, transition:"all .15s",
           }}
-          onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,224,194,0.17)"; e.currentTarget.style.color="rgba(255,224,194,1)"}}
-          onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,224,194,0.1)"; e.currentTarget.style.color="rgba(255,224,194,0.8)"}}
+          onMouseEnter={e=>{e.currentTarget.style.background="var(--accent-g)"; e.currentTarget.style.color="var(--text)"}}
+          onMouseLeave={e=>{e.currentTarget.style.background="var(--accent-d)"; e.currentTarget.style.color="var(--accent)"}}
         >
           Send ↵
         </button>
       </div>
-      <div style={{ height:1, background:"rgba(255,224,194,0.05)" }} />
-      <div style={{ padding:"5px 12px 6px", fontSize:11, color:"rgba(185,170,145,0.65)", fontFamily:UI_FONT }}>
-        Empty → analyze screen · Esc to cancel · text only, no voice
+      <div style={{ height:1, background:"var(--menu-sep)" }} />
+      <div style={{ padding:"5px 12px 6px", fontSize:11, color:"var(--dim)", fontFamily:UI_FONT }}>
+        Esc to cancel · text only, no voice
       </div>
     </div>
   )
@@ -951,15 +933,17 @@ function TextInputPanel() {
 
 // ── Response Panel ─────────────────────────────────────────────────────────────
 
-function ResponsePanel({ entry, onDismiss, isActive }: { entry:ChatEntry; onDismiss:()=>void; isActive:boolean }) {
+function ResponsePanel({ entry, onDismiss, isActive, surfaceBg }: { entry:ChatEntry; onDismiss:()=>void; isActive:boolean; surfaceBg:string }) {
   return (
     <div style={{
-      background:"var(--surface)",
+      background: surfaceBg,
       border:"1px solid var(--border)",
       borderRadius:9,
       overflow:"hidden",
+      backdropFilter:"blur(28px) saturate(150%)",
+      WebkitBackdropFilter:"blur(28px) saturate(150%)",
       animation:"slideUp 0.22s cubic-bezier(0.16,1,0.3,1)",
-      boxShadow:"0 6px 30px rgba(0,0,0,0.45), 0 0 0 0.5px rgba(255,224,194,0.03)",
+      boxShadow:"0 6px 30px rgba(0,0,0,0.45), 0 0 0 0.5px rgba(255,255,255,0.03)",
       position:"relative",
       display:"flex", flexDirection:"column",
       flexShrink:0,
@@ -970,10 +954,10 @@ function ResponsePanel({ entry, onDismiss, isActive }: { entry:ChatEntry; onDism
       <div style={{
         position:"absolute", left:0, top:0, bottom:0, width:2,
         background: entry.error
-          ? "rgba(255,140,101,0.5)"
+          ? "var(--error)"
           : entry.isStreaming
-            ? "linear-gradient(to bottom, rgba(255,224,194,0.6), rgba(255,180,90,0.3))"
-            : "rgba(255,224,194,0.18)",
+            ? "linear-gradient(to bottom, var(--accent), var(--accent-d))"
+            : "var(--border-hi)",
         transition:"background .3s",
       }} />
 
@@ -982,19 +966,19 @@ function ResponsePanel({ entry, onDismiss, isActive }: { entry:ChatEntry; onDism
         <div style={{
           display:"flex", alignItems:"center", gap:8,
           padding:"6px 10px 6px 14px",
-          borderBottom:"1px solid rgba(255,224,194,0.05)",
-          background:"rgba(255,224,194,0.025)",
+          borderBottom:"1px solid var(--menu-sep)",
+          background:"rgba(255,255,255,0.018)",
           flexShrink:0,
         }}>
           <span style={{
             fontSize:10, letterSpacing:"0.12em", fontFamily:UI_FONT, fontWeight:700, flexShrink:0,
-            color: entry.error ? "rgba(255,140,101,0.85)" : "rgba(255,200,130,0.7)",
+            color: entry.error ? "var(--error)" : "var(--section-label)",
           }}>
             {entry.error ? "ERR" : "YOU"}
           </span>
           <span style={{
             fontSize:13, fontFamily:UI_FONT,
-            color: entry.error ? "var(--error)" : "rgba(200,190,175,0.9)",
+            color: entry.error ? "var(--error)" : "var(--dim)",
             fontStyle:entry.error?"normal":"italic",
             flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
           }}>
@@ -1005,12 +989,12 @@ function ResponsePanel({ entry, onDismiss, isActive }: { entry:ChatEntry; onDism
             className="no-drag"
             style={{
               background:"none", border:"none",
-              color:"rgba(255,224,194,0.18)",
+              color:"var(--dim)",
               fontSize:15, lineHeight:1, padding:"1px 3px", flexShrink:0,
               borderRadius:3, transition:"color .15s, background .15s",
             }}
-            onMouseEnter={e=>{e.currentTarget.style.color="rgba(255,224,194,0.8)"; e.currentTarget.style.background="rgba(255,224,194,0.06)"}}
-            onMouseLeave={e=>{e.currentTarget.style.color="rgba(255,224,194,0.18)"; e.currentTarget.style.background="none"}}
+            onMouseEnter={e=>{e.currentTarget.style.color="var(--accent)"; e.currentTarget.style.background="var(--accent-d)"}}
+            onMouseLeave={e=>{e.currentTarget.style.color="var(--dim)"; e.currentTarget.style.background="none"}}
           >
             ×
           </button>
@@ -1023,8 +1007,8 @@ function ResponsePanel({ entry, onDismiss, isActive }: { entry:ChatEntry; onDism
         <div
           className="no-drag"
           style={isActive
-            ? { overflowX:"auto", overscrollBehavior:"contain", padding:"10px 12px 4px 14px" }
-            : { flex:1, minHeight:0, overflowY:"auto", overflowX:"auto", overscrollBehavior:"contain", padding:"10px 12px 4px 14px" }
+            ? { overflowX:"auto", overscrollBehavior:"contain", scrollBehavior:"smooth", padding:"10px 12px 4px 14px" }
+            : { flex:1, minHeight:0, overflowY:"auto", overflowX:"auto", overscrollBehavior:"contain", scrollBehavior:"smooth", padding:"10px 12px 4px 14px" }
           }
         >
           <Blocks text={entry.text} isStreaming={entry.isStreaming} />
@@ -1037,10 +1021,10 @@ function ResponsePanel({ entry, onDismiss, isActive }: { entry:ChatEntry; onDism
           style={{
             margin:"0 12px 8px 14px",
             padding:"5px 7px",
-            border:"1px solid rgba(255,180,90,0.16)",
+            border:"1px solid var(--border)",
             borderRadius:4,
-            background:"rgba(255,180,90,0.055)",
-            color:"rgba(255,210,155,0.82)",
+            background:"var(--accent-d)",
+            color:"var(--accent)",
             fontSize:11.5,
             fontFamily:UI_FONT,
             lineHeight:1.25,
@@ -1141,6 +1125,12 @@ const TypeSVG = () => (
   </svg>
 )
 
+const ScreenshotSVG = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <path d="M9 3L7.17 5H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2h-3.17L15 3H9zm3 5a5 5 0 110 10 5 5 0 010-10zm0 2a3 3 0 100 6 3 3 0 000-6z"/>
+  </svg>
+)
+
 function initialsFor(name?: string, email?: string): string {
   const source = name?.trim() || email?.split("@")[0] || "Y"
   const parts = source.split(/\s+/).filter(Boolean)
@@ -1165,10 +1155,7 @@ function MenuCard({ subscription, plan, onProfileNameSave, onSignOut, onClose, o
   const [profileSaving, setProfileSaving] = React.useState(false)
   const [profileError, setProfileError] = React.useState("")
 
-  const [opacity, setOpacity] = React.useState(() => {
-    const saved = localStorage.getItem("yomi:opacity")
-    return saved ? parseFloat(saved) : 1.0
-  })
+  const [opacity, setOpacity] = React.useState(readUiOpacity)
 
   React.useEffect(() => {
     setNameDraft(subscription?.name ?? "")
@@ -1177,9 +1164,11 @@ function MenuCard({ subscription, plan, onProfileNameSave, onSignOut, onClose, o
   }, [subscription?.name])
 
   const handleOpacity = (val: number) => {
-    setOpacity(val)
-    localStorage.setItem("yomi:opacity", String(val))
-    window.yomi.setOpacity(val)
+    const next = clampUiOpacity(val)
+    setOpacity(next)
+    localStorage.setItem(OPACITY_STORAGE_KEY, String(next))
+    window.dispatchEvent(new CustomEvent(UI_OPACITY_EVENT, { detail: next }))
+    window.yomi.setOpacity(1)
   }
 
   const saveProfileName = async () => {
@@ -1203,12 +1192,13 @@ function MenuCard({ subscription, plan, onProfileNameSave, onSignOut, onClose, o
   const shortcuts = [
     { label: "Voice",  keys: ["Ctrl", "Space"]  },
     { label: "Type",   keys: ["Ctrl", "Enter"]  },
+    { label: "Screen", keys: ["Ctrl", "S"]      },
     { label: "Move",   keys: ["Ctrl", "Arrows"] },
     { label: "Hide",   keys: ["Ctrl", "H"]      },
     { label: "Quit",   keys: ["Ctrl", "Q"]      },
   ]
 
-  const upgradeLabel = plan === "explore" || plan === "pro" ? "Upgrade" : null
+  const upgradeLabel = plan === "max" ? null : "Upgrade"
 
   const MenuBtn = ({ label, danger, onClick }: { label: string; danger?: boolean; onClick: () => void }) => (
     <button
@@ -1241,7 +1231,7 @@ function MenuCard({ subscription, plan, onProfileNameSave, onSignOut, onClose, o
       className="no-drag yomi-hit-area yomi-menu-zone"
       onMouseEnter={onHoverEnter}
       onMouseLeave={onHoverLeave}
-      style={{ position:"fixed", top:28, right:8, zIndex:1000, width:250, height:24 }}
+      style={{ position:"fixed", top:28, right:"max(8px, calc(50% - 382px))", zIndex:1000, width:250, height:24 }}
     />
     <motion.div
       className="no-drag yomi-hit-area yomi-menu-zone"
@@ -1252,9 +1242,9 @@ function MenuCard({ subscription, plan, onProfileNameSave, onSignOut, onClose, o
       exit={{ opacity: 0, scale: 0.95, y: -6 }}
       transition={{ type: "spring", stiffness: 400, damping: 28 }}
       style={{
-        position:"fixed", top:52, right:8, zIndex:1000,
+        position:"fixed", top:52, right:"max(8px, calc(50% - 382px))", zIndex:1000,
         width:250,
-        background: t.surface,
+        background: translucentColor(t.surface, opacity, 0.28),
         border:`1px solid ${t.menuBorder}`,
         borderRadius:10,
         boxShadow: t.menuShadow,
@@ -1438,21 +1428,35 @@ function MenuCard({ subscription, plan, onProfileNameSave, onSignOut, onClose, o
 
       {/* Opacity slider */}
       <div style={{ padding:"10px 14px" }}>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
-          <span style={{ fontSize:10, fontFamily:UI_FONT, fontWeight:700, letterSpacing:"0.1em", color: t.sectionLabel }}>
-            OPACITY
-          </span>
-          <span style={{ fontSize:11, fontFamily:UI_FONT, color: t.btnText, fontWeight:500 }}>
-            {Math.round(opacity * 100)}%
-          </span>
+        <div style={{
+          padding:"9px 10px",
+          borderRadius:8,
+          background:t.kbdBg,
+          border:`1px solid ${t.kbdBorder}`,
+        }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+            <span style={{ fontSize:10, fontFamily:UI_FONT, fontWeight:700, letterSpacing:"0.1em", color: t.sectionLabel }}>
+              GLASS
+            </span>
+            <span style={{ fontSize:11, fontFamily:UI_FONT, color: t.text, fontWeight:700 }}>
+              {Math.round(opacity * 100)}%
+            </span>
+          </div>
+          <input
+            type="range" min={20} max={100} step={1}
+            value={Math.round(opacity * 100)}
+            onChange={e => handleOpacity(parseInt(e.target.value) / 100)}
+            className="no-drag"
+            style={{ width:"100%", margin:0 }}
+          />
+          <div style={{
+            display:"flex", alignItems:"center", justifyContent:"space-between",
+            marginTop:6, fontSize:10, fontFamily:UI_FONT, color:t.dim,
+          }}>
+            <span>translucent</span>
+            <span>solid</span>
+          </div>
         </div>
-        <input
-          type="range" min={20} max={100} step={1}
-          value={Math.round(opacity * 100)}
-          onChange={e => handleOpacity(parseInt(e.target.value) / 100)}
-          className="no-drag"
-          style={{ width:"100%", margin:0 }}
-        />
       </div>
 
       <div style={{ height:1, background: t.menuSep }} />
@@ -1568,11 +1572,6 @@ function GuideCursor({ state, step, totalSteps }: {
             Listening…
           </span>
         )}
-        {state === "processing" && (
-          <span style={{ fontSize:12, fontWeight:600, color: t.lblProcessing, fontFamily:UI_FONT }}>
-            Thinking…
-          </span>
-        )}
         {state === "idle" && !hasStep && (
           <span style={{ fontSize:12, color: t.dim, fontFamily:UI_FONT }}>
             Guide mode
@@ -1595,7 +1594,7 @@ function Toolbar({ state, plan, subscription, interactionInfo, onProfileNameSave
   menuOpen: boolean; onMenuClose: () => void
   onMenuOpen: () => void; onMenuScheduleClose: () => void; onMenuCancelClose: () => void
 }) {
-  const { ttsEnabled, toggleTts, pointingEnabled, togglePointing } = useYomiStore()
+  const { ttsEnabled, toggleTts, pendingAct, clearPendingAct } = useYomiStore()
   const { theme: t } = React.useContext(ThemeCtx)
 
   return (
@@ -1650,16 +1649,16 @@ function Toolbar({ state, plan, subscription, interactionInfo, onProfileNameSave
                 Yomi
               </span>
             </div>
-          ) : (
+          ) : state === "listening" ? (
             <span style={{
               fontSize:12, fontWeight:600, fontFamily:UI_FONT,
               letterSpacing:"-0.02em", lineHeight:1,
               color: "rgba(255,255,255,0.92)",
               transition:"color .25s",
             }}>
-              {state==="listening" ? "Listening…" : "Thinking…"}
+              Listening…
             </span>
-          )}
+          ) : null}
 
           {plan && state==="idle" && (
             <span style={{
@@ -1736,6 +1735,34 @@ function Toolbar({ state, plan, subscription, interactionInfo, onProfileNameSave
             <span style={{ fontSize:11, fontFamily:UI_FONT, letterSpacing:"0.03em", fontWeight:500 }}>Type</span>
           </button>
 
+          {/* Screenshot button — one click captures the screen and analyses it straight into chat */}
+          <button
+            onClick={() => { if (state === "idle") window.yomi.triggerScreenshot() }}
+            onMouseEnter={e => {
+              if (state !== "idle") return
+              e.currentTarget.style.color = t.hambColorActive
+              e.currentTarget.style.background = t.hambBgActive
+              e.currentTarget.style.borderColor = t.hambBorderActive
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = state === "idle" ? t.hambColor : "rgba(255,255,255,0.22)"
+              e.currentTarget.style.background = t.hambBg
+              e.currentTarget.style.borderColor = t.hambBorder
+            }}
+            style={{
+              background: t.hambBg,
+              border: `1px solid ${t.hambBorder}`,
+              borderRadius:5, cursor: state === "idle" ? "pointer" : "default",
+              color: state === "idle" ? t.hambColor : "rgba(255,255,255,0.22)",
+              display:"flex", alignItems:"center", gap:4,
+              padding:"2px 7px", height:22, flexShrink:0, transition:"all .15s",
+            }}
+            title="Analyze my screen (Ctrl+S)"
+          >
+            <ScreenshotSVG />
+            <span style={{ fontSize:11, fontFamily:UI_FONT, letterSpacing:"0.03em", fontWeight:500 }}>Screenshot</span>
+          </button>
+
           {/* Sound toggle button */}
           <button
             onClick={toggleTts}
@@ -1765,51 +1792,35 @@ function Toolbar({ state, plan, subscription, interactionInfo, onProfileNameSave
             </span>
           </button>
 
-          {/* Pointing toggle button */}
-          <button
-            onClick={togglePointing}
-            onMouseEnter={e => {
-              e.currentTarget.style.color = t.hambColorActive
-              e.currentTarget.style.background = t.hambBgActive
-              e.currentTarget.style.borderColor = t.hambBorderActive
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.color = pointingEnabled ? t.hambColor : "rgba(255,255,255,0.35)"
-              e.currentTarget.style.background = t.hambBg
-              e.currentTarget.style.borderColor = t.hambBorder
-            }}
-            style={{
-              background: pointingEnabled ? t.hambBgActive : t.hambBg,
-              border: `1px solid ${pointingEnabled ? t.hambBorderActive : t.hambBorder}`,
-              borderRadius:5, cursor:"pointer",
-              color: pointingEnabled ? t.hambColorActive : "rgba(255,255,255,0.35)",
-              display:"flex", alignItems:"center", gap:4,
-              padding:"2px 7px", height:22, flexShrink:0, transition:"all .15s",
-            }}
-            title={pointingEnabled ? "Pointing on. Ask with Voice or Type." : "Pointing off"}
-          >
-            <span style={{
-              width:5,
-              height:5,
-              borderRadius:"50%",
-              background: pointingEnabled ? t.dotPulse : "rgba(255,255,255,0.22)",
-              boxShadow: pointingEnabled ? t.dotPulseGlow : "none",
-              flexShrink:0,
-            }} />
-            <CursorArrowSVG />
-            <span style={{ fontSize:11, fontFamily:UI_FONT, letterSpacing:"0.03em", fontWeight:500 }}>
-              {pointingEnabled ? "Point on" : "Point off"}
-            </span>
-          </button>
+          {/* Confirm prompt for a risky action awaiting the user's go-ahead */}
+          {pendingAct && (
+            <div style={{
+              display:"flex", alignItems:"center", gap:6, marginLeft:4,
+              padding:"2px 8px", height:22, borderRadius:5,
+              background:"rgba(220,38,38,0.16)", border:"1px solid rgba(248,113,113,0.5)",
+              color:"rgba(254,226,226,0.95)", fontSize:11, fontFamily:UI_FONT, fontWeight:600,
+            }}>
+              <span style={{ maxWidth:150, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                {pendingAct.label}?
+              </span>
+              <button
+                onClick={() => { window.yomi.confirmAct(pendingAct.id, true); clearPendingAct() }}
+                style={{ cursor:"pointer", border:"none", borderRadius:4, padding:"1px 7px", fontWeight:700,
+                  background:"rgba(34,197,94,0.85)", color:"#04210f", fontFamily:UI_FONT, fontSize:11 }}
+              >Yes</button>
+              <button
+                onClick={() => { window.yomi.confirmAct(pendingAct.id, false); clearPendingAct() }}
+                style={{ cursor:"pointer", border:"1px solid rgba(255,255,255,0.25)", borderRadius:4, padding:"1px 7px",
+                  background:"transparent", color:"rgba(255,255,255,0.85)", fontFamily:UI_FONT, fontSize:11 }}
+              >No</button>
+            </div>
+          )}
 
           {state==="listening" && <>
             <Chip label="Send"   keys={["Enter"]} hot={true}  onClick={() => window.yomi.stopListening()} />
             <Chip label="Stop"   keys={["Esc"]}   hot={false} onClick={() => window.yomi.requestEscape()} />
           </>}
           {state==="text-input" && <Chip label="Cancel" keys={["Esc"]} hot={false} />}
-          {state==="processing" && (
-            <span style={{ fontSize:11.5, color: "rgba(255,255,255,0.55)", fontFamily:UI_FONT }}>processing…</span>
-          )}
 
           <button
             className="no-drag yomi-menu-zone"
@@ -2010,7 +2021,7 @@ function SignInPanel({ isWaiting, loadingProvider, error, lastProvider, onSignIn
 const App: React.FC = () => {
   const {
     authState, authError, setAuthState,
-    hotkeyState, entries, ttsEnabled, pointingEnabled, subscription,
+    hotkeyState, entries, ttsEnabled, subscription,
     handleSseEvent, setHotkeyState, stopActivePlayback, dismissEntry,
     setSubscription, setSubscriptionLoading,
     guideMode, setGuideMode, guideSteps, guideCurrentStep, guideTotalSteps,
@@ -2019,6 +2030,8 @@ const App: React.FC = () => {
   const [loadingProvider, setLoadingProvider] = React.useState<"github" | "google" | null>(null)
   const [lastProvider, setLastProvider] = React.useState<"github" | "google" | null>(null)
   const [menuOpen, setMenuOpen] = React.useState(false)
+  const [uiOpacity, setUiOpacity] = React.useState(readUiOpacity)
+  const [backgroundAgentSignal, setBackgroundAgentSignal] = React.useState<BackgroundAgentSignal | null>(null)
   const menuCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const menuOpenedAtRef   = useRef<number>(0)
 
@@ -2129,10 +2142,15 @@ const App: React.FC = () => {
     playQueuedAudio()
   }, [playQueuedAudio])
 
-  // Restore saved window opacity on mount
+  // Keep text opaque; the slider changes glass surface alpha instead.
   useEffect(()=>{
-    const saved = localStorage.getItem("yomi:opacity")
-    if (saved) window.yomi.setOpacity(parseFloat(saved))
+    window.yomi.setOpacity(1)
+    const onOpacityChange = (event: Event) => {
+      const detail = event instanceof CustomEvent ? Number(event.detail) : readUiOpacity()
+      setUiOpacity(clampUiOpacity(detail))
+    }
+    window.addEventListener(UI_OPACITY_EVENT, onOpacityChange)
+    return () => window.removeEventListener(UI_OPACITY_EVENT, onOpacityChange)
   }, [])
 
   // Listen to auth status events from main process
@@ -2176,15 +2194,20 @@ const App: React.FC = () => {
     window.yomi.setGuideMode(guideMode)
   }, [guideMode])
 
-  // Sync spatial pointing on/off to main process.
+  // Background-agent updates from detached "…in the background" runs → companion dock.
   useEffect(()=>{
-    window.yomi.setPointingMode(pointingEnabled)
-  }, [pointingEnabled])
+    return window.yomi.onBackgroundAgent((sig) => setBackgroundAgentSignal(sig))
+  }, [])
 
   // ESC from main exits guide mode
   useEffect(()=>{
     return window.yomi.onGuideExit(() => setGuideMode(false))
   }, [setGuideMode])
+
+  // Authenticated Yomi lives on a full-workarea transparent overlay.
+  useEffect(()=>{
+    window.yomi.setCompanionOverlay(authState === "authenticated")
+  }, [authState])
 
   // Resize window based on auth + content + guide + menu state
   useEffect(()=>{
@@ -2198,7 +2221,7 @@ const App: React.FC = () => {
       const hasStep = guideCurrentStep > 0 && guideSteps.length > 0
       window.yomi.resize(780, hasStep ? 58 : 40)
     } else {
-      const MAX_ENTRIES = 640
+      const MAX_ENTRIES = 600
       const textInputH = hotkeyState === "text-input" ? 88 : 0
       const entriesH = entries.length > 0 ? MAX_ENTRIES : 0
       const chatGap = (textInputH > 0 || entriesH > 0) ? 8 : 0
@@ -2350,6 +2373,18 @@ const App: React.FC = () => {
   const hasContent = entries.length>0 || hotkeyState==="text-input"
   const isListening = hotkeyState==="listening"
   const { theme: t } = React.useContext(ThemeCtx)
+  const shellBg = translucentColor(t.toolbarBg, uiOpacity, 0.26)
+  const toolbarBg = translucentColor(t.bg, uiOpacity, 0.24)
+  const chatSurfaceBg = translucentColor(t.surface, uiOpacity, 0.28)
+  const activeEntry = entries[entries.length - 1]
+
+  useEffect(() => {
+    const el = entriesRef.current
+    if (!el) return
+    requestAnimationFrame(() => {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" })
+    })
+  }, [activeEntry?.id, activeEntry?.text, activeEntry?.isStreaming])
 
   const setMouseEventsIgnored = useCallback((ignored: boolean) => {
     if (mouseEventsIgnoredRef.current === ignored) return
@@ -2404,7 +2439,7 @@ const App: React.FC = () => {
       <div className="yomi-hit-area" style={{
         display:"flex", flexDirection:"column",
         height:"100vh",
-        background: t.toolbarBg,
+        background: shellBg,
         borderRadius:10, overflow:"hidden",
         border:"1px solid var(--border)",
         boxShadow: t.appShadow,
@@ -2427,16 +2462,25 @@ const App: React.FC = () => {
     <div
       ref={rootRef}
       style={{
-        display:"flex", flexDirection:"column",
+        display:"flex", flexDirection:"column", alignItems:"center",
         height:"100vh", position:"relative",
-        minWidth:780,
+        minWidth:0,
+        paddingTop:8,
+        boxSizing:"border-box",
       }}
     >
+      <YomiCompanion
+        enabled={authState === "authenticated"}
+        hotkeyState={hotkeyState}
+        backgroundAgentSignal={backgroundAgentSignal}
+      />
+
       {/* Toolbar pill — always visible, its own floating card */}
       <div className="yomi-hit-area" style={{
         flexShrink:0,
-        margin:"0 20px",
-        background: t.bg,
+        width:780,
+        maxWidth:"calc(100vw - 40px)",
+        background: toolbarBg,
         border: isListening ? t.appBorderListen : t.appBorder,
         borderRadius:10,
         boxShadow: isListening ? t.appShadowListen : t.appShadow,
@@ -2472,9 +2516,9 @@ const App: React.FC = () => {
           animate={{ y: 0, opacity: 1, scale: 1 }}
           exit={{ y: -8, opacity: 0, scale: 0.99 }}
           transition={{ type: "spring", stiffness: 380, damping: 28 }}
-          style={{ marginTop:8, flex:1, minHeight:0, display:"flex", flexDirection:"column", gap:5 }}
+          style={{ marginTop:8, width:780, maxWidth:"calc(100vw - 40px)", maxHeight:600, minHeight:0, display:"flex", flexDirection:"column", gap:5 }}
         >
-          {hotkeyState==="text-input" && <TextInputPanel />}
+          {hotkeyState==="text-input" && <TextInputPanel surfaceBg={chatSurfaceBg} />}
 
           {entries.length>0 && (
             <div
@@ -2485,10 +2529,12 @@ const App: React.FC = () => {
                 overflowY:"auto", overflowX:"hidden",
                 display:"flex", flexDirection:"column", gap:5,
                 overscrollBehavior:"contain",
+                scrollBehavior:"smooth",
+                scrollbarGutter:"stable",
               }}
             >
               {(() => { const e = entries[entries.length-1]!; return (
-                <ResponsePanel key={e.id} entry={e} isActive={true} onDismiss={()=>dismissEntry(e.id)} />
+                <ResponsePanel key={e.id} entry={e} isActive={true} surfaceBg={chatSurfaceBg} onDismiss={()=>dismissEntry(e.id)} />
               )})()}
             </div>
           )}
@@ -2535,7 +2581,7 @@ const App: React.FC = () => {
 function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [themeId, setThemeId] = React.useState<ThemeId>(() => {
     const saved = localStorage.getItem("yomi:theme") as ThemeId | null
-    const id: ThemeId = (saved && saved in THEMES) ? saved : "amber"
+    const id: ThemeId = (saved && saved in THEMES) ? saved : "black"
     applyTheme(THEMES[id])
     return id
   })
