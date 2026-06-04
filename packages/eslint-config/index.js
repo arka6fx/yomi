@@ -21,6 +21,22 @@ export default [
   },
   prettier,
   {
-    ignores: ["dist/**", ".next/**", "out/**", "node_modules/**"],
+    files: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
+  {
+    ignores: [
+      "dist/**",
+      "bin/**",
+      "obj/**",
+      ".next/**",
+      "out/**",
+      "node_modules/**",
+      ".turbo/**",
+      "tmp/**",
+      "apps/sidecar/.playwright-mcp/**",
+    ],
   },
 ]

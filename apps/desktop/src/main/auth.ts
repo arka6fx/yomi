@@ -28,7 +28,11 @@ function saveToken(token: string): void {
 }
 
 export function clearToken(): void {
-  try { fs.unlinkSync(tokenPath()) } catch { /* no-op */ }
+  try {
+    fs.unlinkSync(tokenPath())
+  } catch {
+    /* no-op */
+  }
 }
 
 // Returns the stored token if still valid, null if missing/expired.
@@ -39,7 +43,10 @@ export async function checkStoredToken(): Promise<string | null> {
     const res = await fetch(`${BACKEND_URL}/api/billing/subscription`, {
       headers: { Authorization: `Bearer ${stored}` },
     })
-    if (res.status === 401) { clearToken(); return null }
+    if (res.status === 401) {
+      clearToken()
+      return null
+    }
     return stored
   } catch {
     // Network down in dev — assume token valid so offline use works
@@ -57,11 +64,13 @@ export async function startDeviceCodeFlow(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ clientId: "yomi-desktop" }),
-  }).catch(() => { throw new Error("Cannot reach Yomi backend — check your connection") })
+  }).catch(() => {
+    throw new Error("Cannot reach Yomi backend — check your connection")
+  })
 
   if (!init.ok) throw new Error(`Device code request failed: ${init.status}`)
 
-  const { device_code, user_code, verification_uri, interval } = await init.json() as {
+  const { device_code, user_code, verification_uri, interval } = (await init.json()) as {
     device_code: string
     user_code: string
     verification_uri: string
@@ -86,9 +95,10 @@ async function pollForToken(deviceCode: string, intervalMs: number): Promise<str
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ device_code: deviceCode }),
       })
-      const data = await res.json() as { access_token?: string; error?: string }
+      const data = (await res.json()) as { access_token?: string; error?: string }
       if (data.access_token) return data.access_token
-      if (data.error === "expired_token") throw new Error("Authentication timed out — restart Yomi to try again")
+      if (data.error === "expired_token")
+        throw new Error("Authentication timed out — restart Yomi to try again")
     } catch (err) {
       if (err instanceof Error && err.message.startsWith("Authentication")) throw err
     }
@@ -96,4 +106,6 @@ async function pollForToken(deviceCode: string, intervalMs: number): Promise<str
   throw new Error("Authentication timed out — restart Yomi to try again")
 }
 
-function sleep(ms: number) { return new Promise<void>((r) => setTimeout(r, ms)) }
+function sleep(ms: number) {
+  return new Promise<void>((r) => setTimeout(r, ms))
+}

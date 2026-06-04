@@ -7,29 +7,43 @@ export interface ScreenPoint {
   label: string
 }
 
-export function displayForScreen(capture: ScreenCapture, screenNumber?: number): DisplayCapture | null {
+export function displayForScreen(
+  capture: ScreenCapture,
+  screenNumber?: number,
+): DisplayCapture | null {
   if (screenNumber !== undefined) {
     return capture.displays.find((d) => d.screen === screenNumber) ?? capture.displays[0] ?? null
   }
-  return capture.displays.find((d) => d.isCursorScreen || d.is_cursor_screen) ?? capture.displays[0] ?? null
+  return (
+    capture.displays.find((d) => d.isCursorScreen || d.is_cursor_screen) ??
+    capture.displays[0] ??
+    null
+  )
 }
 
-export function mapPointTargetToScreen(target: PointTarget, capture: ScreenCapture): ScreenPoint | null {
+export function mapPointTargetToScreen(
+  target: PointTarget,
+  capture: ScreenCapture,
+): ScreenPoint | null {
   const display = displayForScreen(capture, target.screen)
   if (!display) return null
 
-  const x = target.coordinateSpace === "normalized"
-    ? display.bounds.x + target.x * display.bounds.width
-    : display.bounds.x + (target.x / Math.max(display.imageWidth, 1)) * display.bounds.width
-  const y = target.coordinateSpace === "normalized"
-    ? display.bounds.y + target.y * display.bounds.height
-    : display.bounds.y + (target.y / Math.max(display.imageHeight, 1)) * display.bounds.height
+  const x =
+    target.coordinateSpace === "normalized"
+      ? display.bounds.x + target.x * display.bounds.width
+      : display.bounds.x + (target.x / Math.max(display.imageWidth, 1)) * display.bounds.width
+  const y =
+    target.coordinateSpace === "normalized"
+      ? display.bounds.y + target.y * display.bounds.height
+      : display.bounds.y + (target.y / Math.max(display.imageHeight, 1)) * display.bounds.height
 
   return { x: Math.round(x), y: Math.round(y), label: target.label }
 }
 
 export function mapGuideElementToScreen(
-  element: { label: string; bbox: { x: number; y: number; width: number; height: number } } | undefined,
+  element:
+    | { label: string; bbox: { x: number; y: number; width: number; height: number } }
+    | undefined,
   capture: ScreenCapture,
 ): ScreenPoint | null {
   if (!element?.bbox) return null

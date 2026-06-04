@@ -37,7 +37,9 @@ function parseGuideResponse(text: string): GuideResponse {
     return { steps: parsed.steps ?? [] }
   } catch {
     return {
-      steps: [{ instruction: "I couldn't identify visual targets from this screenshot.", elements: [] }],
+      steps: [
+        { instruction: "I couldn't identify visual targets from this screenshot.", elements: [] },
+      ],
     }
   }
 }

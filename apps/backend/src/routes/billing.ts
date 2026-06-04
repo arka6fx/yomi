@@ -36,7 +36,7 @@ export const billingRouter = new Hono()
 
 // Create Razorpay subscription
 billingRouter.post("/create-subscription", authenticate, async (c) => {
-  const { plan } = await c.req.json() as { plan: string }
+  const { plan } = (await c.req.json()) as { plan: string }
   const user = c.get("user")
 
   if (plan === "max") {
@@ -57,7 +57,8 @@ billingRouter.post("/create-subscription", authenticate, async (c) => {
       contact: "",
     })
     customerId = customer.id
-    await db.update(authSchema.user)
+    await db
+      .update(authSchema.user)
       .set({ razorpayCustomerId: customerId })
       .where(eq(authSchema.user.id, user.id))
   }
@@ -119,19 +120,19 @@ billingRouter.get("/subscription", authenticate, async (c) => {
   const sessionUser = c.get("user")
   const [user] = await db
     .select({
-      id:                    authSchema.user.id,
-      name:                  authSchema.user.name,
-      email:                 authSchema.user.email,
-      role:                  authSchema.user.role,
-      plan:                  authSchema.user.plan,
-      subscriptionStatus:    authSchema.user.subscriptionStatus,
-      trialEndDate:          authSchema.user.trialEndDate,
-      currentPeriodEnd:      authSchema.user.currentPeriodEnd,
-      trialInteractionUsed:  authSchema.user.trialInteractionUsed,
+      id: authSchema.user.id,
+      name: authSchema.user.name,
+      email: authSchema.user.email,
+      role: authSchema.user.role,
+      plan: authSchema.user.plan,
+      subscriptionStatus: authSchema.user.subscriptionStatus,
+      trialEndDate: authSchema.user.trialEndDate,
+      currentPeriodEnd: authSchema.user.currentPeriodEnd,
+      trialInteractionUsed: authSchema.user.trialInteractionUsed,
       trialInteractionLimit: authSchema.user.trialInteractionLimit,
-      dailyChatCount:        authSchema.user.dailyChatCount,
-      dailyVoiceCount:       authSchema.user.dailyVoiceCount,
-      dailyImageCount:       authSchema.user.dailyImageCount,
+      dailyChatCount: authSchema.user.dailyChatCount,
+      dailyVoiceCount: authSchema.user.dailyVoiceCount,
+      dailyImageCount: authSchema.user.dailyImageCount,
     })
     .from(authSchema.user)
     .where(eq(authSchema.user.id, sessionUser.id))
@@ -152,22 +153,25 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     (sum, r) => sum + (r.inputTokens ?? 0) + (r.outputTokens ?? 0),
     0,
   )
-  const trialInteractionsRemaining = Math.max(user.trialInteractionLimit - user.trialInteractionUsed, 0)
+  const trialInteractionsRemaining = Math.max(
+    user.trialInteractionLimit - user.trialInteractionUsed,
+    0,
+  )
 
   return c.json({
-    name:                user.name,
-    email:               user.email,
-    role:                effectiveRoleForUser(user),
-    plan:                effectivePlanForUser(user),
-    status:              user.subscriptionStatus,
-    trialEndDate:        user.trialEndDate,
-    currentPeriodEnd:    user.currentPeriodEnd,
-    trialInteractionUsed:  user.trialInteractionUsed,
+    name: user.name,
+    email: user.email,
+    role: effectiveRoleForUser(user),
+    plan: effectivePlanForUser(user),
+    status: user.subscriptionStatus,
+    trialEndDate: user.trialEndDate,
+    currentPeriodEnd: user.currentPeriodEnd,
+    trialInteractionUsed: user.trialInteractionUsed,
     trialInteractionLimit: user.trialInteractionLimit,
     trialInteractionsRemaining,
-    dailyChatUsed:       user.dailyChatCount,
-    dailyVoiceUsed:      user.dailyVoiceCount,
-    dailyImageUsed:      user.dailyImageCount,
+    dailyChatUsed: user.dailyChatCount,
+    dailyVoiceUsed: user.dailyVoiceCount,
+    dailyImageUsed: user.dailyImageCount,
     tokensUsedThisPeriod,
   })
 })
@@ -183,15 +187,20 @@ async function handleSubscriptionActive(entity: Record<string, unknown>) {
 
   const subId = entity["id"] as string
   const customerId = entity["customer_id"] as string
-  const periodEnd = entity["current_end"] ? new Date((entity["current_end"] as number) * 1000) : null
+  const periodEnd = entity["current_end"]
+    ? new Date((entity["current_end"] as number) * 1000)
+    : null
 
-  await db.update(authSchema.user).set({
-    plan,
-    subscriptionStatus:  "active",
-    razorpayCustomerId:  customerId,
-    razorpaySubId:       subId,
-    currentPeriodEnd:    periodEnd,
-  }).where(eq(authSchema.user.id, userId))
+  await db
+    .update(authSchema.user)
+    .set({
+      plan,
+      subscriptionStatus: "active",
+      razorpayCustomerId: customerId,
+      razorpaySubId: subId,
+      currentPeriodEnd: periodEnd,
+    })
+    .where(eq(authSchema.user.id, userId))
 }
 
 async function handleSubscriptionEnd(entity: Record<string, unknown>) {
@@ -199,12 +208,15 @@ async function handleSubscriptionEnd(entity: Record<string, unknown>) {
   const userId = notes?.userId
   if (!userId) return
 
-  await db.update(authSchema.user).set({
-    plan:               "explore",
-    subscriptionStatus: "inactive",
-    razorpaySubId:      null,
-    currentPeriodEnd:   null,
-  }).where(eq(authSchema.user.id, userId))
+  await db
+    .update(authSchema.user)
+    .set({
+      plan: "explore",
+      subscriptionStatus: "inactive",
+      razorpaySubId: null,
+      currentPeriodEnd: null,
+    })
+    .where(eq(authSchema.user.id, userId))
 }
 
 async function handlePaymentFailed(entity: Record<string, unknown>) {
@@ -212,6 +224,8 @@ async function handlePaymentFailed(entity: Record<string, unknown>) {
   const userId = notes?.userId
   if (!userId) return
 
-  await db.update(authSchema.user).set({ subscriptionStatus: "past_due" })
+  await db
+    .update(authSchema.user)
+    .set({ subscriptionStatus: "past_due" })
     .where(eq(authSchema.user.id, userId))
 }

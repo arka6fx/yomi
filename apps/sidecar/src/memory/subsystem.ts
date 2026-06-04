@@ -1,5 +1,11 @@
 import { initMemoryDir, loadMemoryIndex, loadMemorySummary } from "./loader.js"
-import { closeMemoryEngine, initMemoryEngine, readProfile, retrieveLocalMemoryContext, captureTurnMemory } from "./engine.js"
+import {
+  closeMemoryEngine,
+  initMemoryEngine,
+  readProfile,
+  retrieveLocalMemoryContext,
+  captureTurnMemory,
+} from "./engine.js"
 import { closeLocalRag, initLocalRag } from "./local-rag.js"
 import { appendSessionTurn, loadRecentSession, type SessionTurn } from "./session.js"
 import { retrieveCloudRagContext, scheduleCloudRagSync } from "./cloud-rag.js"
@@ -29,7 +35,15 @@ export function closeMemorySubsystem(): void {
 }
 
 export async function loadMemoryContext(query: string): Promise<MemoryContextBundle> {
-  const [memorySummary, memoryIndex, localMemory, cloudRagContext, staticProfile, dynamicProfile, recentSession] = await Promise.all([
+  const [
+    memorySummary,
+    memoryIndex,
+    localMemory,
+    cloudRagContext,
+    staticProfile,
+    dynamicProfile,
+    recentSession,
+  ] = await Promise.all([
     loadMemorySummary(),
     loadMemoryIndex(),
     Promise.resolve(retrieveLocalMemoryContext(query, 3000)),

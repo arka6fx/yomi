@@ -3,9 +3,9 @@
 
 export type GuardResult = { break: false } | { break: true; reason: string }
 
-const WINDOW_SIZE = 5          // steps per progress-gate check
-const MAX_STALLED_WINDOWS = 2  // consecutive empty windows before break
-const DUP_CALL_THRESHOLD = 3   // identical consecutive tool calls before break
+const WINDOW_SIZE = 5 // steps per progress-gate check
+const MAX_STALLED_WINDOWS = 2 // consecutive empty windows before break
+const DUP_CALL_THRESHOLD = 3 // identical consecutive tool calls before break
 
 export class LoopGuards {
   private stepCount = 0
@@ -47,7 +47,7 @@ export class LoopGuards {
     const key = `${toolName}:${JSON.stringify(args)}`
     if (
       this.recentCalls.length === DUP_CALL_THRESHOLD - 1 &&
-      this.recentCalls.every(k => k === key)
+      this.recentCalls.every((k) => k === key)
     ) {
       return {
         break: true,

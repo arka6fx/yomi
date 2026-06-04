@@ -160,7 +160,10 @@ export async function scanArchiveSources(): Promise<ArchiveSource[]> {
 function upsertSource(source: ArchiveSource): void {
   const database = openDb()
   const existing = database
-    .query<{ contentHash: string }, [string]>("select content_hash as contentHash from local_rag_sources where path = ?")
+    .query<
+      { contentHash: string },
+      [string]
+    >("select content_hash as contentHash from local_rag_sources where path = ?")
     .get(source.path)
   if (existing?.contentHash === source.hash) return
 
@@ -224,14 +227,18 @@ export async function retrieveLocalRagContext(query: string, maxChars = 3000): P
 
   try {
     await indexLocalRagSources()
-    const rows = openDb().query<LocalRagRow, [string]>(`
+    const rows = openDb()
+      .query<LocalRagRow, [string]>(
+        `
       select c.source_path as sourcePath, c.title as title, c.content as content
       from local_rag_fts f
       join local_rag_chunks c on c.id = f.id
       where local_rag_fts match ?
       order by bm25(local_rag_fts), c.updated_at desc
       limit 8
-    `).all(terms)
+    `,
+      )
+      .all(terms)
 
     // Numbered, attributed blocks so the model can cite sources inline as [n].
     const out: string[] = []

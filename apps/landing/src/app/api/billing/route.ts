@@ -18,10 +18,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(await res.json(), { status: res.status })
   } catch {
     return NextResponse.json({
-      role: "user", plan: "explore", status: "inactive",
-      trialEndDate: null, currentPeriodEnd: null,
-      trialInteractionUsed: 0, trialInteractionLimit: 150, trialInteractionsRemaining: 150,
-      dailyChatUsed: 0, dailyVoiceUsed: 0, dailyImageUsed: 0, tokensUsedThisPeriod: 0,
+      role: "user",
+      plan: "explore",
+      status: "inactive",
+      trialEndDate: null,
+      currentPeriodEnd: null,
+      trialInteractionUsed: 0,
+      trialInteractionLimit: 150,
+      trialInteractionsRemaining: 150,
+      dailyChatUsed: 0,
+      dailyVoiceUsed: 0,
+      dailyImageUsed: 0,
+      tokensUsedThisPeriod: 0,
     })
   }
 }

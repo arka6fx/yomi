@@ -1,7 +1,11 @@
 import { describe, expect, it } from "bun:test"
 import type { PointTarget } from "@yomi/shared"
 import type { ScreenCapture } from "./capture"
-import { displayForScreen, mapGuideElementToScreen, mapPointTargetToScreen } from "./spatial-mapping"
+import {
+  displayForScreen,
+  mapGuideElementToScreen,
+  mapPointTargetToScreen,
+} from "./spatial-mapping"
 
 const capture: ScreenCapture = {
   screenshot_b64: "primary",
@@ -70,10 +74,15 @@ describe("spatial mapping", () => {
   })
 
   it("maps normalized guide bounding boxes to the element center", () => {
-    expect(mapGuideElementToScreen({
-      label: "save",
-      bbox: { x: 0.25, y: 0.2, width: 0.1, height: 0.2 },
-    }, capture)).toEqual({
+    expect(
+      mapGuideElementToScreen(
+        {
+          label: "save",
+          bbox: { x: 0.25, y: 0.2, width: 0.1, height: 0.2 },
+        },
+        capture,
+      ),
+    ).toEqual({
       x: -1120,
       y: 390,
       label: "save",
@@ -81,10 +90,15 @@ describe("spatial mapping", () => {
   })
 
   it("maps pixel guide bounding boxes to the element center", () => {
-    expect(mapGuideElementToScreen({
-      label: "file",
-      bbox: { x: 20, y: 10, width: 80, height: 30 },
-    }, capture)).toEqual({
+    expect(
+      mapGuideElementToScreen(
+        {
+          label: "file",
+          bbox: { x: 20, y: 10, width: 80, height: 30 },
+        },
+        capture,
+      ),
+    ).toEqual({
       x: -1540,
       y: 145,
       label: "file",
@@ -102,11 +116,16 @@ describe("spatial mapping", () => {
       screen_height: 0,
       displays: [],
     }
-    expect(mapPointTargetToScreen({
-      x: 0,
-      y: 0,
-      label: "missing",
-      coordinateSpace: "normalized",
-    }, emptyCapture)).toBeNull()
+    expect(
+      mapPointTargetToScreen(
+        {
+          x: 0,
+          y: 0,
+          label: "missing",
+          coordinateSpace: "normalized",
+        },
+        emptyCapture,
+      ),
+    ).toBeNull()
   })
 })

@@ -28,7 +28,9 @@ export function matchElement(prev: UiaElement, elements: UiaElement[]): UiaEleme
     const exact = elements.find((e) => e.role === prev.role && e.name === prev.name)
     if (exact) return exact
     const needle = prev.name.toLowerCase()
-    const fuzzy = elements.find((e) => e.role === prev.role && e.name && e.name.toLowerCase().includes(needle))
+    const fuzzy = elements.find(
+      (e) => e.role === prev.role && e.name && e.name.toLowerCase().includes(needle),
+    )
     if (fuzzy) return fuzzy
   }
   return null
@@ -64,7 +66,9 @@ class UiaClient {
   private async ensure(): Promise<void> {
     if (this.proc && this.proc.exitCode === null) return
     if (!this.starting) {
-      this.starting = this.spawn().finally(() => { this.starting = null })
+      this.starting = this.spawn().finally(() => {
+        this.starting = null
+      })
     }
     return this.starting
   }
@@ -101,7 +105,11 @@ class UiaClient {
 
   private handleLine(line: string): void {
     let msg: { id?: number; result?: unknown; error?: { message?: string } }
-    try { msg = JSON.parse(line) } catch { return }
+    try {
+      msg = JSON.parse(line)
+    } catch {
+      return
+    }
     if (typeof msg.id !== "number") return
     const p = this.pending.get(msg.id)
     if (!p) return
@@ -118,19 +126,30 @@ class UiaClient {
         if (this.pending.delete(id)) reject(new Error(`uia-helper timeout: ${method}`))
       }, HELPER_TIMEOUT_MS)
       this.pending.set(id, {
-        resolve: (v) => { clearTimeout(timer); resolve(v as T) },
-        reject: (e) => { clearTimeout(timer); reject(e) },
+        resolve: (v) => {
+          clearTimeout(timer)
+          resolve(v as T)
+        },
+        reject: (e) => {
+          clearTimeout(timer)
+          reject(e)
+        },
       })
       try {
         this.proc!.stdin.write(JSON.stringify({ id, method, params }) + "\n")
         this.proc!.stdin.flush()
       } catch (e) {
-        if (this.pending.delete(id)) { clearTimeout(timer); reject(e as Error) }
+        if (this.pending.delete(id)) {
+          clearTimeout(timer)
+          reject(e as Error)
+        }
       }
     })
   }
 
-  async getUiTree(params: { maxNodes?: number; maxDepth?: number; hwnd?: number } = {}): Promise<UiaSnapshot> {
+  async getUiTree(
+    params: { maxNodes?: number; maxDepth?: number; hwnd?: number } = {},
+  ): Promise<UiaSnapshot> {
     const snap = await this.call<UiaSnapshot>("get_ui_tree", params)
     this.lastWindow = snap.window ?? ""
     this.elementsByRef = new Map((snap.elements ?? []).map((e) => [e.ref, e]))

@@ -5,6 +5,16 @@ import { readdir, readFile, writeFile, mkdir } from "fs/promises"
 
 const NOTEPAD = join(homedir(), ".yomi")
 
+type RgJsonLine = RgMatchLine | { type: string }
+type RgMatchLine = {
+  type: "match"
+  data: {
+    path: { text: string }
+    line_number: number
+    lines: { text: string }
+  }
+}
+
 async function ensureParentDir(filePath: string) {
   await mkdir(join(filePath, ".."), { recursive: true })
 }
@@ -24,7 +34,7 @@ export function createMemoryTools() {
         const target = join(NOTEPAD, dir ?? "")
         try {
           const entries = await readdir(target, { withFileTypes: true })
-          return entries.map(e => ({ name: e.name, type: e.isDirectory() ? "dir" : "file" }))
+          return entries.map((e) => ({ name: e.name, type: e.isDirectory() ? "dir" : "file" }))
         } catch {
           return { error: `Cannot read directory: ${dir || "~/.yomi/"}` }
         }
@@ -77,22 +87,28 @@ export function createMemoryTools() {
         required: ["query"],
       }),
       execute: async ({ query }) => {
-        const proc = Bun.spawn(
-          ["rg", "--json", "--max-count", "3", query, NOTEPAD],
-          { stdout: "pipe", stderr: "pipe" },
-        )
+        const proc = Bun.spawn(["rg", "--json", "--max-count", "3", query, NOTEPAD], {
+          stdout: "pipe",
+          stderr: "pipe",
+        })
         const out = await new Response(proc.stdout).text()
         await proc.exited
         const matches = out
           .trim()
           .split("\n")
           .filter(Boolean)
-          .map(line => { try { return JSON.parse(line) } catch { return null } })
-          .filter((item): item is Record<string, unknown> => item !== null && (item as any).type === "match")
-          .map((item: any) => ({
-            file: item.data?.path?.text,
-            line: item.data?.line_number,
-            text: item.data?.lines?.text?.trim(),
+          .map((line) => {
+            try {
+              return JSON.parse(line) as RgJsonLine
+            } catch {
+              return null
+            }
+          })
+          .filter((item): item is RgMatchLine => item !== null && item.type === "match")
+          .map((item) => ({
+            file: item.data.path.text,
+            line: item.data.line_number,
+            text: item.data.lines.text.trim(),
           }))
         return matches.length > 0 ? matches : { message: "No results found" }
       },
