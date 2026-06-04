@@ -8,7 +8,7 @@ const SARVAM_STT_URL = "https://api.sarvam.ai/speech-to-text"
 export const sttRouter = new Hono()
 
 sttRouter.post("/", authenticate, requireAccess("voice"), async (c) => {
-  const { audio_b64 } = await c.req.json() as { audio_b64: string }
+  const { audio_b64 } = (await c.req.json()) as { audio_b64: string }
   const user = c.get("user")
 
   const apiKey = process.env["SARVAM_API_KEY"]
@@ -30,7 +30,7 @@ sttRouter.post("/", authenticate, requireAccess("voice"), async (c) => {
     return c.json({ error: `Sarvam STT error ${res.status}: ${body}` }, 502)
   }
 
-  const data = await res.json() as { transcript: string; language_code: string }
+  const data = (await res.json()) as { transcript: string; language_code: string }
 
   await db.insert(usageEvents).values({
     userId: user.id,

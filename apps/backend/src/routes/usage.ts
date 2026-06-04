@@ -58,7 +58,7 @@ function dailyCountSql(kind: ReserveKind, activeKind: ReserveKind, today: string
 
 usageRouter.post("/interactions/reserve", authenticate, async (c) => {
   const user = c.get("user")
-  const body = await c.req.json().catch(() => ({})) as ReserveInteractionBody
+  const body = (await c.req.json().catch(() => ({}))) as ReserveInteractionBody
   const kind = body.kind
   if (kind !== "chat" && kind !== "voice") {
     return c.json({ error: "kind must be chat or voice", code: "invalid_usage_kind" }, 400)
@@ -72,7 +72,10 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
       plan: effectivePlan,
       trialInteractionUsed: user.trialInteractionUsed,
       trialInteractionLimit: user.trialInteractionLimit,
-      trialInteractionsRemaining: trialRemaining(user.trialInteractionUsed, user.trialInteractionLimit),
+      trialInteractionsRemaining: trialRemaining(
+        user.trialInteractionUsed,
+        user.trialInteractionLimit,
+      ),
     })
   }
 
@@ -94,18 +97,21 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
     const today = todayUtc()
     const countColumn = counterColumn(kind)
 
-    const [reserved] = await db.update(authSchema.user)
+    const [reserved] = await db
+      .update(authSchema.user)
       .set({
-        dailyChatCount:  dailyCountSql("chat", kind, today),
+        dailyChatCount: dailyCountSql("chat", kind, today),
         dailyVoiceCount: dailyCountSql("voice", kind, today),
-        dailyResetDate:  today,
+        dailyResetDate: today,
       })
-      .where(and(
-        eq(authSchema.user.id, user.id),
-        eq(authSchema.user.plan, effectivePlan),
-        eq(authSchema.user.subscriptionStatus, "active"),
-        sql`(${authSchema.user.dailyResetDate} is null or ${authSchema.user.dailyResetDate} <> ${today} or ${countColumn} < ${limit})`,
-      ))
+      .where(
+        and(
+          eq(authSchema.user.id, user.id),
+          eq(authSchema.user.plan, effectivePlan),
+          eq(authSchema.user.subscriptionStatus, "active"),
+          sql`(${authSchema.user.dailyResetDate} is null or ${authSchema.user.dailyResetDate} <> ${today} or ${countColumn} < ${limit})`,
+        ),
+      )
       .returning({
         plan: authSchema.user.plan,
         trialInteractionUsed: authSchema.user.trialInteractionUsed,
@@ -121,7 +127,10 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
     return c.json({
       ok: true,
       ...reserved,
-      trialInteractionsRemaining: trialRemaining(reserved.trialInteractionUsed, reserved.trialInteractionLimit),
+      trialInteractionsRemaining: trialRemaining(
+        reserved.trialInteractionUsed,
+        reserved.trialInteractionLimit,
+      ),
     })
   }
 
@@ -131,14 +140,17 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
   }
 
   // Reserve exactly one Explore turn. The WHERE clause makes the cap atomic.
-  const [reserved] = await db.update(authSchema.user)
+  const [reserved] = await db
+    .update(authSchema.user)
     .set({ trialInteractionUsed: sql`${authSchema.user.trialInteractionUsed} + 1` })
-    .where(and(
-      eq(authSchema.user.id, user.id),
-      eq(authSchema.user.plan, "explore"),
-      gt(authSchema.user.trialEndDate, new Date()),
-      sql`${authSchema.user.trialInteractionUsed} < ${authSchema.user.trialInteractionLimit}`,
-    ))
+    .where(
+      and(
+        eq(authSchema.user.id, user.id),
+        eq(authSchema.user.plan, "explore"),
+        gt(authSchema.user.trialEndDate, new Date()),
+        sql`${authSchema.user.trialInteractionUsed} < ${authSchema.user.trialInteractionLimit}`,
+      ),
+    )
     .returning({
       plan: authSchema.user.plan,
       trialInteractionUsed: authSchema.user.trialInteractionUsed,
@@ -146,18 +158,27 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
     })
 
   if (!reserved) {
-    return c.json({ error: "Trial interaction limit reached - please upgrade", code: "interaction_limit_reached" }, 429)
+    return c.json(
+      {
+        error: "Trial interaction limit reached - please upgrade",
+        code: "interaction_limit_reached",
+      },
+      429,
+    )
   }
 
   return c.json({
     ok: true,
     ...reserved,
-    trialInteractionsRemaining: trialRemaining(reserved.trialInteractionUsed, reserved.trialInteractionLimit),
+    trialInteractionsRemaining: trialRemaining(
+      reserved.trialInteractionUsed,
+      reserved.trialInteractionLimit,
+    ),
   })
 })
 
 usageRouter.post("/", authenticate, async (c) => {
-  const body = await c.req.json() as UsageEventBody
+  const body = (await c.req.json()) as UsageEventBody
   const user = c.get("user")
 
   await db.insert(usageEvents).values({

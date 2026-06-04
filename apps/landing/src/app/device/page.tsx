@@ -53,7 +53,8 @@ function DeviceContent() {
   }
 
   useEffect(() => {
-    const codeParam = new URLSearchParams(window.location.search).get("code")?.trim().toUpperCase() ?? null
+    const codeParam =
+      new URLSearchParams(window.location.search).get("code")?.trim().toUpperCase() ?? null
     setUrlCode(codeParam)
     if (codeParam) setCode(codeParam)
   }, [])
@@ -106,7 +107,10 @@ function DeviceContent() {
       className="relative z-10 w-full max-w-sm"
     >
       {/* Logo */}
-      <Link href="/" className="font-display text-2xl font-bold text-foreground block text-center mb-10 select-none">
+      <Link
+        href="/"
+        className="font-display text-2xl font-bold text-foreground block text-center mb-10 select-none"
+      >
         Yomi
       </Link>
 
@@ -173,9 +177,7 @@ function DeviceContent() {
                 autoFocus
                 className="w-full rounded-xl border border-border bg-background px-4 py-3 text-center text-2xl font-mono font-bold tracking-[0.2em] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/50 uppercase"
               />
-              {error && (
-                <p className="text-xs text-destructive text-center leading-5">{error}</p>
-              )}
+              {error && <p className="text-xs text-destructive text-center leading-5">{error}</p>}
               <button
                 type="submit"
                 disabled={loading || !code.trim()}
@@ -186,8 +188,7 @@ function DeviceContent() {
             </form>
 
             <p className="text-xs text-muted-foreground text-center">
-              Signed in as{" "}
-              <span className="text-foreground">{session.user.email}</span>
+              Signed in as <span className="text-foreground">{session.user.email}</span>
             </p>
           </>
         )}

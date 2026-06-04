@@ -31,7 +31,12 @@ export function emitActResult(ok: boolean, label: string, detail?: string): void
 
 // Ask the desktop to confirm a risky action. Falls back to the safety confirmer (autoconfirm /
 // registered handler) when there's no live stream to prompt on — keeps tests/headless runs working.
-export function requestConfirmation(action: UiaAction, label: string, reason: string, rect?: Rect): Promise<boolean> {
+export function requestConfirmation(
+  action: UiaAction,
+  label: string,
+  reason: string,
+  rect?: Rect,
+): Promise<boolean> {
   if (!emit) return confirmRisky(label, reason)
   const id = `act${++seq}`
   emit({ type: "act_proposed", id, action, label, risky: true, rect })
@@ -39,7 +44,10 @@ export function requestConfirmation(action: UiaAction, label: string, reason: st
     const timer = setTimeout(() => {
       if (pending.delete(id)) resolve(false) // no answer in time → deny
     }, CONFIRM_TIMEOUT_MS)
-    pending.set(id, (approved) => { clearTimeout(timer); resolve(approved) })
+    pending.set(id, (approved) => {
+      clearTimeout(timer)
+      resolve(approved)
+    })
   })
 }
 

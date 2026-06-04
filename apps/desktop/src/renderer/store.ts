@@ -85,7 +85,17 @@ export const useYomiStore = create<YomiState>((set) => ({
         set((s) => {
           const id = nextId++
           return {
-            entries: [...s.entries, { id, transcript: event.text, text: "", error: null, ttsError: null, isStreaming: true }],
+            entries: [
+              ...s.entries,
+              {
+                id,
+                transcript: event.text,
+                text: "",
+                error: null,
+                ttsError: null,
+                isStreaming: true,
+              },
+            ],
             activeId: id,
             guideSteps: [],
             guideCurrentStep: 0,
@@ -97,7 +107,7 @@ export const useYomiStore = create<YomiState>((set) => ({
       case "agent_text":
         set((s) => ({
           entries: s.entries.map((e) =>
-            e.id === s.activeId ? { ...e, text: e.text + event.text, isStreaming: true } : e
+            e.id === s.activeId ? { ...e, text: e.text + event.text, isStreaming: true } : e,
           ),
         }))
         break
@@ -110,8 +120,12 @@ export const useYomiStore = create<YomiState>((set) => ({
           pendingAct: null,
           entries: s.entries.map((e) =>
             e.id === s.activeId
-              ? { ...e, text: `${e.text}${e.text ? "\n" : ""}${event.ok ? "✓" : "✗"} ${event.label}${event.detail ? ` — ${event.detail}` : ""}`, isStreaming: true }
-              : e
+              ? {
+                  ...e,
+                  text: `${e.text}${e.text ? "\n" : ""}${event.ok ? "✓" : "✗"} ${event.label}${event.detail ? ` — ${event.detail}` : ""}`,
+                  isStreaming: true,
+                }
+              : e,
           ),
         }))
         break
@@ -120,13 +134,16 @@ export const useYomiStore = create<YomiState>((set) => ({
       case "tts_error":
         set((s) => ({
           entries: s.entries.map((e) =>
-            e.id === s.activeId ? { ...e, ttsError: event.message } : e
+            e.id === s.activeId ? { ...e, ttsError: event.message } : e,
           ),
         }))
         break
       case "visual_guide":
         set((s) => ({
-          guideSteps: [...s.guideSteps, { instruction: event.instruction, elements: event.elements }],
+          guideSteps: [
+            ...s.guideSteps,
+            { instruction: event.instruction, elements: event.elements },
+          ],
           guideTotalSteps: event.total_steps,
           guideCurrentStep: event.step,
           entries: s.entries.map((e) =>
@@ -136,7 +153,7 @@ export const useYomiStore = create<YomiState>((set) => ({
                   text: `${e.text}${e.text ? "\n" : ""}${event.total_steps > 1 ? `${event.step}. ` : ""}${event.instruction}`,
                   isStreaming: true,
                 }
-              : e
+              : e,
           ),
         }))
         break
@@ -145,9 +162,7 @@ export const useYomiStore = create<YomiState>((set) => ({
       case "done":
         set((s) => ({
           hotkeyState: "idle",
-          entries: s.entries.map((e) =>
-            e.id === s.activeId ? { ...e, isStreaming: false } : e
-          ),
+          entries: s.entries.map((e) => (e.id === s.activeId ? { ...e, isStreaming: false } : e)),
           activeId: null,
         }))
         break
@@ -160,7 +175,7 @@ export const useYomiStore = create<YomiState>((set) => ({
               return {
                 hotkeyState: "idle",
                 entries: s.entries.map((e) =>
-                  e.id === s.activeId ? { ...e, isStreaming: false } : e
+                  e.id === s.activeId ? { ...e, isStreaming: false } : e,
                 ),
                 activeId: null,
               }
@@ -168,7 +183,7 @@ export const useYomiStore = create<YomiState>((set) => ({
             return {
               hotkeyState: "idle",
               entries: s.entries.map((e) =>
-                e.id === s.activeId ? { ...e, error: event.message, isStreaming: false } : e
+                e.id === s.activeId ? { ...e, error: event.message, isStreaming: false } : e,
               ),
               activeId: null,
             }
@@ -176,7 +191,17 @@ export const useYomiStore = create<YomiState>((set) => ({
           const id = nextId++
           return {
             hotkeyState: "idle",
-            entries: [...s.entries, { id, transcript: "", text: "", error: event.message, ttsError: null, isStreaming: false }],
+            entries: [
+              ...s.entries,
+              {
+                id,
+                transcript: "",
+                text: "",
+                error: event.message,
+                ttsError: null,
+                isStreaming: false,
+              },
+            ],
             activeId: null,
           }
         })
@@ -186,58 +211,63 @@ export const useYomiStore = create<YomiState>((set) => ({
 
   stopActivePlayback: () =>
     set((s) => ({
-      entries: s.activeId === null
-        ? s.entries
-        : s.entries.map((e) =>
-            e.id === s.activeId ? { ...e, isStreaming: false } : e
-          ),
+      entries:
+        s.activeId === null
+          ? s.entries
+          : s.entries.map((e) => (e.id === s.activeId ? { ...e, isStreaming: false } : e)),
       activeId: null,
     })),
 
-  dismissEntry: (id) =>
-    set((s) => ({ entries: s.entries.filter((e) => e.id !== id) })),
+  dismissEntry: (id) => set((s) => ({ entries: s.entries.filter((e) => e.id !== id) })),
 
   toggleTts: () => set((s) => ({ ttsEnabled: !s.ttsEnabled })),
   clearPendingAct: () => set({ pendingAct: null }),
 
-  setGuideMode: (on) => set(on
-    ? { guideMode: true }
-    : { guideMode: false, guideSteps: [], guideCurrentStep: 0, guideTotalSteps: 0 }
-  ),
+  setGuideMode: (on) =>
+    set(
+      on
+        ? { guideMode: true }
+        : { guideMode: false, guideSteps: [], guideCurrentStep: 0, guideTotalSteps: 0 },
+    ),
 
-  setSubscription: (subscription) => set((s) => {
-    if (subscription === null) return { subscription: null }
-    const clean = Object.fromEntries(
-      Object.entries(subscription).filter(([, value]) => value !== undefined),
-    ) as SubscriptionUpdate
-    if (s.subscription) {
-      const next = { ...s.subscription, ...clean }
+  setSubscription: (subscription) =>
+    set((s) => {
+      if (subscription === null) return { subscription: null }
+      const clean = Object.fromEntries(
+        Object.entries(subscription).filter(([, value]) => value !== undefined),
+      ) as SubscriptionUpdate
+      if (s.subscription) {
+        const next = { ...s.subscription, ...clean }
+        return {
+          subscription: {
+            ...next,
+            trialInteractionsRemaining:
+              clean.trialInteractionsRemaining ??
+              Math.max(next.trialInteractionLimit - next.trialInteractionUsed, 0),
+          },
+        }
+      }
       return {
         subscription: {
-          ...next,
-          trialInteractionsRemaining: clean.trialInteractionsRemaining ?? Math.max(next.trialInteractionLimit - next.trialInteractionUsed, 0),
+          name: clean.name ?? "",
+          email: clean.email ?? "",
+          role: clean.role ?? "user",
+          plan: clean.plan ?? "explore",
+          status: clean.status ?? "inactive",
+          trialEndDate: clean.trialEndDate ?? null,
+          currentPeriodEnd: clean.currentPeriodEnd ?? null,
+          trialInteractionUsed: clean.trialInteractionUsed ?? 0,
+          trialInteractionLimit: clean.trialInteractionLimit ?? 150,
+          trialInteractionsRemaining:
+            clean.trialInteractionsRemaining ??
+            Math.max((clean.trialInteractionLimit ?? 150) - (clean.trialInteractionUsed ?? 0), 0),
+          dailyChatUsed: clean.dailyChatUsed ?? 0,
+          dailyVoiceUsed: clean.dailyVoiceUsed ?? 0,
+          dailyImageUsed: clean.dailyImageUsed ?? 0,
+          tokensUsedThisPeriod: clean.tokensUsedThisPeriod ?? 0,
         },
       }
-    }
-    return {
-      subscription: {
-        name: clean.name ?? "",
-        email: clean.email ?? "",
-        role: clean.role ?? "user",
-        plan: clean.plan ?? "explore",
-        status: clean.status ?? "inactive",
-        trialEndDate: clean.trialEndDate ?? null,
-        currentPeriodEnd: clean.currentPeriodEnd ?? null,
-        trialInteractionUsed: clean.trialInteractionUsed ?? 0,
-        trialInteractionLimit: clean.trialInteractionLimit ?? 150,
-        trialInteractionsRemaining: clean.trialInteractionsRemaining ?? Math.max((clean.trialInteractionLimit ?? 150) - (clean.trialInteractionUsed ?? 0), 0),
-        dailyChatUsed: clean.dailyChatUsed ?? 0,
-        dailyVoiceUsed: clean.dailyVoiceUsed ?? 0,
-        dailyImageUsed: clean.dailyImageUsed ?? 0,
-        tokensUsedThisPeriod: clean.tokensUsedThisPeriod ?? 0,
-      },
-    }
-  }),
+    }),
   setSubscriptionLoading: (subscriptionLoading) => set({ subscriptionLoading }),
 }))
 

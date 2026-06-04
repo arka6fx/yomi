@@ -6,7 +6,13 @@ import { emitActResult, requestConfirmation } from "../uia/act-bus.js"
 // (snapshot, screenshot, wait, tabs, navigate-back) pass through untouched.
 
 type McpTool = { execute: (args: unknown, opts: unknown) => Promise<unknown>; [k: string]: unknown }
-type BrowserArgs = { element?: string; text?: string; url?: string; values?: unknown; submit?: boolean }
+type BrowserArgs = {
+  element?: string
+  text?: string
+  url?: string
+  values?: unknown
+  submit?: boolean
+}
 
 // Mutating tools whose target we inspect for destructive intent.
 const INSPECTED = new Set([
@@ -21,14 +27,18 @@ function actionLabel(name: string, a: BrowserArgs): string {
 }
 
 // Decide whether a browser action needs confirmation. Exported for unit tests.
-export function classifyBrowserRisk(name: string, args: unknown): { risky: boolean; reason?: string } {
+export function classifyBrowserRisk(
+  name: string,
+  args: unknown,
+): { risky: boolean; reason?: string } {
   const a = (args ?? {}) as BrowserArgs
   // File upload always sends data off the machine.
   if (name === "browser_file_upload") return { risky: true, reason: "uploading a file" }
   if (INSPECTED.has(name)) {
     const values = Array.isArray(a.values) ? a.values.map(String) : []
     const text = [a.element, a.text, ...values].filter(Boolean).join(" ")
-    if (isDestructiveText(text)) return { risky: true, reason: `"${a.element || text}" looks destructive` }
+    if (isDestructiveText(text))
+      return { risky: true, reason: `"${a.element || text}" looks destructive` }
   }
   return { risky: false }
 }
@@ -54,7 +64,11 @@ export function wrapBrowserTools(tools: Record<string, unknown>): Record<string,
         if (!risky) return t.execute(args, opts)
 
         const label = actionLabel(name, a)
-        const approved = await requestConfirmation({ kind: "invoke", ref: name }, label, reason ?? "browser action")
+        const approved = await requestConfirmation(
+          { kind: "invoke", ref: name },
+          label,
+          reason ?? "browser action",
+        )
         if (!approved) {
           emitActResult(false, label, "not confirmed")
           return { ok: false, requiresConfirmation: true, label, reason }

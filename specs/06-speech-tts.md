@@ -2,11 +2,13 @@
 
 ## Purpose
 
-Define the text-to-speech pipeline using Sarvam `bulbul:v3`. TTS starts on sentence boundaries so audio begins before the full LLM response is generated.
+Define the text-to-speech pipeline using Sarvam `bulbul:v3`. TTS starts on
+sentence boundaries so audio begins before the full LLM response is generated.
 
 ## Invariants
 
-- TTS synthesis begins on the first sentence boundary; never wait for the full LLM response.
+- TTS synthesis begins on the first sentence boundary; never wait for the full
+  LLM response.
 - Sarvam `bulbul:v3` is the TTS provider.
 - Audio output is 16 kHz to match renderer playback.
 - Voice defaults to `shreya` and can be overridden with `SARVAM_VOICE`.
@@ -38,7 +40,9 @@ function resolveTts(): TtsEngine {
 
 ### Sentence-Boundary TTS
 
-The fast pipeline streams `llm_chunk` events. TTS buffers text chunks, flushes at sentence boundaries, synthesizes each sentence, and emits `audio_chunk` SSE events alongside text.
+The fast pipeline streams `llm_chunk` events. TTS buffers text chunks, flushes
+at sentence boundaries, synthesizes each sentence, and emits `audio_chunk` SSE
+events alongside text.
 
 ```typescript
 let buffer = ""
@@ -56,11 +60,15 @@ if (buffer.trim().length > 0) queueTts(buffer)
 
 ## Files
 
-- `apps/sidecar/src/speech/resolver.ts` - provider selection and synthesis dispatch.
+- `apps/sidecar/src/speech/resolver.ts` - provider selection and synthesis
+  dispatch.
 - `apps/sidecar/src/services/sarvam/tts.ts` - Sarvam TTS client.
-- `apps/sidecar/src/pipeline/fast.ts` - sentence-boundary buffering and `audio_chunk` SSE.
-- `apps/sidecar/src/pipeline/fast.test.ts` - tests for sentence-boundary audio events.
+- `apps/sidecar/src/pipeline/fast.ts` - sentence-boundary buffering and
+  `audio_chunk` SSE.
+- `apps/sidecar/src/pipeline/fast.test.ts` - tests for sentence-boundary audio
+  events.
 
 ## Open Questions
 
-- Sarvam returns WAV bytes today. If the renderer changes playback format, add conversion at the edge.
+- Sarvam returns WAV bytes today. If the renderer changes playback format, add
+  conversion at the edge.

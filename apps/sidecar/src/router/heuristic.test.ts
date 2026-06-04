@@ -15,7 +15,12 @@ const cases: Case[] = [
   { text: "explain the error message", path: "fast", minConf: 0.5 },
 
   // Fast path — question + short + fast verb (high confidence; use 0.89 to avoid float comparison issues)
-  { text: "what does summarize mean?", path: "fast", minConf: 0.89, label: "all three fast signals" },
+  {
+    text: "what does summarize mean?",
+    path: "fast",
+    minConf: 0.89,
+    label: "all three fast signals",
+  },
 
   // Agent path — action verbs
   { text: "send an email to my boss", path: "agent", minConf: 0.3 },
@@ -35,7 +40,11 @@ const cases: Case[] = [
   { text: "Yomi agent book me a table", path: "agent", minConf: 0.9 },
 
   // Agent path — long request (>30 words)
-  { text: "I want you to go through all my emails from the last week, find any ones that mention the project deadline, and create a summary document with the key dates mentioned in each", path: "agent", minConf: 0.3 },
+  {
+    text: "I want you to go through all my emails from the last week, find any ones that mention the project deadline, and create a summary document with the key dates mentioned in each",
+    path: "agent",
+    minConf: 0.3,
+  },
 
   // Default — short text fires "short request" (+0.3 fast), nothing else → fast conf 0.3
   { text: "hello", path: "fast", minConf: 0.3 },
@@ -43,7 +52,11 @@ const cases: Case[] = [
 
   // Ambiguous — question contains action verb ("how do I create")
   // fast wins because question word + short outweighs single action verb
-  { text: "how do I create a Python function?", path: "fast", label: "question about creating, not create request" },
+  {
+    text: "how do I create a Python function?",
+    path: "fast",
+    label: "question about creating, not create request",
+  },
 ]
 
 describe("scoreHeuristic", () => {
@@ -62,7 +75,8 @@ describe("scoreHeuristic", () => {
   }
 
   it("confidence is capped at 1 even when multiple agent signals fire", () => {
-    const text = "research competitors and then draft a report and schedule a review meeting with my team and send it"
+    const text =
+      "research competitors and then draft a report and schedule a review meeting with my team and send it"
     const result = scoreHeuristic({ text })
     expect(result.confidence).toBeLessThanOrEqual(1)
     expect(result.path).toBe("agent")

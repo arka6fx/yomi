@@ -13,7 +13,7 @@ export interface PromptContext {
   staticProfile?: string
   dynamicProfile?: string
   recentSession?: string
-  hasScreen?: boolean  // whether a screenshot is attached to this turn
+  hasScreen?: boolean // whether a screenshot is attached to this turn
 }
 
 // Read ~/.yomi/yomi.md at call time; returns empty string if absent.
@@ -42,18 +42,44 @@ function resolveCtx(ctx: PromptContext): Required<PromptContext> {
   }
 }
 
-function buildMemoryBlock(ctx: Pick<Required<PromptContext>, "memorySummary" | "memoryIndex" | "localMemory" | "cloudRagContext" | "staticProfile" | "dynamicProfile" | "recentSession">): string {
-  if (!ctx.memorySummary && !ctx.memoryIndex && !ctx.localMemory && !ctx.cloudRagContext && !ctx.staticProfile && !ctx.dynamicProfile && !ctx.recentSession) return ""
+function buildMemoryBlock(
+  ctx: Pick<
+    Required<PromptContext>,
+    | "memorySummary"
+    | "memoryIndex"
+    | "localMemory"
+    | "cloudRagContext"
+    | "staticProfile"
+    | "dynamicProfile"
+    | "recentSession"
+  >,
+): string {
+  if (
+    !ctx.memorySummary &&
+    !ctx.memoryIndex &&
+    !ctx.localMemory &&
+    !ctx.cloudRagContext &&
+    !ctx.staticProfile &&
+    !ctx.dynamicProfile &&
+    !ctx.recentSession
+  )
+    return ""
   const parts: string[] = []
-  if (ctx.staticProfile) parts.push(`<static_profile>\n${ctx.staticProfile.trim()}\n</static_profile>`)
-  if (ctx.dynamicProfile) parts.push(`<dynamic_profile>\n${ctx.dynamicProfile.trim()}\n</dynamic_profile>`)
+  if (ctx.staticProfile)
+    parts.push(`<static_profile>\n${ctx.staticProfile.trim()}\n</static_profile>`)
+  if (ctx.dynamicProfile)
+    parts.push(`<dynamic_profile>\n${ctx.dynamicProfile.trim()}\n</dynamic_profile>`)
   if (ctx.memoryIndex) parts.push(`<index>\n${ctx.memoryIndex.trim()}\n</index>`)
   if (ctx.memorySummary) parts.push(`<summary>\n${ctx.memorySummary.trim()}\n</summary>`)
-  if (ctx.localMemory) parts.push(`<local_retrieved>\n${ctx.localMemory.trim()}\n</local_retrieved>`)
-  if (ctx.cloudRagContext) parts.push(`<cloud_rag_context>\n${ctx.cloudRagContext.trim()}\n</cloud_rag_context>`)
+  if (ctx.localMemory)
+    parts.push(`<local_retrieved>\n${ctx.localMemory.trim()}\n</local_retrieved>`)
+  if (ctx.cloudRagContext)
+    parts.push(`<cloud_rag_context>\n${ctx.cloudRagContext.trim()}\n</cloud_rag_context>`)
   // Retrieved blocks are numbered ([1], [2], …) — require inline citation of any source used.
   if (ctx.localMemory || ctx.cloudRagContext) {
-    parts.push(`<citation_rule>When you use a fact from a numbered retrieved block above, cite its bracketed number inline like [1]. Only cite sources you actually used; never invent a number.</citation_rule>`)
+    parts.push(
+      `<citation_rule>When you use a fact from a numbered retrieved block above, cite its bracketed number inline like [1]. Only cite sources you actually used; never invent a number.</citation_rule>`,
+    )
   }
   if (ctx.recentSession) parts.push(`<recent_chat>\n${ctx.recentSession.trim()}\n</recent_chat>`)
   return `<memory>\n${parts.join("\n")}\n</memory>\n\n`

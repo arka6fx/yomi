@@ -2,7 +2,8 @@
 
 ## Purpose
 
-Define Yomi's plans, feature gates, fair-use limits, and Razorpay billing behavior.
+Define Yomi's plans, feature gates, fair-use limits, and Razorpay billing
+behavior.
 
 ## Invariants
 
@@ -16,34 +17,36 @@ Define Yomi's plans, feature gates, fair-use limits, and Razorpay billing behavi
 
 ## Plan Matrix
 
-| Plan | Price | Core limits | Context | Agents |
-|---|---:|---|---|---|
-| Explore | $0 | 30-day trial, 150 total interactions | screen analysis only | no |
-| Pro | $9.99/mo | chat 10000/day, voice 200/day | local memory + cloud archive mirror | no |
-| Max | $24.99/mo | chat/voice 10000/day | local memory + cloud archive mirror | yes, 10000 runs/day |
+| Plan    |     Price | Core limits                          | Context                             | Agents              |
+| ------- | --------: | ------------------------------------ | ----------------------------------- | ------------------- |
+| Explore |        $0 | 30-day trial, 150 total interactions | screen analysis only                | no                  |
+| Pro     |  $9.99/mo | chat 10000/day, voice 200/day        | local memory + cloud archive mirror | no                  |
+| Max     | $24.99/mo | chat/voice 10000/day                 | local memory + cloud archive mirror | yes, 10000 runs/day |
 
 Razorpay plan amounts:
 
 | Plan | Amount |
-|---|---:|
-| Pro | 999 |
-| Max | 2499 |
+| ---- | -----: |
+| Pro  |    999 |
+| Max  |   2499 |
 
-The amount values are the smallest configured billing units used by the backend/Razorpay integration.
+The amount values are the smallest configured billing units used by the
+backend/Razorpay integration.
 
 ## Feature Gates
 
-| Feature | Explore | Pro | Max |
-|---|---|---|---|
-| Text chat | limited | yes | yes |
-| Voice | limited | 200/day | 10000/day |
-| Screen analysis | yes | yes | yes |
-| Local memory engine | no | yes | yes |
-| Cloud archive mirror | no | yes | yes |
-| File upload RAG | no | no | no |
-| Agent mode | no | no | yes |
+| Feature              | Explore | Pro     | Max       |
+| -------------------- | ------- | ------- | --------- |
+| Text chat            | limited | yes     | yes       |
+| Voice                | limited | 200/day | 10000/day |
+| Screen analysis      | yes     | yes     | yes       |
+| Local memory engine  | no      | yes     | yes       |
+| Cloud archive mirror | no      | yes     | yes       |
+| File upload RAG      | no      | no      | no        |
+| Agent mode           | no      | no      | yes       |
 
-Current implementation detail: normal Max purchase/access can remain blocked until launch while owner/dev accounts can test Max-gated paths.
+Current implementation detail: normal Max purchase/access can remain blocked
+until launch while owner/dev accounts can test Max-gated paths.
 
 ## Billing Flow
 
@@ -57,7 +60,9 @@ Current implementation detail: normal Max purchase/access can remain blocked unt
 
 ## Cancellation And Downgrade
 
-Canceled or failed subscriptions downgrade access back to Explore after the active period rules are applied. Paid-only context features stop being included in new sidecar requests.
+Canceled or failed subscriptions downgrade access back to Explore after the
+active period rules are applied. Paid-only context features stop being included
+in new sidecar requests.
 
 ## Metering
 
@@ -66,7 +71,8 @@ Usage is enforced by backend APIs and shared usage helpers. Important behavior:
 - `usage_events` is append-only.
 - Daily counters reset by UTC date.
 - Voice and agent limits are separate from regular chat where applicable.
-- Local memory and cloud archive retrieval are sidecar context features, not separate billable events.
+- Local memory and cloud archive retrieval are sidecar context features, not
+  separate billable events.
 
 ## Implemented Files
 

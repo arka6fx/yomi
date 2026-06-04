@@ -16,21 +16,13 @@ function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement
 
 function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
-    <h3
-      data-slot="card-title"
-      className={cn("font-semibold text-label", className)}
-      {...props}
-    />
+    <h3 data-slot="card-title" className={cn("font-semibold text-label", className)} {...props} />
   )
 }
 
 function CardDescription({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <p
-      data-slot="card-description"
-      className={cn("text-sm text-caption", className)}
-      {...props}
-    />
+    <p data-slot="card-description" className={cn("text-sm text-caption", className)} {...props} />
   )
 }
 

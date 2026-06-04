@@ -18,7 +18,10 @@ export async function classifyIntent(input: RouterInput): Promise<IntentClassifi
     return await classifyWithLlm(input)
   } catch (err) {
     // Timeout or provider error — fall back to heuristic result
-    console.warn("[yomi/router] LLM classifier failed, using heuristic:", err instanceof Error ? err.message : err)
+    console.warn(
+      "[yomi/router] LLM classifier failed, using heuristic:",
+      err instanceof Error ? err.message : err,
+    )
     return heuristic
   }
 }
