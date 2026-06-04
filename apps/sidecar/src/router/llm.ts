@@ -2,8 +2,7 @@ import { generateObject, jsonSchema } from "ai"
 import { createOpenAI } from "@ai-sdk/openai"
 import type { IntentClassification, RouterInput } from "@yomi/shared"
 
-const ROUTER_SYSTEM_PROMPT =
-  `You classify user requests for a desktop AI assistant into two pipelines.
+const ROUTER_SYSTEM_PROMPT = `You classify user requests for a desktop AI assistant into two pipelines.
 fast: questions, explanations, translations, summaries — any direct single-step answer.
 agent: action verbs (research, draft, send, schedule, create, open, file, deploy) or multi-part tasks.
 Default to fast when unsure. Reply with path, confidence (0..1), and a reason under 15 words.`
@@ -33,7 +32,10 @@ function createModel() {
 function buildPrompt(input: RouterInput): string {
   const parts = [`User request: "${input.text}"`]
   if (input.history?.length) {
-    const recent = input.history.slice(-2).map(t => `${t.role}: ${t.text}`).join("\n")
+    const recent = input.history
+      .slice(-2)
+      .map((t) => `${t.role}: ${t.text}`)
+      .join("\n")
     parts.push(`Recent context:\n${recent}`)
   }
   return parts.join("\n\n")

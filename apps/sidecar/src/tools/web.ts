@@ -1,5 +1,17 @@
 import { tool, jsonSchema } from "ai"
 
+type BraveSearchResponse = {
+  web?: {
+    results?: BraveSearchResult[]
+  }
+}
+
+type BraveSearchResult = {
+  title?: string
+  url?: string
+  description?: string
+}
+
 export function createWebTools() {
   return {
     web_search: tool({
@@ -23,8 +35,8 @@ export function createWebTools() {
         })
         if (!res.ok) return { error: `Search API returned ${res.status}` }
 
-        const data = (await res.json()) as any
-        return (data.web?.results ?? []).map((r: any) => ({
+        const data = (await res.json()) as BraveSearchResponse
+        return (data.web?.results ?? []).map((r) => ({
           title: r.title,
           url: r.url,
           snippet: r.description,

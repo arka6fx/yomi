@@ -75,7 +75,7 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T | null>
     },
   })
   if (!res.ok) return null
-  return await res.json() as T
+  return (await res.json()) as T
 }
 
 async function fetchRemoteMirrorSources(): Promise<CloudSource[]> {
@@ -83,7 +83,7 @@ async function fetchRemoteMirrorSources(): Promise<CloudSource[]> {
   return (data?.sources ?? []).filter((source) => source.sourceType === MIRROR_SOURCE_TYPE)
 }
 
-export function scheduleCloudRagSync(reason = "change"): void {
+export function scheduleCloudRagSync(_reason = "change"): void {
   if (!sessionToken()) return
   scheduleLater()
 }
@@ -102,7 +102,9 @@ export async function performCloudRagSync(): Promise<void> {
       const localSources = await scanArchiveSources()
       const remoteSources = await fetchRemoteMirrorSources().catch(() => [])
       const currentPaths = new Set(localSources.map((source) => source.path))
-      const removedPaths = remoteSources.map((source) => source.name).filter((name) => !currentPaths.has(name))
+      const removedPaths = remoteSources
+        .map((source) => source.name)
+        .filter((name) => !currentPaths.has(name))
 
       const payload = {
         sources: encodeSources(localSources),

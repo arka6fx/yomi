@@ -1,4 +1,5 @@
 import { Hono } from "hono"
+import type { MiddlewareHandler } from "hono"
 import { streamSSE } from "hono/streaming"
 import type { AgentQueryRequest, FastQueryRequest, SseEvent } from "@yomi/shared"
 import { fastPipeline, resolveText } from "./pipeline/fast.js"
@@ -10,20 +11,20 @@ import { resolveConfirmation } from "./uia/act-bus.js"
 import { closeMcp } from "./mcp/client.js"
 
 // Ensure ~/.yomi/ directory tree exists before serving any requests.
-initMemorySubsystem().catch(err => console.warn("[yomi] memory subsystem init failed:", err))
+initMemorySubsystem().catch((err) => console.warn("[yomi] memory subsystem init failed:", err))
 
 const app = new Hono()
 
 const VERSION = "0.1.0"
 
-function authMiddleware(c: any, next: any) {
+const authMiddleware: MiddlewareHandler = async (c, next) => {
   // Read lazily so tests can manipulate the env var at runtime
   const secret = process.env.SIDECAR_SECRET
   const header = c.req.header("x-sidecar-secret")
   if (secret && header !== secret) {
     return c.json({ error: "Unauthorized" }, 401)
   }
-  return next()
+  await next()
 }
 
 app.use("/query", authMiddleware)
@@ -56,11 +57,20 @@ app.post("/query", async (c) => {
     }
 
     if (!text) {
-      await stream.writeSSE({ data: JSON.stringify({ type: "error", message: "text or audio_b64 field is required" } satisfies SseEvent) })
+      await stream.writeSSE({
+        data: JSON.stringify({
+          type: "error",
+          message: "text or audio_b64 field is required",
+        } satisfies SseEvent),
+      })
       return
     }
 
-    const decision = await classifyIntent({ text, screenshot_b64: body.screenshot_b64, history: body.history })
+    const decision = await classifyIntent({
+      text,
+      screenshot_b64: body.screenshot_b64,
+      history: body.history,
+    })
     await stream.writeSSE({
       data: JSON.stringify({
         type: "router_decision",
@@ -72,15 +82,23 @@ app.post("/query", async (c) => {
     })
 
     if (decision.path === "agent") {
-      const agentReq: AgentQueryRequest = { text, screenshot_b64: body.screenshot_b64, plan: body.plan }
-      const emit = (e: SseEvent) => { void stream.writeSSE({ data: JSON.stringify(e) }) }
+      const agentReq: AgentQueryRequest = {
+        text,
+        screenshot_b64: body.screenshot_b64,
+        plan: body.plan,
+      }
+      const emit = (e: SseEvent) => {
+        void stream.writeSSE({ data: JSON.stringify(e) })
+      }
       try {
         for await (const event of agentPipeline(agentReq, { emit })) {
           await stream.writeSSE({ data: JSON.stringify(event) })
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : "Internal error"
-        await stream.writeSSE({ data: JSON.stringify({ type: "error", message } satisfies SseEvent) })
+        await stream.writeSSE({
+          data: JSON.stringify({ type: "error", message } satisfies SseEvent),
+        })
       }
     } else {
       const normalised: FastQueryRequest = { ...body, text }
@@ -90,7 +108,9 @@ app.post("/query", async (c) => {
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : "Internal error"
-        await stream.writeSSE({ data: JSON.stringify({ type: "error", message } satisfies SseEvent) })
+        await stream.writeSSE({
+          data: JSON.stringify({ type: "error", message } satisfies SseEvent),
+        })
       }
     }
   })
@@ -131,7 +151,9 @@ app.post("/query/agent", async (c) => {
   if (!body.text?.trim()) return c.json({ error: "text field is required" }, 400)
 
   return streamSSE(c, async (stream) => {
-    const emit = (e: SseEvent) => { void stream.writeSSE({ data: JSON.stringify(e) }) }
+    const emit = (e: SseEvent) => {
+      void stream.writeSSE({ data: JSON.stringify(e) })
+    }
     try {
       for await (const event of agentPipeline(body, { emit })) {
         await stream.writeSSE({ data: JSON.stringify(event) })
@@ -172,10 +194,12 @@ app.onError((err, c) => {
 
 // Tear down the MCP client + its child browser on shutdown.
 for (const sig of ["SIGINT", "SIGTERM", "beforeExit"] as const) {
-  process.on(sig, () => { void closeMcp().finally(() => process.exit(0)) })
+  process.on(sig, () => {
+    void closeMcp().finally(() => process.exit(0))
+  })
 }
 
 const port = parseInt(process.env.SIDECAR_PORT || "3002", 10)
-console.log(`Sidecar listening on :${port}`)
+console.warn(`Sidecar listening on :${port}`)
 
 export default { port, fetch: app.fetch }

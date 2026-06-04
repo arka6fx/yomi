@@ -52,7 +52,11 @@ function YomiMark({ className = "" }: { className?: string }) {
 
 export function BrandMark({ withText = true, size = "md", className = "" }: BrandMarkProps) {
   return (
-    <Link href="/" className={`inline-flex items-center gap-2.5 select-none ${className}`} aria-label="Yomi home">
+    <Link
+      href="/"
+      className={`inline-flex items-center gap-2.5 select-none ${className}`}
+      aria-label="Yomi home"
+    >
       <YomiMark className={`${sizes[size]} shadow-[0_0_18px_rgba(96,165,250,0.30)]`} />
       {withText && <span className="font-display text-xl font-bold text-foreground">Yomi</span>}
     </Link>

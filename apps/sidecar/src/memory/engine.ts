@@ -6,7 +6,13 @@ import { createModel } from "../pipeline/model.js"
 import { initMemoryDir, notepadDir } from "./loader.js"
 
 export type MemoryStatus = "active" | "superseded" | "uncertain" | "forgotten"
-export type MemoryKind = "preference" | "fact" | "project" | "decision" | "open_thread" | "correction"
+export type MemoryKind =
+  | "preference"
+  | "fact"
+  | "project"
+  | "decision"
+  | "open_thread"
+  | "correction"
 
 export type MemoryRecord = {
   id: string
@@ -23,7 +29,10 @@ export type MemoryRecord = {
   updatedAt: string
 }
 
-export type RetrievedMemory = Pick<MemoryRecord, "id" | "kind" | "topic" | "content" | "confidence" | "sourcePath">
+export type RetrievedMemory = Pick<
+  MemoryRecord,
+  "id" | "kind" | "topic" | "content" | "confidence" | "sourcePath"
+>
 
 type ExtractedMemory = {
   kind: MemoryKind
@@ -121,7 +130,9 @@ export async function readProfile(kind: "static" | "dynamic"): Promise<string> {
   await initMemoryEngine()
   const file = await readFile(profilePath(kind), "utf-8").catch(() => "")
   if (file.trim()) return file.slice(0, MAX_PROFILE_CHARS)
-  const row = openDb().query<{ content: string }, [string]>("select content from profiles where key = ?").get(kind)
+  const row = openDb()
+    .query<{ content: string }, [string]>("select content from profiles where key = ?")
+    .get(kind)
   return (row?.content ?? "").slice(0, MAX_PROFILE_CHARS)
 }
 
@@ -139,7 +150,9 @@ export function retrieveLocalMemoryContext(query: string, maxChars = 3000): stri
     .join(" OR ")
   if (!terms) return ""
 
-  const rows = database.query<RetrievedMemory, [string]>(`
+  const rows = database
+    .query<RetrievedMemory, [string]>(
+      `
     select m.id, m.kind, m.topic, m.content, m.confidence, m.source_path as sourcePath
     from memory_fts f
     join memories m on m.id = f.id
@@ -148,7 +161,9 @@ export function retrieveLocalMemoryContext(query: string, maxChars = 3000): stri
       and m.confidence >= 0.45
     order by bm25(memory_fts), m.updated_at desc
     limit 8
-  `).all(terms)
+  `,
+    )
+    .all(terms)
 
   const out: string[] = []
   let used = 0
@@ -184,10 +199,12 @@ function insertMemory(memory: ExtractedMemory, sourcePath: string, sourceTurnId:
      values (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?)`,
     [id, memory.kind, scope, topic, content, confidence, sourcePath, sourceTurnId, now, now],
   )
-  database.run(
-    "insert into memory_fts (id, topic, content, scope) values (?, ?, ?, ?)",
-    [id, topic, content, scope],
-  )
+  database.run("insert into memory_fts (id, topic, content, scope) values (?, ?, ?, ?)", [
+    id,
+    topic,
+    content,
+    scope,
+  ])
 }
 
 function parseMemories(text: string): ExtractedMemory[] {
@@ -212,9 +229,10 @@ export async function captureTurnMemory(turn: {
 
   const { text } = await generateText({
     model: createModel(EXTRACTION_MODEL),
-    messages: [{
-      role: "user",
-      content: `Extract durable user memory from this Yomi interaction.
+    messages: [
+      {
+        role: "user",
+        content: `Extract durable user memory from this Yomi interaction.
 
 Return strict JSON only:
 {"memories":[{"kind":"preference|fact|project|decision|open_thread|correction","scope":"global|project|app|session","topic":"short key","content":"one concise memory","confidence":0.0,"replaces_topic":"optional old topic"}]}
@@ -227,7 +245,8 @@ Rules:
 
 User: ${input}
 Assistant: ${output}`,
-    }],
+      },
+    ],
   })
 
   const sourceTurnId = crypto.randomUUID()
@@ -240,26 +259,40 @@ Assistant: ${output}`,
 export async function updateUserProfiles(): Promise<void> {
   await initMemoryEngine()
   const database = openDb()
-  const rows = database.query<Pick<MemoryRecord, "kind" | "topic" | "content" | "confidence">, []>(`
+  const rows = database
+    .query<Pick<MemoryRecord, "kind" | "topic" | "content" | "confidence">, []>(
+      `
     select kind, topic, content, confidence
     from memories
     where status = 'active'
     order by confidence desc, updated_at desc
     limit 80
-  `).all()
+  `,
+    )
+    .all()
 
   const stable = rows
     .filter((m) => m.kind === "preference" || m.kind === "fact")
     .map((m) => `- ${m.topic}: ${m.content}`)
     .join("\n")
   const dynamic = rows
-    .filter((m) => m.kind === "project" || m.kind === "decision" || m.kind === "open_thread" || m.kind === "correction")
+    .filter(
+      (m) =>
+        m.kind === "project" ||
+        m.kind === "decision" ||
+        m.kind === "open_thread" ||
+        m.kind === "correction",
+    )
     .map((m) => `- ${m.topic}: ${m.content}`)
     .join("\n")
   const now = nowISO()
 
   await writeFile(profilePath("static"), stable ? `# Static profile\n\n${stable}\n` : "", "utf-8")
-  await writeFile(profilePath("dynamic"), dynamic ? `# Dynamic profile\n\n${dynamic}\n` : "", "utf-8")
+  await writeFile(
+    profilePath("dynamic"),
+    dynamic ? `# Dynamic profile\n\n${dynamic}\n` : "",
+    "utf-8",
+  )
   database.run(
     "insert into profiles (key, content, updated_at) values (?, ?, ?) on conflict(key) do update set content = excluded.content, updated_at = excluded.updated_at",
     ["static", stable, now],
@@ -286,13 +319,18 @@ export async function reindexLocalMemory(): Promise<void> {
   await initMemoryEngine()
   const database = openDb()
   database.run("delete from memory_fts")
-  const rows = database.query<Pick<MemoryRecord, "id" | "topic" | "content" | "scope">, []>(
-    "select id, topic, content, scope from memories where status = 'active'",
-  ).all()
+  const rows = database
+    .query<
+      Pick<MemoryRecord, "id" | "topic" | "content" | "scope">,
+      []
+    >("select id, topic, content, scope from memories where status = 'active'")
+    .all()
   for (const row of rows) {
-    database.run(
-      "insert into memory_fts (id, topic, content, scope) values (?, ?, ?, ?)",
-      [row.id, row.topic, row.content, row.scope],
-    )
+    database.run("insert into memory_fts (id, topic, content, scope) values (?, ?, ?, ?)", [
+      row.id,
+      row.topic,
+      row.content,
+      row.scope,
+    ])
   }
 }

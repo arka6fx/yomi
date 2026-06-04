@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter, usePathname } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { Menu, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { authClient } from "@/lib/auth-client"
@@ -10,18 +10,16 @@ import { BrandMark } from "@/components/BrandMark"
 
 const NAV_LINKS = [
   { label: "Features", href: "/#features" },
-  { label: "Pricing",  href: "/#pricing"  },
+  { label: "Pricing", href: "/#pricing" },
   { label: "Download", href: "/#download" },
-  { label: "Privacy",  href: "/privacy"   },
-  { label: "Terms",    href: "/terms"     },
+  { label: "Privacy", href: "/privacy" },
+  { label: "Terms", href: "/terms" },
 ]
 
 export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false)
   const { data: session } = authClient.useSession()
   const router = useRouter()
-  const pathname = usePathname()
-  const isHome = pathname === "/"
 
   return (
     <div className="sticky top-3 z-50 px-4">
@@ -35,7 +33,7 @@ export default function Nav() {
           <BrandMark size="md" />
 
           <nav className="hidden md:flex items-center gap-7">
-            {NAV_LINKS.map(link => (
+            {NAV_LINKS.map((link) => (
               <Link
                 key={link.label}
                 href={link.href}
@@ -80,7 +78,7 @@ export default function Nav() {
             )}
             <button
               className="md:hidden ml-1 text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted/50 transition-colors"
-              onClick={() => setMenuOpen(v => !v)}
+              onClick={() => setMenuOpen((v) => !v)}
               aria-label="Toggle menu"
             >
               {menuOpen ? <X size={18} /> : <Menu size={18} />}
@@ -98,7 +96,7 @@ export default function Nav() {
               className="overflow-hidden border-t border-border"
             >
               <div className="px-4 py-3 flex flex-col gap-0.5">
-                {NAV_LINKS.map(link => (
+                {NAV_LINKS.map((link) => (
                   <Link
                     key={link.label}
                     href={link.href}
@@ -119,7 +117,10 @@ export default function Nav() {
                         Dashboard
                       </Link>
                       <button
-                        onClick={() => { setMenuOpen(false); authClient.signOut().then(() => router.push("/")) }}
+                        onClick={() => {
+                          setMenuOpen(false)
+                          authClient.signOut().then(() => router.push("/"))
+                        }}
                         className="flex-1 text-center py-2 rounded-xl text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                       >
                         Sign out

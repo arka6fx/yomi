@@ -11,7 +11,7 @@
       "outputs": ["dist/**"]
     },
     "@yomi/desktop#build": {
-      "dependsOn": ["^build", "@yomi/uia-helper#build"],
+      "dependsOn": ["^build", "@yomi/sidecar#build", "@yomi/uia-helper#build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["dist/**", "out/**", "release/**"]
     },
@@ -32,7 +32,13 @@
     },
     "test": {
       "dependsOn": ["^build:ci"],
-      "inputs": ["src/**/*.ts", "src/**/*.tsx", "**/*.test.ts", "**/*.spec.ts", "bunfig.toml"],
+      "inputs": [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "**/*.test.ts",
+        "**/*.spec.ts",
+        "bunfig.toml"
+      ],
       "cache": true
     },
     "format": {

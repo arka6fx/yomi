@@ -1,7 +1,10 @@
 {
   "name": "yomi",
   "private": true,
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "build": "turbo run build",
     "build:ci": "turbo run build:ci",

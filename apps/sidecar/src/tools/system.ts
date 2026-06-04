@@ -15,16 +15,24 @@ function blockedGuard(): { error: string } | null {
 
 // A helper result counts as a failure when it carries an `error` or an explicit `ok: false`.
 export function actFailed(r: unknown): boolean {
-  return typeof r === "object" && r !== null && (("ok" in r && (r as { ok?: unknown }).ok === false) || "error" in r)
+  return (
+    typeof r === "object" &&
+    r !== null &&
+    (("ok" in r && (r as { ok?: unknown }).ok === false) || "error" in r)
+  )
 }
 
 function withHint(result: unknown): unknown {
-  if (typeof result === "object" && result !== null) return { ...(result as object), hint: "re-fetch get_ui_tree and try again" }
+  if (typeof result === "object" && result !== null)
+    return { ...(result as object), hint: "re-fetch get_ui_tree and try again" }
   return { error: String(result), hint: "re-fetch get_ui_tree and try again" }
 }
 
 // Execute an action and, if it fails or the ref went stale, re-snapshot + retry once with a fresh ref.
-async function attemptAct(ref: string, run: (ref: string) => Promise<unknown>): Promise<{ result: unknown; retried: boolean }> {
+async function attemptAct(
+  ref: string,
+  run: (ref: string) => Promise<unknown>,
+): Promise<{ result: unknown; retried: boolean }> {
   let result: unknown
   try {
     result = await run(ref)
@@ -38,7 +46,10 @@ async function attemptAct(ref: string, run: (ref: string) => Promise<unknown>): 
     const retried = await run(fresh)
     return { result: actFailed(retried) ? withHint(retried) : retried, retried: true }
   } catch (e) {
-    return { result: { error: e instanceof Error ? e.message : String(e), hint: "re-fetch get_ui_tree" }, retried: true }
+    return {
+      result: { error: e instanceof Error ? e.message : String(e), hint: "re-fetch get_ui_tree" },
+      retried: true,
+    }
   }
 }
 
@@ -46,7 +57,10 @@ async function attemptAct(ref: string, run: (ref: string) => Promise<unknown>): 
 type RefAction = Extract<UiaAction, { ref: string }>
 async function guardedAct(action: RefAction, run: (ref: string) => Promise<unknown>) {
   const blocked = blockedGuard()
-  if (blocked) { emitActResult(false, action.ref, blocked.error); return blocked }
+  if (blocked) {
+    emitActResult(false, action.ref, blocked.error)
+    return blocked
+  }
 
   const el = uia.getElement(action.ref)
   if (!el) return { error: "element no longer available — call get_ui_tree again first" }
@@ -54,7 +68,12 @@ async function guardedAct(action: RefAction, run: (ref: string) => Promise<unkno
   const label = el.name || el.role || action.ref
   const { risky, reason } = classifyRisk(action.kind, el)
   if (risky) {
-    const approved = await requestConfirmation(action, label, reason ?? "destructive action", el.rect)
+    const approved = await requestConfirmation(
+      action,
+      label,
+      reason ?? "destructive action",
+      el.rect,
+    )
     if (!approved) {
       emitActResult(false, label, "not confirmed")
       return { ok: false, requiresConfirmation: true, label, reason }
@@ -63,14 +82,19 @@ async function guardedAct(action: RefAction, run: (ref: string) => Promise<unkno
   const { result, retried } = await attemptAct(action.ref, run)
   const failed = actFailed(result)
   emitActResult(!failed, label, failed ? "action did not succeed" : undefined)
-  return retried && typeof result === "object" && result !== null ? { ...(result as object), retried } : result
+  return retried && typeof result === "object" && result !== null
+    ? { ...(result as object), retried }
+    : result
 }
 
 function cleanAppName(name: string): string {
   return name.replace(/['";\r\n`$]/g, "").trim()
 }
 
-async function launchWindowsApp(name: string, settleMs = 1200): Promise<{ ok: true; detail: string } | { error: string }> {
+async function launchWindowsApp(
+  name: string,
+  settleMs = 1200,
+): Promise<{ ok: true; detail: string } | { error: string }> {
   const safe = cleanAppName(name)
   if (!safe) return { error: "app name required" }
   const ps =
@@ -79,8 +103,14 @@ async function launchWindowsApp(name: string, settleMs = 1200): Promise<{ ok: tr
     `else { Start-Process '${safe}'; $name = '${safe}'; "started: $name" }; ` +
     `$ws = New-Object -ComObject WScript.Shell; ` +
     `for ($i = 0; $i -lt 20; $i++) { Start-Sleep -Milliseconds 150; if ($ws.AppActivate($name) -or $ws.AppActivate('${safe}')) { break } }`
-  const proc = Bun.spawn(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps], { stdout: "pipe", stderr: "pipe" })
-  const [out, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()])
+  const proc = Bun.spawn(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps], {
+    stdout: "pipe",
+    stderr: "pipe",
+  })
+  const [out, err] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+  ])
   const code = await proc.exited
   if (code !== 0) return { error: (err || "launch failed").trim() }
   await Bun.sleep(settleMs)
@@ -101,7 +131,10 @@ async function activateWindowsApp(name: string): Promise<boolean> {
     `Start-Sleep -Milliseconds 150; ` +
     `$p = Get-Process | Where-Object { $_.MainWindowTitle -like '*${safe}*' } | Select-Object -First 1 ` +
     `}; exit 1`
-  const proc = Bun.spawn(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps], { stdout: "pipe", stderr: "pipe" })
+  const proc = Bun.spawn(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps], {
+    stdout: "pipe",
+    stderr: "pipe",
+  })
   await new Response(proc.stdout).text()
   return (await proc.exited) === 0
 }
@@ -110,29 +143,40 @@ async function getWindowsAppHwnd(name: string): Promise<number | null> {
   const safe = cleanAppName(name)
   if (!safe) return null
   const ps = `(Get-Process | Where-Object { $_.MainWindowTitle -like '*${safe}*' } | Select-Object -First 1).MainWindowHandle`
-  const proc = Bun.spawn(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps], { stdout: "pipe", stderr: "pipe" })
+  const proc = Bun.spawn(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps], {
+    stdout: "pipe",
+    stderr: "pipe",
+  })
   const out = (await new Response(proc.stdout).text()).trim()
   await proc.exited
   const hwnd = Number(out)
   return Number.isFinite(hwnd) && hwnd > 0 ? hwnd : null
 }
 
-async function requireWindowsAppWindow(name: string): Promise<{ ok: true; window: string; hwnd: number } | { error: string }> {
+async function requireWindowsAppWindow(
+  name: string,
+): Promise<{ ok: true; window: string; hwnd: number } | { error: string }> {
   for (let i = 0; i < 8; i++) {
     const hwnd = await getWindowsAppHwnd(name)
     if (hwnd) {
       const info = await uia.getWindowInfo({ hwnd })
-      if (info.window.toLowerCase().includes(name.toLowerCase())) return { ok: true, window: info.window, hwnd }
+      if (info.window.toLowerCase().includes(name.toLowerCase()))
+        return { ok: true, window: info.window, hwnd }
     }
     await activateWindowsApp(name)
     await Bun.sleep(250)
   }
   const info = await uia.getWindowInfo().catch(() => ({ window: "" }))
-  return { error: `Could not find a usable ${name} window; active window is "${info.window}". Refusing to click another app.` }
+  return {
+    error: `Could not find a usable ${name} window; active window is "${info.window}". Refusing to click another app.`,
+  }
 }
 
 function searchTokens(text: string): string[] {
-  return text.toLowerCase().split(/[^a-z0-9]+/).filter((part) => part.length >= 3 && !["the", "and", "feat", "ft", "with"].includes(part))
+  return text
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((part) => part.length >= 3 && !["the", "and", "feat", "ft", "with"].includes(part))
 }
 
 type SpotifyQuery = {
@@ -168,20 +212,14 @@ function scoreSpotifyPlayButton(name: string, query: string): number {
   return score
 }
 
-function scoreSpotifyResult(name: string, query: string): number {
-  const n = name.toLowerCase()
-  if (!n || /\b(play|pause|home|search|library|install|upgrade|profile|back|forward)\b/.test(n)) return -1
-  let score = 0
-  for (const token of searchTokens(query)) if (n.includes(token)) score += 3
-  return score
-}
-
 function tokenScore(name: string, tokens: string[], weight: number): number {
   const n = name.toLowerCase()
   return tokens.reduce((score, token) => score + (n.includes(token) ? weight : 0), 0)
 }
 
-function visibleElement(el: { rect: { x: number; y: number; width: number; height: number } }): boolean {
+function visibleElement(el: {
+  rect: { x: number; y: number; width: number; height: number }
+}): boolean {
   return el.rect.width > 8 && el.rect.height > 8
 }
 
@@ -193,12 +231,26 @@ function contentElement(el: UiaElement, root?: UiaElement): boolean {
   return el.rect.y > root.rect.y + 70 && el.rect.y < bottomPlayerTop && el.rect.x > sideNavRight
 }
 
-function findSpotifyResultRow(elements: UiaElement[], query: SpotifyQuery): { y: number; score: number; label: string; element: UiaElement } | null {
+function findSpotifyResultRow(
+  elements: UiaElement[],
+  query: SpotifyQuery,
+): { y: number; score: number; label: string; element: UiaElement } | null {
   const root = elements[0]
   const rows = new Map<number, { y: number; score: number; label: string; element: UiaElement }>()
   for (const el of elements) {
-    if (!el.enabled || !contentElement(el, root) || !["Button", "Text", "ListItem", "DataItem", "Hyperlink", "Group"].includes(el.role)) continue
-    if (!el.name || /\b(play|pause|home|search|library|install|upgrade|profile|back|forward|queue|connect)\b/i.test(el.name)) continue
+    if (
+      !el.enabled ||
+      !contentElement(el, root) ||
+      !["Button", "Text", "ListItem", "DataItem", "Hyperlink", "Group"].includes(el.role)
+    )
+      continue
+    if (
+      !el.name ||
+      /\b(play|pause|home|search|library|install|upgrade|profile|back|forward|queue|connect)\b/i.test(
+        el.name,
+      )
+    )
+      continue
     const titleScore = tokenScore(el.name, query.titleTokens, 5)
     const artistScore = tokenScore(el.name, query.artistTokens, 3)
     const allScore = tokenScore(el.name, query.allTokens, 1)
@@ -214,15 +266,23 @@ function findSpotifyResultRow(elements: UiaElement[], query: SpotifyQuery): { y:
     }
   }
   const minScore = query.artistTokens.length > 0 ? 8 : 5
-  return [...rows.values()]
-    .filter((row) => row.score >= minScore)
-    .sort((a, b) => b.score - a.score || a.y - b.y)[0] ?? null
+  return (
+    [...rows.values()]
+      .filter((row) => row.score >= minScore)
+      .sort((a, b) => b.score - a.score || a.y - b.y)[0] ?? null
+  )
 }
 
 function findPlayNearRow(elements: UiaElement[], rowY: number): UiaElement | undefined {
   const root = elements[0]
   return elements
-    .filter((el) => el.enabled && contentElement(el, root) && el.role === "Button" && /\bplay\b/i.test(el.name || "Play"))
+    .filter(
+      (el) =>
+        el.enabled &&
+        contentElement(el, root) &&
+        el.role === "Button" &&
+        /\bplay\b/i.test(el.name || "Play"),
+    )
     .map((el) => ({ el, distance: Math.abs(el.rect.y - rowY) }))
     .filter(({ distance }) => distance <= 80)
     .sort((a, b) => a.distance - b.distance || a.el.rect.x - b.el.rect.x)[0]?.el
@@ -231,13 +291,17 @@ function findPlayNearRow(elements: UiaElement[], rowY: number): UiaElement | und
 export type VolumeDirection = "up" | "down" | "mute"
 
 export async function adjustSystemVolume(direction: VolumeDirection, steps = 2): Promise<unknown> {
-  if (platform() !== "win32") return { error: "System volume automation is only supported on Windows." }
+  if (platform() !== "win32")
+    return { error: "System volume automation is only supported on Windows." }
   const key = direction === "up" ? "0xAF" : direction === "down" ? "0xAE" : "0xAD"
   const count = direction === "mute" ? 1 : Math.max(1, Math.min(Math.round(steps), 20))
   const ps =
     `Add-Type -Namespace Yomi -Name Native -MemberDefinition '[DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);'; ` +
     `for ($i = 0; $i -lt ${count}; $i++) { [Yomi.Native]::keybd_event(${key}, 0, 0, [UIntPtr]::Zero); [Yomi.Native]::keybd_event(${key}, 0, 2, [UIntPtr]::Zero); Start-Sleep -Milliseconds 45 }`
-  const proc = Bun.spawn(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps], { stdout: "pipe", stderr: "pipe" })
+  const proc = Bun.spawn(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps], {
+    stdout: "pipe",
+    stderr: "pipe",
+  })
   const err = await new Response(proc.stderr).text()
   const code = await proc.exited
   if (code !== 0) return { error: (err || "volume adjustment failed").trim() }
@@ -247,7 +311,8 @@ export async function adjustSystemVolume(direction: VolumeDirection, steps = 2):
 // Adjust Spotify's own playback volume (separate from system volume) via its in-app shortcuts
 // (Ctrl+Up / Ctrl+Down). Focuses/launches Spotify first so the keystrokes land on it.
 export async function adjustSpotifyVolume(direction: VolumeDirection, steps = 3): Promise<unknown> {
-  if (platform() !== "win32") return { error: "Spotify volume automation is only supported on Windows." }
+  if (platform() !== "win32")
+    return { error: "Spotify volume automation is only supported on Windows." }
   const active = await activateWindowsApp("Spotify")
   if (!active) {
     const launched = await launchWindowsApp("Spotify", 2000)
@@ -256,17 +321,26 @@ export async function adjustSpotifyVolume(direction: VolumeDirection, steps = 3)
   }
   if (direction === "mute") {
     // Spotify has no mute shortcut — drive the volume to zero.
-    for (let i = 0; i < 15; i++) { await uia.call("press_key", { keys: "Ctrl+Down" }); await Bun.sleep(40) }
+    for (let i = 0; i < 15; i++) {
+      await uia.call("press_key", { keys: "Ctrl+Down" })
+      await Bun.sleep(40)
+    }
     return { ok: true, direction: "mute", target: "spotify" }
   }
   const key = direction === "up" ? "Ctrl+Up" : "Ctrl+Down"
   const count = Math.max(1, Math.min(Math.round(steps), 20))
-  for (let i = 0; i < count; i++) { await uia.call("press_key", { keys: key }); await Bun.sleep(50) }
+  for (let i = 0; i < count; i++) {
+    await uia.call("press_key", { keys: key })
+    await Bun.sleep(50)
+  }
   return { ok: true, direction, steps: count, target: "spotify" }
 }
 
 function normalizeRecipient(text: string): string {
-  return text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim()
+  return text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
 }
 
 function findWhatsAppChat(elements: UiaElement[], recipient: string): UiaElement | null {
@@ -285,7 +359,14 @@ function findWhatsAppChat(elements: UiaElement[], recipient: string): UiaElement
     .map((el) => {
       const name = normalizeRecipient(el.name)
       let score = 0
-      if (wantsSelf && (name.includes(" you ") || name.endsWith(" you") || name.includes("message yourself") || name.includes("(you)"))) score += 20
+      if (
+        wantsSelf &&
+        (name.includes(" you ") ||
+          name.endsWith(" you") ||
+          name.includes("message yourself") ||
+          name.includes("(you)"))
+      )
+        score += 20
       if (wantsSelf && /\b98323\b/.test(name)) score += 8
       for (const token of targetTokens) if (name.includes(token)) score += 4
       if (el.role === "DataItem") score += 3
@@ -300,20 +381,26 @@ function findWhatsAppChat(elements: UiaElement[], recipient: string): UiaElement
 function findWhatsAppSearch(elements: UiaElement[]): UiaElement | null {
   const root = elements[0]
   if (!root) return null
-  return elements
-    .filter((el) => {
-      if (!el.enabled || !visibleElement(el) || el.role !== "Edit") return false
-      const inLeftPane = el.rect.x > root.rect.x + 55 && el.rect.x < root.rect.x + root.rect.width * 0.48
-      const nearTop = el.rect.y > root.rect.y + 70 && el.rect.y < root.rect.y + 170
-      return inLeftPane && nearTop
-    })
-    .sort((a, b) => b.rect.width - a.rect.width)[0] ?? null
+  return (
+    elements
+      .filter((el) => {
+        if (!el.enabled || !visibleElement(el) || el.role !== "Edit") return false
+        const inLeftPane =
+          el.rect.x > root.rect.x + 55 && el.rect.x < root.rect.x + root.rect.width * 0.48
+        const nearTop = el.rect.y > root.rect.y + 70 && el.rect.y < root.rect.y + 170
+        return inLeftPane && nearTop
+      })
+      .sort((a, b) => b.rect.width - a.rect.width)[0] ?? null
+  )
 }
 
 function composerPoint(elements: UiaElement[]): { x: number; y: number } | null {
   const root = elements[0]
   if (!root || !visibleElement(root)) return null
-  const bottom = Math.max(...elements.filter(visibleElement).map((el) => el.rect.y + el.rect.height), root.rect.y + root.rect.height)
+  const bottom = Math.max(
+    ...elements.filter(visibleElement).map((el) => el.rect.y + el.rect.height),
+    root.rect.y + root.rect.height,
+  )
   return {
     x: Math.round(root.rect.x + root.rect.width * 0.72),
     y: Math.round(Math.min(root.rect.y + root.rect.height - 55, bottom - 35)),
@@ -335,26 +422,41 @@ async function clickElementOrPoint(el: UiaElement): Promise<unknown> {
 function findWhatsAppComposer(elements: UiaElement[]): UiaElement | null {
   const root = elements[0]
   if (!root) return null
-  return elements
-    .filter((el) => {
-      if (!el.enabled || !visibleElement(el) || el.role !== "Edit") return false
-      if (/search/i.test(el.name) || /search/i.test(el.value ?? "")) return false
-      return el.rect.x > root.rect.x + root.rect.width * 0.35 && el.rect.y > root.rect.y + root.rect.height * 0.55
-    })
-    .sort((a, b) => b.rect.y - a.rect.y || b.rect.width - a.rect.width)[0] ?? null
+  return (
+    elements
+      .filter((el) => {
+        if (!el.enabled || !visibleElement(el) || el.role !== "Edit") return false
+        if (/search/i.test(el.name) || /search/i.test(el.value ?? "")) return false
+        return (
+          el.rect.x > root.rect.x + root.rect.width * 0.35 &&
+          el.rect.y > root.rect.y + root.rect.height * 0.55
+        )
+      })
+      .sort((a, b) => b.rect.y - a.rect.y || b.rect.width - a.rect.width)[0] ?? null
+  )
 }
 
-function findWhatsAppSendButton(elements: UiaElement[], composer?: UiaElement | null): UiaElement | null {
+function findWhatsAppSendButton(
+  elements: UiaElement[],
+  composer?: UiaElement | null,
+): UiaElement | null {
   const root = elements[0]
   if (!root) return null
   const composerY = composer?.rect.y ?? root.rect.y + root.rect.height - 70
-  return elements
-    .filter((el) => {
-      if (!el.enabled || !visibleElement(el) || el.role !== "Button") return false
-      if (!/\bsend\b/i.test(el.name)) return false
-      return el.rect.x > root.rect.x + root.rect.width * 0.55 && Math.abs(el.rect.y - composerY) < 90
-    })
-    .sort((a, b) => Math.abs(a.rect.y - composerY) - Math.abs(b.rect.y - composerY) || b.rect.x - a.rect.x)[0] ?? null
+  return (
+    elements
+      .filter((el) => {
+        if (!el.enabled || !visibleElement(el) || el.role !== "Button") return false
+        if (!/\bsend\b/i.test(el.name)) return false
+        return (
+          el.rect.x > root.rect.x + root.rect.width * 0.55 && Math.abs(el.rect.y - composerY) < 90
+        )
+      })
+      .sort(
+        (a, b) =>
+          Math.abs(a.rect.y - composerY) - Math.abs(b.rect.y - composerY) || b.rect.x - a.rect.x,
+      )[0] ?? null
+  )
 }
 
 export async function sendWhatsAppMessage(recipient: string, message: string): Promise<unknown> {
@@ -428,12 +530,23 @@ export async function sendWhatsAppMessage(recipient: string, message: string): P
 
     const afterSend = await uia.getUiTree({ maxNodes: 2000, maxDepth: 80, hwnd })
     const afterComposer = findWhatsAppComposer(afterSend.elements)
-    const stillContainsText = normalizeRecipient(afterComposer?.value ?? afterComposer?.name ?? "").includes(normalizeRecipient(text))
+    const stillContainsText = normalizeRecipient(
+      afterComposer?.value ?? afterComposer?.name ?? "",
+    ).includes(normalizeRecipient(text))
     if (stillContainsText) {
-      return { error: "WhatsApp message appears to still be in the composer; send did not complete." }
+      return {
+        error: "WhatsApp message appears to still be in the composer; send did not complete.",
+      }
     }
     emitActResult(true, `sent WhatsApp message to ${to}`)
-    return { ok: true, recipient: to, message: text, chat: chat.name, composer: typedComposer?.name, submit: sendButton?.name ?? "Enter" }
+    return {
+      ok: true,
+      recipient: to,
+      message: text,
+      chat: chat.name,
+      composer: typedComposer?.name,
+      submit: sendButton?.name ?? "Enter",
+    }
   } catch (e) {
     return { error: e instanceof Error ? e.message : String(e) }
   }
@@ -464,7 +577,9 @@ export async function playSpotify(query: string): Promise<unknown> {
       row = findSpotifyResultRow(snap.elements, parsed)
     }
     if (!row) {
-      return { error: `Spotify searched for "${parsed.searchText}", but no matching result was exposed. Refusing to play a different song.` }
+      return {
+        error: `Spotify searched for "${parsed.searchText}", but no matching result was exposed. Refusing to play a different song.`,
+      }
     }
 
     const rowPlay = findPlayNearRow(snap.elements, row.y)
@@ -495,7 +610,9 @@ export async function playSpotify(query: string): Promise<unknown> {
     const afterPlay = findPlayNearRow(after.elements, afterRow?.y ?? row.y)
 
     if (!afterPlay) {
-      return { error: `Spotify matched "${row.label}", but no Play button for that result was exposed. Refusing to play a different song.` }
+      return {
+        error: `Spotify matched "${row.label}", but no Play button for that result was exposed. Refusing to play a different song.`,
+      }
     }
 
     const result = await uia.call("click_element", { ref: afterPlay.ref })
@@ -524,7 +641,8 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
     }),
 
     bash: tool({
-      description: "Run a shell command. Only allowlisted commands execute; destructive commands are blocked.",
+      description:
+        "Run a shell command. Only allowlisted commands execute; destructive commands are blocked.",
       parameters: jsonSchema<{ command: string; explanation: string }>({
         type: "object",
         properties: {
@@ -560,7 +678,10 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
         properties: {
           maxNodes: { type: "number", description: "Cap on returned elements (default 400)" },
           maxDepth: { type: "number", description: "Cap on tree traversal depth (default 40)" },
-          hwnd: { type: "number", description: "Optional target window handle; defaults to the foreground window" },
+          hwnd: {
+            type: "number",
+            description: "Optional target window handle; defaults to the foreground window",
+          },
         },
         required: [],
       }),
@@ -569,7 +690,11 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
         try {
           const info = await uia.getWindowInfo({ hwnd })
           if (isBlockedApp(info.window)) {
-            return { error: `"${info.window}" is blocklisted — not capturing its controls.`, window: info.window, elements: [] }
+            return {
+              error: `"${info.window}" is blocklisted — not capturing its controls.`,
+              window: info.window,
+              elements: [],
+            }
           }
           const snap = await uia.getUiTree({ maxNodes, maxDepth, hwnd })
           return snap
@@ -580,7 +705,8 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
     }),
 
     invoke_element: tool({
-      description: "Invoke (click/activate) a control by its `ref` from the latest get_ui_tree snapshot.",
+      description:
+        "Invoke (click/activate) a control by its `ref` from the latest get_ui_tree snapshot.",
       parameters: jsonSchema<{ ref: string }>({
         type: "object",
         properties: { ref: { type: "string", description: "Element ref, e.g. w1e31" } },
@@ -601,7 +727,9 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
         required: ["ref", "text"],
       }),
       execute: async ({ ref, text }) =>
-        guardedAct({ kind: "set_value", ref, text }, (r) => uia.call("set_value", { ref: r, text })),
+        guardedAct({ kind: "set_value", ref, text }, (r) =>
+          uia.call("set_value", { ref: r, text }),
+        ),
     }),
 
     toggle_element: tool({
@@ -641,7 +769,8 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
         required: ["text"],
       }),
       execute: async ({ text, ref }) => {
-        if (platform() !== "win32") return { error: "Typing automation is only supported on Windows." }
+        if (platform() !== "win32")
+          return { error: "Typing automation is only supported on Windows." }
         const blocked = blockedGuard()
         if (blocked) return blocked
         try {
@@ -674,11 +803,16 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
     }),
 
     adjust_volume: tool({
-      description: 'Increase, decrease, or mute the system volume. Use for "increase sound", "lower volume", "mute".',
+      description:
+        'Increase, decrease, or mute the system volume. Use for "increase sound", "lower volume", "mute".',
       parameters: jsonSchema<{ direction: VolumeDirection; steps?: number }>({
         type: "object",
         properties: {
-          direction: { type: "string", enum: ["up", "down", "mute"], description: "Volume direction" },
+          direction: {
+            type: "string",
+            enum: ["up", "down", "mute"],
+            description: "Volume direction",
+          },
           steps: { type: "number", description: "Number of volume key presses, default 2" },
         },
         required: ["direction"],
@@ -688,12 +822,16 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
 
     adjust_spotify_volume: tool({
       description:
-        'Increase, decrease, or mute Spotify\'s own playback volume (in-app Ctrl+Up/Down, separate from system volume). ' +
+        "Increase, decrease, or mute Spotify's own playback volume (in-app Ctrl+Up/Down, separate from system volume). " +
         'Use for "turn up spotify", "lower the spotify volume", "mute spotify".',
       parameters: jsonSchema<{ direction: VolumeDirection; steps?: number }>({
         type: "object",
         properties: {
-          direction: { type: "string", enum: ["up", "down", "mute"], description: "Volume direction" },
+          direction: {
+            type: "string",
+            enum: ["up", "down", "mute"],
+            description: "Volume direction",
+          },
           steps: { type: "number", description: "Number of in-app volume steps, default 3" },
         },
         required: ["direction"],
@@ -707,7 +845,10 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
       parameters: jsonSchema<{ query: string }>({
         type: "object",
         properties: {
-          query: { type: "string", description: 'Song and artist search text, e.g. "Impatient Kesi"' },
+          query: {
+            type: "string",
+            description: 'Song and artist search text, e.g. "Impatient Kesi"',
+          },
         },
         required: ["query"],
       }),
@@ -723,7 +864,10 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
       parameters: jsonSchema<{ recipient: string; message: string }>({
         type: "object",
         properties: {
-          recipient: { type: "string", description: 'Chat/contact name, e.g. "You" or a contact name' },
+          recipient: {
+            type: "string",
+            description: 'Chat/contact name, e.g. "You" or a contact name',
+          },
           message: { type: "string", description: "Message text to send" },
         },
         required: ["recipient", "message"],
@@ -736,7 +880,9 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
         'Open a desktop app by name (e.g. "WhatsApp", "Notepad"), then call get_ui_tree to see its controls.',
       parameters: jsonSchema<{ name: string }>({
         type: "object",
-        properties: { name: { type: "string", description: "App name as shown in the Start menu" } },
+        properties: {
+          name: { type: "string", description: "App name as shown in the Start menu" },
+        },
         required: ["name"],
       }),
       execute: async ({ name }) => {
@@ -758,7 +904,8 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
         required: ["x", "y"],
       }),
       execute: async ({ x, y }) => {
-        if (platform() !== "win32") return { error: "Cursor automation is only supported on Windows." }
+        if (platform() !== "win32")
+          return { error: "Cursor automation is only supported on Windows." }
         const blocked = blockedGuard()
         if (blocked) return blocked
         // The helper moves+clicks together, so stash the point and let `click` perform it.
@@ -779,12 +926,14 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
         required: [],
       }),
       execute: async ({ button = "left", x, y }) => {
-        if (platform() !== "win32") return { error: "Click automation is only supported on Windows." }
+        if (platform() !== "win32")
+          return { error: "Click automation is only supported on Windows." }
         const blocked = blockedGuard()
         if (blocked) return blocked
         const px = x ?? uia.pendingPoint?.x
         const py = y ?? uia.pendingPoint?.y
-        if (px === undefined || py === undefined) return { error: "no point to click — call point_cursor first or pass x,y" }
+        if (px === undefined || py === undefined)
+          return { error: "no point to click — call point_cursor first or pass x,y" }
         try {
           return await uia.call("click_point", { x: px, y: py, button })
         } catch (e) {

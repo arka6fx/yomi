@@ -62,16 +62,11 @@ export default function WaitlistForm({ compact = false }: WaitlistFormProps) {
           required
           disabled={status === "loading"}
         />
-        <Button
-          type="submit"
-          disabled={status === "loading"}
-        >
+        <Button type="submit" disabled={status === "loading"}>
           {status === "loading" ? "Joining…" : "Join waitlist"}
         </Button>
       </form>
-      {status === "error" && (
-        <p className="text-xs text-red-400 pl-1">{message}</p>
-      )}
+      {status === "error" && <p className="text-xs text-red-400 pl-1">{message}</p>}
     </div>
   )
 }

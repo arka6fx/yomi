@@ -3,15 +3,15 @@ import { globalShortcut, app } from "electron"
 export type HotkeyState = "idle" | "listening" | "processing" | "text-input"
 
 let state: HotkeyState = "idle"
-let enabled = false      // Gated by auth — false while signed out
-let initialized = false  // Shortcuts registered once at first auth
-let suspended = false    // True while overlay is hidden — shortcuts fully unregistered
+let enabled = false // Gated by auth — false while signed out
+let initialized = false // Shortcuts registered once at first auth
+let suspended = false // True while overlay is hidden — shortcuts fully unregistered
 
 let onStateChange: ((s: HotkeyState) => void) | null = null
 let onListenStop: (() => void) | null = null
 let onTextQuery: (() => void) | null = null
 let onAbort: (() => void) | null = null
-let onAnyEscape: (() => void) | null = null  // fired on every ESC, regardless of state
+let onAnyEscape: (() => void) | null = null // fired on every ESC, regardless of state
 let onScreenshot: (() => void) | null = null
 
 // Register the three AI-interaction shortcuts.
@@ -39,7 +39,8 @@ function registerAiShortcuts(): void {
 
   // Escape — can fail silently on some Windows setups; IPC fallback covers that case.
   const escOk = globalShortcut.register("Escape", () => triggerEscape())
-  if (!escOk) console.warn("[yomi/hotkey] Escape global shortcut failed to register — IPC fallback active")
+  if (!escOk)
+    console.warn("[yomi/hotkey] Escape global shortcut failed to register — IPC fallback active")
 }
 
 // Called once after first successful auth. Safe to call again on re-auth —
@@ -53,11 +54,11 @@ export function initHotkey(opts: {
   onScreenshot?: () => void
 }): void {
   onStateChange = opts.onStateChange
-  onListenStop  = opts.onListenStop
-  onTextQuery   = opts.onTextQuery
-  onAbort       = opts.onAbort
-  onAnyEscape   = opts.onAnyEscape ?? null
-  onScreenshot  = opts.onScreenshot ?? null
+  onListenStop = opts.onListenStop
+  onTextQuery = opts.onTextQuery
+  onAbort = opts.onAbort
+  onAnyEscape = opts.onAnyEscape ?? null
+  onScreenshot = opts.onScreenshot ?? null
 
   if (!initialized) {
     initialized = true
@@ -89,7 +90,7 @@ export function suspendHotkeys(): void {
   globalShortcut.unregister("Ctrl+Return")
   globalShortcut.unregister("Ctrl+S")
   globalShortcut.unregister("Escape")
-  globalShortcut.unregister("Return")  // defensive — may be registered if state was listening
+  globalShortcut.unregister("Return") // defensive — may be registered if state was listening
 }
 
 // Re-register AI shortcuts when the overlay becomes visible again.
@@ -103,7 +104,7 @@ export function resumeHotkeys(): void {
 // IPC fallback for when globalShortcut("Escape") fails to register.
 // Called directly by the main-process IPC handler when the renderer sends yomi:escape.
 export function triggerEscape(): void {
-  onAnyEscape?.()  // always fires — stops TTS even when state is idle
+  onAnyEscape?.() // always fires — stops TTS even when state is idle
   if (!enabled) return
   if (state === "listening" || state === "text-input") {
     transition("idle")

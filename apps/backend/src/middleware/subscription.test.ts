@@ -45,10 +45,14 @@ function user(overrides: Partial<TestUser> = {}): TestUser {
 
 function app(kind: "chat" | "voice" | "agent") {
   const hono = new Hono()
-  hono.get("/", async (c, next) => {
-    c.set("user", currentUser as any)
-    return requireAccess(kind)(c, next)
-  }, (c) => c.json({ ok: true }))
+  hono.get(
+    "/",
+    async (c, next) => {
+      c.set("user", currentUser as any)
+      return requireAccess(kind)(c, next)
+    },
+    (c) => c.json({ ok: true }),
+  )
   return hono
 }
 
@@ -79,7 +83,7 @@ describe("requireAccess", () => {
 
   it("blocks Explore agents without consuming an interaction", async () => {
     const res = await app("agent").request("/")
-    const body = await res.json() as { code?: string }
+    const body = (await res.json()) as { code?: string }
 
     expect(res.status).toBe(403)
     expect(body.code).toBe("upgrade_required")
@@ -90,7 +94,7 @@ describe("requireAccess", () => {
     currentUser = user({ plan: "pro", subscriptionStatus: "active" })
 
     const res = await app("voice").request("/")
-    const body = await res.json() as { code?: string }
+    const body = (await res.json()) as { code?: string }
 
     expect(res.status).toBe(429)
     expect(body.code).toBe("rate_limited")
@@ -101,7 +105,7 @@ describe("requireAccess", () => {
     currentUser = user({ plan: "enterprise", subscriptionStatus: "active" })
 
     const res = await app("chat").request("/")
-    const body = await res.json() as { code?: string }
+    const body = (await res.json()) as { code?: string }
 
     expect(res.status).toBe(403)
     expect(body.code).toBe("invalid_plan")
