@@ -56,7 +56,7 @@ latency budgets, so they need different architectures — but users want both.
 
 | Phase          | Scope                                                                                 | Weeks |
 | -------------- | ------------------------------------------------------------------------------------- | ----- |
-| 0 — Spike      | hotkey → Sarvam STT → screenshot → 1 LLM call → Sarvam TTS                            | 1–2   |
+| 0 — Spike      | hotkey → ElevenLabs STT → screenshot → 1 LLM call → ElevenLabs TTS                    | 1–2   |
 | 1 — Buddy      | floating UI, tray/menubar shell, notepad init, permissions                            | 3–6   |
 | 2 — Agent      | intent router, ReAct loop, hooks lifecycle, MCP (calendar, email, browser), subagents | 7–12  |
 | 3 — Accounts   | Hono backend, Better Auth, Drizzle/Neon, Razorpay, LLM proxy (Vercel AI SDK)          | 13–15 |

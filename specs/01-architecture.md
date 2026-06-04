@@ -12,7 +12,7 @@ what it may not own.
   sidecar.
 - The sidecar NEVER holds API keys. It proxies requests to the backend.
 - Raw screen captures never leave the device. Audio is processed through the
-  configured Sarvam STT path; only the resolved transcript and prompt context
+  configured ElevenLabs STT path; only the resolved transcript and prompt context
   needed for the model leave the machine.
 - The fast path has a strict < 2s budget end-to-end (hotkey press to first audio
   byte).
@@ -134,10 +134,10 @@ Response: { snippets: RagSearchResult[] }
 [Hotkey press]
   → Desktop captures mic stream + screenshot (parallel)
   → POST /query/fast to sidecar (audio + screenshot)
-    → Sidecar: Sarvam STT (`saarika:v2.5`)
+    → Sidecar: ElevenLabs STT (`scribe_v2`)
     → Sidecar: structured local memory + local RAG archive context
     → Sidecar: Vercel AI SDK streamText (cached system prompt + context)
-    → Sidecar: Sarvam TTS (`bulbul:v3`)
+    → Sidecar: ElevenLabs TTS (`eleven_flash_v2_5`)
   → Desktop receives audio_chunk stream → plays audio
 Total budget: < 2s to first audio byte
 ```

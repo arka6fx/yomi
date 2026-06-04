@@ -176,7 +176,22 @@ function searchTokens(text: string): string[] {
   return text
     .toLowerCase()
     .split(/[^a-z0-9]+/)
-    .filter((part) => part.length >= 3 && !["the", "and", "feat", "ft", "with"].includes(part))
+    .filter(
+      (part) =>
+        part.length >= 3 &&
+        ![
+          "the",
+          "and",
+          "feat",
+          "ft",
+          "with",
+          "song",
+          "songs",
+          "track",
+          "tracks",
+          "music",
+        ].includes(part),
+    )
 }
 
 type SpotifyQuery = {
@@ -190,7 +205,10 @@ type SpotifyQuery = {
 function parseSpotifyQuery(query: string): SpotifyQuery {
   const clean = query.replace(/[.?!]+$/g, "").trim()
   const byMatch = clean.match(/^(.+?)\s+by\s+(.+)$/i)
-  const title = byMatch?.[1]?.trim() ?? clean
+  const title = (byMatch?.[1]?.trim() ?? clean)
+    .replace(/\b(song|track|music)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim()
   const artist = byMatch?.[2]?.trim() ?? ""
   const titleTokens = searchTokens(title)
   const artistTokens = searchTokens(artist)

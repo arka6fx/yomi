@@ -6,12 +6,9 @@
  *   returns an async iterable of text chunks.
  * - `mock.module("@ai-sdk/openai")` replaces the factory function with a spy
  *   so we can inspect the arguments passed to it.
- * - `mock.module("./visual-guide.js")` replaces `generateGuide` so guide-mode
- *   tests don't depend on the LLM at all.
  *
  * The modules are mocked BEFORE the pipeline modules are imported so that the
- * module-level `createModel()` calls inside fast.ts and visual-guide.ts pick
- * up the mocked factories.
+ * module-level `createModel()` calls inside fast.ts pick up the mocked factories.
  */
 
 import { describe, it, expect, beforeEach, mock } from "bun:test"
@@ -49,20 +46,6 @@ const ttsMock = {
 
 // The text chunks that the mocked streamText will yield.
 let streamChunks: string[] = ["Hello", " world", "!"]
-
-// The guide response that the mocked generateGuide will return.
-let fakeGuideResponse = {
-  steps: [
-    {
-      instruction: "Click the message box",
-      elements: [{ label: "Message box", bbox: { x: 10, y: 20, width: 100, height: 30 } }],
-    },
-    {
-      instruction: "Type your message and press Enter",
-      elements: [],
-    },
-  ],
-}
 
 // Capture the messages array passed to streamText for caching assertions.
 let lastStreamTextMessages: unknown[] = []
@@ -110,15 +93,11 @@ mock.module("openai", () => ({
   },
 }))
 
-mock.module("../services/sarvam/stt.js", () => ({
-  sarvamTranscribe: async () => ({
-    transcript: "transcribed from audio",
-    language_code: "en-IN",
+mock.module("../services/elevenlabs/stt.js", () => ({
+  elevenLabsTranscribe: async () => ({
+    text: "transcribed from audio",
+    language_code: "en",
   }),
-}))
-
-mock.module("./visual-guide.js", () => ({
-  generateGuide: (_screenshot: string, _query: string) => Promise.resolve(fakeGuideResponse),
 }))
 
 mock.module("./tts.js", () => ({
@@ -227,18 +206,6 @@ describe("fastPipeline — generator", () => {
     appendSessionCalls = 0
     loadRecentSessionCalls = 0
     streamChunks = ["Hello", " world", "!"]
-    fakeGuideResponse = {
-      steps: [
-        {
-          instruction: "Click the message box",
-          elements: [{ label: "Message box", bbox: { x: 10, y: 20, width: 100, height: 30 } }],
-        },
-        {
-          instruction: "Type your message and press Enter",
-          elements: [],
-        },
-      ],
-    }
 
     delete process.env.FAST_PATH_MODEL
     delete process.env.SIDECAR_SECRET
@@ -307,94 +274,15 @@ describe("fastPipeline — generator", () => {
     expect(doneEvents).toHaveLength(1)
   })
 
-  it("answer mode with screen: strips POINT tag and emits point_target", async () => {
-    streamChunks = ["Click the search bar. ", "[POINT:320,140:search bar:screen2]"]
-    const events = (await collect(
-      fastPipeline({
-        text: "where is the search bar",
-        screenshots: [
-          { screen: 1, screenshot_b64: "screen1", width: 1280, height: 720 },
-          { screen: 2, screenshot_b64: "screen2", width: 1280, height: 720 },
-        ],
-      }),
-    )) as any[]
-
-    expect(events.map((e) => e.type)).toEqual(["transcript", "llm_chunk", "point_target", "done"])
-    expect(events.find((e) => e.type === "llm_chunk").text).toBe("Click the search bar.")
-    expect(events.find((e) => e.type === "point_target").target).toMatchObject({
-      x: 320,
-      y: 140,
-      label: "search bar",
-      screen: 2,
-      coordinateSpace: "screenshot_pixels",
-    })
-  })
-
-  it("answer mode with pointing enabled: uses screen context even for generic directions prompts", async () => {
-    streamChunks = ["Start here. [POINT:100,200:first step]"]
-    const events = (await collect(
-      fastPipeline({
-        text: "give me directions",
-        pointing: true,
-        screenshots: [{ screen: 1, screenshot_b64: "screen1", width: 1280, height: 720 }],
-      }),
-    )) as any[]
-
-    expect(JSON.stringify(lastStreamTextMessages)).toContain("screen1: 1280x720 pixels")
-    expect(events.find((e) => e.type === "llm_chunk").text).toBe("Start here.")
-    expect(events.find((e) => e.type === "point_target").target).toMatchObject({
-      x: 100,
-      y: 200,
-      label: "first step",
-    })
-  })
-
-  it("answer mode with pointing enabled: step guidance emits point_target instead of visual guide", async () => {
-    streamChunks = ["Click Save. [POINT:420,80:Save button]"]
-    const events = (await collect(
-      fastPipeline({
-        text: "show me how to save step by step",
-        pointing: true,
-        screenshots: [{ screen: 1, screenshot_b64: "screen1", width: 1280, height: 720 }],
-      }),
-    )) as any[]
-
-    expect(events.some((e) => e.type === "visual_guide")).toBe(false)
-    expect(events.find((e) => e.type === "llm_chunk").text).toBe("Click Save.")
-    expect(events.find((e) => e.type === "point_target").target).toMatchObject({
-      x: 420,
-      y: 80,
-      label: "Save button",
-    })
-  })
-
-  it("answer mode with screen: POINT none emits null target", async () => {
-    streamChunks = ["HTML is the skeleton of a page. [POINT:none]"]
-    const events = (await collect(
-      fastPipeline({
-        text: "what is html on this screen",
-        screenshots: [{ screen: 1, screenshot_b64: "screen1", width: 1280, height: 720 }],
-      }),
-    )) as any[]
-
-    expect(events.find((e) => e.type === "llm_chunk").text).toBe("HTML is the skeleton of a page.")
-    expect(events.find((e) => e.type === "point_target").target).toBeNull()
-  })
-
-  it("answer mode with TTS: does not speak POINT tags", async () => {
-    ttsMock.engine = "openai"
-    ttsMock.chunks = [new Uint8Array([1, 2, 3])]
-    streamChunks = ["Open the menu. [POINT:20,30:menu]"]
-
+  it("answer mode: an explicit on-screen question attaches the screenshot as context", async () => {
+    streamChunks = ["That is the search bar."]
     await collect(
       fastPipeline({
-        text: "what do I click on this screen",
+        text: "what is this button on my screen",
         screenshots: [{ screen: 1, screenshot_b64: "screen1", width: 1280, height: 720 }],
-        tts: true,
       }),
     )
-
-    expect(ttsMock.calls).toEqual(["Open the menu."])
+    expect(JSON.stringify(lastStreamTextMessages)).toContain("screen1: 1280x720 pixels")
   })
 
   it("answer mode: gives long writing requests a moderate output budget", async () => {
@@ -422,115 +310,6 @@ describe("fastPipeline — generator", () => {
     expect(loadRecentSessionCalls).toBe(1)
     expect(appendSessionCalls).toBe(1)
     expect(JSON.stringify(lastStreamTextMessages)).toContain("remember my project")
-  })
-
-  // -------------------------------------------------------------------------
-  // Guide mode — event sequence
-  // -------------------------------------------------------------------------
-
-  it("guide mode: first event is transcript", async () => {
-    const events = await collect(
-      fastPipeline({ text: "Guide me", mode: "guide", screenshot_b64: "abc123" }),
-    )
-    expect(events[0]).toMatchObject({ type: "transcript", text: "Guide me" })
-  })
-
-  it("guide mode: emits one visual_guide event per step", async () => {
-    const events = (await collect(
-      fastPipeline({ text: "Guide me", mode: "guide", screenshot_b64: "abc123" }),
-    )) as any[]
-    const guideEvents = events.filter((e) => e.type === "visual_guide")
-    expect(guideEvents).toHaveLength(fakeGuideResponse.steps.length)
-  })
-
-  it("guide mode: visual_guide events have correct step numbers and total_steps", async () => {
-    const events = (await collect(
-      fastPipeline({ text: "Guide me", mode: "guide", screenshot_b64: "abc123" }),
-    )) as any[]
-    const guideEvents = events.filter((e) => e.type === "visual_guide")
-    expect(guideEvents[0]).toMatchObject({
-      type: "visual_guide",
-      step: 1,
-      total_steps: 2,
-      instruction: "Click the message box",
-    })
-    expect(guideEvents[1]).toMatchObject({
-      type: "visual_guide",
-      step: 2,
-      total_steps: 2,
-      instruction: "Type your message and press Enter",
-    })
-  })
-
-  it("guide mode: last event is done", async () => {
-    const events = await collect(
-      fastPipeline({ text: "Guide me", mode: "guide", screenshot_b64: "abc123" }),
-    )
-    expect(events[events.length - 1]).toMatchObject({ type: "done" })
-  })
-
-  it("guide mode: event sequence is transcript → visual_guide* → done", async () => {
-    const events = (await collect(
-      fastPipeline({ text: "Guide me", mode: "guide", screenshot_b64: "abc123" }),
-    )) as any[]
-    expect(events[0].type).toBe("transcript")
-    expect(events[events.length - 1].type).toBe("done")
-    const middle = events.slice(1, -1)
-    expect(middle.every((e) => e.type === "visual_guide")).toBe(true)
-  })
-
-  it("guide mode: visual_guide step includes elements array", async () => {
-    const events = (await collect(
-      fastPipeline({ text: "Guide me", mode: "guide", screenshot_b64: "abc123" }),
-    )) as any[]
-    const firstGuide = events.find((e) => e.type === "visual_guide")
-    expect(Array.isArray(firstGuide.elements)).toBe(true)
-    expect(firstGuide.elements[0]).toMatchObject({
-      label: "Message box",
-      bbox: { x: 10, y: 20, width: 100, height: 30 },
-    })
-  })
-
-  // -------------------------------------------------------------------------
-  // Guide mode without screenshot
-  // -------------------------------------------------------------------------
-
-  it("guide mode with no screenshot_b64: emits single visual_guide asking user to take screenshot", async () => {
-    const events = (await collect(fastPipeline({ text: "Guide me", mode: "guide" }))) as any[]
-    const guideEvents = events.filter((e) => e.type === "visual_guide")
-    expect(guideEvents).toHaveLength(1)
-    expect(guideEvents[0]).toMatchObject({
-      type: "visual_guide",
-      step: 1,
-      total_steps: 1,
-      instruction: "Take a screenshot so I can see what you need help with.",
-      elements: [],
-    })
-  })
-
-  it("guide mode with empty screenshot_b64: emits single visual_guide asking for screenshot", async () => {
-    const events = (await collect(
-      fastPipeline({ text: "Guide me", mode: "guide", screenshot_b64: "" }),
-    )) as any[]
-    const guideEvents = events.filter((e) => e.type === "visual_guide")
-    expect(guideEvents).toHaveLength(1)
-    expect(guideEvents[0].elements).toEqual([])
-  })
-
-  // -------------------------------------------------------------------------
-  // Visual guide fallback: LLM returns elements: []
-  // -------------------------------------------------------------------------
-
-  it("guide mode: if LLM returns empty elements, visual_guide has elements: []", async () => {
-    fakeGuideResponse = {
-      steps: [{ instruction: "I couldn't identify visual targets.", elements: [] }],
-    }
-    const events = (await collect(
-      fastPipeline({ text: "Guide me", mode: "guide", screenshot_b64: "abc" }),
-    )) as any[]
-    const guideEvent = events.find((e: any) => e.type === "visual_guide")
-    expect(guideEvent).toBeDefined()
-    expect(guideEvent.elements).toEqual([])
   })
 
   // -------------------------------------------------------------------------
@@ -601,6 +380,29 @@ describe("fastPipeline — generator", () => {
     streamChunks = ["First sentence. ", "Second one! ", "And third?"]
     await collect(fastPipeline({ text: "hi" }))
     expect(ttsMock.calls).toEqual(["First sentence.", "Second one!", "And third?"])
+  })
+
+  it("TTS: first segment flushes early on a clause boundary for faster first audio", async () => {
+    ttsMock.engine = "openai"
+    ttsMock.chunks = [new Uint8Array([1])]
+    // No sentence boundary yet, but a comma past the minimum length — the opening
+    // segment should be spoken immediately instead of waiting for the full sentence.
+    streamChunks = ["Photosynthesis is the process, ", "where plants make food."]
+    await collect(fastPipeline({ text: "hi" }))
+    expect(ttsMock.calls).toEqual(["Photosynthesis is the process,", "where plants make food."])
+  })
+
+  it("TTS: only the first segment uses the loose boundary (later commas wait for sentence end)", async () => {
+    ttsMock.engine = "openai"
+    ttsMock.chunks = [new Uint8Array([1])]
+    // First clause flushes early; the second sentence's comma must NOT split it.
+    streamChunks = ["Okay here is the plan, ", "first we cook, then we eat. ", "Done."]
+    await collect(fastPipeline({ text: "hi" }))
+    expect(ttsMock.calls).toEqual([
+      "Okay here is the plan,",
+      "first we cook, then we eat.",
+      "Done.",
+    ])
   })
 
   it("TTS: skips fenced answer blocks while keeping them in the UI stream", async () => {
@@ -695,14 +497,6 @@ describe("POST /query/fast — HTTP endpoint", () => {
     delete process.env.OPENAI_API_KEY
     streamChunks = ["Hello", " world"]
     ttsMock.reset()
-    fakeGuideResponse = {
-      steps: [
-        {
-          instruction: "Click OK",
-          elements: [{ label: "OK button", bbox: { x: 5, y: 5, width: 50, height: 20 } }],
-        },
-      ],
-    }
   })
 
   // -------------------------------------------------------------------------
@@ -856,47 +650,6 @@ describe("POST /query/fast — HTTP endpoint", () => {
     const res = await postFast({ text: "Hello" })
     const events = (await parseSse(res)) as any[]
     expect(events[events.length - 1]).toMatchObject({ type: "done" })
-  })
-
-  // -------------------------------------------------------------------------
-  // Guide mode SSE events via HTTP
-  // -------------------------------------------------------------------------
-
-  it("guide mode: SSE stream starts with transcript event", async () => {
-    delete process.env.SIDECAR_SECRET
-    const res = await postFast({ text: "Guide me", mode: "guide", screenshot_b64: "abc" })
-    const events = (await parseSse(res)) as any[]
-    expect(events[0]).toMatchObject({ type: "transcript", text: "Guide me" })
-  })
-
-  it("guide mode: SSE stream contains visual_guide events", async () => {
-    delete process.env.SIDECAR_SECRET
-    const res = await postFast({ text: "Guide me", mode: "guide", screenshot_b64: "abc" })
-    const events = (await parseSse(res)) as any[]
-    const guideEvents = events.filter((e: any) => e.type === "visual_guide")
-    expect(guideEvents.length).toBeGreaterThan(0)
-  })
-
-  it("guide mode: SSE stream ends with done event", async () => {
-    delete process.env.SIDECAR_SECRET
-    const res = await postFast({ text: "Guide me", mode: "guide", screenshot_b64: "abc" })
-    const events = (await parseSse(res)) as any[]
-    expect(events[events.length - 1]).toMatchObject({ type: "done" })
-  })
-
-  it("guide mode without screenshot: single visual_guide asks for screenshot", async () => {
-    delete process.env.SIDECAR_SECRET
-    const res = await postFast({ text: "Guide me", mode: "guide" })
-    const events = (await parseSse(res)) as any[]
-    const guideEvents = events.filter((e: any) => e.type === "visual_guide")
-    expect(guideEvents).toHaveLength(1)
-    expect(guideEvents[0]).toMatchObject({
-      type: "visual_guide",
-      step: 1,
-      total_steps: 1,
-      elements: [],
-    })
-    expect(guideEvents[0].instruction).toMatch(/screenshot/i)
   })
 
   // -------------------------------------------------------------------------

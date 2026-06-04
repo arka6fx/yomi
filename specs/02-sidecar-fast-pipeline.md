@@ -21,7 +21,7 @@ two second budget when external providers respond quickly.
 ## Fast Pipeline
 
 ```text
-text input or Sarvam STT
+text input or ElevenLabs STT
   -> screen-aware screenshot inclusion check
   -> Pro/Max context assembly
        local memory profiles + FTS snippets
@@ -30,7 +30,7 @@ text input or Sarvam STT
   -> Vercel AI SDK streamText
        model: FAST_PATH_MODEL || gpt-4.1-mini
        provider: @ai-sdk/openai via AI Credits/OpenAI-compatible endpoint
-  -> optional Sarvam TTS
+  -> optional ElevenLabs TTS
   -> SSE events to desktop
 ```
 
@@ -94,8 +94,8 @@ If visual targets cannot be identified, emit a text-only guide step with
 
 ## Speech Providers
 
-- STT: Sarvam `saarika:v2.5`
-- TTS: Sarvam `bulbul:v3`, 16 kHz
+- STT: ElevenLabs `scribe_v2`
+- TTS: ElevenLabs `eleven_flash_v2_5`
 - Disable TTS with `TTS_ENGINE=none`
 
 ## Implemented Files

@@ -148,6 +148,13 @@ contextBridge.exposeInMainWorld("yomi", {
     return () => ipcRenderer.off("yomi:stop-audio", h)
   },
 
+  // Hands-free loop: main asks the renderer to re-listen for the next task.
+  onLoopContinue(cb: () => void): () => void {
+    const h = () => cb()
+    ipcRenderer.on("yomi:loop-continue", h)
+    return () => ipcRenderer.off("yomi:loop-continue", h)
+  },
+
   getDesktopSourceId(): Promise<string | null> {
     return ipcRenderer.invoke("yomi:get-desktop-source-id")
   },
@@ -185,17 +192,7 @@ contextBridge.exposeInMainWorld("yomi", {
     ipcRenderer.send("yomi:set-opacity", value)
   },
 
-  setGuideMode(on: boolean): void {
-    ipcRenderer.send("yomi:guide-mode", on)
-  },
-
   confirmAct(id: string, approved: boolean): void {
     ipcRenderer.send("yomi:act-confirm", id, approved)
-  },
-
-  onGuideExit(cb: () => void): () => void {
-    const h = () => cb()
-    ipcRenderer.on("yomi:guide-exit", h)
-    return () => ipcRenderer.off("yomi:guide-exit", h)
   },
 })

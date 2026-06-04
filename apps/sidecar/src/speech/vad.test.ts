@@ -12,6 +12,17 @@ function makeSilence(samples: number): Int16Array {
   return new Int16Array(samples) // zeroes → -inf dB
 }
 
+// Float32 [-1,1] frames — the renderer mic path feeds these.
+function makeFloatSpeech(samples: number, amplitude = 0.3): Float32Array {
+  const arr = new Float32Array(samples)
+  arr.fill(amplitude)
+  return arr
+}
+
+function makeFloatSilence(samples: number): Float32Array {
+  return new Float32Array(samples)
+}
+
 function concat(...parts: Int16Array[]): Int16Array {
   const total = parts.reduce((n, p) => n + p.length, 0)
   const out = new Int16Array(total)
@@ -81,6 +92,31 @@ describe("EnergyVad", () => {
     const r = vad.processFrame(makeSilence(480))
     expect(isFinite(r.energyDb)).toBe(true)
     expect(r.energyDb).toBeLessThan(0)
+  })
+
+  // Renderer hands-free loop: Float32 mic frames with a ~1.5s silence tail must
+  // auto-stop (speechEnd) just like the Int16 path.
+  it("Float32 frames: speechEnd fires after speech then ~1.5s silence", () => {
+    const v = new EnergyVad({ sampleRate: 16000, silenceHangoverMs: 1500 })
+    // ~600ms of speech (480 samples/frame = 30ms × 20)
+    for (let i = 0; i < 20; i++) v.processFrame(makeFloatSpeech(480))
+    expect(v.processFrame(makeFloatSpeech(480)).speechEnd).toBe(false)
+
+    // 1.5s hangover = 24000 samples = 50 frames; feed a few extra to be safe.
+    let fired = false
+    for (let i = 0; i < 55; i++) {
+      if (v.processFrame(makeFloatSilence(480)).speechEnd) fired = true
+    }
+    expect(fired).toBe(true)
+  })
+
+  it("Float32 silence alone never fires speechEnd", () => {
+    const v = new EnergyVad({ sampleRate: 16000, silenceHangoverMs: 1500 })
+    let fired = false
+    for (let i = 0; i < 80; i++) {
+      if (v.processFrame(makeFloatSilence(480)).speechEnd) fired = true
+    }
+    expect(fired).toBe(false)
   })
 })
 
