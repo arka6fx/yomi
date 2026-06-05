@@ -48,3 +48,4 @@ npm-debug.log*
 # Scratch / generated artifacts
 tmp/
 **/.playwright-mcp/
+.superpowers/

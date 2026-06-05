@@ -1,6 +1,14 @@
 import type { SseEvent } from "@yomi/shared"
 import type { HotkeyState } from "./store"
-import type { SubscriptionInfo, SubscriptionUpdate, BackgroundAgentSignal } from "../preload/index"
+import type {
+  AutomationHealthResponse,
+  AutomationKnowledgeResponse,
+  AutomationProviderRepairResponse,
+  AutomationWorkflowsResponse,
+  SubscriptionInfo,
+  SubscriptionUpdate,
+  BackgroundAgentSignal,
+} from "../preload/index"
 
 type AuthStatus = "ok" | "needed" | "waiting" | "error"
 
@@ -47,6 +55,11 @@ declare global {
       setOpacity(value: number): void
       // Act mode (Spec 16)
       confirmAct(id: string, approved: boolean): void
+      replayAutomation(replayId: string): void
+      getAutomationHealth(): Promise<AutomationHealthResponse>
+      repairAutomationProvider(providerId: string): Promise<AutomationProviderRepairResponse>
+      getAutomationKnowledge(goal: string): Promise<AutomationKnowledgeResponse>
+      getAutomationWorkflows(): Promise<AutomationWorkflowsResponse>
     }
   }
 }

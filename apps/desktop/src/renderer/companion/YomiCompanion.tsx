@@ -35,6 +35,8 @@ export interface BackgroundAgentSignal {
   runId: string // one detached background run; multiple can coexist
   state: AgentState
   task: string
+  owner?: string
+  detail?: string
   step?: number
   max?: number
   done?: boolean
@@ -90,7 +92,7 @@ export function YomiCompanion({ enabled, hotkeyState, backgroundAgentSignal }: Y
     lastSignalSeqRef.current = backgroundAgentSignal.seq
 
     const controller = controllerRef.current
-    const { runId, task, state, step, max, done } = backgroundAgentSignal
+    const { runId, task, state, step, max, done, owner, detail: signalDetail } = backgroundAgentSignal
     const runs = runAgentsRef.current
 
     let id = runs.get(runId) ?? null
@@ -100,8 +102,8 @@ export function YomiCompanion({ enabled, hotkeyState, backgroundAgentSignal }: Y
     }
     if (!id) return
 
-    const detail = step ? `Step ${step}${max ? `/${max}` : ""}` : undefined
-    controller.updateAgentTask(id, task, detail)
+    const detail = signalDetail ?? (step ? `Step ${step}${max ? `/${max}` : ""}` : undefined)
+    controller.updateAgentTask(id, owner ?? task, detail ?? task)
     controller.setAgentState(id, state)
     if (done) {
       const finishedId = id
