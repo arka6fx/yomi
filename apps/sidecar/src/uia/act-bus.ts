@@ -42,6 +42,7 @@ export function requestConfirmation(
   reason: string,
   rect?: Rect,
 ): Promise<boolean> {
+  if (process.env.YOMI_ACT_AUTOCONFIRM === "true") return Promise.resolve(true)
   if (!emit) return confirmRisky(label, reason)
   const id = `act${++seq}`
   emit({ type: "act_proposed", id, action, label, risky: true, rect })

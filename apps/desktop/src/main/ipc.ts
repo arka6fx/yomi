@@ -545,23 +545,15 @@ async function streamQuery(
 ): Promise<void> {
   pipelineCtrl = ctrl // keep reference current (startPipeline may have rotated it)
 
-  // "…in the background" → spawn a detached, autonomous agent surfaced in the companion dock,
-  // then free the toolbar immediately so the user can keep talking.
-  if (!forceAnswer && shouldUseBackground(text)) {
-    pipelineCtrl = null
-    startBackgroundRun(sidecar, overlayWin, stripBackgroundPhrase(text), capture, plan)
-    endVoiceTurn() // free the toolbar; re-listen if hands-free
-    return
-  }
-
   // Imperative/desktop commands route to the agent (it has the UIA tools).
   const useAgent = !forceAnswer && (shouldUseSystemAction(text) || shouldUseAgent(text))
+  const routedText = useAgent ? stripDetachedPhrase(text) : text
 
   // Interactive actions are hands-free: no chat transcript unless an error/confirmation needs UI.
 
   const endpoint = useAgent ? "/query/agent" : "/query/fast"
   const body = useAgent
-    ? { text, screenshot_b64: capture.screenshot_b64, plan, history: actHistory.slice() }
+    ? { text: routedText, screenshot_b64: capture.screenshot_b64, plan, history: actHistory.slice() }
     : {
         text,
         screenshot_b64: capture.screenshot_b64,
@@ -654,103 +646,6 @@ async function streamQuery(
   if (!sawDone) endVoiceTurn()
 }
 
-// ── Background agents ──────────────────────────────────────────────────────────
-// "…in the background" tasks run autonomously, detached from the foreground pipeline (their own
-// AbortController), so they survive the user starting another query. Progress surfaces in the
-// companion dock via the `yomi:background-agent` channel — one dock entry per runId.
-let backgroundSeq = 0
-let backgroundRunCounter = 0
-
-type BackgroundUpdate = {
-  state: "idle" | "thinking" | "working" | "waiting" | "error"
-  task: string
-  owner?: string
-  detail?: string
-  step?: number
-  max?: number
-  done?: boolean
-}
-
-function startBackgroundRun(
-  sidecar: SidecarManager,
-  overlayWin: BrowserWindow,
-  task: string,
-  capture: ScreenCapture,
-  plan: Plan,
-): void {
-  const runId = `bg-${++backgroundRunCounter}`
-  const ctrl = new AbortController()
-  const sendBg = (u: BackgroundUpdate): void => {
-    if (!overlayWin.isDestroyed()) {
-      overlayWin.webContents.send("yomi:background-agent", { seq: ++backgroundSeq, runId, ...u })
-    }
-  }
-
-  sendBg({ state: "thinking", task })
-
-  void (async () => {
-    try {
-      const res = await fetch(`${sidecar.baseUrl}/query/agent`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-sidecar-secret": sidecar.secret },
-        body: JSON.stringify({ text: task, screenshot_b64: capture.screenshot_b64, plan }),
-        signal: ctrl.signal,
-      })
-      if (!res.ok || !res.body) {
-        sendBg({ state: "error", task, done: true })
-        return
-      }
-
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let buf = ""
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buf += decoder.decode(value, { stream: true })
-        const lines = buf.split("\n")
-        buf = lines.pop()!
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue
-          const event = JSON.parse(line.slice(6)) as SseEvent
-          if (event.type === "automation_started")
-            sendBg({
-              state: "thinking",
-              task: event.run.task,
-              owner: event.run.owner.label,
-              detail: event.run.currentStep,
-            })
-          else if (event.type === "automation_step")
-            sendBg({
-              state:
-                event.state === "waiting" || event.state === "needs_approval"
-                  ? "waiting"
-                  : event.state === "failed"
-                    ? "error"
-                    : "working",
-              task,
-              detail: event.currentStep,
-              step: event.step,
-              max: event.maxSteps,
-            })
-          else if (event.type === "automation_waiting")
-            sendBg({ state: "waiting", task, detail: event.reason })
-          else if (event.type === "automation_completed")
-            sendBg({ state: "idle", task, detail: event.summary, done: true })
-          else if (event.type === "automation_failed")
-            sendBg({ state: "error", task, detail: event.error, done: true })
-          else if (event.type === "agent_step")
-            sendBg({ state: "working", task, step: event.iteration, max: event.max })
-          else if (event.type === "done") sendBg({ state: "idle", task, done: true })
-          else if (event.type === "error") sendBg({ state: "error", task, done: true })
-        }
-      }
-    } catch (err) {
-      if ((err as Error).name !== "AbortError") sendBg({ state: "error", task, done: true })
-    }
-  })()
-}
-
 // Append a completed agent turn to the rolling history (used for follow-up commands on a manual press).
 function pushActTurn(userText: string, assistantText: string): void {
   actHistory.push({ role: "user", text: userText.trim() })
@@ -758,16 +653,16 @@ function pushActTurn(userText: string, assistantText: string): void {
   if (actHistory.length > ACT_HISTORY_MAX) actHistory = actHistory.slice(-ACT_HISTORY_MAX)
 }
 
-// "…in the background" intent → detached autonomous agent surfaced in the companion dock.
-function shouldUseBackground(text: string): boolean {
-  return /\b(in the background|in background|in the bg|in bg)\b/i.test(text)
-}
-
-// Strip the "in the background" framing so the agent receives a clean task.
-function stripBackgroundPhrase(text: string): string {
+// Strip detached-mode wording so foreground automation receives a clean task.
+function stripDetachedPhrase(text: string): string {
   return (
     text
       .replace(/\b(in the background|in background|in the bg|in bg)\b/gi, "")
+      .replace(/\bwithout\s+switching\b/gi, "")
+      .replace(/\bwithout\s+interrupting(?:\s+me)?\b/gi, "")
+      .replace(/\bwhile\s+i\s+(?:keep|am)\s+working\b/gi, "")
+      .replace(/\bdon'?t\s+switch\s+away\b/gi, "")
+      .replace(/\bquietly\b/gi, "")
       .replace(/\s{2,}/g, " ")
       .trim() || text.trim()
   )

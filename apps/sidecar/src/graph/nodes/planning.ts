@@ -5,13 +5,12 @@ import { resolveAgent } from "../../automation/agents/registry.js"
 
 // Planning: break the request into steps, estimate requirements, decide execution mode, and route to
 // the sub-agent that will run it. Dangerous tasks (send/delete/pay/...) require approval; otherwise
-// foreground unless detached.
+// desktop automation is foreground-specific.
 export function makePlanningNode(deps: GraphDeps) {
   return async (state: GraphState): Promise<Partial<GraphState>> => {
     const risk = classifyAutomationRisk(state.goal)
     const preview = buildAutomationPreview(state.goal)
-    const mode: ExecutionMode =
-      risk === "dangerous" ? "approval" : state.background ? "background" : "foreground"
+    const mode: ExecutionMode = risk === "dangerous" ? "approval" : "foreground"
     const agent = resolveAgent(state.goal)
     deps.bridge.step("Planning steps", { state: "thinking", maxSteps: preview.steps.length })
     deps.bridge.timeline("Built execution plan", "planned")

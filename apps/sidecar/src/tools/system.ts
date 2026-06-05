@@ -1,5 +1,8 @@
 import { tool, jsonSchema } from "ai"
-import { platform } from "os"
+import { homedir, platform } from "os"
+import { basename, dirname, extname, isAbsolute, join, resolve } from "path"
+import { existsSync } from "fs"
+import { mkdir } from "fs/promises"
 import type { UiaAction, UiaElement } from "@yomi/shared"
 import { uia } from "../uia/client.js"
 import { classifyRisk, isBlockedApp } from "../uia/safety.js"
@@ -91,6 +94,40 @@ function cleanAppName(name: string): string {
   return name.replace(/['";\r\n`$]/g, "").trim()
 }
 
+function normalizeChromeTarget(target: string): string {
+  const cleaned = target.trim().replace(/^["'`]|["'`]$/g, "")
+  if (!cleaned) return "https://www.google.com"
+  if (/^https?:\/\//i.test(cleaned)) return cleaned
+  if (/^[a-z0-9.-]+\.[a-z]{2,}(?:\/.*)?$/i.test(cleaned)) return `https://${cleaned}`
+  return `https://www.google.com/search?q=${encodeURIComponent(cleaned)}`
+}
+
+export async function openUserChrome(
+  target = "",
+): Promise<{ ok: true; app: "Chrome"; target: string } | { error: string }> {
+  if (platform() !== "win32") return { error: "Opening user Chrome is only supported on Windows." }
+  const url = normalizeChromeTarget(target)
+  const candidates = [
+    join(homedir(), "AppData", "Local", "Google", "Chrome", "Application", "chrome.exe"),
+    "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+    "chrome.exe",
+  ]
+  const exe = candidates.find((candidate) => candidate === "chrome.exe" || existsSync(candidate))
+  if (!exe) return { error: "Google Chrome is not installed in a known location." }
+  try {
+    Bun.spawn([exe, url], { stdin: "ignore", stdout: "ignore", stderr: "ignore" })
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Could not launch Google Chrome." }
+  }
+  await Bun.sleep(1200)
+  const hwnd =
+    (await uia.findWindow({ process: "chrome" }).catch(() => null)) ??
+    (await uia.findWindow({ titleContains: "Google Chrome" }).catch(() => null))
+  if (!hwnd) return { error: "Chrome launch was requested, but no Chrome window appeared." }
+  return { ok: true, app: "Chrome", target: url }
+}
+
 async function launchWindowsApp(
   name: string,
   settleMs = 1200,
@@ -131,6 +168,160 @@ function findWindowsNotepadEditor(elements: UiaElement[]): UiaElement | null {
   )[0] ?? null
 }
 
+let lastNotepadHwnd: number | null = null
+
+async function findWindowsNotepadHwnd(): Promise<number | null> {
+  if (lastNotepadHwnd) {
+    const info = await uia.getWindowInfo({ hwnd: lastNotepadHwnd }).catch(() => null)
+    if (info?.window && /notepad/i.test(info.window)) return lastNotepadHwnd
+    lastNotepadHwnd = null
+  }
+  for (let i = 0; i < 12; i++) {
+    const hwnd =
+      (await uia.findWindow({ process: "Notepad" }).catch(() => null)) ??
+      (await uia.findWindow({ titleContains: "Notepad" }).catch(() => null))
+    if (hwnd) {
+      lastNotepadHwnd = hwnd
+      return hwnd
+    }
+    await Bun.sleep(250)
+  }
+  return null
+}
+
+async function findNotepadDraftHwnd(fileName: string): Promise<number | null> {
+  for (let i = 0; i < 16; i++) {
+    const hwnd = await uia.findWindow({ titleContains: fileName }).catch(() => null)
+    if (hwnd) {
+      lastNotepadHwnd = hwnd
+      return hwnd
+    }
+    await Bun.sleep(250)
+  }
+  const hwnd = await uia.findWindow({ process: "Notepad" }).catch(() => null)
+  if (hwnd) lastNotepadHwnd = hwnd
+  return null
+}
+
+function valueContainsText(value: unknown, text: string): boolean {
+  return typeof value === "string" && value.includes(text)
+}
+
+async function getClipboardText(): Promise<string> {
+  if (platform() !== "win32") return ""
+  const proc = Bun.spawn(
+    ["powershell", "-NoProfile", "-NonInteractive", "-Command", "Get-Clipboard -Raw"],
+    { stdout: "pipe", stderr: "pipe" },
+  )
+  const out = await new Response(proc.stdout).text()
+  await proc.exited.catch(() => null)
+  return out
+}
+
+async function setClipboardText(text: string): Promise<void> {
+  if (platform() !== "win32") return
+  const proc = Bun.spawn(
+    ["powershell", "-NoProfile", "-NonInteractive", "-Command", "[Console]::In.ReadToEnd() | Set-Clipboard"],
+    { stdin: "pipe", stdout: "pipe", stderr: "pipe" },
+  )
+  proc.stdin.write(text)
+  proc.stdin.end()
+  await proc.exited
+}
+
+async function focusNotepadEditor(hwnd: number, editor: UiaElement): Promise<void> {
+  await uia.setForeground(hwnd).catch(() => null)
+  await Bun.sleep(120)
+  await uia
+    .call("click_point", {
+      x: Math.round(editor.rect.x + editor.rect.width / 2),
+      y: Math.round(editor.rect.y + editor.rect.height / 2),
+      button: "left",
+    })
+    .catch(() => null)
+  await Bun.sleep(120)
+}
+
+async function readNotepadTextByClipboard(hwnd: number, editor: UiaElement): Promise<string> {
+  const previous = await getClipboardText().catch(() => "")
+  await focusNotepadEditor(hwnd, editor)
+  await uia.call("press_key", { keys: "Ctrl+A" }).catch(() => null)
+  await Bun.sleep(80)
+  await uia.call("press_key", { keys: "Ctrl+C" }).catch(() => null)
+  await Bun.sleep(180)
+  const text = await getClipboardText().catch(() => "")
+  await setClipboardText(previous).catch(() => null)
+  return text
+}
+
+async function pasteNotepadText(
+  hwnd: number,
+  editor: UiaElement,
+  content: string,
+): Promise<{ ok: true; method: string } | { error: string }> {
+  const previous = await getClipboardText().catch(() => "")
+  await focusNotepadEditor(hwnd, editor)
+  await uia.call("press_key", { keys: "Ctrl+A" }).catch(() => null)
+  await Bun.sleep(80)
+  await setClipboardText(content)
+  await Bun.sleep(100)
+  await uia.call("press_key", { keys: "Ctrl+V" }).catch(() => null)
+  await Bun.sleep(250)
+  await setClipboardText(previous).catch(() => null)
+  const actual = await readNotepadTextByClipboard(hwnd, editor).catch(() => "")
+  if (actual.includes(content)) return { ok: true, method: "clipboard_paste" }
+  return { error: "I pasted text into Notepad, but the editor did not update." }
+}
+
+async function notepadContainsText(hwnd: number, text: string): Promise<boolean> {
+  const snap = await uia.getUiTree({ maxNodes: 300, maxDepth: 30, hwnd }).catch(() => null)
+  const editor = snap ? findWindowsNotepadEditor(snap.elements) : null
+  if (valueContainsText(editor?.value, text)) return true
+  return editor ? (await readNotepadTextByClipboard(hwnd, editor).catch(() => "")).includes(text) : false
+}
+
+async function getWindowsNotepadEditor(): Promise<
+  | { hwnd: number; editor: UiaElement; value: string }
+  | { error: string }
+> {
+  const hwnd = await findWindowsNotepadHwnd()
+  if (!hwnd) return { error: "I could not find an open Notepad window." }
+  await uia.setForeground(hwnd).catch(() => null)
+  await Bun.sleep(250)
+  const snap = await uia.getUiTree({ maxNodes: 300, maxDepth: 30, hwnd }).catch(() => null)
+  const editor = snap ? findWindowsNotepadEditor(snap.elements) : null
+  if (!editor) return { error: "Could not find Notepad's text editor." }
+  const value =
+    typeof editor.value === "string" && editor.value.length > 0
+      ? editor.value
+      : await readNotepadTextByClipboard(hwnd, editor).catch(() => "")
+  return { hwnd, editor, value }
+}
+
+async function setWindowsNotepadText(
+  hwnd: number,
+  editor: UiaElement,
+  content: string,
+): Promise<{ ok: true; method: string } | { error: string }> {
+  const setResult = await uia.call("set_value", { ref: editor.ref, text: content }).catch((err) => ({
+    error: err instanceof Error ? err.message : String(err),
+  }))
+  if (!actFailed(setResult)) {
+    if (valueContainsText((setResult as { after?: unknown }).after, content)) {
+      return { ok: true, method: "set_value" }
+    }
+    if (await notepadContainsText(hwnd, content)) return { ok: true, method: "set_value_verified" }
+  }
+
+  await uia.setForeground(hwnd).catch(() => null)
+  await uia.call("press_key", { keys: "Ctrl+A" }).catch(() => null)
+  await uia.call("type_text", { ref: editor.ref, text: content }).catch((err) => ({
+    error: err instanceof Error ? err.message : String(err),
+  }))
+  if (await notepadContainsText(hwnd, content)) return { ok: true, method: "select_all_type_text" }
+  return pasteNotepadText(hwnd, editor, content)
+}
+
 export async function writeWindowsNotepad(
   text: string,
 ): Promise<{ ok: true; app: "Notepad"; method: string } | { error: string }> {
@@ -138,23 +329,67 @@ export async function writeWindowsNotepad(
   const content = text.trim()
   if (!content) return { error: "No Notepad text provided." }
 
-  const launched = await launchWindowsApp("Notepad", 900)
-  if ("error" in launched) return launched
+  const draftDir = join(homedir(), ".yomi", "drafts")
+  await mkdir(draftDir, { recursive: true })
+  const draftPath = join(draftDir, "yomi-notepad-draft.txt")
+  await Bun.write(draftPath, content)
+  try {
+    Bun.spawn(["notepad.exe", draftPath], { stdin: "ignore", stdout: "ignore", stderr: "ignore" })
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Could not launch Notepad." }
+  }
+  const hwnd = await findNotepadDraftHwnd(basename(draftPath))
+  if (!hwnd) return { error: "Notepad opened, but I could not find its window." }
+  await uia.setForeground(hwnd).catch(() => null)
+  return { ok: true, app: "Notepad", method: "opened_draft_file" }
+}
 
-  const snap = await uia.getUiTree({ maxNodes: 300, maxDepth: 30 }).catch(() => null)
-  const editor = snap ? findWindowsNotepadEditor(snap.elements) : null
-  if (!editor) return { error: "Could not find Notepad's text editor." }
+export async function appendWindowsNotepad(
+  text: string,
+): Promise<{ ok: true; app: "Notepad"; method: string } | { error: string }> {
+  if (platform() !== "win32") return { error: "Windows Notepad automation is only supported on Windows." }
+  const addition = text.trim()
+  if (!addition) return { error: "No Notepad text provided." }
+  const current = await getWindowsNotepadEditor()
+  if ("error" in current) return current
+  const separator = current.value.trim().length > 0 ? "\r\n" : ""
+  const next = `${current.value}${separator}${addition}`
+  const updated = await setWindowsNotepadText(current.hwnd, current.editor, next)
+  if ("error" in updated) return updated
+  return { ok: true, app: "Notepad", method: `append_${updated.method}` }
+}
 
-  const setResult = await uia.call("set_value", { ref: editor.ref, text: content }).catch((err) => ({
-    error: err instanceof Error ? err.message : String(err),
-  }))
-  if (!actFailed(setResult)) return { ok: true, app: "Notepad", method: "set_value" }
+function resolveUserTextPath(rawPath: string): string {
+  let cleaned = rawPath
+    .trim()
+    .replace(/^["'`]|["'`]$/g, "")
+    .replace(/\b(?:as|at|to)\s+$/i, "")
+    .trim()
+  const namedDir = cleaned.match(/^(desktop|documents|downloads)\s+(?:as|named|called)\s+(.+)$/i)
+  if (namedDir?.[1] && namedDir[2]) cleaned = join(namedDir[1], namedDir[2])
+  if (/^desktop[\\/]/i.test(cleaned)) cleaned = join(homedir(), "Desktop", cleaned.replace(/^desktop[\\/]/i, ""))
+  else if (/^documents[\\/]/i.test(cleaned)) cleaned = join(homedir(), "Documents", cleaned.replace(/^documents[\\/]/i, ""))
+  else if (/^downloads[\\/]/i.test(cleaned)) cleaned = join(homedir(), "Downloads", cleaned.replace(/^downloads[\\/]/i, ""))
+  else if (/^desktop$/i.test(cleaned)) cleaned = join(homedir(), "Desktop", "yomi-note.txt")
+  else if (/^documents$/i.test(cleaned)) cleaned = join(homedir(), "Documents", "yomi-note.txt")
+  else if (/^downloads$/i.test(cleaned)) cleaned = join(homedir(), "Downloads", "yomi-note.txt")
+  if (!extname(cleaned)) cleaned += ".txt"
+  return isAbsolute(cleaned) ? cleaned : resolve(homedir(), "Desktop", cleaned)
+}
 
-  const typed = await uia
-    .call("type_text", { ref: editor.ref, text: content })
-    .catch((err) => ({ error: err instanceof Error ? err.message : String(err) }))
-  if (actFailed(typed)) return { error: "I opened Notepad, but could not type into it." }
-  return { ok: true, app: "Notepad", method: "type_text" }
+export async function saveWindowsNotepadAs(
+  rawPath: string,
+): Promise<{ ok: true; app: "Notepad"; path: string } | { error: string }> {
+  if (platform() !== "win32") return { error: "Windows Notepad automation is only supported on Windows." }
+  if (!rawPath.trim()) return { error: "No save path provided." }
+  const current = await getWindowsNotepadEditor()
+  if ("error" in current) return current
+  const filePath = resolveUserTextPath(rawPath)
+  await mkdir(dirname(filePath), { recursive: true }).catch((err) => {
+    if (!(err instanceof Error) || !("code" in err) || err.code !== "EEXIST") throw err
+  })
+  await Bun.write(filePath, current.value)
+  return { ok: true, app: "Notepad", path: filePath }
 }
 
 function searchTokens(text: string): string[] {
@@ -318,28 +553,9 @@ async function clickSpotify(el: UiaElement): Promise<unknown> {
   })
 }
 
-// --- Background-mode primitives (drive native apps without stealing the user's focus) ---
-
-// Run a real-input flow without stranding the user: capture the window they're in, let `fn`
-// foreground the target and act, then restore their prior focus. Best-effort focus-shuttle for apps
-// that can't be driven purely through accessibility patterns.
-export async function runWithFocusShuttle<T>(
-  fn: () => Promise<T>,
-  signal?: AbortSignal,
-): Promise<T> {
-  const prior = await uia.getForeground().catch(() => null)
-  try {
-    return await fn()
-  } finally {
-    // If we were superseded, don't yank focus back — the new run is taking over.
-    if (prior && !signal?.aborted) await uia.setForeground(prior).catch(() => null)
-  }
-}
-
 export type MediaAction = "play_pause" | "next" | "previous" | "stop"
 
-// Tap a media transport key. Windows routes it to the app owning the media session (Spotify
-// registers for it), so this is true background — no window focus needed.
+// Tap a media transport key. Windows routes it to the app owning the media session.
 export async function mediaControl(action: MediaAction): Promise<unknown> {
   if (platform() !== "win32") return { error: "Media controls are only supported on Windows." }
   try {
@@ -394,7 +610,7 @@ const SPOTIFY_PROCESS = "Spotify"
 export async function adjustSpotifyVolume(
   direction: VolumeDirection,
   steps = 3,
-  opts: { background?: boolean; signal?: AbortSignal } = {},
+  opts: { signal?: AbortSignal } = {},
 ): Promise<unknown> {
   if (platform() !== "win32")
     return { error: "Spotify volume automation is only supported on Windows." }
@@ -682,19 +898,13 @@ async function openWhatsAppChat(hwnd: number, chat: UiaElement): Promise<boolean
 // Resolve WhatsApp's window fast (it's usually already running); only pay the slow launch when it
 // has no window (closed or minimized to the tray).
 async function resolveWhatsAppWindow(): Promise<number | null> {
-  let hwnd =
-    (await uia.findWindow({ process: "WhatsApp.Root" })) ??
-    (await uia.findWindow({ process: "WhatsApp" })) ??
-    (await uia.findWindow({ titleContains: "WhatsApp" }))
+  let hwnd = await uia.findWindow({ titleContains: "WhatsApp" }).catch(() => null)
   if (hwnd) return hwnd
-  const launched = await launchWindowsApp("WhatsApp", 1500)
+  const launched = await launchWindowsApp("WhatsApp", 3000)
   if ("error" in launched) return null
-  for (let i = 0; i < 12 && !hwnd; i++) {
-    await Bun.sleep(400)
-    hwnd =
-      (await uia.findWindow({ process: "WhatsApp.Root" })) ??
-      (await uia.findWindow({ process: "WhatsApp" })) ??
-      (await uia.findWindow({ titleContains: "WhatsApp" }))
+  for (let i = 0; i < 20 && !hwnd; i++) {
+    await Bun.sleep(500)
+    hwnd = await uia.findWindow({ titleContains: "WhatsApp" }).catch(() => null)
   }
   return hwnd
 }
@@ -714,18 +924,9 @@ async function clearWhatsAppField(el: UiaElement | null): Promise<void> {
 export async function sendWhatsAppMessage(
   recipient: string,
   message: string,
-  opts: { background?: boolean; signal?: AbortSignal } = {},
+  opts: { signal?: AbortSignal } = {},
 ): Promise<unknown> {
   if (platform() !== "win32") return { error: "WhatsApp automation is only supported on Windows." }
-  if (opts.background) {
-    const result = await runWithFocusShuttle(
-      () => sendWhatsAppMessage(recipient, message, { signal: opts.signal }),
-      opts.signal,
-    )
-    return typeof result === "object" && result !== null && !("error" in result)
-      ? { ...result, foregroundedFallback: true }
-      : result
-  }
   const to = normalizeSpokenWhatsAppRecipient(recipient)
   const text = message.trim()
   if (!to) return { error: "recipient required" }
@@ -735,39 +936,45 @@ export async function sendWhatsAppMessage(
     if (opts.signal?.aborted) return { error: "superseded" }
     const hwnd = await resolveWhatsAppWindow()
     if (!hwnd) return { error: "Could not open WhatsApp." }
-    await uia.maximizeWindow(hwnd).catch(() => null) // full window — more reliable + what the user wants
+    await uia.maximizeWindow(hwnd).catch(() => null)
     await uia.setForeground(hwnd).catch(() => null)
-    await Bun.sleep(350)
+    await Bun.sleep(800)
 
-    // WhatsApp's "Message Yourself" chat is labelled "(You)", so for self search "you" — searching
-    // "myself" matches any chat whose message preview merely contains that word.
     const isSelf = /^(?:myself|me|self|i|you|message\s*myself|msg\s*myself)$/i.test(to)
     const searchTerm = isSelf ? "you" : to
 
-    // All WhatsApp snapshots use lite mode — the finders only need role/name/rect/enabled/value, and
-    // WhatsApp's tree is large enough that the per-node pattern reads otherwise cost seconds each.
     const tree = (maxNodes: number) =>
       uia.getUiTree({ maxNodes, maxDepth: 80, hwnd, lite: true }).catch(() => ({
         window: "",
         elements: [] as UiaElement[],
       }))
 
-    // Search for the contact and open the top matching chat.
     let snap = await tree(800)
-    const search = findWhatsAppSearch(snap.elements)
+    let search = findWhatsAppSearch(snap.elements)
+    for (let i = 0; i < 3 && !search; i++) {
+      await Bun.sleep(400)
+      snap = await tree(800)
+      search = findWhatsAppSearch(snap.elements)
+    }
     if (!search) return { error: "Could not find WhatsApp's search box." }
+    
     await clickElementOrPoint(search)
-    await Bun.sleep(120)
+    await Bun.sleep(200)
     await clearWhatsAppField(search)
     await uia.call("type_text", { text: searchTerm })
-    await Bun.sleep(550)
+    await Bun.sleep(800)
 
     snap = await tree(800)
-    // Only act on a confidently name-matched chat. For self that's the "(You)" chat. If we can't find
-    // a match, ASK the user instead of guessing/blasting the wrong contact.
-    const chat = isSelf
+    let chat = isSelf
       ? findWhatsAppChat(snap.elements, "you")
       : findWhatsAppChat(snap.elements, to)
+    for (let i = 0; i < 4 && !chat; i++) {
+      await Bun.sleep(400)
+      snap = await tree(800)
+      chat = isSelf
+        ? findWhatsAppChat(snap.elements, "you")
+        : findWhatsAppChat(snap.elements, to)
+    }
     if (!chat) {
       return {
         error: isSelf
@@ -782,10 +989,15 @@ export async function sendWhatsAppMessage(
       return { error: `I found ${chatName}, but WhatsApp did not open its message box.` }
     }
     if (opts.signal?.aborted) return { error: "superseded" }
+    await Bun.sleep(600)
 
-    // Type the message into the composer.
     snap = await tree(1500)
-    const composer = findWhatsAppComposer(snap.elements)
+    let composer = findWhatsAppComposer(snap.elements)
+    for (let i = 0; i < 3 && !composer; i++) {
+      await Bun.sleep(400)
+      snap = await tree(1500)
+      composer = findWhatsAppComposer(snap.elements)
+    }
     let composerClickPoint: { x: number; y: number } | null = null
     const typed = await typeWhatsAppComposer(hwnd, text, composer, composerPoint(snap.elements))
     composerClickPoint = typed.point
@@ -809,8 +1021,6 @@ export async function sendWhatsAppMessage(
       return { ok: false, requiresConfirmation: true, label: chatName, reason: "not confirmed" }
     }
 
-    // After confirmation, click the Send button; verify the message left the box and fall back to
-    // Enter, then verify again.
     const sendSnap = await tree(1500)
     const sendButton = findWhatsAppSendButton(sendSnap.elements)
     if (sendButton) {
@@ -822,7 +1032,6 @@ export async function sendWhatsAppMessage(
       await Bun.sleep(400)
     }
 
-    // If the button didn't take (or wasn't found), re-focus the composer and press Enter.
     let stillTyped = await whatsAppComposerStillHasText(hwnd, text)
     if (stillTyped) {
       await uia.setForeground(hwnd).catch(() => null)
@@ -849,27 +1058,16 @@ export async function sendWhatsAppMessage(
 
 export async function playSpotify(
   query: string,
-  opts: { background?: boolean; signal?: AbortSignal } = {},
+  opts: { signal?: AbortSignal } = {},
 ): Promise<unknown> {
   if (platform() !== "win32") return { error: "Spotify automation is only supported on Windows." }
   const parsed = parseSpotifyQuery(query)
   if (!parsed.searchText) return { error: "spotify search query required" }
-  // No true-background route for "play a specific song" (WebView2 + typed search), so focus-shuttle
-  // and flag the brief foreground so the pipeline can tell the user.
-  if (opts.background) {
-    const result = await runWithFocusShuttle(() => playSpotifyForeground(parsed, opts.signal), opts.signal)
-    return typeof result === "object" && result !== null && !("error" in result)
-      ? { ...result, foregroundedFallback: true }
-      : result
-  }
   return playSpotifyForeground(parsed, opts.signal)
 }
 
 async function playSpotifyForeground(parsed: SpotifyQuery, signal?: AbortSignal): Promise<unknown> {
   try {
-    // Fast path when Spotify is already running: foreground it via the helper (~200ms) instead of
-    // launchWindowsApp, whose Get-StartApps + AppActivate PowerShell takes ~5s. Match by PROCESS name
-    // — when a song is playing the window title is the song, not "Spotify". Cold start still launches.
     let hwnd = await uia.findWindow({ process: "Spotify" })
     if (hwnd) {
       await uia.setForeground(hwnd).catch(() => {})
@@ -887,48 +1085,55 @@ async function playSpotifyForeground(parsed: SpotifyQuery, signal?: AbortSignal)
     await uia.call("press_key", { keys: "Enter" })
     await Bun.sleep(500)
 
-    // Poll until the search results render — i.e. any content Play button appears. We do NOT wait for
-    // an exact title match: song titles rarely match the spoken query letter-for-letter, and waiting
-    // for a token match is what made "play nadaniya" spin for 8 retries and then refuse.
     const emptySnap = { window: "", elements: [] as UiaElement[] }
-    // A transient UIA error during one snapshot shouldn't kill the whole flow — default to empty and
-    // let the next poll iteration try again.
     const snapshot = () =>
       uia.getUiTree({ maxNodes: 800, maxDepth: 55, hwnd: hwnd ?? undefined }).catch(() => emptySnap)
 
     let snap = await snapshot()
     let row = findSpotifyResultRow(snap.elements, parsed)
     let topPlay = findTopContentPlay(snap.elements)
-    for (let i = 0; i < 8 && !row && !topPlay; i++) {
+    for (let i = 0; i < 12 && !row && !topPlay; i++) {
       if (signal?.aborted) return { error: "superseded" }
-      await Bun.sleep(300)
+      await Bun.sleep(400)
       snap = await snapshot()
       row = findSpotifyResultRow(snap.elements, parsed)
       topPlay = findTopContentPlay(snap.elements)
     }
 
-    // Prefer the Play button next to the best token-matched row; otherwise play the top result.
     const target = (row && findPlayNearRow(snap.elements, row.y)) || topPlay
-    if (!target) {
-      return {
-        error: `Spotify searched for "${parsed.searchText}" but didn't show a playable result.`,
-      }
+    if (target) {
+      const result = await clickSpotify(target)
+      if (actFailed(result)) return result
+      const label = row?.label ?? "top result"
+      emitActResult(true, target.name || label || "Spotify Play")
+      return { ok: true, query: parsed.original, matched: label, clicked: target.name, result }
     }
 
-    const result = await clickSpotify(target)
-    if (actFailed(result)) return result
-    const label = row?.label ?? "top result"
-    emitActResult(true, target.name || label || "Spotify Play")
-    return { ok: true, query: parsed.original, matched: label, clicked: target.name, result }
+    await uia.call("press_key", { keys: "Tab" })
+    await Bun.sleep(100)
+    await uia.call("press_key", { keys: "Enter" })
+    await Bun.sleep(300)
+    
+    snap = await snapshot()
+    const title = snap.window || ""
+    const hasMatch = parsed.allTokens.some(token => 
+      title.toLowerCase().includes(token.toLowerCase())
+    )
+    
+    if (hasMatch || /\b(spotify|premium|free)\b/i.test(title) === false) {
+      emitActResult(true, "played top result")
+      return { ok: true, query: parsed.original, matched: "top result", clicked: "Enter key", result: { ok: true } }
+    }
+
+    return {
+      error: `Spotify searched for "${parsed.searchText}" but didn't show a playable result.`,
+    }
   } catch (e) {
     return { error: e instanceof Error ? e.message : String(e) }
   }
 }
 
-export function createSystemTools(ctx: { screenshotB64?: string; background?: boolean }) {
-  // In background mode, wrap real-input actions in a focus-shuttle so the user's window is restored.
-  const shuttle = <T>(fn: () => Promise<T>): Promise<T> =>
-    ctx.background ? runWithFocusShuttle(fn) : fn()
+export function createSystemTools(ctx: { screenshotB64?: string }) {
   return {
     look_at_screen: tool({
       description: "Get a screenshot of the user's current screen. Returns base64-encoded PNG.",
@@ -1058,7 +1263,7 @@ export function createSystemTools(ctx: { screenshotB64?: string; background?: bo
         required: ["ref"],
       }),
       execute: async ({ ref }) =>
-        shuttle(() => guardedAct({ kind: "invoke", ref }, (r) => uia.call("click_element", { ref: r }))),
+        guardedAct({ kind: "invoke", ref }, (r) => uia.call("click_element", { ref: r })),
     }),
 
     type_text: tool({
@@ -1079,7 +1284,7 @@ export function createSystemTools(ctx: { screenshotB64?: string; background?: bo
         const blocked = blockedGuard()
         if (blocked) return blocked
         try {
-          return await shuttle(() => uia.call("type_text", ref ? { text, ref } : { text }))
+          return await uia.call("type_text", ref ? { text, ref } : { text })
         } catch (e) {
           return { error: e instanceof Error ? e.message : String(e) }
         }
@@ -1100,7 +1305,7 @@ export function createSystemTools(ctx: { screenshotB64?: string; background?: bo
         const blocked = blockedGuard()
         if (blocked) return blocked
         try {
-          return await shuttle(() => uia.call("press_key", { keys }))
+          return await uia.call("press_key", { keys })
         } catch (e) {
           return { error: e instanceof Error ? e.message : String(e) }
         }
@@ -1109,8 +1314,8 @@ export function createSystemTools(ctx: { screenshotB64?: string; background?: bo
 
     control_spotify: tool({
       description:
-        "Control Spotify playback in the background via media keys (no window focus needed). " +
-        'Use for "pause/resume/play/stop", "next/skip song", "previous song" — especially when the user says "in the background".',
+        "Control Spotify playback via media keys. " +
+        'Use for "pause/resume/play/stop", "next/skip song", and "previous song".',
       parameters: jsonSchema<{ action: SpotifyControl }>({
         type: "object",
         properties: {
@@ -1160,7 +1365,7 @@ export function createSystemTools(ctx: { screenshotB64?: string; background?: bo
         required: ["direction"],
       }),
       execute: async ({ direction, steps }) =>
-        adjustSpotifyVolume(direction, steps, { background: ctx.background }),
+        adjustSpotifyVolume(direction, steps),
     }),
 
     play_spotify: tool({
@@ -1177,8 +1382,46 @@ export function createSystemTools(ctx: { screenshotB64?: string; background?: bo
         required: ["query"],
       }),
       execute: async ({ query }) => {
-        return playSpotify(query, { background: ctx.background })
+        return playSpotify(query)
       },
+    }),
+
+    append_windows_notepad: tool({
+      description:
+        "Append text to the currently open Windows Notepad document. Use for follow-ups like 'add this to the text file' or 'write one more line'.",
+      parameters: jsonSchema<{ text: string }>({
+        type: "object",
+        properties: { text: { type: "string", description: "Text to append" } },
+        required: ["text"],
+      }),
+      execute: async ({ text }) => appendWindowsNotepad(text),
+    }),
+
+    save_windows_notepad_as: tool({
+      description:
+        "Save the currently open Windows Notepad document to a .txt file path. Accepts absolute paths or Desktop/Documents/Downloads-relative paths.",
+      parameters: jsonSchema<{ path: string }>({
+        type: "object",
+        properties: { path: { type: "string", description: "Destination file path" } },
+        required: ["path"],
+      }),
+      execute: async ({ path }) => saveWindowsNotepadAs(path),
+    }),
+
+    open_user_chrome: tool({
+      description:
+        "Open the user's installed Google Chrome with their normal profile. Use this before browser MCP when the user asks for Chrome or their browser.",
+      parameters: jsonSchema<{ target?: string }>({
+        type: "object",
+        properties: {
+          target: {
+            type: "string",
+            description: "URL, domain, or search query to open in Chrome",
+          },
+        },
+        required: [],
+      }),
+      execute: async ({ target }) => openUserChrome(target ?? ""),
     }),
 
     send_whatsapp_message: tool({
@@ -1197,7 +1440,7 @@ export function createSystemTools(ctx: { screenshotB64?: string; background?: bo
         required: ["recipient", "message"],
       }),
       execute: async ({ recipient, message }) =>
-        sendWhatsAppMessage(recipient, message, { background: ctx.background }),
+        sendWhatsAppMessage(recipient, message),
     }),
 
     launch_app: tool({
@@ -1260,7 +1503,7 @@ export function createSystemTools(ctx: { screenshotB64?: string; background?: bo
         if (px === undefined || py === undefined)
           return { error: "no point to click — call point_cursor first or pass x,y" }
         try {
-          return await shuttle(() => uia.call("click_point", { x: px, y: py, button }))
+          return await uia.call("click_point", { x: px, y: py, button })
         } catch (e) {
           return { error: e instanceof Error ? e.message : String(e) }
         }

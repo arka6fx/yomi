@@ -6,7 +6,6 @@ import "@fontsource/caveat/latin-700.css"
 import { AnimatePresence, motion } from "framer-motion"
 import { useYomiStore } from "./store"
 import type { HotkeyState, ChatEntry, SubscriptionInfo } from "./store"
-import { YomiCompanion, type BackgroundAgentSignal } from "./companion/YomiCompanion"
 import { EnergyVad } from "@yomi/shared"
 import { ThemeCtx, type Theme, type ThemeId } from "./theme"
 import { MissionControl } from "./mission/MissionControl"
@@ -628,11 +627,9 @@ function translucentColor(color: string, opacity: number, floor = 0.16): string 
 }
 
 // Glass treatment helpers — layered backgrounds in the active theme's accent.
-// `glassPanel` adds a soft top-left radial accent glow + a faint top sheen (for big
-// cards: login, menu). `glassBar` is sheen-only (for small/repeated surfaces:
-// toolbar, notch, chat) so the glow doesn't get noisy when stacked.
-function glassPanel(base: string, glow: string): string {
-  return `radial-gradient(140% 120% at 0% 0%, ${glow}, transparent 55%), linear-gradient(180deg, rgba(255,255,255,0.05), transparent 38%), ${base}`
+// `glassBar` adds a faint top sheen for small/repeated surfaces (toolbar, notch, chat).
+function glassPanel(_base: string, _glow: string): string {
+  return _base
 }
 function glassBar(base: string): string {
   return `linear-gradient(180deg, rgba(255,255,255,0.05), transparent 42%), ${base}`
@@ -689,7 +686,7 @@ styleEl.textContent = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
   @keyframes pulse  { 0%,100%{opacity:1;transform:scale(1)}   50%{opacity:.25;transform:scale(0.85)} }
-  @keyframes glow   { 0%,100%{box-shadow:0 0 6px 1px rgba(255,210,150,0.5)} 50%{box-shadow:0 0 14px 3px rgba(255,210,150,0.15)} }
+
   @keyframes spin   { to{transform:rotate(360deg)} }
   @keyframes blink  { 0%,100%{opacity:1} 50%{opacity:0} }
   @keyframes wave   { 0%,100%{transform:scaleY(0.35)} 50%{transform:scaleY(1)} }
@@ -850,12 +847,21 @@ const TK_COLOR: Record<TK, string> = {
   plain: "var(--code-text)",
 }
 
+async function copyToClipboard(text: string): Promise<void> {
+  try {
+    await window.yomi.copyText(text)
+    return
+  } catch {
+    await navigator.clipboard.writeText(text)
+  }
+}
+
 // ── Answer Block (MCQ / definite answer) ──────────────────────────────────────
 
 function AnswerBlock({ answer }: { answer: string }) {
   const [copied, setCopied] = React.useState(false)
   const copy = () => {
-    navigator.clipboard.writeText(answer).then(() => {
+    copyToClipboard(answer).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     })
@@ -952,7 +958,7 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
   const [copied, setCopied] = React.useState(false)
 
   const copyCode = () => {
-    navigator.clipboard.writeText(code).then(() => {
+    copyToClipboard(code).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     })
@@ -1472,7 +1478,7 @@ function Blocks({ text, isStreaming }: { text: string; isStreaming: boolean }) {
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = React.useState(false)
   const copy = () => {
-    navigator.clipboard.writeText(text).then(() => {
+    copyToClipboard(text).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     })
@@ -3355,13 +3361,16 @@ function SignInPanel({
     <div
       className="no-drag"
       style={{
-        flex: 1,
         display: "flex",
         flexDirection: "column",
+        alignItems: "center",
         justifyContent: "center",
-        padding: "0 40px",
+        padding: "0 24px",
       }}
     >
+      <div style={{ marginBottom: 12 }}>
+        <YomiLogoMark size={40} />
+      </div>
       <div
         style={{
           fontFamily: DISPLAY_FONT,
@@ -3388,7 +3397,7 @@ function SignInPanel({
 
       {isWaiting ? (
         <div
-          style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 16 }}
+          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}
         >
           <div
             style={{
@@ -3484,12 +3493,6 @@ const App: React.FC = () => {
   const [lastProvider, setLastProvider] = React.useState<"github" | "google" | null>(null)
   const [menuOpen, setMenuOpen] = React.useState(false)
   const [uiOpacity, setUiOpacity] = React.useState(readUiOpacity)
-  const [backgroundAgentSignal, setBackgroundAgentSignal] =
-    React.useState<BackgroundAgentSignal | null>(null)
-  // The floating Yomi only appears while a detached background task is running.
-  const [hasBgRun, setHasBgRun] = React.useState(false)
-  const bgRunsRef = useRef<Set<string>>(new Set())
-  const bgRemoveTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const menuCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const menuOpenedAtRef = useRef<number>(0)
 
@@ -3687,62 +3690,47 @@ const App: React.FC = () => {
     })
   }, [setSubscription])
 
-  // Background-agent updates from detached "…in the background" runs → companion dock.
-  useEffect(() => {
-    return window.yomi.onBackgroundAgent((sig) => setBackgroundAgentSignal(sig))
-  }, [])
+  // Size the transparent Electron shell to the root overlay only; transient hit areas animate.
+  React.useLayoutEffect(() => {
+    let frame = 0
+    let lastHeight = 0
+    const compactHeight = 96
 
-  // Spawn the floating Yomi only while a background task is active; retire it shortly after
-  // the run finishes so the user sees it complete, then it disappears.
-  useEffect(() => {
-    if (!backgroundAgentSignal) return
-    const { runId, done } = backgroundAgentSignal
-    const runs = bgRunsRef.current
-    const timers = bgRemoveTimersRef.current
-    if (done) {
-      if (!timers.has(runId)) {
-        timers.set(
-          runId,
-          setTimeout(() => {
-            runs.delete(runId)
-            timers.delete(runId)
-            setHasBgRun(runs.size > 0)
-          }, 1600),
-        )
+    const measureAndResize = () => {
+      if (authState === "checking") {
+        window.yomi.resize(880, compactHeight)
+        lastHeight = compactHeight
+        return
       }
-    } else {
-      const pending = timers.get(runId)
-      if (pending) {
-        clearTimeout(pending)
-        timers.delete(runId)
-      }
-      runs.add(runId)
-      setHasBgRun(true)
-    }
-  }, [backgroundAgentSignal])
 
-  // Authenticated Yomi lives on a full-workarea transparent overlay.
-  useEffect(() => {
-    window.yomi.setCompanionOverlay(authState === "authenticated")
-  }, [authState])
-
-  // Resize window based on auth + content + menu state
-  useEffect(() => {
-    if (authState === "checking") {
-      window.yomi.resize(780, 40)
-    } else if (authState === "unauthenticated" || authState === "waiting") {
-      // Two-panel "Get started" card needs room for the brand panel + form.
-      window.yomi.resize(780, 460)
-    } else {
-      const MAX_ENTRIES = 600
-      const textInputH = hotkeyState === "text-input" ? 88 : 0
-      const entriesH = entries.length > 0 ? MAX_ENTRIES : 0
-      const chatGap = textInputH > 0 || entriesH > 0 ? 8 : 0
-      // Profile row makes the menu taller than the toolbar-only overlay.
-      const menuMin = menuOpen ? 760 : 0
-      window.yomi.resize(780, Math.max(40, 40 + chatGap + textInputH + entriesH, menuMin))
+      const minHeight = authState === "unauthenticated" || authState === "waiting" ? 460 : compactHeight
+      const root = rootRef.current
+      const nextHeight = Math.ceil(Math.max(
+        minHeight,
+        root?.scrollHeight ?? 0,
+      ) + 8)
+      if (Math.abs(nextHeight - lastHeight) < 2) return
+      lastHeight = nextHeight
+      window.yomi.resize(880, nextHeight)
     }
-  }, [authState, entries, hotkeyState, menuOpen])
+
+    const scheduleResize = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(measureAndResize)
+    }
+
+    const resizeObserver = new ResizeObserver(scheduleResize)
+    if (rootRef.current) resizeObserver.observe(rootRef.current)
+
+    scheduleResize()
+    const settleFrame = requestAnimationFrame(scheduleResize)
+
+    return () => {
+      cancelAnimationFrame(frame)
+      cancelAnimationFrame(settleFrame)
+      resizeObserver.disconnect()
+    }
+  }, [authState, entries.length, hotkeyState, menuOpen, voiceTurnBusy])
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -4141,54 +4129,16 @@ const App: React.FC = () => {
         className="yomi-hit-area drag"
         style={{
           display: "flex",
-          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
           height: "100vh",
-          background: glassPanel(opaqueColor(t.toolbarBg), t.accentG),
+          background: opaqueColor(t.toolbarBg),
           borderRadius: 18,
           overflow: "hidden",
           border: `1px solid ${t.borderHi}`,
-          boxShadow: t.appShadow,
-          backdropFilter: "blur(28px) saturate(160%)",
-          WebkitBackdropFilter: "blur(28px) saturate(160%)",
           position: "relative",
         }}
       >
-        {/* Left brand panel — mascot + wordmark on an accent glow */}
-        <div
-          className="drag"
-          style={{
-            flex: "0 0 44%",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            padding: 24,
-            borderRight: `1px solid ${t.border}`,
-            background: `radial-gradient(120% 90% at 30% 25%, ${t.accentG}, transparent 60%)`,
-          }}
-        >
-          <div style={{ filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.45))" }}>
-            <YomiLogoMark size={116} />
-          </div>
-          <div
-            style={{
-              fontFamily: DISPLAY_FONT,
-              fontSize: 40,
-              fontWeight: 700,
-              color: "var(--accent)",
-              letterSpacing: "-0.02em",
-              lineHeight: 1,
-            }}
-          >
-            Yomi
-          </div>
-          <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", letterSpacing: "0.03em" }}>
-            your AI buddy
-          </div>
-        </div>
-
-        {/* Right form panel */}
         <SignInPanel
           isWaiting={authState === "waiting"}
           loadingProvider={loadingProvider}
@@ -4216,18 +4166,12 @@ const App: React.FC = () => {
         boxSizing: "border-box",
       }}
     >
-      <YomiCompanion
-        enabled={authState === "authenticated" && hasBgRun}
-        hotkeyState={hotkeyState}
-        backgroundAgentSignal={backgroundAgentSignal}
-      />
-
       {/* Toolbar pill — always visible, its own floating card */}
       <div
         className="yomi-hit-area"
         style={{
           flexShrink: 0,
-          width: 780,
+          width: 880,
           maxWidth: "calc(100vw - 40px)",
           background: glassBar(toolbarBg),
           border: isListening ? t.appBorderListen : t.appBorder,
@@ -4270,7 +4214,7 @@ const App: React.FC = () => {
             transition={{ type: "spring", stiffness: 380, damping: 28 }}
             style={{
               marginTop: 8,
-              width: 780,
+              width: 880,
               maxWidth: "calc(100vw - 40px)",
               maxHeight: 600,
               minHeight: 0,

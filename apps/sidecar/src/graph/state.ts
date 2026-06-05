@@ -6,7 +6,7 @@ import type { AutomationState, Plan } from "@yomi/shared"
 // Non-serializable per-request deps (emit, signal, tools, guards) live on GraphDeps, NOT here,
 // so a phase-2 checkpointer upgrade stays drop-in.
 
-export type ExecutionMode = "foreground" | "background" | "approval"
+export type ExecutionMode = "foreground" | "approval"
 export type ValidationStatus = "pending" | "passed" | "failed"
 export type PermissionStatus = "none" | "pending" | "granted" | "denied"
 
@@ -27,7 +27,6 @@ export const GraphAnnotation = Annotation.Root({
   // Identity / inputs
   taskId: Annotation<string>(), // = automation run id
   goal: Annotation<string>(),
-  background: Annotation<boolean>({ reducer: (_, v) => v, default: () => false }),
   plan: Annotation<Plan | undefined>({ reducer: (_, v) => v, default: () => undefined }),
 
   // Conversation carried across execution bursts
