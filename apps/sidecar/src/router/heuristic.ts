@@ -6,6 +6,8 @@ const AGENT_TRIGGER = /^yomi[, ]+agent[, ]?/i
 const AGENT_VERBS =
   /\b(research|draft|send|schedule|book|create|open|file|download|install|deploy|commit|push|email|dm|message)\b/i
 const AGENT_CONNECTIVES = /\band then\b|\bafter that\b|\bfinally\b|\bthen /i
+const WINDOWS_NOTEPAD_ACTION =
+  /\b(?:write|wright|type|put|draft|save|store|note)\b.*\b(?:the\s+)?(?:windows\s+)?notepad\b/i
 
 export function scoreHeuristic(input: RouterInput): IntentClassification {
   const text = input.text.trim()
@@ -37,6 +39,10 @@ export function scoreHeuristic(input: RouterInput): IntentClassification {
   if (AGENT_VERBS.test(text)) {
     agentScore += 0.4
     agentReasons.push("action verb")
+  }
+  if (WINDOWS_NOTEPAD_ACTION.test(text)) {
+    agentScore += 0.7
+    agentReasons.push("windows notepad action")
   }
   if (AGENT_CONNECTIVES.test(text)) {
     agentScore += 0.4

@@ -20,6 +20,63 @@ const ACT_HISTORY_MAX = 16 // last 8 turns (user + assistant each)
 
 type Plan = "explore" | "pro" | "max"
 
+type AutomationProviderHealth = {
+  id: string
+  label: string
+  ok: boolean
+  detail?: string
+  diagnostics?: Record<string, unknown>
+}
+
+type AutomationHealthResponse = {
+  ok: boolean
+  providers: AutomationProviderHealth[]
+}
+
+type AutomationProviderRepairResponse = {
+  provider: AutomationProviderHealth
+}
+
+type AutomationKnowledgeResponse = {
+  agent: { id: string; label: string; provider: string }
+  hint: string | null
+  workflows: {
+    id: string
+    agentId: string
+    goal: string
+    tools: string[]
+    stepCount: number
+    recoveryCount: number
+    durationMs: number
+    outcome: "success" | "failure"
+    summary: string
+    createdAt: string
+  }[]
+  recoveries: {
+    id: string
+    agentId: string
+    goalKey: string
+    error: string
+    strategy: string
+    createdAt: string
+  }[]
+}
+
+type AutomationWorkflowReplay = {
+  replayId: string
+  task: string
+  ownerId: string
+  ownerLabel: string
+  status: string
+  startedAt: string
+  endedAt: string | null
+  summary: string | null
+}
+
+type AutomationWorkflowsResponse = {
+  workflows: AutomationWorkflowReplay[]
+}
+
 // Screen-analysis prompt for the Screenshot button / Ctrl+S. The chat shows SCREEN_LABEL instead.
 const SCREEN_PROMPT = `Analyze what's on my screen and use the standard answer-block format.
 
@@ -65,6 +122,7 @@ let pipelineCtrl: AbortController | null = null
 // True only while a barge-in abort is in flight, so streamQuery's AbortError
 // branch doesn't reset to idle and stomp the fresh listening state.
 let bargingIn = false
+let agentAutomationFocusSuppressed = false
 
 function startPipeline(): AbortController {
   pipelineCtrl?.abort() // cancel any in-flight pipeline
@@ -92,6 +150,68 @@ export function initSidecarIpc(
   onAbort: () => void
   onScreenshot: () => Promise<void>
 } {
+  ipcMain.removeHandler("yomi:automation-health")
+  ipcMain.handle("yomi:automation-health", async (): Promise<AutomationHealthResponse> => {
+    const res = await fetch(`${sidecar.baseUrl}/automation/health`, {
+      headers: { "x-sidecar-secret": sidecar.secret },
+    })
+    const body = (await res.json().catch(() => ({}))) as Partial<AutomationHealthResponse> & {
+      error?: string
+    }
+    if (!res.ok) throw new Error(body.error ?? `Automation health ${res.status}`)
+    return { ok: body.ok === true, providers: body.providers ?? [] }
+  })
+  ipcMain.removeHandler("yomi:automation-provider-repair")
+  ipcMain.handle(
+    "yomi:automation-provider-repair",
+    async (_event, providerId: string): Promise<AutomationProviderRepairResponse> => {
+      if (!providerId) throw new Error("Provider id required")
+      const res = await fetch(`${sidecar.baseUrl}/automation/providers/${providerId}/repair`, {
+        method: "POST",
+        headers: { "x-sidecar-secret": sidecar.secret },
+      })
+      const body = (await res.json().catch(() => ({}))) as Partial<AutomationProviderRepairResponse> & {
+        error?: string
+      }
+      if (!res.ok || !body.provider) {
+        throw new Error(body.error ?? `Automation provider repair ${res.status}`)
+      }
+      return { provider: body.provider }
+    },
+  )
+  ipcMain.removeHandler("yomi:automation-knowledge")
+  ipcMain.handle("yomi:automation-knowledge", async (_event, goal: string): Promise<AutomationKnowledgeResponse> => {
+    const trimmed = goal?.trim()
+    if (!trimmed) throw new Error("Goal required")
+    const res = await fetch(
+      `${sidecar.baseUrl}/automation/knowledge?goal=${encodeURIComponent(trimmed)}`,
+      {
+        headers: { "x-sidecar-secret": sidecar.secret },
+      },
+    )
+    const body = (await res.json().catch(() => ({}))) as Partial<AutomationKnowledgeResponse> & {
+      error?: string
+    }
+    if (!res.ok || !body.agent) throw new Error(body.error ?? `Automation knowledge ${res.status}`)
+    return {
+      agent: body.agent,
+      hint: body.hint ?? null,
+      workflows: body.workflows ?? [],
+      recoveries: body.recoveries ?? [],
+    }
+  })
+  ipcMain.removeHandler("yomi:automation-workflows")
+  ipcMain.handle("yomi:automation-workflows", async (): Promise<AutomationWorkflowsResponse> => {
+    const res = await fetch(`${sidecar.baseUrl}/automation/workflows?limit=8`, {
+      headers: { "x-sidecar-secret": sidecar.secret },
+    })
+    const body = (await res.json().catch(() => ({}))) as Partial<AutomationWorkflowsResponse> & {
+      error?: string
+    }
+    if (!res.ok) throw new Error(body.error ?? `Automation workflows ${res.status}`)
+    return { workflows: body.workflows ?? [] }
+  })
+
   // Forward the user's confirm/cancel for a risky action back to the sidecar (Spec 16).
   ipcMain.on("yomi:act-confirm", async (_e, id: string, approved: boolean) => {
     try {
@@ -100,8 +220,53 @@ export function initSidecarIpc(
         headers: { "Content-Type": "application/json", "x-sidecar-secret": sidecar.secret },
         body: JSON.stringify({ id, approved }),
       })
+      if (agentAutomationFocusSuppressed && !overlayWin.isDestroyed()) {
+        overlayWin.blur()
+        overlayWin.setFocusable(false)
+      }
     } catch (err) {
       console.error("[yomi/act] confirm failed", err)
+    }
+  })
+
+  ipcMain.on("yomi:automation-replay", async (_e, replayId: string) => {
+    if (!replayId) return
+    const ctrl = startPipeline()
+    activateProcessing()
+    try {
+      const plan = await reserveInteraction(overlayWin, "chat", ctrl.signal)
+      const res = await fetch(`${sidecar.baseUrl}/automation/replay`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-sidecar-secret": sidecar.secret },
+        body: JSON.stringify({ replayId, plan }),
+        signal: ctrl.signal,
+      })
+      if (!res.ok || !res.body) throw new Error(`Sidecar replay ${res.status}`)
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buf = ""
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += decoder.decode(value, { stream: true })
+        const lines = buf.split("\n")
+        buf = lines.pop()!
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue
+          send(overlayWin, JSON.parse(line.slice(6)) as SseEvent)
+        }
+      }
+      endVoiceTurn()
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") {
+        send(overlayWin, {
+          type: "error",
+          message: err instanceof Error ? err.message : "Replay failed",
+        })
+        resetToIdle()
+      }
+    } finally {
+      pipelineCtrl = null
     }
   })
 
@@ -359,8 +524,10 @@ async function transcribe(
     signal,
   })
   if (!res.ok) {
-    console.error(`[yomi/voice] STT HTTP ${res.status}`)
-    throw new Error(`Sidecar STT ${res.status}`)
+    const body = (await res.json().catch(() => ({}))) as { error?: string }
+    const message = body.error ?? `Sidecar STT ${res.status}`
+    console.error(`[yomi/voice] STT HTTP ${res.status}: ${message}`)
+    throw new Error(message)
   }
   return ((await res.json()) as { text: string }).text
 }
@@ -410,26 +577,33 @@ async function streamQuery(
         tts,
         plan,
       }
-
-  const res = await fetch(`${sidecar.baseUrl}${endpoint}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-sidecar-secret": sidecar.secret },
-    body: JSON.stringify(body),
-    signal: ctrl.signal,
-  })
-  if (!res.ok || !res.body) {
-    pipelineCtrl = null
-    console.error(`[yomi/voice] ${endpoint} HTTP ${res.status}`)
-    throw new Error(`Sidecar ${res.status}`)
+  const overlayWasFocusable = useAgent ? overlayWin.isFocusable() : null
+  if (useAgent && overlayWasFocusable) {
+    // Real-input UIA tools follow foreground focus; keep Yomi visible but unable to retake it.
+    overlayWin.setFocusable(false)
+    if (overlayWin.isFocused()) overlayWin.blur()
+    agentAutomationFocusSuppressed = true
   }
 
-  const reader = res.body.getReader()
-  const decoder = new TextDecoder()
-  let buf = ""
   let sawDone = false
   let agentTextBuf = "" // accumulate the agent's reply to store in the Act loop history
 
   try {
+    const res = await fetch(`${sidecar.baseUrl}${endpoint}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-sidecar-secret": sidecar.secret },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    })
+    if (!res.ok || !res.body) {
+      pipelineCtrl = null
+      console.error(`[yomi/voice] ${endpoint} HTTP ${res.status}`)
+      throw new Error(`Sidecar ${res.status}`)
+    }
+
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buf = ""
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
@@ -442,6 +616,12 @@ async function streamQuery(
         if (event.type === "agent_text") agentTextBuf += event.text
         // Show a short label in chat instead of a long synthetic prompt (e.g. screen analysis).
         if (event.type === "transcript" && transcriptLabel) event.text = transcriptLabel
+        if (event.type === "act_proposed" && overlayWasFocusable && !overlayWin.isDestroyed()) {
+          // Confirmation needs clickable Yes/No; restore focus only while waiting for the answer.
+          overlayWin.setFocusable(true)
+          overlayWin.show()
+          overlayWin.focus()
+        }
         if (!useAgent || shouldShowInteractiveEvent(event)) {
           send(overlayWin, event)
         }
@@ -466,6 +646,8 @@ async function streamQuery(
     }
     throw err
   } finally {
+    agentAutomationFocusSuppressed = false
+    if (overlayWasFocusable && !overlayWin.isDestroyed()) overlayWin.setFocusable(true)
     pipelineCtrl = null
   }
 
@@ -482,6 +664,8 @@ let backgroundRunCounter = 0
 type BackgroundUpdate = {
   state: "idle" | "thinking" | "working" | "waiting" | "error"
   task: string
+  owner?: string
+  detail?: string
   step?: number
   max?: number
   done?: boolean
@@ -529,7 +713,33 @@ function startBackgroundRun(
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue
           const event = JSON.parse(line.slice(6)) as SseEvent
-          if (event.type === "agent_step")
+          if (event.type === "automation_started")
+            sendBg({
+              state: "thinking",
+              task: event.run.task,
+              owner: event.run.owner.label,
+              detail: event.run.currentStep,
+            })
+          else if (event.type === "automation_step")
+            sendBg({
+              state:
+                event.state === "waiting" || event.state === "needs_approval"
+                  ? "waiting"
+                  : event.state === "failed"
+                    ? "error"
+                    : "working",
+              task,
+              detail: event.currentStep,
+              step: event.step,
+              max: event.maxSteps,
+            })
+          else if (event.type === "automation_waiting")
+            sendBg({ state: "waiting", task, detail: event.reason })
+          else if (event.type === "automation_completed")
+            sendBg({ state: "idle", task, detail: event.summary, done: true })
+          else if (event.type === "automation_failed")
+            sendBg({ state: "error", task, detail: event.error, done: true })
+          else if (event.type === "agent_step")
             sendBg({ state: "working", task, step: event.iteration, max: event.max })
           else if (event.type === "done") sendBg({ state: "idle", task, done: true })
           else if (event.type === "error") sendBg({ state: "error", task, done: true })
@@ -565,19 +775,27 @@ function stripBackgroundPhrase(text: string): string {
 
 // Imperative UI commands → desktop automation tasks for the agent (Spec 16).
 function shouldUseAgent(text: string): boolean {
-  return /\b(open|click|press|type|enter|fill|select|choose|check|uncheck|toggle|close|switch|go to|navigate|delete|send|save|copy|paste|rename|create|run|play|pause|resume|spotify|volume|sound|audio|louder|quieter|mute|unmute|increase|decrease|lower|raise|inc|dec)\b/i.test(
+  return /\b(open|click|press|type|enter|fill|select|choose|check|uncheck|toggle|close|switch|go to|navigate|delete|send|save|copy|paste|rename|create|run|play|pause|resume|spotify|volume|sound|audio|louder|quieter|mute|unmute|increase|decrease|lower|raise|inc|dec|text|message|msg|whats\s*app|whatsapp|tell|ping)\b/i.test(
     text,
   )
 }
 
 function shouldUseSystemAction(text: string): boolean {
   return (
-    /\b(volume|sound|audio|song|louder|quieter|mute|unmute|increase|decrease|lower|raise|inc|dec|spotify)\b/i.test(
+    /\b(volume|sound|audio|song|louder|quieter|mute|unmute|increase|decrease|lower|raise|inc|dec|spotify|whats\s*app|whatsapp)\b/i.test(
       text,
-    ) || /\bplay\b.+\b(song|track|music|by)\b/i.test(text)
+    ) ||
+    /\bplay\b.+\b(song|track|music|by)\b/i.test(text) ||
+    /\b(text|message|msg)\b/i.test(text)
   )
 }
 
 function shouldShowInteractiveEvent(event: SseEvent): boolean {
-  return event.type === "act_proposed" || event.type === "error"
+  return (
+    event.type === "agent_text" ||
+    event.type === "act_proposed" ||
+    event.type === "act_result" ||
+    event.type.startsWith("automation_") ||
+    event.type === "error"
+  )
 }

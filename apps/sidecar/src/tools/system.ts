@@ -117,59 +117,44 @@ async function launchWindowsApp(
   return { ok: true, detail: out.trim() }
 }
 
-async function activateWindowsApp(name: string): Promise<boolean> {
-  const safe = cleanAppName(name)
-  if (!safe) return false
-  const ps =
-    `Add-Type -Namespace Yomi -Name Native -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd); [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);'; ` +
-    `$ws = New-Object -ComObject WScript.Shell; ` +
-    `$p = Get-Process | Where-Object { $_.MainWindowTitle -like '*${safe}*' } | Select-Object -First 1; ` +
-    `for ($i = 0; $i -lt 20; $i++) { ` +
-    `if ($p -and $p.MainWindowHandle -ne 0) { [Yomi.Native]::ShowWindow($p.MainWindowHandle, 9) | Out-Null; if ([Yomi.Native]::SetForegroundWindow($p.MainWindowHandle)) { 'ok'; exit 0 } }; ` +
-    `if ($p -and $ws.AppActivate($p.Id)) { 'ok'; exit 0 }; ` +
-    `if ($ws.AppActivate('${safe}')) { 'ok'; exit 0 }; ` +
-    `Start-Sleep -Milliseconds 150; ` +
-    `$p = Get-Process | Where-Object { $_.MainWindowTitle -like '*${safe}*' } | Select-Object -First 1 ` +
-    `}; exit 1`
-  const proc = Bun.spawn(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps], {
-    stdout: "pipe",
-    stderr: "pipe",
-  })
-  await new Response(proc.stdout).text()
-  return (await proc.exited) === 0
+function findWindowsNotepadEditor(elements: UiaElement[]): UiaElement | null {
+  const editable = elements.filter(
+    (el) =>
+      el.enabled &&
+      !el.offscreen &&
+      (el.patterns.includes("Value") ||
+        /^(?:Edit|Document)$/i.test(el.role) ||
+        /text editor|notepad/i.test(el.name)),
+  )
+  return editable.sort(
+    (a, b) => b.rect.width * b.rect.height - a.rect.width * a.rect.height,
+  )[0] ?? null
 }
 
-async function getWindowsAppHwnd(name: string): Promise<number | null> {
-  const safe = cleanAppName(name)
-  if (!safe) return null
-  const ps = `(Get-Process | Where-Object { $_.MainWindowTitle -like '*${safe}*' } | Select-Object -First 1).MainWindowHandle`
-  const proc = Bun.spawn(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps], {
-    stdout: "pipe",
-    stderr: "pipe",
-  })
-  const out = (await new Response(proc.stdout).text()).trim()
-  await proc.exited
-  const hwnd = Number(out)
-  return Number.isFinite(hwnd) && hwnd > 0 ? hwnd : null
-}
+export async function writeWindowsNotepad(
+  text: string,
+): Promise<{ ok: true; app: "Notepad"; method: string } | { error: string }> {
+  if (platform() !== "win32") return { error: "Windows Notepad automation is only supported on Windows." }
+  const content = text.trim()
+  if (!content) return { error: "No Notepad text provided." }
 
-async function requireWindowsAppWindow(
-  name: string,
-): Promise<{ ok: true; window: string; hwnd: number } | { error: string }> {
-  for (let i = 0; i < 8; i++) {
-    const hwnd = await getWindowsAppHwnd(name)
-    if (hwnd) {
-      const info = await uia.getWindowInfo({ hwnd })
-      if (info.window.toLowerCase().includes(name.toLowerCase()))
-        return { ok: true, window: info.window, hwnd }
-    }
-    await activateWindowsApp(name)
-    await Bun.sleep(250)
-  }
-  const info = await uia.getWindowInfo().catch(() => ({ window: "" }))
-  return {
-    error: `Could not find a usable ${name} window; active window is "${info.window}". Refusing to click another app.`,
-  }
+  const launched = await launchWindowsApp("Notepad", 900)
+  if ("error" in launched) return launched
+
+  const snap = await uia.getUiTree({ maxNodes: 300, maxDepth: 30 }).catch(() => null)
+  const editor = snap ? findWindowsNotepadEditor(snap.elements) : null
+  if (!editor) return { error: "Could not find Notepad's text editor." }
+
+  const setResult = await uia.call("set_value", { ref: editor.ref, text: content }).catch((err) => ({
+    error: err instanceof Error ? err.message : String(err),
+  }))
+  if (!actFailed(setResult)) return { ok: true, app: "Notepad", method: "set_value" }
+
+  const typed = await uia
+    .call("type_text", { ref: editor.ref, text: content })
+    .catch((err) => ({ error: err instanceof Error ? err.message : String(err) }))
+  if (actFailed(typed)) return { error: "I opened Notepad, but could not type into it." }
+  return { ok: true, app: "Notepad", method: "type_text" }
 }
 
 function searchTokens(text: string): string[] {
@@ -222,13 +207,6 @@ function parseSpotifyQuery(query: string): SpotifyQuery {
   }
 }
 
-function scoreSpotifyPlayButton(name: string, query: string): number {
-  const n = name.toLowerCase()
-  if (!/\bplay\b/.test(n)) return -1
-  let score = n === "play" ? 10 : 6
-  for (const token of searchTokens(query)) if (n.includes(token)) score += 2
-  return score
-}
 
 function tokenScore(name: string, tokens: string[], weight: number): number {
   const n = name.toLowerCase()
@@ -306,6 +284,85 @@ function findPlayNearRow(elements: UiaElement[], rowY: number): UiaElement | und
     .sort((a, b) => a.distance - b.distance || a.el.rect.x - b.el.rect.x)[0]?.el
 }
 
+// The topmost Play button in the results area = Spotify's top search result. Used as a fallback when
+// the exact title doesn't token-match the query (e.g. "nadaniya" vs the real title "Nadaaniyan"), so
+// "play <song>" plays the best match instead of refusing.
+function findTopContentPlay(elements: UiaElement[]): UiaElement | undefined {
+  const root = elements[0]
+  return elements
+    .filter(
+      (el) =>
+        el.enabled &&
+        contentElement(el, root) &&
+        el.role === "Button" &&
+        /\bplay\b/i.test(el.name),
+    )
+    .sort((a, b) => a.rect.y - b.rect.y || a.rect.x - b.rect.x)[0]
+}
+
+// Click a Spotify play button. First a real UIA click; if that hits the transient COM hiccup
+// (0x80040201 EVENT_E_ALL_SUBSCRIBERS_FAILED), fall back to a raw coordinate click at the button's
+// center — mouse_event fires no UIA events, so it sidesteps that error entirely.
+async function clickSpotify(el: UiaElement): Promise<unknown> {
+  try {
+    const r = await uia.call("click_element", { ref: el.ref })
+    if (!actFailed(r)) return r
+  } catch {
+    /* fall through to coordinate click */
+  }
+  await Bun.sleep(150)
+  return uia.call("click_point", {
+    x: Math.round(el.rect.x + el.rect.width / 2),
+    y: Math.round(el.rect.y + el.rect.height / 2),
+    button: "left",
+  })
+}
+
+// --- Background-mode primitives (drive native apps without stealing the user's focus) ---
+
+// Run a real-input flow without stranding the user: capture the window they're in, let `fn`
+// foreground the target and act, then restore their prior focus. Best-effort focus-shuttle for apps
+// that can't be driven purely through accessibility patterns.
+export async function runWithFocusShuttle<T>(
+  fn: () => Promise<T>,
+  signal?: AbortSignal,
+): Promise<T> {
+  const prior = await uia.getForeground().catch(() => null)
+  try {
+    return await fn()
+  } finally {
+    // If we were superseded, don't yank focus back — the new run is taking over.
+    if (prior && !signal?.aborted) await uia.setForeground(prior).catch(() => null)
+  }
+}
+
+export type MediaAction = "play_pause" | "next" | "previous" | "stop"
+
+// Tap a media transport key. Windows routes it to the app owning the media session (Spotify
+// registers for it), so this is true background — no window focus needed.
+export async function mediaControl(action: MediaAction): Promise<unknown> {
+  if (platform() !== "win32") return { error: "Media controls are only supported on Windows." }
+  try {
+    await uia.mediaKey(action)
+    return { ok: true, action }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : String(e) }
+  }
+}
+
+export type SpotifyControl = "pause" | "resume" | "play_pause" | "next" | "previous" | "stop"
+
+// Background Spotify transport via media keys. pause/resume/play map to the play-pause toggle (a
+// media key can't distinguish the two); next/previous/stop are distinct.
+export async function controlSpotifyPlayback(action: SpotifyControl): Promise<unknown> {
+  const key: MediaAction =
+    action === "next" ? "next" : action === "previous" ? "previous" : action === "stop" ? "stop" : "play_pause"
+  const res = await mediaControl(key)
+  return typeof res === "object" && res !== null && "error" in res
+    ? res
+    : { ok: true, action, target: "spotify" }
+}
+
 export type VolumeDirection = "up" | "down" | "mute"
 
 export async function adjustSystemVolume(direction: VolumeDirection, steps = 2): Promise<unknown> {
@@ -326,32 +383,71 @@ export async function adjustSystemVolume(direction: VolumeDirection, steps = 2):
   return { ok: true, direction, steps: count }
 }
 
-// Adjust Spotify's own playback volume (separate from system volume) via its in-app shortcuts
-// (Ctrl+Up / Ctrl+Down). Focuses/launches Spotify first so the keystrokes land on it.
-export async function adjustSpotifyVolume(direction: VolumeDirection, steps = 3): Promise<unknown> {
+// Each "step" of volume change as a fraction of the 0..1 range.
+const SPOTIFY_VOLUME_STEP = 0.08
+
+// Spotify volume is controlled through the Windows per-app mixer (Core Audio), NOT Spotify's in-app
+// slider: the slider is a WebView2 control whose UIA write yanks Spotify to the foreground, whereas
+// the mixer is completely focus-free and invisible. "process" is Spotify's process name.
+const SPOTIFY_PROCESS = "Spotify"
+
+export async function adjustSpotifyVolume(
+  direction: VolumeDirection,
+  steps = 3,
+  opts: { background?: boolean; signal?: AbortSignal } = {},
+): Promise<unknown> {
   if (platform() !== "win32")
     return { error: "Spotify volume automation is only supported on Windows." }
-  const active = await activateWindowsApp("Spotify")
-  if (!active) {
-    const launched = await launchWindowsApp("Spotify", 2000)
-    if ("error" in launched) return launched
-    await activateWindowsApp("Spotify")
-  }
-  if (direction === "mute") {
-    // Spotify has no mute shortcut — drive the volume to zero.
-    for (let i = 0; i < 15; i++) {
-      await uia.call("press_key", { keys: "Ctrl+Down" })
-      await Bun.sleep(40)
+  if (opts.signal?.aborted) return { error: "superseded" }
+
+  const current = await uia.getAppVolume(SPOTIFY_PROCESS)
+  if (current === null)
+    return { error: "Spotify isn't playing any audio right now, so there's no volume to change." }
+
+  const delta = SPOTIFY_VOLUME_STEP * Math.max(1, Math.min(steps, 12))
+  const target =
+    direction === "mute"
+      ? 0
+      : direction === "up"
+        ? Math.min(1, current + delta)
+        : Math.max(0, current - delta)
+
+  await uia.setAppVolume(SPOTIFY_PROCESS, target)
+  return { ok: true, direction, was: Math.round(current * 100), target: Math.round(target * 100) }
+}
+
+// Volume Yomi drops Spotify to while listening, so the playing song doesn't drown out the user's
+// voice in the mic. Low but not silent.
+const SPOTIFY_DUCK_LEVEL = 0.12
+// Volume saved when we duck, restored when listening ends. null = not currently ducked.
+let spotifyDuckedFrom: number | null = null
+
+// Duck/restore Spotify via the Windows per-app mixer — focus-free and invisible, so it never steals
+// focus from whatever the user is doing. No-op when Spotify isn't producing audio.
+export async function duckSpotify(on: boolean): Promise<unknown> {
+  if (platform() !== "win32") return { ok: false, reason: "not windows" }
+  try {
+    if (on) {
+      const current = await uia.getAppVolume(SPOTIFY_PROCESS)
+      if (current === null) {
+        spotifyDuckedFrom = null // nothing playing → nothing to duck
+        return { ok: true, spotify: false }
+      }
+      if (spotifyDuckedFrom === null) spotifyDuckedFrom = current
+      if (current <= SPOTIFY_DUCK_LEVEL) return { ok: true, ducked: false, alreadyQuiet: true }
+      await uia.setAppVolume(SPOTIFY_PROCESS, SPOTIFY_DUCK_LEVEL)
+      return { ok: true, ducked: true, from: Math.round(spotifyDuckedFrom * 100) }
     }
-    return { ok: true, direction: "mute", target: "spotify" }
+
+    // Restore the pre-duck volume.
+    if (spotifyDuckedFrom === null) return { ok: true, restored: false }
+    const restore = spotifyDuckedFrom
+    spotifyDuckedFrom = null
+    await uia.setAppVolume(SPOTIFY_PROCESS, restore)
+    return { ok: true, restored: Math.round(restore * 100) }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : String(e) }
   }
-  const key = direction === "up" ? "Ctrl+Up" : "Ctrl+Down"
-  const count = Math.max(1, Math.min(Math.round(steps), 20))
-  for (let i = 0; i < count; i++) {
-    await uia.call("press_key", { keys: key })
-    await Bun.sleep(50)
-  }
-  return { ok: true, direction, steps: count, target: "spotify" }
 }
 
 function normalizeRecipient(text: string): string {
@@ -359,6 +455,16 @@ function normalizeRecipient(text: string): string {
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim()
+}
+
+function normalizeSpokenWhatsAppRecipient(text: string): string {
+  const trimmed = text.replace(/^\s*(?:my|the|a|an)\s+/i, "").replace(/[.?!,]+$/g, "").trim()
+  if (/^(?:me|myself|self|you|message\s*myself|send\s*to\s*myself)$/i.test(trimmed)) return "you"
+  const parts = trimmed.split(/\s+/).filter(Boolean)
+  if (parts.length <= 1) return trimmed
+  const relation =
+    /^(?:mom|mum|mother|mummy|ma|dad|father|papa|brother|sister|wife|husband|partner|friend)$/i
+  return relation.test(parts[0] ?? "") ? parts.slice(1).join(" ") : trimmed
 }
 
 function findWhatsAppChat(elements: UiaElement[], recipient: string): UiaElement | null {
@@ -376,7 +482,10 @@ function findWhatsAppChat(elements: UiaElement[], recipient: string): UiaElement
     })
     .map((el) => {
       const name = normalizeRecipient(el.name)
-      let score = 0
+      // The name (or self) MUST match — otherwise this row is not a candidate at all. The role/size
+      // bonuses are only tie-breakers between rows that already matched the name (else any chat row
+      // would "match" an unknown name and we'd message the wrong person).
+      let nameScore = 0
       if (
         wantsSelf &&
         (name.includes(" you ") ||
@@ -384,9 +493,10 @@ function findWhatsAppChat(elements: UiaElement[], recipient: string): UiaElement
           name.includes("message yourself") ||
           name.includes("(you)"))
       )
-        score += 20
-      if (wantsSelf && /\b98323\b/.test(name)) score += 8
-      for (const token of targetTokens) if (name.includes(token)) score += 4
+        nameScore += 20
+      for (const token of targetTokens) if (token.length >= 2 && name.includes(token)) nameScore += 4
+      if (nameScore === 0) return { el, score: 0 }
+      let score = nameScore
       if (el.role === "DataItem") score += 3
       if (el.rect.width > 180) score += 2
       return { el, score }
@@ -454,194 +564,371 @@ function findWhatsAppComposer(elements: UiaElement[]): UiaElement | null {
   )
 }
 
-function findWhatsAppSendButton(
-  elements: UiaElement[],
-  composer?: UiaElement | null,
-): UiaElement | null {
+// The Send button sits at the far bottom-right of the composer (appears once there's text). Prefer an
+// exact "Send" over "Send document"/"Send feedback", and the right-most/bottom-most candidate.
+function findWhatsAppSendButton(elements: UiaElement[]): UiaElement | null {
   const root = elements[0]
   if (!root) return null
-  const composerY = composer?.rect.y ?? root.rect.y + root.rect.height - 70
+  const candidates = elements.filter(
+    (el) =>
+      el.enabled &&
+      visibleElement(el) &&
+      el.role === "Button" &&
+      /\bsend\b/i.test(el.name) &&
+      !/document|photo|file|feedback|sticker|gif/i.test(el.name) &&
+      el.rect.x > root.rect.x + root.rect.width * 0.5 &&
+      el.rect.y > root.rect.y + root.rect.height * 0.6,
+  )
   return (
-    elements
-      .filter((el) => {
-        if (!el.enabled || !visibleElement(el) || el.role !== "Button") return false
-        if (!/\bsend\b/i.test(el.name)) return false
-        return (
-          el.rect.x > root.rect.x + root.rect.width * 0.55 && Math.abs(el.rect.y - composerY) < 90
-        )
-      })
-      .sort(
-        (a, b) =>
-          Math.abs(a.rect.y - composerY) - Math.abs(b.rect.y - composerY) || b.rect.x - a.rect.x,
-      )[0] ?? null
+    candidates.sort(
+      (a, b) =>
+        (/^send$/i.test(b.name) ? 1 : 0) - (/^send$/i.test(a.name) ? 1 : 0) ||
+        b.rect.x - a.rect.x ||
+        b.rect.y - a.rect.y,
+    )[0] ?? null
   )
 }
 
-export async function sendWhatsAppMessage(recipient: string, message: string): Promise<unknown> {
+// True if the WhatsApp composer still holds `text` — i.e. the send didn't go through.
+async function whatsAppComposerStillHasText(hwnd: number, text: string): Promise<boolean> {
+  const value = await whatsAppComposerText(hwnd)
+  return normalizeRecipient(value).includes(normalizeRecipient(text))
+}
+
+async function whatsAppComposerText(hwnd: number): Promise<string> {
+  const snap = await uia
+    .getUiTree({ maxNodes: 1500, maxDepth: 80, hwnd, lite: true })
+    .catch(() => ({ window: "", elements: [] as UiaElement[] }))
+  const composer = findWhatsAppComposer(snap.elements)
+  return composer?.value ?? composer?.name ?? ""
+}
+
+async function typeWhatsAppComposer(
+  hwnd: number,
+  text: string,
+  composer: UiaElement | null,
+  point: { x: number; y: number } | null,
+): Promise<{ ok: boolean; point: { x: number; y: number } | null }> {
+  let targetPoint = point
+  if (composer) {
+    targetPoint = {
+      x: Math.round(composer.rect.x + composer.rect.width / 2),
+      y: Math.round(composer.rect.y + composer.rect.height / 2),
+    }
+  }
+  if (targetPoint) {
+    await uia.call("click_point", { ...targetPoint, button: "left" }).catch(() => null)
+    await Bun.sleep(500)
+    await uia.call("type_text", { text }).catch(() => null)
+  }
+  await Bun.sleep(250)
+  if (await whatsAppComposerStillHasText(hwnd, text)) return { ok: true, point: targetPoint }
+
+  const snap = await uia.getUiTree({ maxNodes: 1500, maxDepth: 80, hwnd, lite: true }).catch(() => ({
+    window: "",
+    elements: [] as UiaElement[],
+  }))
+  const freshComposer = findWhatsAppComposer(snap.elements)
+  const freshPoint = freshComposer
+    ? {
+        x: Math.round(freshComposer.rect.x + freshComposer.rect.width / 2),
+        y: Math.round(freshComposer.rect.y + freshComposer.rect.height / 2),
+      }
+    : composerPoint(snap.elements)
+  if (!freshPoint) return { ok: false, point: targetPoint }
+
+  await uia.call("click_point", { ...freshPoint, button: "left" }).catch(() => null)
+  await Bun.sleep(200)
+  await uia.call("type_text", { text }).catch(() => null)
+  await Bun.sleep(250)
+  if (await whatsAppComposerStillHasText(hwnd, text)) return { ok: true, point: freshPoint }
+
+  if (freshComposer) {
+    await uia.call("set_value", { ref: freshComposer.ref, text }).catch(() => null)
+    await Bun.sleep(250)
+    if (await whatsAppComposerStillHasText(hwnd, text)) return { ok: true, point: freshPoint }
+  }
+  return { ok: false, point: freshPoint }
+}
+
+async function clearWhatsAppComposer(point: { x: number; y: number } | null): Promise<void> {
+  if (point) {
+    await uia.call("click_point", { ...point, button: "left" }).catch(() => null)
+    await Bun.sleep(150)
+  }
+  await uia.call("press_key", { keys: "Ctrl+A" }).catch(() => null)
+  await Bun.sleep(80)
+  await uia.call("press_key", { keys: "Delete" }).catch(() => null)
+}
+
+async function openWhatsAppChat(hwnd: number, chat: UiaElement): Promise<boolean> {
+  const point = {
+    x: Math.round(chat.rect.x + chat.rect.width / 2),
+    y: Math.round(chat.rect.y + chat.rect.height / 2),
+  }
+  await uia.call("click_point", { ...point, button: "left" }).catch(() => null)
+  await Bun.sleep(250)
+  await uia.call("click_point", { ...point, button: "left" }).catch(() => null)
+  for (let i = 0; i < 6; i++) {
+    await Bun.sleep(250)
+    const snap = await uia
+      .getUiTree({ maxNodes: 1500, maxDepth: 80, hwnd, lite: true })
+      .catch(() => ({ window: "", elements: [] as UiaElement[] }))
+    if (findWhatsAppComposer(snap.elements)) return true
+  }
+  return false
+}
+
+// Resolve WhatsApp's window fast (it's usually already running); only pay the slow launch when it
+// has no window (closed or minimized to the tray).
+async function resolveWhatsAppWindow(): Promise<number | null> {
+  let hwnd =
+    (await uia.findWindow({ process: "WhatsApp.Root" })) ??
+    (await uia.findWindow({ process: "WhatsApp" })) ??
+    (await uia.findWindow({ titleContains: "WhatsApp" }))
+  if (hwnd) return hwnd
+  const launched = await launchWindowsApp("WhatsApp", 1500)
+  if ("error" in launched) return null
+  for (let i = 0; i < 12 && !hwnd; i++) {
+    await Bun.sleep(400)
+    hwnd =
+      (await uia.findWindow({ process: "WhatsApp.Root" })) ??
+      (await uia.findWindow({ process: "WhatsApp" })) ??
+      (await uia.findWindow({ titleContains: "WhatsApp" }))
+  }
+  return hwnd
+}
+
+async function clearWhatsAppField(el: UiaElement | null): Promise<void> {
+  if (el) {
+    await uia.call("set_value", { ref: el.ref, text: "" }).catch(() => null)
+    await Bun.sleep(150)
+    await clickElementOrPoint(el)
+  }
+  await uia.call("press_key", { keys: "Ctrl+A" }).catch(() => null)
+  await uia.call("press_key", { keys: "Delete" }).catch(() => null)
+  await uia.call("press_key", { keys: "Backspace" }).catch(() => null)
+}
+
+// Open the recipient's chat, type the message, send it, then verify the composer cleared.
+export async function sendWhatsAppMessage(
+  recipient: string,
+  message: string,
+  opts: { background?: boolean; signal?: AbortSignal } = {},
+): Promise<unknown> {
   if (platform() !== "win32") return { error: "WhatsApp automation is only supported on Windows." }
-  const to = recipient.trim()
+  if (opts.background) {
+    const result = await runWithFocusShuttle(
+      () => sendWhatsAppMessage(recipient, message, { signal: opts.signal }),
+      opts.signal,
+    )
+    return typeof result === "object" && result !== null && !("error" in result)
+      ? { ...result, foregroundedFallback: true }
+      : result
+  }
+  const to = normalizeSpokenWhatsAppRecipient(recipient)
   const text = message.trim()
   if (!to) return { error: "recipient required" }
   if (!text) return { error: "message required" }
 
   try {
-    const launched = await launchWindowsApp("WhatsApp", 1800)
-    if ("error" in launched) return launched
-    const targetWindow = await requireWindowsAppWindow("WhatsApp")
-    if ("error" in targetWindow) return targetWindow
-    const hwnd = targetWindow.hwnd
-
-    let snap = await uia.getUiTree({ maxNodes: 1200, maxDepth: 55, hwnd })
-    const search = findWhatsAppSearch(snap.elements)
-    if (search) {
-      await clickElementOrPoint(search)
-      await Bun.sleep(150)
-      await uia.call("set_value", { ref: search.ref, text: "" }).catch(() => null)
-      await uia.call("press_key", { keys: "Ctrl+A" })
-      await uia.call("press_key", { keys: "Backspace" })
-      await Bun.sleep(450)
-    }
-
-    snap = await uia.getUiTree({ maxNodes: 1200, maxDepth: 55, hwnd })
-    let chat = findWhatsAppChat(snap.elements, to)
-    if (!chat && search) {
-      await clickElementOrPoint(search)
-      await Bun.sleep(150)
-      await uia.call("type_text", { text: to })
-      await Bun.sleep(700)
-      snap = await uia.getUiTree({ maxNodes: 1200, maxDepth: 55, hwnd })
-      chat = findWhatsAppChat(snap.elements, to)
-    }
-    if (!chat) return { error: `Could not find WhatsApp chat for "${to}".` }
-
-    await activateWindowsApp("WhatsApp")
-    await clickElementOrPoint(chat)
-    emitActResult(true, chat.name || to)
-    await Bun.sleep(900)
-
-    await activateWindowsApp("WhatsApp")
-    const openChat = await uia.getUiTree({ maxNodes: 2000, maxDepth: 80, hwnd })
-    const composer = findWhatsAppComposer(openChat.elements)
-    const point = composer ? null : composerPoint(openChat.elements)
-    if (composer) {
-      await uia.call("type_text", { ref: composer.ref, text })
-    } else if (point) {
-      await uia.call("click_point", { ...point, button: "left" })
-      await Bun.sleep(180)
-      await uia.call("type_text", { text })
-    } else {
-      return { error: "Could not locate WhatsApp message composer." }
-    }
+    if (opts.signal?.aborted) return { error: "superseded" }
+    const hwnd = await resolveWhatsAppWindow()
+    if (!hwnd) return { error: "Could not open WhatsApp." }
+    await uia.maximizeWindow(hwnd).catch(() => null) // full window — more reliable + what the user wants
+    await uia.setForeground(hwnd).catch(() => null)
     await Bun.sleep(350)
 
-    await activateWindowsApp("WhatsApp")
-    const typedSnap = await uia.getUiTree({ maxNodes: 2000, maxDepth: 80, hwnd })
-    const typedComposer = findWhatsAppComposer(typedSnap.elements) ?? composer
-    const sendButton = findWhatsAppSendButton(typedSnap.elements, typedComposer)
-    if (sendButton) {
-      await clickElementOrPoint(sendButton)
-      emitActResult(true, sendButton.name || `sent WhatsApp message to ${to}`)
-    } else {
-      await uia.call("press_key", { keys: "Enter" })
-    }
-    await Bun.sleep(600)
+    // WhatsApp's "Message Yourself" chat is labelled "(You)", so for self search "you" — searching
+    // "myself" matches any chat whose message preview merely contains that word.
+    const isSelf = /^(?:myself|me|self|i|you|message\s*myself|msg\s*myself)$/i.test(to)
+    const searchTerm = isSelf ? "you" : to
 
-    const afterSend = await uia.getUiTree({ maxNodes: 2000, maxDepth: 80, hwnd })
-    const afterComposer = findWhatsAppComposer(afterSend.elements)
-    const stillContainsText = normalizeRecipient(
-      afterComposer?.value ?? afterComposer?.name ?? "",
-    ).includes(normalizeRecipient(text))
-    if (stillContainsText) {
+    // All WhatsApp snapshots use lite mode — the finders only need role/name/rect/enabled/value, and
+    // WhatsApp's tree is large enough that the per-node pattern reads otherwise cost seconds each.
+    const tree = (maxNodes: number) =>
+      uia.getUiTree({ maxNodes, maxDepth: 80, hwnd, lite: true }).catch(() => ({
+        window: "",
+        elements: [] as UiaElement[],
+      }))
+
+    // Search for the contact and open the top matching chat.
+    let snap = await tree(800)
+    const search = findWhatsAppSearch(snap.elements)
+    if (!search) return { error: "Could not find WhatsApp's search box." }
+    await clickElementOrPoint(search)
+    await Bun.sleep(120)
+    await clearWhatsAppField(search)
+    await uia.call("type_text", { text: searchTerm })
+    await Bun.sleep(550)
+
+    snap = await tree(800)
+    // Only act on a confidently name-matched chat. For self that's the "(You)" chat. If we can't find
+    // a match, ASK the user instead of guessing/blasting the wrong contact.
+    const chat = isSelf
+      ? findWhatsAppChat(snap.elements, "you")
+      : findWhatsAppChat(snap.elements, to)
+    if (!chat) {
       return {
-        error: "WhatsApp message appears to still be in the composer; send did not complete.",
+        error: isSelf
+          ? "I couldn't find your own (You) chat on WhatsApp."
+          : `I couldn't find a WhatsApp chat for "${to}". Who should I message?`,
       }
     }
-    emitActResult(true, `sent WhatsApp message to ${to}`)
-    return {
-      ok: true,
-      recipient: to,
-      message: text,
-      chat: chat.name,
-      composer: typedComposer?.name,
-      submit: sendButton?.name ?? "Enter",
+    const chatName = chat.name || to
+    const opened = await openWhatsAppChat(hwnd, chat)
+    if (!opened) {
+      emitActResult(false, chatName, "chat did not open")
+      return { error: `I found ${chatName}, but WhatsApp did not open its message box.` }
     }
+    if (opts.signal?.aborted) return { error: "superseded" }
+
+    // Type the message into the composer.
+    snap = await tree(1500)
+    const composer = findWhatsAppComposer(snap.elements)
+    let composerClickPoint: { x: number; y: number } | null = null
+    const typed = await typeWhatsAppComposer(hwnd, text, composer, composerPoint(snap.elements))
+    composerClickPoint = typed.point
+    if (!typed.ok) {
+      emitActResult(false, chatName, "typing failed")
+      return {
+        error: `I opened ${chatName}, but the message text did not land in the WhatsApp message box.`,
+      }
+    }
+
+    const approved = await requestConfirmation(
+      composerClickPoint
+        ? { kind: "click_point", ...composerClickPoint, button: "left" }
+        : { kind: "click_point", x: 0, y: 0, button: "left" },
+      `Send "${text}" to ${chatName}`,
+      "sending a message",
+    )
+    if (!approved) {
+      await clearWhatsAppComposer(composerClickPoint)
+      emitActResult(false, chatName, "not confirmed")
+      return { ok: false, requiresConfirmation: true, label: chatName, reason: "not confirmed" }
+    }
+
+    // After confirmation, click the Send button; verify the message left the box and fall back to
+    // Enter, then verify again.
+    const sendSnap = await tree(1500)
+    const sendButton = findWhatsAppSendButton(sendSnap.elements)
+    if (sendButton) {
+      await uia.call("click_point", {
+        x: Math.round(sendButton.rect.x + sendButton.rect.width / 2),
+        y: Math.round(sendButton.rect.y + sendButton.rect.height / 2),
+        button: "left",
+      })
+      await Bun.sleep(400)
+    }
+
+    // If the button didn't take (or wasn't found), re-focus the composer and press Enter.
+    let stillTyped = await whatsAppComposerStillHasText(hwnd, text)
+    if (stillTyped) {
+      await uia.setForeground(hwnd).catch(() => null)
+      if (composerClickPoint)
+        await uia.call("click_point", { ...composerClickPoint, button: "left" }).catch(() => null)
+      await Bun.sleep(150)
+      await uia.call("press_key", { keys: "Enter" })
+      await Bun.sleep(400)
+      stillTyped = await whatsAppComposerStillHasText(hwnd, text)
+    }
+
+    if (stillTyped) {
+      emitActResult(false, chatName, "send failed")
+      return {
+        error: `I typed "${text}" into ${chatName} but couldn't get it to send — it's ready in the box for you to send.`,
+      }
+    }
+    emitActResult(true, `sent to ${chatName}`)
+    return { ok: true, recipient: to, chat: chatName, message: text }
   } catch (e) {
     return { error: e instanceof Error ? e.message : String(e) }
   }
 }
 
-export async function playSpotify(query: string): Promise<unknown> {
+export async function playSpotify(
+  query: string,
+  opts: { background?: boolean; signal?: AbortSignal } = {},
+): Promise<unknown> {
   if (platform() !== "win32") return { error: "Spotify automation is only supported on Windows." }
   const parsed = parseSpotifyQuery(query)
   if (!parsed.searchText) return { error: "spotify search query required" }
+  // No true-background route for "play a specific song" (WebView2 + typed search), so focus-shuttle
+  // and flag the brief foreground so the pipeline can tell the user.
+  if (opts.background) {
+    const result = await runWithFocusShuttle(() => playSpotifyForeground(parsed, opts.signal), opts.signal)
+    return typeof result === "object" && result !== null && !("error" in result)
+      ? { ...result, foregroundedFallback: true }
+      : result
+  }
+  return playSpotifyForeground(parsed, opts.signal)
+}
+
+async function playSpotifyForeground(parsed: SpotifyQuery, signal?: AbortSignal): Promise<unknown> {
   try {
-    const launched = await launchWindowsApp("Spotify", 2500)
-    if ("error" in launched) return launched
+    // Fast path when Spotify is already running: foreground it via the helper (~200ms) instead of
+    // launchWindowsApp, whose Get-StartApps + AppActivate PowerShell takes ~5s. Match by PROCESS name
+    // — when a song is playing the window title is the song, not "Spotify". Cold start still launches.
+    let hwnd = await uia.findWindow({ process: "Spotify" })
+    if (hwnd) {
+      await uia.setForeground(hwnd).catch(() => {})
+      await Bun.sleep(150)
+    } else {
+      const launched = await launchWindowsApp("Spotify", 2200)
+      if ("error" in launched) return launched
+      hwnd = await uia.findWindow({ process: "Spotify" })
+    }
 
     await uia.call("press_key", { keys: "Ctrl+L" })
-    await Bun.sleep(350)
+    await Bun.sleep(150)
     await uia.call("type_text", { text: parsed.searchText })
-    await Bun.sleep(250)
+    await Bun.sleep(120)
     await uia.call("press_key", { keys: "Enter" })
-    await Bun.sleep(1500)
+    await Bun.sleep(500)
 
-    // Spotify is slow on a cold start — poll until the search results render instead of bailing after
-    // one snapshot (that one-shot wait is why the first "play X" only opened the app and didn't play).
-    let snap = await uia.getUiTree({ maxNodes: 1200, maxDepth: 55 })
+    // Poll until the search results render — i.e. any content Play button appears. We do NOT wait for
+    // an exact title match: song titles rarely match the spoken query letter-for-letter, and waiting
+    // for a token match is what made "play nadaniya" spin for 8 retries and then refuse.
+    const emptySnap = { window: "", elements: [] as UiaElement[] }
+    // A transient UIA error during one snapshot shouldn't kill the whole flow — default to empty and
+    // let the next poll iteration try again.
+    const snapshot = () =>
+      uia.getUiTree({ maxNodes: 800, maxDepth: 55, hwnd: hwnd ?? undefined }).catch(() => emptySnap)
+
+    let snap = await snapshot()
     let row = findSpotifyResultRow(snap.elements, parsed)
-    for (let i = 0; i < 8 && !row; i++) {
-      await Bun.sleep(700)
-      snap = await uia.getUiTree({ maxNodes: 1200, maxDepth: 55 })
+    let topPlay = findTopContentPlay(snap.elements)
+    for (let i = 0; i < 8 && !row && !topPlay; i++) {
+      if (signal?.aborted) return { error: "superseded" }
+      await Bun.sleep(300)
+      snap = await snapshot()
       row = findSpotifyResultRow(snap.elements, parsed)
+      topPlay = findTopContentPlay(snap.elements)
     }
-    if (!row) {
+
+    // Prefer the Play button next to the best token-matched row; otherwise play the top result.
+    const target = (row && findPlayNearRow(snap.elements, row.y)) || topPlay
+    if (!target) {
       return {
-        error: `Spotify searched for "${parsed.searchText}", but no matching result was exposed. Refusing to play a different song.`,
+        error: `Spotify searched for "${parsed.searchText}" but didn't show a playable result.`,
       }
     }
 
-    const rowPlay = findPlayNearRow(snap.elements, row.y)
-    if (rowPlay) {
-      const result = await uia.call("click_element", { ref: rowPlay.ref })
-      emitActResult(true, rowPlay.name || row.label || "Spotify Play")
-      return { ok: true, query: parsed.original, matched: row.label, clicked: rowPlay.name, result }
-    }
-
-    const candidates = snap.elements
-      .filter((el) => el.enabled && visibleElement(el) && el.role === "Button")
-      .map((el) => ({ el, score: scoreSpotifyPlayButton(el.name, parsed.searchText) }))
-      .filter(({ score }) => score > 10)
-      .sort((a, b) => b.score - a.score || a.el.rect.y - b.el.rect.y || a.el.rect.x - b.el.rect.x)
-
-    const target = candidates[0]?.el
-    if (target) {
-      const result = await uia.call("click_element", { ref: target.ref })
-      emitActResult(true, target.name || "Spotify Play")
-      return { ok: true, query: parsed.original, matched: row.label, clicked: target.name, result }
-    }
-
-    // Open the matched row/card, then look for a Play button on its page/card. Never press Space.
-    await uia.call("click_element", { ref: row.element.ref })
-    await Bun.sleep(900)
-    const after = await uia.getUiTree({ maxNodes: 800, maxDepth: 45 })
-    const afterRow = findSpotifyResultRow(after.elements, parsed)
-    const afterPlay = findPlayNearRow(after.elements, afterRow?.y ?? row.y)
-
-    if (!afterPlay) {
-      return {
-        error: `Spotify matched "${row.label}", but no Play button for that result was exposed. Refusing to play a different song.`,
-      }
-    }
-
-    const result = await uia.call("click_element", { ref: afterPlay.ref })
-    emitActResult(true, afterPlay.name || row.label || "Spotify Play")
-    return { ok: true, query: parsed.original, matched: row.label, clicked: afterPlay.name, result }
+    const result = await clickSpotify(target)
+    if (actFailed(result)) return result
+    const label = row?.label ?? "top result"
+    emitActResult(true, target.name || label || "Spotify Play")
+    return { ok: true, query: parsed.original, matched: label, clicked: target.name, result }
   } catch (e) {
     return { error: e instanceof Error ? e.message : String(e) }
   }
 }
 
-export function createSystemTools(ctx: { screenshotB64?: string }) {
+export function createSystemTools(ctx: { screenshotB64?: string; background?: boolean }) {
+  // In background mode, wrap real-input actions in a focus-shuttle so the user's window is restored.
+  const shuttle = <T>(fn: () => Promise<T>): Promise<T> =>
+    ctx.background ? runWithFocusShuttle(fn) : fn()
   return {
     look_at_screen: tool({
       description: "Get a screenshot of the user's current screen. Returns base64-encoded PNG.",
@@ -771,7 +1058,7 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
         required: ["ref"],
       }),
       execute: async ({ ref }) =>
-        guardedAct({ kind: "invoke", ref }, (r) => uia.call("click_element", { ref: r })),
+        shuttle(() => guardedAct({ kind: "invoke", ref }, (r) => uia.call("click_element", { ref: r }))),
     }),
 
     type_text: tool({
@@ -792,7 +1079,7 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
         const blocked = blockedGuard()
         if (blocked) return blocked
         try {
-          return await uia.call("type_text", ref ? { text, ref } : { text })
+          return await shuttle(() => uia.call("type_text", ref ? { text, ref } : { text }))
         } catch (e) {
           return { error: e instanceof Error ? e.message : String(e) }
         }
@@ -813,11 +1100,29 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
         const blocked = blockedGuard()
         if (blocked) return blocked
         try {
-          return await uia.call("press_key", { keys })
+          return await shuttle(() => uia.call("press_key", { keys }))
         } catch (e) {
           return { error: e instanceof Error ? e.message : String(e) }
         }
       },
+    }),
+
+    control_spotify: tool({
+      description:
+        "Control Spotify playback in the background via media keys (no window focus needed). " +
+        'Use for "pause/resume/play/stop", "next/skip song", "previous song" — especially when the user says "in the background".',
+      parameters: jsonSchema<{ action: SpotifyControl }>({
+        type: "object",
+        properties: {
+          action: {
+            type: "string",
+            enum: ["pause", "resume", "play_pause", "next", "previous", "stop"],
+            description: "Transport action",
+          },
+        },
+        required: ["action"],
+      }),
+      execute: async ({ action }) => controlSpotifyPlayback(action),
     }),
 
     adjust_volume: tool({
@@ -854,7 +1159,8 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
         },
         required: ["direction"],
       }),
-      execute: async ({ direction, steps }) => adjustSpotifyVolume(direction, steps),
+      execute: async ({ direction, steps }) =>
+        adjustSpotifyVolume(direction, steps, { background: ctx.background }),
     }),
 
     play_spotify: tool({
@@ -871,7 +1177,7 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
         required: ["query"],
       }),
       execute: async ({ query }) => {
-        return playSpotify(query)
+        return playSpotify(query, { background: ctx.background })
       },
     }),
 
@@ -890,7 +1196,8 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
         },
         required: ["recipient", "message"],
       }),
-      execute: async ({ recipient, message }) => sendWhatsAppMessage(recipient, message),
+      execute: async ({ recipient, message }) =>
+        sendWhatsAppMessage(recipient, message, { background: ctx.background }),
     }),
 
     launch_app: tool({
@@ -953,7 +1260,7 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
         if (px === undefined || py === undefined)
           return { error: "no point to click — call point_cursor first or pass x,y" }
         try {
-          return await uia.call("click_point", { x: px, y: py, button })
+          return await shuttle(() => uia.call("click_point", { x: px, y: py, button }))
         } catch (e) {
           return { error: e instanceof Error ? e.message : String(e) }
         }

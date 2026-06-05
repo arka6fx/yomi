@@ -1,5 +1,16 @@
 const ELEVENLABS_STT_URL = "https://api.elevenlabs.io/v1/speech-to-text"
 
+export class ElevenLabsSttError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly body?: string,
+  ) {
+    super(message)
+    this.name = "ElevenLabsSttError"
+  }
+}
+
 export interface ElevenLabsSttResponse {
   text: string
   language_code?: string
@@ -36,7 +47,7 @@ export async function elevenLabsTranscribe(
 
   if (!res.ok) {
     const body = await res.text().catch(() => res.statusText)
-    throw new Error(`ElevenLabs STT error ${res.status}: ${body}`)
+    throw new ElevenLabsSttError(`ElevenLabs STT error ${res.status}`, res.status, body)
   }
 
   return res.json() as Promise<ElevenLabsSttResponse>
