@@ -1,6 +1,7 @@
 import {
   app,
   BrowserWindow,
+  clipboard,
   desktopCapturer,
   globalShortcut,
   ipcMain,
@@ -34,30 +35,32 @@ let overlayWin: BrowserWindow | null = null
 let sidecarStarted = false // Sidecar + IPC + hotkeys initialised (once ever)
 let overlayHitRegions: { x: number; y: number; width: number; height: number }[] = []
 let overlayIgnoringMouse = false
-let companionOverlay = false
-const COMPACT_OVERLAY_W = 780
+const COMPACT_OVERLAY_W = 880
+const MIN_OVERLAY_H = 96
 
-function compactOverlayBounds(height = 40): Rectangle {
-  const { x, y, width } = screen.getPrimaryDisplay().workArea
+function compactOverlayBounds(height = MIN_OVERLAY_H): Rectangle {
+  const { x, y, width, height: workHeight } = screen.getPrimaryDisplay().workArea
+  const nextHeight = Math.min(Math.max(height, MIN_OVERLAY_H), Math.max(MIN_OVERLAY_H, workHeight - 16))
   return {
     x: x + Math.round((width - COMPACT_OVERLAY_W) / 2),
     y: y + 8,
     width: COMPACT_OVERLAY_W,
-    height,
+    height: nextHeight,
   }
 }
 
-function companionOverlayBounds(): Rectangle {
-  return screen.getPrimaryDisplay().workArea
-}
-
-function setCompanionOverlay(enabled: boolean): void {
-  if (!overlayWin || overlayWin.isDestroyed() || companionOverlay === enabled) return
-  companionOverlay = enabled
-  overlayWin.setResizable(true)
-  overlayWin.setBounds(enabled ? companionOverlayBounds() : compactOverlayBounds(40), false)
-  overlayWin.setResizable(false)
-  updateOverlayMousePassthrough()
+function resizeOverlay(w: number, h: number): void {
+  if (!overlayWin || overlayWin.isDestroyed()) return
+  const workArea = screen.getDisplayMatching(overlayWin.getBounds()).workArea
+  const nextWidth = Math.min(Math.max(240, Math.round(w)), Math.max(240, workArea.width))
+  const nextHeight = Math.min(
+    Math.max(MIN_OVERLAY_H, Math.round(h)),
+    Math.max(MIN_OVERLAY_H, workArea.height - 16),
+  )
+  const current = overlayWin.getBounds()
+  const x = Math.min(Math.max(current.x, workArea.x), workArea.x + workArea.width - nextWidth)
+  const y = Math.min(Math.max(current.y, workArea.y), workArea.y + workArea.height - nextHeight)
+  overlayWin.setBounds({ x, y, width: nextWidth, height: nextHeight }, false)
 }
 
 function setOverlayMouseIgnored(ignored: boolean): void {
@@ -70,7 +73,7 @@ function setOverlayMouseIgnored(ignored: boolean): void {
 function updateOverlayMousePassthrough(): void {
   if (!overlayWin || overlayWin.isDestroyed() || !overlayWin.isVisible()) return
   if (overlayHitRegions.length === 0) {
-    setOverlayMouseIgnored(companionOverlay)
+    setOverlayMouseIgnored(false)
     return
   }
   const cursor = screen.getCursorScreenPoint()
@@ -162,13 +165,7 @@ app.whenReady().then(async () => {
   })
 
   ipcMain.on("yomi:resize", (_e, w: number, h: number) => {
-    if (!overlayWin) return
-    if (companionOverlay) return
-    overlayWin.setSize(Math.max(240, w), Math.max(40, h))
-  })
-
-  ipcMain.on("yomi:set-companion-overlay", (_e, enabled: boolean) => {
-    setCompanionOverlay(enabled)
+    resizeOverlay(w, h)
   })
 
   ipcMain.on("yomi:set-ignore-mouse-events", (_e, ignored: boolean) => {
@@ -196,6 +193,11 @@ app.whenReady().then(async () => {
   ipcMain.on("yomi:nudge", (_e, dx: number, dy: number) => {
     const [x, y] = overlayWin?.getPosition() ?? [0, 0]
     overlayWin?.setPosition((x ?? 0) + dx, (y ?? 0) + dy)
+  })
+
+  ipcMain.handle("yomi:copy-text", async (_e, text: string) => {
+    clipboard.writeText(String(text ?? ""))
+    return { ok: true }
   })
 
   // ── Auth IPC ────────────────────────────────────────────────────────────────

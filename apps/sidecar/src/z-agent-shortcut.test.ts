@@ -8,10 +8,10 @@ import { closeMemorySubsystem } from "./memory/subsystem.js"
 
 const sessionTurns: unknown[] = []
 const spotifyQueries: string[] = []
-const spotifyBackground: (boolean | undefined)[] = []
 const controlActions: string[] = []
 const whatsAppSends: { recipient: string; message: string }[] = []
 const notepadWrites: string[] = []
+const notepadSaves: string[] = []
 let tempDir = ""
 
 const fakeHooks: Hooks = {
@@ -30,14 +30,17 @@ const fakeSystem = {
     controlActions.push(action)
     return { ok: true, action, target: "spotify" }
   },
-  playSpotify: async (query: string, opts: { background?: boolean } = {}) => {
+  playSpotify: async (query: string) => {
     spotifyQueries.push(query)
-    spotifyBackground.push(opts.background)
-    return opts.background ? { ok: true, foregroundedFallback: true } : { ok: true }
+    return { ok: true }
   },
   sendWhatsAppMessage: async (recipient: string, message: string) => {
     whatsAppSends.push({ recipient, message })
     return { ok: true }
+  },
+  saveWindowsNotepadAs: async (path: string) => {
+    notepadSaves.push(path)
+    return { ok: true as const, app: "Notepad" as const, path }
   },
   writeWindowsNotepad: async (text: string) => {
     notepadWrites.push(text)
@@ -62,10 +65,10 @@ describe("agent shortcut memory", () => {
   beforeEach(async () => {
     sessionTurns.length = 0
     spotifyQueries.length = 0
-    spotifyBackground.length = 0
     controlActions.length = 0
     whatsAppSends.length = 0
     notepadWrites.length = 0
+    notepadSaves.length = 0
     __resetAgentShortcutStateForTest()
     tempDir = await mkdtemp(join(tmpdir(), "yomi-agent-shortcut-"))
     process.env["YOMI_NOTEPAD_DIR"] = tempDir
@@ -141,21 +144,26 @@ describe("agent shortcut memory", () => {
     expect(spotifyQueries).toEqual(["despacito"])
   })
 
-  it("strips the background phrase and passes background to play_spotify", async () => {
+  it("keeps song and artist text as a Spotify query", async () => {
+    await drain({ text: "play Stay Justin Bieber", plan: "max" })
+    expect(controlActions).toEqual([])
+    expect(spotifyQueries).toEqual(["Stay Justin Bieber"])
+  })
+
+  it("strips background phrasing without detaching Spotify playback", async () => {
     await drain({ text: "play Stay by Kid Laroi in the background", plan: "max" })
     expect(spotifyQueries).toEqual(["Stay by Kid Laroi"])
-    expect(spotifyBackground).toEqual([true])
     expect(sessionTurns).toContainEqual({
       kind: "agent",
       input: "play Stay by Kid Laroi in the background",
-      output: "Playing Stay by Kid Laroi on Spotify — I brought it up for a moment to start it.",
-      summary: "Playing Stay by Kid Laroi on Spotify — I brought it up for a moment to start it.",
+      output: "Playing Stay by Kid Laroi on Spotify.",
+      summary: "Playing Stay by Kid Laroi on Spotify.",
     })
   })
 
-  it("leaves normal (foreground) Spotify requests unflagged", async () => {
+  it("routes normal Spotify requests through the foreground playback helper", async () => {
     await drain({ text: "play rain sounds on spotify", plan: "max" })
-    expect(spotifyBackground).toEqual([false])
+    expect(spotifyQueries).toEqual(["rain sounds"])
   })
 
   it("skips the action and emits no error when the request is already aborted", async () => {
@@ -228,6 +236,19 @@ describe("agent shortcut memory", () => {
       input: "write buy milk in notepad and save it",
       output: "I wrote it in Windows Notepad. Where should I save the file, and what should I name it?",
       summary: "I wrote it in Windows Notepad. Where should I save the file, and what should I name it?",
+    })
+  })
+
+  it("writes and saves a Notepad draft when a destination is given directly", async () => {
+    await drain({ text: "save this notepad file to desktop as yomi-automation-smoke", plan: "max" })
+
+    expect(notepadWrites).toEqual([])
+    expect(notepadSaves).toEqual(["desktop as yomi-automation-smoke"])
+    expect(sessionTurns).toContainEqual({
+      kind: "agent",
+      input: "save this notepad file to desktop as yomi-automation-smoke",
+      output: expect.stringContaining("I saved the Notepad file to"),
+      summary: expect.stringContaining("I saved the Notepad file to"),
     })
   })
 

@@ -8,9 +8,11 @@ streams its progress to the desktop. This is the implementation of the agent
 path described in Spec 08, evolved onto **LangGraph** with a typed provider/
 sub-agent layer and a learning store.
 
-Chat, overlay, screen-Q&A, and code-gen are **unchanged** — they stay on the
-fast path (Spec 02) and never enter the graph. Only automation requests (the
-intent router's `agent` decision, Spec 07) run through the AutomationGraph.
+Chat, screen-Q&A, and code-gen are **unchanged** — they stay on the fast path
+(Spec 02) and never enter the graph. Only automation requests (the intent
+router's `agent` decision, Spec 07) run through the AutomationGraph. Automation
+is foreground-specific and reports through Mission Control plus the notch/tray
+status, never through a floating agent companion.
 
 ## Locked Decisions
 
@@ -24,7 +26,8 @@ intent router's `agent` decision, Spec 07) run through the AutomationGraph.
    checkpointer drop-in stays clean.
 3. **Existing SSE events only.** Node lifecycle maps to the existing
    `automation_*` / `agent_*` events via `EventBridge` (`graph/events.ts`), so
-   the desktop store + Dynamic Island need no protocol change.
+   the desktop store, notch/tray status, and Mission Control need no protocol
+   change.
 4. **Provider-routed sub-agents within one Execution node.** No per-agent
    subgraphs. The Planning node classifies a domain; Execution scopes the tool
    set and prompt to that sub-agent. Agents that declare no tool scope inherit
@@ -101,6 +104,9 @@ recovery count, duration) and learned recoveries (`recordRecovery`).
   `automation_*` events; learning is surfaced via timeline entries ("Recalled
   prior experience", "Reusing a learned recovery", "Recorded a learned
   recovery").
+- **Foreground discipline:** desktop automation runs in the foreground flow.
+  Do not spawn detached background runs or floating agent companions; use
+  Mission Control for progress, approvals, cancellation, and results.
 
 ## Tests
 
@@ -137,8 +143,8 @@ CI gates: `bun run lint`, `bun run typecheck`, `bun run build:ci`,
 
 ## Future Work
 
-- **Mission Control UI** — a dedicated panel + timeline/preview/approval cards
-  (data already flows to the desktop store).
+- **Mission Control polish** — refine the dedicated panel, timeline, previews,
+  approvals, cancellation, and completed-run history.
 - **Missions** — long-running, cross-session goals with their own persistence.
 - **Workflow recording/replay** — promote recorded tool sequences to repeatable,
   schedulable workflows (the `workflow` provider).

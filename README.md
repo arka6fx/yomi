@@ -21,14 +21,16 @@ only. LLM keys live in the cloud backend, never bundled in the desktop app.
 
 ```
 apps/
-  backend/    Hono on Bun  — auth, billing (Razorpay), LLM proxy, usage metering
-  desktop/    Electron     — hotkeys, screen+mic capture, floating overlay UI
-  landing/    Next.js 16   — marketing site + waitlist (Vercel)
-  sidecar/    Bun service  — intent router, fast pipeline, ReAct loop, memory + archive sync
+  backend/    Hono on Bun        — auth, billing (Razorpay), LLM proxy, usage metering
+  desktop/    Electron           — hotkeys, screen+mic capture, floating overlay UI
+  landing/    Next.js 16         — marketing site + waitlist (Vercel)
+  sidecar/    Bun service        — intent router, fast pipeline, ReAct loop, memory, MCP, UIA
+  uia-helper/ C# / FlaUI         — Windows UI Automation helper (JSON-RPC over stdio)
 packages/
   db/         Drizzle schema + Neon client
-  shared/     TypeScript contracts across all apps
+  shared/     TypeScript contracts (desktop ↔ sidecar ↔ backend)
   config/     Shared tsconfig + eslint presets
+docs/         Superpowers specs, plans, design docs
 ```
 
 ---
@@ -38,7 +40,7 @@ packages/
 **Prerequisites:** [Bun ≥ 1.1](https://bun.sh/), Node ≥ 20
 
 ```bash
-git clone https://github.com/your-username/yomi
+git clone https://github.com/anomalyco/yomi
 cd yomi
 bun install
 cp .env.example .env   # fill in keys
@@ -212,6 +214,9 @@ Design docs in [`specs/`](./specs/), ordered by implementation:
 | 12  | [12-backend](specs/12-backend.md)                             | Hono routes, Better Auth, LLM proxy, metering, cloud archive mirror/search |
 | 13  | [13-pricing](specs/13-pricing.md)                             | Plans, Razorpay, metering, cap enforcement                                 |
 | 14  | [14-landing-page](specs/14-landing-page.md)                   | Marketing site (Next.js 16, Vercel)                                        |
+| 16  | [16-windows-app-automation](specs/16-windows-app-automation.md) | UIA-based Windows app automation, Act mode, safety guard                  |
+| 17  | [17-browser-automation](specs/17-browser-automation.md)       | Playwright MCP integration via generic MCP client                          |
+| 18  | [18-automation-orchestration](specs/18-automation-orchestration.md) | LangGraph AutomationGraph, provider-routed sub-agents, knowledge base  |
 
 ---
 
@@ -221,7 +226,7 @@ Design docs in [`specs/`](./specs/), ordered by implementation:
   possible; only the distilled prompt leaves.
 - **Visible status:** overlay always shows when Yomi is listening or capturing.
 - **Per-app blocklist:** password managers and banking apps are never captured.
-- **No hidden memory sync:** local memory stays on the device; Cloud RAG mirrors
-  Yomi-generated archive files and does not accept arbitrary user file uploads.
+- **No hidden memory sync:** local memory stays on the device; Cloud RAG (Pro/Max
+  only) mirrors Yomi-generated archive files and does not accept arbitrary user file uploads.
 - **Content protection:** overlay window is excluded from screen recordings and
   video calls.

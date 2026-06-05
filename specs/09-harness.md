@@ -49,10 +49,31 @@ Rendered memory block:
 <local_rag_context>...</local_rag_context>
 <recent_chat>...</recent_chat>
 </memory>
+
+<app_automation>
+<uia_tree>...</uia_tree>
+<act_mode>enabled</act_mode>
+</app_automation>
+
+<browser_automation>
+<browser_context>...</browser_context>
+<available_actions>...</available_actions>
+</browser_automation>
+
+<knowledge>
+<recalled_hints>...</recalled_hints>
+<prior_patterns>...</prior_patterns>
+</knowledge>
 ```
 
 `<local_rag_context>` is included only when the local RAG index returns relevant
 non-personal Yomi memory snippets.
+
+The `<app_automation>` and `<browser_automation>` blocks (Specs 16–17) are
+injected when Act mode is enabled and a target window/browser context is
+detected. The `<knowledge>` block (Spec 18) is injected on the AutomationGraph
+path to recall prior automation results and patterns from
+`~/.yomi/knowledge.db`.
 
 ## Context Builder
 
@@ -97,7 +118,9 @@ Fast path does not expose a tool-selection loop.
 | Screenshot attached    | Use it only for screen-aware queries.                                |
 | Local RAG unavailable  | Continue without local RAG.                                          |
 | Uncertain memory       | Prefer omitting or marking uncertain over overwriting active memory. |
-| Destructive agent tool | Deny or require confirmation.                                        |
+| Destructive agent tool | Deny or require confirmation via act-bus (`POST /act/confirm`).      |
+| Unknown window target  | Fall back to vision + coordinate pointing; never act on mismatched UIA tree. |
+| Automation loop        | Max 15 ReAct iterations; progress check every 3 steps; escape hatch via `POST /escape`. |
 
 ## Implemented Files
 

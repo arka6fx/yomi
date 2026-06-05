@@ -22,7 +22,6 @@ export interface GraphDeps {
   // Model factory for the execution burst (injectable for tests; defaults to createModel).
   modelFactory: (id: string) => LanguageModelV1
   toolsPromise: Promise<ToolSet>
-  background: boolean
   // UIA port for provider/agent validation (injectable for tests; defaults to the uia singleton).
   uia: UiaPort
   writeTurn: WriteSessionTurn

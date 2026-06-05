@@ -180,7 +180,6 @@ export interface AgentQueryRequest {
   task?: string
   plan?: Plan // controls local-only memory injection/writes
   history?: { role: "user" | "assistant"; text: string }[] // prior turns for the conversational act loop
-  background?: boolean // run without stealing focus where possible; inferred from phrasing if unset
 }
 
 export interface CloudRagSnippet {

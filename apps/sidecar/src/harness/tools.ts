@@ -52,7 +52,7 @@ export const TOOL_DESCRIPTIONS: Record<FastToolName | AgentToolName, string> = {
   press_key: "Press a key or chord (Enter, Tab, Ctrl+S) in the foreground app",
   adjust_volume: "Increase, decrease, or mute the system volume",
   adjust_spotify_volume: "Increase, decrease, or mute Spotify's own in-app volume",
-  control_spotify: "Control Spotify playback (pause/resume/next/previous/stop) in the background via media keys",
+  control_spotify: "Control Spotify playback (pause/resume/next/previous/stop) via media keys",
   play_spotify: "Open Spotify, search for a track/artist, and click the best visible Play button",
   send_whatsapp_message: "Open WhatsApp, focus the chat composer, and send a message",
   launch_app: "Open a desktop app by name (e.g. WhatsApp), then read its controls",
