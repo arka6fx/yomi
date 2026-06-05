@@ -16,31 +16,45 @@ what it may not own.
   needed for the model leave the machine.
 - The fast path has a strict < 2s budget end-to-end (hotkey press to first audio
   byte).
+- Desktop automation is foreground-specific. The app must not create detached
+  background automation or floating agent companions.
 
 ## Detailed Design
 
 ### Four Layers
 
 ```
-┌──────────────────────────────────────────────────────┐
-│  LAYER 1: DESKTOP SHELL  (apps/desktop — Electron)   │
-│  Owns: OS integration, capture, hotkeys, UI          │
-│  Does NOT own: AI logic, API keys, memory files      │
-└──────────────────┬───────────────────────────────────┘
-                   │  IPC: local HTTP on 127.0.0.1:3002
-                   │  Auth: SIDECAR_SECRET header
-┌──────────────────▼───────────────────────────────────┐
-│  LAYER 2: LOCAL SIDECAR  (apps/sidecar — Bun)        │
-│  Owns: router, fast pipeline, agent loop, memory     │
-│  Does NOT own: API keys, accounts, billing           │
-└──────────────────┬───────────────────────────────────┘
-                   │  HTTPS to cloud backend
-                   │  Auth: JWT from Better Auth session
-┌──────────────────▼───────────────────────────────────┐
-│  LAYER 3: CLOUD BACKEND  (apps/backend — Hono/Bun)   │
-│  Owns: auth, billing, LLM proxy, usage metering      │
-│  Does NOT own: UI, capture, memory files             │
-└──────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│  LAYER 1: DESKTOP SHELL  (apps/desktop — Electron)       │
+│  Owns: OS integration, capture, hotkeys, UI              │
+│  Does NOT own: AI logic, API keys, memory files          │
+└──┬────────────────┬──────────────────────────────────────┘
+   │ IPC: HTTP/JSON  │ stdio: JSON-RPC
+   │ 127.0.0.1:3002  │
+   │ SIDECAR_SECRET  │
+┌──▼────────────────▼──────────────────────────────────────┐
+│  LAYER 2: LOCAL SIDECAR + HELPERS                        │
+│                                                          │
+│  ┌────────────────────────────┐  ┌─────────────────────┐ │
+│  │ apps/sidecar — Bun service  │  │ apps/uia-helper     │ │
+│  │ router, fast pipeline,      │  │ C# / FlaUI console  │ │
+│  │ ReAct/AutomationGraph loop, │──│ JSON-RPC over stdio │ │
+│  │ memory, MCP client, UIA cl.│  │ Windows UIA only    │ │
+│  └────────────────────────────┘  └─────────────────────┘ │
+│         │ stdio                                            │
+│  ┌──────▼──────────────────────────────────────────────┐  │
+│  │ MCP Servers (Playwright, filesystem, etc.)          │  │
+│  └─────────────────────────────────────────────────────┘  │
+│  Owns: AI logic, memory, tools, automation                │
+│  Does NOT own: API keys, accounts, billing                │
+└──┬───────────────────────────────────────────────────────┘
+   │  HTTPS to cloud backend
+   │  Auth: JWT from Better Auth session
+┌──▼───────────────────────────────────────────────────────┐
+│  LAYER 3: CLOUD BACKEND  (apps/backend — Hono/Bun)       │
+│  Owns: auth, billing, LLM proxy, usage metering          │
+│  Does NOT own: UI, capture, memory files                 │
+└──────────────────────────────────────────────────────────┘
 
   LAYER 4: LANDING  (apps/landing — Next.js)
   Fully independent. No runtime dependency on the others.
@@ -78,6 +92,19 @@ Response: SSE stream → { type: "transcript" | "llm_chunk" | "audio_chunk" | "v
     }
   ]
 }
+```
+
+**Automation Act endpoints (added in Spec 16–18):**
+
+```
+POST /act/confirm
+Body: { act_id: string, action: UiaAction, target_window: string, description: string }
+Response: { confirmed: boolean }
+
+POST /automation/health → { uia_connected: bool, browser_mcp_ready: bool }
+POST /automation/knowledge
+Body: { query: string, top_k?: number }
+Response: { results: KnowledgeResult[] }
 ```
 
 **Agent path:**
@@ -121,12 +148,14 @@ Response: { snippets: RagSearchResult[] }
 
 ### Port Assignments
 
-| Service        | Port | Protocol                    |
-| -------------- | ---- | --------------------------- |
-| `apps/landing` | 3000 | HTTP (Next.js dev server)   |
-| `apps/backend` | 3001 | HTTP (Hono)                 |
-| `apps/sidecar` | 3002 | HTTP (Hono, localhost only) |
-| `apps/desktop` | —    | Electron (IPC to sidecar)   |
+| Service          | Port | Protocol                              |
+| ---------------- | ---- | ------------------------------------- |
+| `apps/landing`   | 3000 | HTTP (Next.js dev server)             |
+| `apps/backend`   | 3001 | HTTP (Hono)                           |
+| `apps/sidecar`   | 3002 | HTTP (Hono, localhost only)           |
+| `apps/desktop`   | —    | Electron (IPC to sidecar)             |
+| `apps/uia-helper`| —    | stdio JSON-RPC (spawned by sidecar)   |
+| MCP servers      | —    | stdio JSON-RPC (spawned by sidecar)   |
 
 ### Data Flow: Fast Path
 
@@ -148,11 +177,16 @@ Total budget: < 2s to first audio byte
 [User trigger "Yomi agent, ..."]
   → Intent router returns `agent`
   → POST /query/agent to sidecar
-    → Sidecar starts ReAct loop
+    → Sidecar starts ReAct loop (or AutomationGraph for Max tier)
     → Per tool call: PreToolUse hook → execute → PostToolUse hook
+    → UIA tools: sidecar sends JSON-RPC to uia-helper over stdio
+    → Browser tools: sidecar sends MCP requests to Playwright MCP over stdio
+    → Act bus: dangerous actions require user confirm via POST /act/confirm
     → Agent writes steps to ~/.yomi/projects/<task>/scratchpad.md
-    → Desktop shows streaming status in floating UI
-  → On completion: Stop hook persists memory, flushes scratchpad
+    → Desktop streams foreground automation progress to Mission Control
+    → Sub-agents: provider-routed via resolveAgent(goal) with scopeTools
+    → Knowledge Base: recallKnowledge() before plan, storeKnowledge() after success
+  → On completion: Stop hook persists memory, flushes scratchpad, stores learnings
 ```
 
 ## Files to change
@@ -165,9 +199,9 @@ Total budget: < 2s to first audio byte
 
 - None — architecture is defined across existing files
 
-## Open Questions
+## Resolved Questions
 
-- WebSocket vs SSE for the sidecar IPC: SSE is simpler and sufficient; WebSocket
-  if bidirectional control (pause/cancel) is needed mid-stream.
-- Sidecar crash recovery: desktop should restart the sidecar process if health
-  check fails.
+- **WebSocket vs SSE:** SSE was chosen. Bidirectional control is handled via
+  separate HTTP endpoints (`POST /cancel`, `POST /escape`).
+- **Sidecar crash recovery:** implemented. Desktop polls `GET /health` every 5 s
+  and restarts the sidecar process on repeated failures.

@@ -28,6 +28,8 @@ Pro/Max turns.
 ~/.yomi/
   yomi.md
   memory.db
+  automation.db          -- agent run persistence, act logs (Spec 16)
+  knowledge.db           -- automation learnings, patterns, corrections (Spec 18)
   memory/
     profile.static.md
     profile.dynamic.md
@@ -110,6 +112,12 @@ Cloud RAG excludes explicitly personal profile files such as `yomi.md`,
 `profile.static.md`, and `profile.dynamic.md`. It mirrors larger non-personal
 context such as old session logs, project notes, long memory files, and
 historical decisions.
+
+**Knowledge Base retrieval (Spec 18):** On the AutomationGraph path, the agent
+also calls `recallKnowledge(query)` against `~/.yomi/knowledge.db` before
+planning. This returns prior automation results, successful patterns, and
+corrections for similar tasks. Results are injected as the `<knowledge>` block
+in the system prompt.
 
 ## Writing
 

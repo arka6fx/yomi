@@ -27,7 +27,7 @@ export const spotifyAgent: SubAgent = {
   provider: "native",
   toolNames: ["play_spotify", "control_spotify", "adjust_spotify_volume", "look_at_screen"],
   systemHint:
-    "You are the Spotify agent. Use the dedicated background-safe Spotify tools (play_spotify, " +
+    "You are the Spotify agent. Use the dedicated Spotify tools (play_spotify, " +
     "control_spotify, adjust_spotify_volume) rather than driving the UI by hand. After acting, the " +
     "system verifies the now-playing state.",
   validate: validateSpotify,

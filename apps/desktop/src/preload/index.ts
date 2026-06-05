@@ -4,18 +4,6 @@ import type { SseEvent } from "@yomi/shared"
 type HotkeyState = "idle" | "listening" | "processing" | "text-input"
 type AuthStatus = "ok" | "needed" | "waiting" | "error"
 
-export interface BackgroundAgentSignal {
-  seq: number
-  runId: string
-  state: "idle" | "thinking" | "working" | "waiting" | "error"
-  task: string
-  owner?: string
-  detail?: string
-  step?: number
-  max?: number
-  done?: boolean
-}
-
 export interface SubscriptionInfo {
   name: string
   email: string
@@ -140,13 +128,6 @@ contextBridge.exposeInMainWorld("yomi", {
     return () => ipcRenderer.off("yomi:state", h)
   },
 
-  // Detached background-agent updates → companion dock (one entry per runId).
-  onBackgroundAgent(cb: (sig: BackgroundAgentSignal) => void): () => void {
-    const h = (_: Electron.IpcRendererEvent, sig: BackgroundAgentSignal) => cb(sig)
-    ipcRenderer.on("yomi:background-agent", h)
-    return () => ipcRenderer.off("yomi:background-agent", h)
-  },
-
   // ── Audio ─────────────────────────────────────────────────────────────────
 
   sendAudioChunk(pcm: ArrayBuffer, sampleRate: number): void {
@@ -167,10 +148,6 @@ contextBridge.exposeInMainWorld("yomi", {
     ipcRenderer.send("yomi:resize", w, h)
   },
 
-  setCompanionOverlay(enabled: boolean): void {
-    ipcRenderer.send("yomi:set-companion-overlay", enabled)
-  },
-
   setMouseEventsIgnored(ignored: boolean): void {
     ipcRenderer.send("yomi:set-ignore-mouse-events", ignored)
   },
@@ -187,6 +164,10 @@ contextBridge.exposeInMainWorld("yomi", {
 
   submitTextQuery(text: string): void {
     ipcRenderer.send("yomi:text-query", text)
+  },
+
+  copyText(text: string): Promise<{ ok: boolean }> {
+    return ipcRenderer.invoke("yomi:copy-text", text)
   },
 
   // ── Subscription ──────────────────────────────────────────────────────────

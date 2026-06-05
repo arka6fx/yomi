@@ -2,16 +2,17 @@
 
 ## Purpose
 
-Define the Electron renderer UI: floating overlay, streaming response view, and
-account controls. The renderer is React and talks only through the preload
-bridge.
+Define the Electron renderer UI: notch/tray status, Mission Control, streaming
+response view, and account controls. The renderer is React and talks only
+through the preload bridge.
 
 ## Invariants
 
 - The UI never calls the sidecar or backend directly.
 - All privileged operations go through `window.yomi`.
-- The overlay always shows current state: idle, listening, processing, speaking,
-  or error.
+- The notch/tray status always shows current state: idle, listening, processing,
+  speaking, error, or foreground automation progress.
+- No floating agent companion or detached background-agent dock is allowed.
 - Local memory and the cloud archive mirror are sidecar-owned; the renderer does
   not expose file upload/index controls.
 - `html, body { background: transparent; margin: 0 }` is required for
@@ -24,20 +25,35 @@ apps/desktop/src/renderer/
   app.tsx
   store.ts
   global.d.ts
+  theme.tsx
+  mission/
+    MissionControl.tsx
 ```
 
-The current renderer is intentionally compact. It combines overlay, text input,
-response stream, account status, and settings in one app surface.
+The current renderer is intentionally compact. It combines notch/tray status,
+text input, response stream, Mission Control, account status, settings, theme
+extraction, and automation confirmation in one app surface.
 
 ## Main States
 
 | State        | UI behavior                                                                                          |
 | ------------ | ---------------------------------------------------------------------------------------------------- |
-| `idle`       | Compact overlay; Voice and Type buttons in toolbar ready to trigger                                  |
+| `idle`       | Compact notch/tray status; Voice and Type controls ready to trigger                                  |
 | `listening`  | Recording indicator; **Send (Enter)** chip to submit, **Stop (Esc)** chip to cancel — both clickable |
 | `processing` | Streaming response card with spinner                                                                 |
 | `speaking`   | Response remains visible while TTS/audio chunks play                                                 |
 | `error`      | Error message with recovery action                                                                   |
+
+## Surface Model
+
+Yomi should feel like an OS companion, not a floating mascot panel. The persistent
+surface is the notch/tray status pill. Mission Control is the detailed view for
+foreground automation timelines, approvals, previews, cancellation, and
+completed results.
+
+Avoid persistent floating companions for routine chat or automation progress. A
+transient guide overlay is allowed only for screen-aware visual guidance or
+automation confirmation, and it should be click-through whenever possible.
 
 ## Query UI
 
@@ -52,6 +68,13 @@ type SseEvent =
   | { type: "llm_chunk"; text: string }
   | { type: "audio_chunk"; audio_b64: string }
   | { type: "visual_guide"; ... }
+  | { type: "agent_step"; step: number; text: string; tool_calls: ToolCall[] }
+  | { type: "subagent_step"; agent: string; step: number; text: string }
+  | { type: "act_proposed"; act_id: string; action: string; target: string }
+  | { type: "act_result"; act_id: string; success: boolean; error?: string }
+  | { type: "automation_plan"; steps: string[] }
+  | { type: "automation_progress"; step: number; total: number; status: string }
+  | { type: "router_decision"; path: "fast" | "agent" }
   | { type: "done" }
   | { type: "error"; message: string }
 ```
@@ -67,6 +90,12 @@ interface YomiApi {
   signIn(): Promise<void>
   signOut(): Promise<void>
   getSubscriptionStatus(): Promise<SubscriptionStatus>
+  setActMode(enabled: boolean): Promise<void>
+  confirmAct(actId: string): Promise<void>
+  replayAutomation(runId: string): Promise<void>
+  onLoopContinue(cb: () => void): () => void
+  requestEscape(): Promise<void>
+  stopListening(): void
 }
 ```
 
@@ -85,13 +114,15 @@ interface GuideStep {
 ```
 
 The guide overlay remains transparent and click-through except for navigation
-controls.
+controls. It is a temporary guidance layer, not the main Yomi surface.
 
 ## Implemented Files
 
 - `apps/desktop/src/renderer/app.tsx`
 - `apps/desktop/src/renderer/store.ts`
 - `apps/desktop/src/renderer/global.d.ts`
+- `apps/desktop/src/renderer/theme.tsx`
+- `apps/desktop/src/renderer/mission/MissionControl.tsx`
 - `apps/desktop/src/preload/index.ts`
 
 ## Future Work

@@ -26,10 +26,19 @@ import {
   controlSpotifyPlayback,
   playSpotify,
   sendWhatsAppMessage,
+  saveWindowsNotepadAs,
   writeWindowsNotepad,
-  type SpotifyControl,
-  type VolumeDirection,
 } from "../tools/system.js"
+import {
+  normalizeSpokenRecipient,
+  pendingDraftRecipientRequest,
+  playbackControl,
+  reminderDraftRequest,
+  spotifyPlaybackQuery,
+  stripDetachedPhrases,
+  volumeAction,
+  whatsAppMessageRequest,
+} from "./shortcuts.js"
 
 const AGENT_PATH_MODEL = process.env.AGENT_PATH_MODEL || "gpt-4.1"
 const MAX_STEPS = parseInt(process.env.AGENT_MAX_STEPS || "20", 10)
@@ -65,136 +74,25 @@ async function getAgentPrompt(text: string, plan: Plan | undefined): Promise<str
   return buildAgentPrompt({ yomiMd: cachedYomiMd, ...memoryCtx })
 }
 
-// Phrases that mean "do this without stealing my focus". Used both to detect background intent and
-// to strip the phrase before parsing the actual command (so "play X in the background" → query "X").
-const BACKGROUND_PATTERNS: RegExp[] = [
-  /\bin\s+the\s+background\b/gi,
-  /\bin\s+bg\b/gi,
-  /\bbehind\s+the\s+scenes\b/gi,
-  /\bwithout\s+switching\b/gi,
-  /\bwithout\s+interrupting(?:\s+me)?\b/gi,
-  /\bwhile\s+i\s+(?:keep|am)\s+working\b/gi,
-  /\bdon'?t\s+switch\s+away\b/gi,
-  /\bquietly\b/gi,
-]
-
-function detectBackgroundMode(text: string): boolean {
-  return BACKGROUND_PATTERNS.some((re) => {
-    re.lastIndex = 0
-    return re.test(text)
-  })
-}
-
-function stripBackgroundPhrase(text: string): string {
-  let out = text
-  for (const re of BACKGROUND_PATTERNS) out = out.replace(re, " ")
-  return out
-    .replace(/\s+/g, " ")
-    .replace(/\s+([.?!,])/g, "$1")
-    .trim()
-}
-
-// Spotify transport (pause/resume/next/previous/stop) — driven by media keys. Matches either an
-// explicit music context ("next song", "skip spotify") or a short bare transport command
-// ("play the next", "previous", "skip") — but not phrases like "what's next on my calendar".
-function playbackControl(text: string): SpotifyControl | null {
-  const t = text
-    .toLowerCase()
-    .replace(/[.!?]+$/g, "")
-    .trim()
-  const musicCtx = /\b(spotify|music|song|track|playback|tune)\b/.test(t)
-
-  // "next", "play the next", "play next song", "skip", "next track", "skip this song"
-  if (
-    /^(?:play |go to |skip to )?(?:the )?next(?: song| track| one)?$/.test(t) ||
-    /\bnext (?:song|track)\b/.test(t) ||
-    /\bskip(?: this)?(?: song| track)?$/.test(t) ||
-    (musicCtx && /\b(next|skip)\b/.test(t))
-  )
-    return "next"
-
-  // "previous", "play the previous", "prev song", "go back a song"
-  if (
-    /^(?:play |go to )?(?:the )?(?:previous|prev|last)(?: song| track| one)?$/.test(t) ||
-    /\b(?:previous|prev) (?:song|track)\b/.test(t) ||
-    /\bgo back (?:a |one )?(?:song|track)\b/.test(t) ||
-    (musicCtx && /\b(previous|prev)\b/.test(t))
-  )
-    return "previous"
-
-  if (/^pause$/.test(t) || (musicCtx && /\bpause\b/.test(t))) return "pause"
-  if (/^(?:resume|unpause|continue)$/.test(t) || (musicCtx && /\b(resume|unpause|continue)\b/.test(t)))
-    return "resume"
-  if (musicCtx && /\bstop\b/.test(t)) return "stop"
-  return null
-}
-
-function spotifyPlaybackQuery(text: string): string | null {
-  if (!/\bplay\b/i.test(text)) return null
-  // "play <something>" is treated as a Spotify request unless it's clearly video/other media.
-  if (/\b(video|youtube|movie|film|episode|trailer|netflix|prime video)\b/i.test(text)) return null
-  const playMatch =
-    text.match(/\bplay\s+(.+?)(?:\s+(?:on|in)\s+spotify\b|$)/i) ??
-    text.match(/\bspotify\s+(?:to\s+)?play\s+(.+?)$/i)
-  const raw =
-    playMatch?.[1] ??
-    text.replace(/\b(open|launch|start)\s+spotify\b/gi, "").replace(/\bspotify\b/gi, "")
-  const query = raw
-    .replace(/\b(to\s+)?play\b/gi, "")
-    .replace(/\b(on|in)\s+spotify\b/gi, "")
-    .replace(/\b(song|track|music)\b/gi, "")
-    .replace(/[.?!]+$/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-  return query || null
-}
-
-function volumeAction(
-  text: string,
-): { direction: VolumeDirection; steps: number; target: "system" | "spotify" } | null {
-  const t = text.toLowerCase()
-  const mentionsSound = /\b(volume|sound|audio|louder|quieter|softer|mute|unmute|inc|dec)\b/.test(t)
-  if (!mentionsSound) return null
-  // "spotify" in the command → adjust Spotify's own volume; otherwise system-wide volume.
-  const target = /\bspotify\b/.test(t) ? "spotify" : "system"
-  const big = /\b(a lot|much|more)\b/.test(t)
-  if (/\b(mute|unmute)\b/.test(t)) return { direction: "mute", steps: 1, target }
-  if (/\b(increase|inc|raise|turn up|up|louder|boost)\b/.test(t))
-    return { direction: "up", steps: big ? 5 : target === "spotify" ? 3 : 2, target }
-  if (/\b(decrease|dec|lower|turn down|down|quieter|softer|reduce)\b/.test(t))
-    return { direction: "down", steps: big ? 5 : target === "spotify" ? 3 : 2, target }
-  return null
-}
-
-function normalizeSpokenRecipient(raw: string): string {
-  const trimmed = raw.replace(/^\s*(?:my|the|a|an)\s+/i, "").replace(/[.?!,]+$/g, "").trim()
-  if (/^(?:me|myself|self|you|message\s*myself|send\s*to\s*myself)$/i.test(trimmed)) return "you"
-  const parts = trimmed.split(/\s+/).filter(Boolean)
-  if (parts.length <= 1) return trimmed
-  const relation =
-    /^(?:mom|mum|mother|mummy|ma|dad|father|papa|brother|sister|wife|husband|partner|friend)$/i
-  return relation.test(parts[0] ?? "") ? parts.slice(1).join(" ") : trimmed
-}
-
-function reminderDraftRequest(text: string): { message: string } | null {
-  if (!/\bwhats\s*app\b|\bwhatsapp\b/i.test(text)) return null
-  if (!/\b(reminder|remainder)\b/i.test(text)) return null
-  if (!/\b(write|draft|make|create|note)\b/i.test(text)) return null
-  const cleaned = text
-    .replace(/[.?!]+$/g, "")
-    .replace(/\b(?:and\s+)?(?:send|share|message)\s+(?:it\s+)?(?:to\s+)?(?:whats\s*app|whatsapp)\b/gi, "")
-    .replace(/\b(?:on|in|via|through|using)\s+(?:whats\s*app|whatsapp)\b/gi, "")
-    .trim()
-  const m =
-    cleaned.match(/\b(?:reminder|remainder)\s+(?:about|for|to)\s+(.+)$/i) ??
-    cleaned.match(/\b(?:write|draft|make|create|note)\s+(?:a\s+)?(?:reminder|remainder)\s+(.+)$/i)
-  const topic = m?.[1]?.replace(/^\s*(?:about|for|to)\s+/i, "").trim()
-  return topic ? { message: `Reminder: ${topic}` } : null
-}
+// Detached-mode phrasing is stripped so it does not pollute command parsing.
 
 function isWindowsNotepadSaveFollowup(text: string): boolean {
   if (!pendingWindowsNotepadDraft) return false
   return /\b(save|store)\s+(?:it|this|that|the\s+(?:note|file|draft))\b/i.test(text.trim())
+}
+
+function notepadSavePath(text: string): string | null {
+  if (!/\b(save|store)\b/i.test(text)) return null
+  if (!/\b(notepad|txt|text\s+file|file|document|it|this|that|note|draft)\b/i.test(text)) {
+    return null
+  }
+  const match =
+    text.match(/\b(?:save|store)\s+(?:this|that|the)?\s*(?:open(?:ed)?\s+)?(?:notepad(?:\s+file)?|txt|text\s+file|file|document|note|draft)\s+(?:as|to|at|in)\s+(.+)$/i) ??
+    text.match(/\b(?:save|store)\s+(?:the\s+)?(?:notepad(?:\s+file)?|txt|text\s+file|file|document|note|draft|it|this|that)?\s*(?:file\s*)?(?:as|to|at|in)\s+(.+)$/i)
+  const path = match?.[1]?.trim().replace(/^["'`]|["'`]$/g, "")
+  if (!path) return null
+  if (!/(desktop|documents|downloads|[\\/]|:|\.txt\b)/i.test(path)) return null
+  return path || null
 }
 
 function stripNotepadTarget(text: string): string {
@@ -226,69 +124,8 @@ export function windowsNotepadRequest(text: string): { content: string; needsMem
   }
 }
 
-function pendingDraftRecipientRequest(text: string): string | null {
-  if (!pendingWhatsAppDraft) return null
-  if (!/\b(send|share|message|msg|text|whats\s*app|whatsapp)\b/i.test(text)) return null
-  const cleaned = text.replace(/[.?!]+$/g, "").trim()
-  const draftRef =
-    /\b(reminder|remainder|it|that|this|draft|message|msg|text)\b/i.test(cleaned) ||
-    /\b(?:i\s+)?(?:told|asked)\s+(?:you|it)\s+to\s+send\b/i.test(cleaned)
-  const m =
-    cleaned.match(
-      /\b(?:send|share)\s+(?:the\s+)?(?:reminder|remainder|draft|message|msg|text|it|that|this)(?:\s+(?:i\s+)?(?:told|asked)\s+(?:you|it)\s+to\s+send)?\s+to\s+(.+?)(?:\s+(?:on|in|via|through|using)\s+(?:whats\s*app|whatsapp)\b|$)/i,
-    ) ??
-    cleaned.match(
-      /\b(?:send|share|message|msg|text|whats\s*app|whatsapp)\s+(?:the\s+)?(?:reminder|remainder|draft|message|msg|text|it|that|this)\s+(.+)$/i,
-    ) ??
-    cleaned.match(
-      /\b(?:send|share|message|msg|text|whats\s*app|whatsapp)\s+(?:to\s+)?(.+?)(?:\s+(?:on|in|via|through|using)\s+(?:whats\s*app|whatsapp)\b|$)/i,
-    )
-  if (!m?.[1]) return null
-  if (!draftRef && !/^(?:me|myself|self|you)$/i.test(m[1].trim())) return null
-  return normalizeSpokenRecipient(m[1])
-}
-
-// Parse a WhatsApp send command from natural phrasing. Handles "send <msg> to <name>",
-// "text/message/tell <name> saying/that/: <msg>", and bare "text/message <name> <msg>" (name = first
-// word, or "my <x>"). Ambiguous phrasings return null and fall through to the LLM agent loop, which
-// has the send_whatsapp_message tool. The recipient name still gets verified by the spoken confirm.
-export function whatsAppMessageRequest(text: string): { recipient: string; message: string } | null {
-  const cleaned = text
-    .replace(/[.?!]+$/g, "")
-    .replace(/^\s*(please|hey|ok|okay|yomi)[,\s]+/i, "")
-    .replace(/\b(open|launch|start)\s+whats\s*app\s*(?:and|to)?\s*/gi, "")
-    .replace(/\b(on|in|over|via|through|using)\s+whats\s*app\b/gi, "")
-    .trim()
-
-  const finish = (recipient: string, message: string) => {
-    const r = normalizeSpokenRecipient(recipient)
-    const msg = message
-      .replace(/^["']|["']$/g, "")
-      .replace(/[.?!]+$/g, "")
-      .trim()
-    return r && msg ? { recipient: r, message: msg } : null
-  }
-
-  // "send <msg> to <name>"
-  let m = cleaned.match(/\bsend\s+["']?(.+?)["']?\s+to\s+(.+)$/i)
-  if (m?.[1] && m[2]) return finish(m[2], m[1])
-
-  // "<verb> <name> (saying|that|to say|:|,|-) <msg>" — separator makes the split unambiguous.
-  m = cleaned.match(
-    /\b(?:text|message|msg|tell|ping|whats\s*app|whatsapp)\s+(.+?)\s+(?:saying|that|to say|:|,|-)\s+(.+)$/i,
-  )
-  if (m?.[1] && m[2]) return finish(m[1], m[2])
-
-  // Bare "<verb> <name> <msg>" — only the clearly-messaging verbs, name = first word (or "my <x>").
-  m = cleaned.match(/\b(?:text|message|msg|whats\s*app|whatsapp)\s+(.+)$/i)
-  if (m?.[1]) {
-    const words = m[1].trim().split(/\s+/)
-    const nameWords = /^my$/i.test(words[0] ?? "") ? 2 : 1
-    if (words.length > nameWords)
-      return finish(words.slice(0, nameWords).join(" "), words.slice(nameWords).join(" "))
-  }
-  return null
-}
+// Re-export for test imports (canonical definition in shortcuts.ts).
+export { whatsAppMessageRequest } from "./shortcuts.js"
 
 type WriteSessionTurn = typeof writeSessionTurn
 type ShortcutSystemActions = {
@@ -297,6 +134,7 @@ type ShortcutSystemActions = {
   controlSpotifyPlayback: typeof controlSpotifyPlayback
   playSpotify: typeof playSpotify
   sendWhatsAppMessage: typeof sendWhatsAppMessage
+  saveWindowsNotepadAs: typeof saveWindowsNotepadAs
   writeWindowsNotepad: typeof writeWindowsNotepad
 }
 
@@ -409,6 +247,7 @@ export async function* agentPipeline(
     controlSpotifyPlayback,
     playSpotify,
     sendWhatsAppMessage,
+    saveWindowsNotepadAs,
     writeWindowsNotepad,
   }
   const writeTurn = opts?.writeSessionTurn ?? writeSessionTurn
@@ -438,9 +277,38 @@ export async function* agentPipeline(
       return
     }
 
-    // "...in the background" → drive apps without stealing focus; strip the phrase before parsing.
-    const background = req.background ?? detectBackgroundMode(req.text)
-    const cleanText = background ? stripBackgroundPhrase(req.text) : req.text
+    const cleanText = stripDetachedPhrases(req.text)
+
+    const savePath = notepadSavePath(cleanText)
+    if (savePath) {
+      const args = { path: savePath }
+      yield stepAutomation(automation, "Save Notepad file")
+      yield timelineAutomation(automation, "Save Notepad file", "running", JSON.stringify(args))
+      yield { type: "agent_tool_call", tool: "save_windows_notepad_as", args }
+      const check = await activeHooks.onPreToolUse("save_windows_notepad_as", args)
+      const result = check.ok
+        ? await activeHooks.onPostToolUse(
+            "save_windows_notepad_as",
+            await systemActions.saveWindowsNotepadAs(savePath),
+          )
+        : `[DENIED: ${check.reason}]`
+      yield { type: "agent_tool_result", tool: "save_windows_notepad_as", result }
+      const failed = shortcutFailed(result)
+      const savedPath =
+        typeof result === "object" && result !== null && "path" in result
+          ? String((result as { path: unknown }).path)
+          : savePath
+      const output = failed
+        ? "I could not save the Notepad file."
+        : `I saved the Notepad file to ${savedPath}.`
+      yield { type: "agent_text", text: output }
+      await activeHooks.onStop(failed ? "notepad save failed" : "notepad file saved")
+      if (!failed) await rememberAgentShortcut(req, output, writeTurn)
+      yield timelineAutomation(automation, output, failed ? "failed" : "done")
+      yield closeAutomation(output, failed)
+      yield { type: "done" }
+      return
+    }
 
     if (isWindowsNotepadSaveFollowup(cleanText)) {
       const output = "Where should I save the Notepad file, and what should I name it?"
@@ -453,7 +321,7 @@ export async function* agentPipeline(
       return
     }
 
-    // Spotify transport (pause/resume/next/previous/stop) via media keys — true background.
+    // Spotify transport (pause/resume/next/previous/stop) via media keys.
     const control = playbackControl(cleanText)
     if (control) {
       const args = { action: control }
@@ -506,10 +374,7 @@ export async function* agentPipeline(
         ? await activeHooks.onPostToolUse(
             toolName,
             spotify
-              ? await systemActions.adjustSpotifyVolume(volume.direction, volume.steps, {
-                  background,
-                  signal,
-                })
+              ? await systemActions.adjustSpotifyVolume(volume.direction, volume.steps, { signal })
               : await systemActions.adjustSystemVolume(volume.direction, volume.steps),
           )
         : `[DENIED: ${check.reason}]`
@@ -543,7 +408,7 @@ export async function* agentPipeline(
       const result = check.ok
         ? await activeHooks.onPostToolUse(
             "play_spotify",
-            await systemActions.playSpotify(spotifyQuery, { background, signal }),
+            await systemActions.playSpotify(spotifyQuery, { signal }),
           )
         : `[DENIED: ${check.reason}]`
       if (signal?.aborted) {
@@ -553,13 +418,9 @@ export async function* agentPipeline(
       }
       yield { type: "agent_tool_result", tool: "play_spotify", result }
       const failed = typeof result === "object" && result !== null && "error" in result
-      const foregrounded =
-        typeof result === "object" && result !== null && "foregroundedFallback" in result
       const output = failed
         ? `I could not play ${spotifyQuery} on Spotify.`
-        : foregrounded
-          ? `Playing ${spotifyQuery} on Spotify — I brought it up for a moment to start it.`
-          : `Playing ${spotifyQuery} on Spotify.`
+        : `Playing ${spotifyQuery} on Spotify.`
       yield { type: "agent_text", text: output }
       await activeHooks.onStop(failed ? "spotify playback failed" : "spotify playback started")
       if (!failed) await rememberAgentShortcut(req, output, writeTurn)
@@ -615,7 +476,7 @@ export async function* agentPipeline(
       return
     }
 
-    const pendingRecipient = pendingDraftRecipientRequest(cleanText)
+    const pendingRecipient = pendingDraftRecipientRequest(cleanText, pendingWhatsAppDraft !== null)
     if (pendingRecipient && pendingWhatsAppDraft) {
       const draft = pendingWhatsAppDraft
       const args = { recipient: pendingRecipient, message: draft.message }
@@ -625,7 +486,6 @@ export async function* agentPipeline(
         ? await activeHooks.onPostToolUse(
             "send_whatsapp_message",
             await systemActions.sendWhatsAppMessage(pendingRecipient, draft.message, {
-              background,
               signal,
             }),
           )
@@ -664,7 +524,7 @@ export async function* agentPipeline(
             await systemActions.sendWhatsAppMessage(
               whatsAppMessage.recipient,
               whatsAppMessage.message,
-              { background, signal },
+              { signal },
             ),
           )
         : `[DENIED: ${check.reason}]`
@@ -712,7 +572,7 @@ export async function* agentPipeline(
     const mcpTools = wrapBrowserTools(await getMcpTools())
     const tools = applyHooks(
       {
-        ...createAgentTools({ screenshotB64: req.screenshot_b64, background }),
+        ...createAgentTools({ screenshotB64: req.screenshot_b64 }),
         ...mcpTools,
       },
       activeHooks,
