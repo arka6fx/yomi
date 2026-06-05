@@ -184,20 +184,24 @@ Razorpay plan amounts: Pro = ₹999, Max = ₹2 499 (cents). Set `RAZORPAY_KEY_I
 Specs are numbered in the order they should be implemented. 00 and 01 are
 reference docs.
 
-| Spec | File                       | Scope                                                                             |
-| ---- | -------------------------- | --------------------------------------------------------------------------------- |
-| 02   | `02-sidecar-fast-pipeline` | OpenAI-compatible fast path + visual guide ← **current**                          |
-| 03   | `03-desktop-shell`         | Electron main: sidecar spawn, hotkey, desktopCapturer, IPC bridge, overlay window |
-| 04   | `04-desktop-ui`            | Renderer: floating overlay, Zustand store, audio capture, streaming response      |
-| 05   | `05-speech-stt`            | STT abstraction: ElevenLabs scribe_v2 + VAD                                       |
-| 06   | `06-speech-tts`            | TTS abstraction: ElevenLabs eleven_flash_v2_5 (MP3)                               |
-| 07   | `07-sidecar-router`        | Intent router: fast vs agent classification                                       |
-| 08   | `08-sidecar-agent`         | ReAct loop, tools, MCP, subagents, sandbox                                        |
-| 09   | `09-harness`               | System prompt, hooks, loop guards                                                 |
-| 10   | `10-memory`                | Notepad (~/.yomi/), compaction, retrieval                                         |
-| 11   | `11-database`              | Drizzle schema + Neon client                                                      |
-| 12   | `12-backend`               | Hono routes, Better Auth, LLM proxy, metering                                     |
-| 13   | `13-pricing`               | Plans, Razorpay, metering logic                                                   |
+| Spec | File                          | Scope                                                                                                 |
+| ---- | ----------------------------- | ----------------------------------------------------------------------------------------------------- |
+| 02   | `02-sidecar-fast-pipeline`    | OpenAI-compatible fast path + visual guide                                                            |
+| 03   | `03-desktop-shell`            | Electron main: sidecar spawn, hotkey, desktopCapturer, IPC bridge, overlay window                     |
+| 04   | `04-desktop-ui`               | Renderer: floating overlay, Zustand store, audio capture, streaming response                          |
+| 05   | `05-speech-stt`               | STT abstraction: ElevenLabs scribe_v2 + VAD                                                           |
+| 06   | `06-speech-tts`               | TTS abstraction: ElevenLabs eleven_flash_v2_5 (MP3)                                                   |
+| 07   | `07-sidecar-router`           | Intent router: fast vs agent classification                                                           |
+| 08   | `08-sidecar-agent`            | ReAct loop, tools, MCP, subagents, sandbox                                                            |
+| 09   | `09-harness`                  | System prompt, hooks, loop guards                                                                     |
+| 10   | `10-memory`                   | Notepad (~/.yomi/), compaction, retrieval                                                             |
+| 11   | `11-database`                 | Drizzle schema + Neon client                                                                          |
+| 12   | `12-backend`                  | Hono routes, Better Auth, LLM proxy, metering                                                         |
+| 13   | `13-pricing`                  | Plans, Razorpay, metering logic                                                                       |
+| 14   | `14-landing-page`             | Next.js marketing site + waitlist                                                                     |
+| 16   | `16-windows-app-automation`   | UIA Act mode: C# helper + sidecar client, confirm channel, safety blocklist                           |
+| 17   | `17-browser-automation`       | Playwright MCP via a generic sidecar MCP client                                                       |
+| 18   | `18-automation-orchestration` | LangGraph AutomationGraph, mission-control events, provider-routed sub-agents, learning ← **current** |
 
 ---
 

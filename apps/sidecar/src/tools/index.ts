@@ -2,7 +2,7 @@ import { createMemoryTools } from "./memory.js"
 import { createSystemTools } from "./system.js"
 import { createWebTools } from "./web.js"
 
-export function createAgentTools(ctx: { screenshotB64?: string }) {
+export function createAgentTools(ctx: { screenshotB64?: string; background?: boolean }) {
   return {
     ...createMemoryTools(),
     ...createSystemTools(ctx),

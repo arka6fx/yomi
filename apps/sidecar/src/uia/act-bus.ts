@@ -29,6 +29,11 @@ export function emitActResult(ok: boolean, label: string, detail?: string): void
   emit?.({ type: "act_result", ok, label, detail })
 }
 
+// Speak/show a line on the live stream (e.g. read a confirmation question aloud before pausing).
+export function emitAgentText(text: string): void {
+  emit?.({ type: "agent_text", text })
+}
+
 // Ask the desktop to confirm a risky action. Falls back to the safety confirmer (autoconfirm /
 // registered handler) when there's no live stream to prompt on — keeps tests/headless runs working.
 export function requestConfirmation(

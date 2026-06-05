@@ -8,6 +8,8 @@ import { useYomiStore } from "./store"
 import type { HotkeyState, ChatEntry, SubscriptionInfo } from "./store"
 import { YomiCompanion, type BackgroundAgentSignal } from "./companion/YomiCompanion"
 import { EnergyVad } from "@yomi/shared"
+import { ThemeCtx, type Theme, type ThemeId } from "./theme"
+import { MissionControl } from "./mission/MissionControl"
 
 // Hands-free voice loop tuning (renderer-side end-of-speech auto-stop).
 const VAD_SILENCE_HANGOVER_MS = 1500 // silence after speech before we auto-stop and process
@@ -24,88 +26,6 @@ const BARGE_IN_SUSTAIN_MS = 350 // continuous speech required before we cut in
 const BARGE_IN_ARM_DELAY_MS = 400 // ignore the first moments (trailing speech / TTS onset)
 
 // ── Theme System ───────────────────────────────────────────────────────────────
-
-type ThemeId = "amber" | "blue" | "green" | "violet" | "hotpink" | "purple" | "black"
-interface Theme {
-  id: ThemeId
-  label: string
-  bg: string
-  surface: string
-  border: string
-  borderHi: string
-  text: string
-  dim: string
-  accent: string
-  accentD: string
-  accentG: string
-  error: string
-  errorD: string
-  codeBg: string
-  kw: string
-  str: string
-  num: string
-  cmt: string
-  fn: string
-  codeText: string
-  toolbarBg: string
-  menuBg: string
-  menuBorder: string
-  menuShadow: string
-  menuSep: string
-  sectionLabel: string
-  btnText: string
-  btnHoverBg: string
-  btnHoverText: string
-  dangerText: string
-  dangerHoverBg: string
-  upgradeText: string
-  upgradeBg: string
-  upgradeBgHover: string
-  upgradeBorder: string
-  dotIdle: string
-  dotPulse: string
-  dotPulseGlow: string
-  dotSpinFaint: string
-  dotSpinBright: string
-  lblIdle: string
-  lblActive: string
-  lblProcessing: string
-  planText: string
-  planBorder: string
-  ttsOn: string
-  ttsOff: string
-  ttsHoverBg: string
-  hambBg: string
-  hambBgActive: string
-  hambBorder: string
-  hambBorderActive: string
-  hambColor: string
-  hambColorActive: string
-  chipBgHot: string
-  chipBgCold: string
-  chipBorderHot: string
-  chipBorderCold: string
-  chipTextHot: string
-  chipTextCold: string
-  kbdBg: string
-  kbdBorder: string
-  kbdBorderB: string
-  kbdText: string
-  dragDot: string
-  appBorder: string
-  appBorderListen: string
-  appShadow: string
-  appShadowListen: string
-  scrollThumb: string
-  scrollThumbHover: string
-  sliderTrack: string
-  sliderThumb: string
-  sliderThumbBorder: string
-  sliderShadow: string
-  sliderHoverShadow: string
-  selectionBg: string
-  placeholder: string
-}
 
 const AMBER: Theme = {
   id: "amber",
@@ -683,11 +603,6 @@ const THEMES: Record<ThemeId, Theme> = {
   purple: PURPLE,
   black: BLACK,
 }
-
-const ThemeCtx = React.createContext<{ theme: Theme; setTheme: (id: ThemeId) => void }>({
-  theme: BLACK,
-  setTheme: () => {},
-})
 
 const themeStyleEl = document.createElement("style")
 document.head.appendChild(themeStyleEl)
@@ -2611,6 +2526,9 @@ function Toolbar({
   onMenuScheduleClose: () => void
 }) {
   const { ttsEnabled, toggleTts, pendingAct, clearPendingAct } = useYomiStore()
+  const automationRuns = useYomiStore((s) => s.automationRuns)
+  const missionsOpen = useYomiStore((s) => s.missionsOpen)
+  const toggleMissions = useYomiStore((s) => s.toggleMissions)
   const { theme: t } = React.useContext(ThemeCtx)
 
   return (
@@ -2720,6 +2638,29 @@ function Toolbar({
           }}
           className="no-drag"
         >
+          {/* Missions — opens Mission Control when automations have streamed in. */}
+          {automationRuns.length > 0 && (
+            <button
+              onClick={toggleMissions}
+              title="Mission Control"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                fontFamily: UI_FONT,
+                fontSize: 11,
+                fontWeight: 500,
+                color: missionsOpen ? t.hambColorActive : t.hambColor,
+                background: missionsOpen ? t.hambBgActive : t.hambBg,
+                border: `1px solid ${missionsOpen ? t.hambBorderActive : t.hambBorder}`,
+                borderRadius: 7,
+                padding: "3px 8px",
+              }}
+            >
+              <span style={{ fontSize: 9 }}>◆</span> Missions · {automationRuns.length}
+            </button>
+          )}
+
           {/* Voice mode button */}
           <button
             onClick={() => {
@@ -3036,11 +2977,43 @@ function Toolbar({
 function Notch({ state, voiceTurnBusy }: { state: HotkeyState; voiceTurnBusy: boolean }) {
   const { theme: t } = React.useContext(ThemeCtx)
   const entries = useYomiStore((s) => s.entries)
-  const active = state !== "idle" || voiceTurnBusy
+  const automationRuns = useYomiStore((s) => s.automationRuns)
+  const activeAutomationRunId = useYomiStore((s) => s.activeAutomationRunId)
+  const replayAutomation = useYomiStore((s) => s.replayAutomation)
+  const activeRun =
+    automationRuns.find((run) => run.id === activeAutomationRunId) ?? automationRuns[0] ?? null
+  const runLive =
+    activeRun &&
+    !["completed", "failed"].includes(activeRun.state) &&
+    Date.now() - Date.parse(activeRun.startedAt) < 60_000
+  const runRecentlyDone =
+    activeRun?.endedAt && Date.now() - Date.parse(activeRun.endedAt) < 12_000
+  const active = state !== "idle" || voiceTurnBusy || Boolean(runLive || runRecentlyDone)
 
   let statusLabel = ""
   let loaderKind: LoaderKind = "processing"
-  if (state === "listening") {
+  if (activeRun && (runLive || runRecentlyDone)) {
+    statusLabel =
+      activeRun.state === "needs_approval"
+        ? "Needs approval"
+        : activeRun.state === "waiting"
+          ? "Waiting"
+          : activeRun.state === "completed"
+            ? "Completed"
+            : activeRun.state === "failed"
+              ? "Failed"
+              : activeRun.state === "recovering"
+                ? "Recovering"
+                : activeRun.state === "thinking"
+                  ? "Thinking"
+                  : "Executing"
+    loaderKind =
+      activeRun.state === "waiting" || activeRun.state === "needs_approval"
+        ? "typing"
+        : activeRun.state === "completed" || activeRun.state === "failed"
+          ? "speaking"
+          : "processing"
+  } else if (state === "listening") {
     statusLabel = "Listening"
     loaderKind = "listening"
   } else if (voiceTurnBusy) {
@@ -3056,7 +3029,13 @@ function Notch({ state, voiceTurnBusy }: { state: HotkeyState; voiceTurnBusy: bo
 
   const latest = entries[entries.length - 1]
   let contextText: string | null = null
-  if (state === "listening" || voiceTurnBusy) contextText = "Esc to stop"
+  if (activeRun && (runLive || runRecentlyDone)) {
+    const progress =
+      activeRun.step && activeRun.maxSteps ? `Step ${activeRun.step}/${activeRun.maxSteps}` : null
+    const confidence =
+      typeof activeRun.confidence === "number" ? `${Math.round(activeRun.confidence * 100)}%` : null
+    contextText = [activeRun.owner.label, progress, confidence].filter(Boolean).join(" · ")
+  } else if (state === "listening" || voiceTurnBusy) contextText = "Esc to stop"
   else if (state === "text-input") contextText = "text only, no voice"
   else if (state === "processing") contextText = latest?.transcript?.trim() || "Working on it"
 
@@ -3147,6 +3126,48 @@ function Notch({ state, voiceTurnBusy }: { state: HotkeyState; voiceTurnBusy: bo
                 {statusLabel}
               </span>
             </div>
+            {activeRun && (runLive || runRecentlyDone) && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  maxWidth: 290,
+                  marginTop: 2,
+                }}
+              >
+                <span
+                  style={{
+                    minWidth: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    fontSize: 11,
+                    color: "rgba(255,255,255,0.72)",
+                  }}
+                >
+                  {activeRun.currentStep || activeRun.task}
+                </span>
+                {activeRun.replayId && activeRun.state === "completed" && (
+                  <button
+                    onClick={() => replayAutomation(activeRun.replayId!)}
+                    style={{
+                      border: `1px solid ${t.hambBorder}`,
+                      borderRadius: 5,
+                      background: t.hambBg,
+                      color: t.hambColor,
+                      fontSize: 10.5,
+                      fontFamily: UI_FONT,
+                      cursor: "pointer",
+                      padding: "1px 6px",
+                      flexShrink: 0,
+                    }}
+                  >
+                    Replay
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </motion.div>
       )}
@@ -4234,6 +4255,9 @@ const App: React.FC = () => {
 
       {/* Notch — state display that hangs from the bottom of the toolbar */}
       <Notch state={hotkeyState} voiceTurnBusy={voiceTurnBusy} />
+
+      {/* Mission Control — drops under the notch when Missions is toggled. */}
+      <MissionControl />
 
       {/* Chat content — no wrapper card; ResponsePanel and TextInputPanel are self-styled */}
       <AnimatePresence>
