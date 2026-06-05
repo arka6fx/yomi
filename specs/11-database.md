@@ -14,6 +14,10 @@ data only through backend APIs.
 - Better Auth user IDs are text, so app tables use text `user_id`.
 - Personal local memory in `~/.yomi` is not synced to Neon.
 - Local RAG is sidecar-owned and stored in local SQLite, not Neon.
+- Additional local SQLite databases live in `~/.yomi/` owned by the sidecar:
+  `automation.db` (Spec 16 — act logs, run persistence) and `knowledge.db`
+  (Spec 18 — automation learnings and recall). These are also never synced
+  to Neon.
 
 ## Auth And Account Tables
 
@@ -92,8 +96,12 @@ migrations.
 - `packages/db/src/schema.ts`
 - `packages/db/drizzle/0004_cloud_rag.sql`
 - `packages/db/drizzle/0005_cloud_rag_archive_mirror.sql`
+- `packages/db/drizzle/0006_daily_interaction_fields.sql`
+- `packages/db/drizzle/0007_knowledge_learning.sql`
 - `packages/db/drizzle/meta/_journal.json`
 
 ## Future Work
 
 - Optional encryption at rest for local memory SQLite.
+- Drizzle schema for `automation.db` and `knowledge.db` if they outgrow raw
+  SQLite usage.

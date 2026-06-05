@@ -10,6 +10,8 @@ type TestUser = {
   trialEndDate: Date | null
   trialInteractionUsed: number
   trialInteractionLimit: number
+  dailyChatCount: number
+  dailyVoiceCount: number
 }
 
 type ReserveBody = {
@@ -24,7 +26,6 @@ type ReserveBody = {
 }
 
 let currentUser: TestUser
-let updateRows: unknown[]
 let updateCalls = 0
 
 const fakeDb = {
@@ -33,7 +34,7 @@ const fakeDb = {
     return {
       set: () => ({
         where: () => ({
-          returning: () => Promise.resolve(updateRows),
+          returning: () => Promise.resolve([]),
         }),
       }),
     }
@@ -78,9 +79,11 @@ function user(overrides: Partial<TestUser> = {}): TestUser {
     role: "user",
     plan: "explore",
     subscriptionStatus: "inactive",
-    trialEndDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    trialInteractionUsed: 0,
+    trialEndDate: null,
+    trialInteractionUsed: 150,
     trialInteractionLimit: 150,
+    dailyChatCount: 10000,
+    dailyVoiceCount: 200,
     ...overrides,
   }
 }
@@ -88,14 +91,10 @@ function user(overrides: Partial<TestUser> = {}): TestUser {
 describe("POST /api/usage/interactions/reserve", () => {
   beforeEach(() => {
     currentUser = user()
-    updateRows = []
     updateCalls = 0
   })
 
-  it("reserves the final Explore interaction", async () => {
-    currentUser = user({ trialInteractionUsed: 149 })
-    updateRows = [{ plan: "explore", trialInteractionUsed: 150, trialInteractionLimit: 150 }]
-
+  it("allows exhausted Explore users without consuming quota", async () => {
     const res = await reserve()
     const body = (await res.json()) as ReserveBody
 
@@ -106,210 +105,53 @@ describe("POST /api/usage/interactions/reserve", () => {
       trialInteractionUsed: 150,
       trialInteractionLimit: 150,
       trialInteractionsRemaining: 0,
+      dailyChatUsed: 10000,
+      dailyVoiceUsed: 200,
     })
-    expect(updateCalls).toBe(1)
-  })
-
-  it("returns the updated Explore count for immediate desktop refresh", async () => {
-    currentUser = user({ trialInteractionUsed: 41 })
-    updateRows = [{ plan: "explore", trialInteractionUsed: 42, trialInteractionLimit: 150 }]
-
-    const res = await reserve()
-    const body = (await res.json()) as ReserveBody
-
-    expect(res.status).toBe(200)
-    expect(body.plan).toBe("explore")
-    expect(body.trialInteractionUsed).toBe(42)
-    expect(body.trialInteractionLimit).toBe(150)
-    expect(body.trialInteractionsRemaining).toBe(108)
-  })
-
-  it("rejects Explore after the interaction pool is exhausted", async () => {
-    currentUser = user({ trialInteractionUsed: 150 })
-
-    const res = await reserve()
-    const body = (await res.json()) as ReserveBody
-
-    expect(res.status).toBe(429)
-    expect(body.code).toBe("interaction_limit_reached")
-    expect(updateCalls).toBe(1)
-  })
-
-  it("rejects an expired Explore trial", async () => {
-    currentUser = user({ trialEndDate: new Date(Date.now() - 1000) })
-
-    const res = await reserve()
-    const body = (await res.json()) as ReserveBody
-
-    expect(res.status).toBe(403)
-    expect(body.code).toBe("trial_expired")
     expect(updateCalls).toBe(0)
   })
 
-  it("allows active Pro without consuming Explore interactions", async () => {
-    currentUser = user({ plan: "pro", subscriptionStatus: "active", trialInteractionUsed: 12 })
-    updateRows = [
-      {
-        plan: "pro",
-        trialInteractionUsed: 12,
-        trialInteractionLimit: 150,
-        dailyChatUsed: 1,
-        dailyVoiceUsed: 0,
-      },
-    ]
-
-    const res = await reserve()
-    const body = (await res.json()) as ReserveBody
-
-    expect(res.status).toBe(200)
-    expect(body.trialInteractionUsed).toBe(12)
-    expect(body.dailyChatUsed).toBe(1)
-    expect(updateCalls).toBe(1)
-  })
-
-  it("gives owner accounts effective Max access even when stored as Explore", async () => {
-    currentUser = user({ role: "owner", plan: "explore", trialInteractionUsed: 12 })
-
-    const res = await reserve()
-    const body = (await res.json()) as ReserveBody
-
-    expect(res.status).toBe(200)
-    expect(body.plan).toBe("max")
-    expect(body.trialInteractionUsed).toBe(12)
-    expect(body.trialInteractionsRemaining).toBe(138)
-    expect(updateCalls).toBe(0)
-  })
-
-  it("gives allowlisted owner emails effective Max access", async () => {
+  it("allows inactive Pro users and returns current counters", async () => {
     currentUser = user({
-      email: "arkagarai292@gmail.com",
-      plan: "explore",
+      plan: "pro",
+      subscriptionStatus: "past_due",
       trialInteractionUsed: 12,
+      dailyChatCount: 345,
+      dailyVoiceCount: 67,
     })
 
-    const res = await reserve()
+    const res = await reserve("voice")
     const body = (await res.json()) as ReserveBody
 
     expect(res.status).toBe(200)
-    expect(body.plan).toBe("max")
+    expect(body.plan).toBe("pro")
     expect(body.trialInteractionUsed).toBe(12)
-    expect(body.trialInteractionsRemaining).toBe(138)
+    expect(body.dailyChatUsed).toBe(345)
+    expect(body.dailyVoiceUsed).toBe(67)
     expect(updateCalls).toBe(0)
   })
 
-  it("rejects normal Max users while Max is unavailable", async () => {
+  it("allows Max while unrestricted plan testing is enabled", async () => {
     currentUser = user({ plan: "max", subscriptionStatus: "active" })
 
     const res = await reserve("chat")
     const body = (await res.json()) as ReserveBody
 
-    expect(res.status).toBe(403)
-    expect(body.code).toBe("plan_unavailable")
+    expect(res.status).toBe(200)
+    expect(body.plan).toBe("max")
     expect(updateCalls).toBe(0)
   })
 
-  it("reserves the final Pro chat turn", async () => {
-    currentUser = user({ plan: "pro", subscriptionStatus: "active" })
-    updateRows = [
-      {
-        plan: "pro",
-        trialInteractionUsed: 0,
-        trialInteractionLimit: 150,
-        dailyChatUsed: 10000,
-        dailyVoiceUsed: 0,
-      },
-    ]
-
-    const res = await reserve("chat")
+  it("still validates reserve kind", async () => {
+    const res = await app().request("/api/usage/interactions/reserve", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: "agent" }),
+    })
     const body = (await res.json()) as ReserveBody
 
-    expect(res.status).toBe(200)
-    expect(body.dailyChatUsed).toBe(10000)
-    expect(updateCalls).toBe(1)
-  })
-
-  it("rejects Pro chat after the daily cap", async () => {
-    currentUser = user({ plan: "pro", subscriptionStatus: "active" })
-
-    const res = await reserve("chat")
-    const body = (await res.json()) as ReserveBody
-
-    expect(res.status).toBe(429)
-    expect(body.code).toBe("rate_limited")
-    expect(updateCalls).toBe(1)
-  })
-
-  it("reserves the final Pro voice turn", async () => {
-    currentUser = user({ plan: "pro", subscriptionStatus: "active" })
-    updateRows = [
-      {
-        plan: "pro",
-        trialInteractionUsed: 0,
-        trialInteractionLimit: 150,
-        dailyChatUsed: 0,
-        dailyVoiceUsed: 200,
-      },
-    ]
-
-    const res = await reserve("voice")
-    const body = (await res.json()) as ReserveBody
-
-    expect(res.status).toBe(200)
-    expect(body.dailyVoiceUsed).toBe(200)
-    expect(updateCalls).toBe(1)
-  })
-
-  it("rejects Pro voice after the daily cap", async () => {
-    currentUser = user({ plan: "pro", subscriptionStatus: "active" })
-
-    const res = await reserve("voice")
-    const body = (await res.json()) as ReserveBody
-
-    expect(res.status).toBe(429)
-    expect(body.code).toBe("rate_limited")
-    expect(updateCalls).toBe(1)
-  })
-
-  it("rejects inactive Pro subscriptions", async () => {
-    currentUser = user({ plan: "pro", subscriptionStatus: "past_due" })
-
-    const res = await reserve("chat")
-    const body = (await res.json()) as ReserveBody
-
-    expect(res.status).toBe(403)
-    expect(body.code).toBe("subscription_required")
+    expect(res.status).toBe(400)
+    expect(body.code).toBe("invalid_usage_kind")
     expect(updateCalls).toBe(0)
-  })
-
-  it("rejects unknown active plans instead of falling back to Pro limits", async () => {
-    currentUser = user({ plan: "enterprise", subscriptionStatus: "active" })
-
-    const res = await reserve("chat")
-    const body = (await res.json()) as ReserveBody
-
-    expect(res.status).toBe(403)
-    expect(body.code).toBe("invalid_plan")
-    expect(updateCalls).toBe(0)
-  })
-
-  it("resets stale paid daily counters and counts the requested kind", async () => {
-    currentUser = user({ plan: "pro", subscriptionStatus: "active" })
-    updateRows = [
-      {
-        plan: "pro",
-        trialInteractionUsed: 0,
-        trialInteractionLimit: 150,
-        dailyChatUsed: 0,
-        dailyVoiceUsed: 1,
-      },
-    ]
-
-    const res = await reserve("voice")
-    const body = (await res.json()) as ReserveBody
-
-    expect(res.status).toBe(200)
-    expect(body.dailyChatUsed).toBe(0)
-    expect(body.dailyVoiceUsed).toBe(1)
-    expect(updateCalls).toBe(1)
   })
 })

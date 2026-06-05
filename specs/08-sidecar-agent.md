@@ -1,5 +1,12 @@
 # Spec 08 — Sidecar: Agent Pipeline
 
+> **Note:** Superseded by [Spec 18](18-automation-orchestration.md) for
+> automation tasks. The original ReAct loop using Vercel AI SDK `streamText` +
+> `maxSteps` remains as the fallback path (`YOMI_LEGACY_AGENT=1`). The
+> AutomationGraph (Spec 18) wraps the ReAct loop with planning, validation,
+> recovery, and learning for Max-tier automation. Chat and screen-Q&A are
+> unchanged.
+
 ## Purpose
 
 Define the ReAct loop that handles complex multi-step requests routed as
@@ -83,22 +90,22 @@ export interface ToolResult {
 Each tool is defined outside the sandbox and dispatched by the sandbox back to
 the sidecar process for actual execution. This keeps the sandbox pure.
 
-**Phase 0 tools:**
+**Available tools:**
 
 - `screenshot` — captures current screen, returns b64-encoded JPEG.
 - `bash` — executes shell command in sandbox.
 - `read` — reads a file from the sandbox filesystem.
 - `write` — writes a file to the sandbox filesystem.
-- `web_search` — performs a web search.
-- `web_fetch` — fetches a URL.
-
-**Future tools:**
-
-- `edit` — edit a range in an existing file (±5 context lines).
+- `edit` — edit a range in an existing file.
 - `glob` — glob-pattern file search.
 - `grep` — regex search across files.
+- `web_search` — performs a web search.
+- `web_fetch` — fetches a URL.
+- `uia_get_tree` — gets UIA accessibility tree from a target window (Spec 16).
+- `uia_invoke` — invokes a UIA element action (Spec 16).
+- `uia_set_value` — sets a UIA element value (Spec 16).
+- `browser_*` — Playwright MCP tools via generic MCP client (Spec 17).
 - `memory_store`/`memory_recall` — explicit memory read/write.
-- gh tools: `gh_create_pr`, `gh_create_issue`, `gh_push`.
 
 ### Sandbox
 
@@ -138,6 +145,12 @@ Subagents share the same tool set but have a narrower system prompt focused on
 their goal.
 
 Subagent model defaults to `gpt-4.1` (same as agent pipeline).
+
+**Spec 18 enhancement:** On the AutomationGraph path (Max tier), sub-agents are
+provider-routed via `resolveAgent(goal)`, which picks the model and scopes tools
+based on the subtask category (e.g. "code" → gpt-4.1 with code tools, "browser"
+→ gpt-4.1-mini with browser tools only). This is gated behind
+`YOMI_LEGACY_AGENT=1` for fallback to the original behavior.
 
 ### Wiring
 

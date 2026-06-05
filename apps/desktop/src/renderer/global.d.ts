@@ -7,7 +7,6 @@ import type {
   AutomationWorkflowsResponse,
   SubscriptionInfo,
   SubscriptionUpdate,
-  BackgroundAgentSignal,
 } from "../preload/index"
 
 type AuthStatus = "ok" | "needed" | "waiting" | "error"
@@ -22,19 +21,18 @@ declare global {
       // Events
       onEvent(cb: (e: SseEvent) => void): () => void
       onStateChange(cb: (s: HotkeyState) => void): () => void
-      onBackgroundAgent(cb: (sig: BackgroundAgentSignal) => void): () => void
       // Audio
       sendAudioChunk(pcm: ArrayBuffer, sampleRate: number): void
       // Window control
       startDrag(offsetX: number, offsetY: number): void
       moveDrag(screenX: number, screenY: number): void
       resize(w: number, h: number): void
-      setCompanionOverlay(enabled: boolean): void
       setMouseEventsIgnored(ignored: boolean): void
       setHitRegions(regions: { x: number; y: number; width: number; height: number }[]): void
       nudge(dx: number, dy: number): void
       // Queries
       submitTextQuery(text: string): void
+      copyText(text: string): Promise<{ ok: boolean }>
       // Subscription
       getSubscriptionInfo(): Promise<SubscriptionInfo | null>
       updateProfileName(name: string): Promise<{ name: string; email: string }>

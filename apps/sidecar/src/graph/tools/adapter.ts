@@ -31,7 +31,7 @@ function applyHooks(tools: ToolSet, activeHooks: Hooks): ToolSet {
 // Build the merged agent tool set (native + memory + web + Playwright MCP) behind the safety
 // hooks. Browser tools degrade gracefully when the MCP server is unavailable.
 export async function buildAgentToolSet(
-  ctx: { screenshotB64?: string; background?: boolean },
+  ctx: { screenshotB64?: string },
   activeHooks: Hooks,
 ): Promise<ToolSet> {
   const mcpTools = wrapBrowserTools(await getMcpTools())

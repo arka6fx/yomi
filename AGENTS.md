@@ -11,7 +11,7 @@ your laptop less. Mac (menu bar / notch), Windows (system tray).
 | ---------------------- | ------------------------ | --------------------------- |
 | Quick ask / screen Q&A | Linear pipeline          | < 2 s                       |
 | Screen-aware guidance  | Linear pipeline + vision | < 3 s                       |
-| Autonomous task        | ReAct loop + subagents   | seconds–minutes, background |
+| Autonomous task        | ReAct loop + subagents   | seconds–minutes, foreground |
 
 **Intent router** decides fast vs agent at the START of every turn. Never route
 mid-turn — switching models loses the prompt cache and causes tool-vocab
@@ -23,7 +23,7 @@ mismatch.
 
 ```
 apps/backend/   Hono/Bun — auth, billing, LLM proxy, metering
-apps/desktop/   Electron — tray/menubar, hotkeys, capture, floating UI
+apps/desktop/   Electron — tray/menubar/notch, hotkeys, capture, Mission Control
 apps/landing/   Next.js  — marketing + waitlist (Vercel)
 apps/sidecar/   Bun      — router, fast pipeline, agent loop, notepad
 packages/db/    Drizzle schema + Neon
@@ -72,8 +72,8 @@ cd apps/desktop  && bun run dev   # Electron
 
 ```
 DESKTOP SHELL  (apps/desktop — Electron)
-  tray/menubar · global hotkey · push-to-talk
-  screen + mic capture · floating UI · device-code auth
+  tray/menubar/notch · global hotkey · push-to-talk
+  screen + mic capture · Mission Control · device-code auth
   ↕  local socket  (low-latency authenticated IPC)
 LOCAL SIDECAR  (apps/sidecar — Bun)
   intent router · fast pipeline (STT → vision → LLM → TTS)
@@ -170,7 +170,7 @@ hook_logs       id, user_id, run_id, hook, tool, decision, payload_redacted, cre
 | ------- | --------- | ---------------------------------------------------------------------------------- |
 | Explore | $0/mo     | 30-day trial; 150 total interactions; voice + screen; no agents                    |
 | Pro     | $9.99/mo  | Unlimited standard interactions\*; voice 200/day; screen analysis; no agents       |
-| Max     | $24.99/mo | Everything in Pro + agents/sub-agents; 10 000 agent runs/day; background execution |
+| Max     | $24.99/mo | Everything in Pro + agents/sub-agents; 10 000 foreground agent runs/day            |
 
 \* Fair-use: chat 10 000/day. Voice capped at 200/day on Pro, 10 000/day on Max.
 
@@ -187,8 +187,8 @@ reference docs.
 | Spec | File                          | Scope                                                                                                 |
 | ---- | ----------------------------- | ----------------------------------------------------------------------------------------------------- |
 | 02   | `02-sidecar-fast-pipeline`    | OpenAI-compatible fast path + visual guide                                                            |
-| 03   | `03-desktop-shell`            | Electron main: sidecar spawn, hotkey, desktopCapturer, IPC bridge, overlay window                     |
-| 04   | `04-desktop-ui`               | Renderer: floating overlay, Zustand store, audio capture, streaming response                          |
+| 03   | `03-desktop-shell`            | Electron main: sidecar spawn, hotkey, desktopCapturer, IPC bridge, tray/notch windows                 |
+| 04   | `04-desktop-ui`               | Renderer: notch/tray status, Mission Control, audio capture, streaming response                       |
 | 05   | `05-speech-stt`               | STT abstraction: ElevenLabs scribe_v2 + VAD                                                           |
 | 06   | `06-speech-tts`               | TTS abstraction: ElevenLabs eleven_flash_v2_5 (MP3)                                                   |
 | 07   | `07-sidecar-router`           | Intent router: fast vs agent classification                                                           |
@@ -211,6 +211,8 @@ reference docs.
   leaves the machine.
 - Visible status: tray/notch pill always shows when Yomi is listening or
   capturing. No silent recording.
+- Desktop automation is foreground-specific. Do not create detached background
+  automation or floating agent companions.
 - Per-app blocklist: password managers and banking apps are never captured.
 - Window content-protection: Yomi's own window excluded from screen-shares.
 - Encrypted memory sync; user-owned export/delete; clear data-retention policy.

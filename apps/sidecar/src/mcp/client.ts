@@ -25,7 +25,9 @@ function browserProfileDir(): string {
 // YOMI_MCP_PLAYWRIGHT_CMD (e.g. "npx -y @playwright/mcp") — useful for the packaged app.
 function playwrightCommand(): { command: string; args: string[] } {
   const profile = browserProfileDir()
-  const baseArgs = ["--browser", "chromium", "--user-data-dir", profile]
+  // Prefer Google Chrome for browser automation; users expect "browser" to mean Chrome here.
+  const browser = process.env.YOMI_BROWSER_AUTOMATION_BROWSER || "chrome"
+  const baseArgs = ["--browser", browser, "--user-data-dir", profile]
   const override = process.env.YOMI_MCP_PLAYWRIGHT_CMD
   if (override) {
     const [command, ...args] = override.split(/\s+/).filter(Boolean)

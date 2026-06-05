@@ -91,7 +91,6 @@ function makeDeps(opts: {
       return opts.model
     },
     toolsPromise: Promise.resolve(noopTools),
-    background: false,
     uia: { getWindowInfo: async () => ({ window: "" }), findWindow: async () => null },
     writeTurn: async () => {},
     requestApproval: opts.requestApproval ?? (async () => true),
@@ -101,7 +100,7 @@ function makeDeps(opts: {
 }
 
 function run(deps: GraphDeps, goal: string) {
-  return buildGraph(deps).invoke({ taskId: "t", goal, background: false }, { recursionLimit: 50 })
+  return buildGraph(deps).invoke({ taskId: "t", goal }, { recursionLimit: 50 })
 }
 
 afterEach(() => {
