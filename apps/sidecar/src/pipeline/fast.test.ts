@@ -52,6 +52,12 @@ let lastStreamTextMessages: unknown[] = []
 let lastStreamTextOptions: Record<string, unknown> = {}
 let appendSessionCalls = 0
 let loadRecentSessionCalls = 0
+const sttMock = {
+  shouldThrow: false,
+  reset(): void {
+    this.shouldThrow = false
+  },
+}
 
 // ---------------------------------------------------------------------------
 // Module mocks — must be registered before any import of the modules under test
@@ -93,12 +99,30 @@ mock.module("openai", () => ({
   },
 }))
 
-mock.module("../services/elevenlabs/stt.js", () => ({
-  elevenLabsTranscribe: async () => ({
-    text: "transcribed from audio",
-    language_code: "en",
-  }),
-}))
+mock.module("../services/elevenlabs/stt.js", () => {
+  class MockElevenLabsSttError extends Error {
+    constructor(
+      message: string,
+      readonly status: number,
+      readonly body?: string,
+    ) {
+      super(message)
+      this.name = "ElevenLabsSttError"
+    }
+  }
+  return {
+    ElevenLabsSttError: MockElevenLabsSttError,
+    elevenLabsTranscribe: async () => {
+      if (sttMock.shouldThrow) {
+        throw new MockElevenLabsSttError("ElevenLabs STT error 401", 401, "invalid api key")
+      }
+      return {
+        text: "transcribed from audio",
+        language_code: "en",
+      }
+    },
+  }
+})
 
 mock.module("./tts.js", () => ({
   resolveTts: () => ttsMock.engine,
@@ -195,6 +219,23 @@ function postFast(body: unknown, opts: { secret?: string | null } = {}): Promise
   )
 }
 
+function postStt(audio: Uint8Array, opts: { secret?: string | null } = {}): Promise<Response> {
+  const { secret = "test-secret" } = opts
+  const form = new FormData()
+  form.append("audio", new Blob([audio], { type: "audio/wav" }), "audio.wav")
+  const headers: Record<string, string> = {}
+  if (secret !== null) headers["x-sidecar-secret"] = secret
+  return Promise.resolve(
+    app.fetch(
+      new Request("http://localhost/stt", {
+        method: "POST",
+        headers,
+        body: form,
+      }),
+    ),
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Suite
 // ---------------------------------------------------------------------------
@@ -211,6 +252,7 @@ describe("fastPipeline — generator", () => {
     delete process.env.SIDECAR_SECRET
     delete process.env.OPENAI_API_KEY
     ttsMock.reset()
+    sttMock.reset()
   })
 
   // -------------------------------------------------------------------------
@@ -671,6 +713,24 @@ describe("POST /query/fast — HTTP endpoint", () => {
     expect(res.status).toBe(200)
     const events = (await parseSse(res)) as any[]
     expect(events[0]).toMatchObject({ type: "transcript", text: "transcribed from audio" })
+  })
+
+  it("POST /stt rejects an empty wav before calling STT", async () => {
+    delete process.env.SIDECAR_SECRET
+    const res = await postStt(new Uint8Array(44))
+    expect(res.status).toBe(400)
+    const body = (await res.json()) as any
+    expect(body.error).toMatch(/empty/)
+  })
+
+  it("POST /stt surfaces upstream STT errors as JSON", async () => {
+    delete process.env.SIDECAR_SECRET
+    sttMock.shouldThrow = true
+    const res = await postStt(new Uint8Array(48))
+    expect(res.status).toBe(400)
+    const body = (await res.json()) as any
+    expect(body.error).toContain("ElevenLabs STT error 401")
+    expect(body.error).toContain("invalid api key")
   })
 
   // -------------------------------------------------------------------------

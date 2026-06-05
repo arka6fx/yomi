@@ -7,6 +7,10 @@ import type { UiaElement, UiaSnapshot } from "@yomi/shared"
 // The helper is spawned lazily on first use and respawned if it dies.
 
 const HELPER_TIMEOUT_MS = 5_000
+// Enumerating a large accessibility tree (e.g. Spotify's WebView2, ~800 nodes) is slow over the
+// cross-process COM bridge and routinely exceeds 5s — give get_ui_tree a much longer budget so a
+// normal play doesn't trip a timeout cascade.
+const TREE_TIMEOUT_MS = 15_000
 
 type Pending = { resolve: (v: unknown) => void; reject: (e: Error) => void }
 
@@ -118,13 +122,17 @@ class UiaClient {
     else p.resolve(msg.result)
   }
 
-  async call<T = unknown>(method: string, params: Record<string, unknown> = {}): Promise<T> {
+  async call<T = unknown>(
+    method: string,
+    params: Record<string, unknown> = {},
+    timeoutMs: number = HELPER_TIMEOUT_MS,
+  ): Promise<T> {
     await this.ensure()
     const id = this.nextId++
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
         if (this.pending.delete(id)) reject(new Error(`uia-helper timeout: ${method}`))
-      }, HELPER_TIMEOUT_MS)
+      }, timeoutMs)
       this.pending.set(id, {
         resolve: (v) => {
           clearTimeout(timer)
@@ -148,9 +156,9 @@ class UiaClient {
   }
 
   async getUiTree(
-    params: { maxNodes?: number; maxDepth?: number; hwnd?: number } = {},
+    params: { maxNodes?: number; maxDepth?: number; hwnd?: number; lite?: boolean } = {},
   ): Promise<UiaSnapshot> {
-    const snap = await this.call<UiaSnapshot>("get_ui_tree", params)
+    const snap = await this.call<UiaSnapshot>("get_ui_tree", params, TREE_TIMEOUT_MS)
     this.lastWindow = snap.window ?? ""
     this.elementsByRef = new Map((snap.elements ?? []).map((e) => [e.ref, e]))
     return snap
@@ -160,6 +168,47 @@ class UiaClient {
     const info = await this.call<{ window: string }>("get_window_info", params)
     this.lastWindow = info.window ?? ""
     return info
+  }
+
+  // --- Background primitives (Spec: background-mode automation) ---
+
+  // Tap a media/volume hardware key — acts on the app owning the media session without focus.
+  async mediaKey(key: string): Promise<{ ok: boolean }> {
+    return this.call<{ ok: boolean }>("media_key", { key })
+  }
+
+  // Per-app volume in the Windows mixer (Core Audio) — focus-free, invisible. Returns 0..1, or null
+  // when the app has no active audio session (e.g. Spotify not playing).
+  async getAppVolume(process: string): Promise<number | null> {
+    const r = await this.call<{ volume?: number | null }>("get_app_volume", { process })
+    return typeof r.volume === "number" ? r.volume : null
+  }
+
+  async setAppVolume(process: string, level: number): Promise<{ ok: boolean; before?: number | null }> {
+    return this.call<{ ok: boolean; before?: number | null }>("set_app_volume", { process, level })
+  }
+
+  // Find an app window by process name / title substring without spawning PowerShell (which would
+  // flash a console and steal foreground). Returns the hwnd, or null if no matching window.
+  async findWindow(params: { process?: string; titleContains?: string }): Promise<number | null> {
+    const r = await this.call<{ hwnd?: number }>("find_window", params)
+    return typeof r.hwnd === "number" && r.hwnd > 0 ? r.hwnd : null
+  }
+
+  // The window the user is currently in — capture before a focus-shuttle to restore it after.
+  async getForeground(): Promise<number | null> {
+    const r = await this.call<{ hwnd?: number }>("get_foreground")
+    return typeof r.hwnd === "number" && r.hwnd > 0 ? r.hwnd : null
+  }
+
+  // Restore focus to a previously captured window handle.
+  async setForeground(hwnd: number): Promise<{ ok: boolean }> {
+    return this.call<{ ok: boolean }>("set_foreground", { hwnd })
+  }
+
+  // Maximize a window so its full UI renders.
+  async maximizeWindow(hwnd: number): Promise<{ ok: boolean }> {
+    return this.call<{ ok: boolean }>("maximize_window", { hwnd })
   }
 }
 

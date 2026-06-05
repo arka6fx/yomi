@@ -30,6 +30,9 @@ const cases: Case[] = [
   { text: "create a new Python file in my project", path: "agent", minConf: 0.3 },
   { text: "open my calendar", path: "agent", minConf: 0.3 },
   { text: "commit and push my changes", path: "agent", minConf: 0.3 },
+  { text: "write buy milk in notepad", path: "agent", minConf: 0.7 },
+  { text: "save this in Windows Notepad", path: "agent", minConf: 0.7 },
+  { text: "wright thingsyou knoe about me in the notepad", path: "agent", minConf: 0.7 },
 
   // Agent path — multi-step connective (needs an action verb + connective to hit 0.8)
   { text: "research best laptops and then draft a comparison doc", path: "agent", minConf: 0.8 },

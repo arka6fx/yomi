@@ -78,6 +78,7 @@ export interface UiaElement {
   enabled: boolean
   offscreen?: boolean // rect is empty or outside the window — needs ScrollIntoView/vision
   value?: string | null
+  rangeValue?: number | null // RangeValuePattern current (e.g. Spotify volume slider 0..100)
 }
 
 export interface UiaSnapshot {
@@ -92,6 +93,63 @@ export type UiaAction =
   | { kind: "click_point"; x: number; y: number; button?: "left" | "right" | "middle" }
 
 export type IntentPath = "fast" | "agent"
+
+export type AutomationState =
+  | "idle"
+  | "thinking"
+  | "executing"
+  | "waiting"
+  | "needs_approval"
+  | "completed"
+  | "failed"
+  | "recovering"
+
+export type AutomationRisk = "safe" | "moderate" | "dangerous"
+
+export interface AutomationOwner {
+  id: string
+  label: string
+}
+
+export interface AutomationPreview {
+  steps: string[]
+  estimatedSeconds: number
+  risk: AutomationRisk
+  confidence: number
+}
+
+export interface AutomationTimelineItem {
+  id: string
+  at: string
+  label: string
+  status: "planned" | "running" | "waiting" | "done" | "failed" | "skipped"
+  detail?: string
+}
+
+export interface AutomationRun {
+  id: string
+  owner: AutomationOwner
+  task: string
+  state: AutomationState
+  startedAt: string
+  endedAt?: string
+  currentStep?: string
+  nextStep?: string
+  step?: number
+  maxSteps?: number
+  estimatedSeconds?: number
+  confidence?: number
+  replayId?: string
+  timeline: AutomationTimelineItem[]
+}
+
+export interface AutomationReplay {
+  id: string
+  runId: string
+  task: string
+  owner: AutomationOwner
+  createdAt: string
+}
 
 export interface IntentClassification {
   path: IntentPath
@@ -122,6 +180,7 @@ export interface AgentQueryRequest {
   task?: string
   plan?: Plan // controls local-only memory injection/writes
   history?: { role: "user" | "assistant"; text: string }[] // prior turns for the conversational act loop
+  background?: boolean // run without stealing focus where possible; inferred from phrasing if unset
 }
 
 export interface CloudRagSnippet {
@@ -189,5 +248,24 @@ export type SseEvent =
   | { type: "agent_tool_call"; tool: string; args: Record<string, unknown> }
   | { type: "agent_tool_result"; tool: string; result: unknown }
   | { type: "agent_step"; iteration: number; max: number }
+  // Automation Mission Control (Spec 18)
+  | { type: "automation_started"; run: AutomationRun }
+  | { type: "automation_preview"; runId: string; preview: AutomationPreview }
+  | {
+      type: "automation_step"
+      runId: string
+      state: AutomationState
+      currentStep: string
+      nextStep?: string
+      step?: number
+      maxSteps?: number
+      estimatedSeconds?: number
+      confidence?: number
+    }
+  | { type: "automation_timeline"; runId: string; item: AutomationTimelineItem }
+  | { type: "automation_waiting"; runId: string; reason: string; risk: AutomationRisk }
+  | { type: "automation_completed"; runId: string; summary: string; replayId?: string }
+  | { type: "automation_failed"; runId: string; error: string; replayId?: string }
+  | { type: "automation_recovering"; runId: string; reason: string }
   | { type: "done" }
   | { type: "error"; message: string }

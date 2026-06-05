@@ -406,6 +406,16 @@ function startSessionValidation() {
   }, 30_000)
 }
 
+// Duck/restore Spotify around a listening turn so a playing song doesn't drown out the user's
+// voice in the mic. Fire-and-forget — never block the state transition on it.
+function setSpotifyDuck(sidecar: SidecarManager, on: boolean): void {
+  void fetch(`${sidecar.baseUrl}/spotify/duck`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-sidecar-secret": sidecar.secret },
+    body: JSON.stringify({ duck: on }),
+  }).catch(() => {})
+}
+
 // Called after a valid token is obtained.
 // First call: starts sidecar, registers IPC handlers, registers shortcuts.
 // Subsequent calls (re-auth after sign-out): just re-enables the shortcuts.
@@ -441,6 +451,9 @@ async function completeSetup(token: string) {
           // Show overlay so the user sees the recording indicator and ESC hint.
           overlayWin?.show()
         }
+        // Duck Spotify while listening so a playing song doesn't drown out the user's voice;
+        // restore it as soon as listening ends.
+        setSpotifyDuck(sidecar, s === "listening")
         overlayWin?.webContents.send("yomi:state", s)
       },
       onListenStop,

@@ -9,6 +9,8 @@ export interface BackgroundAgentSignal {
   runId: string
   state: "idle" | "thinking" | "working" | "waiting" | "error"
   task: string
+  owner?: string
+  detail?: string
   step?: number
   max?: number
   done?: boolean
@@ -33,6 +35,67 @@ export interface SubscriptionInfo {
 
 export type SubscriptionUpdate = Partial<SubscriptionInfo> & {
   plan?: string
+}
+
+export interface AutomationProviderHealth {
+  id: string
+  label: string
+  ok: boolean
+  detail?: string
+  diagnostics?: Record<string, unknown>
+}
+
+export interface AutomationHealthResponse {
+  ok: boolean
+  providers: AutomationProviderHealth[]
+}
+
+export interface AutomationProviderRepairResponse {
+  provider: AutomationProviderHealth
+}
+
+export interface AutomationKnowledgeWorkflow {
+  id: string
+  agentId: string
+  goal: string
+  tools: string[]
+  stepCount: number
+  recoveryCount: number
+  durationMs: number
+  outcome: "success" | "failure"
+  summary: string
+  createdAt: string
+}
+
+export interface AutomationKnowledgeRecovery {
+  id: string
+  agentId: string
+  goalKey: string
+  error: string
+  strategy: string
+  createdAt: string
+}
+
+export interface AutomationKnowledgeResponse {
+  agent: { id: string; label: string; provider: string }
+  hint: string | null
+  workflows: AutomationKnowledgeWorkflow[]
+  recoveries: AutomationKnowledgeRecovery[]
+}
+
+export interface AutomationWorkflowReplay {
+  replayId: string
+  task: string
+  ownerId: string
+  ownerLabel: string
+  status: string
+  startedAt: string
+  endedAt: string | null
+  summary: string | null
+}
+
+export interface AutomationWorkflowsResponse {
+  workflows: AutomationWorkflowReplay[]
 }
 
 contextBridge.exposeInMainWorld("yomi", {
@@ -200,5 +263,25 @@ contextBridge.exposeInMainWorld("yomi", {
 
   confirmAct(id: string, approved: boolean): void {
     ipcRenderer.send("yomi:act-confirm", id, approved)
+  },
+
+  replayAutomation(replayId: string): void {
+    ipcRenderer.send("yomi:automation-replay", replayId)
+  },
+
+  getAutomationHealth(): Promise<AutomationHealthResponse> {
+    return ipcRenderer.invoke("yomi:automation-health")
+  },
+
+  repairAutomationProvider(providerId: string): Promise<AutomationProviderRepairResponse> {
+    return ipcRenderer.invoke("yomi:automation-provider-repair", providerId)
+  },
+
+  getAutomationKnowledge(goal: string): Promise<AutomationKnowledgeResponse> {
+    return ipcRenderer.invoke("yomi:automation-knowledge", goal)
+  },
+
+  getAutomationWorkflows(): Promise<AutomationWorkflowsResponse> {
+    return ipcRenderer.invoke("yomi:automation-workflows")
   },
 })
