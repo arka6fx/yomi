@@ -2,6 +2,11 @@ FROM oven/bun:1.3.14 AS builder
 
 WORKDIR /app
 
+ARG NEXT_PUBLIC_BACKEND_URL
+ARG NEXT_PUBLIC_APP_URL
+ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+
 # Copy workspace root files
 COPY package.json bun.lock ./
 
@@ -30,12 +35,13 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV HOSTNAME=0.0.0.0
 
 # Copy standalone build
 COPY --from=builder /app/apps/landing/.next/standalone ./
-COPY --from=builder /app/apps/landing/.next/static ./.next/static
-COPY --from=builder /app/apps/landing/public ./public
+COPY --from=builder /app/apps/landing/.next/static ./apps/landing/.next/static
+COPY --from=builder /app/apps/landing/public ./apps/landing/public
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+CMD ["node", "apps/landing/server.js"]

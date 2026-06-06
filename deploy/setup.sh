@@ -22,7 +22,7 @@ sudo apt install -y docker-compose-plugin
 
 # Install Certbot
 echo "Installing Certbot..."
-sudo apt install -y certbot python3-certbot-nginx
+sudo apt install -y certbot
 
 # Configure UFW firewall
 echo "Configuring firewall..."
@@ -33,12 +33,8 @@ sudo ufw --force enable
 
 # Create directories
 echo "Creating deployment directories..."
-sudo mkdir -p /opt/yomi/deploy/{certs,logs}
+sudo mkdir -p /opt/yomi/deploy/{certs,certbot-work,logs}
 sudo chown -R $USER:$USER /opt/yomi
-
-# Create certbot webroot
-sudo mkdir -p /var/www/certbot
-sudo chown -R $USER:$USER /var/www/certbot
 
 echo ""
 echo "=== Setup Complete ==="
@@ -46,7 +42,7 @@ echo ""
 echo "Next steps:"
 echo "1. Clone your repo: git clone https://github.com/arka6fx/yomi.git /opt/yomi"
 echo "2. Create .env.production from .env.example"
-echo "3. Run: docker compose up -d --build"
-echo "4. Get SSL certificate: sudo certbot --nginx -d yomi.arka6fx.com"
+echo "3. Issue SSL certificate using the command in SETUP_GUIDE.md"
+echo "4. Run: docker compose --env-file .env.production up -d --build"
 echo ""
 echo "Note: You may need to log out and back in for docker group to take effect."
