@@ -1,0 +1,45 @@
+import { autoUpdater } from "electron-updater"
+import type { BrowserWindow } from "electron"
+
+let initialized = false
+
+export function initAutoUpdater(win: BrowserWindow): void {
+  if (initialized) return
+  initialized = true
+
+  autoUpdater.autoDownload = false
+  autoUpdater.autoInstallOnAppQuit = true
+
+  autoUpdater.on("update-available", (info) => {
+    win.webContents.send("yomi:update-available", {
+      version: info.version,
+      releaseDate: info.releaseDate,
+    })
+  })
+
+  autoUpdater.on("update-downloaded", (info) => {
+    win.webContents.send("yomi:update-downloaded", {
+      version: info.version,
+    })
+  })
+
+  autoUpdater.on("error", (err) => {
+    console.warn("[yomi/updater] error:", err.message)
+  })
+
+  autoUpdater.checkForUpdates().catch(() => {})
+
+  setInterval(() => {
+    autoUpdater.checkForUpdates().catch(() => {})
+  }, 4 * 60 * 60 * 1000)
+}
+
+export function downloadUpdate(): void {
+  autoUpdater.downloadUpdate().catch((err) => {
+    console.warn("[yomi/updater] download failed:", err.message)
+  })
+}
+
+export function installUpdate(): void {
+  autoUpdater.quitAndInstall(false, true)
+}
