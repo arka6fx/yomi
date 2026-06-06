@@ -16,6 +16,11 @@ const VAD_MAX_UTTERANCE_MS = 15000 // hard cap on a single utterance
 const VAD_INACTIVITY_MS = 10000 // no speech at all → exit the loop back to idle
 const TTS_PLAYBACK_GAIN = 1.45
 
+type UpdateNotice =
+  | { status: "available"; version: string; releaseDate: string }
+  | { status: "downloaded"; version: string }
+  | null
+
 // Barge-in tuning — a mic-only VAD tap runs while Yomi processes/speaks so the
 // user can talk over it. Thresholds are deliberately stricter than the listening
 // VAD to resist TTS leaking back through the mic (echo cancellation is on, but
@@ -3493,6 +3498,7 @@ const App: React.FC = () => {
   const [lastProvider, setLastProvider] = React.useState<"github" | "google" | null>(null)
   const [menuOpen, setMenuOpen] = React.useState(false)
   const [uiOpacity, setUiOpacity] = React.useState(readUiOpacity)
+  const [updateNotice, setUpdateNotice] = React.useState<UpdateNotice>(null)
   const menuCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const menuOpenedAtRef = useRef<number>(0)
 
@@ -3690,6 +3696,19 @@ const App: React.FC = () => {
     })
   }, [setSubscription])
 
+  useEffect(() => {
+    const offAvailable = window.yomi.onUpdateAvailable((info) => {
+      setUpdateNotice({ status: "available", ...info })
+    })
+    const offDownloaded = window.yomi.onUpdateDownloaded((info) => {
+      setUpdateNotice({ status: "downloaded", ...info })
+    })
+    return () => {
+      offAvailable()
+      offDownloaded()
+    }
+  }, [])
+
   // Size the transparent Electron shell to the root overlay only; transient hit areas animate.
   React.useLayoutEffect(() => {
     let frame = 0
@@ -3730,7 +3749,7 @@ const App: React.FC = () => {
       cancelAnimationFrame(settleFrame)
       resizeObserver.disconnect()
     }
-  }, [authState, entries.length, hotkeyState, menuOpen, voiceTurnBusy])
+  }, [authState, entries.length, hotkeyState, menuOpen, updateNotice, voiceTurnBusy])
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -4196,6 +4215,78 @@ const App: React.FC = () => {
           onMenuScheduleClose={scheduleMenuClose}
         />
       </div>
+
+      <AnimatePresence>
+        {updateNotice && (
+          <motion.div
+            key="update-notice"
+            className="yomi-hit-area no-drag"
+            initial={{ y: -8, opacity: 0, scale: 0.98 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: -6, opacity: 0, scale: 0.98 }}
+            transition={{ type: "spring", stiffness: 420, damping: 30 }}
+            style={{
+              marginTop: 6,
+              width: 880,
+              maxWidth: "calc(100vw - 40px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              padding: "9px 12px",
+              borderRadius: 10,
+              background: glassBar(toolbarBg),
+              border: `1px solid ${t.borderHi}`,
+              boxShadow: "0 12px 30px rgba(0,0,0,0.38)",
+              color: t.text,
+              fontSize: 12,
+              boxSizing: "border-box",
+            }}
+          >
+            <span>
+              {updateNotice.status === "available"
+                ? `Yomi ${updateNotice.version} is available.`
+                : `Yomi ${updateNotice.version} is ready to install.`}
+            </span>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                className="no-drag"
+                onClick={() =>
+                  updateNotice.status === "available"
+                    ? window.yomi.downloadUpdate()
+                    : window.yomi.installUpdate()
+                }
+                style={{
+                  border: `1px solid ${t.borderHi}`,
+                  borderRadius: 8,
+                  background: t.accentD,
+                  color: t.text,
+                  padding: "5px 9px",
+                  fontSize: 11,
+                  cursor: "pointer",
+                }}
+              >
+                {updateNotice.status === "available" ? "Download" : "Restart"}
+              </button>
+              <button
+                className="no-drag"
+                onClick={() => setUpdateNotice(null)}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  color: t.dim,
+                  cursor: "pointer",
+                  fontSize: 14,
+                  lineHeight: 1,
+                }}
+                aria-label="Dismiss update notice"
+              >
+                ×
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Notch — state display that hangs from the bottom of the toolbar */}
       <Notch state={hotkeyState} voiceTurnBusy={voiceTurnBusy} />

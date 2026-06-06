@@ -58,6 +58,11 @@ declare global {
       repairAutomationProvider(providerId: string): Promise<AutomationProviderRepairResponse>
       getAutomationKnowledge(goal: string): Promise<AutomationKnowledgeResponse>
       getAutomationWorkflows(): Promise<AutomationWorkflowsResponse>
+      // Auto-update
+      onUpdateAvailable(cb: (info: { version: string; releaseDate: string }) => void): () => void
+      onUpdateDownloaded(cb: (info: { version: string }) => void): () => void
+      downloadUpdate(): void
+      installUpdate(): void
     }
   }
 }

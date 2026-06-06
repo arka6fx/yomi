@@ -23,6 +23,7 @@
   "dependencies": {
     "@fontsource/caveat": "^5.2.8",
     "@yomi/shared": "workspace:*",
+    "electron-updater": "^6.8.9",
     "framer-motion": "^11.0.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
