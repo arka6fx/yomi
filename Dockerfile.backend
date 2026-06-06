@@ -3,7 +3,7 @@ FROM oven/bun:1.3.14 AS builder
 WORKDIR /app
 
 # Copy workspace root files
-COPY package.json bun.lockb ./
+COPY package.json bun.lock ./
 COPY apps/backend/package.json ./apps/backend/
 COPY packages/db/package.json ./packages/db/
 COPY packages/shared/package.json ./packages/shared/
@@ -32,7 +32,7 @@ COPY --from=builder /app/packages/db ./packages/db
 COPY --from=builder /app/packages/shared ./packages/shared
 
 # Install production dependencies only
-COPY --from=builder /app/package.json /app/bun.lockb ./
+COPY --from=builder /app/package.json /app/bun.lock ./
 RUN bun install --frozen-lockfile --production
 
 EXPOSE 3001
