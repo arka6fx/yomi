@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import { Hono } from "hono"
 import type { MiddlewareHandler } from "hono"
 import { streamSSE } from "hono/streaming"
@@ -16,6 +18,36 @@ import { allProviders, getProvider } from "./automation/providers/registry.js"
 import type { ProviderId } from "./automation/providers/types.js"
 import { resolveAgent } from "./automation/agents/registry.js"
 import { knowledgeHint, recallKnowledge } from "./automation/knowledge.js"
+
+// Load .env from the sidecar binary's directory (production) or project root (dev).
+// Compiled binaries don't inherit the bun --env-file flag, so we parse it manually.
+function loadDotEnv(): void {
+  const binDir = join(process.execPath, "..")
+  const candidates = [
+    join(binDir, ".env"),
+    join(binDir, "..", ".env"),
+    join(import.meta.dir, "..", "..", ".env"),
+    join(import.meta.dir, "..", "..", "..", ".env"),
+  ]
+  for (const p of candidates) {
+    try {
+      const content = readFileSync(p, "utf8")
+      for (const line of content.split("\n")) {
+        const trimmed = line.trim()
+        if (!trimmed || trimmed.startsWith("#")) continue
+        const eqIdx = trimmed.indexOf("=")
+        if (eqIdx === -1) continue
+        const key = trimmed.slice(0, eqIdx).trim()
+        const val = trimmed.slice(eqIdx + 1).trim()
+        if (!(key in process.env)) process.env[key] = val
+      }
+      return
+    } catch {
+      // try next
+    }
+  }
+}
+loadDotEnv()
 
 // Ensure ~/.yomi/ directory tree exists before serving any requests.
 initMemorySubsystem().catch((err) => console.warn("[yomi] memory subsystem init failed:", err))

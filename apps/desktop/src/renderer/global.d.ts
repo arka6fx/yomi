@@ -50,6 +50,7 @@ declare global {
       // App control
       quit(): void
       openUpgrade(): void
+      openDashboard(): void
       setOpacity(value: number): void
       // Act mode (Spec 16)
       confirmAct(id: string, approved: boolean): void
