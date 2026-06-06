@@ -265,4 +265,26 @@ contextBridge.exposeInMainWorld("yomi", {
   getAutomationWorkflows(): Promise<AutomationWorkflowsResponse> {
     return ipcRenderer.invoke("yomi:automation-workflows")
   },
+
+  // ── Auto-update ──────────────────────────────────────────────────────────
+
+  onUpdateAvailable(cb: (info: { version: string; releaseDate: string }) => void): () => void {
+    const h = (_: Electron.IpcRendererEvent, info: { version: string; releaseDate: string }) => cb(info)
+    ipcRenderer.on("yomi:update-available", h)
+    return () => ipcRenderer.off("yomi:update-available", h)
+  },
+
+  onUpdateDownloaded(cb: (info: { version: string }) => void): () => void {
+    const h = (_: Electron.IpcRendererEvent, info: { version: string }) => cb(info)
+    ipcRenderer.on("yomi:update-downloaded", h)
+    return () => ipcRenderer.off("yomi:update-downloaded", h)
+  },
+
+  downloadUpdate(): void {
+    ipcRenderer.send("yomi:download-update")
+  },
+
+  installUpdate(): void {
+    ipcRenderer.send("yomi:install-update")
+  },
 })

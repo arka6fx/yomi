@@ -24,6 +24,7 @@ import {
   triggerStopListening,
 } from "./hotkey"
 import { initSidecarIpc } from "./ipc"
+import { initAutoUpdater, downloadUpdate, installUpdate } from "./updater"
 
 // Transparent frameless windows need software compositing on some GPU/driver combos
 if (process.platform === "win32") {
@@ -227,6 +228,9 @@ app.whenReady().then(async () => {
 
   ipcMain.on("yomi:quit", () => app.quit())
 
+  ipcMain.on("yomi:download-update", () => downloadUpdate())
+  ipcMain.on("yomi:install-update", () => installUpdate())
+
   ipcMain.on("yomi:open-upgrade", () => {
     const base = process.env["YOMI_LANDING_URL"] ?? "http://localhost:3000"
     openTrustedExternal(`${base}/pricing`)
@@ -302,6 +306,7 @@ app.whenReady().then(async () => {
 
   overlayWin.once("ready-to-show", async () => {
     overlayWin?.show()
+    if (process.env.YOMI_DEV !== "true") initAutoUpdater(overlayWin!)
     // Check for a stored token in the background — renderer is already showing "checking" state
     const token = await checkStoredToken()
     if (token) {
