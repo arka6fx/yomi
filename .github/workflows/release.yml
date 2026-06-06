@@ -18,8 +18,6 @@ jobs:
     name: Build & publish Windows installer
     runs-on: windows-latest
     timeout-minutes: 45
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout
@@ -57,10 +55,10 @@ jobs:
         working-directory: apps/desktop
         run: bunx electron-vite build
 
-      - name: Build installer & publish to GitHub release
+      - name: Build installer & publish to yomi-releases
         working-directory: apps/desktop
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: bunx electron-builder --config electron-builder.yml --win --publish always
 
       - name: Upload installer artifacts
