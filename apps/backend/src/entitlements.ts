@@ -13,6 +13,22 @@ export const PLAN_REQUEST_LIMITS: Record<"explore" | "pro" | "max", number> = {
   max: 8000,
 }
 
+export const FEATURE_LIMITS = {
+  voiceMinutes: { explore: 20, pro: 180, max: 750 },
+  screenshots: { explore: 25, pro: 400, max: 2000 },
+  reasoning: { explore: 0, pro: 100, max: 500 },
+  desktopAutomation: { explore: 0, pro: 75, max: 750 },
+  browserAutomation: { explore: 0, pro: 40, max: 500 },
+} as const
+
+export type FeatureKey = keyof typeof FEATURE_LIMITS
+
+export function featureLimitForUser(user: EntitlementUser, feature: FeatureKey): number | null {
+  if (isOwnerUser(user)) return null
+  const plan = effectivePlanForUser(user) as "explore" | "pro" | "max"
+  return FEATURE_LIMITS[feature][plan]
+}
+
 function parseList(value: string | undefined): string[] {
   return (
     value

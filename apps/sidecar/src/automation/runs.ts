@@ -11,6 +11,7 @@ import type {
   AutomationTimelineItem,
   SseEvent,
 } from "@yomi/shared"
+import { reportUsage } from "./usage.js"
 
 let db: Database | null = null
 let runSeq = 0
@@ -234,6 +235,7 @@ export function completeAutomation(session: AutomationSession, summary: string):
         session.run.id,
       ),
   )
+  reportUsage(session.run.owner.id === "browser" ? "browser_run" : "agent_run")
   return { type: "automation_completed", runId: session.run.id, summary, replayId: session.run.replayId }
 }
 

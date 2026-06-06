@@ -322,6 +322,7 @@ export function initSidecarIpc(
         resetToIdle()
         return
       }
+      reportUsage("screenshot")
       // transcriptLabel keeps the verbose prompt out of chat; forceAnswer skips intent routing
       // (so words inside the prompt can't misroute it to the agent) and never re-arms the mic.
       await streamQuery(
@@ -472,6 +473,16 @@ async function reserveInteraction(
     win.webContents.send("yomi:subscription-update", await sub.json())
   }
   return data.plan ?? "explore"
+}
+
+function reportUsage(kind: string): void {
+  const token = loadToken()
+  if (!token) return
+  fetch(`${BACKEND_URL}/api/usage/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ kind }),
+  }).catch(() => {})
 }
 
 function buildWav(chunks: Float32Array[], sampleRate: number): Buffer {
