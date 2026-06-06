@@ -38,7 +38,10 @@ app.route("/api/user", profileRouter)
 app.route("/api/rag", ragRouter)
 
 const PORT = Number(process.env["PORT"] ?? 3001)
-export default {
+
+const server = Bun.serve({
   port: PORT,
   fetch: app.fetch,
-}
+})
+
+console.log(`Backend listening on :${server.port}`)

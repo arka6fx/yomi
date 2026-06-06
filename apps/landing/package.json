@@ -11,10 +11,7 @@
     "lint": "eslint src",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit",
-    "cf:build": "opennextjs-cloudflare build",
-    "cf:deploy": "opennextjs-cloudflare build && wrangler pages deploy",
-    "cf:preview": "wrangler pages dev .open-next/assets"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
@@ -30,7 +27,6 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
-    "@opennextjs/cloudflare": "^0.6.0",
     "@types/node": "^20.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
@@ -39,7 +35,6 @@
     "autoprefixer": "^10.4.0",
     "postcss": "^8.4.0",
     "tailwindcss": "^3.4.0",
-    "typescript": "^5.5.0",
-    "wrangler": "^4.0.0"
+    "typescript": "^5.5.0"
   }
 }

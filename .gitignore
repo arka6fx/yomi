@@ -26,6 +26,11 @@ build/
 .env
 .env.local
 .env.*.local
+.env.production
+
+# Production deployment
+deploy/certs/
+deploy/logs/
 
 # OS
 .DS_Store

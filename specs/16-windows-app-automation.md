@@ -19,7 +19,9 @@ that break on layout/DPI/scroll changes. Vision + coordinate clicking is kept as
 a **fallback** for apps with no usable UIA tree (some
 Electron/Qt/games/custom-drawn UIs).
 
-This feature lives on the **agent path** (Max tier per AGENTS.md). The
+This feature lives on the **agent path**. It is available on Pro with bounded
+monthly usage and shorter run limits, and on Max with higher usage and longer
+run limits. The
 fast/guide path (Spec 15) stays guidance-only except that the accessibility tree
 becomes an optional precision source for `[POINT]` targeting.
 
@@ -170,8 +172,8 @@ targeting.
 - Honors the per-app blocklist privacy rule: never enumerate or act on password
   managers or banking apps — the foreground window is checked against the
   blocklist before `get_ui_tree`.
-- Act mode is opt-in: gated behind a toolbar toggle and the Max plan, default
-  off.
+- Act mode is opt-in: gated behind a toolbar toggle and paid automation
+  entitlements, default off.
 
 ## Desktop Behavior
 
@@ -289,4 +291,4 @@ End-to-end manual checks:
   `get_ui_tree` cost.
 - Scroll/expand handling for controls below the fold
   (ScrollPattern/ExpandCollapsePattern).
-- Usage metering of `agent_run` for Act-mode sessions per Spec 13 pricing.
+- Usage metering of desktop automation runs per Spec 13 pricing.
