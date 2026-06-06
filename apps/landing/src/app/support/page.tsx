@@ -13,7 +13,7 @@ const channels = [
   {
     title: "Account and billing",
     description: "Questions about sign-in, plan access, invoices, or subscription changes.",
-    href: "mailto:support@yomi.arka6fx.com",
+    href: "mailto:contact.arkagarai@gmail.com",
     label: "Email support",
     icon: Mail,
   },
@@ -27,7 +27,7 @@ const channels = [
   {
     title: "Security and privacy",
     description: "Report sensitive privacy, OAuth, capture, or automation safety concerns.",
-    href: "mailto:privacy@yomi.arka6fx.com",
+    href: "mailto:contact.arkagarai@gmail.com",
     label: "Email privacy",
     icon: MessageSquareText,
   },
