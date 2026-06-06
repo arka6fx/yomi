@@ -146,7 +146,8 @@ their goal.
 
 Subagent model defaults to `gpt-4.1` (same as agent pipeline).
 
-**Spec 18 enhancement:** On the AutomationGraph path (Max tier), sub-agents are
+**Spec 18 enhancement:** On the AutomationGraph path (paid automation tiers),
+sub-agents are
 provider-routed via `resolveAgent(goal)`, which picks the model and scopes tools
 based on the subtask category (e.g. "code" → gpt-4.1 with code tools, "browser"
 → gpt-4.1-mini with browser tools only). This is gated behind

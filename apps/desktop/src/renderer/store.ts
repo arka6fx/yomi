@@ -500,10 +500,10 @@ export const useYomiStore = create<YomiState>((set) => ({
           trialEndDate: clean.trialEndDate ?? null,
           currentPeriodEnd: clean.currentPeriodEnd ?? null,
           trialInteractionUsed: clean.trialInteractionUsed ?? 0,
-          trialInteractionLimit: clean.trialInteractionLimit ?? 150,
+          trialInteractionLimit: clean.trialInteractionLimit ?? 100,
           trialInteractionsRemaining:
             clean.trialInteractionsRemaining ??
-            Math.max((clean.trialInteractionLimit ?? 150) - (clean.trialInteractionUsed ?? 0), 0),
+            Math.max((clean.trialInteractionLimit ?? 100) - (clean.trialInteractionUsed ?? 0), 0),
           dailyChatUsed: clean.dailyChatUsed ?? 0,
           dailyVoiceUsed: clean.dailyVoiceUsed ?? 0,
           dailyImageUsed: clean.dailyImageUsed ?? 0,

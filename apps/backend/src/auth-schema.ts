@@ -19,9 +19,9 @@ export const user = pgTable("user", {
   currentPeriodEnd: timestamp("current_period_end"),
   razorpayCustomerId: text("razorpay_customer_id"),
   razorpaySubId: text("razorpay_sub_id"),
-  // Trial interaction pool — shared across Type A/B/C for Explore plan
+  // Explore interaction pool — shared across Type A/B/C for the free plan
   trialInteractionUsed: integer("trial_interaction_used").notNull().default(0),
-  trialInteractionLimit: integer("trial_interaction_limit").notNull().default(150),
+  trialInteractionLimit: integer("trial_interaction_limit").notNull().default(100),
   // Daily usage counters — reset each UTC day via dailyResetDate (Pro/Max plans)
   dailyChatCount: integer("daily_chat_count").notNull().default(0),
   dailyVoiceCount: integer("daily_voice_count").notNull().default(0),

@@ -177,7 +177,7 @@ Total budget: < 2s to first audio byte
 [User trigger "Yomi agent, ..."]
   → Intent router returns `agent`
   → POST /query/agent to sidecar
-    → Sidecar starts ReAct loop (or AutomationGraph for Max tier)
+    → Sidecar starts ReAct loop (or AutomationGraph for paid automation tiers)
     → Per tool call: PreToolUse hook → execute → PostToolUse hook
     → UIA tools: sidecar sends JSON-RPC to uia-helper over stdio
     → Browser tools: sidecar sends MCP requests to Playwright MCP over stdio

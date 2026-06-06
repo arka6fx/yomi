@@ -31,7 +31,7 @@ Sections:
 1. Hero: Yomi as a desktop AI buddy for screen and voice.
 2. How it works: hotkey, screen/mic context, answer/action.
 3. Features: fast answers, screen-aware help, local memory, cloud archive
-   mirror, future agents.
+   mirror, and foreground automation.
 4. Pricing teaser: Explore, Pro, Max.
 5. Footer: privacy, terms, GitHub/community links.
 
@@ -45,22 +45,22 @@ Privacy positioning:
 
 ## Pricing Page
 
-|                      | Explore                | Pro       | Max       |
-| -------------------- | ---------------------- | --------- | --------- |
-| Price                | $0                     | $9.99/mo  | $24.99/mo |
-| Chat                 | 150 trial interactions | 10000/day | 10000/day |
-| Voice                | trial-limited          | 200/day   | 10000/day |
-| Screen analysis      | yes                    | yes       | yes       |
-| Local memory         | no                     | yes       | yes       |
-| Cloud archive mirror | no                     | yes       | yes       |
-| Agents               | no                     | no        | yes       |
+|                      | Explore | Pro       | Max       |
+| -------------------- | ------- | --------- | --------- |
+| Price                | $0      | $14.99/mo | $39.99/mo |
+| Chat                 | 100/mo  | 2,000/mo  | 8,000/mo  |
+| Voice                | 20 min  | 180 min   | 750 min   |
+| Screen analysis      | 25/mo   | 400/mo    | 2,000/mo  |
+| Local memory         | limited | yes       | expanded  |
+| Cloud archive mirror | no      | 250 MB    | 2 GB      |
+| Automation           | no      | limited   | expanded  |
 
 CTA behavior:
 
 - signed-out users go through auth first
 - Explore starts without checkout
 - Pro starts Razorpay checkout
-- Max can show waitlist/coming-soon until public launch
+- Max starts Razorpay checkout
 
 ## Auth And Checkout
 
@@ -86,6 +86,5 @@ recommended download.
 
 ## Future Work
 
-- Annual billing copy.
-- Public Max launch copy.
+- Annual billing checkout.
 - Real product screenshots after packaging.

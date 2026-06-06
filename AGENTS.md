@@ -140,7 +140,7 @@ extended with:
 ```
 plan                  "explore" | "pro" | "max"  (default "explore")
 subscription_status   "active" | "trialing" | "past_due" | "canceled" | null
-trial_ends_at         timestamp — 30-day explore trial end
+trial_ends_at         timestamp/null — legacy trial field; Explore is limit-based
 daily_interaction_count  int, resets midnight UTC
 daily_interaction_date   date
 ```
@@ -166,15 +166,17 @@ hook_logs       id, user_id, run_id, hook, tool, decision, payload_redacted, cre
 
 ## Plans
 
-| Plan    | Price     | Key limits                                                                         |
-| ------- | --------- | ---------------------------------------------------------------------------------- |
-| Explore | $0/mo     | 30-day trial; 150 total interactions; voice + screen; no agents                    |
-| Pro     | $9.99/mo  | Unlimited standard interactions\*; voice 200/day; screen analysis; no agents       |
-| Max     | $24.99/mo | Everything in Pro + agents/sub-agents; 10 000 foreground agent runs/day            |
+| Plan    | Price      | Key limits                                                                 |
+| ------- | ---------- | -------------------------------------------------------------------------- |
+| Explore | $0/mo      | 100 chats/month; limited voice/screen/memory; no automation                |
+| Pro     | $14.99/mo  | 2 000 chats/month; limited reasoning, voice, images, and automation        |
+| Max     | $39.99/mo  | Higher reasoning, voice, image, and foreground automation limits           |
 
-\* Fair-use: chat 10 000/day. Voice capped at 200/day on Pro, 10 000/day on Max.
+Fair-use: never offer unlimited GPT-4.1, voice, image generation, or
+automation. Pro includes bounded foreground automation; Max raises the limits.
 
-Razorpay plan amounts: Pro = ₹999, Max = ₹2 499 (cents). Set `RAZORPAY_KEY_ID` +
+Razorpay USD plan amounts: Pro = 1499 cents, Max = 3999 cents. Suggested
+India-local pricing: Pro ₹999/mo, Max ₹2 999/mo. Set `RAZORPAY_KEY_ID` +
 `RAZORPAY_KEY_SECRET`.
 
 ---

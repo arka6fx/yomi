@@ -100,9 +100,9 @@ loopback).
 ## Goal
 
 Let Yomi drive native Windows desktop apps from voice/type commands via
-**Microsoft UI Automation (UIA)**, with a vision/coordinate fallback. The agent
-(Max tier) gains tools to open apps, read the control tree, and click/type/press
-keys.
+**Microsoft UI Automation (UIA)**, with a vision/coordinate fallback. Paid
+automation tiers gain tools to open apps, read the control tree, and
+click/type/press keys.
 
 ## Architecture
 

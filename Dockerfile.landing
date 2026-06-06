@@ -1,0 +1,35 @@
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy workspace root files
+COPY package.json package-lock.json* ./
+COPY apps/landing/package.json ./apps/landing/
+COPY packages/shared/package.json ./packages/shared/
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY apps/landing ./apps/landing
+COPY packages/shared ./packages/shared
+
+# Build landing
+WORKDIR /app/apps/landing
+RUN npm run build
+
+# Production stage
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Copy standalone build
+COPY --from=builder /app/apps/landing/.next/standalone ./
+COPY --from=builder /app/apps/landing/.next/static ./.next/static
+COPY --from=builder /app/apps/landing/public ./public
+
+EXPOSE 3000
+
+CMD ["node", "server.js"]

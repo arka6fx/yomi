@@ -123,16 +123,16 @@ const PLANS = [
     name: "Explore",
     price: "$0",
     period: "/ month",
-    badge: "30-day trial",
-    description: "Try everything Yomi has to offer. No card needed.",
+    annual: "$0 / year",
+    badge: "Free",
+    description: "Start with screen-aware AI, voice, and memory basics. No card needed.",
     features: [
-      "Voice & text interaction",
-      "Screenshot analysis",
-      "Memory & personalization",
-      "Voice input & output",
+      "100 AI chats / month",
+      "20 min voice / month",
+      "25 screenshot analyses",
+      "50 local memories",
       "Window controls & docking",
       "Streaming responses",
-      "150 total interactions",
     ],
     cta: "Get started free",
     popular: false,
@@ -141,17 +141,19 @@ const PLANS = [
   {
     key: "pro",
     name: "Pro",
-    price: "$9.99",
+    price: "$14.99",
     period: "/ month",
+    annual: "$144 / year",
     badge: "Most Popular",
-    description: "Unlimited interaction for everyday use.",
+    description: "Daily screen, voice, memory, images, and useful foreground automation.",
     features: [
-      "Everything in Explore",
-      "Unlimited standard interactions*",
-      "Better memory",
+      "2,000 AI chats / month",
+      "180 min voice / month",
+      "400 screenshot analyses",
+      "100 advanced reasoning uses",
+      "75 desktop automation runs",
+      "40 browser automation runs",
       "Faster response queue",
-      "Priority compute",
-      "Enhanced personalization",
     ],
     cta: "Subscribe",
     popular: true,
@@ -160,22 +162,23 @@ const PLANS = [
   {
     key: "max",
     name: "Max",
-    price: "Coming soon",
-    period: "",
-    badge: "Coming soon",
-    description: "Full agentic capabilities for creators.",
+    price: "$39.99",
+    period: "/ month",
+    annual: "$384 / year",
+    badge: "Power users",
+    description: "Heavy automation, long-context work, and high-volume creation.",
     features: [
       "Everything in Pro",
-      "Spawn agents & sub-agents",
-      "Background execution",
-      "Long-running tasks",
-      "Autonomous workflows",
+      "8,000 AI chats / month",
+      "750 min voice / month",
+      "500 advanced reasoning uses",
+      "750 desktop automation runs",
+      "500 browser automation runs",
       "Experimental features first",
     ],
-    cta: "Coming soon",
+    cta: "Subscribe",
     popular: false,
     icon: Cuboid,
-    comingSoon: true,
   },
 ]
 
@@ -254,7 +257,6 @@ export function LandingPage() {
   const heroDownloadLabel = "Get for Windows"
 
   async function handlePlanClick(planKey: string) {
-    if (planKey === "max") return
     if (planKey === "explore") {
       router.push(session ? "/dashboard" : "/signup")
       return
@@ -488,9 +490,7 @@ export function LandingPage() {
                 className={`relative flex flex-col rounded-2xl glass-card p-6 ${
                   plan.popular
                     ? "border-primary shadow-[0_0_40px_-12px_hsl(var(--primary)/0.4)]"
-                    : plan.comingSoon
-                      ? "opacity-75"
-                      : ""
+                    : ""
                 }`}
               >
                 {plan.popular && (
@@ -517,6 +517,7 @@ export function LandingPage() {
                     </span>
                     <span className="text-sm text-muted-foreground">{plan.period}</span>
                   </div>
+                  <p className="mb-2 text-xs text-muted-foreground">{plan.annual}</p>
                   <p className="text-sm text-muted-foreground">{plan.description}</p>
                 </div>
 
@@ -531,7 +532,7 @@ export function LandingPage() {
 
                 <button
                   onClick={() => handlePlanClick(plan.key)}
-                  disabled={billingLoading !== null || plan.comingSoon}
+                  disabled={billingLoading !== null}
                   className={`flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium transition-colors disabled:opacity-70 ${
                     plan.popular
                       ? "bg-primary text-primary-foreground hover:bg-primary/90"
@@ -552,7 +553,7 @@ export function LandingPage() {
           viewport={{ once: true }}
           className="mt-8 text-center text-xs text-muted-foreground"
         >
-          * Fair usage protection applies. All plans include a 30-day free trial on Explore.
+          * Fair usage protection applies. Explore is free with monthly limits.
         </motion.p>
       </section>
 

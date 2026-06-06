@@ -129,8 +129,9 @@ cleanly.
 ## Routing & Tier
 
 The existing intent router already sends imperative/automation commands to the
-agent path. Browser automation rides that path → **Max** tier (agents are Max
-per AGENTS.md). No new gate.
+agent path. Browser automation rides that path and is available on Pro with
+bounded monthly usage and on Max with higher limits. Entitlements are defined in
+Spec 13.
 
 ## Build & Packaging
 
@@ -160,7 +161,7 @@ per AGENTS.md). No new gate.
 CI gates stay green: `bun run lint`, `bun run build:ci`, `bun run typecheck`,
 `bun run test`.
 
-Manual e2e (sidecar running, plan `max`):
+Manual e2e (sidecar running, plan `pro` or `max`):
 
 1. "open example.com and read me the heading" → `browser_navigate` +
    `browser_snapshot`, answer.
