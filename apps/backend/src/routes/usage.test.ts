@@ -18,15 +18,17 @@ type ReserveBody = {
   ok?: boolean
   code?: string
   plan?: string
-  trialInteractionUsed?: number
-  trialInteractionLimit?: number
-  trialInteractionsRemaining?: number
+  requestsUsed?: number
+  requestsLimit?: number | null
+  requestsRemaining?: number | null
+  resetAt?: string
   dailyChatUsed?: number
   dailyVoiceUsed?: number
 }
 
 let currentUser: TestUser
 let updateCalls = 0
+let mockRequestCount = 0
 
 const fakeDb = {
   update: () => {
@@ -41,6 +43,11 @@ const fakeDb = {
   },
   insert: () => ({
     values: () => Promise.resolve(),
+  }),
+  select: () => ({
+    from: () => ({
+      where: () => Promise.resolve([{ count: mockRequestCount }]),
+    }),
   }),
 }
 
@@ -92,26 +99,24 @@ describe("POST /api/usage/interactions/reserve", () => {
   beforeEach(() => {
     currentUser = user()
     updateCalls = 0
+    mockRequestCount = 0
   })
 
-  it("allows exhausted Explore users without consuming quota", async () => {
+  it("blocks exhausted Explore users with quota_exceeded", async () => {
+    mockRequestCount = 100
     const res = await reserve()
     const body = (await res.json()) as ReserveBody
 
-    expect(res.status).toBe(200)
-    expect(body).toEqual({
-      ok: true,
-      plan: "explore",
-      trialInteractionUsed: 100,
-      trialInteractionLimit: 100,
-      trialInteractionsRemaining: 0,
-      dailyChatUsed: 10000,
-      dailyVoiceUsed: 200,
-    })
+    expect(res.status).toBe(429)
+    expect(body.code).toBe("quota_exceeded")
+    expect(body.plan).toBe("explore")
+    expect(body.requestsUsed).toBe(100)
+    expect(body.requestsLimit).toBe(100)
+    expect(body.requestsRemaining).toBe(0)
     expect(updateCalls).toBe(0)
   })
 
-  it("allows inactive Pro users and returns current counters", async () => {
+  it("blocks inactive Pro users with subscription_inactive", async () => {
     currentUser = user({
       plan: "pro",
       subscriptionStatus: "past_due",
@@ -123,15 +128,13 @@ describe("POST /api/usage/interactions/reserve", () => {
     const res = await reserve("voice")
     const body = (await res.json()) as ReserveBody
 
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(402)
+    expect(body.code).toBe("subscription_inactive")
     expect(body.plan).toBe("pro")
-    expect(body.trialInteractionUsed).toBe(12)
-    expect(body.dailyChatUsed).toBe(345)
-    expect(body.dailyVoiceUsed).toBe(67)
     expect(updateCalls).toBe(0)
   })
 
-  it("allows Max while unrestricted plan testing is enabled", async () => {
+  it("allows Max with active subscription and returns request counts", async () => {
     currentUser = user({ plan: "max", subscriptionStatus: "active" })
 
     const res = await reserve("chat")
@@ -139,6 +142,9 @@ describe("POST /api/usage/interactions/reserve", () => {
 
     expect(res.status).toBe(200)
     expect(body.plan).toBe("max")
+    expect(body.requestsUsed).toBe(1)
+    expect(body.requestsLimit).toBe(8000)
+    expect(body.requestsRemaining).toBe(7999)
     expect(updateCalls).toBe(0)
   })
 

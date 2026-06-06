@@ -419,10 +419,12 @@ function send(win: BrowserWindow, event: SseEvent): void {
 type ReserveResponse = {
   ok?: boolean
   error?: string
+  code?: string
   plan?: Plan
-  trialInteractionUsed?: number
-  trialInteractionLimit?: number
-  trialInteractionsRemaining?: number
+  requestsUsed?: number
+  requestsLimit?: number | null
+  requestsRemaining?: number | null
+  resetAt?: string
   dailyChatUsed?: number
   dailyVoiceUsed?: number
 }
@@ -453,9 +455,10 @@ async function reserveInteraction(
   if (data.plan) {
     win.webContents.send("yomi:subscription-update", {
       plan: data.plan,
-      trialInteractionUsed: data.trialInteractionUsed,
-      trialInteractionLimit: data.trialInteractionLimit,
-      trialInteractionsRemaining: data.trialInteractionsRemaining,
+      requestsUsed: data.requestsUsed,
+      requestsLimit: data.requestsLimit,
+      requestsRemaining: data.requestsRemaining,
+      resetAt: data.resetAt,
       dailyChatUsed: data.dailyChatUsed,
       dailyVoiceUsed: data.dailyVoiceUsed,
     })

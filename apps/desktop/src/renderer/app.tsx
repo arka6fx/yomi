@@ -4206,8 +4206,8 @@ const App: React.FC = () => {
           state={hotkeyState}
           plan={subscription?.plan}
           interactionInfo={
-            subscription?.plan === "explore"
-              ? `${subscription.trialInteractionUsed}/${subscription.trialInteractionLimit} used`
+            subscription?.requestsLimit !== null && subscription?.requestsLimit !== undefined
+              ? `${subscription.requestsRemaining ?? 0}/${subscription.requestsLimit} left`
               : undefined
           }
           menuOpen={menuOpen}

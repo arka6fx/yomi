@@ -7,6 +7,12 @@ type EntitlementUser = {
   plan?: string | null
 }
 
+export const PLAN_REQUEST_LIMITS: Record<"explore" | "pro" | "max", number> = {
+  explore: 100,
+  pro: 2000,
+  max: 8000,
+}
+
 function parseList(value: string | undefined): string[] {
   return (
     value
@@ -44,4 +50,17 @@ export function effectiveRoleForUser(user: EntitlementUser): string {
 
 export function effectivePlanForUser(user: EntitlementUser): string {
   return isOwnerUser(user) ? "max" : (user.plan ?? "explore")
+}
+
+export function requestLimitForUser(user: EntitlementUser): number | null {
+  if (isOwnerUser(user)) return null
+  const plan = effectivePlanForUser(user) as keyof typeof PLAN_REQUEST_LIMITS
+  return PLAN_REQUEST_LIMITS[plan] ?? PLAN_REQUEST_LIMITS.explore
+}
+
+export function hasBillablePlanAccess(user: EntitlementUser & { subscriptionStatus?: string | null }): boolean {
+  if (isOwnerUser(user)) return true
+  const plan = effectivePlanForUser(user)
+  if (plan === "explore") return true
+  return user.subscriptionStatus === "active" || user.subscriptionStatus === "trialing"
 }

@@ -12,9 +12,10 @@ export interface SubscriptionInfo {
   status: string
   trialEndDate: string | null
   currentPeriodEnd: string | null
-  trialInteractionUsed: number
-  trialInteractionLimit: number
-  trialInteractionsRemaining: number
+  requestsUsed: number
+  requestsLimit: number | null
+  requestsRemaining: number | null
+  resetAt: string | null
   dailyChatUsed: number
   dailyVoiceUsed: number
   dailyImageUsed: number
