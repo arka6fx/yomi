@@ -232,8 +232,13 @@ app.whenReady().then(async () => {
   ipcMain.on("yomi:install-update", () => installUpdate())
 
   ipcMain.on("yomi:open-upgrade", () => {
-    const base = process.env["YOMI_LANDING_URL"] ?? "http://localhost:3000"
+    const base = process.env["YOMI_LANDING_URL"] ?? "https://yomi.arka6fx.com"
     openTrustedExternal(`${base}/pricing`)
+  })
+
+  ipcMain.on("yomi:open-dashboard", () => {
+    const base = process.env["YOMI_LANDING_URL"] ?? "https://yomi.arka6fx.com"
+    openTrustedExternal(`${base}/dashboard`)
   })
 
   ipcMain.on("yomi:set-opacity", (_e, value: number) => {

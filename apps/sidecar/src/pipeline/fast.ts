@@ -330,14 +330,19 @@ async function* answerPipeline(
     }
 
     try {
-      for await (const chunk of result.textStream) {
-        if (signal?.aborted) break // barge-in: stop pulling tokens / starting TTS
-        if (!chunk) continue
-        gotChunk = true
-        flushVisibleText(chunk)
+      for await (const chunk of result.fullStream) {
+        if (signal?.aborted) break
+        if (chunk.type === "text-delta") {
+          if (!chunk.textDelta) continue
+          gotChunk = true
+          flushVisibleText(chunk.textDelta)
+        } else if (chunk.type === "error") {
+          const errMsg = chunk.error instanceof Error ? chunk.error.message : String(chunk.error)
+          throw new Error(`LLM stream error: ${errMsg}`)
+        }
       }
     } catch (err) {
-      if (signal?.aborted) return // aborted mid-stream — stop quietly
+      if (signal?.aborted) return
       throw err
     }
     if (signal?.aborted) return
