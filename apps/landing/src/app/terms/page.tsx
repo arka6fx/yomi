@@ -135,7 +135,7 @@ export default function TermsPage() {
               <p>
                 Questions about these Terms? Email{" "}
                 <a href="mailto:legal@yomi.app" className="text-accent">
-                  legal@yomi.app
+contact.arkagarai@gmail.com
                 </a>
                 .
               </p>
