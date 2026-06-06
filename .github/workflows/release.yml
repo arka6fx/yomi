@@ -55,7 +55,7 @@ jobs:
         working-directory: apps/desktop
         run: bunx electron-vite build
 
-      - name: Build installer & publish to yomi-releases
+      - name: Build installer & publish to GitHub release
         working-directory: apps/desktop
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
