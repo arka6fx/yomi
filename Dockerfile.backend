@@ -13,7 +13,7 @@ COPY packages/eslint-config/package.json ./packages/eslint-config/
 COPY packages/typescript-config/package.json ./packages/typescript-config/
 
 # Install dependencies
-RUN bun install --frozen-lockfile
+RUN bun install
 
 # Copy source code
 COPY apps/backend ./apps/backend
@@ -39,7 +39,7 @@ COPY --from=builder /app/packages/shared ./packages/shared
 
 # Install production dependencies only
 COPY --from=builder /app/package.json /app/bun.lock ./
-RUN bun install --frozen-lockfile --production
+RUN bun install --production
 
 EXPOSE 3001
 
