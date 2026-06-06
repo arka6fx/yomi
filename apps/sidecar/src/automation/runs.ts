@@ -286,7 +286,7 @@ export function listWorkflowReplays(limit = 10): WorkflowReplay[] {
       `select replay_id, task, owner_id, owner_label, status, started_at, ended_at, summary
        from automation_runs
        where replay_id is not null and status = 'completed'
-       order by ended_at desc, started_at desc
+       order by ended_at desc, replay_id desc
        limit ?`,
     )
     .all(Math.max(0, Math.min(limit, 50))) as WorkflowReplayRow[]
