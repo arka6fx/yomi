@@ -24,9 +24,10 @@ type Sub = {
   status: string
   trialEndDate: string | null
   currentPeriodEnd: string | null
-  trialInteractionUsed: number
-  trialInteractionLimit: number
-  trialInteractionsRemaining?: number
+  requestsUsed: number
+  requestsLimit: number | null
+  requestsRemaining: number | null
+  resetAt: string | null
   dailyChatUsed: number
   dailyVoiceUsed: number
   dailyImageUsed: number
@@ -111,9 +112,10 @@ function DashboardContent() {
           status: "inactive",
           trialEndDate: null,
           currentPeriodEnd: null,
-          trialInteractionUsed: 0,
-          trialInteractionLimit: 100,
-          trialInteractionsRemaining: 100,
+          requestsUsed: 0,
+          requestsLimit: 100,
+          requestsRemaining: 100,
+          resetAt: null,
           dailyChatUsed: 0,
           dailyVoiceUsed: 0,
           dailyImageUsed: 0,
@@ -249,15 +251,6 @@ function DashboardContent() {
                   </span>
                 )}
               </div>
-              {/* Interaction usage for Explore */}
-              {!subPending && !isOwner && currentPlanKey === "explore" && sub && (
-                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                  <Zap size={11} />
-                  {sub.trialInteractionsRemaining ??
-                    Math.max(sub.trialInteractionLimit - sub.trialInteractionUsed, 0)}{" "}
-                  / {sub.trialInteractionLimit} Explore interactions left
-                </p>
-              )}
               {/* Renewal date */}
               {sub?.currentPeriodEnd && (
                 <p className="text-xs text-muted-foreground mt-1">
@@ -270,23 +263,62 @@ function DashboardContent() {
                 </p>
               )}
             </div>
+          </div>
+        </motion.div>
 
-            {/* Daily usage for paid plans */}
-            {!subPending && sub && !isOwner && currentPlanKey !== "explore" && (
-              <div className="text-right space-y-1">
+        {/* Requests section — visible for all users */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.12 }}
+        >
+          <div className="rounded-2xl border border-border bg-card p-6">
+            <div className="flex items-start justify-between gap-6 mb-4">
+              <div>
                 <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
-                  Today&apos;s usage
+                  Requests
                 </p>
-                <div className="flex items-center gap-1.5 justify-end text-xs text-muted-foreground">
-                  <Zap size={11} className="text-primary" />
-                  <span>{sub.dailyChatUsed} chats</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-light text-foreground">
+                    {sub?.requestsRemaining ?? "—"}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    {sub?.requestsLimit !== null && sub?.requestsLimit !== undefined
+                      ? `/ ${sub.requestsLimit} left`
+                      : "unlimited"}
+                  </span>
                 </div>
-                <div className="flex items-center gap-1.5 justify-end text-xs text-muted-foreground">
-                  <span>{sub.dailyVoiceUsed} voice</span>
+                {sub?.resetAt && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Resets{" "}
+                    {new Date(sub.resetAt).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </p>
+                )}
+              </div>
+              {sub?.requestsLimit !== null && sub?.requestsLimit !== undefined && (
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground mb-1">
+                    {sub.requestsUsed} used
+                  </p>
+                  <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary transition-all"
+                      style={{
+                        width: `${Math.min(100, (sub.requestsUsed / sub.requestsLimit) * 100)}%`,
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 justify-end text-xs text-muted-foreground">
-                  <span>{sub.dailyImageUsed} screenshots</span>
-                </div>
+              )}
+            </div>
+            {sub?.requestsRemaining === 0 && sub?.requestsLimit !== null && (
+              <div className="mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                <p className="text-sm text-destructive">
+                  You've used all requests for this month. Upgrade to continue or wait for the reset.
+                </p>
               </div>
             )}
           </div>

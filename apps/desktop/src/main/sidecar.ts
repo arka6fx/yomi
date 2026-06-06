@@ -49,8 +49,11 @@ export class SidecarManager {
           YOMI_BACKEND_URL: BACKEND_URL,
           YOMI_UIA_HELPER: uiaHelperPath(),
         },
-        stdio: "inherit",
+        stdio: ["ignore", "pipe", "pipe"],
+        windowsHide: true,
       })
+      this.proc.stdout?.on("data", (chunk) => console.warn(`[sidecar] ${String(chunk).trim()}`))
+      this.proc.stderr?.on("data", (chunk) => console.error(`[sidecar] ${String(chunk).trim()}`))
       this.proc.on("error", (err) => console.error("[sidecar] spawn error", err))
     }
     await this.waitForHealth()

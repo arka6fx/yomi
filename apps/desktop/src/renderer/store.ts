@@ -35,9 +35,10 @@ export interface SubscriptionInfo {
   status: string
   trialEndDate: string | null
   currentPeriodEnd: string | null
-  trialInteractionUsed: number
-  trialInteractionLimit: number
-  trialInteractionsRemaining: number
+  requestsUsed: number
+  requestsLimit: number | null
+  requestsRemaining: number | null
+  resetAt: string | null
   dailyChatUsed: number
   dailyVoiceUsed: number
   dailyImageUsed: number
@@ -484,9 +485,11 @@ export const useYomiStore = create<YomiState>((set) => ({
         return {
           subscription: {
             ...next,
-            trialInteractionsRemaining:
-              clean.trialInteractionsRemaining ??
-              Math.max(next.trialInteractionLimit - next.trialInteractionUsed, 0),
+            requestsRemaining:
+              clean.requestsRemaining ??
+              (next.requestsLimit === null
+                ? null
+                : Math.max(next.requestsLimit - next.requestsUsed, 0)),
           },
         }
       }
@@ -499,11 +502,14 @@ export const useYomiStore = create<YomiState>((set) => ({
           status: clean.status ?? "inactive",
           trialEndDate: clean.trialEndDate ?? null,
           currentPeriodEnd: clean.currentPeriodEnd ?? null,
-          trialInteractionUsed: clean.trialInteractionUsed ?? 0,
-          trialInteractionLimit: clean.trialInteractionLimit ?? 100,
-          trialInteractionsRemaining:
-            clean.trialInteractionsRemaining ??
-            Math.max((clean.trialInteractionLimit ?? 100) - (clean.trialInteractionUsed ?? 0), 0),
+          requestsUsed: clean.requestsUsed ?? 0,
+          requestsLimit: clean.requestsLimit ?? 100,
+          requestsRemaining:
+            clean.requestsRemaining ??
+            (clean.requestsLimit === null
+              ? null
+              : Math.max((clean.requestsLimit ?? 100) - (clean.requestsUsed ?? 0), 0)),
+          resetAt: clean.resetAt ?? null,
           dailyChatUsed: clean.dailyChatUsed ?? 0,
           dailyVoiceUsed: clean.dailyVoiceUsed ?? 0,
           dailyImageUsed: clean.dailyImageUsed ?? 0,
