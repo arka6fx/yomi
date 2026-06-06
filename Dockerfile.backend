@@ -4,9 +4,13 @@ WORKDIR /app
 
 # Copy workspace root files
 COPY package.json bun.lock ./
+
+# Copy all workspace package.json files
 COPY apps/backend/package.json ./apps/backend/
 COPY packages/db/package.json ./packages/db/
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/eslint-config/package.json ./packages/eslint-config/
+COPY packages/typescript-config/package.json ./packages/typescript-config/
 
 # Install dependencies
 RUN bun install --frozen-lockfile
@@ -15,6 +19,8 @@ RUN bun install --frozen-lockfile
 COPY apps/backend ./apps/backend
 COPY packages/db ./packages/db
 COPY packages/shared ./packages/shared
+COPY packages/eslint-config ./packages/eslint-config
+COPY packages/typescript-config ./packages/typescript-config
 
 # Build backend
 WORKDIR /app/apps/backend
