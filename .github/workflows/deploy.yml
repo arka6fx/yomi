@@ -22,4 +22,5 @@ jobs:
             cd /opt/yomi
             git pull origin main
             sudo docker compose up -d --build
+            sudo docker compose restart nginx
             sudo docker image prune -f
