@@ -28,7 +28,7 @@ export async function elevenLabsTranscribe(
   opts: ElevenLabsSttOptions = {},
 ): Promise<ElevenLabsSttResponse> {
   const apiKey = process.env.ELEVENLABS_API_KEY
-  if (!apiKey) throw new Error("ELEVENLABS_API_KEY is not set")
+  if (!apiKey) throw new Error("Voice is not configured yet. Add ElevenLabs API key to enable voice.")
 
   const form = new FormData()
   form.append("file", new Blob([audio], { type: "audio/wav" }), "audio.wav")

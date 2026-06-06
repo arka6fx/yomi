@@ -342,7 +342,7 @@ async function* answerPipeline(
     }
     if (signal?.aborted) return
     if (!gotChunk) {
-      throw new Error("LLM returned empty response (likely rate-limited or quota exceeded)")
+      throw new Error("Yomi had trouble getting a response. Try again in a moment.")
     }
     if (ttsEnabled && buffer.trim().length > 0) enqueueSentence(buffer)
     await audioChain

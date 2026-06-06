@@ -1,10 +1,10 @@
 import { Hono } from "hono"
 import { createHmac } from "node:crypto"
 import { db, usageEvents } from "@yomi/db"
-import { eq, and, gte } from "drizzle-orm"
+import { eq, and, gte, sql } from "drizzle-orm"
 import { authenticate } from "../auth.js"
 import * as authSchema from "../auth-schema.js"
-import { effectivePlanForUser, effectiveRoleForUser } from "../entitlements.js"
+import { effectivePlanForUser, effectiveRoleForUser, requestLimitForUser } from "../entitlements.js"
 
 // Public plans: Explore, Pro, and Max.
 const PLAN_AMOUNTS: Record<string, number> = {
@@ -151,10 +151,22 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     (sum, r) => sum + (r.inputTokens ?? 0) + (r.outputTokens ?? 0),
     0,
   )
-  const trialInteractionsRemaining = Math.max(
-    user.trialInteractionLimit - user.trialInteractionUsed,
-    0,
-  )
+
+  const requestPeriodStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1))
+  const [requestRow] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(usageEvents)
+    .where(
+      and(
+        eq(usageEvents.userId, user.id),
+        gte(usageEvents.createdAt, requestPeriodStart),
+        sql`${usageEvents.kind} in ${["request_chat", "request_voice"]}`,
+      ),
+    )
+  const requestsUsed = Number(requestRow?.count ?? 0)
+  const requestsLimit = requestLimitForUser(user)
+  const requestsRemaining = requestsLimit === null ? null : Math.max(requestsLimit - requestsUsed, 0)
+  const resetAt = new Date(Date.UTC(requestPeriodStart.getUTCFullYear(), requestPeriodStart.getUTCMonth() + 1, 1))
 
   return c.json({
     name: user.name,
@@ -164,9 +176,10 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     status: user.subscriptionStatus,
     trialEndDate: user.trialEndDate,
     currentPeriodEnd: user.currentPeriodEnd,
-    trialInteractionUsed: user.trialInteractionUsed,
-    trialInteractionLimit: user.trialInteractionLimit,
-    trialInteractionsRemaining,
+    requestsUsed,
+    requestsLimit,
+    requestsRemaining,
+    resetAt,
     dailyChatUsed: user.dailyChatCount,
     dailyVoiceUsed: user.dailyVoiceCount,
     dailyImageUsed: user.dailyImageCount,
