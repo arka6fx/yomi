@@ -5,12 +5,12 @@ import { loadEnv } from "vite"
 export default defineConfig(({ mode }) => {
   // Load .env from apps/desktop/ — makes vars available at compile time for main process
   const env = loadEnv(mode ?? "development", process.cwd(), "")
+  const isDev = mode === "development"
+  const defaultBackendUrl = isDev ? "http://localhost:3001" : "https://yomi.arka6fx.com"
 
   const mainDefine = {
-    "process.env.YOMI_BACKEND_URL": JSON.stringify(
-      env["YOMI_BACKEND_URL"] ?? "http://localhost:3001",
-    ),
-    "process.env.YOMI_DEV": JSON.stringify(env["YOMI_DEV"] ?? "false"),
+    "process.env.YOMI_BACKEND_URL": JSON.stringify(env["YOMI_BACKEND_URL"] ?? defaultBackendUrl),
+    "process.env.YOMI_DEV": JSON.stringify(isDev ? "true" : "false"),
   }
 
   return {

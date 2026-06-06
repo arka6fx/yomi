@@ -245,9 +245,7 @@ app.whenReady().then(async () => {
     const token = loadToken()
     if (!token) return null
     try {
-      const backendUrl =
-        process.env["BACKEND_URL"] ?? process.env["YOMI_BACKEND_URL"] ?? "http://localhost:3001"
-      const res = await fetch(`${backendUrl}/api/billing/subscription`, {
+      const res = await fetch(`${BACKEND_URL}/api/billing/subscription`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.status === 401) {
@@ -267,9 +265,7 @@ app.whenReady().then(async () => {
     const token = loadToken()
     if (!token) throw new Error("Please sign in again")
 
-    const backendUrl =
-      process.env["BACKEND_URL"] ?? process.env["YOMI_BACKEND_URL"] ?? "http://localhost:3001"
-    const res = await fetch(`${backendUrl}/api/user/profile`, {
+    const res = await fetch(`${BACKEND_URL}/api/user/profile`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ name }),
