@@ -1,4 +1,4 @@
-import { Download, Github, Windows, AlertCircle } from "lucide-react"
+import { Download, ExternalLink, Monitor, AlertCircle } from "lucide-react"
 
 async function getLatestRelease() {
   try {
@@ -44,7 +44,7 @@ export default async function DownloadPage() {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"
           >
-            <Github className="w-5 h-5" />
+            <ExternalLink className="w-5 h-5" />
             View on GitHub
           </a>
         </div>
@@ -72,7 +72,7 @@ export default async function DownloadPage() {
           <div className="flex items-start gap-6 mb-8">
             <div className="flex-shrink-0">
               <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center">
-                <Windows className="w-8 h-8 text-blue-600" />
+                <Monitor className="w-8 h-8 text-blue-600" />
               </div>
             </div>
             <div className="flex-1">
@@ -136,7 +136,7 @@ export default async function DownloadPage() {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors"
           >
-            <Github className="w-5 h-5" />
+            <ExternalLink className="w-5 h-5" />
             View all releases on GitHub
           </a>
         </div>
