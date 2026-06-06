@@ -20,6 +20,8 @@ asar: true
 compression: maximum
 
 extraResources:
+  - from: build/icon.ico
+    to: icon.ico
   - from: ../sidecar/dist/
     to: sidecar
     filter:
