@@ -73,12 +73,7 @@ const platforms: Record<
     title: "Windows",
     icon: "⊞",
     options: [
-      { label: "Installer", arch: ".exe", href: "https://github.com/arka6fx/yomi/releases/latest" },
-      {
-        label: "MSI package",
-        arch: ".msi",
-        href: "https://github.com/arka6fx/yomi/releases/latest",
-      },
+      { label: "Installer", arch: ".exe", href: "https://github.com/arka6fx/yomi-releases/releases/latest" },
     ],
     instructions: [
       "Run the installer and follow the prompts",
@@ -707,7 +702,7 @@ export function LandingPage() {
             <p className="text-sm leading-relaxed text-muted-foreground">
               Downloads come directly from{" "}
               <a
-                href="https://github.com/arka6fx/yomi/releases"
+                href="https://github.com/arka6fx/yomi-releases/releases"
                 className="text-primary hover:underline"
                 target="_blank"
                 rel="noopener noreferrer"
