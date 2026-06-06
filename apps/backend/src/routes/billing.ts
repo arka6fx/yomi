@@ -1,10 +1,10 @@
 import { Hono } from "hono"
 import { createHmac } from "node:crypto"
 import { db, usageEvents } from "@yomi/db"
-import { eq, and, gte, sql } from "drizzle-orm"
+import { eq, and, gte, sql, inArray } from "drizzle-orm"
 import { authenticate } from "../auth.js"
 import * as authSchema from "../auth-schema.js"
-import { effectivePlanForUser, effectiveRoleForUser, requestLimitForUser } from "../entitlements.js"
+import { effectivePlanForUser, effectiveRoleForUser, requestLimitForUser, featureLimitForUser, type FeatureKey } from "../entitlements.js"
 
 // Public plans: Explore, Pro, and Max.
 const PLAN_AMOUNTS: Record<string, number> = {
@@ -163,20 +163,42 @@ billingRouter.get("/subscription", authenticate, async (c) => {
   )
 
   const requestPeriodStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1))
-  const [requestRow] = await db
-    .select({ count: sql<number>`count(*)` })
+
+  const kindCounts = await db
+    .select({ kind: usageEvents.kind, count: sql<number>`count(*)` })
     .from(usageEvents)
     .where(
       and(
         eq(usageEvents.userId, user.id),
         gte(usageEvents.createdAt, requestPeriodStart),
-        sql`${usageEvents.kind} in ${["request_chat", "request_voice"]}`,
+        inArray(usageEvents.kind, ["request_chat", "request_voice", "stt", "agent_run", "browser_run", "screenshot"]),
       ),
     )
-  const requestsUsed = Number(requestRow?.count ?? 0)
+    .groupBy(usageEvents.kind)
+
+  const countMap: Record<string, number> = {}
+  for (const row of kindCounts) countMap[row.kind] = Number(row.count)
+
+  const chatUsed = (countMap["request_chat"] ?? 0)
+  const voiceUsed = (countMap["request_voice"] ?? 0)
+  const sttUsed = (countMap["stt"] ?? 0)
+  const agentUsed = (countMap["agent_run"] ?? 0)
+  const browserUsed = (countMap["browser_run"] ?? 0)
+  const screenshotUsed = (countMap["screenshot"] ?? 0)
+
+  const requestsUsed = chatUsed + voiceUsed
   const requestsLimit = requestLimitForUser(user)
   const requestsRemaining = requestsLimit === null ? null : Math.max(requestsLimit - requestsUsed, 0)
   const resetAt = new Date(Date.UTC(requestPeriodStart.getUTCFullYear(), requestPeriodStart.getUTCMonth() + 1, 1))
+
+  const features = {
+    chat: { used: chatUsed, limit: requestsLimit },
+    voice: { used: voiceUsed, limit: featureLimitForUser(user, "voiceMinutes") },
+    screenshots: { used: screenshotUsed, limit: featureLimitForUser(user, "screenshots") },
+    reasoning: { used: 0, limit: featureLimitForUser(user, "reasoning") },
+    desktopAutomation: { used: agentUsed, limit: featureLimitForUser(user, "desktopAutomation") },
+    browserAutomation: { used: browserUsed, limit: featureLimitForUser(user, "browserAutomation") },
+  }
 
   return c.json({
     name: user.name,
@@ -190,6 +212,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     requestsLimit,
     requestsRemaining,
     resetAt,
+    features,
     dailyChatUsed: user.dailyChatCount,
     dailyVoiceUsed: user.dailyVoiceCount,
     dailyImageUsed: user.dailyImageCount,

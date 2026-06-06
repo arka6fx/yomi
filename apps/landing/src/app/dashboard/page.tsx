@@ -18,6 +18,8 @@ import {
 import { authClient } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
 
+type FeatureUsage = { used: number; limit: number | null }
+
 type Sub = {
   role: string
   plan: string
@@ -28,6 +30,14 @@ type Sub = {
   requestsLimit: number | null
   requestsRemaining: number | null
   resetAt: string | null
+  features: {
+    chat: FeatureUsage
+    voice: FeatureUsage
+    screenshots: FeatureUsage
+    reasoning: FeatureUsage
+    desktopAutomation: FeatureUsage
+    browserAutomation: FeatureUsage
+  }
   dailyChatUsed: number
   dailyVoiceUsed: number
   dailyImageUsed: number
@@ -119,6 +129,14 @@ function DashboardContent() {
           requestsLimit: 100,
           requestsRemaining: 100,
           resetAt: null,
+          features: {
+            chat: { used: 0, limit: 100 },
+            voice: { used: 0, limit: 20 },
+            screenshots: { used: 0, limit: 25 },
+            reasoning: { used: 0, limit: 0 },
+            desktopAutomation: { used: 0, limit: 0 },
+            browserAutomation: { used: 0, limit: 0 },
+          },
           dailyChatUsed: 0,
           dailyVoiceUsed: 0,
           dailyImageUsed: 0,
@@ -269,17 +287,17 @@ function DashboardContent() {
           </div>
         </motion.div>
 
-        {/* Requests section — visible for all users */}
+        {/* Usage section — per-feature breakdown */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.12 }}
         >
           <div className="rounded-2xl border border-border bg-card p-6">
-            <div className="flex items-start justify-between gap-6 mb-4">
+            <div className="flex items-start justify-between gap-6 mb-6">
               <div>
                 <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
-                  Requests
+                  Usage this month
                 </p>
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-light text-foreground">
@@ -287,8 +305,8 @@ function DashboardContent() {
                   </span>
                   <span className="text-sm text-muted-foreground">
                     {sub?.requestsLimit !== null && sub?.requestsLimit !== undefined
-                      ? `/ ${sub.requestsLimit} left`
-                      : "unlimited"}
+                      ? `requests left of ${sub.requestsLimit}`
+                      : "unlimited requests"}
                   </span>
                 </div>
                 {sub?.resetAt && (
@@ -301,27 +319,63 @@ function DashboardContent() {
                   </p>
                 )}
               </div>
-              {sub?.requestsLimit !== null && sub?.requestsLimit !== undefined && (
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground mb-1">
-                    {sub.requestsUsed} used
-                  </p>
-                  <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary transition-all"
-                      style={{
-                        width: `${Math.min(100, (sub.requestsUsed / sub.requestsLimit) * 100)}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
             </div>
+
             {sub?.requestsRemaining === 0 && sub?.requestsLimit !== null && (
-              <div className="mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+              <div className="mb-6 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
                 <p className="text-sm text-destructive">
                   You've used all requests for this month. Upgrade to continue or wait for the reset.
                 </p>
+              </div>
+            )}
+
+            {/* Per-feature bars */}
+            {sub?.features && (
+              <div className="space-y-4">
+                {([
+                  { key: "chat" as const, label: "AI Chats", icon: "💬" },
+                  { key: "voice" as const, label: "Voice Interactions", icon: "🎤" },
+                  { key: "screenshots" as const, label: "Screenshot Analyses", icon: "📸" },
+                  { key: "desktopAutomation" as const, label: "Desktop Automation", icon: "🖥️" },
+                  { key: "browserAutomation" as const, label: "Browser Automation", icon: "🌐" },
+                ]).map(({ key, label, icon }) => {
+                  const feat = sub.features[key]
+                  if (!feat) return null
+                  const pct = feat.limit && feat.limit > 0 ? Math.min(100, (feat.used / feat.limit) * 100) : 0
+                  const isUnlimited = feat.limit === null
+                  const isDisabled = feat.limit === 0
+
+                  return (
+                    <div key={key} className={cn("space-y-1.5", isDisabled && "opacity-40")}>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2 text-foreground">
+                          <span className="text-base">{icon}</span>
+                          {label}
+                        </span>
+                        <span className="text-muted-foreground text-xs tabular-nums">
+                          {isDisabled ? (
+                            "Not available"
+                          ) : isUnlimited ? (
+                            `${feat.used} used`
+                          ) : (
+                            `${feat.used} / ${feat.limit}`
+                          )}
+                        </span>
+                      </div>
+                      {!isDisabled && !isUnlimited && (
+                        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className={cn(
+                              "h-full rounded-full transition-all",
+                              pct >= 90 ? "bg-destructive" : pct >= 70 ? "bg-yellow-500" : "bg-primary",
+                            )}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
