@@ -36,6 +36,7 @@ let overlayWin: BrowserWindow | null = null
 let sidecarStarted = false // Sidecar + IPC + hotkeys initialised (once ever)
 let overlayHitRegions: { x: number; y: number; width: number; height: number }[] = []
 let overlayIgnoringMouse = false
+let overlayLogicalPos = { x: 0, y: 0 }
 const COMPACT_OVERLAY_W = 880
 const MIN_OVERLAY_H = 96
 
@@ -58,9 +59,9 @@ function resizeOverlay(w: number, h: number): void {
     Math.max(MIN_OVERLAY_H, Math.round(h)),
     Math.max(MIN_OVERLAY_H, workArea.height - 16),
   )
-  const current = overlayWin.getBounds()
-  const x = Math.min(Math.max(current.x, workArea.x), workArea.x + workArea.width - nextWidth)
-  const y = Math.min(Math.max(current.y, workArea.y), workArea.y + workArea.height - nextHeight)
+  const x = Math.min(Math.max(overlayLogicalPos.x, workArea.x), workArea.x + workArea.width - nextWidth)
+  const y = Math.min(Math.max(overlayLogicalPos.y, workArea.y), workArea.y + workArea.height - nextHeight)
+  overlayLogicalPos = { x, y }
   overlayWin.setBounds({ x, y, width: nextWidth, height: nextHeight }, false)
 }
 
@@ -100,6 +101,11 @@ function openTrustedExternal(rawUrl: string): void {
 app.whenReady().then(async () => {
   // Position overlay at top-center of primary display
   const initialBounds = compactOverlayBounds()
+  overlayLogicalPos = { x: initialBounds.x, y: initialBounds.y }
+
+  const iconPath = app.isPackaged
+    ? path.join(process.resourcesPath, "icon.ico")
+    : path.join(__dirname, "../../build/icon.ico")
 
   overlayWin = new BrowserWindow({
     ...initialBounds,
@@ -109,6 +115,7 @@ app.whenReady().then(async () => {
     skipTaskbar: true,
     resizable: false,
     show: false,
+    icon: iconPath,
     backgroundColor: "#00000000",
     hasShadow: false,
     webPreferences: {
@@ -183,17 +190,17 @@ app.whenReady().then(async () => {
 
   let dragStart = { winX: 0, winY: 0, mouseX: 0, mouseY: 0 }
   ipcMain.on("yomi:drag-start", (_e, mouseX: number, mouseY: number) => {
-    const pos = overlayWin?.getPosition() ?? [0, 0]
-    dragStart = { winX: pos[0] ?? 0, winY: pos[1] ?? 0, mouseX, mouseY }
+    dragStart = { winX: overlayLogicalPos.x, winY: overlayLogicalPos.y, mouseX, mouseY }
   })
   ipcMain.on("yomi:drag-move", (_e, mouseX: number, mouseY: number) => {
     const dx = mouseX - dragStart.mouseX
     const dy = mouseY - dragStart.mouseY
-    overlayWin?.setPosition(dragStart.winX + dx, dragStart.winY + dy)
+    overlayLogicalPos = { x: dragStart.winX + dx, y: dragStart.winY + dy }
+    overlayWin?.setPosition(overlayLogicalPos.x, overlayLogicalPos.y)
   })
   ipcMain.on("yomi:nudge", (_e, dx: number, dy: number) => {
-    const [x, y] = overlayWin?.getPosition() ?? [0, 0]
-    overlayWin?.setPosition((x ?? 0) + dx, (y ?? 0) + dy)
+    overlayLogicalPos = { x: overlayLogicalPos.x + dx, y: overlayLogicalPos.y + dy }
+    overlayWin?.setPosition(overlayLogicalPos.x, overlayLogicalPos.y)
   })
 
   ipcMain.handle("yomi:copy-text", async (_e, text: string) => {
@@ -367,11 +374,11 @@ app.whenReady().then(async () => {
             nudgeDir.y === 0
               ? 0
               : Math.min(Math.abs(nudgeVel.y) + NUDGE_ACCEL, NUDGE_MAX) * Math.sign(nudgeDir.y)
-          const [x, y] = overlayWin.getPosition()
-          overlayWin.setPosition(
-            Math.round((x ?? 0) + nudgeVel.x),
-            Math.round((y ?? 0) + nudgeVel.y),
-          )
+          overlayLogicalPos = {
+            x: Math.round(overlayLogicalPos.x + nudgeVel.x),
+            y: Math.round(overlayLogicalPos.y + nudgeVel.y),
+          }
+          overlayWin.setPosition(overlayLogicalPos.x, overlayLogicalPos.y)
         }, 16)
       }
     })
