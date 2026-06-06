@@ -107,8 +107,8 @@ export default function PrivacyPage() {
               </ul>
               <p>
                 To exercise these rights, contact us at{" "}
-                <a href="mailto:privacy@yomi.app" className="text-accent">
-                  privacy@yomi.app
+                <a href="mailto:contact.arkagarai@gmail.com" className="text-accent">
+                  contact.arkagarai@gmail.com
                 </a>
                 .
               </p>
@@ -132,8 +132,8 @@ export default function PrivacyPage() {
             <Section title="Contact">
               <p>
                 Questions? Email{" "}
-                <a href="mailto:privacy@yomi.app" className="text-accent">
-                  privacy@yomi.app
+                <a href="mailto:contact.arkagarai@gmail.com" className="text-accent">
+                  contact.arkagarai@gmail.com
                 </a>{" "}
                 or open an issue on{" "}
                 <a
