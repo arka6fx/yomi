@@ -6,16 +6,25 @@ function authHeader(req: NextRequest) {
   return req.headers.get("authorization") ?? ""
 }
 
+async function safeJson(res: Response): Promise<unknown> {
+  const text = await res.text()
+  try {
+    return JSON.parse(text)
+  } catch {
+    return { error: `Backend returned non-JSON (${res.status})` }
+  }
+}
+
 export async function GET(req: NextRequest) {
   const auth = authHeader(req)
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  // Dev fallback — return free defaults if backend not reachable
   try {
     const res = await fetch(`${BACKEND}/api/billing/subscription`, {
       headers: { Authorization: auth },
     })
-    return NextResponse.json(await res.json(), { status: res.status })
+    const data = await safeJson(res)
+    return NextResponse.json(data, { status: res.status })
   } catch {
     return NextResponse.json({
       role: "user",
@@ -46,7 +55,8 @@ export async function POST(req: NextRequest) {
       headers: { Authorization: auth, "Content-Type": "application/json" },
       body: JSON.stringify(body),
     })
-    return NextResponse.json(await res.json(), { status: res.status })
+    const data = await safeJson(res)
+    return NextResponse.json(data, { status: res.status })
   } catch {
     return NextResponse.json({ error: "Backend unreachable" }, { status: 502 })
   }

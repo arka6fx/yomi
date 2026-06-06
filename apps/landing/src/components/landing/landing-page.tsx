@@ -262,9 +262,12 @@ export function LandingPage() {
     }
     setBillingLoading(planKey)
     try {
-      const res = await fetch("/api/billing", {
+      const res = await fetch("/api/billing/create-subscription", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.session.token}`,
+        },
         body: JSON.stringify({ plan: planKey }),
       })
       const data = await res.json()

@@ -100,10 +100,13 @@ function DashboardContent() {
 
   useEffect(() => {
     if (!session) return
-    fetch("/api/billing", {
+    fetch("/api/billing/subscription", {
       headers: { Authorization: `Bearer ${session.session.token}` },
     })
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`billing ${r.status}`)
+        return r.json()
+      })
       .then((d: Sub) => setSub(d))
       .catch(() =>
         setSub({
@@ -139,7 +142,7 @@ function DashboardContent() {
     setBillingError("")
     setBillingLoading(planKey)
     try {
-      const res = await fetch("/api/billing", {
+      const res = await fetch("/api/billing/create-subscription", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
