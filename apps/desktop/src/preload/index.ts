@@ -239,6 +239,10 @@ contextBridge.exposeInMainWorld("yomi", {
     ipcRenderer.send("yomi:open-upgrade")
   },
 
+  openDashboard(): void {
+    ipcRenderer.send("yomi:open-dashboard")
+  },
+
   setOpacity(value: number): void {
     ipcRenderer.send("yomi:set-opacity", value)
   },

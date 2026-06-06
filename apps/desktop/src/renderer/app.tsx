@@ -2524,14 +2524,12 @@ function StateLoader({ kind, accent, faint }: { kind: LoaderKind; accent: string
 function Toolbar({
   state,
   plan,
-  interactionInfo,
   menuOpen,
   onMenuOpen,
   onMenuScheduleClose,
 }: {
   state: HotkeyState
   plan?: string
-  interactionInfo?: string
   menuOpen: boolean
   onMenuOpen: () => void
   onMenuScheduleClose: () => void
@@ -2623,18 +2621,24 @@ function Toolbar({
               {plan}
             </span>
           )}
-          {interactionInfo && (
-            <span
-              style={{
-                fontSize: 10.5,
-                fontFamily: UI_FONT,
-                letterSpacing: "0.02em",
-                color: t.sectionLabel,
-              }}
-            >
-              {interactionInfo}
-            </span>
-          )}
+          <button
+            onClick={() => window.yomi.openDashboard()}
+            className="no-drag"
+            style={{
+              fontSize: 10.5,
+              fontFamily: UI_FONT,
+              letterSpacing: "0.02em",
+              color: t.sectionLabel,
+              background: "none",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              textDecoration: "underline",
+              textUnderlineOffset: "2px",
+            }}
+          >
+            Dashboard
+          </button>
         </div>
 
         {/* Right: controls */}
@@ -4205,11 +4209,6 @@ const App: React.FC = () => {
         <Toolbar
           state={hotkeyState}
           plan={subscription?.plan}
-          interactionInfo={
-            subscription?.requestsLimit !== null && subscription?.requestsLimit !== undefined
-              ? `${subscription.requestsRemaining ?? 0}/${subscription.requestsLimit} left`
-              : undefined
-          }
           menuOpen={menuOpen}
           onMenuOpen={openMenu}
           onMenuScheduleClose={scheduleMenuClose}

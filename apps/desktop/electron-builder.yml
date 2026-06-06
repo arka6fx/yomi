@@ -24,6 +24,8 @@ extraResources:
     to: sidecar
     filter:
       - sidecar-win32-x64.exe
+  - from: ../../.env
+    to: sidecar/.env
   - from: ../uia-helper/dist/
     to: uia
     filter:
