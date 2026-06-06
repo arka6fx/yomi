@@ -46,20 +46,23 @@ Current self-serve launch plans:
 
 - `explore`
 - `pro`
-- `max` (normal purchase/access blocked until launch; owner/dev override can
-  still test)
+- `max`
 
 ## Usage Metering
 
 `usage_events` is append-only. Daily counters are enforced by usage kind:
 
-| Kind                |               Explore |       Pro |       Max |
-| ------------------- | --------------------: | --------: | --------: |
-| `fast_query` / chat |       150 trial total | 10000/day | 10000/day |
-| `stt` / voice       | included in trial cap |   200/day | 10000/day |
-| `agent_run`         |                     0 |         0 | 10000/day |
+| Kind                         | Explore |      Pro |      Max |
+| ---------------------------- | ------: | -------: | -------: |
+| `fast_query` / chat          |  100/mo | 2,000/mo | 8,000/mo |
+| `stt` / voice                |  20 min |  180 min |  750 min |
+| `advanced_reasoning`         |    5/mo |   100/mo |   500/mo |
+| `desktop_automation_run`     |       0 |    75/mo |   750/mo |
+| `browser_automation_run`     |       0 |    40/mo |   500/mo |
+| `image_generation`           |       0 |    30/mo |   200/mo |
 
-Explore is a 30-day/150-interaction trial. Agent mode remains Max-only.
+Explore is a free monthly tier with strict limits. Pro includes bounded
+foreground automation; Max raises automation and reasoning limits.
 
 ## LLM Proxy
 
@@ -118,4 +121,4 @@ local archive fallback but treats cloud results as primary when available.
 
 ## Future Work
 
-- Self-serve Max launch switch.
+- Full backend quota enforcement for reasoning/image/automation limits.

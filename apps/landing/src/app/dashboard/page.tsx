@@ -12,7 +12,6 @@ import {
   Loader2,
   Download,
   Shield,
-  Clock,
   Sparkles,
   Cuboid,
 } from "lucide-react"
@@ -39,52 +38,50 @@ const PLANS = [
     key: "explore",
     name: "Explore",
     price: "Free",
-    priceSub: "30-day trial",
-    desc: "Try everything Yomi has to offer.",
+    priceSub: "forever",
+    annual: "$0 / year",
+    desc: "Free screen-aware AI with monthly limits.",
     icon: Sparkles,
     features: [
-      "Voice & text interaction",
-      "Screenshot analysis",
-      "150 total interactions",
-      "Memory & personalization",
+      "100 AI chats / month",
+      "20 min voice / month",
+      "25 screenshot analyses",
+      "50 local memories",
     ],
   },
   {
     key: "pro",
     name: "Pro",
-    price: "$9.99",
+    price: "$14.99",
     priceSub: "/ mo",
-    desc: "Unlimited interaction for everyday use.",
+    annual: "$144 / year",
+    desc: "Daily voice, screen, memory, and useful automation.",
     icon: Crown,
     features: [
-      "Everything in Explore",
-      "Unlimited standard interactions",
-      "Priority compute",
-      "Enhanced personalization",
+      "2,000 AI chats / month",
+      "100 reasoning uses",
+      "75 desktop automation runs",
+      "40 browser automation runs",
     ],
   },
   {
     key: "max",
     name: "Max",
-    price: "Coming soon",
-    priceSub: "",
-    desc: "Full agentic capabilities for creators.",
+    price: "$39.99",
+    priceSub: "/ mo",
+    annual: "$384 / year",
+    desc: "Power-user automation, reasoning, and creation limits.",
     icon: Cuboid,
     features: [
       "Everything in Pro",
-      "Background agents",
-      "Autonomous workflows",
+      "8,000 AI chats / month",
+      "500 reasoning uses",
+      "750 desktop automation runs",
+      "500 browser automation runs",
       "Early access features",
     ],
-    comingSoon: true,
   },
 ]
-
-function trialDaysLeft(trialEndDate: string | null): number | null {
-  if (!trialEndDate) return null
-  const ms = new Date(trialEndDate).getTime() - Date.now()
-  return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)))
-}
 
 function DashboardContent() {
   const { data: session, isPending } = authClient.useSession()
@@ -115,8 +112,8 @@ function DashboardContent() {
           trialEndDate: null,
           currentPeriodEnd: null,
           trialInteractionUsed: 0,
-          trialInteractionLimit: 150,
-          trialInteractionsRemaining: 150,
+          trialInteractionLimit: 100,
+          trialInteractionsRemaining: 100,
           dailyChatUsed: 0,
           dailyVoiceUsed: 0,
           dailyImageUsed: 0,
@@ -137,10 +134,6 @@ function DashboardContent() {
 
   async function handleUpgrade(planKey: string) {
     if (planKey === "explore") return
-    if (planKey === "max") {
-      setBillingError("Yomi Max is coming soon")
-      return
-    }
     setBillingError("")
     setBillingLoading(planKey)
     try {
@@ -171,8 +164,6 @@ function DashboardContent() {
   const isOwner = sub?.role === "owner"
   const currentPlanKey = sub?.plan ?? "explore"
   const currentPlanIdx = PLANS.findIndex((p) => p.key === currentPlanKey)
-  const daysLeft = trialDaysLeft(sub?.trialEndDate ?? null)
-  const trialExpired = currentPlanKey === "explore" && daysLeft !== null && daysLeft === 0
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
@@ -258,27 +249,13 @@ function DashboardContent() {
                   </span>
                 )}
               </div>
-              {/* Trial countdown */}
-              {!subPending && !isOwner && currentPlanKey === "explore" && daysLeft !== null && (
-                <p
-                  className={cn(
-                    "text-xs flex items-center gap-1",
-                    trialExpired ? "text-destructive" : "text-muted-foreground",
-                  )}
-                >
-                  <Clock size={11} />
-                  {trialExpired
-                    ? "Trial expired — upgrade to continue"
-                    : `${daysLeft} day${daysLeft === 1 ? "" : "s"} left in free trial`}
-                </p>
-              )}
-              {/* Interaction usage for explore */}
+              {/* Interaction usage for Explore */}
               {!subPending && !isOwner && currentPlanKey === "explore" && sub && (
                 <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                   <Zap size={11} />
                   {sub.trialInteractionsRemaining ??
                     Math.max(sub.trialInteractionLimit - sub.trialInteractionUsed, 0)}{" "}
-                  / {sub.trialInteractionLimit} interactions left
+                  / {sub.trialInteractionLimit} Explore interactions left
                 </p>
               )}
               {/* Renewal date */}
@@ -330,7 +307,6 @@ function DashboardContent() {
               {PLANS.map((plan, i) => {
                 const isCurrent = plan.key === currentPlanKey
                 const isUpgrade = i > currentPlanIdx
-                const isComingSoon = "comingSoon" in plan && plan.comingSoon
 
                 return (
                   <div
@@ -339,9 +315,7 @@ function DashboardContent() {
                       "rounded-xl border p-4 flex flex-col gap-3 transition-colors",
                       isCurrent
                         ? "border-primary bg-primary/5"
-                        : isComingSoon
-                          ? "border-border bg-card opacity-75"
-                          : "border-border bg-card",
+                        : "border-border bg-card",
                     )}
                   >
                     <div className="flex-1">
@@ -353,6 +327,7 @@ function DashboardContent() {
                         <span className="text-xl font-light text-foreground">{plan.price}</span>
                         <span className="text-xs text-muted-foreground">{plan.priceSub}</span>
                       </div>
+                      <p className="text-[11px] text-muted-foreground mb-1">{plan.annual}</p>
                       <p className="text-xs text-muted-foreground mb-2 leading-relaxed">
                         {plan.desc}
                       </p>
@@ -371,8 +346,6 @@ function DashboardContent() {
 
                     {isCurrent ? (
                       <span className="text-xs text-primary font-medium">Current plan</span>
-                    ) : isComingSoon ? (
-                      <span className="text-xs text-muted-foreground font-medium">Coming soon</span>
                     ) : isUpgrade ? (
                       <button
                         onClick={() => handleUpgrade(plan.key)}

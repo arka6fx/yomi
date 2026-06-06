@@ -9,7 +9,7 @@ import type { Context, Next } from "hono"
 import * as authSchema from "./auth-schema.js"
 import { effectivePlanForUser, effectiveRoleForUser, isOwnerUser } from "./entitlements.js"
 
-const TRIAL_DAYS = 30
+const REGULAR_INTERACTION_LIMIT = 100
 
 async function getUserFields(userId: string) {
   const [row] = await db
@@ -41,11 +41,9 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        // Set role, plan, and trial dates right after the user row is inserted
+        // Set role and plan right after Better Auth inserts the user row.
         after: async (createdUser) => {
           const isOwner = isOwnerUser(createdUser)
-          const now = new Date()
-          const trialEnd = new Date(now.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000)
 
           await db
             .update(authSchema.user)
@@ -56,8 +54,7 @@ export const auth = betterAuth({
                     role: "user",
                     plan: "explore",
                     subscriptionStatus: "inactive",
-                    trialStartDate: now,
-                    trialEndDate: trialEnd,
+                    trialInteractionLimit: REGULAR_INTERACTION_LIMIT,
                   },
             )
             .where(eq(authSchema.user.id, createdUser.id))
@@ -82,7 +79,7 @@ export const auth = betterAuth({
           currentPeriodEnd: fields?.currentPeriodEnd ?? null,
           razorpayCustomerId: fields?.razorpayCustomerId ?? null,
           trialInteractionUsed: fields?.trialInteractionUsed ?? 0,
-          trialInteractionLimit: fields?.trialInteractionLimit ?? 150,
+          trialInteractionLimit: fields?.trialInteractionLimit ?? REGULAR_INTERACTION_LIMIT,
           dailyChatCount: fields?.dailyChatCount ?? 0,
           dailyVoiceCount: fields?.dailyVoiceCount ?? 0,
           dailyImageCount: fields?.dailyImageCount ?? 0,

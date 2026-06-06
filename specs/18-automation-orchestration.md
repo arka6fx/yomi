@@ -14,6 +14,10 @@ router's `agent` decision, Spec 07) run through the AutomationGraph. Automation
 is foreground-specific and reports through Mission Control plus the notch/tray
 status, never through a floating agent companion.
 
+Automation is a paid feature: Pro gets bounded foreground automation with lower
+monthly run and duration limits; Max gets higher limits, longer runs, and
+greater concurrency. See Spec 13 for entitlements.
+
 ## Locked Decisions
 
 1. **Graph wraps the ReAct loop; it does not replace chat.** The AutomationGraph
@@ -121,7 +125,7 @@ recovery count, duration) and learned recoveries (`recordRecovery`).
 ## Verification
 
 CI gates: `bun run lint`, `bun run typecheck`, `bun run build:ci`,
-`bun run test`. Manual (sidecar running, plan `max`):
+`bun run test`. Manual (sidecar running, plan `pro` or `max`):
 
 1. `/query/agent` "play lofi on spotify" → timeline shows "Spawned Spotify
    Agent", scoped execution, and a Validation backed by the now-playing check.

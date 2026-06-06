@@ -52,7 +52,7 @@ export const subscriptions = pgTable("subscriptions", {
     .references(() => users.id),
   razorpayCustomerId: text("razorpay_customer_id").notNull().default(""),
   razorpaySubId: text("razorpay_sub_id"),
-  plan: text("plan").notNull().default("free"), // "free" | "basic" | "standard" | "genesis"
+  plan: text("plan").notNull().default("explore"), // "explore" | "pro" | "max"
   status: text("status").notNull().default("active"),
   currentPeriodEnd: timestamp("current_period_end"),
   cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
