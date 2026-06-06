@@ -79,6 +79,11 @@ mock.module("ai", () => ({
           yield chunk
         }
       })(),
+      fullStream: (async function* () {
+        for (const chunk of chunks) {
+          yield { type: "text-delta", textDelta: chunk }
+        }
+      })(),
     }
   },
 }))
