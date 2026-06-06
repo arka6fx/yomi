@@ -37,6 +37,9 @@
         "src/**/*.tsx",
         "**/*.test.ts",
         "**/*.spec.ts",
+        "**/*.test.tsx",
+        "**/*.spec.tsx",
+        "package.json",
         "bunfig.toml"
       ],
       "cache": true

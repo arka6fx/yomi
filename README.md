@@ -1,232 +1,212 @@
 # Yomi
 
-AI buddy that lives on your desktop. Sees your screen, hears your voice, and
-acts so you touch your laptop less.
+Cross-platform AI buddy. Yomi sees your screen, hears your voice, answers fast,
+and can run foreground automation when a task needs more than a quick response.
 
-## How it works
+## Architecture
 
-Every request is routed to one of two pipelines:
+Yomi is split into a desktop shell, a local sidecar, a cloud backend, and a
+landing site.
 
-| Type                   | Path                                     | Latency                      |
-| ---------------------- | ---------------------------------------- | ---------------------------- |
-| Quick ask / screen Q&A | STT → screenshot → 1 LLM call → TTS      | < 2 s                        |
-| Autonomous task        | ReAct agent loop + subagents + MCP tools | seconds–minutes (background) |
+```text
+apps/backend/   Hono on Bun    auth, billing, LLM proxy, usage metering
+apps/desktop/   Electron       tray/notch UI, hotkeys, screen and mic capture
+apps/landing/   Next.js 16     landing, auth pages, dashboard, downloads
+apps/sidecar/   Bun service    router, fast path, agent loop, memory, MCP
+apps/uia-helper C# / FlaUI     Windows UI Automation helper
 
-The **local sidecar** (Bun) is the brain. The **Electron shell** is capture + UI
-only. LLM keys live in the cloud backend, never bundled in the desktop app.
-
----
-
-## Monorepo
-
-```
-apps/
-  backend/    Hono on Bun        — auth, billing (Razorpay), LLM proxy, usage metering
-  desktop/    Electron           — hotkeys, screen+mic capture, floating overlay UI
-  landing/    Next.js 16         — marketing site + waitlist (Vercel)
-  sidecar/    Bun service        — intent router, fast pipeline, ReAct loop, memory, MCP, UIA
-  uia-helper/ C# / FlaUI         — Windows UI Automation helper (JSON-RPC over stdio)
-packages/
-  db/         Drizzle schema + Neon client
-  shared/     TypeScript contracts (desktop ↔ sidecar ↔ backend)
-  config/     Shared tsconfig + eslint presets
-docs/         Superpowers specs, plans, design docs
+packages/db/    Drizzle schema and Neon client
+packages/shared Desktop, sidecar, backend contracts
+packages/*config Shared TypeScript and ESLint config
 ```
 
----
+The sidecar is the local brain. The desktop app stays thin: capture, UI, and
+foreground system integration. Provider keys live in environment files or the
+backend, never in the desktop bundle.
 
-## Quick start
+## Request Paths
 
-**Prerequisites:** [Bun ≥ 1.1](https://bun.sh/), Node ≥ 20
+| Request | Path | Target |
+| --- | --- | --- |
+| Quick ask / screen Q&A | STT or text -> screenshot -> one LLM call -> optional TTS | under 2-3s |
+| Autonomous task | router -> ReAct/LangGraph loop -> tools/subagents -> progress events | foreground, seconds-minutes |
+
+Do not switch models mid-turn. The router decides fast path vs agent path at
+the start of a turn.
+
+## Local Development
+
+Prerequisites:
+
+- Bun 1.3.x
+- Node 20+
+- A Neon Postgres database
+- AI Credits/OpenAI-compatible LLM credentials
+- ElevenLabs API key for STT/TTS
 
 ```bash
-git clone https://github.com/anomalyco/yomi
+git clone https://github.com/arka6fx/yomi.git
 cd yomi
 bun install
-cp .env.example .env   # fill in keys
-bun run dev            # runs all apps in watch mode
+cp .env.example .env
+bun run dev
 ```
 
-In dev mode, start the sidecar separately before the desktop app:
+Common dev targets:
+
+| App | Command | URL |
+| --- | --- | --- |
+| Landing | `cd apps/landing && bun run dev` | `http://localhost:3000` |
+| Backend | `cd apps/backend && bun run dev` | `http://localhost:3001` |
+| Sidecar | `cd apps/sidecar && bun run dev` | `http://localhost:3002` |
+| Desktop | `cd apps/desktop && bun run dev` | Electron |
+
+For desktop development, start the sidecar before the desktop app.
+
+## Environment
+
+Minimum local `.env` values:
 
 ```bash
-# Terminal 1
-cd apps/sidecar && bun run dev   # :3002
+DATABASE_URL=postgresql://...
 
-# Terminal 2
-cd apps/desktop && bun run dev   # Electron window
-```
+BETTER_AUTH_SECRET=...
+BETTER_AUTH_URL=http://localhost:3000
+BETTER_AUTH_BASE_URL=http://localhost:3001
+BACKEND_URL=http://localhost:3001
+NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 
-| App            | Port / target         |
-| -------------- | --------------------- |
-| `apps/landing` | http://localhost:3000 |
-| `apps/backend` | http://localhost:3001 |
-| `apps/sidecar` | http://localhost:3002 |
-| `apps/desktop` | Electron window       |
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GITHUB_CLIENT_ID=...
+GITHUB_CLIENT_SECRET=...
 
----
+OPENAI_API_KEY=...
+OPENAI_BASE_URL=...
 
-## Environment setup
-
-Copy `.env.example` → `.env`. Minimum keys to get voice + AI working:
-
-```bash
-# LLM — chat, vision, agent via AI Credits/OpenAI-compatible API
-OPENAI_API_KEY=...    # AI Credits API key
-OPENAI_BASE_URL=...   # AI Credits OpenAI-compatible base URL
-
-# STT + TTS — ElevenLabs
 ELEVENLABS_API_KEY=...
-ELEVENLABS_VOICE_ID=EXAVITQu4vr4xnSDxMaL   # premade voice (Sarah)
+ELEVENLABS_VOICE_ID=EXAVITQu4vr4xnSDxMaL
 
-# Database (Neon free tier works)
-DATABASE_URL=postgres://...
+ENCRYPTION_KEY=...
+SIDECAR_SECRET=...
 ```
 
-> **Note:** `OPENAI_BASE_URL` is for LLM chat/vision only. STT and TTS use
-> ElevenLabs via `ELEVENLABS_API_KEY`. Set `TTS_ENGINE=none` to disable voice output.
->
-> Use a **premade** `ELEVENLABS_VOICE_ID`. Community "library" voices return
-> `402 paid_plan_required` on free-tier API keys. Run `bun run tts:check` to
-> verify your voice synthesizes before shipping.
+Production uses `https://yomi.arka6fx.com` for `BETTER_AUTH_URL`,
+`BETTER_AUTH_BASE_URL`, `BACKEND_URL`, `NEXT_PUBLIC_BACKEND_URL`, and
+`NEXT_PUBLIC_APP_URL`.
 
----
+Razorpay keys can stay blank until billing is enabled. Billing routes will not
+work without them.
 
-## Overlay keyboard shortcuts
-
-| Shortcut     | Action                                 |
-| ------------ | -------------------------------------- |
-| `Ctrl+Space` | Start voice recording                  |
-| `Ctrl+Enter` | Open text input (type instead of talk) |
-| `Ctrl+H`     | Show / hide overlay                    |
-| `Ctrl+Arrow` | Nudge overlay position (smooth)        |
-| `Enter`      | Send voice query (while listening)     |
-| `Esc`        | Cancel voice or text input             |
-
-The toolbar also has **Voice** and **Type** buttons that trigger the same
-actions as `Ctrl+Space` and `Ctrl+Enter`.
-
-**Voice mode:** press `Ctrl+Space` (or click **Voice**), speak your question,
-then press `Enter` or click **Send** to submit. Press `Esc` to cancel without
-sending.
-
-**Text input mode:** press `Ctrl+Enter` (or click **Type**), type your question,
-press `Enter`. An empty submit takes a screenshot and describes what is on
-screen.
-
-**Copy:** each response card has a **Copy** button. Code blocks have their own
-per-block copy button.
-
----
-
-## AI model routing
-
-| Task               | Default model                             | Override env var   |
-| ------------------ | ----------------------------------------- | ------------------ |
-| Fast chat / vision | `gpt-4.1-mini`                            | `FAST_PATH_MODEL`  |
-| Agent / reasoning  | `gpt-4.1`                                 | `AGENT_PATH_MODEL` |
-| Speech-to-text     | `scribe_v2` (ElevenLabs)                  | `ELEVENLABS_STT_MODEL` |
-| Voice output (TTS) | `eleven_flash_v2_5` (ElevenLabs)          | `ELEVENLABS_TTS_MODEL` |
-
----
-
-## Speech
-
-**STT** runs through the sidecar (`POST /stt`) using ElevenLabs `scribe_v2`.
-Configured via `ELEVENLABS_API_KEY`.
-
-**TTS** uses ElevenLabs `eleven_flash_v2_5` with `ELEVENLABS_VOICE_ID`.
-Set `TTS_ENGINE=none` to disable voice output. When disabled, responses still
-stream as text in the overlay.
-
----
-
-## Tech stack
-
-| Layer   | Choice                                    |
-| ------- | ----------------------------------------- |
-| LLM SDK | Vercel AI SDK + `@ai-sdk/openai`          |
-| STT     | ElevenLabs (`scribe_v2`)                  |
-| TTS     | ElevenLabs (`eleven_flash_v2_5`)          |
-| Backend | Hono on Bun                               |
-| Auth    | Better Auth - Google + GitHub OAuth       |
-| DB      | Postgres (Neon) + Drizzle ORM             |
-| Billing | Razorpay                                  |
-| Desktop | Electron                                  |
-| Landing | Next.js 16 (Vercel)                       |
-
----
-
-## Authentication
-
-Desktop and web share sessions through Better Auth:
-
-| Flow                      | How it works                                                                                                                                                                                                        |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Desktop sign-in**       | Device-code flow (RFC 8628). Click sign-in, your browser opens the device page, and if you are already signed in it auto-confirms. The desktop polls for a session token and stores it encrypted via `safeStorage`. |
-| **Landing sign-in**       | Direct OAuth via Google/GitHub through Better Auth's client SDK.                                                                                                                                                    |
-| **Cross-device sign-out** | Signing out from the landing page calls `POST /api/auth/sign-out-all` which revokes all sessions for the user. The desktop detects the invalidated token within 30 seconds and shows the sign-in page.              |
-| **Session validation**    | Desktop checks token validity every 30 seconds against the billing endpoint. A 401 response triggers automatic sign-out.                                                                                            |
-
-Desktop tokens are stored encrypted at:
-
-- **macOS:** `~/Library/Application Support/Yomi/session.enc`
-- **Windows:** `%APPDATA%/Yomi/session.enc`
-
-No secrets leave the encrypted storage - not even the app reads the raw token
-except to attach it as a Bearer header.
-
----
-
-## Build commands
+## Commands
 
 ```bash
-bun run build      # turbo build — all apps
-bun run typecheck  # turbo typecheck
-bun run lint       # turbo lint
-
-# Database
-cd apps/backend && bun run db:generate   # generate migrations
-cd apps/backend && bun run db:migrate    # run migrations
-cd apps/backend && bun run db:studio     # Drizzle Studio UI
+bun run lint
+bun run typecheck
+bun run test
+bun run build:ci
+bun run build
 ```
 
----
+Database commands live in `packages/db`:
+
+```bash
+cd packages/db
+bun run db:generate
+bun run db:migrate
+bun run db:studio
+```
+
+## Test Layout
+
+Tests are package-local. Do not create one root `tests/` folder for normal unit
+or integration tests.
+
+Use colocated files next to the code they exercise:
+
+```text
+apps/backend/src/routes/usage.test.ts
+apps/sidecar/src/router/intent.test.ts
+apps/desktop/src/renderer/store.test.ts
+packages/shared/src/chunk.test.ts
+```
+
+Why: Turborepo schedules and caches work by package. Keeping tests inside the
+owning workspace lets `turbo run test --filter ...` and `--affected` run only the
+packages that changed. Root-level tests should be reserved for rare repo-wide
+checks that cannot belong to a single package.
+
+## Production
+
+Production runs on EC2 with Docker Compose and nginx:
+
+- public site: `https://yomi.arka6fx.com`
+- backend: proxied under `https://yomi.arka6fx.com/api/*`
+- nginx terminates TLS using certificates in `deploy/certs`
+- GitHub Actions deploys by SSHing to `/opt/yomi`, pulling `main`, and running
+  `docker compose up -d --build`
+
+See [SETUP_GUIDE.md](./SETUP_GUIDE.md) for the current runbook.
+
+## OAuth
+
+Configure OAuth callbacks:
+
+```text
+https://yomi.arka6fx.com/api/auth/callback/github
+https://yomi.arka6fx.com/api/auth/callback/google
+```
+
+Local callbacks:
+
+```text
+http://localhost:3001/api/auth/callback/github
+http://localhost:3001/api/auth/callback/google
+```
+
+## Speech And Models
+
+| Capability | Provider / default |
+| --- | --- |
+| Fast LLM | AI Credits/OpenAI-compatible endpoint, `gpt-4.1-mini` |
+| Agent LLM | AI Credits/OpenAI-compatible endpoint, `gpt-4.1` |
+| STT | ElevenLabs `scribe_v2` |
+| TTS | ElevenLabs `eleven_flash_v2_5` |
+
+Set `TTS_ENGINE=none` to disable voice output. Use a premade ElevenLabs voice;
+community library voices can fail on free-tier API keys.
 
 ## Specs
 
-Design docs in [`specs/`](./specs/), ordered by implementation:
+The numbered docs in `specs/` are implementation references, not product copy.
+Current order:
 
-| #   | Doc                                                           | Contents                                                                   |
-| --- | ------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| 00  | [00-overview](specs/00-overview.md)                           | Principles, identity, invariants, phase map                                |
-| 01  | [01-architecture](specs/01-architecture.md)                   | Four-layer architecture, IPC contracts, data flows                         |
-| 02  | [02-sidecar-fast-pipeline](specs/02-sidecar-fast-pipeline.md) | Fast linear pipeline, local context, cloud archive mirror, visual guidance |
-| 03  | [03-desktop-shell](specs/03-desktop-shell.md)                 | Electron main: sidecar spawn, hotkeys, capture, IPC                        |
-| 04  | [04-desktop-ui](specs/04-desktop-ui.md)                       | Floating overlay, Zustand store, audio, streaming UI                       |
-| 05  | [05-speech-stt](specs/05-speech-stt.md)                       | STT: ElevenLabs `scribe_v2` + VAD                                          |
-| 06  | [06-speech-tts](specs/06-speech-tts.md)                       | TTS: ElevenLabs `eleven_flash_v2_5`                                        |
-| 07  | [07-sidecar-router](specs/07-sidecar-router.md)               | Intent router: fast vs agent classification                                |
-| 08  | [08-sidecar-agent](specs/08-sidecar-agent.md)                 | ReAct loop, tools, MCP, subagents, sandbox                                 |
-| 09  | [09-harness](specs/09-harness.md)                             | Prompt assembly, local context, hooks, loop guards                         |
-| 10  | [10-memory](specs/10-memory.md)                               | Local memory engine, retrieval, profiles, compaction                       |
-| 11  | [11-database](specs/11-database.md)                           | Drizzle schema, Neon, cloud archive tables                                 |
-| 12  | [12-backend](specs/12-backend.md)                             | Hono routes, Better Auth, LLM proxy, metering, cloud archive mirror/search |
-| 13  | [13-pricing](specs/13-pricing.md)                             | Plans, Razorpay, metering, cap enforcement                                 |
-| 14  | [14-landing-page](specs/14-landing-page.md)                   | Marketing site (Next.js 16, Vercel)                                        |
-| 16  | [16-windows-app-automation](specs/16-windows-app-automation.md) | UIA-based Windows app automation, Act mode, safety guard                  |
-| 17  | [17-browser-automation](specs/17-browser-automation.md)       | Playwright MCP integration via generic MCP client                          |
-| 18  | [18-automation-orchestration](specs/18-automation-orchestration.md) | LangGraph AutomationGraph, provider-routed sub-agents, knowledge base  |
-
----
+| # | Spec |
+| --- | --- |
+| 00 | [Overview](specs/00-overview.md) |
+| 01 | [Architecture](specs/01-architecture.md) |
+| 02 | [Sidecar fast pipeline](specs/02-sidecar-fast-pipeline.md) |
+| 03 | [Desktop shell](specs/03-desktop-shell.md) |
+| 04 | [Desktop UI](specs/04-desktop-ui.md) |
+| 05 | [Speech STT](specs/05-speech-stt.md) |
+| 06 | [Speech TTS](specs/06-speech-tts.md) |
+| 07 | [Sidecar router](specs/07-sidecar-router.md) |
+| 08 | [Sidecar agent](specs/08-sidecar-agent.md) |
+| 09 | [Harness](specs/09-harness.md) |
+| 10 | [Memory](specs/10-memory.md) |
+| 11 | [Database](specs/11-database.md) |
+| 12 | [Backend](specs/12-backend.md) |
+| 13 | [Pricing](specs/13-pricing.md) |
+| 14 | [Landing page](specs/14-landing-page.md) |
+| 16 | [Windows app automation](specs/16-windows-app-automation.md) |
+| 17 | [Browser automation](specs/17-browser-automation.md) |
+| 18 | [Automation orchestration](specs/18-automation-orchestration.md) |
 
 ## Privacy
 
-- **Local-by-default:** screen analysis and STT run locally / on-device where
-  possible; only the distilled prompt leaves.
-- **Visible status:** overlay always shows when Yomi is listening or capturing.
-- **Per-app blocklist:** password managers and banking apps are never captured.
-- **No hidden memory sync:** local memory stays on the device; Cloud RAG (Pro/Max
-  only) mirrors Yomi-generated archive files and does not accept arbitrary user file uploads.
-- **Content protection:** overlay window is excluded from screen recordings and
-  video calls.
+- No silent recording. The tray/notch UI shows when listening or capturing.
+- Password managers and banking apps must be blocklisted from capture.
+- Desktop automation is foreground-specific.
+- Memory is user-owned and export/delete must remain possible.
+- OAuth tokens are encrypted at rest.

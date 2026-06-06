@@ -1,481 +1,222 @@
-# Yomi Deployment & Setup Guide
+# Yomi Production Runbook
 
-## ✅ Completed Steps
+Current production target:
 
-1. ✅ EC2 instance launched (c7i-flex.large, ap-south-1 Mumbai)
-2. ✅ Elastic IP allocated and associated
-3. ✅ SSH key pair downloaded
-4. ✅ DNS A record added (yomi.arka6fx.com → Elastic IP)
-5. ✅ Google OAuth URLs updated
-6. ✅ GitHub OAuth URLs updated
-7. ✅ GitHub Actions secrets added (EC2_HOST, EC2_SSH_KEY)
-8. ✅ All deployment files created (Docker, nginx, CI/CD)
-
----
-
-## 🚀 Next Steps: Manual Setup
-
-### Step 1: SSH into EC2 Instance
-
-```bash
-# From your local machine
-ssh -i yomi-ec2-key.pem ubuntu@<your-elastic-ip>
+```text
+https://yomi.arka6fx.com
 ```
 
-**Example:**
-```bash
-ssh -i yomi-ec2-key.pem ubuntu@13.234.56.78
+Production runs on EC2 from `/opt/yomi` using Docker Compose. GitHub Actions
+deploys `main` by SSH.
+
+## Required Secrets
+
+GitHub Actions repository secrets:
+
+```text
+EC2_HOST=yomi.arka6fx.com
+EC2_SSH_KEY=<private key contents>
 ```
 
-### Step 2: Run Setup Script
+EC2 file:
 
-```bash
-# Once logged into EC2
-cd /opt/yomi
-git clone https://github.com/arka6fx/yomi.git .
-chmod +x deploy/setup.sh
-./deploy/setup.sh
+```text
+/opt/yomi/.env.production
 ```
 
-This will:
-- Install Docker & Docker Compose
-- Configure UFW firewall (ports 22, 80, 443)
-- Install Certbot for SSL
-- Create deployment directories
-
-### Step 3: Configure Production Environment
+Required production values:
 
 ```bash
-# Generate encryption key
-openssl rand -hex 32
+DATABASE_URL=postgresql://...
 
-# Copy and edit production env
-cp .env.example .env.production
-nano .env.production
-```
-
-**Update these values in `.env.production`:**
-```bash
-ENCRYPTION_KEY=<paste-the-hex-key-you-generated>
-
-# Verify these match your OAuth setup
-GOOGLE_CLIENT_ID=309890578090-...
-GOOGLE_CLIENT_SECRET=GOCSPX-...
-GITHUB_CLIENT_ID=Ov23lijL89pMm38klD0y
-GITHUB_CLIENT_SECRET=f80244c7069e02e1d776e1bfb2825862d3fb3825
-
-# All URLs should point to your production domain
+BETTER_AUTH_SECRET=...
 BETTER_AUTH_URL=https://yomi.arka6fx.com
 BETTER_AUTH_BASE_URL=https://yomi.arka6fx.com
 BACKEND_URL=https://yomi.arka6fx.com
 NEXT_PUBLIC_BACKEND_URL=https://yomi.arka6fx.com
 NEXT_PUBLIC_APP_URL=https://yomi.arka6fx.com
-CORS_ORIGIN=https://yomi.arka6fx.com
+
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GITHUB_CLIENT_ID=...
+GITHUB_CLIENT_SECRET=...
+
+OPENAI_API_KEY=...
+OPENAI_BASE_URL=...
+
+ELEVENLABS_API_KEY=...
+ELEVENLABS_VOICE_ID=EXAVITQu4vr4xnSDxMaL
+
+ENCRYPTION_KEY=<openssl rand -hex 32>
+SIDECAR_SECRET=...
 ```
 
-### Step 4: Build and Start Services
+Optional until billing is enabled:
 
 ```bash
-# Build Docker images
-docker compose build
-
-# Start all services
-docker compose up -d
-
-# Check status
-docker compose ps
+RAZORPAY_KEY_ID=
+RAZORPAY_KEY_SECRET=
+RAZORPAY_WEBHOOK_SECRET=
 ```
 
-### Step 5: Setup SSL Certificate
+## First Server Setup
 
 ```bash
-# Stop nginx temporarily (certbot needs port 80)
-docker compose stop nginx
-
-# Get SSL certificate
-sudo certbot certonly --standalone -d yomi.arka6fx.com
-
-# Restart nginx
-docker compose start nginx
-```
-
-**Auto-renewal is already configured** via certbot's systemd timer.
-
-### Step 6: Verify Deployment
-
-```bash
-# Test health endpoints
-curl https://yomi.arka6fx.com/health
-curl https://yomi.arka6fx.com/api/health
-
-# Check logs
-docker compose logs -f backend
-docker compose logs -f landing
-```
-
----
-
-## 📦 GitHub Releases Setup (Desktop App Distribution)
-
-### Step 1: Create a Release Tag
-
-```bash
-# From your local machine (not EC2)
-cd /path/to/yomi
-
-# Create and push a version tag
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-### Step 2: Build Windows Installer
-
-```bash
-# Navigate to desktop app
-cd apps/desktop
-
-# Install dependencies (if not already done)
-bun install
-
-# Build the installer
-bun run dist:win
-```
-
-This creates: `apps/desktop/release/Yomi-0.1.0-x64.exe`
-
-### Step 3: Upload to GitHub Release
-
-**Option A: Manual Upload (Recommended for first release)**
-
-1. Go to: https://github.com/arka6fx/yomi/releases
-2. Click "Draft a new release"
-3. Choose tag: `v0.1.0`
-4. Release title: `Yomi v0.1.0 - Initial Release`
-5. Write release notes (features, changes, etc.)
-6. Drag & drop `apps/desktop/release/Yomi-0.1.0-x64.exe` into the assets area
-7. Click "Publish release"
-
-**Option B: Automated Upload (For future releases)**
-
-```bash
-# Install GitHub CLI (if not installed)
-# Windows: winget install GitHub.cli
-# Mac: brew install gh
-
-# Login to GitHub
-gh auth login
-
-# Upload the installer
-cd apps/desktop
-gh release upload v0.1.0 release/Yomi-0.1.0-x64.exe --clobber
-```
-
-### Step 4: Verify Download Page
-
-Visit: https://yomi.arka6fx.com/download
-
-You should see:
-- Version number (v0.1.0)
-- Release date
-- File size
-- Download button
-- Release notes
-- SmartScreen warning explanation
-
----
-
-## 🔧 Useful Commands
-
-### EC2 Management
-
-```bash
-# SSH into server
-ssh -i yomi-ec2-key.pem ubuntu@<elastic-ip>
-
-# View logs
-docker compose logs -f backend
-docker compose logs -f landing
-docker compose logs -f nginx
-
-# Restart services
-docker compose restart
-
-# Stop all services
-docker compose down
-
-# Start all services
-docker compose up -d
-
-# Rebuild after code changes
-git pull origin main
-docker compose build --no-cache
-docker compose up -d
-
-# Check resource usage
-docker stats
-```
-
-### SSL Certificate Management
-
-```bash
-# Test renewal (dry run)
-sudo certbot renew --dry-run
-
-# Force renewal
-sudo certbot renew --force-renewal
-
-# View certificate info
-sudo certbot certificates
-```
-
-### Database Management
-
-```bash
-# Run migrations (from EC2)
+sudo apt update
+sudo apt install -y docker-compose-plugin certbot
+sudo mkdir -p /opt/yomi
+sudo chown -R ubuntu:ubuntu /opt/yomi
+git clone https://github.com/arka6fx/yomi.git /opt/yomi
 cd /opt/yomi
-docker compose exec backend bunx drizzle-kit migrate
-
-# Or from your local machine
-cd packages/db
-DATABASE_URL=<your-neon-url> bunx drizzle-kit migrate
+cp .env.example .env.production
 ```
 
----
+Fill `.env.production`, then start the app once over HTTP or temporarily stop
+nginx to issue the certificate.
 
-## 🐛 Troubleshooting
-
-### Docker Build Fails
+Certificate command used for this deployment:
 
 ```bash
-# Clear Docker cache
-docker system prune -a
-
-# Rebuild without cache
-docker compose build --no-cache
+cd /opt/yomi
+sudo docker compose stop nginx
+sudo mkdir -p deploy/certs deploy/certbot-work deploy/logs
+sudo certbot certonly \
+  --standalone \
+  --non-interactive \
+  --agree-tos \
+  --register-unsafely-without-email \
+  --config-dir /opt/yomi/deploy/certs \
+  --work-dir /opt/yomi/deploy/certbot-work \
+  --logs-dir /opt/yomi/deploy/logs \
+  -d yomi.arka6fx.com
+sudo docker compose up -d --build
 ```
 
-### Nginx Won't Start
+Certbot installed a renewal timer. After renewal, recreate or reload nginx so it
+uses the renewed files.
+
+## Deploy
+
+Automatic deploy:
 
 ```bash
-# Check if port 80/443 is in use
-sudo lsof -i :80
-sudo lsof -i :443
-
-# Check nginx config syntax
-docker compose exec nginx nginx -t
-
-# View nginx error logs
-docker compose logs nginx
-tail -f deploy/logs/error.log
+git push origin main
 ```
 
-### SSL Certificate Issues
+Manual deploy from EC2:
 
 ```bash
-# Check certificate status
-sudo certbot certificates
-
-# Manually renew
-sudo certbot renew --force-renewal
-
-# Reinstall certificate
-sudo certbot --nginx -d yomi.arka6fx.com --force-renewal
-```
-
-### Backend Not Responding
-
-```bash
-# Check backend logs
-docker compose logs backend
-
-# Restart backend
-docker compose restart backend
-
-# Check if backend is healthy
-curl http://localhost:3001/health
-```
-
-### Landing Page Not Loading
-
-```bash
-# Check landing logs
-docker compose logs landing
-
-# Verify standalone build exists
-docker compose exec landing ls -la .next/standalone
-
-# Restart landing
-docker compose restart landing
-```
-
----
-
-## 📊 Monitoring
-
-### View Real-time Logs
-
-```bash
-# All services
-docker compose logs -f
-
-# Specific service
-docker compose logs -f backend
-docker compose logs -f landing
-docker compose logs -f nginx
-```
-
-### Check Service Health
-
-```bash
-# Docker health checks
-docker compose ps
-
-# Manual health checks
-curl https://yomi.arka6fx.com/health
-curl https://yomi.arka6fx.com/api/health
-```
-
-### Resource Usage
-
-```bash
-# Docker container stats
-docker stats
-
-# System resources
-htop
-df -h
-free -m
-```
-
----
-
-## 🔄 Deployment Workflow
-
-### Local Development → Production
-
-1. **Make changes locally**
-   ```bash
-   git add .
-   git commit -m "feat: add new feature"
-   git push origin main
-   ```
-
-2. **Auto-deploy triggers** (GitHub Actions)
-   - Builds and tests code
-   - SSHs into EC2
-   - Pulls latest code
-   - Rebuilds Docker images
-   - Restarts services
-
-3. **Verify deployment**
-   ```bash
-   curl https://yomi.arka6fx.com/health
-   ```
-
-### Manual Deployment (if needed)
-
-```bash
-# SSH into EC2
-ssh -i yomi-ec2-key.pem ubuntu@<elastic-ip>
-
-# Pull latest code
 cd /opt/yomi
 git pull origin main
-
-# Rebuild and restart
-docker compose down
-docker compose build --no-cache
-docker compose up -d
+sudo docker compose --env-file .env.production up -d --build
+sudo docker image prune -f
 ```
 
----
+Manual deploy from GitHub CLI:
 
-## 🔐 Security Checklist
+```bash
+gh workflow run deploy.yml --repo arka6fx/yomi --ref main
+```
 
-- [x] SSH key secured (chmod 400)
-- [x] UFW firewall configured (only 22, 80, 443 open)
-- [x] SSL certificate installed
-- [x] `.env.production` not committed to git
-- [x] Database URL uses SSL (`sslmode=require`)
-- [x] OAuth secrets stored in `.env.production`
-- [x] GitHub Actions secrets configured
-- [ ] Code signing certificate (deferred for beta)
-- [ ] Rate limiting configured (nginx has basic limits)
-- [ ] Regular backups (Neon handles DB backups)
+## Verify
 
----
+```bash
+curl -I https://yomi.arka6fx.com/
+curl https://yomi.arka6fx.com/health
+sudo docker compose ps
+sudo docker compose logs --tail=80 backend landing nginx
+```
 
-## 📝 Environment Variables Reference
+Expected container state:
 
-### Production (.env.production)
+```text
+backend   healthy
+landing   healthy
+nginx     up, ports 80 and 443 bound
+```
 
-| Variable | Purpose | Example |
-|----------|---------|---------|
-| `DATABASE_URL` | Neon Postgres connection | `postgresql://...` |
-| `BETTER_AUTH_SECRET` | Auth encryption key | `Ss57I108tuAfstRkLRnL/...` |
-| `BETTER_AUTH_URL` | Public auth URL | `https://yomi.arka6fx.com` |
-| `GOOGLE_CLIENT_ID` | Google OAuth | `309890578090-...` |
-| `GITHUB_CLIENT_ID` | GitHub OAuth | `Ov23lijL89pMm38klD0y` |
-| `ENCRYPTION_KEY` | OAuth token encryption | `openssl rand -hex 32` |
-| `OPENAI_API_KEY` | AI Credits API | `sk-live-...` |
-| `ELEVENLABS_API_KEY` | Speech services | `sk_...` |
-| `CORS_ORIGIN` | Allowed CORS origin | `https://yomi.arka6fx.com` |
+Expected public behavior:
 
-### Local Development (.env)
+```text
+http://yomi.arka6fx.com/  -> 301
+https://yomi.arka6fx.com/ -> 200
+/_next/static/*          -> 200
+```
 
-Same variables but with `http://localhost:3000` and `http://localhost:3001` URLs.
+## OAuth
 
----
+Configure these callback URLs in the OAuth provider dashboards:
 
-## 🎯 Post-Deployment Tasks
+```text
+https://yomi.arka6fx.com/api/auth/callback/github
+https://yomi.arka6fx.com/api/auth/callback/google
+```
 
-### Immediate
+If login attempts call `localhost:3001`, rebuild `landing` with production
+public build args:
 
-1. ✅ Test health endpoints
-2. ✅ Test OAuth login (Google + GitHub)
-3. ✅ Create first user account
-4. ✅ Verify landing page loads
-5. ⏳ Upload first desktop release to GitHub
-6. ⏳ Test download page
+```bash
+cd /opt/yomi
+sudo docker compose --env-file .env.production build --no-cache landing
+sudo docker compose --env-file .env.production up -d --force-recreate landing nginx
+```
 
-### Within 24 Hours
+## Razorpay
 
-1. Monitor logs for errors
-2. Check SSL certificate auto-renewal
-3. Test device-code auth flow
-4. Verify desktop app connects to production backend
+Leave Razorpay values blank until billing is ready. When enabling billing:
 
-### Within 1 Week
+1. Generate API keys in Razorpay Dashboard.
+2. Set `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`.
+3. Add a webhook for `https://yomi.arka6fx.com/api/billing/webhook`.
+4. Set `RAZORPAY_WEBHOOK_SECRET` to the same secret entered in Razorpay.
+5. Recreate backend:
 
-1. Set up monitoring (Uptime Kuma, Grafana)
-2. Configure automated backups
-3. Test Razorpay billing (when ready)
-4. Set up error tracking (Sentry, etc.)
+```bash
+cd /opt/yomi
+sudo docker compose up -d --force-recreate backend nginx
+```
 
----
+## Troubleshooting
 
-## 📞 Support
+SSH deploy timeout:
 
-### Documentation
+- Check EC2 security group allows GitHub Actions runners or use a self-hosted
+  runner.
+- Confirm `EC2_HOST` points to `yomi.arka6fx.com`.
 
-- [Docker Compose](https://docs.docker.com/compose/)
-- [Nginx](https://nginx.org/en/docs/)
-- [Let's Encrypt](https://letsencrypt.org/docs/)
-- [GitHub Actions](https://docs.github.com/en/actions)
+Port 80/443 in use:
 
-### Logs Location
+```bash
+sudo ss -ltnp '( sport = :80 or sport = :443 )'
+sudo systemctl disable --now nginx
+sudo docker compose up -d nginx
+```
 
-- Nginx: `/opt/yomi/deploy/logs/`
-- Docker: `docker compose logs <service>`
-- System: `/var/log/syslog`
+White page:
 
----
+```bash
+curl -I https://yomi.arka6fx.com/_next/static/
+sudo docker compose build --no-cache landing
+sudo docker compose up -d --force-recreate landing nginx
+```
 
-## 🎉 You're Done!
+Nginx 502 after deploy:
 
-Your Yomi deployment is now live at:
-- **Landing Page:** https://yomi.arka6fx.com
-- **API:** https://yomi.arka6fx.com/api
-- **Download:** https://yomi.arka6fx.com/download
+```bash
+sudo docker compose restart nginx
+```
 
-Next: Upload your first desktop release to GitHub and test the full flow!
+Backend missing env:
+
+```bash
+sudo docker inspect yomi-backend-1 --format '{{range .Config.Env}}{{println .}}{{end}}' | sort
+```
+
+Do not print secret values into logs or chat.
+
+## Security Notes
+
+- Rotate any GitHub PAT that appears in shell output.
+- Keep `.env.production` out of git.
+- Keep the EC2 private key readable only by the owning user.
+- Do not commit OAuth client secrets, Razorpay secrets, or database URLs.
