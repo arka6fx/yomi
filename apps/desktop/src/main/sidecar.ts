@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto"
 import path from "node:path"
 import { app } from "electron"
 import type { ChildProcess } from "node:child_process"
+import { BACKEND_URL } from "./auth"
 
 // Resolve the compiled Windows sidecar binary.
 // In production the binary lives in <resources>/sidecar/ (extraResources in electron-builder.yml).
@@ -45,6 +46,7 @@ export class SidecarManager {
           ...process.env,
           SIDECAR_SECRET: this.secret,
           YOMI_SESSION_TOKEN: this.sessionToken,
+          YOMI_BACKEND_URL: BACKEND_URL,
           YOMI_UIA_HELPER: uiaHelperPath(),
         },
         stdio: "inherit",

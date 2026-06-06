@@ -3,9 +3,11 @@ import path from "node:path"
 import fs from "node:fs"
 
 export const BACKEND_URL =
-  process.env["YOMI_BACKEND_URL"] ??
-  process.env["BACKEND_URL"] ??
-  (process.env["YOMI_DEV"] === "true" ? "http://localhost:3001" : "https://api.yomi.app")
+  app.isPackaged
+    ? "https://yomi.arka6fx.com"
+    : (process.env["YOMI_BACKEND_URL"] ??
+      process.env["BACKEND_URL"] ??
+      (process.env["YOMI_DEV"] === "true" ? "http://localhost:3001" : "https://yomi.arka6fx.com"))
 
 function tokenPath() {
   return path.join(app.getPath("userData"), "session.enc")
