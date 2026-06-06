@@ -30,8 +30,13 @@ async function rzp<T>(path: string, body?: unknown): Promise<T> {
     headers: { Authorization: rzpAuth(), "Content-Type": "application/json" },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   })
-  if (!res.ok) throw new Error(`Razorpay ${path} → ${res.status}: ${await res.text()}`)
-  return res.json() as Promise<T>
+  const text = await res.text()
+  if (!res.ok) throw new Error(`Razorpay ${path} → ${res.status}: ${text}`)
+  try {
+    return JSON.parse(text) as T
+  } catch {
+    throw new Error(`Razorpay ${path} returned non-JSON: ${text.slice(0, 200)}`)
+  }
 }
 
 export const billingRouter = new Hono()
@@ -46,39 +51,44 @@ billingRouter.post("/create-subscription", authenticate, async (c) => {
 
   const period = PLAN_PERIODS[plan]!
 
-  // Reuse existing customer ID if present, otherwise create one
-  let customerId = user.razorpayCustomerId ?? ""
-  if (!customerId) {
-    const customer = await rzp<{ id: string }>("/customers", {
-      name: user.name,
-      email: user.email,
-      contact: "",
+  try {
+    let customerId = user.razorpayCustomerId ?? ""
+    if (!customerId) {
+      const customer = await rzp<{ id: string }>("/customers", {
+        name: user.name,
+        email: user.email,
+        contact: "",
+      })
+      customerId = customer.id
+      await db
+        .update(authSchema.user)
+        .set({ razorpayCustomerId: customerId })
+        .where(eq(authSchema.user.id, user.id))
+    }
+
+    const planObj = await rzp<{ id: string }>("/plans", {
+      period: period.period,
+      interval: period.interval,
+      item: {
+        name: `Yomi ${plan.charAt(0).toUpperCase() + plan.slice(1)}`,
+        amount,
+        currency: "USD",
+      },
     })
-    customerId = customer.id
-    await db
-      .update(authSchema.user)
-      .set({ razorpayCustomerId: customerId })
-      .where(eq(authSchema.user.id, user.id))
+
+    const subscription = await rzp<{ id: string; short_url: string }>("/subscriptions", {
+      plan_id: planObj.id,
+      customer_notify: 1,
+      total_count: period.totalCount,
+      notes: { userId: user.id, plan },
+    })
+
+    return c.json({ id: subscription.id, short_url: subscription.short_url })
+  } catch (err) {
+    console.error("[yomi/billing] create-subscription failed:", err)
+    const message = err instanceof Error ? err.message : "Unknown error"
+    return c.json({ error: message }, 502)
   }
-
-  const planObj = await rzp<{ id: string }>("/plans", {
-    period: period.period,
-    interval: period.interval,
-    item: {
-      name: `Yomi ${plan.charAt(0).toUpperCase() + plan.slice(1)}`,
-      amount,
-      currency: "USD",
-    },
-  })
-
-  const subscription = await rzp<{ id: string; short_url: string }>("/subscriptions", {
-    plan_id: planObj.id,
-    customer_notify: 1,
-    total_count: period.totalCount,
-    notes: { userId: user.id, plan },
-  })
-
-  return c.json({ id: subscription.id, short_url: subscription.short_url })
 })
 
 // Razorpay webhook — update user plan on subscription events
