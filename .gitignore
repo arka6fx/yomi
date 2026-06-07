@@ -54,3 +54,6 @@ npm-debug.log*
 tmp/
 **/.playwright-mcp/
 .superpowers/
+
+# Auto-generated Next.js type reference
+apps/landing/next-env.d.ts
