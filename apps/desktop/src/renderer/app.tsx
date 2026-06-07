@@ -34,8 +34,8 @@ const BARGE_IN_ARM_DELAY_MS = 400 // ignore the first moments (trailing speech /
 const AMBER: Theme = {
   id: "amber",
   label: "Amber",
-  bg: "rgba(0,0,0,0.94)",
-  surface: "rgba(1,1,1,0.96)",
+  bg: "rgb(0,0,0)",
+  surface: "rgb(1,1,1)",
   border: "rgba(255,224,194,0.09)",
   borderHi: "rgba(255,224,194,0.18)",
   text: "rgba(238,233,224,1)",
@@ -52,8 +52,8 @@ const AMBER: Theme = {
   cmt: "rgba(145,128,95,0.65)",
   fn: "#ffe0c2",
   codeText: "rgba(208,196,178,1)",
-  toolbarBg: "rgba(0,0,0,0.99)",
-  menuBg: "rgba(0,0,0,0.99)",
+  toolbarBg: "rgb(0,0,0)",
+  menuBg: "rgb(0,0,0)",
   menuBorder: "rgba(255,224,194,0.1)",
   menuShadow: "0 12px 40px rgba(0,0,0,0.65), 0 0 0 0.5px rgba(255,224,194,0.04)",
   menuSep: "rgba(255,224,194,0.06)",
@@ -115,8 +115,8 @@ const AMBER: Theme = {
 const BLUE: Theme = {
   id: "blue",
   label: "Blue",
-  bg: "rgba(5,9,20,0.95)",
-  surface: "rgba(8,14,30,0.96)",
+  bg: "rgb(5,9,20)",
+  surface: "rgb(8,14,30)",
   border: "rgba(59,130,246,0.14)",
   borderHi: "rgba(59,130,246,0.28)",
   text: "rgba(226,232,240,1)",
@@ -133,8 +133,8 @@ const BLUE: Theme = {
   cmt: "rgba(100,116,139,0.7)",
   fn: "#C4B5FD",
   codeText: "rgba(203,213,225,1)",
-  toolbarBg: "rgba(5,9,22,0.98)",
-  menuBg: "rgba(5,9,22,0.98)",
+  toolbarBg: "rgb(5,9,22)",
+  menuBg: "rgb(5,9,22)",
   menuBorder: "rgba(59,130,246,0.2)",
   menuShadow: "0 12px 40px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(59,130,246,0.06)",
   menuSep: "rgba(59,130,246,0.1)",
@@ -196,8 +196,8 @@ const BLUE: Theme = {
 const GREEN: Theme = {
   id: "green",
   label: "Green",
-  bg: "rgba(2,10,4,0.95)",
-  surface: "rgba(4,15,6,0.96)",
+  bg: "rgb(2,10,4)",
+  surface: "rgb(4,15,6)",
   border: "rgba(34,197,94,0.15)",
   borderHi: "rgba(34,197,94,0.3)",
   text: "rgba(220,252,231,1)",
@@ -214,8 +214,8 @@ const GREEN: Theme = {
   cmt: "rgba(74,120,84,0.7)",
   fn: "#bbf7d0",
   codeText: "rgba(187,247,208,0.85)",
-  toolbarBg: "rgba(2,12,4,0.98)",
-  menuBg: "rgba(2,12,4,0.98)",
+  toolbarBg: "rgb(2,12,4)",
+  menuBg: "rgb(2,12,4)",
   menuBorder: "rgba(34,197,94,0.2)",
   menuShadow: "0 12px 40px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(34,197,94,0.06)",
   menuSep: "rgba(34,197,94,0.1)",
@@ -277,8 +277,8 @@ const GREEN: Theme = {
 const VIOLET: Theme = {
   id: "violet",
   label: "Violet",
-  bg: "rgba(6,3,14,0.95)",
-  surface: "rgba(10,5,22,0.96)",
+  bg: "rgb(6,3,14)",
+  surface: "rgb(10,5,22)",
   border: "rgba(139,92,246,0.16)",
   borderHi: "rgba(139,92,246,0.32)",
   text: "rgba(237,233,254,1)",
@@ -295,8 +295,8 @@ const VIOLET: Theme = {
   cmt: "rgba(100,80,150,0.7)",
   fn: "#ddd6fe",
   codeText: "rgba(221,214,254,0.85)",
-  toolbarBg: "rgba(6,3,16,0.98)",
-  menuBg: "rgba(6,3,16,0.98)",
+  toolbarBg: "rgb(6,3,16)",
+  menuBg: "rgb(6,3,16)",
   menuBorder: "rgba(139,92,246,0.22)",
   menuShadow: "0 12px 40px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(139,92,246,0.06)",
   menuSep: "rgba(139,92,246,0.1)",
@@ -358,8 +358,8 @@ const VIOLET: Theme = {
 const HOTPINK: Theme = {
   id: "hotpink",
   label: "Hot Pink",
-  bg: "rgba(14,2,8,0.95)",
-  surface: "rgba(20,4,12,0.96)",
+  bg: "rgb(14,2,8)",
+  surface: "rgb(20,4,12)",
   border: "rgba(236,72,153,0.16)",
   borderHi: "rgba(236,72,153,0.32)",
   text: "rgba(253,242,248,1)",
@@ -376,8 +376,8 @@ const HOTPINK: Theme = {
   cmt: "rgba(150,70,110,0.7)",
   fn: "#fbcfe8",
   codeText: "rgba(251,207,232,0.85)",
-  toolbarBg: "rgba(14,2,9,0.98)",
-  menuBg: "rgba(14,2,9,0.98)",
+  toolbarBg: "rgb(14,2,9)",
+  menuBg: "rgb(14,2,9)",
   menuBorder: "rgba(236,72,153,0.22)",
   menuShadow: "0 12px 40px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(236,72,153,0.06)",
   menuSep: "rgba(236,72,153,0.1)",
@@ -439,8 +439,8 @@ const HOTPINK: Theme = {
 const PURPLE: Theme = {
   id: "purple",
   label: "Purple",
-  bg: "rgba(9,3,14,0.95)",
-  surface: "rgba(14,5,21,0.96)",
+  bg: "rgb(9,3,14)",
+  surface: "rgb(14,5,21)",
   border: "rgba(168,85,247,0.16)",
   borderHi: "rgba(168,85,247,0.32)",
   text: "rgba(243,232,255,1)",
@@ -457,8 +457,8 @@ const PURPLE: Theme = {
   cmt: "rgba(120,80,170,0.7)",
   fn: "#e9d5ff",
   codeText: "rgba(233,213,255,0.85)",
-  toolbarBg: "rgba(9,3,15,0.98)",
-  menuBg: "rgba(9,3,15,0.98)",
+  toolbarBg: "rgb(9,3,15)",
+  menuBg: "rgb(9,3,15)",
   menuBorder: "rgba(168,85,247,0.22)",
   menuShadow: "0 12px 40px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(168,85,247,0.06)",
   menuSep: "rgba(168,85,247,0.1)",
@@ -520,8 +520,8 @@ const PURPLE: Theme = {
 const BLACK: Theme = {
   id: "black",
   label: "Black",
-  bg: "rgba(0,0,0,0.97)",
-  surface: "rgba(1,1,1,0.98)",
+  bg: "rgb(0,0,0)",
+  surface: "rgb(1,1,1)",
   border: "rgba(255,255,255,0.1)",
   borderHi: "rgba(255,255,255,0.2)",
   text: "rgba(226,232,240,1)",
@@ -538,8 +538,8 @@ const BLACK: Theme = {
   cmt: "rgba(100,116,139,0.7)",
   fn: "#c4b5fd",
   codeText: "rgba(203,213,225,1)",
-  toolbarBg: "rgba(0,0,0,0.995)",
-  menuBg: "rgba(0,0,0,0.995)",
+  toolbarBg: "rgb(0,0,0)",
+  menuBg: "rgb(0,0,0)",
   menuBorder: "rgba(255,255,255,0.12)",
   menuShadow: "0 12px 40px rgba(0,0,0,0.9), 0 0 0 0.5px rgba(255,255,255,0.06)",
   menuSep: "rgba(255,255,255,0.07)",
@@ -611,36 +611,6 @@ const THEMES: Record<ThemeId, Theme> = {
 const themeStyleEl = document.createElement("style")
 document.head.appendChild(themeStyleEl)
 
-const OPACITY_STORAGE_KEY = "yomi:opacity"
-const UI_OPACITY_EVENT = "yomi:opacity-change"
-
-function clampUiOpacity(value: number): number {
-  return Number.isFinite(value) ? Math.min(1, Math.max(0.2, value)) : 1
-}
-
-function readUiOpacity(): number {
-  const saved = localStorage.getItem(OPACITY_STORAGE_KEY)
-  return saved ? clampUiOpacity(parseFloat(saved)) : 1
-}
-
-function translucentColor(color: string, opacity: number, floor = 0.16): string {
-  const match = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/)
-  if (!match) return color
-  const alpha = match[4] ? parseFloat(match[4]) : 1
-  const nextAlpha = Math.max(floor, Math.min(alpha, alpha * clampUiOpacity(opacity)))
-  return `rgba(${match[1]},${match[2]},${match[3]},${Number(nextAlpha.toFixed(3))})`
-}
-
-// Glass treatment helpers — layered backgrounds in the active theme's accent.
-// `glassBar` adds a faint top sheen for small/repeated surfaces (toolbar, notch, chat).
-function glassPanel(_base: string, _glow: string): string {
-  return _base
-}
-function glassBar(base: string): string {
-  return `linear-gradient(180deg, rgba(255,255,255,0.05), transparent 42%), ${base}`
-}
-
-// Force a colour to full opacity (used for the solid sign-in card).
 function opaqueColor(color: string): string {
   const m = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/)
   return m ? `rgb(${m[1]},${m[2]},${m[3]})` : color
@@ -701,8 +671,8 @@ styleEl.textContent = `
   @keyframes rippleOut { 0%{transform:scale(1);opacity:0.7} 100%{transform:scale(2.8);opacity:0} }
 
   * { box-sizing:border-box; margin:0; padding:0; }
-  html, body { background: transparent !important; height:100%; margin:0; overflow:hidden; }
-  #root { height:100%; display:flex; flex-direction:column; }
+  html, body { background: transparent; height:100%; margin:0; overflow:hidden; }
+  #root { display:flex; flex-direction:column; }
   .drag    { -webkit-app-region:drag;    app-region:drag;    }
   .no-drag { -webkit-app-region:no-drag; app-region:no-drag; }
   ::-webkit-scrollbar { width:3px; }
@@ -1555,8 +1525,6 @@ function TextInputPanel({ surfaceBg }: { surfaceBg: string }) {
         border: "1px solid var(--border-hi)",
         borderRadius: 9,
         overflow: "hidden",
-        backdropFilter: "blur(28px) saturate(150%)",
-        WebkitBackdropFilter: "blur(28px) saturate(150%)",
         boxShadow: "0 8px 40px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(255,255,255,0.04)",
         animation: "slideUp 0.2s cubic-bezier(0.16,1,0.3,1)",
       }}
@@ -1655,8 +1623,6 @@ function ResponsePanel({
         border: "1px solid var(--border)",
         borderRadius: 9,
         overflow: "hidden",
-        backdropFilter: "blur(28px) saturate(150%)",
-        WebkitBackdropFilter: "blur(28px) saturate(150%)",
         animation: "slideUp 0.22s cubic-bezier(0.16,1,0.3,1)",
         boxShadow: "0 6px 30px rgba(0,0,0,0.45), 0 0 0 0.5px rgba(255,255,255,0.03)",
         position: "relative",
@@ -1968,21 +1934,11 @@ function MenuCard({
   const [profileSaving, setProfileSaving] = React.useState(false)
   const [profileError, setProfileError] = React.useState("")
 
-  const [opacity, setOpacity] = React.useState(readUiOpacity)
-
   React.useEffect(() => {
     setNameDraft(subscription?.name ?? "")
     setProfileEditing(false)
     setProfileError("")
   }, [subscription?.name])
-
-  const handleOpacity = (val: number) => {
-    const next = clampUiOpacity(val)
-    setOpacity(next)
-    localStorage.setItem(OPACITY_STORAGE_KEY, String(next))
-    window.dispatchEvent(new CustomEvent(UI_OPACITY_EVENT, { detail: next }))
-    window.yomi.setOpacity(1)
-  }
 
   const saveProfileName = async () => {
     const nextName = nameDraft.trim()
@@ -2082,12 +2038,10 @@ function MenuCard({
           right: "max(8px, calc(50% - 382px))",
           zIndex: 1000,
           width: 250,
-          background: glassPanel(translucentColor(t.surface, opacity, 0.28), t.accentG),
+          background: t.surface,
           border: `1px solid ${t.borderHi}`,
           borderRadius: 16,
           boxShadow: t.menuShadow,
-          backdropFilter: "blur(28px) saturate(160%)",
-          WebkitBackdropFilter: "blur(28px) saturate(160%)",
           overflow: "hidden",
           transformOrigin: "top right",
         }}
@@ -2343,68 +2297,6 @@ function MenuCard({
                 borderTop: `5px solid ${t.dim}`,
               }}
             />
-          </div>
-        </div>
-
-        <div style={{ height: 1, background: t.menuSep }} />
-
-        {/* Opacity slider */}
-        <div style={{ padding: "10px 14px" }}>
-          <div
-            style={{
-              padding: "9px 10px",
-              borderRadius: 8,
-              background: t.kbdBg,
-              border: `1px solid ${t.kbdBorder}`,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 8,
-              }}
-            >
-              <span
-                style={{
-                  fontSize: 10,
-                  fontFamily: UI_FONT,
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
-                  color: t.sectionLabel,
-                }}
-              >
-                GLASS
-              </span>
-              <span style={{ fontSize: 11, fontFamily: UI_FONT, color: t.text, fontWeight: 700 }}>
-                {Math.round(opacity * 100)}%
-              </span>
-            </div>
-            <input
-              type="range"
-              min={20}
-              max={100}
-              step={1}
-              value={Math.round(opacity * 100)}
-              onChange={(e) => handleOpacity(parseInt(e.target.value) / 100)}
-              className="no-drag"
-              style={{ width: "100%", margin: 0 }}
-            />
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginTop: 6,
-                fontSize: 10,
-                fontFamily: UI_FONT,
-                color: t.dim,
-              }}
-            >
-              <span>translucent</span>
-              <span>solid</span>
-            </div>
           </div>
         </div>
 
@@ -3096,9 +2988,7 @@ function Notch({ state, voiceTurnBusy }: { state: HotkeyState; voiceTurnBusy: bo
             style={{
               minWidth: 200,
               maxWidth: 320,
-              background: glassBar(notchBg),
-              backdropFilter: "blur(28px) saturate(160%)",
-              WebkitBackdropFilter: "blur(28px) saturate(160%)",
+              background: notchBg,
               borderBottomLeftRadius: 18,
               borderBottomRightRadius: 18,
               boxShadow: state === "listening" ? t.appShadowListen : t.appShadow,
@@ -3501,7 +3391,6 @@ const App: React.FC = () => {
   const [loadingProvider, setLoadingProvider] = React.useState<"github" | "google" | null>(null)
   const [lastProvider, setLastProvider] = React.useState<"github" | "google" | null>(null)
   const [menuOpen, setMenuOpen] = React.useState(false)
-  const [uiOpacity, setUiOpacity] = React.useState(readUiOpacity)
   const [updateNotice, setUpdateNotice] = React.useState<UpdateNotice>(null)
   const menuCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const menuOpenedAtRef = useRef<number>(0)
@@ -3640,17 +3529,6 @@ const App: React.FC = () => {
     [playQueuedAudio],
   )
 
-  // Keep text opaque; the slider changes glass surface alpha instead.
-  useEffect(() => {
-    window.yomi.setOpacity(1)
-    const onOpacityChange = (event: Event) => {
-      const detail = event instanceof CustomEvent ? Number(event.detail) : readUiOpacity()
-      setUiOpacity(clampUiOpacity(detail))
-    }
-    window.addEventListener(UI_OPACITY_EVENT, onOpacityChange)
-    return () => window.removeEventListener(UI_OPACITY_EVENT, onOpacityChange)
-  }, [])
-
   // Listen to auth status events from main process
   useEffect(() => {
     return window.yomi.onAuthStatus((status, detail) => {
@@ -3713,7 +3591,7 @@ const App: React.FC = () => {
     }
   }, [])
 
-  // Size the transparent Electron shell to the root overlay only; transient hit areas animate.
+  // Size the Electron shell to the root overlay only; transient hit areas animate.
   React.useLayoutEffect(() => {
     let frame = 0
     let lastHeight = 0
@@ -3728,10 +3606,11 @@ const App: React.FC = () => {
 
       const minHeight = authState === "unauthenticated" || authState === "waiting" ? 460 : compactHeight
       const root = rootRef.current
+      const menuExtra = menuOpen ? 520 : 0
       const nextHeight = Math.ceil(Math.max(
         minHeight,
-        root?.scrollHeight ?? 0,
-      ) + 8)
+        (root?.scrollHeight ?? 0) + menuExtra,
+      ))
       if (Math.abs(nextHeight - lastHeight) < 2) return
       lastHeight = nextHeight
       window.yomi.resize(880, nextHeight)
@@ -4084,8 +3963,8 @@ const App: React.FC = () => {
   const hasContent = entries.length > 0 || hotkeyState === "text-input"
   const isListening = hotkeyState === "listening"
   const { theme: t } = React.useContext(ThemeCtx)
-  const toolbarBg = translucentColor(t.bg, uiOpacity, 0.24)
-  const chatSurfaceBg = glassBar(translucentColor(t.surface, uiOpacity, 0.28))
+  const toolbarBg = t.bg
+  const chatSurfaceBg = t.surface
   const activeEntry = entries[entries.length - 1]
 
   useEffect(() => {
@@ -4182,10 +4061,8 @@ const App: React.FC = () => {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        height: "100vh",
         position: "relative",
         minWidth: 0,
-        paddingTop: 8,
         boxSizing: "border-box",
       }}
     >
@@ -4196,12 +4073,10 @@ const App: React.FC = () => {
           flexShrink: 0,
           width: 880,
           maxWidth: "calc(100vw - 40px)",
-          background: glassBar(toolbarBg),
+          background: toolbarBg,
           border: isListening ? t.appBorderListen : t.appBorder,
           borderRadius: 12,
           boxShadow: isListening ? t.appShadowListen : t.appShadow,
-          backdropFilter: "blur(28px) saturate(160%)",
-          WebkitBackdropFilter: "blur(28px) saturate(160%)",
           overflow: "hidden",
           transition: "border-color .3s, box-shadow .3s",
         }}
@@ -4234,7 +4109,7 @@ const App: React.FC = () => {
               gap: 12,
               padding: "9px 12px",
               borderRadius: 10,
-              background: glassBar(toolbarBg),
+              background: toolbarBg,
               border: `1px solid ${t.borderHi}`,
               boxShadow: "0 12px 30px rgba(0,0,0,0.38)",
               color: t.text,

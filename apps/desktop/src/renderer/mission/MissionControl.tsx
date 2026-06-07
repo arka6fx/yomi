@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion"
 import type { AutomationRun, AutomationTimelineItem } from "@yomi/shared"
 import type { AutomationProviderHealth, AutomationWorkflowReplay } from "../../preload"
 import { useYomiStore } from "../store"
-import { ThemeCtx, UI_FONT, glassBar } from "../theme"
+import { ThemeCtx, UI_FONT } from "../theme"
 
 const PANEL_WIDTH = 360
 
@@ -626,9 +626,7 @@ export function MissionControl() {
         >
           <div
             style={{
-              background: glassBar(t.menuBg),
-              backdropFilter: "blur(28px) saturate(160%)",
-              WebkitBackdropFilter: "blur(28px) saturate(160%)",
+              background: t.menuBg,
               border: `1px solid ${t.border}`,
               borderRadius: 12,
               boxShadow: t.appShadow,

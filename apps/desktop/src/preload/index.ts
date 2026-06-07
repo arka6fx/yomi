@@ -243,10 +243,6 @@ contextBridge.exposeInMainWorld("yomi", {
     ipcRenderer.send("yomi:open-dashboard")
   },
 
-  setOpacity(value: number): void {
-    ipcRenderer.send("yomi:set-opacity", value)
-  },
-
   confirmAct(id: string, approved: boolean): void {
     ipcRenderer.send("yomi:act-confirm", id, approved)
   },
