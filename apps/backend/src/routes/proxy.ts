@@ -11,6 +11,13 @@ const ELEVENLABS_TTS_URL = "https://api.elevenlabs.io/v1/text-to-speech"
 
 export const proxyRouter = new Hono()
 
+proxyRouter.use("*", async (c, next) => {
+  const path = c.req.path
+  const method = c.req.method
+  const auth = c.req.header("Authorization")
+  console.log(`[proxy] ${method} ${path} auth=${auth ? "present" : "missing"}`)
+  await next()
+})
 proxyRouter.use("*", authenticate)
 
 proxyRouter.post("/elevenlabs/stt", requireAccess("voice"), async (c) => {
@@ -112,6 +119,9 @@ proxyRouter.post("/chat/completions", async (c) => {
   if (!openaiKey) return c.json({ error: "OPENAI_API_KEY not configured" }, 500)
 
   const body = await c.req.json()
+  const model = body.model ?? "unknown"
+
+  console.log(`[proxy/llm] model=${model} stream=${!!body.stream} msgCount=${body.messages?.length ?? 0}`)
 
   const targetUrl = `${OPENAI_BASE_URL.replace(/\/+$/, "")}/chat/completions`
 
@@ -126,11 +136,14 @@ proxyRouter.post("/chat/completions", async (c) => {
 
   if (!upstream.ok) {
     const errBody = await upstream.text().catch(() => upstream.statusText)
+    console.log(`[proxy/llm] upstream error: ${upstream.status} ${errBody}`)
     return c.json(
       { error: `Upstream error ${upstream.status}: ${errBody}` },
       upstream.status as ContentfulStatusCode,
     )
   }
+
+  console.log(`[proxy/llm] upstream ${upstream.status} streaming=${!!body.stream}`)
 
   if (!body.stream) {
     const json = await upstream.json()
@@ -148,14 +161,20 @@ proxyRouter.post("/chat/completions", async (c) => {
   return stream(c, async (streamWriter) => {
     const reader = upstream.body!.getReader()
     const decoder = new TextDecoder()
+    let bytes = 0
     try {
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
+        bytes += value?.length ?? 0
         const text = decoder.decode(value, { stream: true })
         await streamWriter.write(text)
       }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      console.log(`[proxy/llm] stream error after ${bytes} bytes: ${msg}`)
     } finally {
+      console.log(`[proxy/llm] stream done: ${bytes} bytes forwarded`)
       reader.releaseLock()
     }
   })
