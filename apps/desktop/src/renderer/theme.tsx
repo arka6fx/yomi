@@ -88,32 +88,12 @@ export const ThemeCtx = React.createContext<{ theme: Theme; setTheme: (id: Theme
   setTheme: () => {},
 })
 
-export const OPACITY_STORAGE_KEY = "yomi:opacity"
-export const UI_OPACITY_EVENT = "yomi:opacity-change"
-
-export function clampUiOpacity(value: number): number {
-  return Number.isFinite(value) ? Math.min(1, Math.max(0.2, value)) : 1
-}
-
-export function readUiOpacity(): number {
-  const saved = localStorage.getItem(OPACITY_STORAGE_KEY)
-  return saved ? clampUiOpacity(parseFloat(saved)) : 1
-}
-
-export function translucentColor(color: string, opacity: number, floor = 0.16): string {
-  const match = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/)
-  if (!match) return color
-  const alpha = match[4] ? parseFloat(match[4]) : 1
-  const nextAlpha = Math.max(floor, Math.min(alpha, alpha * clampUiOpacity(opacity)))
-  return `rgba(${match[1]},${match[2]},${match[3]},${Number(nextAlpha.toFixed(3))})`
-}
-
-export function glassPanel(base: string, glow: string): string {
-  return `radial-gradient(140% 120% at 0% 0%, ${glow}, transparent 55%), linear-gradient(180deg, rgba(255,255,255,0.05), transparent 38%), ${base}`
+export function glassPanel(base: string, _glow: string): string {
+  return base
 }
 
 export function glassBar(base: string): string {
-  return `linear-gradient(180deg, rgba(255,255,255,0.05), transparent 42%), ${base}`
+  return base
 }
 
 export function opaqueColor(color: string): string {

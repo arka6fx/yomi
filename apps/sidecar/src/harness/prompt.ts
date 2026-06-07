@@ -177,6 +177,10 @@ ${FAST_EXAMPLES}
 
 <screen_context>
 ${screenLine}
+When a screenshot is attached, analyze it to understand what the user is asking about:
+- If the screen shows a problem statement, question, or task (like "solve with code dijkstra algorithm", a coding problem, an MCQ, or any question), SOLVE IT — provide the actual solution, code, or answer.
+- If the screen shows an error, UI, or something the user is asking about, explain or guide them.
+- Do not just describe what you see on the screen. The user wants you to act on what's visible, not narrate it.
 </screen_context>
 
 <capabilities>

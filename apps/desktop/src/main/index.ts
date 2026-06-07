@@ -28,7 +28,6 @@ import { initAutoUpdater, downloadUpdate, installUpdate } from "./updater"
 
 // Transparent frameless windows need software compositing on some GPU/driver combos
 if (process.platform === "win32") {
-  app.commandLine.appendSwitch("enable-transparent-visuals")
   app.commandLine.appendSwitch("disable-gpu-program-cache")
 }
 
@@ -246,10 +245,6 @@ app.whenReady().then(async () => {
   ipcMain.on("yomi:open-dashboard", () => {
     const base = process.env["YOMI_LANDING_URL"] ?? "https://yomi.arka6fx.com"
     openTrustedExternal(`${base}/dashboard`)
-  })
-
-  ipcMain.on("yomi:set-opacity", (_e, value: number) => {
-    overlayWin?.setOpacity(Math.max(0.1, Math.min(1, value)))
   })
 
   // Handle 401 from subscription check — triggers re-auth
