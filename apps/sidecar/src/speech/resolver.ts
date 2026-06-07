@@ -5,7 +5,7 @@ export type TtsEngine = "elevenlabs" | "none"
 export function resolveTts(): TtsEngine {
   const explicit = process.env.TTS_ENGINE?.toLowerCase() as TtsEngine | undefined
   if (explicit === "elevenlabs" || explicit === "none") return explicit
-  if (process.env.ELEVENLABS_API_KEY) return "elevenlabs"
+  if (process.env.YOMI_SESSION_TOKEN || process.env.ELEVENLABS_API_KEY) return "elevenlabs"
   return "none"
 }
 
