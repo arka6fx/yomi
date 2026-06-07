@@ -1,13 +1,13 @@
 const ELEVENLABS_STT_URL = "https://api.elevenlabs.io/v1/speech-to-text"
 
 export class ElevenLabsSttError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-    readonly body?: string,
-  ) {
+  status: number
+  body: string
+  constructor(message: string, status: number, body: string) {
     super(message)
     this.name = "ElevenLabsSttError"
+    this.status = status
+    this.body = body
   }
 }
 
@@ -27,6 +27,37 @@ export async function elevenLabsTranscribe(
   audio: Uint8Array,
   opts: ElevenLabsSttOptions = {},
 ): Promise<ElevenLabsSttResponse> {
+  const token = process.env.YOMI_SESSION_TOKEN
+  const backendUrl = process.env.YOMI_BACKEND_URL ?? process.env.BACKEND_URL
+
+  // Production: proxy through authenticated backend
+  if (backendUrl && token) {
+    const audio_b64 = Buffer.from(audio).toString("base64")
+    const res = await fetch(`${backendUrl.replace(/\/+$/, "")}/api/v1/elevenlabs/stt`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        audio_b64,
+        model_id: opts.model_id ?? process.env.ELEVENLABS_STT_MODEL ?? "scribe_v2",
+        language_code: opts.language_code ?? process.env.ELEVENLABS_STT_LANGUAGE,
+        no_verbatim: opts.no_verbatim ?? true,
+      }),
+    })
+    if (!res.ok) {
+      const body = await res.text().catch(() => res.statusText)
+      throw new ElevenLabsSttError(
+        `STT proxy error ${res.status}: ${body}`,
+        res.status,
+        body,
+      )
+    }
+    return res.json() as Promise<ElevenLabsSttResponse>
+  }
+
+  // Dev: direct ElevenLabs API
   const apiKey = process.env.ELEVENLABS_API_KEY
   if (!apiKey) throw new Error("Voice is not configured yet. Add ElevenLabs API key to enable voice.")
 
@@ -49,6 +80,5 @@ export async function elevenLabsTranscribe(
     const body = await res.text().catch(() => res.statusText)
     throw new ElevenLabsSttError(`ElevenLabs STT error ${res.status}`, res.status, body)
   }
-
   return res.json() as Promise<ElevenLabsSttResponse>
 }
