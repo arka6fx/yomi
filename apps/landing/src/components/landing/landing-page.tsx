@@ -409,7 +409,7 @@ export function LandingPage() {
               { sym: "␣", label: "Space" },
             ]}
             label="Voice + Screen"
-            description="Press to start recording, speak your question, then press Enter to send. Yomi captures your screen and responds with text and voice."
+            description="Press Ctrl+Space, speak your question, then press Enter. Yomi transcribes your voice, captures screen context, and responds with text and spoken audio."
           />
           <InteractionCard
             type="B"
@@ -418,16 +418,16 @@ export function LandingPage() {
               { sym: "↵", label: "Enter" },
             ]}
             label="Type + Screen"
-            description="Type a question. Yomi captures your screen and returns a text response."
+            description="Press Ctrl+Enter, type your question, then press Enter. Yomi intelligently includes your screen for spatial or UI queries and returns a fast text response."
           />
           <InteractionCard
             type="C"
             hotkey={[
               { sym: "^", label: "Ctrl" },
-              { sym: "↵", label: "Enter" },
+              { sym: "S", label: "S" },
             ]}
-            label="Just Screen"
-            description="Open the text panel and press Enter with an empty input. Yomi analyzes your screen and tells you what's on it."
+            label="Screen Q&A"
+            description="Press Ctrl+S to capture your screen. Yomi analyzes what's on your display and provides step-by-step visual guidance overlaid on your screen."
           />
         </div>
       </section>
