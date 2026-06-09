@@ -13,6 +13,13 @@ gatewayRouter.get("/status", (c) => {
   return c.json(gateway.getStatus())
 })
 
+// Sidecar polls this to pull pending messages
+gatewayRouter.get("/pending", authenticate, (c) => {
+  const user = c.get("user")
+  const messages = getDefaultGateway().getPendingMessages(user.id)
+  return c.json({ messages })
+})
+
 // List linked platforms for the authenticated user
 gatewayRouter.get("/connections", authenticate, async (c) => {
   const user = c.get("user")

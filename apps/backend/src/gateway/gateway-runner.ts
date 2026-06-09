@@ -50,6 +50,7 @@ export class GatewayRunner {
   private sidecarResolver: SidecarResolver | null = null
   private cleanupTimer: ReturnType<typeof setInterval> | null = null
   private linkingCodes: Map<string, LinkingCode> = new Map()
+  private pendingMessages: Map<string, GatewayMessage[]> = new Map()
 
   constructor(sidecarUrl?: string, sidecarSecret?: string) {
     this.defaultSidecarUrl = sidecarUrl ?? process.env["SIDECAR_URL"] ?? "http://localhost:3002"
@@ -295,31 +296,53 @@ export class GatewayRunner {
       }
     }
 
+    // Queue message for the linked user's sidecar to poll
+    const yomiUserId = await this.resolveYomiUserId(msg.platform, msg.userId)
+    console.warn(`[gateway] queueing for yomiUserId=${yomiUserId ?? "unknown"} text="${msg.text.slice(0, 60)}"`)
+    if (yomiUserId) {
+      this.queueForUser(yomiUserId, msg)
+    }
+
     const session = this.getOrCreateSession(msg)
-
-    const controlResult = this.handleControlCommand(msg, session)
-    if (controlResult) {
-      const adapter = this.adapters.get(msg.platform)
-      await adapter?.sendMessage(msg.chatId, controlResult)
-      return
-    }
-
-    if (session.pendingMessages.length > 0) {
-      session.pendingMessages.push(msg)
-      return
-    }
-
     session.messageCount++
     session.lastActivityAt = Date.now()
+  }
 
+  // Resolve the Yomi user ID from a platform user ID
+  async resolveYomiUserId(platform: PlatformType, platformUserId: string): Promise<string | undefined> {
     try {
-      await this.sendToSidecar(msg)
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : String(err)
-      console.warn(`[gateway] forward error: ${errMsg}`)
-      const adapter = this.adapters.get(msg.platform)
-      await adapter?.sendMessage(msg.chatId, `Sorry, I encountered an error: ${errMsg}`)
+      const row = await db
+        .select({ userId: platformConnections.userId })
+        .from(platformConnections)
+        .where(
+          and(
+            eq(platformConnections.platform, platform),
+            eq(platformConnections.platformUserId, platformUserId),
+          ),
+        )
+        .limit(1)
+        .then((r) => r[0])
+      return row?.userId
+    } catch {
+      return undefined
     }
+  }
+
+  private queueForUser(yomiUserId: string, msg: GatewayMessage): void {
+    const queue = this.pendingMessages.get(yomiUserId)
+    if (queue) {
+      queue.push(msg)
+    } else {
+      this.pendingMessages.set(yomiUserId, [msg])
+    }
+  }
+
+  // Sidecar polls this to pull pending messages
+  getPendingMessages(yomiUserId: string): GatewayMessage[] {
+    const messages = this.pendingMessages.get(yomiUserId)
+    if (!messages || messages.length === 0) return []
+    this.pendingMessages.delete(yomiUserId)
+    return messages
   }
 
   private getOrCreateSession(msg: GatewayMessage): GatewaySession {

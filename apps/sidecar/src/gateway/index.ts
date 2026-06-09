@@ -1,1 +1,1 @@
-export { handleGatewayMessage } from "./receive.js"
+export { handleGatewayMessage, startGatewayPoll, stopGatewayPoll } from "./receive.js"
