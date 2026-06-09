@@ -42,6 +42,7 @@ export const devices = pgTable("devices", {
     .references(() => users.id, { onDelete: "cascade" }),
   os: text("os").notNull(), // "windows"
   appVersion: text("app_version").notNull(),
+  sidecarUrl: text("sidecar_url"), // URL of the user's sidecar for message routing
   lastSeen: timestamp("last_seen").notNull().defaultNow(),
 })
 
@@ -253,5 +254,28 @@ export const hookLogs = pgTable(
   },
   (t) => ({
     agentRunIdx: index("hook_logs_agent_run_idx").on(t.agentRunId),
+  }),
+)
+
+export const platformConnections = pgTable(
+  "platform_connections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    platform: text("platform").notNull(), // "telegram" | "discord" | "slack" | "whatsapp"
+    platformUserId: text("platform_user_id").notNull(), // user's ID on the external platform
+    platformChatId: text("platform_chat_id"), // specific chat/channel if applicable
+    connectedAt: timestamp("connected_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    platformUserUnique: unique("platform_connections_platform_user_unique").on(
+      t.platform,
+      t.platformUserId,
+    ),
+    userIdx: index("platform_connections_user_idx").on(t.userId),
+    platformIdx: index("platform_connections_platform_idx").on(t.platform, t.platformUserId),
   }),
 )
