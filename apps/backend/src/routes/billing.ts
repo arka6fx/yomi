@@ -1,5 +1,5 @@
 import { Hono } from "hono"
-import { createHmac, randomBytes } from "node:crypto"
+import { createHmac } from "node:crypto"
 import { db, usageEvents } from "@yomi/db"
 import { eq, and, gte, sql, inArray } from "drizzle-orm"
 import { authenticate } from "../auth.js"
@@ -151,9 +151,6 @@ function isWebhookDuplicate(eventId: string): boolean {
   }
   return false
 }
-
-// ── Past-due grace period (7 days) ─────────────────────────────────────────────
-const PAST_DUE_GRACE_MS = 7 * 24 * 60 * 60 * 1000
 
 // ── Router ─────────────────────────────────────────────────────────────────────
 

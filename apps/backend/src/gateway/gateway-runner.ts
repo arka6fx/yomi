@@ -209,8 +209,6 @@ export class GatewayRunner {
     console.warn("[gateway] stopped")
   }
 
-  stop(): void {
-
   // Bootstrap Discord DM channels from existing platform connections.
   // Ensures the adapter polls DMs for users who linked via OAuth but whose
   // GET /users/@me/channels returns [] (known Discord API limitation).

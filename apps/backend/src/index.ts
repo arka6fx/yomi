@@ -129,4 +129,4 @@ const server = Bun.serve({
   fetch: app.fetch,
 })
 
-console.log(`Backend listening on :${server.port}`)
+console.warn(`Backend listening on :${server.port}`)
