@@ -189,6 +189,7 @@ describe("saveCronOutput", () => {
 
   it("saves multiple outputs for same job", async () => {
     const p1 = await saveCronOutput("multi", "first")
+    await new Promise((r) => setTimeout(r, 2))
     const p2 = await saveCronOutput("multi", "second")
     expect(p1).not.toBe(p2)
 
