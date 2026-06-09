@@ -261,12 +261,12 @@ export const platformConnections = pgTable(
   "platform_connections",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id")
+    userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    platform: text("platform").notNull(), // "telegram" | "discord" | "slack" | "whatsapp"
-    platformUserId: text("platform_user_id").notNull(), // user's ID on the external platform
-    platformChatId: text("platform_chat_id"), // specific chat/channel if applicable
+    platform: text("platform").notNull(),
+    platformUserId: text("platform_user_id").notNull(),
+    platformChatId: text("platform_chat_id"),
     connectedAt: timestamp("connected_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
