@@ -1,21 +1,120 @@
 import { Hono } from "hono"
-import { createHmac } from "node:crypto"
+import { createHmac, randomBytes } from "node:crypto"
 import { db, usageEvents } from "@yomi/db"
 import { eq, and, gte, sql, inArray } from "drizzle-orm"
 import { authenticate } from "../auth.js"
 import * as authSchema from "../auth-schema.js"
-import { effectivePlanForUser, effectiveRoleForUser, requestLimitForUser, featureLimitForUser, type FeatureKey } from "../entitlements.js"
+import { effectivePlanForUser, effectiveRoleForUser, requestLimitForUser, featureLimitForUser } from "../entitlements.js"
 
-// Public plans: Explore, Pro, and Max.
-const PLAN_AMOUNTS: Record<string, number> = {
-  pro: 1499,
-  max: 3999,
+// ── Pricing Configuration ──────────────────────────────────────────────────────
+// Canonical prices in USD cents. Razorpay Plan IDs come from env vars
+// (pre-created in Razorpay dashboard — see /create-subscription).
+//
+// Adding a new plan:
+//   1. Add entry here
+//   2. Create corresponding Razorpay Plan in dashboard
+//   3. Set RAZORPAY_PLAN_PRO / RAZORPAY_PLAN_MAX env var
+//
+// Adding annual billing:
+//   Add "proAnnual" / "maxAnnual" entries with interval: 12,
+//   corresponding Razorpay Annual Plans, and env vars.
+
+interface PlanConfig {
+  key: string
+  name: string
+  amountCents: number           // USD cents, canonical billing amount
+  currency: string               // "usd" — always lowercase
+  interval: number               // 1 = monthly, 12 = annual
+  razorpayPlanId: string | null  // pre-created plan ID from env
+  features: string[]             // display-only for dashboard
 }
 
-const PLAN_PERIODS: Record<string, { period: string; interval: number; totalCount: number }> = {
-  pro: { period: "monthly", interval: 1, totalCount: 12 },
-  max: { period: "monthly", interval: 1, totalCount: 12 },
+const PLANS: Record<string, PlanConfig> = {
+  explore: {
+    key: "explore",
+    name: "Explore",
+    amountCents: 0,
+    currency: "usd",
+    interval: 1,
+    razorpayPlanId: null,
+    features: ["100 AI chats / month", "20 min voice", "25 screenshots", "50 local memories"],
+  },
+  pro: {
+    key: "pro",
+    name: "Pro",
+    amountCents: 1499,
+    currency: "usd",
+    interval: 1,
+    razorpayPlanId: process.env["RAZORPAY_PLAN_PRO"] ?? null,
+    features: ["2,000 AI chats / month", "180 min voice", "100 reasoning", "75 desktop runs", "40 browser runs"],
+  },
+  max: {
+    key: "max",
+    name: "Max",
+    amountCents: 3999,
+    currency: "usd",
+    interval: 1,
+    razorpayPlanId: process.env["RAZORPAY_PLAN_MAX"] ?? null,
+    features: ["8,000 AI chats / month", "750 min voice", "500 reasoning", "750 desktop runs", "500 browser runs"],
+  },
 }
+
+// ── Currency Display Layer ─────────────────────────────────────────────────────
+// Maps USD cents to estimated local amounts. Updated manually until we
+// integrate a live FX API (post-500-customers).
+
+interface CurrencyDisplay {
+  code: string       // ISO 4217
+  symbol: string     // "$", "₹", "€", etc.
+  rate: number       // 1 USD = X local units
+  decimals: number   // display precision
+}
+
+const CURRENCIES: Record<string, CurrencyDisplay> = {
+  usd: { code: "USD", symbol: "$", rate: 1, decimals: 2 },
+  inr: { code: "INR", symbol: "₹", rate: 83, decimals: 0 },
+  eur: { code: "EUR", symbol: "€", rate: 0.92, decimals: 2 },
+  gbp: { code: "GBP", symbol: "£", rate: 0.79, decimals: 2 },
+  aud: { code: "AUD", symbol: "A$", rate: 1.52, decimals: 2 },
+  cad: { code: "CAD", symbol: "C$", rate: 1.36, decimals: 2 },
+  brl: { code: "BRL", symbol: "R$", rate: 5.05, decimals: 2 },
+  jpy: { code: "JPY", symbol: "¥", rate: 149, decimals: 0 },
+}
+
+// Country → currency mapping (alpha-2 → default currency for display)
+const COUNTRY_CURRENCY: Record<string, string> = {
+  IN: "inr", US: "usd", GB: "gbp", CA: "cad", AU: "aud",
+  BR: "brl", JP: "jpy", DE: "eur", FR: "eur", IT: "eur",
+  ES: "eur", NL: "eur", SE: "eur", MX: "usd", PH: "usd",
+  NG: "usd", ZA: "usd", AE: "usd", SG: "usd", HK: "usd",
+  // default: usd
+}
+
+function detectCurrency(cfCountry: string | null): CurrencyDisplay {
+  const key = cfCountry ? (COUNTRY_CURRENCY[cfCountry.toUpperCase()] ?? "usd") : "usd"
+  return CURRENCIES[key] ?? CURRENCIES["usd"]!
+}
+
+function estimateLocal(amountCents: number, display: CurrencyDisplay): {
+  amount: number
+  formatted: string
+} {
+  if (display.code === "USD") {
+    return { amount: amountCents / 100, formatted: `$${(amountCents / 100).toFixed(2)}` }
+  }
+  const converted = Math.round(amountCents / 100 * display.rate)
+  const divisor = Math.pow(10, display.decimals)
+  const displayAmount = converted / divisor
+  return {
+    amount: displayAmount,
+    formatted: `${display.symbol}${displayAmount.toLocaleString("en-US", {
+      minimumFractionDigits: display.decimals,
+      maximumFractionDigits: display.decimals,
+    })}`,
+  }
+}
+
+// ── Razorpay Helpers ───────────────────────────────────────────────────────────
 
 function rzpAuth(): string {
   const id = process.env["RAZORPAY_KEY_ID"]
@@ -39,19 +138,72 @@ async function rzp<T>(path: string, body?: unknown): Promise<T> {
   }
 }
 
+// ── Processed webhook event IDs (in-memory, capped) ────────────────────────────
+const processedWebhookIds = new Set<string>()
+const MAX_WEBHOOK_IDS = 10_000
+
+function isWebhookDuplicate(eventId: string): boolean {
+  if (processedWebhookIds.has(eventId)) return true
+  processedWebhookIds.add(eventId)
+  if (processedWebhookIds.size > MAX_WEBHOOK_IDS) {
+    const iter = processedWebhookIds.values().next()
+    if (!iter.done) processedWebhookIds.delete(iter.value)
+  }
+  return false
+}
+
+// ── Past-due grace period (7 days) ─────────────────────────────────────────────
+const PAST_DUE_GRACE_MS = 7 * 24 * 60 * 60 * 1000
+
+// ── Router ─────────────────────────────────────────────────────────────────────
+
 export const billingRouter = new Hono()
 
-// Create Razorpay subscription
+// Get public plan list with estimated local pricing
+billingRouter.get("/plans", (c) => {
+  const cf = c.req.header("CF-IPCountry") ?? null
+  const display = detectCurrency(cf)
+
+  const estimate =
+    display.code === "USD" ? null
+    : `Estimated ${display.code} equivalent. Charged in USD. Your bank may convert the amount automatically.`
+
+  const plans = Object.values(PLANS).map((p) => ({
+    key: p.key,
+    name: p.name,
+    amountCents: p.amountCents,
+    currency: p.currency.toUpperCase(),
+    interval: p.interval === 12 ? "year" : "month",
+    features: p.features,
+    local: p.amountCents > 0 ? estimateLocal(p.amountCents, display) : null,
+    notice: estimate,
+  }))
+
+  return c.json({ plans, displayCurrency: display.code })
+})
+
+// Create Razorpay subscription — uses pre-created plan IDs from env
 billingRouter.post("/create-subscription", authenticate, async (c) => {
   const { plan } = (await c.req.json()) as { plan: string }
   const user = c.get("user")
 
-  const amount = PLAN_AMOUNTS[plan]
-  if (!amount) return c.json({ error: "Unknown plan" }, 400)
+  const config = PLANS[plan]
+  if (!config || plan === "explore") {
+    return c.json({ error: "Invalid plan" }, 400)
+  }
 
-  const period = PLAN_PERIODS[plan]!
+  const planId = config.razorpayPlanId
+  if (!planId) {
+    return c.json({ error: "Razorpay plan not configured for this tier" }, 500)
+  }
+
+  // Idempotency: if user already has an active sub for this plan, return existing
+  if (user.razorpaySubId && user.plan === plan && user.subscriptionStatus === "active") {
+    return c.json({ error: "You already have an active subscription for this plan" }, 409)
+  }
 
   try {
+    // Create or reuse Razorpay customer
     let customerId = user.razorpayCustomerId ?? ""
     if (!customerId) {
       const customer = await rzp<{ id: string }>("/customers", {
@@ -66,20 +218,12 @@ billingRouter.post("/create-subscription", authenticate, async (c) => {
         .where(eq(authSchema.user.id, user.id))
     }
 
-    const planObj = await rzp<{ id: string }>("/plans", {
-      period: period.period,
-      interval: period.interval,
-      item: {
-        name: `Yomi ${plan.charAt(0).toUpperCase() + plan.slice(1)}`,
-        amount,
-        currency: "USD",
-      },
-    })
-
+    // Create subscription referencing the pre-created plan
+    // total_count: 0 → indefinite (no auto-cancel after N cycles)
     const subscription = await rzp<{ id: string; short_url: string }>("/subscriptions", {
-      plan_id: planObj.id,
+      plan_id: planId,
       customer_notify: 1,
-      total_count: period.totalCount,
+      total_count: 0,
       notes: { userId: user.id, plan },
     })
 
@@ -91,7 +235,23 @@ billingRouter.post("/create-subscription", authenticate, async (c) => {
   }
 })
 
-// Razorpay webhook — update user plan on subscription events
+// Cancel subscription (sets cancel_at_cycle_end = 1 in Razorpay)
+billingRouter.post("/cancel-subscription", authenticate, async (c) => {
+  const user = c.get("user")
+  if (!user.razorpaySubId) {
+    return c.json({ error: "No active subscription" }, 404)
+  }
+  try {
+    await rzp(`/subscriptions/${user.razorpaySubId}/cancel`, { cancel_at_cycle_end: 1 })
+    // Razorpay sends subscription.cancelled webhook — we update DB there
+    return c.json({ ok: true })
+  } catch (err) {
+    console.error("[yomi/billing] cancel-subscription failed:", err)
+    return c.json({ error: "Failed to cancel subscription" }, 502)
+  }
+})
+
+// Razorpay webhook — verify signature, deduplicate, handle events
 billingRouter.post("/webhook", async (c) => {
   const secret = process.env["RAZORPAY_WEBHOOK_SECRET"]
   const sig = c.req.header("x-razorpay-signature")
@@ -101,23 +261,47 @@ billingRouter.post("/webhook", async (c) => {
   const expectedSig = createHmac("sha256", secret).update(body).digest("hex")
   if (sig !== expectedSig) return c.json({ error: "Invalid signature" }, 400)
 
-  const event = JSON.parse(body) as {
-    event: string
-    payload: { subscription: { entity: Record<string, unknown> } }
+  let event: { event: string; payload: { subscription: { entity: Record<string, unknown> } } }
+  try {
+    event = JSON.parse(body)
+  } catch {
+    return c.json({ error: "Invalid JSON" }, 400)
   }
 
-  switch (event.event) {
-    case "subscription.activated":
-    case "subscription.charged":
-      await handleSubscriptionActive(event.payload.subscription.entity)
-      break
-    case "subscription.completed":
-    case "subscription.cancelled":
-      await handleSubscriptionEnd(event.payload.subscription.entity)
-      break
-    case "payment.failed":
-      await handlePaymentFailed(event.payload.subscription.entity)
-      break
+  // Deduplicate by event ID (Razorpay includes one; fallback to event string)
+  const eventId = (event as unknown as { event_id?: string }).event_id ?? event.event
+  if (isWebhookDuplicate(eventId)) return c.json({ ok: true, deduplicated: true })
+
+  try {
+    switch (event.event) {
+      case "subscription.activated":
+      case "subscription.charged":
+        await handleSubscriptionActive(event.payload.subscription.entity)
+        break
+      case "subscription.authenticated":
+        await handleSubscriptionActive(event.payload.subscription.entity)
+        break
+      case "subscription.completed":
+      case "subscription.cancelled":
+        await handleSubscriptionEnd(event.payload.subscription.entity)
+        break
+      case "subscription.halted":
+        await handlePaymentFailed(event.payload.subscription.entity)
+        break
+      case "payment.failed":
+        await handlePaymentFailed(event.payload.subscription.entity)
+        break
+      case "subscription.pending":
+        // Payment is processing — no action, user checks back later
+        break
+      case "subscription.paused":
+      case "subscription.resumed":
+        // Pass through — status managed by Razorpay cycle
+        break
+    }
+  } catch (err) {
+    console.error("[yomi/billing] webhook handler error:", err)
+    return c.json({ error: "Handler error" }, 500)
   }
 
   return c.json({ ok: true })
@@ -136,6 +320,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
       subscriptionStatus: authSchema.user.subscriptionStatus,
       trialEndDate: authSchema.user.trialEndDate,
       currentPeriodEnd: authSchema.user.currentPeriodEnd,
+      razorpaySubId: authSchema.user.razorpaySubId,
       trialInteractionUsed: authSchema.user.trialInteractionUsed,
       trialInteractionLimit: authSchema.user.trialInteractionLimit,
       dailyChatCount: authSchema.user.dailyChatCount,
@@ -181,7 +366,6 @@ billingRouter.get("/subscription", authenticate, async (c) => {
 
   const chatUsed = (countMap["request_chat"] ?? 0)
   const voiceUsed = (countMap["request_voice"] ?? 0)
-  const sttUsed = (countMap["stt"] ?? 0)
   const agentUsed = (countMap["agent_run"] ?? 0)
   const browserUsed = (countMap["browser_run"] ?? 0)
   const screenshotUsed = (countMap["screenshot"] ?? 0)
@@ -210,6 +394,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     status: user.subscriptionStatus,
     trialEndDate: user.trialEndDate,
     currentPeriodEnd: user.currentPeriodEnd,
+    razorpaySubId: user.razorpaySubId,
     requestsUsed,
     requestsLimit,
     requestsRemaining,
@@ -222,7 +407,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
   })
 })
 
-// --- Webhook helpers ---
+// ── Webhook Helpers ────────────────────────────────────────────────────────────
 
 async function handleSubscriptionActive(entity: Record<string, unknown>) {
   const notes = entity["notes"] as Record<string, string> | undefined
