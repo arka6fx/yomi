@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto"
-import { eq, and } from "drizzle-orm"
-import { db, platformConnections } from "@yomi/db"
+import { eq, and, lt } from "drizzle-orm"
+import { db, platformConnections, linkingCodes } from "@yomi/db"
 import type { PlatformType, GatewayMessage, GatewaySessionInfo } from "@yomi/shared"
 import type { PlatformAdapter } from "./platform-adapter.js"
 import { TelegramAdapter } from "./platforms/telegram.js"
@@ -49,7 +49,6 @@ export class GatewayRunner {
   private sidecarSecret: string
   private sidecarResolver: SidecarResolver | null = null
   private cleanupTimer: ReturnType<typeof setInterval> | null = null
-  private linkingCodes: Map<string, LinkingCode> = new Map()
   private pendingMessages: Map<string, GatewayMessage[]> = new Map()
 
   constructor(sidecarUrl?: string, sidecarSecret?: string) {
@@ -57,25 +56,53 @@ export class GatewayRunner {
     this.sidecarSecret = sidecarSecret ?? process.env["SIDECAR_SECRET"] ?? ""
   }
 
-  verifyLinkingCode(code: string): LinkingCode | null {
-    const entry = this.linkingCodes.get(code.toUpperCase())
-    if (!entry) return null
-    if (Date.now() > entry.expiresAt) {
-      this.linkingCodes.delete(code.toUpperCase())
+  async verifyLinkingCode(code: string): Promise<LinkingCode | null> {
+    try {
+      const row = await db
+        .select({
+          platform: linkingCodes.platform,
+          platformUserId: linkingCodes.platformUserId,
+          chatId: linkingCodes.platformChatId,
+          expiresAt: linkingCodes.expiresAt,
+        })
+        .from(linkingCodes)
+        .where(eq(linkingCodes.code, code.toUpperCase()))
+        .limit(1)
+        .then((r) => r[0])
+
+      if (!row) return null
+      if (Date.now() > row.expiresAt.getTime()) {
+        await db.delete(linkingCodes).where(eq(linkingCodes.code, code.toUpperCase()))
+        return null
+      }
+
+      await db.delete(linkingCodes).where(eq(linkingCodes.code, code.toUpperCase()))
+
+      return {
+        platform: row.platform as PlatformType,
+        platformUserId: row.platformUserId,
+        chatId: row.chatId ?? row.platformUserId,
+        expiresAt: row.expiresAt.getTime(),
+      }
+    } catch (err) {
+      console.warn("[gateway] verifyLinkingCode error:", err)
       return null
     }
-    this.linkingCodes.delete(code.toUpperCase())
-    return entry
   }
 
-  private generateLinkingCode(msg: GatewayMessage): string {
+  private async generateLinkingCode(msg: GatewayMessage): Promise<string> {
     const code = randomBytes(3).toString("hex").toUpperCase().slice(0, 6)
-    this.linkingCodes.set(code, {
-      platform: msg.platform,
-      platformUserId: msg.userId,
-      chatId: msg.chatId,
-      expiresAt: Date.now() + LINK_CODE_TTL_MS,
-    })
+    try {
+      await db.insert(linkingCodes).values({
+        code,
+        platform: msg.platform,
+        platformUserId: msg.userId,
+        platformChatId: msg.chatId,
+        expiresAt: new Date(Date.now() + LINK_CODE_TTL_MS),
+      })
+    } catch (err) {
+      console.warn("[gateway] generateLinkingCode insert error:", err)
+    }
     return code
   }
 
@@ -165,7 +192,7 @@ export class GatewayRunner {
 
     this.cleanupTimer = setInterval(() => {
       this.cleanupSessions()
-      this.cleanupLinkingCodes()
+      void this.cleanupExpiredCodes()
     }, SESSION_CLEANUP_INTERVAL_MS)
 
     console.warn(`[gateway] running with ${this.adapters.size} adapter(s)`)
@@ -287,7 +314,7 @@ export class GatewayRunner {
       const linked = await this.isUserLinked(msg.platform, msg.userId)
       console.warn(`[gateway] isUserLinked(${msg.platform}, ${msg.userId}) = ${linked}`)
       if (!linked) {
-        const code = this.generateLinkingCode(msg)
+        const code = await this.generateLinkingCode(msg)
         const adapter = this.adapters.get(msg.platform)
         console.warn(`[gateway] unlinked user — generated code=${code} adapter=${adapter ? "found" : "NOT FOUND"}`)
         const result = await adapter?.sendMessage(msg.chatId, this.getLinkingPrompt(code))
@@ -400,10 +427,13 @@ export class GatewayRunner {
     return null
   }
 
-  private cleanupLinkingCodes(): void {
-    const now = Date.now()
-    for (const [code, entry] of this.linkingCodes) {
-      if (now > entry.expiresAt) this.linkingCodes.delete(code)
+  private async cleanupExpiredCodes(): Promise<void> {
+    try {
+      await db.delete(linkingCodes).where(
+        lt(linkingCodes.expiresAt, new Date()),
+      )
+    } catch {
+      // ignore
     }
   }
 

@@ -279,3 +279,11 @@ export const platformConnections = pgTable(
     platformIdx: index("platform_connections_platform_idx").on(t.platform, t.platformUserId),
   }),
 )
+
+export const linkingCodes = pgTable("linking_codes", {
+  code: text("code").primaryKey().notNull(),
+  platform: text("platform").notNull(),
+  platformUserId: text("platform_user_id").notNull(),
+  platformChatId: text("platform_chat_id"),
+  expiresAt: timestamp("expires_at").notNull(),
+})
