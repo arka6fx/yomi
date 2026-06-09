@@ -58,7 +58,7 @@ describe("requireAccess", () => {
 
   it("blocks Explore agent (feature not available)", async () => {
     const res = await app("agent").request("/")
-    const body = await res.json()
+    const body = await res.json() as { code?: string }
 
     expect(res.status).toBe(403)
     expect(body.code).toBe("feature_not_available")
@@ -68,7 +68,7 @@ describe("requireAccess", () => {
     currentUser = user({ plan: "pro", subscriptionStatus: "past_due" })
 
     const res = await app("voice").request("/")
-    const body = await res.json()
+    const body = await res.json() as { code?: string }
 
     expect(res.status).toBe(402)
     expect(body.code).toBe("subscription_inactive")
@@ -78,7 +78,7 @@ describe("requireAccess", () => {
     currentUser = user({ plan: "pro", subscriptionStatus: "past_due" })
 
     const res = await app("chat").request("/")
-    const body = await res.json()
+    const body = await res.json() as { code?: string }
 
     expect(res.status).toBe(402)
     expect(body.code).toBe("subscription_inactive")
@@ -88,7 +88,7 @@ describe("requireAccess", () => {
     currentUser = user({ plan: "pro", subscriptionStatus: "past_due" })
 
     const res = await app("agent").request("/")
-    const body = await res.json()
+    const body = await res.json() as { code?: string }
 
     expect(res.status).toBe(402)
     expect(body.code).toBe("subscription_inactive")
