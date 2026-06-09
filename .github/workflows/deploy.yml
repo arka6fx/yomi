@@ -20,7 +20,8 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd /opt/yomi
+            git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/arka6fx/yomi.git
             git pull origin main
-            sudo docker compose up -d --build
+            sudo docker compose up -d --build backend
             sudo docker compose restart nginx
             sudo docker image prune -f
