@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock, afterEach } from "bun:test"
+import { beforeEach, describe, expect, it, mock, afterEach, beforeAll, afterAll } from "bun:test"
 import { Hono } from "hono"
 
 type TestUser = { id: string; email: string }
@@ -40,7 +40,7 @@ const fakeDb = {
 let linkingCodeResult: { platform: string; platformUserId: string; chatId: string } | null = null
 let sentMessages: { platform: string; chatId: string; text: string }[] = []
 
-mock.module("@yomi/db", () => ({ db: fakeDb, platformConnections: {} }))
+mock.module("@yomi/db", () => ({ db: fakeDb, platformConnections: {}, linkingCodes: {} }))
 
 mock.module("../auth.js", () => ({
   authenticate: async (c: any, next: () => Promise<void>) => {
@@ -71,6 +71,7 @@ mock.module("./gateway-runner.js", () => ({
     getAdapter: () => ({
       getWebhookVerifyToken: () => "yomi",
       handleWebhookPayload: () => {},
+      sendMessage: async () => ({ ok: true, messageId: "test-msg" }),
     }),
     getPendingMessages: () => [],
   }),
@@ -328,5 +329,132 @@ describe("GET /api/gateway/pending", () => {
     expect(res.status).toBe(200)
     const body = await res.json() as any
     expect(body.messages).toEqual([])
+  })
+})
+
+// ========== Discord OAuth ==========
+
+describe("GET /api/gateway/discord/auth", () => {
+  afterEach(() => {
+    delete process.env["DISCORD_CLIENT_ID"]
+    delete process.env["DISCORD_REDIRECT_URI"]
+  })
+
+  it("redirects to error when env vars missing", async () => {
+    delete process.env["DISCORD_CLIENT_ID"]
+    const res = await app().request("/api/gateway/discord/auth")
+    expect(res.status).toBe(302)
+    const location = res.headers.get("Location")
+    expect(location).toContain("error=discord_not_configured")
+  })
+
+  it("redirects to Discord OAuth with correct params", async () => {
+    process.env["DISCORD_CLIENT_ID"] = "1513769981773480068"
+    process.env["DISCORD_REDIRECT_URI"] = "http://localhost:3001/api/gateway/discord/callback"
+
+    const res = await app().request("/api/gateway/discord/auth")
+    expect(res.status).toBe(302)
+    const url = new URL(res.headers.get("Location")!)
+    expect(url.host).toBe("discord.com")
+    expect(url.pathname).toBe("/api/oauth2/authorize")
+    expect(url.searchParams.get("client_id")).toBe("1513769981773480068")
+    expect(url.searchParams.get("response_type")).toBe("code")
+    expect(url.searchParams.get("redirect_uri")).toBe("http://localhost:3001/api/gateway/discord/callback")
+    expect(url.searchParams.get("scope")).toBe("identify")
+    expect(url.searchParams.get("state")).toBeTruthy()
+  })
+})
+
+describe("GET /api/gateway/discord/callback", () => {
+  let savedEnv: Record<string, string | undefined> = {}
+
+  beforeAll(() => {
+    savedEnv["DISCORD_CLIENT_ID"] = process.env["DISCORD_CLIENT_ID"]
+    savedEnv["DISCORD_REDIRECT_URI"] = process.env["DISCORD_REDIRECT_URI"]
+    savedEnv["DISCORD_CLIENT_SECRET"] = process.env["DISCORD_CLIENT_SECRET"]
+    savedEnv["DISCORD_BOT_TOKEN"] = process.env["DISCORD_BOT_TOKEN"]
+  })
+
+  afterAll(() => {
+    process.env["DISCORD_CLIENT_ID"] = savedEnv["DISCORD_CLIENT_ID"]
+    process.env["DISCORD_REDIRECT_URI"] = savedEnv["DISCORD_REDIRECT_URI"]
+    process.env["DISCORD_CLIENT_SECRET"] = savedEnv["DISCORD_CLIENT_SECRET"]
+    process.env["DISCORD_BOT_TOKEN"] = savedEnv["DISCORD_BOT_TOKEN"]
+  })
+
+  it("redirects with error when code is missing", async () => {
+    const res = await app().request("/api/gateway/discord/callback?state=abc")
+    expect(res.status).toBe(302)
+    expect(res.headers.get("Location")).toContain("error=discord_auth_failed")
+  })
+
+  it("redirects with error when state is missing", async () => {
+    const res = await app().request("/api/gateway/discord/callback?code=xyz")
+    expect(res.status).toBe(302)
+    expect(res.headers.get("Location")).toContain("error=discord_auth_failed")
+  })
+
+  it("redirects with error for invalid state", async () => {
+    const res = await app().request("/api/gateway/discord/callback?code=xyz&state=invalid")
+    expect(res.status).toBe(302)
+    expect(res.headers.get("Location")).toContain("error=discord_auth_failed")
+  })
+
+  it("redirects with error when env vars missing after valid state", async () => {
+    process.env["DISCORD_CLIENT_ID"] = "1513769981773480068"
+    process.env["DISCORD_REDIRECT_URI"] = "http://localhost:3001/api/gateway/discord/callback"
+
+    const authRes = await app().request("/api/gateway/discord/auth")
+    const state = new URL(authRes.headers.get("Location")!).searchParams.get("state")!
+
+    delete process.env["DISCORD_CLIENT_SECRET"]
+
+    const res = await app().request(`/api/gateway/discord/callback?code=xyz&state=${state}`)
+    expect(res.status).toBe(302)
+    expect(res.headers.get("Location")).toContain("error=discord_not_configured")
+  })
+
+  it("handles full OAuth flow and redirects with success", async () => {
+    process.env["DISCORD_CLIENT_ID"] = "1513769981773480068"
+    process.env["DISCORD_REDIRECT_URI"] = "http://localhost:3001/api/gateway/discord/callback"
+    process.env["DISCORD_CLIENT_SECRET"] = "test-secret"
+    process.env["DISCORD_BOT_TOKEN"] = "test-bot-token"
+
+    const authRes = await app().request("/api/gateway/discord/auth")
+    const state = new URL(authRes.headers.get("Location")!).searchParams.get("state")!
+
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = mock((url: string | URL) => {
+      const urlStr = url.toString()
+      if (urlStr.includes("oauth2/token")) {
+        return new Response(JSON.stringify({ access_token: "mock-access" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+      if (urlStr.includes("/users/@me") && !urlStr.includes("channels")) {
+        return new Response(JSON.stringify({ id: "discord-user-456", username: "testuser" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+      if (urlStr.includes("/users/@me/channels")) {
+        return new Response(JSON.stringify({ id: "dm-channel-789" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+      return new Response(JSON.stringify({}), { status: 200 })
+    }) as any
+
+    try {
+      const res = await app().request(`/api/gateway/discord/callback?code=mock-code&state=${state}`)
+      expect(res.status).toBe(302)
+      expect(res.headers.get("Location")).toContain("discord_sent=true")
+      expect(insertPayload).not.toBeNull()
+      expect((insertPayload as any).platform).toBe("discord")
+    } finally {
+      globalThis.fetch = originalFetch
+    }
   })
 })
