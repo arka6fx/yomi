@@ -115,11 +115,6 @@ const PLATFORM_META: Record<string, { name: string; color: string; inviteUrl: st
     color: "bg-indigo-500/10 text-indigo-400",
     inviteUrl: `${process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:3001"}/api/gateway/discord/auth`,
   },
-  whatsapp: {
-    name: "WhatsApp",
-    color: "bg-emerald-500/10 text-emerald-400",
-    inviteUrl: "",
-  },
   slack: {
     name: "Slack",
     color: "bg-purple-500/10 text-purple-400",
@@ -545,7 +540,7 @@ function DashboardContent() {
                   Linked accounts
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Connect Telegram, Discord, or WhatsApp to chat with Yomi from anywhere.
+                  Connect Telegram or Discord to chat with Yomi from anywhere.
                 </p>
               </div>
               <Link

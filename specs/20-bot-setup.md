@@ -54,15 +54,6 @@ Permissions `2048` = Send Messages only. Add more as needed.
 5. Under OAuth2 → URL Generator → scopes: `bot` → permissions: `Send Messages`
 6. Use generated URL to invite the bot to a server
 
-### WhatsApp
-
-| Field            | State         | Notes                                                         |
-| ---------------- | ------------- | ------------------------------------------------------------- |
-| Access token     | Not set       | `WHATSAPP_ACCESS_TOKEN` not in `.env`                         |
-| Phone number ID  | Not set       | `WHATSAPP_PHONE_NUMBER_ID` not in `.env`                      |
-| Setup required   | Meta Business | Requires Meta Business Account + WhatsApp Cloud API setup     |
-| Webhook          | Backend       | `GET/POST /api/gateway/webhooks/whatsapp` in `routes.ts`      |
-
 ### Slack
 
 | Field            | State         | Notes                                                         |
@@ -137,7 +128,7 @@ Defined in `packages/db/src/schema.ts`:
 | ----------------- | --------- | --------------------------------------------- |
 | id                | uuid      | Primary key, auto-generated                   |
 | user_id           | uuid      | FK → user(id), cascading delete               |
-| platform          | text      | `"telegram" \| "discord" \| "slack" \| "whatsapp"` |
+| platform          | text      | `"telegram" \| "discord" \| "slack"` |
 | platform_user_id  | text      | User's ID on the external platform            |
 | platform_chat_id  | text      | Specific chat/channel (nullable)              |
 | connected_at      | timestamp | Auto-set on insert                            |
@@ -181,7 +172,6 @@ Falls back to `SIDECAR_URL` env var if no device found.
 
 1. Generate Discord invite URL and add the bot to a test server
 2. Build the `/link` page on the landing site (or a simple static page)
-3. Set `WHATSAPP_ACCESS_TOKEN` and `WHATSAPP_PHONE_NUMBER_ID` if WhatsApp is needed
-4. Set `SLACK_BOT_TOKEN` if Slack is needed
-5. Deploy backend to production so Telegram/Discord can reach it 24/7
+3. Set `SLACK_BOT_TOKEN` if Slack is needed
+4. Deploy backend to production so Telegram/Discord can reach it 24/7
 6. Test full linking flow end-to-end with a new Telegram user

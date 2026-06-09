@@ -60,7 +60,7 @@ LOCAL SIDECAR  (apps/sidecar — Bun)
   ↕  authenticated HTTPS
 CLOUD BACKEND  (apps/backend — Hono/Bun)
   Better Auth · Razorpay webhooks · LLM proxy · usage metering · memory sync
-  Messaging Gateway (Telegram / Discord / Slack / WhatsApp — polling + webhooks)
+  Messaging Gateway (Telegram / Discord / Slack — polling + webhooks)
 ```
 
 ---
@@ -68,7 +68,7 @@ CLOUD BACKEND  (apps/backend — Hono/Bun)
 ## Messaging Gateway
 
 Users link their account via a 6-character code flow:
-1. Message the bot on Telegram, Discord (after adding to a server), or WhatsApp
+1. Message the bot on Telegram or Discord (after adding to a server)
 2. Bot replies with a linking code (stored in `linking_codes`, expires in 10 min)
 3. Enter code on `/link` page → inserts `platform_connections` row
 4. Subsequent messages route from gateway → backend queue → sidecar polling → LLM

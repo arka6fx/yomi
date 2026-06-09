@@ -6,7 +6,6 @@ import type { PlatformAdapter } from "./platform-adapter.js"
 import { TelegramAdapter } from "./platforms/telegram.js"
 import { DiscordAdapter } from "./platforms/discord.js"
 import { SlackAdapter } from "./platforms/slack.js"
-import { WhatsAppAdapter } from "./platforms/whatsapp.js"
 
 const SESSION_TTL_MS = 60 * 60 * 1000
 const SESSION_CLEANUP_INTERVAL_MS = 5 * 60 * 1000
@@ -157,9 +156,6 @@ export class GatewayRunner {
     const telegramToken = process.env["TELEGRAM_BOT_TOKEN"]
     const discordToken = process.env["DISCORD_BOT_TOKEN"]
     const slackToken = process.env["SLACK_BOT_TOKEN"]
-    const whatsappToken = process.env["WHATSAPP_ACCESS_TOKEN"]
-    const whatsappPhoneId = process.env["WHATSAPP_PHONE_NUMBER_ID"]
-    const whatsappVerify = process.env["WHATSAPP_WEBHOOK_VERIFY_TOKEN"] ?? "yomi"
 
     if (telegramToken) {
       const adapter = new TelegramAdapter(telegramToken)
@@ -171,10 +167,6 @@ export class GatewayRunner {
     }
     if (slackToken) {
       const adapter = new SlackAdapter(slackToken)
-      this.registerAdapter(adapter)
-    }
-    if (whatsappToken && whatsappPhoneId) {
-      const adapter = new WhatsAppAdapter(whatsappToken, whatsappPhoneId, whatsappVerify)
       this.registerAdapter(adapter)
     }
 

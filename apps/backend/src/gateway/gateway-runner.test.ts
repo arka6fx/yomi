@@ -68,7 +68,7 @@ const { GatewayRunner } = await import("./gateway-runner.js")
 
 function makeMsg(overrides: Partial<GatewayMessage> = {}): GatewayMessage {
   return {
-    platform: "whatsapp",
+    platform: "discord",
     chatId: "919832307332",
     userId: "919832307332",
     text: "hello yomi",
@@ -83,7 +83,7 @@ let adapterMessages: { chatId: string; text: string }[] = []
 
 function fakeAdapter() {
   return {
-    platform: "whatsapp" as PlatformType,
+    platform: "discord" as PlatformType,
     connect: async () => {},
     disconnect: async () => {},
     sendMessage: async (chatId: string, text: string) => {
@@ -147,7 +147,7 @@ describe("GatewayRunner — pending messages", () => {
     // But onIncoming is private. Let's test resolveYomiUserId + getPendingMessages + queueForUser.
 
     // resolveYomiUserId is public
-    const yomiUserId = await runner.resolveYomiUserId("whatsapp", "919832307332")
+    const yomiUserId = await runner.resolveYomiUserId("discord", "919832307332")
     expect(yomiUserId).toBe("yomi-user-123")
 
     // Initially no pending messages
@@ -161,7 +161,7 @@ describe("GatewayRunner — pending messages", () => {
     const runner = new GatewayRunner()
     dbSelectResult = undefined
 
-    const yomiUserId = await runner.resolveYomiUserId("whatsapp", "unknown-user")
+    const yomiUserId = await runner.resolveYomiUserId("discord", "unknown-user")
     expect(yomiUserId).toBeUndefined()
   })
 
@@ -169,7 +169,7 @@ describe("GatewayRunner — pending messages", () => {
     const runner = new GatewayRunner()
     dbError = new Error("DB connection failed")
 
-    const yomiUserId = await runner.resolveYomiUserId("whatsapp", "user-1")
+    const yomiUserId = await runner.resolveYomiUserId("discord", "user-1")
     expect(yomiUserId).toBeUndefined()
   })
 })
@@ -180,7 +180,7 @@ describe("GatewayRunner — unlinked user prompt", () => {
   it("isUserLinked returns false for unknown user", async () => {
     const runner = new GatewayRunner()
     dbSelectResult = undefined // user not linked
-    const linked = await (runner as unknown as { isUserLinked: (p: string, u: string) => Promise<boolean> }).isUserLinked("whatsapp", "unknown-user")
+    const linked = await (runner as unknown as { isUserLinked: (p: string, u: string) => Promise<boolean> }).isUserLinked("discord", "unknown-user")
     expect(linked).toBe(false)
   })
 })
@@ -199,7 +199,7 @@ describe("GatewayRunner — status", () => {
     runner.registerAdapter(fakeAdapter())
     const status = runner.getStatus()
     expect(status.adapters).toHaveLength(1)
-    expect(status.adapters[0]!.platform).toBe("whatsapp")
+    expect(status.adapters[0]!.platform).toBe("discord")
   })
 })
 
@@ -209,7 +209,7 @@ describe("GatewayRunner — adapter management", () => {
   it("getAdapter returns registered adapter", () => {
     const runner = new GatewayRunner()
     runner.registerAdapter(fakeAdapter())
-    expect(runner.getAdapter("whatsapp")).toBeDefined()
+    expect(runner.getAdapter("discord")).toBeDefined()
   })
 
   it("getAdapter returns undefined for unregistered platform", () => {
@@ -231,7 +231,7 @@ describe("GatewayRunner — sendMessage", () => {
   it("sends message through registered adapter", async () => {
     const runner = new GatewayRunner()
     runner.registerAdapter(fakeAdapter())
-    const result = await runner.sendMessage("whatsapp", "chat-1", "hello")
+    const result = await runner.sendMessage("discord", "chat-1", "hello")
     expect(result.ok).toBe(true)
     expect(result.messageId).toBe("test-msg-id")
     expect(adapterMessages.length).toBe(1)
