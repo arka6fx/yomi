@@ -3,7 +3,7 @@ import type { PlatformAdapter } from "../platform-adapter.js"
 import { truncateMessage } from "../platform-adapter.js"
 
 const POLL_INTERVAL_MS = 3_000
-const API_BASE = "https://graph.facebook.com/v22.0"
+const API_BASE = "https://graph.facebook.com/v25.0"
 
 interface WhatsAppTextPayload {
   messaging_product: "whatsapp"
@@ -99,10 +99,12 @@ export class WhatsAppAdapter implements PlatformAdapter {
   }
 
   handleWebhookPayload(body: WhatsAppWebhookPayload): void {
+    console.warn("[gateway/whatsapp] webhook payload received:", JSON.stringify(body.entry?.length ?? 0).slice(0, 200))
     for (const entry of body.entry ?? []) {
       for (const change of entry.changes ?? []) {
         if (change.field !== "messages") continue
         const messages = change.value.messages ?? []
+        console.warn(`[gateway/whatsapp] webhook: ${messages.length} message(s) in change`)
         for (const msg of messages) {
           if (this.processedIds.has(msg.id)) continue
           this.processedIds.add(msg.id)
@@ -117,6 +119,8 @@ export class WhatsAppAdapter implements PlatformAdapter {
           const contacts = change.value.contacts ?? []
           const contactName =
             contacts.find((c) => c.wa_id === msg.from)?.profile.name ?? msg.from
+
+          console.warn(`[gateway/whatsapp] enqueue msg from=${msg.from} text="${text.slice(0, 80)}" id=${msg.id}`)
 
           const gatewayMsg: GatewayMessage = {
             platform: "whatsapp",
@@ -147,17 +151,20 @@ export class WhatsAppAdapter implements PlatformAdapter {
         text: { body: clean },
       }
 
+      console.warn(`[gateway/whatsapp] send to=${chatId} phoneNumberId=${this.phoneNumberId} text="${clean.slice(0, 100)}"`)
       const res = await fetch(`${API_BASE}/${this.phoneNumberId}/messages`, {
         method: "POST",
         headers: this.headers,
         body: JSON.stringify(body),
       })
       const data = (await res.json()) as WhatsAppApiResponse
+      console.warn(`[gateway/whatsapp] send response status=${res.status} msgId=${data.messages?.[0]?.id ?? "none"} error=${data.error?.message ?? "none"}`)
       if (data.error) {
         return { ok: false, error: `WhatsApp API ${data.error.code}: ${data.error.message}` }
       }
       return { ok: true, messageId: data.messages?.[0]?.id }
     } catch (err) {
+      console.warn(`[gateway/whatsapp] send exception:`, err)
       return { ok: false, error: err instanceof Error ? err.message : String(err) }
     }
   }
@@ -202,6 +209,7 @@ export class WhatsAppAdapter implements PlatformAdapter {
     if (this.webhookQueue.length === 0) return
 
     const batch = this.webhookQueue.splice(0)
+    console.warn(`[gateway/whatsapp] draining ${batch.length} message(s) from queue`)
     for (const msg of batch) {
       this.messageHandler(msg)
     }
