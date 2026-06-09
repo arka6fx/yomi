@@ -15,6 +15,7 @@ export interface PlatformAdapter {
     messageId: string,
   ): Promise<{ ok: boolean; error?: string }>
   setMessageHandler(handler: (msg: GatewayMessage) => void): void
+  registerDmChannel?(channelId: string): void
 }
 
 export function removeMarkdown(text: string): string {

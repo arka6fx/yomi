@@ -96,7 +96,29 @@ const sidecarResolver: SidecarResolver = async (userId, platform) => {
 getDefaultGateway().setSidecarResolver(sidecarResolver)
 
 // Start the messaging gateway (Max-only, checks plan internally)
-getDefaultGateway().start(process.env["YOMI_PLAN"]).catch((err) =>
+getDefaultGateway().start(process.env["YOMI_PLAN"]).then(async () => {
+  // Bootstrap known Discord DM channels from the DB
+  // GET /users/@me/channels often returns empty for this bot,
+  // so we proactively recover channels from linked accounts
+  try {
+    const rows = await db
+      .select({ platformChatId: platformConnections.platformChatId })
+      .from(platformConnections)
+      .where(eq(platformConnections.platform, "discord"))
+
+    const adapter = getDefaultGateway().getAdapter("discord")
+    if (adapter?.registerDmChannel) {
+      for (const row of rows) {
+        if (row.platformChatId) {
+          adapter.registerDmChannel(row.platformChatId)
+        }
+      }
+      console.warn(`[backend] recovered ${rows.length} Discord DM channels for polling`)
+    }
+  } catch (err) {
+    console.warn("[backend] failed to bootstrap Discord DM channels:", err)
+  }
+}).catch((err) =>
   console.warn("[backend] gateway init failed:", err),
 )
 
