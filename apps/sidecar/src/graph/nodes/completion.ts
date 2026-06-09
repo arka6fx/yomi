@@ -25,7 +25,10 @@ export function makeCompletionNode(deps: GraphDeps) {
       // Persist the turn + fire compaction, mirroring the legacy success path.
       if (memoryEnabled(state.plan)) {
         await deps.writeTurn({ kind: "agent", input: state.goal, output: summary, summary })
-        compact().catch((err) => console.warn("[yomi/graph] compaction error:", err))
+        // Compactor's tail also drives the skill curator on Pro/Max.
+        compact({ plan: state.plan }).catch((err) =>
+          console.warn("[yomi/graph] compaction error:", err),
+        )
       }
     }
 

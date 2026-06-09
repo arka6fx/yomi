@@ -62,8 +62,12 @@ function notepadAppendText(text: string): string | null {
   if (!/\b(notepad|txt|text\s+file|file|document)\b/i.test(text)) return null
   if (!/\b(add|append|insert|write|type|put)\b/i.test(text)) return null
   const match =
-    text.match(/\b(?:add|append|insert|write|type|put)\s+(.+?)\s+(?:to|into|in|inside|at the end of)\s+(?:the\s+)?(?:open(?:ed)?\s+)?(?:notepad|txt|text\s+file|file|document)\b/i) ??
-    text.match(/\b(?:to|into|in|inside)\s+(?:the\s+)?(?:open(?:ed)?\s+)?(?:notepad|txt|text\s+file|file|document)\s+(?:add|append|insert|write|type|put)\s+(.+)$/i)
+    text.match(
+      /\b(?:add|append|insert|write|type|put)\s+(.+?)\s+(?:to|into|in|inside|at the end of)\s+(?:the\s+)?(?:open(?:ed)?\s+)?(?:notepad|txt|text\s+file|file|document)\b/i,
+    ) ??
+    text.match(
+      /\b(?:to|into|in|inside)\s+(?:the\s+)?(?:open(?:ed)?\s+)?(?:notepad|txt|text\s+file|file|document)\s+(?:add|append|insert|write|type|put)\s+(.+)$/i,
+    )
   const content = match?.[1]?.trim().replace(/^["'`]|["'`]$/g, "")
   return content || null
 }
@@ -72,19 +76,28 @@ function notepadSavePath(text: string): string | null {
   if (!/\b(save|store)\b/i.test(text)) return null
   if (!/\b(notepad|txt|text\s+file|file|document|it|this|that)\b/i.test(text)) return null
   const match =
-    text.match(/\b(?:save|store)\s+(?:this|that|the)?\s*(?:open(?:ed)?\s+)?(?:notepad|txt|text\s+file|file|document)\s+(?:as|to|at|in)\s+(.+)$/i) ??
-    text.match(/\b(?:save|store)\s+(?:the\s+)?(?:notepad|txt|text\s+file|file|document|it|this|that)?\s*(?:file\s*)?(?:as|to|at|in)\s+(.+)$/i) ??
+    text.match(
+      /\b(?:save|store)\s+(?:this|that|the)?\s*(?:open(?:ed)?\s+)?(?:notepad|txt|text\s+file|file|document)\s+(?:as|to|at|in)\s+(.+)$/i,
+    ) ??
+    text.match(
+      /\b(?:save|store)\s+(?:the\s+)?(?:notepad|txt|text\s+file|file|document|it|this|that)?\s*(?:file\s*)?(?:as|to|at|in)\s+(.+)$/i,
+    ) ??
     text.match(/\b(?:as|to|at|in)\s+(.+?)\s+(?:save|store)\b/i)
   const path = match?.[1]?.trim().replace(/^["'`]|["'`]$/g, "")
   return path || null
 }
 
 function userChromeTarget(text: string): string | null {
-  if (!/\b(chrome|google\s+chrome|desktop(?:'s)?\s+google\s+chrome|browser)\b/i.test(text)) return null
+  if (!/\b(chrome|google\s+chrome|desktop(?:'s)?\s+google\s+chrome|browser)\b/i.test(text))
+    return null
   if (!/\b(open|go to|navigate|search|look up|visit)\b/i.test(text)) return null
   const match =
-    text.match(/\b(?:open|launch|start)\s+(?:my\s+|user(?:'s)?\s+|desktop(?:'s)?\s+)?(?:google\s+)?(?:chrome|browser)(?:\s+(?:and|then))?\s*(?:go to|navigate to|open|visit|search for|look up)?\s*(.*)$/i) ??
-    text.match(/\b(?:go to|navigate to|visit|open|search for|look up)\s+(.+?)\s+(?:in|on|using)\s+(?:my\s+|user(?:'s)?\s+|desktop(?:'s)?\s+)?(?:google\s+)?(?:chrome|browser)\b/i)
+    text.match(
+      /\b(?:open|launch|start)\s+(?:my\s+|user(?:'s)?\s+|desktop(?:'s)?\s+)?(?:google\s+)?(?:chrome|browser)(?:\s+(?:and|then))?\s*(?:go to|navigate to|open|visit|search for|look up)?\s*(.*)$/i,
+    ) ??
+    text.match(
+      /\b(?:go to|navigate to|visit|open|search for|look up)\s+(.+?)\s+(?:in|on|using)\s+(?:my\s+|user(?:'s)?\s+|desktop(?:'s)?\s+)?(?:google\s+)?(?:chrome|browser)\b/i,
+    )
   const target = match?.[1]?.trim().replace(/^["'`]|["'`]$/g, "")
   return target ?? ""
 }
@@ -199,12 +212,18 @@ export async function* runGraph(
       : { error: `[DENIED: ${check.reason}]` }
     const failed = typeof result === "object" && result !== null && "error" in result
     bridge.raw({ type: "agent_tool_result", tool: "save_windows_notepad_as", result })
-    bridge.timeline("Finished save_windows_notepad_as", failed ? "failed" : "done", JSON.stringify(result))
+    bridge.timeline(
+      "Finished save_windows_notepad_as",
+      failed ? "failed" : "done",
+      JSON.stringify(result),
+    )
     const savedPath =
       typeof result === "object" && result !== null && "path" in result
         ? String((result as { path: unknown }).path)
         : savePath
-    const summary = failed ? "I could not save the Notepad file." : `I saved the Notepad file to ${savedPath}.`
+    const summary = failed
+      ? "I could not save the Notepad file."
+      : `I saved the Notepad file to ${savedPath}.`
     bridge.raw({ type: "agent_text", text: summary })
     if (failed) bridge.fail(summary)
     else {
@@ -269,7 +288,11 @@ export async function* runGraph(
       : { error: `[DENIED: ${check.reason}]` }
     const failed = typeof result === "object" && result !== null && "error" in result
     bridge.raw({ type: "agent_tool_result", tool: "append_windows_notepad", result })
-    bridge.timeline("Finished append_windows_notepad", failed ? "failed" : "done", JSON.stringify(result))
+    bridge.timeline(
+      "Finished append_windows_notepad",
+      failed ? "failed" : "done",
+      JSON.stringify(result),
+    )
     const summary = failed ? "I could not append text to Notepad." : "I added the text to Notepad."
     bridge.raw({ type: "agent_text", text: summary })
     if (failed) bridge.fail(summary)
@@ -436,7 +459,11 @@ export async function* runGraph(
       : `Sent the reminder to ${pendingRecipient} on WhatsApp.`
     if (!failed) pendingWhatsAppDraft = null
     bridge.raw({ type: "agent_tool_result", tool: "send_whatsapp_message", result })
-    bridge.timeline("Finished send_whatsapp_message", failed ? "failed" : "done", JSON.stringify(result))
+    bridge.timeline(
+      "Finished send_whatsapp_message",
+      failed ? "failed" : "done",
+      JSON.stringify(result),
+    )
     bridge.raw({ type: "agent_text", text: summary })
     if (failed) bridge.fail(summary)
     else {
@@ -479,7 +506,11 @@ export async function* runGraph(
         `I could not send "${whatsAppMessage.message}" to ${whatsAppMessage.recipient} on WhatsApp.`)
       : `Sent "${whatsAppMessage.message}" to ${whatsAppMessage.recipient} on WhatsApp.`
     bridge.raw({ type: "agent_tool_result", tool: "send_whatsapp_message", result })
-    bridge.timeline("Finished send_whatsapp_message", failed ? "failed" : "done", JSON.stringify(result))
+    bridge.timeline(
+      "Finished send_whatsapp_message",
+      failed ? "failed" : "done",
+      JSON.stringify(result),
+    )
     bridge.raw({ type: "agent_text", text: summary })
     if (failed) bridge.fail(summary)
     else {
@@ -533,7 +564,10 @@ export async function* runGraph(
     automation,
     bridge,
     modelFactory: createModel,
-    toolsPromise: buildAgentToolSet({ screenshotB64: req.screenshot_b64 }, activeHooks),
+    toolsPromise: buildAgentToolSet(
+      { screenshotB64: req.screenshot_b64, plan: req.plan },
+      activeHooks,
+    ),
     uia,
     writeTurn,
     requestApproval:

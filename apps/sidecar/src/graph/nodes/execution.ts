@@ -2,8 +2,14 @@ import { streamText } from "ai"
 import type { CoreMessage } from "ai"
 import { redactAutomationPayload } from "../../automation/runs.js"
 import { resolveAgent, scopeTools } from "../../automation/agents/registry.js"
+import { toolGuardrail } from "../../harness/hooks.js"
+import { compressContext } from "../../agent/index.js"
 import { AGENT_PATH_MODEL, BURST_STEPS, type GraphDeps } from "../deps.js"
 import type { GraphState, ToolHistoryItem } from "../state.js"
+
+// 1M tokens for gpt-4.1 family. Used by the turn-level compressor when no
+// model-aware context length is available. Matches the published 4.1 window.
+const DEFAULT_MODEL_CONTEXT_WINDOW = 1_000_000
 
 // Same stream-event shape the legacy agent consumed from the AI SDK fullStream.
 type AgentStreamEvent =
@@ -39,6 +45,11 @@ export function makeExecutionNode(deps: GraphDeps) {
       ? `${state.systemPrompt}\n\n${agent.systemHint}`
       : state.systemPrompt
     deps.bridge.step(`Executing plan (${agent.label})`, { state: "executing" })
+
+    // Reset the per-turn guardrail controller — each streamText burst is a fresh
+    // observation window. LoopGuards reads the halt decision in onStep().
+    toolGuardrail.resetForTurn()
+
     const result = streamText({
       model: deps.modelFactory(AGENT_PATH_MODEL),
       system,
@@ -132,6 +143,33 @@ export function makeExecutionNode(deps: GraphDeps) {
       }
     } else if (assistantText) {
       newMessages = [{ role: "assistant", content: assistantText }]
+    }
+
+    // Compress the conversation in-flight when it crosses the plan's threshold.
+    // The compressor preserves the head (system prompt + first exchange) and a
+    // recent tail by token budget, replacing the middle with a directive-guarded
+    // summary. We only return the NEW portion of the compressed list — the
+    // GraphState messages reducer appends, so the prior state.messages stays
+    // intact and the two halves reconnect head-to-tail.
+    if (!broke && newMessages.length > 0) {
+      const fullMessages: CoreMessage[] = [...state.messages, ...newMessages]
+      const result_compression = await compressContext(fullMessages, {
+        contextWindow: DEFAULT_MODEL_CONTEXT_WINDOW,
+        plan: deps.req.plan,
+        signal: deps.signal,
+      }).catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.warn(`[yomi/execution] compression error: ${msg}`)
+        return null
+      })
+      if (result_compression?.compressed) {
+        const carried = result_compression.messages.slice(state.messages.length)
+        newMessages = carried
+        deps.bridge.timeline(
+          `Compressed context: ${result_compression.originalCount} → ${result_compression.compressedCount} messages (~${result_compression.preTokens - result_compression.postTokens} tokens saved)`,
+          "done",
+        )
+      }
     }
 
     const summaryText = assistantText.replace(/\n/g, " ").trim()

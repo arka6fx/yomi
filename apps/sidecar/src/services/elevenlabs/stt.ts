@@ -48,18 +48,15 @@ export async function elevenLabsTranscribe(
     })
     if (!res.ok) {
       const body = await res.text().catch(() => res.statusText)
-      throw new ElevenLabsSttError(
-        `STT proxy error ${res.status}: ${body}`,
-        res.status,
-        body,
-      )
+      throw new ElevenLabsSttError(`STT proxy error ${res.status}: ${body}`, res.status, body)
     }
     return res.json() as Promise<ElevenLabsSttResponse>
   }
 
   // Dev: direct ElevenLabs API
   const apiKey = process.env.ELEVENLABS_API_KEY
-  if (!apiKey) throw new Error("Voice is not configured yet. Add ElevenLabs API key to enable voice.")
+  if (!apiKey)
+    throw new Error("Voice is not configured yet. Add ElevenLabs API key to enable voice.")
 
   const form = new FormData()
   form.append("file", new Blob([audio], { type: "audio/wav" }), "audio.wav")
