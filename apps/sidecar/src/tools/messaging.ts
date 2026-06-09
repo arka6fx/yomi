@@ -34,7 +34,7 @@ export function createMessagingTools() {
         properties: {
           platform: {
             type: "string",
-            enum: ["telegram", "discord", "slack", "whatsapp"],
+            enum: ["telegram", "discord", "slack"],
             description: "Target messaging platform.",
           },
           chatId: {

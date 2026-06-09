@@ -110,7 +110,7 @@ state only sees the final compressed output after the burst completes.
 | **Tool safety** | PreToolUse denylist + LoopGuards (stall/dup) | Failure-pattern guardrails + threat pattern library (LLM-injection hardened) | High |
 | **Scheduling** | None | Agent-aware cron with skill loading, chain jobs, model overrides | High |
 | **Subagent delegation** | LangGraph sub-agents (basic, single) | Parallel batch, orchestrator/leaf roles, blocked-tool safety | Medium |
-| **Messaging** | Desktop-only (Electron) | 20+ platform adapters (Telegram, Discord, Slack, WhatsApp, etc.) | Medium |
+| **Messaging** | Desktop-only (Electron) | 20+ platform adapters (Telegram, Discord, Slack, etc.) | Medium |
 | **Plugin system** | None | Full plugin system with 4 discovery paths + lifecycle hooks | Medium |
 | **Usage insights** | Basic metering on backend | `/insights` with token breakdowns, cost estimates, tool patterns | Medium |
 | **Credential management** | Single API key per service | Multi-key pool with failover, OAuth lifecycle, status tracking | Low |
@@ -458,11 +458,11 @@ conversation) is added to the shared tool set.
 **Problem:** Yomi is locked to the desktop. Users cannot talk to it from their
 phone, from a chat app, or while away from their computer. The original Hermes
 pattern puts per-user platform adapters in each sidecar, which would require
-every user to create their own Telegram bot / WhatsApp account — too complex
+every user to create their own Telegram bot — too complex
 for a consumer product.
 
 **Solution:** Move the gateway to the **backend**. A single set of bot tokens
-(one Telegram bot, one WhatsApp number, one Discord bot) serves all users.
+(one Telegram bot, one Discord bot) serves all users.
 Backend routes messages to the correct user's sidecar via device-code auth.
 
 **Architecture:**
@@ -483,8 +483,8 @@ USER PHONE          BACKEND (:3001)            SIDECAR (:3002)
 platform_connections {
   id:         uuid // pk
   user_id:    uuid // fk → user
-  platform:   "telegram" | "discord" | "whatsapp" | "slack"
-  platform_user_id: string // Telegram chat_id, Discord user_id, WhatsApp wa_id
+  platform:   "telegram" | "discord" | "slack"
+  platform_user_id: string // Telegram chat_id, Discord user_id
   device_id:  uuid? // fk → devices (null until sidecar connects)
   created_at: timestamp
 }
@@ -494,12 +494,10 @@ platform_connections {
 | Method | Path | Purpose |
 |--------|------|---------|
 | `POST` | `/gateway/send` | Sidecar calls to reply via platform API |
-| `GET` | `/gateway/webhooks/whatsapp` | Meta webhook verification |
-| `POST` | `/gateway/webhooks/whatsapp` | WhatsApp incoming messages |
 
 **Sidecar changes:**
 - Remove all gateway adapter code (telegram.ts, discord.ts, slack.ts,
-  whatsapp.ts, gateway-runner.ts, platform-adapter.ts)
+  gateway-runner.ts, platform-adapter.ts)
 - Add `POST /gateway/receive` accepting
   `{ platform, chatId, userId, text, messageId }`, process through pipeline,
   reply via `POST /gateway/send` on backend
@@ -508,7 +506,7 @@ platform_connections {
 - Bot token in backend `.env` → everything runs locally on :3001
 - User messages Telegram bot → backend looks up `platform_connections` →
   forwards to user's sidecar → processes → backend sends reply via Telegram API
-- No WhatsApp/Discord tokens needed for basic test — Telegram alone works
+- No Discord tokens needed for basic test — Telegram alone works
 
 **Entitlement:** Messaging is a Max-only feature. Explore/Pro are desktop-only.
 
@@ -644,7 +642,7 @@ graph topology or replaces an existing loop.
 - `apps/sidecar/src/tools/index.ts` — register new tools (skill CRUD, cronjob,
   delegateTask, send\_message, list\_platforms)
 - `apps/sidecar/src/tools/messaging.ts` — send\_message + list\_platforms tool
-  implementations; platform enum includes telegram, discord, slack, whatsapp
+  implementations; platform enum includes telegram, discord, slack
 - `apps/sidecar/src/index.ts` — register new sidecar HTTP routes
   (`GET /insights`, cron tick, gateway status/sessions)
 - `apps/sidecar/src/gateway/receive.ts` — `POST /gateway/receive` endpoint
@@ -652,7 +650,7 @@ graph topology or replaces an existing loop.
 - `apps/sidecar/package.json` — new dependencies (cron-parser, platform SDKs)
 - `apps/backend/src/gateway/` — move gateway code from sidecar to backend
 - `apps/backend/src/gateway/routes.ts` — backend gateway routes
-  (`POST /gateway/send`, WhatsApp webhooks)
+  (`POST /gateway/send`)
 - `apps/backend/src/index.ts` — register gateway routes
 - `packages/db/src/schema.ts` — add `platform_connections` table
 - `apps/desktop/src/renderer/` — Mission Control panel for insights, cron
@@ -677,7 +675,6 @@ graph topology or replaces an existing loop.
 - `apps/backend/src/gateway/platforms/telegram.ts` — Telegram adapter
 - `apps/backend/src/gateway/platforms/discord.ts` — Discord adapter
 - `apps/backend/src/gateway/platforms/slack.ts` — Slack adapter
-- `apps/backend/src/gateway/platforms/whatsapp.ts` — WhatsApp Cloud API adapter (webhook receive, Graph API send)
 - `apps/backend/src/gateway/gateway-runner.ts` — gateway lifecycle
 - `apps/backend/src/gateway/routes.ts` — backend gateway HTTP routes
 - `apps/sidecar/src/gateway/receive.ts` — single endpoint to accept forwarded messages
