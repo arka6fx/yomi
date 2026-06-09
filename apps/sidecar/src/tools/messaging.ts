@@ -21,7 +21,7 @@ export function createMessagingTools() {
   return {
     send_message: tool({
       description:
-        "Send a message to a connected messaging platform (Telegram, Discord, or Slack). " +
+        "Send a message to a connected messaging platform (Telegram or Discord). " +
         "Use this to proactively reach the user or deliver results to a specific platform. " +
         "Specify the platform, chat ID, and message text. " +
         "The gateway must be running (Max plan) for this tool to work.",
@@ -34,7 +34,7 @@ export function createMessagingTools() {
         properties: {
           platform: {
             type: "string",
-            enum: ["telegram", "discord", "slack"],
+            enum: ["telegram", "discord"],
             description: "Target messaging platform.",
           },
           chatId: {

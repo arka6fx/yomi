@@ -60,7 +60,7 @@ export const TOOL_DESCRIPTIONS: Record<FastToolName | AgentToolName, string> = {
   point_cursor: "Move the mouse cursor to a screen position (coordinate fallback)",
   click: "Click the mouse at the last pointed position (coordinate fallback)",
   cronjob: "Create, list, view, update, delete, pause, or resume scheduled cron jobs",
-  send_message: "Send a message to a connected messaging platform (Telegram, Discord, Slack)",
+  send_message: "Send a message to a connected messaging platform (Telegram, Discord)",
   list_platforms: "List connected messaging platforms and active gateway sessions",
 }
 
