@@ -105,7 +105,8 @@ export class GatewayRunner {
         .limit(1)
         .then((r) => r[0])
       return !!row
-    } catch {
+    } catch (err) {
+      console.warn(`[gateway] isUserLinked DB error:`, err)
       return false
     }
   }
@@ -278,13 +279,18 @@ export class GatewayRunner {
   }
 
   private async onIncoming(msg: GatewayMessage): Promise<void> {
+    console.warn(`[gateway] onIncoming platform=${msg.platform} from=${msg.userId} chat=${msg.chatId} text="${msg.text.slice(0, 80)}"`)
+
     // Prompt unlinked users to connect their account
     if (msg.userId && msg.userId !== "unknown") {
       const linked = await this.isUserLinked(msg.platform, msg.userId)
+      console.warn(`[gateway] isUserLinked(${msg.platform}, ${msg.userId}) = ${linked}`)
       if (!linked) {
         const code = this.generateLinkingCode(msg)
         const adapter = this.adapters.get(msg.platform)
-        await adapter?.sendMessage(msg.chatId, this.getLinkingPrompt(code))
+        console.warn(`[gateway] unlinked user — generated code=${code} adapter=${adapter ? "found" : "NOT FOUND"}`)
+        const result = await adapter?.sendMessage(msg.chatId, this.getLinkingPrompt(code))
+        console.warn(`[gateway] linking code send result:`, JSON.stringify(result))
         return
       }
     }
