@@ -169,6 +169,8 @@ function DashboardContent() {
             browserAutomation: { used: 0, limit: 0 },
             gatewayMessages: { used: 0, limit: 50 },
           },
+          razorpaySubId: null,
+          billingWarning: null,
           dailyChatUsed: 0,
           dailyVoiceUsed: 0,
           dailyImageUsed: 0,
