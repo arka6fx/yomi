@@ -44,7 +44,10 @@ export function playbackControl(text: string): SpotifyControl | null {
     return "previous"
 
   if (/^pause$/.test(t) || (musicCtx && /\bpause\b/.test(t))) return "pause"
-  if (/^(?:resume|unpause|continue)$/.test(t) || (musicCtx && /\b(resume|unpause|continue)\b/.test(t)))
+  if (
+    /^(?:resume|unpause|continue)$/.test(t) ||
+    (musicCtx && /\b(resume|unpause|continue)\b/.test(t))
+  )
     return "resume"
   if (musicCtx && /\bstop\b/.test(t)) return "stop"
   return null
@@ -86,7 +89,11 @@ export function volumeAction(
 }
 
 export function normalizeSpokenRecipient(raw: string): string {
-  const trimmed = raw.replace(/^\s*(?:my|the|a|an)\s+/i, "").replace(/[.?!,]+$/g, "").trim()
+  const trimmed = raw
+    .replace(/^\s*(?:my|the|a|an)\s+/i, "")
+    .replace(/[.?!,]+$/g, "")
+    .replace(/\s+(?:on|in|over|via|through|using)\s+(?:\w+\s+)?whats\s*app\b\s*$/gi, "")
+    .trim()
   if (/^(?:me|myself|self|you|message\s*myself|send\s*to\s*myself)$/i.test(trimmed)) return "you"
   const parts = trimmed.split(/\s+/).filter(Boolean)
   if (parts.length <= 1) return trimmed
@@ -101,7 +108,10 @@ export function reminderDraftRequest(text: string): { message: string } | null {
   if (!/\b(write|draft|make|create|note)\b/i.test(text)) return null
   const cleaned = text
     .replace(/[.?!]+$/g, "")
-    .replace(/\b(?:and\s+)?(?:send|share|message)\s+(?:it\s+)?(?:to\s+)?(?:whats\s*app|whatsapp)\b/gi, "")
+    .replace(
+      /\b(?:and\s+)?(?:send|share|message)\s+(?:it\s+)?(?:to\s+)?(?:whats\s*app|whatsapp)\b/gi,
+      "",
+    )
     .replace(/\b(?:on|in|via|through|using)\s+(?:whats\s*app|whatsapp)\b/gi, "")
     .trim()
   const m =
@@ -111,12 +121,14 @@ export function reminderDraftRequest(text: string): { message: string } | null {
   return topic ? { message: `Reminder: ${topic}` } : null
 }
 
-export function whatsAppMessageRequest(text: string): { recipient: string; message: string } | null {
+export function whatsAppMessageRequest(
+  text: string,
+): { recipient: string; message: string } | null {
   const cleaned = text
     .replace(/[.?!]+$/g, "")
     .replace(/^\s*(please|hey|ok|okay|yomi)[,\s]+/i, "")
     .replace(/\b(open|launch|start)\s+whats\s*app\s*(?:and|to)?\s*/gi, "")
-    .replace(/\b(on|in|over|via|through|using)\s+whats\s*app\b/gi, "")
+    .replace(/\b(on|in|over|via|through|using)\s+(?:\w+\s+)?whats\s*app\b/gi, "")
     .trim()
 
   const finish = (recipient: string, message: string) => {
@@ -146,10 +158,7 @@ export function whatsAppMessageRequest(text: string): { recipient: string; messa
   return null
 }
 
-export function pendingDraftRecipientRequest(
-  text: string,
-  hasDraft: boolean,
-): string | null {
+export function pendingDraftRecipientRequest(text: string, hasDraft: boolean): string | null {
   if (!hasDraft) return null
   if (!/\b(send|share|message|msg|text|whats\s*app|whatsapp)\b/i.test(text)) return null
   const cleaned = text.replace(/[.?!]+$/g, "").trim()

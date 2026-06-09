@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { join } from "node:path"
+import { buildSkillIndexBlock } from "../tools/skills/skill-index.js"
 
 export interface PromptContext {
   userName?: string
@@ -128,10 +129,48 @@ For ordinary questions:
 - Then put the direct final answer in an answer block when there is a concrete answer to copy, choose, or act on.
 </answer_format>`
 
+// Cached skill-index block. The prompt builders are sync (many call sites
+// depend on this), so we read the index once and refresh it explicitly via
+// `refreshSkillIndexBlock()`. The cache lives in this module so both the
+// fast and agent paths share a single read.
+let cachedSkillIndexBlock = ""
+
+// First-call lazy load — used by the prompt builders when the cache is
+// empty. Wrapped in a fire-and-forget so a slow disk read never blocks
+// the fast path; the next refresh will catch up.
+let indexLoadInFlight: Promise<void> | null = null
+function ensureSkillIndexLoaded(): void {
+  if (cachedSkillIndexBlock || indexLoadInFlight) return
+  indexLoadInFlight = buildSkillIndexBlock()
+    .then((b) => {
+      cachedSkillIndexBlock = b
+    })
+    .catch(() => {
+      // Empty on failure — fast path doesn't need to block.
+      cachedSkillIndexBlock = ""
+    })
+    .finally(() => {
+      indexLoadInFlight = null
+    })
+}
+
+// Refresh the cached skill-index block. Called by the skill-write tools
+// (create/edit/patch/delete) so a freshly written skill surfaces in the
+// system prompt within the same session.
+export async function refreshSkillIndexBlock(): Promise<void> {
+  cachedSkillIndexBlock = await buildSkillIndexBlock()
+}
+
+function getSkillIndexBlock(): string {
+  ensureSkillIndexLoaded()
+  return cachedSkillIndexBlock
+}
+
 export function buildFastPrompt(ctx: PromptContext): string {
   const { userName, os, yomiMd, hasScreen, ...memoryCtx } = resolveCtx(ctx)
   const userCtx = yomiMd ? `<user_context>\n${yomiMd}\n</user_context>\n\n` : ""
   const memCtx = buildMemoryBlock(memoryCtx)
+  const skillCtx = getSkillIndexBlock()
 
   const screenLine = hasScreen
     ? "A screenshot of their current screen is attached — use it to answer."
@@ -144,8 +183,8 @@ export function buildFastPrompt(ctx: PromptContext): string {
   // Prompt order is tuned for prefix caching: the long, turn-invariant block
   // (identity → user_context → answer_format → voice_rules → examples → rules)
   // leads so the OpenAI-compatible endpoint can cache it. The per-turn dynamic
-  // tail (screen_context, screen-dependent capabilities, memory) comes last so it
-  // never invalidates that cached prefix.
+  // tail (screen_context, screen-dependent capabilities, memory, skills) comes
+  // last so it never invalidates that cached prefix.
   return `\
 <identity>
 You are Yomi, ${userName}'s sharp, friendly AI companion on their ${os} desktop.
@@ -187,13 +226,14 @@ When a screenshot is attached, analyze it to understand what the user is asking 
 ${capLine}
 </capabilities>
 
-${memCtx}`
+${memCtx}${skillCtx}`
 }
 
 export function buildAgentPrompt(ctx: PromptContext): string {
   const { userName, os, yomiMd, ...memoryCtx } = resolveCtx(ctx)
   const userCtx = yomiMd ? `<user_context>\n${yomiMd}\n</user_context>\n\n` : ""
   const memCtx = buildMemoryBlock(memoryCtx)
+  const skillCtx = getSkillIndexBlock()
 
   return `\
 <identity>
@@ -207,7 +247,7 @@ ${userCtx}${memCtx}${ANSWER_FORMAT_RULES}
 <capabilities>
 You research, draft, file, and schedule — multi-step tasks run to completion.
 Tools: look_at_screen, bash (sandboxed), web_search, fetch_url, read_file, write_file, list_files, search, MCP servers.
-You can also operate desktop apps directly: launch_app, play_spotify, send_whatsapp_message, adjust_volume, get_ui_tree, invoke_element, set_value, toggle_element, press_key, point_cursor, click.
+You can also operate desktop apps directly: launch_app, play_spotify, adjust_volume, get_ui_tree, invoke_element, set_value, toggle_element, press_key, point_cursor, click.
 For web tasks you drive a real browser with the browser_* tools (navigate, snapshot, click, type, etc.).
 Terminology: "Notepad" means the native Windows Notepad app. Use local memory tools only when the user says Yomi memory, remember this, or refers to ~/.yomi.
 </capabilities>
@@ -224,7 +264,7 @@ To do something inside a Windows app (open WhatsApp and message someone, click a
    - Browsers (Chrome/Edge): press_key "Ctrl+L" to focus the address bar, type_text the URL or query, then press_key "Enter".
    - File Explorer: press_key "Ctrl+L" to focus the path bar, type a folder path, then press_key "Enter".
    - Windows Notepad: create a new blank note first (Ctrl+N) before writing, then target the editor and set_value or type_text. If the user asks to save but gives no file name/location, ask where to save it.
-   - Messaging apps: before sending, re-read get_ui_tree and confirm the open chat's title in the conversation header matches the intended recipient. For WhatsApp use send_whatsapp_message. For Telegram/Unigram, click_element a chat row to open it, verify the header, then type_text into the composer.
+   - Messaging apps: before sending, re-read get_ui_tree and confirm the open chat's title in the conversation header matches the intended recipient.
    - Spotify playback: use play_spotify with the song and artist as the query. Do not stop after launch_app.
    - System sound: use adjust_volume. "Increase sound" means direction up; "decrease/lower sound" means direction down. For Spotify's own volume ("turn up spotify", "lower spotify volume") use adjust_spotify_volume instead.
    - Spotify transport (pause/resume/next/previous/stop): use control_spotify.
@@ -257,5 +297,5 @@ ${AGENT_EXAMPLES}
 - If a bash command would be destructive, explain and ask the user first.
 - Write working notes to scratchpad.md during long tasks using write_file.
 - When done, summarise what changed and what's still open.
-</rules>`
+</rules>${skillCtx}`
 }

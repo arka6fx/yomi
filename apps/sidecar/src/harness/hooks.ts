@@ -2,12 +2,19 @@ import { appendFile, mkdir } from "node:fs/promises"
 import { homedir } from "node:os"
 import { join } from "node:path"
 import { initMemoryDir } from "../memory/loader.js"
+import {
+  appendGuidance,
+  ToolCallGuardrailController,
+  scanForThreats,
+} from "../tools/guardrails/index.js"
+import { getDefaultPluginManager } from "../plugins/plugin-manager.js"
 
 export interface Hooks {
   onSessionStart(): Promise<void>
   onUserPromptSubmit(prompt: string): Promise<void>
   onPreToolUse(toolName: string, args: unknown): Promise<{ ok: boolean; reason?: string }>
-  onPostToolUse(toolName: string, result: unknown): Promise<unknown>
+  onPostToolUse(toolName: string, result: unknown, args?: unknown): Promise<unknown>
+  onMemoryWrite?(content: string, metadata?: { source?: string; path?: string; kind?: string }): Promise<{ ok: boolean; reason?: string }>
   onStop(summary: string): Promise<void>
   onSessionEnd(): Promise<void>
 }
@@ -35,55 +42,167 @@ function todaySessionPath(): string {
   return join(homedir(), ".yomi", "sessions", `${date}-dev.md`)
 }
 
-export const hooks: Hooks = {
-  async onSessionStart() {
-    await initMemoryDir()
-  },
+function toolArgsToText(args: unknown): string {
+  if (typeof args === "string") return args
+  if (args === undefined || args === null) return ""
+  try {
+    return JSON.stringify(args, (_k, v) => (typeof v === "bigint" ? v.toString() : v))
+  } catch {
+    return String(args)
+  }
+}
 
-  async onUserPromptSubmit(_prompt: string) {
-    // reserved for future use (e.g. per-prompt context injection)
-  },
+function resultToText(result: unknown): string {
+  if (typeof result === "string") return result
+  if (result === undefined || result === null) return ""
+  try {
+    return JSON.stringify(result, (_k, v) => (typeof v === "bigint" ? v.toString() : v))
+  } catch {
+    return String(result)
+  }
+}
 
-  async onPreToolUse(toolName, args) {
-    if (toolName === "bash") {
-      const cmd =
-        typeof args === "object" && args !== null && "command" in args
-          ? String((args as Record<string, unknown>).command)
-          : ""
-      for (const pattern of DENYLIST) {
-        if (pattern.test(cmd)) {
-          return { ok: false, reason: `command matches denylist: "${cmd}"` }
+// Shared per-turn guardrail controller. ReAct bursts (LangGraph execution / legacy
+// agentPipeline) call resetForTurn() at the start of each streamText burst; LoopGuards
+// reads `guardrail.haltDecision` in onStep() to break out of the burst.
+const guardrail = new ToolCallGuardrailController()
+export { guardrail as toolGuardrail }
+
+// Build the default hooks, optionally chaining in plugin hooks.
+function buildHooks(): Hooks {
+  const base: Hooks = {
+    async onSessionStart() {
+      await initMemoryDir()
+    },
+
+    async onUserPromptSubmit(_prompt: string) {
+      // reserved for future use (e.g. per-prompt context injection)
+    },
+
+    async onPreToolUse(toolName, args) {
+      const guardrailDecision = guardrail.beforeCall(
+        toolName,
+        (args ?? {}) as Record<string, unknown>,
+      )
+      if (!guardrailDecision.allowsExecution) {
+        return { ok: false, reason: guardrailDecision.message }
+      }
+
+      const text = toolArgsToText(args)
+      if (text) {
+        const findings = scanForThreats(text, "all")
+        if (findings.length > 0) {
+          return { ok: false, reason: `threat_block: ${findings[0]}` }
         }
       }
-    }
-    return { ok: true }
-  },
 
-  async onPostToolUse(toolName, result) {
-    const text = typeof result === "string" ? result : JSON.stringify(result)
-    if (text.length > TOOL_OUTPUT_MAX_CHARS) {
-      const trimmed = trimMiddle(text, TOOL_OUTPUT_MAX_CHARS)
-      console.warn(
-        `[yomi/hooks] trimmed ${toolName} output: ${text.length} → ${trimmed.length} chars`,
-      )
-      return trimmed
-    }
-    return result
-  },
+      if (toolName === "bash") {
+        const cmd =
+          typeof args === "object" && args !== null && "command" in args
+            ? String((args as Record<string, unknown>).command)
+            : ""
+        for (const pattern of DENYLIST) {
+          if (pattern.test(cmd)) {
+            return { ok: false, reason: `command matches denylist: "${cmd}"` }
+          }
+        }
+      }
+      return { ok: true }
+    },
 
-  async onStop(summary) {
-    const path = todaySessionPath()
-    const hhmm = new Date().toTimeString().slice(0, 5)
-    const line = `## ${hhmm} — ${summary}\n`
-    try {
-      await mkdir(join(homedir(), ".yomi", "sessions"), { recursive: true })
-      await appendFile(path, line, "utf8")
-    } catch (err) {
-      console.warn("[yomi/hooks] onStop: failed to write session log:", err)
-    }
-  },
+    async onPostToolUse(toolName, result, args) {
+      const decision = guardrail.afterCall(toolName, (args ?? {}) as Record<string, unknown>, result)
+      let out: unknown = decision.isWarn ? appendGuidance(result, decision) : result
+      if (decision.action === "halt") {
+        out = appendGuidance(result, decision)
+      }
 
-  async onSessionEnd() {
-    // Compaction is triggered directly from agentPipeline after each run.
-  },
+      const resultText = resultToText(out)
+      if (resultText) {
+        const findings = scanForThreats(resultText, "context")
+        if (findings.length > 0) {
+          console.warn(`[yomi/hooks] threat pattern(s) in ${toolName} output: ${findings.join(", ")}`)
+        }
+      }
+
+      if (resultText.length > TOOL_OUTPUT_MAX_CHARS) {
+        const trimmed = trimMiddle(resultText, TOOL_OUTPUT_MAX_CHARS)
+        console.warn(
+          `[yomi/hooks] trimmed ${toolName} output: ${resultText.length} → ${trimmed.length} chars`,
+        )
+        return trimmed
+      }
+      return out
+    },
+
+    async onStop(summary) {
+      const path = todaySessionPath()
+      const hhmm = new Date().toTimeString().slice(0, 5)
+      const line = `## ${hhmm} — ${summary}\n`
+      try {
+        await mkdir(join(homedir(), ".yomi", "sessions"), { recursive: true })
+        await appendFile(path, line, "utf8")
+      } catch (err) {
+        console.warn("[yomi/hooks] onStop: failed to write session log:", err)
+      }
+    },
+
+    async onSessionEnd() {
+      // Compaction is triggered directly from agentPipeline after each run.
+    },
+  }
+
+  // Merge plugin hooks into the chain. Plugin hooks run after the guardrail /
+  // threat checks but before the final output trim. The plugin manager may be
+  // uninitialised (loaded lazily from index.ts), so guard.
+  let pluginHooks: Partial<Hooks> = {}
+  try {
+    pluginHooks = getDefaultPluginManager().getPluginHooks()
+  } catch {
+    // Plugin manager not loaded — use base hooks
+  }
+
+  if (pluginHooks.onPreToolUse) {
+    const orig = base.onPreToolUse.bind(base)
+    base.onPreToolUse = async (toolName, args) => {
+      const r = await orig(toolName, args)
+      if (!r.ok) return r
+      return pluginHooks.onPreToolUse!(toolName, args)
+    }
+  }
+  if (pluginHooks.onPostToolUse) {
+    const orig = base.onPostToolUse.bind(base)
+    base.onPostToolUse = async (toolName, result, args) => {
+      const r = await orig(toolName, result, args)
+      return pluginHooks.onPostToolUse!(toolName, r, args)
+    }
+  }
+  if (pluginHooks.onSessionStart) {
+    const orig = base.onSessionStart.bind(base)
+    base.onSessionStart = async () => { await orig(); await pluginHooks.onSessionStart!() }
+  }
+  if (pluginHooks.onSessionEnd) {
+    const orig = base.onSessionEnd.bind(base)
+    base.onSessionEnd = async () => { await orig(); await pluginHooks.onSessionEnd!() }
+  }
+  if (pluginHooks.onUserPromptSubmit) {
+    const orig = base.onUserPromptSubmit.bind(base)
+    base.onUserPromptSubmit = async (p) => { await orig(p); await pluginHooks.onUserPromptSubmit!(p) }
+  }
+  if (pluginHooks.onStop) {
+    const orig = base.onStop.bind(base)
+    base.onStop = async (s) => { await orig(s); await pluginHooks.onStop!(s) }
+  }
+  if (pluginHooks.onMemoryWrite) {
+    const orig = base.onMemoryWrite?.bind(base) ?? (async () => ({ ok: true } as const))
+    base.onMemoryWrite = async (content, metadata) => {
+      const r = await orig(content, metadata)
+      if (!r.ok) return r
+      return pluginHooks.onMemoryWrite!(content, metadata)
+    }
+  }
+
+  return base
 }
+
+export const hooks: Hooks = buildHooks()

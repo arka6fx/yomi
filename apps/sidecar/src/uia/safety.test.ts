@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "bun:test"
+import { afterEach, beforeEach, describe, expect, it } from "bun:test"
 import { classifyRisk, confirmRisky, isBlockedApp, registerConfirmer } from "./safety.js"
 
 describe("isBlockedApp", () => {
@@ -29,6 +29,10 @@ describe("classifyRisk", () => {
 })
 
 describe("confirmRisky", () => {
+  beforeEach(() => {
+    delete process.env.YOMI_ACT_AUTOCONFIRM
+    registerConfirmer(null)
+  })
   afterEach(() => {
     registerConfirmer(null)
     delete process.env.YOMI_ACT_AUTOCONFIRM

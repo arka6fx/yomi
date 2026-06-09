@@ -32,9 +32,17 @@ describe("smoke: shortcut parsers", () => {
 
   it("volumeAction: system and spotify volume", () => {
     expect(volumeAction("turn volume up")).toEqual({ direction: "up", steps: 2, target: "system" })
-    expect(volumeAction("lower the volume a lot")).toEqual({ direction: "down", steps: 5, target: "system" })
+    expect(volumeAction("lower the volume a lot")).toEqual({
+      direction: "down",
+      steps: 5,
+      target: "system",
+    })
     expect(volumeAction("mute")).toEqual({ direction: "mute", steps: 1, target: "system" })
-    expect(volumeAction("increase spotify volume")).toEqual({ direction: "up", steps: 3, target: "spotify" })
+    expect(volumeAction("increase spotify volume")).toEqual({
+      direction: "up",
+      steps: 3,
+      target: "spotify",
+    })
     expect(volumeAction("hello")).toBeNull()
   })
 
@@ -55,9 +63,11 @@ describe("smoke: shortcut parsers", () => {
   })
 
   it("reminderDraftRequest: parses reminder drafts", () => {
-    expect(reminderDraftRequest("write a reminder about buying milk and send to whatsapp")).toEqual({
-      message: "Reminder: buying milk",
-    })
+    expect(reminderDraftRequest("write a reminder about buying milk and send to whatsapp")).toEqual(
+      {
+        message: "Reminder: buying milk",
+      },
+    )
     expect(reminderDraftRequest("what's the weather")).toBeNull()
   })
 

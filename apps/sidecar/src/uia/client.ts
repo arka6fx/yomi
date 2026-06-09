@@ -184,7 +184,10 @@ class UiaClient {
     return typeof r.volume === "number" ? r.volume : null
   }
 
-  async setAppVolume(process: string, level: number): Promise<{ ok: boolean; before?: number | null }> {
+  async setAppVolume(
+    process: string,
+    level: number,
+  ): Promise<{ ok: boolean; before?: number | null }> {
     return this.call<{ ok: boolean; before?: number | null }>("set_app_volume", { process, level })
   }
 

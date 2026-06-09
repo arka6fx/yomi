@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "bun:test"
+import { afterEach, beforeEach, describe, expect, it } from "bun:test"
 import type { SseEvent, UiaAction } from "@yomi/shared"
 import {
   emitActResult,
@@ -10,6 +10,9 @@ import {
 const action: UiaAction = { kind: "invoke", ref: "w1e1" }
 
 describe("act-bus", () => {
+  beforeEach(() => {
+    delete process.env.YOMI_ACT_AUTOCONFIRM
+  })
   afterEach(() => {
     setActEmitter(null)
     delete process.env.YOMI_ACT_AUTOCONFIRM

@@ -1,9 +1,11 @@
 import { generateText } from "ai"
 import { readFile, writeFile, appendFile } from "node:fs/promises"
 import { join } from "node:path"
+import type { Plan } from "@yomi/shared"
 import { createModel } from "../pipeline/model.js"
 import { notepadDir } from "./loader.js"
 import { scheduleCloudRagSync } from "./cloud-rag.js"
+import { getDefaultCurator } from "../agent/curator.js"
 
 const COMPACT_MODEL = process.env.COMPACT_MODEL || "gpt-4.1-mini"
 // Minimum session log size before we bother calling the LLM.
@@ -17,7 +19,7 @@ function sessionPath(date: string): string {
   return join(notepadDir(), "sessions", `${date}-dev.md`)
 }
 
-export async function compact(): Promise<void> {
+export async function compact(opts: { plan?: Plan | undefined } = {}): Promise<void> {
   const today = todayISO()
 
   const sessionLog = await readFile(sessionPath(today), "utf-8").catch(() => "")
@@ -76,4 +78,17 @@ If nothing new worth adding, respond with exactly: NOTHING_NEW`,
     await appendFile(indexPath, indexEntry, "utf-8")
   }
   scheduleCloudRagSync("compact")
+
+  // Tail trigger: the curator's lifecycle + LLM review pass. Self-throttles
+  // via .curator_state.last_run_at, so this is a near-no-op most of the
+  // time. Errors are swallowed — a curator failure must never break
+  // session-memory compaction.
+  if (opts.plan) {
+    getDefaultCurator()
+      .maybeRunCurator({ plan: opts.plan })
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.warn(`[yomi/curator] error: ${msg}`)
+      })
+  }
 }

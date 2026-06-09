@@ -1,4 +1,5 @@
 import type { ToolSet } from "ai"
+import type { Plan } from "@yomi/shared"
 import { createAgentTools } from "../../tools/index.js"
 import { getMcpTools } from "../../mcp/client.js"
 import { wrapBrowserTools } from "../../mcp/safety.js"
@@ -31,7 +32,7 @@ function applyHooks(tools: ToolSet, activeHooks: Hooks): ToolSet {
 // Build the merged agent tool set (native + memory + web + Playwright MCP) behind the safety
 // hooks. Browser tools degrade gracefully when the MCP server is unavailable.
 export async function buildAgentToolSet(
-  ctx: { screenshotB64?: string },
+  ctx: { screenshotB64?: string; plan?: Plan | undefined },
   activeHooks: Hooks,
 ): Promise<ToolSet> {
   const mcpTools = wrapBrowserTools(await getMcpTools())
