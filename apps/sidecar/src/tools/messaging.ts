@@ -10,7 +10,7 @@ async function backendPost(path: string, body: unknown): Promise<{ ok: boolean; 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     })
-    const data = await res.json().catch(() => ({})) as { ok?: boolean; error?: string }
+    const data = await res.json().catch(() => ({ ok: false })) as { ok: boolean; error?: string }
     return data
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) }
