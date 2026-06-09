@@ -46,6 +46,7 @@ function LinkPageContent() {
   }, [session, isPending, router])
 
   const [discordSent, setDiscordSent] = useState(false)
+  const [discordDmFailed, setDiscordDmFailed] = useState(false)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -55,6 +56,9 @@ function LinkPageContent() {
     }
     if (params.get("discord_sent") === "true") {
       setDiscordSent(true)
+    }
+    if (params.get("discord_dm_failed") === "true") {
+      setDiscordDmFailed(true)
     }
   }, [])
 
@@ -168,6 +172,17 @@ function LinkPageContent() {
                   <p className="text-xs text-indigo-400/80">
                     Check your Discord DMs from the Yomi bot. Enter the
                     6-character code below to link your account.
+                  </p>
+                </div>
+              )}
+
+              {discordDmFailed && (
+                <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm space-y-1">
+                  <p className="font-medium text-yellow-300">Could not send Discord DM</p>
+                  <p className="text-xs text-yellow-400/80">
+                    The bot could not message you directly. Use the code below — it was
+                    pre-filled from your authorization. If this keeps happening, make sure
+                    "Allow DMs from server members" is enabled in your Discord privacy settings.
                   </p>
                 </div>
               )}
