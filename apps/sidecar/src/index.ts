@@ -20,7 +20,7 @@ import { allProviders, getProvider } from "./automation/providers/registry.js"
 import type { ProviderId } from "./automation/providers/types.js"
 import { resolveAgent } from "./automation/agents/registry.js"
 import { knowledgeHint, recallKnowledge } from "./automation/knowledge.js"
-import { handleGatewayMessage } from "./gateway/receive.js"
+import { handleGatewayMessage, startGatewayPoll, stopGatewayPoll } from "./gateway/receive.js"
 import type { GatewayMessage, Plan } from "@yomi/shared"
 import { initUsageStore, logUsageEvent } from "./insights/usage-store.js"
 import { generateReport, getMaxLookback, formatTerminal } from "./insights/insights-engine.js"
@@ -410,6 +410,7 @@ app.onError((err, c) => {
 // Tear down the MCP client + its child browser on shutdown.
 for (const sig of ["SIGINT", "SIGTERM", "beforeExit"] as const) {
   process.on(sig, () => {
+    stopGatewayPoll()
     getDefaultScheduler().stop()
     getDefaultPluginManager().shutdown()
     void closeMcp().finally(() => process.exit(0))
@@ -417,6 +418,7 @@ for (const sig of ["SIGINT", "SIGTERM", "beforeExit"] as const) {
 }
 
 const port = parseInt(process.env.SIDECAR_PORT || "3002", 10)
+startGatewayPoll()
 console.warn(`Sidecar listening on :${port}`)
 
 export default { port, fetch: app.fetch }
