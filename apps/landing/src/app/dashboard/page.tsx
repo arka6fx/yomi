@@ -190,8 +190,8 @@ function DashboardContent() {
     fetch("/api/gateway/connections", {
       headers: { Authorization: `Bearer ${session.session.token}` },
     })
-      .then((r) => r.json())
-      .then((d: PlatformLink[]) => setPlatformLinks(d))
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((d: PlatformLink[]) => setPlatformLinks(Array.isArray(d) ? d : []))
       .catch(() => setPlatformLinks([]))
       .finally(() => setPlatformsLoading(false))
   }, [session])
