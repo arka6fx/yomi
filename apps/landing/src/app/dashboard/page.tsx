@@ -104,7 +104,7 @@ const PLANS = [
 
 type PlatformLink = { platform: string; connectedAt: string }
 
-const PLATFORM_META: Record<string, { name: string; color: string; inviteUrl: string; dmUrl?: string }> = {
+const PLATFORM_META: Record<string, { name: string; color: string; inviteUrl: string }> = {
   telegram: {
     name: "Telegram",
     color: "bg-sky-500/10 text-sky-400",
@@ -114,7 +114,6 @@ const PLATFORM_META: Record<string, { name: string; color: string; inviteUrl: st
     name: "Discord",
     color: "bg-indigo-500/10 text-indigo-400",
     inviteUrl: `${process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:3001"}/api/gateway/discord/auth`,
-    dmUrl: "https://discord.com/users/1513769981773480068",
   },
   whatsapp: {
     name: "WhatsApp",
@@ -584,21 +583,7 @@ function DashboardContent() {
                       </a>
                     ) : null,
                   )}
-                  {Object.entries(PLATFORM_META).map(([key, meta]) =>
-                    meta.dmUrl ? (
-                      <a
-                        key={`${key}-dm`}
-                        href={meta.dmUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-lg px-3 py-1.5 transition-colors"
-                      >
-                        <MessageCircle size={12} />
-                        DM {meta.name}
-                        <ExternalLink size={10} />
-                      </a>
-                    ) : null,
-                  )}
+
                 </div>
               </div>
             ) : (
