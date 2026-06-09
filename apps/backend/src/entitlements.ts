@@ -19,6 +19,7 @@ export const FEATURE_LIMITS = {
   reasoning: { explore: 0, pro: 100, max: 500 },
   desktopAutomation: { explore: 0, pro: 75, max: 750 },
   browserAutomation: { explore: 0, pro: 40, max: 500 },
+  gatewayMessages: { explore: 50, pro: 2000, max: 8000 },
 } as const
 
 export type FeatureKey = keyof typeof FEATURE_LIMITS

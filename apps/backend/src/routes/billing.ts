@@ -171,7 +171,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
       and(
         eq(usageEvents.userId, user.id),
         gte(usageEvents.createdAt, requestPeriodStart),
-        inArray(usageEvents.kind, ["request_chat", "request_voice", "stt", "agent_run", "browser_run", "screenshot"]),
+        inArray(usageEvents.kind, ["request_chat", "request_voice", "stt", "agent_run", "browser_run", "screenshot", "gateway_message"]),
       ),
     )
     .groupBy(usageEvents.kind)
@@ -185,6 +185,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
   const agentUsed = (countMap["agent_run"] ?? 0)
   const browserUsed = (countMap["browser_run"] ?? 0)
   const screenshotUsed = (countMap["screenshot"] ?? 0)
+  const gatewayUsed = (countMap["gateway_message"] ?? 0)
 
   const requestsUsed = chatUsed + voiceUsed
   const requestsLimit = requestLimitForUser(user)
@@ -198,6 +199,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     reasoning: { used: 0, limit: featureLimitForUser(user, "reasoning") },
     desktopAutomation: { used: agentUsed, limit: featureLimitForUser(user, "desktopAutomation") },
     browserAutomation: { used: browserUsed, limit: featureLimitForUser(user, "browserAutomation") },
+    gatewayMessages: { used: gatewayUsed, limit: featureLimitForUser(user, "gatewayMessages") },
   }
 
   return c.json({

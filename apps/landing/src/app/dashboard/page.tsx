@@ -41,6 +41,7 @@ type Sub = {
     reasoning: FeatureUsage
     desktopAutomation: FeatureUsage
     browserAutomation: FeatureUsage
+    gatewayMessages: FeatureUsage
   }
   dailyChatUsed: number
   dailyVoiceUsed: number
@@ -173,6 +174,7 @@ function DashboardContent() {
             reasoning: { used: 0, limit: 0 },
             desktopAutomation: { used: 0, limit: 0 },
             browserAutomation: { used: 0, limit: 0 },
+            gatewayMessages: { used: 0, limit: 50 },
           },
           dailyChatUsed: 0,
           dailyVoiceUsed: 0,
@@ -410,6 +412,7 @@ function DashboardContent() {
                   { key: "screenshots" as const, label: "Screenshot Analyses", icon: "📸" },
                   { key: "desktopAutomation" as const, label: "Desktop Automation", icon: "🖥️" },
                   { key: "browserAutomation" as const, label: "Browser Automation", icon: "🌐" },
+                  { key: "gatewayMessages" as const, label: "Messaging Bots", icon: "💭" },
                 ]).map(({ key, label, icon }) => {
                   const feat = sub.features[key]
                   if (!feat) return null
