@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { beforeEach, describe, expect, it, mock } from "bun:test"
 import type { GatewayMessage } from "@yomi/shared"
 
@@ -51,7 +50,7 @@ describe("WhatsAppAdapter — webhook parsing", () => {
           type: "text",
           text: { body: "hello yomi" },
         },
-      ]),
+      ]) as any,
     )
 
     // Messages are enqueued to webhookQueue, drained every 3s
@@ -73,15 +72,15 @@ describe("WhatsAppAdapter — webhook parsing", () => {
           type: "text",
           text: { body: "test message" },
         },
-      ]),
+      ]) as any,
     )
 
     const queue = (adapter as any).webhookQueue as GatewayMessage[]
     expect(queue.length).toBe(1)
-    expect(queue[0].text).toBe("test message")
-    expect(queue[0].platform).toBe("whatsapp")
-    expect(queue[0].chatId).toBe("919832307332")
-    expect(queue[0].userId).toBe("919832307332")
+    expect(queue[0]!.text).toBe("test message")
+    expect(queue[0]!.platform).toBe("whatsapp")
+    expect(queue[0]!.chatId).toBe("919832307332")
+    expect(queue[0]!.userId).toBe("919832307332")
   })
 
   it("skips non-text message types", () => {
@@ -96,12 +95,12 @@ describe("WhatsAppAdapter — webhook parsing", () => {
           type: "image",
           image: { id: "img-123", mime_type: "image/jpeg" },
         },
-      ]),
+      ]) as any,
     )
 
     const queue = (adapter as any).webhookQueue as GatewayMessage[]
     expect(queue.length).toBe(1)
-    expect(queue[0].text).toBe("[image message]")
+    expect(queue[0]!.text).toBe("[image message]")
   })
 
   it("deduplicates by message ID", () => {
@@ -116,7 +115,7 @@ describe("WhatsAppAdapter — webhook parsing", () => {
           type: "text",
           text: { body: "first" },
         },
-      ]),
+      ]) as any,
     )
 
     // Send same webhook again
@@ -129,12 +128,12 @@ describe("WhatsAppAdapter — webhook parsing", () => {
           type: "text",
           text: { body: "duplicate" },
         },
-      ]),
+      ]) as any,
     )
 
     const queue = (adapter as any).webhookQueue as GatewayMessage[]
     expect(queue.length).toBe(1)
-    expect(queue[0].text).toBe("first")
+    expect(queue[0]!.text).toBe("first")
   })
 
   it("handles empty webhook payload", () => {
@@ -165,13 +164,13 @@ describe("WhatsAppAdapter — webhook parsing", () => {
           type: "text",
           text: { body: "msg 2" },
         },
-      ]),
+      ]) as any,
     )
 
     const queue = (adapter as any).webhookQueue as GatewayMessage[]
     expect(queue.length).toBe(2)
-    expect(queue[0].text).toBe("msg 1")
-    expect(queue[1].text).toBe("msg 2")
+    expect(queue[0]!.text).toBe("msg 1")
+    expect(queue[1]!.text).toBe("msg 2")
   })
 })
 
@@ -195,7 +194,7 @@ describe("WhatsAppAdapter — sendMessage", () => {
     // Mock fetch to return success
     mock.module("node:http", () => ({}))
     const origFetch = globalThis.fetch
-    globalThis.fetch = async () =>
+    globalThis.fetch = (async () =>
       new Response(
         JSON.stringify({
           messaging_product: "whatsapp",
@@ -203,7 +202,7 @@ describe("WhatsAppAdapter — sendMessage", () => {
           messages: [{ id: "wamid.test-send-001" }],
         }),
         { status: 200 },
-      )
+      )) as unknown as typeof fetch
 
     const result = await adapter.sendMessage("919832307332", "hello from test")
     expect(result.ok).toBe(true)
@@ -216,13 +215,13 @@ describe("WhatsAppAdapter — sendMessage", () => {
     const adapter = new WhatsAppAdapter("invalid-token", "123456789", "yomi")
 
     const origFetch = globalThis.fetch
-    globalThis.fetch = async () =>
+    globalThis.fetch = (async () =>
       new Response(
         JSON.stringify({
           error: { message: "Auth failed", code: 190 },
         }),
         { status: 401 },
-      )
+      )) as unknown as typeof fetch
 
     const result = await adapter.sendMessage("919832307332", "hello")
     expect(result.ok).toBe(false)
@@ -236,13 +235,13 @@ describe("WhatsAppAdapter — sendMessage", () => {
 
     let requestBody: string = ""
     const origFetch = globalThis.fetch
-    globalThis.fetch = async (_url: string | URL | Request, opts?: RequestInit) => {
+    globalThis.fetch = (async (_url: string | URL | Request, opts?: RequestInit) => {
       requestBody = opts?.body as string ?? ""
       return new Response(
         JSON.stringify({ messaging_product: "whatsapp", contacts: [], messages: [] }),
         { status: 200 },
       )
-    }
+    }) as unknown as typeof fetch
 
     const longText = "a".repeat(5000)
     await adapter.sendMessage("919832307332", longText)
