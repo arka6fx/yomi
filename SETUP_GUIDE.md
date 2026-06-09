@@ -59,6 +59,43 @@ RAZORPAY_KEY_SECRET=
 RAZORPAY_WEBHOOK_SECRET=
 ```
 
+## Messaging Gateway
+
+Yomi supports Telegram and Discord messaging bots so users can chat with
+Yomi from their phone.
+
+### Telegram
+
+1. Create a bot via [@BotFather](https://t.me/BotFather)
+2. Copy the token → set `TELEGRAM_BOT_TOKEN` in `.env.production`
+3. The bot polls Telegram every 3s — no webhook URL needed
+
+### Discord
+
+1. Create an application at [discord.com/developers](https://discord.com/developers/applications)
+2. Under OAuth2, add `https://yomi.arka6fx.com/api/gateway/discord/callback` as a redirect URI
+3. Set these in `.env.production`:
+
+```bash
+DISCORD_BOT_TOKEN=MTUxMzc2OTk4MTc3MzQ4MDA2OA.xxxxx
+DISCORD_CLIENT_ID=1513769981773480068
+DISCORD_CLIENT_SECRET=
+DISCORD_REDIRECT_URI=https://yomi.arka6fx.com/api/gateway/discord/callback
+```
+
+DISCORD_CLIENT_SECRET is also set as a GitHub Actions secret for the deploy
+workflow to inject during build.
+
+### OAuth Callback URLs
+
+Configure in the OAuth provider dashboards:
+
+```text
+https://yomi.arka6fx.com/api/auth/callback/github
+https://yomi.arka6fx.com/api/auth/callback/google
+https://yomi.arka6fx.com/api/gateway/discord/callback
+```
+
 ## First Server Setup
 
 ```bash
@@ -150,6 +187,7 @@ Configure these callback URLs in the OAuth provider dashboards:
 ```text
 https://yomi.arka6fx.com/api/auth/callback/github
 https://yomi.arka6fx.com/api/auth/callback/google
+https://yomi.arka6fx.com/api/gateway/discord/callback
 ```
 
 If login attempts call `localhost:3001`, rebuild `landing` with production

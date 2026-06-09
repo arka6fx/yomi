@@ -37,6 +37,7 @@ latency budgets, so they need different architectures — but users want both.
 | Foreground agent     | Autonomous tasks with ReAct loop + subagents                        |
 | MCP ecosystem        | Calendar, email, browser (Playwright), Notion, Slack                 |
 | Act mode             | Opt-in desktop automation via UIA for Windows native apps           |
+| Messaging Gateway    | Chat with Yomi from Telegram or Discord — messages route cloud → sidecar → LLM → reply |
 | AutomationGraph      | LangGraph-based orchestration with validation, recovery, and learning|
 
 ### Glossary
@@ -55,6 +56,7 @@ latency budgets, so they need different architectures — but users want both.
 | **Act mode**          | Opt-in state where Yomi can perform desktop actions (click, type, toggle) via UIA                             |
 | **MCP client**        | Generic stdio-based client in sidecar for connecting Playwright, filesystem, and other MCP servers            |
 | **AutomationGraph**   | LangGraph state machine wrapping the ReAct loop with planning, validation, recovery, and learning             |
+| **Messaging Gateway** | Cloud backend adapter system that bridges Telegram and Discord bots to the user's sidecar via a queue         |
 | **Knowledge Base**    | `~/.yomi/knowledge.db` — persistent store of automation results, patterns, and corrections for agent learning |
 
 ### Phase Map
@@ -69,7 +71,7 @@ _Phases 0–4 are complete. Phase 5 is in progress._
 | 3 — Accounts   | Hono backend, Better Auth, Drizzle/Neon, Razorpay, LLM proxy (Vercel AI SDK)                        | Done       |
 | 4 — Automation | Windows UIA helper (C#/FlaUI), browser MCP (Playwright), Act mode, safety guard, automation DB      | Done       |
 | 5 — Orchestrate| LangGraph AutomationGraph, provider-routed sub-agents, knowledge base, Mission Control streaming     | In progress|
-| 6 — Launch     | Next.js landing, waitlist → download, pricing page, Discord                                         | Pending    |
+| 6 — Launch     | Next.js landing, waitlist → download, pricing page, Telegram + Discord messaging bots | Done       |
 
 ## Files to change
 
