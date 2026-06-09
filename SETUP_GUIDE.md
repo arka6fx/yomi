@@ -57,6 +57,9 @@ Optional until billing is enabled:
 RAZORPAY_KEY_ID=
 RAZORPAY_KEY_SECRET=
 RAZORPAY_WEBHOOK_SECRET=
+# Pre-created Razorpay Plan IDs (create in Dashboard → Plans, total_count = 0)
+RAZORPAY_PLAN_PRO=plan_xxxxxxxxxx
+RAZORPAY_PLAN_MAX=plan_xxxxxxxxxx
 ```
 
 ## Messaging Gateway
@@ -205,9 +208,13 @@ Leave Razorpay values blank until billing is ready. When enabling billing:
 
 1. Generate API keys in Razorpay Dashboard.
 2. Set `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`.
-3. Add a webhook for `https://yomi.arka6fx.com/api/billing/webhook`.
-4. Set `RAZORPAY_WEBHOOK_SECRET` to the same secret entered in Razorpay.
-5. Recreate backend:
+3. Create two Plans in Dashboard → Plans:
+   - "Yomi Pro Monthly" — 1499 USD, monthly, `total_count = 0`
+   - "Yomi Max Monthly" — 3999 USD, monthly, `total_count = 0`
+4. Copy the plan IDs and set `RAZORPAY_PLAN_PRO` and `RAZORPAY_PLAN_MAX`.
+5. Add a webhook for `https://yomi.arka6fx.com/api/billing/webhook`.
+6. Set `RAZORPAY_WEBHOOK_SECRET` to the same secret entered in Razorpay.
+7. Update `.env.production` and redeploy:
 
 ```bash
 cd /opt/yomi

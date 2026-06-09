@@ -36,6 +36,8 @@ jobs:
             echo "DISCORD_CLIENT_ID=1513769981773480068" >> .env.production
             echo "DISCORD_CLIENT_SECRET=${{ secrets.DISCORD_CLIENT_SECRET }}" >> .env.production
             echo "DISCORD_REDIRECT_URI=https://yomi.arka6fx.com/api/gateway/discord/callback" >> .env.production
+            echo "RAZORPAY_PLAN_PRO=${{ secrets.RAZORPAY_PLAN_PRO }}" >> .env.production
+            echo "RAZORPAY_PLAN_MAX=${{ secrets.RAZORPAY_PLAN_MAX }}" >> .env.production
 
             sudo docker compose up -d --build backend landing
             sudo docker compose restart nginx

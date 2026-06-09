@@ -18,6 +18,7 @@ import {
   ExternalLink,
   Plus,
   MessageCircle,
+  AlertTriangle,
 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
@@ -30,10 +31,12 @@ type Sub = {
   status: string
   trialEndDate: string | null
   currentPeriodEnd: string | null
+  razorpaySubId: string | null
   requestsUsed: number
   requestsLimit: number | null
   requestsRemaining: number | null
   resetAt: string | null
+  billingWarning: string | null
   features: {
     chat: FeatureUsage
     voice: FeatureUsage
@@ -126,6 +129,7 @@ function DashboardContent() {
   const [billingLoading, setBillingLoading] = useState<string | null>(null)
   const [billingError, setBillingError] = useState("")
   const [desiredPlan, setDesiredPlan] = useState<string | null>(null)
+  const [cancelling, setCancelling] = useState(false)
 
   const [platformLinks, setPlatformLinks] = useState<PlatformLink[]>([])
   const [platformsLoading, setPlatformsLoading] = useState(true)
@@ -216,6 +220,31 @@ function DashboardContent() {
     }
   }
 
+  async function handleCancelSubscription() {
+    if (!sub?.razorpaySubId) return
+    setCancelling(true)
+    try {
+      const res = await fetch("/api/billing/cancel-subscription", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session!.session.token}`,
+        },
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? "Cancellation failed")
+      // Refresh subscription state
+      const subRes = await fetch("/api/billing/subscription", {
+        headers: { Authorization: `Bearer ${session!.session.token}` },
+      })
+      if (subRes.ok) setSub(await subRes.json())
+    } catch (err) {
+      setBillingError(err instanceof Error ? err.message : "Failed to cancel")
+    } finally {
+      setCancelling(false)
+    }
+  }
+
   async function handleSignOut() {
     await authClient.signOut()
     router.push("/")
@@ -300,6 +329,21 @@ function DashboardContent() {
           <p className="text-muted-foreground mt-1 text-sm">Your Yomi account overview.</p>
         </motion.div>
 
+        {/* Billing warnings */}
+        {sub?.billingWarning && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4 flex items-start gap-3"
+          >
+            <AlertTriangle size={16} className="text-yellow-400 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm text-yellow-300 font-medium">Payment past due</p>
+              <p className="text-xs text-yellow-400/80">{sub.billingWarning}</p>
+            </div>
+          </motion.div>
+        )}
+
         {/* Plan card */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -328,10 +372,12 @@ function DashboardContent() {
                         ? "bg-sky-500/10 text-sky-300"
                         : sub.status === "active"
                           ? "bg-emerald-500/10 text-emerald-400"
-                          : "bg-sky-500/10 text-sky-300",
+                          : sub.status === "past_due"
+                            ? "bg-red-500/10 text-red-400"
+                            : "bg-sky-500/10 text-sky-300",
                     )}
                   >
-                    {isOwner ? "owner" : sub.status}
+                    {isOwner ? "owner" : sub.status === "past_due" ? "past due" : sub.status}
                   </span>
                 )}
               </div>
@@ -346,7 +392,22 @@ function DashboardContent() {
                   })}
                 </p>
               )}
+              {sub && sub.plan !== "explore" && (
+                <p className="text-[11px] text-muted-foreground/60 mt-1">
+                  Charged in USD. Your bank may convert the amount automatically.
+                </p>
+              )}
             </div>
+            {sub?.razorpaySubId && sub.plan !== "explore" && (
+              <button
+                onClick={handleCancelSubscription}
+                disabled={cancelling}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+              >
+                {cancelling ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                Cancel subscription
+              </button>
+            )}
           </div>
         </motion.div>
 
