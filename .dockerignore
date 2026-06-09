@@ -60,3 +60,6 @@ yarn-error.log*
 .agents/
 specs/
 mascot/
+
+# Vendored examples (not part of Yomi workspace)
+examples/

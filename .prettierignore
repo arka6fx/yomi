@@ -13,6 +13,10 @@ obj/
 tmp/
 apps/sidecar/.playwright-mcp/
 apps/landing/next-env.d.ts
+
+# Vendored examples (not part of Yomi workspace)
+examples/
+
 bun.lockb
 *.lock
 *.enc
