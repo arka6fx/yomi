@@ -24,7 +24,7 @@ const PLATFORM_INFO: Record<string, { name: string; inviteUrl: string }> = {
   },
   discord: {
     name: "Discord",
-    inviteUrl: "https://discord.com/api/oauth2/authorize?client_id=1513769981773480068&permissions=2048&scope=bot",
+    inviteUrl: "https://discord.com/users/1513769981773480068",
   },
   whatsapp: {
     name: "WhatsApp",
