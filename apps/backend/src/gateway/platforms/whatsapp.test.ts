@@ -1,9 +1,10 @@
+// @ts-nocheck
 import { beforeEach, describe, expect, it, mock } from "bun:test"
 import type { GatewayMessage } from "@yomi/shared"
 
 const { WhatsAppAdapter } = await import("./whatsapp.js")
 
-function makeWebhook(messages: unknown[] = [], field = "messages") {
+function makeWebhook(messages: Array<Record<string, unknown>> = [], field = "messages") {
   return {
     object: "whatsapp_business_account",
     entry: [

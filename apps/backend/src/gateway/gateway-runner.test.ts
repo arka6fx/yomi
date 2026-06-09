@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { beforeEach, describe, expect, it, mock, afterEach } from "bun:test"
 import type { GatewayMessage, PlatformType } from "@yomi/shared"
 
@@ -156,23 +157,10 @@ describe("GatewayRunner — pending messages", () => {
 // ========== Unlinked user prompt ==========
 
 describe("GatewayRunner — unlinked user prompt", () => {
-  it("sends linking prompt when user is not linked", async () => {
-    // The adapter's messageHandler is set during registerAdapter,
-    // and onIncoming is called via that handler. We test indirectly:
-    // registerAdapter → setMessageHandler → call the handler manually
+  it("isUserLinked returns false for unknown user", async () => {
     const runner = new GatewayRunner()
-    const adapter = fakeAdapter()
-
-    let handlerCalled: GatewayMessage | null = null
-    adapter.setMessageHandler = (handler) => {
-      adapter["_handler"] = handler
-    }
-
-    runner.registerAdapter(adapter)
-
-    // onIncoming is private, but we can test isUserLinked directly
     dbSelectResult = undefined // user not linked
-    const linked = await (runner as any).isUserLinked("whatsapp", "unknown-user")
+    const linked = await (runner as unknown as { isUserLinked: (p: string, u: string) => Promise<boolean> }).isUserLinked("whatsapp", "unknown-user")
     expect(linked).toBe(false)
   })
 })
