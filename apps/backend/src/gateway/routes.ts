@@ -223,6 +223,9 @@ gatewayRouter.get("/discord/callback", async (c) => {
     const discordUser = (await userRes.json()) as { id: string; username: string }
     console.warn(`[discord-oauth] Discord user: ${discordUser.id} (${discordUser.username})`)
 
+    // Generate linking code first (before DM attempt, so it's available as fallback)
+    const linkCode = randomBytes(3).toString("hex").toUpperCase().slice(0, 6)
+
     // Create DM channel with bot (needs "Allow DMs" enabled in Dev Portal)
     const dmRes = await fetch("https://discord.com/api/v10/users/@me/channels", {
       method: "POST",
@@ -236,15 +239,25 @@ gatewayRouter.get("/discord/callback", async (c) => {
     if (!dmRes.ok) {
       const text = await dmRes.text()
       console.warn("[discord-oauth] DM channel creation failed:", text)
-      // Fallback: show discord_user_id on the link page so the flow isn't dead
-      return c.redirect(`/link?discord_user_id=${discordUser.id}`)
+      // Store code and redirect so user sees it on the link page
+      try {
+        await db.insert(linkingCodes).values({
+          code: linkCode,
+          platform: "discord" as const,
+          platformUserId: discordUser.id,
+          platformChatId: null,
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        })
+      } catch (err) {
+        console.warn("[discord-oauth] linking code insert error:", err)
+      }
+      return c.redirect(`/link?code=${linkCode}&discord_dm_failed=true`)
     }
 
     const dmChannel = (await dmRes.json()) as { id: string }
     console.warn(`[discord-oauth] DM channel created: ${dmChannel.id}`)
 
-    // Generate and store linking code
-    const linkCode = randomBytes(3).toString("hex").toUpperCase().slice(0, 6)
+    // Store linking code
     try {
       await db.insert(linkingCodes).values({
         code: linkCode,
