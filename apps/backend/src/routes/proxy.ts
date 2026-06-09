@@ -114,7 +114,7 @@ proxyRouter.post("/chat/completions", async (c) => {
   const body = await c.req.json()
   const model = body.model ?? "unknown"
 
-  console.log(`[proxy/llm] model=${model} stream=${!!body.stream} msgCount=${body.messages?.length ?? 0}`)
+  console.warn(`[proxy/llm] model=${model} stream=${!!body.stream} msgCount=${body.messages?.length ?? 0}`)
 
   const targetUrl = `${OPENAI_BASE_URL.replace(/\/+$/, "")}/chat/completions`
 
@@ -136,7 +136,7 @@ proxyRouter.post("/chat/completions", async (c) => {
     )
   }
 
-  console.log(`[proxy/llm] upstream ${upstream.status} streaming=${!!body.stream}`)
+  console.warn(`[proxy/llm] upstream ${upstream.status} streaming=${!!body.stream}`)
 
   if (!body.stream) {
     const json = await upstream.json()
@@ -165,9 +165,9 @@ proxyRouter.post("/chat/completions", async (c) => {
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
-      console.log(`[proxy/llm] stream error after ${bytes} bytes: ${msg}`)
+      console.error(`[proxy/llm] stream error after ${bytes} bytes: ${msg}`)
     } finally {
-      console.log(`[proxy/llm] stream done: ${bytes} bytes forwarded`)
+      console.warn(`[proxy/llm] stream done: ${bytes} bytes forwarded`)
       reader.releaseLock()
     }
   })

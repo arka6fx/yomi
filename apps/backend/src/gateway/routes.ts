@@ -4,7 +4,7 @@ import { eq, and } from "drizzle-orm"
 import { db, platformConnections, linkingCodes } from "@yomi/db"
 import { getDefaultGateway } from "./gateway-runner.js"
 import { authenticate } from "../auth.js"
-import type { GatewayMessage, PlatformType } from "@yomi/shared"
+import type { PlatformType } from "@yomi/shared"
 
 export const gatewayRouter = new Hono()
 
