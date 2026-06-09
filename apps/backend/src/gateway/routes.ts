@@ -80,7 +80,7 @@ gatewayRouter.post("/link", authenticate, async (c) => {
   }
 
   const gateway = getDefaultGateway()
-  const entry = gateway.verifyLinkingCode(body.code.toUpperCase())
+  const entry = await gateway.verifyLinkingCode(body.code.toUpperCase())
   if (!entry) {
     return c.json({ ok: false, error: "Invalid or expired code" }, 400)
   }

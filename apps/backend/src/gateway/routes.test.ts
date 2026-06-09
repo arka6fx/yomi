@@ -51,7 +51,7 @@ mock.module("../auth.js", () => ({
 
 mock.module("./gateway-runner.js", () => ({
   getDefaultGateway: () => ({
-    verifyLinkingCode: (code: string) => {
+    verifyLinkingCode: async (code: string) => {
       if (code === "VALID12") return linkingCodeResult
       return null
     },
