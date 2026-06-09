@@ -45,7 +45,7 @@ gatewayRouter.delete("/connections/:platform", authenticate, async (c) => {
   const user = c.get("user")
   const platform = c.req.param("platform") as PlatformType
 
-  if (!["telegram", "discord", "slack"].includes(platform)) {
+  if (!["telegram", "discord"].includes(platform)) {
     return c.json({ ok: false, error: "Invalid platform" }, 400)
   }
 

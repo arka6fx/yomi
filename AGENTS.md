@@ -60,7 +60,7 @@ LOCAL SIDECAR  (apps/sidecar — Bun)
   ↕  authenticated HTTPS
 CLOUD BACKEND  (apps/backend — Hono/Bun)
   Better Auth · Razorpay webhooks · LLM proxy · usage metering · memory sync
-  Messaging Gateway (Telegram / Discord / Slack — polling + webhooks)
+  Messaging Gateway (Telegram / Discord — polling + webhooks)
 ```
 
 ---
