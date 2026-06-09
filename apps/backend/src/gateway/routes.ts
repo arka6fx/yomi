@@ -7,6 +7,12 @@ import type { GatewayMessage, PlatformType } from "@yomi/shared"
 
 export const gatewayRouter = new Hono()
 
+// Gateway status for monitoring
+gatewayRouter.get("/status", (c) => {
+  const gateway = getDefaultGateway()
+  return c.json(gateway.getStatus())
+})
+
 // List linked platforms for the authenticated user
 gatewayRouter.get("/connections", authenticate, async (c) => {
   const user = c.get("user")
