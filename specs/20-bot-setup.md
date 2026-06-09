@@ -54,13 +54,6 @@ Permissions `2048` = Send Messages only. Add more as needed.
 5. Under OAuth2 → URL Generator → scopes: `bot` → permissions: `Send Messages`
 6. Use generated URL to invite the bot to a server
 
-### Slack
-
-| Field            | State         | Notes                                                         |
-| ---------------- | ------------- | ------------------------------------------------------------- |
-| Bot token        | Not set       | `SLACK_BOT_TOKEN` not in `.env`                               |
-| Setup required   | Slack API     | Create Slack app, add Bot token with `chat:write` scope       |
-
 ---
 
 ## User Linking Flow
@@ -128,7 +121,7 @@ Defined in `packages/db/src/schema.ts`:
 | ----------------- | --------- | --------------------------------------------- |
 | id                | uuid      | Primary key, auto-generated                   |
 | user_id           | uuid      | FK → user(id), cascading delete               |
-| platform          | text      | `"telegram" \| "discord" \| "slack"` |
+| platform          | text      | `"telegram" \| "discord"` |
 | platform_user_id  | text      | User's ID on the external platform            |
 | platform_chat_id  | text      | Specific chat/channel (nullable)              |
 | connected_at      | timestamp | Auto-set on insert                            |
@@ -172,6 +165,5 @@ Falls back to `SIDECAR_URL` env var if no device found.
 
 1. Generate Discord invite URL and add the bot to a test server
 2. Build the `/link` page on the landing site (or a simple static page)
-3. Set `SLACK_BOT_TOKEN` if Slack is needed
-4. Deploy backend to production so Telegram/Discord can reach it 24/7
-6. Test full linking flow end-to-end with a new Telegram user
+3. Deploy backend to production so Telegram/Discord can reach it 24/7
+4. Test full linking flow end-to-end with a new Telegram user

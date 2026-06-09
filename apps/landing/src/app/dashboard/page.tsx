@@ -115,11 +115,6 @@ const PLATFORM_META: Record<string, { name: string; color: string; inviteUrl: st
     color: "bg-indigo-500/10 text-indigo-400",
     inviteUrl: `${process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:3001"}/api/gateway/discord/auth`,
   },
-  slack: {
-    name: "Slack",
-    color: "bg-purple-500/10 text-purple-400",
-    inviteUrl: "",
-  },
 }
 
 function DashboardContent() {

@@ -110,7 +110,7 @@ state only sees the final compressed output after the burst completes.
 | **Tool safety** | PreToolUse denylist + LoopGuards (stall/dup) | Failure-pattern guardrails + threat pattern library (LLM-injection hardened) | High |
 | **Scheduling** | None | Agent-aware cron with skill loading, chain jobs, model overrides | High |
 | **Subagent delegation** | LangGraph sub-agents (basic, single) | Parallel batch, orchestrator/leaf roles, blocked-tool safety | Medium |
-| **Messaging** | Desktop-only (Electron) | 20+ platform adapters (Telegram, Discord, Slack, etc.) | Medium |
+| **Messaging** | Desktop-only (Electron) | 20+ platform adapters (Telegram, Discord, etc.) | Medium |
 | **Plugin system** | None | Full plugin system with 4 discovery paths + lifecycle hooks | Medium |
 | **Usage insights** | Basic metering on backend | `/insights` with token breakdowns, cost estimates, tool patterns | Medium |
 | **Credential management** | Single API key per service | Multi-key pool with failover, OAuth lifecycle, status tracking | Low |
@@ -483,7 +483,7 @@ USER PHONE          BACKEND (:3001)            SIDECAR (:3002)
 platform_connections {
   id:         uuid // pk
   user_id:    uuid // fk → user
-  platform:   "telegram" | "discord" | "slack"
+  platform:   "telegram" | "discord"
   platform_user_id: string // Telegram chat_id, Discord user_id
   device_id:  uuid? // fk → devices (null until sidecar connects)
   created_at: timestamp
@@ -496,7 +496,7 @@ platform_connections {
 | `POST` | `/gateway/send` | Sidecar calls to reply via platform API |
 
 **Sidecar changes:**
-- Remove all gateway adapter code (telegram.ts, discord.ts, slack.ts,
+- Remove all gateway adapter code (telegram.ts, discord.ts,
   gateway-runner.ts, platform-adapter.ts)
 - Add `POST /gateway/receive` accepting
   `{ platform, chatId, userId, text, messageId }`, process through pipeline,
@@ -642,7 +642,7 @@ graph topology or replaces an existing loop.
 - `apps/sidecar/src/tools/index.ts` — register new tools (skill CRUD, cronjob,
   delegateTask, send\_message, list\_platforms)
 - `apps/sidecar/src/tools/messaging.ts` — send\_message + list\_platforms tool
-  implementations; platform enum includes telegram, discord, slack
+  implementations; platform enum includes telegram, discord
 - `apps/sidecar/src/index.ts` — register new sidecar HTTP routes
   (`GET /insights`, cron tick, gateway status/sessions)
 - `apps/sidecar/src/gateway/receive.ts` — `POST /gateway/receive` endpoint
@@ -674,7 +674,6 @@ graph topology or replaces an existing loop.
 - `apps/backend/src/gateway/platform-adapter.ts` — BasePlatformAdapter ABC
 - `apps/backend/src/gateway/platforms/telegram.ts` — Telegram adapter
 - `apps/backend/src/gateway/platforms/discord.ts` — Discord adapter
-- `apps/backend/src/gateway/platforms/slack.ts` — Slack adapter
 - `apps/backend/src/gateway/gateway-runner.ts` — gateway lifecycle
 - `apps/backend/src/gateway/routes.ts` — backend gateway HTTP routes
 - `apps/sidecar/src/gateway/receive.ts` — single endpoint to accept forwarded messages
