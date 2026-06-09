@@ -50,18 +50,62 @@ describe("requireAccess", () => {
     expect(res.status).toBe(200)
   })
 
-  it("allows Pro voice even when the subscription is inactive", async () => {
-    currentUser = user({ plan: "pro", subscriptionStatus: "past_due" })
-
+  it("allows Explore voice", async () => {
     const res = await app("voice").request("/")
 
     expect(res.status).toBe(200)
   })
 
-  it("allows Max agents while testing unrestricted plans", async () => {
+  it("blocks Explore agent (feature not available)", async () => {
+    const res = await app("agent").request("/")
+    const body = await res.json()
+
+    expect(res.status).toBe(403)
+    expect(body.code).toBe("feature_not_available")
+  })
+
+  it("blocks Pro past_due on voice", async () => {
+    currentUser = user({ plan: "pro", subscriptionStatus: "past_due" })
+
+    const res = await app("voice").request("/")
+    const body = await res.json()
+
+    expect(res.status).toBe(402)
+    expect(body.code).toBe("subscription_inactive")
+  })
+
+  it("blocks Pro past_due on chat", async () => {
+    currentUser = user({ plan: "pro", subscriptionStatus: "past_due" })
+
+    const res = await app("chat").request("/")
+    const body = await res.json()
+
+    expect(res.status).toBe(402)
+    expect(body.code).toBe("subscription_inactive")
+  })
+
+  it("blocks Pro past_due on agent", async () => {
+    currentUser = user({ plan: "pro", subscriptionStatus: "past_due" })
+
+    const res = await app("agent").request("/")
+    const body = await res.json()
+
+    expect(res.status).toBe(402)
+    expect(body.code).toBe("subscription_inactive")
+  })
+
+  it("allows Max active on agent", async () => {
     currentUser = user({ plan: "max", subscriptionStatus: "active" })
 
     const res = await app("agent").request("/")
+
+    expect(res.status).toBe(200)
+  })
+
+  it("allows Pro active on voice", async () => {
+    currentUser = user({ plan: "pro", subscriptionStatus: "active" })
+
+    const res = await app("voice").request("/")
 
     expect(res.status).toBe(200)
   })
