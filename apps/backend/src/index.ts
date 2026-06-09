@@ -30,6 +30,23 @@ app.use(
 
 app.get("/health", (c) => c.json({ status: "ok", version: "0.1.0" }))
 
+// Download proxy — redirects to the latest Windows installer from GitHub Releases
+app.get("/api/download", async (c) => {
+  try {
+    const res = await fetch(
+      "https://api.github.com/repos/arka6fx/yomi-releases/releases/latest",
+      { headers: { Accept: "application/vnd.github+json" } },
+    )
+    if (!res.ok) throw new Error("GitHub API error")
+    const release = await res.json() as { assets: { name: string; browser_download_url: string }[] }
+    const exe = release.assets.find((a) => a.name.endsWith(".exe"))
+    if (!exe) throw new Error("No .exe asset")
+    return c.redirect(exe.browser_download_url)
+  } catch {
+    return c.redirect("https://github.com/arka6fx/yomi-releases/releases/latest")
+  }
+})
+
 // Custom auth routes first (device-code flow)
 app.route("/api/auth", authRoutesRouter)
 
