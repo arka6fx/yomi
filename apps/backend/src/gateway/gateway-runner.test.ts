@@ -4,6 +4,9 @@ import type { GatewayMessage, PlatformType } from "@yomi/shared"
 // Mock DB before importing GatewayRunner
 let dbSelectResult: { id?: string; userId?: string } | undefined
 let dbError: Error | null = null
+let linkingCodeRows: { code: string; platform: string; platformUserId: string; chatId?: string; expiresAt: Date }[] = []
+let insertedCodes: { code: string }[] = []
+let deletedCodes: string[] = []
 
 mock.module("@yomi/db", () => ({
   db: {
@@ -26,6 +29,17 @@ mock.module("@yomi/db", () => ({
         },
       }),
     }),
+    insert: () => ({
+      values: (payload: { code: string }) => {
+        insertedCodes.push(payload)
+        return Promise.resolve()
+      },
+    }),
+    delete: () => ({
+      where: () => ({
+        returning: () => Promise.resolve([]),
+      }),
+    }),
   },
   platformConnections: {
     id: "id",
@@ -35,6 +49,13 @@ mock.module("@yomi/db", () => ({
     platformChatId: "platformChatId",
     connectedAt: "connectedAt",
     updatedAt: "updatedAt",
+  },
+  linkingCodes: {
+    code: "code",
+    platform: "platform",
+    platformUserId: "platformUserId",
+    platformChatId: "platformChatId",
+    expiresAt: "expiresAt",
   },
   devices: {
     sidecarUrl: "sidecarUrl",
@@ -84,7 +105,7 @@ beforeEach(() => {
 // ========== Linking codes ==========
 
 describe("GatewayRunner — linking codes", () => {
-  it("generates and verifies a linking code", () => {
+  it("generates and verifies a linking code", async () => {
     const runner = new GatewayRunner()
     runner.registerAdapter(fakeAdapter())
 
@@ -93,15 +114,15 @@ describe("GatewayRunner — linking codes", () => {
     // via the getLinkingPrompt which is tested through onIncoming
 
     // Directly test the public API: verifyLinkingCode returns null for unknown code
-    const result = runner.verifyLinkingCode("ZZZZZZ")
+    const result = await runner.verifyLinkingCode("ZZZZZZ")
     expect(result).toBeNull()
   })
 
-  it("verifyLinkingCode returns null for expired code", () => {
+  it("verifyLinkingCode returns null for expired code", async () => {
     const runner = new GatewayRunner()
     // Can't directly test expiry since it uses Date.now() internally,
     // but we can verify null for non-existent codes.
-    expect(runner.verifyLinkingCode("000000")).toBeNull()
+    expect(await runner.verifyLinkingCode("000000")).toBeNull()
   })
 })
 
