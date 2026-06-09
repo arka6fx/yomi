@@ -61,9 +61,13 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
 
   const effectivePlan = effectivePlanForUser(user)
   if (!hasBillablePlanAccess(user)) {
+    const status = user.subscriptionStatus ?? "inactive"
+    const msg = status === "past_due"
+      ? "Your payment is past due. Update your payment method to restore full access."
+      : "Your subscription needs attention before Yomi can process more requests."
     return c.json(
       {
-        error: "Your subscription needs attention before Yomi can process more requests.",
+        error: msg,
         code: "subscription_inactive",
         plan: effectivePlan,
       },
@@ -102,7 +106,7 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
 
   const nextUsed = used + 1
 
-  return c.json({
+  const resp: Record<string, unknown> = {
     ok: true,
     plan: effectivePlan,
     requestsUsed: nextUsed,
@@ -111,7 +115,13 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
     resetAt: new Date(Date.UTC(periodStart.getUTCFullYear(), periodStart.getUTCMonth() + 1, 1)),
     dailyChatUsed: user.dailyChatCount,
     dailyVoiceUsed: user.dailyVoiceCount,
-  })
+  }
+
+  if (user.subscriptionStatus === "past_due") {
+    resp["billingWarning"] = "Your payment is past due. Please update your payment method."
+  }
+
+  return c.json(resp)
 })
 
 usageRouter.post("/", authenticate, async (c) => {

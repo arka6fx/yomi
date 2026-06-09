@@ -75,9 +75,17 @@ export function requestLimitForUser(user: EntitlementUser): number | null {
   return PLAN_REQUEST_LIMITS[plan] ?? PLAN_REQUEST_LIMITS.explore
 }
 
-export function hasBillablePlanAccess(user: EntitlementUser & { subscriptionStatus?: string | null }): boolean {
+export function hasBillablePlanAccess(user: EntitlementUser & { subscriptionStatus?: string | null; currentPeriodEnd?: Date | null }): boolean {
   if (isOwnerUser(user)) return true
   const plan = effectivePlanForUser(user)
   if (plan === "explore") return true
-  return user.subscriptionStatus === "active" || user.subscriptionStatus === "trialing"
+  if (user.subscriptionStatus === "active" || user.subscriptionStatus === "trialing") return true
+
+  // Past-due grace: 7 days after period end before hard cutoff
+  if (user.subscriptionStatus === "past_due" && user.currentPeriodEnd) {
+    const graceEnd = new Date(user.currentPeriodEnd.getTime() + 7 * 24 * 60 * 60 * 1000)
+    if (new Date() < graceEnd) return true
+  }
+
+  return false
 }

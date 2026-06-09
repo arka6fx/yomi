@@ -18,16 +18,26 @@ export function requireAccess(kind: AccessKind) {
 
     const plan = effectivePlanForUser(user)
 
-    // Pro/Max need an active subscription
+    // Pro/Max need an active subscription (or within past-due grace period)
     if (!hasBillablePlanAccess(user)) {
+      const status = user.subscriptionStatus ?? "inactive"
+      const msg = status === "past_due"
+        ? "Your payment is past due. Update your payment method to restore full access."
+        : "Your subscription needs attention before Yomi can process more requests."
       return c.json(
         {
-          error: "Your subscription needs attention before Yomi can process more requests.",
+          error: msg,
           code: "subscription_inactive",
           plan,
+          subscriptionStatus: user.subscriptionStatus,
         },
         402,
       )
+    }
+
+    // Warn past-due users but let them through (grace period)
+    if (user.subscriptionStatus === "past_due") {
+      c.header("X-Yomi-Billing-Warning", "past_due")
     }
 
     // Kind-specific feature gating
