@@ -23,6 +23,9 @@ jobs:
             git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/arka6fx/yomi.git
             git pull origin main
             
+            # Strip previously injected gateway lines to avoid duplication
+            sed -i '/^# --- Injected by deploy workflow ---/,$d' .env.production
+            
             # Inject gateway secrets into .env.production
             echo "" >> .env.production
             echo "# --- Injected by deploy workflow ---" >> .env.production
