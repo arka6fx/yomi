@@ -14,6 +14,10 @@ import {
   Shield,
   Sparkles,
   Cuboid,
+  Trash2,
+  ExternalLink,
+  Plus,
+  MessageCircle,
 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
@@ -58,6 +62,7 @@ const PLANS = [
       "20 min voice / month",
       "25 screenshot analyses",
       "50 local memories",
+      "Messaging bots (limited)",
     ],
   },
   {
@@ -73,6 +78,7 @@ const PLANS = [
       "100 reasoning uses",
       "75 desktop automation runs",
       "40 browser automation runs",
+      "Messaging bots (full access)",
     ],
   },
   {
@@ -90,9 +96,36 @@ const PLANS = [
       "750 desktop automation runs",
       "500 browser automation runs",
       "Early access features",
+      "Messaging bots (priority)",
     ],
   },
 ]
+
+type PlatformLink = { platform: string; connectedAt: string }
+
+const PLATFORM_META: Record<string, { name: string; color: string; inviteUrl: string }> = {
+  telegram: {
+    name: "Telegram",
+    color: "bg-sky-500/10 text-sky-400",
+    inviteUrl: "https://t.me/yomi_assistant_bot",
+  },
+  discord: {
+    name: "Discord",
+    color: "bg-indigo-500/10 text-indigo-400",
+    inviteUrl:
+      "https://discord.com/api/oauth2/authorize?client_id=1513769981773480068&permissions=2048&scope=bot",
+  },
+  whatsapp: {
+    name: "WhatsApp",
+    color: "bg-emerald-500/10 text-emerald-400",
+    inviteUrl: "",
+  },
+  slack: {
+    name: "Slack",
+    color: "bg-purple-500/10 text-purple-400",
+    inviteUrl: "",
+  },
+}
 
 function DashboardContent() {
   const { data: session, isPending } = authClient.useSession()
@@ -103,6 +136,10 @@ function DashboardContent() {
   const [billingLoading, setBillingLoading] = useState<string | null>(null)
   const [billingError, setBillingError] = useState("")
   const [desiredPlan, setDesiredPlan] = useState<string | null>(null)
+
+  const [platformLinks, setPlatformLinks] = useState<PlatformLink[]>([])
+  const [platformsLoading, setPlatformsLoading] = useState(true)
+  const [unlinking, setUnlinking] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isPending && !session) router.push("/signin")
@@ -147,6 +184,17 @@ function DashboardContent() {
   }, [session])
 
   useEffect(() => {
+    if (!session) return
+    fetch("/api/gateway/connections", {
+      headers: { Authorization: `Bearer ${session.session.token}` },
+    })
+      .then((r) => r.json())
+      .then((d: PlatformLink[]) => setPlatformLinks(d))
+      .catch(() => setPlatformLinks([]))
+      .finally(() => setPlatformsLoading(false))
+  }, [session])
+
+  useEffect(() => {
     setDesiredPlan(new URLSearchParams(window.location.search).get("plan"))
   }, [])
 
@@ -180,6 +228,30 @@ function DashboardContent() {
   async function handleSignOut() {
     await authClient.signOut()
     router.push("/")
+  }
+
+  async function handleUnlink(platform: string) {
+    setUnlinking(platform)
+    try {
+      const res = await fetch(
+        `/api/gateway/connections/${platform}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${session!.session.token}`,
+          },
+        },
+      )
+      if (res.ok) {
+        setPlatformLinks((prev) =>
+          prev.filter((p) => p.platform !== platform),
+        )
+      }
+    } catch {
+      // ignore
+    } finally {
+      setUnlinking(null)
+    }
   }
 
   if (isPending || !session) return null
@@ -457,6 +529,120 @@ function DashboardContent() {
             </div>
           </motion.div>
         )}
+
+        {/* Linked accounts */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <div className="rounded-2xl border border-border bg-card p-6">
+            <div className="flex items-start justify-between gap-4 mb-5">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
+                  Linked accounts
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Connect Telegram or Discord to chat with Yomi from anywhere.
+                </p>
+              </div>
+              <Link
+                href="/link"
+                className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-xl font-medium px-3 py-1.5 text-xs hover:bg-primary/90 transition-colors shrink-0"
+              >
+                <Plus size={12} />
+                Link new
+              </Link>
+            </div>
+
+            {platformsLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 size={14} className="animate-spin" />
+                Loading...
+              </div>
+            ) : platformLinks.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border/60 p-4 text-center">
+                <p className="text-sm text-muted-foreground mb-3">
+                  No accounts linked yet. Message the Yomi bot to get started.
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  {Object.entries(PLATFORM_META).map(([key, meta]) =>
+                    meta.inviteUrl ? (
+                      <a
+                        key={key}
+                        href={meta.inviteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs bg-muted hover:bg-muted/80 text-foreground rounded-lg px-3 py-1.5 transition-colors"
+                      >
+                        <MessageCircle size={12} />
+                        Add {meta.name} bot
+                        <ExternalLink size={10} />
+                      </a>
+                    ) : null,
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {platformLinks.map((link) => {
+                  const meta = PLATFORM_META[link.platform] ?? {
+                    name: link.platform,
+                    color: "bg-muted text-muted-foreground",
+                    inviteUrl: "",
+                  }
+                  return (
+                    <div
+                      key={link.platform}
+                      className="flex items-center justify-between rounded-xl border border-border px-4 py-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={cn(
+                            "text-xs px-2 py-0.5 rounded-full font-medium capitalize",
+                            meta.color,
+                          )}
+                        >
+                          {meta.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          Connected{" "}
+                          {new Date(link.connectedAt).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "short",
+                              day: "numeric",
+                            },
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href="/link"
+                          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          Manage
+                        </Link>
+                        <button
+                          onClick={() => handleUnlink(link.platform)}
+                          disabled={unlinking === link.platform}
+                          className="flex items-center gap-1 text-xs text-destructive/70 hover:text-destructive transition-colors disabled:opacity-50"
+                        >
+                          {unlinking === link.platform ? (
+                            <Loader2 size={12} className="animate-spin" />
+                          ) : (
+                            <Trash2 size={12} />
+                          )}
+                          Unlink
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </motion.div>
 
         {/* Download CTA */}
         <motion.div
