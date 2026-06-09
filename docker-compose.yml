@@ -24,6 +24,13 @@ services:
     environment:
       - PORT=3001
       - NODE_ENV=production
+      - SIDECAR_SECRET=Axg1ieXzvDB6pLR4mtuCsqjlUP8YMhEk
+      - SIDECAR_URL=http://sidecar:3002
+      - YOMI_PLAN=max
+      - TELEGRAM_BOT_TOKEN=8938511073:AAElzdQi6xfNiKDbilly1rw1CUEtp6qAd4w
+      - DISCORD_BOT_TOKEN=MTUxMzc2OTk4MTc3MzQ4MDA2OA.Grnah4.hDCbGAtxSI6EWKTz9cyXKk6ll2dmMUcdFLhNSA
+      - WHATSAPP_ACCESS_TOKEN=EAAZCVCB8ZBRjoBRqY8oFUaRHc3Sditlx0L5TFN0ZASf5wnoOFryfcZCZAYC9QvHOeBflfCh6ZBuw8rpa7bgkAaY0HZBVwxGnxXHAXgUuJwFYMTVJvrFVuqahRswpPpHzcoLlJc1CC7q7SJCqJM5HqoLySm595J7f6xioYGSHNKOo7ZBwosrL1RxnUKHthOsvlLXjbf0lgssArSU4zFhuZCIaCHq1ZB8eB2zu94v8BtZBDMN36CC8FX8ka9NA1i4JjFnqlUVHVVETAZBON4wF94cK39bf
+      - WHATSAPP_PHONE_NUMBER_ID=1151344804725583
     restart: unless-stopped
     networks:
       - yomi-net
