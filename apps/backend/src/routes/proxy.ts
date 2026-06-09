@@ -11,13 +11,6 @@ const ELEVENLABS_TTS_URL = "https://api.elevenlabs.io/v1/text-to-speech"
 
 export const proxyRouter = new Hono()
 
-proxyRouter.use("*", async (c, next) => {
-  const path = c.req.path
-  const method = c.req.method
-  const auth = c.req.header("Authorization")
-  console.log(`[proxy] ${method} ${path} auth=${auth ? "present" : "missing"}`)
-  await next()
-})
 proxyRouter.use("*", authenticate)
 
 proxyRouter.post("/elevenlabs/stt", requireAccess("voice"), async (c) => {
@@ -136,7 +129,7 @@ proxyRouter.post("/chat/completions", async (c) => {
 
   if (!upstream.ok) {
     const errBody = await upstream.text().catch(() => upstream.statusText)
-    console.log(`[proxy/llm] upstream error: ${upstream.status} ${errBody}`)
+    console.error(`[proxy/llm] upstream error: ${upstream.status} ${errBody}`)
     return c.json(
       { error: `Upstream error ${upstream.status}: ${errBody}` },
       upstream.status as ContentfulStatusCode,
