@@ -27,6 +27,7 @@ export class DiscordAdapter implements PlatformAdapter {
   private connected = false
   private botUserId: string | null = null
   private trackedChannels: Map<string, string> = new Map()
+  private dmChannels: Map<string, string> = new Map()
 
   constructor(token: string) {
     this.token = token
@@ -57,6 +58,7 @@ export class DiscordAdapter implements PlatformAdapter {
     this.stopPolling()
     this.connected = false
     this.trackedChannels.clear()
+    this.dmChannels.clear()
     console.warn("[gateway/discord] disconnected")
   }
 
@@ -155,11 +157,39 @@ export class DiscordAdapter implements PlatformAdapter {
     }
   }
 
+  private async discoverDmChannels(): Promise<void> {
+    try {
+      const res = await fetch(`${API_BASE}/users/@me/channels`, { headers: this.headers })
+      if (!res.ok) return
+      const channels = (await res.json()) as { id: string; type: number; recipients?: { id: string }[] }[]
+      for (const channel of channels) {
+        // DM channels have type 1
+        if (channel.type !== 1) continue
+        const recipient = channel.recipients?.[0]
+        if (recipient && recipient.id !== this.botUserId) {
+          this.dmChannels.set(recipient.id, channel.id)
+        }
+      }
+    } catch {
+      // non-fatal
+    }
+  }
+
   private async pollChannels(): Promise<void> {
     if (!this.connected || !this.messageHandler) return
 
+    // Refresh DM channel list
+    await this.discoverDmChannels()
+
     const channels = await this.discoverChannels()
-    for (const channel of channels) {
+    // Also poll DM channels
+    const dmEntries = Array.from(this.dmChannels.entries())
+    const allChannels: { id: string; isDm: boolean }[] = [
+      ...channels.map((c) => ({ id: c.id, isDm: false })),
+      ...dmEntries.map(([, id]) => ({ id, isDm: true })),
+    ]
+
+    for (const channel of allChannels) {
       const lastKnown = this.trackedChannels.get(channel.id)
       try {
         const params = new URLSearchParams({ limit: "5" })
