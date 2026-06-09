@@ -57,3 +57,6 @@ tmp/
 
 # Auto-generated Next.js type reference
 apps/landing/next-env.d.ts
+
+# Vendored examples (not part of Yomi workspace)
+examples/
