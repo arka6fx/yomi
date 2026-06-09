@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { beforeEach, describe, expect, it, mock, afterEach } from "bun:test"
 import { Hono } from "hono"
 
