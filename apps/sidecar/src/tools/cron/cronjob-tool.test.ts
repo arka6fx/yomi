@@ -21,7 +21,7 @@ afterEach(async () => {
 })
 
 async function execute(action: string, args: Record<string, unknown> = {}) {
-  const tool = sharedTool["cronjob"]
+  const tool = sharedTool["cronjob"]!
   return tool.execute!({ action, ...args }, { toolCallId: "test", messages: [] })
 }
 
