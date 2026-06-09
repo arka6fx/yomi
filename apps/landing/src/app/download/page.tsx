@@ -1,15 +1,28 @@
 import { Download, ExternalLink, Monitor, AlertCircle } from "lucide-react"
 
+type GitHubAsset = {
+  name: string
+  browser_download_url: string
+  size: number
+}
+
+type GitHubRelease = {
+  tag_name: string
+  published_at: string
+  body: string | null
+  assets: GitHubAsset[]
+}
+
 async function getLatestRelease() {
   try {
     const res = await fetch('https://api.github.com/repos/arka6fx/yomi-releases/releases/latest', {
-      next: { revalidate: 3600 } // Cache for 1 hour
+      next: { revalidate: 3600 }
     })
     
     if (!res.ok) return null
     
-    const release = await res.json()
-    const windowsAsset = release.assets.find((asset: any) => 
+    const release: GitHubRelease = await res.json()
+    const windowsAsset = release.assets.find((asset) => 
       asset.name.endsWith('.exe')
     )
     

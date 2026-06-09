@@ -7,7 +7,6 @@ import { motion } from "framer-motion"
 import {
   LogOut,
   Check,
-  Zap,
   Crown,
   Loader2,
   Download,
