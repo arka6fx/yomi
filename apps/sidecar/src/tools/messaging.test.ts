@@ -18,7 +18,7 @@ describe("messaging tools", () => {
   })
 
   function mockFetch(response: { ok: boolean; error?: string }) {
-    globalThis.fetch = async (url: RequestInfo | URL, opts?: RequestInit) => {
+    globalThis.fetch = (async (url: string | URL, opts?: RequestInit) => {
       fetchCalls.push({
         url: typeof url === "string" ? url : url.toString(),
         method: opts?.method,
