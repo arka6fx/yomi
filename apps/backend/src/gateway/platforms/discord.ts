@@ -28,6 +28,7 @@ export class DiscordAdapter implements PlatformAdapter {
   private botUserId: string | null = null
   private trackedChannels: Map<string, string> = new Map()
   private dmChannels: Map<string, string> = new Map()
+  private knownChannels: Set<string> = new Set()
 
   constructor(token: string) {
     this.token = token
@@ -59,6 +60,7 @@ export class DiscordAdapter implements PlatformAdapter {
     this.connected = false
     this.trackedChannels.clear()
     this.dmChannels.clear()
+    this.knownChannels.clear()
     console.warn("[gateway/discord] disconnected")
   }
 
@@ -88,9 +90,25 @@ export class DiscordAdapter implements PlatformAdapter {
         return { ok: false, error: `Discord ${res.status}: ${text}` }
       }
       const data = (await res.json()) as DiscordMessage
+      // Track channels we've interacted with so they get polled
+      // Also set the tracked position to this message so we don't replay old ones
+      if (!this.knownChannels.has(chatId)) {
+        this.knownChannels.add(chatId)
+        if (!this.trackedChannels.has(chatId)) {
+          this.trackedChannels.set(chatId, data.id)
+        }
+      }
       return { ok: true, messageId: data.id }
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  // Register a DM channel so it gets polled for incoming messages
+  registerDmChannel(channelId: string): void {
+    if (!this.knownChannels.has(channelId)) {
+      this.knownChannels.add(channelId)
+      console.warn(`[discord] registered DM channel ${channelId} for polling`)
     }
   }
 
@@ -201,10 +219,11 @@ export class DiscordAdapter implements PlatformAdapter {
     const channels = await this.discoverChannels()
     // Also poll DM channels
     const dmEntries = Array.from(this.dmChannels.entries())
-    console.warn(`[discord] pollChannels: ${channels.length} guild channels, ${dmEntries.length} DM entries`)
+    console.warn(`[discord] pollChannels: ${channels.length} guild channels, ${dmEntries.length} DM entries, ${this.knownChannels.size} known channels`)
     const allChannels: { id: string; isDm: boolean }[] = [
       ...channels.map((c) => ({ id: c.id, isDm: false })),
       ...dmEntries.map(([, id]) => ({ id, isDm: true })),
+      ...Array.from(this.knownChannels).filter((id) => !channels.some((c) => c.id === id) && !dmEntries.some(([, d]) => d === id)).map((id) => ({ id, isDm: true })),
     ]
 
     for (const channel of allChannels) {
