@@ -113,7 +113,7 @@ const PLATFORM_META: Record<string, { name: string; color: string; inviteUrl: st
   discord: {
     name: "Discord",
     color: "bg-indigo-500/10 text-indigo-400",
-    inviteUrl: "https://discord.com/users/1513769981773480068",
+    inviteUrl: "https://discord.com/api/oauth2/authorize?client_id=1513769981773480068&permissions=2048&scope=bot",
   },
   whatsapp: {
     name: "WhatsApp",
@@ -578,7 +578,7 @@ function DashboardContent() {
                         className="inline-flex items-center gap-1.5 text-xs bg-muted hover:bg-muted/80 text-foreground rounded-lg px-3 py-1.5 transition-colors"
                       >
                         <MessageCircle size={12} />
-                        {meta.name === "Discord" ? "DM " + meta.name : "Add " + meta.name + " bot"}
+                        {meta.name === "Discord" ? "Add " + meta.name : "Add " + meta.name + " bot"}
                         <ExternalLink size={10} />
                       </a>
                     ) : null,
