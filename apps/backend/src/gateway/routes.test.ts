@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { beforeEach, describe, expect, it, mock, afterEach } from "bun:test"
 import { Hono } from "hono"
 
@@ -99,7 +98,7 @@ describe("GET /api/gateway/status", () => {
   it("returns gateway status with adapters", async () => {
     const res = await app().request("/api/gateway/status")
     expect(res.status).toBe(200)
-    const body = await res.json()
+    const body = await res.json() as any
     expect(body.running).toBe(true)
     expect(body.adapters).toHaveLength(3)
     expect(body.adapters[0].platform).toBe("telegram")
@@ -119,7 +118,7 @@ describe("POST /api/gateway/link", () => {
       body: JSON.stringify({}),
     })
     expect(res.status).toBe(400)
-    const body = await res.json()
+    const body = await res.json() as any
     expect(body.error).toBe("Missing code")
   })
 
@@ -131,7 +130,7 @@ describe("POST /api/gateway/link", () => {
       body: JSON.stringify({ code: "INVALID" }),
     })
     expect(res.status).toBe(400)
-    const body = await res.json()
+    const body = await res.json() as any
     expect(body.error).toBe("Invalid or expired code")
   })
 
@@ -147,7 +146,7 @@ describe("POST /api/gateway/link", () => {
       body: JSON.stringify({ code: "VALID12" }),
     })
     expect(res.status).toBe(200)
-    const body = await res.json()
+    const body = await res.json() as any
     expect(body.ok).toBe(true)
     expect(body.platform).toBe("whatsapp")
     // Verify DB insert was called with correct values
@@ -156,8 +155,8 @@ describe("POST /api/gateway/link", () => {
     expect((insertPayload as any).platformUserId).toBe("wa-12345")
     // Verify confirmation message was sent
     expect(sentMessages.length).toBe(1)
-    expect(sentMessages[0].platform).toBe("whatsapp")
-    expect(sentMessages[0].text).toContain("linked")
+    expect(sentMessages[0]!.platform).toBe("whatsapp")
+    expect(sentMessages[0]!.text).toContain("linked")
   })
 })
 
@@ -233,7 +232,7 @@ describe("POST /api/gateway/webhooks/whatsapp", () => {
       body: JSON.stringify(payload),
     })
     expect(res.status).toBe(200)
-    const body = await res.json()
+    const body = await res.json() as any
     expect(body.status).toBe("ok")
   })
 })
@@ -261,11 +260,11 @@ describe("POST /api/gateway/send", () => {
       }),
     })
     expect(res.status).toBe(200)
-    const body = await res.json()
+    const body = await res.json() as any
     expect(body.ok).toBe(true)
     expect(body.messageId).toBe("msg-test-001")
     expect(sentMessages.length).toBe(1)
-    expect(sentMessages[0].chatId).toBe("919832307332")
+    expect(sentMessages[0]!.chatId).toBe("919832307332")
   })
 })
 
@@ -276,7 +275,7 @@ describe("GET /api/gateway/connections", () => {
     connectionRows = []
     const res = await app().request("/api/gateway/connections")
     expect(res.status).toBe(200)
-    const body = await res.json()
+    const body = await res.json() as any
     expect(body).toEqual([])
   })
 
@@ -287,7 +286,7 @@ describe("GET /api/gateway/connections", () => {
     ]
     const res = await app().request("/api/gateway/connections")
     expect(res.status).toBe(200)
-    const body = await res.json()
+    const body = await res.json() as any
     expect(body).toHaveLength(2)
     expect(body[0].platform).toBe("whatsapp")
     expect(body[1].platform).toBe("telegram")
@@ -316,7 +315,7 @@ describe("DELETE /api/gateway/connections/:platform", () => {
       method: "DELETE",
     })
     expect(res.status).toBe(200)
-    const body = await res.json()
+    const body = await res.json() as any
     expect(body.ok).toBe(true)
   })
 })
@@ -327,7 +326,7 @@ describe("GET /api/gateway/pending", () => {
   it("returns empty messages array", async () => {
     const res = await app().request("/api/gateway/pending")
     expect(res.status).toBe(200)
-    const body = await res.json()
+    const body = await res.json() as any
     expect(body.messages).toEqual([])
   })
 })

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { beforeEach, describe, expect, it, mock, afterEach } from "bun:test"
 import type { GatewayMessage, PlatformType } from "@yomi/shared"
 
@@ -179,7 +178,7 @@ describe("GatewayRunner — status", () => {
     runner.registerAdapter(fakeAdapter())
     const status = runner.getStatus()
     expect(status.adapters).toHaveLength(1)
-    expect(status.adapters[0].platform).toBe("whatsapp")
+    expect(status.adapters[0]!.platform).toBe("whatsapp")
   })
 })
 
@@ -215,7 +214,7 @@ describe("GatewayRunner — sendMessage", () => {
     expect(result.ok).toBe(true)
     expect(result.messageId).toBe("test-msg-id")
     expect(adapterMessages.length).toBe(1)
-    expect(adapterMessages[0].chatId).toBe("chat-1")
-    expect(adapterMessages[0].text).toBe("hello")
+    expect(adapterMessages[0]!.chatId).toBe("chat-1")
+    expect(adapterMessages[0]!.text).toBe("hello")
   })
 })
