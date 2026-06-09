@@ -12,12 +12,18 @@ import { classifyIntent } from "./router/intent.js"
 import { initMemorySubsystem } from "./memory/subsystem.js"
 import { resolveConfirmation } from "./uia/act-bus.js"
 import { closeMcp } from "./mcp/client.js"
+import { getDefaultScheduler } from "./tools/cron/cron-scheduler.js"
+import { getDefaultPluginManager } from "./plugins/plugin-manager.js"
 import { duckSpotify } from "./tools/system.js"
 import { getReplayCommand, listWorkflowReplays } from "./automation/runs.js"
 import { allProviders, getProvider } from "./automation/providers/registry.js"
 import type { ProviderId } from "./automation/providers/types.js"
 import { resolveAgent } from "./automation/agents/registry.js"
 import { knowledgeHint, recallKnowledge } from "./automation/knowledge.js"
+import { handleGatewayMessage } from "./gateway/receive.js"
+import type { GatewayMessage, Plan } from "@yomi/shared"
+import { initUsageStore, logUsageEvent } from "./insights/usage-store.js"
+import { generateReport, getMaxLookback, formatTerminal } from "./insights/insights-engine.js"
 
 // Load .env from the sidecar binary's directory (production) or project root (dev).
 // Compiled binaries don't inherit the bun --env-file flag, so we parse it manually.
@@ -51,6 +57,21 @@ loadDotEnv()
 
 // Ensure ~/.yomi/ directory tree exists before serving any requests.
 initMemorySubsystem().catch((err) => console.warn("[yomi] memory subsystem init failed:", err))
+
+// Load plugins from ~/.yomi/plugins/. This runs before the cron scheduler so
+// plugin hooks are available to the harness when the scheduler fires its first
+// tick. Failures are non-fatal — plugins that fail to load are silently skipped.
+getDefaultPluginManager().init().catch((err) => console.warn("[yomi] plugin init failed:", err))
+
+// Initialize the local usage store (SQLite) for usage analytics.
+initUsageStore().catch((err) => console.warn("[yomi] usage store init failed:", err))
+
+// Start the cron scheduler as a background service.
+// The scheduler checks plan entitlement internally — if the plan doesn't support
+// cron, the tick loop simply won't start.
+getDefaultScheduler().start(process.env["YOMI_PLAN"])
+
+
 
 const app = new Hono()
 
@@ -86,7 +107,7 @@ app.use("/stt", authMiddleware)
 app.use("/act/*", authMiddleware)
 app.use("/automation/*", authMiddleware)
 app.use("/spotify/*", authMiddleware)
-
+app.use("/insights", authMiddleware)
 app.get("/health", (c) => {
   return c.json({ status: "ok", version: VERSION })
 })
@@ -136,6 +157,9 @@ app.post("/query", async (c) => {
       } satisfies SseEvent),
     })
 
+    const kind = decision.path === "agent" ? "agent_run" : "fast_query"
+    logUsageEvent({ kind })
+
     if (decision.path === "agent") {
       const agentReq: AgentQueryRequest = {
         text,
@@ -184,6 +208,7 @@ app.post("/query/fast", async (c) => {
     return c.json({ error: "text or audio_b64 field is required" }, 400)
   }
 
+  logUsageEvent({ kind: "fast_query" })
   return streamSSE(c, async (stream) => {
     try {
       for await (const event of fastPipeline(body, c.req.raw.signal)) {
@@ -206,6 +231,7 @@ app.post("/query/agent", async (c) => {
   }
   if (!body.text?.trim()) return c.json({ error: "text field is required" }, 400)
 
+  logUsageEvent({ kind: "agent_run" })
   return streamSSE(c, async (stream) => {
     const emit = (e: SseEvent) => {
       void stream.writeSSE({ data: JSON.stringify(e) })
@@ -276,12 +302,10 @@ app.get("/automation/workflows", (c) => {
 app.get("/automation/health", async (c) => {
   const providers = await Promise.all(
     allProviders().map(async (p) => {
-      const health = await p
-        .healthCheck()
-        .catch((err) => ({
-          ok: false,
-          detail: err instanceof Error ? err.message : "healthCheck threw",
-        }))
+      const health = await p.healthCheck().catch((err) => ({
+        ok: false,
+        detail: err instanceof Error ? err.message : "healthCheck threw",
+      }))
       const diagnostics = await p.diagnostics().catch(() => ({}))
       return { id: p.id, label: p.label, ...health, diagnostics }
     }),
@@ -351,6 +375,33 @@ app.post("/spotify/duck", async (c) => {
   return c.json(result as Record<string, unknown>)
 })
 
+// Usage insights endpoint — returns analytics report for the given lookback period.
+// Query params: days (number, default 7), plan (string, default "explore").
+app.get("/insights", (c) => {
+  const rawDays = Number.parseInt(c.req.query("days") ?? "7", 10)
+  const days = Number.isFinite(rawDays) && rawDays > 0 ? rawDays : 7
+  const rawPlan = (c.req.query("plan") ?? "explore") as Plan
+  const plan = rawPlan === "pro" || rawPlan === "max" ? rawPlan : "explore"
+  const maxDays = getMaxLookback(plan)
+  const report = generateReport(Math.min(days, maxDays), plan)
+  const format = c.req.query("format")
+  if (format === "terminal") {
+    return c.text(formatTerminal(report))
+  }
+  return c.json(report)
+})
+
+// Gateway receive endpoint — backend forwards platform messages here.
+app.post("/gateway/receive", async (c) => {
+  const body = await c.req.json().catch(() => ({})) as GatewayMessage
+  if (!body.platform || !body.text) {
+    return c.json({ error: "Missing required fields" }, 400)
+  }
+  // Fire and forget — response is sent back through the backend's /gateway/send
+  void handleGatewayMessage(body)
+  return c.json({ ok: true })
+})
+
 app.onError((err, c) => {
   console.error(err)
   return c.json({ error: "Internal server error" }, 500)
@@ -359,6 +410,8 @@ app.onError((err, c) => {
 // Tear down the MCP client + its child browser on shutdown.
 for (const sig of ["SIGINT", "SIGTERM", "beforeExit"] as const) {
   process.on(sig, () => {
+    getDefaultScheduler().stop()
+    getDefaultPluginManager().shutdown()
     void closeMcp().finally(() => process.exit(0))
   })
 }
