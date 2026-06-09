@@ -24,7 +24,7 @@ const PLATFORM_INFO: Record<string, { name: string; inviteUrl: string }> = {
   },
   discord: {
     name: "Discord",
-    inviteUrl: "https://discord.com/api/oauth2/authorize?client_id=1513769981773480068&permissions=2048&scope=bot",
+    inviteUrl: "https://discord.com/users/1513769981773480068",
   },
   whatsapp: {
     name: "WhatsApp",
@@ -197,7 +197,7 @@ function LinkPageContent() {
                   How it works
                 </p>
                 <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside leading-relaxed">
-                  <li>Message the Yomi bot on Telegram or Discord</li>
+                  <li>Message the Yomi bot on Telegram, WhatsApp, or DM on Discord</li>
                   <li>The bot replies with a 6-character code</li>
                   <li>Enter that code above to link your account</li>
                   <li>Now you can talk to Yomi from anywhere!</li>
