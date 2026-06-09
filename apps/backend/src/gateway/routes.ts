@@ -23,15 +23,20 @@ gatewayRouter.get("/pending", authenticate, (c) => {
 // List linked platforms for the authenticated user
 gatewayRouter.get("/connections", authenticate, async (c) => {
   const user = c.get("user")
-  const rows = await db
-    .select({
-      platform: platformConnections.platform,
-      connectedAt: platformConnections.connectedAt,
-    })
-    .from(platformConnections)
-    .where(eq(platformConnections.userId, user.id))
+  try {
+    const rows = await db
+      .select({
+        platform: platformConnections.platform,
+        connectedAt: platformConnections.connectedAt,
+      })
+      .from(platformConnections)
+      .where(eq(platformConnections.userId, user.id))
 
-  return c.json(rows)
+    return c.json(rows)
+  } catch (err) {
+    console.warn("[gateway] connections error:", err)
+    return c.json([], 200)
+  }
 })
 
 // Unlink a platform for the authenticated user
@@ -43,21 +48,26 @@ gatewayRouter.delete("/connections/:platform", authenticate, async (c) => {
     return c.json({ ok: false, error: "Invalid platform" }, 400)
   }
 
-  const result = await db
-    .delete(platformConnections)
-    .where(
-      and(
-        eq(platformConnections.userId, user.id),
-        eq(platformConnections.platform, platform),
-      ),
-    )
-    .returning({ id: platformConnections.id })
+  try {
+    const result = await db
+      .delete(platformConnections)
+      .where(
+        and(
+          eq(platformConnections.userId, user.id),
+          eq(platformConnections.platform, platform),
+        ),
+      )
+      .returning({ id: platformConnections.id })
 
-  if (result.length === 0) {
-    return c.json({ ok: false, error: "No connection found" }, 404)
+    if (result.length === 0) {
+      return c.json({ ok: false, error: "No connection found" }, 404)
+    }
+
+    return c.json({ ok: true })
+  } catch (err) {
+    console.warn("[gateway] unlink error:", err)
+    return c.json({ ok: false, error: "Failed to unlink" }, 500)
   }
-
-  return c.json({ ok: true })
 })
 
 // Link a platform account to the authenticated Yomi user
