@@ -204,3 +204,57 @@ Small purposeful comments — one-liners on non-obvious logic, short section
 headers. Never multi-line blocks or docstrings. Use conventional commits:
 `feat:`, `fix:`, `refactor:`, `perf:`, `style:`, `test:`, `chore:`, `docs:`.
 Short, lowercase, no full stops. Example: `feat: speaker mute toggle`.
+
+---
+
+## Billing Architecture (2026-06)
+
+**Design:** Pre-created Razorpay plans (not dynamic). USD canonical, 8 currency
+display layer via `CF-IPCountry`. Pre-created plan IDs from env vars.
+
+```
+Checkout: POST /create-subscription → 1 Razorpay call (no customer/plan creation)
+Plans:   GET /plans → local estimates + "Charged in USD" notice
+Cancel:  POST /cancel-subscription → cancel_at_cycle_end
+Webhook: POST /webhook → 8 event types, idempotent (event_id dedup)
+```
+
+**Key numbers:** Pro $14.99/mo (1499¢), Max $39.99/mo (3999¢).
+`total_count: 0` (indefinite renewal). 7-day past_due grace.
+Plans configured in `apps/backend/src/routes/billing.ts:32`.
+
+**Razorpay flow:**
+1. Create plan in Razorpay Dashboard → set `RAZORPAY_PLAN_PRO`/`RAZORPAY_PLAN_MAX`
+2. Backend creates subscription with pre-created plan ID
+3. Frontend redirects to Razorpay `short_url`
+4. User authorizes → Razorpay sends webhook → backend activates
+5. Monthly charge → webhook → `subscription.charged` → extends `currentPeriodEnd`
+
+**Currency display** (`apps/backend/src/routes/billing.ts:62`): USD, INR, EUR,
+GBP, AUD, CAD, BRL, SGD. Manual rates (no live FX API until 500+ customers).
+
+**Grace period:** `hasBillablePlanAccess()` allows 7 days past_due. Webhook
+`payment.failed` → status = past_due → billing warning in dashboard.
+
+## Messaging Gateway (Telegram + Discord only)
+
+Telegram and Discord via polling + OAuth linking. No WhatsApp/Slack cloud
+integration. Desktop WhatsApp automation (`send_whatsapp_message` tool via UIA)
+is separate.
+
+**DM discovery fix:** `registerDmChannel()` on adapter interface; auto-register
+on send; startup bootstrap queries `platformConnections`. Discord
+`GET /users/@me/channels` returns `[]` — workaround in place.
+
+## Removed (2026-06)
+- WhatsApp cloud adapter (762 lines: adapter, tests, webhooks, routes, types)
+- Slack cloud adapter (189 lines: adapter, routes, types)
+- Dynamic Razorpay plan creation (was 3 calls per checkout → 1)
+
+## Cleanup (always do before pushing)
+- Check CI passes: `bun run ci` locally or `gh run list` for status
+- No unused imports (`Zap` in dashboard was removed)
+- No `as any` in non-test files (download page uses `GitHubAsset`/`GitHubRelease` types)
+- No noisy debug logs in production paths (proxy.ts router middleware removed)
+- Empty catches intentional (`// ignore` or `// best-effort`)
+- Conventional commit messages on all pushes
