@@ -27,7 +27,7 @@ const HEALTH_INTERVAL_MS = 10_000
 const HEALTH_FAIL_THRESHOLD = 3
 
 export class SidecarManager {
-  readonly secret = process.env.SIDECAR_SECRET || "***PURGED-LEAKED-SECRET***"
+  readonly secret = process.env.SIDECAR_SECRET || ""
   readonly baseUrl = "http://127.0.0.1:3002"
   private proc: ChildProcess | null = null
   private failCount = 0
