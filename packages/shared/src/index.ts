@@ -268,3 +268,44 @@ export type SseEvent =
   | { type: "automation_recovering"; runId: string; reason: string }
   | { type: "done" }
   | { type: "error"; message: string }
+  // Gateway events (Spec 19 — Messaging Gateway)
+  | { type: "gateway_connected"; platform: PlatformType }
+  | { type: "gateway_disconnected"; platform: PlatformType }
+  | { type: "gateway_error"; platform: PlatformType; message: string }
+  | { type: "gateway_message"; platform: PlatformType; chatId: string; userId: string; text: string }
+  | { type: "gateway_session"; platform: PlatformType; chatId: string; active: boolean }
+
+export type PlatformType = "telegram" | "discord" | "slack" | "whatsapp"
+
+export interface PlatformConfig {
+  type: PlatformType
+  token: string
+  additionalToken?: string
+  enabled: boolean
+}
+
+export interface GatewayMessage {
+  platform: PlatformType
+  chatId: string
+  userId: string
+  text: string
+  messageId?: string
+  timestamp: string
+}
+
+export interface GatewaySessionInfo {
+  id: string
+  platform: PlatformType
+  chatId: string
+  userId: string
+  createdAt: string
+  lastActivityAt: string
+  messageCount: number
+}
+
+export interface PlatformConnection {
+  platform: PlatformType
+  platformUserId: string
+  platformChatId?: string
+  connectedAt: string
+}

@@ -10,6 +10,11 @@ import { authRoutesRouter } from "./routes/auth-routes.js"
 import { profileRouter } from "./routes/profile.js"
 import { ragRouter } from "./routes/rag.js"
 import { proxyRouter } from "./routes/proxy.js"
+import { gatewayRouter } from "./gateway/routes.js"
+import { getDefaultGateway } from "./gateway/gateway-runner.js"
+import type { SidecarResolver } from "./gateway/gateway-runner.js"
+import { eq, and } from "drizzle-orm"
+import { db, platformConnections, devices } from "@yomi/db"
 
 const app = new Hono()
 
@@ -38,6 +43,45 @@ app.route("/api/billing", billingRouter)
 app.route("/api/user", profileRouter)
 app.route("/api/rag", ragRouter)
 app.route("/api/v1", proxyRouter)
+app.route("/api/gateway", gatewayRouter)
+
+// Register sidecar URL resolver from platform connections
+const sidecarResolver: SidecarResolver = async (userId, platform) => {
+  try {
+    const conn = await db
+      .select({ yomiUserId: platformConnections.userId })
+      .from(platformConnections)
+      .where(
+        and(
+          eq(platformConnections.platform, platform),
+          eq(platformConnections.platformUserId, userId),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0])
+
+    if (!conn) return undefined
+
+    const device = await db
+      .select({ sidecarUrl: devices.sidecarUrl })
+      .from(devices)
+      .where(eq(devices.userId, conn.yomiUserId))
+      .orderBy(devices.lastSeen)
+      .limit(1)
+      .then((rows) => rows[0])
+
+    return device?.sidecarUrl ?? undefined
+  } catch (err) {
+    console.warn("[gateway] sidecar resolver error:", err)
+    return undefined
+  }
+}
+getDefaultGateway().setSidecarResolver(sidecarResolver)
+
+// Start the messaging gateway (Max-only, checks plan internally)
+getDefaultGateway().start(process.env["YOMI_PLAN"]).catch((err) =>
+  console.warn("[backend] gateway init failed:", err),
+)
 
 const PORT = Number(process.env["PORT"] ?? 3001)
 
