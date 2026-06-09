@@ -96,8 +96,31 @@ Production uses `https://yomi.arka6fx.com` for `BETTER_AUTH_URL`,
 `BETTER_AUTH_BASE_URL`, `BACKEND_URL`, `NEXT_PUBLIC_BACKEND_URL`, and
 `NEXT_PUBLIC_APP_URL`.
 
-Razorpay keys can stay blank until billing is enabled. Billing routes will not
-work without them.
+## Billing (Razorpay)
+
+Plans are configured in `apps/backend/src/routes/billing.ts` with canonical
+USD pricing. Razorpay Plans must be **pre-created in the dashboard** — the
+backend references them by ID, avoiding dynamic plan creation per checkout.
+
+```bash
+# Required for billing
+RAZORPAY_KEY_ID=
+RAZORPAY_KEY_SECRET=
+RAZORPAY_WEBHOOK_SECRET=
+
+# Pre-created Razorpay Plan IDs (create in Dashboard → Plans, total_count = 0)
+RAZORPAY_PLAN_PRO=plan_xxxxxxxxxx
+RAZORPAY_PLAN_MAX=plan_xxxxxxxxxx
+```
+
+Razorpay keys can stay blank until billing is enabled.
+
+**Key design decisions:**
+- USD is the canonical billing currency. Local equivalents are estimated
+  using the `GET /api/billing/plans` endpoint (with `CF-IPCountry` header)
+- Subscriptions use `total_count: 0` (indefinite renewal)
+- 7-day grace period after payment failure before access is cut off
+- Webhooks are idempotent (deduplicated by event ID)
 
 ## Messaging Gateway
 
