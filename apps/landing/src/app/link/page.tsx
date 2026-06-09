@@ -24,7 +24,7 @@ const PLATFORM_INFO: Record<string, { name: string; inviteUrl: string; dmUrl?: s
   },
   discord: {
     name: "Discord",
-    inviteUrl: "https://discord.com/api/oauth2/authorize?client_id=1513769981773480068&permissions=2048&scope=bot",
+    inviteUrl: `${BACKEND_URL}/api/gateway/discord/auth`,
     dmUrl: "https://discord.com/users/1513769981773480068",
   },
   whatsapp: {
@@ -49,11 +49,16 @@ function LinkPageContent() {
     if (!isPending && !session) router.push("/signin")
   }, [session, isPending, router])
 
+  const [discordSent, setDiscordSent] = useState(false)
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const codeParam = params.get("code")
     if (codeParam) {
       setCode(codeParam.toUpperCase().slice(0, 6))
+    }
+    if (params.get("discord_sent") === "true") {
+      setDiscordSent(true)
     }
   }, [])
 
@@ -155,6 +160,16 @@ function LinkPageContent() {
                   connect it with Yomi.
                 </p>
               </div>
+
+              {discordSent && (
+                <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-4 text-sm text-indigo-300 space-y-1">
+                  <p className="font-medium">Code sent to Discord!</p>
+                  <p className="text-xs text-indigo-400/80">
+                    Check your Discord DMs from the Yomi bot. Enter the
+                    6-character code below to link your account.
+                  </p>
+                </div>
+              )}
 
               <div className="rounded-2xl border border-border bg-card p-6 space-y-5">
                 <div>

@@ -160,23 +160,40 @@ export class DiscordAdapter implements PlatformAdapter {
   private async discoverDmChannels(): Promise<void> {
     try {
       const res = await fetch(`${API_BASE}/users/@me/channels`, { headers: this.headers })
-      if (!res.ok) return
-      const channels = (await res.json()) as { id: string; type: number; recipients?: { id: string }[] }[]
-      for (const channel of channels) {
-        // DM channels have type 1
-        if (channel.type !== 1) continue
-        const recipient = channel.recipients?.[0]
-        if (recipient && recipient.id !== this.botUserId) {
-          this.dmChannels.set(recipient.id, channel.id)
-        }
+      if (!res.ok) {
+        console.warn(`[discord] discoverDmChannels failed: ${res.status} ${res.statusText}`)
+        return
       }
-    } catch {
-      // non-fatal
+      const channels = (await res.json()) as { id: string; type: number; recipients?: { id: string }[] }[]
+      console.warn(`[discord] discoverDmChannels: ${channels.length} total channels returned`)
+      for (const channel of channels) {
+        console.warn(`[discord]   channel id=${channel.id} type=${channel.type} recipients=${channel.recipients?.map(r => r.id).join(",")}`)
+        // DM channels have type 1
+        if (channel.type !== 1) {
+          console.warn(`[discord]   skipping channel ${channel.id}: type=${channel.type} is not DM (type 1)`)
+          continue
+        }
+        const recipient = channel.recipients?.[0]
+        if (!recipient) {
+          console.warn(`[discord]   skipping channel ${channel.id}: no recipients`)
+          continue
+        }
+        if (recipient.id === this.botUserId) {
+          console.warn(`[discord]   skipping channel ${channel.id}: recipient is bot self`)
+          continue
+        }
+        console.warn(`[discord]   tracking DM channel: recipient=${recipient.id} channelId=${channel.id}`)
+        this.dmChannels.set(recipient.id, channel.id)
+      }
+    } catch (err) {
+      console.warn(`[discord] discoverDmChannels error:`, err)
     }
   }
 
   private async pollChannels(): Promise<void> {
     if (!this.connected || !this.messageHandler) return
+
+    console.warn(`[discord] pollChannels start (connected=${this.connected}, handler=${!!this.messageHandler})`)
 
     // Refresh DM channel list
     await this.discoverDmChannels()
@@ -184,6 +201,7 @@ export class DiscordAdapter implements PlatformAdapter {
     const channels = await this.discoverChannels()
     // Also poll DM channels
     const dmEntries = Array.from(this.dmChannels.entries())
+    console.warn(`[discord] pollChannels: ${channels.length} guild channels, ${dmEntries.length} DM entries`)
     const allChannels: { id: string; isDm: boolean }[] = [
       ...channels.map((c) => ({ id: c.id, isDm: false })),
       ...dmEntries.map(([, id]) => ({ id, isDm: true })),
@@ -197,11 +215,18 @@ export class DiscordAdapter implements PlatformAdapter {
           `${API_BASE}/channels/${channel.id}/messages?${params}`,
           { headers: this.headers },
         )
-        if (!res.ok) continue
+        if (!res.ok) {
+          console.warn(`[discord] poll channel ${channel.id} (dm=${channel.isDm}) failed: ${res.status}`)
+          continue
+        }
         const messages = (await res.json()) as DiscordMessage[]
+        console.warn(`[discord]   channel ${channel.id} (dm=${channel.isDm}): ${messages.length} messages, lastKnown=${lastKnown ?? "none"}`)
         for (const msg of messages.reverse()) {
-          if (lastKnown && msg.id <= lastKnown) continue
-          if (msg.author.bot || msg.author.id === this.botUserId) continue
+          const skipOld = lastKnown && msg.id <= lastKnown
+          const skipBot = msg.author.bot || msg.author.id === this.botUserId
+          console.warn(`[discord]   msg id=${msg.id} author=${msg.author.id} bot=${msg.author.bot} content="${msg.content.slice(0, 60)}" skipOld=${skipOld} skipBot=${skipBot}`)
+          if (skipOld) continue
+          if (skipBot) continue
 
           this.trackedChannels.set(channel.id, msg.id)
           const gatewayMsg: GatewayMessage = {
@@ -212,10 +237,11 @@ export class DiscordAdapter implements PlatformAdapter {
             messageId: msg.id,
             timestamp: msg.timestamp,
           }
+          console.warn(`[discord] DM received: sender=${msg.author.id} chat=${channel.id} content="${msg.content.slice(0, 80)}"`)
           this.messageHandler(gatewayMsg)
         }
-      } catch {
-        // channel may be inaccessible — skip
+      } catch (err) {
+        console.warn(`[discord] poll channel ${channel.id} error:`, err)
       }
     }
   }
