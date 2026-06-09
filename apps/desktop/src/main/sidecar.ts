@@ -1,5 +1,4 @@
 import { spawn } from "node:child_process"
-import { randomUUID } from "node:crypto"
 import path from "node:path"
 import { app } from "electron"
 import type { ChildProcess } from "node:child_process"
@@ -28,10 +27,11 @@ const HEALTH_INTERVAL_MS = 10_000
 const HEALTH_FAIL_THRESHOLD = 3
 
 export class SidecarManager {
-  readonly secret = randomUUID()
+  readonly secret = process.env.SIDECAR_SECRET || "***PURGED-LEAKED-SECRET***"
   readonly baseUrl = "http://127.0.0.1:3002"
   private proc: ChildProcess | null = null
   private failCount = 0
+  private healthTimer: ReturnType<typeof setInterval> | null = null
   private sessionToken: string
 
   constructor(sessionToken: string) {
@@ -75,7 +75,8 @@ export class SidecarManager {
   }
 
   private startHealthLoop(): void {
-    setInterval(async () => {
+    if (this.healthTimer) clearInterval(this.healthTimer)
+    this.healthTimer = setInterval(async () => {
       try {
         const res = await fetch(`${this.baseUrl}/health`)
         if (res.ok) {
@@ -95,8 +96,14 @@ export class SidecarManager {
 
   async restart(): Promise<void> {
     this.proc?.kill()
+    this.proc = null
     await sleep(500)
     await this.start()
+  }
+
+  async updateToken(newToken: string): Promise<void> {
+    this.sessionToken = newToken
+    await this.restart()
   }
 }
 
