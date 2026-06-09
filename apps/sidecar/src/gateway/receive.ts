@@ -5,6 +5,50 @@ import { agentPipeline } from "../pipeline/agent.js"
 
 const BACKEND_URL = process.env["YOMI_BACKEND_URL"] ?? "http://localhost:3001"
 const PLAN = (process.env["YOMI_PLAN"] ?? "max") as Plan
+const POLL_INTERVAL_MS = 2_500
+const SESSION_TOKEN = process.env["YOMI_SESSION_TOKEN"] ?? ""
+
+let pollTimer: ReturnType<typeof setInterval> | null = null
+
+// Start polling the backend for pending gateway messages
+export function startGatewayPoll(): void {
+  if (pollTimer) return
+  if (!SESSION_TOKEN) {
+    console.warn("[gateway/poll] no YOMI_SESSION_TOKEN — skipping poll")
+    return
+  }
+
+  pollTimer = setInterval(() => void poll(), POLL_INTERVAL_MS)
+  console.warn("[gateway/poll] started")
+}
+
+export function stopGatewayPoll(): void {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+    console.warn("[gateway/poll] stopped")
+  }
+}
+
+async function poll(): Promise<void> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/gateway/pending`, {
+      headers: {
+        Authorization: `Bearer ${SESSION_TOKEN}`,
+      },
+    })
+    if (!res.ok) return
+    const data = (await res.json()) as { messages: GatewayMessage[] }
+    if (!data.messages?.length) return
+
+    console.warn(`[gateway/poll] received ${data.messages.length} message(s)`)
+    for (const msg of data.messages) {
+      void handleGatewayMessage(msg)
+    }
+  } catch {
+    // retry on next interval
+  }
+}
 
 export async function handleGatewayMessage(msg: GatewayMessage): Promise<void> {
   const decision = await classifyIntent({ text: msg.text })
