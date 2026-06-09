@@ -60,7 +60,6 @@ mock.module("./gateway-runner.js", () => ({
       adapters: [
         { platform: "telegram", connected: true },
         { platform: "discord", connected: true },
-        { platform: "whatsapp", connected: true },
       ],
       activeSessions: 0,
     }),
@@ -101,10 +100,9 @@ describe("GET /api/gateway/status", () => {
     expect(res.status).toBe(200)
     const body = await res.json() as any
     expect(body.running).toBe(true)
-    expect(body.adapters).toHaveLength(3)
+    expect(body.adapters).toHaveLength(2)
     expect(body.adapters[0].platform).toBe("telegram")
     expect(body.adapters[1].platform).toBe("discord")
-    expect(body.adapters[2].platform).toBe("whatsapp")
     expect(body.activeSessions).toBe(0)
   })
 })
@@ -137,9 +135,9 @@ describe("POST /api/gateway/link", () => {
 
   it("links account with valid code", async () => {
     linkingCodeResult = {
-      platform: "whatsapp",
-      platformUserId: "wa-12345",
-      chatId: "wa-chat-12345",
+      platform: "telegram",
+      platformUserId: "tg-12345",
+      chatId: "tg-chat-12345",
     }
     const res = await app().request("/api/gateway/link", {
       method: "POST",
@@ -149,92 +147,15 @@ describe("POST /api/gateway/link", () => {
     expect(res.status).toBe(200)
     const body = await res.json() as any
     expect(body.ok).toBe(true)
-    expect(body.platform).toBe("whatsapp")
+    expect(body.platform).toBe("telegram")
     // Verify DB insert was called with correct values
     expect(insertPayload).not.toBeNull()
-    expect((insertPayload as any).platform).toBe("whatsapp")
-    expect((insertPayload as any).platformUserId).toBe("wa-12345")
+    expect((insertPayload as any).platform).toBe("telegram")
+    expect((insertPayload as any).platformUserId).toBe("tg-12345")
     // Verify confirmation message was sent
     expect(sentMessages.length).toBe(1)
-    expect(sentMessages[0]!.platform).toBe("whatsapp")
+    expect(sentMessages[0]!.platform).toBe("telegram")
     expect(sentMessages[0]!.text).toContain("linked")
-  })
-})
-
-// ========== WhatsApp webhook ==========
-
-describe("GET /api/gateway/webhooks/whatsapp", () => {
-  it("returns challenge on valid verify request", async () => {
-    const res = await app().request(
-      "/api/gateway/webhooks/whatsapp?hub.mode=subscribe&hub.verify_token=yomi&hub.challenge=abc123"
-    )
-    expect(res.status).toBe(200)
-    const body = await res.text()
-    expect(body).toBe("abc123")
-  })
-
-  it("returns 400 on missing params", async () => {
-    const res = await app().request("/api/gateway/webhooks/whatsapp")
-    expect(res.status).toBe(400)
-  })
-
-  it("returns 403 on wrong verify token", async () => {
-    const res = await app().request(
-      "/api/gateway/webhooks/whatsapp?hub.mode=subscribe&hub.verify_token=wrong&hub.challenge=test"
-    )
-    expect(res.status).toBe(403)
-  })
-
-  it("returns 400 when mode is not subscribe", async () => {
-    const res = await app().request(
-      "/api/gateway/webhooks/whatsapp?hub.mode=invalid&hub.verify_token=yomi&hub.challenge=test"
-    )
-    expect(res.status).toBe(400)
-  })
-})
-
-describe("POST /api/gateway/webhooks/whatsapp", () => {
-  it("accepts valid webhook payload", async () => {
-    const payload = {
-      object: "whatsapp_business_account",
-      entry: [
-        {
-          id: "1151344804725583",
-          changes: [
-            {
-              value: {
-                messaging_product: "whatsapp",
-                metadata: {
-                  display_phone_number: "15556511593",
-                  phone_number_id: "1151344804725583",
-                },
-                contacts: [
-                  { profile: { name: "TestUser" }, wa_id: "919832307332" },
-                ],
-                messages: [
-                  {
-                    from: "919832307332",
-                    id: "wamid.test123",
-                    timestamp: "1740000000",
-                    type: "text",
-                    text: { body: "hello yomi" },
-                  },
-                ],
-              },
-              field: "messages",
-            },
-          ],
-        },
-      ],
-    }
-    const res = await app().request("/api/gateway/webhooks/whatsapp", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-    expect(res.status).toBe(200)
-    const body = await res.json() as any
-    expect(body.status).toBe("ok")
   })
 })
 
@@ -255,8 +176,8 @@ describe("POST /api/gateway/send", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        platform: "whatsapp",
-        chatId: "919832307332",
+        platform: "discord",
+        chatId: "dm-channel-123",
         text: "Hello from test",
       }),
     })
@@ -265,7 +186,7 @@ describe("POST /api/gateway/send", () => {
     expect(body.ok).toBe(true)
     expect(body.messageId).toBe("msg-test-001")
     expect(sentMessages.length).toBe(1)
-    expect(sentMessages[0]!.chatId).toBe("919832307332")
+    expect(sentMessages[0]!.chatId).toBe("dm-channel-123")
   })
 })
 
@@ -282,14 +203,14 @@ describe("GET /api/gateway/connections", () => {
 
   it("returns linked platforms", async () => {
     connectionRows = [
-      { platform: "whatsapp", connectedAt: new Date("2026-06-01") },
+      { platform: "discord", connectedAt: new Date("2026-06-01") },
       { platform: "telegram", connectedAt: new Date("2026-06-02") },
     ]
     const res = await app().request("/api/gateway/connections")
     expect(res.status).toBe(200)
     const body = await res.json() as any
     expect(body).toHaveLength(2)
-    expect(body[0].platform).toBe("whatsapp")
+    expect(body[0].platform).toBe("discord")
     expect(body[1].platform).toBe("telegram")
   })
 })
@@ -304,15 +225,15 @@ describe("DELETE /api/gateway/connections/:platform", () => {
 
   it("returns 404 when no connection exists", async () => {
     deleteCalls = []
-    const res = await app().request("/api/gateway/connections/whatsapp", {
+    const res = await app().request("/api/gateway/connections/discord", {
       method: "DELETE",
     })
     expect(res.status).toBe(404)
   })
 
   it("unlinks valid platform", async () => {
-    deleteCalls = [{ platform: "whatsapp", userId: "test-user-123" }]
-    const res = await app().request("/api/gateway/connections/whatsapp", {
+    deleteCalls = [{ platform: "discord", userId: "test-user-123" }]
+    const res = await app().request("/api/gateway/connections/discord", {
       method: "DELETE",
     })
     expect(res.status).toBe(200)

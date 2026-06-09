@@ -45,7 +45,7 @@ gatewayRouter.delete("/connections/:platform", authenticate, async (c) => {
   const user = c.get("user")
   const platform = c.req.param("platform") as PlatformType
 
-  if (!["telegram", "discord", "slack", "whatsapp"].includes(platform)) {
+  if (!["telegram", "discord", "slack"].includes(platform)) {
     return c.json({ ok: false, error: "Invalid platform" }, 400)
   }
 
@@ -103,37 +103,7 @@ gatewayRouter.post("/link", authenticate, async (c) => {
     "✅ Your account is now linked! You can start using Yomi.")
     .catch(() => {})
 
-  return c.json({ ok: true, platform: entry.platform })
-})
-
-// WhatsApp webhook verification (Meta sends a GET challenge)
-gatewayRouter.get("/webhooks/whatsapp", (c) => {
-  const mode = c.req.query("hub.mode")
-  const token = c.req.query("hub.verify_token")
-  const challenge = c.req.query("hub.challenge")
-
-  if (mode !== "subscribe" || !token || !challenge) {
-    return c.text("Bad request", 400)
-  }
-
-  const expected = process.env["WHATSAPP_WEBHOOK_VERIFY_TOKEN"] ?? "yomi"
-  if (token !== expected) {
-    return c.text("Verification token mismatch", 403)
-  }
-
-  return c.text(challenge)
-})
-
-// WhatsApp inbound messages (signed by Meta, no auth middleware)
-gatewayRouter.post("/webhooks/whatsapp", async (c) => {
-  const body = await c.req.json().catch(() => ({}))
-  const adapter = getDefaultGateway().getAdapter("whatsapp")
-  if (!adapter || !("handleWebhookPayload" in adapter)) {
-    return c.json({ error: "WhatsApp adapter not available" }, 503)
-  }
-
-  ;(adapter as { handleWebhookPayload: (body: unknown) => void }).handleWebhookPayload(body)
-  return c.json({ status: "ok" })
+  return c.json({ ok: true, platform: entry.platform, chatId: entry.chatId })
 })
 
 // Sidecar calls this to send a reply back through the platform

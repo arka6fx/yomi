@@ -26,10 +26,6 @@ const PLATFORM_INFO: Record<string, { name: string; inviteUrl: string }> = {
     name: "Discord",
     inviteUrl: `${BACKEND_URL}/api/gateway/discord/auth`,
   },
-  whatsapp: {
-    name: "WhatsApp",
-    inviteUrl: "",
-  },
 }
 
 function LinkPageContent() {
@@ -41,6 +37,7 @@ function LinkPageContent() {
   const [result, setResult] = useState<{
     ok: boolean
     platform?: string
+    chatId?: string
     error?: string
   } | null>(null)
 
@@ -78,6 +75,7 @@ function LinkPageContent() {
       const data = (await res.json()) as {
         ok: boolean
         platform?: string
+        chatId?: string
         error?: string
       }
       setResult(data)
@@ -99,6 +97,10 @@ function LinkPageContent() {
   if (isPending || !session) return null
 
   const platformInfo = result?.platform ? PLATFORM_INFO[result.platform] : null
+  const inviteUrl =
+    result?.platform === "discord" && result?.chatId
+      ? `discord://-/channels/@me/${result.chatId}`
+      : platformInfo?.inviteUrl
   const isExpired = result?.error?.toLowerCase().includes("expired")
 
   return (
@@ -212,7 +214,7 @@ function LinkPageContent() {
                   How it works
                 </p>
                 <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside leading-relaxed">
-                  <li>Open the Yomi bot on Telegram, add it on Discord, or start via WhatsApp</li>
+                  <li>Open the Yomi bot on Telegram or add it on Discord</li>
                   <li>The bot replies with a 6-character code</li>
                   <li>Enter that code above to link your account</li>
                   <li>Now you can talk to Yomi from anywhere!</li>
@@ -263,9 +265,9 @@ function LinkPageContent() {
                   Go to Dashboard
                   <ArrowRight size={14} />
                 </Link>
-                {platformInfo?.inviteUrl && (
+                {inviteUrl && (
                   <a
-                    href={platformInfo.inviteUrl}
+                    href={inviteUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 bg-card border border-border text-foreground rounded-xl font-medium px-6 py-3 text-sm hover:bg-muted transition-colors"
