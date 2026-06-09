@@ -10,12 +10,12 @@ async function getLatestRelease() {
     
     const release = await res.json()
     const windowsAsset = release.assets.find((asset: any) => 
-      asset.name.endsWith('.exe') && asset.name.includes('win')
+      asset.name.endsWith('.exe')
     )
     
     return {
       version: release.tag_name,
-      downloadUrl: windowsAsset?.browser_download_url,
+      downloadUrl: windowsAsset?.browser_download_url ?? 'https://github.com/arka6fx/yomi-releases/releases/latest',
       publishedAt: release.published_at,
       releaseNotes: release.body || 'No release notes available.',
       assetName: windowsAsset?.name || 'Yomi-Setup.exe',

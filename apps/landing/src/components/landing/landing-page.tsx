@@ -73,7 +73,7 @@ const platforms: Record<
     title: "Windows",
     icon: "⊞",
     options: [
-      { label: "Installer", arch: ".exe", href: "https://github.com/arka6fx/yomi-releases/releases/latest" },
+      { label: "Installer", arch: ".exe", href: "/api/download" },
     ],
     instructions: [
       "Run the installer and follow the prompts",
