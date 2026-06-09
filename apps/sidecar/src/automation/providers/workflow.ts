@@ -3,7 +3,9 @@ import { countWorkflowReplays, listWorkflowReplays } from "../runs.js"
 
 // WorkflowProvider: recorded automation replay catalog. Execution still flows through
 // /automation/replay; this provider tells Mission Control whether reusable workflows exist.
-export function createWorkflowProvider(port = { countWorkflowReplays, listWorkflowReplays }): Provider {
+export function createWorkflowProvider(
+  port = { countWorkflowReplays, listWorkflowReplays },
+): Provider {
   return {
     id: "workflow",
     label: "Workflow Provider",

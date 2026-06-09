@@ -23,10 +23,12 @@ export const AGENT_TOOLS = [
   "adjust_spotify_volume",
   "control_spotify",
   "play_spotify",
-  "send_whatsapp_message",
   "launch_app",
   "point_cursor",
   "click",
+  "cronjob",
+  "send_message",
+  "list_platforms",
 ] as const
 
 export type FastToolName = (typeof FAST_TOOLS)[number]
@@ -54,10 +56,12 @@ export const TOOL_DESCRIPTIONS: Record<FastToolName | AgentToolName, string> = {
   adjust_spotify_volume: "Increase, decrease, or mute Spotify's own in-app volume",
   control_spotify: "Control Spotify playback (pause/resume/next/previous/stop) via media keys",
   play_spotify: "Open Spotify, search for a track/artist, and click the best visible Play button",
-  send_whatsapp_message: "Open WhatsApp, focus the chat composer, and send a message",
-  launch_app: "Open a desktop app by name (e.g. WhatsApp), then read its controls",
+  launch_app: "Open a desktop app by name, then read its controls",
   point_cursor: "Move the mouse cursor to a screen position (coordinate fallback)",
   click: "Click the mouse at the last pointed position (coordinate fallback)",
+  cronjob: "Create, list, view, update, delete, pause, or resume scheduled cron jobs",
+  send_message: "Send a message to a connected messaging platform (Telegram, Discord, Slack)",
+  list_platforms: "List connected messaging platforms and active gateway sessions",
 }
 
 // Re-export for consumers that need the actual AI SDK tool objects.

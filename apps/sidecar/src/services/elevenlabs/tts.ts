@@ -27,7 +27,8 @@ export async function elevenLabsSynthesize(
         voice_id: opts.voiceId ?? process.env.ELEVENLABS_VOICE_ID ?? DEFAULT_VOICE_ID,
         model_id: opts.model_id ?? process.env.ELEVENLABS_TTS_MODEL ?? "eleven_flash_v2_5",
         language_code: opts.language_code ?? process.env.ELEVENLABS_TTS_LANGUAGE,
-        output_format: opts.output_format ?? process.env.ELEVENLABS_TTS_OUTPUT_FORMAT ?? "mp3_44100_128",
+        output_format:
+          opts.output_format ?? process.env.ELEVENLABS_TTS_OUTPUT_FORMAT ?? "mp3_44100_128",
       }),
     })
 
@@ -43,7 +44,8 @@ export async function elevenLabsSynthesize(
   if (!apiKey) throw new Error("ELEVENLABS_API_KEY is not set")
 
   const voiceId = opts.voiceId ?? process.env.ELEVENLABS_VOICE_ID ?? DEFAULT_VOICE_ID
-  const outputFormat = opts.output_format ?? process.env.ELEVENLABS_TTS_OUTPUT_FORMAT ?? "mp3_44100_128"
+  const outputFormat =
+    opts.output_format ?? process.env.ELEVENLABS_TTS_OUTPUT_FORMAT ?? "mp3_44100_128"
   const url = new URL(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`)
   url.searchParams.set("output_format", outputFormat)
 

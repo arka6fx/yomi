@@ -2,9 +2,10 @@ import { streamText, type ToolSet } from "ai"
 import type { AgentQueryRequest, Plan, SseEvent } from "@yomi/shared"
 import { createModel } from "./model.js"
 import { createAgentTools } from "../tools/index.js"
-import { hooks, type Hooks } from "../harness/hooks.js"
+import { hooks, toolGuardrail, type Hooks } from "../harness/hooks.js"
 import { buildAgentPrompt, loadYomiMd } from "../harness/prompt.js"
 import { LoopGuards } from "../harness/guards.js"
+import { compressContext } from "../agent/index.js"
 import { compact } from "../memory/compactor.js"
 import { loadMemoryContext, writeSessionTurn } from "../memory/subsystem.js"
 import { setActEmitter } from "../uia/act-bus.js"
@@ -42,6 +43,9 @@ import {
 
 const AGENT_PATH_MODEL = process.env.AGENT_PATH_MODEL || "gpt-4.1"
 const MAX_STEPS = parseInt(process.env.AGENT_MAX_STEPS || "20", 10)
+// 1M tokens for gpt-4.1 family. Used by the turn-level compressor when no
+// model-aware context length is available. Matches the published 4.1 window.
+const DEFAULT_MODEL_CONTEXT_WINDOW = 1_000_000
 
 let pendingWhatsAppDraft: { kind: "reminder"; message: string } | null = null
 let pendingWindowsNotepadDraft = false
@@ -87,8 +91,12 @@ function notepadSavePath(text: string): string | null {
     return null
   }
   const match =
-    text.match(/\b(?:save|store)\s+(?:this|that|the)?\s*(?:open(?:ed)?\s+)?(?:notepad(?:\s+file)?|txt|text\s+file|file|document|note|draft)\s+(?:as|to|at|in)\s+(.+)$/i) ??
-    text.match(/\b(?:save|store)\s+(?:the\s+)?(?:notepad(?:\s+file)?|txt|text\s+file|file|document|note|draft|it|this|that)?\s*(?:file\s*)?(?:as|to|at|in)\s+(.+)$/i)
+    text.match(
+      /\b(?:save|store)\s+(?:this|that|the)?\s*(?:open(?:ed)?\s+)?(?:notepad(?:\s+file)?|txt|text\s+file|file|document|note|draft)\s+(?:as|to|at|in)\s+(.+)$/i,
+    ) ??
+    text.match(
+      /\b(?:save|store)\s+(?:the\s+)?(?:notepad(?:\s+file)?|txt|text\s+file|file|document|note|draft|it|this|that)?\s*(?:file\s*)?(?:as|to|at|in)\s+(.+)$/i,
+    )
   const path = match?.[1]?.trim().replace(/^["'`]|["'`]$/g, "")
   if (!path) return null
   if (!/(desktop|documents|downloads|[\\/]|:|\.txt\b)/i.test(path)) return null
@@ -98,7 +106,10 @@ function notepadSavePath(text: string): string | null {
 function stripNotepadTarget(text: string): string {
   return text
     .replace(/\b(?:in|into|on|to|inside)\s+(?:the\s+)?(?:windows\s+)?notepad\b/gi, " ")
-    .replace(/\b(?:open|launch|start)\s+(?:the\s+)?(?:windows\s+)?notepad(?:\s+(?:and|to))?\b/gi, " ")
+    .replace(
+      /\b(?:open|launch|start)\s+(?:the\s+)?(?:windows\s+)?notepad(?:\s+(?:and|to))?\b/gi,
+      " ",
+    )
     .replace(/\b(?:write|wright|type|put|draft|make|create|note)\s+(?:down\s+)?(?:this\s+)?/gi, " ")
     .replace(/\b(?:and\s+)?(?:save|store)\s+(?:it|this|that|the\s+(?:note|file|draft))\b/gi, " ")
     .replace(/\s+/g, " ")
@@ -106,14 +117,14 @@ function stripNotepadTarget(text: string): string {
     .trim()
 }
 
-export function windowsNotepadRequest(text: string): { content: string; needsMemory: boolean; wantsSave: boolean } | null {
+export function windowsNotepadRequest(
+  text: string,
+): { content: string; needsMemory: boolean; wantsSave: boolean } | null {
   if (!/\b(?:the\s+)?(?:windows\s+)?notepad\b/i.test(text)) return null
   const wantsWrite = /\b(write|wright|type|put|draft|make|create|note)\b/i.test(text)
   const wantsSave = /\b(save|store)\b/i.test(text)
   const asksKnownAboutMe =
-    /\b(?:(?:what|things|stuff|struffs)\s+you|thingsyou)\s+(?:know|knoe)\s+about\s+me\b/i.test(
-      text,
-    )
+    /\b(?:(?:what|things|stuff|struffs)\s+you|thingsyou)\s+(?:know|knoe)\s+about\s+me\b/i.test(text)
   if (!wantsWrite && !wantsSave && !asksKnownAboutMe) return null
 
   const content = stripNotepadTarget(text)
@@ -190,7 +201,7 @@ function shortcutFailed(result: unknown): boolean {
   return (
     typeof result === "object" &&
     result !== null &&
-    (("error" in result) || ("ok" in result && (result as { ok?: unknown }).ok === false))
+    ("error" in result || ("ok" in result && (result as { ok?: unknown }).ok === false))
   )
 }
 
@@ -208,7 +219,7 @@ function applyHooks(tools: ToolSet, activeHooks: Hooks): ToolSet {
             return `[DENIED: ${check.reason}]`
           }
           const result = await (t as ExecutableTool).execute?.(args, opts)
-          return activeHooks.onPostToolUse(name, result)
+          return activeHooks.onPostToolUse(name, result, args)
         },
       },
     ]),
@@ -255,15 +266,12 @@ export async function* agentPipeline(
     setActEmitter((event) => {
       if (event.type === "act_proposed") {
         opts.emit?.(waitingAutomation(automation, event.label, "dangerous"))
-        opts.emit?.(timelineAutomation(automation, `Waiting for approval: ${event.label}`, "waiting"))
+        opts.emit?.(
+          timelineAutomation(automation, `Waiting for approval: ${event.label}`, "waiting"),
+        )
       } else if (event.type === "act_result") {
         opts.emit?.(
-          timelineAutomation(
-            automation,
-            event.label,
-            event.ok ? "done" : "failed",
-            event.detail,
-          ),
+          timelineAutomation(automation, event.label, event.ok ? "done" : "failed", event.detail),
         )
       }
       opts.emit?.(event)
@@ -572,20 +580,53 @@ export async function* agentPipeline(
     const mcpTools = wrapBrowserTools(await getMcpTools())
     const tools = applyHooks(
       {
-        ...createAgentTools({ screenshotB64: req.screenshot_b64 }),
+        ...createAgentTools({ screenshotB64: req.screenshot_b64, plan: req.plan }),
         ...mcpTools,
       },
       activeHooks,
     )
 
+    // Reset the per-turn guardrail controller — each streamText burst is a fresh
+    // observation window. LoopGuards reads the halt decision in onStep().
+    toolGuardrail.resetForTurn()
+
+    // Pre-burst compression: when the caller's prior history pushes the message
+    // list past the plan's threshold, summarise the middle before streamText so
+    // the burst is cheaper and finishes inside the model's window. The legacy
+    // pipeline is single-burst-per-call (the graph owns cross-burst state), so
+    // the integration lives BEFORE streamText — not between steps.
+    const baseMessages: { role: "user" | "assistant" | "system"; content: string }[] = [
+      ...(req.history ?? []).map((h) => ({ role: h.role, content: h.text })),
+      { role: "user" as const, content: req.text },
+    ]
+    let preCompressedMessages: { role: "user" | "assistant" | "system"; content: string }[] =
+      baseMessages
+    const compression = await compressContext(
+      baseMessages as unknown as Parameters<typeof compressContext>[0],
+      {
+        contextWindow: DEFAULT_MODEL_CONTEXT_WINDOW,
+        plan: req.plan,
+        signal,
+      },
+    ).catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.warn(`[yomi/agent] compression error: ${msg}`)
+      return null
+    })
+    if (compression?.compressed) {
+      preCompressedMessages = compression.messages as typeof baseMessages
+      yield timelineAutomation(
+        automation,
+        `Compressed context: ${compression.originalCount} → ${compression.compressedCount} messages (~${compression.preTokens - compression.postTokens} tokens saved)`,
+        "done",
+      )
+    }
+
     const result = streamText({
       model: createModel(AGENT_PATH_MODEL),
       system,
       // Prepend prior turns so follow-up commands in the conversational act loop have context.
-      messages: [
-        ...(req.history ?? []).map((h) => ({ role: h.role, content: h.text })),
-        { role: "user" as const, content: req.text },
-      ],
+      messages: preCompressedMessages as unknown as Parameters<typeof streamText>[0]["messages"],
       tools,
       maxSteps: MAX_STEPS,
       abortSignal: signal,
@@ -672,7 +713,10 @@ export async function* agentPipeline(
     if (memoryEnabled(req.plan)) {
       await writeTurn({ kind: "agent", input: req.text, output: summary, summary })
       // Fire compaction after each agent run; it no-ops if the session log is too short.
-      compact().catch((err) => console.warn("[yomi/agent] compaction error:", err))
+      // The compactor's tail also drives the skill curator on Pro/Max plans.
+      compact({ plan: req.plan }).catch((err) =>
+        console.warn("[yomi/agent] compaction error:", err),
+      )
     }
     yield timelineAutomation(automation, summary, "done")
     yield closeAutomation(summary)

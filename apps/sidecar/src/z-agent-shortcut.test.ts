@@ -234,8 +234,10 @@ describe("agent shortcut memory", () => {
     expect(sessionTurns).toContainEqual({
       kind: "agent",
       input: "write buy milk in notepad and save it",
-      output: "I wrote it in Windows Notepad. Where should I save the file, and what should I name it?",
-      summary: "I wrote it in Windows Notepad. Where should I save the file, and what should I name it?",
+      output:
+        "I wrote it in Windows Notepad. Where should I save the file, and what should I name it?",
+      summary:
+        "I wrote it in Windows Notepad. Where should I save the file, and what should I name it?",
     })
   })
 

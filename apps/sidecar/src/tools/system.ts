@@ -163,9 +163,9 @@ function findWindowsNotepadEditor(elements: UiaElement[]): UiaElement | null {
         /^(?:Edit|Document)$/i.test(el.role) ||
         /text editor|notepad/i.test(el.name)),
   )
-  return editable.sort(
-    (a, b) => b.rect.width * b.rect.height - a.rect.width * a.rect.height,
-  )[0] ?? null
+  return (
+    editable.sort((a, b) => b.rect.width * b.rect.height - a.rect.width * a.rect.height)[0] ?? null
+  )
 }
 
 let lastNotepadHwnd: number | null = null
@@ -221,7 +221,13 @@ async function getClipboardText(): Promise<string> {
 async function setClipboardText(text: string): Promise<void> {
   if (platform() !== "win32") return
   const proc = Bun.spawn(
-    ["powershell", "-NoProfile", "-NonInteractive", "-Command", "[Console]::In.ReadToEnd() | Set-Clipboard"],
+    [
+      "powershell",
+      "-NoProfile",
+      "-NonInteractive",
+      "-Command",
+      "[Console]::In.ReadToEnd() | Set-Clipboard",
+    ],
     { stdin: "pipe", stdout: "pipe", stderr: "pipe" },
   )
   proc.stdin.write(text)
@@ -277,12 +283,13 @@ async function notepadContainsText(hwnd: number, text: string): Promise<boolean>
   const snap = await uia.getUiTree({ maxNodes: 300, maxDepth: 30, hwnd }).catch(() => null)
   const editor = snap ? findWindowsNotepadEditor(snap.elements) : null
   if (valueContainsText(editor?.value, text)) return true
-  return editor ? (await readNotepadTextByClipboard(hwnd, editor).catch(() => "")).includes(text) : false
+  return editor
+    ? (await readNotepadTextByClipboard(hwnd, editor).catch(() => "")).includes(text)
+    : false
 }
 
 async function getWindowsNotepadEditor(): Promise<
-  | { hwnd: number; editor: UiaElement; value: string }
-  | { error: string }
+  { hwnd: number; editor: UiaElement; value: string } | { error: string }
 > {
   const hwnd = await findWindowsNotepadHwnd()
   if (!hwnd) return { error: "I could not find an open Notepad window." }
@@ -303,9 +310,11 @@ async function setWindowsNotepadText(
   editor: UiaElement,
   content: string,
 ): Promise<{ ok: true; method: string } | { error: string }> {
-  const setResult = await uia.call("set_value", { ref: editor.ref, text: content }).catch((err) => ({
-    error: err instanceof Error ? err.message : String(err),
-  }))
+  const setResult = await uia
+    .call("set_value", { ref: editor.ref, text: content })
+    .catch((err) => ({
+      error: err instanceof Error ? err.message : String(err),
+    }))
   if (!actFailed(setResult)) {
     if (valueContainsText((setResult as { after?: unknown }).after, content)) {
       return { ok: true, method: "set_value" }
@@ -325,7 +334,8 @@ async function setWindowsNotepadText(
 export async function writeWindowsNotepad(
   text: string,
 ): Promise<{ ok: true; app: "Notepad"; method: string } | { error: string }> {
-  if (platform() !== "win32") return { error: "Windows Notepad automation is only supported on Windows." }
+  if (platform() !== "win32")
+    return { error: "Windows Notepad automation is only supported on Windows." }
   const content = text.trim()
   if (!content) return { error: "No Notepad text provided." }
 
@@ -347,7 +357,8 @@ export async function writeWindowsNotepad(
 export async function appendWindowsNotepad(
   text: string,
 ): Promise<{ ok: true; app: "Notepad"; method: string } | { error: string }> {
-  if (platform() !== "win32") return { error: "Windows Notepad automation is only supported on Windows." }
+  if (platform() !== "win32")
+    return { error: "Windows Notepad automation is only supported on Windows." }
   const addition = text.trim()
   if (!addition) return { error: "No Notepad text provided." }
   const current = await getWindowsNotepadEditor()
@@ -367,9 +378,12 @@ function resolveUserTextPath(rawPath: string): string {
     .trim()
   const namedDir = cleaned.match(/^(desktop|documents|downloads)\s+(?:as|named|called)\s+(.+)$/i)
   if (namedDir?.[1] && namedDir[2]) cleaned = join(namedDir[1], namedDir[2])
-  if (/^desktop[\\/]/i.test(cleaned)) cleaned = join(homedir(), "Desktop", cleaned.replace(/^desktop[\\/]/i, ""))
-  else if (/^documents[\\/]/i.test(cleaned)) cleaned = join(homedir(), "Documents", cleaned.replace(/^documents[\\/]/i, ""))
-  else if (/^downloads[\\/]/i.test(cleaned)) cleaned = join(homedir(), "Downloads", cleaned.replace(/^downloads[\\/]/i, ""))
+  if (/^desktop[\\/]/i.test(cleaned))
+    cleaned = join(homedir(), "Desktop", cleaned.replace(/^desktop[\\/]/i, ""))
+  else if (/^documents[\\/]/i.test(cleaned))
+    cleaned = join(homedir(), "Documents", cleaned.replace(/^documents[\\/]/i, ""))
+  else if (/^downloads[\\/]/i.test(cleaned))
+    cleaned = join(homedir(), "Downloads", cleaned.replace(/^downloads[\\/]/i, ""))
   else if (/^desktop$/i.test(cleaned)) cleaned = join(homedir(), "Desktop", "yomi-note.txt")
   else if (/^documents$/i.test(cleaned)) cleaned = join(homedir(), "Documents", "yomi-note.txt")
   else if (/^downloads$/i.test(cleaned)) cleaned = join(homedir(), "Downloads", "yomi-note.txt")
@@ -380,7 +394,8 @@ function resolveUserTextPath(rawPath: string): string {
 export async function saveWindowsNotepadAs(
   rawPath: string,
 ): Promise<{ ok: true; app: "Notepad"; path: string } | { error: string }> {
-  if (platform() !== "win32") return { error: "Windows Notepad automation is only supported on Windows." }
+  if (platform() !== "win32")
+    return { error: "Windows Notepad automation is only supported on Windows." }
   if (!rawPath.trim()) return { error: "No save path provided." }
   const current = await getWindowsNotepadEditor()
   if ("error" in current) return current
@@ -399,18 +414,9 @@ function searchTokens(text: string): string[] {
     .filter(
       (part) =>
         part.length >= 3 &&
-        ![
-          "the",
-          "and",
-          "feat",
-          "ft",
-          "with",
-          "song",
-          "songs",
-          "track",
-          "tracks",
-          "music",
-        ].includes(part),
+        !["the", "and", "feat", "ft", "with", "song", "songs", "track", "tracks", "music"].includes(
+          part,
+        ),
     )
 }
 
@@ -441,7 +447,6 @@ function parseSpotifyQuery(query: string): SpotifyQuery {
     allTokens,
   }
 }
-
 
 function tokenScore(name: string, tokens: string[], weight: number): number {
   const n = name.toLowerCase()
@@ -527,10 +532,7 @@ function findTopContentPlay(elements: UiaElement[]): UiaElement | undefined {
   return elements
     .filter(
       (el) =>
-        el.enabled &&
-        contentElement(el, root) &&
-        el.role === "Button" &&
-        /\bplay\b/i.test(el.name),
+        el.enabled && contentElement(el, root) && el.role === "Button" && /\bplay\b/i.test(el.name),
     )
     .sort((a, b) => a.rect.y - b.rect.y || a.rect.x - b.rect.x)[0]
 }
@@ -572,7 +574,13 @@ export type SpotifyControl = "pause" | "resume" | "play_pause" | "next" | "previ
 // media key can't distinguish the two); next/previous/stop are distinct.
 export async function controlSpotifyPlayback(action: SpotifyControl): Promise<unknown> {
   const key: MediaAction =
-    action === "next" ? "next" : action === "previous" ? "previous" : action === "stop" ? "stop" : "play_pause"
+    action === "next"
+      ? "next"
+      : action === "previous"
+        ? "previous"
+        : action === "stop"
+          ? "stop"
+          : "play_pause"
   const res = await mediaControl(key)
   return typeof res === "object" && res !== null && "error" in res
     ? res
@@ -674,7 +682,10 @@ function normalizeRecipient(text: string): string {
 }
 
 function normalizeSpokenWhatsAppRecipient(text: string): string {
-  const trimmed = text.replace(/^\s*(?:my|the|a|an)\s+/i, "").replace(/[.?!,]+$/g, "").trim()
+  const trimmed = text
+    .replace(/^\s*(?:my|the|a|an)\s+/i, "")
+    .replace(/[.?!,]+$/g, "")
+    .trim()
   if (/^(?:me|myself|self|you|message\s*myself|send\s*to\s*myself)$/i.test(trimmed)) return "you"
   const parts = trimmed.split(/\s+/).filter(Boolean)
   if (parts.length <= 1) return trimmed
@@ -710,7 +721,8 @@ function findWhatsAppChat(elements: UiaElement[], recipient: string): UiaElement
           name.includes("(you)"))
       )
         nameScore += 20
-      for (const token of targetTokens) if (token.length >= 2 && name.includes(token)) nameScore += 4
+      for (const token of targetTokens)
+        if (token.length >= 2 && name.includes(token)) nameScore += 4
       if (nameScore === 0) return { el, score: 0 }
       let score = nameScore
       if (el.role === "DataItem") score += 3
@@ -840,10 +852,12 @@ async function typeWhatsAppComposer(
   await Bun.sleep(250)
   if (await whatsAppComposerStillHasText(hwnd, text)) return { ok: true, point: targetPoint }
 
-  const snap = await uia.getUiTree({ maxNodes: 1500, maxDepth: 80, hwnd, lite: true }).catch(() => ({
-    window: "",
-    elements: [] as UiaElement[],
-  }))
+  const snap = await uia
+    .getUiTree({ maxNodes: 1500, maxDepth: 80, hwnd, lite: true })
+    .catch(() => ({
+      window: "",
+      elements: [] as UiaElement[],
+    }))
   const freshComposer = findWhatsAppComposer(snap.elements)
   const freshPoint = freshComposer
     ? {
@@ -957,7 +971,7 @@ export async function sendWhatsAppMessage(
       search = findWhatsAppSearch(snap.elements)
     }
     if (!search) return { error: "Could not find WhatsApp's search box." }
-    
+
     await clickElementOrPoint(search)
     await Bun.sleep(200)
     await clearWhatsAppField(search)
@@ -965,15 +979,11 @@ export async function sendWhatsAppMessage(
     await Bun.sleep(800)
 
     snap = await tree(800)
-    let chat = isSelf
-      ? findWhatsAppChat(snap.elements, "you")
-      : findWhatsAppChat(snap.elements, to)
+    let chat = isSelf ? findWhatsAppChat(snap.elements, "you") : findWhatsAppChat(snap.elements, to)
     for (let i = 0; i < 4 && !chat; i++) {
       await Bun.sleep(400)
       snap = await tree(800)
-      chat = isSelf
-        ? findWhatsAppChat(snap.elements, "you")
-        : findWhatsAppChat(snap.elements, to)
+      chat = isSelf ? findWhatsAppChat(snap.elements, "you") : findWhatsAppChat(snap.elements, to)
     }
     if (!chat) {
       return {
@@ -1113,16 +1123,22 @@ async function playSpotifyForeground(parsed: SpotifyQuery, signal?: AbortSignal)
     await Bun.sleep(100)
     await uia.call("press_key", { keys: "Enter" })
     await Bun.sleep(300)
-    
+
     snap = await snapshot()
     const title = snap.window || ""
-    const hasMatch = parsed.allTokens.some(token => 
-      title.toLowerCase().includes(token.toLowerCase())
+    const hasMatch = parsed.allTokens.some((token) =>
+      title.toLowerCase().includes(token.toLowerCase()),
     )
-    
+
     if (hasMatch || /\b(spotify|premium|free)\b/i.test(title) === false) {
       emitActResult(true, "played top result")
-      return { ok: true, query: parsed.original, matched: "top result", clicked: "Enter key", result: { ok: true } }
+      return {
+        ok: true,
+        query: parsed.original,
+        matched: "top result",
+        clicked: "Enter key",
+        result: { ok: true },
+      }
     }
 
     return {
@@ -1364,8 +1380,7 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
         },
         required: ["direction"],
       }),
-      execute: async ({ direction, steps }) =>
-        adjustSpotifyVolume(direction, steps),
+      execute: async ({ direction, steps }) => adjustSpotifyVolume(direction, steps),
     }),
 
     play_spotify: tool({
@@ -1424,28 +1439,9 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
       execute: async ({ target }) => openUserChrome(target ?? ""),
     }),
 
-    send_whatsapp_message: tool({
-      description:
-        "Open WhatsApp, select a chat, focus the message composer, type the message, and send it. " +
-        "Use this for WhatsApp messaging requests instead of generic type_text so text does not land in Search.",
-      parameters: jsonSchema<{ recipient: string; message: string }>({
-        type: "object",
-        properties: {
-          recipient: {
-            type: "string",
-            description: 'Chat/contact name, e.g. "You" or a contact name',
-          },
-          message: { type: "string", description: "Message text to send" },
-        },
-        required: ["recipient", "message"],
-      }),
-      execute: async ({ recipient, message }) =>
-        sendWhatsAppMessage(recipient, message),
-    }),
-
     launch_app: tool({
       description:
-        'Open a desktop app by name (e.g. "WhatsApp", "Notepad"), then call get_ui_tree to see its controls.',
+        'Open a desktop app by name (e.g. "Notepad", "Spotify"), then call get_ui_tree to see its controls.',
       parameters: jsonSchema<{ name: string }>({
         type: "object",
         properties: {

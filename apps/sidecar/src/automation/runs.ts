@@ -111,7 +111,9 @@ export function classifyAutomationOwner(task: string): AutomationOwner {
 }
 
 export function classifyAutomationRisk(text: string): AutomationRisk {
-  if (/\b(delete|remove|send|email|pay|buy|purchase|transfer|submit|uninstall|format)\b/i.test(text))
+  if (
+    /\b(delete|remove|send|email|pay|buy|purchase|transfer|submit|uninstall|format)\b/i.test(text)
+  )
     return "dangerous"
   if (/\b(create|draft|schedule|save|post|message|edit|update|rename)\b/i.test(text))
     return "moderate"
@@ -121,7 +123,19 @@ export function classifyAutomationRisk(text: string): AutomationRisk {
 export function buildAutomationPreview(task: string): AutomationPreview {
   const owner = classifyAutomationOwner(task)
   const risk = classifyAutomationRisk(task)
-  const base = owner.id === "spotify" ? ["Find Spotify", "Run playback action"] : owner.id === "browser" ? ["Open browser context", "Inspect page", "Run requested web action"] : owner.id === "messaging" ? ["Open messaging app", "Find recipient or chat", "Prepare message", "Wait for approval if sending"] : ["Inspect current context", "Choose the right tool", "Run the requested action"]
+  const base =
+    owner.id === "spotify"
+      ? ["Find Spotify", "Run playback action"]
+      : owner.id === "browser"
+        ? ["Open browser context", "Inspect page", "Run requested web action"]
+        : owner.id === "messaging"
+          ? [
+              "Open messaging app",
+              "Find recipient or chat",
+              "Prepare message",
+              "Wait for approval if sending",
+            ]
+          : ["Inspect current context", "Choose the right tool", "Run the requested action"]
   return {
     steps: base,
     estimatedSeconds: Math.max(8, base.length * 5),
@@ -227,16 +241,15 @@ export function completeAutomation(session: AutomationSession, summary: string):
       .query(
         "update automation_runs set status = ?, ended_at = ?, summary = ?, timeline_json = ? where id = ?",
       )
-      .run(
-        "completed",
-        endedAt,
-        summary,
-        JSON.stringify(session.run.timeline),
-        session.run.id,
-      ),
+      .run("completed", endedAt, summary, JSON.stringify(session.run.timeline), session.run.id),
   )
   reportUsage(session.run.owner.id === "browser" ? "browser_run" : "agent_run")
-  return { type: "automation_completed", runId: session.run.id, summary, replayId: session.run.replayId }
+  return {
+    type: "automation_completed",
+    runId: session.run.id,
+    summary,
+    replayId: session.run.replayId,
+  }
 }
 
 export function failAutomation(session: AutomationSession, error: string): SseEvent {
