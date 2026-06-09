@@ -33,6 +33,7 @@ if (process.platform === "win32") {
 
 let overlayWin: BrowserWindow | null = null
 let sidecarStarted = false // Sidecar + IPC + hotkeys initialised (once ever)
+let sidecarInstance: SidecarManager | null = null
 let overlayHitRegions: { x: number; y: number; width: number; height: number }[] = []
 let overlayIgnoringMouse = false
 let overlayLogicalPos = { x: 0, y: 0 }
@@ -428,7 +429,7 @@ function setSpotifyDuck(sidecar: SidecarManager, on: boolean): void {
 
 // Called after a valid token is obtained.
 // First call: starts sidecar, registers IPC handlers, registers shortcuts.
-// Subsequent calls (re-auth after sign-out): just re-enables the shortcuts.
+// Subsequent calls (re-auth after sign-out): restarts sidecar with new token.
 async function completeSetup(token: string) {
   if (!overlayWin) return
 
@@ -436,6 +437,7 @@ async function completeSetup(token: string) {
     sidecarStarted = true
 
     const sidecar = new SidecarManager(token)
+    sidecarInstance = sidecar
     try {
       await sidecar.start()
     } catch (err) {
@@ -484,7 +486,10 @@ async function completeSetup(token: string) {
 
     startSessionValidation()
   } else {
-    // Re-auth after sign-out: sidecar already running, just unlock shortcuts
+    // Re-auth after sign-out: restart sidecar with new token
+    if (sidecarInstance) {
+      await sidecarInstance.updateToken(token)
+    }
     enableHotkeys()
   }
 }
