@@ -25,7 +25,7 @@ describe("messaging tools", () => {
         body: opts?.body ? JSON.parse(opts.body as string) : undefined,
       })
       return new Response(JSON.stringify(response), { status: 200 })
-    }
+    }) as typeof fetch
   }
 
   describe("list_platforms", () => {
