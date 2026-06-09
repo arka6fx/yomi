@@ -33,6 +33,7 @@ jobs:
             echo "SIDECAR_SECRET=${{ secrets.SIDECAR_SECRET }}" >> .env.production
             echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env.production
             echo "DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }}" >> .env.production
+            echo "DISCORD_CLIENT_SECRET=${{ secrets.DISCORD_CLIENT_SECRET }}" >> .env.production
             echo "WHATSAPP_ACCESS_TOKEN=${{ secrets.WHATSAPP_ACCESS_TOKEN }}" >> .env.production
             echo "WHATSAPP_PHONE_NUMBER_ID=${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}" >> .env.production
             echo "WHATSAPP_WEBHOOK_VERIFY_TOKEN=yomi" >> .env.production
