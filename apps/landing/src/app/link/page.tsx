@@ -17,7 +17,7 @@ import { authClient } from "@/lib/auth-client"
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:3001"
 
-const PLATFORM_INFO: Record<string, { name: string; inviteUrl: string }> = {
+const PLATFORM_INFO: Record<string, { name: string; inviteUrl: string; dmUrl?: string }> = {
   telegram: {
     name: "Telegram",
     inviteUrl: "https://t.me/yomi_assistant_bot",
@@ -25,6 +25,7 @@ const PLATFORM_INFO: Record<string, { name: string; inviteUrl: string }> = {
   discord: {
     name: "Discord",
     inviteUrl: "https://discord.com/api/oauth2/authorize?client_id=1513769981773480068&permissions=2048&scope=bot",
+    dmUrl: "https://discord.com/users/1513769981773480068",
   },
   whatsapp: {
     name: "WhatsApp",
@@ -215,6 +216,20 @@ function LinkPageContent() {
                       >
                         <MessageCircle size={12} />
                         {info.name}
+                      </a>
+                    ) : null,
+                  )}
+                  {Object.entries(PLATFORM_INFO).map(([key, info]) =>
+                    info.dmUrl ? (
+                      <a
+                        key={`${key}-dm`}
+                        href={info.dmUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 transition-colors bg-indigo-500/10 rounded-lg px-3 py-1.5"
+                      >
+                        <MessageCircle size={12} />
+                        DM {info.name}
                       </a>
                     ) : null,
                   )}
