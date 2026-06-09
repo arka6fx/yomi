@@ -99,6 +99,66 @@ Production uses `https://yomi.arka6fx.com` for `BETTER_AUTH_URL`,
 Razorpay keys can stay blank until billing is enabled. Billing routes will not
 work without them.
 
+## Messaging Gateway
+
+Yomi supports messaging bots on Telegram and Discord. Link your account once,
+then chat with Yomi from your phone even when away from your computer.
+
+```text
+┌──────────────┐     ┌─────────────────┐     ┌──────────────┐
+│  Telegram /  │ --> │  Cloud Backend  │ --> │  Sidecar     │
+│  Discord DM  │ <-- │  (queue + send) │ <-- │  (LLM reply) │
+└──────────────┘     └─────────────────┘     └──────────────┘
+```
+
+### Setup
+
+**Telegram** — create a bot via [@BotFather](https://t.me/BotFather) and set
+`TELEGRAM_BOT_TOKEN`. The bot polls Telegram every 3s for new messages.
+
+**Discord** — create an application at
+[discord.com/developers](https://discord.com/developers/applications). Set:
+
+```bash
+DISCORD_BOT_TOKEN=      # Bot token from the Bot page
+DISCORD_CLIENT_ID=      # Application ID from General Information
+DISCORD_CLIENT_SECRET=  # From OAuth2 → Client Secret
+DISCORD_REDIRECT_URI=   # e.g. https://yomi.arka6fx.com/api/gateway/discord/callback
+```
+
+Discord uses a two-step OAuth identify flow (no server required):
+1. User clicks "Add Discord" → authorizes via OAuth
+2. Backend creates a DM channel and sends a 6-character linking code
+3. User enters the code on `/link` to connect their account
+
+### Linking Flow
+
+```
+User messages bot (first time)
+  → Bot replies: "Your code: ABC123"
+  → User visits /link, enters code
+  → Account linked, bot replies: "Your account is now linked!"
+  → All future messages route to your sidecar for AI replies
+```
+
+Linking codes expire after 10 minutes. Unlinked users always receive a fresh
+code on their next message.
+
+### Required Env Vars
+
+```bash
+# Telegram
+TELEGRAM_BOT_TOKEN=
+
+# Discord
+DISCORD_BOT_TOKEN=
+DISCORD_CLIENT_ID=
+DISCORD_CLIENT_SECRET=
+DISCORD_REDIRECT_URI=
+```
+
+Messaging is a Max-only feature (Explore/Pro are desktop-only).
+
 ## Commands
 
 ```bash
