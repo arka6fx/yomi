@@ -288,3 +288,13 @@ export const linkingCodes = pgTable("linking_codes", {
   userId: text("user_id"),
   expiresAt: timestamp("expires_at").notNull(),
 })
+
+// Telegram deep-link onboarding tokens
+export const telegramLinkTokens = pgTable("telegram_link_tokens", {
+  token: text("token").primaryKey().notNull(),
+  userId: text("user_id").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").notNull().default(false),
+  telegramUserId: text("telegram_user_id"),
+})

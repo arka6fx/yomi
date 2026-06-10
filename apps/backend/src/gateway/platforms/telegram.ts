@@ -28,6 +28,7 @@ export class TelegramAdapter implements PlatformAdapter {
   private lastUpdateId = 0
   private messageHandler: ((msg: GatewayMessage) => void) | null = null
   private connected = false
+  botUsername: string | null = null
 
   constructor(token: string) {
     this.token = token
@@ -40,9 +41,10 @@ export class TelegramAdapter implements PlatformAdapter {
   async connect(): Promise<void> {
     if (this.connected) return
     const res = await fetch(`${this.apiUrl}/getMe`)
-    const data = (await res.json()) as TelegramResponse
+    const data = (await res.json()) as TelegramResponse & { result?: { username?: string } }
     if (!data.ok) throw new Error(`Telegram API error: ${data.description ?? "unknown"}`)
-    console.warn("[gateway/telegram] connected")
+    this.botUsername = data.result?.username ?? null
+    console.warn(`[gateway/telegram] connected as @${this.botUsername}`)
     this.connected = true
     this.startPolling()
   }

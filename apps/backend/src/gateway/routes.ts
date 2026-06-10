@@ -128,6 +128,19 @@ gatewayRouter.post("/send", async (c) => {
   return c.json(result)
 })
 
+// Telegram deep-link token — returns a one-time https://t.me/<bot>?start=<token> URL
+gatewayRouter.post("/telegram/token", authenticate, async (c) => {
+  const user = c.get("user")
+  try {
+    const gateway = getDefaultGateway()
+    const result = await gateway.createTelegramLinkToken(user.id)
+    return c.json(result)
+  } catch (err) {
+    console.warn("[gateway] telegram token creation error:", err)
+    return c.json({ error: "Failed to create token" }, 500)
+  }
+})
+
 // ── Discord OAuth2 identify flow ─────────────────────────────────────────────
 
 // In-memory state store for CSRF protection (10-min TTL)

@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto"
 import { eq, and, lt } from "drizzle-orm"
 import { db, platformConnections, linkingCodes } from "@yomi/db"
+import { telegramLinkTokens } from "@yomi/db"
 import type { PlatformType, GatewayMessage, GatewaySessionInfo } from "@yomi/shared"
 import type { PlatformAdapter } from "./platform-adapter.js"
 import { TelegramAdapter } from "./platforms/telegram.js"
@@ -267,6 +268,106 @@ export class GatewayRunner {
     }
   }
 
+  // ── Telegram deep-link handler ──────────────────────────────────────────────
+  // Called when user taps "Start" from a https://t.me/<bot>?start=<token> link.
+  // Validates the one-time token and links the Telegram account.
+
+  private async handleTelegramDeepLink(token: string, platformUserId: string, chatId: string): Promise<void> {
+    console.warn(`[telegram-deeplink] /start received: token=${token} telegramUser=${platformUserId} chat=${chatId}`)
+
+    try {
+      const row = await db
+        .select({
+          token: telegramLinkTokens.token,
+          userId: telegramLinkTokens.userId,
+          expiresAt: telegramLinkTokens.expiresAt,
+          used: telegramLinkTokens.used,
+        })
+        .from(telegramLinkTokens)
+        .where(eq(telegramLinkTokens.token, token))
+        .limit(1)
+        .then((r) => r[0])
+
+      if (!row) {
+        console.warn(`[telegram-deeplink] token not found: ${token}`)
+        await this.sendMessage("telegram", chatId, "❌ Invalid link. Please reconnect from the Yomi dashboard.")
+        return
+      }
+
+      if (row.used) {
+        console.warn(`[telegram-deeplink] token already used: ${token}`)
+        await this.sendMessage("telegram", chatId, "ℹ️ This link has already been used. Your account may already be connected.")
+        return
+      }
+
+      if (Date.now() > row.expiresAt.getTime()) {
+        console.warn(`[telegram-deeplink] token expired: ${token}`)
+        await db.delete(telegramLinkTokens).where(eq(telegramLinkTokens.token, token))
+        await this.sendMessage("telegram", chatId, "⏰ Link expired. Please reconnect from the Yomi dashboard.")
+        return
+      }
+
+      // Mark token as used and record the Telegram user ID
+      await db
+        .update(telegramLinkTokens)
+        .set({ used: true, telegramUserId: platformUserId })
+        .where(eq(telegramLinkTokens.token, token))
+
+      // Create platform_connections entry
+      const existing = await db
+        .select({ id: platformConnections.id })
+        .from(platformConnections)
+        .where(
+          and(
+            eq(platformConnections.platform, "telegram"),
+            eq(platformConnections.platformUserId, platformUserId),
+          ),
+        )
+        .limit(1)
+        .then((r) => r[0])
+
+      if (existing) {
+        console.warn(`[telegram-deeplink] user already linked: yomiUser=${row.userId} telegramUser=${platformUserId}`)
+        await this.sendMessage("telegram", chatId, "ℹ️ This Telegram account is already linked to Yomi.")
+        return
+      }
+
+      await db.insert(platformConnections).values({
+        userId: row.userId,
+        platform: "telegram",
+        platformUserId: platformUserId,
+        platformChatId: chatId,
+      })
+
+      console.warn(`[telegram-deeplink] link success: yomiUser=${row.userId} telegramUser=${platformUserId} token=${token}`)
+      await this.sendMessage("telegram", chatId, "✅ Telegram successfully linked to your Yomi account.")
+    } catch (err) {
+      console.warn("[telegram-deeplink] error:", err)
+      try { await this.sendMessage("telegram", chatId, "⚠️ An error occurred. Please try again from the Yomi dashboard.") } catch { /* ignore */ }
+    }
+  }
+
+  // ── Telegram deep-link token generator ──────────────────────────────────────
+  // Called by the API endpoint to create a one-time use token for Telegram deep linking.
+
+  async createTelegramLinkToken(userId: string): Promise<{ token: string; deepLink: string }> {
+    const token = randomBytes(24).toString("hex").slice(0, 32)
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
+
+    await db.insert(telegramLinkTokens).values({
+      token,
+      userId,
+      expiresAt,
+    })
+
+    const adapter = this.adapters.get("telegram") as TelegramAdapter | undefined
+    const username = adapter?.botUsername ?? process.env["TELEGRAM_BOT_USERNAME"] ?? "yomi_assistant_bot"
+    const deepLink = `https://t.me/${username}?start=${token}`
+
+    console.warn(`[telegram-deeplink] token created: token=${token} yomiUser=${userId} deepLink=${deepLink}`)
+    return { token, deepLink }
+  }
+
   stop(): void {
     if (!this.running) return
     this.running = false
@@ -377,6 +478,20 @@ export class GatewayRunner {
 
   private async onIncoming(msg: GatewayMessage): Promise<void> {
     console.warn(`[gateway] onIncoming platform=${msg.platform} from=${msg.userId} chat=${msg.chatId} text="${msg.text.slice(0, 80)}"`)
+
+    // Telegram deep-link intercept: /start <TOKEN>
+    if (
+      msg.platform === "telegram" &&
+      process.env["TELEGRAM_DEEP_LINK_ENABLED"] === "true" &&
+      msg.text.startsWith("/start ") &&
+      msg.text.length > 7
+    ) {
+      const token = msg.text.slice(7).trim()
+      if (token.length >= 16) {
+        await this.handleTelegramDeepLink(token, msg.userId, msg.chatId)
+        return
+      }
+    }
 
     // Prompt unlinked users to connect their account
     if (msg.userId && msg.userId !== "unknown") {
