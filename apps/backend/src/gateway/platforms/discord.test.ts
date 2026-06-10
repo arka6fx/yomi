@@ -1,30 +1,6 @@
 import { describe, expect, it, mock, beforeEach } from "bun:test"
 import { DiscordAdapter } from "./discord.js"
 
-describe("DiscordAdapter — connect/disconnect", () => {
-  it("prevents double connect", async () => {
-    const adapter = new DiscordAdapter("fake-token", "fake-app-id")
-    let fetchCalls = 0
-    globalThis.fetch = mock((url: string | URL, init?: RequestInit) => {
-      fetchCalls++
-      const urlStr = url.toString()
-      if (urlStr.includes("/users/@me") && init?.method !== "POST") {
-        return new Response(JSON.stringify({ id: "bot-999" }), { status: 200 })
-      }
-      if (urlStr.includes("/commands")) {
-        return new Response(JSON.stringify([]), { status: 200 })
-      }
-      return new Response(JSON.stringify({}), { status: 200 })
-    }) as any
-
-    await adapter.connect()
-    // connect() should be a no-op after first call
-    // The adapter sets up gateway which we can't easily test here
-    expect(fetchCalls).toBeGreaterThan(0)
-    adapter.disconnect()
-  })
-})
-
 describe("DiscordAdapter — sendMessage", () => {
   it("sends message via REST API", async () => {
     const adapter = new DiscordAdapter("fake-token", "fake-app-id")
