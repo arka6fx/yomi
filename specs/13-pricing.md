@@ -44,25 +44,33 @@ Current Razorpay checkout amounts in the backend are USD cents:
 
 ## Feature Gates
 
-| Feature                    | Explore | Pro                 | Max                  |
-| -------------------------- | ------- | ------------------- | -------------------- |
-| Text chat                  | 100/mo  | 2,000/mo            | 8,000/mo             |
-| Default assistant          | 4.1 mini | 4.1 mini            | 4.1 mini             |
-| Advanced reasoning         | 5/mo    | 100/mo              | 500/mo               |
-| Long-context mode          | no      | 15/mo               | 150/mo               |
-| Screenshot understanding   | 25/mo   | 400/mo              | 2,000/mo             |
-| Image understanding        | 10/mo   | 200/mo              | 1,000/mo             |
-| Image generation           | no      | 30 low or 12 medium | 200 low or 80 medium |
-| Voice STT                  | 20 min  | 180 min             | 750 min              |
-| TTS output                 | 5k chars | 60k chars          | 250k chars           |
-| Local memory               | 50      | 3,000               | 15,000               |
-| Cloud memory mirror        | no      | 250 MB              | 2 GB                 |
-| Desktop automation         | no      | 75 runs/mo          | 750 runs/mo          |
-| Browser automation         | no      | 40 runs/mo          | 500 runs/mo          |
-| Automation max duration    | n/a     | 7 min/run           | 45 min/run           |
-| Automation concurrency     | n/a     | 1 active run        | 3 active runs        |
-| Experimental/early access  | no      | limited             | first access         |
-| Priority                   | best effort | priority         | highest              |
+Limits are defined in `packages/shared/src/plans.ts` — the single source of truth.
+
+| Feature                | Explore  | Pro             | Max              |
+| ---------------------- | -------- | --------------- | ---------------- |
+| AI chats / month       | 100      | 2,000           | 8,000            |
+| Voice (minutes)        | 20       | 180             | 750              |
+| Screenshots            | 25       | 400             | 2,000            |
+| Advanced reasoning     | 5        | 100             | 500              |
+| Desktop automation     | 10       | 75              | 750              |
+| Browser automation     | 10       | 40              | 500              |
+| Gateway messaging      | 50       | 2,000           | 8,000            |
+
+Explore now includes limited reasoning and automation to allow feature
+discovery. Upgrade prompts appear at 80% usage; hard enforcement at 100%.
+
+### Quota Enforcement
+
+All feature limits are enforced at the API level before execution:
+
+| Checkpoint | File |
+|-----------|------|
+| Feature availability (limit === 0) | `middleware/subscription.ts` |
+| Feature quota (used >= limit) | `routes/usage.ts POST /interactions/reserve` |
+| Subscription billing access | `entitlements.ts hasBillablePlanAccess()` |
+
+Enforcement returns HTTP 429 with `code: "quota_exceeded"` and upgrade
+information. Subscription issues return HTTP 402.
 
 ## Automation Policy
 
@@ -125,16 +133,17 @@ features stop being included in new requests.
 
 ## Implemented Files
 
-- `apps/backend/src/routes/billing.ts`
-- `apps/backend/src/routes/usage.ts`
-- `apps/backend/src/middleware/subscription.ts`
-- `apps/landing/src/components/landing/landing-page.tsx`
-- `apps/landing/src/app/dashboard/page.tsx`
-- `packages/shared/src/index.ts`
+- `packages/shared/src/plans.ts` — single source of truth for all plan definitions
+- `apps/backend/src/entitlements.ts` — derives limits from shared plans
+- `apps/backend/src/routes/billing.ts` — uses shared plan configs for billing
+- `apps/backend/src/routes/usage.ts` — full feature-level quota enforcement
+- `apps/backend/src/middleware/subscription.ts` — feature availability gating
+- `apps/landing/src/app/dashboard/page.tsx` — progress bars with used/limit/percentage
+- `apps/landing/src/app/link/page.tsx` — upgrade prompts
 
 ## Future Work
 
-- Annual Razorpay subscriptions.
-- Self-serve cancellation portal.
-- Full backend quota enforcement for all limits in this spec.
-- Optional regional INR checkout amounts.
+- Track voice duration (seconds) instead of just count
+- Annual Razorpay subscriptions
+- Self-serve cancellation portal
+- Optional regional INR checkout amounts

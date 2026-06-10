@@ -45,6 +45,15 @@ type Sub = {
     browserAutomation: FeatureUsage
     gatewayMessages: FeatureUsage
   }
+  planLimits?: {
+    chat: number
+    voiceMinutes: number
+    screenshots: number
+    reasoning: number
+    desktopAutomation: number
+    browserAutomation: number
+    gatewayMessages: number
+  }
   dailyChatUsed: number
   dailyVoiceUsed: number
   dailyImageUsed: number
@@ -63,9 +72,10 @@ const PLANS = [
     features: [
       "100 AI chats / month",
       "20 min voice / month",
-      "25 screenshot analyses",
-      "50 local memories",
-      "Messaging bots (limited)",
+      "25 screenshots",
+      "10 desktop runs",
+      "10 browser runs",
+      "5 reasoning uses",
     ],
   },
   {
@@ -93,7 +103,6 @@ const PLANS = [
     desc: "Power-user automation, reasoning, and creation limits.",
     icon: Cuboid,
     features: [
-      "Everything in Pro",
       "8,000 AI chats / month",
       "500 reasoning uses",
       "750 desktop automation runs",
@@ -163,13 +172,14 @@ function DashboardContent() {
             chat: { used: 0, limit: 100 },
             voice: { used: 0, limit: 20 },
             screenshots: { used: 0, limit: 25 },
-            reasoning: { used: 0, limit: 0 },
-            desktopAutomation: { used: 0, limit: 0 },
-            browserAutomation: { used: 0, limit: 0 },
+            reasoning: { used: 0, limit: 5 },
+            desktopAutomation: { used: 0, limit: 10 },
+            browserAutomation: { used: 0, limit: 10 },
             gatewayMessages: { used: 0, limit: 50 },
           },
           razorpaySubId: null,
           billingWarning: null,
+          planLimits: { chat: 100, voiceMinutes: 20, screenshots: 25, reasoning: 5, desktopAutomation: 10, browserAutomation: 10, gatewayMessages: 50 },
           dailyChatUsed: 0,
           dailyVoiceUsed: 0,
           dailyImageUsed: 0,
@@ -461,6 +471,7 @@ function DashboardContent() {
                   { key: "chat" as const, label: "AI Chats", icon: "💬" },
                   { key: "voice" as const, label: "Voice Interactions", icon: "🎤" },
                   { key: "screenshots" as const, label: "Screenshot Analyses", icon: "📸" },
+                  { key: "reasoning" as const, label: "Reasoning", icon: "🧠" },
                   { key: "desktopAutomation" as const, label: "Desktop Automation", icon: "🖥️" },
                   { key: "browserAutomation" as const, label: "Browser Automation", icon: "🌐" },
                   { key: "gatewayMessages" as const, label: "Messaging Bots", icon: "💭" },

@@ -5,58 +5,26 @@ import { eq, and, gte, sql, inArray } from "drizzle-orm"
 import { authenticate } from "../auth.js"
 import * as authSchema from "../auth-schema.js"
 import { effectivePlanForUser, effectiveRoleForUser, requestLimitForUser, featureLimitForUser } from "../entitlements.js"
+import { PLANS as SHARED_PLANS, type PlanKey, type FeatureKey } from "@yomi/shared/plans"
 
-// ── Pricing Configuration ──────────────────────────────────────────────────────
-// Canonical prices in USD cents. Razorpay Plan IDs come from env vars
-// (pre-created in Razorpay dashboard — see /create-subscription).
-//
-// Adding a new plan:
-//   1. Add entry here
-//   2. Create corresponding Razorpay Plan in dashboard
-//   3. Set RAZORPAY_PLAN_PRO / RAZORPAY_PLAN_MAX env var
-//
-// Adding annual billing:
-//   Add "proAnnual" / "maxAnnual" entries with interval: 12,
-//   corresponding Razorpay Annual Plans, and env vars.
-
-interface PlanConfig {
-  key: string
-  name: string
-  amountCents: number           // USD cents, canonical billing amount
-  currency: string               // "usd" — always lowercase
-  interval: number               // 1 = monthly, 12 = annual
-  razorpayPlanId: string | null  // pre-created plan ID from env
-  features: string[]             // display-only for dashboard
+const RAZORPAY_PLAN_IDS: Partial<Record<PlanKey, string | null>> = {
+  explore: null,
+  pro: process.env["RAZORPAY_PLAN_PRO"] ?? null,
+  max: process.env["RAZORPAY_PLAN_MAX"] ?? null,
 }
 
-const PLANS: Record<string, PlanConfig> = {
-  explore: {
-    key: "explore",
-    name: "Explore",
-    amountCents: 0,
-    currency: "usd",
-    interval: 1,
-    razorpayPlanId: null,
-    features: ["100 AI chats / month", "20 min voice", "25 screenshots", "50 local memories"],
-  },
-  pro: {
-    key: "pro",
-    name: "Pro",
-    amountCents: 1499,
-    currency: "usd",
-    interval: 1,
-    razorpayPlanId: process.env["RAZORPAY_PLAN_PRO"] ?? null,
-    features: ["2,000 AI chats / month", "180 min voice", "100 reasoning", "75 desktop runs", "40 browser runs"],
-  },
-  max: {
-    key: "max",
-    name: "Max",
-    amountCents: 3999,
-    currency: "usd",
-    interval: 1,
-    razorpayPlanId: process.env["RAZORPAY_PLAN_MAX"] ?? null,
-    features: ["8,000 AI chats / month", "750 min voice", "500 reasoning", "750 desktop runs", "500 browser runs"],
-  },
+function planFeatures(key: string): string[] {
+  const plan = SHARED_PLANS[key]
+  if (!plan) return []
+  const l = plan.limits
+  return [
+    `${l.chat.toLocaleString()} AI chats / month`,
+    `${l.voiceMinutes} min voice`,
+    l.reasoning > 0 ? `${l.reasoning} reasoning` : "",
+    l.desktopAutomation > 0 ? `${l.desktopAutomation} desktop runs` : "",
+    l.browserAutomation > 0 ? `${l.browserAutomation} browser runs` : "",
+    l.gatewayMessages > 0 ? `${l.gatewayMessages} messaging` : "",
+  ].filter(Boolean)
 }
 
 // ── Currency Display Layer ─────────────────────────────────────────────────────
@@ -165,14 +133,14 @@ billingRouter.get("/plans", (c) => {
     display.code === "USD" ? null
     : `Estimated ${display.code} equivalent. Charged in USD. Your bank may convert the amount automatically.`
 
-  const plans = Object.values(PLANS).map((p) => ({
+  const plans = Object.values(SHARED_PLANS).map((p) => ({
     key: p.key,
     name: p.name,
-    amountCents: p.amountCents,
-    currency: p.currency.toUpperCase(),
-    interval: p.interval === 12 ? "year" : "month",
-    features: p.features,
-    local: p.amountCents > 0 ? estimateLocal(p.amountCents, display) : null,
+    amountCents: p.priceCents,
+    currency: "USD",
+    interval: "month",
+    features: planFeatures(p.key),
+    local: p.priceCents > 0 ? estimateLocal(p.priceCents, display) : null,
     notice: estimate,
   }))
 
@@ -184,12 +152,12 @@ billingRouter.post("/create-subscription", authenticate, async (c) => {
   const { plan } = (await c.req.json()) as { plan: string }
   const user = c.get("user")
 
-  const config = PLANS[plan]
+  const config = SHARED_PLANS[plan]
   if (!config || plan === "explore") {
     return c.json({ error: "Invalid plan" }, 400)
   }
 
-  const planId = config.razorpayPlanId
+  const planId = RAZORPAY_PLAN_IDS[plan as PlanKey]
   if (!planId) {
     return c.json({ error: "Razorpay plan not configured for this tier" }, 500)
   }
@@ -353,7 +321,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
       and(
         eq(usageEvents.userId, user.id),
         gte(usageEvents.createdAt, requestPeriodStart),
-        inArray(usageEvents.kind, ["request_chat", "request_voice", "stt", "agent_run", "browser_run", "screenshot", "gateway_message"]),
+        inArray(usageEvents.kind, ["request_chat", "request_voice", "stt", "agent_run", "browser_run", "screenshot", "gateway_message", "reasoning"]),
       ),
     )
     .groupBy(usageEvents.kind)
@@ -368,6 +336,8 @@ billingRouter.get("/subscription", authenticate, async (c) => {
   const screenshotUsed = (countMap["screenshot"] ?? 0)
   const gatewayUsed = (countMap["gateway_message"] ?? 0)
 
+  const reasoningUsed = (countMap["reasoning"] ?? 0)
+
   const requestsUsed = chatUsed + voiceUsed
   const requestsLimit = requestLimitForUser(user)
   const requestsRemaining = requestsLimit === null ? null : Math.max(requestsLimit - requestsUsed, 0)
@@ -377,7 +347,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     chat: { used: chatUsed, limit: requestsLimit },
     voice: { used: voiceUsed, limit: featureLimitForUser(user, "voiceMinutes") },
     screenshots: { used: screenshotUsed, limit: featureLimitForUser(user, "screenshots") },
-    reasoning: { used: 0, limit: featureLimitForUser(user, "reasoning") },
+    reasoning: { used: reasoningUsed, limit: featureLimitForUser(user, "reasoning") },
     desktopAutomation: { used: agentUsed, limit: featureLimitForUser(user, "desktopAutomation") },
     browserAutomation: { used: browserUsed, limit: featureLimitForUser(user, "browserAutomation") },
     gatewayMessages: { used: gatewayUsed, limit: featureLimitForUser(user, "gatewayMessages") },
@@ -397,6 +367,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     requestsRemaining,
     resetAt,
     features,
+    planLimits: SHARED_PLANS[effectivePlanForUser(user)]?.limits ?? SHARED_PLANS["explore"].limits,
     dailyChatUsed: user.dailyChatCount,
     dailyVoiceUsed: user.dailyVoiceCount,
     dailyImageUsed: user.dailyImageCount,
