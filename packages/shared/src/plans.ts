@@ -75,7 +75,7 @@ export type PlanKey = keyof typeof PLANS
 export type FeatureKey = keyof (typeof PLANS)["explore"]["limits"]
 
 export function getPlan(key: string): PlanConfig {
-  return PLANS[key] ?? PLANS.explore
+  return (PLANS[key] ?? PLANS["explore"]) as PlanConfig
 }
 
 export function featureLimit(plan: string, feature: FeatureKey): number {
