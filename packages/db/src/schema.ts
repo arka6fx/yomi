@@ -285,5 +285,6 @@ export const linkingCodes = pgTable("linking_codes", {
   platform: text("platform").notNull(),
   platformUserId: text("platform_user_id").notNull(),
   platformChatId: text("platform_chat_id"),
+  userId: text("user_id"),
   expiresAt: timestamp("expires_at").notNull(),
 })

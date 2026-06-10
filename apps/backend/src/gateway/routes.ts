@@ -131,7 +131,7 @@ gatewayRouter.post("/send", async (c) => {
 // ── Discord OAuth2 identify flow ─────────────────────────────────────────────
 
 // In-memory state store for CSRF protection (10-min TTL)
-const oauthStateStore = new Map<string, { createdAt: number }>()
+const oauthStateStore = new Map<string, { createdAt: number; userId: string }>()
 const OAUTH_STATE_TTL = 10 * 60 * 1000
 
 setInterval(() => {
@@ -142,15 +142,18 @@ setInterval(() => {
 }, 60_000)
 
 // Initiate OAuth — user clicks "Add Discord" on landing/dashboard
-gatewayRouter.get("/discord/auth", (c) => {
+gatewayRouter.get("/discord/auth", authenticate, (c) => {
+  const user = c.get("user")
   const clientId = process.env["DISCORD_CLIENT_ID"]
   const redirectUri = process.env["DISCORD_REDIRECT_URI"]
   if (!clientId || !redirectUri) {
     return c.redirect("/link?error=discord_not_configured")
   }
 
-  const state = randomBytes(16).toString("hex")
-  oauthStateStore.set(state, { createdAt: Date.now() })
+  const stateData = randomBytes(16).toString("hex")
+  // Encode Yomi user ID in state: random.userId
+  const state = `${stateData}.${user.id}`
+  oauthStateStore.set(state, { createdAt: Date.now(), userId: user.id })
 
   const url = new URL("https://discord.com/api/oauth2/authorize")
   url.searchParams.set("client_id", clientId)
@@ -159,7 +162,7 @@ gatewayRouter.get("/discord/auth", (c) => {
   url.searchParams.set("scope", "identify")
   url.searchParams.set("state", state)
 
-  console.warn(`[discord-oauth] initiating authorization — scopes: identify, client_id: ${clientId}`)
+  console.warn(`[discord-oauth] initiating authorization — scopes: identify, client_id: ${clientId}, yomiUser: ${user.id}`)
 
   return c.redirect(url.toString())
 })
@@ -185,8 +188,7 @@ gatewayRouter.get("/discord/callback", async (c) => {
   const clientId = process.env["DISCORD_CLIENT_ID"]
   const clientSecret = process.env["DISCORD_CLIENT_SECRET"]
   const redirectUri = process.env["DISCORD_REDIRECT_URI"]
-  const botToken = process.env["DISCORD_BOT_TOKEN"]
-  if (!clientId || !clientSecret || !redirectUri || !botToken) {
+  if (!clientId || !clientSecret || !redirectUri) {
     console.warn("[discord-oauth] missing env vars")
     return c.redirect("/link?error=discord_not_configured")
   }
@@ -214,7 +216,7 @@ gatewayRouter.get("/discord/callback", async (c) => {
     const tokenData = (await tokenRes.json()) as { access_token: string; scope?: string }
     console.warn(`[discord-oauth] token exchange success, scopes: ${tokenData.scope ?? "unknown"}`)
 
-    // Get Discord user ID from /users/@me
+    // Get Discord user ID
     const userRes = await fetch("https://discord.com/api/v10/users/@me", {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     })
@@ -225,113 +227,27 @@ gatewayRouter.get("/discord/callback", async (c) => {
     }
 
     const discordUser = (await userRes.json()) as { id: string; username: string }
-    console.warn(`[discord-oauth] OAuth success — Discord user: ${discordUser.id} (${discordUser.username})`)
+    console.warn(`[discord-oauth] OAuth success — Discord user: ${discordUser.id} (${discordUser.username}), yomiUser: ${stored.userId}`)
 
-    // Generate linking code first (before DM attempt, so fallback always has it)
+    // Generate linking code — stored with both Yomi userId and Discord userId
     const linkCode = randomBytes(3).toString("hex").toUpperCase().slice(0, 6)
-    console.warn(`[discord-oauth] linking code generated: ${linkCode} for user ${discordUser.id}`)
 
-    // Fetch the bot's user ID so we can have the user create a DM with it
-    const botMeRes = await fetch("https://discord.com/api/v10/users/@me", {
-      headers: { Authorization: `Bot ${botToken}` },
-    })
-    if (!botMeRes.ok) {
-      const text = await botMeRes.text()
-      console.warn(`[discord-oauth] failed to get bot user info (${botMeRes.status}): ${text.slice(0, 300)}`)
-      return c.redirect(`/link?code=${linkCode}&discord_dm_failed=true`)
-    }
-    const botMe = (await botMeRes.json()) as { id: string }
-    console.warn(`[discord-oauth] bot user ID: ${botMe.id}`)
-
-    // Create DM channel using the USER's OAuth token (not the bot token).
-    // Bot token requires a shared server or "Allow DMs from server members".
-    // User token always works — the user is initiating the DM with the bot.
-    console.warn(`[discord-oauth] creating DM channel: user ${discordUser.id} → bot ${botMe.id} (using user token)`)
-    const dmRes = await fetch("https://discord.com/api/v10/users/@me/channels", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${tokenData.access_token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ recipient_id: botMe.id }),
-    })
-
-    if (!dmRes.ok) {
-      const text = await dmRes.text()
-      let parsed: { code?: number; message?: string } = {}
-      try { parsed = JSON.parse(text) } catch { /* not JSON */ }
-      console.warn(`[discord-oauth] DM channel creation FAILED`)
-      console.warn(`  HTTP status: ${dmRes.status}`)
-      console.warn(`  Discord code: ${parsed.code ?? "none"}`)
-      console.warn(`  Discord message: ${parsed.message ?? text.slice(0, 300)}`)
-      console.warn(`  Bot token DM to user also attempted — likely blocked by missing shared server`)
-      // Store code anyway — user sees it on the web link page
-      try {
-        await db.insert(linkingCodes).values({
-          code: linkCode,
-          platform: "discord" as const,
-          platformUserId: discordUser.id,
-          platformChatId: null,
-          expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-        })
-        console.warn(`[discord-oauth] stored linking code ${linkCode} without chatId`)
-      } catch (err) {
-        console.warn("[discord-oauth] linking code DB insert error:", err)
-      }
-      return c.redirect(`/link?code=${linkCode}&discord_dm_failed=true`)
-    }
-
-    const dmChannel = (await dmRes.json()) as { id: string }
-    console.warn(`[discord-oauth] DM channel created: ${dmChannel.id} for user ${discordUser.id}`)
-
-    // Register the DM channel with the adapter so it polls for future messages
-    const gateway = getDefaultGateway()
-    const discordAdapter = gateway.getAdapter("discord")
-    if (discordAdapter) {
-      discordAdapter.registerDmChannel?.(dmChannel.id)
-      console.warn(`[discord-oauth] registered DM channel ${dmChannel.id} with adapter`)
-    }
-
-    // Store linking code with chatId
     try {
       await db.insert(linkingCodes).values({
         code: linkCode,
         platform: "discord" as const,
         platformUserId: discordUser.id,
-        platformChatId: dmChannel.id,
+        platformChatId: null,
+        userId: stored.userId,
         expiresAt: new Date(Date.now() + 10 * 60 * 1000),
       })
-      console.warn(`[discord-oauth] stored linking code ${linkCode} with chatId ${dmChannel.id}`)
+      console.warn(`[discord-oauth] linking code ${linkCode} stored (yomiUser=${stored.userId}, discordUser=${discordUser.id})`)
     } catch (err) {
       console.warn("[discord-oauth] linking code DB insert error:", err)
+      return c.redirect("/link?error=linking_code_failed")
     }
 
-    // Send the linkCode via DM using the Discord adapter
-    if (discordAdapter) {
-      const appUrl =
-        process.env["YOMI_APP_URL"] ??
-        process.env["NEXT_PUBLIC_APP_URL"] ??
-        "https://yomi.ai"
-      const msg =
-        `Welcome to Yomi! Your linking code: **${linkCode}**\n\n` +
-        `Visit ${appUrl}/link and enter this code to connect your account. ` +
-        `The code expires in 10 minutes.`
-      console.warn(`[discord-oauth] sending DM with linking code to channel ${dmChannel.id}...`)
-      const result = await discordAdapter.sendMessage(dmChannel.id, msg)
-      if (result.ok) {
-        console.warn(`[discord-oauth] DM sent successfully — messageId=${result.messageId}`)
-      } else {
-        console.warn(`[discord-oauth] DM send FAILED: ${result.error}`)
-        // Code is still valid — user can find it on the link page via ?code= param
-        // We redirect with the code so the user always sees it
-        return c.redirect(`/link?code=${linkCode}&discord_dm_failed=true`)
-      }
-    } else {
-      console.warn("[discord-oauth] discord adapter not available — cannot send DM")
-      return c.redirect(`/link?code=${linkCode}&discord_dm_failed=true`)
-    }
-
-    return c.redirect("/link?discord_sent=true")
+    return c.redirect(`/link?code=${linkCode}&discord_ready=true`)
   } catch (err) {
     console.warn("[discord-oauth] callback error:", err)
     return c.redirect("/link?error=discord_auth_failed")
