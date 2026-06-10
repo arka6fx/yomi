@@ -195,7 +195,7 @@ export class DiscordAdapter implements PlatformAdapter {
       op: 2,
       d: {
         token: this.token,
-        intents: 1 << 12 | 1 << 0, // DIRECT_MESSAGES | GUILDS
+        intents: (1 << 15) | (1 << 12) | (1 << 0), // MESSAGE_CONTENT | DIRECT_MESSAGES | GUILDS
         properties: { os: "linux", browser: "yomi", device: "yomi" },
       },
     })
