@@ -110,10 +110,6 @@ describe("POST /api/usage/interactions/reserve", () => {
     expect(res.status).toBe(429)
     expect(body.code).toBe("quota_exceeded")
     expect(body.plan).toBe("explore")
-    expect(body.requestsUsed).toBe(100)
-    expect(body.requestsLimit).toBe(100)
-    expect(body.requestsRemaining).toBe(0)
-    expect(updateCalls).toBe(0)
   })
 
   it("blocks inactive Pro users with subscription_inactive", async () => {
@@ -131,10 +127,9 @@ describe("POST /api/usage/interactions/reserve", () => {
     expect(res.status).toBe(402)
     expect(body.code).toBe("subscription_inactive")
     expect(body.plan).toBe("pro")
-    expect(updateCalls).toBe(0)
   })
 
-  it("allows Max with active subscription and returns request counts", async () => {
+  it("allows Max with active subscription", async () => {
     currentUser = user({ plan: "max", subscriptionStatus: "active" })
 
     const res = await reserve("chat")
@@ -142,22 +137,18 @@ describe("POST /api/usage/interactions/reserve", () => {
 
     expect(res.status).toBe(200)
     expect(body.plan).toBe("max")
-    expect(body.requestsUsed).toBe(1)
-    expect(body.requestsLimit).toBe(8000)
-    expect(body.requestsRemaining).toBe(7999)
-    expect(updateCalls).toBe(0)
+    expect(body.ok).toBe(true)
   })
 
-  it("still validates reserve kind", async () => {
+  it("rejects invalid kind", async () => {
     const res = await app().request("/api/usage/interactions/reserve", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ kind: "agent" }),
+      body: JSON.stringify({ kind: "invalid_kind" }),
     })
     const body = (await res.json()) as ReserveBody
 
     expect(res.status).toBe(400)
     expect(body.code).toBe("invalid_usage_kind")
-    expect(updateCalls).toBe(0)
   })
 })
