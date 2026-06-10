@@ -280,7 +280,7 @@ function LinkPageContent() {
                   Go to Dashboard
                   <ArrowRight size={14} />
                 </Link>
-                {inviteUrl && (
+                {inviteUrl && platformInfo && (
                   <a
                     href={inviteUrl}
                     target="_blank"
