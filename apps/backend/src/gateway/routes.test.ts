@@ -371,7 +371,7 @@ describe("GET /api/gateway/discord/callback", () => {
     try {
       const res = await app().request(`/api/gateway/discord/callback?code=mock-code&state=${state}`)
       expect(res.status).toBe(302)
-      expect(res.headers.get("Location")).toContain("discord_sent=true")
+      expect(res.headers.get("Location")).toContain("discord_ready=true")
       expect(insertPayload).not.toBeNull()
       expect((insertPayload as any).platform).toBe("discord")
     } finally {
