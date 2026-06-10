@@ -160,7 +160,11 @@ export class GatewayRunner {
       this.registerAdapter(adapter)
     }
     if (discordToken) {
-      const adapter = new DiscordAdapter(discordToken)
+      const appId = process.env["DISCORD_CLIENT_ID"]
+      const adapter = new DiscordAdapter(discordToken, appId)
+      adapter.onLinkCode(async (code, discordUserId, channelId) => {
+        await this.handleDiscordLinkCode(code, discordUserId, channelId, adapter)
+      })
       this.registerAdapter(adapter)
     }
 
@@ -182,9 +186,85 @@ export class GatewayRunner {
     }, SESSION_CLEANUP_INTERVAL_MS)
 
     console.warn(`[gateway] running with ${this.adapters.size} adapter(s)`)
+  }
 
-    // Bootstrap known Discord DM channels from existing platform connections
-    void this.bootstrapDiscordChannels()
+  // ── Discord /link slash command handler ─────────────────────────────────────
+
+  private async handleDiscordLinkCode(
+    code: string,
+    discordUserId: string,
+    channelId: string,
+    adapter: DiscordAdapter,
+  ): Promise<void> {
+    try {
+      const row = await db
+        .select({
+          code: linkingCodes.code,
+          platformUserId: linkingCodes.platformUserId,
+          userId: linkingCodes.userId,
+          expiresAt: linkingCodes.expiresAt,
+        })
+        .from(linkingCodes)
+        .where(
+          and(
+            eq(linkingCodes.code, code),
+            eq(linkingCodes.platform, "discord"),
+          ),
+        )
+        .limit(1)
+        .then((r) => r[0])
+
+      if (!row) {
+        await adapter.sendMessage(channelId, "❌ Invalid linking code. Generate one from the Yomi dashboard.")
+        return
+      }
+
+      if (Date.now() > row.expiresAt.getTime()) {
+        await db.delete(linkingCodes).where(eq(linkingCodes.code, code))
+        await adapter.sendMessage(channelId, "❌ This linking code has expired. Generate a new one from the Yomi dashboard.")
+        return
+      }
+
+      if (row.platformUserId !== discordUserId) {
+        await adapter.sendMessage(channelId, "❌ This code was generated for a different Discord account. Re-authenticate on the dashboard.")
+        return
+      }
+
+      if (!row.userId) {
+        await adapter.sendMessage(channelId, "❌ This code is not associated with a Yomi account. Make sure you're logged in on the dashboard when generating it.")
+        return
+      }
+
+      // Link the account
+      const existing = await db
+        .select({ id: platformConnections.id })
+        .from(platformConnections)
+        .where(
+          and(
+            eq(platformConnections.platform, "discord"),
+            eq(platformConnections.platformUserId, discordUserId),
+          ),
+        )
+        .limit(1)
+        .then((r) => r[0])
+
+      if (!existing) {
+        await db.insert(platformConnections).values({
+          userId: row.userId,
+          platform: "discord",
+          platformUserId: discordUserId,
+          platformChatId: channelId,
+        })
+      }
+
+      await db.delete(linkingCodes).where(eq(linkingCodes.code, code))
+
+      await adapter.sendMessage(channelId, "✅ Your Discord account is now linked to Yomi! You can now DM the bot from anywhere.")
+      console.warn(`[gateway] /link success: yomiUser=${row.userId} discordUser=${discordUserId} code=${code}`)
+    } catch (err) {
+      console.warn("[gateway] handleDiscordLinkCode error:", err)
+      try { await adapter.sendMessage(channelId, "⚠️ An error occurred. Please try again from the Yomi dashboard.") } catch { /* ignore */ }
+    }
   }
 
   stop(): void {
