@@ -13,7 +13,7 @@ const LINK_CODE_TTL_MS = 10 * 60 * 1000
 interface LinkingCode {
   platform: PlatformType
   platformUserId: string
-  chatId: string
+  chatId: string | null
   expiresAt: number
 }
 
@@ -79,7 +79,7 @@ export class GatewayRunner {
       return {
         platform: row.platform as PlatformType,
         platformUserId: row.platformUserId,
-        chatId: row.chatId ?? row.platformUserId,
+        chatId: row.chatId,
         expiresAt: row.expiresAt.getTime(),
       }
     } catch (err) {
