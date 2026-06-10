@@ -159,6 +159,8 @@ gatewayRouter.get("/discord/auth", (c) => {
   url.searchParams.set("scope", "identify")
   url.searchParams.set("state", state)
 
+  console.warn(`[discord-oauth] initiating authorization — scopes: identify, client_id: ${clientId}`)
+
   return c.redirect(url.toString())
 })
 
@@ -209,8 +211,8 @@ gatewayRouter.get("/discord/callback", async (c) => {
       return c.redirect("/link?error=discord_auth_failed")
     }
 
-    const tokenData = (await tokenRes.json()) as { access_token: string }
-    console.warn("[discord-oauth] OAuth success")
+    const tokenData = (await tokenRes.json()) as { access_token: string; scope?: string }
+    console.warn(`[discord-oauth] token exchange success, scopes: ${tokenData.scope ?? "unknown"}`)
 
     // Get Discord user ID from /users/@me
     const userRes = await fetch("https://discord.com/api/v10/users/@me", {
@@ -229,22 +231,40 @@ gatewayRouter.get("/discord/callback", async (c) => {
     const linkCode = randomBytes(3).toString("hex").toUpperCase().slice(0, 6)
     console.warn(`[discord-oauth] linking code generated: ${linkCode} for user ${discordUser.id}`)
 
-    // Create DM channel between bot and user
-    // Uses bot token (not user token) — requires the bot to have proper permissions.
-    // Does NOT require the user to be in any guild.
-    console.warn(`[discord-oauth] creating DM channel for recipient ${discordUser.id}...`)
+    // Fetch the bot's user ID so we can have the user create a DM with it
+    const botMeRes = await fetch("https://discord.com/api/v10/users/@me", {
+      headers: { Authorization: `Bot ${botToken}` },
+    })
+    if (!botMeRes.ok) {
+      const text = await botMeRes.text()
+      console.warn(`[discord-oauth] failed to get bot user info (${botMeRes.status}): ${text.slice(0, 300)}`)
+      return c.redirect(`/link?code=${linkCode}&discord_dm_failed=true`)
+    }
+    const botMe = (await botMeRes.json()) as { id: string }
+    console.warn(`[discord-oauth] bot user ID: ${botMe.id}`)
+
+    // Create DM channel using the USER's OAuth token (not the bot token).
+    // Bot token requires a shared server or "Allow DMs from server members".
+    // User token always works — the user is initiating the DM with the bot.
+    console.warn(`[discord-oauth] creating DM channel: user ${discordUser.id} → bot ${botMe.id} (using user token)`)
     const dmRes = await fetch("https://discord.com/api/v10/users/@me/channels", {
       method: "POST",
       headers: {
-        Authorization: `Bot ${botToken}`,
+        Authorization: `Bearer ${tokenData.access_token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ recipient_id: discordUser.id }),
+      body: JSON.stringify({ recipient_id: botMe.id }),
     })
 
     if (!dmRes.ok) {
       const text = await dmRes.text()
-      console.warn(`[discord-oauth] DM channel creation FAILED (${dmRes.status}): ${text.slice(0, 300)}`)
+      let parsed: { code?: number; message?: string } = {}
+      try { parsed = JSON.parse(text) } catch { /* not JSON */ }
+      console.warn(`[discord-oauth] DM channel creation FAILED`)
+      console.warn(`  HTTP status: ${dmRes.status}`)
+      console.warn(`  Discord code: ${parsed.code ?? "none"}`)
+      console.warn(`  Discord message: ${parsed.message ?? text.slice(0, 300)}`)
+      console.warn(`  Bot token DM to user also attempted — likely blocked by missing shared server`)
       // Store code anyway — user sees it on the web link page
       try {
         await db.insert(linkingCodes).values({
@@ -254,7 +274,7 @@ gatewayRouter.get("/discord/callback", async (c) => {
           platformChatId: null,
           expiresAt: new Date(Date.now() + 10 * 60 * 1000),
         })
-        console.warn(`[discord-oauth] stored linking code ${linkCode} without chatId (DM creation failed)`)
+        console.warn(`[discord-oauth] stored linking code ${linkCode} without chatId`)
       } catch (err) {
         console.warn("[discord-oauth] linking code DB insert error:", err)
       }
