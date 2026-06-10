@@ -471,29 +471,55 @@ USER PHONE          BACKEND (:3001)            SIDECAR (:3002)
    │                     │                         │
    ├─ DM Telegram ─────► │                         │
    │                     ├─ lookup platform_conn   │
-   │                     ├─ POST /gateway/receive ─►│
+   │                     ├─ queue message          │
+   │                     │◄── GET /api/gateway/pending (poll) ──┤
+   │                     ├─ return messages ──────►│
    │                     │                         ├─ process
-   │                     │◄── POST /gateway/send ──┤
+   │                     │◄── POST /api/gateway/send (reply) ──┤
    │◄── bot replies ────┤                         │
 ```
 
+Sidecar polls backend every ~2.5s for queued messages. Backend never pushes
+directly to sidecar (no inbound HTTP from cloud to user machine).
+
+**Discord uses Gateway WebSocket** for real-time events (`INTERACTION_CREATE`
+for `/link` slash commands, `MESSAGE_CREATE` for DMs). Telegram uses REST
+long-polling.
+
 **New DB table — `platform_connections`:**
 ```typescript
-// packages/db/src/schema.ts
+// packages/db/src/schema.ts (already implemented)
 platform_connections {
-  id:         uuid // pk
-  user_id:    uuid // fk → user
-  platform:   "telegram" | "discord"
-  platform_user_id: string // Telegram chat_id, Discord user_id
-  device_id:  uuid? // fk → devices (null until sidecar connects)
-  created_at: timestamp
+  id:              uuid     // pk
+  user_id:         text     // fk → user
+  platform:        text     // "telegram" | "discord"
+  platform_user_id: text    // platform user ID
+  platform_chat_id: text?   // chat/channel ID (nullable)
+  connected_at:    timestamp
+  updated_at:      timestamp
 }
+// Unique on (platform, platform_user_id)
 ```
 
-**Backend routes:**
+**Linking flow — three paths:**
+
+1. **Telegram deep-link:** `t.me/bot?start=TOKEN` → auto-link, no code needed
+2. **Telegram / Discord manual:** User messages bot → gets 6-char code →
+   enters on `/link` page
+3. **Discord slash command:** `/link ABC123` in any server → linked instantly
+
+**Backend routes (all under `/api/gateway`):**
 | Method | Path | Purpose |
 |--------|------|---------|
-| `POST` | `/gateway/send` | Sidecar calls to reply via platform API |
+| `GET` | `/status` | Gateway health |
+| `GET` | `/pending` | Sidecar polls for queued messages |
+| `GET` | `/connections` | List linked platforms |
+| `DELETE` | `/connections/:platform` | Unlink a platform |
+| `POST` | `/link` | Link via 6-char code |
+| `POST` | `/send` | Sidecar sends reply through platform |
+| `POST` | `/telegram/token` | Generate deep-link token |
+| `GET` | `/discord/auth` | Initiate Discord OAuth |
+| `GET` | `/discord/callback` | Discord OAuth callback |
 
 **Sidecar changes:**
 - Remove all gateway adapter code (telegram.ts, discord.ts,
@@ -648,11 +674,10 @@ graph topology or replaces an existing loop.
 - `apps/sidecar/src/gateway/receive.ts` — `POST /gateway/receive` endpoint
   (accepts forwarded messages from backend, processes through pipeline)
 - `apps/sidecar/package.json` — new dependencies (cron-parser, platform SDKs)
-- `apps/backend/src/gateway/` — move gateway code from sidecar to backend
-- `apps/backend/src/gateway/routes.ts` — backend gateway routes
-  (`POST /gateway/send`)
+- `apps/backend/src/gateway/` — **Implemented.** Gateway in backend with platform adapters (Telegram REST polling, Discord Gateway WebSocket), gateway-runner, and routes.
+- `apps/backend/src/gateway/routes.ts` — **Implemented.** All 9 routes (status, pending, connections, link, send, telegram/token, discord/auth, discord/callback)
 - `apps/backend/src/index.ts` — register gateway routes
-- `packages/db/src/schema.ts` — add `platform_connections` table
+- `packages/db/src/schema.ts` — add `platform_connections` table **(implemented)**, `linking_codes` **(implemented)**, `telegram_link_tokens` **(implemented)**
 - `apps/desktop/src/renderer/` — Mission Control panel for insights, cron
   management, skill browsing
 - `packages/shared/src/` — new IPC types (skill CRUD, cron jobs, insights data)
@@ -671,11 +696,11 @@ graph topology or replaces an existing loop.
 - `apps/sidecar/src/tools/delegate/delegate-tool.ts` — subagent delegation
 - `apps/sidecar/src/agent/compressor.ts` — context compression
 - `apps/sidecar/src/plugins/plugin-manager.ts` — plugin discovery + loading
-- `apps/backend/src/gateway/platform-adapter.ts` — BasePlatformAdapter ABC
-- `apps/backend/src/gateway/platforms/telegram.ts` — Telegram adapter
-- `apps/backend/src/gateway/platforms/discord.ts` — Discord adapter
-- `apps/backend/src/gateway/gateway-runner.ts` — gateway lifecycle
-- `apps/backend/src/gateway/routes.ts` — backend gateway HTTP routes
+- `apps/backend/src/gateway/platform-adapter.ts` — **Implemented.** PlatformAdapter interface
+- `apps/backend/src/gateway/platforms/telegram.ts` — **Implemented.** Telegram REST polling adapter
+- `apps/backend/src/gateway/platforms/discord.ts` — **Implemented.** Discord Gateway WebSocket adapter with /link slash command
+- `apps/backend/src/gateway/gateway-runner.ts` — **Implemented.** Gateway lifecycle, link handling, deep-link tokens
+- `apps/backend/src/gateway/routes.ts` — **Implemented.** All gateway HTTP routes
 - `apps/sidecar/src/gateway/receive.ts` — single endpoint to accept forwarded messages
 - `apps/sidecar/src/insights/insights-engine.ts` — usage analytics
 - `apps/sidecar/src/agent/curator.ts` — skill lifecycle maintenance
