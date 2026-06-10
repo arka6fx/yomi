@@ -98,10 +98,12 @@ gatewayRouter.post("/link", authenticate, async (c) => {
     return c.json({ ok: false, error: `Failed to link account: ${msg}` }, 500)
   }
 
-  // Confirm to the user on the platform
-  await gateway.sendMessage(entry.platform, entry.chatId,
-    "✅ Your account is now linked! You can start using Yomi.")
-    .catch(() => {})
+  // Confirm to the user on the platform (only if we have a chatId)
+  if (entry.chatId) {
+    await gateway.sendMessage(entry.platform, entry.chatId,
+      "✅ Your account is now linked! You can start using Yomi.")
+      .catch(() => {})
+  }
 
   return c.json({ ok: true, platform: entry.platform, chatId: entry.chatId })
 })
@@ -221,12 +223,16 @@ gatewayRouter.get("/discord/callback", async (c) => {
     }
 
     const discordUser = (await userRes.json()) as { id: string; username: string }
-    console.warn(`[discord-oauth] Discord user: ${discordUser.id} (${discordUser.username})`)
+    console.warn(`[discord-oauth] OAuth success — Discord user: ${discordUser.id} (${discordUser.username})`)
 
-    // Generate linking code first (before DM attempt, so it's available as fallback)
+    // Generate linking code first (before DM attempt, so fallback always has it)
     const linkCode = randomBytes(3).toString("hex").toUpperCase().slice(0, 6)
+    console.warn(`[discord-oauth] linking code generated: ${linkCode} for user ${discordUser.id}`)
 
-    // Create DM channel with bot (needs "Allow DMs" enabled in Dev Portal)
+    // Create DM channel between bot and user
+    // Uses bot token (not user token) — requires the bot to have proper permissions.
+    // Does NOT require the user to be in any guild.
+    console.warn(`[discord-oauth] creating DM channel for recipient ${discordUser.id}...`)
     const dmRes = await fetch("https://discord.com/api/v10/users/@me/channels", {
       method: "POST",
       headers: {
@@ -238,8 +244,8 @@ gatewayRouter.get("/discord/callback", async (c) => {
 
     if (!dmRes.ok) {
       const text = await dmRes.text()
-      console.warn("[discord-oauth] DM channel creation failed:", text)
-      // Store code and redirect so user sees it on the link page
+      console.warn(`[discord-oauth] DM channel creation FAILED (${dmRes.status}): ${text.slice(0, 300)}`)
+      // Store code anyway — user sees it on the web link page
       try {
         await db.insert(linkingCodes).values({
           code: linkCode,
@@ -248,16 +254,25 @@ gatewayRouter.get("/discord/callback", async (c) => {
           platformChatId: null,
           expiresAt: new Date(Date.now() + 10 * 60 * 1000),
         })
+        console.warn(`[discord-oauth] stored linking code ${linkCode} without chatId (DM creation failed)`)
       } catch (err) {
-        console.warn("[discord-oauth] linking code insert error:", err)
+        console.warn("[discord-oauth] linking code DB insert error:", err)
       }
       return c.redirect(`/link?code=${linkCode}&discord_dm_failed=true`)
     }
 
     const dmChannel = (await dmRes.json()) as { id: string }
-    console.warn(`[discord-oauth] DM channel created: ${dmChannel.id}`)
+    console.warn(`[discord-oauth] DM channel created: ${dmChannel.id} for user ${discordUser.id}`)
 
-    // Store linking code
+    // Register the DM channel with the adapter so it polls for future messages
+    const gateway = getDefaultGateway()
+    const discordAdapter = gateway.getAdapter("discord")
+    if (discordAdapter) {
+      discordAdapter.registerDmChannel(dmChannel.id)
+      console.warn(`[discord-oauth] registered DM channel ${dmChannel.id} with adapter`)
+    }
+
+    // Store linking code with chatId
     try {
       await db.insert(linkingCodes).values({
         code: linkCode,
@@ -266,13 +281,12 @@ gatewayRouter.get("/discord/callback", async (c) => {
         platformChatId: dmChannel.id,
         expiresAt: new Date(Date.now() + 10 * 60 * 1000),
       })
+      console.warn(`[discord-oauth] stored linking code ${linkCode} with chatId ${dmChannel.id}`)
     } catch (err) {
-      console.warn("[discord-oauth] linking code insert error:", err)
+      console.warn("[discord-oauth] linking code DB insert error:", err)
     }
 
     // Send the linkCode via DM using the Discord adapter
-    const gateway = getDefaultGateway()
-    const discordAdapter = gateway.getAdapter("discord")
     if (discordAdapter) {
       const appUrl =
         process.env["YOMI_APP_URL"] ??
@@ -282,8 +296,19 @@ gatewayRouter.get("/discord/callback", async (c) => {
         `Welcome to Yomi! Your linking code: **${linkCode}**\n\n` +
         `Visit ${appUrl}/link and enter this code to connect your account. ` +
         `The code expires in 10 minutes.`
+      console.warn(`[discord-oauth] sending DM with linking code to channel ${dmChannel.id}...`)
       const result = await discordAdapter.sendMessage(dmChannel.id, msg)
-      console.warn(`[discord-oauth] DM send result:`, result)
+      if (result.ok) {
+        console.warn(`[discord-oauth] DM sent successfully — messageId=${result.messageId}`)
+      } else {
+        console.warn(`[discord-oauth] DM send FAILED: ${result.error}`)
+        // Code is still valid — user can find it on the link page via ?code= param
+        // We redirect with the code so the user always sees it
+        return c.redirect(`/link?code=${linkCode}&discord_dm_failed=true`)
+      }
+    } else {
+      console.warn("[discord-oauth] discord adapter not available — cannot send DM")
+      return c.redirect(`/link?code=${linkCode}&discord_dm_failed=true`)
     }
 
     return c.redirect("/link?discord_sent=true")
