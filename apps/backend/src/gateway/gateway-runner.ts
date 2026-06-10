@@ -289,36 +289,6 @@ export class GatewayRunner {
     console.warn("[gateway] stopped")
   }
 
-  // Bootstrap Discord DM channels from existing platform connections.
-  // Ensures the adapter polls DMs for users who linked via OAuth but whose
-  // GET /users/@me/channels returns [] (known Discord API limitation).
-  private async bootstrapDiscordChannels(): Promise<void> {
-    const discordAdapter = this.adapters.get("discord") as DiscordAdapter | undefined
-    if (!discordAdapter) return
-
-    try {
-      const rows = await db
-        .select({
-          platformChatId: platformConnections.platformChatId,
-        })
-        .from(platformConnections)
-        .where(
-          and(
-            eq(platformConnections.platform, "discord"),
-          ),
-        )
-
-      for (const row of rows) {
-        if (row.platformChatId) {
-          discordAdapter.registerDmChannel(row.platformChatId)
-        }
-      }
-      console.warn(`[gateway] bootstrap: registered ${rows.length} Discord DM channels`)
-    } catch (err) {
-      console.warn("[gateway] bootstrap Discord channels error:", err)
-    }
-  }
-
   isRunning(): boolean {
     return this.running
   }

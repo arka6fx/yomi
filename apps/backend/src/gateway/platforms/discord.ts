@@ -238,6 +238,7 @@ export class DiscordAdapter implements PlatformAdapter {
     console.warn(`[discord] /link command: code=${code} user=${data.member?.user?.id ?? data.user?.id ?? "unknown"}`)
     const userId = data.member?.user?.id ?? data.user?.id
     const channelId = data.channel_id
+    if (!userId || !channelId) return
 
     if (this.linkCodeHandler) {
       this.linkCodeHandler(code.toUpperCase(), userId, channelId)

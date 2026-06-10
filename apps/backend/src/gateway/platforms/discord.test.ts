@@ -42,7 +42,7 @@ describe("DiscordAdapter — sendMessage", () => {
     const result = await adapter.sendMessage("chan-123", "Hello from Yomi")
     expect(result.ok).toBe(true)
     expect(result.messageId).toBe("msg-456")
-    expect(capturedBody).toContain("Hello from Yomi")
+    expect(capturedBody!).toContain("Hello from Yomi")
   })
 
   it("handles send failure", async () => {
