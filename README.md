@@ -90,6 +90,16 @@ ELEVENLABS_VOICE_ID=EXAVITQu4vr4xnSDxMaL
 
 ENCRYPTION_KEY=...
 SIDECAR_SECRET=...
+
+# Messaging
+TELEGRAM_BOT_TOKEN=
+DISCORD_BOT_TOKEN=
+DISCORD_CLIENT_ID=
+DISCORD_CLIENT_SECRET=
+DISCORD_REDIRECT_URI=http://localhost:3001/api/gateway/discord/callback
+TELEGRAM_DEEP_LINK_ENABLED=false
+TELEGRAM_BOT_USERNAME=yomi_assistant_bot
+NEXT_PUBLIC_DISCORD_INVITE=
 ```
 
 Production uses `https://yomi.arka6fx.com` for `BETTER_AUTH_URL`,
@@ -130,16 +140,24 @@ then chat with Yomi from your phone even when away from your computer.
 ```text
 ┌──────────────┐     ┌─────────────────┐     ┌──────────────┐
 │  Telegram /  │ --> │  Cloud Backend  │ --> │  Sidecar     │
-│  Discord DM  │ <-- │  (queue + send) │ <-- │  (LLM reply) │
+│  Discord     │ <-- │  (queue + send) │ <-- │  (LLM reply) │
 └──────────────┘     └─────────────────┘     └──────────────┘
 ```
 
-### Setup
+### Telegram
 
-**Telegram** — create a bot via [@BotFather](https://t.me/BotFather) and set
+Create a bot via [@BotFather](https://t.me/BotFather) and set
 `TELEGRAM_BOT_TOKEN`. The bot polls Telegram every 3s for new messages.
 
-**Discord** — create an application at
+**Deep-link onboarding (production):** When `TELEGRAM_DEEP_LINK_ENABLED=true`,
+the dashboard generates a one-time token. Clicking
+`https://t.me/yomi_assistant_bot?start=TOKEN` links the Telegram account
+instantly — no code entry needed. Tokens expire after 15 minutes. The 6-char
+code flow remains as fallback for users who message the bot directly.
+
+### Discord
+
+Create an application at
 [discord.com/developers](https://discord.com/developers/applications). Set:
 
 ```bash
@@ -149,38 +167,49 @@ DISCORD_CLIENT_SECRET=  # From OAuth2 → Client Secret
 DISCORD_REDIRECT_URI=   # e.g. https://yomi.arka6fx.com/api/gateway/discord/callback
 ```
 
-Discord uses a two-step OAuth identify flow (no server required):
-1. User clicks "Add Discord" → authorizes via OAuth
-2. Backend creates a DM channel and sends a 6-character linking code
-3. User enters the code on `/link` to connect their account
+The bot connects via Gateway WebSocket (intents: `MESSAGE_CONTENT |
+DIRECT_MESSAGES | GUILDS`) and auto-registers a `/link` slash command on
+startup. Two onboarding paths:
+
+1. **Dashboard OAuth:** User clicks "Add Discord" → OAuth2 identify flow →
+   receives a 6-character code on the `/link` page. Enter it there or use
+   `/link CODE` in any server the bot is in.
+2. **Slash command:** User types `/link ABC123` in any server/channel → account
+   linked instantly via `handleDiscordLinkCode`.
+
+Once linked, DMs arrive via Gateway `MESSAGE_CREATE` events and route through
+the backend queue to the sidecar.
 
 ### Linking Flow
 
 ```
-User messages bot (first time)
-  → Bot replies: "Your code: ABC123"
-  → User visits /link, enters code
-  → Account linked, bot replies: "Your account is now linked!"
-  → All future messages route to your sidecar for AI replies
-```
+Telegram (deep-link):
+  Dashboard → "Connect Telegram" → opens t.me/bot?start=TOKEN
+  → User presses Start → account linked automatically
 
-Linking codes expire after 10 minutes. Unlinked users always receive a fresh
-code on their next message.
+Telegram (manual):
+  User messages bot → bot replies with 6-char code
+  → User visits /link, enters code → account linked
+
+Discord:
+  Dashboard → "Add Discord" → OAuth → code shown on /link page
+  → Enter code on web OR use /link CODE in Discord → account linked
+```
 
 ### Required Env Vars
 
 ```bash
-# Telegram
 TELEGRAM_BOT_TOKEN=
+TELEGRAM_BOT_USERNAME=yomi_assistant_bot
+TELEGRAM_DEEP_LINK_ENABLED=false
 
-# Discord
 DISCORD_BOT_TOKEN=
 DISCORD_CLIENT_ID=
 DISCORD_CLIENT_SECRET=
 DISCORD_REDIRECT_URI=
-```
 
-Messaging is a Max-only feature (Explore/Pro are desktop-only).
+NEXT_PUBLIC_DISCORD_INVITE=
+```
 
 ## Commands
 

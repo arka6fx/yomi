@@ -64,20 +64,22 @@ RAZORPAY_PLAN_MAX=plan_xxxxxxxxxx
 
 ## Messaging Gateway
 
-Yomi supports Telegram and Discord messaging bots so users can chat with
-Yomi from their phone.
+Yomi supports Telegram and Discord messaging bots.
 
 ### Telegram
 
 1. Create a bot via [@BotFather](https://t.me/BotFather)
 2. Copy the token → set `TELEGRAM_BOT_TOKEN` in `.env.production`
-3. The bot polls Telegram every 3s — no webhook URL needed
+3. Set `TELEGRAM_BOT_USERNAME=yomi_assistant_bot`
+4. Set `TELEGRAM_DEEP_LINK_ENABLED=true` for one-click onboarding via `t.me/bot?start=TOKEN`
+5. The bot polls Telegram every 3s for new messages
 
 ### Discord
 
 1. Create an application at [discord.com/developers](https://discord.com/developers/applications)
-2. Under OAuth2, add `https://yomi.arka6fx.com/api/gateway/discord/callback` as a redirect URI
-3. Set these in `.env.production`:
+2. Under Bot tab, enable **Server Members Intent** and **Message Content Intent**
+3. Under OAuth2, add `https://yomi.arka6fx.com/api/gateway/discord/callback` as a redirect URI
+4. Set these in `.env.production`:
 
 ```bash
 DISCORD_BOT_TOKEN=MTUxMzc2OTk4MTc3MzQ4MDA2OA.xxxxx
@@ -86,8 +88,12 @@ DISCORD_CLIENT_SECRET=
 DISCORD_REDIRECT_URI=https://yomi.arka6fx.com/api/gateway/discord/callback
 ```
 
-DISCORD_CLIENT_SECRET is also set as a GitHub Actions secret for the deploy
-workflow to inject during build.
+DISCORD_CLIENT_ID is hardcoded in the deploy workflow.
+DISCORD_CLIENT_SECRET is set as a GitHub Actions secret and injected at deploy
+time (not baked into the Docker image).
+
+The bot connects via Gateway WebSocket and auto-registers a `/link` slash
+command. See `discord.ts:331` for registration logic.
 
 ### OAuth Callback URLs
 

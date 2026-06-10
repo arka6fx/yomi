@@ -2,8 +2,7 @@
 
 ## Purpose
 
-Document existing bot registrations, creation steps, and the user-linking flow
-so anyone can recreate or audit the platform bot configuration.
+Document existing bot registrations, creation steps, and the user-linking flow.
 
 ---
 
@@ -11,138 +10,138 @@ so anyone can recreate or audit the platform bot configuration.
 
 ### Telegram
 
-| Field            | Value                                                               |
-| ---------------- | ------------------------------------------------------------------- |
-| Bot handle       | `@yomi_assistant_bot`                                               |
-| Token            | Set in `TELEGRAM_BOT_TOKEN` in `.env`                               |
-| Created via      | [@BotFather](https://t.me/botfather) on Telegram                    |
-| Adapter          | `apps/backend/src/gateway/platforms/telegram.ts`                    |
-| Polling          | HTTP long-poll `getUpdates` every 3 s — no webhook needed           |
-| Link invite      | `https://t.me/yomi_assistant_bot`                                   |
-
-**Creation steps (reference):**
-1. Open Telegram → search `@BotFather` → tap Start
-2. Send `/newbot` → follow prompts for name and username
-3. BotFather returns the token — set as `TELEGRAM_BOT_TOKEN`
-4. (Optional) `/setdescription` → "Yomi — your AI desktop assistant"
-5. (Optional) `/setuserpic` → upload Yomi logo
+| Field            | Value                                                     |
+| ---------------- | --------------------------------------------------------- |
+| Bot handle       | `@yomi_assistant_bot`                                     |
+| Token            | `TELEGRAM_BOT_TOKEN` in `.env`                            |
+| Created via      | [@BotFather](https://t.me/botfather)                      |
+| Adapter          | `apps/backend/src/gateway/platforms/telegram.ts`          |
+| Polling          | HTTP long-poll `getUpdates` every 3s                      |
+| Deep-link URL    | `https://t.me/yomi_assistant_bot?start=TOKEN`             |
 
 ### Discord
 
-| Field            | Value                                                               |
-| ---------------- | ------------------------------------------------------------------- |
-| Bot application  | Discord Developer Portal → Applications → yomi-assistant            |
-| Token            | Set in `DISCORD_BOT_TOKEN` in `.env`                                |
-| Created via      | [Discord Developer Portal](https://discord.com/developers/applications) |
-| Bot client ID    | `1513769981773480068` (derived from token payload)                  |
-| Adapter          | `apps/backend/src/gateway/platforms/discord.ts`                     |
-| Gateway intents  | Requires `GUILD_MESSAGES`, `DIRECT_MESSAGES`, `MESSAGE_CONTENT`     |
-| Invite URL       | (needs to be generated — see below)                                 |
-
-**Invite URL:**
-```
-https://discord.com/api/oauth2/authorize?client_id=1513769981773480068&permissions=2048&scope=bot
-```
-Open this link in a browser to add the bot to a server.
-Permissions `2048` = Send Messages only. Add more as needed.
-
-**Creation steps (reference):**
-1. Go to https://discord.com/developers/applications → New Application
-2. Name: "Yomi Assistant" → Bot → Add Bot
-3. Under Bot tab: enable `SERVER MEMBERS INTENT`, `MESSAGE CONTENT INTENT`
-4. Copy the token → set as `DISCORD_BOT_TOKEN`
-5. Under OAuth2 → URL Generator → scopes: `bot` → permissions: `Send Messages`
-6. Use generated URL to invite the bot to a server
+| Field            | Value                                                     |
+| ---------------- | --------------------------------------------------------- |
+| Bot app          | Discord Developer Portal                                  |
+| Bot name         | `yomi`                                                    |
+| Bot client ID    | `1513769981773480068`                                     |
+| Token            | `DISCORD_BOT_TOKEN` in `.env`                             |
+| Adapter          | `apps/backend/src/gateway/platforms/discord.ts`           |
+| Connection       | Gateway WebSocket (`wss://gateway.discord.gg`)            |
+| Gateway intents  | `MESSAGE_CONTENT` (1<<15), `DIRECT_MESSAGES` (1<<12), `GUILDS` (1<<0) |
+| Slash command    | `/link` (registered globally on startup)                  |
 
 ---
 
-## User Linking Flow
+## User Linking Flows
+
+### Telegram deep-link (primary, production)
 
 ```
-┌──────────┐   message    ┌─────────────────┐   check platform_connections
-│ Telegram  │ ──────────→  │  Backend (:3001) │ ──────────────────────────────┐
-│   User    │              │  (gateway-runner) │                              │
-└──────────┘              └─────────────────┘                              │
-     ↑                          │                                           │
-     │    "Your code: ABC123"    │  No row found                             │
-     │    "Visit domain/link"    │  ← generate 6-char hex code, store 10min │
-     │                          ▼                                           │
-     │                     ┌──────────┐                                     │
-     │                     │ Browser  │                                     │
-     │                     │ (logged  │                                     │
-     │                     │  in)     │                                     │
-     │                     └────┬─────┘                                     │
-     │                          │ POST /api/gateway/link { code: "ABC123" } │
-     │                          ▼                                           │
-     │                     ┌──────────────────┐                             │
-     │  "✅ Linked!"       │  Verify code →   │                             │
-     │  ←─────────────────│  INSERT into     │                             │
-     │                     │  platform_conn   │                             │
-     │                     └──────────────────┘                             │
+Dashboard → "Connect Telegram"
+  → POST /api/gateway/telegram/token (authenticated)
+  → Backend generates 32-char hex token, INSERT telegram_link_tokens (15 min TTL)
+  → Returns { deepLink: "https://t.me/yomi_assistant_bot?start=TOKEN" }
+  → Frontend opens deep link
+  → User presses Start in Telegram
+  → Bot receives /start TOKEN
+  → onIncoming intercepts /start, calls handleTelegramDeepLink
+  → Validates token (exists, not expired, not used)
+  → INSERT platform_connections
+  → Bot replies: "Telegram successfully linked to your Yomi account."
 ```
 
-### Step by step
+### Telegram manual (fallback)
 
-1. **User messages the bot** — any platform (Telegram, Discord, etc.)
-2. **Backend checks `platform_connections`** — `SELECT id FROM platform_connections WHERE platform = $1 AND platform_user_id = $2`
-3. **No row found** → backend generates a random 6-char hex code, stores in-memory with 10-min TTL
-4. **Bot replies** with the linking prompt:
-   > "Welcome to Yomi! Your account isn't linked yet.
-   > Your code: **ABC123**
-   > Visit https://yomi.arka6fx.com/link and enter this code."
-5. **User opens browser**, logs into Yomi (OAuth), enters code
-6. **`POST /api/gateway/link`** (authenticated, requires session):
-   - Verifies the code via `GatewayRunner.verifyLinkingCode()`
-   - Creates row in `platform_connections`:
-     - `user_id` — from the authenticated session
-     - `platform` — e.g. `"telegram"`
-     - `platform_user_id` — the Telegram user ID
-     - `platform_chat_id` — the chat ID
-   - Sends confirmation message via the bot
-7. **Subsequent messages** — connection exists → forward to sidecar
+```
+User messages bot → isUserLinked returns false
+  → generateLinkingCode → INSERT linking_codes (10 min TTL)
+  → Bot replies with 6-char code and /link URL
+  → User visits /link, enters code
+  → POST /api/gateway/link → verifyLinkingCode → INSERT platform_connections
+```
 
-### Linking code storage
+### Discord
 
-Codes are stored in-memory in `GatewayRunner.linkingCodes`:
-- Key: 6-char uppercase hex string (e.g. `"A3F2B1"`)
-- Value: `{ platform, platformUserId, chatId, expiresAt }`
-- TTL: 10 minutes
-- Cleaned up every 5 min by `cleanupLinkingCodes()`
+```
+Dashboard → "Add Discord"
+  → GET /api/gateway/discord/auth (OAuth2, identify scope, userId in state)
+  → Discord OAuth → callback → generate 6-char code
+  → INSERT linking_codes (with userId, platformUserId)
+  → Redirect to /link?code=ABC123&discord_ready=true
+
+Then either:
+  A) User enters code on /link page → POST /api/gateway/link → linked
+  B) User types /link ABC123 in any server → handleDiscordLinkCode → linked
+
+Once linked, DMs arrive via Gateway MESSAGE_CREATE events
+  → onMessageCreate filters DMs (no guild_id)
+  → messageHandler → onIncoming → queueForUser → sidecar polls
+```
+
+---
+
+## Linking Code Storage
+
+Codes are stored in the `linking_codes` database table:
+
+| Column           | Type      | Notes                                         |
+| ---------------- | --------- | --------------------------------------------- |
+| code             | text      | Primary key, 6-char uppercase hex             |
+| platform         | text      | `"telegram"` or `"discord"`                   |
+| platform_user_id | text      | User's ID on the external platform            |
+| platform_chat_id | text      | Chat/channel ID (nullable)                    |
+| user_id          | text      | Yomi user ID (nullable, from OAuth state)     |
+| expires_at       | timestamp | 10 minutes from creation                      |
+
+Cleanup: `cleanupExpiredCodes()` runs every 5 min, deletes expired rows.
+
+### Telegram deep-link tokens
+
+Stored in `telegram_link_tokens`:
+
+| Column           | Type      | Notes                                         |
+| ---------------- | --------- | --------------------------------------------- |
+| token            | text      | Primary key, 32-char hex                      |
+| user_id          | text      | Yomi user ID                                  |
+| created_at       | timestamp | Auto-set                                      |
+| expires_at       | timestamp | 15 minutes from creation                      |
+| used             | boolean   | One-time use, marked on successful link        |
+| telegram_user_id | text      | Set on successful link (nullable)             |
 
 ---
 
 ## Database
 
-### `platform_connections` table
-
-Defined in `packages/db/src/schema.ts`:
+### `platform_connections`
 
 | Column            | Type      | Notes                                         |
 | ----------------- | --------- | --------------------------------------------- |
 | id                | uuid      | Primary key, auto-generated                   |
-| user_id           | uuid      | FK → user(id), cascading delete               |
-| platform          | text      | `"telegram" \| "discord"` |
+| user_id           | text      | FK → user(id), cascading delete               |
+| platform          | text      | `"telegram"` or `"discord"`                   |
 | platform_user_id  | text      | User's ID on the external platform            |
-| platform_chat_id  | text      | Specific chat/channel (nullable)              |
+| platform_chat_id  | text      | Chat/channel ID (nullable)                    |
 | connected_at      | timestamp | Auto-set on insert                            |
 | updated_at        | timestamp | Auto-set on insert                            |
 
 Unique constraint on `(platform, platform_user_id)`.
 
-### `devices.sidecar_url`
+---
 
-Added to `devices` table in `packages/db/src/schema.ts`:
+## Env Vars
 
-| Column      | Type | Notes                                      |
-| ----------- | ---- | ------------------------------------------ |
-| sidecar_url | text | URL of the user's sidecar (nullable)       |
+```bash
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_BOT_USERNAME=yomi_assistant_bot
+TELEGRAM_DEEP_LINK_ENABLED=true
 
-When a message arrives from a linked user, the backend looks up:
-1. `platform_connections` → gets `yomi_user_id`
-2. `devices` WHERE `user_id = yomi_user_id` → gets `sidecar_url`
-3. Forwards message to that sidecar URL
-
-Falls back to `SIDECAR_URL` env var if no device found.
+DISCORD_BOT_TOKEN=
+DISCORD_CLIENT_ID=1513769981773480068
+DISCORD_CLIENT_SECRET=
+DISCORD_REDIRECT_URI=https://yomi.arka6fx.com/api/gateway/discord/callback
+```
 
 ---
 
@@ -150,20 +149,12 @@ Falls back to `SIDECAR_URL` env var if no device found.
 
 | File | Purpose |
 | ---- | ------- |
-| `apps/backend/src/gateway/gateway-runner.ts` | Link check in `onIncoming`, code generation, `verifyLinkingCode()` |
-| `apps/backend/src/gateway/routes.ts` | `POST /api/gateway/link` endpoint |
-| `apps/backend/src/gateway/platforms/telegram.ts` | Telegram polling adapter |
-| `apps/backend/src/gateway/platforms/discord.ts` | Discord gateway adapter |
-| `packages/db/src/schema.ts` | `platform_connections` table + `devices.sidecar_url` |
-| `packages/shared/src/index.ts` | `PlatformConnection`, `PlatformType` types |
-| `apps/sidecar/src/gateway/receive.ts` | Processes forwarded messages, runs fast/agent pipeline |
-| `specs/19-hermes-features.md` §6 | Cloud Messaging Gateway architecture |
-
----
-
-## Next Steps
-
-1. Generate Discord invite URL and add the bot to a test server
-2. Build the `/link` page on the landing site (or a simple static page)
-3. Deploy backend to production so Telegram/Discord can reach it 24/7
-4. Test full linking flow end-to-end with a new Telegram user
+| `apps/backend/src/gateway/gateway-runner.ts` | onIncoming, handleDiscordLinkCode, handleTelegramDeepLink, createTelegramLinkToken |
+| `apps/backend/src/gateway/routes.ts` | POST /telegram/token, POST /link, POST /send, OAuth auth+callback |
+| `apps/backend/src/gateway/platforms/telegram.ts` | HTTP polling adapter, botUsername |
+| `apps/backend/src/gateway/platforms/discord.ts` | Gateway WebSocket, /link slash command, MESSAGE_CREATE handler |
+| `apps/backend/src/gateway/platform-adapter.ts` | PlatformAdapter interface |
+| `packages/db/src/schema.ts` | platform_connections, linking_codes, telegram_link_tokens |
+| `apps/landing/src/app/link/page.tsx` | Link page with one-click Telegram + Discord connect |
+| `apps/landing/src/app/dashboard/page.tsx` | Dashboard with platform connection management |
+| `specs/19-hermes-features.md` | Cloud Messaging Gateway architecture |
