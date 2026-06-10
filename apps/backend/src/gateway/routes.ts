@@ -268,7 +268,7 @@ gatewayRouter.get("/discord/callback", async (c) => {
     const gateway = getDefaultGateway()
     const discordAdapter = gateway.getAdapter("discord")
     if (discordAdapter) {
-      discordAdapter.registerDmChannel(dmChannel.id)
+      discordAdapter.registerDmChannel?.(dmChannel.id)
       console.warn(`[discord-oauth] registered DM channel ${dmChannel.id} with adapter`)
     }
 
