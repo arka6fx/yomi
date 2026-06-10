@@ -367,7 +367,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     requestsRemaining,
     resetAt,
     features,
-    planLimits: SHARED_PLANS[effectivePlanForUser(user)]?.limits ?? SHARED_PLANS["explore"].limits,
+    planLimits: (SHARED_PLANS[effectivePlanForUser(user)] ?? SHARED_PLANS["explore"]).limits,
     dailyChatUsed: user.dailyChatCount,
     dailyVoiceUsed: user.dailyVoiceCount,
     dailyImageUsed: user.dailyImageCount,
