@@ -56,12 +56,10 @@ describe("requireAccess", () => {
     expect(res.status).toBe(200)
   })
 
-  it("blocks Explore agent (feature not available)", async () => {
+  it("allows Explore agent (now includes limited desktop automation)", async () => {
     const res = await app("agent").request("/")
-    const body = await res.json() as { code?: string }
 
-    expect(res.status).toBe(403)
-    expect(body.code).toBe("feature_not_available")
+    expect(res.status).toBe(200)
   })
 
   it("blocks Pro past_due on voice", async () => {
