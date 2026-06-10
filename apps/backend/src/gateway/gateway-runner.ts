@@ -1,7 +1,6 @@
 import { createHash, randomBytes } from "node:crypto"
 import { eq, and, lt } from "drizzle-orm"
-import { db, platformConnections, linkingCodes } from "@yomi/db"
-import { telegramLinkTokens } from "@yomi/db"
+import { db, platformConnections, linkingCodes, telegramLinkTokens } from "@yomi/db"
 import type { PlatformType, GatewayMessage, GatewaySessionInfo } from "@yomi/shared"
 import type { PlatformAdapter } from "./platform-adapter.js"
 import { TelegramAdapter } from "./platforms/telegram.js"
