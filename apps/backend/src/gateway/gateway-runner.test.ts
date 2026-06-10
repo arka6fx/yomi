@@ -70,6 +70,15 @@ mock.module("@yomi/db", () => ({
     used: "used",
     telegramUserId: "telegramUserId",
   },
+  usageEvents: {
+    userId: "userId",
+    kind: "kind",
+    model: "model",
+    inputTokens: "inputTokens",
+    outputTokens: "outputTokens",
+    costCents: "costCents",
+    status: "status",
+  },
 }))
 
 const { GatewayRunner } = await import("./gateway-runner.js")
