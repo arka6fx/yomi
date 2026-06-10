@@ -1,3 +1,5 @@
+import { PLANS, type FeatureKey, type PlanKey, featureLimit as planFeatureLimit, getPlan } from "@yomi/shared/plans"
+
 const DEFAULT_OWNER_EMAILS = ["owner@example.com"]
 
 type EntitlementUser = {
@@ -5,29 +7,6 @@ type EntitlementUser = {
   email?: string | null
   role?: string | null
   plan?: string | null
-}
-
-export const PLAN_REQUEST_LIMITS: Record<"explore" | "pro" | "max", number> = {
-  explore: 100,
-  pro: 2000,
-  max: 8000,
-}
-
-export const FEATURE_LIMITS = {
-  voiceMinutes: { explore: 20, pro: 180, max: 750 },
-  screenshots: { explore: 25, pro: 400, max: 2000 },
-  reasoning: { explore: 0, pro: 100, max: 500 },
-  desktopAutomation: { explore: 0, pro: 75, max: 750 },
-  browserAutomation: { explore: 0, pro: 40, max: 500 },
-  gatewayMessages: { explore: 50, pro: 2000, max: 8000 },
-} as const
-
-export type FeatureKey = keyof typeof FEATURE_LIMITS
-
-export function featureLimitForUser(user: EntitlementUser, feature: FeatureKey): number | null {
-  if (isOwnerUser(user)) return null
-  const plan = effectivePlanForUser(user) as "explore" | "pro" | "max"
-  return FEATURE_LIMITS[feature][plan]
 }
 
 function parseList(value: string | undefined): string[] {
@@ -66,13 +45,26 @@ export function effectiveRoleForUser(user: EntitlementUser): string {
 }
 
 export function effectivePlanForUser(user: EntitlementUser): string {
-  return isOwnerUser(user) ? "max" : (user.plan ?? "explore")
+  if (isOwnerUser(user)) return "max"
+  const plan = user.plan ?? "explore"
+  return plan in PLANS ? plan : "explore"
 }
 
 export function requestLimitForUser(user: EntitlementUser): number | null {
   if (isOwnerUser(user)) return null
-  const plan = effectivePlanForUser(user) as keyof typeof PLAN_REQUEST_LIMITS
-  return PLAN_REQUEST_LIMITS[plan] ?? PLAN_REQUEST_LIMITS.explore
+  const plan = effectivePlanForUser(user) as PlanKey
+  return planFeatureLimit(plan, "chat") as number
+}
+
+export function featureLimitForUser(user: EntitlementUser, feature: FeatureKey): number | null {
+  if (isOwnerUser(user)) return null
+  const plan = effectivePlanForUser(user) as PlanKey
+  return planFeatureLimit(plan, feature) as number
+}
+
+export function getPlanConfig(user: EntitlementUser) {
+  const plan = effectivePlanForUser(user)
+  return getPlan(plan)
 }
 
 export function hasBillablePlanAccess(user: EntitlementUser & { subscriptionStatus?: string | null; currentPeriodEnd?: Date | null }): boolean {
@@ -81,7 +73,6 @@ export function hasBillablePlanAccess(user: EntitlementUser & { subscriptionStat
   if (plan === "explore") return true
   if (user.subscriptionStatus === "active" || user.subscriptionStatus === "trialing") return true
 
-  // Past-due grace: 7 days after period end before hard cutoff
   if (user.subscriptionStatus === "past_due" && user.currentPeriodEnd) {
     const graceEnd = new Date(user.currentPeriodEnd.getTime() + 7 * 24 * 60 * 60 * 1000)
     if (new Date() < graceEnd) return true

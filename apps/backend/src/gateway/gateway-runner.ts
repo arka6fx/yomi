@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto"
 import { eq, and, lt } from "drizzle-orm"
 import { db, platformConnections, linkingCodes, telegramLinkTokens } from "@yomi/db"
+import { usageEvents } from "@yomi/db"
 import type { PlatformType, GatewayMessage, GatewaySessionInfo } from "@yomi/shared"
 import type { PlatformAdapter } from "./platform-adapter.js"
 import { TelegramAdapter } from "./platforms/telegram.js"
@@ -511,6 +512,16 @@ export class GatewayRunner {
     console.warn(`[gateway] queueing for yomiUserId=${yomiUserId ?? "unknown"} text="${msg.text.slice(0, 60)}"`)
     if (yomiUserId) {
       this.queueForUser(yomiUserId, msg)
+      // Track gateway message usage
+      await db.insert(usageEvents).values({
+        userId: yomiUserId,
+        kind: "gateway_message",
+        model: null,
+        inputTokens: 0,
+        outputTokens: 0,
+        costCents: 0,
+        status: "done",
+      }).catch(() => { /* best-effort */ })
     }
 
     const session = this.getOrCreateSession(msg)
