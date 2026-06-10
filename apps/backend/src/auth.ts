@@ -108,6 +108,7 @@ export type SessionUser = typeof auth.$Infer.Session.user & {
   trialEndDate: Date | null
   currentPeriodEnd: Date | null
   razorpayCustomerId: string | null
+  razorpaySubId: string | null
   trialInteractionUsed: number
   trialInteractionLimit: number
   dailyChatCount: number
