@@ -45,8 +45,7 @@ function LinkPageContent() {
     if (!isPending && !session) router.push("/signin")
   }, [session, isPending, router])
 
-  const [discordSent, setDiscordSent] = useState(false)
-  const [discordDmFailed, setDiscordDmFailed] = useState(false)
+  const [discordReady, setDiscordReady] = useState(false)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -54,11 +53,8 @@ function LinkPageContent() {
     if (codeParam) {
       setCode(codeParam.toUpperCase().slice(0, 6))
     }
-    if (params.get("discord_sent") === "true") {
-      setDiscordSent(true)
-    }
-    if (params.get("discord_dm_failed") === "true") {
-      setDiscordDmFailed(true)
+    if (params.get("discord_ready") === "true") {
+      setDiscordReady(true)
     }
   }, [])
 
@@ -166,24 +162,23 @@ function LinkPageContent() {
                 </p>
               </div>
 
-              {discordSent && (
-                <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-4 text-sm text-indigo-300 space-y-1">
-                  <p className="font-medium">Code sent to Discord!</p>
-                  <p className="text-xs text-indigo-400/80">
-                    Check your Discord DMs from the Yomi bot. Enter the
-                    6-character code below to link your account.
-                  </p>
-                </div>
-              )}
-
-              {discordDmFailed && (
-                <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm space-y-1">
-                  <p className="font-medium text-yellow-300">Could not send Discord DM</p>
-                  <p className="text-xs text-yellow-400/80">
-                    The bot could not message you directly. Use the code below — it was
-                    pre-filled from your authorization. If this keeps happening, make sure
-                    "Allow DMs from server members" is enabled in your Discord privacy settings.
-                  </p>
+              {discordReady && (
+                <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-4 text-sm space-y-2">
+                  <p className="font-medium text-sky-300">Discord authorized!</p>
+                  <ol className="text-xs text-sky-400/80 space-y-1 list-decimal list-inside leading-relaxed">
+                    <li>Join the <strong>Yomi Discord server</strong> below</li>
+                    <li>Run <code className="bg-sky-500/20 px-1.5 py-0.5 rounded text-sky-300 font-mono text-[11px]">/link {code || "ABC123"}</code> in any channel</li>
+                    <li>Your account will be linked instantly</li>
+                  </ol>
+                  <a
+                    href={process.env.NEXT_PUBLIC_DISCORD_INVITE ?? "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 transition-colors bg-sky-500/10 rounded-lg px-3 py-1.5 mt-1"
+                  >
+                    <MessageCircle size={12} />
+                    Join Yomi Discord Server
+                  </a>
                 </div>
               )}
 
