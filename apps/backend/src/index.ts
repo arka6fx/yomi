@@ -102,4 +102,11 @@ getDefaultGateway().start(process.env["YOMI_PLAN"]).then(() => {
   console.error("[backend] gateway start failed:", err)
 })
 
+const PORT = Number(process.env["PORT"] ?? 3001)
+
+const server = Bun.serve({
+  port: PORT,
+  fetch: app.fetch,
+})
+
 console.warn(`Backend listening on :${server.port}`)
