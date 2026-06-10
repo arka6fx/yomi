@@ -46,6 +46,8 @@ function LinkPageContent() {
   }, [session, isPending, router])
 
   const [discordReady, setDiscordReady] = useState(false)
+  const [telegramConnecting, setTelegramConnecting] = useState(false)
+  const [telegramError, setTelegramError] = useState("")
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -86,6 +88,26 @@ function LinkPageContent() {
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleTelegramConnect() {
+    setTelegramConnecting(true)
+    setTelegramError("")
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/gateway/telegram/token`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session!.session.token}`,
+        },
+      })
+      const data = (await res.json()) as { deepLink?: string; error?: string }
+      if (!res.ok || !data.deepLink) throw new Error(data.error ?? "Failed to create link")
+      window.open(data.deepLink, "_blank")
+    } catch (err) {
+      setTelegramError(err instanceof Error ? err.message : "Failed to connect")
+      setTelegramConnecting(false)
     }
   }
 
@@ -221,14 +243,41 @@ function LinkPageContent() {
 
               <div className="rounded-xl border border-border/50 bg-card/50 p-4 space-y-3">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  How it works
+                  Connect platforms
                 </p>
-                <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside leading-relaxed">
-                  <li>Open the Yomi bot on Telegram or add it on Discord</li>
-                  <li>The bot replies with a 6-character code</li>
-                  <li>Enter that code above to link your account</li>
-                  <li>Now you can talk to Yomi from anywhere!</li>
-                </ol>
+
+                {/* Telegram one-click deep link */}
+                <button
+                  onClick={handleTelegramConnect}
+                  disabled={telegramConnecting}
+                  className="w-full flex items-center justify-between gap-2 bg-sky-500/10 border border-sky-500/20 rounded-xl px-4 py-3 text-sm hover:bg-sky-500/20 transition-colors disabled:opacity-50"
+                >
+                  <span className="flex items-center gap-2">
+                    <MessageCircle size={14} className="text-sky-400" />
+                    <span className="text-sky-300 font-medium">Connect Telegram</span>
+                  </span>
+                  {telegramConnecting ? (
+                    <Loader2 size={14} className="animate-spin text-sky-400" />
+                  ) : (
+                    <span className="text-xs text-sky-400/60">One click</span>
+                  )}
+                </button>
+                {telegramError && (
+                  <p className="text-xs text-destructive">{telegramError}</p>
+                )}
+
+                {/* Manual code entry (fallback for old flow) */}
+                <div className="border-t border-border/30 pt-3">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                    Or enter a code manually
+                  </p>
+                  <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside leading-relaxed">
+                    <li>Open the Yomi bot on Telegram or add it on Discord</li>
+                    <li>The bot replies with a 6-character code</li>
+                    <li>Enter that code above to link your account</li>
+                    <li>Now you can talk to Yomi from anywhere!</li>
+                  </ol>
+                </div>
 
                 <div className="flex flex-wrap gap-2 pt-1">
                   {Object.entries(PLATFORM_INFO).map(([key, info]) =>

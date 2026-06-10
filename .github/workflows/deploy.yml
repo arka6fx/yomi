@@ -39,6 +39,8 @@ jobs:
             echo "RAZORPAY_PLAN_PRO=${{ secrets.RAZORPAY_PLAN_PRO }}" >> .env.production
             echo "RAZORPAY_PLAN_MAX=${{ secrets.RAZORPAY_PLAN_MAX }}" >> .env.production
             echo "NEXT_PUBLIC_DISCORD_INVITE=https://discord.gg/R8s4qBVwK8" >> .env.production
+            echo "TELEGRAM_DEEP_LINK_ENABLED=true" >> .env.production
+            echo "TELEGRAM_BOT_USERNAME=yomi_assistant_bot" >> .env.production
 
             sudo docker compose up -d --build backend landing
             sudo docker compose restart nginx
