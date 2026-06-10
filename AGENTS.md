@@ -203,7 +203,9 @@ Heavy:      gpt-4.1
 Small purposeful comments — one-liners on non-obvious logic, short section
 headers. Never multi-line blocks or docstrings. Use conventional commits:
 `feat:`, `fix:`, `refactor:`, `perf:`, `style:`, `test:`, `chore:`, `docs:`.
-Short, lowercase, no full stops. Example: `feat: speaker mute toggle`.
+Short, lowercase, no full stops. No em-dashes. Single line preferred, max 72
+chars in the summary line. Break long explanations into the body after a blank
+line. Example: `feat: speaker mute toggle`.
 
 ---
 
