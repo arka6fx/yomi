@@ -5,7 +5,7 @@ import { eq, and, gte, sql, inArray } from "drizzle-orm"
 import { authenticate } from "../auth.js"
 import * as authSchema from "../auth-schema.js"
 import { effectivePlanForUser, effectiveRoleForUser, requestLimitForUser, featureLimitForUser } from "../entitlements.js"
-import { PLANS as SHARED_PLANS, type PlanKey, type FeatureKey } from "@yomi/shared/plans"
+import { PLANS as SHARED_PLANS, type PlanKey, type FeatureKey, getPlan } from "@yomi/shared/plans"
 
 const RAZORPAY_PLAN_IDS: Partial<Record<PlanKey, string | null>> = {
   explore: null,
@@ -367,7 +367,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     requestsRemaining,
     resetAt,
     features,
-    planLimits: (SHARED_PLANS[effectivePlanForUser(user)] ?? SHARED_PLANS["explore"]).limits,
+    planLimits: getPlan(effectivePlanForUser(user)).limits,
     dailyChatUsed: user.dailyChatCount,
     dailyVoiceUsed: user.dailyVoiceCount,
     dailyImageUsed: user.dailyImageCount,
