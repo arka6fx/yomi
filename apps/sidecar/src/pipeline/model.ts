@@ -1,13 +1,3 @@
-import {
-  BedrockRuntimeClient,
-  ConverseCommand,
-  ConverseStreamCommand,
-  type ContentBlock,
-  type ConverseCommandInput,
-  type ConverseStreamCommandInput,
-  type Message,
-  type SystemContentBlock,
-} from "@aws-sdk/client-bedrock-runtime"
 import type {
   LanguageModelV1,
   LanguageModelV1CallOptions,
@@ -16,34 +6,62 @@ import type {
   LanguageModelV1StreamPart,
 } from "@ai-sdk/provider"
 
-const DEFAULT_REGION = "us-east-1"
-const DEFAULT_MODEL = "minimax.minimax-m2.5"
+const DEFAULT_MODEL = "gpt-4.1-mini"
+const DEFAULT_BASE_URL = "https://api.openai.com/v1"
 
-let client: BedrockRuntimeClient | null = null
+type ChatMessage = {
+  role: "system" | "user" | "assistant"
+  content:
+    | string
+    | Array<
+        | { type: "text"; text: string }
+        | { type: "image_url"; image_url: { url: string } }
+      >
+}
 
-function getClient(): BedrockRuntimeClient {
-  if (client) return client
-  const accessKeyId = process.env.AWS_ACCESS_KEY_ID
-  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
-  if (!accessKeyId || !secretAccessKey) {
-    throw new Error("AWS Bedrock credentials are missing")
+type ChatCompletionResponse = {
+  id?: string
+  model?: string
+  choices?: Array<{
+    message?: { content?: string | null }
+    finish_reason?: string | null
+  }>
+  usage?: {
+    prompt_tokens?: number
+    completion_tokens?: number
   }
-  client = new BedrockRuntimeClient({
-    region: process.env.AWS_BEDROCK_REGION || DEFAULT_REGION,
-    credentials: { accessKeyId, secretAccessKey },
-  })
-  return client
 }
 
-function textBlock(text: string): ContentBlock {
-  return { text }
+type ChatCompletionChunk = {
+  model?: string
+  choices?: Array<{
+    delta?: { content?: string | null }
+    finish_reason?: string | null
+  }>
+  usage?: {
+    prompt_tokens?: number
+    completion_tokens?: number
+  } | null
 }
 
-function imageFormat(mimeType?: string): "png" | "jpeg" | "gif" | "webp" {
-  if (mimeType?.includes("png")) return "png"
-  if (mimeType?.includes("gif")) return "gif"
-  if (mimeType?.includes("webp")) return "webp"
-  return "jpeg"
+function baseUrl(): string {
+  return (process.env["AI_CREDITS_BASE_URL"] || DEFAULT_BASE_URL).replace(/\/+$/, "")
+}
+
+function apiKey(): string {
+  const key = process.env["AI_CREDITS_API_KEY"]
+  if (!key) throw new Error("AI Credits credentials are missing")
+  return key
+}
+
+function imageUrl(part: { image: unknown; mimeType?: string }): string {
+  if (typeof part.image === "string") return part.image
+  if (part.image instanceof URL) return part.image.toString()
+  if (part.image instanceof Uint8Array) {
+    const mime = part.mimeType || "image/jpeg"
+    return `data:${mime};base64,${Buffer.from(part.image).toString("base64")}`
+  }
+  return "[image omitted: unsupported image input]"
 }
 
 function messageText(message: LanguageModelV1Message): string {
@@ -63,90 +81,81 @@ function messageText(message: LanguageModelV1Message): string {
     .join("\n")
 }
 
-function contentBlocks(message: LanguageModelV1Message): ContentBlock[] {
-  if (message.role === "system") return [textBlock(message.content)]
-  const blocks: ContentBlock[] = []
+function userContent(message: Exclude<LanguageModelV1Message, { role: "system" }>): ChatMessage["content"] {
+  const parts: Array<
+    | { type: "text"; text: string }
+    | { type: "image_url"; image_url: { url: string } }
+  > = []
+
   for (const part of message.content) {
     if (part.type === "text") {
-      blocks.push(textBlock(part.text))
-    } else if (part.type === "image" && part.image instanceof Uint8Array) {
-      blocks.push({
-        image: {
-          format: imageFormat(part.mimeType),
-          source: { bytes: part.image },
-        },
-      })
+      parts.push({ type: "text", text: part.text })
     } else if (part.type === "image") {
-      blocks.push(textBlock("[image omitted: unsupported URL image]"))
+      const url = imageUrl(part)
+      if (url.startsWith("[image omitted")) {
+        parts.push({ type: "text", text: url })
+      } else {
+        parts.push({ type: "image_url", image_url: { url } })
+      }
     } else {
       const text = messageText({ ...message, content: [part] } as LanguageModelV1Message)
-      if (text) blocks.push(textBlock(text))
+      if (text) parts.push({ type: "text", text })
     }
   }
-  return blocks.length > 0 ? blocks : [textBlock("")]
+
+  return parts.length === 1 && parts[0]?.type === "text" ? parts[0].text : parts
 }
 
-function bedrockPrompt(options: LanguageModelV1CallOptions): {
-  system: SystemContentBlock[]
-  messages: Message[]
-} {
-  const system: SystemContentBlock[] = []
-  const messages: Message[] = []
+function chatMessages(options: LanguageModelV1CallOptions): ChatMessage[] {
+  const messages: ChatMessage[] = []
 
   for (const message of options.prompt) {
     if (message.role === "system") {
-      system.push({ text: message.content })
+      messages.push({ role: "system", content: message.content })
       continue
     }
     if (message.role === "tool") {
-      messages.push({ role: "user", content: [textBlock(messageText(message))] })
+      messages.push({ role: "user", content: messageText(message) })
       continue
     }
     messages.push({
       role: message.role,
-      content: contentBlocks(message),
+      content: userContent(message),
     })
   }
 
   if (options.responseFormat?.type === "json") {
-    system.push({
-      text: "Return only valid JSON. Do not wrap the JSON in markdown.",
+    messages.unshift({
+      role: "system",
+      content: "Return only valid JSON. Do not wrap the JSON in markdown.",
     })
   }
 
-  return { system, messages }
+  return messages
 }
 
-function finishReason(reason?: string): "stop" | "length" | "content-filter" | "tool-calls" | "error" | "other" {
-  if (reason === "max_tokens") return "length"
-  if (reason === "stop_sequence" || reason === "end_turn") return "stop"
-  if (reason === "tool_use") return "tool-calls"
-  if (reason === "content_filtered" || reason === "guardrail_intervened") return "content-filter"
-  return "other"
-}
-
-function inferenceConfig(options: LanguageModelV1CallOptions) {
+function requestBody(modelId: string, options: LanguageModelV1CallOptions, stream: boolean) {
   return {
-    maxTokens: options.maxTokens,
+    model: modelId,
+    messages: chatMessages(options),
+    max_tokens: options.maxTokens,
     temperature: options.temperature,
-    topP: options.topP,
-    stopSequences: options.stopSequences,
+    top_p: options.topP,
+    stop: options.stopSequences,
+    stream,
+    ...(stream ? { stream_options: { include_usage: true } } : {}),
+    ...(options.responseFormat?.type === "json"
+      ? { response_format: { type: "json_object" } }
+      : {}),
   }
 }
 
-function warnings(options: LanguageModelV1CallOptions): LanguageModelV1CallWarning[] {
-  if (options.mode.type === "regular" && options.mode.tools?.length) return []
-  return []
-}
-
-function requestBody(modelId: string, options: LanguageModelV1CallOptions): ConverseCommandInput {
-  const prompt = bedrockPrompt(options)
-  return {
-    modelId,
-    system: prompt.system.length > 0 ? prompt.system : undefined,
-    messages: prompt.messages,
-    inferenceConfig: inferenceConfig(options),
-  }
+function finishReason(reason?: string | null): "stop" | "length" | "content-filter" | "tool-calls" | "error" | "other" {
+  if (reason === "length") return "length"
+  if (reason === "stop") return "stop"
+  if (reason === "tool_calls" || reason === "function_call") return "tool-calls"
+  if (reason === "content_filter") return "content-filter"
+  return reason ? "other" : "stop"
 }
 
 function tokenUsage(inputTokens?: number, outputTokens?: number) {
@@ -156,79 +165,96 @@ function tokenUsage(inputTokens?: number, outputTokens?: number) {
   }
 }
 
-function rawSettings(body: ConverseCommandInput | ConverseStreamCommandInput): Record<string, unknown> {
-  return {
-    modelId: body.modelId,
-    system: body.system,
-    messages: body.messages,
-    inferenceConfig: body.inferenceConfig,
-  }
+function warnings(_options: LanguageModelV1CallOptions): LanguageModelV1CallWarning[] {
+  return []
 }
 
-function bedrockError(error: unknown, modelId: string): Error {
-  const message = error instanceof Error ? error.message : String(error)
-  if (/operation not allowed/i.test(message)) {
-    return new Error(
-      `AWS Bedrock MiniMax invocation is not allowed for ${modelId}. Enable model access and bedrock:InvokeModel/bedrock:InvokeModelWithResponseStream permissions.`,
-    )
+async function chatCompletion(body: unknown, signal?: AbortSignal): Promise<Response> {
+  const response = await fetch(`${baseUrl()}/chat/completions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey()}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+    signal,
+  })
+  if (!response.ok) {
+    const text = await response.text().catch(() => "")
+    throw new Error(`AI Credits request failed (${response.status}): ${text || response.statusText}`)
   }
-  if (/credentials/i.test(message)) return new Error(message)
-  return error instanceof Error ? error : new Error(message)
+  return response
+}
+
+function parseSseLine(line: string): ChatCompletionChunk | null {
+  if (!line.startsWith("data:")) return null
+  const data = line.slice(5).trim()
+  if (!data || data === "[DONE]") return null
+  return JSON.parse(data) as ChatCompletionChunk
 }
 
 export function createModel(modelId = DEFAULT_MODEL): LanguageModelV1 {
   return {
     specificationVersion: "v1",
-    provider: "aws-bedrock",
+    provider: "ai-credits",
     modelId,
     defaultObjectGenerationMode: "json",
-    supportsImageUrls: false,
+    supportsImageUrls: true,
     supportsStructuredOutputs: false,
 
     async doGenerate(options) {
-      const body = requestBody(modelId, options)
-      const response = await getClient()
-        .send(new ConverseCommand(body), {
-          abortSignal: options.abortSignal,
-        })
-        .catch((error) => {
-          throw bedrockError(error, modelId)
-        })
-      const text = response.output?.message?.content?.map((part) => part.text ?? "").join("") ?? ""
+      const body = requestBody(modelId, options, false)
+      const response = await chatCompletion(body, options.abortSignal)
+      const json = (await response.json()) as ChatCompletionResponse
+      const choice = json.choices?.[0]
       return {
-        text,
-        finishReason: finishReason(response.stopReason),
-        usage: tokenUsage(response.usage?.inputTokens, response.usage?.outputTokens),
-        rawCall: { rawPrompt: options.prompt, rawSettings: rawSettings(body) },
-        rawResponse: { body: response },
-        response: { modelId },
+        text: choice?.message?.content ?? "",
+        finishReason: finishReason(choice?.finish_reason),
+        usage: tokenUsage(json.usage?.prompt_tokens, json.usage?.completion_tokens),
+        rawCall: { rawPrompt: options.prompt, rawSettings: body },
+        rawResponse: { body: json },
+        response: { id: json.id, modelId: json.model ?? modelId },
         warnings: warnings(options),
       }
     },
 
     async doStream(options) {
-      const body: ConverseStreamCommandInput = requestBody(modelId, options)
-      const response = await getClient()
-        .send(new ConverseStreamCommand(body), {
-          abortSignal: options.abortSignal,
-        })
-        .catch((error) => {
-          throw bedrockError(error, modelId)
-        })
+      const body = requestBody(modelId, options, true)
+      const response = await chatCompletion(body, options.abortSignal)
       const stream = new ReadableStream<LanguageModelV1StreamPart>({
         async start(controller) {
-          let stopReason: string | undefined
+          const reader = response.body?.getReader()
+          if (!reader) {
+            controller.enqueue({ type: "error", error: new Error("AI Credits stream had no body") })
+            controller.close()
+            return
+          }
+
+          const decoder = new TextDecoder()
+          let buffer = ""
+          let stopReason: string | null | undefined
           let inputTokens = 0
           let outputTokens = 0
           controller.enqueue({ type: "response-metadata", timestamp: new Date(), modelId })
+
           try {
-            for await (const event of response.stream ?? []) {
-              const delta = event.contentBlockDelta?.delta?.text
-              if (delta) controller.enqueue({ type: "text-delta", textDelta: delta })
-              if (event.messageStop?.stopReason) stopReason = event.messageStop.stopReason
-              if (event.metadata?.usage) {
-                inputTokens = event.metadata.usage.inputTokens ?? inputTokens
-                outputTokens = event.metadata.usage.outputTokens ?? outputTokens
+            while (true) {
+              const { done, value } = await reader.read()
+              if (done) break
+              buffer += decoder.decode(value, { stream: true })
+              const lines = buffer.split(/\r?\n/)
+              buffer = lines.pop() ?? ""
+              for (const line of lines) {
+                const chunk = parseSseLine(line.trim())
+                if (!chunk) continue
+                const choice = chunk.choices?.[0]
+                const delta = choice?.delta?.content
+                if (delta) controller.enqueue({ type: "text-delta", textDelta: delta })
+                if (choice?.finish_reason) stopReason = choice.finish_reason
+                if (chunk.usage) {
+                  inputTokens = chunk.usage.prompt_tokens ?? inputTokens
+                  outputTokens = chunk.usage.completion_tokens ?? outputTokens
+                }
               }
             }
             controller.enqueue({
@@ -246,7 +272,7 @@ export function createModel(modelId = DEFAULT_MODEL): LanguageModelV1 {
 
       return {
         stream,
-        rawCall: { rawPrompt: options.prompt, rawSettings: rawSettings(body) },
+        rawCall: { rawPrompt: options.prompt, rawSettings: body },
         warnings: warnings(options),
       }
     },

@@ -25,14 +25,50 @@ import {
 } from "../services/credit-ledger.js"
 import { payloadHash, recordPaymentEvent } from "../services/payment-events.js"
 
-const DODO_API_BASE = process.env["DODO_API_BASE"] ?? "https://api.dodopayments.com"
-const DODO_PRODUCT_IDS: Partial<Record<PlanKey | string, string | null>> = {
-  explore: null,
-  pro: process.env["DODO_PRODUCT_PRO"] ?? null,
-  max: process.env["DODO_PRODUCT_MAX"] ?? null,
-  credits_500: process.env["DODO_PRODUCT_CREDITS_500"] ?? null,
-  credits_2000: process.env["DODO_PRODUCT_CREDITS_2000"] ?? null,
-  credits_6000: process.env["DODO_PRODUCT_CREDITS_6000"] ?? null,
+type DodoMode = "test" | "live"
+
+function dodoMode(): DodoMode {
+  const mode = (process.env["DODO_ENV"] ?? "test").toLowerCase()
+  if (mode === "test" || mode === "live") return mode
+  throw new Error("DODO_ENV must be 'test' or 'live'")
+}
+
+type DodoConfig = {
+  mode: DodoMode
+  apiBase: string
+  apiKey: string | null
+  webhookSecret: string | null
+  productIds: Partial<Record<PlanKey | string, string | null>>
+}
+
+export function getDodoConfig(): DodoConfig {
+  const mode = dodoMode()
+  const prefix = mode === "live" ? "DODO_LIVE" : "DODO_TEST"
+
+  function read(key: string): string | null {
+    const selected = process.env[`${prefix}_${key}`]
+    if (selected !== undefined) return selected || null
+
+    const legacy = process.env[`DODO_${key}`]
+    if (legacy !== undefined) return legacy || null
+
+    return null
+  }
+
+  return {
+    mode,
+    apiBase: read("API_BASE") ?? "https://api.dodopayments.com",
+    apiKey: read("API_KEY"),
+    webhookSecret: read("WEBHOOK_SECRET"),
+    productIds: {
+      explore: null,
+      pro: read("PRODUCT_PRO"),
+      max: read("PRODUCT_MAX"),
+      credits_500: read("PRODUCT_CREDITS_500"),
+      credits_2000: read("PRODUCT_CREDITS_2000"),
+      credits_6000: read("PRODUCT_CREDITS_6000"),
+    },
+  }
 }
 
 type DodoEntity = Record<string, unknown>
@@ -47,8 +83,6 @@ function planFeatures(key: string): string[] {
     `${plan.includedCredits.toLocaleString()} credits / month`,
     l.reasoning > 0 ? `${l.reasoning} reasoning` : "",
     l.desktopAutomation > 0 ? `${l.desktopAutomation} desktop runs` : "",
-    l.browserAutomation > 0 ? `${l.browserAutomation} browser runs` : "",
-    l.gatewayMessages > 0 ? `${l.gatewayMessages} messaging` : "",
   ].filter(Boolean)
 }
 
@@ -116,13 +150,14 @@ function estimateLocal(amountCents: number, display: CurrencyDisplay): {
 }
 
 function dodoAuth(): string {
-  const key = process.env["DODO_API_KEY"]
-  if (!key) throw new Error("DODO_API_KEY is not configured")
-  return `Bearer ${key}`
+  const { apiKey, mode } = getDodoConfig()
+  if (!apiKey) throw new Error(`DODO_API_KEY is not configured for ${mode} mode`)
+  return `Bearer ${apiKey}`
 }
 
 async function dodo<T>(path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`${DODO_API_BASE.replace(/\/+$/, "")}${path}`, {
+  const { apiBase } = getDodoConfig()
+  const res = await fetch(`${apiBase.replace(/\/+$/, "")}${path}`, {
     method: body === undefined ? "GET" : "POST",
     headers: {
       Authorization: dodoAuth(),
@@ -170,7 +205,7 @@ async function createDodoCheckout(input: {
 }
 
 function verifyDodoWebhook(body: string, headers: Headers): boolean {
-  const secret = process.env["DODO_WEBHOOK_SECRET"]
+  const { webhookSecret: secret } = getDodoConfig()
   if (!secret) return false
 
   const webhookId = headers.get("webhook-id")
@@ -280,7 +315,7 @@ billingRouter.post("/create-subscription", authenticate, async (c) => {
   const config = SHARED_PLANS[plan]
   if (!config || plan === "explore") return c.json({ error: "Invalid plan" }, 400)
 
-  const productId = DODO_PRODUCT_IDS[plan]
+  const productId = getDodoConfig().productIds[plan]
   if (!productId) return c.json({ error: "Dodo product not configured for this tier" }, 500)
 
   if (user.dodoSubscriptionId && user.plan === plan && user.subscriptionStatus === "active") {
@@ -312,7 +347,7 @@ billingRouter.post("/create-credit-pack", authenticate, async (c) => {
   const config = getCreditPack(pack)
   if (!config) return c.json({ error: "Invalid credit pack" }, 400)
 
-  const productId = DODO_PRODUCT_IDS[config.key]
+  const productId = getDodoConfig().productIds[config.key]
   if (!productId) return c.json({ error: "Dodo product not configured for this credit pack" }, 500)
 
   try {
@@ -444,9 +479,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
           "request_voice",
           "stt",
           "agent_run",
-          "browser_run",
           "screenshot",
-          "gateway_message",
           "reasoning",
         ]),
       ),
@@ -459,9 +492,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
   const chatUsed = countMap["request_chat"] ?? 0
   const voiceUsed = countMap["request_voice"] ?? 0
   const agentUsed = countMap["agent_run"] ?? 0
-  const browserUsed = countMap["browser_run"] ?? 0
   const screenshotUsed = countMap["screenshot"] ?? 0
-  const gatewayUsed = countMap["gateway_message"] ?? 0
   const reasoningUsed = countMap["reasoning"] ?? 0
   const requestsUsed = chatUsed + voiceUsed
   const requestsLimit = requestLimitForUser(user)
@@ -487,10 +518,14 @@ billingRouter.get("/subscription", authenticate, async (c) => {
       screenshots: { used: screenshotUsed, limit: featureLimitForUser(user, "screenshots") },
       reasoning: { used: reasoningUsed, limit: featureLimitForUser(user, "reasoning") },
       desktopAutomation: { used: agentUsed, limit: featureLimitForUser(user, "desktopAutomation") },
-      browserAutomation: { used: browserUsed, limit: featureLimitForUser(user, "browserAutomation") },
-      gatewayMessages: { used: gatewayUsed, limit: featureLimitForUser(user, "gatewayMessages") },
     },
-    planLimits: getPlan(effectivePlanForUser(user)).limits,
+    planLimits: {
+      chat: getPlan(effectivePlanForUser(user)).limits.chat,
+      voiceMinutes: getPlan(effectivePlanForUser(user)).limits.voiceMinutes,
+      screenshots: getPlan(effectivePlanForUser(user)).limits.screenshots,
+      reasoning: getPlan(effectivePlanForUser(user)).limits.reasoning,
+      desktopAutomation: getPlan(effectivePlanForUser(user)).limits.desktopAutomation,
+    },
     dailyChatUsed: user.dailyChatCount,
     dailyVoiceUsed: user.dailyVoiceCount,
     dailyImageUsed: user.dailyImageCount,

@@ -1,7 +1,7 @@
-import { novaSonicTranscribe } from "../services/bedrock/nova-sonic.js"
+import { elevenLabsTranscribe } from "../services/elevenlabs/stt.js"
 
 export async function transcribe(wav: Uint8Array): Promise<string> {
-  const result = await novaSonicTranscribe(wav)
+  const result = await elevenLabsTranscribe(wav)
   return result.text
 }
 

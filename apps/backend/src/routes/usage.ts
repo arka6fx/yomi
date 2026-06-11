@@ -27,7 +27,7 @@ type UsageEventBody = {
 }
 
 type ReserveBody = {
-  kind: "chat" | "voice" | "screenshot" | "reasoning" | "desktop_automation" | "browser_automation" | "messaging"
+  kind: "chat" | "voice" | "screenshot" | "reasoning" | "desktop_automation"
   duration?: number  // voice duration in seconds
 }
 
@@ -37,8 +37,6 @@ const FEATURE_KIND_MAP: Record<string, FeatureKey> = {
   screenshot: "screenshots",
   reasoning: "reasoning",
   desktop_automation: "desktopAutomation",
-  browser_automation: "browserAutomation",
-  messaging: "gatewayMessages",
 }
 
 const CREDIT_KIND_MAP: Record<ReserveBody["kind"], BillableUsageKind> = {
@@ -47,8 +45,6 @@ const CREDIT_KIND_MAP: Record<ReserveBody["kind"], BillableUsageKind> = {
   screenshot: "screenshot",
   reasoning: "reasoning",
   desktop_automation: "desktop_automation",
-  browser_automation: "browser_automation",
-  messaging: "messaging",
 }
 
 const REQUEST_KINDS = ["request_chat", "request_voice"]

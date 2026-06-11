@@ -42,7 +42,6 @@ export async function GET(req: NextRequest) {
         screenshots: { used: 0, limit: 25 },
         reasoning: { used: 0, limit: 0 },
         desktopAutomation: { used: 0, limit: 0 },
-        browserAutomation: { used: 0, limit: 0 },
       },
       dailyChatUsed: 0,
       dailyVoiceUsed: 0,

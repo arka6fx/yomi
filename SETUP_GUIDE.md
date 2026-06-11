@@ -1,28 +1,19 @@
 # Yomi Production Runbook
 
-Current production target:
+Production targets:
 
 ```text
-https://yomi.arka6fx.com
+Landing / dashboard: https://yomi.arka6fx.com
+Backend API:         https://api.yomi.arka6fx.com
+Staging API:         https://api-staging.yomi.arka6fx.com
 ```
 
-Production runs on EC2 from `/opt/yomi` using Docker Compose. GitHub Actions
-deploys `main` by SSH.
+Production runs on Cloudflare Workers and Cloudflare Pages.
 
 ## Required Secrets
 
-GitHub Actions repository secrets:
-
-```text
-EC2_HOST=yomi.arka6fx.com
-EC2_SSH_KEY=<private key contents>
-```
-
-EC2 file:
-
-```text
-/opt/yomi/.env.production
-```
+Cloudflare secrets are set with Wrangler per app/environment. Do not commit
+secret values to `wrangler.jsonc`.
 
 Required production values:
 
@@ -31,21 +22,29 @@ DATABASE_URL=postgresql://...
 
 BETTER_AUTH_SECRET=...
 BETTER_AUTH_URL=https://yomi.arka6fx.com
-BETTER_AUTH_BASE_URL=https://yomi.arka6fx.com
-BACKEND_URL=https://yomi.arka6fx.com
-NEXT_PUBLIC_BACKEND_URL=https://yomi.arka6fx.com
+BETTER_AUTH_BASE_URL=https://api.yomi.arka6fx.com
+BACKEND_URL=https://api.yomi.arka6fx.com
+NEXT_PUBLIC_BACKEND_URL=https://api.yomi.arka6fx.com
 NEXT_PUBLIC_APP_URL=https://yomi.arka6fx.com
+YOMI_BACKEND_URL=https://api.yomi.arka6fx.com
+YOMI_APP_URL=https://yomi.arka6fx.com
+CORS_ORIGIN=https://yomi.arka6fx.com
 
 GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 GITHUB_CLIENT_ID=...
 GITHUB_CLIENT_SECRET=...
 
-OPENAI_API_KEY=...
-OPENAI_BASE_URL=...
+AI_CREDITS_API_KEY=...
+AI_CREDITS_BASE_URL=...
+AI_CREDITS_FAST_MODEL=gpt-4.1-mini
+AI_CREDITS_AGENT_MODEL=gpt-4.1
 
 ELEVENLABS_API_KEY=...
 ELEVENLABS_VOICE_ID=EXAVITQu4vr4xnSDxMaL
+ELEVENLABS_STT_MODEL=scribe_v2
+ELEVENLABS_TTS_MODEL=eleven_flash_v2_5
+TTS_ENGINE=elevenlabs
 
 ENCRYPTION_KEY=<openssl rand -hex 32>
 SIDECAR_SECRET=...
@@ -54,160 +53,124 @@ SIDECAR_SECRET=...
 Optional until billing is enabled:
 
 ```bash
-DODO_API_KEY=
-DODO_WEBHOOK_SECRET=
-DODO_API_BASE=https://api.dodopayments.com
-DODO_PRODUCT_PRO=
-DODO_PRODUCT_MAX=
-DODO_PRODUCT_CREDITS_500=
-DODO_PRODUCT_CREDITS_2000=
-DODO_PRODUCT_CREDITS_6000=
+DODO_ENV=test
+
+DODO_TEST_API_KEY=
+DODO_TEST_WEBHOOK_SECRET=
+DODO_TEST_API_BASE=https://api.dodopayments.com
+DODO_TEST_PRODUCT_PRO=
+DODO_TEST_PRODUCT_MAX=
+DODO_TEST_PRODUCT_CREDITS_500=
+DODO_TEST_PRODUCT_CREDITS_2000=
+DODO_TEST_PRODUCT_CREDITS_6000=
+
+DODO_LIVE_API_KEY=
+DODO_LIVE_WEBHOOK_SECRET=
+DODO_LIVE_API_BASE=
+DODO_LIVE_PRODUCT_PRO=
+DODO_LIVE_PRODUCT_MAX=
+DODO_LIVE_PRODUCT_CREDITS_500=
+DODO_LIVE_PRODUCT_CREDITS_2000=
+DODO_LIVE_PRODUCT_CREDITS_6000=
 ```
 
-## Messaging Gateway
+## OAuth Callback URLs
 
-Yomi supports Telegram and Discord messaging bots.
-
-### Telegram
-
-1. Create a bot via [@BotFather](https://t.me/BotFather)
-2. Copy the token → set `TELEGRAM_BOT_TOKEN` in `.env.production`
-3. Set `TELEGRAM_BOT_USERNAME=yomi_assistant_bot`
-4. Set `TELEGRAM_DEEP_LINK_ENABLED=true` for one-click onboarding via `t.me/bot?start=TOKEN`
-5. The bot polls Telegram every 3s for new messages
-
-### Discord
-
-1. Create an application at [discord.com/developers](https://discord.com/developers/applications)
-2. Under Bot tab, enable **Server Members Intent** and **Message Content Intent**
-3. Under OAuth2, add `https://yomi.arka6fx.com/api/gateway/discord/callback` as a redirect URI
-4. Set these in `.env.production`:
-
-```bash
-DISCORD_BOT_TOKEN=MTUxMzc2OTk4MTc3MzQ4MDA2OA.xxxxx
-DISCORD_CLIENT_ID=1513769981773480068
-DISCORD_CLIENT_SECRET=
-DISCORD_REDIRECT_URI=https://yomi.arka6fx.com/api/gateway/discord/callback
-```
-
-DISCORD_CLIENT_ID is hardcoded in the deploy workflow.
-DISCORD_CLIENT_SECRET is set as a GitHub Actions secret and injected at deploy
-time (not baked into the Docker image).
-
-The bot connects via Gateway WebSocket and auto-registers a `/link` slash
-command. See `discord.ts:331` for registration logic.
-
-### OAuth Callback URLs
-
-Configure in the OAuth provider dashboards:
+Configure these in the OAuth provider dashboards:
 
 ```text
-https://yomi.arka6fx.com/api/auth/callback/github
-https://yomi.arka6fx.com/api/auth/callback/google
-https://yomi.arka6fx.com/api/gateway/discord/callback
+https://api.yomi.arka6fx.com/api/auth/callback/github
+https://api.yomi.arka6fx.com/api/auth/callback/google
 ```
 
-## First Server Setup
+## Cloudflare Setup
+
+Install dependencies and authenticate Wrangler:
 
 ```bash
-sudo apt update
-sudo apt install -y docker-compose-plugin certbot
-sudo mkdir -p /opt/yomi
-sudo chown -R ubuntu:ubuntu /opt/yomi
-git clone https://github.com/arka6fx/yomi.git /opt/yomi
-cd /opt/yomi
-cp .env.example .env.production
+bun install
+bunx wrangler login
 ```
 
-Fill `.env.production`, then start the app once over HTTP or temporarily stop
-nginx to issue the certificate.
-
-Certificate command used for this deployment:
+Set backend Worker secrets:
 
 ```bash
-cd /opt/yomi
-sudo docker compose stop nginx
-sudo mkdir -p deploy/certs deploy/certbot-work deploy/logs
-sudo certbot certonly \
-  --standalone \
-  --non-interactive \
-  --agree-tos \
-  --register-unsafely-without-email \
-  --config-dir /opt/yomi/deploy/certs \
-  --work-dir /opt/yomi/deploy/certbot-work \
-  --logs-dir /opt/yomi/deploy/logs \
-  -d yomi.arka6fx.com
-sudo docker compose up -d --build
+cd apps/backend
+bunx wrangler secret put DATABASE_URL --env production
+bunx wrangler secret put BETTER_AUTH_SECRET --env production
+bunx wrangler secret put GOOGLE_CLIENT_ID --env production
+bunx wrangler secret put GOOGLE_CLIENT_SECRET --env production
+bunx wrangler secret put GITHUB_CLIENT_ID --env production
+bunx wrangler secret put GITHUB_CLIENT_SECRET --env production
+bunx wrangler secret put ENCRYPTION_KEY --env production
+bunx wrangler secret put AI_CREDITS_API_KEY --env production
+bunx wrangler secret put AI_CREDITS_BASE_URL --env production
+bunx wrangler secret put ELEVENLABS_API_KEY --env production
+bunx wrangler secret put ELEVENLABS_VOICE_ID --env production
 ```
 
-Certbot installed a renewal timer. After renewal, recreate or reload nginx so it
-uses the renewed files.
+When billing is ready, also set:
+
+```bash
+bunx wrangler secret put DODO_LIVE_API_KEY --env production
+bunx wrangler secret put DODO_LIVE_WEBHOOK_SECRET --env production
+bunx wrangler secret put DODO_LIVE_PRODUCT_PRO --env production
+bunx wrangler secret put DODO_LIVE_PRODUCT_MAX --env production
+bunx wrangler secret put DODO_LIVE_PRODUCT_CREDITS_500 --env production
+bunx wrangler secret put DODO_LIVE_PRODUCT_CREDITS_2000 --env production
+bunx wrangler secret put DODO_LIVE_PRODUCT_CREDITS_6000 --env production
+```
+
+Set `DODO_ENV` in `apps/backend/wrangler.jsonc` vars instead of a secret.
+Only set `DODO_LIVE_API_BASE` in vars if Dodo gives you a non-default base URL.
+
+Set landing Pages environment variables in the Cloudflare Pages dashboard:
+
+```text
+NEXT_PUBLIC_BACKEND_URL=https://api.yomi.arka6fx.com
+NEXT_PUBLIC_APP_URL=https://yomi.arka6fx.com
+BACKEND_URL=https://api.yomi.arka6fx.com
+BETTER_AUTH_URL=https://yomi.arka6fx.com
+BETTER_AUTH_BASE_URL=https://api.yomi.arka6fx.com
+```
+
+Backend Worker routes are configured in `apps/backend/wrangler.jsonc`:
+
+```text
+production: api.yomi.arka6fx.com
+staging:    api-staging.yomi.arka6fx.com
+```
 
 ## Deploy
 
-Automatic deploy:
+Backend:
 
 ```bash
-git push origin main
+cd apps/backend
+bun run cf:check
+bun run deploy:production
 ```
 
-Manual deploy from EC2:
+Landing:
 
 ```bash
-cd /opt/yomi
-git pull origin main
-sudo docker compose --env-file .env.production up -d --build
-sudo docker image prune -f
-```
-
-Manual deploy from GitHub CLI:
-
-```bash
-gh workflow run deploy.yml --repo arka6fx/yomi --ref main
+cd apps/landing
+bun run build:cloudflare
+bun run deploy:production
 ```
 
 ## Verify
 
 ```bash
 curl -I https://yomi.arka6fx.com/
-curl https://yomi.arka6fx.com/health
-sudo docker compose ps
-sudo docker compose logs --tail=80 backend landing nginx
-```
-
-Expected container state:
-
-```text
-backend   healthy
-landing   healthy
-nginx     up, ports 80 and 443 bound
+curl https://api.yomi.arka6fx.com/health
 ```
 
 Expected public behavior:
 
 ```text
-http://yomi.arka6fx.com/  -> 301
-https://yomi.arka6fx.com/ -> 200
-/_next/static/*          -> 200
-```
-
-## OAuth
-
-Configure these callback URLs in the OAuth provider dashboards:
-
-```text
-https://yomi.arka6fx.com/api/auth/callback/github
-https://yomi.arka6fx.com/api/auth/callback/google
-https://yomi.arka6fx.com/api/gateway/discord/callback
-```
-
-If login attempts call `localhost:3001`, rebuild `landing` with production
-public build args:
-
-```bash
-cd /opt/yomi
-sudo docker compose --env-file .env.production build --no-cache landing
-sudo docker compose --env-file .env.production up -d --force-recreate landing nginx
+https://yomi.arka6fx.com/       -> 200
+https://api.yomi.arka6fx.com/health -> 200
 ```
 
 ## Dodo Payments
@@ -215,60 +178,18 @@ sudo docker compose --env-file .env.production up -d --force-recreate landing ng
 Leave Dodo values blank until billing is ready. When enabling billing:
 
 1. Generate an API key in the Dodo dashboard.
-2. Set `DODO_API_KEY`.
-3. Create subscription products for Pro and Max.
-4. Create one-time products for the credit packs.
-5. Set `DODO_PRODUCT_PRO`, `DODO_PRODUCT_MAX`, and credit-pack product IDs.
-6. Add a webhook for `https://yomi.arka6fx.com/api/billing/webhook`.
-7. Set `DODO_WEBHOOK_SECRET` to the webhook signing secret.
-8. Update `.env.production` and redeploy:
-
-```bash
-cd /opt/yomi
-sudo docker compose up -d --force-recreate backend nginx
-```
-
-## Troubleshooting
-
-SSH deploy timeout:
-
-- Check EC2 security group allows GitHub Actions runners or use a self-hosted
-  runner.
-- Confirm `EC2_HOST` points to `yomi.arka6fx.com`.
-
-Port 80/443 in use:
-
-```bash
-sudo ss -ltnp '( sport = :80 or sport = :443 )'
-sudo systemctl disable --now nginx
-sudo docker compose up -d nginx
-```
-
-White page:
-
-```bash
-curl -I https://yomi.arka6fx.com/_next/static/
-sudo docker compose build --no-cache landing
-sudo docker compose up -d --force-recreate landing nginx
-```
-
-Nginx 502 after deploy:
-
-```bash
-sudo docker compose restart nginx
-```
-
-Backend missing env:
-
-```bash
-sudo docker inspect yomi-backend-1 --format '{{range .Config.Env}}{{println .}}{{end}}' | sort
-```
-
-Do not print secret values into logs or chat.
+2. Create subscription products for Pro and Max.
+3. Create one-time products for the credit packs.
+4. Set `DODO_ENV=test` for sandbox or `DODO_ENV=live` for production.
+5. Set the matching `DODO_TEST_*` or `DODO_LIVE_*` product IDs.
+6. Add a webhook for `https://api.yomi.arka6fx.com/api/billing/webhook`.
+7. Set the matching webhook signing secret.
+8. Add the Dodo secrets to the backend Worker.
+9. Redeploy the backend Worker.
 
 ## Security Notes
 
-- Rotate any GitHub PAT that appears in shell output.
-- Keep `.env.production` out of git.
-- Keep the EC2 private key readable only by the owning user.
-- Do not commit OAuth client secrets, Dodo secrets, or database URLs.
+- Keep `.env` and `.env.production` out of git.
+- Do not commit OAuth client secrets, Dodo secrets, AI Credits keys, ElevenLabs
+  keys, or database URLs.
+- Rotate old AWS keys because the AWS deployment path has been removed.

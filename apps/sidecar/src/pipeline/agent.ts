@@ -41,10 +41,10 @@ import {
   // whatsAppMessageRequest,        // will provide later
 } from "./shortcuts.js"
 
-const AGENT_PATH_MODEL = process.env.AGENT_PATH_MODEL || "minimax.minimax-m2.5"
+const AGENT_MODEL = process.env.AI_CREDITS_AGENT_MODEL || "gpt-4.1"
 const MAX_STEPS = parseInt(process.env.AGENT_MAX_STEPS || "20", 10)
-// 1M tokens for MiniMax. Used by the turn-level compressor when no
-// model-aware context length is available. Matches the published 4.1 window.
+// 1M tokens for GPT-4.1. Used by the turn-level compressor when no
+// model-aware context length is available.
 const DEFAULT_MODEL_CONTEXT_WINDOW = 1_000_000
 
 // let pendingWhatsAppDraft: { kind: "reminder"; message: string } | null = null
@@ -541,7 +541,7 @@ export async function* agentPipeline(
     }
 
     const result = streamText({
-      model: createModel(AGENT_PATH_MODEL),
+      model: createModel(AGENT_MODEL),
       system,
       // Prepend prior turns so follow-up commands in the conversational act loop have context.
       messages: preCompressedMessages as unknown as Parameters<typeof streamText>[0]["messages"],

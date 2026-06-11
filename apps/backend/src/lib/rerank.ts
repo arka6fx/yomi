@@ -1,6 +1,6 @@
 // Reranking for hybrid RAG retrieval.
 // - mmrRerank: cheap, embedding-based Maximal Marginal Relevance (no network). Always on.
-// - llmRerank: optional listwise rerank, disabled until Bedrock rerank is configured,
+// - llmRerank: optional listwise rerank, disabled until an AI Credits rerank path is configured,
 //   with a strict timeout; returns null on failure so the caller falls back to MMR order.
 
 export interface RerankCandidate {
@@ -71,7 +71,7 @@ export function mmrRerank(
   return selected
 }
 
-// Optional listwise LLM rerank. Disabled while production is Bedrock-only.
+// Optional listwise LLM rerank. Disabled until production enables reranking.
 export async function llmRerank(
   _query: string,
   candidates: RerankCandidate[],
