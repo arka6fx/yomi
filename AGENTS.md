@@ -192,6 +192,20 @@ Speech:     Nova 2 Sonic (Bedrock Converse API)
 
 ---
 
+## Desktop releases
+
+Production web/backend deploys come from this repo's `main` branch. Desktop
+installers are separate: always publish Windows releases to
+`arka6fx/yomi-releases` using `.github/workflows/release.yml`.
+
+When STT/TTS or sidecar code changes, deploying backend/landing is not enough.
+Build and publish a new desktop installer so the packaged sidecar is updated.
+The installer must include `apps/sidecar/dist/sidecar-win32-x64.exe`; verify the
+fresh binary contains `amazon.nova-2-sonic-v1:0` and does not contain legacy
+`STT proxy error` or `/api/v1/elevenlabs/stt` strings before release.
+
+---
+
 ## Code style
 
 Small purposeful comments — one-liners on non-obvious logic, short section
