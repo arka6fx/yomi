@@ -29,12 +29,13 @@ function loadDotEnv(): void {
 
 loadDotEnv()
 
-export const BACKEND_URL =
-  app.isPackaged
-    ? "https://yomi.arka6fx.com"
-    : (process.env["YOMI_BACKEND_URL"] ??
-      process.env["BACKEND_URL"] ??
-      (process.env["YOMI_DEV"] === "true" ? "http://localhost:3001" : "https://yomi.arka6fx.com"))
+const configuredBackendUrl = process.env["YOMI_BACKEND_URL"] ?? process.env["BACKEND_URL"]
+const defaultBackendUrl =
+  !app.isPackaged && process.env["YOMI_DEV"] === "true"
+    ? "http://localhost:3001"
+    : "https://yomi.arka6fx.com"
+
+export const BACKEND_URL = configuredBackendUrl ?? defaultBackendUrl
 
 function tokenPath() {
   return path.join(app.getPath("userData"), "session.enc")
