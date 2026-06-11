@@ -41,7 +41,6 @@ import {
   // whatsAppMessageRequest,        // will provide later
 } from "./shortcuts.js"
 
-// was: process.env.AGENT_PATH_MODEL || "gpt-4.1"
 const AGENT_PATH_MODEL = process.env.AGENT_PATH_MODEL || "minimax.minimax-m2.5"
 const MAX_STEPS = parseInt(process.env.AGENT_MAX_STEPS || "20", 10)
 // 1M tokens for MiniMax. Used by the turn-level compressor when no

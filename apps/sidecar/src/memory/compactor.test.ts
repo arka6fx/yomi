@@ -21,8 +21,8 @@ mock.module("ai", () => ({
   jsonSchema: (schema: unknown) => schema,
 }))
 
-mock.module("@ai-sdk/openai", () => ({
-  createOpenAI: () => (modelId: string) => ({ provider: "openai", modelId }),
+mock.module("../pipeline/model.js", () => ({
+  createModel: (modelId: string) => ({ provider: "aws-bedrock", modelId }),
 }))
 
 import { compact } from "./compactor.js"

@@ -1,6 +1,6 @@
 // Reranking for hybrid RAG retrieval.
 // - mmrRerank: cheap, embedding-based Maximal Marginal Relevance (no network). Always on.
-// - llmRerank: optional listwise rerank via the OpenAI-compatible chat endpoint (RAG_RERANK_LLM=true),
+// - llmRerank: optional listwise rerank, disabled until Bedrock rerank is configured,
 //   with a strict timeout; returns null on failure so the caller falls back to MMR order.
 
 export interface RerankCandidate {
@@ -71,63 +71,12 @@ export function mmrRerank(
   return selected
 }
 
-// Optional listwise LLM rerank. Returns reranked candidates, or null on timeout/failure.
+// Optional listwise LLM rerank. Disabled while production is Bedrock-only.
 export async function llmRerank(
-  query: string,
+  _query: string,
   candidates: RerankCandidate[],
   k: number,
 ): Promise<RerankCandidate[] | null> {
-  const apiKey = process.env["OPENAI_API_KEY"]
-  if (!apiKey || candidates.length <= 1) return null
-  // was: process.env["RAG_RERANK_MODEL"] ?? "gpt-4.1-mini"
-  const model = process.env["RAG_RERANK_MODEL"] ?? "minimax.minimax-m2.5"
-  const base = (process.env["OPENAI_BASE_URL"] ?? "https://api.openai.com/v1").replace(/\/$/, "")
-  const timeoutMs = Math.max(
-    200,
-    Number.parseInt(process.env["RAG_RERANK_TIMEOUT_MS"] ?? "800", 10) || 800,
-  )
-
-  const list = candidates
-    .map((c, i) => `[${i + 1}] ${c.content.slice(0, 500).replace(/\s+/g, " ")}`)
-    .join("\n")
-  const prompt = `Rank the passages by how well they help answer the query. Return ONLY a JSON array of passage numbers, most relevant first, no prose.\n\nQuery: ${query}\n\nPassages:\n${list}`
-
-  const ctrl = new AbortController()
-  const timer = setTimeout(() => ctrl.abort(), timeoutMs)
-  try {
-    const res = await fetch(`${base}/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model,
-        temperature: 0,
-        messages: [{ role: "user", content: prompt }],
-      }),
-      signal: ctrl.signal,
-    })
-    if (!res.ok) return null
-    const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
-    const text = data.choices?.[0]?.message?.content ?? ""
-    const match = text.match(/\[[\s\S]*\]/)
-    if (!match) return null
-    const order = JSON.parse(match[0]) as number[]
-    const seen = new Set<number>()
-    const ranked: RerankCandidate[] = []
-    for (const n of order) {
-      const idx = n - 1
-      if (idx >= 0 && idx < candidates.length && !seen.has(idx)) {
-        seen.add(idx)
-        ranked.push(candidates[idx]!)
-      }
-    }
-    // Append anything the model omitted, preserving the input (RRF) order.
-    candidates.forEach((c, i) => {
-      if (!seen.has(i)) ranked.push(c)
-    })
-    return ranked.slice(0, k)
-  } catch {
-    return null
-  } finally {
-    clearTimeout(timer)
-  }
+  if (candidates.length <= 1 || k <= 0) return candidates.slice(0, k)
+  return null
 }
