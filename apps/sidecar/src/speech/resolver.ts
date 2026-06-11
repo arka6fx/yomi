@@ -1,15 +1,15 @@
-import { novaSonicSynthesize } from "../services/bedrock/nova-sonic.js"
+import { elevenLabsSynthesize } from "../services/elevenlabs/tts.js"
 
-export type TtsEngine = "nova-sonic" | "none"
+export type TtsEngine = "elevenlabs" | "none"
 
 export function resolveTts(): TtsEngine {
   const explicit = process.env.TTS_ENGINE?.toLowerCase() as TtsEngine | undefined
-  if (explicit === "nova-sonic" || explicit === "none") return explicit
-  if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) return "nova-sonic"
+  if (explicit === "elevenlabs" || explicit === "none") return explicit
+  if (process.env.ELEVENLABS_API_KEY) return "elevenlabs"
   return "none"
 }
 
 export async function* synthesize(text: string): AsyncGenerator<Uint8Array> {
   if (resolveTts() === "none") return
-  yield await novaSonicSynthesize(text)
+  yield* elevenLabsSynthesize(text)
 }

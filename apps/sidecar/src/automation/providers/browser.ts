@@ -1,7 +1,7 @@
 // ── Browser automation provider — will provide later ───────────────────────
 // import type { Provider, ProviderHealth } from "./types.js"
 // 
-// const BROWSER_MODEL = process.env.AGENT_PATH_MODEL || "minimax.minimax-m2.5"
+// const BROWSER_MODEL = process.env.AI_CREDITS_AGENT_MODEL || "gpt-4.1"
 // 
 // export const browserProvider: Provider = {
 //   id: "browser",

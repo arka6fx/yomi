@@ -78,7 +78,7 @@ function chunkText(content: string): string[] {
 
 async function embedText(input: string): Promise<number[]> {
   if (!input.trim()) return []
-  throw new Error("Cloud RAG embeddings are disabled until a Bedrock embedding model is configured")
+  throw new Error("Cloud RAG embeddings are disabled until an embeddings provider is configured")
 }
 
 function vectorLiteral(values: number[]): string {

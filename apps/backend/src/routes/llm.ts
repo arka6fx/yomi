@@ -6,7 +6,7 @@ llmRouter.post("/stream", (c) =>
   c.json(
     {
       error:
-        "Backend LLM proxy is disabled. Use the local sidecar Bedrock MiniMax path.",
+        "Backend LLM proxy is disabled. Use the local sidecar AI Credits path.",
     },
     410,
   ),

@@ -298,7 +298,11 @@ export class Curator {
       archiveAfterDays: opts.archiveAfterDays ?? DEFAULT_ARCHIVE_AFTER_DAYS,
       maxReviewPairs: opts.maxReviewPairs ?? DEFAULT_MAX_REVIEW_PAIRS,
       modelFactory: opts.modelFactory ?? createModel,
-      modelId: opts.modelId ?? process.env["CURATOR_MODEL"] ?? "minimax.minimax-m2.5",
+      modelId:
+        opts.modelId ??
+        process.env["CURATOR_MODEL"] ??
+        process.env["AI_CREDITS_FAST_MODEL"] ??
+        "gpt-4.1-mini",
     }
   }
 

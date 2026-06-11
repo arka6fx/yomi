@@ -81,15 +81,23 @@ app.route("/api/v1", proxyRouter)
 // // Start the messaging gateway — will provide later
 // getDefaultGateway().start(process.env["YOMI_PLAN"]).then(() => { ... })
 
-process.on("unhandledRejection", (err) => {
-  console.error("[unhandledRejection]", err)
-})
+if (typeof process !== "undefined" && typeof process.on === "function") {
+  process.on("unhandledRejection", (err) => {
+    console.error("[unhandledRejection]", err)
+  })
+}
 
 const PORT = Number(process.env["PORT"] ?? 3001)
 
-const server = Bun.serve({
-  port: PORT,
-  fetch: app.fetch,
-})
+if (typeof Bun !== "undefined") {
+  const server = Bun.serve({
+    port: PORT,
+    fetch: app.fetch,
+  })
 
-console.warn(`Backend listening on :${server.port}`)
+  console.warn(`Backend listening on :${server.port}`)
+}
+
+export default {
+  fetch: app.fetch,
+}

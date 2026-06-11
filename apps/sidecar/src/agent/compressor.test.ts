@@ -332,7 +332,7 @@ describe("compressContext", () => {
     expect(auxModelId).toBe("gpt-4.1-nano")
   })
 
-  it("defaults the aux model to minimax.minimax-m2.5", async () => {
+  it("defaults the aux model to gpt-4.1-mini", async () => {
     delete process.env["COMPRESSOR_MODEL"]
     generatedText = "## Active Task\n- x"
     const head = [system("s"), user("a"), assistant("b"), user("c")]
@@ -340,7 +340,7 @@ describe("compressContext", () => {
     const messages = [...head, ...middle, user("latest")]
 
     await compressContext(messages, baseOpts)
-    expect(auxModelId).toBe("minimax.minimax-m2.5")
+    expect(auxModelId).toBe("gpt-4.1-mini")
   })
 
   it("respects the COMPRESSOR_MODEL env var", async () => {
@@ -369,7 +369,7 @@ describe("compressContext", () => {
         return fakeModel(id)
       },
     })
-    expect(factoryId).toBe("minimax.minimax-m2.5")
+    expect(factoryId).toBe("gpt-4.1-mini")
   })
 
   it("returns the original messages when the LLM call throws", async () => {
