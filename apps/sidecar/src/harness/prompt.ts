@@ -182,9 +182,9 @@ export function buildFastPrompt(ctx: PromptContext): string {
     ? "You answer questions, explain what's on screen, and guide the user step by step."
     : "You answer questions and help the user step by step. Do not reference any image or screen."
 
-  // Prompt order is tuned for prefix caching: the long, turn-invariant block
+  // Prompt order keeps the long, turn-invariant block first.
   // (identity → user_context → answer_format → voice_rules → examples → rules)
-  // leads so the OpenAI-compatible endpoint can cache it. The per-turn dynamic
+  // The per-turn dynamic
   // tail (screen_context, screen-dependent capabilities, memory, skills) comes
   // last so it never invalidates that cached prefix.
   return `\

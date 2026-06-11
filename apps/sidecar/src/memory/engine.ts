@@ -43,7 +43,6 @@ type ExtractedMemory = {
   replaces_topic?: string
 }
 
-// was: process.env.MEMORY_EXTRACTION_MODEL || "gpt-4.1-mini"
 const EXTRACTION_MODEL = process.env.MEMORY_EXTRACTION_MODEL || "minimax.minimax-m2.5"
 const MAX_PROFILE_CHARS = 3000
 

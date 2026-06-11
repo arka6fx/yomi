@@ -4,8 +4,8 @@
  * Mocking strategy:
  * - `mock.module("ai")` replaces `streamText` with a controllable fake that
  *   returns an async iterable of text chunks.
- * - `mock.module("@ai-sdk/openai")` replaces the factory function with a spy
- *   so we can inspect the arguments passed to it.
+ * - `mock.module("../pipeline/model.js")` replaces the Bedrock MiniMax model
+ *   factory so tests do not call AWS.
  *
  * The modules are mocked BEFORE the pipeline modules are imported so that the
  * module-level `createModel()` calls inside fast.ts pick up the mocked factories.
@@ -17,7 +17,7 @@ import { describe, it, expect, beforeEach, mock } from "bun:test"
 // TTS mock state — controls the mocked resolver below
 // ---------------------------------------------------------------------------
 
-type FakeTtsEngine = "openai" | "none"
+type FakeTtsEngine = "nova-sonic" | "none"
 const ttsMock = {
   engine: "none" as FakeTtsEngine,
   // Bytes the mocked synthesize() yields, one Uint8Array per chunk.
@@ -88,42 +88,18 @@ mock.module("ai", () => ({
   },
 }))
 
-mock.module("@ai-sdk/openai", () => ({
-  createOpenAI: (_opts: Record<string, unknown>) => {
-    return (modelId: string) => ({ provider: "openai", modelId })
-  },
+mock.module("./model.js", () => ({
+  createModel: (modelId: string) => ({ provider: "aws-bedrock", modelId }),
 }))
 
-mock.module("openai", () => ({
-  default: class {
-    audio = {
-      transcriptions: {
-        create: async () => ({ text: "transcribed from audio" }),
-      },
-    }
-  },
-}))
-
-mock.module("../services/elevenlabs/stt.js", () => {
-  class MockElevenLabsSttError extends Error {
-    constructor(
-      message: string,
-      readonly status: number,
-      readonly body?: string,
-    ) {
-      super(message)
-      this.name = "ElevenLabsSttError"
-    }
-  }
+mock.module("../services/bedrock/nova-sonic.js", () => {
   return {
-    ElevenLabsSttError: MockElevenLabsSttError,
-    elevenLabsTranscribe: async () => {
+    novaSonicTranscribe: async () => {
       if (sttMock.shouldThrow) {
-        throw new MockElevenLabsSttError("ElevenLabs STT error 401", 401, "invalid api key")
+        throw new Error("Nova Sonic validation error: invalid api key")
       }
       return {
         text: "transcribed from audio",
-        language_code: "en",
       }
     },
   }
@@ -154,6 +130,29 @@ mock.module("../memory/session.js", () => ({
 
 mock.module("../memory/compactor.js", () => ({
   compact: async () => {},
+}))
+
+mock.module("../memory/subsystem.js", () => ({
+  loadMemoryContext: async () => {
+    loadRecentSessionCalls++
+    return {
+      memorySummary: "",
+      memoryIndex: "",
+      localMemory: "User: remember my project\nAssistant: It is Yomi.",
+      cloudRagContext: "",
+      staticProfile: "",
+      dynamicProfile: "",
+      recentSession: "",
+    }
+  },
+  writeSessionTurn: async () => {
+    appendSessionCalls++
+  },
+  captureStructuredMemory: async () => {},
+}))
+
+mock.module("../insights/usage-store.js", () => ({
+  logUsageEvent: () => {},
 }))
 
 // ---------------------------------------------------------------------------
@@ -255,7 +254,8 @@ describe("fastPipeline — generator", () => {
 
     delete process.env.FAST_PATH_MODEL
     delete process.env.SIDECAR_SECRET
-    delete process.env.OPENAI_API_KEY
+    delete process.env.AWS_ACCESS_KEY_ID
+    delete process.env.AWS_SECRET_ACCESS_KEY
     ttsMock.reset()
     sttMock.reset()
   })
@@ -363,7 +363,7 @@ describe("fastPipeline — generator", () => {
   // Model selection
   // -------------------------------------------------------------------------
 
-  it("default model is gpt-4.1-mini when FAST_PATH_MODEL is unset", async () => {
+  it("default model is minimax.minimax-m2.5 when FAST_PATH_MODEL is unset", async () => {
     delete process.env.FAST_PATH_MODEL
     const events = (await collect(fastPipeline({ text: "Hello" }))) as any[]
     expect(events.some((e) => e.type === "llm_chunk")).toBe(true)
@@ -402,7 +402,7 @@ describe("fastPipeline — generator", () => {
   })
 
   it("TTS request false: no audio_chunk events even when a TTS engine is available", async () => {
-    ttsMock.engine = "openai"
+    ttsMock.engine = "nova-sonic"
     ttsMock.chunks = [new Uint8Array([1, 2, 3])]
     streamChunks = ["Hello world."]
     const events = (await collect(fastPipeline({ text: "hi", tts: false }))) as any[]
@@ -411,7 +411,7 @@ describe("fastPipeline — generator", () => {
   })
 
   it("TTS enabled: emits audio_chunk events with base64-encoded bytes", async () => {
-    ttsMock.engine = "openai"
+    ttsMock.engine = "nova-sonic"
     ttsMock.chunks = [new Uint8Array([0xde, 0xad, 0xbe, 0xef])]
     streamChunks = ["One sentence."]
     const events = (await collect(fastPipeline({ text: "hi" }))) as any[]
@@ -421,7 +421,7 @@ describe("fastPipeline — generator", () => {
   })
 
   it("TTS: synthesize called once per sentence boundary", async () => {
-    ttsMock.engine = "openai"
+    ttsMock.engine = "nova-sonic"
     ttsMock.chunks = [new Uint8Array([1])]
     // Three sentences. Match the regex `[.!?]\s` so boundaries fire mid-stream.
     streamChunks = ["First sentence. ", "Second one! ", "And third?"]
@@ -430,7 +430,7 @@ describe("fastPipeline — generator", () => {
   })
 
   it("TTS: first segment flushes early on a clause boundary for faster first audio", async () => {
-    ttsMock.engine = "openai"
+    ttsMock.engine = "nova-sonic"
     ttsMock.chunks = [new Uint8Array([1])]
     // No sentence boundary yet, but a comma past the minimum length — the opening
     // segment should be spoken immediately instead of waiting for the full sentence.
@@ -440,7 +440,7 @@ describe("fastPipeline — generator", () => {
   })
 
   it("TTS: only the first segment uses the loose boundary (later commas wait for sentence end)", async () => {
-    ttsMock.engine = "openai"
+    ttsMock.engine = "nova-sonic"
     ttsMock.chunks = [new Uint8Array([1])]
     // First clause flushes early; the second sentence's comma must NOT split it.
     streamChunks = ["Okay here is the plan, ", "first we cook, then we eat. ", "Done."]
@@ -453,7 +453,7 @@ describe("fastPipeline — generator", () => {
   })
 
   it("TTS: skips fenced answer blocks while keeping them in the UI stream", async () => {
-    ttsMock.engine = "openai"
+    ttsMock.engine = "nova-sonic"
     ttsMock.chunks = [new Uint8Array([1])]
     streamChunks = ["Reason first. \n```answer\nB. Correct choice.\n```\nDone."]
     const events = (await collect(fastPipeline({ text: "hi" }))) as any[]
@@ -467,7 +467,7 @@ describe("fastPipeline — generator", () => {
   })
 
   it("TTS: tail without trailing whitespace is still synthesized at end", async () => {
-    ttsMock.engine = "openai"
+    ttsMock.engine = "nova-sonic"
     ttsMock.chunks = [new Uint8Array([1])]
     // No trailing space after the final period — won't hit the regex mid-stream,
     // so it falls through to the end-of-stream flush.
@@ -477,7 +477,7 @@ describe("fastPipeline — generator", () => {
   })
 
   it("TTS: empty/whitespace-only buffer at end is not synthesized", async () => {
-    ttsMock.engine = "openai"
+    ttsMock.engine = "nova-sonic"
     ttsMock.chunks = [new Uint8Array([1])]
     streamChunks = ["One sentence. "] // boundary cuts cleanly, no tail text
     await collect(fastPipeline({ text: "hi" }))
@@ -485,7 +485,7 @@ describe("fastPipeline — generator", () => {
   })
 
   it("TTS: yields multiple audio_chunk events per sentence when synth returns multiple chunks", async () => {
-    ttsMock.engine = "openai"
+    ttsMock.engine = "nova-sonic"
     ttsMock.chunks = [new Uint8Array([1]), new Uint8Array([2]), new Uint8Array([3])]
     streamChunks = ["One sentence."]
     const events = (await collect(fastPipeline({ text: "hi" }))) as any[]
@@ -494,7 +494,7 @@ describe("fastPipeline — generator", () => {
   })
 
   it("TTS: audio_chunk events preserve sentence order even when later synthesis finishes first", async () => {
-    ttsMock.engine = "openai"
+    ttsMock.engine = "nova-sonic"
     ttsMock.chunkPlan = [[new Uint8Array([1]), new Uint8Array([2])], [new Uint8Array([3])]]
     ttsMock.delaysMs = [20, 0]
     streamChunks = ["First sentence. ", "Second sentence."]
@@ -506,7 +506,7 @@ describe("fastPipeline — generator", () => {
   })
 
   it("TTS: done is still the last event when audio is present", async () => {
-    ttsMock.engine = "openai"
+    ttsMock.engine = "nova-sonic"
     ttsMock.chunks = [new Uint8Array([1, 2])]
     streamChunks = ["Hello world."]
     const events = (await collect(fastPipeline({ text: "hi" }))) as any[]
@@ -514,7 +514,7 @@ describe("fastPipeline — generator", () => {
   })
 
   it("TTS: synthesis errors emit diagnostics and text response still completes", async () => {
-    ttsMock.engine = "openai"
+    ttsMock.engine = "nova-sonic"
     ttsMock.shouldThrow = true
     streamChunks = ["Hello world."]
     const events = (await collect(fastPipeline({ text: "hi" }))) as any[]
@@ -525,7 +525,7 @@ describe("fastPipeline — generator", () => {
   })
 
   it("TTS: repeated synthesis failures emit only one diagnostic event", async () => {
-    ttsMock.engine = "openai"
+    ttsMock.engine = "nova-sonic"
     ttsMock.shouldThrow = true
     streamChunks = ["First sentence. ", "Second sentence."]
     const events = (await collect(fastPipeline({ text: "hi" }))) as any[]
@@ -541,7 +541,8 @@ describe("fastPipeline — generator", () => {
 describe("POST /query/fast — HTTP endpoint", () => {
   beforeEach(() => {
     delete process.env.FAST_PATH_MODEL
-    delete process.env.OPENAI_API_KEY
+    delete process.env.AWS_ACCESS_KEY_ID
+    delete process.env.AWS_SECRET_ACCESS_KEY
     streamChunks = ["Hello", " world"]
     ttsMock.reset()
   })
@@ -732,9 +733,9 @@ describe("POST /query/fast — HTTP endpoint", () => {
     delete process.env.SIDECAR_SECRET
     sttMock.shouldThrow = true
     const res = await postStt(new Uint8Array(48))
-    expect(res.status).toBe(400)
+    expect(res.status).toBe(502)
     const body = (await res.json()) as any
-    expect(body.error).toContain("ElevenLabs STT error 401")
+    expect(body.error).toContain("Nova Sonic validation error")
     expect(body.error).toContain("invalid api key")
   })
 

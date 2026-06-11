@@ -1,6 +1,6 @@
 import { generateObject, jsonSchema } from "ai"
-import { createOpenAI } from "@ai-sdk/openai"
 import type { IntentClassification, RouterInput } from "@yomi/shared"
+import { createModel } from "../pipeline/model.js"
 
 const ROUTER_SYSTEM_PROMPT = `You classify user requests for a desktop AI assistant into two pipelines.
 fast: questions, explanations, translations, summaries — any direct single-step answer.
@@ -20,35 +20,6 @@ const RouterDecision = jsonSchema<{ path: "fast" | "agent"; confidence: number; 
 const TIMEOUT_MS = parseInt(process.env.ROUTER_LLM_TIMEOUT_MS || "250", 10)
 const MODEL = process.env.ROUTER_MODEL || "minimax.minimax-m2.5"
 
-// ── AWS Bedrock — MiniMax M2.5 via OpenAI-compatible mantle endpoint ─────────
-const bedrock = createOpenAI({
-  apiKey: process.env.AWS_BEDROCK_BEARER_TOKEN,
-  baseURL:
-    process.env.AWS_BEDROCK_BASE_URL || "https://bedrock-mantle.us-east-1.api.aws/v1",
-})
-
-function createModel() {
-  return bedrock(MODEL)
-}
-
-// ── Legacy: OpenAI / AI Credits router (kept for rollback) ──────────────────
-// const MODEL = process.env.FAST_PATH_MODEL || "gpt-4.1-mini"
-//
-// const backendUrl = process.env.YOMI_BACKEND_URL ?? process.env.BACKEND_URL
-// const sessionToken = process.env.YOMI_SESSION_TOKEN
-//
-// const openai = createOpenAI({
-//   apiKey: sessionToken || process.env.OPENAI_API_KEY,
-//   baseURL:
-//     backendUrl && sessionToken
-//       ? `${backendUrl.replace(/\/+$/, "")}/api/v1`
-//       : process.env.OPENAI_BASE_URL,
-// })
-//
-// function createModel() {
-//   return openai(MODEL)
-// }
-
 function buildPrompt(input: RouterInput): string {
   const parts = [`User request: "${input.text}"`]
   if (input.history?.length) {
@@ -63,7 +34,7 @@ function buildPrompt(input: RouterInput): string {
 
 export async function classifyWithLlm(input: RouterInput): Promise<IntentClassification> {
   const { object } = await generateObject({
-    model: createModel(),
+    model: createModel(MODEL),
     schema: RouterDecision,
     system: ROUTER_SYSTEM_PROMPT,
     prompt: buildPrompt(input),

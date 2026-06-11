@@ -32,7 +32,6 @@ export interface GraphDeps {
   markClosed: () => void
 }
 
-// was: process.env["AGENT_PATH_MODEL"] || "gpt-4.1"
 export const AGENT_PATH_MODEL = process.env["AGENT_PATH_MODEL"] || "minimax.minimax-m2.5"
 // Steps per execution burst. Defaults to the legacy 20 so single-burst reach matches the old
 // loop; Validation/Recovery wrap the burst rather than shrinking it. Tune down via env.

@@ -13,8 +13,8 @@ import { authenticate } from "../auth.js"
 import { effectivePlanForUser, isOwnerUser } from "../entitlements.js"
 import { llmRerank, mmrRerank, parseVector, type RerankCandidate } from "../lib/rerank.js"
 
-const EMBEDDING_MODEL = process.env["EMBEDDING_MODEL"] ?? "text-embedding-3-small"
 const EMBEDDING_DIMENSIONS = 1536
+const EMBEDDING_MODEL = "disabled-bedrock-pending"
 const MAX_DOCUMENT_CHARS = 120_000
 const CHUNK_CHARS = 1800
 const CHUNK_OVERLAP = 220
@@ -76,28 +76,9 @@ function chunkText(content: string): string[] {
   return chunkMarkdown(content, { targetChars: CHUNK_CHARS, overlap: CHUNK_OVERLAP })
 }
 
-function embeddingUrl(): string {
-  const base = process.env["OPENAI_BASE_URL"] ?? "https://api.openai.com/v1"
-  return `${base.replace(/\/$/, "")}/embeddings`
-}
-
 async function embedText(input: string): Promise<number[]> {
-  const apiKey = process.env["OPENAI_API_KEY"]
-  if (!apiKey) throw new Error("OPENAI_API_KEY is not configured")
-  const res = await fetch(embeddingUrl(), {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model: EMBEDDING_MODEL,
-      input,
-      dimensions: EMBEDDING_DIMENSIONS,
-    }),
-  })
-  if (!res.ok) throw new Error(`Embedding request failed (${res.status})`)
-  const data = (await res.json()) as { data?: { embedding?: number[] }[] }
-  const embedding = data.data?.[0]?.embedding
-  if (!embedding?.length) throw new Error("Embedding response was empty")
-  return embedding
+  if (!input.trim()) return []
+  throw new Error("Cloud RAG embeddings are disabled until a Bedrock embedding model is configured")
 }
 
 function vectorLiteral(values: number[]): string {
