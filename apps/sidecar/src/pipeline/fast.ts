@@ -10,7 +10,7 @@ import {
   writeSessionTurn,
 } from "../memory/subsystem.js"
 
-const MODEL = process.env.FAST_PATH_MODEL || "minimax.minimax-m2.5"
+const MODEL = process.env.AI_CREDITS_FAST_MODEL || "gpt-4.1-mini"
 
 // yomi.md is stable per-session; memory files change after compaction so load fresh each turn.
 let cachedYomiMd: string | null = null

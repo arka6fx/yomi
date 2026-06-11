@@ -129,7 +129,6 @@ describe("Cloud RAG routes", () => {
     sourceRows = [{ id: "source_1" }]
     documentRows = []
     conflictTargets = []
-    process.env["OPENAI_API_KEY"] = "test-key"
   })
 
   afterEach(() => {
