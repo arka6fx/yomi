@@ -9,10 +9,5 @@
         "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}",
       },
     },
-    "razorpay": {
-      "type": "local",
-      "command": ["npx", "-y", "mcp-remote", "https://mcp.razorpay.com/mcp", "--header", "Authorization: ${RAZORPAY_MCP_AUTH}"],
-      "enabled": true,
-    },
   },
 }

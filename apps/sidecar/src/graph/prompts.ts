@@ -1,5 +1,6 @@
 import type { Plan } from "@yomi/shared"
 import { buildAgentPrompt, loadYomiMd } from "../harness/prompt.js"
+import { getDesktopFocusContext } from "../harness/hooks.js"
 import { loadMemoryContext } from "../memory/subsystem.js"
 import { memoryEnabled } from "./deps.js"
 
@@ -33,7 +34,7 @@ export async function buildGraphSystemPrompt(
     .filter(([, value]) => typeof value === "string" && value.trim().length > 0)
     .map(([key]) => key)
   return {
-    systemPrompt: buildAgentPrompt({ yomiMd: cachedYomiMd, ...memoryCtx }),
+    systemPrompt: buildAgentPrompt({ yomiMd: cachedYomiMd, ...memoryCtx, desktopFocusChange: getDesktopFocusContext() }),
     memoryRefs,
   }
 }

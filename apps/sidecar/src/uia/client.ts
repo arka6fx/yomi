@@ -1,11 +1,12 @@
 import { platform } from "os"
 import path from "path"
 import type { Subprocess } from "bun"
-import type { UiaElement, UiaSnapshot } from "@yomi/shared"
+import type { FocusChangeEvent, TreeDiff, UiaElement, UiaSnapshot } from "@yomi/shared"
 
 // JSON-RPC client for the C# uia-helper (Spec 16). One process, line-delimited JSON over stdio.
 // The helper is spawned lazily on first use and respawned if it dies.
 
+const DEBUG = () => !!process.env.DEBUG_UIA
 const HELPER_TIMEOUT_MS = 5_000
 // Enumerating a large accessibility tree (e.g. Spotify's WebView2, ~800 nodes) is slow over the
 // cross-process COM bridge and routinely exceeds 5s — give get_ui_tree a much longer budget so a
@@ -40,6 +41,57 @@ export function matchElement(prev: UiaElement, elements: UiaElement[]): UiaEleme
   return null
 }
 
+// Diff two UiaElement arrays to find added, removed, and changed elements.
+// Matching priority: automationId → exact name+role → fuzzy name+role (same as matchElement).
+function computeDiff(oldElements: UiaElement[], newElements: UiaElement[]): TreeDiff {
+  // Build match sets by identity criteria.
+  type MatchKey = { automationId: string } | { name: string; role: string } | { name: string }
+  function keyOf(e: UiaElement): MatchKey | null {
+    if (e.automationId) return { automationId: e.automationId }
+    if (e.name && e.role) return { name: e.name, role: e.role }
+    return null
+  }
+
+  const newByKey = new Map<string, UiaElement>()
+  for (const e of newElements) {
+    const k = keyOf(e)
+    if (k) newByKey.set(JSON.stringify(k), e)
+  }
+
+  const added: UiaElement[] = []
+  const removed: UiaElement[] = []
+  const changed: UiaElement[] = []
+
+  for (const oldEl of oldElements) {
+    const k = keyOf(oldEl)
+    if (!k) continue
+    const match = newByKey.get(JSON.stringify(k))
+    if (!match) {
+      removed.push(oldEl)
+      if (DEBUG()) console.warn(`[uia/diff] removed: ${oldEl.role} "${oldEl.name}"`)
+    } else {
+      // Compare properties that change at runtime (enabled, value).
+      if (
+        oldEl.enabled !== match.enabled ||
+        oldEl.value !== match.value
+      ) {
+        changed.push(match)
+        if (DEBUG()) console.warn(`[uia/diff] changed: ${match.role} "${match.name}" enabled=${match.enabled} value=${match.value ?? ""}`)
+      }
+      // Consumed — remove so anything left in newByKey is truly new.
+      newByKey.delete(JSON.stringify(k))
+    }
+  }
+
+  for (const [_, e] of newByKey) {
+    added.push(e)
+    if (DEBUG()) console.warn(`[uia/diff] added: ${e.role} "${e.name}"`)
+  }
+
+  if (DEBUG()) console.warn(`[uia/diff] summary: +${added.length} -${removed.length} ~${changed.length}`)
+  return { added, removed, changed }
+}
+
 class UiaClient {
   private proc: Subprocess<"pipe", "pipe", "inherit"> | null = null
   private starting: Promise<void> | null = null
@@ -50,6 +102,10 @@ class UiaClient {
   lastWindow = ""
   // Last snapshot's elements by ref — lets acting tools classify risk / label without a round-trip.
   private elementsByRef = new Map<string, UiaElement>()
+  // Previous snapshot's elements for tree-diff computation.
+  private previousElements: UiaElement[] | null = null
+  // Focus-change event callback registered by the harness.
+  onFocusChange: ((event: FocusChangeEvent) => void) | null = null
   // Coordinate-fallback handoff: point_cursor stashes a target that click consumes.
   pendingPoint: { x: number; y: number } | null = null
 
@@ -108,18 +164,35 @@ class UiaClient {
   }
 
   private handleLine(line: string): void {
-    let msg: { id?: number; result?: unknown; error?: { message?: string } }
+    let msg: { id?: number; result?: unknown; error?: { message?: string }; event?: string; hwnd?: number; window?: string }
     try {
       msg = JSON.parse(line)
     } catch {
+      if (DEBUG()) console.warn(`[uia/client] non-JSON line from helper: "${line.slice(0, 80)}"`)
       return
     }
-    if (typeof msg.id !== "number") return
+    // Event frames (no id, no pending request) — push to registered listeners.
+    if (typeof msg.id !== "number") {
+      if (msg.event === "focus_changed" && typeof msg.hwnd === "number") {
+        if (DEBUG()) console.warn(`[uia/client] event frame: focus_changed hwnd=0x${msg.hwnd.toString(16)} window="${msg.window ?? ""}"`)
+        if (this.onFocusChange) {
+          this.onFocusChange({ hwnd: msg.hwnd, window: msg.window ?? "" })
+        }
+      } else {
+        if (DEBUG()) console.warn(`[uia/client] unknown event frame: ${msg.event ?? "no event type"}`)
+      }
+      return
+    }
     const p = this.pending.get(msg.id)
     if (!p) return
     this.pending.delete(msg.id)
-    if (msg.error) p.reject(new Error(msg.error.message || "uia-helper error"))
-    else p.resolve(msg.result)
+    if (msg.error) {
+      if (DEBUG()) console.warn(`[uia/client] RPC error id=${msg.id}: ${msg.error.message || "unknown"}`)
+      p.reject(new Error(msg.error.message || "uia-helper error"))
+    } else {
+      if (DEBUG()) console.warn(`[uia/client] RPC response id=${msg.id} received`)
+      p.resolve(msg.result)
+    }
   }
 
   async call<T = unknown>(
@@ -158,9 +231,20 @@ class UiaClient {
   async getUiTree(
     params: { maxNodes?: number; maxDepth?: number; hwnd?: number; lite?: boolean } = {},
   ): Promise<UiaSnapshot> {
+    const isFirst = !this.previousElements
+    if (DEBUG()) console.warn(`[uia/client] getUiTree() called hwnd=${params.hwnd ?? "foreground"} first=${isFirst}`)
     const snap = await this.call<UiaSnapshot>("get_ui_tree", params, TREE_TIMEOUT_MS)
     this.lastWindow = snap.window ?? ""
-    this.elementsByRef = new Map((snap.elements ?? []).map((e) => [e.ref, e]))
+    const fresh = snap.elements ?? []
+    if (DEBUG()) console.warn(`[uia/client] getUiTree() returned window="${snap.window}" elements=${fresh.length} truncated=${snap.truncated ?? false}`)
+    // Compute diff against the previous snapshot when one exists.
+    if (this.previousElements) {
+      snap.diff = computeDiff(this.previousElements, fresh)
+    } else {
+      if (DEBUG()) console.warn(`[uia/client] getUiTree() first snapshot — no diff computed`)
+    }
+    this.previousElements = fresh
+    this.elementsByRef = new Map(fresh.map((e) => [e.ref, e]))
     return snap
   }
 
@@ -168,6 +252,70 @@ class UiaClient {
     const info = await this.call<{ window: string }>("get_window_info", params)
     this.lastWindow = info.window ?? ""
     return info
+  }
+
+  // --- UIA action patterns (tree expansion, scroll, right-click, text, search) ---
+
+  async expandElement(ref: string): Promise<{ ok: boolean; name?: string }> {
+    return this.call<{ ok: boolean; name?: string }>("expand_element", { ref })
+  }
+
+  async collapseElement(ref: string): Promise<{ ok: boolean; name?: string }> {
+    return this.call<{ ok: boolean; name?: string }>("collapse_element", { ref })
+  }
+
+  async scroll(
+    ref: string,
+    horizontalPercent?: number,
+    verticalPercent?: number,
+  ): Promise<{ ok: boolean; name?: string }> {
+    return this.call<{ ok: boolean; name?: string }>("scroll", { ref, horizontalPercent, verticalPercent })
+  }
+
+  async rightClick(ref: string): Promise<{ ok: boolean; x?: number; y?: number }> {
+    return this.call<{ ok: boolean; x?: number; y?: number }>("right_click", { ref })
+  }
+
+  async getSubtree(
+    ref: string,
+    maxNodes?: number,
+    maxDepth?: number,
+  ): Promise<{ elements: UiaElement[]; count: number }> {
+    return this.call<{ elements: UiaElement[]; count: number }>("get_subtree", { ref, maxNodes, maxDepth })
+  }
+
+  async findElement(
+    ref: string,
+    role?: string,
+    name?: string,
+    automationId?: string,
+  ): Promise<{ ok: boolean; element?: UiaElement; error?: string }> {
+    return this.call<{ ok: boolean; element?: UiaElement; error?: string }>("find_element", {
+      ref,
+      role,
+      name,
+      automationId,
+    })
+  }
+
+  async getText(ref: string): Promise<{ ok: boolean; text?: string; length?: number; name?: string }> {
+    return this.call<{ ok: boolean; text?: string; length?: number; name?: string }>("get_text", { ref })
+  }
+
+  async getChildren(
+    ref: string,
+    maxChildren?: number,
+  ): Promise<{ elements: UiaElement[]; count: number }> {
+    return this.call<{ elements: UiaElement[]; count: number }>("get_children", { ref, maxChildren })
+  }
+
+  async getFocusTree(
+    maxDepth?: number,
+  ): Promise<{ ok: boolean; elements?: UiaElement[]; focusRef?: string; error?: string }> {
+    return this.call<{ ok: boolean; elements?: UiaElement[]; focusRef?: string; error?: string }>(
+      "get_focus_tree",
+      { maxDepth },
+    )
   }
 
   // --- Background primitives (Spec: background-mode automation) ---

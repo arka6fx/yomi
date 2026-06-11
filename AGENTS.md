@@ -38,11 +38,11 @@ bun install && bun run dev        # install + run all in watch mode
 
 ## Stack (settled — do not relitigate)
 
-- **LLM:** Vercel AI SDK (`ai` + `@ai-sdk/openai`) via OpenAI-compatible endpoint
-- **STT/TTS:** ElevenLabs `scribe_v2` / `eleven_flash_v2_5` (MP3)
+- **LLM:** Vercel AI SDK (`ai` + `@ai-sdk/openai`) via AWS Bedrock mantle (MiniMax M2.5)
+- **STT/TTS:** AWS Bedrock Nova Sonic (Converse API, IAM auth)
 - **Desktop:** Electron (Tauri-ready). Never embed login in Electron window — device-code flow only
 - **Backend:** Hono on Bun, Better Auth (Google + GitHub OAuth), Drizzle + Neon
-- **Billing:** Razorpay
+- **Billing:** Dodo Payments
 - **Primary LLM provider:** AI Credits/OpenAI-compatible. Don't add alternative routing unless asked.
 
 ---
@@ -59,23 +59,16 @@ LOCAL SIDECAR  (apps/sidecar — Bun)
   ReAct agent loop · MCP + subagents · notepad memory
   ↕  authenticated HTTPS
 CLOUD BACKEND  (apps/backend — Hono/Bun)
-  Better Auth · Razorpay webhooks · LLM proxy · usage metering · memory sync
-  Messaging Gateway (Telegram / Discord — polling + webhooks)
+  Better Auth · Dodo webhooks · LLM proxy · usage metering · memory sync
+  Messaging Gateway (Telegram / Discord — will provide later)
 ```
 
 ---
 
-## Messaging Gateway
+## Messaging Gateway (will provide later)
 
-Users link their account via a 6-character code flow:
-1. Message the bot on Telegram or Discord (after adding to a server)
-2. Bot replies with a linking code (stored in `linking_codes`, expires in 10 min)
-3. Enter code on `/link` page → inserts `platform_connections` row
-4. Subsequent messages route from gateway → backend queue → sidecar polling → LLM
-
-Platform adapters live in `apps/backend/src/gateway/platforms/`. Each implements
-`PlatformAdapter` (send/receive). The sidecar is platform-agnostic — it only sees
-`GatewayMessage { platform, chatId, userId, text }`.
+Telegram/Discord bots via polling, code-linking flow, gateway routes, and platform
+adapters in `apps/backend/src/gateway/` — all commented out until first public release.
 
 ---
 
@@ -87,7 +80,8 @@ Platform adapters live in `apps/backend/src/gateway/platforms/`. Each implements
 Tools: `look_at_screen`, `transcribe`, `speak`. No tool-selection loop.
 
 **Agent path:** filesystem r/w · bash (sandboxed) · web search/fetch · cursor
-automation · MCP servers (calendar, email, Notion, Slack, browser).
+automation · MCP servers (calendar, email, Notion, Slack). Browser automation
+commented out — will provide later.
 
 **Session lifecycle:**
 ```
@@ -133,8 +127,8 @@ daily_interaction_date   date
 App tables (`packages/db/src/schema.ts`):
 ```
 devices, subscriptions, usage_events (append-only), memory_blobs,
-agent_runs, mcp_connections (oauth_tokens encrypted), hook_logs (PII redacted),
-platform_connections, linking_codes
+agent_runs, mcp_connections (oauth_tokens encrypted), hook_logs (PII redacted)
+# platform_connections, linking_codes — commented out, will provide later
 ```
 
 ---
@@ -147,7 +141,7 @@ platform_connections, linking_codes
 | Pro     | $14.99/mo  | 2 000 chats/month; limited reasoning, voice, images, automation    |
 | Max     | $39.99/mo  | Higher reasoning, voice, image, and foreground automation limits   |
 
-Fair-use: never offer unlimited. Razorpay USD: Pro = 1499¢, Max = 3999¢.
+Fair-use: never offer unlimited. Dodo USD: Pro = 1499¢, Max = 3999¢.
 India-local: Pro ₹999/mo, Max ₹2 999/mo.
 
 ---
@@ -167,13 +161,13 @@ India-local: Pro ₹999/mo, Max ₹2 999/mo.
 | 10 | `10-memory` | Notepad, compaction, retrieval |
 | 11 | `11-database` | Drizzle schema + Neon client |
 | 12 | `12-backend` | Hono routes, Better Auth, LLM proxy, metering |
-| 13 | `13-pricing` | Plans, Razorpay, metering |
+| 13 | `13-pricing` | Plans, Dodo Payments, metering |
 | 14 | `14-landing-page` | Next.js marketing site + waitlist |
 | 16 | `16-windows-app-automation` | UIA Act mode, safety blocklist |
-| 17 | `17-browser-automation` | Playwright MCP via sidecar |
-| 18 | `18-automation-orchestration` | LangGraph, sub-agents ← **current** |
-| 19 | `19-hermes-features.md` | Cloud messaging gateway architecture |
-| 20 | `20-bot-setup.md` | Bot setup + linking flow |
+| 17 | `17-browser-automation` | Playwright MCP via sidecar ← **will provide later** |
+| 18 | `18-automation-orchestration` | LangGraph, sub-agents ← **will provide later** |
+| 19 | `19-hermes-features.md` | Cloud messaging gateway architecture ← **will provide later** |
+| 20 | `20-bot-setup.md` | Bot setup + linking flow ← **will provide later** |
 
 ---
 
@@ -188,12 +182,12 @@ India-local: Pro ₹999/mo, Max ₹2 999/mo.
 
 ---
 
-## Models (2026-05)
+## Models (2026-06)
 
 ```
-Fast path:  gpt-4.1-mini
-Agent path: gpt-4.1
-Heavy:      gpt-4.1
+Fast path:  minimax.minimax-m2.5 (Bedrock mantle)
+Agent path: minimax.minimax-m2.5 (Bedrock mantle)
+Speech:     Nova 2 Sonic (Bedrock Converse API)
 ```
 
 ---
@@ -211,47 +205,48 @@ line. Example: `feat: speaker mute toggle`.
 
 ## Billing Architecture (2026-06)
 
-**Design:** Pre-created Razorpay plans (not dynamic). USD canonical, 8 currency
-display layer via `CF-IPCountry`. Pre-created plan IDs from env vars.
+**Design:** Pre-created Dodo products. USD canonical, 8 currency display layer
+via `CF-IPCountry`. Pre-created product IDs from env vars.
 
 ```
-Checkout: POST /create-subscription → 1 Razorpay call (no customer/plan creation)
+Checkout: POST /create-subscription → Dodo Checkout Session
+Credits:  POST /create-credit-pack → Dodo Checkout Session
 Plans:   GET /plans → local estimates + "Charged in USD" notice
-Cancel:  POST /cancel-subscription → cancel_at_cycle_end
-Webhook: POST /webhook → 8 event types, idempotent (event_id dedup)
+Cancel:  POST /cancel-subscription → Dodo subscription cancel
+Webhook: POST /webhook → Standard Webhooks verification, idempotent event dedup
 ```
 
 **Key numbers:** Pro $14.99/mo (1499¢), Max $39.99/mo (3999¢).
-`total_count: 0` (indefinite renewal). 7-day past_due grace.
+7-day past_due grace.
 Plans configured in `apps/backend/src/routes/billing.ts:32`.
 
-**Razorpay flow:**
-1. Create plan in Razorpay Dashboard → set `RAZORPAY_PLAN_PRO`/`RAZORPAY_PLAN_MAX`
-2. Backend creates subscription with pre-created plan ID
-3. Frontend redirects to Razorpay `short_url`
-4. User authorizes → Razorpay sends webhook → backend activates
-5. Monthly charge → webhook → `subscription.charged` → extends `currentPeriodEnd`
+**Dodo flow:**
+1. Create subscription and credit-pack products in Dodo Dashboard
+2. Set `DODO_PRODUCT_PRO`, `DODO_PRODUCT_MAX`, and credit-pack product IDs
+3. Backend creates a Dodo Checkout Session
+4. Frontend redirects to Dodo checkout URL
+5. Dodo sends webhook → backend activates subscription or grants credits
 
 **Currency display** (`apps/backend/src/routes/billing.ts:62`): USD, INR, EUR,
 GBP, AUD, CAD, BRL, SGD. Manual rates (no live FX API until 500+ customers).
 
 **Grace period:** `hasBillablePlanAccess()` allows 7 days past_due. Webhook
-`payment.failed` → status = past_due → billing warning in dashboard.
+payment failure → status = past_due → billing warning in dashboard.
 
-## Messaging Gateway (Telegram + Discord only)
+## Messaging Gateway (will provide later)
 
-Telegram and Discord via polling + OAuth linking. No WhatsApp/Slack cloud
-integration. Desktop WhatsApp automation (`send_whatsapp_message` tool via UIA)
-is separate.
+Telegram/Discord bots, platform adapters, gateway routes, linking flow — all
+commented out with stubs. Desktop `send_whatsapp_message` tool also stubbed.
 
-**DM discovery fix:** `registerDmChannel()` on adapter interface; auto-register
-on send; startup bootstrap queries `platformConnections`. Discord
-`GET /users/@me/channels` returns `[]` — workaround in place.
-
-## Removed (2026-06)
+## Removed / commented out (2026-06)
 - WhatsApp cloud adapter (762 lines: adapter, tests, webhooks, routes, types)
 - Slack cloud adapter (189 lines: adapter, routes, types)
-- Dynamic Razorpay plan creation (was 3 calls per checkout → 1)
+- Legacy billing integration — replaced by Dodo Payments
+- Browser automation (Playwright MCP, browser tools, automation agents) — commented out for later
+- Messaging gateway (Telegram/Discord bots, gateway routes, adapter code) — commented out for later
+- send_whatsapp_message tool — commented out
+- ElevenLabs STT (scribe_v2) and TTS (eleven_flash_v2_5) — replaced by Nova Sonic
+- GPT-4.1-mini / GPT-4.1 LLM — replaced by MiniMax M2.5 via Bedrock mantle
 
 ## Cleanup (always do before pushing)
 - Check CI passes: `bun run ci` locally or `gh run list` for status

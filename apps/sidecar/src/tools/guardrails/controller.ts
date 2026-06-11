@@ -16,8 +16,8 @@ const IDEMPOTENT_TOOL_NAMES: ReadonlySet<string> = new Set([
   "search",
   "get_ui_tree",
   "press_key",
-  "browser_snapshot",
-  "browser_console",
+  // "browser_snapshot",   // will provide later
+  // "browser_console",
 ])
 
 // Tools that mutate state. Listed explicitly so we can default-classify new
@@ -30,13 +30,13 @@ const MUTATING_TOOL_NAMES: ReadonlySet<string> = new Set([
   "todo",
   "memory",
   "skill_manage",
-  "browser_click",
-  "browser_type",
-  "browser_press",
-  "browser_scroll",
-  "browser_navigate",
-  "browser_fill_form",
-  "send_whatsapp_message",
+  // "browser_click",      // will provide later
+  // "browser_type",
+  // "browser_press",
+  // "browser_scroll",
+  // "browser_navigate",
+  // "browser_fill_form",
+  // "send_whatsapp_message",
   "control_spotify",
   "play_spotify",
   "adjust_spotify_volume",

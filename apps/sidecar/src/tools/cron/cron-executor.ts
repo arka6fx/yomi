@@ -15,13 +15,14 @@ import { notepadDir } from "../../memory/loader.js"
 import { saveCronOutput } from "./cron-store.js"
 import type { CronJob, CronJobResult } from "./cron-types.js"
 
-const CRON_AGENT_MODEL = process.env["CRON_AGENT_MODEL"] || "gpt-4.1-mini"
+// was: process.env["CRON_AGENT_MODEL"] || "gpt-4.1-mini"
+const CRON_AGENT_MODEL = process.env["CRON_AGENT_MODEL"] || "minimax.minimax-m2.5"
 const CRON_TIMEOUT_MS = 180_000 // 3 minutes
 
 // Tools that cron sessions are NOT allowed to use.
 const CRON_BLOCKED_TOOLS = new Set([
   "cronjob",
-  "send_whatsapp_message",
+  // "send_whatsapp_message", // will provide later
 ])
 
 function buildCronToolSet() {

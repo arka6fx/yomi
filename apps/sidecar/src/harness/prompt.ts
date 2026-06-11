@@ -15,6 +15,7 @@ export interface PromptContext {
   dynamicProfile?: string
   recentSession?: string
   hasScreen?: boolean // whether a screenshot is attached to this turn
+  desktopFocusChange?: string // non-empty when UIA focus switched to a new window
 }
 
 // Read ~/.yomi/yomi.md at call time; returns empty string if absent.
@@ -40,6 +41,7 @@ function resolveCtx(ctx: PromptContext): Required<PromptContext> {
     dynamicProfile: ctx.dynamicProfile ?? "",
     recentSession: ctx.recentSession ?? "",
     hasScreen: ctx.hasScreen ?? false,
+    desktopFocusChange: ctx.desktopFocusChange ?? "",
   }
 }
 
@@ -230,10 +232,13 @@ ${memCtx}${skillCtx}`
 }
 
 export function buildAgentPrompt(ctx: PromptContext): string {
-  const { userName, os, yomiMd, ...memoryCtx } = resolveCtx(ctx)
+  const { userName, os, yomiMd, desktopFocusChange, ...memoryCtx } = resolveCtx(ctx)
   const userCtx = yomiMd ? `<user_context>\n${yomiMd}\n</user_context>\n\n` : ""
   const memCtx = buildMemoryBlock(memoryCtx)
   const skillCtx = getSkillIndexBlock()
+  const focusCtx = desktopFocusChange
+    ? `\n<desktop_focus>\n${desktopFocusChange}\n</desktop_focus>\n\n`
+    : ""
 
   return `\
 <identity>
@@ -242,7 +247,7 @@ You can see their screen, hear their voice, and act on their behalf.
 Be warm, direct, and genuinely helpful. Sound like a smart friend getting things done.
 </identity>
 
-${userCtx}${memCtx}${ANSWER_FORMAT_RULES}
+${userCtx}${memCtx}${focusCtx}${ANSWER_FORMAT_RULES}
 
 <capabilities>
 You research, draft, file, and schedule — multi-step tasks run to completion.

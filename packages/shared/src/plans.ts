@@ -8,6 +8,7 @@ export interface PlanConfig {
   priceCents: number
   priceDisplay: string
   interval: "month"
+  includedCredits: number
 
   limits: {
     chat: number
@@ -27,6 +28,7 @@ export const PLANS: Record<string, PlanConfig> = {
     priceCents: 0,
     priceDisplay: "$0",
     interval: "month",
+    includedCredits: 100,
     limits: {
       chat: 100,
       voiceMinutes: 20,
@@ -43,6 +45,7 @@ export const PLANS: Record<string, PlanConfig> = {
     priceCents: 1499,
     priceDisplay: "$14.99",
     interval: "month",
+    includedCredits: 2500,
     limits: {
       chat: 2000,
       voiceMinutes: 180,
@@ -59,6 +62,7 @@ export const PLANS: Record<string, PlanConfig> = {
     priceCents: 3999,
     priceDisplay: "$39.99",
     interval: "month",
+    includedCredits: 10000,
     limits: {
       chat: 8000,
       voiceMinutes: 750,
@@ -73,6 +77,60 @@ export const PLANS: Record<string, PlanConfig> = {
 
 export type PlanKey = keyof typeof PLANS
 export type FeatureKey = keyof (typeof PLANS)["explore"]["limits"]
+export type UsageCreditKind =
+  | "chat"
+  | "voice"
+  | "screenshot"
+  | "reasoning"
+  | "desktop_automation"
+  | "browser_automation"
+  | "messaging"
+
+export interface CreditPackConfig {
+  key: "credits_500" | "credits_2000" | "credits_6000"
+  name: string
+  credits: number
+  priceCents: number
+  priceDisplay: string
+  currency: "USD"
+}
+
+export const CREDIT_PACKS: Record<string, CreditPackConfig> = {
+  credits_500: {
+    key: "credits_500",
+    name: "500 credits",
+    credits: 500,
+    priceCents: 499,
+    priceDisplay: "$4.99",
+    currency: "USD",
+  },
+  credits_2000: {
+    key: "credits_2000",
+    name: "2,000 credits",
+    credits: 2000,
+    priceCents: 1499,
+    priceDisplay: "$14.99",
+    currency: "USD",
+  },
+  credits_6000: {
+    key: "credits_6000",
+    name: "6,000 credits",
+    credits: 6000,
+    priceCents: 3999,
+    priceDisplay: "$39.99",
+    currency: "USD",
+  },
+}
+
+export const CREDIT_COSTS: Record<UsageCreditKind, number> = {
+  chat: 1,
+  voice: 2,
+  screenshot: 1,
+  reasoning: 5,
+  desktop_automation: 10,
+  browser_automation: 10,
+  messaging: 1,
+}
 
 export function getPlan(key: string): PlanConfig {
   return (PLANS[key] ?? PLANS["explore"]) as PlanConfig
@@ -84,4 +142,12 @@ export function featureLimit(plan: string, feature: FeatureKey): number {
 
 export function isPlanKey(key: string): key is PlanKey {
   return key in PLANS
+}
+
+export function getCreditPack(key: string): CreditPackConfig | null {
+  return (CREDIT_PACKS[key] ?? null) as CreditPackConfig | null
+}
+
+export function creditCost(kind: UsageCreditKind, units = 1): number {
+  return CREDIT_COSTS[kind] * Math.max(Math.ceil(units), 1)
 }

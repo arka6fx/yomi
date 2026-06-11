@@ -8,6 +8,49 @@ import {
   scanForThreats,
 } from "../tools/guardrails/index.js"
 import { getDefaultPluginManager } from "../plugins/plugin-manager.js"
+import type { FocusChangeEvent, UiaSnapshot } from "@yomi/shared"
+
+// Track the last focus change for agent awareness.
+let lastFocusChange: FocusChangeEvent | null = null
+let lastFocusWarned = ""
+
+export function getDesktopFocusContext(): string {
+  if (!lastFocusChange) {
+    if (process.env.DEBUG_UIA) console.warn("[hooks/focus] getDesktopFocusContext: no focus change recorded")
+    return ""
+  }
+  // Only report once per focus change to avoid repeating the same warning.
+  const tag = `${lastFocusChange.hwnd}:${lastFocusChange.window}`
+  if (tag === lastFocusWarned) {
+    if (process.env.DEBUG_UIA) console.warn(`[hooks/focus] getDesktopFocusContext: already reported "${lastFocusChange.window}" — skipping`)
+    return ""
+  }
+  lastFocusWarned = tag
+  console.warn(`[hooks/focus] getDesktopFocusContext: injecting focus change into prompt — "${lastFocusChange.window}"`)
+  return `[DESKTOP FOCUS CHANGE] User switched to "${lastFocusChange.window}". The previous snapshot may be stale — re-snapshot if you are mid-task.\n`
+}
+
+export function formatTreeDiff(diff: import("@yomi/shared").TreeDiff): string {
+  const parts: string[] = []
+  if (diff.added.length) parts.push(`${diff.added.length} element(s) added`)
+  if (diff.removed.length) parts.push(`${diff.removed.length} element(s) removed`)
+  if (diff.changed.length) parts.push(`${diff.changed.length} element(s) changed (enabled/value)`)
+  if (parts.length === 0) return ""
+  const details: string[] = []
+  if (diff.added.length <= 5) {
+    for (const e of diff.added) details.push(`  + ${e.role} "${e.name ?? ""}"`)
+  }
+  if (diff.removed.length <= 5) {
+    for (const e of diff.removed) details.push(`  - ${e.role} "${e.name ?? ""}"`)
+  }
+  if (diff.changed.length <= 5) {
+    for (const e of diff.changed) {
+      const flags = [e.enabled ? "" : "disabled", e.value ? `value="${e.value}"` : ""].filter(Boolean).join(", ")
+      details.push(`  ~ ${e.role} "${e.name ?? ""}"${flags ? ` (${flags})` : ""}`)
+    }
+  }
+  return `<tree_diff>\n${parts.join("; ")}\n${details.join("\n")}\n</tree_diff>`
+}
 
 export interface Hooks {
   onSessionStart(): Promise<void>
@@ -73,6 +116,18 @@ function buildHooks(): Hooks {
   const base: Hooks = {
     async onSessionStart() {
       await initMemoryDir()
+      // Register focus-change handler on the UIA client.
+      try {
+        const { uia } = await import("../uia/client.js")
+        uia.onFocusChange = (evt: FocusChangeEvent) => {
+          lastFocusChange = evt
+          lastFocusWarned = "" // reset so the next getDesktopFocusContext fires
+          console.warn(`[hooks/focus] switched to "${evt.window}" (hwnd=${evt.hwnd})`)
+        }
+        console.warn("[hooks/focus] focus tracking registered on UIA client")
+      } catch (err) {
+        console.warn("[hooks/focus] UIA client unavailable (non-Windows):", err)
+      }
     },
 
     async onUserPromptSubmit(_prompt: string) {
@@ -115,6 +170,27 @@ function buildHooks(): Hooks {
       let out: unknown = decision.isWarn ? appendGuidance(result, decision) : result
       if (decision.action === "halt") {
         out = appendGuidance(result, decision)
+      }
+
+      // Tree-diff: for UIA snapshot tools, include a compact diff summary.
+      const diffReqTools = new Set(["get_ui_tree", "get_subtree", "get_children"])
+      if (
+        diffReqTools.has(toolName) &&
+        typeof out === "object" &&
+        out !== null &&
+        "diff" in out &&
+        typeof (out as UiaSnapshot).diff === "object"
+      ) {
+        const diff = (out as UiaSnapshot).diff!
+        if (diff.added.length || diff.removed.length || diff.changed.length) {
+          const summary = formatTreeDiff(diff)
+          console.warn(`[hooks/diff] ${toolName} tree diff: +${diff.added.length} -${diff.removed.length} ~${diff.changed.length} window="${(out as UiaSnapshot).window}"`)
+          // Prepend the diff summary as a string, but keep the structured tree available.
+          const fullText = resultToText(out)
+          out = `${summary}\n\n${fullText}`
+        } else {
+          console.warn(`[hooks/diff] ${toolName} returned with diff (0 changes) — no change since last snapshot`)
+        }
       }
 
       const resultText = resultToText(out)

@@ -7,21 +7,21 @@ import type { AgentQueryRequest, FastQueryRequest, SseEvent } from "@yomi/shared
 import { fastPipeline, resolveText } from "./pipeline/fast.js"
 import { agentPipeline } from "./pipeline/agent.js"
 import { transcribe } from "./stt.js"
-import { ElevenLabsSttError } from "./services/elevenlabs/stt.js"
 import { classifyIntent } from "./router/intent.js"
 import { initMemorySubsystem } from "./memory/subsystem.js"
 import { resolveConfirmation } from "./uia/act-bus.js"
-import { closeMcp } from "./mcp/client.js"
+// import { closeMcp } from "./mcp/client.js" // will provide later
 import { getDefaultScheduler } from "./tools/cron/cron-scheduler.js"
 import { getDefaultPluginManager } from "./plugins/plugin-manager.js"
 import { duckSpotify } from "./tools/system.js"
-import { getReplayCommand, listWorkflowReplays } from "./automation/runs.js"
-import { allProviders, getProvider } from "./automation/providers/registry.js"
+// import { getReplayCommand, listWorkflowReplays } from "./automation/runs.js"
+// import { allProviders, getProvider } from "./automation/providers/registry.js"
 import type { ProviderId } from "./automation/providers/types.js"
-import { resolveAgent } from "./automation/agents/registry.js"
-import { knowledgeHint, recallKnowledge } from "./automation/knowledge.js"
-import { handleGatewayMessage, startGatewayPoll, stopGatewayPoll } from "./gateway/receive.js"
-import type { GatewayMessage, Plan } from "@yomi/shared"
+// import { resolveAgent } from "./automation/agents/registry.js"
+// import { knowledgeHint, recallKnowledge } from "./automation/knowledge.js"
+// import { handleGatewayMessage, startGatewayPoll, stopGatewayPoll } from "./gateway/receive.js"
+// import type { GatewayMessage, Plan } from "@yomi/shared"
+import type { Plan } from "@yomi/shared"
 import { initUsageStore, logUsageEvent } from "./insights/usage-store.js"
 import { generateReport, getMaxLookback, formatTerminal } from "./insights/insights-engine.js"
 
@@ -248,6 +248,13 @@ app.post("/query/agent", async (c) => {
   })
 })
 
+// ── Desktop automation routes — will provide later ──────────────────────────
+// app.post("/automation/replay", async (c) => {
+// app.get("/automation/workflows", (c) => { ... });
+// app.get("/automation/health", async (c) => { ... });
+// app.post("/automation/providers/:id/repair", async (c) => { ... });
+// app.get("/automation/knowledge", (c) => { ... });
+
 // Act-mode confirmation callback (Spec 16): desktop posts the user's yes/no for a risky action.
 app.post("/act/confirm", async (c) => {
   let body: { id?: string; approved?: boolean }
@@ -261,86 +268,12 @@ app.post("/act/confirm", async (c) => {
   return c.json({ ok: resolved })
 })
 
-app.post("/automation/replay", async (c) => {
-  let body: { replayId?: string; plan?: AgentQueryRequest["plan"] }
-  try {
-    body = await c.req.json()
-  } catch {
-    return c.json({ error: "Invalid JSON body" }, 400)
-  }
-  if (!body.replayId) return c.json({ error: "replayId required" }, 400)
-  const text = getReplayCommand(body.replayId)
-  if (!text) return c.json({ error: "replay not found" }, 404)
-
-  return streamSSE(c, async (stream) => {
-    const emit = (e: SseEvent) => {
-      void stream.writeSSE({ data: JSON.stringify(e) })
-    }
-    try {
-      const driver = await getAgentDriver()
-      for await (const event of driver(
-        { text, plan: body.plan },
-        { emit, signal: c.req.raw.signal },
-      )) {
-        await stream.writeSSE({ data: JSON.stringify(event) })
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Internal error"
-      await stream.writeSSE({ data: JSON.stringify({ type: "error", message } satisfies SseEvent) })
-    }
-  })
-})
-
-app.get("/automation/workflows", (c) => {
-  const rawLimit = Number.parseInt(c.req.query("limit") ?? "10", 10)
-  const limit = Number.isFinite(rawLimit) ? rawLimit : 10
-  return c.json({ workflows: listWorkflowReplays(limit) })
-})
-
-// Validation-framework probe: report each execution provider's health + diagnostics. Seeds the
-// future self-test orchestrator and lets the desktop surface integration status.
-app.get("/automation/health", async (c) => {
-  const providers = await Promise.all(
-    allProviders().map(async (p) => {
-      const health = await p.healthCheck().catch((err) => ({
-        ok: false,
-        detail: err instanceof Error ? err.message : "healthCheck threw",
-      }))
-      const diagnostics = await p.diagnostics().catch(() => ({}))
-      return { id: p.id, label: p.label, ...health, diagnostics }
-    }),
-  )
-  return c.json({ ok: providers.every((p) => p.ok), providers })
-})
-
-// Repair a single provider, then return its fresh health + diagnostics snapshot.
-app.post("/automation/providers/:id/repair", async (c) => {
-  const id = c.req.param("id")
-  if (!isProviderId(id)) return c.json({ error: "unknown provider" }, 404)
-  const provider = getProvider(id)
-  const health = await provider.repair().catch((err) => ({
-    ok: false,
-    detail: err instanceof Error ? err.message : "repair failed",
-  }))
-  const diagnostics = await provider.diagnostics().catch(() => ({}))
-  return c.json({
-    provider: { id: provider.id, label: provider.label, ...health, diagnostics },
-  })
-})
-
-// Knowledge Base lookup: what prior experience would the agent for this goal consult? Seeds a future
-// Memory Center UI and lets the desktop preview learned context before running.
-app.get("/automation/knowledge", (c) => {
-  const goal = c.req.query("goal")?.trim()
-  if (!goal) return c.json({ error: "goal query param required" }, 400)
-  const agent = resolveAgent(goal)
-  const recall = recallKnowledge(agent.id, goal)
-  return c.json({
-    agent: { id: agent.id, label: agent.label, provider: agent.provider },
-    hint: knowledgeHint(recall),
-    ...recall,
-  })
-})
+// ── Automation routes — will provide later ──────────────────────────────────
+// app.post("/automation/replay", async (c) => { ... });
+// app.get("/automation/workflows", (c) => { ... });
+// app.get("/automation/health", async (c) => { ... });
+// app.post("/automation/providers/:id/repair", async (c) => { ... });
+// app.get("/automation/knowledge", (c) => { ... });
 
 app.post("/stt", async (c) => {
   const form = await c.req.formData()
@@ -353,14 +286,9 @@ app.post("/stt", async (c) => {
     return c.json({ text })
   } catch (err) {
     const message = err instanceof Error ? err.message : "STT failed"
-    if (message.includes("ELEVENLABS_API_KEY")) {
+    if (message.includes("Bearer token")) {
       console.error(`[yomi/stt] ${message}`)
-      return c.json({ error: "STT is not configured: ELEVENLABS_API_KEY is missing" }, 503)
-    }
-    if (err instanceof ElevenLabsSttError) {
-      const detail = err.body ? `: ${err.body}` : ""
-      console.error(`[yomi/stt] ${err.message}${detail}`)
-      return c.json({ error: `${err.message}${detail}` }, err.status >= 500 ? 502 : 400)
+      return c.json({ error: "STT is not configured: AWS Bedrock token is missing" }, 503)
     }
     console.error(`[yomi/stt] ${message}`)
     return c.json({ error: message }, 502)
@@ -391,38 +319,32 @@ app.get("/insights", (c) => {
   return c.json(report)
 })
 
-// Gateway receive endpoint — backend forwards platform messages here.
-app.post("/gateway/receive", async (c) => {
-  const body = await c.req.json().catch(() => ({})) as GatewayMessage
-  if (!body.platform || !body.text) {
-    return c.json({ error: "Missing required fields" }, 400)
-  }
-  // Fire and forget — response is sent back through the backend's /gateway/send
-  void handleGatewayMessage(body)
-  return c.json({ ok: true })
-})
+// ── Gateway receive — will provide later ────────────────────────────────────
+// app.post("/gateway/receive", async (c) => { ... });
 
 app.onError((err, c) => {
   console.error(err)
   return c.json({ error: "Internal server error" }, 500)
 })
 
-// Tear down the MCP client + its child browser on shutdown.
+// Tear down on shutdown.
 for (const sig of ["SIGINT", "SIGTERM", "beforeExit"] as const) {
   process.on(sig, () => {
-    stopGatewayPoll()
+    // stopGatewayPoll() // will provide later
     getDefaultScheduler().stop()
     getDefaultPluginManager().shutdown()
-    void closeMcp().finally(() => process.exit(0))
+    // void closeMcp().finally(() => process.exit(0))
+    process.exit(0)
   })
 }
 
 const port = parseInt(process.env.SIDECAR_PORT || "3002", 10)
-startGatewayPoll()
+// startGatewayPoll() // will provide later
 console.warn(`Sidecar listening on :${port}`)
 
 export default { port, fetch: app.fetch }
 
 function isProviderId(id: string): id is ProviderId {
-  return id === "native" || id === "browser" || id === "api" || id === "workflow"
+  return id === "native" || id === "api" || id === "workflow"
+  // "browser" — will provide later
 }

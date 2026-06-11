@@ -17,8 +17,8 @@ export const user = pgTable("user", {
   trialStartDate: timestamp("trial_start_date"),
   trialEndDate: timestamp("trial_end_date"),
   currentPeriodEnd: timestamp("current_period_end"),
-  razorpayCustomerId: text("razorpay_customer_id"),
-  razorpaySubId: text("razorpay_sub_id"),
+  dodoCustomerId: text("dodo_customer_id"),
+  dodoSubscriptionId: text("dodo_subscription_id"),
   // Explore interaction pool — shared across Type A/B/C for the free plan
   trialInteractionUsed: integer("trial_interaction_used").notNull().default(0),
   trialInteractionLimit: integer("trial_interaction_limit").notNull().default(100),

@@ -51,8 +51,8 @@ export const subscriptions = pgTable("subscriptions", {
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id),
-  razorpayCustomerId: text("razorpay_customer_id").notNull().default(""),
-  razorpaySubId: text("razorpay_sub_id"),
+  providerCustomerId: text("provider_customer_id").notNull().default(""),
+  providerSubscriptionId: text("provider_subscription_id"),
   plan: text("plan").notNull().default("explore"), // "explore" | "pro" | "max"
   status: text("status").notNull().default("active"),
   currentPeriodEnd: timestamp("current_period_end"),
@@ -74,12 +74,124 @@ export const usageEvents = pgTable(
     inputTokens: integer("input_tokens").notNull().default(0),
     outputTokens: integer("output_tokens").notNull().default(0),
     costCents: integer("cost_cents").notNull().default(0), // integer cents, never floats
+    creditsCharged: integer("credits_charged").notNull().default(0),
     status: text("status").notNull().default("done"), // "started" | "done" | "error"
+    metadata: jsonb("metadata"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => ({
     userPeriodIdx: index("usage_events_user_period_idx").on(t.userId, t.createdAt),
     userKindIdx: index("usage_events_user_kind_idx").on(t.userId, t.kind, t.createdAt),
+  }),
+)
+
+export const creditAccounts = pgTable("credit_accounts", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  availableCredits: integer("available_credits").notNull().default(0),
+  lifetimeGranted: integer("lifetime_granted").notNull().default(0),
+  lifetimeConsumed: integer("lifetime_consumed").notNull().default(0),
+  lifetimeRefunded: integer("lifetime_refunded").notNull().default(0),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+})
+
+export const paymentRecords = pgTable(
+  "payment_records",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    kind: text("kind").notNull(), // "subscription" | "credit_pack"
+    productKey: text("product_key").notNull(),
+    providerCustomerId: text("provider_customer_id"),
+    providerOrderId: text("provider_order_id"),
+    providerPaymentId: text("provider_payment_id"),
+    providerSubscriptionId: text("provider_subscription_id"),
+    amountCents: integer("amount_cents").notNull().default(0),
+    currency: text("currency").notNull().default("USD"),
+    status: text("status").notNull().default("created"),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    userIdx: index("payment_records_user_idx").on(t.userId, t.createdAt),
+    providerPaymentUnique: unique("payment_records_provider_payment_unique").on(
+      t.provider,
+      t.providerPaymentId,
+    ),
+    providerOrderUnique: unique("payment_records_provider_order_unique").on(
+      t.provider,
+      t.providerOrderId,
+    ),
+  }),
+)
+
+export const creditGrants = pgTable(
+  "credit_grants",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    paymentId: uuid("payment_id").references(() => paymentRecords.id),
+    source: text("source").notNull(), // "subscription_cycle" | "credit_pack" | "admin_adjustment" | "refund" | "migration" | "promo"
+    sourceId: text("source_id").notNull(),
+    creditsGranted: integer("credits_granted").notNull(),
+    creditsRemaining: integer("credits_remaining").notNull(),
+    expiresAt: timestamp("expires_at"),
+    status: text("status").notNull().default("active"),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    userStatusIdx: index("credit_grants_user_status_idx").on(t.userId, t.status, t.expiresAt),
+    sourceUnique: unique("credit_grants_source_unique").on(t.source, t.sourceId),
+  }),
+)
+
+export const creditTransactions = pgTable(
+  "credit_transactions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    grantId: uuid("grant_id").references(() => creditGrants.id),
+    usageEventId: uuid("usage_event_id").references(() => usageEvents.id),
+    paymentId: uuid("payment_id").references(() => paymentRecords.id),
+    type: text("type").notNull(), // "grant" | "reserve" | "consume" | "release" | "refund" | "adjustment" | "expire"
+    amount: integer("amount").notNull(),
+    balanceAfter: integer("balance_after").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    reason: text("reason"),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    userCreatedIdx: index("credit_transactions_user_created_idx").on(t.userId, t.createdAt),
+    idempotencyUnique: unique("credit_transactions_idempotency_unique").on(t.idempotencyKey),
+  }),
+)
+
+export const processedPaymentEvents = pgTable(
+  "processed_payment_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    provider: text("provider").notNull(),
+    eventId: text("event_id").notNull(),
+    eventType: text("event_type").notNull(),
+    payloadHash: text("payload_hash").notNull(),
+    receivedAt: timestamp("received_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    providerEventUnique: unique("processed_payment_events_provider_event_unique").on(
+      t.provider,
+      t.eventId,
+    ),
   }),
 )
 

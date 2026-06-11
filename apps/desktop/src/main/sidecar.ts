@@ -1,8 +1,36 @@
 import { spawn } from "node:child_process"
+import { readFileSync } from "node:fs"
 import path from "node:path"
 import { app } from "electron"
 import type { ChildProcess } from "node:child_process"
 import { BACKEND_URL } from "./auth"
+
+function loadDotEnv(): void {
+  const candidates = [
+    path.join(process.cwd(), ".env"),
+    path.join(__dirname, "../../../.env"),
+    path.join(__dirname, "../../../../.env"),
+  ]
+  for (const file of candidates) {
+    try {
+      const content = readFileSync(file, "utf8")
+      for (const line of content.split("\n")) {
+        const trimmed = line.trim()
+        if (!trimmed || trimmed.startsWith("#")) continue
+        const eqIdx = trimmed.indexOf("=")
+        if (eqIdx === -1) continue
+        const key = trimmed.slice(0, eqIdx).trim()
+        const value = trimmed.slice(eqIdx + 1).trim()
+        if (!(key in process.env)) process.env[key] = value
+      }
+      return
+    } catch {
+      // try next
+    }
+  }
+}
+
+loadDotEnv()
 
 // Resolve the compiled Windows sidecar binary.
 // In production the binary lives in <resources>/sidecar/ (extraResources in electron-builder.yml).

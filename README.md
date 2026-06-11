@@ -106,29 +106,32 @@ Production uses `https://yomi.arka6fx.com` for `BETTER_AUTH_URL`,
 `BETTER_AUTH_BASE_URL`, `BACKEND_URL`, `NEXT_PUBLIC_BACKEND_URL`, and
 `NEXT_PUBLIC_APP_URL`.
 
-## Billing (Razorpay)
+## Billing (Dodo Payments)
 
 Plans are configured in `apps/backend/src/routes/billing.ts` with canonical
-USD pricing. Razorpay Plans must be **pre-created in the dashboard** — the
-backend references them by ID, avoiding dynamic plan creation per checkout.
+USD pricing. Dodo products must be **pre-created in the dashboard** — the
+backend references them by ID for subscription and credit-pack checkouts.
 
 ```bash
 # Required for billing
-RAZORPAY_KEY_ID=
-RAZORPAY_KEY_SECRET=
-RAZORPAY_WEBHOOK_SECRET=
+DODO_API_KEY=
+DODO_WEBHOOK_SECRET=
+DODO_API_BASE=https://api.dodopayments.com
 
-# Pre-created Razorpay Plan IDs (create in Dashboard → Plans, total_count = 0)
-RAZORPAY_PLAN_PRO=plan_xxxxxxxxxx
-RAZORPAY_PLAN_MAX=plan_xxxxxxxxxx
+# Product IDs from Dodo dashboard
+DODO_PRODUCT_PRO=
+DODO_PRODUCT_MAX=
+DODO_PRODUCT_CREDITS_500=
+DODO_PRODUCT_CREDITS_2000=
+DODO_PRODUCT_CREDITS_6000=
 ```
 
-Razorpay keys can stay blank until billing is enabled.
+Dodo keys can stay blank until billing is enabled.
 
 **Key design decisions:**
 - USD is the canonical billing currency. Local equivalents are estimated
   using the `GET /api/billing/plans` endpoint (with `CF-IPCountry` header)
-- Subscriptions use `total_count: 0` (indefinite renewal)
+- Subscriptions and credit packs use Dodo Checkout Sessions
 - 7-day grace period after payment failure before access is cut off
 - Webhooks are idempotent (deduplicated by event ID)
 

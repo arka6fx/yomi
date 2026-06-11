@@ -59,10 +59,10 @@ export default function TermsPage() {
             <Section title="Subscriptions and billing">
               <ul>
                 <li>
-                  Paid plans are billed monthly via Razorpay. Prices are listed at yomi.app/pricing.
+                  Paid plans are billed monthly via Dodo Payments. Prices are listed at yomi.app/pricing.
                 </li>
                 <li>
-                  Monthly plans can be cancelled at any time via the Razorpay customer portal.
+                  Monthly plans can be cancelled at any time from your Yomi dashboard.
                   Access continues until the end of the current billing cycle.
                 </li>
                 <li>
