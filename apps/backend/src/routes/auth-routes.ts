@@ -8,6 +8,11 @@ import { auth } from "../auth.js"
 // Standard OAuth2 device authorization grant (RFC 8628)
 export const authRoutesRouter = new Hono()
 
+authRoutesRouter.use("*", (c, next) => {
+  console.log("[auth-routes] handling:", c.req.method, c.req.path)
+  return next()
+})
+
 // Initiate device-code flow: returns device_code, user_code, verification_uri
 authRoutesRouter.post("/device-code", async (c) => {
   const { clientId } = (await c.req.json()) as { clientId: string }
