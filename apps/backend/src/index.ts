@@ -20,12 +20,6 @@ import { db, devices } from "@yomi/db"
 
 const app = new Hono()
 
-app.use("*", async (c, next) => {
-  console.log("[route] matching:", c.req.method, c.req.path)
-  await next()
-  console.log("[route] done:", c.req.method, c.req.path, c.res.status)
-})
-
 app.onError(errorHandler)
 
 app.use(
@@ -59,7 +53,17 @@ app.get("/api/download", async (c) => {
 app.route("/api/auth", authRoutesRouter)
 
 // Better Auth handles all remaining /api/auth/* routes
-app.on(["GET", "POST"], "/api/auth/*", (c) => auth.handler(c.req.raw))
+// Explicitly skip custom auth paths to avoid Better Auth intercepting them
+const SKIP_AUTH_PATHS = new Set([
+  "/api/auth/device-code",
+  "/api/auth/device-code/token",
+  "/api/auth/device-code/confirm",
+  "/api/auth/sign-out-all",
+])
+app.on(["GET", "POST"], "/api/auth/*", async (c) => {
+  if (SKIP_AUTH_PATHS.has(c.req.path)) return c.notFound()
+  return auth.handler(c.req.raw)
+})
 
 app.route("/api/llm", llmRouter)
 // app.route("/api/stt", sttRouter)  // legacy ElevenLabs
@@ -76,6 +80,10 @@ app.route("/api/v1", proxyRouter)
 // 
 // // Start the messaging gateway — will provide later
 // getDefaultGateway().start(process.env["YOMI_PLAN"]).then(() => { ... })
+
+process.on("unhandledRejection", (err) => {
+  console.error("[unhandledRejection]", err)
+})
 
 const PORT = Number(process.env["PORT"] ?? 3001)
 
