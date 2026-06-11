@@ -38,12 +38,12 @@ bun install && bun run dev        # install + run all in watch mode
 
 ## Stack (settled — do not relitigate)
 
-- **LLM:** Vercel AI SDK (`ai` + `@ai-sdk/openai`) via AWS Bedrock mantle (MiniMax M2.5)
+- **LLM:** Vercel AI SDK (`ai`) with a native AWS Bedrock MiniMax M2.5 provider
 - **STT/TTS:** AWS Bedrock Nova Sonic (Converse API, IAM auth)
 - **Desktop:** Electron (Tauri-ready). Never embed login in Electron window — device-code flow only
 - **Backend:** Hono on Bun, Better Auth (Google + GitHub OAuth), Drizzle + Neon
 - **Billing:** Dodo Payments
-- **Primary LLM provider:** AI Credits/OpenAI-compatible. Don't add alternative routing unless asked.
+- **Primary LLM provider:** AWS Bedrock MiniMax M2.5. Do not use OpenAI or AI Credits paths unless explicitly requested.
 
 ---
 
@@ -153,8 +153,8 @@ India-local: Pro ₹999/mo, Max ₹2 999/mo.
 | 02 | `02-sidecar-fast-pipeline` | Fast path + visual guide |
 | 03 | `03-desktop-shell` | Electron main: sidecar spawn, hotkey, IPC, tray |
 | 04 | `04-desktop-ui` | Notch, Mission Control, audio, streaming |
-| 05 | `05-speech-stt` | ElevenLabs scribe_v2 + VAD |
-| 06 | `06-speech-tts` | ElevenLabs eleven_flash_v2_5 |
+| 05 | `05-speech-stt` | AWS Bedrock Nova Sonic STT + VAD |
+| 06 | `06-speech-tts` | AWS Bedrock Nova Sonic TTS |
 | 07 | `07-sidecar-router` | Fast vs agent classification |
 | 08 | `08-sidecar-agent` | ReAct loop, tools, MCP, sandbox |
 | 09 | `09-harness` | System prompt, hooks, loop guards |

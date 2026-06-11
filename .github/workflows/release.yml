@@ -43,6 +43,20 @@ jobs:
           $pkg.version = "${{ inputs.version }}"
           $pkg | ConvertTo-Json -Depth 10 | Set-Content package.json
 
+      - name: Write packaged sidecar env
+        run: |
+          @"
+AWS_BEDROCK_REGION=${{ secrets.AWS_BEDROCK_REGION || 'us-east-1' }}
+AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+FAST_PATH_MODEL=minimax.minimax-m2.5
+ROUTER_MODEL=minimax.minimax-m2.5
+AGENT_PATH_MODEL=minimax.minimax-m2.5
+TTS_ENGINE=nova-sonic
+YOMI_BACKEND_URL=https://yomi.arka6fx.com
+BACKEND_URL=https://yomi.arka6fx.com
+"@ | Set-Content .env -NoNewline
+
       - name: Build sidecar (Windows x64)
         working-directory: apps/sidecar
         run: bun run build

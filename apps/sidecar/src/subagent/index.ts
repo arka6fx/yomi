@@ -10,7 +10,6 @@ import { createSystemTools } from "../tools/system.js"
 import type { CoreMessage, ToolSet } from "ai"
 import type { Plan } from "@yomi/shared"
 
-// was: process.env["AGENT_PATH_MODEL"] || "gpt-4.1"
 const AGENT_PATH_MODEL = process.env["AGENT_PATH_MODEL"] || "minimax.minimax-m2.5"
 const NOTEPAD = join(homedir(), ".yomi")
 

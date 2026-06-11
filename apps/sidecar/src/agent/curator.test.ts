@@ -18,8 +18,8 @@ mock.module("ai", () => ({
   jsonSchema: (s: unknown) => s,
 }))
 
-mock.module("@ai-sdk/openai", () => ({
-  createOpenAI: () => (id: string) => ({ provider: "openai", modelId: id }),
+mock.module("../pipeline/model.js", () => ({
+  createModel: (id: string) => ({ provider: "aws-bedrock", modelId: id }),
 }))
 
 beforeEach(async () => {
