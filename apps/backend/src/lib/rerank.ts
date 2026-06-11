@@ -79,7 +79,8 @@ export async function llmRerank(
 ): Promise<RerankCandidate[] | null> {
   const apiKey = process.env["OPENAI_API_KEY"]
   if (!apiKey || candidates.length <= 1) return null
-  const model = process.env["RAG_RERANK_MODEL"] ?? "gpt-4.1-mini"
+  // was: process.env["RAG_RERANK_MODEL"] ?? "gpt-4.1-mini"
+  const model = process.env["RAG_RERANK_MODEL"] ?? "minimax.minimax-m2.5"
   const base = (process.env["OPENAI_BASE_URL"] ?? "https://api.openai.com/v1").replace(/\/$/, "")
   const timeoutMs = Math.max(
     200,

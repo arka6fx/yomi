@@ -1,12 +1,12 @@
 import { nativeProvider } from "./native.js"
-import { browserProvider } from "./browser.js"
+// import { browserProvider } from "./browser.js"
 import { apiProvider } from "./api.js"
 import { workflowProvider } from "./workflow.js"
 import type { Provider, ProviderId } from "./types.js"
 
 const providers: Record<ProviderId, Provider> = {
   native: nativeProvider,
-  browser: browserProvider,
+  // browser: browserProvider, // will provide later
   api: apiProvider,
   workflow: workflowProvider,
 }

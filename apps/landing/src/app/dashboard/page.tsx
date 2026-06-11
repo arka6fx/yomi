@@ -18,6 +18,8 @@ import {
   Plus,
   MessageCircle,
   AlertTriangle,
+  WalletCards,
+  ReceiptText,
 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
@@ -30,7 +32,7 @@ type Sub = {
   status: string
   trialEndDate: string | null
   currentPeriodEnd: string | null
-  razorpaySubId: string | null
+  dodoSubscriptionId: string | null
   requestsUsed: number
   requestsLimit: number | null
   requestsRemaining: number | null
@@ -58,6 +60,30 @@ type Sub = {
   dailyVoiceUsed: number
   dailyImageUsed: number
   tokensUsedThisPeriod: number
+  credits?: {
+    balance: number
+    lifetimeGranted: number
+    lifetimeConsumed: number
+    lifetimeRefunded: number
+    expiringSoon: number
+    expiringSoonAt: string | null
+  }
+  creditPacks?: Array<{
+    key: string
+    name: string
+    credits: number
+    priceCents: number
+    priceDisplay: string
+    currency: string
+  }>
+  creditTransactions?: Array<{
+    id: string
+    type: string
+    amount: number
+    balanceAfter: number
+    reason: string | null
+    createdAt: string
+  }>
 }
 
 const PLANS = [
@@ -136,6 +162,7 @@ function DashboardContent() {
   const [subPending, setSubPending] = useState(true)
   const [billingLoading, setBillingLoading] = useState<string | null>(null)
   const [billingError, setBillingError] = useState("")
+  const [creditLoading, setCreditLoading] = useState<string | null>(null)
   const [desiredPlan, setDesiredPlan] = useState<string | null>(null)
   const [cancelling, setCancelling] = useState(false)
 
@@ -177,13 +204,23 @@ function DashboardContent() {
             browserAutomation: { used: 0, limit: 10 },
             gatewayMessages: { used: 0, limit: 50 },
           },
-          razorpaySubId: null,
+          dodoSubscriptionId: null,
           billingWarning: null,
           planLimits: { chat: 100, voiceMinutes: 20, screenshots: 25, reasoning: 5, desktopAutomation: 10, browserAutomation: 10, gatewayMessages: 50 },
           dailyChatUsed: 0,
           dailyVoiceUsed: 0,
           dailyImageUsed: 0,
           tokensUsedThisPeriod: 0,
+          credits: {
+            balance: 0,
+            lifetimeGranted: 0,
+            lifetimeConsumed: 0,
+            lifetimeRefunded: 0,
+            expiringSoon: 0,
+            expiringSoonAt: null,
+          },
+          creditPacks: [],
+          creditTransactions: [],
         }),
       )
       .finally(() => setSubPending(false))
@@ -232,7 +269,7 @@ function DashboardContent() {
   }
 
   async function handleCancelSubscription() {
-    if (!sub?.razorpaySubId) return
+    if (!sub?.dodoSubscriptionId) return
     setCancelling(true)
     try {
       const res = await fetch("/api/billing/cancel-subscription", {
@@ -253,6 +290,27 @@ function DashboardContent() {
       setBillingError(err instanceof Error ? err.message : "Failed to cancel")
     } finally {
       setCancelling(false)
+    }
+  }
+
+  async function handleBuyCredits(pack: string) {
+    setBillingError("")
+    setCreditLoading(pack)
+    try {
+      const res = await fetch("/api/billing/create-credit-pack", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session!.session.token}`,
+        },
+        body: JSON.stringify({ pack }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? "Credit purchase failed")
+      window.location.href = data.short_url
+    } catch (err) {
+      setBillingError(err instanceof Error ? err.message : "Failed to start credit purchase")
+      setCreditLoading(null)
     }
   }
 
@@ -409,7 +467,7 @@ function DashboardContent() {
                 </p>
               )}
             </div>
-            {sub?.razorpaySubId && sub.plan !== "explore" && (
+            {sub?.dodoSubscriptionId && sub.plan !== "explore" && (
               <button
                 onClick={handleCancelSubscription}
                 disabled={cancelling}
@@ -513,6 +571,98 @@ function DashboardContent() {
                     </div>
                   )
                 })}
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Credits */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.14 }}
+        >
+          <div className="rounded-2xl border border-border bg-card p-6">
+            <div className="flex flex-wrap items-start justify-between gap-6 mb-6">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
+                  Credits
+                </p>
+                <div className="flex items-center gap-3">
+                  <WalletCards size={24} className="text-primary" />
+                  <div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl font-light text-foreground tabular-nums">
+                        {sub?.credits?.balance ?? 0}
+                      </span>
+                      <span className="text-sm text-muted-foreground">available</span>
+                    </div>
+                    {sub?.credits?.expiringSoon ? (
+                      <p className="text-xs text-yellow-400 mt-1">
+                        {sub.credits.expiringSoon} expire soon
+                        {sub.credits.expiringSoonAt
+                          ? ` on ${new Date(sub.credits.expiringSoonAt).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                            })}`
+                          : ""}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Credits are used for overages and one-time packs.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full sm:w-auto">
+                {(sub?.creditPacks ?? []).map((pack) => (
+                  <button
+                    key={pack.key}
+                    onClick={() => handleBuyCredits(pack.key)}
+                    disabled={creditLoading !== null}
+                    className="rounded-xl border border-border bg-background px-3 py-2 text-left hover:border-primary/60 transition-colors disabled:opacity-50"
+                  >
+                    <span className="block text-sm font-medium text-foreground">{pack.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {creditLoading === pack.key ? "Starting..." : pack.priceDisplay}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {(sub?.creditTransactions?.length ?? 0) > 0 && (
+              <div className="border-t border-border pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <ReceiptText size={14} className="text-muted-foreground" />
+                  <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                    Recent activity
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  {sub!.creditTransactions!.slice(0, 5).map((tx) => (
+                    <div key={tx.id} className="flex items-center justify-between gap-4 text-sm">
+                      <div>
+                        <p className="text-foreground capitalize">{tx.reason ?? tx.type}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(tx.createdAt).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className={cn("tabular-nums", tx.amount >= 0 ? "text-emerald-400" : "text-muted-foreground")}>
+                          {tx.amount >= 0 ? "+" : ""}
+                          {tx.amount}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{tx.balanceAfter} left</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

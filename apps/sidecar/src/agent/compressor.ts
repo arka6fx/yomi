@@ -577,7 +577,8 @@ export async function compressContext(
     }
   }
 
-  const auxModelId = opts.auxModelId ?? process.env["COMPRESSOR_MODEL"] ?? "gpt-4.1-mini"
+  // was: process.env["COMPRESSOR_MODEL"] ?? "gpt-4.1-mini"
+  const auxModelId = opts.auxModelId ?? process.env["COMPRESSOR_MODEL"] ?? "minimax.minimax-m2.5"
   const factory = opts.modelFactory ?? createModel
   const model = factory(auxModelId)
   if (!model) {

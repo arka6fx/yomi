@@ -10,7 +10,7 @@ has no AI runtime logic.
 
 - No LLM calls from the landing app.
 - Pricing mirrors `specs/13-pricing.md`.
-- Checkout uses backend Razorpay routes.
+- Checkout uses backend Dodo billing routes.
 - Public copy must not claim hidden cloud memory sync.
 - Download links point to GitHub Releases or a CDN.
 
@@ -59,8 +59,8 @@ CTA behavior:
 
 - signed-out users go through auth first
 - Explore starts without checkout
-- Pro starts Razorpay checkout
-- Max starts Razorpay checkout
+- Pro starts Dodo checkout
+- Max starts Dodo checkout
 
 ## Auth And Checkout
 

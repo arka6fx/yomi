@@ -7,8 +7,8 @@ import { compressContext } from "../../agent/index.js"
 import { AGENT_PATH_MODEL, BURST_STEPS, type GraphDeps } from "../deps.js"
 import type { GraphState, ToolHistoryItem } from "../state.js"
 
-// 1M tokens for gpt-4.1 family. Used by the turn-level compressor when no
-// model-aware context length is available. Matches the published 4.1 window.
+// 1M tokens for MiniMax. Used by the turn-level compressor when no
+// model-aware context length is available.
 const DEFAULT_MODEL_CONTEXT_WINDOW = 1_000_000
 
 // Same stream-event shape the legacy agent consumed from the AI SDK fullStream.

@@ -1,6 +1,7 @@
 // Provider abstraction (the spec's four execution backends). A Provider is an execution surface the
 // graph delegates to; it owns its own health/repair so the validation framework can probe it.
-export type ProviderId = "native" | "browser" | "api" | "workflow"
+export type ProviderId = "native" | "api" | "workflow"
+// "browser" — will provide later
 
 export interface ProviderHealth {
   ok: boolean

@@ -3,92 +3,14 @@ import { homedir, platform } from "os"
 import { basename, dirname, extname, isAbsolute, join, resolve } from "path"
 import { existsSync } from "fs"
 import { mkdir } from "fs/promises"
-import type { UiaAction, UiaElement } from "@yomi/shared"
+import type { UiaElement } from "@yomi/shared"
 import { uia } from "../uia/client.js"
-import { classifyRisk, isBlockedApp } from "../uia/safety.js"
+import { isBlockedApp } from "../uia/safety.js"
 import { emitActResult, requestConfirmation } from "../uia/act-bus.js"
+import { blockedGuard, actFailed, guardedAct } from "./act-helpers.js"
 
-// Refuse to act on a blocklisted foreground app (password managers, banking).
-function blockedGuard(): { error: string } | null {
-  if (isBlockedApp(uia.lastWindow)) {
-    return { error: `Refusing to act on "${uia.lastWindow}" — blocklisted app.` }
-  }
-  return null
-}
-
-// A helper result counts as a failure when it carries an `error` or an explicit `ok: false`.
-export function actFailed(r: unknown): boolean {
-  return (
-    typeof r === "object" &&
-    r !== null &&
-    (("ok" in r && (r as { ok?: unknown }).ok === false) || "error" in r)
-  )
-}
-
-function withHint(result: unknown): unknown {
-  if (typeof result === "object" && result !== null)
-    return { ...(result as object), hint: "re-fetch get_ui_tree and try again" }
-  return { error: String(result), hint: "re-fetch get_ui_tree and try again" }
-}
-
-// Execute an action and, if it fails or the ref went stale, re-snapshot + retry once with a fresh ref.
-async function attemptAct(
-  ref: string,
-  run: (ref: string) => Promise<unknown>,
-): Promise<{ result: unknown; retried: boolean }> {
-  let result: unknown
-  try {
-    result = await run(ref)
-    if (!actFailed(result)) return { result, retried: false }
-  } catch (e) {
-    result = { error: e instanceof Error ? e.message : String(e) }
-  }
-  const fresh = await uia.reResolve(ref).catch(() => null)
-  if (!fresh) return { result: withHint(result), retried: false }
-  try {
-    const retried = await run(fresh)
-    return { result: actFailed(retried) ? withHint(retried) : retried, retried: true }
-  } catch (e) {
-    return {
-      result: { error: e instanceof Error ? e.message : String(e), hint: "re-fetch get_ui_tree" },
-      retried: true,
-    }
-  }
-}
-
-// Run a UIA action through the safety guard: blocklist → risk → confirm → execute (+retry) → report.
-type RefAction = Extract<UiaAction, { ref: string }>
-async function guardedAct(action: RefAction, run: (ref: string) => Promise<unknown>) {
-  const blocked = blockedGuard()
-  if (blocked) {
-    emitActResult(false, action.ref, blocked.error)
-    return blocked
-  }
-
-  const el = uia.getElement(action.ref)
-  if (!el) return { error: "element no longer available — call get_ui_tree again first" }
-
-  const label = el.name || el.role || action.ref
-  const { risky, reason } = classifyRisk(action.kind, el)
-  if (risky) {
-    const approved = await requestConfirmation(
-      action,
-      label,
-      reason ?? "destructive action",
-      el.rect,
-    )
-    if (!approved) {
-      emitActResult(false, label, "not confirmed")
-      return { ok: false, requiresConfirmation: true, label, reason }
-    }
-  }
-  const { result, retried } = await attemptAct(action.ref, run)
-  const failed = actFailed(result)
-  emitActResult(!failed, label, failed ? "action did not succeed" : undefined)
-  return retried && typeof result === "object" && result !== null
-    ? { ...(result as object), retried }
-    : result
-}
+// Re-export for system.test.ts
+export { actFailed }
 
 function cleanAppName(name: string): string {
   return name.replace(/['";\r\n`$]/g, "").trim()
@@ -1253,7 +1175,7 @@ export function createSystemTools(ctx: { screenshotB64?: string }) {
         required: ["ref", "text"],
       }),
       execute: async ({ ref, text }) =>
-        guardedAct({ kind: "set_value", ref, text }, (r) =>
+        guardedAct({ kind: "set_value", ref }, (r) =>
           uia.call("set_value", { ref: r, text }),
         ),
     }),

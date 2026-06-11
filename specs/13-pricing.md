@@ -2,14 +2,14 @@
 
 ## Purpose
 
-Define Yomi's plans, feature gates, fair-use limits, and Razorpay billing
+Define Yomi's plans, feature gates, fair-use limits, and Dodo billing
 behavior.
 
 ## Invariants
 
 - Plans are **Explore**, **Pro**, and **Max**.
 - Internal plan keys remain `explore`, `pro`, and `max`.
-- Razorpay is the sole payment processor.
+- Dodo Payments is the sole payment processor.
 - Explore is free with monthly limits, not a time-limited trial.
 - Pro is the primary revenue plan and includes limited foreground automation.
 - Max raises limits for power users and full foreground automation.
@@ -27,7 +27,7 @@ behavior.
 
 Suggested annual discount: about 20%.
 
-India-local Razorpay pricing guidance:
+India-local display pricing guidance:
 
 | Plan    | Monthly | Annual     |
 | ------- | ------: | ---------: |
@@ -35,7 +35,7 @@ India-local Razorpay pricing guidance:
 | Pro     |   ₹999 |  ₹9,999/yr |
 | Max     | ₹2,999 | ₹29,999/yr |
 
-Current Razorpay checkout amounts in the backend are USD cents:
+Current Dodo checkout amounts in the backend are USD cents:
 
 | Plan | Amount |
 | ---- | -----: |
@@ -107,9 +107,9 @@ When limits are reached:
 ## Billing Flow
 
 1. User starts checkout for Pro or Max.
-2. Backend creates a Razorpay subscription.
-3. User completes Razorpay checkout.
-4. Razorpay sends a webhook.
+2. Backend creates a Dodo Checkout Session.
+3. User completes Dodo checkout.
+4. Dodo sends a webhook.
 5. Backend verifies the webhook signature.
 6. Backend updates the user plan and subscription status.
 7. Desktop sees the updated plan through auth/billing state refresh.
@@ -144,6 +144,6 @@ features stop being included in new requests.
 ## Future Work
 
 - Track voice duration (seconds) instead of just count
-- Annual Razorpay subscriptions
+- Annual Dodo subscriptions
 - Self-serve cancellation portal
 - Optional regional INR checkout amounts

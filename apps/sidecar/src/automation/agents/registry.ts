@@ -2,7 +2,7 @@ import type { ToolSet } from "ai"
 import { classifyAutomationOwner } from "../runs.js"
 import { BASE_TOOLS, type SubAgent } from "./types.js"
 import { spotifyAgent } from "./spotify.js"
-import { browserAgent } from "./browser.js"
+// import { browserAgent } from "./browser.js"
 
 // Domains that intentionally inherit the FULL merged tool set (no scoping). These flows (WhatsApp,
 // Notepad, calendar, research) are already well-tuned and must not regress; they only gain a system
@@ -39,7 +39,7 @@ const generalAgent = inheritAll(
 
 const byId: Record<string, SubAgent> = {
   spotify: spotifyAgent,
-  browser: browserAgent,
+  // browser: browserAgent, // will provide later
   messaging: messagingAgent,
   calendar: calendarAgent,
   windows: windowsAgent,

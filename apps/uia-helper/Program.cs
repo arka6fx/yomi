@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using FlaUI.Core;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Definitions;
 using FlaUI.Core.Input;
@@ -41,6 +42,10 @@ internal static class Program
     private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
     [DllImport("user32.dll")]
     private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern int GetWindowTextLength(IntPtr hWnd);
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder text, int count);
     [DllImport("kernel32.dll")]
     private static extern uint GetCurrentThreadId();
 
@@ -66,6 +71,10 @@ internal static class Program
     private const uint KeyEventKeyUp = 0x0002;
     private const int SwRestore = 9;
     private const int SwMaximize = 3;
+    private static int _subReqSeq; // unique id sequence for get_subtree refs
+    private static IntPtr _lastFocusHwnd = IntPtr.Zero;
+    private static DateTime _lastFocusEvent = DateTime.MinValue;
+    private static bool _focusTrackingStarted;
 
     [STAThread]
     private static void Main()
@@ -79,6 +88,8 @@ internal static class Program
         {
             if (string.IsNullOrWhiteSpace(line)) continue;
             line = line.TrimStart('﻿'); // tolerate a stray UTF-8 BOM on the first line
+
+            EnsureFocusTracking();
 
             JsonElement req;
             try { req = JsonSerializer.Deserialize<JsonElement>(line); }
@@ -99,6 +110,55 @@ internal static class Program
 
             stdout.WriteLine(JsonSerializer.Serialize(response));
             stdout.Flush();
+        }
+    }
+
+    private static void EnsureFocusTracking()
+    {
+        if (_focusTrackingStarted) return;
+        _focusTrackingStarted = true;
+        try
+        {
+            // Poll foreground window every 500ms. Simpler than UIA focus-changed events
+            // (FlaUI 4.0 UIA3 doesn't expose FocusChangedEvent in the managed API).
+            Console.Error.WriteLine("[uia/helper] focus tracking started (500ms poll)");
+            var timer = new System.Threading.Timer(_ =>
+            {
+                try
+                {
+                    var hwnd = GetForegroundWindow();
+                    if (hwnd == IntPtr.Zero)
+                    {
+                        Console.Error.WriteLine("[uia/helper] focus poll: no foreground window");
+                        return;
+                    }
+                    if (hwnd == _lastFocusHwnd) return;
+                    Console.Error.WriteLine($"[uia/helper] focus changed: hwnd=0x{hwnd.ToInt64():X}");
+                    _lastFocusHwnd = hwnd;
+                    var len = GetWindowTextLength(hwnd);
+                    if (len <= 0)
+                    {
+                        Console.Error.WriteLine("[uia/helper] focus window has no title text");
+                        return;
+                    }
+                    var sb = new System.Text.StringBuilder(len + 1);
+                    GetWindowText(hwnd, sb, sb.Capacity);
+                    var name = sb.ToString();
+                    Console.Error.WriteLine($"[uia/helper] focus window title=\"{name}\"");
+                    var frame = new { @event = "focus_changed", hwnd = hwnd.ToInt64(), window = name };
+                    Console.Out.WriteLine(JsonSerializer.Serialize(frame));
+                    Console.Out.Flush();
+                    Console.Error.WriteLine("[uia/helper] focus event frame emitted");
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[uia/helper] focus poll error: {ex.Message}");
+                }
+            }, null, 500, 500);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[uia/helper] focus tracking init failed: {ex.Message}");
         }
     }
 
@@ -125,6 +185,15 @@ internal static class Program
             "set_foreground" => SetForeground(p),
             "maximize_window" => MaximizeWindow(p),
             "set_range_value" => SetRangeValue(p),
+            "expand_element" => ExpandElement(p),
+            "collapse_element" => CollapseElement(p),
+            "scroll" => ScrollElement(p),
+            "right_click" => RightClick(p),
+            "get_subtree" => GetSubtree(p),
+            "find_element" => FindElement(p),
+            "get_text" => GetText(p),
+            "get_children" => GetChildren(p),
+            "get_focus_tree" => GetFocusTree(p),
             _ => throw new InvalidOperationException($"unknown method: {method}"),
         };
     }
@@ -153,6 +222,7 @@ internal static class Program
         var elements = new List<object>();
         var walker = Automation.TreeWalkerFactory.GetControlViewWalker();
         var winRect = SafeRect(window);
+        var truncated = false;
 
         var elementSeq = 0;
         // Resilient walk: a live WebView2 tree (Spotify) mutates mid-enumeration, so a single element
@@ -160,13 +230,27 @@ internal static class Program
         // whole snapshot — we return whatever rendered instead of failing the entire get_ui_tree.
         void Walk(AutomationElement el, int depth)
         {
-            if (elements.Count >= maxNodes || depth > maxDepth) return;
+            if (elements.Count >= maxNodes) { truncated = true; return; }
+            if (depth > maxDepth) { truncated = true; return; }
+
+            // Count direct children before recursing (cheap sibling iteration, no recursion).
+            int childCount = 0;
+            try
+            {
+                var c = walker.GetFirstChild(el);
+                while (c != null && childCount < maxNodes)
+                {
+                    childCount++;
+                    c = walker.GetNextSibling(c);
+                }
+            }
+            catch { }
 
             try
             {
                 var key = $"w{windowId}e{++elementSeq}";
                 _refs[key] = el;
-                elements.Add(Describe(key, el, winRect, lite));
+                elements.Add(Describe(key, el, winRect, lite, childCount));
             }
             catch { return; } // can't describe this node — skip it and its subtree
 
@@ -179,17 +263,18 @@ internal static class Program
                     try { child = walker.GetNextSibling(child); }
                     catch { break; }
                 }
+                if (elements.Count >= maxNodes) truncated = true;
             }
             catch { /* children inaccessible — keep what we have */ }
         }
 
         Walk(window, 0);
-        return new { window = SafeName(window), elements };
+        return new { window = SafeName(window), elements, truncated };
     }
 
     private static readonly List<string> NoPatterns = new();
 
-    private static object Describe(string key, AutomationElement el, System.Drawing.Rectangle winRect, bool lite)
+    private static object Describe(string key, AutomationElement el, System.Drawing.Rectangle winRect, bool lite, int childCount = 0)
     {
         var rect = SafeRect(el);
         // offscreen = no usable rect, or rect doesn't intersect the window (needs ScrollIntoView/vision).
@@ -206,6 +291,7 @@ internal static class Program
             offscreen,
             value = ValueOrNull(el),
             rangeValue = lite ? (double?)null : RangeValueOrNull(el),
+            childCount,
         };
     }
 
@@ -232,8 +318,10 @@ internal static class Program
         if (pat.Toggle.IsSupported) list.Add("Toggle");
         if (pat.ExpandCollapse.IsSupported) list.Add("ExpandCollapse");
         if (pat.SelectionItem.IsSupported) list.Add("SelectionItem");
+        if (pat.Selection.IsSupported) list.Add("Selection");
         if (pat.Scroll.IsSupported) list.Add("Scroll");
         if (pat.ScrollItem.IsSupported) list.Add("ScrollItem");
+        if (pat.Text.IsSupported) list.Add("Text");
         if (pat.LegacyIAccessible.IsSupported) list.Add("LegacyIAccessible");
         return list;
     }
@@ -587,6 +675,275 @@ internal static class Program
         throw new InvalidOperationException($"unknown key: {name}");
     }
 
+    // Expand a collapsed UI tree node via ExpandCollapsePattern (e.g. tree views, dropdowns, accordions).
+    private static object ExpandElement(JsonElement p)
+    {
+        var el = Resolve(p);
+        if (!el.Patterns.ExpandCollapse.IsSupported)
+            return new { ok = false, error = "ExpandCollapse pattern not supported", name = SafeName(el) };
+        el.Patterns.ExpandCollapse.Pattern.Expand();
+        return new { ok = true, name = SafeName(el) };
+    }
+
+    // Collapse an expanded UI tree node via ExpandCollapsePattern.
+    private static object CollapseElement(JsonElement p)
+    {
+        var el = Resolve(p);
+        if (!el.Patterns.ExpandCollapse.IsSupported)
+            return new { ok = false, error = "ExpandCollapse pattern not supported", name = SafeName(el) };
+        el.Patterns.ExpandCollapse.Pattern.Collapse();
+        return new { ok = true, name = SafeName(el) };
+    }
+
+    // Scroll a scrollable container to a percentage (0–100) via ScrollPattern.
+    // Pass -1 to leave an axis unchanged.
+    private static object ScrollElement(JsonElement p)
+    {
+        var el = Resolve(p);
+        if (!el.Patterns.Scroll.IsSupported)
+            return new { ok = false, error = "Scroll pattern not supported", name = SafeName(el) };
+        var horiz = GetDouble(p, "horizontalPercent", -1);
+        var vert = GetDouble(p, "verticalPercent", -1);
+        el.Patterns.Scroll.Pattern.SetScrollPercent(horiz, vert);
+        return new { ok = true, name = SafeName(el) };
+    }
+
+    // Right-click at the element's center to open a context menu.
+    private static object RightClick(JsonElement p)
+    {
+        var el = Resolve(p);
+        var rect = SafeRect(el);
+        if (rect.IsEmpty)
+            return new { ok = false, error = "element has no bounding rectangle", name = SafeName(el) };
+        var x = rect.X + rect.Width / 2;
+        var y = rect.Y + rect.Height / 2;
+        SetCursorPos(x, y);
+        Thread.Sleep(50);
+        mouse_event(MouseRightDown, 0, 0, 0, UIntPtr.Zero);
+        Thread.Sleep(40);
+        mouse_event(MouseRightUp, 0, 0, 0, UIntPtr.Zero);
+        Thread.Sleep(200); // wait for context menu to appear
+        return new { ok = true, x, y };
+    }
+
+    // Walk children of a specific element and return them as a fresh subtree snapshot.
+    // Refs are stable within the subtree call; call get_ui_tree again to refresh all refs.
+    private static object GetSubtree(JsonElement p)
+    {
+        var el = Resolve(p);
+        var maxNodes = GetInt(p, "maxNodes", DefaultMaxNodes);
+        var maxDepth = GetInt(p, "maxDepth", DefaultMaxDepth);
+        var walker = Automation.TreeWalkerFactory.GetControlViewWalker();
+        var elements = new List<object>();
+        var rootRect = SafeRect(el);
+        _subReqSeq++;
+        var seq = 0;
+
+        void Walk(AutomationElement node, int depth)
+        {
+            if (elements.Count >= maxNodes || depth > maxDepth) return;
+
+            int childCount = 0;
+            try
+            {
+                var c = walker.GetFirstChild(node);
+                while (c != null && childCount < maxNodes)
+                {
+                    childCount++;
+                    c = walker.GetNextSibling(c);
+                }
+            }
+            catch { }
+
+            try
+            {
+                var key = $"r{_subReqSeq}n{++seq}";
+                _refs[key] = node;
+                elements.Add(Describe(key, node, rootRect, false, childCount));
+            }
+            catch { return; }
+
+            try
+            {
+                var child = walker.GetFirstChild(node);
+                while (child != null && elements.Count < maxNodes)
+                {
+                    Walk(child, depth + 1);
+                    try { child = walker.GetNextSibling(child); }
+                    catch { break; }
+                }
+            }
+            catch { }
+        }
+
+        Walk(el, 0);
+        return new { elements, count = elements.Count };
+    }
+
+    // Search descendants of an element by role, name, and/or automationId.
+    // Returns the first match as a single UiaElement with a stable ref.
+    private static AutomationElement? WalkFind(AutomationElement root, string? role, string? name, string? automationId, ITreeWalker walker, int depth, ref int visited)
+    {
+        if (depth > 20 || visited > 200) return null;
+        visited++;
+        try
+        {
+            var match = true;
+            if (match && role != null) match = root.ControlType.ToString() == role;
+            if (match && name != null) match = root.Name == name;
+            if (match && automationId != null) match = root.AutomationId == automationId;
+            if (match) return root;
+        }
+        catch { return null; }
+
+        try
+        {
+            var child = walker.GetFirstChild(root);
+            while (child != null)
+            {
+                var found = WalkFind(child, role, name, automationId, walker, depth + 1, ref visited);
+                if (found != null) return found;
+                try { child = walker.GetNextSibling(child); }
+                catch { break; }
+            }
+        }
+        catch { }
+        return null;
+    }
+
+    private static object FindElement(JsonElement p)
+    {
+        var el = Resolve(p);
+        var role = GetString(p, "role");
+        var name = GetString(p, "name");
+        var automationId = GetString(p, "automationId");
+        var walker = Automation.TreeWalkerFactory.GetControlViewWalker();
+        var visited = 0;
+        var found = WalkFind(el, role, name, automationId, walker, 0, ref visited);
+        if (found == null)
+            return new { ok = false, error = "no matching element found", visited };
+
+        var key = $"f{++_subReqSeq}";
+        _refs[key] = found;
+        // Count children for the found element so the caller knows if it's expandable.
+        int childCount = 0;
+        try
+        {
+            var c = walker.GetFirstChild(found);
+            while (c != null && childCount < DefaultMaxNodes)
+            {
+                childCount++;
+                c = walker.GetNextSibling(c);
+            }
+        }
+        catch { }
+        return new { ok = true, element = Describe(key, found, SafeRect(found), false, childCount), visited };
+    }
+
+    // Read the full text content of an element that supports TextPattern (e.g. document, editor, terminal).
+    private static object GetText(JsonElement p)
+    {
+        var el = Resolve(p);
+        if (!el.Patterns.Text.IsSupported)
+            return new { ok = false, error = "Text pattern not supported", name = SafeName(el) };
+        var text = el.Patterns.Text.Pattern.DocumentRange.GetText(-1);
+        var length = text?.Length ?? 0;
+        return new { ok = true, text, length, name = SafeName(el) };
+    }
+
+    // Fetch direct children of an element (depth 1 only). Lighter than get_subtree when the agent
+    // just wants to see what's inside a container without recursing the entire subtree.
+    private static object GetChildren(JsonElement p)
+    {
+        var el = Resolve(p);
+        var max = GetInt(p, "maxChildren", DefaultMaxNodes);
+        var walker = Automation.TreeWalkerFactory.GetControlViewWalker();
+        var children = new List<object>();
+        var winRect = SafeRect(el);
+        _subReqSeq++;
+        var seq = 0;
+
+        try
+        {
+            var child = walker.GetFirstChild(el);
+            while (child != null && children.Count < max)
+            {
+                try
+                {
+                    var key = $"c{_subReqSeq}e{++seq}";
+                    _refs[key] = child;
+                    // Count grandchildren so the agent knows which children are expandable.
+                    int grandchildCount = 0;
+                    try
+                    {
+                        var gc = walker.GetFirstChild(child);
+                        while (gc != null && grandchildCount < max)
+                        {
+                            grandchildCount++;
+                            gc = walker.GetNextSibling(gc);
+                        }
+                    }
+                    catch { }
+                    children.Add(Describe(key, child, winRect, false, grandchildCount));
+                }
+                catch { }
+                try { child = walker.GetNextSibling(child); }
+                catch { break; }
+            }
+        }
+        catch { }
+
+        return new { elements = children, count = children.Count };
+    }
+
+    // Return the focus path: the focused element and its ancestors up to the window.
+    // Lets the agent understand what's currently active without a full tree snapshot.
+    private static object GetFocusTree(JsonElement p)
+    {
+        var maxDepth = GetInt(p, "maxDepth", 10);
+        var focused = Automation.FocusedElement();
+        if (focused == null || focused == Automation.GetDesktop())
+            return new { ok = false, error = "no focused element" };
+
+        var walker = Automation.TreeWalkerFactory.GetControlViewWalker();
+        var chain = new List<AutomationElement>();
+        var current = focused;
+        for (int d = 0; d < maxDepth && current != null; d++)
+        {
+            chain.Add(current);
+            try { current = walker.GetParent(current); }
+            catch { break; }
+        }
+
+        _subReqSeq++;
+        var elements = new List<object>();
+        var seq = 0;
+        // Use the nearest ancestor's rect as the viewport hint for offscreen detection.
+        var viewRect = SafeRect(chain.Count > 0 ? chain[^1] : focused);
+
+        foreach (var el in chain)
+        {
+            int childCount = 0;
+            try
+            {
+                var c = walker.GetFirstChild(el);
+                while (c != null && childCount < DefaultMaxNodes)
+                {
+                    childCount++;
+                    c = walker.GetNextSibling(c);
+                }
+            }
+            catch { }
+
+            var key = $"z{_subReqSeq}a{++seq}";
+            _refs[key] = el;
+            elements.Add(Describe(key, el, viewRect, false, childCount));
+        }
+
+        var focusRef = elements.Count > 0 ? (elements[0].GetType().GetProperty("ref")?.GetValue(elements[0]) as string) : null;
+        return new { ok = true, elements, focusRef };
+    }
+
     // --- Helpers ---
 
     private static AutomationElement Resolve(JsonElement p)
@@ -638,5 +995,19 @@ internal static class Program
         if (p.ValueKind == JsonValueKind.Object && p.TryGetProperty(name, out var v) && v.TryGetInt32(out var i))
             return i;
         return fallback;
+    }
+
+    private static double GetDouble(JsonElement p, string name, double fallback)
+    {
+        if (p.ValueKind == JsonValueKind.Object && p.TryGetProperty(name, out var v) && v.TryGetDouble(out var d))
+            return d;
+        return fallback;
+    }
+
+    private static string? GetString(JsonElement p, string name)
+    {
+        if (p.ValueKind == JsonValueKind.Object && p.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String)
+            return v.GetString();
+        return null;
     }
 }

@@ -18,22 +18,36 @@ const RouterDecision = jsonSchema<{ path: "fast" | "agent"; confidence: number; 
 })
 
 const TIMEOUT_MS = parseInt(process.env.ROUTER_LLM_TIMEOUT_MS || "250", 10)
-const MODEL = process.env.FAST_PATH_MODEL || "gpt-4.1-mini"
+const MODEL = process.env.ROUTER_MODEL || "minimax.minimax-m2.5"
 
-const backendUrl = process.env.YOMI_BACKEND_URL ?? process.env.BACKEND_URL
-const sessionToken = process.env.YOMI_SESSION_TOKEN
-
-const openai = createOpenAI({
-  apiKey: sessionToken || process.env.OPENAI_API_KEY,
+// ── AWS Bedrock — MiniMax M2.5 via OpenAI-compatible mantle endpoint ─────────
+const bedrock = createOpenAI({
+  apiKey: process.env.AWS_BEDROCK_BEARER_TOKEN,
   baseURL:
-    backendUrl && sessionToken
-      ? `${backendUrl.replace(/\/+$/, "")}/api/v1`
-      : process.env.OPENAI_BASE_URL,
+    process.env.AWS_BEDROCK_BASE_URL || "https://bedrock-mantle.us-east-1.api.aws/v1",
 })
 
 function createModel() {
-  return openai(MODEL)
+  return bedrock(MODEL)
 }
+
+// ── Legacy: OpenAI / AI Credits router (kept for rollback) ──────────────────
+// const MODEL = process.env.FAST_PATH_MODEL || "gpt-4.1-mini"
+//
+// const backendUrl = process.env.YOMI_BACKEND_URL ?? process.env.BACKEND_URL
+// const sessionToken = process.env.YOMI_SESSION_TOKEN
+//
+// const openai = createOpenAI({
+//   apiKey: sessionToken || process.env.OPENAI_API_KEY,
+//   baseURL:
+//     backendUrl && sessionToken
+//       ? `${backendUrl.replace(/\/+$/, "")}/api/v1`
+//       : process.env.OPENAI_BASE_URL,
+// })
+//
+// function createModel() {
+//   return openai(MODEL)
+// }
 
 function buildPrompt(input: RouterInput): string {
   const parts = [`User request: "${input.text}"`]

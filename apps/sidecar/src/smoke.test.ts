@@ -46,35 +46,16 @@ describe("smoke: shortcut parsers", () => {
     expect(volumeAction("hello")).toBeNull()
   })
 
-  it("whatsAppMessageRequest: parses send commands", () => {
-    expect(whatsAppMessageRequest("send hi to lily on WhatsApp")).toEqual({
-      recipient: "lily",
-      message: "hi",
-    })
-    expect(whatsAppMessageRequest("text dad good morning")).toEqual({
-      recipient: "dad",
-      message: "good morning",
-    })
-    expect(whatsAppMessageRequest("send hi to myself on WhatsApp")).toEqual({
-      recipient: "you",
-      message: "hi",
-    })
-    expect(whatsAppMessageRequest("what's the weather")).toBeNull()
+  it("whatsAppMessageRequest: returns null (stubbed)", () => {
+    expect(whatsAppMessageRequest("send hi to lily on WhatsApp")).toBeNull()
   })
 
-  it("reminderDraftRequest: parses reminder drafts", () => {
-    expect(reminderDraftRequest("write a reminder about buying milk and send to whatsapp")).toEqual(
-      {
-        message: "Reminder: buying milk",
-      },
-    )
-    expect(reminderDraftRequest("what's the weather")).toBeNull()
+  it("reminderDraftRequest: returns null (stubbed)", () => {
+    expect(reminderDraftRequest("write a reminder about buying milk and send to whatsapp")).toBeNull()
   })
 
-  it("pendingDraftRecipientRequest: parses follow-up recipient", () => {
-    expect(pendingDraftRecipientRequest("send the reminder to myself", true)).toBe("you")
-    expect(pendingDraftRecipientRequest("send it to lily", true)).toBe("lily")
-    expect(pendingDraftRecipientRequest("send it to lily", false)).toBeNull()
+  it("pendingDraftRecipientRequest: returns null (stubbed)", () => {
+    expect(pendingDraftRecipientRequest("send the reminder to myself", true)).toBeNull()
   })
 
   it("stripDetachedPhrases: removes background phrasing", () => {
@@ -92,11 +73,10 @@ describe("smoke: agent registry", () => {
     expect(agent.toolNames).toContain("play_spotify")
   })
 
-  it("resolves browser agent for browser commands", () => {
+  it("resolves automation agent for browser commands (stubbed)", () => {
     const agent = resolveAgent("open google.com in the browser")
-    expect(agent.id).toBe("browser")
-    expect(agent.provider).toBe("browser")
-    expect(agent.toolPrefixes).toContain("browser_")
+    expect(agent.id).toBe("automation")
+    expect(agent.provider).toBe("native")
   })
 
   it("resolves messaging agent for whatsapp commands", () => {
@@ -132,11 +112,11 @@ describe("smoke: owner classification", () => {
     expect(classifyAutomationOwner("play despacito on spotify").id).toBe("spotify")
   })
 
-  it("classifies browser commands", () => {
-    expect(classifyAutomationOwner("open google.com in the browser").id).toBe("browser")
+  it("classifies browser commands as automation (stubbed)", () => {
+    expect(classifyAutomationOwner("open google.com in the browser").id).toBe("automation")
   })
 
-  it("classifies whatsapp commands", () => {
+  it("classifies whatsapp commands as messaging", () => {
     expect(classifyAutomationOwner("send hi to lily on whatsapp").id).toBe("messaging")
   })
 

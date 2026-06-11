@@ -1,17 +1,41 @@
 import { Hono } from "hono"
-import { createHmac } from "node:crypto"
+import { createHmac, timingSafeEqual } from "node:crypto"
 import { db, usageEvents } from "@yomi/db"
-import { eq, and, gte, sql, inArray } from "drizzle-orm"
+import { and, eq, gte, inArray, sql } from "drizzle-orm"
 import { authenticate } from "../auth.js"
 import * as authSchema from "../auth-schema.js"
-import { effectivePlanForUser, effectiveRoleForUser, requestLimitForUser, featureLimitForUser } from "../entitlements.js"
-import { PLANS as SHARED_PLANS, type PlanKey, type FeatureKey, getPlan } from "@yomi/shared/plans"
+import {
+  effectivePlanForUser,
+  effectiveRoleForUser,
+  featureLimitForUser,
+  requestLimitForUser,
+} from "../entitlements.js"
+import {
+  CREDIT_PACKS,
+  PLANS as SHARED_PLANS,
+  getCreditPack,
+  getPlan,
+  type PlanKey,
+} from "@yomi/shared/plans"
+import {
+  createPaymentRecord,
+  getCreditSummary,
+  grantCredits,
+  recentCreditTransactions,
+} from "../services/credit-ledger.js"
+import { payloadHash, recordPaymentEvent } from "../services/payment-events.js"
 
-const RAZORPAY_PLAN_IDS: Partial<Record<PlanKey, string | null>> = {
+const DODO_API_BASE = process.env["DODO_API_BASE"] ?? "https://api.dodopayments.com"
+const DODO_PRODUCT_IDS: Partial<Record<PlanKey | string, string | null>> = {
   explore: null,
-  pro: process.env["RAZORPAY_PLAN_PRO"] ?? null,
-  max: process.env["RAZORPAY_PLAN_MAX"] ?? null,
+  pro: process.env["DODO_PRODUCT_PRO"] ?? null,
+  max: process.env["DODO_PRODUCT_MAX"] ?? null,
+  credits_500: process.env["DODO_PRODUCT_CREDITS_500"] ?? null,
+  credits_2000: process.env["DODO_PRODUCT_CREDITS_2000"] ?? null,
+  credits_6000: process.env["DODO_PRODUCT_CREDITS_6000"] ?? null,
 }
+
+type DodoEntity = Record<string, unknown>
 
 function planFeatures(key: string): string[] {
   const plan = SHARED_PLANS[key]
@@ -20,6 +44,7 @@ function planFeatures(key: string): string[] {
   return [
     `${l.chat.toLocaleString()} AI chats / month`,
     `${l.voiceMinutes} min voice`,
+    `${plan.includedCredits.toLocaleString()} credits / month`,
     l.reasoning > 0 ? `${l.reasoning} reasoning` : "",
     l.desktopAutomation > 0 ? `${l.desktopAutomation} desktop runs` : "",
     l.browserAutomation > 0 ? `${l.browserAutomation} browser runs` : "",
@@ -27,15 +52,11 @@ function planFeatures(key: string): string[] {
   ].filter(Boolean)
 }
 
-// ── Currency Display Layer ─────────────────────────────────────────────────────
-// Maps USD cents to estimated local amounts. Updated manually until we
-// integrate a live FX API (post-500-customers).
-
 interface CurrencyDisplay {
-  code: string       // ISO 4217
-  symbol: string     // "$", "₹", "€", etc.
-  rate: number       // 1 USD = X local units
-  decimals: number   // display precision
+  code: string
+  symbol: string
+  rate: number
+  decimals: number
 }
 
 const CURRENCIES: Record<string, CurrencyDisplay> = {
@@ -49,13 +70,27 @@ const CURRENCIES: Record<string, CurrencyDisplay> = {
   jpy: { code: "JPY", symbol: "¥", rate: 149, decimals: 0 },
 }
 
-// Country → currency mapping (alpha-2 → default currency for display)
 const COUNTRY_CURRENCY: Record<string, string> = {
-  IN: "inr", US: "usd", GB: "gbp", CA: "cad", AU: "aud",
-  BR: "brl", JP: "jpy", DE: "eur", FR: "eur", IT: "eur",
-  ES: "eur", NL: "eur", SE: "eur", MX: "usd", PH: "usd",
-  NG: "usd", ZA: "usd", AE: "usd", SG: "usd", HK: "usd",
-  // default: usd
+  IN: "inr",
+  US: "usd",
+  GB: "gbp",
+  CA: "cad",
+  AU: "aud",
+  BR: "brl",
+  JP: "jpy",
+  DE: "eur",
+  FR: "eur",
+  IT: "eur",
+  ES: "eur",
+  NL: "eur",
+  SE: "eur",
+  MX: "usd",
+  PH: "usd",
+  NG: "usd",
+  ZA: "usd",
+  AE: "usd",
+  SG: "usd",
+  HK: "usd",
 }
 
 function detectCurrency(cfCountry: string | null): CurrencyDisplay {
@@ -70,68 +105,159 @@ function estimateLocal(amountCents: number, display: CurrencyDisplay): {
   if (display.code === "USD") {
     return { amount: amountCents / 100, formatted: `$${(amountCents / 100).toFixed(2)}` }
   }
-  const converted = Math.round(amountCents / 100 * display.rate)
-  const divisor = Math.pow(10, display.decimals)
-  const displayAmount = converted / divisor
+  const converted = Math.round((amountCents / 100) * display.rate)
   return {
-    amount: displayAmount,
-    formatted: `${display.symbol}${displayAmount.toLocaleString("en-US", {
+    amount: converted,
+    formatted: `${display.symbol}${converted.toLocaleString("en-US", {
       minimumFractionDigits: display.decimals,
       maximumFractionDigits: display.decimals,
     })}`,
   }
 }
 
-// ── Razorpay Helpers ───────────────────────────────────────────────────────────
-
-function rzpAuth(): string {
-  const id = process.env["RAZORPAY_KEY_ID"]
-  const secret = process.env["RAZORPAY_KEY_SECRET"]
-  if (!id || !secret) throw new Error("Razorpay credentials not configured")
-  return "Basic " + btoa(`${id}:${secret}`)
+function dodoAuth(): string {
+  const key = process.env["DODO_API_KEY"]
+  if (!key) throw new Error("DODO_API_KEY is not configured")
+  return `Bearer ${key}`
 }
 
-async function rzp<T>(path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`https://api.razorpay.com/v1${path}`, {
-    method: body !== undefined ? "POST" : "GET",
-    headers: { Authorization: rzpAuth(), "Content-Type": "application/json" },
-    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+async function dodo<T>(path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`${DODO_API_BASE.replace(/\/+$/, "")}${path}`, {
+    method: body === undefined ? "GET" : "POST",
+    headers: {
+      Authorization: dodoAuth(),
+      "Content-Type": "application/json",
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   })
   const text = await res.text()
-  if (!res.ok) throw new Error(`Razorpay ${path} → ${res.status}: ${text}`)
+  if (!res.ok) throw new Error(`Dodo ${path} -> ${res.status}: ${text}`)
   try {
     return JSON.parse(text) as T
   } catch {
-    throw new Error(`Razorpay ${path} returned non-JSON: ${text.slice(0, 200)}`)
+    throw new Error(`Dodo ${path} returned non-JSON: ${text.slice(0, 200)}`)
   }
 }
 
-// ── Processed webhook event IDs (in-memory, capped) ────────────────────────────
-const processedWebhookIds = new Set<string>()
-const MAX_WEBHOOK_IDS = 10_000
-
-function isWebhookDuplicate(eventId: string): boolean {
-  if (processedWebhookIds.has(eventId)) return true
-  processedWebhookIds.add(eventId)
-  if (processedWebhookIds.size > MAX_WEBHOOK_IDS) {
-    const iter = processedWebhookIds.values().next()
-    if (!iter.done) processedWebhookIds.delete(iter.value)
-  }
-  return false
+function appUrl(path: string): string {
+  const base = process.env["BETTER_AUTH_URL"] ?? "http://localhost:3000"
+  return `${base.replace(/\/+$/, "")}${path}`
 }
 
-// ── Router ─────────────────────────────────────────────────────────────────────
+function checkoutUrl(data: Record<string, unknown>): string | null {
+  return (
+    (data["checkout_url"] as string | undefined) ??
+    (data["payment_link"] as string | undefined) ??
+    (data["url"] as string | undefined) ??
+    null
+  )
+}
+
+async function createDodoCheckout(input: {
+  productId: string
+  user: { id: string; name?: string | null; email?: string | null }
+  metadata: Record<string, string>
+}) {
+  return dodo<Record<string, unknown>>("/checkouts", {
+    product_cart: [{ product_id: input.productId, quantity: 1 }],
+    customer: {
+      email: input.user.email,
+      name: input.user.name,
+    },
+    metadata: input.metadata,
+    return_url: appUrl("/dashboard"),
+  })
+}
+
+function verifyDodoWebhook(body: string, headers: Headers): boolean {
+  const secret = process.env["DODO_WEBHOOK_SECRET"]
+  if (!secret) return false
+
+  const webhookId = headers.get("webhook-id")
+  const timestamp = headers.get("webhook-timestamp")
+  const signatureHeader = headers.get("webhook-signature")
+  if (!webhookId || !timestamp || !signatureHeader) return false
+
+  const signedPayload = `${webhookId}.${timestamp}.${body}`
+  const normalizedSecret = secret.startsWith("whsec_") ? secret.slice("whsec_".length) : secret
+  const key = secret.startsWith("whsec_")
+    ? Buffer.from(normalizedSecret, "base64")
+    : Buffer.from(normalizedSecret)
+  const expected = createHmac("sha256", key).update(signedPayload).digest("base64")
+  const signatures = signatureHeader
+    .split(" ")
+    .flatMap((part) => part.split(","))
+    .map((part) => part.trim())
+    .map((part) => (part.startsWith("v1,") ? part.slice(3) : part))
+    .filter(Boolean)
+
+  return signatures.some((sig) => {
+    const actual = Buffer.from(sig)
+    const expectedBuffer = Buffer.from(expected)
+    return actual.length === expectedBuffer.length && timingSafeEqual(actual, expectedBuffer)
+  })
+}
+
+function eventType(event: Record<string, unknown>): string {
+  return String(event["type"] ?? event["event"] ?? event["event_type"] ?? "unknown")
+}
+
+function eventData(event: Record<string, unknown>): DodoEntity {
+  const data = event["data"]
+  if (data && typeof data === "object" && !Array.isArray(data)) return data as DodoEntity
+  const payload = event["payload"]
+  if (payload && typeof payload === "object" && !Array.isArray(payload)) return payload as DodoEntity
+  return event
+}
+
+function metadata(entity: DodoEntity): Record<string, string> {
+  const meta = entity["metadata"]
+  if (meta && typeof meta === "object" && !Array.isArray(meta)) return meta as Record<string, string>
+  return {}
+}
+
+function stringField(entity: DodoEntity, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = entity[key]
+    if (typeof value === "string" && value) return value
+  }
+  return null
+}
+
+function numberField(entity: DodoEntity, keys: string[]): number {
+  for (const key of keys) {
+    const value = entity[key]
+    if (typeof value === "number") return value
+    if (typeof value === "string" && value && !Number.isNaN(Number(value))) return Number(value)
+  }
+  return 0
+}
+
+function dateField(entity: DodoEntity, keys: string[]): Date | null {
+  for (const key of keys) {
+    const value = entity[key]
+    if (typeof value === "number") return new Date(value > 10_000_000_000 ? value : value * 1000)
+    if (typeof value === "string" && value) {
+      const date = new Date(value)
+      if (!Number.isNaN(date.getTime())) return date
+    }
+  }
+  return null
+}
+
+function subscriptionCreditExpiry(periodEnd: Date | null): Date {
+  if (periodEnd) return new Date(periodEnd.getTime() + 5 * 24 * 60 * 60 * 1000)
+  return new Date(Date.now() + 35 * 24 * 60 * 60 * 1000)
+}
 
 export const billingRouter = new Hono()
 
-// Get public plan list with estimated local pricing
 billingRouter.get("/plans", (c) => {
-  const cf = c.req.header("CF-IPCountry") ?? null
-  const display = detectCurrency(cf)
-
+  const display = detectCurrency(c.req.header("CF-IPCountry") ?? null)
   const estimate =
-    display.code === "USD" ? null
-    : `Estimated ${display.code} equivalent. Charged in USD. Your bank may convert the amount automatically.`
+    display.code === "USD"
+      ? null
+      : `Estimated ${display.code} equivalent. Charged in USD. Your bank may convert the amount automatically.`
 
   const plans = Object.values(SHARED_PLANS).map((p) => ({
     key: p.key,
@@ -139,6 +265,7 @@ billingRouter.get("/plans", (c) => {
     amountCents: p.priceCents,
     currency: "USD",
     interval: "month",
+    includedCredits: p.includedCredits,
     features: planFeatures(p.key),
     local: p.priceCents > 0 ? estimateLocal(p.priceCents, display) : null,
     notice: estimate,
@@ -147,68 +274,85 @@ billingRouter.get("/plans", (c) => {
   return c.json({ plans, displayCurrency: display.code })
 })
 
-// Create Razorpay subscription — uses pre-created plan IDs from env
 billingRouter.post("/create-subscription", authenticate, async (c) => {
   const { plan } = (await c.req.json()) as { plan: string }
   const user = c.get("user")
-
   const config = SHARED_PLANS[plan]
-  if (!config || plan === "explore") {
-    return c.json({ error: "Invalid plan" }, 400)
-  }
+  if (!config || plan === "explore") return c.json({ error: "Invalid plan" }, 400)
 
-  const planId = RAZORPAY_PLAN_IDS[plan as PlanKey]
-  if (!planId) {
-    return c.json({ error: "Razorpay plan not configured for this tier" }, 500)
-  }
+  const productId = DODO_PRODUCT_IDS[plan]
+  if (!productId) return c.json({ error: "Dodo product not configured for this tier" }, 500)
 
-  // Idempotency: if user already has an active sub for this plan, return existing
-  if (user.razorpaySubId && user.plan === plan && user.subscriptionStatus === "active") {
+  if (user.dodoSubscriptionId && user.plan === plan && user.subscriptionStatus === "active") {
     return c.json({ error: "You already have an active subscription for this plan" }, 409)
   }
 
   try {
-    // Create or reuse Razorpay customer
-    let customerId = user.razorpayCustomerId ?? ""
-    if (!customerId) {
-      const customer = await rzp<{ id: string }>("/customers", {
-        name: user.name,
-        email: user.email,
-        contact: "",
-      })
-      customerId = customer.id
-      await db
-        .update(authSchema.user)
-        .set({ razorpayCustomerId: customerId })
-        .where(eq(authSchema.user.id, user.id))
-    }
-
-    // Create subscription referencing the pre-created plan
-    // total_count: 0 → indefinite (no auto-cancel after N cycles)
-    const subscription = await rzp<{ id: string; short_url: string }>("/subscriptions", {
-      plan_id: planId,
-      customer_notify: 1,
-      total_count: 0,
-      notes: { userId: user.id, plan },
+    const checkout = await createDodoCheckout({
+      productId,
+      user,
+      metadata: {
+        userId: user.id,
+        kind: "subscription",
+        plan,
+      },
     })
-
-    return c.json({ id: subscription.id, short_url: subscription.short_url })
+    const url = checkoutUrl(checkout)
+    if (!url) throw new Error("Dodo checkout response did not include a checkout URL")
+    return c.json({ id: String(checkout["id"] ?? checkout["checkout_id"] ?? ""), short_url: url })
   } catch (err) {
     console.error("[yomi/billing] create-subscription failed:", err)
-    const message = err instanceof Error ? err.message : "Unknown error"
-    return c.json({ error: message }, 502)
+    return c.json({ error: err instanceof Error ? err.message : "Unknown error" }, 502)
   }
 })
 
-// Cancel subscription (sets cancel_at_cycle_end = 1 in Razorpay)
+billingRouter.post("/create-credit-pack", authenticate, async (c) => {
+  const { pack } = (await c.req.json()) as { pack: string }
+  const user = c.get("user")
+  const config = getCreditPack(pack)
+  if (!config) return c.json({ error: "Invalid credit pack" }, 400)
+
+  const productId = DODO_PRODUCT_IDS[config.key]
+  if (!productId) return c.json({ error: "Dodo product not configured for this credit pack" }, 500)
+
+  try {
+    const checkout = await createDodoCheckout({
+      productId,
+      user,
+      metadata: {
+        userId: user.id,
+        kind: "credit_pack",
+        productKey: config.key,
+      },
+    })
+    const url = checkoutUrl(checkout)
+    if (!url) throw new Error("Dodo checkout response did not include a checkout URL")
+
+    await createPaymentRecord({
+      userId: user.id,
+      provider: "dodo",
+      kind: "credit_pack",
+      productKey: config.key,
+      providerOrderId: String(checkout["id"] ?? checkout["checkout_id"] ?? ""),
+      amountCents: config.priceCents,
+      currency: config.currency,
+      status: "created",
+      metadata: { checkout },
+    })
+
+    return c.json({ id: String(checkout["id"] ?? checkout["checkout_id"] ?? ""), short_url: url })
+  } catch (err) {
+    console.error("[yomi/billing] create-credit-pack failed:", err)
+    return c.json({ error: err instanceof Error ? err.message : "Unknown error" }, 502)
+  }
+})
+
 billingRouter.post("/cancel-subscription", authenticate, async (c) => {
   const user = c.get("user")
-  if (!user.razorpaySubId) {
-    return c.json({ error: "No active subscription" }, 404)
-  }
+  if (!user.dodoSubscriptionId) return c.json({ error: "No active subscription" }, 404)
+
   try {
-    await rzp(`/subscriptions/${user.razorpaySubId}/cancel`, { cancel_at_cycle_end: 1 })
-    // Razorpay sends subscription.cancelled webhook — we update DB there
+    await dodo(`/subscriptions/${user.dodoSubscriptionId}/cancel`, {})
     return c.json({ ok: true })
   } catch (err) {
     console.error("[yomi/billing] cancel-subscription failed:", err)
@@ -216,54 +360,30 @@ billingRouter.post("/cancel-subscription", authenticate, async (c) => {
   }
 })
 
-// Razorpay webhook — verify signature, deduplicate, handle events
 billingRouter.post("/webhook", async (c) => {
-  const secret = process.env["RAZORPAY_WEBHOOK_SECRET"]
-  const sig = c.req.header("x-razorpay-signature")
-  if (!sig || !secret) return c.json({ error: "No signature" }, 400)
-
   const body = await c.req.text()
-  const expectedSig = createHmac("sha256", secret).update(body).digest("hex")
-  if (sig !== expectedSig) return c.json({ error: "Invalid signature" }, 400)
+  if (!verifyDodoWebhook(body, c.req.raw.headers)) return c.json({ error: "Invalid signature" }, 400)
 
-  let event: { event: string; payload: { subscription: { entity: Record<string, unknown> } } }
+  let event: Record<string, unknown>
   try {
-    event = JSON.parse(body)
+    event = JSON.parse(body) as Record<string, unknown>
   } catch {
     return c.json({ error: "Invalid JSON" }, 400)
   }
 
-  // Deduplicate by event ID (Razorpay includes one; fallback to event string)
-  const eventId = (event as unknown as { event_id?: string }).event_id ?? event.event
-  if (isWebhookDuplicate(eventId)) return c.json({ ok: true, deduplicated: true })
+  const type = eventType(event)
+  const id = c.req.header("webhook-id") ?? stringField(event, ["id", "event_id"]) ?? `${type}:${payloadHash(body)}`
+  const recorded = await recordPaymentEvent({
+    provider: "dodo",
+    eventId: id,
+    eventType: type,
+    payloadHash: payloadHash(body),
+  })
+  if (recorded.duplicate) return c.json({ ok: true, deduplicated: true })
 
+  const entity = eventData(event)
   try {
-    switch (event.event) {
-      case "subscription.activated":
-      case "subscription.charged":
-        await handleSubscriptionActive(event.payload.subscription.entity)
-        break
-      case "subscription.authenticated":
-        await handleSubscriptionActive(event.payload.subscription.entity)
-        break
-      case "subscription.completed":
-      case "subscription.cancelled":
-        await handleSubscriptionEnd(event.payload.subscription.entity)
-        break
-      case "subscription.halted":
-        await handlePaymentFailed(event.payload.subscription.entity)
-        break
-      case "payment.failed":
-        await handlePaymentFailed(event.payload.subscription.entity)
-        break
-      case "subscription.pending":
-        // Payment is processing — no action, user checks back later
-        break
-      case "subscription.paused":
-      case "subscription.resumed":
-        // Pass through — status managed by Razorpay cycle
-        break
-    }
+    await handleDodoEvent(type, entity, id)
   } catch (err) {
     console.error("[yomi/billing] webhook handler error:", err)
     return c.json({ error: "Handler error" }, 500)
@@ -272,7 +392,6 @@ billingRouter.post("/webhook", async (c) => {
   return c.json({ ok: true })
 })
 
-// Current subscription info for the dashboard
 billingRouter.get("/subscription", authenticate, async (c) => {
   const sessionUser = c.get("user")
   const [user] = await db
@@ -285,7 +404,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
       subscriptionStatus: authSchema.user.subscriptionStatus,
       trialEndDate: authSchema.user.trialEndDate,
       currentPeriodEnd: authSchema.user.currentPeriodEnd,
-      razorpaySubId: authSchema.user.razorpaySubId,
+      dodoSubscriptionId: authSchema.user.dodoSubscriptionId,
       trialInteractionUsed: authSchema.user.trialInteractionUsed,
       trialInteractionLimit: authSchema.user.trialInteractionLimit,
       dailyChatCount: authSchema.user.dailyChatCount,
@@ -313,7 +432,6 @@ billingRouter.get("/subscription", authenticate, async (c) => {
   )
 
   const requestPeriodStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1))
-
   const kindCounts = await db
     .select({ kind: usageEvents.kind, count: sql<number>`count(*)` })
     .from(usageEvents)
@@ -321,7 +439,16 @@ billingRouter.get("/subscription", authenticate, async (c) => {
       and(
         eq(usageEvents.userId, user.id),
         gte(usageEvents.createdAt, requestPeriodStart),
-        inArray(usageEvents.kind, ["request_chat", "request_voice", "stt", "agent_run", "browser_run", "screenshot", "gateway_message", "reasoning"]),
+        inArray(usageEvents.kind, [
+          "request_chat",
+          "request_voice",
+          "stt",
+          "agent_run",
+          "browser_run",
+          "screenshot",
+          "gateway_message",
+          "reasoning",
+        ]),
       ),
     )
     .groupBy(usageEvents.kind)
@@ -329,29 +456,17 @@ billingRouter.get("/subscription", authenticate, async (c) => {
   const countMap: Record<string, number> = {}
   for (const row of kindCounts) countMap[row.kind] = Number(row.count)
 
-  const chatUsed = (countMap["request_chat"] ?? 0)
-  const voiceUsed = (countMap["request_voice"] ?? 0)
-  const agentUsed = (countMap["agent_run"] ?? 0)
-  const browserUsed = (countMap["browser_run"] ?? 0)
-  const screenshotUsed = (countMap["screenshot"] ?? 0)
-  const gatewayUsed = (countMap["gateway_message"] ?? 0)
-
-  const reasoningUsed = (countMap["reasoning"] ?? 0)
-
+  const chatUsed = countMap["request_chat"] ?? 0
+  const voiceUsed = countMap["request_voice"] ?? 0
+  const agentUsed = countMap["agent_run"] ?? 0
+  const browserUsed = countMap["browser_run"] ?? 0
+  const screenshotUsed = countMap["screenshot"] ?? 0
+  const gatewayUsed = countMap["gateway_message"] ?? 0
+  const reasoningUsed = countMap["reasoning"] ?? 0
   const requestsUsed = chatUsed + voiceUsed
   const requestsLimit = requestLimitForUser(user)
   const requestsRemaining = requestsLimit === null ? null : Math.max(requestsLimit - requestsUsed, 0)
   const resetAt = new Date(Date.UTC(requestPeriodStart.getUTCFullYear(), requestPeriodStart.getUTCMonth() + 1, 1))
-
-  const features = {
-    chat: { used: chatUsed, limit: requestsLimit },
-    voice: { used: voiceUsed, limit: featureLimitForUser(user, "voiceMinutes") },
-    screenshots: { used: screenshotUsed, limit: featureLimitForUser(user, "screenshots") },
-    reasoning: { used: reasoningUsed, limit: featureLimitForUser(user, "reasoning") },
-    desktopAutomation: { used: agentUsed, limit: featureLimitForUser(user, "desktopAutomation") },
-    browserAutomation: { used: browserUsed, limit: featureLimitForUser(user, "browserAutomation") },
-    gatewayMessages: { used: gatewayUsed, limit: featureLimitForUser(user, "gatewayMessages") },
-  }
 
   return c.json({
     name: user.name,
@@ -361,49 +476,91 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     status: user.subscriptionStatus,
     trialEndDate: user.trialEndDate,
     currentPeriodEnd: user.currentPeriodEnd,
-    razorpaySubId: user.razorpaySubId,
+    dodoSubscriptionId: user.dodoSubscriptionId,
     requestsUsed,
     requestsLimit,
     requestsRemaining,
     resetAt,
-    features,
+    features: {
+      chat: { used: chatUsed, limit: requestsLimit },
+      voice: { used: voiceUsed, limit: featureLimitForUser(user, "voiceMinutes") },
+      screenshots: { used: screenshotUsed, limit: featureLimitForUser(user, "screenshots") },
+      reasoning: { used: reasoningUsed, limit: featureLimitForUser(user, "reasoning") },
+      desktopAutomation: { used: agentUsed, limit: featureLimitForUser(user, "desktopAutomation") },
+      browserAutomation: { used: browserUsed, limit: featureLimitForUser(user, "browserAutomation") },
+      gatewayMessages: { used: gatewayUsed, limit: featureLimitForUser(user, "gatewayMessages") },
+    },
     planLimits: getPlan(effectivePlanForUser(user)).limits,
     dailyChatUsed: user.dailyChatCount,
     dailyVoiceUsed: user.dailyVoiceCount,
     dailyImageUsed: user.dailyImageCount,
     tokensUsedThisPeriod,
+    credits: await getCreditSummary(user.id),
+    creditPacks: Object.values(CREDIT_PACKS),
+    creditTransactions: await recentCreditTransactions(user.id, 10),
   })
 })
 
-// ── Webhook Helpers ────────────────────────────────────────────────────────────
+async function handleDodoEvent(type: string, entity: DodoEntity, eventId: string) {
+  const normalized = type.toLowerCase()
+  if (normalized.includes("subscription") && normalized.match(/active|renew|paid|success|charge/)) {
+    await handleSubscriptionActive(entity, eventId)
+    return
+  }
+  if (normalized.includes("subscription") && normalized.match(/cancel|expire|complete/)) {
+    await handleSubscriptionEnd(entity)
+    return
+  }
+  if (normalized.includes("subscription") && normalized.match(/fail|past_due|halt/)) {
+    await handlePaymentFailed(entity)
+    return
+  }
+  if (normalized.includes("payment") && normalized.match(/success|succeed|paid|captured/)) {
+    await handlePaymentSucceeded(entity, eventId)
+  }
+}
 
-async function handleSubscriptionActive(entity: Record<string, unknown>) {
-  const notes = entity["notes"] as Record<string, string> | undefined
-  const userId = notes?.userId
-  const plan = notes?.plan
+async function handleSubscriptionActive(entity: DodoEntity, eventId: string) {
+  const meta = metadata(entity)
+  const userId = meta.userId
+  const plan = meta.plan
   if (!userId || !plan) return
 
-  const subId = entity["id"] as string
-  const customerId = entity["customer_id"] as string
-  const periodEnd = entity["current_end"]
-    ? new Date((entity["current_end"] as number) * 1000)
-    : null
+  const config = SHARED_PLANS[plan]
+  if (!config) return
+
+  const subId = stringField(entity, ["subscription_id", "id"])
+  const customerId = stringField(entity, ["customer_id", "customerId"])
+  const periodEnd = dateField(entity, ["current_period_end", "currentPeriodEnd", "next_billing_date"])
 
   await db
     .update(authSchema.user)
     .set({
       plan,
       subscriptionStatus: "active",
-      razorpayCustomerId: customerId,
-      razorpaySubId: subId,
+      dodoCustomerId: customerId,
+      dodoSubscriptionId: subId,
       currentPeriodEnd: periodEnd,
     })
     .where(eq(authSchema.user.id, userId))
+
+  if (!config.includedCredits) return
+
+  await grantCredits({
+    userId,
+    amount: config.includedCredits,
+    source: "subscription_cycle",
+    sourceId: `${subId ?? "subscription"}:${periodEnd?.toISOString() ?? eventId}`,
+    idempotencyKey: `dodo:${eventId}:subscription_credits`,
+    expiresAt: subscriptionCreditExpiry(periodEnd),
+    reason: `${config.name} monthly credits`,
+    metadata: { provider: "dodo", subscriptionId: subId, plan },
+  })
 }
 
-async function handleSubscriptionEnd(entity: Record<string, unknown>) {
-  const notes = entity["notes"] as Record<string, string> | undefined
-  const userId = notes?.userId
+async function handleSubscriptionEnd(entity: DodoEntity) {
+  const meta = metadata(entity)
+  const userId = meta.userId
   if (!userId) return
 
   await db
@@ -411,19 +568,55 @@ async function handleSubscriptionEnd(entity: Record<string, unknown>) {
     .set({
       plan: "explore",
       subscriptionStatus: "inactive",
-      razorpaySubId: null,
+      dodoSubscriptionId: null,
       currentPeriodEnd: null,
     })
     .where(eq(authSchema.user.id, userId))
 }
 
-async function handlePaymentFailed(entity: Record<string, unknown>) {
-  const notes = entity["notes"] as Record<string, string> | undefined
-  const userId = notes?.userId
+async function handlePaymentFailed(entity: DodoEntity) {
+  const userId = metadata(entity).userId
   if (!userId) return
-
   await db
     .update(authSchema.user)
     .set({ subscriptionStatus: "past_due" })
     .where(eq(authSchema.user.id, userId))
+}
+
+async function handlePaymentSucceeded(entity: DodoEntity, eventId: string) {
+  const meta = metadata(entity)
+  if (meta.kind !== "credit_pack" || !meta.userId || !meta.productKey) return
+
+  const pack = getCreditPack(meta.productKey)
+  if (!pack) return
+
+  const paymentId = await createPaymentRecord({
+    userId: meta.userId,
+    provider: "dodo",
+    kind: "credit_pack",
+    productKey: pack.key,
+    providerCustomerId: stringField(entity, ["customer_id", "customerId"]),
+    providerOrderId: stringField(entity, ["checkout_id", "payment_link_id", "order_id"]),
+    providerPaymentId: stringField(entity, ["payment_id", "id"]),
+    amountCents: numberField(entity, ["amount", "total_amount"]) || pack.priceCents,
+    currency: stringField(entity, ["currency"]) ?? pack.currency,
+    status: "paid",
+    metadata: { providerEvent: entity },
+  })
+
+  const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+  await grantCredits({
+    userId: meta.userId,
+    amount: pack.credits,
+    source: "credit_pack",
+    sourceId: stringField(entity, ["payment_id", "id", "checkout_id"]) ?? eventId,
+    idempotencyKey: `dodo:${eventId}:credit_pack:${pack.key}`,
+    paymentId,
+    expiresAt,
+    reason: `${pack.name} purchase`,
+    metadata: {
+      provider: "dodo",
+      productKey: pack.key,
+    },
+  })
 }

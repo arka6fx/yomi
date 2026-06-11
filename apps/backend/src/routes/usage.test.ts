@@ -18,6 +18,7 @@ type ReserveBody = {
   ok?: boolean
   code?: string
   plan?: string
+  creditsRemaining?: number
   requestsUsed?: number
   requestsLimit?: number | null
   requestsRemaining?: number | null
@@ -27,12 +28,10 @@ type ReserveBody = {
 }
 
 let currentUser: TestUser
-let updateCalls = 0
 let mockRequestCount = 0
 
 const fakeDb = {
   update: () => {
-    updateCalls++
     return {
       set: () => ({
         where: () => ({
@@ -42,7 +41,9 @@ const fakeDb = {
     }
   },
   insert: () => ({
-    values: () => Promise.resolve(),
+    values: () => ({
+      returning: () => Promise.resolve([{ id: "usage_1" }]),
+    }),
   }),
   select: () => ({
     from: () => ({
@@ -54,6 +55,23 @@ const fakeDb = {
 mock.module("@yomi/db", () => ({
   db: fakeDb,
   usageEvents: {},
+}))
+
+mock.module("../services/credit-ledger.js", () => ({
+  getCreditSummary: async () => ({
+    balance: 0,
+    lifetimeGranted: 0,
+    lifetimeConsumed: 0,
+    lifetimeRefunded: 0,
+    expiringSoon: 0,
+    expiringSoonAt: null,
+  }),
+  consumeCredits: async () => ({
+    ok: false,
+    charged: 0,
+    balance: 0,
+    insufficient: true,
+  }),
 }))
 
 mock.module("../auth.js", () => ({
@@ -98,18 +116,18 @@ function user(overrides: Partial<TestUser> = {}): TestUser {
 describe("POST /api/usage/interactions/reserve", () => {
   beforeEach(() => {
     currentUser = user()
-    updateCalls = 0
     mockRequestCount = 0
   })
 
-  it("blocks exhausted Explore users with quota_exceeded", async () => {
+  it("blocks exhausted Explore users without credits", async () => {
     mockRequestCount = 100
     const res = await reserve()
     const body = (await res.json()) as ReserveBody
 
-    expect(res.status).toBe(429)
-    expect(body.code).toBe("quota_exceeded")
+    expect(res.status).toBe(402)
+    expect(body.code).toBe("insufficient_credits")
     expect(body.plan).toBe("explore")
+    expect(body.creditsRemaining).toBe(0)
   })
 
   it("blocks inactive Pro users with subscription_inactive", async () => {
