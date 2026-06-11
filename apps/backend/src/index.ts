@@ -20,6 +20,12 @@ import { db, devices } from "@yomi/db"
 
 const app = new Hono()
 
+app.use("*", async (c, next) => {
+  console.log("[route] matching:", c.req.method, c.req.path)
+  await next()
+  console.log("[route] done:", c.req.method, c.req.path, c.res.status)
+})
+
 app.onError(errorHandler)
 
 app.use(
