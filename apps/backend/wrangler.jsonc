@@ -1,0 +1,32 @@
+{
+  "name": "yomi-backend",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-06-11",
+  "compatibility_flags": ["nodejs_compat_v2"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "vars": {
+    "ENVIRONMENT": "development",
+    "DODO_ENV": "test"
+  },
+  "env": {
+    "staging": {
+      "name": "yomi-backend-staging",
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "DODO_ENV": "test"
+      },
+      "routes": [{ "pattern": "api-staging.yomi.arka6fx.com", "custom_domain": true }]
+    },
+    "production": {
+      "name": "yomi-backend",
+      "vars": {
+        "ENVIRONMENT": "production",
+        "DODO_ENV": "live"
+      },
+      "routes": [{ "pattern": "api.yomi.arka6fx.com", "custom_domain": true }]
+    }
+  }
+}

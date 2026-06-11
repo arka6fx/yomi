@@ -52,7 +52,7 @@ export interface CompressionOptions {
   contextWindow: number
   // Plan-based threshold ratio. Omit to use the default (Pro-equivalent).
   plan?: Plan | undefined
-  // Override the summary model. Defaults to MiniMax M2.5.
+  // Override the summary model. Defaults to the AI Credits fast model.
   auxModelId?: string
   // Injectable model factory (default uses the sidecar's createModel).
   modelFactory?: (id: string) => LanguageModelV1
@@ -577,7 +577,11 @@ export async function compressContext(
     }
   }
 
-  const auxModelId = opts.auxModelId ?? process.env["COMPRESSOR_MODEL"] ?? "minimax.minimax-m2.5"
+  const auxModelId =
+    opts.auxModelId ??
+    process.env["COMPRESSOR_MODEL"] ??
+    process.env["AI_CREDITS_FAST_MODEL"] ??
+    "gpt-4.1-mini"
   const factory = opts.modelFactory ?? createModel
   const model = factory(auxModelId)
   if (!model) {

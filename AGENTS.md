@@ -38,12 +38,12 @@ bun install && bun run dev        # install + run all in watch mode
 
 ## Stack (settled — do not relitigate)
 
-- **LLM:** Vercel AI SDK (`ai`) with a native AWS Bedrock MiniMax M2.5 provider
-- **STT/TTS:** AWS Bedrock Nova Sonic (Converse API, IAM auth)
+- **LLM:** Vercel AI SDK (`ai`) with AI Credits / OpenAI-compatible inference
+- **STT/TTS:** ElevenLabs (`scribe_v2`, `eleven_flash_v2_5`)
 - **Desktop:** Electron (Tauri-ready). Never embed login in Electron window — device-code flow only
 - **Backend:** Hono on Bun, Better Auth (Google + GitHub OAuth), Drizzle + Neon
 - **Billing:** Dodo Payments
-- **Primary LLM provider:** AWS Bedrock MiniMax M2.5. Do not use OpenAI or AI Credits paths unless explicitly requested.
+- **Primary LLM provider:** AI Credits / OpenAI-compatible endpoint.
 
 ---
 
@@ -60,15 +60,10 @@ LOCAL SIDECAR  (apps/sidecar — Bun)
   ↕  authenticated HTTPS
 CLOUD BACKEND  (apps/backend — Hono/Bun)
   Better Auth · Dodo webhooks · LLM proxy · usage metering · memory sync
-  Messaging Gateway (Telegram / Discord — will provide later)
+  Messaging gateway and browser automation are hidden from the public UI for now
 ```
 
 ---
-
-## Messaging Gateway (will provide later)
-
-Telegram/Discord bots via polling, code-linking flow, gateway routes, and platform
-adapters in `apps/backend/src/gateway/` — all commented out until first public release.
 
 ---
 
@@ -81,7 +76,7 @@ Tools: `look_at_screen`, `transcribe`, `speak`. No tool-selection loop.
 
 **Agent path:** filesystem r/w · bash (sandboxed) · web search/fetch · cursor
 automation · MCP servers (calendar, email, Notion, Slack). Browser automation
-commented out — will provide later.
+is hidden from the public UI for now.
 
 **Session lifecycle:**
 ```
@@ -153,8 +148,8 @@ India-local: Pro ₹999/mo, Max ₹2 999/mo.
 | 02 | `02-sidecar-fast-pipeline` | Fast path + visual guide |
 | 03 | `03-desktop-shell` | Electron main: sidecar spawn, hotkey, IPC, tray |
 | 04 | `04-desktop-ui` | Notch, Mission Control, audio, streaming |
-| 05 | `05-speech-stt` | AWS Bedrock Nova Sonic STT + VAD |
-| 06 | `06-speech-tts` | AWS Bedrock Nova Sonic TTS |
+| 05 | `05-speech-stt` | ElevenLabs STT + VAD |
+| 06 | `06-speech-tts` | ElevenLabs TTS |
 | 07 | `07-sidecar-router` | Fast vs agent classification |
 | 08 | `08-sidecar-agent` | ReAct loop, tools, MCP, sandbox |
 | 09 | `09-harness` | System prompt, hooks, loop guards |
@@ -185,9 +180,9 @@ India-local: Pro ₹999/mo, Max ₹2 999/mo.
 ## Models (2026-06)
 
 ```
-Fast path:  minimax.minimax-m2.5 (Bedrock mantle)
-Agent path: minimax.minimax-m2.5 (Bedrock mantle)
-Speech:     Nova 2 Sonic (Bedrock Converse API)
+Fast path:  gpt-4.1-mini (AI Credits / OpenAI-compatible)
+Agent path: gpt-4.1 (AI Credits / OpenAI-compatible)
+Speech:     ElevenLabs scribe_v2 + eleven_flash_v2_5
 ```
 
 ---
@@ -201,8 +196,9 @@ installers are separate: always publish Windows releases to
 When STT/TTS or sidecar code changes, deploying backend/landing is not enough.
 Build and publish a new desktop installer so the packaged sidecar is updated.
 The installer must include `apps/sidecar/dist/sidecar-win32-x64.exe`; verify the
-fresh binary contains `amazon.nova-2-sonic-v1:0` and does not contain legacy
-`STT proxy error` or `/api/v1/elevenlabs/stt` strings before release.
+fresh binary contains `eleven_flash_v2_5` and `scribe_v2`, and does not contain
+`amazon.nova-2-sonic-v1:0`, `minimax.minimax-m2.5`, or `Bedrock` strings before
+release.
 
 ---
 
@@ -236,10 +232,11 @@ Plans configured in `apps/backend/src/routes/billing.ts:32`.
 
 **Dodo flow:**
 1. Create subscription and credit-pack products in Dodo Dashboard
-2. Set `DODO_PRODUCT_PRO`, `DODO_PRODUCT_MAX`, and credit-pack product IDs
-3. Backend creates a Dodo Checkout Session
-4. Frontend redirects to Dodo checkout URL
-5. Dodo sends webhook → backend activates subscription or grants credits
+2. Set `DODO_ENV=test` locally and `DODO_ENV=live` in production
+3. Set the matching `DODO_TEST_*` or `DODO_LIVE_*` product IDs
+4. Backend creates a Dodo Checkout Session
+5. Frontend redirects to Dodo checkout URL
+6. Dodo sends webhook → backend activates subscription or grants credits
 
 **Currency display** (`apps/backend/src/routes/billing.ts:62`): USD, INR, EUR,
 GBP, AUD, CAD, BRL, SGD. Manual rates (no live FX API until 500+ customers).
@@ -247,20 +244,19 @@ GBP, AUD, CAD, BRL, SGD. Manual rates (no live FX API until 500+ customers).
 **Grace period:** `hasBillablePlanAccess()` allows 7 days past_due. Webhook
 payment failure → status = past_due → billing warning in dashboard.
 
-## Messaging Gateway (will provide later)
+## Hidden Features
 
-Telegram/Discord bots, platform adapters, gateway routes, linking flow — all
-commented out with stubs. Desktop `send_whatsapp_message` tool also stubbed.
+Messaging gateway and browser automation are hidden from the public UI for now.
 
 ## Removed / commented out (2026-06)
 - WhatsApp cloud adapter (762 lines: adapter, tests, webhooks, routes, types)
 - Slack cloud adapter (189 lines: adapter, routes, types)
 - Legacy billing integration — replaced by Dodo Payments
-- Browser automation (Playwright MCP, browser tools, automation agents) — commented out for later
-- Messaging gateway (Telegram/Discord bots, gateway routes, adapter code) — commented out for later
+- Browser automation is hidden from the public UI for now
+- Messaging gateway is hidden from the public UI for now
 - send_whatsapp_message tool — commented out
-- ElevenLabs STT (scribe_v2) and TTS (eleven_flash_v2_5) — replaced by Nova Sonic
-- GPT-4.1-mini / GPT-4.1 LLM — replaced by MiniMax M2.5 via Bedrock mantle
+- AWS Bedrock Nova Sonic STT/TTS — replaced by ElevenLabs
+- MiniMax M2.5 via Bedrock mantle — replaced by AI Credits / OpenAI-compatible inference
 
 ## Cleanup (always do before pushing)
 - Check CI passes: `bun run ci` locally or `gh run list` for status

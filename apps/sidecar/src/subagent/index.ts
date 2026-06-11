@@ -10,7 +10,7 @@ import { createSystemTools } from "../tools/system.js"
 import type { CoreMessage, ToolSet } from "ai"
 import type { Plan } from "@yomi/shared"
 
-const AGENT_PATH_MODEL = process.env["AGENT_PATH_MODEL"] || "minimax.minimax-m2.5"
+const AGENT_MODEL = process.env["AI_CREDITS_AGENT_MODEL"] || "gpt-4.1"
 const NOTEPAD = join(homedir(), ".yomi")
 
 export type SubagentRole = "leaf" | "orchestrator"
@@ -115,7 +115,7 @@ export async function runSubagent(opts: SubagentRunOptions): Promise<SubagentRes
     .join("\n\n")
 
   const maxSteps = opts.maxSteps ?? 10
-  const modelId = opts.model ?? AGENT_PATH_MODEL
+  const modelId = opts.model ?? AGENT_MODEL
 
   try {
     const result = streamText({

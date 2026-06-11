@@ -16,8 +16,6 @@ export interface PlanConfig {
     screenshots: number
     reasoning: number
     desktopAutomation: number
-    browserAutomation: number
-    gatewayMessages: number
   }
 }
 
@@ -35,8 +33,6 @@ export const PLANS: Record<string, PlanConfig> = {
       screenshots: 25,
       reasoning: 5,
       desktopAutomation: 10,
-      browserAutomation: 10,
-      gatewayMessages: 50,
     },
   },
   pro: {
@@ -52,8 +48,6 @@ export const PLANS: Record<string, PlanConfig> = {
       screenshots: 400,
       reasoning: 100,
       desktopAutomation: 75,
-      browserAutomation: 40,
-      gatewayMessages: 2000,
     },
   },
   max: {
@@ -69,8 +63,6 @@ export const PLANS: Record<string, PlanConfig> = {
       screenshots: 2000,
       reasoning: 500,
       desktopAutomation: 750,
-      browserAutomation: 500,
-      gatewayMessages: 8000,
     },
   },
 }
@@ -83,8 +75,6 @@ export type UsageCreditKind =
   | "screenshot"
   | "reasoning"
   | "desktop_automation"
-  | "browser_automation"
-  | "messaging"
 
 export interface CreditPackConfig {
   key: "credits_500" | "credits_2000" | "credits_6000"
@@ -128,8 +118,6 @@ export const CREDIT_COSTS: Record<UsageCreditKind, number> = {
   screenshot: 1,
   reasoning: 5,
   desktop_automation: 10,
-  browser_automation: 10,
-  messaging: 1,
 }
 
 export function getPlan(key: string): PlanConfig {
