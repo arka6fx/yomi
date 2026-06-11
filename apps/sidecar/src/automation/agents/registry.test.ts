@@ -26,10 +26,6 @@ describe("resolveAgent", () => {
     expect(a.provider).toBe("native")
   })
 
-  it("routes browser goals to the browser provider", () => {
-    expect(resolveAgent("open the website and search for cats").provider).toBe("browser")
-  })
-
   it("routes messaging goals to the inherit-all messaging agent", () => {
     const a = resolveAgent("send a whatsapp to Alex saying hi")
     expect(a.id).toBe("messaging")
@@ -51,16 +47,6 @@ describe("scopeTools", () => {
     expect(keys).toContain("read_file") // base
     expect(keys).not.toContain("send_whatsapp_message")
     expect(keys).not.toContain("browser_navigate")
-  })
-
-  it("scopes the browser agent by the browser_ prefix", () => {
-    const scoped = scopeTools(allTools, resolveAgent("navigate to the website"))
-    const keys = Object.keys(scoped)
-    expect(keys).toContain("browser_navigate")
-    expect(keys).toContain("browser_click")
-    expect(keys).toContain("look_at_screen")
-    expect(keys).not.toContain("play_spotify")
-    expect(keys).not.toContain("send_whatsapp_message")
   })
 
   it("passes the full tool set through unchanged for inherit-all agents", () => {

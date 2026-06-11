@@ -3,18 +3,20 @@ import { cors } from "hono/cors"
 import { auth } from "./auth.js"
 import { errorHandler } from "./middleware/error-handler.js"
 import { llmRouter } from "./routes/llm.js"
-import { sttRouter } from "./routes/stt.js"
+// import { sttRouter } from "./routes/stt.js"   // legacy ElevenLabs
 import { usageRouter } from "./routes/usage.js"
 import { billingRouter } from "./routes/billing.js"
 import { authRoutesRouter } from "./routes/auth-routes.js"
 import { profileRouter } from "./routes/profile.js"
 import { ragRouter } from "./routes/rag.js"
 import { proxyRouter } from "./routes/proxy.js"
-import { gatewayRouter } from "./gateway/routes.js"
-import { getDefaultGateway } from "./gateway/gateway-runner.js"
-import type { SidecarResolver } from "./gateway/gateway-runner.js"
+// import { gatewayRouter } from "./gateway/routes.js"
+// import { getDefaultGateway } from "./gateway/gateway-runner.js"
+// import type { SidecarResolver } from "./gateway/gateway-runner.js"
+// import { eq, and } from "drizzle-orm"
+// import { db, platformConnections, devices } from "@yomi/db"
 import { eq, and } from "drizzle-orm"
-import { db, platformConnections, devices } from "@yomi/db"
+import { db, devices } from "@yomi/db"
 
 const app = new Hono()
 
@@ -54,53 +56,20 @@ app.route("/api/auth", authRoutesRouter)
 app.on(["GET", "POST"], "/api/auth/*", (c) => auth.handler(c.req.raw))
 
 app.route("/api/llm", llmRouter)
-app.route("/api/stt", sttRouter)
+// app.route("/api/stt", sttRouter)  // legacy ElevenLabs
 app.route("/api/usage", usageRouter)
 app.route("/api/billing", billingRouter)
 app.route("/api/user", profileRouter)
 app.route("/api/rag", ragRouter)
 app.route("/api/v1", proxyRouter)
-app.route("/api/gateway", gatewayRouter)
-
-// Register sidecar URL resolver from platform connections
-const sidecarResolver: SidecarResolver = async (userId, platform) => {
-  try {
-    const conn = await db
-      .select({ yomiUserId: platformConnections.userId })
-      .from(platformConnections)
-      .where(
-        and(
-          eq(platformConnections.platform, platform),
-          eq(platformConnections.platformUserId, userId),
-        ),
-      )
-      .limit(1)
-      .then((rows) => rows[0])
-
-    if (!conn) return undefined
-
-    const device = await db
-      .select({ sidecarUrl: devices.sidecarUrl })
-      .from(devices)
-      .where(eq(devices.userId, conn.yomiUserId))
-      .orderBy(devices.lastSeen)
-      .limit(1)
-      .then((rows) => rows[0])
-
-    return device?.sidecarUrl ?? undefined
-  } catch (err) {
-    console.warn("[gateway] sidecar resolver error:", err)
-    return undefined
-  }
-}
-getDefaultGateway().setSidecarResolver(sidecarResolver)
-
-// Start the messaging gateway
-getDefaultGateway().start(process.env["YOMI_PLAN"]).then(() => {
-  console.warn("[backend] gateway started")
-}).catch((err) => {
-  console.error("[backend] gateway start failed:", err)
-})
+// app.route("/api/gateway", gatewayRouter) // will provide later
+// 
+// // Register sidecar URL resolver from platform connections — will provide later
+// const sidecarResolver: SidecarResolver = async (userId, platform) => { ... }
+// getDefaultGateway().setSidecarResolver(sidecarResolver)
+// 
+// // Start the messaging gateway — will provide later
+// getDefaultGateway().start(process.env["YOMI_PLAN"]).then(() => { ... })
 
 const PORT = Number(process.env["PORT"] ?? 3001)
 

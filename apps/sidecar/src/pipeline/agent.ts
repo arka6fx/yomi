@@ -2,15 +2,15 @@ import { streamText, type ToolSet } from "ai"
 import type { AgentQueryRequest, Plan, SseEvent } from "@yomi/shared"
 import { createModel } from "./model.js"
 import { createAgentTools } from "../tools/index.js"
-import { hooks, toolGuardrail, type Hooks } from "../harness/hooks.js"
+import { getDesktopFocusContext, hooks, toolGuardrail, type Hooks } from "../harness/hooks.js"
 import { buildAgentPrompt, loadYomiMd } from "../harness/prompt.js"
 import { LoopGuards } from "../harness/guards.js"
 import { compressContext } from "../agent/index.js"
 import { compact } from "../memory/compactor.js"
 import { loadMemoryContext, writeSessionTurn } from "../memory/subsystem.js"
 import { setActEmitter } from "../uia/act-bus.js"
-import { getMcpTools } from "../mcp/client.js"
-import { wrapBrowserTools } from "../mcp/safety.js"
+// import { getMcpTools } from "../mcp/client.js"      // will provide later
+// import { wrapBrowserTools } from "../mcp/safety.js"  // will provide later
 import {
   completeAutomation,
   failAutomation,
@@ -26,32 +26,34 @@ import {
   adjustSpotifyVolume,
   controlSpotifyPlayback,
   playSpotify,
-  sendWhatsAppMessage,
+  // sendWhatsAppMessage,   // will provide later
   saveWindowsNotepadAs,
   writeWindowsNotepad,
 } from "../tools/system.js"
 import {
-  normalizeSpokenRecipient,
-  pendingDraftRecipientRequest,
+  // normalizeSpokenRecipient,      // will provide later
+  // pendingDraftRecipientRequest,  // will provide later
   playbackControl,
-  reminderDraftRequest,
+  // reminderDraftRequest,          // will provide later
   spotifyPlaybackQuery,
   stripDetachedPhrases,
   volumeAction,
-  whatsAppMessageRequest,
+  // whatsAppMessageRequest,        // will provide later
 } from "./shortcuts.js"
 
-const AGENT_PATH_MODEL = process.env.AGENT_PATH_MODEL || "gpt-4.1"
+// was: process.env.AGENT_PATH_MODEL || "gpt-4.1"
+const AGENT_PATH_MODEL = process.env.AGENT_PATH_MODEL || "minimax.minimax-m2.5"
 const MAX_STEPS = parseInt(process.env.AGENT_MAX_STEPS || "20", 10)
-// 1M tokens for gpt-4.1 family. Used by the turn-level compressor when no
+// 1M tokens for MiniMax. Used by the turn-level compressor when no
 // model-aware context length is available. Matches the published 4.1 window.
 const DEFAULT_MODEL_CONTEXT_WINDOW = 1_000_000
 
-let pendingWhatsAppDraft: { kind: "reminder"; message: string } | null = null
+// let pendingWhatsAppDraft: { kind: "reminder"; message: string } | null = null
 let pendingWindowsNotepadDraft = false
+let pendingWhatsAppDraft: { kind: "reminder"; message: string } | null = null
 
 export function __resetAgentShortcutStateForTest(): void {
-  pendingWhatsAppDraft = null
+  // pendingWhatsAppDraft = null
   pendingWindowsNotepadDraft = false
 }
 
@@ -75,7 +77,7 @@ async function getAgentPrompt(text: string, plan: Plan | undefined): Promise<str
         dynamicProfile: "",
         recentSession: "",
       }
-  return buildAgentPrompt({ yomiMd: cachedYomiMd, ...memoryCtx })
+  return buildAgentPrompt({ yomiMd: cachedYomiMd, ...memoryCtx, desktopFocusChange: getDesktopFocusContext() })
 }
 
 // Detached-mode phrasing is stripped so it does not pollute command parsing.
@@ -136,7 +138,7 @@ export function windowsNotepadRequest(
 }
 
 // Re-export for test imports (canonical definition in shortcuts.ts).
-export { whatsAppMessageRequest } from "./shortcuts.js"
+// export { whatsAppMessageRequest } from "./shortcuts.js" // will provide later
 
 type WriteSessionTurn = typeof writeSessionTurn
 type ShortcutSystemActions = {
@@ -144,7 +146,7 @@ type ShortcutSystemActions = {
   adjustSpotifyVolume: typeof adjustSpotifyVolume
   controlSpotifyPlayback: typeof controlSpotifyPlayback
   playSpotify: typeof playSpotify
-  sendWhatsAppMessage: typeof sendWhatsAppMessage
+  // sendWhatsAppMessage: typeof sendWhatsAppMessage
   saveWindowsNotepadAs: typeof saveWindowsNotepadAs
   writeWindowsNotepad: typeof writeWindowsNotepad
 }
@@ -257,7 +259,7 @@ export async function* agentPipeline(
     adjustSpotifyVolume,
     controlSpotifyPlayback,
     playSpotify,
-    sendWhatsAppMessage,
+    // sendWhatsAppMessage,  // will provide later
     saveWindowsNotepadAs,
     writeWindowsNotepad,
   }
@@ -484,100 +486,17 @@ export async function* agentPipeline(
       return
     }
 
-    const pendingRecipient = pendingDraftRecipientRequest(cleanText, pendingWhatsAppDraft !== null)
-    if (pendingRecipient && pendingWhatsAppDraft) {
-      const draft = pendingWhatsAppDraft
-      const args = { recipient: pendingRecipient, message: draft.message }
-      yield { type: "agent_tool_call", tool: "send_whatsapp_message", args }
-      const check = await activeHooks.onPreToolUse("send_whatsapp_message", args)
-      const result = check.ok
-        ? await activeHooks.onPostToolUse(
-            "send_whatsapp_message",
-            await systemActions.sendWhatsAppMessage(pendingRecipient, draft.message, {
-              signal,
-            }),
-          )
-        : `[DENIED: ${check.reason}]`
-      if (signal?.aborted) {
-        yield closeAutomation("Automation cancelled.", true)
-        yield { type: "done" }
-        return
-      }
-      yield { type: "agent_tool_result", tool: "send_whatsapp_message", result }
-      const failed = shortcutFailed(result)
-      const errText =
-        failed && typeof (result as { error?: unknown }).error === "string"
-          ? (result as { error: string }).error
-          : null
-      const output = failed
-        ? (errText ?? `I could not send the reminder to ${pendingRecipient} on WhatsApp.`)
-        : `Sent the reminder to ${pendingRecipient} on WhatsApp.`
-      if (!failed) pendingWhatsAppDraft = null
-      yield { type: "agent_text", text: output }
-      await activeHooks.onStop(failed ? "whatsapp reminder send failed" : "whatsapp reminder sent")
-      if (!failed) await rememberAgentShortcut(req, output, writeTurn)
-      yield timelineAutomation(automation, output, failed ? "failed" : "done")
-      yield closeAutomation(output, failed)
-      yield { type: "done" }
-      return
-    }
+    // ── WhatsApp shortcuts — will provide later ─────────────────────────────
+    // const pendingRecipient = pendingDraftRecipientRequest(cleanText, pendingWhatsAppDraft !== null)
+    // if (pendingRecipient && pendingWhatsAppDraft) { ... }
+    // const whatsAppMessage = whatsAppMessageRequest(cleanText)
+    // if (whatsAppMessage) { ... }
+    // const reminderDraft = reminderDraftRequest(cleanText)
+    // if (reminderDraft) { ... }
 
-    const whatsAppMessage = whatsAppMessageRequest(cleanText)
-    if (whatsAppMessage) {
-      yield { type: "agent_tool_call", tool: "send_whatsapp_message", args: whatsAppMessage }
-      const check = await activeHooks.onPreToolUse("send_whatsapp_message", whatsAppMessage)
-      const result = check.ok
-        ? await activeHooks.onPostToolUse(
-            "send_whatsapp_message",
-            await systemActions.sendWhatsAppMessage(
-              whatsAppMessage.recipient,
-              whatsAppMessage.message,
-              { signal },
-            ),
-          )
-        : `[DENIED: ${check.reason}]`
-      if (signal?.aborted) {
-        yield closeAutomation("Automation cancelled.", true)
-        yield { type: "done" }
-        return
-      }
-      yield { type: "agent_tool_result", tool: "send_whatsapp_message", result }
-      const failed = shortcutFailed(result)
-      // On failure speak the actual reason/question (e.g. "who should I message?") so the user can
-      // clarify, rather than a generic "couldn't send".
-      const errText =
-        failed && typeof (result as { error?: unknown }).error === "string"
-          ? (result as { error: string }).error
-          : null
-      const output = failed
-        ? (errText ??
-          `I could not send "${whatsAppMessage.message}" to ${whatsAppMessage.recipient} on WhatsApp.`)
-        : `Sent "${whatsAppMessage.message}" to ${whatsAppMessage.recipient} on WhatsApp.`
-      yield { type: "agent_text", text: output }
-      await activeHooks.onStop(failed ? "whatsapp send failed" : "whatsapp message sent")
-      if (!failed) await rememberAgentShortcut(req, output, writeTurn)
-      yield timelineAutomation(automation, output, failed ? "failed" : "done")
-      yield closeAutomation(output, failed)
-      yield { type: "done" }
-      return
-    }
-
-    const reminderDraft = reminderDraftRequest(cleanText)
-    if (reminderDraft) {
-      pendingWhatsAppDraft = { kind: "reminder", message: reminderDraft.message }
-      const output = `I wrote: "${reminderDraft.message}". Who should I send it to on WhatsApp?`
-      yield waitingAutomation(automation, "Waiting for WhatsApp recipient", "moderate")
-      yield timelineAutomation(automation, "Drafted WhatsApp reminder", "done")
-      yield { type: "agent_text", text: output }
-      await activeHooks.onStop("whatsapp reminder recipient needed")
-      yield closeAutomation("Waiting for WhatsApp recipient.")
-      yield { type: "done" }
-      return
-    }
-
-    // Build tools only for the full agent loop (not the fast-path returns above), so a "volume up"
-    // command doesn't spawn the browser MCP. Browser tools merge in behind the same safety guard.
-    const mcpTools = wrapBrowserTools(await getMcpTools())
+    // Build tools for the full agent loop.
+    // const mcpTools = wrapBrowserTools(await getMcpTools()) // will provide later
+    const mcpTools = {}
     const tools = applyHooks(
       {
         ...createAgentTools({ screenshotB64: req.screenshot_b64, plan: req.plan }),

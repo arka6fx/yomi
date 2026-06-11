@@ -45,7 +45,7 @@ Core app tables:
 | Table             | Purpose                                                                        |
 | ----------------- | ------------------------------------------------------------------------------ |
 | `devices`         | Registered desktop installs and last-seen metadata                             |
-| `subscriptions`   | Razorpay customer/subscription mapping                                         |
+| `subscriptions`   | Payment-provider customer/subscription mapping                                |
 | `usage_events`    | Append-only metering events                                                    |
 | `memory_blobs`    | Legacy/future encrypted sync placeholder; not used for local memory by default |
 | `agent_runs`      | Agent task history                                                             |

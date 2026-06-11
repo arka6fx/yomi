@@ -74,16 +74,30 @@ export interface UiaElement {
   name: string
   automationId?: string
   rect: { x: number; y: number; width: number; height: number } // physical screen px
-  patterns: string[] // ["Invoke","Value","Toggle","ExpandCollapse","SelectionItem","Scroll","ScrollItem","LegacyIAccessible"]
+  patterns: string[] // ["Invoke","Value","Toggle","ExpandCollapse","SelectionItem","Selection","Scroll","ScrollItem","Text","LegacyIAccessible"]
   enabled: boolean
   offscreen?: boolean // rect is empty or outside the window — needs ScrollIntoView/vision
   value?: string | null
   rangeValue?: number | null // RangeValuePattern current (e.g. Spotify volume slider 0..100)
+  childCount?: number // number of direct children (0 = leaf; omitted = unknown)
 }
 
 export interface UiaSnapshot {
   window: string
   elements: UiaElement[]
+  truncated?: boolean // true when the tree was cut off by node/depth limits
+  diff?: TreeDiff // changes since the last snapshot, computed by the sidecar
+}
+
+export interface TreeDiff {
+  added: UiaElement[] // elements that appeared since the last snapshot
+  removed: UiaElement[] // elements that disappeared since the last snapshot
+  changed: UiaElement[] // elements that existed before but have different properties
+}
+
+export interface FocusChangeEvent {
+  hwnd: number
+  window: string
 }
 
 export type UiaAction =
@@ -91,6 +105,11 @@ export type UiaAction =
   | { kind: "set_value"; ref: string; text: string }
   | { kind: "toggle"; ref: string }
   | { kind: "click_point"; x: number; y: number; button?: "left" | "right" | "middle" }
+  | { kind: "expand"; ref: string }
+  | { kind: "collapse"; ref: string }
+  | { kind: "scroll"; ref: string; horizontalPercent?: number; verticalPercent?: number }
+  | { kind: "right_click"; ref: string }
+  | { kind: "select_text"; ref: string; start: number; length: number }
 
 export type IntentPath = "fast" | "agent"
 

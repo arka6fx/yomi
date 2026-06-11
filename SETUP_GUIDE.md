@@ -54,12 +54,14 @@ SIDECAR_SECRET=...
 Optional until billing is enabled:
 
 ```bash
-RAZORPAY_KEY_ID=
-RAZORPAY_KEY_SECRET=
-RAZORPAY_WEBHOOK_SECRET=
-# Pre-created Razorpay Plan IDs (create in Dashboard → Plans, total_count = 0)
-RAZORPAY_PLAN_PRO=plan_xxxxxxxxxx
-RAZORPAY_PLAN_MAX=plan_xxxxxxxxxx
+DODO_API_KEY=
+DODO_WEBHOOK_SECRET=
+DODO_API_BASE=https://api.dodopayments.com
+DODO_PRODUCT_PRO=
+DODO_PRODUCT_MAX=
+DODO_PRODUCT_CREDITS_500=
+DODO_PRODUCT_CREDITS_2000=
+DODO_PRODUCT_CREDITS_6000=
 ```
 
 ## Messaging Gateway
@@ -208,19 +210,18 @@ sudo docker compose --env-file .env.production build --no-cache landing
 sudo docker compose --env-file .env.production up -d --force-recreate landing nginx
 ```
 
-## Razorpay
+## Dodo Payments
 
-Leave Razorpay values blank until billing is ready. When enabling billing:
+Leave Dodo values blank until billing is ready. When enabling billing:
 
-1. Generate API keys in Razorpay Dashboard.
-2. Set `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`.
-3. Create two Plans in Dashboard → Plans:
-   - "Yomi Pro Monthly" — 1499 USD, monthly, `total_count = 0`
-   - "Yomi Max Monthly" — 3999 USD, monthly, `total_count = 0`
-4. Copy the plan IDs and set `RAZORPAY_PLAN_PRO` and `RAZORPAY_PLAN_MAX`.
-5. Add a webhook for `https://yomi.arka6fx.com/api/billing/webhook`.
-6. Set `RAZORPAY_WEBHOOK_SECRET` to the same secret entered in Razorpay.
-7. Update `.env.production` and redeploy:
+1. Generate an API key in the Dodo dashboard.
+2. Set `DODO_API_KEY`.
+3. Create subscription products for Pro and Max.
+4. Create one-time products for the credit packs.
+5. Set `DODO_PRODUCT_PRO`, `DODO_PRODUCT_MAX`, and credit-pack product IDs.
+6. Add a webhook for `https://yomi.arka6fx.com/api/billing/webhook`.
+7. Set `DODO_WEBHOOK_SECRET` to the webhook signing secret.
+8. Update `.env.production` and redeploy:
 
 ```bash
 cd /opt/yomi
@@ -270,4 +271,4 @@ Do not print secret values into logs or chat.
 - Rotate any GitHub PAT that appears in shell output.
 - Keep `.env.production` out of git.
 - Keep the EC2 private key readable only by the owning user.
-- Do not commit OAuth client secrets, Razorpay secrets, or database URLs.
+- Do not commit OAuth client secrets, Dodo secrets, or database URLs.

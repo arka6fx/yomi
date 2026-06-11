@@ -2,6 +2,7 @@
 import { createMemoryTools } from "./memory.js"
 import { createSystemTools } from "./system.js"
 import { createWebTools } from "./web.js"
+import { createUiaAdvancedTools } from "./uia-advanced.js"
 import { createSkillTools } from "./skills/index.js"
 import { createDelegateTaskTool } from "../subagent/delegate-tool.js"
 import { createCronJobTool } from "./cron/cronjob-tool.js"
@@ -18,6 +19,7 @@ export function createAgentTools(ctx: AgentToolsContext = {}) {
     ...createMemoryTools(),
     ...createSystemTools(ctx),
     ...createWebTools(),
+    ...createUiaAdvancedTools(),
     ...createSkillTools({ plan: ctx.plan }),
     ...createDelegateTaskTool({ plan: ctx.plan }),
     ...createCronJobTool({ plan: ctx.plan }),

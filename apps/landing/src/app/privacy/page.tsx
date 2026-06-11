@@ -79,7 +79,7 @@ export default function PrivacyPage() {
                   features.
                 </li>
                 <li>
-                  <strong className="text-label">Razorpay</strong> — payment processing. We never
+                  <strong className="text-label">Dodo Payments</strong> — payment processing. We never
                   store card details.
                 </li>
                 <li>

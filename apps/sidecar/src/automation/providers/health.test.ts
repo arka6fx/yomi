@@ -1,7 +1,6 @@
 import { platform } from "node:os"
 import { describe, expect, it } from "bun:test"
 import { createNativeProvider } from "./native.js"
-import { createBrowserProvider, type BrowserPort } from "./browser.js"
 import { createWorkflowProvider } from "./workflow.js"
 import type { UiaPort } from "./types.js"
 
@@ -36,33 +35,6 @@ describe("native provider health", () => {
   it("always reports a platform in diagnostics", async () => {
     const diag = await createNativeProvider(okUia).diagnostics()
     expect(diag.platform).toBe(platform())
-  })
-})
-
-describe("browser provider health", () => {
-  const port = (tools: Record<string, unknown>, onReset?: () => void): BrowserPort => ({
-    getTools: async () => tools,
-    reset: async () => onReset?.(),
-  })
-
-  it("is healthy when the MCP server yields tools", async () => {
-    const health = await createBrowserProvider(port({ browser_navigate: {} })).healthCheck()
-    expect(health.ok).toBe(true)
-    expect(health.detail).toContain("1")
-  })
-
-  it("is unhealthy when no tools are available", async () => {
-    const health = await createBrowserProvider(port({})).healthCheck()
-    expect(health.ok).toBe(false)
-  })
-
-  it("resets the client then re-probes on repair", async () => {
-    let reset = false
-    const health = await createBrowserProvider(
-      port({ browser_navigate: {} }, () => (reset = true)),
-    ).repair()
-    expect(reset).toBe(true)
-    expect(health.ok).toBe(true)
   })
 })
 

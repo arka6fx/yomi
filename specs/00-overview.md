@@ -68,7 +68,7 @@ _Phases 0–4 are complete. Phase 5 is in progress._
 | 0 — Spike      | hotkey → ElevenLabs STT → screenshot → 1 LLM call → ElevenLabs TTS                                  | Done       |
 | 1 — Buddy      | tray/notch status, Mission Control, notepad init, permissions                                       | Done       |
 | 2 — Agent      | intent router, ReAct loop, hooks lifecycle, MCP (calendar, email, browser), subagents               | Done       |
-| 3 — Accounts   | Hono backend, Better Auth, Drizzle/Neon, Razorpay, LLM proxy (Vercel AI SDK)                        | Done       |
+| 3 — Accounts   | Hono backend, Better Auth, Drizzle/Neon, Dodo Payments, LLM proxy (Vercel AI SDK)                   | Done       |
 | 4 — Automation | Windows UIA helper (C#/FlaUI), browser MCP (Playwright), Act mode, safety guard, automation DB      | Done       |
 | 5 — Orchestrate| LangGraph AutomationGraph, provider-routed sub-agents, knowledge base, Mission Control streaming     | In progress|
 | 6 — Launch     | Next.js landing, waitlist → download, pricing page, Telegram + Discord messaging bots | Done       |

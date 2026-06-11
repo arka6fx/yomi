@@ -43,7 +43,7 @@ export function isDestructiveText(text: string): boolean {
 
 // Heuristic risk classifier for a proposed action against a target element.
 export function classifyRisk(
-  kind: "invoke" | "set_value" | "toggle" | "click_point",
+  kind: string,
   el?: { name?: string; role?: string },
 ): { risky: boolean; reason?: string } {
   const name = el?.name ?? ""
@@ -53,6 +53,10 @@ export function classifyRisk(
   // Typing into a password field is sensitive even if the label isn't a "verb".
   if (kind === "set_value" && /password|passcode|pin/i.test(name)) {
     return { risky: true, reason: "target looks like a password field" }
+  }
+  // Right-click: the context menu may contain destructive options, but the target text determines risk.
+  if (kind === "right_click" && isDestructiveText(name)) {
+    return { risky: true, reason: `right-click on "${name}" may show destructive menu items` }
   }
   return { risky: false }
 }

@@ -187,37 +187,20 @@ describe("agent shortcut memory", () => {
     expect(events.some((e) => e.type === "error")).toBe(false)
   })
 
-  it("writes successful WhatsApp shortcuts to session memory", async () => {
-    await drain({ text: "send hi to lily on WhatsApp", plan: "max" })
-
-    expect(sessionTurns).toContainEqual({
-      kind: "agent",
-      input: "send hi to lily on WhatsApp",
-      output: 'Sent "hi" to lily on WhatsApp.',
-      summary: 'Sent "hi" to lily on WhatsApp.',
-    })
-  })
-
-  it("end-to-end routes a natural 'text <name> saying <msg>' to send_whatsapp_message", async () => {
-    await drain({ text: "text lily saying running late", plan: "max" })
-    expect(whatsAppSends).toEqual([{ recipient: "lily", message: "running late" }])
-  })
-
-  it("routes 'send hi to my mom lily on whatsapp' to Lily", async () => {
-    await drain({ text: "i am saying send hi to my mom lily on whatsapp", plan: "max" })
-    expect(whatsAppSends).toEqual([{ recipient: "lily", message: "hi" }])
-  })
-
-  it("routes send-to-self WhatsApp commands to the You chat", async () => {
-    await drain({ text: "send remember this to myself on whatsapp", plan: "max" })
-    expect(whatsAppSends).toEqual([{ recipient: "you", message: "remember this" }])
-  })
+  // ── WhatsApp tests commented out (will provide later) ──────────────────
+  // it("writes successful WhatsApp shortcuts to session memory", ...)
+  // it("end-to-end routes a natural 'text <name> saying <msg>' to send_whatsapp_message", ...)
+  // it("routes 'send hi to my mom lily on whatsapp' to Lily", ...)
+  // it("routes send-to-self WhatsApp commands to the You chat", ...)
+  // it("holds a reminder draft and sends it on the follow-up recipient command", ...)
+  // it("sends a pending reminder draft when the follow-up says message me", ...)
+  // it("sends a pending reminder draft when the follow-up references the told text", ...)
+  // it("does not let a pending draft steal a fresh explicit WhatsApp message", ...)
 
   it("writes explicit Windows Notepad commands to Notepad instead of WhatsApp", async () => {
     await drain({ text: "write buy milk in notepad", plan: "max" })
 
     expect(notepadWrites).toEqual(["buy milk"])
-    expect(whatsAppSends).toEqual([])
     expect(sessionTurns).toContainEqual({
       kind: "agent",
       input: "write buy milk in notepad",
@@ -230,7 +213,6 @@ describe("agent shortcut memory", () => {
     await drain({ text: "write buy milk in notepad and save it", plan: "max" })
 
     expect(notepadWrites).toEqual(["buy milk"])
-    expect(whatsAppSends).toEqual([])
     expect(sessionTurns).toContainEqual({
       kind: "agent",
       input: "write buy milk in notepad and save it",
@@ -252,61 +234,5 @@ describe("agent shortcut memory", () => {
       output: expect.stringContaining("I saved the Notepad file to"),
       summary: expect.stringContaining("I saved the Notepad file to"),
     })
-  })
-
-  it("treats save-it follow-ups as Notepad follow-ups, not WhatsApp", async () => {
-    await drain({ text: "write buy milk in notepad", plan: "max" })
-    const events = await drain({ text: "save it", plan: "max" })
-
-    expect(whatsAppSends).toEqual([])
-    expect(events).toContainEqual({
-      type: "agent_text",
-      text: "Where should I save the Notepad file, and what should I name it?",
-    })
-  })
-
-  it("holds a reminder draft and sends it on the follow-up recipient command", async () => {
-    const draftEvents = await drain({
-      text: "write a reminder about buying facing and send to whatsapp",
-      plan: "max",
-    })
-    expect(whatsAppSends).toEqual([])
-    expect(draftEvents).toContainEqual({
-      type: "agent_text",
-      text: 'I wrote: "Reminder: buying facing". Who should I send it to on WhatsApp?',
-    })
-
-    await drain({ text: "send the reminder to myself", plan: "max" })
-    expect(whatsAppSends).toEqual([{ recipient: "you", message: "Reminder: buying facing" }])
-  })
-
-  it("sends a pending reminder draft when the follow-up says message me", async () => {
-    await drain({
-      text: "write a reminder about buying facing and send to whatsapp",
-      plan: "max",
-    })
-
-    await drain({ text: "send message to me", plan: "max" })
-    expect(whatsAppSends).toEqual([{ recipient: "you", message: "Reminder: buying facing" }])
-  })
-
-  it("sends a pending reminder draft when the follow-up references the told text", async () => {
-    await drain({
-      text: "write a reminder about buying facing and send to whatsapp",
-      plan: "max",
-    })
-
-    await drain({ text: "send the text i told you to send to me", plan: "max" })
-    expect(whatsAppSends).toEqual([{ recipient: "you", message: "Reminder: buying facing" }])
-  })
-
-  it("does not let a pending draft steal a fresh explicit WhatsApp message", async () => {
-    await drain({
-      text: "write a reminder about buying facing and send to whatsapp",
-      plan: "max",
-    })
-
-    await drain({ text: "send hi to lily on whatsapp", plan: "max" })
-    expect(whatsAppSends).toEqual([{ recipient: "lily", message: "hi" }])
   })
 })

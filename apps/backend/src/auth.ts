@@ -8,6 +8,8 @@ import { eq } from "drizzle-orm"
 import type { Context, Next } from "hono"
 import * as authSchema from "./auth-schema.js"
 import { effectivePlanForUser, effectiveRoleForUser, isOwnerUser } from "./entitlements.js"
+import { grantCredits } from "./services/credit-ledger.js"
+import { getPlan } from "@yomi/shared/plans"
 
 const REGULAR_INTERACTION_LIMIT = 100
 
@@ -19,7 +21,8 @@ async function getUserFields(userId: string) {
       subscriptionStatus: authSchema.user.subscriptionStatus,
       trialEndDate: authSchema.user.trialEndDate,
       currentPeriodEnd: authSchema.user.currentPeriodEnd,
-      razorpayCustomerId: authSchema.user.razorpayCustomerId,
+      dodoCustomerId: authSchema.user.dodoCustomerId,
+      dodoSubscriptionId: authSchema.user.dodoSubscriptionId,
       trialInteractionUsed: authSchema.user.trialInteractionUsed,
       trialInteractionLimit: authSchema.user.trialInteractionLimit,
       dailyChatCount: authSchema.user.dailyChatCount,
@@ -58,6 +61,20 @@ export const auth = betterAuth({
                   },
             )
             .where(eq(authSchema.user.id, createdUser.id))
+
+          if (!isOwner) {
+            const plan = getPlan("explore")
+            await grantCredits({
+              userId: createdUser.id,
+              amount: plan.includedCredits,
+              source: "subscription_cycle",
+              sourceId: `signup:${createdUser.id}:explore`,
+              idempotencyKey: `signup:${createdUser.id}:explore_credits`,
+              expiresAt: new Date(Date.now() + 35 * 24 * 60 * 60 * 1000),
+              reason: "Explore monthly credits",
+              metadata: { plan: "explore" },
+            })
+          }
         },
       },
     },
@@ -77,7 +94,8 @@ export const auth = betterAuth({
           subscriptionStatus: fields?.subscriptionStatus ?? "inactive",
           trialEndDate: fields?.trialEndDate ?? null,
           currentPeriodEnd: fields?.currentPeriodEnd ?? null,
-          razorpayCustomerId: fields?.razorpayCustomerId ?? null,
+          dodoCustomerId: fields?.dodoCustomerId ?? null,
+          dodoSubscriptionId: fields?.dodoSubscriptionId ?? null,
           trialInteractionUsed: fields?.trialInteractionUsed ?? 0,
           trialInteractionLimit: fields?.trialInteractionLimit ?? REGULAR_INTERACTION_LIMIT,
           dailyChatCount: fields?.dailyChatCount ?? 0,
@@ -107,8 +125,8 @@ export type SessionUser = typeof auth.$Infer.Session.user & {
   subscriptionStatus: string
   trialEndDate: Date | null
   currentPeriodEnd: Date | null
-  razorpayCustomerId: string | null
-  razorpaySubId: string | null
+  dodoCustomerId: string | null
+  dodoSubscriptionId: string | null
   trialInteractionUsed: number
   trialInteractionLimit: number
   dailyChatCount: number

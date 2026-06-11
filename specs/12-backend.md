@@ -9,7 +9,7 @@ and cloud archive mirroring/search.
 
 - Hono is the backend framework.
 - LLM and speech provider keys live only in backend/server environments.
-- Razorpay is the payment processor.
+- Dodo Payments is the payment processor.
 - Usage and feature gates are enforced at backend API boundaries.
 - Structured memory stays in the sidecar; the backend hosts the mirrored archive
   index for Cloud RAG search.
@@ -39,7 +39,7 @@ gates.
 
 ## Billing
 
-Billing routes create Razorpay subscriptions and receive webhooks. Webhooks
+Billing routes create Dodo Checkout Sessions and receive webhooks. Webhooks
 update the user's `plan`, `subscription_status`, and subscription records.
 
 Current self-serve launch plans:

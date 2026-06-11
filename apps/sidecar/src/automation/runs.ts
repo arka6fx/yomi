@@ -97,10 +97,10 @@ export function classifyAutomationOwner(task: string): AutomationOwner {
   const text = task.toLowerCase()
   if (/\bspotify|music|song|track|playlist\b/.test(text))
     return { id: "spotify", label: "Spotify Agent" }
-  if (/\bwhats\s*app|whatsapp|telegram|message|text|msg|send\b/.test(text))
-    return { id: "messaging", label: "Messaging Agent" }
-  if (/\bbrowser|website|web|url|chrome|edge|search|open\s+https?:\/\//.test(text))
-    return { id: "browser", label: "Browser Agent" }
+  // if (/\bwhats\s*app|whatsapp|telegram|message|text|msg|send\b/.test(text))
+  //   return { id: "messaging", label: "Messaging Agent" } // will provide later
+  // if (/\bbrowser|website|web|url|chrome|edge|search|open\s+https?:\/\//.test(text))
+  //   return { id: "browser", label: "Browser Agent" } // will provide later
   if (/\bcalendar|meeting|reminder|schedule|event\b/.test(text))
     return { id: "calendar", label: "Calendar Agent" }
   if (/\bfile|folder|notepad|save|delete|rename|copy|paste\b/.test(text))
@@ -126,16 +126,16 @@ export function buildAutomationPreview(task: string): AutomationPreview {
   const base =
     owner.id === "spotify"
       ? ["Find Spotify", "Run playback action"]
-      : owner.id === "browser"
-        ? ["Open browser context", "Inspect page", "Run requested web action"]
-        : owner.id === "messaging"
-          ? [
-              "Open messaging app",
-              "Find recipient or chat",
-              "Prepare message",
-              "Wait for approval if sending",
-            ]
-          : ["Inspect current context", "Choose the right tool", "Run the requested action"]
+      // : owner.id === "browser"
+      //   ? ["Open browser context", "Inspect page", "Run requested web action"]
+      //   : owner.id === "messaging"
+      //     ? [
+      //         "Open messaging app",
+      //         "Find recipient or chat",
+      //         "Prepare message",
+      //         "Wait for approval if sending",
+      //       ]
+      : ["Inspect current context", "Choose the right tool", "Run the requested action"]
   return {
     steps: base,
     estimatedSeconds: Math.max(8, base.length * 5),
@@ -243,7 +243,8 @@ export function completeAutomation(session: AutomationSession, summary: string):
       )
       .run("completed", endedAt, summary, JSON.stringify(session.run.timeline), session.run.id),
   )
-  reportUsage(session.run.owner.id === "browser" ? "browser_run" : "agent_run")
+  // reportUsage(session.run.owner.id === "browser" ? "browser_run" : "agent_run")
+  reportUsage("agent_run")
   return {
     type: "automation_completed",
     runId: session.run.id,
