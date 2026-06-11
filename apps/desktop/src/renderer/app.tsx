@@ -18,6 +18,7 @@ const TTS_PLAYBACK_GAIN = 1.45
 
 type UpdateNotice =
   | { status: "available"; version: string; releaseDate: string }
+  | { status: "downloading"; version: string }
   | { status: "downloaded"; version: string }
   | null
 
@@ -3591,6 +3592,23 @@ const App: React.FC = () => {
     }
   }, [])
 
+  const handleUpdateClick = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault()
+      event.stopPropagation()
+      if (!updateNotice) return
+      if (updateNotice.status === "downloaded") {
+        window.yomi.installUpdate()
+        return
+      }
+      if (updateNotice.status === "available") {
+        setUpdateNotice({ status: "downloading", version: updateNotice.version })
+        window.yomi.downloadUpdate()
+      }
+    },
+    [updateNotice],
+  )
+
   // Size the Electron shell to the root overlay only; transient hit areas animate.
   React.useLayoutEffect(() => {
     let frame = 0
@@ -4016,7 +4034,7 @@ const App: React.FC = () => {
       window.removeEventListener("resize", sendHitRegions)
       window.yomi.setHitRegions([])
     }
-  }, [authState, entries.length, hotkeyState, menuOpen])
+  }, [authState, entries.length, hotkeyState, menuOpen, updateNotice])
 
   // ── Sign-in states ──────────────────────────────────────────────────────────
 
@@ -4120,16 +4138,15 @@ const App: React.FC = () => {
             <span>
               {updateNotice.status === "available"
                 ? `Yomi ${updateNotice.version} is available.`
-                : `Yomi ${updateNotice.version} is ready to install.`}
+                : updateNotice.status === "downloading"
+                  ? `Downloading Yomi ${updateNotice.version}...`
+                  : `Yomi ${updateNotice.version} is ready to install.`}
             </span>
             <div style={{ display: "flex", gap: 8 }}>
               <button
                 className="no-drag"
-                onClick={() =>
-                  updateNotice.status === "available"
-                    ? window.yomi.downloadUpdate()
-                    : window.yomi.installUpdate()
-                }
+                onClick={handleUpdateClick}
+                disabled={updateNotice.status === "downloading"}
                 style={{
                   border: `1px solid ${t.borderHi}`,
                   borderRadius: 8,
@@ -4137,10 +4154,15 @@ const App: React.FC = () => {
                   color: t.text,
                   padding: "5px 9px",
                   fontSize: 11,
-                  cursor: "pointer",
+                  cursor: updateNotice.status === "downloading" ? "default" : "pointer",
+                  opacity: updateNotice.status === "downloading" ? 0.7 : 1,
                 }}
               >
-                {updateNotice.status === "available" ? "Download" : "Restart"}
+                {updateNotice.status === "available"
+                  ? "Download"
+                  : updateNotice.status === "downloading"
+                    ? "Downloading"
+                    : "Restart"}
               </button>
               <button
                 className="no-drag"
