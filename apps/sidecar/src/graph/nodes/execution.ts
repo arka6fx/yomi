@@ -4,10 +4,10 @@ import { redactAutomationPayload } from "../../automation/runs.js"
 import { resolveAgent, scopeTools } from "../../automation/agents/registry.js"
 import { toolGuardrail } from "../../harness/hooks.js"
 import { compressContext } from "../../agent/index.js"
-import { AGENT_PATH_MODEL, BURST_STEPS, type GraphDeps } from "../deps.js"
+import { AGENT_MODEL, BURST_STEPS, type GraphDeps } from "../deps.js"
 import type { GraphState, ToolHistoryItem } from "../state.js"
 
-// 1M tokens for MiniMax. Used by the turn-level compressor when no
+// 1M tokens for GPT-4.1. Used by the turn-level compressor when no
 // model-aware context length is available.
 const DEFAULT_MODEL_CONTEXT_WINDOW = 1_000_000
 
@@ -51,7 +51,7 @@ export function makeExecutionNode(deps: GraphDeps) {
     toolGuardrail.resetForTurn()
 
     const result = streamText({
-      model: deps.modelFactory(AGENT_PATH_MODEL),
+      model: deps.modelFactory(AGENT_MODEL),
       system,
       messages: state.messages,
       tools,

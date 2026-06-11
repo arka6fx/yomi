@@ -286,9 +286,9 @@ app.post("/stt", async (c) => {
     return c.json({ text })
   } catch (err) {
     const message = err instanceof Error ? err.message : "STT failed"
-    if (message.includes("Bearer token")) {
+    if (message.includes("ELEVENLABS_API_KEY")) {
       console.error(`[yomi/stt] ${message}`)
-      return c.json({ error: "STT is not configured: AWS Bedrock token is missing" }, 503)
+      return c.json({ error: "STT is not configured: ELEVENLABS_API_KEY is missing" }, 503)
     }
     console.error(`[yomi/stt] ${message}`)
     return c.json({ error: message }, 502)

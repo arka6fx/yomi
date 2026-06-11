@@ -3,12 +3,12 @@ import { transcribe, transcribeStreaming } from "./transcribe.js"
 
 const DUMMY_WAV = new Uint8Array(44)
 
-mock.module("../services/bedrock/nova-sonic.js", () => ({
-  novaSonicTranscribe: async () => ({ text: "transcribed text" }),
+mock.module("../services/elevenlabs/stt.js", () => ({
+  elevenLabsTranscribe: async () => ({ text: "transcribed text" }),
 }))
 
 describe("transcribe", () => {
-  it("returns transcript from Nova Sonic", async () => {
+  it("returns transcript from ElevenLabs", async () => {
     const text = await transcribe(DUMMY_WAV)
     expect(text).toBe("transcribed text")
   })

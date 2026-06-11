@@ -9,7 +9,7 @@ Yomi is split into a desktop shell, a local sidecar, a cloud backend, and a
 landing site.
 
 ```text
-apps/backend/   Hono on Bun    auth, billing, LLM proxy, usage metering
+apps/backend/   Hono Worker    auth, billing, LLM proxy, usage metering
 apps/desktop/   Electron       tray/notch UI, hotkeys, screen and mic capture
 apps/landing/   Next.js 16     landing, auth pages, dashboard, downloads
 apps/sidecar/   Bun service    router, fast path, agent loop, memory, MCP
@@ -82,8 +82,10 @@ GOOGLE_CLIENT_SECRET=...
 GITHUB_CLIENT_ID=...
 GITHUB_CLIENT_SECRET=...
 
-OPENAI_API_KEY=...
-OPENAI_BASE_URL=...
+AI_CREDITS_API_KEY=...
+AI_CREDITS_BASE_URL=...
+AI_CREDITS_FAST_MODEL=gpt-4.1-mini
+AI_CREDITS_AGENT_MODEL=gpt-4.1
 
 ELEVENLABS_API_KEY=...
 ELEVENLABS_VOICE_ID=EXAVITQu4vr4xnSDxMaL
@@ -91,20 +93,19 @@ ELEVENLABS_VOICE_ID=EXAVITQu4vr4xnSDxMaL
 ENCRYPTION_KEY=...
 SIDECAR_SECRET=...
 
-# Messaging
-TELEGRAM_BOT_TOKEN=
-DISCORD_BOT_TOKEN=
-DISCORD_CLIENT_ID=
-DISCORD_CLIENT_SECRET=
-DISCORD_REDIRECT_URI=http://localhost:3001/api/gateway/discord/callback
-TELEGRAM_DEEP_LINK_ENABLED=false
-TELEGRAM_BOT_USERNAME=yomi_assistant_bot
-NEXT_PUBLIC_DISCORD_INVITE=
 ```
 
-Production uses `https://yomi.arka6fx.com` for `BETTER_AUTH_URL`,
-`BETTER_AUTH_BASE_URL`, `BACKEND_URL`, `NEXT_PUBLIC_BACKEND_URL`, and
-`NEXT_PUBLIC_APP_URL`.
+Production uses split Cloudflare hostnames:
+
+```bash
+BETTER_AUTH_URL=https://yomi.arka6fx.com
+BETTER_AUTH_BASE_URL=https://api.yomi.arka6fx.com
+BACKEND_URL=https://api.yomi.arka6fx.com
+NEXT_PUBLIC_BACKEND_URL=https://api.yomi.arka6fx.com
+NEXT_PUBLIC_APP_URL=https://yomi.arka6fx.com
+YOMI_BACKEND_URL=https://api.yomi.arka6fx.com
+CORS_ORIGIN=https://yomi.arka6fx.com
+```
 
 ## Billing (Dodo Payments)
 
@@ -114,19 +115,31 @@ backend references them by ID for subscription and credit-pack checkouts.
 
 ```bash
 # Required for billing
-DODO_API_KEY=
-DODO_WEBHOOK_SECRET=
-DODO_API_BASE=https://api.dodopayments.com
+DODO_ENV=test
 
-# Product IDs from Dodo dashboard
-DODO_PRODUCT_PRO=
-DODO_PRODUCT_MAX=
-DODO_PRODUCT_CREDITS_500=
-DODO_PRODUCT_CREDITS_2000=
-DODO_PRODUCT_CREDITS_6000=
+# Test mode
+DODO_TEST_API_KEY=
+DODO_TEST_WEBHOOK_SECRET=
+DODO_TEST_API_BASE=https://api.dodopayments.com
+DODO_TEST_PRODUCT_PRO=
+DODO_TEST_PRODUCT_MAX=
+DODO_TEST_PRODUCT_CREDITS_500=
+DODO_TEST_PRODUCT_CREDITS_2000=
+DODO_TEST_PRODUCT_CREDITS_6000=
+
+# Live mode
+DODO_LIVE_API_KEY=
+DODO_LIVE_WEBHOOK_SECRET=
+DODO_LIVE_API_BASE=
+DODO_LIVE_PRODUCT_PRO=
+DODO_LIVE_PRODUCT_MAX=
+DODO_LIVE_PRODUCT_CREDITS_500=
+DODO_LIVE_PRODUCT_CREDITS_2000=
+DODO_LIVE_PRODUCT_CREDITS_6000=
 ```
 
-Dodo keys can stay blank until billing is enabled.
+Set `DODO_ENV=test` for local development and `DODO_ENV=live` for production.
+Only the selected mode needs values.
 
 **Key design decisions:**
 - USD is the canonical billing currency. Local equivalents are estimated
@@ -134,85 +147,6 @@ Dodo keys can stay blank until billing is enabled.
 - Subscriptions and credit packs use Dodo Checkout Sessions
 - 7-day grace period after payment failure before access is cut off
 - Webhooks are idempotent (deduplicated by event ID)
-
-## Messaging Gateway
-
-Yomi supports messaging bots on Telegram and Discord. Link your account once,
-then chat with Yomi from your phone even when away from your computer.
-
-```text
-┌──────────────┐     ┌─────────────────┐     ┌──────────────┐
-│  Telegram /  │ --> │  Cloud Backend  │ --> │  Sidecar     │
-│  Discord     │ <-- │  (queue + send) │ <-- │  (LLM reply) │
-└──────────────┘     └─────────────────┘     └──────────────┘
-```
-
-### Telegram
-
-Create a bot via [@BotFather](https://t.me/BotFather) and set
-`TELEGRAM_BOT_TOKEN`. The bot polls Telegram every 3s for new messages.
-
-**Deep-link onboarding (production):** When `TELEGRAM_DEEP_LINK_ENABLED=true`,
-the dashboard generates a one-time token. Clicking
-`https://t.me/yomi_assistant_bot?start=TOKEN` links the Telegram account
-instantly — no code entry needed. Tokens expire after 15 minutes. The 6-char
-code flow remains as fallback for users who message the bot directly.
-
-### Discord
-
-Create an application at
-[discord.com/developers](https://discord.com/developers/applications). Set:
-
-```bash
-DISCORD_BOT_TOKEN=      # Bot token from the Bot page
-DISCORD_CLIENT_ID=      # Application ID from General Information
-DISCORD_CLIENT_SECRET=  # From OAuth2 → Client Secret
-DISCORD_REDIRECT_URI=   # e.g. https://yomi.arka6fx.com/api/gateway/discord/callback
-```
-
-The bot connects via Gateway WebSocket (intents: `MESSAGE_CONTENT |
-DIRECT_MESSAGES | GUILDS`) and auto-registers a `/link` slash command on
-startup. Two onboarding paths:
-
-1. **Dashboard OAuth:** User clicks "Add Discord" → OAuth2 identify flow →
-   receives a 6-character code on the `/link` page. Enter it there or use
-   `/link CODE` in any server the bot is in.
-2. **Slash command:** User types `/link ABC123` in any server/channel → account
-   linked instantly via `handleDiscordLinkCode`.
-
-Once linked, DMs arrive via Gateway `MESSAGE_CREATE` events and route through
-the backend queue to the sidecar.
-
-### Linking Flow
-
-```
-Telegram (deep-link):
-  Dashboard → "Connect Telegram" → opens t.me/bot?start=TOKEN
-  → User presses Start → account linked automatically
-
-Telegram (manual):
-  User messages bot → bot replies with 6-char code
-  → User visits /link, enters code → account linked
-
-Discord:
-  Dashboard → "Add Discord" → OAuth → code shown on /link page
-  → Enter code on web OR use /link CODE in Discord → account linked
-```
-
-### Required Env Vars
-
-```bash
-TELEGRAM_BOT_TOKEN=
-TELEGRAM_BOT_USERNAME=yomi_assistant_bot
-TELEGRAM_DEEP_LINK_ENABLED=false
-
-DISCORD_BOT_TOKEN=
-DISCORD_CLIENT_ID=
-DISCORD_CLIENT_SECRET=
-DISCORD_REDIRECT_URI=
-
-NEXT_PUBLIC_DISCORD_INVITE=
-```
 
 ## Commands
 
@@ -254,13 +188,13 @@ checks that cannot belong to a single package.
 
 ## Production
 
-Production runs on EC2 with Docker Compose and nginx:
+Production targets Cloudflare:
 
-- public site: `https://yomi.arka6fx.com`
-- backend: proxied under `https://yomi.arka6fx.com/api/*`
-- nginx terminates TLS using certificates in `deploy/certs`
-- GitHub Actions deploys by SSHing to `/opt/yomi`, pulling `main`, and running
-  `docker compose up -d --build`
+- backend: Cloudflare Worker from `apps/backend`
+- public site/dashboard: Cloudflare Pages from `apps/landing`
+- database: Neon Postgres
+- billing: Dodo Payments
+- desktop installers: still published to `arka6fx/yomi-releases`
 
 See [SETUP_GUIDE.md](./SETUP_GUIDE.md) for the current runbook.
 
@@ -269,8 +203,8 @@ See [SETUP_GUIDE.md](./SETUP_GUIDE.md) for the current runbook.
 Configure OAuth callbacks:
 
 ```text
-https://yomi.arka6fx.com/api/auth/callback/github
-https://yomi.arka6fx.com/api/auth/callback/google
+https://api.yomi.arka6fx.com/api/auth/callback/github
+https://api.yomi.arka6fx.com/api/auth/callback/google
 ```
 
 Local callbacks:
