@@ -8,7 +8,7 @@ Backend API:         https://api.yomi.arka6fx.com
 Staging API:         https://api-staging.yomi.arka6fx.com
 ```
 
-Production runs on Cloudflare Workers and Cloudflare Pages.
+Production runs on Cloudflare Workers.
 
 ## Required Secrets
 
@@ -124,7 +124,9 @@ bunx wrangler secret put DODO_LIVE_PRODUCT_CREDITS_6000 --env production
 Set `DODO_ENV` in `apps/backend/wrangler.jsonc` vars instead of a secret.
 Only set `DODO_LIVE_API_BASE` in vars if Dodo gives you a non-default base URL.
 
-Set landing Pages environment variables in the Cloudflare Pages dashboard:
+Landing is deployed as a static-assets Worker. These values are useful for local
+builds or if you choose to point the client directly at the backend instead of
+the same-origin `/api/*` proxy:
 
 ```text
 NEXT_PUBLIC_BACKEND_URL=https://api.yomi.arka6fx.com
@@ -134,7 +136,8 @@ BETTER_AUTH_URL=https://yomi.arka6fx.com
 BETTER_AUTH_BASE_URL=https://api.yomi.arka6fx.com
 ```
 
-Backend Worker routes are configured in `apps/backend/wrangler.jsonc`:
+Custom domains are configured once in the Cloudflare dashboard. They are not
+managed by `wrangler.jsonc`, so deploy tokens only need Worker edit access:
 
 ```text
 production: api.yomi.arka6fx.com

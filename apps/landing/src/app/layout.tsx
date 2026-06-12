@@ -28,9 +28,14 @@ export const metadata: Metadata = {
     default: "Yomi - Your AI buddy on every screen",
   },
   description: "Yomi sees your screen, hears your voice, and acts so you touch your laptop less.",
+  manifest: "/site.webmanifest",
   icons: {
-    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
 }
 

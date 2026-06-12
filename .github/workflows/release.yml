@@ -46,13 +46,14 @@ jobs:
       - name: Write packaged sidecar env
         run: |
           @"
-AWS_BEDROCK_REGION=us-east-1
-AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
-AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
-FAST_PATH_MODEL=minimax.minimax-m2.5
-ROUTER_MODEL=minimax.minimax-m2.5
-AGENT_PATH_MODEL=minimax.minimax-m2.5
-TTS_ENGINE=nova-sonic
+AI_CREDITS_API_KEY=${{ secrets.AI_CREDITS_API_KEY }}
+AI_CREDITS_BASE_URL=${{ secrets.AI_CREDITS_BASE_URL }}
+AI_CREDITS_FAST_MODEL=${{ secrets.AI_CREDITS_FAST_MODEL }}
+AI_CREDITS_AGENT_MODEL=${{ secrets.AI_CREDITS_AGENT_MODEL }}
+ELEVENLABS_API_KEY=${{ secrets.ELEVENLABS_API_KEY }}
+ELEVENLABS_VOICE_ID=${{ secrets.ELEVENLABS_VOICE_ID }}
+ELEVENLABS_STT_MODEL=scribe_v2
+ELEVENLABS_TTS_MODEL=eleven_flash_v2_5
 YOMI_BACKEND_URL=https://yomi.arka6fx.com
 BACKEND_URL=https://yomi.arka6fx.com
 "@ | Set-Content .env -NoNewline

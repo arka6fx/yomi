@@ -1,6 +1,8 @@
 {
   "name": "yomi-backend",
   "main": "src/index.ts",
+  "workers_dev": false,
+  "preview_urls": false,
   "compatibility_date": "2026-06-11",
   "compatibility_flags": ["nodejs_compat_v2"],
   "observability": {
@@ -9,24 +11,31 @@
   },
   "vars": {
     "ENVIRONMENT": "development",
-    "DODO_ENV": "test"
+    "DODO_ENV": "test",
+    "BETTER_AUTH_URL": "https://yomi.arka6fx.com",
+    "BETTER_AUTH_BASE_URL": "https://api.yomi.arka6fx.com",
+    "CORS_ORIGIN": "https://yomi.arka6fx.com"
   },
   "env": {
     "staging": {
       "name": "yomi-backend-staging",
       "vars": {
         "ENVIRONMENT": "staging",
-        "DODO_ENV": "test"
-      },
-      "routes": [{ "pattern": "api-staging.yomi.arka6fx.com", "custom_domain": true }]
+        "DODO_ENV": "test",
+        "BETTER_AUTH_URL": "https://yomi.arka6fx.com",
+        "BETTER_AUTH_BASE_URL": "https://api.yomi.arka6fx.com",
+        "CORS_ORIGIN": "https://yomi.arka6fx.com"
+      }
     },
     "production": {
       "name": "yomi-backend",
       "vars": {
         "ENVIRONMENT": "production",
-        "DODO_ENV": "live"
-      },
-      "routes": [{ "pattern": "api.yomi.arka6fx.com", "custom_domain": true }]
+        "DODO_ENV": "live",
+        "BETTER_AUTH_URL": "https://yomi.arka6fx.com",
+        "BETTER_AUTH_BASE_URL": "https://api.yomi.arka6fx.com",
+        "CORS_ORIGIN": "https://yomi.arka6fx.com"
+      }
     }
   }
 }
