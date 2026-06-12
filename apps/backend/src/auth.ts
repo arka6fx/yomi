@@ -17,8 +17,20 @@ let authInstance: AuthInstance | null = null
 
 function getRuntimeAuthConfig() {
   const webOrigin = process.env["CORS_ORIGIN"] ?? process.env["BETTER_AUTH_URL"] ?? "http://localhost:3000"
-  const authBaseUrl = process.env["BETTER_AUTH_BASE_URL"] ?? "http://localhost:3001"
-  return { webOrigin, authBaseUrl }
+  const authBaseUrl = process.env["BETTER_AUTH_BASE_URL"] ?? webOrigin
+
+  const authBaseHost = new URL(authBaseUrl).hostname
+  const isSplitDomain = new URL(webOrigin).hostname !== authBaseHost
+
+  const hostParts = authBaseHost.split(".")
+  const cookieDomain =
+    isSplitDomain && hostParts.length >= 3 ? `.${hostParts.slice(-3).join(".")}` : null
+
+  const callbackBase = authBaseUrl.replace(/\/+$/, "")
+  const googleRedirectUri = `${callbackBase}/api/auth/callback/google`
+  const githubRedirectUri = `${callbackBase}/api/auth/callback/github`
+
+  return { webOrigin, authBaseUrl, isSplitDomain, cookieDomain, googleRedirectUri, githubRedirectUri }
 }
 
 async function getUserFields(userId: string) {
@@ -46,12 +58,19 @@ async function getUserFields(userId: string) {
 }
 
 function createAuth() {
-  const { webOrigin, authBaseUrl } = getRuntimeAuthConfig()
+  const { webOrigin, authBaseUrl, cookieDomain, googleRedirectUri, githubRedirectUri } =
+    getRuntimeAuthConfig()
+
+  const advanced: Record<string, unknown> = {}
+  if (cookieDomain) {
+    advanced.crossSubDomainCookies = { enabled: true, domain: cookieDomain }
+  }
 
   return betterAuth({
     database: drizzleAdapter(db, { provider: "pg", schema: authSchema }),
-    baseURL: authBaseUrl,
+    baseURL: webOrigin,
     trustedOrigins: [webOrigin, authBaseUrl].filter((origin, index, self) => self.indexOf(origin) === index),
+    advanced,
     databaseHooks: {
       user: {
         create: {
@@ -122,10 +141,12 @@ function createAuth() {
       google: {
         clientId: process.env["GOOGLE_CLIENT_ID"]!,
         clientSecret: process.env["GOOGLE_CLIENT_SECRET"]!,
+        redirectURI: googleRedirectUri,
       },
       github: {
         clientId: process.env["GITHUB_CLIENT_ID"]!,
         clientSecret: process.env["GITHUB_CLIENT_SECRET"]!,
+        redirectURI: githubRedirectUri,
       },
     },
   })
