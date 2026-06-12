@@ -64,15 +64,9 @@ app.get("/api/download", async (c) => {
 // Custom auth routes first (device-code flow)
 app.route("/api/auth", authRoutesRouter)
 
-// OAuth callback redirect: bounce through main domain so state cookie matches
-// Only redirect direct requests (no x-yomi-via header), not proxied ones
+// OAuth callback: Better Auth handles directly. redirectURI is set to the API
+// domain per-provider, and crossSubDomainCookies shares the session with landing.
 app.on(["GET"], "/api/auth/callback/:provider", async (c) => {
-  const url = new URL(c.req.url)
-  const isProxied = c.req.header("x-yomi-via") === "landing"
-  if ((url.searchParams.has("code") || url.searchParams.has("state")) && !isProxied) {
-    const webOrigin = process.env["CORS_ORIGIN"] ?? process.env["BETTER_AUTH_URL"] ?? "http://localhost:3000"
-    return c.redirect(`${webOrigin}${url.pathname}${url.search}`, 302)
-  }
   return getAuth().handler(c.req.raw)
 })
 
@@ -123,12 +117,4 @@ if (typeof Bun !== "undefined") {
   console.warn(`Backend listening on :${server.port}`)
 }
 
-export default {
-  fetch(request: Request, env: Record<string, unknown>, ctx: unknown) {
-    for (const [key, value] of Object.entries(env)) {
-      if (typeof value === "string") process.env[key] = value
-    }
-
-    return app.fetch(request, env, ctx as never)
-  },
-}
+export { app }

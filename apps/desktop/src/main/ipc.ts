@@ -610,20 +610,20 @@ async function streamQuery(
     const reader = res.body.getReader()
     const decoder = new TextDecoder()
     let buf = ""
+    let streamClosed = false
     while (true) {
       const { done, value } = await reader.read()
-      if (done) break
-      buf += decoder.decode(value, { stream: true })
+      if (value?.byteLength) {
+        buf += decoder.decode(value, { stream: !done })
+      }
       const lines = buf.split("\n")
       buf = lines.pop()!
       for (const line of lines) {
         if (!line.startsWith("data: ")) continue
         const event = JSON.parse(line.slice(6)) as SseEvent
         if (event.type === "agent_text") agentTextBuf += event.text
-        // Show a short label in chat instead of a long synthetic prompt (e.g. screen analysis).
         if (event.type === "transcript" && transcriptLabel) event.text = transcriptLabel
         if (event.type === "act_proposed" && overlayWasFocusable && !overlayWin.isDestroyed()) {
-          // Confirmation needs clickable Yes/No; restore focus only while waiting for the answer.
           overlayWin.setFocusable(true)
           overlayWin.show()
           overlayWin.focus()
@@ -633,7 +633,6 @@ async function streamQuery(
         }
         if (event.type === "done") {
           sawDone = true
-          // Record this agent turn so a follow-up command (next loop turn or manual Voice press) has context.
           if (useAgent) pushActTurn(text, agentTextBuf)
           endVoiceTurn()
         }
@@ -642,15 +641,38 @@ async function streamQuery(
           endVoiceTurn()
         }
       }
+      if (done) {
+        streamClosed = true
+        // Emit buffered or empty data as error so it reaches the renderer
+        if (buf.trim() && buf.startsWith("data: ")) {
+          try {
+            const event = JSON.parse(buf.slice(6).trim()) as SseEvent
+            send(overlayWin, event)
+          } catch {
+            /* best-effort */
+          }
+        }
+        break
+      }
     }
   } catch (err) {
     if ((err as Error).name === "AbortError") {
-      // ESC resets to idle; a barge-in already transitioned to listening, so leave it.
       if (!bargingIn) resetToIdle()
       bargingIn = false
       return
     }
-    throw err
+    // Only surface socket errors if no error event was already received
+    if (!sawDone) {
+      send(overlayWin, {
+        type: "error",
+        message: streamClosed
+          ? "Voice stream closed before completion. Try again."
+          : `Voice connection failed: ${err instanceof Error ? err.message : "Unknown error"}`,
+      })
+    }
+    endVoiceTurn()
+    return
+  }
   } finally {
     agentAutomationFocusSuppressed = false
     if (overlayWasFocusable && !overlayWin.isDestroyed()) overlayWin.setFocusable(true)

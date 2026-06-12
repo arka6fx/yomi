@@ -36,7 +36,7 @@ const configuredBackendUrl = process.env["YOMI_BACKEND_URL"] ?? process.env["BAC
 const defaultBackendUrl =
   !app.isPackaged && process.env["YOMI_DEV"] === "true"
     ? "http://localhost:3001"
-    : "https://yomi.arka6fx.com"
+    : "https://api.yomi.arka6fx.com"
 
 export const BACKEND_URL = configuredBackendUrl ?? defaultBackendUrl
 

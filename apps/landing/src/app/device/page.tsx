@@ -12,6 +12,7 @@ function DeviceContent() {
 
   const { data: session, isPending } = authClient.useSession()
   const [urlCode, setUrlCode] = useState<string | null>(null)
+  const [provider, setProvider] = useState<string | null>(null)
   const [code, setCode] = useState("")
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
@@ -53,10 +54,12 @@ function DeviceContent() {
   }
 
   useEffect(() => {
-    const codeParam =
-      new URLSearchParams(window.location.search).get("code")?.trim().toUpperCase() ?? null
+    const params = new URLSearchParams(window.location.search)
+    const codeParam = params.get("code")?.trim().toUpperCase() ?? null
+    const providerParam = params.get("provider") ?? null
     setUrlCode(codeParam)
     if (codeParam) setCode(codeParam)
+    if (providerParam) setProvider(providerParam)
   }, [])
 
   // Auto-confirm when user arrives with code in URL and is already logged in
@@ -67,11 +70,12 @@ function DeviceContent() {
     confirmCode(urlCode, session.session.token)
   }, [session, urlCode, done])
 
-  // Not logged in + code in URL → send to sign-in, preserving the code in redirect
+  // Not logged in + code in URL → send to sign-in, preserving the code and provider in redirect
   useEffect(() => {
     if (isPending || session || !urlCode) return
-    router.replace(`/signin?redirect=${encodeURIComponent(`/device?code=${urlCode}`)}`)
-  }, [isPending, session, urlCode, router])
+    const providerSuffix = provider ? `&provider=${encodeURIComponent(provider)}` : ""
+    router.replace(`/signin?redirect=${encodeURIComponent(`/device?code=${urlCode}${providerSuffix}`)}`)
+  }, [isPending, session, urlCode, provider, router])
 
   async function handleConfirm(e: React.FormEvent) {
     e.preventDefault()
