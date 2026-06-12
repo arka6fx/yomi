@@ -14,7 +14,7 @@ import { effectivePlanForUser, isOwnerUser } from "../entitlements.js"
 import { llmRerank, mmrRerank, parseVector, type RerankCandidate } from "../lib/rerank.js"
 
 const EMBEDDING_DIMENSIONS = 1536
-const EMBEDDING_MODEL = "disabled-bedrock-pending"
+const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
 const MAX_DOCUMENT_CHARS = 120_000
 const CHUNK_CHARS = 1800
 const CHUNK_OVERLAP = 220
@@ -78,7 +78,27 @@ function chunkText(content: string): string[] {
 
 async function embedText(input: string): Promise<number[]> {
   if (!input.trim()) return []
-  throw new Error("Cloud RAG embeddings are disabled until an embeddings provider is configured")
+  const apiKey = process.env["AI_CREDITS_API_KEY"]
+  if (!apiKey) throw new Error("AI_CREDITS_API_KEY is required for Cloud RAG embeddings")
+
+  const baseUrl = (process.env["AI_CREDITS_BASE_URL"] ?? "https://api.aicredits.in/v1").replace(/\/+$/, "")
+  const model = process.env["AI_CREDITS_EMBEDDING_MODEL"] ?? DEFAULT_EMBEDDING_MODEL
+  const res = await fetch(`${baseUrl}/embeddings`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ model, input }),
+  })
+
+  if (!res.ok) throw new Error(`AI Credits embeddings failed: ${res.status}`)
+  const body = (await res.json()) as { data?: { embedding?: number[] }[] }
+  const embedding = body.data?.[0]?.embedding
+  if (!Array.isArray(embedding) || embedding.length !== EMBEDDING_DIMENSIONS) {
+    throw new Error(`AI Credits embedding dimensions must be ${EMBEDDING_DIMENSIONS}`)
+  }
+  return embedding
 }
 
 function vectorLiteral(values: number[]): string {
@@ -186,7 +206,7 @@ async function upsertMirrorSource(userId: string, source: CloudArchiveSource) {
     await db.insert(ragEmbeddings).values({
       userId,
       chunkId: createdChunk.id,
-      model: EMBEDDING_MODEL,
+      model: process.env["AI_CREDITS_EMBEDDING_MODEL"] ?? DEFAULT_EMBEDDING_MODEL,
       embedding,
     })
   }
@@ -347,7 +367,7 @@ ragRouter.post("/documents", async (c) => {
     await db.insert(ragEmbeddings).values({
       userId: user.id,
       chunkId: createdChunk.id,
-      model: EMBEDDING_MODEL,
+      model: process.env["AI_CREDITS_EMBEDDING_MODEL"] ?? DEFAULT_EMBEDDING_MODEL,
       embedding,
     })
   }

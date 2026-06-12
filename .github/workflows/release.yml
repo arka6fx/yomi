@@ -18,6 +18,8 @@ jobs:
     name: Build & publish Windows installer
     runs-on: windows-latest
     timeout-minutes: 45
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
@@ -34,7 +36,7 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: Install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Bump desktop version
         working-directory: apps/desktop
@@ -45,18 +47,20 @@ jobs:
 
       - name: Write packaged sidecar env
         run: |
-          @"
-AI_CREDITS_API_KEY=${{ secrets.AI_CREDITS_API_KEY }}
-AI_CREDITS_BASE_URL=${{ secrets.AI_CREDITS_BASE_URL }}
-AI_CREDITS_FAST_MODEL=${{ secrets.AI_CREDITS_FAST_MODEL }}
-AI_CREDITS_AGENT_MODEL=${{ secrets.AI_CREDITS_AGENT_MODEL }}
-ELEVENLABS_API_KEY=${{ secrets.ELEVENLABS_API_KEY }}
-ELEVENLABS_VOICE_ID=${{ secrets.ELEVENLABS_VOICE_ID }}
-ELEVENLABS_STT_MODEL=scribe_v2
-ELEVENLABS_TTS_MODEL=eleven_flash_v2_5
-YOMI_BACKEND_URL=https://yomi.arka6fx.com
-BACKEND_URL=https://yomi.arka6fx.com
-"@ | Set-Content .env -NoNewline
+          $lines = @(
+            "AI_CREDITS_API_KEY=${{ secrets.AI_CREDITS_API_KEY }}"
+            "AI_CREDITS_BASE_URL=${{ secrets.AI_CREDITS_BASE_URL }}"
+            "AI_CREDITS_FAST_MODEL=${{ secrets.AI_CREDITS_FAST_MODEL }}"
+            "AI_CREDITS_AGENT_MODEL=${{ secrets.AI_CREDITS_AGENT_MODEL }}"
+            "AI_CREDITS_EMBEDDING_MODEL=text-embedding-3-small"
+            "ELEVENLABS_API_KEY=${{ secrets.ELEVENLABS_API_KEY }}"
+            "ELEVENLABS_VOICE_ID=${{ secrets.ELEVENLABS_VOICE_ID }}"
+            "ELEVENLABS_STT_MODEL=scribe_v2"
+            "ELEVENLABS_TTS_MODEL=eleven_flash_v2_5"
+            "YOMI_BACKEND_URL=https://yomi.arka6fx.com"
+            "BACKEND_URL=https://yomi.arka6fx.com"
+          )
+          $lines -join "`n" | Set-Content .env -NoNewline
 
       - name: Build sidecar (Windows x64)
         working-directory: apps/sidecar
