@@ -39,6 +39,7 @@ AI_CREDITS_API_KEY=...
 AI_CREDITS_BASE_URL=...
 AI_CREDITS_FAST_MODEL=gpt-4.1-mini
 AI_CREDITS_AGENT_MODEL=gpt-4.1
+AI_CREDITS_EMBEDDING_MODEL=text-embedding-3-small
 
 ELEVENLABS_API_KEY=...
 ELEVENLABS_VOICE_ID=EXAVITQu4vr4xnSDxMaL
@@ -104,7 +105,6 @@ bunx wrangler secret put GITHUB_CLIENT_ID --env production
 bunx wrangler secret put GITHUB_CLIENT_SECRET --env production
 bunx wrangler secret put ENCRYPTION_KEY --env production
 bunx wrangler secret put AI_CREDITS_API_KEY --env production
-bunx wrangler secret put AI_CREDITS_BASE_URL --env production
 bunx wrangler secret put ELEVENLABS_API_KEY --env production
 bunx wrangler secret put ELEVENLABS_VOICE_ID --env production
 ```

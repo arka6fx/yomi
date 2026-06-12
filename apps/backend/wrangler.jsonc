@@ -14,7 +14,9 @@
     "DODO_ENV": "test",
     "BETTER_AUTH_URL": "https://yomi.arka6fx.com",
     "BETTER_AUTH_BASE_URL": "https://api.yomi.arka6fx.com",
-    "CORS_ORIGIN": "https://yomi.arka6fx.com"
+    "CORS_ORIGIN": "https://yomi.arka6fx.com",
+    "AI_CREDITS_BASE_URL": "https://api.aicredits.in/v1",
+    "AI_CREDITS_EMBEDDING_MODEL": "text-embedding-3-small"
   },
   "env": {
     "staging": {
@@ -24,7 +26,9 @@
         "DODO_ENV": "test",
         "BETTER_AUTH_URL": "https://yomi.arka6fx.com",
         "BETTER_AUTH_BASE_URL": "https://api.yomi.arka6fx.com",
-        "CORS_ORIGIN": "https://yomi.arka6fx.com"
+        "CORS_ORIGIN": "https://yomi.arka6fx.com",
+        "AI_CREDITS_BASE_URL": "https://api.aicredits.in/v1",
+        "AI_CREDITS_EMBEDDING_MODEL": "text-embedding-3-small"
       }
     },
     "production": {
@@ -34,7 +38,9 @@
         "DODO_ENV": "live",
         "BETTER_AUTH_URL": "https://yomi.arka6fx.com",
         "BETTER_AUTH_BASE_URL": "https://api.yomi.arka6fx.com",
-        "CORS_ORIGIN": "https://yomi.arka6fx.com"
+        "CORS_ORIGIN": "https://yomi.arka6fx.com",
+        "AI_CREDITS_BASE_URL": "https://api.aicredits.in/v1",
+        "AI_CREDITS_EMBEDDING_MODEL": "text-embedding-3-small"
       }
     }
   }

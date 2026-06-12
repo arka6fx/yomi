@@ -27,6 +27,9 @@ let sourceRows: unknown[] = [{ id: "source_1" }]
 let documentRows: unknown[] = []
 let conflictTargets: unknown[][] = []
 const realFetch = globalThis.fetch
+const realAiCreditsApiKey = process.env["AI_CREDITS_API_KEY"]
+const realAiCreditsBaseUrl = process.env["AI_CREDITS_BASE_URL"]
+const realAiCreditsEmbeddingModel = process.env["AI_CREDITS_EMBEDDING_MODEL"]
 
 const fakeDb = {
   insert: (table?: unknown) => ({
@@ -112,13 +115,15 @@ function user(overrides: Partial<TestUser> = {}): TestUser {
 
 describe("Cloud RAG routes", () => {
   beforeEach(() => {
+    process.env["AI_CREDITS_API_KEY"] = "test-key"
+    process.env["AI_CREDITS_BASE_URL"] = "https://aicredits.test/v1"
+    process.env["AI_CREDITS_EMBEDDING_MODEL"] = "text-embedding-3-small"
     globalThis.fetch = (async (...args: Parameters<typeof fetch>) => {
       const [input] = args
       const url = typeof input === "string" ? input : input.toString()
       if (url.includes("/embeddings")) {
-        return new Response(JSON.stringify({ data: [{ embedding: [0.1, 0.2, 0.3] }] }), {
-          status: 200,
-        })
+        const embedding = Array.from({ length: 1536 }, (_, i) => (i % 3) / 10)
+        return new Response(JSON.stringify({ data: [{ embedding }] }), { status: 200 })
       }
       return new Response("{}", { status: 200 })
     }) as typeof fetch
@@ -133,6 +138,12 @@ describe("Cloud RAG routes", () => {
 
   afterEach(() => {
     globalThis.fetch = realFetch
+    if (realAiCreditsApiKey === undefined) delete process.env["AI_CREDITS_API_KEY"]
+    else process.env["AI_CREDITS_API_KEY"] = realAiCreditsApiKey
+    if (realAiCreditsBaseUrl === undefined) delete process.env["AI_CREDITS_BASE_URL"]
+    else process.env["AI_CREDITS_BASE_URL"] = realAiCreditsBaseUrl
+    if (realAiCreditsEmbeddingModel === undefined) delete process.env["AI_CREDITS_EMBEDDING_MODEL"]
+    else process.env["AI_CREDITS_EMBEDDING_MODEL"] = realAiCreditsEmbeddingModel
   })
 
   it("blocks Explore users from creating sources", async () => {
