@@ -191,7 +191,7 @@ Speech:     ElevenLabs scribe_v2 + eleven_flash_v2_5
 
 Production web/backend deploys come from this repo's `main` branch. Desktop
 installers are separate: always publish Windows releases to
-`arka6fx/yomi-releases` using `.github/workflows/release.yml`.
+`arka6fx/yomi-releases` using the release workflow in that repo (`arka6fx/yomi-releases/.github/workflows/release.yml`).
 
 When STT/TTS or sidecar code changes, deploying backend/landing is not enough.
 Build and publish a new desktop installer so the packaged sidecar is updated.
