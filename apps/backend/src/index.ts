@@ -64,6 +64,18 @@ app.get("/api/download", async (c) => {
 // Custom auth routes first (device-code flow)
 app.route("/api/auth", authRoutesRouter)
 
+// OAuth callback redirect: bounce through main domain so state cookie matches
+// Only redirect direct requests (no x-yomi-via header), not proxied ones
+app.on(["GET"], "/api/auth/callback/:provider", async (c) => {
+  const url = new URL(c.req.url)
+  const isProxied = c.req.header("x-yomi-via") === "landing"
+  if ((url.searchParams.has("code") || url.searchParams.has("state")) && !isProxied) {
+    const webOrigin = process.env["CORS_ORIGIN"] ?? process.env["BETTER_AUTH_URL"] ?? "http://localhost:3000"
+    return c.redirect(`${webOrigin}${url.pathname}${url.search}`, 302)
+  }
+  return getAuth().handler(c.req.raw)
+})
+
 // Better Auth handles all remaining /api/auth/* routes
 // Explicitly skip custom auth paths to avoid Better Auth intercepting them
 const SKIP_AUTH_PATHS = new Set([
@@ -74,6 +86,7 @@ const SKIP_AUTH_PATHS = new Set([
 ])
 app.on(["GET", "POST"], "/api/auth/*", async (c) => {
   if (SKIP_AUTH_PATHS.has(c.req.path)) return c.notFound()
+
   return getAuth().handler(c.req.raw)
 })
 
