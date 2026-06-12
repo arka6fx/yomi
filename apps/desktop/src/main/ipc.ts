@@ -592,6 +592,7 @@ async function streamQuery(
   }
 
   let sawDone = false
+  let streamClosed = false
   let agentTextBuf = "" // accumulate the agent's reply to store in the Act loop history
 
   try {
@@ -610,7 +611,6 @@ async function streamQuery(
     const reader = res.body.getReader()
     const decoder = new TextDecoder()
     let buf = ""
-    let streamClosed = false
     while (true) {
       const { done, value } = await reader.read()
       if (value?.byteLength) {
