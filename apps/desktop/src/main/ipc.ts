@@ -672,7 +672,6 @@ async function streamQuery(
     }
     endVoiceTurn()
     return
-  }
   } finally {
     agentAutomationFocusSuppressed = false
     if (overlayWasFocusable && !overlayWin.isDestroyed()) overlayWin.setFocusable(true)
