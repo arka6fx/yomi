@@ -8,6 +8,9 @@ function loadDotEnv(): void {
     path.join(__dirname, "../../../.env"),
     path.join(__dirname, "../../../../.env"),
   ]
+  if (app.isPackaged) {
+    candidates.push(path.join(process.resourcesPath, "sidecar", ".env"))
+  }
   for (const file of candidates) {
     try {
       const content = fs.readFileSync(file, "utf8")

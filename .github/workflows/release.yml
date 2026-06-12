@@ -57,8 +57,8 @@ jobs:
             "ELEVENLABS_VOICE_ID=${{ secrets.ELEVENLABS_VOICE_ID }}"
             "ELEVENLABS_STT_MODEL=scribe_v2"
             "ELEVENLABS_TTS_MODEL=eleven_flash_v2_5"
-            "YOMI_BACKEND_URL=https://yomi.arka6fx.com"
-            "BACKEND_URL=https://yomi.arka6fx.com"
+            "YOMI_BACKEND_URL=https://api.yomi.arka6fx.com"
+            "BACKEND_URL=https://api.yomi.arka6fx.com"
           )
           $lines -join "`n" | Set-Content .env -NoNewline
 
