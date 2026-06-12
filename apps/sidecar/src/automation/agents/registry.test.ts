@@ -26,9 +26,9 @@ describe("resolveAgent", () => {
     expect(a.provider).toBe("native")
   })
 
-  it("routes messaging goals to the inherit-all messaging agent", () => {
+  it("routes whatsapp goals to the general automation agent while messaging is hidden", () => {
     const a = resolveAgent("send a whatsapp to Alex saying hi")
-    expect(a.id).toBe("messaging")
+    expect(a.id).toBe("automation")
     expect(a.toolNames).toBeUndefined() // inherits the full tool set
   })
 

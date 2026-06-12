@@ -22,8 +22,10 @@ describe("automation runs", () => {
 
   it("classifies owners from task text", () => {
     expect(classifyAutomationOwner("play focus music on Spotify").label).toBe("Spotify Agent")
-    expect(classifyAutomationOwner("open example.com in the browser").label).toBe("Browser Agent")
-    expect(classifyAutomationOwner("send a message on WhatsApp").label).toBe("Messaging Agent")
+    expect(classifyAutomationOwner("open example.com in the browser").label).toBe(
+      "Automation Agent",
+    )
+    expect(classifyAutomationOwner("send a message on WhatsApp").label).toBe("Automation Agent")
   })
 
   it("classifies risky actions", () => {
