@@ -3586,9 +3586,13 @@ const App: React.FC = () => {
     const offDownloaded = window.yomi.onUpdateDownloaded((info) => {
       setUpdateNotice({ status: "downloaded", ...info })
     })
+    const offError = window.yomi.onUpdateError((info) => {
+      console.warn("[yomi] updater error:", info.message)
+    })
     return () => {
       offAvailable()
       offDownloaded()
+      offError()
     }
   }, [])
 

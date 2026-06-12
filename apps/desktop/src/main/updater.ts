@@ -25,12 +25,13 @@ export function initAutoUpdater(win: BrowserWindow): void {
 
   autoUpdater.on("error", (err) => {
     console.warn("[yomi/updater] error:", err.message)
+    win.webContents.send("yomi:update-error", { message: err.message })
   })
 
-  autoUpdater.checkForUpdates().catch(() => {})
+  checkAndNotify(win)
 
   setInterval(() => {
-    autoUpdater.checkForUpdates().catch(() => {})
+    checkAndNotify(win)
   }, 4 * 60 * 60 * 1000)
 }
 
@@ -42,4 +43,11 @@ export function downloadUpdate(): void {
 
 export function installUpdate(): void {
   autoUpdater.quitAndInstall(false, true)
+}
+
+function checkAndNotify(win: BrowserWindow): void {
+  autoUpdater.checkForUpdates().catch((err) => {
+    console.warn("[yomi/updater] check failed:", err.message)
+    win.webContents.send("yomi:update-error", { message: err.message })
+  })
 }
