@@ -1,6 +1,5 @@
 import { Hono } from "hono"
-import { cors } from "hono/cors"
-import { auth } from "./auth.js"
+import { getAuth } from "./auth.js"
 import { errorHandler } from "./middleware/error-handler.js"
 import { llmRouter } from "./routes/llm.js"
 // import { sttRouter } from "./routes/stt.js"   // legacy ElevenLabs
@@ -24,10 +23,23 @@ app.onError(errorHandler)
 
 app.use(
   "*",
-  cors({
-    origin: process.env["BETTER_AUTH_URL"] ?? "http://localhost:3000",
-    credentials: true,
-  }),
+  async (c, next) => {
+    const origin = c.req.header("Origin")
+    const webOrigin = process.env["CORS_ORIGIN"] ?? process.env["BETTER_AUTH_URL"] ?? "http://localhost:3000"
+    const allowedOrigins = new Set([webOrigin].filter(Boolean))
+    if (origin && allowedOrigins.has(origin)) {
+      c.header("Access-Control-Allow-Origin", origin)
+      c.header("Access-Control-Allow-Credentials", "true")
+      c.header("Access-Control-Allow-Methods", "GET,HEAD,PUT,POST,DELETE,PATCH,OPTIONS")
+      c.header("Access-Control-Allow-Headers", c.req.header("Access-Control-Request-Headers") ?? "Authorization,Content-Type")
+      c.header("Vary", "Origin")
+      if (c.req.method === "OPTIONS") {
+        return c.body(null, 204)
+      }
+    }
+
+    await next()
+  },
 )
 
 app.get("/health", (c) => c.json({ status: "ok", version: "0.1.0" }))
@@ -62,7 +74,7 @@ const SKIP_AUTH_PATHS = new Set([
 ])
 app.on(["GET", "POST"], "/api/auth/*", async (c) => {
   if (SKIP_AUTH_PATHS.has(c.req.path)) return c.notFound()
-  return auth.handler(c.req.raw)
+  return getAuth().handler(c.req.raw)
 })
 
 app.route("/api/llm", llmRouter)
@@ -99,5 +111,11 @@ if (typeof Bun !== "undefined") {
 }
 
 export default {
-  fetch: app.fetch,
+  fetch(request: Request, env: Record<string, unknown>, ctx: unknown) {
+    for (const [key, value] of Object.entries(env)) {
+      if (typeof value === "string") process.env[key] = value
+    }
+
+    return app.fetch(request, env, ctx as never)
+  },
 }

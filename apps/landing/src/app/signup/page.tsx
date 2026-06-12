@@ -2,13 +2,7 @@ import AuthCard from "@/components/AuthCard"
 
 export const metadata = { title: "Sign up" }
 
-export default async function SignUpPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ plan?: string }>
-}) {
-  const { plan } = await searchParams
-
+export default function SignUpPage() {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-background px-6">
       <div
@@ -18,7 +12,7 @@ export default async function SignUpPage({
             "radial-gradient(ellipse 800px 600px at 50% 30%, rgba(96,165,250,0.1) 0%, transparent 70%)",
         }}
       />
-      <AuthCard defaultMode="signup" plan={plan} />
+      <AuthCard defaultMode="signup" />
     </main>
   )
 }

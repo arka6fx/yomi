@@ -17,6 +17,8 @@ build/
 
 # Cloudflare / OpenNext
 .open-next/
+.worker-assets/
+.wrangler/
 .dev.vars
 
 # Turbo cache

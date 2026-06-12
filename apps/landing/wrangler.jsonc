@@ -1,17 +1,34 @@
 {
+  "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "yomi-landing",
+  "main": "src/worker.ts",
+  "workers_dev": false,
+  "preview_urls": false,
   "compatibility_date": "2026-06-11",
-  "pages_build_output_dir": ".vercel/output/static",
+  "compatibility_flags": ["nodejs_compat_v2"],
+  "assets": {
+    "directory": "./.worker-assets",
+    "binding": "ASSETS",
+    "html_handling": "drop-trailing-slash",
+    "not_found_handling": "none",
+    "run_worker_first": true
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
   "vars": {
     "ENVIRONMENT": "development"
   },
   "env": {
     "staging": {
+      "name": "yomi-landing-staging",
       "vars": {
         "ENVIRONMENT": "staging"
       }
     },
     "production": {
+      "name": "yomi-landing",
       "vars": {
         "ENVIRONMENT": "production"
       }

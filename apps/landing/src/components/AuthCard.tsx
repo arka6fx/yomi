@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useState } from "react"
 import { ArrowLeft, Loader2 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
+import { BrandMark } from "@/components/BrandMark"
 
 interface AuthCardProps {
   defaultMode: "signin" | "signup"
@@ -15,8 +16,13 @@ export default function AuthCard({ defaultMode, plan, callbackURL }: AuthCardPro
   const [loading, setLoading] = useState<"github" | "google" | null>(null)
   const [error, setError] = useState("")
 
-  const redirectTo = callbackURL ?? (plan ? `/dashboard?plan=${plan}` : "/dashboard")
   const busy = loading !== null
+
+  function getRedirectTo() {
+    const params = new URLSearchParams(window.location.search)
+    const selectedPlan = plan ?? params.get("plan") ?? undefined
+    return callbackURL ?? params.get("redirect") ?? (selectedPlan ? `/dashboard?plan=${selectedPlan}` : "/dashboard")
+  }
 
   async function handleOAuth(provider: "github" | "google") {
     setError("")
@@ -24,7 +30,7 @@ export default function AuthCard({ defaultMode, plan, callbackURL }: AuthCardPro
     try {
       await authClient.signIn.social({
         provider,
-        callbackURL: `${window.location.origin}${redirectTo}`,
+        callbackURL: `${window.location.origin}${getRedirectTo()}`,
       })
     } catch {
       setError("Something went wrong. Please try again.")
@@ -41,6 +47,10 @@ export default function AuthCard({ defaultMode, plan, callbackURL }: AuthCardPro
         <ArrowLeft size={13} />
         Back to home
       </Link>
+
+      <div className="mb-5 flex justify-center">
+        <BrandMark withText={false} size="lg" className="pointer-events-none" />
+      </div>
 
       <h1 className="mb-1 text-center text-xl font-medium text-foreground">
         {defaultMode === "signup" ? "Create an account" : "Welcome back"}

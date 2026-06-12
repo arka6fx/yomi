@@ -6,12 +6,13 @@
   "scripts": {
     "dev": "next dev --port 3000",
     "build": "next build",
-    "build:cloudflare": "opennextjs-cloudflare build",
+    "build:cloudflare": "bun run build && bun run prepare:cloudflare-assets",
     "build:ci": "next build",
     "start": "next start",
-    "preview:cloudflare": "opennextjs-cloudflare preview",
-    "deploy:staging": "opennextjs-cloudflare deploy --env staging",
-    "deploy:production": "opennextjs-cloudflare deploy --env production",
+    "prepare:cloudflare-assets": "bun scripts/prepare-cloudflare-assets.mjs",
+    "preview:cloudflare": "wrangler dev --env production",
+    "deploy:staging": "bun run build && bun run prepare:cloudflare-assets && wrangler deploy --env staging",
+    "deploy:production": "bun run build && bun run prepare:cloudflare-assets && wrangler deploy --env production",
     "lint": "eslint src",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -39,7 +40,6 @@
     "autoprefixer": "^10.4.0",
     "postcss": "^8.4.0",
     "tailwindcss": "^3.4.0",
-    "@opennextjs/cloudflare": "^1.0.0",
     "typescript": "^5.5.0",
     "wrangler": "^4.0.0"
   }

@@ -2,13 +2,7 @@ import AuthCard from "@/components/AuthCard"
 
 export const metadata = { title: "Sign in" }
 
-export default async function SignInPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ plan?: string; redirect?: string }>
-}) {
-  const { plan, redirect } = await searchParams
-
+export default function SignInPage() {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-background px-6">
       <div
@@ -18,7 +12,7 @@ export default async function SignInPage({
             "radial-gradient(ellipse 800px 600px at 50% 30%, rgba(96,165,250,0.1) 0%, transparent 70%)",
         }}
       />
-      <AuthCard defaultMode="signin" plan={plan} callbackURL={redirect} />
+      <AuthCard defaultMode="signin" />
     </main>
   )
 }

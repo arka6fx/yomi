@@ -2,7 +2,7 @@ import { Hono } from "hono"
 import { db } from "@yomi/db"
 import { eq } from "drizzle-orm"
 import * as authSchema from "../auth-schema.js"
-import { auth } from "../auth.js"
+import { getAuth } from "../auth.js"
 
 // Device-code flow for desktop OAuth (thin wrapper — Better Auth handles the heavy lifting)
 // Standard OAuth2 device authorization grant (RFC 8628)
@@ -56,7 +56,7 @@ authRoutesRouter.post("/device-code/token", async (c) => {
 
 // Browser calls this after the user authenticates — links the session token to the device code
 authRoutesRouter.post("/device-code/confirm", async (c) => {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers })
+  const session = await getAuth().api.getSession({ headers: c.req.raw.headers })
   if (!session) return c.json({ error: "Not authenticated" }, 401)
 
   const { user_code } = (await c.req.json()) as { user_code: string }
@@ -86,7 +86,7 @@ authRoutesRouter.post("/device-code/confirm", async (c) => {
 // Sign-out from ALL devices — ensures signing out from the landing page also revokes
 // the desktop session token. Call this AFTER Better Auth's own sign-out.
 authRoutesRouter.post("/sign-out-all", async (c) => {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers })
+  const session = await getAuth().api.getSession({ headers: c.req.raw.headers })
   if (!session) return c.json({ error: "Not authenticated" }, 401)
   await db.delete(authSchema.session).where(eq(authSchema.session.userId, session.user.id))
   return c.json({ ok: true })
