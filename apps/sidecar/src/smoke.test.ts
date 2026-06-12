@@ -51,7 +51,9 @@ describe("smoke: shortcut parsers", () => {
   })
 
   it("reminderDraftRequest: returns null (stubbed)", () => {
-    expect(reminderDraftRequest("write a reminder about buying milk and send to whatsapp")).toBeNull()
+    expect(
+      reminderDraftRequest("write a reminder about buying milk and send to whatsapp"),
+    ).toBeNull()
   })
 
   it("pendingDraftRecipientRequest: returns null (stubbed)", () => {
@@ -79,9 +81,9 @@ describe("smoke: agent registry", () => {
     expect(agent.provider).toBe("native")
   })
 
-  it("resolves messaging agent for whatsapp commands", () => {
+  it("resolves automation agent for whatsapp commands (stubbed)", () => {
     const agent = resolveAgent("send hi to lily on whatsapp")
-    expect(agent.id).toBe("messaging")
+    expect(agent.id).toBe("automation")
   })
 
   it("falls back to automation agent for unknown goals", () => {
@@ -116,8 +118,8 @@ describe("smoke: owner classification", () => {
     expect(classifyAutomationOwner("open google.com in the browser").id).toBe("automation")
   })
 
-  it("classifies whatsapp commands as messaging", () => {
-    expect(classifyAutomationOwner("send hi to lily on whatsapp").id).toBe("messaging")
+  it("classifies whatsapp commands as automation (stubbed)", () => {
+    expect(classifyAutomationOwner("send hi to lily on whatsapp").id).toBe("automation")
   })
 
   it("classifies notepad commands", () => {
