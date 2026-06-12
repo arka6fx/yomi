@@ -288,4 +288,10 @@ contextBridge.exposeInMainWorld("yomi", {
   installUpdate(): void {
     ipcRenderer.send("yomi:install-update")
   },
+
+  onUpdateError(cb: (info: { message: string }) => void): () => void {
+    const h = (_: Electron.IpcRendererEvent, info: { message: string }) => cb(info)
+    ipcRenderer.on("yomi:update-error", h)
+    return () => ipcRenderer.off("yomi:update-error", h)
+  },
 })
