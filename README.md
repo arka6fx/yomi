@@ -101,7 +101,7 @@ Production uses split Cloudflare hostnames:
 BETTER_AUTH_URL=https://yomi.arka6fx.com
 BETTER_AUTH_BASE_URL=https://api.yomi.arka6fx.com
 BACKEND_URL=https://api.yomi.arka6fx.com
-NEXT_PUBLIC_BACKEND_URL=https://api.yomi.arka6fx.com
+# NEXT_PUBLIC_BACKEND_URL — NOT SET in production (auth client uses same-origin proxy)
 NEXT_PUBLIC_APP_URL=https://yomi.arka6fx.com
 YOMI_BACKEND_URL=https://api.yomi.arka6fx.com
 CORS_ORIGIN=https://yomi.arka6fx.com
@@ -120,7 +120,8 @@ DODO_ENV=test
 # Test mode
 DODO_TEST_API_KEY=
 DODO_TEST_WEBHOOK_SECRET=
-DODO_TEST_API_BASE=https://api.dodopayments.com
+# Defaults to https://test.dodopayments.com (test) / https://live.dodopayments.com (live)
+DODO_TEST_API_BASE=
 DODO_TEST_PRODUCT_PRO=
 DODO_TEST_PRODUCT_MAX=
 DODO_TEST_PRODUCT_CREDITS_500=
