@@ -1,6 +1,6 @@
 import { Hono } from "hono"
 import { createHmac, timingSafeEqual } from "node:crypto"
-import { db, usageEvents } from "@yomi/db"
+import { db, paymentRecords, usageEvents } from "@yomi/db"
 import { and, eq, gte, inArray, sql } from "drizzle-orm"
 import { authenticate } from "../auth.js"
 import * as authSchema from "../auth-schema.js"
@@ -23,14 +23,18 @@ import {
   grantCredits,
   recentCreditTransactions,
 } from "../services/credit-ledger.js"
-import { payloadHash, recordPaymentEvent } from "../services/payment-events.js"
+import { payloadHash, recordPaymentEvent, upsertPaymentRecord } from "../services/payment-events.js"
 
 type DodoMode = "test" | "live"
 
 function dodoMode(): DodoMode {
-  const mode = (process.env["DODO_ENV"] ?? "test").toLowerCase()
-  if (mode === "test" || mode === "live") return mode
-  throw new Error("DODO_ENV must be 'test' or 'live'")
+  const raw = process.env["DODO_ENV"] ?? ""
+  const mode = raw.toLowerCase()
+  if (mode === "live") return "live"
+  if (raw && mode !== "test") {
+    console.warn("[yomi/dodo] WARNING: DODO_ENV=" + raw + " is invalid; defaulting to test")
+  }
+  return "test"
 }
 
 type DodoConfig = {
@@ -57,7 +61,7 @@ export function getDodoConfig(): DodoConfig {
 
   return {
     mode,
-    apiBase: read("API_BASE") ?? "https://api.dodopayments.com",
+    apiBase: read("API_BASE") ?? (mode === "test" ? "https://test.dodopayments.com" : "https://live.dodopayments.com"),
     apiKey: read("API_KEY"),
     webhookSecret: read("WEBHOOK_SECRET"),
     productIds: {
@@ -156,15 +160,43 @@ function dodoAuth(): string {
 }
 
 async function dodo<T>(path: string, body?: unknown): Promise<T> {
-  const { apiBase } = getDodoConfig()
-  const res = await fetch(`${apiBase.replace(/\/+$/, "")}${path}`, {
-    method: body === undefined ? "GET" : "POST",
-    headers: {
-      Authorization: dodoAuth(),
-      "Content-Type": "application/json",
-    },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-  })
+  const { apiBase, apiKey, mode } = getDodoConfig()
+  const url = `${apiBase.replace(/\/+$/, "")}${path}`
+
+  // Diagnostic log — no secrets
+  console.log("[yomi/dodo] mode:", mode, "apiBase:", apiBase, "path:", path, "hasApiKey:", !!apiKey)
+
+  // Reject obviously malformed URLs before fetch
+  try {
+    new URL(url)
+  } catch {
+    throw new Error(`Dodo API has an invalid URL: ${url} (mode=${mode})`)
+  }
+
+  let res: Response
+  try {
+    res = await fetch(url, {
+      method: body === undefined ? "GET" : "POST",
+      headers: {
+        Authorization: dodoAuth(),
+        "Content-Type": "application/json",
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      // keepalive:false — prevents Bun's FailedToOpenSocket socket-leak bug
+      // (https://github.com/oven-sh/bun/issues/3327)
+      keepalive: false,
+      signal: AbortSignal.timeout(15_000),
+    })
+  } catch (err) {
+    // Log the full error chain (message + cause + stack) to diagnose Bun socket issues
+    const cause =
+      err instanceof Error && "cause" in err
+        ? String((err as Error & { cause: unknown }).cause ?? err.stack ?? "")
+        : String(err)
+    console.error("[yomi/dodo] fetch failed — url:", url, "cause:", cause)
+    throw new Error(`Dodo API request failed: ${err instanceof Error ? err.message : String(err)}`)
+  }
+
   const text = await res.text()
   if (!res.ok) throw new Error(`Dodo ${path} -> ${res.status}: ${text}`)
   try {
@@ -193,6 +225,7 @@ async function createDodoCheckout(input: {
   user: { id: string; name?: string | null; email?: string | null }
   metadata: Record<string, string>
 }) {
+  console.log("[yomi/billing] creating Dodo checkout for productId:", input.productId)
   return dodo<Record<string, unknown>>("/checkouts", {
     product_cart: [{ product_id: input.productId, quantity: 1 }],
     customer: {
@@ -204,16 +237,23 @@ async function createDodoCheckout(input: {
   })
 }
 
-function verifyDodoWebhook(body: string, headers: Headers): boolean {
+const WEBHOOK_TOLERANCE_SECONDS = 300
+
+export function verifyDodoWebhook(body: string, headers: Headers): boolean {
   const { webhookSecret: secret } = getDodoConfig()
   if (!secret) return false
 
   const webhookId = headers.get("webhook-id")
-  const timestamp = headers.get("webhook-timestamp")
+  const timestampStr = headers.get("webhook-timestamp")
   const signatureHeader = headers.get("webhook-signature")
-  if (!webhookId || !timestamp || !signatureHeader) return false
+  if (!webhookId || !timestampStr || !signatureHeader) return false
 
-  const signedPayload = `${webhookId}.${timestamp}.${body}`
+  const timestamp = Number(timestampStr)
+  if (!Number.isFinite(timestamp)) return false
+  const age = Math.abs((Date.now() / 1000) - timestamp)
+  if (age > WEBHOOK_TOLERANCE_SECONDS) return false
+
+  const signedPayload = `${webhookId}.${timestampStr}.${body}`
   const normalizedSecret = secret.startsWith("whsec_") ? secret.slice("whsec_".length) : secret
   const key = secret.startsWith("whsec_")
     ? Buffer.from(normalizedSecret, "base64")
@@ -285,6 +325,24 @@ function subscriptionCreditExpiry(periodEnd: Date | null): Date {
   return new Date(Date.now() + 35 * 24 * 60 * 60 * 1000)
 }
 
+function logDodoConfig(): void {
+  const env = process.env["DODO_ENV"] ?? ""
+  if (env && env !== "test" && env !== "live") {
+    console.warn("[yomi/dodo] WARNING: DODO_ENV=" + env + " is invalid; defaulting to test")
+  }
+  const mode = env === "live" ? "live" : "test"
+  const prefix = mode === "live" ? "DODO_LIVE" : "DODO_TEST"
+  const apiKey = process.env[`${prefix}_API_KEY`] ?? process.env["DODO_API_KEY"] ?? ""
+  const baseUrl = mode === "live" ? "https://live.dodopayments.com" : "https://test.dodopayments.com"
+
+  if (!apiKey) {
+    console.warn("[yomi/dodo] WARNING: " + prefix + "_API_KEY is not set — Dodo Payments will fail at runtime")
+  }
+  console.log("[yomi/dodo] config:", JSON.stringify({ mode, baseUrl, hasApiKey: !!apiKey }))
+}
+
+logDodoConfig()
+
 export const billingRouter = new Hono()
 
 billingRouter.get("/plans", (c) => {
@@ -322,6 +380,8 @@ billingRouter.post("/create-subscription", authenticate, async (c) => {
     return c.json({ error: "You already have an active subscription for this plan" }, 409)
   }
 
+  const isUpgrade = user.plan !== "explore" && user.plan !== plan && !!user.dodoSubscriptionId
+
   try {
     const checkout = await createDodoCheckout({
       productId,
@@ -330,14 +390,36 @@ billingRouter.post("/create-subscription", authenticate, async (c) => {
         userId: user.id,
         kind: "subscription",
         plan,
+        ...(isUpgrade ? { isUpgrade: "true", previousPlan: user.plan } : {}),
       },
     })
+    const checkoutId = String(checkout["id"] ?? checkout["checkout_id"] ?? "")
     const url = checkoutUrl(checkout)
     if (!url) throw new Error("Dodo checkout response did not include a checkout URL")
-    return c.json({ id: String(checkout["id"] ?? checkout["checkout_id"] ?? ""), short_url: url })
+
+    await createPaymentRecord({
+      userId: user.id,
+      provider: "dodo",
+      kind: "subscription",
+      productKey: plan,
+      providerOrderId: checkoutId,
+      amountCents: config.priceCents,
+      currency: "USD",
+      status: "created",
+      metadata: { checkout, isUpgrade, previousPlan: isUpgrade ? user.plan : null },
+    })
+
+    return c.json({ id: checkoutId, short_url: url })
   } catch (err) {
     console.error("[yomi/billing] create-subscription failed:", err)
-    return c.json({ error: err instanceof Error ? err.message : "Unknown error" }, 502)
+    const msg = err instanceof Error ? err.message : "Unknown error"
+    const config = getDodoConfig()
+    return c.json({
+      error: "Dodo checkout creation failed",
+      cause: msg.includes("Dodo ") ? msg : `internal: ${msg}`,
+      environment: config.mode,
+      targetBase: config.apiBase,
+    }, 502)
   }
 })
 
@@ -378,7 +460,14 @@ billingRouter.post("/create-credit-pack", authenticate, async (c) => {
     return c.json({ id: String(checkout["id"] ?? checkout["checkout_id"] ?? ""), short_url: url })
   } catch (err) {
     console.error("[yomi/billing] create-credit-pack failed:", err)
-    return c.json({ error: err instanceof Error ? err.message : "Unknown error" }, 502)
+    const msg = err instanceof Error ? err.message : "Unknown error"
+    const config = getDodoConfig()
+    return c.json({
+      error: "Dodo checkout creation failed",
+      cause: msg.includes("Dodo ") ? msg : `internal: ${msg}`,
+      environment: config.mode,
+      targetBase: config.apiBase,
+    }, 502)
   }
 })
 
@@ -388,10 +477,25 @@ billingRouter.post("/cancel-subscription", authenticate, async (c) => {
 
   try {
     await dodo(`/subscriptions/${user.dodoSubscriptionId}/cancel`, {})
+
+    // Optimistically mark subscription as cancelling so the dashboard reflects it immediately.
+    // The webhook (subscription.cancelled) will finalize status to "inactive" and reset plan.
+    await db
+      .update(authSchema.user)
+      .set({ subscriptionStatus: "cancelling" })
+      .where(and(eq(authSchema.user.id, user.id), eq(authSchema.user.dodoSubscriptionId, user.dodoSubscriptionId)))
+
     return c.json({ ok: true })
   } catch (err) {
     console.error("[yomi/billing] cancel-subscription failed:", err)
-    return c.json({ error: "Failed to cancel subscription" }, 502)
+    const msg = err instanceof Error ? err.message : "Unknown error"
+    const config = getDodoConfig()
+    return c.json({
+      error: "Failed to cancel subscription",
+      cause: msg.includes("Dodo ") ? msg : `internal: ${msg}`,
+      environment: config.mode,
+      targetBase: config.apiBase,
+    }, 502)
   }
 })
 
@@ -555,18 +659,68 @@ async function handleDodoEvent(type: string, entity: DodoEntity, eventId: string
   }
 }
 
+async function findUserBySubscription(subId: string): Promise<string | null> {
+  const [user] = await db
+    .select({ id: authSchema.user.id })
+    .from(authSchema.user)
+    .where(eq(authSchema.user.dodoSubscriptionId, subId))
+    .limit(1)
+  return user?.id ?? null
+}
+
 async function handleSubscriptionActive(entity: DodoEntity, eventId: string) {
   const meta = metadata(entity)
-  const userId = meta.userId
+  const subId = stringField(entity, ["subscription_id", "id"])
+  let userId = meta.userId
   const plan = meta.plan
+
+  if (!userId && subId) userId = await findUserBySubscription(subId)
   if (!userId || !plan) return
 
   const config = SHARED_PLANS[plan]
   if (!config) return
 
-  const subId = stringField(entity, ["subscription_id", "id"])
   const customerId = stringField(entity, ["customer_id", "customerId"])
   const periodEnd = dateField(entity, ["current_period_end", "currentPeriodEnd", "next_billing_date"])
+
+  // Detect plan change — cancel old Dodo subscription if user switched plans
+  const [existing] = await db
+    .select({ plan: authSchema.user.plan, dodoSubscriptionId: authSchema.user.dodoSubscriptionId })
+    .from(authSchema.user)
+    .where(eq(authSchema.user.id, userId))
+    .limit(1)
+
+  const isRenewal = existing?.plan === plan
+  const isUpgrade = existing?.plan !== "explore" && existing?.plan !== plan && existing?.plan !== undefined
+
+  if (isUpgrade && existing?.dodoSubscriptionId && existing.dodoSubscriptionId !== subId) {
+    try {
+      console.warn(`[yomi/billing] cancelling old subscription ${existing.dodoSubscriptionId} for upgrade to ${plan}`)
+      await dodo(`/subscriptions/${existing.dodoSubscriptionId}/cancel`, {})
+    } catch (err) {
+      console.warn("[yomi/billing] failed to cancel old subscription on upgrade:", err)
+    }
+  }
+
+  // Create or update payment record for subscription activation/renewal
+  const paymentId = await upsertPaymentRecord({
+    userId,
+    provider: "dodo",
+    kind: "subscription",
+    productKey: plan,
+    providerCustomerId: customerId,
+    providerOrderId: subId,
+    providerSubscriptionId: subId,
+    amountCents: config.priceCents,
+    currency: "USD",
+    status: "paid",
+    metadata: {
+      providerEvent: { type: "subscription_active", eventId },
+      plan,
+      isRenewal,
+      previousPlan: existing?.plan ?? null,
+    },
+  })
 
   await db
     .update(authSchema.user)
@@ -579,7 +733,7 @@ async function handleSubscriptionActive(entity: DodoEntity, eventId: string) {
     })
     .where(eq(authSchema.user.id, userId))
 
-  if (!config.includedCredits) return
+  if (config.includedCredits <= 0) return
 
   await grantCredits({
     userId,
@@ -587,16 +741,41 @@ async function handleSubscriptionActive(entity: DodoEntity, eventId: string) {
     source: "subscription_cycle",
     sourceId: `${subId ?? "subscription"}:${periodEnd?.toISOString() ?? eventId}`,
     idempotencyKey: `dodo:${eventId}:subscription_credits`,
+    paymentId,
     expiresAt: subscriptionCreditExpiry(periodEnd),
     reason: `${config.name} monthly credits`,
-    metadata: { provider: "dodo", subscriptionId: subId, plan },
+    metadata: { provider: "dodo", subscriptionId: subId, plan, isRenewal },
   })
 }
 
 async function handleSubscriptionEnd(entity: DodoEntity) {
   const meta = metadata(entity)
-  const userId = meta.userId
+  const subId = stringField(entity, ["subscription_id", "id"])
+  let userId = meta.userId
+
+  if (!userId && subId) userId = await findUserBySubscription(subId)
   if (!userId) return
+
+  // Find and update matching payment record
+  if (subId) {
+    const [rec] = await db
+      .select({ id: paymentRecords.id })
+      .from(paymentRecords)
+      .where(
+        and(
+          eq(paymentRecords.provider, "dodo"),
+          eq(paymentRecords.providerOrderId, subId),
+        ),
+      )
+      .limit(1)
+
+    if (rec) {
+      await db
+        .update(paymentRecords)
+        .set({ status: "cancelled", updatedAt: new Date(), metadata: { cancelledAt: new Date().toISOString() } })
+        .where(eq(paymentRecords.id, rec.id))
+    }
+  }
 
   await db
     .update(authSchema.user)
@@ -610,8 +789,13 @@ async function handleSubscriptionEnd(entity: DodoEntity) {
 }
 
 async function handlePaymentFailed(entity: DodoEntity) {
-  const userId = metadata(entity).userId
+  const meta = metadata(entity)
+  const subId = stringField(entity, ["subscription_id", "id"])
+  let userId = meta.userId
+
+  if (!userId && subId) userId = await findUserBySubscription(subId)
   if (!userId) return
+
   await db
     .update(authSchema.user)
     .set({ subscriptionStatus: "past_due" })
@@ -625,7 +809,7 @@ async function handlePaymentSucceeded(entity: DodoEntity, eventId: string) {
   const pack = getCreditPack(meta.productKey)
   if (!pack) return
 
-  const paymentId = await createPaymentRecord({
+  const paymentId = await upsertPaymentRecord({
     userId: meta.userId,
     provider: "dodo",
     kind: "credit_pack",
@@ -636,7 +820,7 @@ async function handlePaymentSucceeded(entity: DodoEntity, eventId: string) {
     amountCents: numberField(entity, ["amount", "total_amount"]) || pack.priceCents,
     currency: stringField(entity, ["currency"]) ?? pack.currency,
     status: "paid",
-    metadata: { providerEvent: entity },
+    metadata: { providerEvent: { eventId, type: "payment_succeeded" } },
   })
 
   const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)

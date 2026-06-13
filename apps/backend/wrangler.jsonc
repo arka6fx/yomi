@@ -1,10 +1,17 @@
 {
   "name": "yomi-backend",
-  "main": "src/index.ts",
+  "main": "src/worker.ts",
   "workers_dev": false,
   "preview_urls": false,
   "compatibility_date": "2026-06-11",
   "compatibility_flags": ["nodejs_compat_v2"],
+  "kv_namespaces": [
+    {
+      "binding": "DEVICE_CODES",
+      "id": "b5c65dc531f54df2be6558fe90606fdf",
+      "preview_id": "70eef91707444f27b0084ebd4827a8f9"
+    }
+  ],
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1
@@ -12,6 +19,12 @@
   "vars": {
     "ENVIRONMENT": "development",
     "DODO_ENV": "test",
+    "DODO_TEST_API_BASE": "https://test.dodopayments.com",
+    "DODO_TEST_PRODUCT_PRO": "pdt_0NgpaqgPFPP1ILAL1KB4a",
+    "DODO_TEST_PRODUCT_MAX": "pdt_0Ngpe8uJgzzFshRGbgSaa",
+    "DODO_TEST_PRODUCT_CREDITS_500": "pdt_0Ngpf9viougexvvbfowTl",
+    "DODO_TEST_PRODUCT_CREDITS_2000": "pdt_0NgpfYVmpPRjuVRJFYZf1",
+    "DODO_TEST_PRODUCT_CREDITS_6000": "pdt_0NgpfusjWfLsZcKwGn7sT",
     "BETTER_AUTH_URL": "https://yomi.arka6fx.com",
     "BETTER_AUTH_BASE_URL": "https://api.yomi.arka6fx.com",
     "CORS_ORIGIN": "https://yomi.arka6fx.com",
@@ -24,19 +37,37 @@
       "vars": {
         "ENVIRONMENT": "staging",
         "DODO_ENV": "test",
+        "DODO_TEST_API_BASE": "https://test.dodopayments.com",
+        "DODO_TEST_PRODUCT_PRO": "pdt_0NgpaqgPFPP1ILAL1KB4a",
+        "DODO_TEST_PRODUCT_MAX": "pdt_0Ngpe8uJgzzFshRGbgSaa",
+        "DODO_TEST_PRODUCT_CREDITS_500": "pdt_0Ngpf9viougexvvbfowTl",
+        "DODO_TEST_PRODUCT_CREDITS_2000": "pdt_0NgpfYVmpPRjuVRJFYZf1",
+        "DODO_TEST_PRODUCT_CREDITS_6000": "pdt_0NgpfusjWfLsZcKwGn7sT",
         "BETTER_AUTH_URL": "https://yomi.arka6fx.com",
         "BETTER_AUTH_BASE_URL": "https://api.yomi.arka6fx.com",
         "CORS_ORIGIN": "https://yomi.arka6fx.com",
-"AI_CREDITS_BASE_URL": "https://api.aicredits.in/v1",
+        "AI_CREDITS_BASE_URL": "https://api.aicredits.in/v1",
         "AI_CREDITS_EMBEDDING_MODEL": "text-embedding-3-small",
         "NEXT_PUBLIC_APP_URL": "https://yomi.arka6fx.com"
       }
     },
     "production": {
       "name": "yomi-backend",
+      "kv_namespaces": [
+        {
+          "binding": "DEVICE_CODES",
+          "id": "b5c65dc531f54df2be6558fe90606fdf"
+        }
+      ],
       "vars": {
         "ENVIRONMENT": "production",
-        "DODO_ENV": "live",
+        "DODO_ENV": "test",
+        "DODO_TEST_API_BASE": "https://test.dodopayments.com",
+        "DODO_TEST_PRODUCT_PRO": "pdt_0NgpaqgPFPP1ILAL1KB4a",
+        "DODO_TEST_PRODUCT_MAX": "pdt_0Ngpe8uJgzzFshRGbgSaa",
+        "DODO_TEST_PRODUCT_CREDITS_500": "pdt_0Ngpf9viougexvvbfowTl",
+        "DODO_TEST_PRODUCT_CREDITS_2000": "pdt_0NgpfYVmpPRjuVRJFYZf1",
+        "DODO_TEST_PRODUCT_CREDITS_6000": "pdt_0NgpfusjWfLsZcKwGn7sT",
         "BETTER_AUTH_URL": "https://yomi.arka6fx.com",
         "BETTER_AUTH_BASE_URL": "https://api.yomi.arka6fx.com",
         "CORS_ORIGIN": "https://yomi.arka6fx.com",

@@ -24,7 +24,8 @@ BETTER_AUTH_SECRET=...
 BETTER_AUTH_URL=https://yomi.arka6fx.com
 BETTER_AUTH_BASE_URL=https://api.yomi.arka6fx.com
 BACKEND_URL=https://api.yomi.arka6fx.com
-NEXT_PUBLIC_BACKEND_URL=https://api.yomi.arka6fx.com
+# NEXT_PUBLIC_BACKEND_URL — DO NOT SET in production. Auth client must use same-origin
+# so OAuth cookies land on the correct domain. Worker proxies /api/* to backend.
 NEXT_PUBLIC_APP_URL=https://yomi.arka6fx.com
 YOMI_BACKEND_URL=https://api.yomi.arka6fx.com
 YOMI_APP_URL=https://yomi.arka6fx.com
@@ -58,7 +59,8 @@ DODO_ENV=test
 
 DODO_TEST_API_KEY=
 DODO_TEST_WEBHOOK_SECRET=
-DODO_TEST_API_BASE=https://api.dodopayments.com
+# Defaults to https://test.dodopayments.com (test) / https://live.dodopayments.com (live)
+DODO_TEST_API_BASE=
 DODO_TEST_PRODUCT_PRO=
 DODO_TEST_PRODUCT_MAX=
 DODO_TEST_PRODUCT_CREDITS_500=
@@ -124,12 +126,13 @@ bunx wrangler secret put DODO_LIVE_PRODUCT_CREDITS_6000 --env production
 Set `DODO_ENV` in `apps/backend/wrangler.jsonc` vars instead of a secret.
 Only set `DODO_LIVE_API_BASE` in vars if Dodo gives you a non-default base URL.
 
-Landing is deployed as a static-assets Worker. These values are useful for local
-builds or if you choose to point the client directly at the backend instead of
-the same-origin `/api/*` proxy:
+Landing is deployed as a static-assets Worker. The auth client uses same-origin
+requests by default — the landing Worker proxies `/api/*` to the backend. For
+local dev you may set `NEXT_PUBLIC_BACKEND_URL` to skip the proxy, but DO NOT
+set it in production (OAuth cookies would be set for the wrong domain):
 
 ```text
-NEXT_PUBLIC_BACKEND_URL=https://api.yomi.arka6fx.com
+# NEXT_PUBLIC_BACKEND_URL=https://api.yomi.arka6fx.com — local dev only, never in prod
 NEXT_PUBLIC_APP_URL=https://yomi.arka6fx.com
 BACKEND_URL=https://api.yomi.arka6fx.com
 BETTER_AUTH_URL=https://yomi.arka6fx.com
