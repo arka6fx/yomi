@@ -209,6 +209,7 @@ integrationsRouter.get("/callback/google", async (c) => {
 integrationsRouter.delete("/:provider", authenticate, async (c) => {
   const user = c.get("user")
   const provider = c.req.param("provider")
+  if (!provider) return c.json({ error: "Provider required" }, 400)
 
   const [row] = await db
     .select({ oauthTokens: mcpConnections.oauthTokens })
