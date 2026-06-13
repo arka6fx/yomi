@@ -1497,13 +1497,30 @@ function CopyButton({ text }: { text: string }) {
 
 // ── Text Input ─────────────────────────────────────────────────────────────────
 
+const ACCENT_ORANGE = "#FF5C35"
+
+const SUGGESTION_CHIPS = [
+  { label: "Summarize emails", query: "Summarize my last 5 emails" },
+  { label: "Calendar today", query: "What's on my calendar today?" },
+  { label: "Open PRs", query: "Review my open pull requests" },
+]
+
+function greetingFor(name: string | null | undefined): string {
+  const hour = new Date().getHours()
+  const prefix = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"
+  return name ? `${prefix}, ${name.split(" ")[0]}` : prefix
+}
+
 function TextInputPanel({ surfaceBg }: { surfaceBg: string }) {
   const [value, setValue] = React.useState("")
   const inputRef = useRef<HTMLInputElement>(null)
   const valueRef = useRef("")
+  const subscription = useYomiStore((s) => s.subscription)
+
   useEffect(() => {
     valueRef.current = value
   }, [value])
+
   // Use rAF so the OS-level window focus transfer completes before the DOM focus call.
   useEffect(() => {
     requestAnimationFrame(() => {
@@ -1511,94 +1528,220 @@ function TextInputPanel({ surfaceBg }: { surfaceBg: string }) {
     })
   }, [])
 
-  const submit = React.useCallback(() => {
-    const text = valueRef.current.trim()
-    if (!text) return // empty does nothing — screen analysis lives on the Screenshot button
+  const submit = React.useCallback((override?: string) => {
+    const text = (override ?? valueRef.current).trim()
+    if (!text) return
     setValue("")
     valueRef.current = ""
     window.yomi.submitTextQuery(text)
   }, [])
 
   return (
-    <div
-      style={{
-        background: surfaceBg,
-        border: "1px solid var(--border-hi)",
-        borderRadius: 9,
-        overflow: "hidden",
-        boxShadow: "0 8px 40px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(255,255,255,0.04)",
-        animation: "slideUp 0.2s cubic-bezier(0.16,1,0.3,1)",
-      }}
-      className="drag yomi-hit-area"
-    >
-      <div style={{ padding: "8px 10px", display: "flex", alignItems: "center", gap: 8 }}>
-        <span
-          style={{
-            fontSize: 10.5,
-            color: "var(--section-label)",
-            letterSpacing: "0.12em",
-            fontFamily: UI_FONT,
-            fontWeight: 700,
-            flexShrink: 0,
-          }}
-        >
-          ASK
+    <div style={{ fontFamily: UI_FONT, animation: "slideUp 0.2s cubic-bezier(0.16,1,0.3,1)" }} className="drag yomi-hit-area">
+      {/* Greeting */}
+      <div style={{ marginBottom: 10, paddingLeft: 2 }}>
+        <div style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", lineHeight: 1.2 }}>
+          {greetingFor(subscription?.name)}
+        </div>
+        <div style={{ fontSize: 11.5, color: ACCENT_ORANGE, marginTop: 3, fontWeight: 500 }}>
+          Your AI buddy — ask me anything
+        </div>
+      </div>
+
+      {/* Main input container */}
+      <div
+        style={{
+          background: surfaceBg,
+          border: "1px solid var(--border-hi)",
+          borderRadius: 16,
+          overflow: "hidden",
+          boxShadow: "0 8px 40px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(255,255,255,0.04)",
+        }}
+      >
+        <div style={{ padding: "10px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+          {/* + affordance */}
+          <button
+            className="no-drag"
+            title="Attach or mention"
+            style={{
+              background: "none",
+              border: "1px solid var(--border)",
+              borderRadius: 7,
+              width: 28,
+              height: 28,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 16,
+              color: "var(--dim)",
+              cursor: "pointer",
+              flexShrink: 0,
+              transition: "color .15s, border-color .15s",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; e.currentTarget.style.borderColor = "var(--border-hi)" }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--dim)"; e.currentTarget.style.borderColor = "var(--border)" }}
+          >
+            +
+          </button>
+
+          {/* Text input */}
+          <input
+            ref={inputRef}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { e.preventDefault(); submit() }
+            }}
+            placeholder={'Ask me anything or type "@" to mention files or users'}
+            className="no-drag"
+            style={{
+              flex: 1,
+              background: "none",
+              border: "none",
+              outline: "none",
+              fontSize: 12.5,
+              fontFamily: UI_FONT,
+              color: "var(--text)",
+              caretColor: "var(--accent)",
+              minWidth: 0,
+            }}
+          />
+
+          {/* Right cluster: model selector + mic + send */}
+          <div className="no-drag" style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+            {/* Model selector — cosmetic, shows current routing */}
+            <button
+              style={{
+                background: "var(--accent-d)",
+                border: "1px solid var(--border)",
+                borderRadius: 7,
+                padding: "3px 8px",
+                fontSize: 11,
+                color: "var(--accent)",
+                fontFamily: UI_FONT,
+                cursor: "default",
+                display: "flex",
+                alignItems: "center",
+                gap: 3,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Auto ⚡ <span style={{ opacity: 0.6, fontSize: 9 }}>▾</span>
+            </button>
+
+            {/* Mic button */}
+            <button
+              onClick={() => window.yomi.triggerVoice()}
+              className="no-drag"
+              title="Voice (Ctrl+Space)"
+              style={{
+                background: "none",
+                border: "1px solid var(--border)",
+                borderRadius: 7,
+                width: 28,
+                height: 28,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 13,
+                color: "var(--dim)",
+                cursor: "pointer",
+                transition: "color .15s, border-color .15s",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; e.currentTarget.style.borderColor = "var(--border-hi)" }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--dim)"; e.currentTarget.style.borderColor = "var(--border)" }}
+            >
+              🎙
+            </button>
+
+            {/* Send button — filled */}
+            <button
+              onClick={() => submit()}
+              className="no-drag"
+              title="Send (Enter)"
+              style={{
+                background: "var(--accent)",
+                border: "none",
+                borderRadius: 7,
+                width: 28,
+                height: 28,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 13,
+                color: "#fff",
+                cursor: "pointer",
+                transition: "opacity .15s",
+                opacity: value.trim() ? 1 : 0.45,
+              }}
+              onMouseEnter={(e) => { if (value.trim()) e.currentTarget.style.opacity = "0.85" }}
+              onMouseLeave={(e) => { e.currentTarget.style.opacity = value.trim() ? "1" : "0.45" }}
+            >
+              ↑
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Suggestion chips */}
+      <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+        {SUGGESTION_CHIPS.map((chip) => (
+          <button
+            key={chip.label}
+            className="no-drag"
+            onClick={() => submit(chip.query)}
+            style={{
+              background: "var(--accent-d)",
+              border: "1px solid var(--border)",
+              borderRadius: 20,
+              padding: "4px 11px",
+              fontSize: 11,
+              color: "var(--dim)",
+              fontFamily: UI_FONT,
+              cursor: "pointer",
+              transition: "color .15s, border-color .15s",
+              whiteSpace: "nowrap",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; e.currentTarget.style.borderColor = "var(--border-hi)" }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--dim)"; e.currentTarget.style.borderColor = "var(--border)" }}
+          >
+            {chip.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Connect your apps strip */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginTop: 8,
+          padding: "6px 10px",
+          background: "rgba(255,255,255,0.03)",
+          borderRadius: 9,
+          border: "1px solid var(--border)",
+        }}
+      >
+        <span style={{ fontSize: 11, color: "var(--dim)", fontFamily: UI_FONT }}>
+          Connect your apps
         </span>
-        <input
-          ref={inputRef}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault()
-              submit()
-            }
-          }}
-          placeholder="Type your question…"
+        <button
           className="no-drag"
+          onClick={() => window.yomi.openDashboard()}
           style={{
-            flex: 1,
             background: "none",
             border: "none",
-            outline: "none",
-            fontSize: 12.5,
-            fontFamily: UI_FONT,
-            color: "var(--text)",
-            caretColor: "var(--accent)",
-          }}
-        />
-        <button
-          onClick={submit}
-          className="no-drag"
-          style={{
-            background: "var(--accent-d)",
-            border: "1px solid var(--border-hi)",
-            borderRadius: 4,
-            padding: "3px 10px",
-            fontSize: 11.5,
-            color: "var(--accent)",
+            fontSize: 11,
+            color: ACCENT_ORANGE,
             fontFamily: UI_FONT,
             cursor: "pointer",
-            flexShrink: 0,
-            transition: "all .15s",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "var(--accent-g)"
-            e.currentTarget.style.color = "var(--text)"
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "var(--accent-d)"
-            e.currentTarget.style.color = "var(--accent)"
+            padding: 0,
+            fontWeight: 500,
           }}
         >
-          Send ↵
+          Integrations →
         </button>
-      </div>
-      <div style={{ height: 1, background: "var(--menu-sep)" }} />
-      <div
-        style={{ padding: "5px 12px 6px", fontSize: 11, color: "var(--dim)", fontFamily: UI_FONT }}
-      >
-        Esc to cancel · text only, no voice
       </div>
     </div>
   )
