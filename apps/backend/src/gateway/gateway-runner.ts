@@ -1,11 +1,11 @@
 import { createHash, randomBytes } from "node:crypto"
 import { eq, and, lt } from "drizzle-orm"
 import { db, platformConnections, linkingCodes, telegramLinkTokens } from "@yomi/db"
-import { usageEvents } from "@yomi/db"
 import type { PlatformType, GatewayMessage, GatewaySessionInfo } from "@yomi/shared"
 import type { PlatformAdapter } from "./platform-adapter.js"
 import { TelegramAdapter } from "./platforms/telegram.js"
 import { DiscordAdapter } from "./platforms/discord.js"
+import { runAgent } from "../agent/run.js"
 
 const SESSION_TTL_MS = 60 * 60 * 1000
 const SESSION_CLEANUP_INTERVAL_MS = 5 * 60 * 1000
@@ -494,39 +494,53 @@ export class GatewayRunner {
     }
 
     // Prompt unlinked users to connect their account
-    if (msg.userId && msg.userId !== "unknown") {
-      const linked = await this.isUserLinked(msg.platform, msg.userId)
-      console.warn(`[gateway] isUserLinked(${msg.platform}, ${msg.userId}) = ${linked}`)
-      if (!linked) {
-        const code = await this.generateLinkingCode(msg)
-        const adapter = this.adapters.get(msg.platform)
-        console.warn(`[gateway] unlinked user — generated code=${code} adapter=${adapter ? "found" : "NOT FOUND"}`)
-        const result = await adapter?.sendMessage(msg.chatId, this.getLinkingPrompt(code))
-        console.warn(`[gateway] linking code send result:`, JSON.stringify(result))
-        return
-      }
+    if (!msg.userId || msg.userId === "unknown") return
+    const linked = await this.isUserLinked(msg.platform, msg.userId)
+    console.warn(`[gateway] isUserLinked(${msg.platform}, ${msg.userId}) = ${linked}`)
+    if (!linked) {
+      const code = await this.generateLinkingCode(msg)
+      const adapter = this.adapters.get(msg.platform)
+      console.warn(`[gateway] unlinked user — generated code=${code} adapter=${adapter ? "found" : "NOT FOUND"}`)
+      const result = await adapter?.sendMessage(msg.chatId, this.getLinkingPrompt(code))
+      console.warn(`[gateway] linking code send result:`, JSON.stringify(result))
+      return
     }
 
-    // Queue message for the linked user's sidecar to poll
     const yomiUserId = await this.resolveYomiUserId(msg.platform, msg.userId)
-    console.warn(`[gateway] queueing for yomiUserId=${yomiUserId ?? "unknown"} text="${msg.text.slice(0, 60)}"`)
-    if (yomiUserId) {
-      this.queueForUser(yomiUserId, msg)
-      // Track gateway message usage
-      await db.insert(usageEvents).values({
-        userId: yomiUserId,
-        kind: "gateway_message",
-        model: null,
-        inputTokens: 0,
-        outputTokens: 0,
-        costCents: 0,
-        status: "done",
-      }).catch(() => { /* best-effort */ })
-    }
+    console.warn(`[gateway] resolved yomiUserId=${yomiUserId ?? "unknown"} text="${msg.text.slice(0, 60)}"`)
+    if (!yomiUserId) return
 
     const session = this.getOrCreateSession(msg)
     session.messageCount++
     session.lastActivityAt = Date.now()
+
+    // Control commands (/stop /new /help) are handled locally — no LLM needed.
+    const controlReply = this.handleControlCommand(msg, session)
+    if (controlReply) {
+      await this.sendMessage(msg.platform, msg.chatId, controlReply).catch(() => {})
+      return
+    }
+
+    // ── Backend agent path ────────────────────────────────────────────────────
+    // Run the agent server-side so the desktop does not need to be running.
+    // A sidecar escape hatch is preserved: if this message ever needs a local
+    // action (future: remote screenshot, UIA), resolve the sidecar URL first.
+    // For now all data queries run here.
+    void this.sendTyping(msg.platform, msg.chatId).catch(() => {})
+
+    try {
+      const result = await runAgent({ userId: yomiUserId, text: msg.text })
+      await this.sendMessage(msg.platform, msg.chatId, result.text).catch((err) => {
+        console.warn("[gateway] failed to send agent reply:", err)
+      })
+    } catch (err) {
+      console.warn("[gateway] runAgent error:", err)
+      await this.sendMessage(
+        msg.platform,
+        msg.chatId,
+        "Sorry, I ran into an error. Please try again.",
+      ).catch(() => {})
+    }
   }
 
   // Resolve the Yomi user ID from a platform user ID
