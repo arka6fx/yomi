@@ -17,6 +17,14 @@ let cachedYomiMd: string | null = null
 function memoryEnabled(plan: Plan | undefined): boolean {
   return plan === "pro" || plan === "max"
 }
+// All plan tiers (explore/pro/max) get voice; undefined means unauthenticated
+// or desktop dev mode — fall through to env-based TTS resolution.
+function voiceEnabled(plan: Plan | undefined, ttsReq: boolean): boolean {
+  if (!ttsReq) return false
+  if (plan === "explore" || plan === "pro" || plan === "max") return resolveTts() !== "none"
+  // No plan: respect env-based TTS config (allows local dev with API key)
+  return resolveTts() !== "none"
+}
 
 async function getFastPrompt(
   text: string,
@@ -249,7 +257,7 @@ async function* answerPipeline(
     abortSignal: signal, // barge-in / client disconnect cancels the LLM request
   })
 
-  const ttsEnabled = tts && resolveTts() !== "none"
+  const ttsEnabled = voiceEnabled(plan, tts)
   const queue = new EventQueue()
   let ttsErrorEmitted = false
 
