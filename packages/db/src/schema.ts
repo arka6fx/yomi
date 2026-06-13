@@ -341,7 +341,9 @@ export const mcpConnections = pgTable(
     provider: text("provider").notNull(), // "google" | "notion" | "slack" | etc.
     oauthTokens: text("oauth_tokens").notNull(), // AES-256-GCM encrypted JSON
     scopes: text("scopes").array().notNull(),
+    displayName: text("display_name"),
     expiresAt: timestamp("expires_at"),
+    lastSyncAt: timestamp("last_sync_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
