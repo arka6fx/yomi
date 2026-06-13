@@ -5,13 +5,6 @@
   "preview_urls": false,
   "compatibility_date": "2026-06-11",
   "compatibility_flags": ["nodejs_compat_v2"],
-  "kv_namespaces": [
-    {
-      "binding": "DEVICE_CODES",
-      "id": "b5c65dc531f54df2be6558fe90606fdf",
-      "preview_id": "70eef91707444f27b0084ebd4827a8f9"
-    }
-  ],
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1
@@ -53,12 +46,6 @@
     },
     "production": {
       "name": "yomi-backend",
-      "kv_namespaces": [
-        {
-          "binding": "DEVICE_CODES",
-          "id": "b5c65dc531f54df2be6558fe90606fdf"
-        }
-      ],
       "vars": {
         "ENVIRONMENT": "production",
         "DODO_ENV": "test",
