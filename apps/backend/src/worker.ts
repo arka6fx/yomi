@@ -1,4 +1,4 @@
-import { app } from "./index"
+import { app } from "./index.js"
 
 export default {
   async fetch(request: Request, env: Record<string, unknown>, ctx: unknown) {

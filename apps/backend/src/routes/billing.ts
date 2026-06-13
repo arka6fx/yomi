@@ -674,7 +674,7 @@ async function handleSubscriptionActive(entity: DodoEntity, eventId: string) {
   let userId = meta.userId
   const plan = meta.plan
 
-  if (!userId && subId) userId = await findUserBySubscription(subId)
+  if (!userId && subId) userId = (await findUserBySubscription(subId)) ?? undefined
   if (!userId || !plan) return
 
   const config = SHARED_PLANS[plan]
@@ -753,7 +753,7 @@ async function handleSubscriptionEnd(entity: DodoEntity) {
   const subId = stringField(entity, ["subscription_id", "id"])
   let userId = meta.userId
 
-  if (!userId && subId) userId = await findUserBySubscription(subId)
+  if (!userId && subId) userId = (await findUserBySubscription(subId)) ?? undefined
   if (!userId) return
 
   // Find and update matching payment record
@@ -793,7 +793,7 @@ async function handlePaymentFailed(entity: DodoEntity) {
   const subId = stringField(entity, ["subscription_id", "id"])
   let userId = meta.userId
 
-  if (!userId && subId) userId = await findUserBySubscription(subId)
+  if (!userId && subId) userId = (await findUserBySubscription(subId)) ?? undefined
   if (!userId) return
 
   await db

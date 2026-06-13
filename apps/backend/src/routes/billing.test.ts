@@ -416,7 +416,7 @@ describe("Dodo billing — subscription checkout", () => {
   })
 
   it("returns 502 when the Dodo API fails", async () => {
-    globalThis.fetch = async () => new Response("Server Error", { status: 500 }) as Response
+    globalThis.fetch = (async () => new Response("Server Error", { status: 500 })) as unknown as typeof fetch
     const res = await createSubscription("pro")
     expect(res.status).toBe(502)
   })
@@ -505,7 +505,7 @@ describe("Dodo billing — cancel subscription", () => {
   })
 
   it("returns 502 when the Dodo cancel API fails", async () => {
-    globalThis.fetch = async () => new Response("Error", { status: 500 }) as Response
+    globalThis.fetch = (async () => new Response("Error", { status: 500 })) as unknown as typeof fetch
     const res = await cancelSubscription()
     expect(res.status).toBe(502)
   })
