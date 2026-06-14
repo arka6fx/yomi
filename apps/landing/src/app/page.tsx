@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { redirect } from "next/navigation"
 import { LandingPage } from "@/components/landing/landing-page"
 
 const TITLE = "Yomi — AI Productivity Assistant for Windows"
@@ -146,7 +147,14 @@ const jsonLd = {
   ],
 }
 
-export default function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; [key: string]: string | string[] | undefined }>
+}) {
+  const { error } = await searchParams
+  if (error) redirect(`/signin?error=${encodeURIComponent(error)}`)
+
   return (
     <>
       <script

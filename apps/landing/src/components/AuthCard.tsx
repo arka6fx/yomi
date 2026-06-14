@@ -6,15 +6,29 @@ import { ArrowLeft, Loader2 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { BrandMark } from "@/components/BrandMark"
 
+function mapAuthError(code: string): string {
+  switch (code) {
+    case "please_restart_the_process":
+      return "Session expired — please try signing in again."
+    case "account_not_linked":
+      return "This email is already registered with a different provider."
+    case "provider_rejected":
+      return "Sign-in was cancelled. Please try again."
+    default:
+      return "Sign-in failed. Please try again."
+  }
+}
+
 interface AuthCardProps {
   defaultMode: "signin" | "signup"
   plan?: string
   callbackURL?: string
+  initialError?: string
 }
 
-export default function AuthCard({ defaultMode, plan, callbackURL }: AuthCardProps) {
+export default function AuthCard({ defaultMode, plan, callbackURL, initialError }: AuthCardProps) {
   const [loading, setLoading] = useState<"github" | "google" | null>(null)
-  const [error, setError] = useState("")
+  const [error, setError] = useState(initialError ? mapAuthError(initialError) : "")
 
   const busy = loading !== null
 

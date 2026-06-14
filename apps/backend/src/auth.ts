@@ -103,7 +103,7 @@ function createAuth() {
                 expiresAt: new Date(Date.now() + 35 * 24 * 60 * 60 * 1000),
                 reason: "Explore monthly credits",
                 metadata: { plan: "explore" },
-              })
+              }).catch((err) => console.error("[signup] grantCredits failed:", createdUser.id, err))
             }
           },
         },
