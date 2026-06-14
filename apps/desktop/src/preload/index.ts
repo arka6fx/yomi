@@ -289,6 +289,29 @@ contextBridge.exposeInMainWorld("yomi", {
     ipcRenderer.send("yomi:install-update")
   },
 
+  // ── Integrations ──────────────────────────────────────────────────────────
+
+  getIntegrations(): Promise<{
+    id: string
+    provider: string
+    displayName: string
+    scopes: string[]
+    connected: boolean
+    lastSyncAt: string | null
+    expiresAt: string | null
+    createdAt: string
+  }[]> {
+    return ipcRenderer.invoke("yomi:get-integrations")
+  },
+
+  connectIntegration(id: string): Promise<{ ok?: boolean; error?: string; kind?: string }> {
+    return ipcRenderer.invoke("yomi:connect-integration", id)
+  },
+
+  disconnectIntegration(provider: string): Promise<{ ok?: boolean; error?: string }> {
+    return ipcRenderer.invoke("yomi:disconnect-integration", provider)
+  },
+
   onUpdateError(cb: (info: { message: string }) => void): () => void {
     const h = (_: Electron.IpcRendererEvent, info: { message: string }) => cb(info)
     ipcRenderer.on("yomi:update-error", h)

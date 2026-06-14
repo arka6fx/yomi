@@ -17,9 +17,11 @@ import {
   AlertTriangle,
   WalletCards,
   ReceiptText,
+  Plug,
 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
+import { ConnectorMarketplace, buildCatalog, DARK_THEME } from "@yomi/ui-connectors"
 
 type FeatureUsage = { used: number; limit: number | null }
 
@@ -136,6 +138,10 @@ function DashboardContent() {
   const [desiredPlan, setDesiredPlan] = useState<string | null>(null)
   const [cancelling, setCancelling] = useState(false)
 
+  const [activeTab, setActiveTab] = useState<"account" | "integrations">("account")
+  const [connectedProviders, setConnectedProviders] = useState<string[]>([])
+  const [integrationLoadingId, setIntegrationLoadingId] = useState<string | null>(null)
+
   useEffect(() => {
     if (!isPending && !session) router.push("/signin")
   }, [session, isPending, router])
@@ -191,8 +197,23 @@ function DashboardContent() {
   }, [session])
 
   useEffect(() => {
-    setDesiredPlan(new URLSearchParams(window.location.search).get("plan"))
+    const params = new URLSearchParams(window.location.search)
+    setDesiredPlan(params.get("plan"))
+    if (params.has("integration_success") || params.has("integration_error")) {
+      setActiveTab("integrations")
+    }
   }, [])
+
+  useEffect(() => {
+    if (!session) return
+    const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ""
+    fetch(`${apiBase}/api/integrations/status`, {
+      headers: { Authorization: `Bearer ${session.session.token}` },
+    })
+      .then((r) => r.ok ? r.json() : { connected: [] })
+      .then((d: { connected: string[] }) => setConnectedProviders(d.connected))
+      .catch(() => {}) // ignore — integrations tab is best-effort
+  }, [session])
 
   useEffect(() => {
     if (!desiredPlan || !session || subPending || !sub) return
@@ -267,6 +288,27 @@ function DashboardContent() {
     }
   }
 
+  async function handleConnectIntegration(id: string) {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ""
+    // Redirect to backend OAuth flow; callback will redirect back here
+    window.location.href = `${apiBase}/api/integrations/connect/${id}`
+  }
+
+  async function handleDisconnectIntegration(id: string) {
+    if (!session) return
+    setIntegrationLoadingId(id)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ""
+      await fetch(`${apiBase}/api/integrations/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session.session.token}` },
+      })
+      setConnectedProviders((prev) => prev.filter((p) => p !== id))
+    } catch { /* best-effort */ } finally {
+      setIntegrationLoadingId(null)
+    }
+  }
+
   async function handleSignOut() {
     await authClient.signOut()
     router.push("/")
@@ -326,6 +368,60 @@ function DashboardContent() {
           </h1>
           <p className="text-muted-foreground mt-1 text-sm">Your Yomi account overview.</p>
         </motion.div>
+
+        {/* Tab switcher */}
+        <div className="flex gap-1 border-b border-border">
+          {(["account", "integrations"] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={cn(
+                "flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px",
+                activeTab === tab
+                  ? "border-primary text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {tab === "integrations" && <Plug size={13} />}
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab === "integrations" && connectedProviders.length > 0 && (
+                <span className="ml-1 bg-primary/20 text-primary text-xs px-1.5 py-0.5 rounded-full leading-none">
+                  {connectedProviders.length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Integrations tab */}
+        {activeTab === "integrations" && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").has("integration_success") && (
+              <div className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-400">
+                Integration connected successfully.
+              </div>
+            )}
+            {new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").has("integration_error") && (
+              <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                Integration failed: {new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("integration_error")}
+              </div>
+            )}
+            <ConnectorMarketplace
+              connectors={buildCatalog(connectedProviders)}
+              theme={DARK_THEME}
+              onConnect={handleConnectIntegration}
+              onDisconnect={handleDisconnectIntegration}
+              loadingId={integrationLoadingId}
+            />
+          </motion.div>
+        )}
+
+        {/* Account tab content — only shown when account tab active */}
+        {activeTab === "account" && <>
 
         {/* Billing warnings */}
         {sub?.billingWarning && (
@@ -694,6 +790,8 @@ function DashboardContent() {
             </Link>
           </div>
         </motion.div>
+
+        </> /* end account tab */}
       </main>
     </div>
   )
