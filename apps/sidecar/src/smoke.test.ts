@@ -50,14 +50,16 @@ describe("smoke: shortcut parsers", () => {
     expect(whatsAppMessageRequest("send hi to lily on WhatsApp")).toBeNull()
   })
 
-  it("reminderDraftRequest: returns null (stubbed)", () => {
+  it("reminderDraftRequest: extracts reminder draft", () => {
     expect(
       reminderDraftRequest("write a reminder about buying milk and send to whatsapp"),
-    ).toBeNull()
+    ).toEqual({ message: "about buying milk and send to whatsapp" })
   })
 
-  it("pendingDraftRecipientRequest: returns null (stubbed)", () => {
-    expect(pendingDraftRecipientRequest("send the reminder to myself", true)).toBeNull()
+  it("pendingDraftRecipientRequest: extracts recipient", () => {
+    expect(pendingDraftRecipientRequest("send the reminder to myself", true)).toBe(
+      "the reminder to myself",
+    )
   })
 
   it("stripDetachedPhrases: removes background phrasing", () => {
@@ -81,9 +83,9 @@ describe("smoke: agent registry", () => {
     expect(agent.provider).toBe("native")
   })
 
-  it("resolves automation agent for whatsapp commands (stubbed)", () => {
+  it("resolves messaging agent for whatsapp commands", () => {
     const agent = resolveAgent("send hi to lily on whatsapp")
-    expect(agent.id).toBe("automation")
+    expect(agent.id).toBe("messaging")
   })
 
   it("falls back to automation agent for unknown goals", () => {
@@ -118,11 +120,11 @@ describe("smoke: owner classification", () => {
     expect(classifyAutomationOwner("open google.com in the browser").id).toBe("automation")
   })
 
-  it("classifies whatsapp commands as automation (stubbed)", () => {
-    expect(classifyAutomationOwner("send hi to lily on whatsapp").id).toBe("automation")
+  it("classifies whatsapp commands as messaging", () => {
+    expect(classifyAutomationOwner("send hi to lily on whatsapp").id).toBe("messaging")
   })
 
   it("classifies notepad commands", () => {
-    expect(classifyAutomationOwner("write buy milk in notepad").id).toBe("windows")
+    expect(classifyAutomationOwner("write buy milk in notepad").id).toBe("automation")
   })
 })

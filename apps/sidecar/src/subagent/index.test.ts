@@ -91,13 +91,17 @@ describe("runSubagent", () => {
   })
 
   it("loads context files successfully", async () => {
-    // Mock readFile to avoid actual filesystem
-    mock.module("fs/promises", () => ({
-      readFile: async () => "mock context content",
-    }))
-
-    const { runSubagent: runWithMockFs } = await import("./index.js")
-    await runWithMockFs({ role: "leaf", goal: "x", context: ["test.md"] })
+    const { mkdtemp, writeFile, rm } = await import("node:fs/promises")
+    const { join } = await import("node:path")
+    const { tmpdir } = await import("node:os")
+    const dir = await mkdtemp(join(tmpdir(), "subagent-"))
+    const ctxPath = join(dir, "test.md")
+    await writeFile(ctxPath, "mock context content", "utf-8")
+    try {
+      await runSubagent({ role: "leaf", goal: "x", context: [ctxPath] })
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
   })
 })
 

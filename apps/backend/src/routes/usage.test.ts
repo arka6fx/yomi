@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test"
+import { beforeAll, beforeEach, describe, expect, it, mock } from "bun:test"
 import { Hono } from "hono"
 
 type TestUser = {
@@ -81,7 +81,11 @@ mock.module("../auth.js", () => ({
   },
 }))
 
-const { usageRouter } = await import("./usage.js")
+let usageRouter: import("hono").Hono
+
+beforeAll(async () => {
+  usageRouter = (await import("./usage.js")).usageRouter
+})
 
 function app() {
   const hono = new Hono()

@@ -1,8 +1,8 @@
 import { describe, expect, it, beforeAll, afterAll } from "bun:test"
-import { platform } from "node:os"
 import { appendFile, mkdir, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { uia } from "./client.js"
+import { shouldRunWindowsAutomationE2e } from "./automation-harness.js"
 
 const LOG_FILE = join(import.meta.dir, "../../../../debug/failure-regression-log.txt")
 let logBuf = ""
@@ -33,15 +33,14 @@ async function killProcess(name: string) {
 // Regression Tests for 7 Fixed Capabilities
 // =============================================================================
 
-describe("Regression: 7 fixed capabilities", () => {
-  let skipReason = ""
+const regressionDescribe = shouldRunWindowsAutomationE2e() ? describe : describe.skip
+regressionDescribe("Regression: 7 fixed capabilities", () => {
   let notepadHwnd: number | null = null
 
   beforeAll(async () => {
     await writeFile(LOG_FILE, `# Failure Regression Test Log\n# Started: ${new Date().toISOString()}\n\n`, "utf8")
     await log("=== Failure Regression Tests Started ===")
 
-    if (platform() !== "win32") { skipReason = "not Windows"; await log(`SKIP: ${skipReason}`); return }
     process.env.YOMI_ACT_AUTOCONFIRM = "true"
 
     try {
