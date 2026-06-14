@@ -32,7 +32,7 @@ export function createPostgresTools(ctx: ConnectorContext): ToolSet {
           if (!dsn) return { error: "No DSN configured for this Postgres connection." }
 
           // Dynamic import so this module doesn't force a pg dep on non-postgres builds
-          // @ts-ignore — pg is an optional runtime dep
+          // @ts-expect-error — pg is an optional runtime dep
           const { Client } = await import("pg").catch(() => {
             throw new Error("pg package not installed — run: bun add pg")
           })
@@ -66,7 +66,7 @@ export function createPostgresTools(ctx: ConnectorContext): ToolSet {
           const dsn = await ctx.getAccessToken(ctx.userId, "postgres")
           if (!dsn) return { error: "No DSN configured." }
 
-          // @ts-ignore — pg is an optional runtime dep
+          // @ts-expect-error — pg is an optional runtime dep
           const { Client } = await import("pg").catch(() => {
             throw new Error("pg package not installed — run: bun add pg")
           })

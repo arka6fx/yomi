@@ -30,7 +30,7 @@ export function createMysqlTools(ctx: ConnectorContext): ToolSet {
           const dsn = await ctx.getAccessToken(ctx.userId, "mysql")
           if (!dsn) return { error: "No DSN configured for this MySQL connection." }
 
-          // @ts-ignore — mysql2 is an optional runtime dep
+          // @ts-expect-error — mysql2 is an optional runtime dep
           const mysql2 = await import("mysql2/promise").catch(() => {
             throw new Error("mysql2 package not installed — run: bun add mysql2")
           })
@@ -65,7 +65,7 @@ export function createMysqlTools(ctx: ConnectorContext): ToolSet {
           const dsn = await ctx.getAccessToken(ctx.userId, "mysql")
           if (!dsn) return { error: "No DSN configured." }
 
-          // @ts-ignore — mysql2 is an optional runtime dep
+          // @ts-expect-error — mysql2 is an optional runtime dep
           const mysql2 = await import("mysql2/promise").catch(() => {
             throw new Error("mysql2 package not installed — run: bun add mysql2")
           })
