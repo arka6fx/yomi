@@ -4,6 +4,9 @@ import Footer from "@/components/Footer"
 
 export const metadata: Metadata = {
   title: "Terms of Service",
+  description:
+    "Yomi Terms of Service — the agreement between you and Yomi governing your use of the desktop app, API integrations, and subscription plans.",
+  alternates: { canonical: "https://yomi.arka6fx.com/terms" },
 }
 
 export default function TermsPage() {

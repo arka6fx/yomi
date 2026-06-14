@@ -4,6 +4,9 @@ import Footer from "@/components/Footer"
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
+  description:
+    "Read Yomi's Privacy Policy — how we handle your data, what Google API scopes we request, and your rights to access, export, or delete your information.",
+  alternates: { canonical: "https://yomi.arka6fx.com/privacy" },
 }
 
 export default function PrivacyPage() {
