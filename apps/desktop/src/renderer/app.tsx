@@ -2160,7 +2160,7 @@ function MenuCard({
         onMouseEnter={onHoverEnter}
         onMouseLeave={onHoverLeave}
         style={{
-          position: "fixed",
+          position: "absolute",
           top: 28,
           right: "max(8px, calc(50% - 382px))",
           zIndex: 1000,
@@ -2177,7 +2177,7 @@ function MenuCard({
         exit={{ opacity: 0, scale: 0.95, y: -6 }}
         transition={{ type: "spring", stiffness: 400, damping: 28 }}
         style={{
-          position: "fixed",
+          position: "absolute",
           top: 52,
           right: "max(8px, calc(50% - 382px))",
           zIndex: 1000,
@@ -3771,10 +3771,11 @@ const App: React.FC = () => {
 
       const minHeight = authState === "unauthenticated" || authState === "waiting" ? 460 : compactHeight
       const root = rootRef.current
-      const menuExtra = menuOpen ? 520 : 0
+      // Menu card uses position:absolute inside root — scrollHeight naturally includes it.
+      // No fixed menuExtra needed; actual menu height drives the resize via ResizeObserver.
       const nextHeight = Math.ceil(Math.max(
         minHeight,
-        (root?.scrollHeight ?? 0) + menuExtra,
+        (root?.scrollHeight ?? 0),
       ))
       if (Math.abs(nextHeight - lastHeight) < 2) return
       lastHeight = nextHeight
@@ -3797,7 +3798,7 @@ const App: React.FC = () => {
       cancelAnimationFrame(settleFrame)
       resizeObserver.disconnect()
     }
-  }, [authState, entries.length, hotkeyState, menuOpen, updateNotice, voiceTurnBusy])
+  }, [authState, entries.length, hotkeyState, updateNotice, voiceTurnBusy])
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
