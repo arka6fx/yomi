@@ -1,6 +1,8 @@
 import { describe, expect, it } from "bun:test"
 import { nativeProvider } from "./native.js"
 import { createWorkflowProvider } from "./workflow.js"
+import { apiProvider } from "./api.js"
+import { getConnectorRegistry } from "../../connectors/registry.js"
 
 describe("native provider health", () => {
   it("is always unavailable (desktop automation not shipping)", async () => {
@@ -12,6 +14,39 @@ describe("native provider health", () => {
   it("diagnostics report available: false", async () => {
     const diag = await nativeProvider.diagnostics()
     expect(diag.available).toBe(false)
+  })
+})
+
+describe("api provider health", () => {
+  it("reports no integrations connected when registry is empty", async () => {
+    const health = await apiProvider.healthCheck()
+    expect(health.ok).toBe(true)
+    expect(health.detail).toContain("no integrations")
+  })
+
+  it("diagnostics list connected provider ids", async () => {
+    const reg = getConnectorRegistry()
+    const original = reg.getConnected.bind(reg)
+    reg.getConnected = () => ["notion", "github"]
+    try {
+      const diag = await apiProvider.diagnostics()
+      expect(diag.integrations).toEqual(["notion", "github"])
+    } finally {
+      reg.getConnected = original
+    }
+  })
+
+  it("healthCheck reports count when integrations are connected", async () => {
+    const reg = getConnectorRegistry()
+    const original = reg.getConnected.bind(reg)
+    reg.getConnected = () => ["notion"]
+    try {
+      const health = await apiProvider.healthCheck()
+      expect(health.ok).toBe(true)
+      expect(health.detail).toContain("1 integration")
+    } finally {
+      reg.getConnected = original
+    }
   })
 })
 
