@@ -88,23 +88,48 @@ export function volumeAction(
   return null
 }
 
-// ── WhatsApp messaging — will provide later ─────────────────────────────────
-// export function normalizeSpokenRecipient(raw: string): string { ... }
-// export function reminderDraftRequest(text: string): { message: string } | null { ... }
-// export function whatsAppMessageRequest(text: string): ... { ... }
-// export function pendingDraftRecipientRequest(text: string, hasDraft: boolean): string | null { ... }
+// ── Messaging shortcuts ─────────────────────────────────────────────────────
 
-export function normalizeSpokenRecipient(_raw: string): string {
-  return _raw
+export function normalizeSpokenRecipient(raw: string): string {
+  return raw.trim().replace(/^(my|to)\s+/i, "").replace(/^["']|["']$/g, "").trim()
 }
-export function reminderDraftRequest(_text: string): { message: string } | null {
+
+export function reminderDraftRequest(text: string): { message: string } | null {
+  const t = text.toLowerCase().replace(/[.!?]+$/g, "").trim()
+  const remindMatch = t.match(
+    /\b(?:remind|reminder|remind me|set a reminder|create a reminder|make a reminder)\s+(?:to\s+)?(.+)$/i,
+  )
+  if (remindMatch) return { message: remindMatch[1]!.trim() }
   return null
 }
+
 export function whatsAppMessageRequest(
-  _text: string,
+  text: string,
 ): { recipient: string; message: string } | null {
+  const t = text
+    .toLowerCase()
+    .replace(/\b(?:via|on|through|using)\s+(?:whatsapp|telegram|message)\b/gi, "")
+    .replace(/\b(?:send|text)\s+/gi, "")
+    .trim()
+  const toMatch = t.match(
+    /^(?:(?:a\s+)?message\s+)?(?:to|for)\s+(.+?)\s+(?:saying|that|to say)\s+(.+)$/i,
+  )
+  if (toMatch) return { recipient: toMatch[1]!.trim(), message: toMatch[2]!.trim() }
+  const directMatch = t.match(
+    /^(?:(?:a\s+)?message\s+)?(.+?)\s+(?:saying|that|to say)\s+(.+)$/i,
+  )
+  if (directMatch) return { recipient: directMatch[1]!.trim(), message: directMatch[2]!.trim() }
   return null
 }
-export function pendingDraftRecipientRequest(_text: string, _hasDraft: boolean): string | null {
+
+export function pendingDraftRecipientRequest(text: string, hasDraft: boolean): string | null {
+  if (!hasDraft) return null
+  const t = text.toLowerCase().replace(/[.!?]+$/g, "").trim()
+  const match = t.match(
+    /^(?:send|text|message)\s+(?:it|that|this)\s+(?:to|for)\s+(.+)$/i,
+  )
+  if (match) return match[1]!.trim()
+  const nameMatch = t.match(/^(?:send|text|message)\s+(.+)$/i)
+  if (nameMatch && nameMatch[1]!.trim().length < 40) return nameMatch[1]!.trim()
   return null
 }

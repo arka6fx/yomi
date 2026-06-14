@@ -1,0 +1,65 @@
+﻿data: {"type":"automation_started","run":{"id":"run-1781287134977-4","owner":{"id":"windows","label":"Windows Agent"},"task":"Open Windows Notepad and open the file at Documents\\YomiTests\\AI Testing.txt","state":"thinking","startedAt":"2026-06-12T17:58:54.977Z","confidence":0.82,"timeline":[],"replayId":"replay-run-1781287134977-4"}}
+
+data: {"type":"automation_preview","runId":"run-1781287134977-4","preview":{"steps":["Inspect current context","Choose the right tool","Run the requested action"],"estimatedSeconds":15,"risk":"safe","confidence":0.82}}
+
+data: {"type":"automation_timeline","runId":"run-1781287134977-4","item":{"id":"item-8","at":"2026-06-12T17:58:54.982Z","label":"Prepared automation preview","status":"planned"}}
+
+data: {"type":"agent_text","text":"I'll"}
+
+data: {"type":"agent_text","text":" open"}
+
+data: {"type":"agent_text","text":" Windows"}
+
+data: {"type":"agent_text","text":" Not"}
+
+data: {"type":"agent_text","text":"epad"}
+
+data: {"type":"agent_text","text":" and"}
+
+data: {"type":"agent_text","text":" load"}
+
+data: {"type":"agent_text","text":" your"}
+
+data: {"type":"agent_text","text":" file"}
+
+data: {"type":"agent_text","text":" at"}
+
+data: {"type":"agent_text","text":" Documents"}
+
+data: {"type":"agent_text","text":"\\"}
+
+data: {"type":"agent_text","text":"Y"}
+
+data: {"type":"agent_text","text":"omi"}
+
+data: {"type":"agent_text","text":"Tests"}
+
+data: {"type":"agent_text","text":"\\"}
+
+data: {"type":"agent_text","text":"AI"}
+
+data: {"type":"agent_text","text":" Testing"}
+
+data: {"type":"agent_text","text":".txt"}
+
+data: {"type":"agent_text","text":" now"}
+
+data: {"type":"agent_text","text":"."}
+
+data: {"type":"agent_text","text":" One"}
+
+data: {"type":"agent_text","text":" moment"}
+
+data: {"type":"agent_text","text":"."}
+
+data: {"type":"automation_step","runId":"run-1781287134977-4","state":"executing","currentStep":"Agent step 1","step":1,"maxSteps":20,"estimatedSeconds":15,"confidence":0.82}
+
+data: {"type":"agent_step","iteration":1,"max":20}
+
+data: {"type":"automation_timeline","runId":"run-1781287134977-4","item":{"id":"item-9","at":"2026-06-12T17:58:56.063Z","label":"I'll open Windows Notepad and load your file at Documents\\YomiTests\\AI Testing.txt now. One moment.","status":"done"}}
+
+data: {"type":"automation_completed","runId":"run-1781287134977-4","summary":"I'll open Windows Notepad and load your file at Documents\\YomiTests\\AI Testing.txt now. One moment.","replayId":"replay-run-1781287134977-4"}
+
+data: {"type":"done"}
+
+

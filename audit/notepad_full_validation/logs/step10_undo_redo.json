@@ -1,0 +1,27 @@
+﻿[
+    {
+        "RedoStatus":  "Success",
+        "UndoStatus":  "Success",
+        "Cycle":  1
+    },
+    {
+        "RedoStatus":  "Success",
+        "UndoStatus":  "Success",
+        "Cycle":  2
+    },
+    {
+        "RedoStatus":  "Success",
+        "UndoStatus":  "Success",
+        "Cycle":  3
+    },
+    {
+        "RedoStatus":  "Success",
+        "UndoStatus":  "Success",
+        "Cycle":  4
+    },
+    {
+        "RedoStatus":  "Success",
+        "UndoStatus":  "Success",
+        "Cycle":  5
+    }
+]

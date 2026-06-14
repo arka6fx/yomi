@@ -1,0 +1,27 @@
+# Arch Upgrade E2E Log
+# Started: 2026-06-12T13:34:31.886Z
+
+[13:34:31.887] === Arch Upgrade E2E Started ===
+[13:34:32.007] OK: helper ping
+[13:34:33.014] Test app (Notepad) hwnd: 3017572
+[13:34:34.538] killProcess CalculatorApp: {"ok":true,"killed":1}
+[13:34:34.568] listProcesses: 8 processes
+[13:34:34.568] Sample: NVIDIA Overlay "NVIDIA GeForce Overlay" | PowerToys.QuickAccess "PowerToys Quick Access (Preview)" | chrome "Desktop Automation Enhancement - Google Chrome" | Cursor "opencode - Untitled (Workspace) - Cursor" | ApplicationFrameHost "Calculator"
+[13:34:34.615] listProcesses notepad: 1 matches
+[13:34:34.622] Clipboard: wrote "Yomi-test-1781271274615", read "Yomi-test-1781271274615"
+[13:34:34.626] Cursor: 200, 200
+[13:34:35.141] hover_element: {"ok":true,"x":960,"y":557,"name":"Text editor"}
+[13:34:35.710] double_click: {"ok":true,"x":960,"y":557,"name":"Text editor"}
+[13:34:36.251] highlight: {"ok":true,"x":-2,"y":65,"width":1924,"height":985,"name":"Text editor"}
+[13:34:36.633] drag_to_point: {"ok":true,"fromX":100,"fromY":100,"toX":200,"toY":200}
+[13:34:37.827] Recovery: recovered=true strategy="reFocus: window foregrounded" newRef=none
+[13:34:38.162] executeWithRecovery: ok=true recovery=none
+[13:34:38.188] rePlan keyboard: recovered=true strategy="reFocus: foreground restored"
+[13:34:38.194] Best strategy for notepad/type_text: clipboard_paste (confidence: 0.65)
+[13:34:38.195] All notepad strategies: 2
+[13:34:38.197] After failure: clipboard_paste confidence=0.65
+[13:34:38.198] Duration recorded
+[13:34:38.199] Strategy stats: 2 total, byApp: {"notepad":2}
+[13:34:38.827] executePlan: ok=true strategy="clipboard_paste" duration=305ms
+[13:34:38.831] validateWindowExists: true
+[13:34:39.244] === Arch Upgrade E2E Completed ===

@@ -1,0 +1,17 @@
+﻿{
+    "EditorControlType":  "ControlType.Document",
+    "BoundingRect":  "78,78,898,787",
+    "ControlType":  "ControlType.Window",
+    "EditorRect":  "84,153,886,674",
+    "EditorEnabled":  true,
+    "EditorClass":  "RichEditD2DPT",
+    "EditorDiscoveryMethod":  "UIA: FindFirst by ControlType.Document",
+    "WindowDiscoveryMethod":  "UIA: wildcard search by Name like \u0027*Notepad*\u0027",
+    "ClassName":  "Notepad",
+    "IsEnabled":  true,
+    "Step":  1,
+    "EditorName":  "Text editor",
+    "WindowName":  "Untitled - Notepad",
+    "HasKeyboardFocus":  true,
+    "ProcessId":  15900
+}

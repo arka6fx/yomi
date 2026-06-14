@@ -1,0 +1,66 @@
+[
+  {
+    "task": "type_text_in_notepad",
+    "strategy": "clipboard_paste",
+    "successRate": 0.65,
+    "evidenceLabels": ["ui_state: editor value contains text"],
+    "updatedAt": "2026-06-12T19:07:36Z",
+    "confidence": 0.65
+  },
+  {
+    "task": "type_text_in_notepad",
+    "strategy": "set_value_on_document",
+    "successRate": 0.55,
+    "evidenceLabels": ["ui_state: editor value contains text"],
+    "updatedAt": "2026-06-12T19:07:36Z",
+    "confidence": 0.55
+  },
+  {
+    "task": "launch_windows_app",
+    "strategy": "get-startapps → shell:AppsFolder → wait",
+    "successRate": 0.84,
+    "evidenceLabels": ["process_state: process running", "ui_state: window handle found"],
+    "updatedAt": "2026-06-12T19:07:36Z",
+    "confidence": 0.84
+  },
+  {
+    "task": "close_window",
+    "strategy": "uia_close_window → verify process dead",
+    "successRate": 1.0,
+    "evidenceLabels": ["process_state: process exited"],
+    "updatedAt": "2026-06-12T19:07:36Z",
+    "confidence": 0.84
+  },
+  {
+    "task": "get_ui_tree",
+    "strategy": "get_ui_tree with control view, maxNodes=300",
+    "successRate": 1.0,
+    "evidenceLabels": ["ui_state: elements array populated"],
+    "updatedAt": "2026-06-12T19:07:36Z",
+    "confidence": 0.84
+  },
+  {
+    "task": "screen_capture",
+    "strategy": "capture_screen via GDI BitBlt",
+    "successRate": 1.0,
+    "evidenceLabels": ["screenshot: valid image data returned"],
+    "updatedAt": "2026-06-12T19:07:36Z",
+    "confidence": 0.84
+  },
+  {
+    "task": "media_play_pause",
+    "strategy": "Send VK_MEDIA_PLAY_PAUSE key via keybd_event",
+    "successRate": 1.0,
+    "evidenceLabels": ["audio_state: key sent successfully"],
+    "updatedAt": "2026-06-12T19:07:36Z",
+    "confidence": 0.84
+  },
+  {
+    "task": "window_move_resize",
+    "strategy": "SetWindowPos via uia-helper",
+    "successRate": 1.0,
+    "evidenceLabels": ["ui_state: window repositioned"],
+    "updatedAt": "2026-06-12T19:07:36Z",
+    "confidence": 0.84
+  }
+]

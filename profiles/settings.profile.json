@@ -1,0 +1,37 @@
+{
+  "app": "Settings",
+  "version": "Windows 11 UWP",
+  "processName": "SystemSettings",
+  "windowTitlePattern": "Settings",
+  "framework": "UWP (UIA)",
+  "lastValidated": "2026-06-12T19:07:36Z",
+  "validationPassRate": 0.33,
+  "launchCommand": "ms-settings:",
+  "windows": {
+    "main": {
+      "title": "Settings",
+      "controlType": "Window",
+      "uwp": true
+    }
+  },
+  "controls": {
+    "navigationPane": {
+      "role": "Navigation",
+      "patterns": []
+    },
+    "contentArea": {
+      "role": "Pane",
+      "patterns": [],
+      "note": "Content changes based on selected category"
+    },
+    "toggles": {
+      "role": "ToggleButton",
+      "patterns": ["Toggle"],
+      "note": "Only visible on specific settings pages, not landing page"
+    }
+  },
+  "knownRecoveryStrategies": {
+    "tree_too_sparse": ["Use lite:false for full property enumeration", "Navigate to a subpage first"],
+    "toggles_not_found": ["Navigate to Accessibility > Visual effects", "Navigate to Bluetooth & devices"]
+  }
+}

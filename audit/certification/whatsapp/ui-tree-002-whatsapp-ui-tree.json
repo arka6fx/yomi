@@ -1,0 +1,8576 @@
+{
+  "window": "WhatsApp",
+  "elements": [
+    {
+      "ref": "w1e1",
+      "role": "Window",
+      "name": "WhatsApp",
+      "automationId": "",
+      "rect": {
+        "x": 570,
+        "y": 377,
+        "width": 800,
+        "height": 600
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e2",
+      "role": "Pane",
+      "name": "Non Client Input Sink Window",
+      "automationId": "",
+      "rect": {
+        "x": 578,
+        "y": 377,
+        "width": 784,
+        "height": 32
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e3",
+      "role": "Pane",
+      "name": "AppWindow Custom Title Bar",
+      "automationId": "",
+      "rect": {
+        "x": 1224,
+        "y": 377,
+        "width": 138,
+        "height": 32
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e4",
+      "role": "Button",
+      "name": "Minimize",
+      "automationId": "Minimize",
+      "rect": {
+        "x": 1224,
+        "y": 377,
+        "width": 46,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e5",
+      "role": "Button",
+      "name": "Maximize",
+      "automationId": "Maximize",
+      "rect": {
+        "x": 1270,
+        "y": 377,
+        "width": 46,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e6",
+      "role": "Button",
+      "name": "Close",
+      "automationId": "Close",
+      "rect": {
+        "x": 1316,
+        "y": 377,
+        "width": 46,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e7",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 578,
+        "y": 378,
+        "width": 784,
+        "height": 591
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e8",
+      "role": "Pane",
+      "name": "(4) WhatsApp",
+      "automationId": "",
+      "rect": {
+        "x": 578,
+        "y": 378,
+        "width": 784,
+        "height": 591
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e9",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 578,
+        "y": 378,
+        "width": 784,
+        "height": 591
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": false,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e10",
+      "role": "Pane",
+      "name": "(4) WhatsApp - Web content",
+      "automationId": "",
+      "rect": {
+        "x": 578,
+        "y": 378,
+        "width": 784,
+        "height": 591
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e11",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 578,
+        "y": 378,
+        "width": 784,
+        "height": 591
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e12",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e13",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 578,
+        "y": 378,
+        "width": 784,
+        "height": 591
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e14",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 578,
+        "y": 378,
+        "width": 784,
+        "height": 591
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e15",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e16",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 578,
+        "y": 378,
+        "width": 784,
+        "height": 591
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e17",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 578,
+        "y": 378,
+        "width": 784,
+        "height": 591
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e18",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 578,
+        "y": 378,
+        "width": 784,
+        "height": 591
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e19",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 578,
+        "y": 378,
+        "width": 784,
+        "height": 591
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e20",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 578,
+        "y": 378,
+        "width": 784,
+        "height": 591
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e21",
+      "role": "Document",
+      "name": "(4) WhatsApp",
+      "automationId": "RootWebArea",
+      "rect": {
+        "x": 578,
+        "y": 378,
+        "width": 784,
+        "height": 591
+      },
+      "patterns": [
+        "Value",
+        "Scroll",
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "https://web.whatsapp.com/?osBuild=26200&windowsBuild=262002&launchContext=unknown&bridgeError=1&windowsBuildType=RELEASE&windows=1",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e22",
+      "role": "Group",
+      "name": "",
+      "automationId": "mount_0_0_z8",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e23",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 578,
+        "y": 378,
+        "width": 784,
+        "height": 591
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e24",
+      "role": "Text",
+      "name": "WhatsApp",
+      "automationId": "",
+      "rect": {
+        "x": 623,
+        "y": 389,
+        "width": 56,
+        "height": 15
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e25",
+      "role": "Group",
+      "name": "Search or start a new chat chat-list-filters Chat list Your personal messages are end-to-end encrypted Resize the chat list panel Send document Add contact Ask Meta AI",
+      "automationId": "",
+      "rect": {
+        "x": 578,
+        "y": 415,
+        "width": 784,
+        "height": 554
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 13
+    },
+    {
+      "ref": "w1e26",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 578,
+        "y": 415,
+        "width": 64,
+        "height": 554
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 14
+    },
+    {
+      "ref": "w1e27",
+      "role": "Button",
+      "name": "Chats",
+      "automationId": "",
+      "rect": {
+        "x": 590,
+        "y": 425,
+        "width": 40,
+        "height": 41
+      },
+      "patterns": [
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e28",
+      "role": "StatusBar",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 612,
+        "y": 419,
+        "width": 24,
+        "height": 25
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e29",
+      "role": "Text",
+      "name": "4",
+      "automationId": "",
+      "rect": {
+        "x": 620,
+        "y": 424,
+        "width": 8,
+        "height": 15
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e30",
+      "role": "Button",
+      "name": "Calls",
+      "automationId": "",
+      "rect": {
+        "x": 590,
+        "y": 469,
+        "width": 40,
+        "height": 41
+      },
+      "patterns": [
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e31",
+      "role": "Button",
+      "name": "Status",
+      "automationId": "",
+      "rect": {
+        "x": 590,
+        "y": 513,
+        "width": 40,
+        "height": 41
+      },
+      "patterns": [
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e32",
+      "role": "StatusBar",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 618,
+        "y": 514,
+        "width": 12,
+        "height": 13
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e33",
+      "role": "Text",
+      "name": "Updates in Status",
+      "automationId": "",
+      "rect": {
+        "x": 623,
+        "y": 519,
+        "width": 2,
+        "height": 12
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e34",
+      "role": "Button",
+      "name": "Channels",
+      "automationId": "",
+      "rect": {
+        "x": 590,
+        "y": 557,
+        "width": 40,
+        "height": 41
+      },
+      "patterns": [
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e35",
+      "role": "StatusBar",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 618,
+        "y": 558,
+        "width": 12,
+        "height": 13
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e36",
+      "role": "Button",
+      "name": "Communities",
+      "automationId": "",
+      "rect": {
+        "x": 590,
+        "y": 601,
+        "width": 40,
+        "height": 41
+      },
+      "patterns": [
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e37",
+      "role": "Separator",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 590,
+        "y": 653,
+        "width": 40,
+        "height": 3
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e38",
+      "role": "Button",
+      "name": "Meta AI",
+      "automationId": "",
+      "rect": {
+        "x": 590,
+        "y": 667,
+        "width": 40,
+        "height": 41
+      },
+      "patterns": [
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e39",
+      "role": "Button",
+      "name": "Send feedback",
+      "automationId": "",
+      "rect": {
+        "x": 590,
+        "y": 809,
+        "width": 40,
+        "height": 40
+      },
+      "patterns": [
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e40",
+      "role": "Button",
+      "name": "Media",
+      "automationId": "",
+      "rect": {
+        "x": 590,
+        "y": 853,
+        "width": 40,
+        "height": 40
+      },
+      "patterns": [
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e41",
+      "role": "Separator",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 590,
+        "y": 905,
+        "width": 40,
+        "height": 2
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e42",
+      "role": "Button",
+      "name": "You",
+      "automationId": "",
+      "rect": {
+        "x": 590,
+        "y": 919,
+        "width": 40,
+        "height": 40
+      },
+      "patterns": [
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e43",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 415,
+        "width": 264,
+        "height": 65
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e44",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 415,
+        "width": 264,
+        "height": 65
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e45",
+      "role": "Text",
+      "name": "Chats",
+      "automationId": "",
+      "rect": {
+        "x": 663,
+        "y": 433,
+        "width": 124,
+        "height": 29
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e46",
+      "role": "Button",
+      "name": "New chat",
+      "automationId": "",
+      "rect": {
+        "x": 791,
+        "y": 427,
+        "width": 40,
+        "height": 41
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e47",
+      "role": "Button",
+      "name": "Menu",
+      "automationId": "",
+      "rect": {
+        "x": 847,
+        "y": 427,
+        "width": 40,
+        "height": 41
+      },
+      "patterns": [
+        "ExpandCollapse",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e48",
+      "role": "Edit",
+      "name": "Search or start a new chat",
+      "automationId": "_r_b_",
+      "rect": {
+        "x": 711,
+        "y": 491,
+        "width": 176,
+        "height": 21
+      },
+      "patterns": [
+        "Value",
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e49",
+      "role": "Tab",
+      "name": "chat-list-filters",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 527,
+        "width": 264,
+        "height": 43
+      },
+      "patterns": [
+        "Selection",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e50",
+      "role": "TabItem",
+      "name": "All",
+      "automationId": "all-filter",
+      "rect": {
+        "x": 663,
+        "y": 531,
+        "width": 43,
+        "height": 33
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e51",
+      "role": "TabItem",
+      "name": "Unread 4",
+      "automationId": "label_item_1",
+      "rect": {
+        "x": 713,
+        "y": 531,
+        "width": 84,
+        "height": 33
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e52",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 804,
+        "y": 531,
+        "width": 37,
+        "height": 33
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e53",
+      "role": "TabItem",
+      "name": "",
+      "automationId": "additional-filters",
+      "rect": {
+        "x": 804,
+        "y": 531,
+        "width": 37,
+        "height": 33
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e54",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 569,
+        "width": 254,
+        "height": 12620
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e55",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 568,
+        "width": 254,
+        "height": 12621
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e56",
+      "role": "DataGrid",
+      "name": "Chat list",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 568,
+        "width": 254,
+        "height": 12621
+      },
+      "patterns": [
+        "Value",
+        "Selection",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 66
+    },
+    {
+      "ref": "w1e57",
+      "role": "DataItem",
+      "name": "+91 98323 07332 (You) Yesterday Your message could not be delivered. You can see the full list of reasons here: https://support.discord.com/hc/en-us/articles/360060145013 Pinned chat",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 572,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e58",
+      "role": "DataItem",
+      "name": "+91 98323 07332 (You) Yesterday Your message could not be delivered. You can see the full list of reasons here: https://support.discord.com/hc/en-us/articles/360060145013 Pinned chat",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 572,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e59",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 572,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e60",
+      "role": "DataItem",
+      "name": "+91 98323 07332 (You) Yesterday",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 585,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e61",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 611,
+        "width": 116,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e62",
+      "role": "DataItem",
+      "name": "Pinned chat",
+      "automationId": "",
+      "rect": {
+        "x": 852,
+        "y": 611,
+        "width": 20,
+        "height": 21
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e63",
+      "role": "Group",
+      "name": "Pinned chat",
+      "automationId": "",
+      "rect": {
+        "x": 852,
+        "y": 611,
+        "width": 20,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e64",
+      "role": "DataItem",
+      "name": "Chirantan Yesterday Ship",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 648,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e65",
+      "role": "DataItem",
+      "name": "Chirantan Yesterday Ship",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 648,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e66",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 648,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e67",
+      "role": "DataItem",
+      "name": "Chirantan Yesterday",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 661,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e68",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 687,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e69",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e70",
+      "role": "DataItem",
+      "name": "2 unread messages CSE 3rd Year 2025-26(2023-2027 Batch) Yesterday ~Piyali Chatterjee :  These 6th semester students did not pay their examination fees so far. The college will remain open tomorrow. Pay it tomorrow positively.",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 724,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e71",
+      "role": "DataItem",
+      "name": "2 unread messages CSE 3rd Year 2025-26(2023-2027 Batch) Yesterday ~Piyali Chatterjee :  These 6th semester students did not pay their examination fees so far. The college will remain open tomorrow. Pay it tomorrow positively.",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 724,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e72",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 724,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e73",
+      "role": "DataItem",
+      "name": "2 unread messages CSE 3rd Year 2025-26(2023-2027 Batch) Yesterday",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 737,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e74",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 763,
+        "width": 116,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e75",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 852,
+        "y": 763,
+        "width": 20,
+        "height": 21
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e76",
+      "role": "DataItem",
+      "name": "+91 70634 55604 Yesterday sk_9573be2fd3f73ecddc7bbdfcf61de3276099b13909432273",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 800,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e77",
+      "role": "DataItem",
+      "name": "+91 70634 55604 Yesterday sk_9573be2fd3f73ecddc7bbdfcf61de3276099b13909432273",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 800,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e78",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 800,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e79",
+      "role": "DataItem",
+      "name": "+91 70634 55604 Yesterday",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 813,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e80",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 839,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e81",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e82",
+      "role": "DataItem",
+      "name": "Adrika Yesterday Holo??",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 876,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e83",
+      "role": "DataItem",
+      "name": "Adrika Yesterday Holo??",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 876,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e84",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 876,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e85",
+      "role": "DataItem",
+      "name": "Adrika Yesterday",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 889,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e86",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 915,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e87",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e88",
+      "role": "DataItem",
+      "name": "MyJio Offers Yesterday 🎬 Enjoy 15 OTT apps + 30 GB data @ just ₹200 All your favorite OTT in one place 🍿 Recharge and enjoy: 📺 Access to 15 OTT platforms like YouTube Premium, Amazon Prime, SonyLiv, Zee5, etc. 📶 30 GB data & Unlimited 5G 📺 1000+ digital channels via JioTV 📅 28 days validity No more switching apps — just binge non-stop 😍 T&C Apply.",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 952,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e89",
+      "role": "DataItem",
+      "name": "MyJio Offers Yesterday 🎬 Enjoy 15 OTT apps + 30 GB data @ just ₹200 All your favorite OTT in one place 🍿 Recharge and enjoy: 📺 Access to 15 OTT platforms like YouTube Premium, Amazon Prime, SonyLiv, Zee5, etc. 📶 30 GB data & Unlimited 5G 📺 1000+ digital channels via JioTV 📅 28 days validity No more switching apps — just binge non-stop 😍 T&C Apply.",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 952,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e90",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 952,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e91",
+      "role": "DataItem",
+      "name": "MyJio Offers Yesterday",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 965,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e92",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 991,
+        "width": 113,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 7
+    },
+    {
+      "ref": "w1e93",
+      "role": "Image",
+      "name": "🎬",
+      "automationId": "",
+      "rect": {
+        "x": 751,
+        "y": 991,
+        "width": 20,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e94",
+      "role": "Image",
+      "name": "🍿",
+      "automationId": "",
+      "rect": {
+        "x": 1259,
+        "y": 991,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e95",
+      "role": "Image",
+      "name": "📺",
+      "automationId": "",
+      "rect": {
+        "x": 1411,
+        "y": 991,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e96",
+      "role": "Image",
+      "name": "📶",
+      "automationId": "",
+      "rect": {
+        "x": 1969,
+        "y": 991,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e97",
+      "role": "Image",
+      "name": "📺",
+      "automationId": "",
+      "rect": {
+        "x": 2161,
+        "y": 991,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e98",
+      "role": "Image",
+      "name": "📅",
+      "automationId": "",
+      "rect": {
+        "x": 2390,
+        "y": 991,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e99",
+      "role": "Image",
+      "name": "😍",
+      "automationId": "",
+      "rect": {
+        "x": 2803,
+        "y": 991,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e100",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 849,
+        "y": 991,
+        "width": 23,
+        "height": 21
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e101",
+      "role": "Button",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 855,
+        "y": 991,
+        "width": 20,
+        "height": 21
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e102",
+      "role": "DataItem",
+      "name": "Saif Alam Yesterday # commit new chnages push > commit new chnages push <details><summary>5 previous messages</summary> > I’ll inspect the working tree first so I can commit only the current intended changes and avoid touching unrelated files. Then I’ll push the current branch. > > I found four modified desktop files on main. I’m checking the diff now to make sure the commit scope is coherent before staging anything. > > The diff is a single coherent desktop change: the overlay can pass clicks through when idle, with hit areas still interactive, plus the TTS hover side effect was removed. I’ll run the relevant lightweight check, then stage these four files and commit with a conventional message. > > @yomi/desktop typecheck passed. I’m staging only the four modified desktop files now, then I’ll create the commit and push main to origin. > > The commit is created: 3366156 fix: ignore idle overlay clicks. I’m pushing it to origin/main now. </details> Committed and pushed to origin/main. Commit: 3366156 fix: ignore idle overlay clicks Validation: bun run --filter @yomi/desktop typecheck passed. Working tree is clean. > what should we implement now <details><summary>3 previous messages</summary> > I’ll quickly look at the repo’s specs and current structure so the recommendation is based on what is actually implemented, not just the roadmap text. > > The repo is clean and already has sidecar pipeline, router, speech, memory, backend, and desktop shell pieces present. I’m reading the near-term specs now to identify the next highest-leverage gap. > > One thing stands out: specs/02 is stale in places, while AGENTS.md has the newer decisions: Anthropic fast path plus Sarvam STT/TTS. I’m checking the actual sidecar and desktop IPC files to see whether the end-to-end voice path is solid before recommending the next slice. </details> Implement the *desktop-to-router pipeline* next. Right now the sidecar has /query with intent routing, but desktop IPC still posts to /query/fast, which bypasses the “intent router decides fast vs agent at the start” invariant. Also, voice screenshots are captured after recording stops, not speculatively at hotkey/listen start. Recommended slice: 1. Change desktop IPC to call POST /query instead of /query/fast. 2. Capture screenshot on listening start and reuse it when the user stops recording. 3. Forward/render router_decision SSE events in the UI, even if only subtly for now. 4. Keep text queries routed through /query too. 5. Add focused tests around /query routing and desktop IPC assumptions if practical. Why this first: it makes the architecture real. After that, Spec 07/08 agent work can plug into the existing desktop flow without another rewrite. The current app already has a lot of sidecar pieces present, but the desktop is still effectively hardwired to fast path. > yes fix my code base spec and readme agents,md fix all according to my current decissions <details><summary>6 previous messages</summary> > I’ll align the implementation and docs around the current decisions in AGENTS.md: Anthropic fast path, Sarvam speech, router-first /query, and speculative screenshot capture. I’m going to inspect the affected code and docs first, then patch the smallest coherent set. > > The implementation still uses @ai-sdk/openai and gpt-4.1-mini in the sidecar, while the current project decision says Anthropic Haiku for fast path and OpenRouter only as fallback. I’m going to update provider routing, desktop /query routing, speculative screenshot capture, and the stale docs/specs together. > > I’m using the ai-sdk skill for the provider change, because this touches Vercel AI SDK model setup and fallback routing. > > I’m patching the code now: shared model provider selection, desktop routing to /query, screenshot capture at listen start, and a small router decision display in the response card. > > The first patch hit one context mismatch in ipc.ts, so I’m splitting the changes into smaller patches against the exact file text. > > <details><summary>Edited 7 files</summary> > > - Wrote ./apps/sidecar/package.json (+3",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1028,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e103",
+      "role": "DataItem",
+      "name": "Saif Alam Yesterday # commit new chnages push > commit new chnages push <details><summary>5 previous messages</summary> > I’ll inspect the working tree first so I can commit only the current intended changes and avoid touching unrelated files. Then I’ll push the current branch. > > I found four modified desktop files on main. I’m checking the diff now to make sure the commit scope is coherent before staging anything. > > The diff is a single coherent desktop change: the overlay can pass clicks through when idle, with hit areas still interactive, plus the TTS hover side effect was removed. I’ll run the relevant lightweight check, then stage these four files and commit with a conventional message. > > @yomi/desktop typecheck passed. I’m staging only the four modified desktop files now, then I’ll create the commit and push main to origin. > > The commit is created: 3366156 fix: ignore idle overlay clicks. I’m pushing it to origin/main now. </details> Committed and pushed to origin/main. Commit: 3366156 fix: ignore idle overlay clicks Validation: bun run --filter @yomi/desktop typecheck passed. Working tree is clean. > what should we implement now <details><summary>3 previous messages</summary> > I’ll quickly look at the repo’s specs and current structure so the recommendation is based on what is actually implemented, not just the roadmap text. > > The repo is clean and already has sidecar pipeline, router, speech, memory, backend, and desktop shell pieces present. I’m reading the near-term specs now to identify the next highest-leverage gap. > > One thing stands out: specs/02 is stale in places, while AGENTS.md has the newer decisions: Anthropic fast path plus Sarvam STT/TTS. I’m checking the actual sidecar and desktop IPC files to see whether the end-to-end voice path is solid before recommending the next slice. </details> Implement the *desktop-to-router pipeline* next. Right now the sidecar has /query with intent routing, but desktop IPC still posts to /query/fast, which bypasses the “intent router decides fast vs agent at the start” invariant. Also, voice screenshots are captured after recording stops, not speculatively at hotkey/listen start. Recommended slice: 1. Change desktop IPC to call POST /query instead of /query/fast. 2. Capture screenshot on listening start and reuse it when the user stops recording. 3. Forward/render router_decision SSE events in the UI, even if only subtly for now. 4. Keep text queries routed through /query too. 5. Add focused tests around /query routing and desktop IPC assumptions if practical. Why this first: it makes the architecture real. After that, Spec 07/08 agent work can plug into the existing desktop flow without another rewrite. The current app already has a lot of sidecar pieces present, but the desktop is still effectively hardwired to fast path. > yes fix my code base spec and readme agents,md fix all according to my current decissions <details><summary>6 previous messages</summary> > I’ll align the implementation and docs around the current decisions in AGENTS.md: Anthropic fast path, Sarvam speech, router-first /query, and speculative screenshot capture. I’m going to inspect the affected code and docs first, then patch the smallest coherent set. > > The implementation still uses @ai-sdk/openai and gpt-4.1-mini in the sidecar, while the current project decision says Anthropic Haiku for fast path and OpenRouter only as fallback. I’m going to update provider routing, desktop /query routing, speculative screenshot capture, and the stale docs/specs together. > > I’m using the ai-sdk skill for the provider change, because this touches Vercel AI SDK model setup and fallback routing. > > I’m patching the code now: shared model provider selection, desktop routing to /query, screenshot capture at listen start, and a small router decision display in the response card. > > The first patch hit one context mismatch in ipc.ts, so I’m splitting the changes into smaller patches against the exact file text. > > <details><summary>Edited 7 files</summary> > > - Wrote ./apps/sidecar/package.json (+3",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1028,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e104",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1028,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e105",
+      "role": "DataItem",
+      "name": "Saif Alam Yesterday",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1041,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e106",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1067,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e107",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e108",
+      "role": "DataItem",
+      "name": "1 unread message Aranya Thursday accha",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1104,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e109",
+      "role": "DataItem",
+      "name": "1 unread message Aranya Thursday accha",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1104,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e110",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1104,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e111",
+      "role": "DataItem",
+      "name": "1 unread message Aranya Thursday",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1117,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e112",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1143,
+        "width": 116,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e113",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 852,
+        "y": 1143,
+        "width": 20,
+        "height": 21
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e114",
+      "role": "DataItem",
+      "name": "Razorpay Thursday Hi ARKA GARAI, We need a few more details for your international payment request verification. Note: You’ll be able to collect international payments only after your verification is complete. Submit or check details here https://rzp.io/i/OFr0IAgZs3 Thank you, Team Razorpay",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1180,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e115",
+      "role": "DataItem",
+      "name": "Razorpay Thursday Hi ARKA GARAI, We need a few more details for your international payment request verification. Note: You’ll be able to collect international payments only after your verification is complete. Submit or check details here https://rzp.io/i/OFr0IAgZs3 Thank you, Team Razorpay",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1180,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e116",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1180,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e117",
+      "role": "DataItem",
+      "name": "Razorpay Thursday",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1193,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e118",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1219,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e119",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e120",
+      "role": "DataItem",
+      "name": "CSE 3A Wednesday Akshay :  Surprise",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1256,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e121",
+      "role": "DataItem",
+      "name": "CSE 3A Wednesday Akshay :  Surprise",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1256,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e122",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1256,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e123",
+      "role": "DataItem",
+      "name": "CSE 3A Wednesday",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1269,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e124",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1295,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e125",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e126",
+      "role": "DataItem",
+      "name": "CSE 3A Wednesday CSE Sec A Unofficial ~HRICK 😊 :  Sobai CN lab copy OS lab theke collect kore nish.",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1332,
+        "width": 254,
+        "height": 96
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e127",
+      "role": "DataItem",
+      "name": "CSE 3A Wednesday CSE Sec A Unofficial ~HRICK 😊 :  Sobai CN lab copy OS lab theke collect kore nish.",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1332,
+        "width": 254,
+        "height": 92
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e128",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1332,
+        "width": 254,
+        "height": 92
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e129",
+      "role": "DataItem",
+      "name": "CSE Sec A Unofficial",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1363,
+        "width": 142,
+        "height": 29
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e130",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e131",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1395,
+        "width": 142,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e132",
+      "role": "Image",
+      "name": "😊",
+      "automationId": "",
+      "rect": {
+        "x": 783,
+        "y": 1395,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e133",
+      "role": "DataItem",
+      "name": "Cse Final year project Wednesday Spandan :  bol",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1427,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e134",
+      "role": "DataItem",
+      "name": "Cse Final year project Wednesday Spandan :  bol",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1427,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e135",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1427,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e136",
+      "role": "DataItem",
+      "name": "Cse Final year project Wednesday",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1440,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e137",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1466,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e138",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e139",
+      "role": "DataItem",
+      "name": "Sangeeta (Kakima) Tuesday Saikat( Mama) and 4 other contacts",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1503,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e140",
+      "role": "DataItem",
+      "name": "Sangeeta (Kakima) Tuesday Saikat( Mama) and 4 other contacts",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1503,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e141",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1503,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e142",
+      "role": "DataItem",
+      "name": "Sangeeta (Kakima) Tuesday",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1516,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e143",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1542,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e144",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e145",
+      "role": "DataItem",
+      "name": "Paytm Bill Payments Tuesday Security code notifications are no longer available for this chat",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1579,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e146",
+      "role": "DataItem",
+      "name": "Paytm Bill Payments Tuesday Security code notifications are no longer available for this chat",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1579,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e147",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1579,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e148",
+      "role": "DataItem",
+      "name": "Paytm Bill Payments Tuesday",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1592,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e149",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1618,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e150",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e151",
+      "role": "DataItem",
+      "name": "dibyo Tuesday Voice call",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1655,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e152",
+      "role": "DataItem",
+      "name": "dibyo Tuesday Voice call",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1655,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e153",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1655,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e154",
+      "role": "DataItem",
+      "name": "dibyo Tuesday",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1668,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e155",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1694,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e156",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e157",
+      "role": "DataItem",
+      "name": "JioHome Monday Still paying separately for TV, OTT & Wi-Fi? With JioHome- Enjoy all 3 Services in one Plan 📺 New LiveTV with 1000+ Digital channels Use it just like TV. No Change. 🎬 12 Entertainment Apps Latest movies and shows before TV release 🛜 Unlimited Wi-Fi For work, studies, gaming & video calls ➕ 🏏 Watch Live T20 cricket in Asli 4K ✨ Special Offer for You: Get 1 Month FREE with every 3-month recharge + FREE 5000 GB Cloud Storage & AI tools with Pro Google Gemini worth ₹35,100 FREE",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1731,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e158",
+      "role": "DataItem",
+      "name": "JioHome Monday Still paying separately for TV, OTT & Wi-Fi? With JioHome- Enjoy all 3 Services in one Plan 📺 New LiveTV with 1000+ Digital channels Use it just like TV. No Change. 🎬 12 Entertainment Apps Latest movies and shows before TV release 🛜 Unlimited Wi-Fi For work, studies, gaming & video calls ➕ 🏏 Watch Live T20 cricket in Asli 4K ✨ Special Offer for You: Get 1 Month FREE with every 3-month recharge + FREE 5000 GB Cloud Storage & AI tools with Pro Google Gemini worth ₹35,100 FREE",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1731,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e159",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1731,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e160",
+      "role": "DataItem",
+      "name": "JioHome Monday",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1744,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e161",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1770,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 6
+    },
+    {
+      "ref": "w1e162",
+      "role": "Image",
+      "name": "📺",
+      "automationId": "",
+      "rect": {
+        "x": 1305,
+        "y": 1770,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e163",
+      "role": "Image",
+      "name": "🎬",
+      "automationId": "",
+      "rect": {
+        "x": 1770,
+        "y": 1770,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e164",
+      "role": "Image",
+      "name": "🛜",
+      "automationId": "",
+      "rect": {
+        "x": 2214,
+        "y": 1770,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e165",
+      "role": "Image",
+      "name": "➕",
+      "automationId": "",
+      "rect": {
+        "x": 2578,
+        "y": 1770,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e166",
+      "role": "Image",
+      "name": "🏏",
+      "automationId": "",
+      "rect": {
+        "x": 2602,
+        "y": 1770,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e167",
+      "role": "Image",
+      "name": "✨",
+      "automationId": "",
+      "rect": {
+        "x": 2831,
+        "y": 1770,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e168",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e169",
+      "role": "DataItem",
+      "name": "Rajdeep Jr Monday Photo",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1807,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e170",
+      "role": "DataItem",
+      "name": "Rajdeep Jr Monday Photo",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1807,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e171",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1807,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e172",
+      "role": "DataItem",
+      "name": "Rajdeep Jr Monday",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1820,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e173",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1846,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e174",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e175",
+      "role": "DataItem",
+      "name": "Soubhik (Banty) Monday Oo",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1883,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e176",
+      "role": "DataItem",
+      "name": "Soubhik (Banty) Monday Oo",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1883,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e177",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1883,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e178",
+      "role": "DataItem",
+      "name": "Soubhik (Banty) Monday",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1896,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e179",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1922,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e180",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e181",
+      "role": "DataItem",
+      "name": "uttam Nsec Jr Sunday C:prog https://youtube.com/playlist?list=PLxgZQoSe9cg1drBnejUaDD9GEJBGQ5hMt&si=ftdVhvjPpWp-tejZ",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1959,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e182",
+      "role": "DataItem",
+      "name": "uttam Nsec Jr Sunday C:prog https://youtube.com/playlist?list=PLxgZQoSe9cg1drBnejUaDD9GEJBGQ5hMt&si=ftdVhvjPpWp-tejZ",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1959,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e183",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 1959,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e184",
+      "role": "DataItem",
+      "name": "uttam Nsec Jr Sunday",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1972,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e185",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 1998,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e186",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e187",
+      "role": "DataItem",
+      "name": "Oushnik Sunday You reacted 👍 to:   \" Okkk bro\"",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2035,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e188",
+      "role": "DataItem",
+      "name": "Oushnik Sunday You reacted 👍 to:   \" Okkk bro\"",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2035,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e189",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2035,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e190",
+      "role": "DataItem",
+      "name": "Oushnik Sunday",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2048,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e191",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2074,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e192",
+      "role": "Image",
+      "name": "👍",
+      "automationId": "",
+      "rect": {
+        "x": 807,
+        "y": 2074,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e193",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e194",
+      "role": "DataItem",
+      "name": "Ituri CSC Center 06/06/2026 Joy Da Ituri :  Photo",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2111,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e195",
+      "role": "DataItem",
+      "name": "Ituri CSC Center 06/06/2026 Joy Da Ituri :  Photo",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2111,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e196",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2111,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e197",
+      "role": "DataItem",
+      "name": "Ituri CSC Center 06/06/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2124,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e198",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2150,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e199",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e200",
+      "role": "DataItem",
+      "name": "Lily(Mom) 06/06/2026 hi",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2187,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e201",
+      "role": "DataItem",
+      "name": "Lily(Mom) 06/06/2026 hi",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2187,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e202",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2187,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e203",
+      "role": "DataItem",
+      "name": "Lily(Mom) 06/06/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2200,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e204",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2226,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e205",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e206",
+      "role": "DataItem",
+      "name": "Saikat( Mama) 05/06/2026 Class11_Atomic_Structure_Test_Formatted.pdf • 3 pages",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2263,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e207",
+      "role": "DataItem",
+      "name": "Saikat( Mama) 05/06/2026 Class11_Atomic_Structure_Test_Formatted.pdf • 3 pages",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2263,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e208",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2263,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e209",
+      "role": "DataItem",
+      "name": "Saikat( Mama) 05/06/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2276,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e210",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2302,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e211",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e212",
+      "role": "DataItem",
+      "name": "Confirmtkt 05/06/2026 🙏 Arka Garai,  Your Asansol Junction - DAKHINESWAR train booking is successful ✅   🚂 PNR: 2737839447  📱 Booking ID: TK979037490q27  You can view the Trip Details for more information. 💬 For any queries, please visit our Customer Service section. Loving the Confirmtkt experience? ❤️   Give us a 5-star rating! ⭐ ⭐ ⭐ ⭐ ⭐",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2339,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e213",
+      "role": "DataItem",
+      "name": "Confirmtkt 05/06/2026 🙏 Arka Garai,  Your Asansol Junction - DAKHINESWAR train booking is successful ✅   🚂 PNR: 2737839447  📱 Booking ID: TK979037490q27  You can view the Trip Details for more information. 💬 For any queries, please visit our Customer Service section. Loving the Confirmtkt experience? ❤️   Give us a 5-star rating! ⭐ ⭐ ⭐ ⭐ ⭐",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2339,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e214",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2339,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e215",
+      "role": "DataItem",
+      "name": "Confirmtkt 05/06/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2352,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e216",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2378,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 11
+    },
+    {
+      "ref": "w1e217",
+      "role": "Image",
+      "name": "🙏",
+      "automationId": "",
+      "rect": {
+        "x": 747,
+        "y": 2378,
+        "width": 20,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e218",
+      "role": "Image",
+      "name": "✅",
+      "automationId": "",
+      "rect": {
+        "x": 1265,
+        "y": 2378,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e219",
+      "role": "Image",
+      "name": "🚂",
+      "automationId": "",
+      "rect": {
+        "x": 1292,
+        "y": 2378,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e220",
+      "role": "Image",
+      "name": "📱",
+      "automationId": "",
+      "rect": {
+        "x": 1436,
+        "y": 2378,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e221",
+      "role": "Image",
+      "name": "💬",
+      "automationId": "",
+      "rect": {
+        "x": 1966,
+        "y": 2378,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e222",
+      "role": "Image",
+      "name": "❤️",
+      "automationId": "",
+      "rect": {
+        "x": 2569,
+        "y": 2378,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e223",
+      "role": "Image",
+      "name": "⭐",
+      "automationId": "",
+      "rect": {
+        "x": 2735,
+        "y": 2378,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e224",
+      "role": "Image",
+      "name": "⭐",
+      "automationId": "",
+      "rect": {
+        "x": 2755,
+        "y": 2378,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e225",
+      "role": "Image",
+      "name": "⭐",
+      "automationId": "",
+      "rect": {
+        "x": 2775,
+        "y": 2378,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e226",
+      "role": "Image",
+      "name": "⭐",
+      "automationId": "",
+      "rect": {
+        "x": 2795,
+        "y": 2378,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e227",
+      "role": "Image",
+      "name": "⭐",
+      "automationId": "",
+      "rect": {
+        "x": 2815,
+        "y": 2378,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e228",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e229",
+      "role": "DataItem",
+      "name": "SE lab project 04/06/2026 dibyo :  Sticker",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2415,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e230",
+      "role": "DataItem",
+      "name": "SE lab project 04/06/2026 dibyo :  Sticker",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2415,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e231",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2415,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e232",
+      "role": "DataItem",
+      "name": "SE lab project 04/06/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2428,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e233",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2454,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e234",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e235",
+      "role": "DataItem",
+      "name": "Sabyasachi 04/06/2026 You reacted 😁 to:   \" Awesome 💯 \"",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2491,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e236",
+      "role": "DataItem",
+      "name": "Sabyasachi 04/06/2026 You reacted 😁 to:   \" Awesome 💯 \"",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2491,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e237",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2491,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e238",
+      "role": "DataItem",
+      "name": "Sabyasachi 04/06/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2504,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e239",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2530,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e240",
+      "role": "Image",
+      "name": "😁",
+      "automationId": "",
+      "rect": {
+        "x": 807,
+        "y": 2530,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e241",
+      "role": "Image",
+      "name": "💯",
+      "automationId": "",
+      "rect": {
+        "x": 920,
+        "y": 2530,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e242",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e243",
+      "role": "DataItem",
+      "name": "Abhisek 04/06/2026 Bhai CN and DBMS ka file likha hai?",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2567,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e244",
+      "role": "DataItem",
+      "name": "Abhisek 04/06/2026 Bhai CN and DBMS ka file likha hai?",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2567,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e245",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2567,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e246",
+      "role": "DataItem",
+      "name": "Abhisek 04/06/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2580,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e247",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2606,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e248",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e249",
+      "role": "DataItem",
+      "name": "Star Health Insurance Assist 02/06/2026 Can your health insurance plan be customised? Why settle for a 'one-size-fits-all' plan? 🧩 Your health cover should be as unique as you... ✅ Plans starting at just ₹13/day* Own your protection, secure your future! Team Star Health",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2643,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e250",
+      "role": "DataItem",
+      "name": "Star Health Insurance Assist 02/06/2026 Can your health insurance plan be customised? Why settle for a 'one-size-fits-all' plan? 🧩 Your health cover should be as unique as you... ✅ Plans starting at just ₹13/day* Own your protection, secure your future! Team Star Health",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2643,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e251",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2643,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e252",
+      "role": "DataItem",
+      "name": "Star Health Insurance Assist 02/06/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2656,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e253",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2682,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e254",
+      "role": "Image",
+      "name": "🧩",
+      "automationId": "",
+      "rect": {
+        "x": 1286,
+        "y": 2682,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e255",
+      "role": "Image",
+      "name": "✅",
+      "automationId": "",
+      "rect": {
+        "x": 1603,
+        "y": 2682,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e256",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e257",
+      "role": "DataItem",
+      "name": "Priyanshu 01/06/2026 Aacha",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2719,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e258",
+      "role": "DataItem",
+      "name": "Priyanshu 01/06/2026 Aacha",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2719,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e259",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2719,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e260",
+      "role": "DataItem",
+      "name": "Priyanshu 01/06/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2732,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e261",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2758,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e262",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e263",
+      "role": "DataItem",
+      "name": "disha 01/06/2026 Ki jani amio jai ni",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2795,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e264",
+      "role": "DataItem",
+      "name": "disha 01/06/2026 Ki jani amio jai ni",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2795,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e265",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2795,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e266",
+      "role": "DataItem",
+      "name": "disha 01/06/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2808,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e267",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2834,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e268",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e269",
+      "role": "DataItem",
+      "name": "MyJio 01/06/2026 🏏 Super Over for your data! 🏏 Running low on data? Don’t get caught out 📉 Check your real time balance and recharge instantly with zero fee, only on MyJio App   🏆 📲 Download now: http://tiny.jio.com/MyJioWA",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2871,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e270",
+      "role": "DataItem",
+      "name": "MyJio 01/06/2026 🏏 Super Over for your data! 🏏 Running low on data? Don’t get caught out 📉 Check your real time balance and recharge instantly with zero fee, only on MyJio App   🏆 📲 Download now: http://tiny.jio.com/MyJioWA",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2871,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e271",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2871,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e272",
+      "role": "DataItem",
+      "name": "MyJio 01/06/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2884,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e273",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2910,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 5
+    },
+    {
+      "ref": "w1e274",
+      "role": "Image",
+      "name": "🏏",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2910,
+        "width": 20,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e275",
+      "role": "Image",
+      "name": "🏏",
+      "automationId": "",
+      "rect": {
+        "x": 911,
+        "y": 2910,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e276",
+      "role": "Image",
+      "name": "📉",
+      "automationId": "",
+      "rect": {
+        "x": 1196,
+        "y": 2910,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e277",
+      "role": "Image",
+      "name": "🏆",
+      "automationId": "",
+      "rect": {
+        "x": 1751,
+        "y": 2910,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e278",
+      "role": "Image",
+      "name": "📲",
+      "automationId": "",
+      "rect": {
+        "x": 1771,
+        "y": 2910,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e279",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e280",
+      "role": "DataItem",
+      "name": "CSE 3A 01/06/2026 CSE3A_DBMS ~Soumi Ghosh Mukherjee :  05.06.26",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2947,
+        "width": 254,
+        "height": 96
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e281",
+      "role": "DataItem",
+      "name": "CSE 3A 01/06/2026 CSE3A_DBMS ~Soumi Ghosh Mukherjee :  05.06.26",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2947,
+        "width": 254,
+        "height": 92
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e282",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 2947,
+        "width": 254,
+        "height": 92
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e283",
+      "role": "DataItem",
+      "name": "CSE3A_DBMS",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 2978,
+        "width": 142,
+        "height": 29
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e284",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e285",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3010,
+        "width": 142,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e286",
+      "role": "DataItem",
+      "name": "RESEARCH METHODOLOGY CSE 3A 29/05/2026 ~sumitesh majumder :  join class",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3042,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e287",
+      "role": "DataItem",
+      "name": "RESEARCH METHODOLOGY CSE 3A 29/05/2026 ~sumitesh majumder :  join class",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3042,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e288",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3042,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e289",
+      "role": "DataItem",
+      "name": "RESEARCH METHODOLOGY CSE 3A 29/05/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3055,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e290",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3081,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e291",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e292",
+      "role": "DataItem",
+      "name": "Lenskart 28/05/2026 Hey Arka ₹1000 OFF on ₹2000+ — one of the better times to shop Browse styles and choose what feels right  Use Code: SAVEBIG Valid till 1st June If you wish to unsubscribe, reply with STOP",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3118,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e293",
+      "role": "DataItem",
+      "name": "Lenskart 28/05/2026 Hey Arka ₹1000 OFF on ₹2000+ — one of the better times to shop Browse styles and choose what feels right  Use Code: SAVEBIG Valid till 1st June If you wish to unsubscribe, reply with STOP",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3118,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e294",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3118,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e295",
+      "role": "DataItem",
+      "name": "Lenskart 28/05/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3131,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e296",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3157,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e297",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e298",
+      "role": "DataItem",
+      "name": "Prithwish 25/05/2026 You reacted ❤️ to:   \" Personal ai assistant banabi .. griffith nam dibi .\"",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3194,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e299",
+      "role": "DataItem",
+      "name": "Prithwish 25/05/2026 You reacted ❤️ to:   \" Personal ai assistant banabi .. griffith nam dibi .\"",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3194,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e300",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3194,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e301",
+      "role": "DataItem",
+      "name": "Prithwish 25/05/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3207,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e302",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3233,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e303",
+      "role": "Image",
+      "name": "❤️",
+      "automationId": "",
+      "rect": {
+        "x": 807,
+        "y": 3233,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e304",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e305",
+      "role": "DataItem",
+      "name": "3 unread messages DWDM CSE 3A 6th Sem 2026 25/05/2026 Dwaipayan :  @Akshay  wrong group",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3270,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e306",
+      "role": "DataItem",
+      "name": "3 unread messages DWDM CSE 3A 6th Sem 2026 25/05/2026 Dwaipayan :  @Akshay  wrong group",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3270,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e307",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3270,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e308",
+      "role": "DataItem",
+      "name": "3 unread messages DWDM CSE 3A 6th Sem 2026 25/05/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3283,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e309",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3309,
+        "width": 116,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e310",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 852,
+        "y": 3309,
+        "width": 20,
+        "height": 21
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e311",
+      "role": "DataItem",
+      "name": "1 unread message WhatsApp 23/05/2026 *New: Keep your contacts up-to-date with About 📣 * Now it's easier for people to see and respond to your About directly from your chats. Share your availability, your mood, or what you’re up to, and control who can see it from your privacy settings. In Settings, tap the bubble on your profile picture to make edits.",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3346,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e312",
+      "role": "DataItem",
+      "name": "1 unread message WhatsApp 23/05/2026 *New: Keep your contacts up-to-date with About 📣 * Now it's easier for people to see and respond to your About directly from your chats. Share your availability, your mood, or what you’re up to, and control who can see it from your privacy settings. In Settings, tap the bubble on your profile picture to make edits.",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3346,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e313",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3346,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e314",
+      "role": "DataItem",
+      "name": "1 unread message WhatsApp 23/05/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3359,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e315",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3385,
+        "width": 116,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e316",
+      "role": "Image",
+      "name": "📣",
+      "automationId": "",
+      "rect": {
+        "x": 1031,
+        "y": 3385,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e317",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 852,
+        "y": 3385,
+        "width": 20,
+        "height": 21
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e318",
+      "role": "DataItem",
+      "name": "Anima 21/05/2026 You reacted 🙃 to:   \" 😭 i feel the same\"",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3422,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e319",
+      "role": "DataItem",
+      "name": "Anima 21/05/2026 You reacted 🙃 to:   \" 😭 i feel the same\"",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3422,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e320",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3422,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e321",
+      "role": "DataItem",
+      "name": "Anima 21/05/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3435,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e322",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3461,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e323",
+      "role": "Image",
+      "name": "🙃",
+      "automationId": "",
+      "rect": {
+        "x": 807,
+        "y": 3461,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e324",
+      "role": "Image",
+      "name": "😭",
+      "automationId": "",
+      "rect": {
+        "x": 854,
+        "y": 3461,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e325",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e326",
+      "role": "DataItem",
+      "name": "Spandan 20/05/2026 No prob",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3498,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e327",
+      "role": "DataItem",
+      "name": "Spandan 20/05/2026 No prob",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3498,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e328",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3498,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e329",
+      "role": "DataItem",
+      "name": "Spandan 20/05/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3511,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e330",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3537,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e331",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e332",
+      "role": "DataItem",
+      "name": "Dibakar Nayak (pg) 16/05/2026 Rent for the of may 26 pl.",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3574,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e333",
+      "role": "DataItem",
+      "name": "Dibakar Nayak (pg) 16/05/2026 Rent for the of may 26 pl.",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3574,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e334",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3574,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e335",
+      "role": "DataItem",
+      "name": "Dibakar Nayak (pg) 16/05/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3587,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e336",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3613,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e337",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e338",
+      "role": "DataItem",
+      "name": "Aryashree 15/05/2026 Ok",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3650,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e339",
+      "role": "DataItem",
+      "name": "Aryashree 15/05/2026 Ok",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3650,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e340",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3650,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e341",
+      "role": "DataItem",
+      "name": "Aryashree 15/05/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3663,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e342",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3689,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e343",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e344",
+      "role": "DataItem",
+      "name": "Dwaipayan Karmakar 13/05/2026 You reacted ❤️ to:   \" Sticker\"",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3726,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e345",
+      "role": "DataItem",
+      "name": "Dwaipayan Karmakar 13/05/2026 You reacted ❤️ to:   \" Sticker\"",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3726,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e346",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3726,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e347",
+      "role": "DataItem",
+      "name": "Dwaipayan Karmakar 13/05/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3739,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e348",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3765,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e349",
+      "role": "Image",
+      "name": "❤️",
+      "automationId": "",
+      "rect": {
+        "x": 807,
+        "y": 3765,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e350",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e351",
+      "role": "DataItem",
+      "name": "Anwesha 12/05/2026 😓",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3802,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e352",
+      "role": "DataItem",
+      "name": "Anwesha 12/05/2026 😓",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3802,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e353",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3802,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e354",
+      "role": "DataItem",
+      "name": "Anwesha 12/05/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3815,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e355",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3841,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e356",
+      "role": "Image",
+      "name": "😓",
+      "automationId": "",
+      "rect": {
+        "x": 750,
+        "y": 3841,
+        "width": 20,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e357",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e358",
+      "role": "DataItem",
+      "name": "Sasthi 12/05/2026 To The Pradhan Tiluri Gram Panchayat P.O.- Tiluri, P.S.- Saltora Dist.- Bankura, PIN- 722153 Subject: Application for Digitalization of My Child’s Birth Certificate Respected Sir/Madam, I respectfully state that the birth certificate of my son, Soubhik Gorain, has not yet been digitized in the official records. Due to this, we are facing difficulties in availing various government and educational services where an online birth certificate is required. Therefore, I kindly request you to take the necessary steps for the digitalization of my son’s birth certificate and update the details in the official online portal at the earliest. The necessary documents related to the birth certificate are enclosed herewith for your kind consideration. I shall be highly grateful for your cooperation and prompt action. Thanking you. Yours faithfully, Sasthipada Gorain Father of Soubhik Gorain Vill.- Ituri, P.O.- Tiluri P.S.- Saltora, Dist.- Bankura PIN- 722153 Mobile No.- 9933818898 Date: 12/05/2025",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3878,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e359",
+      "role": "DataItem",
+      "name": "Sasthi 12/05/2026 To The Pradhan Tiluri Gram Panchayat P.O.- Tiluri, P.S.- Saltora Dist.- Bankura, PIN- 722153 Subject: Application for Digitalization of My Child’s Birth Certificate Respected Sir/Madam, I respectfully state that the birth certificate of my son, Soubhik Gorain, has not yet been digitized in the official records. Due to this, we are facing difficulties in availing various government and educational services where an online birth certificate is required. Therefore, I kindly request you to take the necessary steps for the digitalization of my son’s birth certificate and update the details in the official online portal at the earliest. The necessary documents related to the birth certificate are enclosed herewith for your kind consideration. I shall be highly grateful for your cooperation and prompt action. Thanking you. Yours faithfully, Sasthipada Gorain Father of Soubhik Gorain Vill.- Ituri, P.O.- Tiluri P.S.- Saltora, Dist.- Bankura PIN- 722153 Mobile No.- 9933818898 Date: 12/05/2025",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3878,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e360",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3878,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e361",
+      "role": "DataItem",
+      "name": "Sasthi 12/05/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3891,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e362",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3917,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e363",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e364",
+      "role": "DataItem",
+      "name": "Surjakanta Das 11/05/2026 Hmm",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3954,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e365",
+      "role": "DataItem",
+      "name": "Surjakanta Das 11/05/2026 Hmm",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3954,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e366",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 3954,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e367",
+      "role": "DataItem",
+      "name": "Surjakanta Das 11/05/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3967,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e368",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 3993,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e369",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e370",
+      "role": "DataItem",
+      "name": "OpenAI 08/05/2026 You received a one-time passcode. For added security, you can only see it on your primary device for WhatsApp.",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 4030,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e371",
+      "role": "DataItem",
+      "name": "OpenAI 08/05/2026 You received a one-time passcode. For added security, you can only see it on your primary device for WhatsApp.",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 4030,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e372",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 4030,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e373",
+      "role": "DataItem",
+      "name": "OpenAI 08/05/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 4043,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e374",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 4069,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e375",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e376",
+      "role": "DataItem",
+      "name": "Amazon 08/05/2026 🔥 *SALE is LIVE* - Amazon Great Summer Sale is here! 🕗 Unmissable 8 PM Deals are back - here’s why you’ll love them: ✅ Top unmissable picks across Fashion, Home, Kitchen, Beauty & more ✅ FREE delivery* on your next order ✅ Extra 10% off with HDFC Credit Card / EasyEMI* 🎁 Shop these 8PM Deals now  https://www.amazon.in/jul *T&C Apply, visit Amazon.in Reply STOP to unsubscribe",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 4106,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e377",
+      "role": "DataItem",
+      "name": "Amazon 08/05/2026 🔥 *SALE is LIVE* - Amazon Great Summer Sale is here! 🕗 Unmissable 8 PM Deals are back - here’s why you’ll love them: ✅ Top unmissable picks across Fashion, Home, Kitchen, Beauty & more ✅ FREE delivery* on your next order ✅ Extra 10% off with HDFC Credit Card / EasyEMI* 🎁 Shop these 8PM Deals now  https://www.amazon.in/jul *T&C Apply, visit Amazon.in Reply STOP to unsubscribe",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 4106,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e378",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 4106,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e379",
+      "role": "DataItem",
+      "name": "Amazon 08/05/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 4119,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e380",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 4145,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 6
+    },
+    {
+      "ref": "w1e381",
+      "role": "Image",
+      "name": "🔥",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 4145,
+        "width": 20,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e382",
+      "role": "Image",
+      "name": "🕗",
+      "automationId": "",
+      "rect": {
+        "x": 1082,
+        "y": 4145,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e383",
+      "role": "Image",
+      "name": "✅",
+      "automationId": "",
+      "rect": {
+        "x": 1491,
+        "y": 4145,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e384",
+      "role": "Image",
+      "name": "✅",
+      "automationId": "",
+      "rect": {
+        "x": 1945,
+        "y": 4145,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e385",
+      "role": "Image",
+      "name": "✅",
+      "automationId": "",
+      "rect": {
+        "x": 2177,
+        "y": 4145,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e386",
+      "role": "Image",
+      "name": "🎁",
+      "automationId": "",
+      "rect": {
+        "x": 2501,
+        "y": 4145,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e387",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e388",
+      "role": "DataItem",
+      "name": "Shashank 07/05/2026 Hmm kar",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 4182,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e389",
+      "role": "DataItem",
+      "name": "Shashank 07/05/2026 Hmm kar",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 4182,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e390",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 4182,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e391",
+      "role": "DataItem",
+      "name": "Shashank 07/05/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 4195,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e392",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 4221,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e393",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e394",
+      "role": "DataItem",
+      "name": "+91 98321 92588 07/05/2026 You reacted 👍 to:   \" Ok ok\"",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 4258,
+        "width": 254,
+        "height": 77
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e395",
+      "role": "DataItem",
+      "name": "+91 98321 92588 07/05/2026 You reacted 👍 to:   \" Ok ok\"",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 4258,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e396",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 643,
+        "y": 4258,
+        "width": 254,
+        "height": 73
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e397",
+      "role": "DataItem",
+      "name": "+91 98321 92588 07/05/2026",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 4271,
+        "width": 142,
+        "height": 25
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e398",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 730,
+        "y": 4297,
+        "width": 136,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e399",
+      "role": "Image",
+      "name": "👍",
+      "automationId": "",
+      "rect": {
+        "x": 807,
+        "y": 4297,
+        "width": 21,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e400",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    }
+  ],
+  "truncated": true,
+  "view": "control"
+}

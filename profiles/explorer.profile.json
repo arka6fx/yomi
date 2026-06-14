@@ -1,0 +1,42 @@
+{
+  "app": "File Explorer",
+  "version": "Windows 11",
+  "processName": "explorer",
+  "windowTitlePattern": "Explorer",
+  "framework": "Win32 (UIA)",
+  "lastValidated": "2026-06-12T19:07:36Z",
+  "validationPassRate": 1.0,
+  "windows": {
+    "main": {
+      "title": "Quick access | This PC",
+      "note": "May also be 'Quick access' or specific folder name"
+    }
+  },
+  "controls": {
+    "addressBar": {
+      "role": "ComboBox" ,
+      "patterns": ["ExpandCollapse", "Value"],
+      "automationId": "Address Band"
+    },
+    "fileList": {
+      "role": "List",
+      "patterns": ["Scroll", "Selection"]
+    },
+    "searchBox": {
+      "role": "Edit",
+      "automationId": "Search Box"
+    }
+  },
+  "commonWorkflows": {
+    "navigate_to_folder": {
+      "methods": [
+        {"method": "press_key Ctrl+L → type path → Enter", "confidence": 0.6}
+      ],
+      "evidence": "Window title updates to folder name"
+    }
+  },
+  "knownRecoveryStrategies": {
+    "explorer_not_detected": ["Skip if only Program Manager visible", "Try with titleContains different patterns"],
+    "address_bar_not_found": ["Use keyboard shortcut Ctrl+L then type_text"]
+  }
+}

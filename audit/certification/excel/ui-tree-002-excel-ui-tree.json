@@ -1,0 +1,1235 @@
+{
+  "window": "Excel",
+  "elements": [
+    {
+      "ref": "w1e1",
+      "role": "Window",
+      "name": "Excel",
+      "automationId": "",
+      "rect": {
+        "x": 640,
+        "y": 50,
+        "width": 641,
+        "height": 1027
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 7
+    },
+    {
+      "ref": "w1e2",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 648,
+        "y": 51,
+        "width": 625,
+        "height": 1018
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e3",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 648,
+        "y": 51,
+        "width": 625,
+        "height": 1018
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 8
+    },
+    {
+      "ref": "w1e4",
+      "role": "TitleBar",
+      "name": "Excel",
+      "automationId": "",
+      "rect": {
+        "x": 690,
+        "y": 51,
+        "width": 292,
+        "height": 48
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e5",
+      "role": "MenuItem",
+      "name": "Arka Garai",
+      "automationId": "MeControlWidget",
+      "rect": {
+        "x": 983,
+        "y": 51,
+        "width": 50,
+        "height": 48
+      },
+      "patterns": [
+        "ExpandCollapse",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e6",
+      "role": "Image",
+      "name": "Arka Garai",
+      "automationId": "PersonaPicture",
+      "rect": {
+        "x": 997,
+        "y": 63,
+        "width": 24,
+        "height": 24
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e7",
+      "role": "Button",
+      "name": "Help",
+      "automationId": "",
+      "rect": {
+        "x": 1081,
+        "y": 51,
+        "width": 48,
+        "height": 48
+      },
+      "patterns": [
+        "Invoke",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e8",
+      "role": "Button",
+      "name": "Minimize",
+      "automationId": "",
+      "rect": {
+        "x": 1129,
+        "y": 51,
+        "width": 48,
+        "height": 48
+      },
+      "patterns": [
+        "Invoke",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e9",
+      "role": "Button",
+      "name": "Maximize",
+      "automationId": "",
+      "rect": {
+        "x": 1177,
+        "y": 51,
+        "width": 48,
+        "height": 48
+      },
+      "patterns": [
+        "Invoke",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e10",
+      "role": "Button",
+      "name": "Close",
+      "automationId": "",
+      "rect": {
+        "x": 1225,
+        "y": 51,
+        "width": 48,
+        "height": 48
+      },
+      "patterns": [
+        "Invoke",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e11",
+      "role": "Pane",
+      "name": "",
+      "automationId": "OutSpaceNavBar",
+      "rect": {
+        "x": 648,
+        "y": 99,
+        "width": 140,
+        "height": 970
+      },
+      "patterns": [
+        "Scroll",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e12",
+      "role": "List",
+      "name": "File",
+      "automationId": "NavBarMenu",
+      "rect": {
+        "x": 648,
+        "y": 99,
+        "width": 140,
+        "height": 970
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 6
+    },
+    {
+      "ref": "w1e13",
+      "role": "ListItem",
+      "name": "Home",
+      "automationId": "msotcidPlaceHome",
+      "rect": {
+        "x": 648,
+        "y": 99,
+        "width": 140,
+        "height": 128
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e14",
+      "role": "ListItem",
+      "name": "New",
+      "automationId": "msotcidPlaceOfficeStart",
+      "rect": {
+        "x": 648,
+        "y": 227,
+        "width": 140,
+        "height": 128
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e15",
+      "role": "ListItem",
+      "name": "Open",
+      "automationId": "msotcidPlaceOpen",
+      "rect": {
+        "x": 648,
+        "y": 355,
+        "width": 140,
+        "height": 128
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e16",
+      "role": "ListItem",
+      "name": "Account",
+      "automationId": "msotcidPlaceApplication",
+      "rect": {
+        "x": 648,
+        "y": 933,
+        "width": 140,
+        "height": 40
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e17",
+      "role": "ListItem",
+      "name": "Feedback",
+      "automationId": "OfficeFeedbackBackstage",
+      "rect": {
+        "x": 648,
+        "y": 973,
+        "width": 140,
+        "height": 40
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e18",
+      "role": "ListItem",
+      "name": "Options",
+      "automationId": "ApplicationOptionsDialog",
+      "rect": {
+        "x": 648,
+        "y": 1013,
+        "width": 140,
+        "height": 40
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e19",
+      "role": "Pane",
+      "name": "Backstage view",
+      "automationId": "BackstageView",
+      "rect": {
+        "x": 788,
+        "y": 99,
+        "width": 485,
+        "height": 970
+      },
+      "patterns": [
+        "Scroll",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e20",
+      "role": "Pane",
+      "name": "",
+      "automationId": "HeaderContentScrollViewerToSyncWithMainContent",
+      "rect": {
+        "x": 788,
+        "y": 99,
+        "width": 485,
+        "height": 42
+      },
+      "patterns": [
+        "Scroll",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e21",
+      "role": "Text",
+      "name": "Good afternoon",
+      "automationId": "GreetingMessage",
+      "rect": {
+        "x": 840,
+        "y": 99,
+        "width": 157,
+        "height": 42
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e22",
+      "role": "ScrollBar",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 1256,
+        "y": 99,
+        "width": 17,
+        "height": 42
+      },
+      "patterns": [
+        "RangeValue",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": false,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": 0,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e23",
+      "role": "Group",
+      "name": "Home",
+      "automationId": "PlaceTabHomeContent",
+      "rect": {
+        "x": 788,
+        "y": 141,
+        "width": 485,
+        "height": 928
+      },
+      "patterns": [
+        "Scroll",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e24",
+      "role": "Group",
+      "name": "New",
+      "automationId": "HomePageSlabCreateNew",
+      "rect": {
+        "x": 788,
+        "y": 141,
+        "width": 468,
+        "height": 256
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e25",
+      "role": "Button",
+      "name": "Hide or show region",
+      "automationId": "HomePageSlabCreateNew",
+      "rect": {
+        "x": 812,
+        "y": 155,
+        "width": 24,
+        "height": 24
+      },
+      "patterns": [
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e26",
+      "role": "List",
+      "name": "Templates",
+      "automationId": "",
+      "rect": {
+        "x": 836,
+        "y": 193,
+        "width": 372,
+        "height": 152
+      },
+      "patterns": [
+        "Selection",
+        "Scroll",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e27",
+      "role": "ListItem",
+      "name": "Blank workbook",
+      "automationId": "",
+      "rect": {
+        "x": 836,
+        "y": 193,
+        "width": 180,
+        "height": 152
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e28",
+      "role": "ListItem",
+      "name": "Welcome to Excel",
+      "automationId": "",
+      "rect": {
+        "x": 1028,
+        "y": 193,
+        "width": 180,
+        "height": 152
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e29",
+      "role": "Hyperlink",
+      "name": "More templates",
+      "automationId": "",
+      "rect": {
+        "x": 1099,
+        "y": 369,
+        "width": 109,
+        "height": 16
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e30",
+      "role": "Group",
+      "name": "Open",
+      "automationId": "GroupRecentDocuments",
+      "rect": {
+        "x": 788,
+        "y": 405,
+        "width": 468,
+        "height": 524
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e31",
+      "role": "Tab",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 836,
+        "y": 417,
+        "width": 372,
+        "height": 36
+      },
+      "patterns": [
+        "Selection",
+        "Scroll",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e32",
+      "role": "TabItem",
+      "name": "Recent",
+      "automationId": "",
+      "rect": {
+        "x": 836,
+        "y": 421,
+        "width": 64,
+        "height": 28
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e33",
+      "role": "TabItem",
+      "name": "Favorites",
+      "automationId": "",
+      "rect": {
+        "x": 900,
+        "y": 421,
+        "width": 79,
+        "height": 28
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e34",
+      "role": "List",
+      "name": "Recent",
+      "automationId": "",
+      "rect": {
+        "x": 836,
+        "y": 497,
+        "width": 372,
+        "height": 392
+      },
+      "patterns": [
+        "Selection",
+        "Scroll",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 7
+    },
+    {
+      "ref": "w1e35",
+      "role": "ListItem",
+      "name": "yomi-cert-test",
+      "automationId": "",
+      "rect": {
+        "x": 836,
+        "y": 497,
+        "width": 372,
+        "height": 56
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e36",
+      "role": "ListItem",
+      "name": "bedrock-long-term-api-key",
+      "automationId": "",
+      "rect": {
+        "x": 836,
+        "y": 553,
+        "width": 372,
+        "height": 56
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e37",
+      "role": "ListItem",
+      "name": "BedrockAPIKey-m3ry_accessKeys",
+      "automationId": "",
+      "rect": {
+        "x": 836,
+        "y": 609,
+        "width": 372,
+        "height": 56
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e38",
+      "role": "ListItem",
+      "name": "bedrock-long-term-api-key",
+      "automationId": "",
+      "rect": {
+        "x": 836,
+        "y": 665,
+        "width": 372,
+        "height": 56
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e39",
+      "role": "ListItem",
+      "name": "Mettl-Bulk-Upload-Template-General-Questions-P-v12",
+      "automationId": "",
+      "rect": {
+        "x": 836,
+        "y": 721,
+        "width": 372,
+        "height": 56
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e40",
+      "role": "ListItem",
+      "name": "Book1",
+      "automationId": "",
+      "rect": {
+        "x": 836,
+        "y": 777,
+        "width": 372,
+        "height": 56
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e41",
+      "role": "ListItem",
+      "name": "ATTENDANCE_REPORT_CA1_2nd year",
+      "automationId": "",
+      "rect": {
+        "x": 836,
+        "y": 833,
+        "width": 372,
+        "height": 56
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e42",
+      "role": "Hyperlink",
+      "name": "More workbooks",
+      "automationId": "",
+      "rect": {
+        "x": 1093,
+        "y": 901,
+        "width": 115,
+        "height": 16
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e43",
+      "role": "ScrollBar",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 1256,
+        "y": 141,
+        "width": 17,
+        "height": 928
+      },
+      "patterns": [
+        "RangeValue",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": false,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": 0,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e44",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 648,
+        "y": 1047,
+        "width": 625,
+        "height": 22
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e45",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 648,
+        "y": 51,
+        "width": 625,
+        "height": 179
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e46",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 648,
+        "y": 230,
+        "width": 208,
+        "height": 41
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e47",
+      "role": "ComboBox",
+      "name": "Name Box",
+      "automationId": "13",
+      "rect": {
+        "x": 657,
+        "y": 239,
+        "width": 100,
+        "height": 25
+      },
+      "patterns": [
+        "Value",
+        "ExpandCollapse",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e48",
+      "role": "Edit",
+      "name": "Name Box",
+      "automationId": "1001",
+      "rect": {
+        "x": 660,
+        "y": 242,
+        "width": 77,
+        "height": 19
+      },
+      "patterns": [
+        "Value",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e49",
+      "role": "Button",
+      "name": "Open",
+      "automationId": "DropDown",
+      "rect": {
+        "x": 741,
+        "y": 240,
+        "width": 15,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e50",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 856,
+        "y": 230,
+        "width": 417,
+        "height": 41
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e51",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 648,
+        "y": 271,
+        "width": 625,
+        "height": 776
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e52",
+      "role": "TitleBar",
+      "name": "",
+      "automationId": "TitleBar",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "Excel",
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e53",
+      "role": "MenuBar",
+      "name": "System",
+      "automationId": "SystemMenuBar",
+      "rect": {
+        "x": 648,
+        "y": 58,
+        "width": 22,
+        "height": 22
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e54",
+      "role": "MenuItem",
+      "name": "System",
+      "automationId": "",
+      "rect": {
+        "x": 648,
+        "y": 58,
+        "width": 22,
+        "height": 22
+      },
+      "patterns": [
+        "Invoke",
+        "ExpandCollapse",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e55",
+      "role": "Button",
+      "name": "Minimise",
+      "automationId": "Minimize-Restore",
+      "rect": {
+        "x": 1134,
+        "y": 28,
+        "width": 47,
+        "height": 24
+      },
+      "patterns": [
+        "Invoke",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e56",
+      "role": "Button",
+      "name": "Maximise",
+      "automationId": "Maximize-Restore",
+      "rect": {
+        "x": 1181,
+        "y": 28,
+        "width": 46,
+        "height": 24
+      },
+      "patterns": [
+        "Invoke",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e57",
+      "role": "Button",
+      "name": "Close",
+      "automationId": "Close",
+      "rect": {
+        "x": 1227,
+        "y": 28,
+        "width": 47,
+        "height": 24
+      },
+      "patterns": [
+        "Invoke",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    }
+  ],
+  "truncated": false,
+  "view": "control"
+}

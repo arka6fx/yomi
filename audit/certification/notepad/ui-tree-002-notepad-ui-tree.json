@@ -1,0 +1,1303 @@
+{
+  "window": "*yomi-cert-test.txt - Notepad",
+  "elements": [
+    {
+      "ref": "w1e1",
+      "role": "Window",
+      "name": "*yomi-cert-test.txt - Notepad",
+      "automationId": "",
+      "rect": {
+        "x": 78,
+        "y": 78,
+        "width": 898,
+        "height": 787
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 6
+    },
+    {
+      "ref": "w1e2",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 84,
+        "y": 78,
+        "width": 886,
+        "height": 781
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e3",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 84,
+        "y": 78,
+        "width": 886,
+        "height": 781
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e4",
+      "role": "Window",
+      "name": "Pop-up",
+      "automationId": "",
+      "rect": {
+        "x": 84,
+        "y": 78,
+        "width": 886,
+        "height": 781
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e5",
+      "role": "Window",
+      "name": "Keep unsaved changes?",
+      "automationId": "",
+      "rect": {
+        "x": 84,
+        "y": 78,
+        "width": 886,
+        "height": 781
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e6",
+      "role": "Pane",
+      "name": "",
+      "automationId": "ContentScrollViewer",
+      "rect": {
+        "x": 268,
+        "y": 357,
+        "width": 518,
+        "height": 144
+      },
+      "patterns": [
+        "Scroll",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e7",
+      "role": "Text",
+      "name": "Keep unsaved changes?",
+      "automationId": "",
+      "rect": {
+        "x": 292,
+        "y": 381,
+        "width": 215,
+        "height": 27
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e8",
+      "role": "Text",
+      "name": "C:\\Users\\arkag\\Desktop\\yomi-cert-test.txt has unsaved changes in Notepad. There also are changes to this file from another app. If you reopen the file, unsaved changes from Notepad will be discarded.",
+      "automationId": "",
+      "rect": {
+        "x": 292,
+        "y": 420,
+        "width": 470,
+        "height": 56
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e9",
+      "role": "Button",
+      "name": "Keep changes",
+      "automationId": "PrimaryButton",
+      "rect": {
+        "x": 292,
+        "y": 525,
+        "width": 151,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e10",
+      "role": "Text",
+      "name": "Keep changes",
+      "automationId": "ContentBlock",
+      "rect": {
+        "x": 325,
+        "y": 531,
+        "width": 86,
+        "height": 19
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e11",
+      "role": "Button",
+      "name": "Keep for all",
+      "automationId": "SecondaryButton",
+      "rect": {
+        "x": 451,
+        "y": 525,
+        "width": 152,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e12",
+      "role": "Text",
+      "name": "Keep for all",
+      "automationId": "ContentBlock",
+      "rect": {
+        "x": 492,
+        "y": 531,
+        "width": 70,
+        "height": 19
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e13",
+      "role": "Button",
+      "name": "Reopen file",
+      "automationId": "CloseButton",
+      "rect": {
+        "x": 611,
+        "y": 525,
+        "width": 151,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e14",
+      "role": "Text",
+      "name": "Reopen file",
+      "automationId": "ContentBlock",
+      "rect": {
+        "x": 652,
+        "y": 531,
+        "width": 70,
+        "height": 19
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e15",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 84,
+        "y": 153,
+        "width": 886,
+        "height": 674
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e16",
+      "role": "Document",
+      "name": "Text editor",
+      "automationId": "",
+      "rect": {
+        "x": 84,
+        "y": 153,
+        "width": 886,
+        "height": 674
+      },
+      "patterns": [
+        "Value",
+        "Scroll",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "Hello from Yomi Certification!\rThis is an automated test.\rLine three here.Hello from Yomi Certification!\rThis is an automated test.\rLine three here.",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e17",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 124,
+        "y": 88,
+        "width": 527,
+        "height": 32
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e18",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 124,
+        "y": 88,
+        "width": 527,
+        "height": 32
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e19",
+      "role": "Tab",
+      "name": "",
+      "automationId": "Tabs",
+      "rect": {
+        "x": 124,
+        "y": 88,
+        "width": 527,
+        "height": 32
+      },
+      "patterns": [
+        "Selection",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e20",
+      "role": "List",
+      "name": "",
+      "automationId": "TabListView",
+      "rect": {
+        "x": 126,
+        "y": 88,
+        "width": 488,
+        "height": 32
+      },
+      "patterns": [
+        "Selection",
+        "Scroll",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e21",
+      "role": "TabItem",
+      "name": "NotepadValidation.md. Modified.",
+      "automationId": "",
+      "rect": {
+        "x": 132,
+        "y": 88,
+        "width": 239,
+        "height": 32
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e22",
+      "role": "Text",
+      "name": "NotepadValidation.md",
+      "automationId": "",
+      "rect": {
+        "x": 141,
+        "y": 96,
+        "width": 122,
+        "height": 15
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e23",
+      "role": "TabItem",
+      "name": "yomi-cert-test.txt. Modified.",
+      "automationId": "",
+      "rect": {
+        "x": 367,
+        "y": 88,
+        "width": 247,
+        "height": 32
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e24",
+      "role": "Text",
+      "name": "yomi-cert-test.txt",
+      "automationId": "",
+      "rect": {
+        "x": 380,
+        "y": 96,
+        "width": 97,
+        "height": 15
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e25",
+      "role": "Button",
+      "name": "Add New Tab",
+      "automationId": "AddButton",
+      "rect": {
+        "x": 617,
+        "y": 93,
+        "width": 32,
+        "height": 24
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e26",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 84,
+        "y": 120,
+        "width": 886,
+        "height": 33
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e27",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 84,
+        "y": 120,
+        "width": 886,
+        "height": 33
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 16
+    },
+    {
+      "ref": "w1e28",
+      "role": "MenuBar",
+      "name": "",
+      "automationId": "MenuBar",
+      "rect": {
+        "x": 84,
+        "y": 120,
+        "width": 159,
+        "height": 32
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e29",
+      "role": "MenuItem",
+      "name": "File",
+      "automationId": "File",
+      "rect": {
+        "x": 88,
+        "y": 120,
+        "width": 41,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ExpandCollapse",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e30",
+      "role": "MenuItem",
+      "name": "Edit",
+      "automationId": "Edit",
+      "rect": {
+        "x": 137,
+        "y": 120,
+        "width": 44,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ExpandCollapse",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e31",
+      "role": "MenuItem",
+      "name": "View",
+      "automationId": "View",
+      "rect": {
+        "x": 189,
+        "y": 120,
+        "width": 50,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ExpandCollapse",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e32",
+      "role": "Button",
+      "name": "Headings",
+      "automationId": "",
+      "rect": {
+        "x": 363,
+        "y": 120,
+        "width": 56,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ExpandCollapse",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e33",
+      "role": "Button",
+      "name": "Lists",
+      "automationId": "",
+      "rect": {
+        "x": 419,
+        "y": 120,
+        "width": 56,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ExpandCollapse",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e34",
+      "role": "Button",
+      "name": "Bold (Ctrl+B)",
+      "automationId": "",
+      "rect": {
+        "x": 475,
+        "y": 120,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e35",
+      "role": "Button",
+      "name": "Italic (Ctrl+I)",
+      "automationId": "",
+      "rect": {
+        "x": 507,
+        "y": 120,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e36",
+      "role": "Button",
+      "name": "Strikethrough (Ctrl+Shift+X)",
+      "automationId": "",
+      "rect": {
+        "x": 539,
+        "y": 120,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e37",
+      "role": "Button",
+      "name": "Link (Ctrl+K)",
+      "automationId": "",
+      "rect": {
+        "x": 571,
+        "y": 120,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e38",
+      "role": "Button",
+      "name": "Table",
+      "automationId": "",
+      "rect": {
+        "x": 603,
+        "y": 120,
+        "width": 56,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ExpandCollapse",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e39",
+      "role": "Button",
+      "name": "Clear formatting (Ctrl+Space)",
+      "automationId": "",
+      "rect": {
+        "x": 659,
+        "y": 120,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e40",
+      "role": "Button",
+      "name": "Writing tools",
+      "automationId": "RewriteDropDownButton",
+      "rect": {
+        "x": 804,
+        "y": 120,
+        "width": 56,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ExpandCollapse",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e41",
+      "role": "Button",
+      "name": "What's new",
+      "automationId": "FREButton",
+      "rect": {
+        "x": 864,
+        "y": 121,
+        "width": 30,
+        "height": 30
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e42",
+      "role": "Button",
+      "name": "User avatar",
+      "automationId": "AvatarButton",
+      "rect": {
+        "x": 898,
+        "y": 120,
+        "width": 30,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e43",
+      "role": "Button",
+      "name": "Settings",
+      "automationId": "SettingsButton",
+      "rect": {
+        "x": 932,
+        "y": 120,
+        "width": 30,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e44",
+      "role": "Window",
+      "name": "",
+      "automationId": "PrivacyTeachingTip",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e45",
+      "role": "Pane",
+      "name": "",
+      "automationId": "PsDownloadDetailTeachingTip",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e46",
+      "role": "Pane",
+      "name": "Local AI model must complete downloading to use this feature while signed out.",
+      "automationId": "PsDownloadLightTeachingTip",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e47",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 84,
+        "y": 827,
+        "width": 886,
+        "height": 32
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": false,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e48",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 84,
+        "y": 827,
+        "width": 886,
+        "height": 32
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": false,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 6
+    },
+    {
+      "ref": "w1e49",
+      "role": "Text",
+      "name": "Line 5,\nColumn 17",
+      "automationId": "ContentTextBlock",
+      "rect": {
+        "x": 100,
+        "y": 835,
+        "width": 68,
+        "height": 16
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e50",
+      "role": "Text",
+      "name": "148 characters",
+      "automationId": "ContentTextBlock",
+      "rect": {
+        "x": 189,
+        "y": 835,
+        "width": 77,
+        "height": 16
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e51",
+      "role": "Text",
+      "name": "Plain text",
+      "automationId": "ContentTextBlock",
+      "rect": {
+        "x": 387,
+        "y": 827,
+        "width": 62,
+        "height": 32
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e52",
+      "role": "Text",
+      "name": "Zoom",
+      "automationId": "ContentTextBlock",
+      "rect": {
+        "x": 599,
+        "y": 835,
+        "width": 32,
+        "height": 16
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e53",
+      "role": "Text",
+      "name": " Windows (CRLF)",
+      "automationId": "ContentTextBlock",
+      "rect": {
+        "x": 667,
+        "y": 835,
+        "width": 91,
+        "height": 16
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e54",
+      "role": "Text",
+      "name": " UTF-8",
+      "automationId": "ContentTextBlock",
+      "rect": {
+        "x": 835,
+        "y": 835,
+        "width": 36,
+        "height": 16
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e55",
+      "role": "TitleBar",
+      "name": "",
+      "automationId": "TitleBar",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "*yomi-cert-test.txt - Notepad",
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e56",
+      "role": "MenuBar",
+      "name": "System",
+      "automationId": "SystemMenuBar",
+      "rect": {
+        "x": 86,
+        "y": 86,
+        "width": 22,
+        "height": 22
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e57",
+      "role": "MenuItem",
+      "name": "System",
+      "automationId": "",
+      "rect": {
+        "x": 86,
+        "y": 86,
+        "width": 22,
+        "height": 22
+      },
+      "patterns": [
+        "ExpandCollapse",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e58",
+      "role": "Button",
+      "name": "Minimise",
+      "automationId": "Minimize-Restore",
+      "rect": {
+        "x": 831,
+        "y": 79,
+        "width": 47,
+        "height": 30
+      },
+      "patterns": [
+        "Invoke",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e59",
+      "role": "Button",
+      "name": "Maximise",
+      "automationId": "Maximize-Restore",
+      "rect": {
+        "x": 878,
+        "y": 79,
+        "width": 46,
+        "height": 30
+      },
+      "patterns": [
+        "Invoke",
+        "LegacyIAccessible"
+      ],
+      "enabled": false,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e60",
+      "role": "Button",
+      "name": "Close",
+      "automationId": "Close",
+      "rect": {
+        "x": 924,
+        "y": 79,
+        "width": 47,
+        "height": 30
+      },
+      "patterns": [
+        "Invoke",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    }
+  ],
+  "truncated": false,
+  "view": "control"
+}

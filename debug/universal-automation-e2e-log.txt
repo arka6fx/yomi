@@ -1,0 +1,34 @@
+# Universal Automation E2E Log
+# Started: 2026-06-12T13:42:18.805Z
+
+[13:42:18.806] === Universal Automation E2E Started ===
+[13:42:18.919] OK: helper ping
+[13:42:21.717]   dismissAd: 1 ad elements dismissed
+[13:42:21.718] dismissAd found 1 elements — safely handled
+[13:42:27.296]   launchApp "Notepad": launched hwnd=1115312
+[13:42:31.143]   FAIL: Notepad — find editor
+[13:42:31.143]   ERROR: Notepad — find editor: Error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+[13:42:31.329]   setText "Universal test": confidence=0.70
+[13:42:43.325]   launchApp "CalculatorApp": FAILED
+[13:42:43.325]   SKIP: Calculator not available
+[13:42:43.874]   launchApp "explorer": launched hwnd=1114738
+[13:42:45.199]   FAIL: File Explorer — find file list
+[13:42:45.199]   ERROR: File Explorer — find file list: Error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+[13:42:47.866]   FAIL: File Explorer — navigate address bar
+[13:42:47.866]   ERROR: File Explorer — navigate address bar: Error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+[13:42:51.394] After move/resize/restore: window="*Line1 - Notepad"
+[13:42:52.011] Report: 3/10 pass (30.0%)
+[13:42:52.011] Report saved: C:\Users\arkag\Projects\yomi\universal-automation-report.json
+[13:42:52.012] === Universal Automation E2E Completed ===

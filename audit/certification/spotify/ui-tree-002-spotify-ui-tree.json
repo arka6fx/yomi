@@ -1,0 +1,8773 @@
+{
+  "window": "Spotify Free",
+  "elements": [
+    {
+      "ref": "w1e1",
+      "role": "Window",
+      "name": "Spotify Free",
+      "automationId": "",
+      "rect": {
+        "x": 125,
+        "y": 108,
+        "width": 1600,
+        "height": 900
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e2",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 125,
+        "y": 108,
+        "width": 1600,
+        "height": 900
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": false,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e3",
+      "role": "Pane",
+      "name": "Spotify Free",
+      "automationId": "",
+      "rect": {
+        "x": 125,
+        "y": 108,
+        "width": 1600,
+        "height": 900
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e4",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 125,
+        "y": 108,
+        "width": 1600,
+        "height": 900
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e5",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 125,
+        "y": 108,
+        "width": 1600,
+        "height": 900
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e6",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 125,
+        "y": 108,
+        "width": 1600,
+        "height": 900
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e7",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 125,
+        "y": 108,
+        "width": 1600,
+        "height": 900
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e8",
+      "role": "Pane",
+      "name": "",
+      "automationId": "view_1",
+      "rect": {
+        "x": 125,
+        "y": 108,
+        "width": 1600,
+        "height": 900
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e9",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e10",
+      "role": "Edit",
+      "name": "Address and search bar",
+      "automationId": "view_1012",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Value",
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "xpui.app.spotify.com/index.html",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e11",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 125,
+        "y": 108,
+        "width": 1600,
+        "height": 900
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e12",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 125,
+        "y": 108,
+        "width": 1600,
+        "height": 900
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e13",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 125,
+        "y": 108,
+        "width": 1600,
+        "height": 900
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e14",
+      "role": "Document",
+      "name": "Spotify - Web Player: Music for everyone",
+      "automationId": "RootWebArea",
+      "rect": {
+        "x": 125,
+        "y": 108,
+        "width": 1600,
+        "height": 900
+      },
+      "patterns": [
+        "Value",
+        "Scroll",
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "https://xpui.app.spotify.com/index.html",
+      "rangeValue": null,
+      "childCount": 15
+    },
+    {
+      "ref": "w1e15",
+      "role": "Group",
+      "name": "",
+      "automationId": "main",
+      "rect": {
+        "x": 125,
+        "y": 108,
+        "width": 1600,
+        "height": 900
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 19
+    },
+    {
+      "ref": "w1e16",
+      "role": "Hyperlink",
+      "name": "Skip to main content",
+      "automationId": "",
+      "rect": {
+        "x": 124,
+        "y": 107,
+        "width": 1,
+        "height": 1
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "Scroll",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/index.html#main-view",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e17",
+      "role": "Button",
+      "name": "Go back",
+      "automationId": "",
+      "rect": {
+        "x": 197,
+        "y": 116,
+        "width": 24,
+        "height": 48
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e18",
+      "role": "Button",
+      "name": "Go forward",
+      "automationId": "",
+      "rect": {
+        "x": 229,
+        "y": 116,
+        "width": 24,
+        "height": 48
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": false,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e19",
+      "role": "Button",
+      "name": "Home",
+      "automationId": "",
+      "rect": {
+        "x": 660,
+        "y": 116,
+        "width": 48,
+        "height": 48
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e20",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 716,
+        "y": 116,
+        "width": 474,
+        "height": 48
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e21",
+      "role": "Button",
+      "name": "Search",
+      "automationId": "",
+      "rect": {
+        "x": 716,
+        "y": 116,
+        "width": 48,
+        "height": 48
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e22",
+      "role": "ComboBox",
+      "name": "What do you want to play?",
+      "automationId": "",
+      "rect": {
+        "x": 716,
+        "y": 116,
+        "width": 474,
+        "height": 48
+      },
+      "patterns": [
+        "Value",
+        "ExpandCollapse",
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e23",
+      "role": "Button",
+      "name": "Browse",
+      "automationId": "",
+      "rect": {
+        "x": 1150,
+        "y": 128,
+        "width": 24,
+        "height": 25
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e24",
+      "role": "Button",
+      "name": "What's New",
+      "automationId": "",
+      "rect": {
+        "x": 1446,
+        "y": 124,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e25",
+      "role": "Button",
+      "name": "Listening activity",
+      "automationId": "",
+      "rect": {
+        "x": 1486,
+        "y": 124,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e26",
+      "role": "Button",
+      "name": "arka",
+      "automationId": "",
+      "rect": {
+        "x": 1526,
+        "y": 116,
+        "width": 48,
+        "height": 48
+      },
+      "patterns": [
+        "ExpandCollapse",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e27",
+      "role": "Group",
+      "name": "Main",
+      "automationId": "",
+      "rect": {
+        "x": 133,
+        "y": 172,
+        "width": 72,
+        "height": 748
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e28",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 133,
+        "y": 172,
+        "width": 72,
+        "height": 748
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e29",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 133,
+        "y": 172,
+        "width": 72,
+        "height": 107
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e30",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 149,
+        "y": 188,
+        "width": 40,
+        "height": 40
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e31",
+      "role": "Button",
+      "name": "Open Your Library",
+      "automationId": "",
+      "rect": {
+        "x": 149,
+        "y": 188,
+        "width": 40,
+        "height": 40
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e32",
+      "role": "Text",
+      "name": "Your Library",
+      "automationId": "",
+      "rect": {
+        "x": 156,
+        "y": 207,
+        "width": 1,
+        "height": 23
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e33",
+      "role": "Button",
+      "name": "Create",
+      "automationId": "",
+      "rect": {
+        "x": 151,
+        "y": 236,
+        "width": 36,
+        "height": 35
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e34",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 133,
+        "y": 279,
+        "width": 72,
+        "height": 641
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e35",
+      "role": "DataGrid",
+      "name": "Your Library",
+      "automationId": "",
+      "rect": {
+        "x": 137,
+        "y": 287,
+        "width": 64,
+        "height": 128
+      },
+      "patterns": [
+        "Value",
+        "Selection",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e36",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e37",
+      "role": "DataItem",
+      "name": "Liked Songs Playlist • arka",
+      "automationId": "",
+      "rect": {
+        "x": 137,
+        "y": 287,
+        "width": 64,
+        "height": 64
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e38",
+      "role": "DataItem",
+      "name": "Liked Songs Playlist • arka",
+      "automationId": "",
+      "rect": {
+        "x": 137,
+        "y": 287,
+        "width": 64,
+        "height": 64
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e39",
+      "role": "Group",
+      "name": "Liked Songs",
+      "automationId": "",
+      "rect": {
+        "x": 137,
+        "y": 287,
+        "width": 64,
+        "height": 64
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e40",
+      "role": "Button",
+      "name": "Liked Songs Playlist • arka",
+      "automationId": "",
+      "rect": {
+        "x": 137,
+        "y": 287,
+        "width": 64,
+        "height": 64
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e41",
+      "role": "DataItem",
+      "name": "My Playlist #1 Playlist • arka",
+      "automationId": "",
+      "rect": {
+        "x": 137,
+        "y": 351,
+        "width": 64,
+        "height": 64
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e42",
+      "role": "DataItem",
+      "name": "My Playlist #1 Playlist • arka",
+      "automationId": "",
+      "rect": {
+        "x": 137,
+        "y": 351,
+        "width": 64,
+        "height": 64
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e43",
+      "role": "Group",
+      "name": "My Playlist #1",
+      "automationId": "",
+      "rect": {
+        "x": 137,
+        "y": 351,
+        "width": 64,
+        "height": 64
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e44",
+      "role": "Button",
+      "name": "My Playlist #1 Playlist • arka",
+      "automationId": "",
+      "rect": {
+        "x": 137,
+        "y": 351,
+        "width": 64,
+        "height": 64
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e45",
+      "role": "Group",
+      "name": "My Playlist #1",
+      "automationId": "",
+      "rect": {
+        "x": 145,
+        "y": 359,
+        "width": 48,
+        "height": 48
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e46",
+      "role": "DataItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e47",
+      "role": "Text",
+      "name": "Resize main navigation",
+      "automationId": "",
+      "rect": {
+        "x": 208,
+        "y": 545,
+        "width": 78,
+        "height": 67
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e48",
+      "role": "Slider",
+      "name": "Resize main navigation",
+      "automationId": "",
+      "rect": {
+        "x": 210,
+        "y": 613,
+        "width": 130,
+        "height": 17
+      },
+      "patterns": [
+        "Value",
+        "RangeValue",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "72",
+      "rangeValue": 72,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e49",
+      "role": "Group",
+      "name": "Now playing bar",
+      "automationId": "",
+      "rect": {
+        "x": 133,
+        "y": 928,
+        "width": 1584,
+        "height": 72
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 10
+    },
+    {
+      "ref": "w1e50",
+      "role": "Group",
+      "name": "Now playing: Believer by Imagine Dragons",
+      "automationId": "",
+      "rect": {
+        "x": 141,
+        "y": 936,
+        "width": 468,
+        "height": 56
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e51",
+      "role": "Button",
+      "name": "Now playing view",
+      "automationId": "",
+      "rect": {
+        "x": 141,
+        "y": 936,
+        "width": 56,
+        "height": 56
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e52",
+      "role": "Hyperlink",
+      "name": "Believer",
+      "automationId": "",
+      "rect": {
+        "x": 213,
+        "y": 945,
+        "width": 52,
+        "height": 21
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "https://xpui.app.spotify.com/album/33pt9HBdGlAbRGBHQgsZsU",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e53",
+      "role": "Hyperlink",
+      "name": "Imagine Dragons",
+      "automationId": "",
+      "rect": {
+        "x": 213,
+        "y": 965,
+        "width": 93,
+        "height": 18
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "https://xpui.app.spotify.com/artist/53XhwfbYqKCa1cC15pYq2q",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e54",
+      "role": "Button",
+      "name": "Add to playlist",
+      "automationId": "",
+      "rect": {
+        "x": 327,
+        "y": 948,
+        "width": 17,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e55",
+      "role": "Group",
+      "name": "Player controls",
+      "automationId": "",
+      "rect": {
+        "x": 608,
+        "y": 935,
+        "width": 634,
+        "height": 58
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 9
+    },
+    {
+      "ref": "w1e56",
+      "role": "Button",
+      "name": "Disable Shuffle for Believer",
+      "automationId": "",
+      "rect": {
+        "x": 821,
+        "y": 935,
+        "width": 32,
+        "height": 33
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e57",
+      "role": "Button",
+      "name": "Previous",
+      "automationId": "",
+      "rect": {
+        "x": 861,
+        "y": 935,
+        "width": 32,
+        "height": 33
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e58",
+      "role": "Button",
+      "name": "Play",
+      "automationId": "",
+      "rect": {
+        "x": 909,
+        "y": 935,
+        "width": 32,
+        "height": 33
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e59",
+      "role": "Button",
+      "name": "Next",
+      "automationId": "",
+      "rect": {
+        "x": 957,
+        "y": 935,
+        "width": 32,
+        "height": 33
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e60",
+      "role": "CheckBox",
+      "name": "Enable repeat",
+      "automationId": "",
+      "rect": {
+        "x": 997,
+        "y": 935,
+        "width": 32,
+        "height": 33
+      },
+      "patterns": [
+        "Value",
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e61",
+      "role": "Text",
+      "name": "1:19",
+      "automationId": "",
+      "rect": {
+        "x": 632,
+        "y": 975,
+        "width": 27,
+        "height": 18
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e62",
+      "role": "Text",
+      "name": "Change progress",
+      "automationId": "",
+      "rect": {
+        "x": 665,
+        "y": 977,
+        "width": 65,
+        "height": 44
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e63",
+      "role": "Slider",
+      "name": "Change progress",
+      "automationId": "",
+      "rect": {
+        "x": 667,
+        "y": 1023,
+        "width": 130,
+        "height": 16
+      },
+      "patterns": [
+        "Value",
+        "RangeValue",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "1:19/3:24",
+      "rangeValue": 80000,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e64",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 1191,
+        "y": 975,
+        "width": 51,
+        "height": 18
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e65",
+      "role": "Text",
+      "name": "3:24",
+      "automationId": "",
+      "rect": {
+        "x": 1191,
+        "y": 975,
+        "width": 27,
+        "height": 18
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e66",
+      "role": "Button",
+      "name": "Lyrics",
+      "automationId": "",
+      "rect": {
+        "x": 1424,
+        "y": 948,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e67",
+      "role": "Button",
+      "name": "Queue",
+      "automationId": "",
+      "rect": {
+        "x": 1456,
+        "y": 948,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e68",
+      "role": "Button",
+      "name": "Connect to a device",
+      "automationId": "",
+      "rect": {
+        "x": 1488,
+        "y": 948,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e69",
+      "role": "Button",
+      "name": "Mute",
+      "automationId": "",
+      "rect": {
+        "x": 1520,
+        "y": 948,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e70",
+      "role": "Text",
+      "name": "Change volume",
+      "automationId": "",
+      "rect": {
+        "x": 1551,
+        "y": 957,
+        "width": 57,
+        "height": 44
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e71",
+      "role": "Slider",
+      "name": "Change volume",
+      "automationId": "",
+      "rect": {
+        "x": 1553,
+        "y": 1003,
+        "width": 129,
+        "height": 16
+      },
+      "patterns": [
+        "Value",
+        "RangeValue",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "0:00",
+      "rangeValue": 0.8999999761581421,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e72",
+      "role": "Button",
+      "name": "Open Miniplayer",
+      "automationId": "",
+      "rect": {
+        "x": 1653,
+        "y": 948,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e73",
+      "role": "Button",
+      "name": "Enter Full screen",
+      "automationId": "",
+      "rect": {
+        "x": 1685,
+        "y": 948,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e74",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 213,
+        "y": 172,
+        "width": 1076,
+        "height": 748
+      },
+      "patterns": [
+        "Scroll",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e75",
+      "role": "Group",
+      "name": "Spotify - Web Player: Music for everyone",
+      "automationId": "",
+      "rect": {
+        "x": 213,
+        "y": 172,
+        "width": 1076,
+        "height": 748
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 14
+    },
+    {
+      "ref": "w1e76",
+      "role": "List",
+      "name": "Home Filters",
+      "automationId": "",
+      "rect": {
+        "x": 253,
+        "y": 188,
+        "width": 199,
+        "height": 40
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e77",
+      "role": "CheckBox",
+      "name": "All",
+      "automationId": "",
+      "rect": {
+        "x": 253,
+        "y": 188,
+        "width": 41,
+        "height": 32
+      },
+      "patterns": [
+        "Value",
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e78",
+      "role": "CheckBox",
+      "name": "Music",
+      "automationId": "",
+      "rect": {
+        "x": 301,
+        "y": 188,
+        "width": 62,
+        "height": 32
+      },
+      "patterns": [
+        "Value",
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e79",
+      "role": "CheckBox",
+      "name": "Podcasts",
+      "automationId": "",
+      "rect": {
+        "x": 370,
+        "y": 188,
+        "width": 82,
+        "height": 32
+      },
+      "patterns": [
+        "Value",
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e80",
+      "role": "Text",
+      "name": "Home",
+      "automationId": "",
+      "rect": {
+        "x": 212,
+        "y": 239,
+        "width": 1,
+        "height": 22
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e81",
+      "role": "Group",
+      "name": "Good afternoon",
+      "automationId": "",
+      "rect": {
+        "x": 253,
+        "y": 240,
+        "width": 996,
+        "height": 104
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 24
+    },
+    {
+      "ref": "w1e82",
+      "role": "Hyperlink",
+      "name": "STAY (with Justin Bieber)",
+      "automationId": "",
+      "rect": {
+        "x": 309,
+        "y": 254,
+        "width": 162,
+        "height": 20
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "https://xpui.app.spotify.com/album/4QLAtpLNUsHEYrcHXmMIZZ",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e83",
+      "role": "Button",
+      "name": "Play",
+      "automationId": "",
+      "rect": {
+        "x": 456,
+        "y": 248,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e84",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 253,
+        "y": 240,
+        "width": 243,
+        "height": 48
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e85",
+      "role": "Hyperlink",
+      "name": "Romantic Mix",
+      "automationId": "",
+      "rect": {
+        "x": 560,
+        "y": 254,
+        "width": 88,
+        "height": 20
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "https://xpui.app.spotify.com/playlist/37i9dQZF1EVGJJ3r00UGAt",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e86",
+      "role": "Button",
+      "name": "Play",
+      "automationId": "",
+      "rect": {
+        "x": 707,
+        "y": 248,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e87",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 504,
+        "y": 240,
+        "width": 243,
+        "height": 48
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e88",
+      "role": "Hyperlink",
+      "name": "Pop Punk Mix",
+      "automationId": "",
+      "rect": {
+        "x": 811,
+        "y": 254,
+        "width": 88,
+        "height": 20
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "https://xpui.app.spotify.com/playlist/37i9dQZF1EQlwBHcFvRC5P",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e89",
+      "role": "Button",
+      "name": "Play",
+      "automationId": "",
+      "rect": {
+        "x": 958,
+        "y": 248,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e90",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 755,
+        "y": 240,
+        "width": 243,
+        "height": 48
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e91",
+      "role": "Hyperlink",
+      "name": "Latest Dance Telugu",
+      "automationId": "",
+      "rect": {
+        "x": 1062,
+        "y": 254,
+        "width": 130,
+        "height": 20
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "https://xpui.app.spotify.com/playlist/37i9dQZF1DX3VuB7FVwxmc",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e92",
+      "role": "Button",
+      "name": "Play",
+      "automationId": "",
+      "rect": {
+        "x": 1209,
+        "y": 248,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e93",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 1006,
+        "y": 240,
+        "width": 243,
+        "height": 48
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e94",
+      "role": "Hyperlink",
+      "name": "The Kid LAROI - STAY ft Justin Bieber (Clean)",
+      "automationId": "",
+      "rect": {
+        "x": 309,
+        "y": 300,
+        "width": 179,
+        "height": 40
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "https://xpui.app.spotify.com/playlist/3uo3QgTFuXpXVrwYCLxy5v",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e95",
+      "role": "Button",
+      "name": "Play",
+      "automationId": "",
+      "rect": {
+        "x": 456,
+        "y": 304,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e96",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 253,
+        "y": 296,
+        "width": 243,
+        "height": 48
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e97",
+      "role": "Hyperlink",
+      "name": "Udi Udi",
+      "automationId": "",
+      "rect": {
+        "x": 560,
+        "y": 310,
+        "width": 47,
+        "height": 20
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "https://xpui.app.spotify.com/album/6ZRXnfTz48dWXDlDrumiYE",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e98",
+      "role": "Button",
+      "name": "Play",
+      "automationId": "",
+      "rect": {
+        "x": 707,
+        "y": 304,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e99",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 504,
+        "y": 296,
+        "width": 243,
+        "height": 48
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e100",
+      "role": "Hyperlink",
+      "name": "Anubha Bajaj",
+      "automationId": "",
+      "rect": {
+        "x": 811,
+        "y": 310,
+        "width": 85,
+        "height": 20
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "https://xpui.app.spotify.com/artist/1jR0u53xF6iccwKAu9SD3H",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e101",
+      "role": "Button",
+      "name": "Play",
+      "automationId": "",
+      "rect": {
+        "x": 958,
+        "y": 304,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e102",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 755,
+        "y": 296,
+        "width": 243,
+        "height": 48
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e103",
+      "role": "Hyperlink",
+      "name": "Nadaniyan",
+      "automationId": "",
+      "rect": {
+        "x": 1062,
+        "y": 310,
+        "width": 70,
+        "height": 20
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "https://xpui.app.spotify.com/album/5joI5ZRz0ferDlzJTgIg9p",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e104",
+      "role": "Button",
+      "name": "Play",
+      "automationId": "",
+      "rect": {
+        "x": 1209,
+        "y": 304,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e105",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 1006,
+        "y": 296,
+        "width": 243,
+        "height": 48
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e106",
+      "role": "Group",
+      "name": "Made For arka",
+      "automationId": "",
+      "rect": {
+        "x": 253,
+        "y": 384,
+        "width": 996,
+        "height": 304
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e107",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 253,
+        "y": 384,
+        "width": 996,
+        "height": 48
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e108",
+      "role": "Hyperlink",
+      "name": "Show all",
+      "automationId": "",
+      "rect": {
+        "x": 1186,
+        "y": 385,
+        "width": 55,
+        "height": 48
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "https://xpui.app.spotify.com/section/0JQ5DAUnp4wcj0bCb3wh3S",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e109",
+      "role": "DataGrid",
+      "name": "Made For arka",
+      "automationId": "react-aria171628195-:rlf:",
+      "rect": {
+        "x": 213,
+        "y": 440,
+        "width": 1640,
+        "height": 248
+      },
+      "patterns": [
+        "Value",
+        "Selection",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 8
+    },
+    {
+      "ref": "w1e110",
+      "role": "DataItem",
+      "name": "Daily Mix 1",
+      "automationId": "react-aria171628195-:rlf:-react-aria-1",
+      "rect": {
+        "x": 241,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e111",
+      "role": "DataItem",
+      "name": "Daily Mix 1",
+      "automationId": "",
+      "rect": {
+        "x": 241,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e112",
+      "role": "ListItem",
+      "name": "Daily Mix 1",
+      "automationId": "",
+      "rect": {
+        "x": 241,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e113",
+      "role": "Button",
+      "name": "Daily Mix 1 Navjot Ahuja, Eden's Echo, Akshath and more",
+      "automationId": "",
+      "rect": {
+        "x": 241,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e114",
+      "role": "Button",
+      "name": "Play Daily Mix 1",
+      "automationId": "",
+      "rect": {
+        "x": 368,
+        "y": 575,
+        "width": 49,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e115",
+      "role": "Hyperlink",
+      "name": "Daily Mix 1",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/playlist/37i9dQZF1E36DHa4ySLvtF",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e116",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:playlist:37i9dQZF1E36DHa4ySLvtF-0",
+      "rect": {
+        "x": 253,
+        "y": 631,
+        "width": 75,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e117",
+      "role": "Text",
+      "name": "Navjot Ahuja, Eden's Echo, Akshath and more",
+      "automationId": "",
+      "rect": {
+        "x": 253,
+        "y": 635,
+        "width": 152,
+        "height": 41
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e118",
+      "role": "DataItem",
+      "name": "Daily Mix 2",
+      "automationId": "react-aria171628195-:rlf:-react-aria-2",
+      "rect": {
+        "x": 436,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e119",
+      "role": "DataItem",
+      "name": "Daily Mix 2",
+      "automationId": "",
+      "rect": {
+        "x": 436,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e120",
+      "role": "ListItem",
+      "name": "Daily Mix 2",
+      "automationId": "",
+      "rect": {
+        "x": 436,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e121",
+      "role": "Button",
+      "name": "Daily Mix 2 Yo Yo Honey Singh, Darshan Raval, Pritam and more",
+      "automationId": "",
+      "rect": {
+        "x": 436,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e122",
+      "role": "Button",
+      "name": "Play Daily Mix 2",
+      "automationId": "",
+      "rect": {
+        "x": 564,
+        "y": 575,
+        "width": 48,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e123",
+      "role": "Hyperlink",
+      "name": "Daily Mix 2",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/playlist/37i9dQZF1E375wVXAI0RJT",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e124",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:playlist:37i9dQZF1E375wVXAI0RJT-1",
+      "rect": {
+        "x": 448,
+        "y": 631,
+        "width": 79,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e125",
+      "role": "Text",
+      "name": "Yo Yo Honey Singh, Darshan Raval, Pritam and more",
+      "automationId": "",
+      "rect": {
+        "x": 448,
+        "y": 635,
+        "width": 148,
+        "height": 61
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e126",
+      "role": "DataItem",
+      "name": "Daily Mix 3",
+      "automationId": "react-aria171628195-:rlf:-react-aria-3",
+      "rect": {
+        "x": 632,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e127",
+      "role": "DataItem",
+      "name": "Daily Mix 3",
+      "automationId": "",
+      "rect": {
+        "x": 632,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e128",
+      "role": "ListItem",
+      "name": "Daily Mix 3",
+      "automationId": "",
+      "rect": {
+        "x": 632,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e129",
+      "role": "Button",
+      "name": "Daily Mix 3 Neck Deep, Paramore, Taylor Acorn and more",
+      "automationId": "",
+      "rect": {
+        "x": 632,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e130",
+      "role": "Button",
+      "name": "Play Daily Mix 3",
+      "automationId": "",
+      "rect": {
+        "x": 759,
+        "y": 575,
+        "width": 49,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e131",
+      "role": "Hyperlink",
+      "name": "Daily Mix 3",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/playlist/37i9dQZF1E35nCLbKowco2",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e132",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:playlist:37i9dQZF1E35nCLbKowco2-2",
+      "rect": {
+        "x": 644,
+        "y": 631,
+        "width": 78,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e133",
+      "role": "Text",
+      "name": "Neck Deep, Paramore, Taylor Acorn and more",
+      "automationId": "",
+      "rect": {
+        "x": 644,
+        "y": 635,
+        "width": 142,
+        "height": 41
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e134",
+      "role": "DataItem",
+      "name": "Daily Mix 4",
+      "automationId": "react-aria171628195-:rlf:-react-aria-4",
+      "rect": {
+        "x": 827,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e135",
+      "role": "DataItem",
+      "name": "Daily Mix 4",
+      "automationId": "",
+      "rect": {
+        "x": 827,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e136",
+      "role": "ListItem",
+      "name": "Daily Mix 4",
+      "automationId": "",
+      "rect": {
+        "x": 827,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e137",
+      "role": "Button",
+      "name": "Daily Mix 4 Taylor Swift, Katy Perry, Maroon 5 and more",
+      "automationId": "",
+      "rect": {
+        "x": 827,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e138",
+      "role": "Button",
+      "name": "Play Daily Mix 4",
+      "automationId": "",
+      "rect": {
+        "x": 955,
+        "y": 575,
+        "width": 48,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e139",
+      "role": "Hyperlink",
+      "name": "Daily Mix 4",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/playlist/37i9dQZF1E35PnYOJshcCC",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e140",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:playlist:37i9dQZF1E35PnYOJshcCC-3",
+      "rect": {
+        "x": 839,
+        "y": 631,
+        "width": 79,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e141",
+      "role": "Text",
+      "name": "Taylor Swift, Katy Perry, Maroon 5 and more",
+      "automationId": "",
+      "rect": {
+        "x": 839,
+        "y": 635,
+        "width": 147,
+        "height": 41
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e142",
+      "role": "DataItem",
+      "name": "Daily Mix 5",
+      "automationId": "react-aria171628195-:rlf:-react-aria-5",
+      "rect": {
+        "x": 1023,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e143",
+      "role": "DataItem",
+      "name": "Daily Mix 5",
+      "automationId": "",
+      "rect": {
+        "x": 1023,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e144",
+      "role": "ListItem",
+      "name": "Daily Mix 5",
+      "automationId": "",
+      "rect": {
+        "x": 1023,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e145",
+      "role": "Button",
+      "name": "Daily Mix 5 Soft boy, ikiru., Tollan Kim and more",
+      "automationId": "",
+      "rect": {
+        "x": 1023,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e146",
+      "role": "Button",
+      "name": "Play Daily Mix 5",
+      "automationId": "",
+      "rect": {
+        "x": 1150,
+        "y": 575,
+        "width": 49,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e147",
+      "role": "Hyperlink",
+      "name": "Daily Mix 5",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/playlist/37i9dQZF1E36hO54pmidAt",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e148",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:playlist:37i9dQZF1E36hO54pmidAt-4",
+      "rect": {
+        "x": 1035,
+        "y": 631,
+        "width": 78,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e149",
+      "role": "Text",
+      "name": "Soft boy, ikiru., Tollan Kim and more",
+      "automationId": "",
+      "rect": {
+        "x": 1035,
+        "y": 635,
+        "width": 159,
+        "height": 41
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e150",
+      "role": "DataItem",
+      "name": "Daily Mix 6",
+      "automationId": "react-aria171628195-:rlf:-react-aria-6",
+      "rect": {
+        "x": 1218,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e151",
+      "role": "DataItem",
+      "name": "Daily Mix 6",
+      "automationId": "",
+      "rect": {
+        "x": 1218,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e152",
+      "role": "ListItem",
+      "name": "Daily Mix 6",
+      "automationId": "",
+      "rect": {
+        "x": 1218,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e153",
+      "role": "Button",
+      "name": "Daily Mix 6 Ariana Grande, The Weeknd, MANILA GREY and more",
+      "automationId": "",
+      "rect": {
+        "x": 1218,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e154",
+      "role": "Button",
+      "name": "Play Daily Mix 6",
+      "automationId": "",
+      "rect": {
+        "x": 1346,
+        "y": 575,
+        "width": 48,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e155",
+      "role": "Hyperlink",
+      "name": "Daily Mix 6",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/playlist/37i9dQZF1E37pOe9iyk7Xw",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e156",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:playlist:37i9dQZF1E37pOe9iyk7Xw-5",
+      "rect": {
+        "x": 1230,
+        "y": 631,
+        "width": 79,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e157",
+      "role": "Text",
+      "name": "Ariana Grande, The Weeknd, MANILA GREY and more",
+      "automationId": "",
+      "rect": {
+        "x": 1230,
+        "y": 635,
+        "width": 154,
+        "height": 61
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e158",
+      "role": "DataItem",
+      "name": "Discover Weekly",
+      "automationId": "react-aria171628195-:rlf:-react-aria-7",
+      "rect": {
+        "x": 1414,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e159",
+      "role": "DataItem",
+      "name": "Discover Weekly",
+      "automationId": "",
+      "rect": {
+        "x": 1414,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e160",
+      "role": "ListItem",
+      "name": "Discover Weekly",
+      "automationId": "",
+      "rect": {
+        "x": 1414,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e161",
+      "role": "Button",
+      "name": "Discover Weekly Your shortcut to hidden gems, deep cuts, and future faves, updated every Monday. You’ll know when you hear it.",
+      "automationId": "",
+      "rect": {
+        "x": 1414,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e162",
+      "role": "Button",
+      "name": "Play Discover Weekly",
+      "automationId": "",
+      "rect": {
+        "x": 1541,
+        "y": 575,
+        "width": 49,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e163",
+      "role": "Hyperlink",
+      "name": "Discover Weekly",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/playlist/37i9dQZEVXcJi4aw7zkpMj",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e164",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:playlist:37i9dQZEVXcJi4aw7zkpMj-6",
+      "rect": {
+        "x": 1426,
+        "y": 631,
+        "width": 121,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e165",
+      "role": "Text",
+      "name": "Your shortcut to hidden gems, deep cuts, and future faves, updated every Monday. You’ll know when you hear it.",
+      "automationId": "",
+      "rect": {
+        "x": 1426,
+        "y": 635,
+        "width": 149,
+        "height": 101
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e166",
+      "role": "DataItem",
+      "name": "Release Radar",
+      "automationId": "react-aria171628195-:rlf:-react-aria-8",
+      "rect": {
+        "x": 1609,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e167",
+      "role": "DataItem",
+      "name": "Release Radar",
+      "automationId": "",
+      "rect": {
+        "x": 1609,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e168",
+      "role": "ListItem",
+      "name": "Release Radar",
+      "automationId": "",
+      "rect": {
+        "x": 1609,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e169",
+      "role": "Button",
+      "name": "Release Radar Catch all the latest music from artists you follow, plus new singles picked for you. Updates every Friday.",
+      "automationId": "",
+      "rect": {
+        "x": 1609,
+        "y": 440,
+        "width": 196,
+        "height": 248
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e170",
+      "role": "Button",
+      "name": "Play Release Radar",
+      "automationId": "",
+      "rect": {
+        "x": 1737,
+        "y": 575,
+        "width": 48,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e171",
+      "role": "Hyperlink",
+      "name": "Release Radar",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/playlist/37i9dQZEVXbx6cy0B1Q58l",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e172",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:playlist:37i9dQZEVXbx6cy0B1Q58l-7",
+      "rect": {
+        "x": 1621,
+        "y": 631,
+        "width": 104,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e173",
+      "role": "Text",
+      "name": "Catch all the latest music from artists you follow, plus new singles picked for you. Updates every Friday.",
+      "automationId": "",
+      "rect": {
+        "x": 1621,
+        "y": 635,
+        "width": 157,
+        "height": 101
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e174",
+      "role": "Group",
+      "name": "Jump back in",
+      "automationId": "",
+      "rect": {
+        "x": 253,
+        "y": 711,
+        "width": 996,
+        "height": 348
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e175",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 253,
+        "y": 711,
+        "width": 996,
+        "height": 49
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e176",
+      "role": "Hyperlink",
+      "name": "Show all",
+      "automationId": "",
+      "rect": {
+        "x": 1186,
+        "y": 712,
+        "width": 55,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "https://xpui.app.spotify.com/section/0JQ5DAIiKWzVFULQfUm85X",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e177",
+      "role": "DataGrid",
+      "name": "Jump back in",
+      "automationId": "react-aria171628195-:rlj:",
+      "rect": {
+        "x": 213,
+        "y": 767,
+        "width": 858,
+        "height": 292
+      },
+      "patterns": [
+        "Value",
+        "Selection",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e178",
+      "role": "DataItem",
+      "name": "New Hindi albums",
+      "automationId": "react-aria171628195-:rlj:-react-aria-1",
+      "rect": {
+        "x": 241,
+        "y": 767,
+        "width": 196,
+        "height": 292
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e179",
+      "role": "DataItem",
+      "name": "New Hindi albums",
+      "automationId": "",
+      "rect": {
+        "x": 241,
+        "y": 767,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e180",
+      "role": "ListItem",
+      "name": "New Hindi albums",
+      "automationId": "",
+      "rect": {
+        "x": 241,
+        "y": 767,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e181",
+      "role": "Button",
+      "name": "New Hindi albums By swastik",
+      "automationId": "",
+      "rect": {
+        "x": 241,
+        "y": 767,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e182",
+      "role": "Button",
+      "name": "Play New Hindi albums",
+      "automationId": "",
+      "rect": {
+        "x": 368,
+        "y": 903,
+        "width": 49,
+        "height": 48
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e183",
+      "role": "Hyperlink",
+      "name": "New Hindi albums",
+      "automationId": "",
+      "rect": {
+        "x": 253,
+        "y": 959,
+        "width": 131,
+        "height": 22
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "https://xpui.app.spotify.com/playlist/5A23wHXWVdWoQsK7VdOLsV",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e184",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:playlist:5A23wHXWVdWoQsK7VdOLsV-0",
+      "rect": {
+        "x": 253,
+        "y": 959,
+        "width": 131,
+        "height": 22
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e185",
+      "role": "Text",
+      "name": "By swastik",
+      "automationId": "",
+      "rect": {
+        "x": 253,
+        "y": 985,
+        "width": 67,
+        "height": 20
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e186",
+      "role": "DataItem",
+      "name": "Ransom Lil Tecca I got black, I got white, what you want? Hop outside a Ghost and hop up in a Phanto",
+      "automationId": "react-aria171628195-:rlj:-react-aria-2",
+      "rect": {
+        "x": 436,
+        "y": 767,
+        "width": 196,
+        "height": 292
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e187",
+      "role": "DataItem",
+      "name": "Ransom Lil Tecca I got black, I got white, what you want? Hop outside a Ghost and hop up in a Phanto",
+      "automationId": "",
+      "rect": {
+        "x": 436,
+        "y": 767,
+        "width": 196,
+        "height": 292
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e188",
+      "role": "ListItem",
+      "name": "Ransom Lil Tecca I got black, I got white, what you want? Hop outside a Ghost and hop up in a Phanto",
+      "automationId": "",
+      "rect": {
+        "x": 436,
+        "y": 767,
+        "width": 196,
+        "height": 292
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e189",
+      "role": "Button",
+      "name": "Ransom Lil Tecca I got black, I got white, what you want? Hop outside a Ghost and hop up in a Phanto I got black, I got white, what you want? Hop outside a Ghost and hop up in a Phantom I know I'm ’bout to blow, I ain't dumb They try to take my flow, I take they ass for ransom I know that I'm gone",
+      "automationId": "",
+      "rect": {
+        "x": 436,
+        "y": 767,
+        "width": 196,
+        "height": 292
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e190",
+      "role": "Button",
+      "name": "Play Ransom Lil Tecca I got black, I got white, what you want? Hop outside a Ghost and hop up in a Phanto",
+      "automationId": "",
+      "rect": {
+        "x": 564,
+        "y": 903,
+        "width": 48,
+        "height": 48
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e191",
+      "role": "Hyperlink",
+      "name": "Ransom Lil Tecca I got black, I got white, what you want? Hop outside a Ghost and hop up in a Phanto",
+      "automationId": "",
+      "rect": {
+        "x": 448,
+        "y": 959,
+        "width": 160,
+        "height": 44
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "https://xpui.app.spotify.com/playlist/6Lv9R1hmtwLJTPPoH183Kd",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e192",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:playlist:6Lv9R1hmtwLJTPPoH183Kd-1",
+      "rect": {
+        "x": 448,
+        "y": 959,
+        "width": 160,
+        "height": 44
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e193",
+      "role": "Text",
+      "name": "I got black, I got white, what you want? Hop outside a Ghost and hop up in a Phantom I know I'm ’bout to blow, I ain't dumb They try to take my flow, I take they ass for ransom I know that I'm gone",
+      "automationId": "",
+      "rect": {
+        "x": 448,
+        "y": 1007,
+        "width": 155,
+        "height": 180
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e194",
+      "role": "DataItem",
+      "name": "CORTIS 'GREENGREEN' x Chase Atlantic x Travis Scott",
+      "automationId": "react-aria171628195-:rlj:-react-aria-3",
+      "rect": {
+        "x": 632,
+        "y": 767,
+        "width": 196,
+        "height": 292
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e195",
+      "role": "DataItem",
+      "name": "CORTIS 'GREENGREEN' x Chase Atlantic x Travis Scott",
+      "automationId": "",
+      "rect": {
+        "x": 632,
+        "y": 767,
+        "width": 196,
+        "height": 292
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e196",
+      "role": "ListItem",
+      "name": "CORTIS 'GREENGREEN' x Chase Atlantic x Travis Scott",
+      "automationId": "",
+      "rect": {
+        "x": 632,
+        "y": 767,
+        "width": 196,
+        "height": 292
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e197",
+      "role": "Button",
+      "name": "CORTIS 'GREENGREEN' x Chase Atlantic x Travis Scott REDRED x12, Wassup x6, ACAI x5, YCC x5, TNT x4, Blue Lips x3",
+      "automationId": "",
+      "rect": {
+        "x": 632,
+        "y": 767,
+        "width": 196,
+        "height": 292
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e198",
+      "role": "Button",
+      "name": "Play CORTIS 'GREENGREEN' x Chase Atlantic x Travis Scott",
+      "automationId": "",
+      "rect": {
+        "x": 759,
+        "y": 903,
+        "width": 49,
+        "height": 48
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e199",
+      "role": "Hyperlink",
+      "name": "CORTIS 'GREENGREEN' x Chase Atlantic x Travis Scott",
+      "automationId": "",
+      "rect": {
+        "x": 644,
+        "y": 959,
+        "width": 160,
+        "height": 44
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "https://xpui.app.spotify.com/playlist/3M0uH3nIEL8F0c5NV4F1eG",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e200",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:playlist:3M0uH3nIEL8F0c5NV4F1eG-2",
+      "rect": {
+        "x": 644,
+        "y": 959,
+        "width": 160,
+        "height": 44
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e201",
+      "role": "Text",
+      "name": "REDRED x12, Wassup x6, ACAI x5, YCC x5, TNT x4, Blue Lips x3",
+      "automationId": "",
+      "rect": {
+        "x": 644,
+        "y": 1007,
+        "width": 160,
+        "height": 60
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e202",
+      "role": "DataItem",
+      "name": "Sugar crush all songs",
+      "automationId": "react-aria171628195-:rlj:-react-aria-4",
+      "rect": {
+        "x": 827,
+        "y": 767,
+        "width": 196,
+        "height": 292
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e203",
+      "role": "DataItem",
+      "name": "Sugar crush all songs",
+      "automationId": "",
+      "rect": {
+        "x": 827,
+        "y": 767,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e204",
+      "role": "ListItem",
+      "name": "Sugar crush all songs",
+      "automationId": "",
+      "rect": {
+        "x": 827,
+        "y": 767,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e205",
+      "role": "Button",
+      "name": "Sugar crush all songs By Maddie",
+      "automationId": "",
+      "rect": {
+        "x": 827,
+        "y": 767,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e206",
+      "role": "Button",
+      "name": "Play Sugar crush all songs",
+      "automationId": "",
+      "rect": {
+        "x": 955,
+        "y": 903,
+        "width": 48,
+        "height": 48
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e207",
+      "role": "Hyperlink",
+      "name": "Sugar crush all songs",
+      "automationId": "",
+      "rect": {
+        "x": 839,
+        "y": 959,
+        "width": 152,
+        "height": 22
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "https://xpui.app.spotify.com/playlist/513dlKaTzh9scAOWBYDJQz",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e208",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:playlist:513dlKaTzh9scAOWBYDJQz-3",
+      "rect": {
+        "x": 839,
+        "y": 959,
+        "width": 152,
+        "height": 22
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e209",
+      "role": "Text",
+      "name": "By Maddie",
+      "automationId": "",
+      "rect": {
+        "x": 839,
+        "y": 985,
+        "width": 68,
+        "height": 20
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e210",
+      "role": "Group",
+      "name": "Recents",
+      "automationId": "",
+      "rect": {
+        "x": 253,
+        "y": 1083,
+        "width": 996,
+        "height": 309
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e211",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 253,
+        "y": 1083,
+        "width": 996,
+        "height": 48
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e212",
+      "role": "Hyperlink",
+      "name": "Show all",
+      "automationId": "",
+      "rect": {
+        "x": 1186,
+        "y": 1084,
+        "width": 55,
+        "height": 48
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/recents",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e213",
+      "role": "DataGrid",
+      "name": "Recents",
+      "automationId": "react-aria171628195-:rd2:",
+      "rect": {
+        "x": 213,
+        "y": 1139,
+        "width": 3986,
+        "height": 253
+      },
+      "patterns": [
+        "Value",
+        "Selection",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 20
+    },
+    {
+      "ref": "w1e214",
+      "role": "DataItem",
+      "name": "Liked Songs",
+      "automationId": "react-aria171628195-:rd2:-react-aria-21",
+      "rect": {
+        "x": 241,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e215",
+      "role": "DataItem",
+      "name": "Liked Songs",
+      "automationId": "",
+      "rect": {
+        "x": 241,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e216",
+      "role": "ListItem",
+      "name": "Liked Songs",
+      "automationId": "",
+      "rect": {
+        "x": 241,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e217",
+      "role": "Button",
+      "name": "Liked Songs 1 song added",
+      "automationId": "",
+      "rect": {
+        "x": 241,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e218",
+      "role": "Button",
+      "name": "Play Liked Songs",
+      "automationId": "",
+      "rect": {
+        "x": 368,
+        "y": 1274,
+        "width": 49,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e219",
+      "role": "Hyperlink",
+      "name": "Liked Songs",
+      "automationId": "",
+      "rect": {
+        "x": 253,
+        "y": 1330,
+        "width": 89,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/collection/tracks",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e220",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:collection:tracks-0",
+      "rect": {
+        "x": 253,
+        "y": 1330,
+        "width": 89,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e221",
+      "role": "Text",
+      "name": "1 song added",
+      "automationId": "",
+      "rect": {
+        "x": 273,
+        "y": 1356,
+        "width": 84,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e222",
+      "role": "DataItem",
+      "name": "STAY (with Justin Bieber)",
+      "automationId": "react-aria171628195-:rd2:-react-aria-1",
+      "rect": {
+        "x": 436,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e223",
+      "role": "DataItem",
+      "name": "STAY (with Justin Bieber)",
+      "automationId": "",
+      "rect": {
+        "x": 436,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e224",
+      "role": "ListItem",
+      "name": "STAY (with Justin Bieber)",
+      "automationId": "",
+      "rect": {
+        "x": 436,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 6
+    },
+    {
+      "ref": "w1e225",
+      "role": "Button",
+      "name": "STAY (with Justin Bieber) Album • The Kid LAROI, Justin Bieber",
+      "automationId": "",
+      "rect": {
+        "x": 436,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e226",
+      "role": "Button",
+      "name": "Play STAY (with Justin Bieber) by ",
+      "automationId": "",
+      "rect": {
+        "x": 564,
+        "y": 1274,
+        "width": 48,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e227",
+      "role": "Hyperlink",
+      "name": "STAY (with Justin Bieber)",
+      "automationId": "",
+      "rect": {
+        "x": 448,
+        "y": 1330,
+        "width": 172,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/album/4QLAtpLNUsHEYrcHXmMIZZ",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e228",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:album:4QLAtpLNUsHEYrcHXmMIZZ-1",
+      "rect": {
+        "x": 448,
+        "y": 1330,
+        "width": 172,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e229",
+      "role": "Text",
+      "name": "Album",
+      "automationId": "",
+      "rect": {
+        "x": 448,
+        "y": 1356,
+        "width": 43,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e230",
+      "role": "Text",
+      "name": " • ",
+      "automationId": "",
+      "rect": {
+        "x": 490,
+        "y": 1356,
+        "width": 11,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e231",
+      "role": "Text",
+      "name": "The Kid LAROI, Justin Bieber",
+      "automationId": "",
+      "rect": {
+        "x": 448,
+        "y": 1356,
+        "width": 157,
+        "height": 41
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e232",
+      "role": "DataItem",
+      "name": "Romantic Mix",
+      "automationId": "react-aria171628195-:rd2:-react-aria-2",
+      "rect": {
+        "x": 632,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e233",
+      "role": "DataItem",
+      "name": "Romantic Mix",
+      "automationId": "",
+      "rect": {
+        "x": 632,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e234",
+      "role": "ListItem",
+      "name": "Romantic Mix",
+      "automationId": "",
+      "rect": {
+        "x": 632,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 6
+    },
+    {
+      "ref": "w1e235",
+      "role": "Button",
+      "name": "Romantic Mix Playlist • Spotify",
+      "automationId": "",
+      "rect": {
+        "x": 632,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e236",
+      "role": "Button",
+      "name": "Play Romantic Mix",
+      "automationId": "",
+      "rect": {
+        "x": 759,
+        "y": 1274,
+        "width": 49,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e237",
+      "role": "Hyperlink",
+      "name": "Romantic Mix",
+      "automationId": "",
+      "rect": {
+        "x": 644,
+        "y": 1330,
+        "width": 98,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/playlist/37i9dQZF1EVGJJ3r00UGAt",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e238",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:playlist:37i9dQZF1EVGJJ3r00UGAt-2",
+      "rect": {
+        "x": 644,
+        "y": 1330,
+        "width": 98,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e239",
+      "role": "Text",
+      "name": "Playlist",
+      "automationId": "",
+      "rect": {
+        "x": 644,
+        "y": 1356,
+        "width": 46,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e240",
+      "role": "Text",
+      "name": " • ",
+      "automationId": "",
+      "rect": {
+        "x": 689,
+        "y": 1356,
+        "width": 11,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e241",
+      "role": "Text",
+      "name": "Spotify",
+      "automationId": "",
+      "rect": {
+        "x": 699,
+        "y": 1356,
+        "width": 47,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e242",
+      "role": "DataItem",
+      "name": "#494 – Jensen Huang: NVIDIA - The $4 Trillion Company & the AI Revolution",
+      "automationId": "react-aria171628195-:rd2:-react-aria-3",
+      "rect": {
+        "x": 827,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e243",
+      "role": "DataItem",
+      "name": "#494 – Jensen Huang: NVIDIA - The $4 Trillion Company & the AI Revolution",
+      "automationId": "",
+      "rect": {
+        "x": 827,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e244",
+      "role": "Group",
+      "name": "#494 – Jensen Huang: NVIDIA - The $4 Trillion Company & the AI Revolution",
+      "automationId": "",
+      "rect": {
+        "x": 827,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e245",
+      "role": "Button",
+      "name": "#494 – Jensen Huang: NVIDIA - The $4 Trillion Company & the AI Revolution",
+      "automationId": "",
+      "rect": {
+        "x": 827,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e246",
+      "role": "Button",
+      "name": "Play #494 – Jensen Huang: NVIDIA - The $4 Trillion Company & the AI Revolution",
+      "automationId": "",
+      "rect": {
+        "x": 955,
+        "y": 1274,
+        "width": 48,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e247",
+      "role": "Hyperlink",
+      "name": "#494 – Jensen Huang: NVIDIA - The $4 Trillion Company & the AI Revolution",
+      "automationId": "",
+      "rect": {
+        "x": 839,
+        "y": 1330,
+        "width": 172,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/episode/0BGcaYvcDPkvBzFmkRI5uY",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e248",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:episode:0BGcaYvcDPkvBzFmkRI5uY-3",
+      "rect": {
+        "x": 839,
+        "y": 1330,
+        "width": 172,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e249",
+      "role": "ProgressBar",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 839,
+        "y": 1364,
+        "width": 172,
+        "height": 13
+      },
+      "patterns": [
+        "Value",
+        "RangeValue",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "2 hr 30 min 54 sec left of 2 hr 31 min 44 sec",
+      "rangeValue": 50000,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e250",
+      "role": "DataItem",
+      "name": "My Playlist #1",
+      "automationId": "react-aria171628195-:rd2:-react-aria-4",
+      "rect": {
+        "x": 1023,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e251",
+      "role": "DataItem",
+      "name": "My Playlist #1",
+      "automationId": "",
+      "rect": {
+        "x": 1023,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e252",
+      "role": "ListItem",
+      "name": "My Playlist #1",
+      "automationId": "",
+      "rect": {
+        "x": 1023,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e253",
+      "role": "Button",
+      "name": "My Playlist #1 Playlist added",
+      "automationId": "",
+      "rect": {
+        "x": 1023,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e254",
+      "role": "Button",
+      "name": "Play My Playlist #1",
+      "automationId": "",
+      "rect": {
+        "x": 1150,
+        "y": 1274,
+        "width": 49,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e255",
+      "role": "Hyperlink",
+      "name": "My Playlist #1",
+      "automationId": "",
+      "rect": {
+        "x": 1035,
+        "y": 1330,
+        "width": 98,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/playlist/1sH7YGr5ilq9f1TEcy3X3X",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e256",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:playlist:1sH7YGr5ilq9f1TEcy3X3X-4",
+      "rect": {
+        "x": 1035,
+        "y": 1330,
+        "width": 98,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e257",
+      "role": "Text",
+      "name": "Playlist added",
+      "automationId": "",
+      "rect": {
+        "x": 1055,
+        "y": 1356,
+        "width": 90,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e258",
+      "role": "DataItem",
+      "name": "Pop Punk Mix",
+      "automationId": "react-aria171628195-:rd2:-react-aria-5",
+      "rect": {
+        "x": 1218,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e259",
+      "role": "DataItem",
+      "name": "Pop Punk Mix",
+      "automationId": "",
+      "rect": {
+        "x": 1218,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e260",
+      "role": "ListItem",
+      "name": "Pop Punk Mix",
+      "automationId": "",
+      "rect": {
+        "x": 1218,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 6
+    },
+    {
+      "ref": "w1e261",
+      "role": "Button",
+      "name": "Pop Punk Mix Playlist • Spotify",
+      "automationId": "",
+      "rect": {
+        "x": 1218,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e262",
+      "role": "Button",
+      "name": "Play Pop Punk Mix",
+      "automationId": "",
+      "rect": {
+        "x": 1346,
+        "y": 1274,
+        "width": 48,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e263",
+      "role": "Hyperlink",
+      "name": "Pop Punk Mix",
+      "automationId": "",
+      "rect": {
+        "x": 1230,
+        "y": 1330,
+        "width": 98,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/playlist/37i9dQZF1EQlwBHcFvRC5P",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e264",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:playlist:37i9dQZF1EQlwBHcFvRC5P-5",
+      "rect": {
+        "x": 1230,
+        "y": 1330,
+        "width": 98,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e265",
+      "role": "Text",
+      "name": "Playlist",
+      "automationId": "",
+      "rect": {
+        "x": 1230,
+        "y": 1356,
+        "width": 46,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e266",
+      "role": "Text",
+      "name": " • ",
+      "automationId": "",
+      "rect": {
+        "x": 1275,
+        "y": 1356,
+        "width": 12,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e267",
+      "role": "Text",
+      "name": "Spotify",
+      "automationId": "",
+      "rect": {
+        "x": 1286,
+        "y": 1356,
+        "width": 46,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e268",
+      "role": "DataItem",
+      "name": "The Kid LAROI - STAY ft Justin Bieber (Clean)",
+      "automationId": "react-aria171628195-:rd2:-react-aria-6",
+      "rect": {
+        "x": 1414,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e269",
+      "role": "DataItem",
+      "name": "The Kid LAROI - STAY ft Justin Bieber (Clean)",
+      "automationId": "",
+      "rect": {
+        "x": 1414,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e270",
+      "role": "ListItem",
+      "name": "The Kid LAROI - STAY ft Justin Bieber (Clean)",
+      "automationId": "",
+      "rect": {
+        "x": 1414,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 6
+    },
+    {
+      "ref": "w1e271",
+      "role": "Button",
+      "name": "The Kid LAROI - STAY ft Justin Bieber (Clean) Playlist • Clean Version",
+      "automationId": "",
+      "rect": {
+        "x": 1414,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e272",
+      "role": "Button",
+      "name": "Play The Kid LAROI - STAY ft Justin Bieber (Clean)",
+      "automationId": "",
+      "rect": {
+        "x": 1541,
+        "y": 1274,
+        "width": 49,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e273",
+      "role": "Hyperlink",
+      "name": "The Kid LAROI - STAY ft Justin Bieber (Clean)",
+      "automationId": "",
+      "rect": {
+        "x": 1426,
+        "y": 1330,
+        "width": 172,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/playlist/3uo3QgTFuXpXVrwYCLxy5v",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e274",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:playlist:3uo3QgTFuXpXVrwYCLxy5v-6",
+      "rect": {
+        "x": 1426,
+        "y": 1330,
+        "width": 172,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e275",
+      "role": "Text",
+      "name": "Playlist",
+      "automationId": "",
+      "rect": {
+        "x": 1426,
+        "y": 1356,
+        "width": 46,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e276",
+      "role": "Text",
+      "name": " • ",
+      "automationId": "",
+      "rect": {
+        "x": 1471,
+        "y": 1356,
+        "width": 11,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e277",
+      "role": "Text",
+      "name": "Clean Version",
+      "automationId": "",
+      "rect": {
+        "x": 1481,
+        "y": 1356,
+        "width": 88,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e278",
+      "role": "DataItem",
+      "name": "All Honey Singh Songs",
+      "automationId": "react-aria171628195-:rd2:-react-aria-7",
+      "rect": {
+        "x": 1609,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e279",
+      "role": "DataItem",
+      "name": "All Honey Singh Songs",
+      "automationId": "",
+      "rect": {
+        "x": 1609,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e280",
+      "role": "ListItem",
+      "name": "All Honey Singh Songs",
+      "automationId": "",
+      "rect": {
+        "x": 1609,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 6
+    },
+    {
+      "ref": "w1e281",
+      "role": "Button",
+      "name": "All Honey Singh Songs Playlist • satendra_kabira",
+      "automationId": "",
+      "rect": {
+        "x": 1609,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e282",
+      "role": "Button",
+      "name": "Play All Honey Singh Songs ",
+      "automationId": "",
+      "rect": {
+        "x": 1737,
+        "y": 1274,
+        "width": 48,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e283",
+      "role": "Hyperlink",
+      "name": "All Honey Singh Songs",
+      "automationId": "",
+      "rect": {
+        "x": 1621,
+        "y": 1330,
+        "width": 162,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/playlist/7a7gtZeFL0puQpRS2x7Pib",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e284",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:playlist:7a7gtZeFL0puQpRS2x7Pib-7",
+      "rect": {
+        "x": 1621,
+        "y": 1330,
+        "width": 162,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e285",
+      "role": "Text",
+      "name": "Playlist",
+      "automationId": "",
+      "rect": {
+        "x": 1621,
+        "y": 1356,
+        "width": 46,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e286",
+      "role": "Text",
+      "name": " • ",
+      "automationId": "",
+      "rect": {
+        "x": 1666,
+        "y": 1356,
+        "width": 12,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e287",
+      "role": "Text",
+      "name": "satendra_kabira",
+      "automationId": "",
+      "rect": {
+        "x": 1677,
+        "y": 1356,
+        "width": 103,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e288",
+      "role": "DataItem",
+      "name": "Anubha Bajaj",
+      "automationId": "react-aria171628195-:rd2:-react-aria-8",
+      "rect": {
+        "x": 1805,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e289",
+      "role": "DataItem",
+      "name": "Anubha Bajaj",
+      "automationId": "",
+      "rect": {
+        "x": 1805,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e290",
+      "role": "ListItem",
+      "name": "Anubha Bajaj",
+      "automationId": "",
+      "rect": {
+        "x": 1805,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e291",
+      "role": "Button",
+      "name": "Anubha Bajaj Artist",
+      "automationId": "",
+      "rect": {
+        "x": 1805,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e292",
+      "role": "Button",
+      "name": "Play Anubha Bajaj",
+      "automationId": "",
+      "rect": {
+        "x": 1932,
+        "y": 1274,
+        "width": 49,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e293",
+      "role": "Hyperlink",
+      "name": "Anubha Bajaj",
+      "automationId": "",
+      "rect": {
+        "x": 1817,
+        "y": 1330,
+        "width": 95,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/artist/1jR0u53xF6iccwKAu9SD3H",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e294",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:artist:1jR0u53xF6iccwKAu9SD3H-8",
+      "rect": {
+        "x": 1817,
+        "y": 1330,
+        "width": 95,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e295",
+      "role": "Text",
+      "name": "Artist",
+      "automationId": "",
+      "rect": {
+        "x": 1817,
+        "y": 1356,
+        "width": 36,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e296",
+      "role": "DataItem",
+      "name": "Ransom Lil Tecca I got black, I got white, what you want? Hop outside a Ghost and hop up in a Phanto",
+      "automationId": "react-aria171628195-:rd2:-react-aria-9",
+      "rect": {
+        "x": 2000,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e297",
+      "role": "DataItem",
+      "name": "Ransom Lil Tecca I got black, I got white, what you want? Hop outside a Ghost and hop up in a Phanto",
+      "automationId": "",
+      "rect": {
+        "x": 2000,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e298",
+      "role": "ListItem",
+      "name": "Ransom Lil Tecca I got black, I got white, what you want? Hop outside a Ghost and hop up in a Phanto",
+      "automationId": "",
+      "rect": {
+        "x": 2000,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 6
+    },
+    {
+      "ref": "w1e299",
+      "role": "Button",
+      "name": "Ransom Lil Tecca I got black, I got white, what you want? Hop outside a Ghost and hop up in a Phanto Playlist • Official E9",
+      "automationId": "",
+      "rect": {
+        "x": 2000,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e300",
+      "role": "Button",
+      "name": "Play Ransom Lil Tecca I got black, I got white, what you want? Hop outside a Ghost and hop up in a Phanto",
+      "automationId": "",
+      "rect": {
+        "x": 2128,
+        "y": 1274,
+        "width": 48,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e301",
+      "role": "Hyperlink",
+      "name": "Ransom Lil Tecca I got black, I got white, what you want? Hop outside a Ghost and hop up in a Phanto",
+      "automationId": "",
+      "rect": {
+        "x": 2012,
+        "y": 1330,
+        "width": 172,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/playlist/6Lv9R1hmtwLJTPPoH183Kd",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e302",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:playlist:6Lv9R1hmtwLJTPPoH183Kd-9",
+      "rect": {
+        "x": 2012,
+        "y": 1330,
+        "width": 172,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e303",
+      "role": "Text",
+      "name": "Playlist",
+      "automationId": "",
+      "rect": {
+        "x": 2012,
+        "y": 1356,
+        "width": 46,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e304",
+      "role": "Text",
+      "name": " • ",
+      "automationId": "",
+      "rect": {
+        "x": 2057,
+        "y": 1356,
+        "width": 12,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e305",
+      "role": "Text",
+      "name": "Official E9",
+      "automationId": "",
+      "rect": {
+        "x": 2068,
+        "y": 1356,
+        "width": 65,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e306",
+      "role": "DataItem",
+      "name": "Udi Udi",
+      "automationId": "react-aria171628195-:rd2:-react-aria-10",
+      "rect": {
+        "x": 2196,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e307",
+      "role": "DataItem",
+      "name": "Udi Udi",
+      "automationId": "",
+      "rect": {
+        "x": 2196,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e308",
+      "role": "ListItem",
+      "name": "Udi Udi",
+      "automationId": "",
+      "rect": {
+        "x": 2196,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 6
+    },
+    {
+      "ref": "w1e309",
+      "role": "Button",
+      "name": "Udi Udi Album • Aneesh, Sarkar, Hruday",
+      "automationId": "",
+      "rect": {
+        "x": 2196,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e310",
+      "role": "Button",
+      "name": "Play Udi Udi by ",
+      "automationId": "",
+      "rect": {
+        "x": 2323,
+        "y": 1274,
+        "width": 49,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e311",
+      "role": "Hyperlink",
+      "name": "Udi Udi",
+      "automationId": "",
+      "rect": {
+        "x": 2208,
+        "y": 1330,
+        "width": 53,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/album/6ZRXnfTz48dWXDlDrumiYE",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e312",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:album:6ZRXnfTz48dWXDlDrumiYE-10",
+      "rect": {
+        "x": 2208,
+        "y": 1330,
+        "width": 53,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e313",
+      "role": "Text",
+      "name": "Album",
+      "automationId": "",
+      "rect": {
+        "x": 2208,
+        "y": 1356,
+        "width": 43,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e314",
+      "role": "Text",
+      "name": " • ",
+      "automationId": "",
+      "rect": {
+        "x": 2250,
+        "y": 1356,
+        "width": 11,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e315",
+      "role": "Text",
+      "name": "Aneesh, Sarkar, Hruday",
+      "automationId": "",
+      "rect": {
+        "x": 2208,
+        "y": 1356,
+        "width": 160,
+        "height": 41
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e316",
+      "role": "DataItem",
+      "name": "Latest Dance Telugu",
+      "automationId": "react-aria171628195-:rd2:-react-aria-11",
+      "rect": {
+        "x": 2391,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e317",
+      "role": "DataItem",
+      "name": "Latest Dance Telugu",
+      "automationId": "",
+      "rect": {
+        "x": 2391,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e318",
+      "role": "ListItem",
+      "name": "Latest Dance Telugu",
+      "automationId": "",
+      "rect": {
+        "x": 2391,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 6
+    },
+    {
+      "ref": "w1e319",
+      "role": "Button",
+      "name": "Latest Dance Telugu Playlist • Spotify",
+      "automationId": "",
+      "rect": {
+        "x": 2391,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e320",
+      "role": "Button",
+      "name": "Play Latest Dance Telugu",
+      "automationId": "",
+      "rect": {
+        "x": 2519,
+        "y": 1274,
+        "width": 48,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e321",
+      "role": "Hyperlink",
+      "name": "Latest Dance Telugu",
+      "automationId": "",
+      "rect": {
+        "x": 2403,
+        "y": 1330,
+        "width": 147,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/playlist/37i9dQZF1DX3VuB7FVwxmc",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e322",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:playlist:37i9dQZF1DX3VuB7FVwxmc-11",
+      "rect": {
+        "x": 2403,
+        "y": 1330,
+        "width": 147,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e323",
+      "role": "Text",
+      "name": "Playlist",
+      "automationId": "",
+      "rect": {
+        "x": 2403,
+        "y": 1356,
+        "width": 46,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e324",
+      "role": "Text",
+      "name": " • ",
+      "automationId": "",
+      "rect": {
+        "x": 2448,
+        "y": 1356,
+        "width": 12,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e325",
+      "role": "Text",
+      "name": "Spotify",
+      "automationId": "",
+      "rect": {
+        "x": 2459,
+        "y": 1356,
+        "width": 46,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e326",
+      "role": "DataItem",
+      "name": "Safar Mix",
+      "automationId": "react-aria171628195-:rd2:-react-aria-12",
+      "rect": {
+        "x": 2587,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e327",
+      "role": "DataItem",
+      "name": "Safar Mix",
+      "automationId": "",
+      "rect": {
+        "x": 2587,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e328",
+      "role": "ListItem",
+      "name": "Safar Mix",
+      "automationId": "",
+      "rect": {
+        "x": 2587,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 6
+    },
+    {
+      "ref": "w1e329",
+      "role": "Button",
+      "name": "Safar Mix Playlist • Spotify",
+      "automationId": "",
+      "rect": {
+        "x": 2587,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e330",
+      "role": "Button",
+      "name": "Play Safar Mix",
+      "automationId": "",
+      "rect": {
+        "x": 2714,
+        "y": 1274,
+        "width": 49,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e331",
+      "role": "Hyperlink",
+      "name": "Safar Mix",
+      "automationId": "",
+      "rect": {
+        "x": 2599,
+        "y": 1330,
+        "width": 67,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/playlist/37i9dQZF1DXd05hd2jmMZL",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e332",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:playlist:37i9dQZF1DXd05hd2jmMZL-12",
+      "rect": {
+        "x": 2599,
+        "y": 1330,
+        "width": 67,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e333",
+      "role": "Text",
+      "name": "Playlist",
+      "automationId": "",
+      "rect": {
+        "x": 2599,
+        "y": 1356,
+        "width": 46,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e334",
+      "role": "Text",
+      "name": " • ",
+      "automationId": "",
+      "rect": {
+        "x": 2644,
+        "y": 1356,
+        "width": 11,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e335",
+      "role": "Text",
+      "name": "Spotify",
+      "automationId": "",
+      "rect": {
+        "x": 2654,
+        "y": 1356,
+        "width": 47,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e336",
+      "role": "DataItem",
+      "name": "Arijit Singh All Songs ❤️",
+      "automationId": "react-aria171628195-:rd2:-react-aria-13",
+      "rect": {
+        "x": 2782,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e337",
+      "role": "DataItem",
+      "name": "Arijit Singh All Songs ❤️",
+      "automationId": "",
+      "rect": {
+        "x": 2782,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e338",
+      "role": "ListItem",
+      "name": "Arijit Singh All Songs ❤️",
+      "automationId": "",
+      "rect": {
+        "x": 2782,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 6
+    },
+    {
+      "ref": "w1e339",
+      "role": "Button",
+      "name": "Arijit Singh All Songs ❤️ Playlist • Indian Playlists",
+      "automationId": "",
+      "rect": {
+        "x": 2782,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e340",
+      "role": "Button",
+      "name": "Play Arijit Singh All Songs ❤️",
+      "automationId": "",
+      "rect": {
+        "x": 2910,
+        "y": 1274,
+        "width": 48,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e341",
+      "role": "Hyperlink",
+      "name": "Arijit Singh All Songs ❤️",
+      "automationId": "",
+      "rect": {
+        "x": 2794,
+        "y": 1330,
+        "width": 172,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/playlist/7qxn6GsFH77ghVtKzOnAYA",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e342",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:playlist:7qxn6GsFH77ghVtKzOnAYA-13",
+      "rect": {
+        "x": 2794,
+        "y": 1330,
+        "width": 172,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e343",
+      "role": "Text",
+      "name": "Playlist",
+      "automationId": "",
+      "rect": {
+        "x": 2794,
+        "y": 1356,
+        "width": 46,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e344",
+      "role": "Text",
+      "name": " • ",
+      "automationId": "",
+      "rect": {
+        "x": 2839,
+        "y": 1356,
+        "width": 12,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e345",
+      "role": "Text",
+      "name": "Indian Playlists",
+      "automationId": "",
+      "rect": {
+        "x": 2850,
+        "y": 1356,
+        "width": 94,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e346",
+      "role": "DataItem",
+      "name": "Nadaniyan",
+      "automationId": "react-aria171628195-:rd2:-react-aria-14",
+      "rect": {
+        "x": 2978,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e347",
+      "role": "DataItem",
+      "name": "Nadaniyan",
+      "automationId": "",
+      "rect": {
+        "x": 2978,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e348",
+      "role": "ListItem",
+      "name": "Nadaniyan",
+      "automationId": "",
+      "rect": {
+        "x": 2978,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 6
+    },
+    {
+      "ref": "w1e349",
+      "role": "Button",
+      "name": "Nadaniyan Album • Eden's Echo",
+      "automationId": "",
+      "rect": {
+        "x": 2978,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e350",
+      "role": "Button",
+      "name": "Play Nadaniyan by ",
+      "automationId": "",
+      "rect": {
+        "x": 3105,
+        "y": 1274,
+        "width": 49,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e351",
+      "role": "Hyperlink",
+      "name": "Nadaniyan",
+      "automationId": "",
+      "rect": {
+        "x": 2990,
+        "y": 1330,
+        "width": 78,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/album/5joI5ZRz0ferDlzJTgIg9p",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e352",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:album:5joI5ZRz0ferDlzJTgIg9p-14",
+      "rect": {
+        "x": 2990,
+        "y": 1330,
+        "width": 78,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e353",
+      "role": "Text",
+      "name": "Album",
+      "automationId": "",
+      "rect": {
+        "x": 2990,
+        "y": 1356,
+        "width": 43,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e354",
+      "role": "Text",
+      "name": " • ",
+      "automationId": "",
+      "rect": {
+        "x": 3032,
+        "y": 1356,
+        "width": 11,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e355",
+      "role": "Text",
+      "name": "Eden's Echo",
+      "automationId": "",
+      "rect": {
+        "x": 3042,
+        "y": 1356,
+        "width": 76,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e356",
+      "role": "DataItem",
+      "name": "New Hindi albums",
+      "automationId": "react-aria171628195-:rd2:-react-aria-15",
+      "rect": {
+        "x": 3173,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e357",
+      "role": "DataItem",
+      "name": "New Hindi albums",
+      "automationId": "",
+      "rect": {
+        "x": 3173,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e358",
+      "role": "ListItem",
+      "name": "New Hindi albums",
+      "automationId": "",
+      "rect": {
+        "x": 3173,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 6
+    },
+    {
+      "ref": "w1e359",
+      "role": "Button",
+      "name": "New Hindi albums Playlist • swastik",
+      "automationId": "",
+      "rect": {
+        "x": 3173,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e360",
+      "role": "Button",
+      "name": "Play New Hindi albums",
+      "automationId": "",
+      "rect": {
+        "x": 3301,
+        "y": 1274,
+        "width": 48,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e361",
+      "role": "Hyperlink",
+      "name": "New Hindi albums",
+      "automationId": "",
+      "rect": {
+        "x": 3185,
+        "y": 1330,
+        "width": 132,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/playlist/5A23wHXWVdWoQsK7VdOLsV",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e362",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:playlist:5A23wHXWVdWoQsK7VdOLsV-15",
+      "rect": {
+        "x": 3185,
+        "y": 1330,
+        "width": 132,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e363",
+      "role": "Text",
+      "name": "Playlist",
+      "automationId": "",
+      "rect": {
+        "x": 3185,
+        "y": 1356,
+        "width": 46,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e364",
+      "role": "Text",
+      "name": " • ",
+      "automationId": "",
+      "rect": {
+        "x": 3230,
+        "y": 1356,
+        "width": 12,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e365",
+      "role": "Text",
+      "name": "swastik",
+      "automationId": "",
+      "rect": {
+        "x": 3241,
+        "y": 1356,
+        "width": 49,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e366",
+      "role": "DataItem",
+      "name": "Believe",
+      "automationId": "react-aria171628195-:rd2:-react-aria-16",
+      "rect": {
+        "x": 3369,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e367",
+      "role": "DataItem",
+      "name": "Believe",
+      "automationId": "",
+      "rect": {
+        "x": 3369,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e368",
+      "role": "ListItem",
+      "name": "Believe",
+      "automationId": "",
+      "rect": {
+        "x": 3369,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 6
+    },
+    {
+      "ref": "w1e369",
+      "role": "Button",
+      "name": "Believe Album • Justin Bieber",
+      "automationId": "",
+      "rect": {
+        "x": 3369,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e370",
+      "role": "Button",
+      "name": "Play Believe by ",
+      "automationId": "",
+      "rect": {
+        "x": 3496,
+        "y": 1274,
+        "width": 49,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e371",
+      "role": "Hyperlink",
+      "name": "Believe",
+      "automationId": "",
+      "rect": {
+        "x": 3381,
+        "y": 1330,
+        "width": 54,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/album/5cxMa6oLINJzmZ8lF7wWQN",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e372",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:album:5cxMa6oLINJzmZ8lF7wWQN-16",
+      "rect": {
+        "x": 3381,
+        "y": 1330,
+        "width": 54,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e373",
+      "role": "Text",
+      "name": "Album",
+      "automationId": "",
+      "rect": {
+        "x": 3381,
+        "y": 1356,
+        "width": 43,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e374",
+      "role": "Text",
+      "name": " • ",
+      "automationId": "",
+      "rect": {
+        "x": 3423,
+        "y": 1356,
+        "width": 11,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e375",
+      "role": "Text",
+      "name": "Justin Bieber",
+      "automationId": "",
+      "rect": {
+        "x": 3433,
+        "y": 1356,
+        "width": 84,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e376",
+      "role": "DataItem",
+      "name": "Daily Mix 2",
+      "automationId": "react-aria171628195-:rd2:-react-aria-17",
+      "rect": {
+        "x": 3564,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e377",
+      "role": "DataItem",
+      "name": "Daily Mix 2",
+      "automationId": "",
+      "rect": {
+        "x": 3564,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e378",
+      "role": "ListItem",
+      "name": "Daily Mix 2",
+      "automationId": "",
+      "rect": {
+        "x": 3564,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 6
+    },
+    {
+      "ref": "w1e379",
+      "role": "Button",
+      "name": "Daily Mix 2 Playlist • Spotify",
+      "automationId": "",
+      "rect": {
+        "x": 3564,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e380",
+      "role": "Button",
+      "name": "Play Daily Mix 2",
+      "automationId": "",
+      "rect": {
+        "x": 3692,
+        "y": 1274,
+        "width": 48,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e381",
+      "role": "Hyperlink",
+      "name": "Daily Mix 2",
+      "automationId": "",
+      "rect": {
+        "x": 3576,
+        "y": 1330,
+        "width": 79,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/playlist/37i9dQZF1E375wVXAI0RJT",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e382",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:playlist:37i9dQZF1E375wVXAI0RJT-17",
+      "rect": {
+        "x": 3576,
+        "y": 1330,
+        "width": 79,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e383",
+      "role": "Text",
+      "name": "Playlist",
+      "automationId": "",
+      "rect": {
+        "x": 3576,
+        "y": 1356,
+        "width": 46,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e384",
+      "role": "Text",
+      "name": " • ",
+      "automationId": "",
+      "rect": {
+        "x": 3621,
+        "y": 1356,
+        "width": 12,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e385",
+      "role": "Text",
+      "name": "Spotify",
+      "automationId": "",
+      "rect": {
+        "x": 3632,
+        "y": 1356,
+        "width": 46,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e386",
+      "role": "DataItem",
+      "name": "love, flowers, chainsaw",
+      "automationId": "react-aria171628195-:rd2:-react-aria-18",
+      "rect": {
+        "x": 3760,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e387",
+      "role": "DataItem",
+      "name": "love, flowers, chainsaw",
+      "automationId": "",
+      "rect": {
+        "x": 3760,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e388",
+      "role": "ListItem",
+      "name": "love, flowers, chainsaw",
+      "automationId": "",
+      "rect": {
+        "x": 3760,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 6
+    },
+    {
+      "ref": "w1e389",
+      "role": "Button",
+      "name": "love, flowers, chainsaw Playlist • denze enjoyer",
+      "automationId": "",
+      "rect": {
+        "x": 3760,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e390",
+      "role": "Button",
+      "name": "Play love, flowers, chainsaw",
+      "automationId": "",
+      "rect": {
+        "x": 3887,
+        "y": 1274,
+        "width": 49,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e391",
+      "role": "Hyperlink",
+      "name": "love, flowers, chainsaw",
+      "automationId": "",
+      "rect": {
+        "x": 3772,
+        "y": 1330,
+        "width": 166,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "https://xpui.app.spotify.com/playlist/14bnFxoGKNcdQl4QBXUykz",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e392",
+      "role": "Group",
+      "name": "",
+      "automationId": "card-title-spotify:playlist:14bnFxoGKNcdQl4QBXUykz-18",
+      "rect": {
+        "x": 3772,
+        "y": 1330,
+        "width": 166,
+        "height": 23
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e393",
+      "role": "Text",
+      "name": "Playlist",
+      "automationId": "",
+      "rect": {
+        "x": 3772,
+        "y": 1356,
+        "width": 46,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e394",
+      "role": "Text",
+      "name": " • ",
+      "automationId": "",
+      "rect": {
+        "x": 3817,
+        "y": 1356,
+        "width": 11,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e395",
+      "role": "Text",
+      "name": "denze enjoyer",
+      "automationId": "",
+      "rect": {
+        "x": 3827,
+        "y": 1356,
+        "width": 91,
+        "height": 21
+      },
+      "patterns": [
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e396",
+      "role": "DataItem",
+      "name": "Certified Depressant",
+      "automationId": "react-aria171628195-:rd2:-react-aria-19",
+      "rect": {
+        "x": 3955,
+        "y": 1139,
+        "width": 196,
+        "height": 253
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e397",
+      "role": "DataItem",
+      "name": "Certified Depressant",
+      "automationId": "",
+      "rect": {
+        "x": 3955,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e398",
+      "role": "ListItem",
+      "name": "Certified Depressant",
+      "automationId": "",
+      "rect": {
+        "x": 3955,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 6
+    },
+    {
+      "ref": "w1e399",
+      "role": "Button",
+      "name": "Certified Depressant Playlist • Celine",
+      "automationId": "",
+      "rect": {
+        "x": 3955,
+        "y": 1139,
+        "width": 196,
+        "height": 250
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e400",
+      "role": "Button",
+      "name": "Play Certified Depressant",
+      "automationId": "",
+      "rect": {
+        "x": 4083,
+        "y": 1274,
+        "width": 48,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    }
+  ],
+  "truncated": true,
+  "view": "control"
+}

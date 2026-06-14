@@ -1,0 +1,64 @@
+{
+  "app": "Notepad",
+  "version": "Windows 11",
+  "processName": "Notepad",
+  "windowTitlePattern": "Notepad",
+  "framework": "Win32 (UIA)",
+  "lastValidated": "2026-06-12T19:07:36Z",
+  "validationPassRate": 0.8,
+  "windows": {
+    "main": {
+      "title": "* - Notepad",
+      "controlType": "Window",
+      "automationId": ""
+    }
+  },
+  "controls": {
+    "editor": {
+      "role": "Document",
+      "name": "Text Editor",
+      "patterns": ["Text", "TextPattern2"],
+      "note": "Does NOT have Value pattern; does NOT have Scroll pattern"
+    },
+    "titleBar": {
+      "role": "TitleBar",
+      "patterns": []
+    },
+    "menuBar": {
+      "role": "MenuBar",
+      "patterns": []
+    }
+  },
+  "commonWorkflows": {
+    "type_text": {
+      "methods": [
+        {"method": "type_text", "confidence": 0.55, "note": "Direct keystroke simulation"},
+        {"method": "clipboard_paste", "confidence": 0.65, "note": "Set clipboard text then Ctrl+V"}
+      ],
+      "evidence": "Check editor value via getElement after typing"
+    },
+    "save_as": {
+      "methods": [
+        {"method": "press_key Ctrl+S", "confidence": 0.4},
+        {"method": "uia_save_dialog", "confidence": 0.3}
+      ],
+      "note": "Save dialog is a separate modal window"
+    },
+    "close": {
+      "methods": [
+        {"method": "close_window", "confidence": 0.8}
+      ],
+      "evidence": "Process should exit or window should disappear"
+    }
+  },
+  "knownRecoveryStrategies": {
+    "editor_not_found": ["Retry with longer delay", "Search by role Document", "Search by role Edit"],
+    "set_value_failed": ["Use type_text instead", "Use clipboard_paste instead"],
+    "scroll_failed": ["Use keyboard PageDown/PageUp"],
+    "focus_lost": ["set_foreground", "click_point on editor center"]
+  },
+  "failureHistory": [
+    {"capability": "ui_set_value", "count": 1, "resolution": "Use type_text or clipboard_paste"},
+    {"capability": "ui_scroll", "count": 1, "resolution": "Use keyboard fallback"}
+  ]
+}

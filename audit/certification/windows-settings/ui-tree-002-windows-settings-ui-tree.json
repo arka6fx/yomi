@@ -1,0 +1,27 @@
+{
+  "window": "Settings",
+  "elements": [
+    {
+      "ref": "w1e1",
+      "role": "Window",
+      "name": "Settings",
+      "automationId": "",
+      "rect": {
+        "x": 716,
+        "y": 53,
+        "width": 959,
+        "height": 1027
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    }
+  ],
+  "truncated": false,
+  "view": "control"
+}

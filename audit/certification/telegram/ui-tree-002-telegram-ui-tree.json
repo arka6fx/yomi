@@ -1,0 +1,815 @@
+{
+  "window": "Telegram",
+  "elements": [
+    {
+      "ref": "w1e1",
+      "role": "Window",
+      "name": "Telegram",
+      "automationId": "",
+      "rect": {
+        "x": 915,
+        "y": 112,
+        "width": 800,
+        "height": 625
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e2",
+      "role": "TitleBar",
+      "name": "",
+      "automationId": "TitleBar",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": "Telegram",
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e3",
+      "role": "MenuBar",
+      "name": "System",
+      "automationId": "SystemMenuBar",
+      "rect": {
+        "x": 915,
+        "y": 120,
+        "width": 22,
+        "height": 22
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e4",
+      "role": "MenuItem",
+      "name": "System",
+      "automationId": "",
+      "rect": {
+        "x": 915,
+        "y": 120,
+        "width": 22,
+        "height": 22
+      },
+      "patterns": [
+        "Invoke",
+        "ExpandCollapse",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e5",
+      "role": "Button",
+      "name": "Minimise",
+      "automationId": "Minimize-Restore",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e6",
+      "role": "Button",
+      "name": "Maximise",
+      "automationId": "Maximize-Restore",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e7",
+      "role": "Button",
+      "name": "Close",
+      "automationId": "Close",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e8",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 915,
+        "y": 112,
+        "width": 800,
+        "height": 25
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e9",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 915,
+        "y": 113,
+        "width": 800,
+        "height": 24
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e10",
+      "role": "Button",
+      "name": "Minimize",
+      "automationId": "",
+      "rect": {
+        "x": 1607,
+        "y": 113,
+        "width": 36,
+        "height": 24
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e11",
+      "role": "Button",
+      "name": "Maximize",
+      "automationId": "",
+      "rect": {
+        "x": 1643,
+        "y": 113,
+        "width": 36,
+        "height": 24
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e12",
+      "role": "Button",
+      "name": "Close",
+      "automationId": "",
+      "rect": {
+        "x": 1679,
+        "y": 113,
+        "width": 36,
+        "height": 24
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e13",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 915,
+        "y": 136,
+        "width": 800,
+        "height": 1
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e14",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 915,
+        "y": 137,
+        "width": 800,
+        "height": 600
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e15",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 915,
+        "y": 137,
+        "width": 800,
+        "height": 600
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e16",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 915,
+        "y": 137,
+        "width": 800,
+        "height": 600
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e17",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 1201,
+        "y": 137,
+        "width": 514,
+        "height": 600
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e18",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 915,
+        "y": 137,
+        "width": 286,
+        "height": 600
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e19",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 915,
+        "y": 137,
+        "width": 286,
+        "height": 54
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e20",
+      "role": "Button",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 915,
+        "y": 137,
+        "width": 54,
+        "height": 54
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e21",
+      "role": "Button",
+      "name": "Main menu",
+      "automationId": "",
+      "rect": {
+        "x": 922,
+        "y": 144,
+        "width": 40,
+        "height": 40
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e22",
+      "role": "Edit",
+      "name": "Search",
+      "automationId": "",
+      "rect": {
+        "x": 969,
+        "y": 146,
+        "width": 221,
+        "height": 35
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e23",
+      "role": "Edit",
+      "name": "Search",
+      "automationId": "",
+      "rect": {
+        "x": 981,
+        "y": 154,
+        "width": 179,
+        "height": 22
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "Yomi",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e24",
+      "role": "Group",
+      "name": "",
+      "automationId": "qt_scrollarea_viewport",
+      "rect": {
+        "x": 981,
+        "y": 154,
+        "width": 179,
+        "height": 22
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e25",
+      "role": "Button",
+      "name": "Clear search",
+      "automationId": "",
+      "rect": {
+        "x": 1155,
+        "y": 146,
+        "width": 35,
+        "height": 35
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e26",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 915,
+        "y": 191,
+        "width": 286,
+        "height": 546
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e27",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 915,
+        "y": 191,
+        "width": 286,
+        "height": 546
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e28",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 915,
+        "y": 191,
+        "width": 286,
+        "height": 546
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e29",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 915,
+        "y": 223,
+        "width": 286,
+        "height": 67
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e30",
+      "role": "Button",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 915,
+        "y": 251,
+        "width": 286,
+        "height": 38
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e31",
+      "role": "Button",
+      "name": "Cancel",
+      "automationId": "",
+      "rect": {
+        "x": 1161,
+        "y": 250,
+        "width": 40,
+        "height": 40
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e32",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 915,
+        "y": 289,
+        "width": 286,
+        "height": 1
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e33",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 915,
+        "y": 318,
+        "width": 286,
+        "height": 220
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 2
+    },
+    {
+      "ref": "w1e34",
+      "role": "Text",
+      "name": "No Results\nThere were no results for \"Yomi\".",
+      "automationId": "",
+      "rect": {
+        "x": 925,
+        "y": 481,
+        "width": 266,
+        "height": 44
+      },
+      "patterns": [
+        "Invoke",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e35",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 998,
+        "y": 351,
+        "width": 120,
+        "height": 120
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e36",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 1201,
+        "y": 137,
+        "width": 1,
+        "height": 600
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e37",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 1201,
+        "y": 137,
+        "width": 6,
+        "height": 600
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "",
+      "rangeValue": null,
+      "childCount": 0
+    }
+  ],
+  "truncated": false,
+  "view": "control"
+}

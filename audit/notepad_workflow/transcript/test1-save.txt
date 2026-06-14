@@ -1,0 +1,23 @@
+﻿data: {"type":"automation_started","run":{"id":"run-1781287068545-2","owner":{"id":"windows","label":"Windows Agent"},"task":"save this notepad file as Documents\\YomiTests\\AI Testing.txt","state":"thinking","startedAt":"2026-06-12T17:57:48.545Z","confidence":0.82,"timeline":[],"replayId":"replay-run-1781287068545-2"}}
+
+data: {"type":"automation_preview","runId":"run-1781287068545-2","preview":{"steps":["Inspect current context","Choose the right tool","Run the requested action"],"estimatedSeconds":15,"risk":"moderate","confidence":0.82}}
+
+data: {"type":"automation_timeline","runId":"run-1781287068545-2","item":{"id":"item-3","at":"2026-06-12T17:57:48.549Z","label":"Prepared automation preview","status":"planned"}}
+
+data: {"type":"automation_step","runId":"run-1781287068545-2","state":"executing","currentStep":"Save Notepad file","estimatedSeconds":15,"confidence":0.82}
+
+data: {"type":"automation_timeline","runId":"run-1781287068545-2","item":{"id":"item-4","at":"2026-06-12T17:57:48.553Z","label":"Save Notepad file","status":"running","detail":"{\"path\":\"Documents\\\\YomiTests\\\\AI Testing.txt\"}"}}
+
+data: {"type":"agent_tool_call","tool":"save_windows_notepad_as","args":{"path":"Documents\\YomiTests\\AI Testing.txt"}}
+
+data: {"type":"agent_tool_result","tool":"save_windows_notepad_as","result":{"ok":true,"app":"Notepad","path":"C:\\Users\\arkag\\Documents\\YomiTests\\AI Testing.txt"}}
+
+data: {"type":"agent_text","text":"I saved the Notepad file to C:\\Users\\arkag\\Documents\\YomiTests\\AI Testing.txt."}
+
+data: {"type":"automation_timeline","runId":"run-1781287068545-2","item":{"id":"item-5","at":"2026-06-12T17:57:50.699Z","label":"I saved the Notepad file to C:\\Users\\arkag\\Documents\\YomiTests\\AI Testing.txt.","status":"done"}}
+
+data: {"type":"automation_completed","runId":"run-1781287068545-2","summary":"I saved the Notepad file to C:\\Users\\arkag\\Documents\\YomiTests\\AI Testing.txt.","replayId":"replay-run-1781287068545-2"}
+
+data: {"type":"done"}
+
+

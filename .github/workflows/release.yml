@@ -87,3 +87,4 @@ jobs:
           name: installer-${{ inputs.version }}
           path: apps/desktop/release/*.exe
           if-no-files-found: warn
+          retention-days: 30

@@ -1,0 +1,35 @@
+{
+  "name": "@yomi/certification",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "certify": "bun run src/cli.ts",
+    "certify:all": "bun run src/cli.ts --all",
+    "certify:spotify": "bun run src/cli.ts --app spotify",
+    "certify:notepad": "bun run src/cli.ts --app notepad",
+    "certify:explorer": "bun run src/cli.ts --app explorer",
+    "certify:media": "bun run src/cli.ts --app media",
+    "certify:system": "bun run src/cli.ts --app system",
+    "certify:whatsapp": "bun run src/cli.ts --app whatsapp",
+    "certify:telegram": "bun run src/cli.ts --app telegram",
+    "certify:discord": "bun run src/cli.ts --app discord",
+    "certify:instagram": "bun run src/cli.ts --app instagram",
+    "certify:settings": "bun run src/cli.ts --app settings",
+    "certify:browser": "bun run src/cli.ts --app browser",
+    "certify:vscode": "bun run src/cli.ts --app vscode",
+    "certify:terminal": "bun run src/cli.ts --app terminal",
+    "certify:office": "bun run src/cli.ts --app word --app excel --app powerpoint",
+    "test": "bun test --pass-with-no-tests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@yomi/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.0",
+    "@yomi/eslint-config": "workspace:*",
+    "@yomi/typescript-config": "workspace:*",
+    "typescript": "^5.5.0"
+  }
+}

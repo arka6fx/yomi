@@ -236,9 +236,7 @@ export function buildAgentPrompt(ctx: PromptContext): string {
   const userCtx = yomiMd ? `<user_context>\n${yomiMd}\n</user_context>\n\n` : ""
   const memCtx = buildMemoryBlock(memoryCtx)
   const skillCtx = getSkillIndexBlock()
-  const focusCtx = desktopFocusChange
-    ? `\n<desktop_focus>\n${desktopFocusChange}\n</desktop_focus>\n\n`
-    : ""
+  const focusCtx = ""
 
   return `\
 <identity>
@@ -252,35 +250,16 @@ ${userCtx}${memCtx}${focusCtx}${ANSWER_FORMAT_RULES}
 <capabilities>
 You research, draft, file, and schedule — multi-step tasks run to completion.
 Tools: look_at_screen, bash (sandboxed), web_search, fetch_url, read_file, write_file, list_files, search, MCP servers.
-You can also operate desktop apps directly: launch_app, play_spotify, adjust_volume, get_ui_tree, invoke_element, set_value, toggle_element, press_key, point_cursor, click.
+You can send messages to connected platforms (Telegram, Discord) using send_message.
 For web tasks you drive a real browser with the browser_* tools (navigate, snapshot, click, type, etc.).
 Terminology: "Notepad" means the native Windows Notepad app. Use local memory tools only when the user says Yomi memory, remember this, or refers to ~/.yomi.
 </capabilities>
 
-<app_automation>
-To do something inside a Windows app (open WhatsApp and message someone, click a button, fill a field):
-1. launch_app to open it if it isn't already in front, then get_ui_tree to list the foreground window's controls.
-2. Target a control by its ref: invoke_element or click_element to activate it, set_value or type_text to fill a field, toggle_element for a checkbox. invoke_element and click_element automatically try several strategies (invoke, a real mouse click, selecting a list item, the accessibility default action), so to open a list row, menu item, or chat just call one of them on that ref — you do not need to pick the strategy yourself.
-3. After any action that changes the screen (opening a menu, switching chats, navigating), call get_ui_tree again to verify it worked and to get fresh refs — refs are only valid for the latest snapshot. If a result says it did not succeed or carries a "re-fetch get_ui_tree" hint, re-snapshot and try the next best control.
-4. If a control is marked offscreen, it is scrolled out of view; invoke_element/click_element auto-scroll it into view first, but re-fetch get_ui_tree afterward to confirm the screen changed.
-5. If repeated UIA attempts on the same target do nothing (some apps' lists are custom-drawn, not real UIA controls), fall back to vision: call look_at_screen, then click at the on-screen coordinates of the target.
-6. To submit: prefer clicking a visible Send/Submit button. Use press_key "Enter" only if no such button exists.
-7. Per-app tips:
-   - Browsers (Chrome/Edge): press_key "Ctrl+L" to focus the address bar, type_text the URL or query, then press_key "Enter".
-   - File Explorer: press_key "Ctrl+L" to focus the path bar, type a folder path, then press_key "Enter".
-   - Windows Notepad: create a new blank note first (Ctrl+N) before writing, then target the editor and set_value or type_text. If the user asks to save but gives no file name/location, ask where to save it.
-   - Messaging apps: before sending, re-read get_ui_tree and confirm the open chat's title in the conversation header matches the intended recipient.
-   - Spotify playback: use play_spotify with the song and artist as the query. Do not stop after launch_app.
-   - System sound: use adjust_volume. "Increase sound" means direction up; "decrease/lower sound" means direction down. For Spotify's own volume ("turn up spotify", "lower spotify volume") use adjust_spotify_volume instead.
-   - Spotify transport (pause/resume/next/previous/stop): use control_spotify.
-Destructive steps (send, delete, pay) ask the user to confirm automatically — just propose the action.
-</app_automation>
-
-<desktop_automation_mode>
-Desktop app automation is foreground-specific. If the user says "in the background",
-"quietly", or "without switching", treat that wording as a preference, but do not
-create detached background runs. Use the normal foreground desktop automation flow.
-</desktop_automation_mode>
+<messaging>
+You can send messages to connected messaging platforms (Telegram, Discord) using the send_message tool.
+The user can link their Telegram or Discord account via the dashboard.
+When the user asks to send a message, use send_message with the platform, chatId, and text.
+</messaging>
 
 <browser_automation>
 For web tasks — research, filling a web form, multi-step site flows, logging into a site, extracting data — use the browser_* tools. They drive a dedicated browser Yomi controls (separate from the user's everyday Chrome), with the user's saved logins.

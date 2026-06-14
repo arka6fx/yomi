@@ -1,0 +1,17 @@
+﻿{
+    "View":  {
+                 "IsEnabled":  true,
+                 "Name":  "Zoom",
+                 "ControlType":  "ControlType.MenuItem"
+             },
+    "File":  {
+                 "IsEnabled":  true,
+                 "Name":  "New tab",
+                 "ControlType":  "ControlType.MenuItem"
+             },
+    "Edit":  {
+                 "IsEnabled":  true,
+                 "Name":  "Undo",
+                 "ControlType":  "ControlType.MenuItem"
+             }
+}

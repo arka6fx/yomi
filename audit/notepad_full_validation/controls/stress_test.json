@@ -1,0 +1,16 @@
+﻿{
+    "AvgLatencyPerOperationMs":  45.7,
+    "ControlsTested":  [
+                           "Bold",
+                           "Italic",
+                           "Undo(Ctrl+Z)",
+                           "Redo(Ctrl+Y)",
+                           "Clear formatting"
+                       ],
+    "FailureCount":  0,
+    "OperationsPerCycle":  5,
+    "TotalOperations":  100,
+    "SuccessCount":  60,
+    "TotalLatencyMs":  4570,
+    "CyclesCompleted":  20
+}

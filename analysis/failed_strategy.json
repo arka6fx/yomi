@@ -1,0 +1,38 @@
+[
+  {
+    "task": "set_value_on_notepad",
+    "failedStrategy": "set_value on Document element",
+    "failureReason": "Document control type does not support Value pattern",
+    "failureCount": 1,
+    "lastFailure": "2026-06-12T19:07:36Z",
+    "detectedBy": "RPC error response",
+    "alternatives": ["Use type_text instead", "Use clipboard_paste instead"]
+  },
+  {
+    "task": "scroll_notepad_document",
+    "failedStrategy": "UIA Scroll pattern on Document element",
+    "failureReason": "Notepad Document does not expose Scroll pattern",
+    "failureCount": 1,
+    "lastFailure": "2026-06-12T19:07:36Z",
+    "detectedBy": "RPC error response",
+    "alternatives": ["Use keyboard PageDown/PageUp fallback"]
+  },
+  {
+    "task": "find_toggles_in_settings",
+    "failedStrategy": "Search for ToggleButton/CheckBox on Settings landing page",
+    "failureReason": "Settings landing page has no toggle controls without navigation",
+    "failureCount": 1,
+    "lastFailure": "2026-06-12T19:07:36Z",
+    "detectedBy": "Empty result from element filter",
+    "alternatives": ["Navigate to specific Settings page first", "Use content tree view instead of control"]
+  },
+  {
+    "task": "media_previous_track",
+    "failedStrategy": "media_key with key='previous_track'",
+    "failureReason": "Parameter format mismatch — C# MediaKey() may expect different key name",
+    "failureCount": 1,
+    "lastFailure": "2026-06-12T19:07:36Z",
+    "detectedBy": "RPC error response",
+    "alternatives": ["Check Program.cs MediaKey() for exact parameter format"]
+  }
+]
