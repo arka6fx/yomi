@@ -3,6 +3,11 @@ import { googleGmailDef } from "./google-gmail-def.js"
 import { googleCalendarDef } from "./google-calendar-def.js"
 import { googleDriveDef } from "./google-drive-def.js"
 import { githubDef } from "./github-def.js"
+import { notionDef } from "./notion-def.js"
+import { slackDef } from "./slack-def.js"
+import { linearDef, linearApiKeyDef } from "./linear-def.js"
+import { postgresDef } from "./postgres-def.js"
+import { mysqlDef } from "./mysql-def.js"
 
 // All registered ConnectorDefs, in display order.
 // Each def.id must match the provider key stored in mcp_connections.
@@ -12,5 +17,10 @@ export const ALL_CONNECTOR_DEFS: ConnectorDef[] = [
   googleCalendarDef,
   googleDriveDef,
   githubDef,
-  // Checkpoint 3: notion, slack, linear, linearApiKey, postgres, mysql
+  notionDef,
+  slackDef,
+  linearDef,
+  linearApiKeyDef,
+  postgresDef,
+  mysqlDef,
 ]
