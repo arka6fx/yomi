@@ -10,6 +10,7 @@ import { profileRouter } from "./routes/profile.js"
 import { ragRouter } from "./routes/rag.js"
 import { proxyRouter } from "./routes/proxy.js"
 import { gatewayRouter } from "./gateway/routes.js"
+import { integrationsRouter } from "./routes/integrations.js"
 import { getDefaultGateway } from "./gateway/gateway-runner.js"
 import type { SidecarResolver } from "./gateway/gateway-runner.js"
 import { eq, and } from "drizzle-orm"
@@ -90,6 +91,7 @@ app.route("/api/user", profileRouter)
 app.route("/api/rag", ragRouter)
 app.route("/api/v1", proxyRouter)
 app.route("/api/gateway", gatewayRouter)
+app.route("/api/integrations", integrationsRouter)
 
 // Register sidecar URL resolver from platform connections
 const sidecarResolver: SidecarResolver = async (userId, platform) => {

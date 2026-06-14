@@ -23,23 +23,32 @@ export async function getAccessToken(userId: string, provider: string): Promise<
 
   let tokens = decryptTokens(row.oauthTokens)
 
-  // Refresh if expiring within 5 minutes
-  const expiresAt = tokens.expiresAt ?? 0
-  if (expiresAt - Date.now() < 5 * 60 * 1000 && tokens.refreshToken) {
-    if (provider === "google") {
+  // Skip refresh for non-expiring credentials (api_key, connection_string, GitHub OAuth)
+  const expiresAt = tokens.expiresAt ?? null
+  const needsRefresh =
+    expiresAt !== null &&
+    tokens.refreshToken !== null &&
+    expiresAt - Date.now() < 5 * 60 * 1000
+
+  if (needsRefresh && tokens.refreshToken) {
+    let refreshed = false
+    if (provider === "google" || provider.startsWith("google-")) {
       tokens = await refreshGoogleAccessToken(tokens.refreshToken)
-    } else {
-      throw new Error(`Token refresh not implemented for provider: ${provider}`)
+      refreshed = true
     }
-    const encrypted = encryptTokens(tokens)
-    await db
-      .update(mcpConnections)
-      .set({
-        oauthTokens: encrypted,
-        expiresAt: tokens.expiresAt ? new Date(tokens.expiresAt) : null,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(mcpConnections.userId, userId), eq(mcpConnections.provider, provider)))
+    // Other OAuth providers (Slack, Notion, etc.) handle long-lived tokens or
+    // surface 401s as reconnect hints — no generic refresh yet.
+    if (refreshed) {
+      const encrypted = encryptTokens(tokens)
+      await db
+        .update(mcpConnections)
+        .set({
+          oauthTokens: encrypted,
+          expiresAt: tokens.expiresAt ? new Date(tokens.expiresAt) : null,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(mcpConnections.userId, userId), eq(mcpConnections.provider, provider)))
+    }
   }
 
   return tokens.accessToken
