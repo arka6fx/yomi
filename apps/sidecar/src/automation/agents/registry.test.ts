@@ -26,10 +26,9 @@ describe("resolveAgent", () => {
     expect(a.provider).toBe("native")
   })
 
-  it("routes whatsapp goals to the general automation agent while messaging is hidden", () => {
+  it("routes whatsapp goals to the messaging agent", () => {
     const a = resolveAgent("send a whatsapp to Alex saying hi")
-    expect(a.id).toBe("automation")
-    expect(a.toolNames).toBeUndefined() // inherits the full tool set
+    expect(a.id).toBe("messaging")
   })
 
   it("falls back to the general automation agent for unmatched goals", () => {

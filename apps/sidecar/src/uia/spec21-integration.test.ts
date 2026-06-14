@@ -7,11 +7,11 @@
 // YOMI_ACT_AUTOCONFIRM=true is required for testing risky actions.
 
 import { describe, expect, it, beforeAll, afterAll } from "bun:test"
-import { platform } from "node:os"
 import { appendFile, mkdir, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { uia } from "./client.js"
 import type { UiaElement, UiaSnapshot } from "@yomi/shared"
+import { shouldRunWindowsAutomationE2e } from "./automation-harness.js"
 
 const LOG_FILE = path.resolve(import.meta.dir, "../../../../debug/spec21-test-log.txt")
 const TIMEOUT_MS = 20_000
@@ -44,7 +44,8 @@ async function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms))
 }
 
-describe("Spec 21 — Universal Desktop Automation Integration", () => {
+const integrationDescribe = shouldRunWindowsAutomationE2e() ? describe : describe.skip
+integrationDescribe("Spec 21 — Universal Desktop Automation Integration", () => {
   let skipReason = ""
   let helperAlive = false
 
@@ -52,8 +53,8 @@ describe("Spec 21 — Universal Desktop Automation Integration", () => {
     await resetLog()
     await log("=== Spec 21 Integration Test Started ===")
 
-    if (platform() !== "win32") {
-      skipReason = "not on Windows"
+    if (!shouldRunWindowsAutomationE2e()) {
+      skipReason = "not Windows e2e"
       await log(`SKIP: ${skipReason}`)
       return
     }

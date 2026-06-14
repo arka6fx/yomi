@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, mock, jest } from "bun:test"
+import { afterEach, beforeAll, beforeEach, describe, expect, it, mock } from "bun:test"
 import { Hono } from "hono"
 import { createHmac } from "node:crypto"
 
@@ -99,7 +99,16 @@ mock.module("../services/payment-events.js", () => ({
   upsertPaymentRecord: async (input: any) => mockState.upsertPaymentRecord(input),
 }))
 
-const { billingRouter, getDodoConfig, verifyDodoWebhook } = await import("./billing.js")
+let billingRouter: import("hono").Hono
+let getDodoConfig: (...args: any[]) => any
+let verifyDodoWebhook: (...args: any[]) => any
+
+beforeAll(async () => {
+  const mod = await import("./billing.js")
+  billingRouter = mod.billingRouter
+  getDodoConfig = mod.getDodoConfig
+  verifyDodoWebhook = mod.verifyDodoWebhook
+})
 
 function app() {
   const hono = new Hono()

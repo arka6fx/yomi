@@ -57,6 +57,7 @@ tmp/
 debug/
 **/.playwright-mcp/
 .superpowers/
+**/__mocks__/
 
 # Auto-generated Next.js type reference
 apps/landing/next-env.d.ts

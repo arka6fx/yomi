@@ -25,7 +25,7 @@ describe("automation runs", () => {
     expect(classifyAutomationOwner("open example.com in the browser").label).toBe(
       "Automation Agent",
     )
-    expect(classifyAutomationOwner("send a message on WhatsApp").label).toBe("Automation Agent")
+    expect(classifyAutomationOwner("send a message on WhatsApp").label).toBe("Messaging Agent")
   })
 
   it("classifies risky actions", () => {

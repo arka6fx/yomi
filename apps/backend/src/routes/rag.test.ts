@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
+import { afterEach, beforeAll, beforeEach, describe, expect, it, mock } from "bun:test"
 import { Hono } from "hono"
 
 const mockRagSources = {}
@@ -94,7 +94,11 @@ mock.module("../auth.js", () => ({
   },
 }))
 
-const { ragRouter } = await import("./rag.js")
+let ragRouter: import("hono").Hono
+
+beforeAll(async () => {
+  ragRouter = (await import("./rag.js")).ragRouter
+})
 
 function app() {
   const hono = new Hono()
