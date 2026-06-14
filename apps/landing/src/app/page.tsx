@@ -1,6 +1,8 @@
 import type { Metadata } from "next"
-import { redirect } from "next/navigation"
 import { LandingPage } from "@/components/landing/landing-page"
+
+// static prerender — LandingPage forwards ?error= to /signin client-side
+export const dynamic = "force-static"
 
 const TITLE = "Yomi — AI Productivity Assistant for Windows"
 const DESC =
@@ -147,14 +149,7 @@ const jsonLd = {
   ],
 }
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string; [key: string]: string | string[] | undefined }>
-}) {
-  const { error } = await searchParams
-  if (error) redirect(`/signin?error=${encodeURIComponent(error)}`)
-
+export default function Home() {
   return (
     <>
       <script
