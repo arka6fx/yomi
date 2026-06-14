@@ -6,6 +6,22 @@ import type { PlatformAdapter } from "./platform-adapter.js"
 import { TelegramAdapter } from "./platforms/telegram.js"
 import { DiscordAdapter } from "./platforms/discord.js"
 import { runAgent } from "../agent/run.js"
+import { transcribeAudioUrl } from "../services/transcription.js"
+
+// Patterns that suggest the user wants the desktop to do something local
+const DESKTOP_ACTION_PATTERNS = [
+  /\b(click|open|close|type|scroll|drag|move|resize|minimize|maximize|window|app|application)\b/i,
+  /\b(screenshot|screen|desktop|file|folder|copy|paste|select|highlight)\b/i,
+  /\b(play|pause|skip|volume|mute|spotify|music|video)\b/i,
+  /\b(terminal|shell|command|run|execute)\b/i,
+]
+
+function classifyIntent(text: string): "data-query" | "desktop-action" {
+  for (const p of DESKTOP_ACTION_PATTERNS) {
+    if (p.test(text)) return "desktop-action"
+  }
+  return "data-query"
+}
 
 const SESSION_TTL_MS = 60 * 60 * 1000
 const SESSION_CLEANUP_INTERVAL_MS = 5 * 60 * 1000
@@ -521,11 +537,72 @@ export class GatewayRunner {
       return
     }
 
+    // ── Voice note transcription ──────────────────────────────────────────────
+    if (msg.audioUrl) {
+      void this.sendTyping(msg.platform, msg.chatId).catch(() => {})
+      try {
+        const transcript = await transcribeAudioUrl(msg.audioUrl, msg.audioMimeType ?? "audio/ogg")
+        if (!transcript) {
+          await this.sendMessage(msg.platform, msg.chatId, "I couldn't make out the audio. Please try again or type your message.").catch(() => {})
+          return
+        }
+        console.warn(`[gateway] voice transcript: "${transcript.slice(0, 100)}"`)
+        // Show transcript so user can see what was heard
+        await this.sendMessage(msg.platform, msg.chatId, `🎙️ _Heard:_ ${transcript}`).catch(() => {})
+        msg = { ...msg, text: transcript }
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err)
+        if (errMsg === "STT_RATE_LIMIT") {
+          await this.sendMessage(msg.platform, msg.chatId, "Voice transcription paused — please type instead.").catch(() => {})
+        } else {
+          console.warn("[gateway] transcription error:", errMsg)
+          await this.sendMessage(msg.platform, msg.chatId, "Sorry, I couldn't transcribe the audio. Please type your message.").catch(() => {})
+        }
+        return
+      }
+    }
+
+    // ── Intent classification ─────────────────────────────────────────────────
+    // Desktop-action intents can only run if the sidecar is online.
+    // Data-query intents always run here on the backend.
+    const intent = classifyIntent(msg.text)
+
+    if (intent === "desktop-action") {
+      let sidecarUrl: string | undefined
+      if (this.sidecarResolver) {
+        sidecarUrl = await this.sidecarResolver(yomiUserId, msg.platform)
+      }
+
+      if (!sidecarUrl) {
+        await this.sendMessage(
+          msg.platform,
+          msg.chatId,
+          "That needs your desktop to be online. Open the Yomi app and try again.",
+        ).catch(() => {})
+        return
+      }
+
+      // Forward to sidecar for local execution
+      void this.sendTyping(msg.platform, msg.chatId).catch(() => {})
+      try {
+        const res = await fetch(`${sidecarUrl}/gateway/receive`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.sidecarSecret}`,
+          },
+          body: JSON.stringify(msg),
+        })
+        if (!res.ok) throw new Error(`Sidecar returned ${res.status}`)
+        // Sidecar handles the reply
+        return
+      } catch (err) {
+        console.warn("[gateway] sidecar forward failed:", err)
+        // Fall through to backend agent as fallback
+      }
+    }
+
     // ── Backend agent path ────────────────────────────────────────────────────
-    // Run the agent server-side so the desktop does not need to be running.
-    // A sidecar escape hatch is preserved: if this message ever needs a local
-    // action (future: remote screenshot, UIA), resolve the sidecar URL first.
-    // For now all data queries run here.
     void this.sendTyping(msg.platform, msg.chatId).catch(() => {})
 
     try {
