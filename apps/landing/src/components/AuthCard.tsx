@@ -52,6 +52,8 @@ export default function AuthCard({ defaultMode, plan, callbackURL, initialError 
       await authClient.signIn.social({
         provider,
         callbackURL: `${window.location.origin}${getRedirectTo()}`,
+        // route oauth failures back to the styled signin page (reads ?error=)
+        errorCallbackURL: `${window.location.origin}/signin`,
       })
     } catch {
       setError("Something went wrong. Please try again.")
