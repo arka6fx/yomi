@@ -10,6 +10,7 @@ import { BrandMark } from "@/components/BrandMark"
 
 const NAV_LINKS = [
   { label: "Features", href: "/#features" },
+  { label: "Integrations", href: "/#connectors" },
   { label: "Pricing", href: "/#pricing" },
   { label: "Download", href: "/#download" },
   { label: "Support", href: "/support" },

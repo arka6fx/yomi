@@ -17,6 +17,27 @@
       "env": {
         "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}"
       }
+    },
+    "dodo-payments": {
+      "command": "npx",
+      "args": ["-y", "dodopayments-mcp"],
+      "env": {
+        "DODO_PAYMENTS_API_KEY": "${DODO_PAYMENTS_API_KEY}",
+        "DODO_PAYMENTS_WEBHOOK_KEY": "${DODO_PAYMENTS_WEBHOOK_KEY}",
+        "DODO_PAYMENTS_ENVIRONMENT": "${DODO_PAYMENTS_ENVIRONMENT}"
+      }
+    },
+    "better-auth": {
+      "command": "npx",
+      "args": ["-y", "@better-auth/mcp@latest"]
+    },
+    "cloudflare": {
+      "command": "npx",
+      "args": ["-y", "@cloudflare/mcp-server-cloudflare@latest", "run"],
+      "env": {
+        "CLOUDFLARE_ACCOUNT_ID": "${CLOUDFLARE_ACCOUNT_ID}",
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      }
     }
   }
 }

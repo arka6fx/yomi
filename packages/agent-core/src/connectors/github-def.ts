@@ -219,8 +219,8 @@ export const githubDef: ConnectorDef = {
     tokenUrl: "https://github.com/login/oauth/access_token",
     // GitHub tokens do not expire by default — no expiresAt stored
     scopes: ["repo", "read:user"],
-    clientIdEnv: "GITHUB_CLIENT_ID",
-    clientSecretEnv: "GITHUB_CLIENT_SECRET",
+    clientIdEnv: "GITHUB_INTEGRATIONS_CLIENT_ID",
+    clientSecretEnv: "GITHUB_INTEGRATIONS_CLIENT_SECRET",
     redirectPath: "/api/integrations/callback/github",
   },
   setup: {
@@ -233,8 +233,8 @@ export const githubDef: ConnectorDef = {
       "Click Register application, then copy the Client ID and Client Secret",
     ],
     collect: [
-      { env: "GITHUB_CLIENT_ID", label: "GitHub Client ID", secret: false },
-      { env: "GITHUB_CLIENT_SECRET", label: "GitHub Client Secret", secret: true },
+      { env: "GITHUB_INTEGRATIONS_CLIENT_ID", label: "GitHub Client ID", secret: false },
+      { env: "GITHUB_INTEGRATIONS_CLIENT_SECRET", label: "GitHub Client Secret", secret: true },
     ],
     docsUrl: "https://docs.github.com/en/apps/oauth-apps/building-oauth-apps",
   },

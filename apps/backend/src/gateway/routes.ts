@@ -147,12 +147,12 @@ gatewayRouter.post("/telegram/token", authenticate, async (c) => {
 const oauthStateStore = new Map<string, { createdAt: number; userId: string }>()
 const OAUTH_STATE_TTL = 10 * 60 * 1000
 
-setInterval(() => {
+function pruneOauthStore() {
   const now = Date.now()
   for (const [key, val] of oauthStateStore) {
     if (now - val.createdAt > OAUTH_STATE_TTL) oauthStateStore.delete(key)
   }
-}, 60_000)
+}
 
 // Initiate OAuth — user clicks "Add Discord" on landing/dashboard
 gatewayRouter.get("/discord/auth", authenticate, (c) => {
@@ -163,6 +163,7 @@ gatewayRouter.get("/discord/auth", authenticate, (c) => {
     return c.redirect("/link?error=discord_not_configured")
   }
 
+  pruneOauthStore()
   const stateData = randomBytes(16).toString("hex")
   // Encode Yomi user ID in state: random.userId
   const state = `${stateData}.${user.id}`

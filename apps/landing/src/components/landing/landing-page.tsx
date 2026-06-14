@@ -6,11 +6,17 @@ import { useRouter } from "next/navigation"
 import { AnimatePresence, motion } from "framer-motion"
 import {
   ArrowRight,
+  Bot,
+  Calendar,
   Check,
   Crown,
   Cuboid,
+  Database,
   Download,
+  GitBranch,
   Loader2,
+  Mail,
+  MessageSquare,
   Mic,
   Monitor,
   Shield,
@@ -112,6 +118,22 @@ const FEATURES = [
   },
 ]
 
+const CONNECTORS = [
+  { icon: Mail, name: "Gmail", description: "Read, search, and compose email" },
+  { icon: Calendar, name: "Google Calendar", description: "Check schedule, find free time" },
+  { icon: Monitor, name: "Google Drive", description: "Search and read your files" },
+  { icon: GitBranch, name: "GitHub", description: "PRs, issues, and code search" },
+  { icon: MessageSquare, name: "Notion", description: "Search pages and databases" },
+  { icon: Zap, name: "Slack", description: "Search messages, send replies" },
+  { icon: Bot, name: "Linear", description: "Issues, projects, and sprints" },
+  { icon: Database, name: "Postgres / MySQL", description: "Query your own database" },
+]
+
+const BOT_CHANNELS = [
+  { icon: MessageSquare, name: "Telegram", description: "Text or send voice notes — works while your laptop is closed" },
+  { icon: Bot, name: "Discord", description: "Chat in any server channel Yomi joins" },
+]
+
 const PLANS = [
   {
     key: "explore",
@@ -128,6 +150,8 @@ const PLANS = [
       "50 local memories",
       "Window controls & docking",
       "Streaming responses",
+      "2 app connectors",
+      "50 bot messages / month",
     ],
     cta: "Get started free",
     popular: false,
@@ -146,7 +170,8 @@ const PLANS = [
       "180 min voice / month",
       "400 screenshot analyses",
       "100 advanced reasoning uses",
-      "Faster response queue",
+      "All 8 app connectors",
+      "1,000 Telegram & Discord bot messages / month",
     ],
     cta: "Subscribe",
     popular: true,
@@ -165,6 +190,8 @@ const PLANS = [
       "8,000 AI chats / month",
       "750 min voice / month",
       "500 advanced reasoning uses",
+      "All 8 app connectors",
+      "5,000 Telegram & Discord bot messages / month",
       "Experimental features first",
     ],
     cta: "Subscribe",
@@ -327,10 +354,16 @@ export function LandingPage() {
               >
                 <div className="mb-6 flex items-start gap-5">
                   <span className="font-accent text-5xl leading-none text-[#eaf4ff]">*</span>
-                  <p className="max-w-sm text-sm leading-5 text-white/78 sm:text-base sm:leading-6">
-                    Yomi is a Windows AI buddy that sees your screen, hears your voice, and helps
-                    you move through laptop work without breaking flow.
-                  </p>
+                  <div className="max-w-sm space-y-3">
+                    <p className="text-sm leading-5 text-white/78 sm:text-base sm:leading-6">
+                      Yomi is an AI assistant that sees your screen, hears your voice, and connects
+                      to your apps — Gmail, Calendar, Drive, GitHub, Notion, Slack, Linear, and more.
+                    </p>
+                    <p className="text-sm leading-5 text-white/55 sm:text-sm sm:leading-6">
+                      Ask questions about your work from the desktop or from Telegram, without
+                      switching windows or copy-pasting context.
+                    </p>
+                  </div>
                 </div>
                 <div className="flex flex-col items-start gap-3">
                   <div className="flex flex-wrap items-center gap-3">
@@ -456,6 +489,181 @@ export function LandingPage() {
             </motion.div>
           ))}
         </div>
+      </section>
+
+      {/* ── Connectors ───────────────────────────────────────────────────────── */}
+      <section id="connectors" className="mx-auto max-w-5xl px-6 py-24">
+        <div className="mb-14 text-center">
+          <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            Connectors
+          </p>
+          <h2 className="font-accent text-3xl font-medium text-foreground sm:text-4xl">
+            Your tools, one conversation away.
+          </h2>
+          <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
+            Connect your apps once. Ask Yomi from the desktop or from Telegram — even with your laptop closed.
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {CONNECTORS.map((c, i) => (
+            <motion.div
+              key={c.name}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: i * 0.06 }}
+              className="flex items-start gap-3 rounded-2xl glass-card p-4"
+            >
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                <c.icon size={16} className="text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">{c.name}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{c.description}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Bot channels */}
+        <div className="mt-12">
+          <p className="mb-6 text-center text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            Also available on
+          </p>
+          <div className="mx-auto grid max-w-lg gap-4 sm:grid-cols-2">
+            {BOT_CHANNELS.map((ch, i) => (
+              <motion.div
+                key={ch.name}
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: i * 0.1 }}
+                className="flex items-start gap-3 rounded-2xl glass-card p-5"
+              >
+                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                  <ch.icon size={18} className="text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">{ch.name}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{ch.description}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Data & Integrations transparency ─────────────────────────────── */}
+      <section id="data-use" className="mx-auto max-w-5xl px-6 py-24">
+        <div className="mb-14 text-center">
+          <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            Transparency
+          </p>
+          <h2 className="font-accent text-3xl font-medium text-foreground sm:text-4xl">
+            What Yomi accesses, and why.
+          </h2>
+          <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
+            Yomi only reads data when you ask a question. Nothing is stored between queries.
+            You can revoke any integration at any time.
+          </p>
+        </div>
+
+        <div className="mx-auto max-w-3xl overflow-hidden rounded-2xl glass-card">
+          {[
+            {
+              provider: "Google — Gmail",
+              scopes: "gmail.readonly, gmail.modify, gmail.send",
+              why: "To read, search, and summarise your emails when you ask. For example: “What did Sarah say about the project?” or “Draft a reply to the last email from Acme.”",
+            },
+            {
+              provider: "Google — Calendar",
+              scopes: "calendar.readonly",
+              why: 'To answer schedule questions like "What’s on my calendar today?" or "Find me a free hour this week."',
+            },
+            {
+              provider: "Google — Drive",
+              scopes: "drive.file",
+              why: "To list and read files you choose to share with Yomi, so you can ask questions about their content.",
+            },
+            {
+              provider: "GitHub",
+              scopes: "repo, read:user",
+              why: "To list pull requests and issues and search code in your repositories when you ask.",
+            },
+            {
+              provider: "Notion",
+              scopes: "Public integration",
+              why: "To search pages, read content, and create or update pages and database entries.",
+            },
+            {
+              provider: "Slack",
+              scopes: "channels:read, chat:write, search:read",
+              why: "To search messages, list channels, and send replies on your behalf.",
+            },
+            {
+              provider: "Linear",
+              scopes: "read, write",
+              why: "To list, create, and update issues and projects in your Linear workspace.",
+            },
+          ].map((row, i) => (
+            <div
+              key={row.provider}
+              className={`flex flex-col gap-1 px-6 py-4 text-sm sm:flex-row sm:gap-4 ${
+                i < 6 ? "border-b border-border" : ""
+              }`}
+            >
+              <div className="w-44 shrink-0 font-medium text-foreground">{row.provider}</div>
+              <div className="flex flex-1 flex-col gap-1">
+                <p className="font-mono text-xs text-muted-foreground/70">{row.scopes}</p>
+                <p className="text-muted-foreground">{row.why}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="mx-auto mt-8 max-w-3xl rounded-2xl glass-card p-6 text-sm text-muted-foreground"
+        >
+          <p className="mb-3 font-medium text-foreground">How your data is protected</p>
+          <ul className="space-y-2">
+            <li className="flex items-start gap-2">
+              <Check size={14} className="mt-0.5 shrink-0 text-primary" />
+              Data from integrations is used only to answer your current query and is never stored after the request completes.
+            </li>
+            <li className="flex items-start gap-2">
+              <Check size={14} className="mt-0.5 shrink-0 text-primary" />
+              OAuth tokens are encrypted at rest using AES-256-GCM and are never shared with third parties.
+            </li>
+            <li className="flex items-start gap-2">
+              <Check size={14} className="mt-0.5 shrink-0 text-primary" />
+              Yomi&apos;s use of Google API data complies with the{" "}
+              <Link href="https://developers.google.com/terms/api-services-user-data-policy" className="text-primary underline underline-offset-2" target="_blank" rel="noopener noreferrer">
+                Google API Services User Data Policy
+              </Link>
+              , including the Limited Use requirements.
+            </li>
+            <li className="flex items-start gap-2">
+              <Check size={14} className="mt-0.5 shrink-0 text-primary" />
+              You can disconnect any integration instantly from your dashboard or from{" "}
+              <Link href="https://myaccount.google.com/permissions" className="text-primary underline underline-offset-2" target="_blank" rel="noopener noreferrer">
+                Google Account settings
+              </Link>
+              .
+            </li>
+          </ul>
+          <p className="mt-4">
+            Read our full{" "}
+            <Link href="/privacy" className="text-primary underline underline-offset-2">
+              Privacy Policy
+            </Link>{" "}
+            for details on data handling and your rights.
+          </p>
+        </motion.div>
       </section>
 
       <section id="pricing" className="mx-auto max-w-5xl px-6 py-24">

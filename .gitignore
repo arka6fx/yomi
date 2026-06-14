@@ -54,6 +54,7 @@ npm-debug.log*
 
 # Scratch / generated artifacts
 tmp/
+debug/
 **/.playwright-mcp/
 .superpowers/
 

@@ -1,11 +1,10 @@
 import { existsSync } from "node:fs"
 import { readFile } from "node:fs/promises"
-import { tmpdir } from "node:os"
 import { describe, expect, it } from "bun:test"
 import { automationArtifactRoot, writeFailureArtifact } from "./failure-artifacts.js"
 
 describe("failure artifacts", () => {
-  it("writes replayable failure files under the temp directory", async () => {
+  it("writes replayable failure files under the debug directory", async () => {
     const artifact = await writeFailureArtifact({
       runId: "run/test:1",
       action: { kind: "invoke", ref: "w1e1" },
@@ -18,7 +17,6 @@ describe("failure artifacts", () => {
     })
 
     expect(artifact.dir.startsWith(automationArtifactRoot())).toBe(true)
-    expect(artifact.dir.startsWith(tmpdir())).toBe(true)
     expect(existsSync(artifact.manifestPath)).toBe(true)
     expect(artifact.files.some((file) => file.endsWith("uia-snapshot.json"))).toBe(true)
     expect(artifact.files.some((file) => file.endsWith("screenshot.b64.txt"))).toBe(true)

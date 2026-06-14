@@ -112,6 +112,126 @@ export function createNotionTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
+    "notion.createPage": tool({
+      description:
+        "Create a new page in a Notion database or as a child of an existing page.",
+      parameters: z.object({
+        parentType: z.enum(["database", "page"]).describe("Whether the parent is a database or a page"),
+        parentId: z.string().describe("ID of the parent database or page"),
+        title: z.string().describe("Title of the new page"),
+        properties: z
+          .record(z.string())
+          .optional()
+          .describe("Additional property values as {propertyName: stringValue} — for database pages only"),
+        content: z.string().optional().describe("Optional plain-text content to add as a paragraph block"),
+      }),
+      execute: async ({ parentType, parentId, title, properties, content }) => {
+        try {
+          const parent =
+            parentType === "database"
+              ? { database_id: parentId }
+              : { page_id: parentId }
+
+          const props: Record<string, unknown> = {
+            title: { title: [{ text: { content: title } }] },
+          }
+          if (properties && parentType === "database") {
+            for (const [key, value] of Object.entries(properties)) {
+              props[key] = { rich_text: [{ text: { content: value } }] }
+            }
+          }
+
+          const body: Record<string, unknown> = { parent, properties: props }
+          if (content) {
+            body.children = [
+              {
+                object: "block",
+                type: "paragraph",
+                paragraph: { rich_text: [{ type: "text", text: { content } }] },
+              },
+            ]
+          }
+
+          const page = await notion<{ id: string; url: string }>("/pages", {
+            method: "POST",
+            body: JSON.stringify(body),
+          })
+          return { id: page.id, url: page.url, title }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "notion.updatePage": tool({
+      description: "Update properties or content of an existing Notion page.",
+      parameters: z.object({
+        pageId: z.string().describe("Notion page ID to update"),
+        title: z.string().optional().describe("New title for the page"),
+        properties: z
+          .record(z.string())
+          .optional()
+          .describe("Property values to update as {propertyName: stringValue}"),
+        archived: z.boolean().optional().describe("Set to true to archive (trash) the page"),
+      }),
+      execute: async ({ pageId, title, properties, archived }) => {
+        try {
+          const props: Record<string, unknown> = {}
+          if (title) props.title = { title: [{ text: { content: title } }] }
+          if (properties) {
+            for (const [key, value] of Object.entries(properties)) {
+              props[key] = { rich_text: [{ text: { content: value } }] }
+            }
+          }
+
+          const body: Record<string, unknown> = {}
+          if (Object.keys(props).length > 0) body.properties = props
+          if (archived !== undefined) body.archived = archived
+
+          const page = await notion<{ id: string; url: string }>(`/pages/${pageId}`, {
+            method: "PATCH",
+            body: JSON.stringify(body),
+          })
+          return { id: page.id, url: page.url, updated: true }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "notion.createDatabaseEntry": tool({
+      description:
+        "Create a new row (entry) in a Notion database with specified property values.",
+      parameters: z.object({
+        databaseId: z.string().describe("Notion database ID"),
+        title: z.string().describe("Value for the title (Name) property"),
+        properties: z
+          .record(z.string())
+          .optional()
+          .describe("Additional property values as {propertyName: stringValue}"),
+      }),
+      execute: async ({ databaseId, title, properties }) => {
+        try {
+          const props: Record<string, unknown> = {
+            Name: { title: [{ text: { content: title } }] },
+          }
+          if (properties) {
+            for (const [key, value] of Object.entries(properties)) {
+              props[key] = { rich_text: [{ text: { content: value } }] }
+            }
+          }
+
+          const entry = await notion<{ id: string; url: string }>("/pages", {
+            method: "POST",
+            body: JSON.stringify({ parent: { database_id: databaseId }, properties: props }),
+          })
+          return { id: entry.id, url: entry.url, title }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
     "notion.queryDatabase": tool({
       description:
         "Query a Notion database to retrieve rows matching optional filters. Returns row titles and key properties.",
@@ -182,8 +302,8 @@ export const notionDef: ConnectorDef = {
   name: "Notion",
   category: "knowledge",
   icon: "notion",
-  description: "Search pages, read content, and query databases in your Notion workspace.",
-  readOnlyByDefault: true,
+  description: "Search, read, create, and update pages and database entries in your Notion workspace.",
+  readOnlyByDefault: false,
   auth: {
     kind: "oauth2",
     authUrl: "https://api.notion.com/v1/oauth/authorize",
@@ -201,7 +321,7 @@ export const notionDef: ConnectorDef = {
       "Go to notion.so/my-integrations → New integration",
       "Set type to 'Public' (required for OAuth — internal integrations don't support OAuth)",
       "Set Redirect URI to: ${BACKEND_URL}/api/integrations/callback/notion",
-      "Under Capabilities: enable Read content",
+      "Under Capabilities: enable Read content, Insert content, and Update content",
       "Copy the OAuth client ID and client secret",
     ],
     collect: [

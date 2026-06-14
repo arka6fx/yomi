@@ -42,14 +42,16 @@ type Sub = {
     voice: FeatureUsage
     screenshots: FeatureUsage
     reasoning: FeatureUsage
-    desktopAutomation: FeatureUsage
+    connectors: FeatureUsage
+    botMessages: FeatureUsage
   }
   planLimits?: {
     chat: number
     voiceMinutes: number
     screenshots: number
     reasoning: number
-    desktopAutomation: number
+    connectors: number
+    botMessages: number
   }
   dailyChatUsed: number
   dailyVoiceUsed: number
@@ -88,13 +90,15 @@ const PLANS = [
     price: "Free",
     priceSub: "forever",
     annual: "$0 / year",
-    desc: "Free screen-aware AI with monthly limits.",
+    desc: "Screen-aware AI with 2 app connectors. No card needed.",
     icon: Sparkles,
     features: [
       "100 AI chats / month",
       "20 min voice / month",
       "25 screenshots",
       "5 reasoning uses",
+      "2 app connectors",
+      "50 bot messages / month",
     ],
   },
   {
@@ -103,11 +107,13 @@ const PLANS = [
     price: "$14.99",
     priceSub: "/ mo",
     annual: "$144 / year",
-    desc: "Daily voice, screen, memory, and higher AI limits.",
+    desc: "All 8 connectors, Telegram & Discord bot, and higher limits.",
     icon: Crown,
     features: [
       "2,000 AI chats / month",
       "100 reasoning uses",
+      "All 8 app connectors",
+      "1,000 bot messages / month",
     ],
   },
   {
@@ -116,11 +122,13 @@ const PLANS = [
     price: "$39.99",
     priceSub: "/ mo",
     annual: "$384 / year",
-    desc: "Power-user reasoning, voice, and creation limits.",
+    desc: "High-volume reasoning, voice, bots, and early features.",
     icon: Cuboid,
     features: [
       "8,000 AI chats / month",
       "500 reasoning uses",
+      "All 8 app connectors",
+      "5,000 bot messages / month",
       "Early access features",
     ],
   },
@@ -172,11 +180,12 @@ function DashboardContent() {
             voice: { used: 0, limit: 20 },
             screenshots: { used: 0, limit: 25 },
             reasoning: { used: 0, limit: 5 },
-            desktopAutomation: { used: 0, limit: 10 },
+            connectors: { used: 0, limit: 2 },
+            botMessages: { used: 0, limit: 50 },
           },
           dodoSubscriptionId: null,
           billingWarning: null,
-          planLimits: { chat: 100, voiceMinutes: 20, screenshots: 25, reasoning: 5, desktopAutomation: 10 },
+          planLimits: { chat: 100, voiceMinutes: 20, screenshots: 25, reasoning: 5, connectors: 2, botMessages: 50 },
           dailyChatUsed: 0,
           dailyVoiceUsed: 0,
           dailyImageUsed: 0,
@@ -552,10 +561,11 @@ function DashboardContent() {
               <div className="space-y-4">
                 {([
                   { key: "chat" as const, label: "AI Chats", icon: "💬" },
-                  { key: "voice" as const, label: "Voice Interactions", icon: "🎤" },
+                  { key: "voice" as const, label: "Voice", icon: "🎤" },
                   { key: "screenshots" as const, label: "Screenshot Analyses", icon: "📸" },
                   { key: "reasoning" as const, label: "Reasoning", icon: "🧠" },
-                  { key: "desktopAutomation" as const, label: "Desktop Automation", icon: "🖥️" },
+                  { key: "connectors" as const, label: "App Connectors", icon: "🔌" },
+                  { key: "botMessages" as const, label: "Bot Messages (Telegram/Discord)", icon: "🤖" },
                 ]).map(({ key, label, icon }) => {
                   const feat = sub.features[key]
                   if (!feat) return null

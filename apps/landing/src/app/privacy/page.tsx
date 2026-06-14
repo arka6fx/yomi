@@ -14,14 +14,67 @@ export default function PrivacyPage() {
         <div className="mx-auto max-w-3xl px-6 py-24">
           <p className="mb-3 font-mono text-xs uppercase tracking-widest text-sky-100/50">Legal</p>
           <h1 className="mb-2 font-accent text-5xl font-medium text-[#eaf4ff]">Privacy Policy</h1>
-          <p className="mb-16 text-sm text-white/40">Last updated: May 2025</p>
+          <p className="mb-16 text-sm text-white/40">Last updated: June 2025</p>
 
           <div className="max-w-none space-y-10 text-sm leading-7 text-white/55">
             <Section title="Overview">
               <p>
-                Yomi is designed to be private by default. Screenshots are sent to our LLM proxy
-                only when you trigger a query — never stored, never used for training. Audio is
-                transcribed via cloud STT and discarded immediately after.
+                Yomi is an AI assistant that sees your screen, hears your voice, and connects to
+                your apps — Gmail, Google Calendar, Google Drive, GitHub, Notion, Slack, Linear,
+                and others. It is designed to be private by default: data from your connected apps
+                is used only to answer your direct queries and is not stored, shared, or used to
+                train AI models.
+              </p>
+            </Section>
+
+            <Section title="Google API Services — User Data">
+              <p>
+                Yomi&apos;s use of information received from Google APIs adheres to the{" "}
+                <a
+                  href="https://developers.google.com/terms/api-services-user-data-policy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Google API Services User Data Policy
+                </a>
+                , including the Limited Use requirements.
+              </p>
+              <p>When you connect a Google account, Yomi may request the following access:</p>
+              <ul>
+                <li>
+                  <strong className="text-label">Gmail</strong> (
+                  <code className="text-sky-100/70">gmail.readonly</code>,{" "}
+                  <code className="text-sky-100/70">gmail.modify</code>,{" "}
+                  <code className="text-sky-100/70">gmail.send</code>) — to read, search, and
+                  send emails when you ask Yomi a question about your inbox.
+                </li>
+                <li>
+                  <strong className="text-label">Google Calendar</strong> (
+                  <code className="text-sky-100/70">calendar.readonly</code>) — to answer
+                  schedule queries such as &ldquo;What&apos;s on my calendar today?&rdquo;
+                </li>
+                <li>
+                  <strong className="text-label">Google Drive</strong> (
+                  <code className="text-sky-100/70">drive.file</code>) — to list and read files
+                  you have chosen to share with Yomi.
+                </li>
+              </ul>
+              <p>
+                This data is used <strong className="text-label">only</strong> to fulfil your
+                specific request at the time it is made. It is not retained after the response is
+                returned, not shared with third parties beyond the AI inference provider, and not
+                used for advertising or to train machine-learning models.
+              </p>
+              <p>
+                You can revoke Yomi&apos;s access to your Google account at any time from{" "}
+                <a
+                  href="https://myaccount.google.com/permissions"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  myaccount.google.com/permissions
+                </a>{" "}
+                or by disconnecting the integration from your Yomi dashboard.
               </p>
             </Section>
 
@@ -70,21 +123,36 @@ export default function PrivacyPage() {
               <p>We use the following third-party services:</p>
               <ul>
                 <li>
+                  <strong className="text-label">Google APIs</strong> — Gmail, Calendar, and Drive
+                  data accessed on your behalf when you ask Yomi a question. Governed by
+                  Google&apos;s{" "}
+                  <a
+                    href="https://policies.google.com/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Privacy Policy
+                  </a>
+                  . Yomi&apos;s use complies with the Google API Services User Data Policy,
+                  including Limited Use requirements.
+                </li>
+                <li>
                   <strong className="text-label">AI Credits / OpenAI-compatible API</strong> — LLM
-                  inference via our proxy. Prompts sent to these providers are subject to their
-                  respective privacy policies. We do not enable training data use.
+                  inference via our proxy. Query content (including excerpts from connected apps)
+                  is sent to the LLM provider only to generate a response and is subject to their
+                  privacy policy. We do not enable training data use.
                 </li>
                 <li>
                   <strong className="text-label">ElevenLabs</strong> — cloud STT and TTS for voice
                   features.
                 </li>
                 <li>
-                  <strong className="text-label">Dodo Payments</strong> — payment processing. We never
-                  store card details.
+                  <strong className="text-label">Dodo Payments</strong> — payment processing. We
+                  never store card details.
                 </li>
                 <li>
                   <strong className="text-label">Neon (Postgres)</strong> — encrypted database
-                  hosting.
+                  hosting for account data, usage events, and encrypted OAuth tokens.
                 </li>
               </ul>
             </Section>

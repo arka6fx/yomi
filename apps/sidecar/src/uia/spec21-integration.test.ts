@@ -13,7 +13,7 @@ import path from "node:path"
 import { uia } from "./client.js"
 import type { UiaElement, UiaSnapshot } from "@yomi/shared"
 
-const LOG_FILE = path.resolve(import.meta.dir, "../../../../spec21-test-log.txt")
+const LOG_FILE = path.resolve(import.meta.dir, "../../../../debug/spec21-test-log.txt")
 const TIMEOUT_MS = 20_000
 
 let logBuf = ""

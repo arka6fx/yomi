@@ -1,7 +1,7 @@
 import React, { useState } from "react"
-import { ConnectorIcon } from "../icons.js"
-import { DARK_THEME } from "../types.js"
-import type { ConnectorInfo, ConnectorTheme } from "../types.js"
+import { ConnectorIcon } from "../icons"
+import { DARK_THEME } from "../types"
+import type { ConnectorInfo, ConnectorTheme } from "../types"
 
 interface ConnectedBadgeProps {
   t: ConnectorTheme

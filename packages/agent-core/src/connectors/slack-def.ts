@@ -90,6 +90,46 @@ export function createSlackTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
+    "slack.listUsers": tool({
+      description: "List members in the Slack workspace. Returns user ID, display name, and online status.",
+      parameters: z.object({
+        limit: z.number().int().min(1).max(100).default(20).describe("Max users to return"),
+        cursor: z.string().optional().describe("Pagination cursor from previous call"),
+      }),
+      execute: async ({ limit, cursor }) => {
+        try {
+          const params = new URLSearchParams({ limit: String(limit) })
+          if (cursor) params.set("cursor", cursor)
+          const data = await slack<{
+            members?: {
+              id: string
+              name: string
+              real_name?: string
+              profile?: { display_name?: string; image_72?: string }
+              deleted: boolean
+              is_bot: boolean
+            }[]
+            response_metadata?: { next_cursor?: string }
+          }>(`/users.list?${params}`)
+          const members = (data.members ?? [])
+            .filter((m) => !m.deleted && !m.is_bot)
+            .map((m) => ({
+              id: m.id,
+              name: m.real_name ?? m.profile?.display_name ?? m.name,
+              displayName: m.profile?.display_name ?? "",
+              avatar: m.profile?.image_72 ?? null,
+            }))
+          return {
+            count: members.length,
+            members,
+            nextCursor: data.response_metadata?.next_cursor ?? null,
+          }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
     "slack.sendMessage": tool({
       description: "Send a message to a Slack channel or DM. Only available when write access is granted.",
       parameters: z.object({

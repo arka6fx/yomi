@@ -1,10 +1,10 @@
 import { mkdir, writeFile } from "node:fs/promises"
-import { tmpdir } from "node:os"
 import { join } from "node:path"
 import type { UiaAction, UiaSnapshot } from "@yomi/shared"
 import type { ActAttempt } from "../tools/act-helpers.js"
 import type { RecoveryResult } from "./recovery.js"
 import { uia, UiaRpcError } from "./client.js"
+import { notepadDir } from "../memory/loader.js"
 
 export type FailureArtifactInput = {
   runId: string
@@ -28,7 +28,7 @@ function safeSegment(value: string): string {
 }
 
 export function automationArtifactRoot(): string {
-  return join(tmpdir(), "yomi-automation-artifacts")
+  return join(notepadDir(), "debug")
 }
 
 export async function createAutomationArtifactDir(runId: string): Promise<string> {
