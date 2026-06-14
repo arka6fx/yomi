@@ -1,4 +1,4 @@
-import { app } from "./index.js"
+import { app, startGateway } from "./index.js"
 
 export default {
   async fetch(request: Request, env: Record<string, unknown>, ctx: unknown) {
@@ -6,6 +6,8 @@ export default {
       for (const [key, value] of Object.entries(env)) {
         if (typeof value === "string") process.env[key] = value
       }
+
+      startGateway()
 
       return await app.fetch(request, env, ctx as never)
     } catch (err) {
