@@ -114,10 +114,10 @@ const sidecarResolver: SidecarResolver = async (userId, platform) => {
     return undefined
   }
 }
-export function startGateway(): void {
+export function startGateway(): Promise<void> {
   const gateway = getDefaultGateway()
   gateway.setSidecarResolver(sidecarResolver)
-  gateway.start(process.env["YOMI_PLAN"]).catch((err) => {
+  return gateway.start(process.env["YOMI_PLAN"]).catch((err) => {
     console.error("[gateway] failed to start:", err)
   })
 }
