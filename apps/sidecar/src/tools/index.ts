@@ -7,6 +7,8 @@ import { createSkillTools } from "./skills/index.js"
 import { createDelegateTaskTool } from "../subagent/delegate-tool.js"
 import { createCronJobTool } from "./cron/cronjob-tool.js"
 import { createMessagingTools } from "./messaging.js"
+import { createIntegrationTools } from "./integrations.js"
+import { getConnectorRegistry } from "../connectors/registry.js"
 import { getDefaultPluginManager } from "../plugins/plugin-manager.js"
 
 export interface AgentToolsContext {
@@ -24,6 +26,8 @@ export function createAgentTools(ctx: AgentToolsContext = {}) {
     ...createDelegateTaskTool({ plan: ctx.plan }),
     ...createCronJobTool({ plan: ctx.plan }),
     ...createMessagingTools(),
+    ...createIntegrationTools(),
+    ...getConnectorRegistry().getAllDefTools(),
     ...getDefaultPluginManager().getTools(),
   }
 }
