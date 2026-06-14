@@ -1,6 +1,7 @@
 import { tool, type ToolSet } from "ai"
 import { z } from "zod"
 import type { ConnectorDef, ConnectorContext } from "./connector-def.js"
+import { connectorError } from "./connector-def.js"
 
 async function gqlLinear<T>(token: string, query: string, variables?: Record<string, unknown>): Promise<T> {
   const res = await fetch("https://api.linear.app/graphql", {
@@ -102,7 +103,7 @@ function createLinearToolsFrom(provider: string) {
             if (issues.length === 0) return { issues: [], message: "No issues found." }
             return { count: issues.length, issues }
           } catch (err) {
-            return { error: err instanceof Error ? err.message : "Failed to list issues" }
+            return connectorError(err)
           }
         },
       }),
@@ -170,7 +171,7 @@ function createLinearToolsFrom(provider: string) {
               })),
             }
           } catch (err) {
-            return { error: err instanceof Error ? err.message : "Failed to get issue" }
+            return connectorError(err)
           }
         },
       }),
@@ -225,7 +226,7 @@ function createLinearToolsFrom(provider: string) {
             if (!result.issueCreate.success) return { error: "Issue creation failed" }
             return { ok: true, ...result.issueCreate.issue }
           } catch (err) {
-            return { error: err instanceof Error ? err.message : "Failed to create issue" }
+            return connectorError(err)
           }
         },
       }),
@@ -278,7 +279,7 @@ function createLinearToolsFrom(provider: string) {
             if (!result.issueUpdate.success) return { error: "Update failed" }
             return { ok: true, ...result.issueUpdate.issue }
           } catch (err) {
-            return { error: err instanceof Error ? err.message : "Failed to update issue" }
+            return connectorError(err)
           }
         },
       }),

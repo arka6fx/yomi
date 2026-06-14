@@ -1,6 +1,7 @@
 import { tool, type ToolSet } from "ai"
 import { z } from "zod"
 import type { ConnectorDef, ConnectorContext } from "./connector-def.js"
+import { connectorError } from "./connector-def.js"
 
 export function createDriveTools(ctx: ConnectorContext): ToolSet {
   async function drive<T>(path: string, init?: RequestInit): Promise<T> {
@@ -64,7 +65,7 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
             })),
           }
         } catch (err) {
-          return { error: err instanceof Error ? err.message : "Search failed" }
+          return connectorError(err)
         }
       },
     }),
@@ -97,7 +98,7 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
             description: file.description,
           }
         } catch (err) {
-          return { error: err instanceof Error ? err.message : "Failed to fetch file" }
+          return connectorError(err)
         }
       },
     }),
@@ -144,7 +145,7 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
             })),
           }
         } catch (err) {
-          return { error: err instanceof Error ? err.message : "Failed to list files" }
+          return connectorError(err)
         }
       },
     }),

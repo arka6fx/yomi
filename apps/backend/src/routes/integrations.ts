@@ -44,6 +44,21 @@ function redirectUri(): string {
   )
 }
 
+// In-memory rate limiter: max 5 OAuth initiations per user per minute
+const oauthInitWindow = new Map<string, { count: number; windowStart: number }>()
+
+function checkOAuthRateLimit(userId: string): boolean {
+  const now = Date.now()
+  const entry = oauthInitWindow.get(userId)
+  if (!entry || now - entry.windowStart > 60_000) {
+    oauthInitWindow.set(userId, { count: 1, windowStart: now })
+    return true
+  }
+  if (entry.count >= 5) return false
+  entry.count++
+  return true
+}
+
 export const integrationsRouter = new Hono()
 
 // ── List connected integrations (safe — no tokens) ───────────────────────────
@@ -92,6 +107,10 @@ integrationsRouter.get("/status", authenticate, async (c) => {
 // ── Start Google OAuth flow ──────────────────────────────────────────────────
 
 integrationsRouter.get("/connect/google", authenticate, (c) => {
+  if (!checkOAuthRateLimit(c.get("user").id)) {
+    return c.json({ error: "Too many connect attempts — please wait a minute" }, 429)
+  }
+
   const state = Buffer.from(
     JSON.stringify({ userId: c.get("user").id, ts: Date.now() }),
   ).toString("base64url")
@@ -217,6 +236,11 @@ integrationsRouter.get("/callback/google", async (c) => {
 integrationsRouter.get("/connect/:id", authenticate, (c) => {
   const id = c.req.param("id") ?? ""
   const userId = c.get("user").id
+
+  if (!checkOAuthRateLimit(userId)) {
+    return c.json({ error: "Too many connect attempts — please wait a minute" }, 429)
+  }
+
   const def = getConnectorDef(id)
   if (!def) return c.json({ error: `Unknown connector: ${id}` }, 404)
 

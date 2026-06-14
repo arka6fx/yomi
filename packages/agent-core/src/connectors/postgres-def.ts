@@ -1,6 +1,7 @@
 import { tool, type ToolSet } from "ai"
 import { z } from "zod"
 import type { ConnectorDef, ConnectorContext } from "./connector-def.js"
+import { connectorError } from "./connector-def.js"
 
 // SELECT-only guard — rejects anything that looks like a write statement
 const WRITE_PATTERN = /^\s*(insert|update|delete|drop|truncate|alter|create|replace|merge|call|execute|exec|grant|revoke|set|begin|commit|rollback)\b/i
@@ -52,7 +53,7 @@ export function createPostgresTools(ctx: ConnectorContext): ToolSet {
             await client.end()
           }
         } catch (err) {
-          return { error: err instanceof Error ? err.message : "Query failed" }
+          return connectorError(err)
         }
       },
     }),
@@ -86,7 +87,7 @@ export function createPostgresTools(ctx: ConnectorContext): ToolSet {
             await client.end()
           }
         } catch (err) {
-          return { error: err instanceof Error ? err.message : "Failed to list tables" }
+          return connectorError(err)
         }
       },
     }),
