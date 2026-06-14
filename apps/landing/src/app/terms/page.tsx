@@ -62,7 +62,7 @@ export default function TermsPage() {
             <Section title="Subscriptions and billing">
               <ul>
                 <li>
-                  Paid plans are billed monthly via Dodo Payments. Prices are listed at yomi.app/pricing.
+                  Paid plans are billed monthly via Dodo Payments. Prices are listed at yomi.arka6fx.com/pricing.
                 </li>
                 <li>
                   Monthly plans can be cancelled at any time from your Yomi dashboard.
@@ -137,8 +137,8 @@ export default function TermsPage() {
             <Section title="Contact">
               <p>
                 Questions about these Terms? Email{" "}
-                <a href="mailto:legal@yomi.app" className="text-accent">
-contact.arkagarai@gmail.com
+                <a href="mailto:contact.arkagarai@gmail.com" className="text-accent">
+                  contact.arkagarai@gmail.com
                 </a>
                 .
               </p>
