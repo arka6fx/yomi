@@ -47,14 +47,17 @@ function findInTree(el: UiaElement[], o: { role?: string | string[]; namePattern
 async function smartClick(hwnd: number, el: UiaElement, label: string): Promise<boolean> {
   await log(`  Click: ${el.role} "${el.name}" ref=${el.ref}`)
   let ok = false
+  // eslint-disable-next-line no-empty
   try { const r = await uia.call("click_element", { ref: el.ref }); ok = (r as { ok?: boolean }).ok === true } catch {}
   if (!ok) {
     const cx = Math.round(el.rect.x + el.rect.width / 2)
     const cy = Math.round(el.rect.y + el.rect.height / 2)
+    // eslint-disable-next-line no-empty
     try { await uia.call("click_point", { x: cx, y: cy, button: "left" }); ok = true } catch {}
   }
   if (!ok) {
     const nr = await uia.reResolve(el.ref)
+    // eslint-disable-next-line no-empty
     if (nr) try { const r = await uia.call("click_element", { ref: nr }); ok = (r as { ok?: boolean }).ok === true } catch {}
   }
   await sleep(500)
