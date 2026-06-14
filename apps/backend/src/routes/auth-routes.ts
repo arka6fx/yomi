@@ -1,11 +1,12 @@
 import { Hono } from "hono"
 import { db } from "@yomi/db"
-import { eq } from "drizzle-orm"
+import { deviceCodes } from "@yomi/db"
+import { eq, lt } from "drizzle-orm"
 import * as authSchema from "../auth-schema.js"
 import { getAuth } from "../auth.js"
 
-// Device-code flow for desktop OAuth (thin wrapper — Better Auth handles the heavy lifting)
-// Standard OAuth2 device authorization grant (RFC 8628)
+// Device-code flow for desktop OAuth (RFC 8628)
+// Codes persisted in DB so all CF Worker isolates share state.
 export const authRoutesRouter = new Hono()
 
 authRoutesRouter.use("*", (c, next) => {
@@ -18,14 +19,14 @@ authRoutesRouter.post("/device-code", async (c) => {
   const { clientId } = (await c.req.json()) as { clientId: string }
   if (!clientId) return c.json({ error: "clientId required" }, 400)
 
-  // Generate device code + user code pair
   const deviceCode = crypto.randomUUID()
-  const userCode = Math.random().toString(36).slice(2, 8).toUpperCase()
-  const expiresAt = Date.now() + 5 * 60 * 1000 // 5 min
+  const userCode = crypto.randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase()
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000)
 
-  // Persist in Better Auth's secondary storage or a simple in-memory map
-  // Phase 3: move to Redis; for now use in-memory
-  pendingDeviceCodes.set(deviceCode, { userCode, clientId, expiresAt, token: null })
+  // Prune expired codes opportunistically to keep the table small
+  await db.delete(deviceCodes).where(lt(deviceCodes.expiresAt, new Date())).catch(() => {})
+
+  await db.insert(deviceCodes).values({ deviceCode, userCode, clientId, expiresAt })
 
   return c.json({
     device_code: deviceCode,
@@ -39,18 +40,24 @@ authRoutesRouter.post("/device-code", async (c) => {
 // Desktop polls this to get the session token once the user has authenticated in the browser
 authRoutesRouter.post("/device-code/token", async (c) => {
   const { device_code } = (await c.req.json()) as { device_code: string }
-  const entry = pendingDeviceCodes.get(device_code)
+
+  const entry = await db
+    .select()
+    .from(deviceCodes)
+    .where(eq(deviceCodes.deviceCode, device_code))
+    .limit(1)
+    .then((r) => r[0] ?? null)
 
   if (!entry) return c.json({ error: "invalid_grant" }, 400)
-  if (Date.now() > entry.expiresAt) {
-    pendingDeviceCodes.delete(device_code)
+
+  if (Date.now() > entry.expiresAt.getTime()) {
+    await db.delete(deviceCodes).where(eq(deviceCodes.deviceCode, device_code)).catch(() => {})
     return c.json({ error: "expired_token" }, 400)
   }
-  if (!entry.token) {
-    return c.json({ error: "authorization_pending" }, 400)
-  }
 
-  pendingDeviceCodes.delete(device_code)
+  if (!entry.token) return c.json({ error: "authorization_pending" }, 400)
+
+  await db.delete(deviceCodes).where(eq(deviceCodes.deviceCode, device_code)).catch(() => {})
   return c.json({ access_token: entry.token })
 })
 
@@ -63,34 +70,32 @@ authRoutesRouter.post("/device-code/confirm", async (c) => {
   const normalizedCode = user_code?.trim().toUpperCase()
   if (!normalizedCode) return c.json({ error: "user_code required" }, 400)
 
-  let foundExpired = false
-  for (const [deviceCode, entry] of pendingDeviceCodes) {
-    if (entry.userCode !== normalizedCode) continue
-    if (Date.now() >= entry.expiresAt) {
-      foundExpired = true
-      pendingDeviceCodes.delete(deviceCode)
-      continue
-    }
+  const entry = await db
+    .select()
+    .from(deviceCodes)
+    .where(eq(deviceCodes.userCode, normalizedCode))
+    .limit(1)
+    .then((r) => r[0] ?? null)
 
-    {
-      entry.token = session.session.token
-      pendingDeviceCodes.set(deviceCode, entry)
-      return c.json({ ok: true })
-    }
+  if (!entry) return c.json({ error: "invalid_user_code" }, 400)
+
+  if (Date.now() >= entry.expiresAt.getTime()) {
+    await db.delete(deviceCodes).where(eq(deviceCodes.userCode, normalizedCode)).catch(() => {})
+    return c.json({ error: "expired_user_code" }, 400)
   }
 
-  if (foundExpired) return c.json({ error: "expired_user_code" }, 400)
-  return c.json({ error: "invalid_user_code" }, 400)
+  await db
+    .update(deviceCodes)
+    .set({ token: session.session.token })
+    .where(eq(deviceCodes.userCode, normalizedCode))
+
+  return c.json({ ok: true })
 })
 
-// Sign-out from ALL devices — ensures signing out from the landing page also revokes
-// the desktop session token. Call this AFTER Better Auth's own sign-out.
+// Sign-out from ALL devices — revokes the desktop session token too
 authRoutesRouter.post("/sign-out-all", async (c) => {
   const session = await getAuth().api.getSession({ headers: c.req.raw.headers })
   if (!session) return c.json({ error: "Not authenticated" }, 401)
   await db.delete(authSchema.session).where(eq(authSchema.session.userId, session.user.id))
   return c.json({ ok: true })
 })
-
-type PendingEntry = { userCode: string; clientId: string; expiresAt: number; token: string | null }
-const pendingDeviceCodes = new Map<string, PendingEntry>()

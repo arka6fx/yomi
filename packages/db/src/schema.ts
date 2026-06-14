@@ -412,3 +412,20 @@ export const telegramLinkTokens = pgTable("telegram_link_tokens", {
   used: boolean("used").notNull().default(false),
   telegramUserId: text("telegram_user_id"),
 })
+
+// Device-code OAuth flow (RFC 8628) — persisted in DB so CF Worker isolates share state
+export const deviceCodes = pgTable(
+  "device_codes",
+  {
+    deviceCode: text("device_code").primaryKey().notNull(),
+    userCode: text("user_code").notNull(),
+    clientId: text("client_id").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    token: text("token"), // null until confirmed by browser
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    userCodeIdx: index("device_codes_user_code_idx").on(t.userCode),
+    expiresAtIdx: index("device_codes_expires_at_idx").on(t.expiresAt),
+  }),
+)

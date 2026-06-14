@@ -22,7 +22,7 @@ models mid-turn — loses prompt cache and causes tool-vocab mismatch.
 
 ```
 apps/backend/   Hono/Bun — auth, billing, LLM proxy, metering, messaging gateway
-apps/desktop/   Electron — tray/menubar/notch, hotkeys, capture, Mission Control
+apps/desktop/   Electron — tray/menubar/notch, hotkeys, capture
 apps/landing/   Next.js  — marketing, dashboard, account linking (Vercel)
 apps/sidecar/   Bun      — router, fast pipeline, agent loop, notepad
 packages/db/    Drizzle schema + Neon
@@ -52,7 +52,7 @@ bun install && bun run dev        # install + run all in watch mode
 ```
 DESKTOP SHELL  (apps/desktop — Electron)
   tray/menubar/notch · global hotkey · push-to-talk
-  screen + mic capture · Mission Control · device-code auth
+  screen + mic capture · device-code auth
   ↕  local socket  (low-latency authenticated IPC)
 LOCAL SIDECAR  (apps/sidecar — Bun)
   intent router · fast pipeline (STT → vision → LLM → TTS)
@@ -60,10 +60,8 @@ LOCAL SIDECAR  (apps/sidecar — Bun)
   ↕  authenticated HTTPS
 CLOUD BACKEND  (apps/backend — Hono/Bun)
   Better Auth · Dodo webhooks · LLM proxy · usage metering · memory sync
-  Messaging gateway and browser automation are hidden from the public UI for now
+  Messaging gateway is hidden from the public UI for now
 ```
-
----
 
 ---
 
@@ -74,9 +72,8 @@ CLOUD BACKEND  (apps/backend — Hono/Bun)
 **Fast path:** `STT → speculative screenshot → 1 LLM call → TTS`
 Tools: `look_at_screen`, `transcribe`, `speak`. No tool-selection loop.
 
-**Agent path:** filesystem r/w · bash (sandboxed) · web search/fetch · cursor
-automation · MCP servers (calendar, email, Notion, Slack). Browser automation
-is hidden from the public UI for now.
+**Agent path:** filesystem r/w · bash (sandboxed) · web search/fetch ·
+MCP servers (calendar, email, Notion, Slack).
 
 **Session lifecycle:**
 ```
@@ -130,11 +127,11 @@ agent_runs, mcp_connections (oauth_tokens encrypted), hook_logs (PII redacted)
 
 ## Plans
 
-| Plan    | Price      | Key limits                                                         |
-| ------- | ---------- | ------------------------------------------------------------------ |
-| Explore | $0/mo      | 100 chats/month; limited voice/screen/memory; no automation        |
-| Pro     | $14.99/mo  | 2 000 chats/month; limited reasoning, voice, images, automation    |
-| Max     | $39.99/mo  | Higher reasoning, voice, image, and foreground automation limits   |
+| Plan    | Price      | Key limits                                                     |
+| ------- | ---------- | -------------------------------------------------------------- |
+| Explore | $0/mo      | 100 chats/month; limited voice/screen/memory; 2 connectors     |
+| Pro     | $14.99/mo  | 2 000 chats/month; limited reasoning, voice, images; 8 connectors |
+| Max     | $39.99/mo  | Higher reasoning, voice, and image limits; 8 connectors        |
 
 Fair-use: never offer unlimited. Dodo USD: Pro = 1499¢, Max = 3999¢.
 India-local: Pro ₹999/mo, Max ₹2 999/mo.
@@ -147,7 +144,7 @@ India-local: Pro ₹999/mo, Max ₹2 999/mo.
 | - | ---- | ----- |
 | 02 | `02-sidecar-fast-pipeline` | Fast path + visual guide |
 | 03 | `03-desktop-shell` | Electron main: sidecar spawn, hotkey, IPC, tray |
-| 04 | `04-desktop-ui` | Notch, Mission Control, audio, streaming |
+| 04 | `04-desktop-ui` | Notch, audio, streaming |
 | 05 | `05-speech-stt` | ElevenLabs STT + VAD |
 | 06 | `06-speech-tts` | ElevenLabs TTS |
 | 07 | `07-sidecar-router` | Fast vs agent classification |
@@ -158,9 +155,6 @@ India-local: Pro ₹999/mo, Max ₹2 999/mo.
 | 12 | `12-backend` | Hono routes, Better Auth, LLM proxy, metering |
 | 13 | `13-pricing` | Plans, Dodo Payments, metering |
 | 14 | `14-landing-page` | Next.js marketing site + waitlist |
-| 16 | `16-windows-app-automation` | UIA Act mode, safety blocklist |
-| 17 | `17-browser-automation` | Playwright MCP via sidecar ← **will provide later** |
-| 18 | `18-automation-orchestration` | LangGraph, sub-agents ← **will provide later** |
 | 19 | `19-hermes-features.md` | Cloud messaging gateway architecture ← **will provide later** |
 | 20 | `20-bot-setup.md` | Bot setup + linking flow ← **will provide later** |
 
@@ -170,7 +164,6 @@ India-local: Pro ₹999/mo, Max ₹2 999/mo.
 
 - Local-by-default: STT + screen on-device; only the distilled prompt leaves
 - Visible status: tray/notch pill when listening or capturing. No silent recording
-- Desktop automation is foreground-specific only
 - Per-app blocklist: password managers and banking apps never captured
 - Yomi's own window excluded from screen-shares
 - Encrypted memory sync; user-owned export/delete
@@ -246,13 +239,15 @@ payment failure → status = past_due → billing warning in dashboard.
 
 ## Hidden Features
 
-Messaging gateway and browser automation are hidden from the public UI for now.
+Messaging gateway is hidden from the public UI for now.
 
 ## Removed / commented out (2026-06)
 - WhatsApp cloud adapter (762 lines: adapter, tests, webhooks, routes, types)
 - Slack cloud adapter (189 lines: adapter, routes, types)
 - Legacy billing integration — replaced by Dodo Payments
-- Browser automation is hidden from the public UI for now
+- Browser automation (Playwright MCP via sidecar) — removed, not shipping
+- Windows UIA Act mode (FlaUI helper + sidecar client) — removed, not shipping
+- Mission Control UI + automationRuns store state — removed from desktop renderer
 - Messaging gateway is hidden from the public UI for now
 - send_whatsapp_message tool — commented out
 - AWS Bedrock Nova Sonic STT/TTS — replaced by ElevenLabs

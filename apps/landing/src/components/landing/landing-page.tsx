@@ -119,14 +119,14 @@ const FEATURES = [
 ]
 
 const CONNECTORS = [
-  { icon: Mail, name: "Gmail", description: "Read, search, and compose email" },
-  { icon: Calendar, name: "Google Calendar", description: "Check schedule, find free time" },
-  { icon: Monitor, name: "Google Drive", description: "Search and read your files" },
+  { icon: Mail, name: "Gmail", description: "Read, draft, and manage emails" },
+  { icon: Calendar, name: "Google Calendar", description: "View schedules and upcoming events" },
+  { icon: Monitor, name: "Google Drive", description: "Search and retrieve files from your Drive" },
   { icon: GitBranch, name: "GitHub", description: "PRs, issues, and code search" },
   { icon: MessageSquare, name: "Notion", description: "Search pages and databases" },
   { icon: Zap, name: "Slack", description: "Search messages, send replies" },
   { icon: Bot, name: "Linear", description: "Issues, projects, and sprints" },
-  { icon: Database, name: "Postgres / MySQL", description: "Query your own database" },
+  { icon: Database, name: "Discord", description: "Chat in servers and channels" },
 ]
 
 const BOT_CHANNELS = [
@@ -151,7 +151,7 @@ const PLANS = [
       "Window controls & docking",
       "Streaming responses",
       "2 app connectors",
-      "50 bot messages / month",
+      "20 bot messages / month",
     ],
     cta: "Get started free",
     popular: false,
@@ -169,9 +169,8 @@ const PLANS = [
       "2,000 AI chats / month",
       "180 min voice / month",
       "400 screenshot analyses",
-      "100 advanced reasoning uses",
       "All 8 app connectors",
-      "1,000 Telegram & Discord bot messages / month",
+      "200 Telegram & Discord bot messages / month",
     ],
     cta: "Subscribe",
     popular: true,
@@ -184,14 +183,13 @@ const PLANS = [
     period: "/ month",
     annual: "$384 / year",
     badge: "Power users",
-    description: "High-volume reasoning, voice, and image work for power users.",
+    description: "High-volume voice, screenshots, and bots for power users.",
     features: [
       "Everything in Pro",
       "8,000 AI chats / month",
       "750 min voice / month",
-      "500 advanced reasoning uses",
       "All 8 app connectors",
-      "5,000 Telegram & Discord bot messages / month",
+      "500 Telegram & Discord bot messages / month",
       "Experimental features first",
     ],
     cta: "Subscribe",
@@ -417,6 +415,72 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* ── What is Yomi? ────────────────────────────────────────────────── */}
+      <section id="about" className="mx-auto max-w-3xl px-6 py-20">
+        <div className="mb-8 text-center">
+          <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            About
+          </p>
+          <h2 className="font-accent text-3xl font-medium text-foreground sm:text-4xl">
+            What is Yomi?
+          </h2>
+        </div>
+        <p className="text-center text-sm leading-relaxed text-muted-foreground">
+          Yomi is an AI productivity assistant that helps users interact with their work across
+          multiple services using natural language. Users can connect services such as Google Drive,
+          Gmail, Google Calendar, GitHub, Slack, Notion, and Linear to search information, manage
+          tasks, read documents, access calendars, and automate workflows from a single interface.
+        </p>
+      </section>
+
+      {/* ── How Yomi Uses Google Data ─────────────────────────────────────── */}
+      <section id="google-data" className="mx-auto max-w-3xl px-6 py-10">
+        <div className="mb-8 text-center">
+          <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            Google Integration
+          </p>
+          <h2 className="font-accent text-3xl font-medium text-foreground sm:text-4xl">
+            How Yomi Uses Google Data
+          </h2>
+        </div>
+        <div className="rounded-2xl glass-card p-6 text-sm text-muted-foreground">
+          <p className="mb-4">
+            Yomi only accesses Google data after a user explicitly authorizes access through
+            Google&apos;s OAuth consent flow.
+          </p>
+          <p className="mb-3 font-medium text-foreground">
+            Depending on the integrations enabled by the user, Yomi may use:
+          </p>
+          <ul className="mb-4 space-y-2">
+            <li className="flex items-start gap-2">
+              <Check size={14} className="mt-0.5 shrink-0 text-primary" />
+              <span>
+                <strong className="text-foreground">Google Drive</strong> access to search,
+                retrieve, and organize files.
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <Check size={14} className="mt-0.5 shrink-0 text-primary" />
+              <span>
+                <strong className="text-foreground">Gmail</strong> access to read, draft, and send
+                emails requested by the user.
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <Check size={14} className="mt-0.5 shrink-0 text-primary" />
+              <span>
+                <strong className="text-foreground">Google Calendar</strong> access to view and
+                manage calendar events and schedules.
+              </span>
+            </li>
+          </ul>
+          <p>
+            Yomi does not sell user data and only uses authorized data to provide requested
+            functionality.
+          </p>
+        </div>
+      </section>
+
       <section className="mx-auto max-w-5xl px-6 py-24" id="how-it-works">
         <div className="mb-14 text-center">
           <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
@@ -491,11 +555,11 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ── Connectors ───────────────────────────────────────────────────────── */}
+      {/* ── Supported Integrations ───────────────────────────────────────────── */}
       <section id="connectors" className="mx-auto max-w-5xl px-6 py-24">
         <div className="mb-14 text-center">
           <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            Connectors
+            Supported Integrations
           </p>
           <h2 className="font-accent text-3xl font-medium text-foreground sm:text-4xl">
             Your tools, one conversation away.
@@ -664,6 +728,23 @@ export function LandingPage() {
             for details on data handling and your rights.
           </p>
         </motion.div>
+
+        {/* Privacy & Security CTA */}
+        <div className="mx-auto mt-8 flex max-w-3xl flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          <Link
+            href="/privacy"
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
+          >
+            <Shield size={14} />
+            View Privacy Policy
+          </Link>
+          <Link
+            href="/terms"
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
+          >
+            View Terms of Service
+          </Link>
+        </div>
       </section>
 
       <section id="pricing" className="mx-auto max-w-5xl px-6 py-24">

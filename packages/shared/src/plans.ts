@@ -34,7 +34,7 @@ export const PLANS: Record<string, PlanConfig> = {
       screenshots: 25,
       reasoning: 5,
       connectors: 2,
-      botMessages: 50,
+      botMessages: 20,
     },
   },
   pro: {
@@ -50,7 +50,7 @@ export const PLANS: Record<string, PlanConfig> = {
       screenshots: 400,
       reasoning: 100,
       connectors: 8,
-      botMessages: 1000,
+      botMessages: 200,
     },
   },
   max: {
@@ -66,7 +66,7 @@ export const PLANS: Record<string, PlanConfig> = {
       screenshots: 2000,
       reasoning: 500,
       connectors: 8,
-      botMessages: 5000,
+      botMessages: 500,
     },
   },
 }

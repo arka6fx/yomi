@@ -96,9 +96,8 @@ const PLANS = [
       "100 AI chats / month",
       "20 min voice / month",
       "25 screenshots",
-      "5 reasoning uses",
       "2 app connectors",
-      "50 bot messages / month",
+      "20 bot messages / month",
     ],
   },
   {
@@ -111,9 +110,8 @@ const PLANS = [
     icon: Crown,
     features: [
       "2,000 AI chats / month",
-      "100 reasoning uses",
       "All 8 app connectors",
-      "1,000 bot messages / month",
+      "200 bot messages / month",
     ],
   },
   {
@@ -122,13 +120,12 @@ const PLANS = [
     price: "$39.99",
     priceSub: "/ mo",
     annual: "$384 / year",
-    desc: "High-volume reasoning, voice, bots, and early features.",
+    desc: "High-volume voice, bots, and early access features.",
     icon: Cuboid,
     features: [
       "8,000 AI chats / month",
-      "500 reasoning uses",
       "All 8 app connectors",
-      "5,000 bot messages / month",
+      "500 bot messages / month",
       "Early access features",
     ],
   },
@@ -149,6 +146,7 @@ function DashboardContent() {
   const [activeTab, setActiveTab] = useState<"account" | "integrations">("account")
   const [connectedProviders, setConnectedProviders] = useState<string[]>([])
   const [integrationLoadingId, setIntegrationLoadingId] = useState<string | null>(null)
+  const [showWelcome, setShowWelcome] = useState(false)
 
   useEffect(() => {
     if (!isPending && !session) router.push("/signin")
@@ -181,11 +179,11 @@ function DashboardContent() {
             screenshots: { used: 0, limit: 25 },
             reasoning: { used: 0, limit: 5 },
             connectors: { used: 0, limit: 2 },
-            botMessages: { used: 0, limit: 50 },
+            botMessages: { used: 0, limit: 20 },
           },
           dodoSubscriptionId: null,
           billingWarning: null,
-          planLimits: { chat: 100, voiceMinutes: 20, screenshots: 25, reasoning: 5, connectors: 2, botMessages: 50 },
+          planLimits: { chat: 100, voiceMinutes: 20, screenshots: 25, reasoning: 5, connectors: 2, botMessages: 20 },
           dailyChatUsed: 0,
           dailyVoiceUsed: 0,
           dailyImageUsed: 0,
@@ -208,6 +206,7 @@ function DashboardContent() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     setDesiredPlan(params.get("plan"))
+    if (params.has("welcome")) setShowWelcome(true)
     if (params.has("integration_success") || params.has("integration_error")) {
       setActiveTab("integrations")
     }
@@ -432,6 +431,41 @@ function DashboardContent() {
         {/* Account tab content — only shown when account tab active */}
         {activeTab === "account" && <>
 
+        {/* Welcome banner — shown once after signup */}
+        {showWelcome && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="rounded-xl border border-primary/30 bg-primary/5 p-4 flex items-start justify-between gap-4"
+          >
+            <div>
+              <p className="text-sm font-medium text-foreground">Welcome to Yomi!</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Download the desktop app to get started — it lives in your system tray and
+                responds to{" "}
+                <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono text-[10px]">
+                  Ctrl+Space
+                </kbd>.
+              </p>
+              <Link
+                href="/#download"
+                className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+              >
+                <Download size={12} />
+                Download for Windows
+              </Link>
+            </div>
+            <button
+              onClick={() => setShowWelcome(false)}
+              className="text-muted-foreground hover:text-foreground transition-colors shrink-0 text-lg leading-none"
+              aria-label="Dismiss"
+            >
+              ×
+            </button>
+          </motion.div>
+        )}
+
         {/* Billing warnings */}
         {sub?.billingWarning && (
           <motion.div
@@ -563,9 +597,8 @@ function DashboardContent() {
                   { key: "chat" as const, label: "AI Chats", icon: "💬" },
                   { key: "voice" as const, label: "Voice", icon: "🎤" },
                   { key: "screenshots" as const, label: "Screenshot Analyses", icon: "📸" },
-                  { key: "reasoning" as const, label: "Reasoning", icon: "🧠" },
                   { key: "connectors" as const, label: "App Connectors", icon: "🔌" },
-                  { key: "botMessages" as const, label: "Bot Messages (Telegram/Discord)", icon: "🤖" },
+                  { key: "botMessages" as const, label: "Bot Messages", icon: "🤖" },
                 ]).map(({ key, label, icon }) => {
                   const feat = sub.features[key]
                   if (!feat) return null

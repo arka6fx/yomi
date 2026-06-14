@@ -73,7 +73,7 @@ export async function checkStoredToken(): Promise<string | null> {
   const stored = loadToken()
   if (!stored) return null
   try {
-    const res = await fetch(`${BACKEND_URL}/api/billing/subscription`, {
+    const res = await fetch(`${BACKEND_URL}/api/user/me`, {
       headers: { Authorization: `Bearer ${stored}` },
     })
     if (res.status === 401) {
@@ -82,7 +82,7 @@ export async function checkStoredToken(): Promise<string | null> {
     }
     return stored
   } catch {
-    // Network down in dev — assume token valid so offline use works
+    // Network down — assume token valid so offline use works
     return stored
   }
 }
