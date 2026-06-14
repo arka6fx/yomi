@@ -24,11 +24,12 @@ export default function Footer() {
           <div>
             <p className="mb-1 font-medium text-white/60">Developer</p>
             <p>Arka Garai</p>
+            <p className="mt-0.5 text-white/30">Independent software developer</p>
           </div>
           <div>
             <p className="mb-1 font-medium text-white/60">Support</p>
             <a
-              href="mailto:owner@example.com"
+              href="mailto:contact.arkagarai@gmail.com"
               className="transition-colors hover:text-white/70"
             >
               owner@example.com

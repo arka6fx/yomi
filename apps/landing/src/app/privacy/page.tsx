@@ -17,7 +17,7 @@ export default function PrivacyPage() {
         <div className="mx-auto max-w-3xl px-6 py-24">
           <p className="mb-3 font-mono text-xs uppercase tracking-widest text-sky-100/50">Legal</p>
           <h1 className="mb-2 font-accent text-5xl font-medium text-[#eaf4ff]">Privacy Policy</h1>
-          <p className="mb-16 text-sm text-white/40">Last updated: June 2025</p>
+          <p className="mb-16 text-sm text-white/40">Last updated: June 2026</p>
 
           <div className="max-w-none space-y-10 text-sm leading-7 text-white/55">
             <Section title="Overview">
@@ -196,7 +196,7 @@ export default function PrivacyPage() {
             <Section title="Changes to this policy">
               <p>
                 We will notify users of material changes via email at least 14 days before they take
-                effect. The latest version is always at yomi.app/privacy.
+                effect. The latest version is always at yomi.arka6fx.com/privacy.
               </p>
             </Section>
 

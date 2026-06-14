@@ -359,12 +359,23 @@ export function LandingPage() {
                   <span className="font-accent text-5xl leading-none text-[#eaf4ff]">*</span>
                   <div className="max-w-sm space-y-3">
                     <p className="text-sm leading-5 text-white/78 sm:text-base sm:leading-6">
-                      Yomi is an AI assistant that sees your screen, hears your voice, and connects
-                      to your apps — Gmail, Calendar, Drive, GitHub, Notion, Slack, Linear, and more.
+                      Yomi is an AI productivity assistant that reads your Gmail, Google Calendar,
+                      and Google Drive to answer questions you ask in natural language. It also
+                      connects to GitHub, Slack, Notion, Linear, and more.
                     </p>
                     <p className="text-sm leading-5 text-white/55 sm:text-sm sm:leading-6">
-                      Ask questions about your work from the desktop or from Telegram, without
-                      switching windows or copy-pasting context.
+                      Ask anything about your work from the desktop or from Telegram — without
+                      switching apps or copy-pasting context.
+                    </p>
+                    <p className="text-xs leading-5 text-white/40">
+                      Google data (Gmail · Calendar · Drive) is read only when you ask a question
+                      and is never stored.{" "}
+                      <a
+                        href="#google-data"
+                        className="underline underline-offset-2 transition-colors hover:text-white/60"
+                      >
+                        Learn more
+                      </a>
                     </p>
                   </div>
                 </div>
@@ -472,6 +483,18 @@ export function LandingPage() {
               &ldquo;What emails did I get from Acme this week?&rdquo; or &ldquo;Find the Q3
               report in my Drive.&rdquo; Yomi reads data on-demand per request and never
               stores it.
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground/70">
+              Yomi&apos;s use of Google API data complies with the{" "}
+              <a
+                href="https://developers.google.com/terms/api-services-user-data-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 hover:text-muted-foreground"
+              >
+                Google API Services User Data Policy
+              </a>
+              , including the Limited Use requirements.
             </p>
           </div>
 
