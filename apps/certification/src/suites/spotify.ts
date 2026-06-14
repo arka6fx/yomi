@@ -132,7 +132,7 @@ export class SpotifySuite extends BaseSuite {
         const bottomBtns = (tree?.elements ?? []).filter((e) =>
           e.role === "Button" && e.enabled && !e.offscreen && e.rect && e.rect.y > 500)
           .sort((a, b) => a.rect!.x - b.rect!.x)
-        if (bottomBtns.length > 0) {
+        if (bottomBtns.length > 0 && bottomBtns[0]) {
           await this.smartClick(this.hwnd, bottomBtns[0], `Bottom-Btn-0-${bottomBtns[0].name ?? ""}`)
           toggled = true
           await this.sleep(500)
@@ -177,7 +177,7 @@ export class SpotifySuite extends BaseSuite {
         const bottomBtns = (tree?.elements ?? []).filter((e) =>
           e.role === "Button" && e.enabled && !e.offscreen && e.rect && e.rect.y > 500)
           .sort((a, b) => a.rect!.x - b.rect!.x)
-        if (bottomBtns.length > 2) {
+        if (bottomBtns.length > 2 && bottomBtns[2]) {
           await this.smartClick(this.hwnd, bottomBtns[2], `Bottom-Btn-2-${bottomBtns[2].name ?? ""}`)
           opened = true
           await this.sleep(500)
