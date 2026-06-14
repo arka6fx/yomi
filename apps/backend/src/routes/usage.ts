@@ -100,8 +100,6 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
   const periodStart = currentMonthStart()
   const creditKind = CREDIT_KIND_MAP[kind]
   const creditsRequired = creditsForUsage(creditKind, { durationSeconds: body.duration })
-  let featureQuotaExceeded = false
-  let requestQuotaExceeded = false
   let featureUsed = 0
   let requestsUsedBefore = 0
 
@@ -131,7 +129,20 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
 
       featureUsed = await featureUsage(user.id, eventKinds, periodStart)
       if (featureUsed >= featureLimit) {
-        featureQuotaExceeded = true
+        const plan = getPlanConfig(user)
+        return c.json(
+          {
+            error: `${plan.name} monthly ${featureKey} limit reached. Upgrade to continue.`,
+            code: "feature_quota_exceeded",
+            plan: effectivePlan,
+            feature: featureKey,
+            used: featureUsed,
+            limit: featureLimit,
+            upgradeUrl: "/dashboard?upgrade=true",
+            resetAt: new Date(Date.UTC(periodStart.getUTCFullYear(), periodStart.getUTCMonth() + 1, 1)),
+          },
+          402,
+        )
       }
     }
   }
@@ -140,38 +151,30 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
   if (kind === "chat" || kind === "voice") {
     const limit = requestLimitForUser(user)
     requestsUsedBefore = await featureUsage(user.id, REQUEST_KINDS, periodStart)
-    if (limit !== null && requestsUsedBefore >= limit) requestQuotaExceeded = true
+    if (limit !== null && requestsUsedBefore >= limit) {
+      const plan = getPlanConfig(user)
+      return c.json(
+        {
+          error: `${plan.name} monthly request limit reached. Buy credits or upgrade to continue.`,
+          code: "request_quota_exceeded",
+          plan: effectivePlan,
+          used: requestsUsedBefore,
+          limit,
+          upgradeUrl: "/dashboard?credits=true",
+          resetAt: new Date(Date.UTC(periodStart.getUTCFullYear(), periodStart.getUTCMonth() + 1, 1)),
+        },
+        402,
+      )
+    }
   }
 
   const creditsBefore = await getCreditSummary(user.id)
-  const requiresCredits = featureQuotaExceeded || requestQuotaExceeded || creditsBefore.balance >= creditsRequired
+  const requiresCredits = creditsBefore.balance >= creditsRequired
 
   // Record usage event
   const eventKind = kind === "chat" ? "request_chat"
     : kind === "voice" ? "request_voice"
     : kind
-
-  if ((featureQuotaExceeded || requestQuotaExceeded) && creditsBefore.balance < creditsRequired) {
-    const plan = getPlanConfig(user)
-    return c.json(
-      {
-        error: "Not enough credits to continue.",
-        code: "insufficient_credits",
-        plan: effectivePlan,
-        feature: featureKey,
-        used: featureUsed,
-        limit: featureLimitForUser(user, featureKey),
-        requestsUsed: requestsUsedBefore,
-        requestsLimit: kind === "chat" || kind === "voice" ? requestLimitForUser(user) : undefined,
-        creditsRequired,
-        creditsRemaining: creditsBefore.balance,
-        resetAt: new Date(Date.UTC(periodStart.getUTCFullYear(), periodStart.getUTCMonth() + 1, 1)),
-        upgradeUrl: "/dashboard?credits=true",
-        message: `${plan.name} quota reached. Buy credits or upgrade to continue.`,
-      },
-      402,
-    )
-  }
 
   const [event] = await db.insert(usageEvents).values({
     userId: user.id,
@@ -200,22 +203,11 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
     })
 
     if (!debit.ok) {
-      if (featureQuotaExceeded || requestQuotaExceeded) {
-        return c.json(
-          {
-            error: "Not enough credits to continue.",
-            code: "insufficient_credits",
-            creditsRequired,
-            creditsRemaining: debit.balance,
-            buyCreditsUrl: "/dashboard?credits=true",
-          },
-          402,
-        )
-      }
+      // credits insufficient — usage recorded but not charged; will be flagged via usageWarning
     } else {
       creditsCharged = debit.charged
       creditsRemaining = debit.balance
-      paidBy = featureQuotaExceeded || requestQuotaExceeded ? "paid_overage" : "credits"
+      paidBy = "credits"
       await db
         .update(usageEvents)
         .set({ creditsCharged })
