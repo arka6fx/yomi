@@ -102,3 +102,26 @@ describe("delegate_task tool is wired in", () => {
     expect(r.error).toMatch(/either goal/)
   })
 })
+
+describe("connector tools are wired into createAgentTools", () => {
+  it("includes def tools from the registry when a connector is connected", async () => {
+    const { getConnectorRegistry } = await import("../connectors/registry.js")
+    const reg = getConnectorRegistry()
+    const fakeToolSet = { "notion.search": { description: "search notion", parameters: {}, execute: async () => ({}) } }
+    const original = reg.getAllDefTools.bind(reg)
+    reg.getAllDefTools = () => fakeToolSet as never
+
+    try {
+      const tools: Record<string, unknown> = createAgentTools()
+      expect(tools["notion.search"]).toBeDefined()
+    } finally {
+      reg.getAllDefTools = original
+    }
+  })
+
+  it("includes legacy integration tools (gmail)", () => {
+    const tools: Record<string, unknown> = createAgentTools()
+    expect(tools["gmail.searchEmails"]).toBeDefined()
+    expect(tools["gmail.sendEmail"]).toBeDefined()
+  })
+})
