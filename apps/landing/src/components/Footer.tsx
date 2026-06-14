@@ -14,7 +14,39 @@ export default function Footer() {
 
   return (
     <footer className="border-t border-white/10 bg-[#050914]">
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-6 py-10 sm:flex-row">
+      {/* Contact / developer info — required for Google OAuth verification */}
+      <div className="mx-auto max-w-6xl px-6 pt-10 pb-6">
+        <div className="grid gap-6 text-xs text-white/40 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <p className="mb-1 font-medium text-white/60">Product</p>
+            <p>Yomi — AI Productivity Assistant</p>
+          </div>
+          <div>
+            <p className="mb-1 font-medium text-white/60">Developer</p>
+            <p>Arka Garai</p>
+          </div>
+          <div>
+            <p className="mb-1 font-medium text-white/60">Support</p>
+            <a
+              href="mailto:arkagarai292@gmail.com"
+              className="transition-colors hover:text-white/70"
+            >
+              arkagarai292@gmail.com
+            </a>
+          </div>
+          <div>
+            <p className="mb-1 font-medium text-white/60">Website</p>
+            <a
+              href="https://yomi.arka6fx.com"
+              className="transition-colors hover:text-white/70"
+            >
+              yomi.arka6fx.com
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 border-t border-white/5 px-6 py-6 sm:flex-row">
         <div className="flex flex-wrap items-center justify-center gap-6 sm:justify-start">
           {links.map((link) => (
             <Link

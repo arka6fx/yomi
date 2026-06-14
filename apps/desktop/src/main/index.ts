@@ -464,7 +464,7 @@ function startSessionValidation() {
     const token = loadToken()
     if (!token) return
     try {
-      const res = await fetch(`${BACKEND_URL}/api/billing/subscription`, {
+      const res = await fetch(`${BACKEND_URL}/api/user/me`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.status === 401) {

@@ -12,7 +12,7 @@ export default function SignUpPage() {
             "radial-gradient(ellipse 800px 600px at 50% 30%, rgba(96,165,250,0.1) 0%, transparent 70%)",
         }}
       />
-      <AuthCard defaultMode="signup" />
+      <AuthCard defaultMode="signup" callbackURL="/dashboard?welcome=1" />
     </main>
   )
 }
