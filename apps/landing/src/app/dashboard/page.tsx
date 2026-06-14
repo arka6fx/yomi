@@ -19,9 +19,12 @@ import {
   ReceiptText,
   Plug,
   MessageSquare,
+  MessageCircle,
   Mic,
   ScanLine,
   Bot,
+  Plus,
+  ExternalLink,
   type LucideIcon,
 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
@@ -136,6 +139,22 @@ const PLANS = [
   },
 ]
 
+type PlatformLink = { platform: string; connectedAt: string }
+
+// /api/* is proxied to the backend by the cloudflare worker
+const PLATFORM_META: Record<string, { name: string; color: string; inviteUrl: string }> = {
+  telegram: {
+    name: "Telegram",
+    color: "bg-sky-500/10 text-sky-400",
+    inviteUrl: "https://t.me/yomi_assistant_bot",
+  },
+  discord: {
+    name: "Discord",
+    color: "bg-indigo-500/10 text-indigo-400",
+    inviteUrl: "/api/gateway/discord/auth",
+  },
+}
+
 function DashboardContent() {
   const { data: session, isPending } = authClient.useSession()
   const router = useRouter()
@@ -152,6 +171,10 @@ function DashboardContent() {
   const [connectedProviders, setConnectedProviders] = useState<string[]>([])
   const [integrationLoadingId, setIntegrationLoadingId] = useState<string | null>(null)
   const [showWelcome, setShowWelcome] = useState(false)
+
+  const [platformLinks, setPlatformLinks] = useState<PlatformLink[]>([])
+  const [platformsLoading, setPlatformsLoading] = useState(true)
+  const [unlinking, setUnlinking] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isPending && !session) router.push("/signin")
@@ -226,6 +249,17 @@ function DashboardContent() {
       .then((r) => r.ok ? r.json() : { connected: [] })
       .then((d: { connected: string[] }) => setConnectedProviders(d.connected))
       .catch(() => {}) // ignore — integrations tab is best-effort
+  }, [session])
+
+  useEffect(() => {
+    if (!session) return
+    fetch("/api/gateway/connections", {
+      headers: { Authorization: `Bearer ${session.session.token}` },
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((d: PlatformLink[]) => setPlatformLinks(Array.isArray(d) ? d : []))
+      .catch(() => setPlatformLinks([]))
+      .finally(() => setPlatformsLoading(false))
   }, [session])
 
   useEffect(() => {
@@ -319,6 +353,23 @@ function DashboardContent() {
       setConnectedProviders((prev) => prev.filter((p) => p !== id))
     } catch { /* best-effort */ } finally {
       setIntegrationLoadingId(null)
+    }
+  }
+
+  async function handleUnlink(platform: string) {
+    setUnlinking(platform)
+    try {
+      const res = await fetch(`/api/gateway/connections/${platform}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session!.session.token}` },
+      })
+      if (res.ok) {
+        setPlatformLinks((prev) => prev.filter((p) => p.platform !== platform))
+      }
+    } catch {
+      // ignore
+    } finally {
+      setUnlinking(null)
     }
   }
 
@@ -816,7 +867,116 @@ function DashboardContent() {
           </motion.div>
         )}
 
-        {/* Linked accounts removed from the public dashboard */}
+        {/* Linked accounts */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <div className="rounded-2xl border border-border bg-card p-6">
+            <div className="flex items-start justify-between gap-4 mb-5">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
+                  Linked accounts
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Connect Telegram or Discord to chat with Yomi from anywhere.
+                </p>
+              </div>
+              <Link
+                href="/link"
+                className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-xl font-medium px-3 py-1.5 text-xs hover:bg-primary/90 transition-colors shrink-0"
+              >
+                <Plus size={12} />
+                Link new
+              </Link>
+            </div>
+
+            {platformsLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 size={14} className="animate-spin" />
+                Loading...
+              </div>
+            ) : platformLinks.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border/60 p-4 text-center">
+                <p className="text-sm text-muted-foreground mb-3">
+                  No accounts linked yet. Message the Yomi bot to get started.
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  {Object.entries(PLATFORM_META).map(([key, meta]) =>
+                    meta.inviteUrl ? (
+                      <a
+                        key={key}
+                        href={meta.inviteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs bg-muted hover:bg-muted/80 text-foreground rounded-lg px-3 py-1.5 transition-colors"
+                      >
+                        <MessageCircle size={12} />
+                        {meta.name === "Discord" ? "Add " + meta.name : "Add " + meta.name + " bot"}
+                        <ExternalLink size={10} />
+                      </a>
+                    ) : null,
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {platformLinks.map((link) => {
+                  const meta = PLATFORM_META[link.platform] ?? {
+                    name: link.platform,
+                    color: "bg-muted text-muted-foreground",
+                    inviteUrl: "",
+                  }
+                  return (
+                    <div
+                      key={link.platform}
+                      className="flex items-center justify-between rounded-xl border border-border px-4 py-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={cn(
+                            "text-xs px-2 py-0.5 rounded-full font-medium capitalize",
+                            meta.color,
+                          )}
+                        >
+                          {meta.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          Connected{" "}
+                          {new Date(link.connectedAt).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href="/link"
+                          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          Manage
+                        </Link>
+                        <button
+                          onClick={() => handleUnlink(link.platform)}
+                          disabled={unlinking === link.platform}
+                          className="flex items-center gap-1 text-xs text-destructive/70 hover:text-destructive transition-colors disabled:opacity-50"
+                        >
+                          {unlinking === link.platform ? (
+                            <Loader2 size={12} className="animate-spin" />
+                          ) : (
+                            <Trash2 size={12} />
+                          )}
+                          Unlink
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </motion.div>
 
         {/* Download CTA */}
         <motion.div

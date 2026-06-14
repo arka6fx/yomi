@@ -34,6 +34,13 @@ type Integration = {
   lastSyncAt: string | null
 }
 
+type BotConnection = { platform: string; connectedAt: string }
+
+const BOT_META: Record<string, { name: string; color: string }> = {
+  telegram: { name: "Telegram", color: "#3aa9e0" },
+  discord: { name: "Discord", color: "#7a8cf0" },
+}
+
 export default function IntegrationsPage() {
   const { theme: t } = useContext(ThemeCtx)
   const connectorTheme = useConnectorTheme()
@@ -41,6 +48,9 @@ export default function IntegrationsPage() {
   const [integrations, setIntegrations] = useState<Integration[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingId, setLoadingId] = useState<string | null>(null)
+
+  const [botConnections, setBotConnections] = useState<BotConnection[]>([])
+  const [botBusy, setBotBusy] = useState<string | null>(null)
 
   async function loadIntegrations() {
     setLoading(true)
@@ -54,9 +64,48 @@ export default function IntegrationsPage() {
     }
   }
 
+  async function loadBotConnections() {
+    try {
+      const rows = await window.yomi.getBotConnections()
+      setBotConnections(Array.isArray(rows) ? rows : [])
+    } catch {
+      // best-effort
+    }
+  }
+
   useEffect(() => {
     void loadIntegrations()
+    void loadBotConnections()
   }, [])
+
+  async function handleBotConnect(platform: "telegram" | "discord") {
+    setBotBusy(platform)
+    try {
+      const result =
+        platform === "telegram"
+          ? await window.yomi.connectTelegramBot()
+          : await window.yomi.connectDiscordBot()
+      if (result.error) console.error("[bot] connect error:", result.error)
+      // Browser opened for linking; refresh shortly after the user returns
+      setTimeout(() => void loadBotConnections(), 3000)
+    } finally {
+      setBotBusy(null)
+    }
+  }
+
+  async function handleBotUnlink(platform: string) {
+    setBotBusy(platform)
+    try {
+      await window.yomi.unlinkBot(platform)
+      setBotConnections((prev) => prev.filter((b) => b.platform !== platform))
+    } catch {
+      // best-effort
+    } finally {
+      setBotBusy(null)
+    }
+  }
+
+  const connectedBots = new Set(botConnections.map((b) => b.platform))
 
   const connectedProviders = integrations.map((i) => i.provider)
   const connectedMap = Object.fromEntries(
@@ -138,6 +187,105 @@ export default function IntegrationsPage() {
           loadingId={loadingId}
         />
       )}
+
+      {/* Bot channels — chat with Yomi from Telegram or Discord */}
+      <motion.div
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+        style={{ marginTop: 24 }}
+      >
+        <h3 style={{ fontSize: 13, fontWeight: 700, color: t.text, margin: "0 0 2px 0" }}>
+          Chat from anywhere
+        </h3>
+        <p style={{ fontSize: 11, color: t.dim, margin: "0 0 12px 0", lineHeight: 1.45 }}>
+          Connect Telegram or Discord to message Yomi even with your desktop closed.
+        </p>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {(["telegram", "discord"] as const).map((platform) => {
+            const meta = BOT_META[platform] ?? { name: platform, color: t.dim as string }
+            const connected = connectedBots.has(platform)
+            const conn = botConnections.find((b) => b.platform === platform)
+            const busy = botBusy === platform
+            return (
+              <div
+                key={platform}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  border: `1px solid ${t.border}`,
+                  background: t.surface,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      background: meta.color,
+                      flexShrink: 0,
+                    }}
+                  />
+                  <div>
+                    <div style={{ fontSize: 12.5, fontWeight: 600, color: t.text }}>{meta.name}</div>
+                    <div style={{ fontSize: 10.5, color: t.dim }}>
+                      {connected && conn
+                        ? `Connected ${new Date(conn.connectedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                        : "Not connected"}
+                    </div>
+                  </div>
+                </div>
+
+                {connected ? (
+                  <button
+                    onClick={() => void handleBotUnlink(platform)}
+                    disabled={busy}
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: connectorTheme.error,
+                      background: "transparent",
+                      border: `1px solid ${t.border}`,
+                      borderRadius: 8,
+                      padding: "5px 12px",
+                      cursor: busy ? "default" : "pointer",
+                      opacity: busy ? 0.5 : 1,
+                      fontFamily: UI_FONT,
+                    }}
+                  >
+                    {busy ? "…" : "Unlink"}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => void handleBotConnect(platform)}
+                    disabled={busy}
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: connectorTheme.accentText,
+                      background: connectorTheme.accent,
+                      border: "none",
+                      borderRadius: 8,
+                      padding: "5px 12px",
+                      cursor: busy ? "default" : "pointer",
+                      opacity: busy ? 0.5 : 1,
+                      fontFamily: UI_FONT,
+                    }}
+                  >
+                    {busy ? "Opening…" : "Connect"}
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </motion.div>
     </div>
   )
 }
