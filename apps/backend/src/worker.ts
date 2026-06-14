@@ -1,13 +1,19 @@
 import { app, startGateway } from "./index.js"
 
+interface ExecutionContext {
+  waitUntil(promise: Promise<unknown>): void
+}
+
 export default {
-  async fetch(request: Request, env: Record<string, unknown>, ctx: unknown) {
+  async fetch(request: Request, env: Record<string, unknown>, ctx: ExecutionContext) {
     try {
       for (const [key, value] of Object.entries(env)) {
-        if (typeof value === "string") process.env[key] = value
+        if (typeof value === "string") {
+          process.env[key] = value.replace(/^\uFEFF/, "")
+        }
       }
 
-      startGateway()
+      ctx.waitUntil(startGateway())
 
       return await app.fetch(request, env, ctx as never)
     } catch (err) {
