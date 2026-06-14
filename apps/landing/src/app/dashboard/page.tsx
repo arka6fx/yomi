@@ -18,6 +18,11 @@ import {
   WalletCards,
   ReceiptText,
   Plug,
+  MessageSquare,
+  Mic,
+  ScanLine,
+  Bot,
+  type LucideIcon,
 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
@@ -594,12 +599,12 @@ function DashboardContent() {
             {sub?.features && (
               <div className="space-y-4">
                 {([
-                  { key: "chat" as const, label: "AI Chats", icon: "💬" },
-                  { key: "voice" as const, label: "Voice", icon: "🎤" },
-                  { key: "screenshots" as const, label: "Screenshot Analyses", icon: "📸" },
-                  { key: "connectors" as const, label: "App Connectors", icon: "🔌" },
-                  { key: "botMessages" as const, label: "Bot Messages", icon: "🤖" },
-                ]).map(({ key, label, icon }) => {
+                  { key: "chat" as const, label: "AI Chats", Icon: MessageSquare as LucideIcon },
+                  { key: "voice" as const, label: "Voice", Icon: Mic as LucideIcon },
+                  { key: "screenshots" as const, label: "Screenshot Analyses", Icon: ScanLine as LucideIcon },
+                  { key: "connectors" as const, label: "App Connectors", Icon: Plug as LucideIcon },
+                  { key: "botMessages" as const, label: "Bot Messages", Icon: Bot as LucideIcon },
+                ]).map(({ key, label, Icon }) => {
                   const feat = sub.features[key]
                   if (!feat) return null
                   const pct = feat.limit && feat.limit > 0 ? Math.min(100, (feat.used / feat.limit) * 100) : 0
@@ -610,7 +615,7 @@ function DashboardContent() {
                     <div key={key} className={cn("space-y-1.5", isDisabled && "opacity-40")}>
                       <div className="flex items-center justify-between text-sm">
                         <span className="flex items-center gap-2 text-foreground">
-                          <span className="text-base">{icon}</span>
+                          <Icon size={15} className="text-muted-foreground shrink-0" />
                           {label}
                         </span>
                         <span className="text-muted-foreground text-xs tabular-nums">

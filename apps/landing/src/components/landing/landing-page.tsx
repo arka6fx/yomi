@@ -6,17 +6,11 @@ import { useRouter } from "next/navigation"
 import { AnimatePresence, motion } from "framer-motion"
 import {
   ArrowRight,
-  Bot,
-  Calendar,
   Check,
   Crown,
   Cuboid,
-  Database,
   Download,
-  GitBranch,
   Loader2,
-  Mail,
-  MessageSquare,
   Mic,
   Monitor,
   Shield,
@@ -27,6 +21,17 @@ import { authClient } from "@/lib/auth-client"
 
 import Footer from "@/components/Footer"
 import Nav from "@/components/Nav"
+import {
+  GmailIcon,
+  GoogleCalendarIcon,
+  GoogleDriveIcon,
+  GitHubIcon,
+  NotionIcon,
+  SlackIcon,
+  LinearIcon,
+  DiscordIcon,
+  TelegramIcon,
+} from "@/components/brand-icons"
 
 type Platform = "mac" | "windows" | "unknown"
 
@@ -119,19 +124,19 @@ const FEATURES = [
 ]
 
 const CONNECTORS = [
-  { icon: Mail, name: "Gmail", description: "Read, draft, and manage emails" },
-  { icon: Calendar, name: "Google Calendar", description: "View schedules and upcoming events" },
-  { icon: Monitor, name: "Google Drive", description: "Search and retrieve files from your Drive" },
-  { icon: GitBranch, name: "GitHub", description: "PRs, issues, and code search" },
-  { icon: MessageSquare, name: "Notion", description: "Search pages and databases" },
-  { icon: Zap, name: "Slack", description: "Search messages, send replies" },
-  { icon: Bot, name: "Linear", description: "Issues, projects, and sprints" },
-  { icon: Database, name: "Discord", description: "Chat in servers and channels" },
+  { Icon: GmailIcon, name: "Gmail", description: "Read, draft, and manage emails" },
+  { Icon: GoogleCalendarIcon, name: "Google Calendar", description: "View schedules and upcoming events" },
+  { Icon: GoogleDriveIcon, name: "Google Drive", description: "Search and retrieve files from your Drive" },
+  { Icon: GitHubIcon, name: "GitHub", description: "PRs, issues, and code search" },
+  { Icon: NotionIcon, name: "Notion", description: "Search pages and databases" },
+  { Icon: SlackIcon, name: "Slack", description: "Search messages, send replies" },
+  { Icon: LinearIcon, name: "Linear", description: "Issues, projects, and sprints" },
+  { Icon: DiscordIcon, name: "Discord", description: "Chat in servers and channels" },
 ]
 
 const BOT_CHANNELS = [
-  { icon: MessageSquare, name: "Telegram", description: "Text or send voice notes — works while your laptop is closed" },
-  { icon: Bot, name: "Discord", description: "Chat in any server channel Yomi joins" },
+  { Icon: TelegramIcon, name: "Telegram", description: "Text or send voice notes — works while your laptop is closed" },
+  { Icon: DiscordIcon, name: "Discord", description: "Chat in any server channel Yomi joins" },
 ]
 
 const PLANS = [
@@ -425,12 +430,22 @@ export function LandingPage() {
             What is Yomi?
           </h2>
         </div>
-        <p className="text-center text-sm leading-relaxed text-muted-foreground">
-          Yomi is an AI productivity assistant that helps users interact with their work across
-          multiple services using natural language. Users can connect services such as Google Drive,
-          Gmail, Google Calendar, GitHub, Slack, Notion, and Linear to search information, manage
-          tasks, read documents, access calendars, and automate workflows from a single interface.
-        </p>
+        <div className="space-y-4 text-center text-sm leading-relaxed text-muted-foreground">
+          <p>
+            Yomi is an AI productivity assistant that connects to your Google Workspace — Gmail,
+            Google Calendar, and Google Drive — so you can query, analyze, and act on your work
+            using natural language, without switching apps or copy-pasting context.
+          </p>
+          <p>
+            Ask Yomi to search your inbox, find a file, check your calendar, or draft a reply, all
+            from a single interface on your desktop or via Telegram. Yomi only accesses your Google
+            data when you ask a question, and for no other purpose.
+          </p>
+          <p>
+            Yomi also connects to GitHub, Slack, Notion, Linear, and Discord so you can manage
+            tasks, search code, and automate cross-app workflows entirely through conversation.
+          </p>
+        </div>
       </section>
 
       {/* ── How Yomi Uses Google Data ─────────────────────────────────────── */}
@@ -442,42 +457,84 @@ export function LandingPage() {
           <h2 className="font-accent text-3xl font-medium text-foreground sm:text-4xl">
             How Yomi Uses Google Data
           </h2>
+          <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
+            Yomi requests Google API access solely to answer your questions and complete tasks you
+            explicitly request. No Google data is stored after a request completes.
+          </p>
         </div>
-        <div className="rounded-2xl glass-card p-6 text-sm text-muted-foreground">
-          <p className="mb-4">
-            Yomi only accesses Google data after a user explicitly authorizes access through
-            Google&apos;s OAuth consent flow.
-          </p>
-          <p className="mb-3 font-medium text-foreground">
-            Depending on the integrations enabled by the user, Yomi may use:
-          </p>
-          <ul className="mb-4 space-y-2">
-            <li className="flex items-start gap-2">
-              <Check size={14} className="mt-0.5 shrink-0 text-primary" />
-              <span>
-                <strong className="text-foreground">Google Drive</strong> access to search,
-                retrieve, and organize files.
-              </span>
-            </li>
-            <li className="flex items-start gap-2">
-              <Check size={14} className="mt-0.5 shrink-0 text-primary" />
-              <span>
-                <strong className="text-foreground">Gmail</strong> access to read, draft, and send
-                emails requested by the user.
-              </span>
-            </li>
-            <li className="flex items-start gap-2">
-              <Check size={14} className="mt-0.5 shrink-0 text-primary" />
-              <span>
-                <strong className="text-foreground">Google Calendar</strong> access to view and
-                manage calendar events and schedules.
-              </span>
-            </li>
-          </ul>
-          <p>
-            Yomi does not sell user data and only uses authorized data to provide requested
-            functionality.
-          </p>
+        <div className="space-y-4">
+          {/* Purpose banner */}
+          <div className="rounded-2xl border border-primary/20 bg-primary/5 px-6 py-4 text-sm text-muted-foreground">
+            <p className="mb-1 font-medium text-foreground">App purpose</p>
+            <p>
+              Yomi is a personal AI assistant. It accesses your Google account data — with your
+              explicit permission — to answer questions you ask in natural language. For example:
+              &ldquo;What emails did I get from Acme this week?&rdquo; or &ldquo;Find the Q3
+              report in my Drive.&rdquo; Yomi reads data on-demand per request and never
+              stores it.
+            </p>
+          </div>
+
+          <div className="rounded-2xl glass-card p-6 text-sm text-muted-foreground">
+            <p className="mb-4">
+              Yomi only accesses Google data after you explicitly authorize access through
+              Google&apos;s OAuth consent flow. You may revoke access at any time.
+            </p>
+            <p className="mb-4 font-medium text-foreground">
+              Depending on the integrations you enable, Yomi may request:
+            </p>
+            <ul className="mb-4 space-y-4">
+              <li className="flex items-start gap-3">
+                <Check size={14} className="mt-0.5 shrink-0 text-primary" />
+                <div>
+                  <p className="font-medium text-foreground">Gmail</p>
+                  <p className="mt-0.5">
+                    <span className="font-mono text-xs text-muted-foreground/70">gmail.readonly · gmail.modify · gmail.send</span>
+                  </p>
+                  <p className="mt-1">
+                    <strong className="text-foreground/80">Purpose:</strong> To search your inbox,
+                    summarize email threads, and draft or send replies when you ask. For example:{" "}
+                    &ldquo;What did Sarah say about the project?&rdquo; or &ldquo;Draft a reply
+                    declining the meeting.&rdquo;
+                  </p>
+                </div>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check size={14} className="mt-0.5 shrink-0 text-primary" />
+                <div>
+                  <p className="font-medium text-foreground">Google Calendar</p>
+                  <p className="mt-0.5">
+                    <span className="font-mono text-xs text-muted-foreground/70">calendar.readonly</span>
+                  </p>
+                  <p className="mt-1">
+                    <strong className="text-foreground/80">Purpose:</strong> To answer schedule
+                    questions, find free time, and surface upcoming events when you ask. For
+                    example: &ldquo;What&apos;s on my calendar today?&rdquo; or &ldquo;When is my
+                    next meeting with the design team?&rdquo;
+                  </p>
+                </div>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check size={14} className="mt-0.5 shrink-0 text-primary" />
+                <div>
+                  <p className="font-medium text-foreground">Google Drive</p>
+                  <p className="mt-0.5">
+                    <span className="font-mono text-xs text-muted-foreground/70">drive.file</span>
+                  </p>
+                  <p className="mt-1">
+                    <strong className="text-foreground/80">Purpose:</strong> To search, read, and
+                    navigate files you choose to share with Yomi. For example: &ldquo;Find the Q3
+                    budget spreadsheet&rdquo; or &ldquo;What does the product spec say about
+                    pricing?&rdquo;
+                  </p>
+                </div>
+              </li>
+            </ul>
+            <p>
+              Yomi does not sell user data. Google API data is used only to respond to your current
+              request and is discarded immediately after.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -579,8 +636,8 @@ export function LandingPage() {
               transition={{ duration: 0.4, delay: i * 0.06 }}
               className="flex items-start gap-3 rounded-2xl glass-card p-4"
             >
-              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                <c.icon size={16} className="text-primary" />
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/6 ring-1 ring-inset ring-white/10">
+                <c.Icon size={18} />
               </div>
               <div>
                 <p className="text-sm font-medium text-foreground">{c.name}</p>
@@ -605,8 +662,8 @@ export function LandingPage() {
                 transition={{ duration: 0.4, delay: i * 0.1 }}
                 className="flex items-start gap-3 rounded-2xl glass-card p-5"
               >
-                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                  <ch.icon size={18} className="text-primary" />
+                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/6 ring-1 ring-inset ring-white/10">
+                  <ch.Icon size={22} />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-foreground">{ch.name}</p>
