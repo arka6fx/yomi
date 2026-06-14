@@ -1,6 +1,6 @@
 import type { ToolSet } from "ai"
 import { GoogleGmailConnector } from "./google-gmail.js"
-import { googleGmailDef } from "./google-gmail-def.js"
+import { ALL_CONNECTOR_DEFS } from "./all-defs.js"
 import type {
   Connector,
   ConnectorStatus,
@@ -53,22 +53,24 @@ export class ConnectorRegistry {
     this.defTools = {}
     this.connectedDefIds.clear()
 
+    // Legacy Gmail path: stored as "google" in mcp_connections for existing rows.
+    // Kept so registry.get("google") still works for sidecar backward compat.
     if (this.connectedProviders.has("google")) {
-      // Legacy path — kept for any code that calls registry.get("google") directly
       this.connectors.set(
         "google",
         new GoogleGmailConnector(this.userId, this.deps.getAccessToken),
       )
-      // Def path — tools come from the ConnectorDef ToolFactory
-      this.connectedDefIds.add("google-gmail")
-      const tools = googleGmailDef.tools({
-        userId: this.userId,
-        getAccessToken: this.deps.getAccessToken,
-      })
-      Object.assign(this.defTools, tools)
     }
-    // Additional defs (Calendar, GitHub, Notion, etc.) are registered here
-    // in subsequent checkpoints by checking their provider key in connectedProviders.
+
+    // Def-based path: iterate all registered ConnectorDefs and load tools for
+    // any that the user has connected (provider key matches mcp_connections row).
+    for (const def of ALL_CONNECTOR_DEFS) {
+      if (this.connectedProviders.has(def.id)) {
+        this.connectedDefIds.add(def.id)
+        const tools = def.tools({ userId: this.userId, getAccessToken: this.deps.getAccessToken })
+        Object.assign(this.defTools, tools)
+      }
+    }
   }
 
   // Returns the merged AI SDK tool set from all connected ConnectorDefs.
