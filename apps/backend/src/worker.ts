@@ -4,6 +4,8 @@ interface ExecutionContext {
   waitUntil(promise: Promise<unknown>): void
 }
 
+let gatewayPromise: Promise<void> | null = null
+
 export default {
   async fetch(request: Request, env: Record<string, unknown>, ctx: ExecutionContext) {
     try {
@@ -13,7 +15,15 @@ export default {
         }
       }
 
-      ctx.waitUntil(startGateway())
+      // Start gateway only on non-auth requests to avoid I/O conflicts with
+      // Better Auth (OAuth callback / session validation) on critical paths.
+      const url = new URL(request.url)
+      if (!url.pathname.startsWith("/api/auth/")) {
+        if (!gatewayPromise) {
+          gatewayPromise = startGateway()
+        }
+        ctx.waitUntil(gatewayPromise)
+      }
 
       return await app.fetch(request, env, ctx as never)
     } catch (err) {
