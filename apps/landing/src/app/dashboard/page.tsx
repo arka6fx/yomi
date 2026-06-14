@@ -629,13 +629,13 @@ function DashboardContent() {
                         </span>
                       </div>
                       {!isDisabled && !isUnlimited && (
-                        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="relative w-full h-1.5 bg-muted rounded-full overflow-hidden">
                           <div
                             className={cn(
-                              "h-full rounded-full transition-all",
+                              "absolute inset-y-0 left-0 transition-[width] duration-500",
                               pct >= 90 ? "bg-destructive" : pct >= 70 ? "bg-yellow-500" : "bg-primary",
                             )}
-                            style={{ width: `${pct}%` }}
+                            style={{ width: `${Math.min(100, pct)}%` }}
                           />
                         </div>
                       )}
