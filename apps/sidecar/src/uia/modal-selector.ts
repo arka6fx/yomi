@@ -76,17 +76,17 @@ export function selectModality(ctx: SelectorContext): ModalityScore[] {
     case "click":
       scores.push(scoreUIA(ctx.uiaElement))
       scores.push(scoreMouse(ctx.mouseTarget))
-      scores.push(scoreKeyboard(ctx.keyboardShortcut))
+      scores.push(scoreKeyboard(ctx.keyboardShortcut ?? null))
       scores.push(scoreVision(ctx.imageAvailable ?? false))
       break
     case "type_text":
       scores.push(scoreClipboard(ctx.textLength ?? 0))
       scores.push(scoreUIA(ctx.uiaElement))
-      scores.push(scoreKeyboard(ctx.keyboardShortcut))
+      scores.push(scoreKeyboard(ctx.keyboardShortcut ?? null))
       break
     case "navigate":
       scores.push(scoreBrowser(ctx.browserUrl))
-      scores.push(scoreKeyboard(ctx.keyboardShortcut))
+      scores.push(scoreKeyboard(ctx.keyboardShortcut ?? null))
       break
     case "scroll":
       scores.push(scoreUIA(ctx.uiaElement))
@@ -110,5 +110,5 @@ export function selectModality(ctx: SelectorContext): ModalityScore[] {
 }
 
 export function bestModality(ctx: SelectorContext): ModalityScore {
-  return selectModality(ctx)[0]
+  return selectModality(ctx)[0]!
 }
