@@ -1,11 +1,19 @@
+import { getConnectorRegistry } from "../../connectors/registry.js"
 import type { Provider } from "./types.js"
 
-// ApiProvider: placeholder for direct-API integrations (calendar/email/Notion/etc.). Implements the
-// interface so the registry is complete and the validation framework can report it; filled in later.
 export const apiProvider: Provider = {
   id: "api",
   label: "API Provider",
-  healthCheck: async () => ({ ok: true, detail: "no API integrations configured yet" }),
-  diagnostics: async () => ({ integrations: [] }),
-  repair: async () => ({ ok: true, detail: "nothing to repair" }),
+  async healthCheck() {
+    const connected = getConnectorRegistry().getConnected()
+    return connected.length > 0
+      ? { ok: true, detail: `${connected.length} integration(s) connected` }
+      : { ok: true, detail: "no integrations connected" }
+  },
+  async diagnostics() {
+    return { integrations: getConnectorRegistry().getConnected() }
+  },
+  async repair() {
+    return { ok: true, detail: "nothing to repair" }
+  },
 }
