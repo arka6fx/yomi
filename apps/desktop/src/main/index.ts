@@ -53,14 +53,17 @@ function compactOverlayBounds(height = MIN_OVERLAY_H): Rectangle {
 
 function resizeOverlay(w: number, h: number): void {
   if (!overlayWin || overlayWin.isDestroyed()) return
-  const workArea = screen.getDisplayMatching(overlayWin.getBounds()).workArea
+  // Use actual window bounds — native CSS app-region drag moves the window at OS level
+  // without firing mousemove in the renderer, so overlayLogicalPos can be stale.
+  const currentBounds = overlayWin.getBounds()
+  const workArea = screen.getDisplayMatching(currentBounds).workArea
   const nextWidth = Math.min(Math.max(240, Math.round(w)), Math.max(240, workArea.width))
-  const nextHeight = Math.min(
-    Math.max(MIN_OVERLAY_H, Math.round(h)),
-    Math.max(MIN_OVERLAY_H, workArea.height - 16),
-  )
-  const x = Math.min(Math.max(overlayLogicalPos.x, workArea.x), workArea.x + workArea.width - nextWidth)
-  const y = Math.min(Math.max(overlayLogicalPos.y, workArea.y), workArea.y + workArea.height - nextHeight)
+  // Pin y at current position — never slide the window up. Cap height at the space
+  // available below so the window doesn't bleed off the screen bottom.
+  const y = Math.max(currentBounds.y, workArea.y)
+  const availBelow = Math.max(MIN_OVERLAY_H, workArea.y + workArea.height - y - 8)
+  const nextHeight = Math.min(Math.max(MIN_OVERLAY_H, Math.round(h)), availBelow)
+  const x = Math.min(Math.max(currentBounds.x, workArea.x), workArea.x + workArea.width - nextWidth)
   overlayLogicalPos = { x, y }
   overlayWin.setBounds({ x, y, width: nextWidth, height: nextHeight }, false)
 }
@@ -190,7 +193,8 @@ app.whenReady().then(async () => {
 
   let dragStart = { winX: 0, winY: 0, mouseX: 0, mouseY: 0 }
   ipcMain.on("yomi:drag-start", (_e, mouseX: number, mouseY: number) => {
-    dragStart = { winX: overlayLogicalPos.x, winY: overlayLogicalPos.y, mouseX, mouseY }
+    const b = overlayWin?.getBounds()
+    dragStart = { winX: b?.x ?? overlayLogicalPos.x, winY: b?.y ?? overlayLogicalPos.y, mouseX, mouseY }
   })
   ipcMain.on("yomi:drag-move", (_e, mouseX: number, mouseY: number) => {
     const dx = mouseX - dragStart.mouseX
@@ -296,6 +300,63 @@ app.whenReady().then(async () => {
 
     overlayWin?.webContents.send("yomi:subscription-update", data)
     return { name: data.name, email: data.email }
+  })
+
+  // ── Integrations ────────────────────────────────────────────────────────────
+
+  ipcMain.handle("yomi:get-integrations", async () => {
+    const token = loadToken()
+    if (!token) return []
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/integrations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) return []
+      const data = (await res.json()) as { integrations: unknown[] }
+      return data.integrations ?? []
+    } catch {
+      return []
+    }
+  })
+
+  ipcMain.handle("yomi:connect-integration", async (_e, id: string) => {
+    const token = loadToken()
+    if (!token) return { error: "Not signed in" }
+    // Fetch the OAuth URL from backend (follows no redirect, captures Location header)
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/integrations/connect/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        redirect: "manual",
+      })
+      if (res.status === 302 || res.status === 301) {
+        const location = res.headers.get("location")
+        if (location) {
+          await shell.openExternal(location)
+          return { ok: true }
+        }
+      }
+      if (res.ok) {
+        // api_key or connection_string — return the config JSON for the renderer
+        return res.json()
+      }
+      return { error: `Connect failed: ${res.status}` }
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Connect failed" }
+    }
+  })
+
+  ipcMain.handle("yomi:disconnect-integration", async (_e, provider: string) => {
+    const token = loadToken()
+    if (!token) return { error: "Not signed in" }
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/integrations/${provider}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      return res.ok ? { ok: true } : { error: `Delete failed: ${res.status}` }
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Disconnect failed" }
+    }
   })
 
   setInterval(updateOverlayMousePassthrough, 50)

@@ -1,0 +1,27 @@
+{
+  "name": "@yomi/ui-connectors",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "bun test --pass-with-no-tests"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.3.0",
+    "@yomi/eslint-config": "workspace:*",
+    "@yomi/typescript-config": "workspace:*",
+    "typescript": "^5.5.0"
+  },
+  "dependencies": {
+    "@yomi/agent-core": "workspace:*"
+  }
+}

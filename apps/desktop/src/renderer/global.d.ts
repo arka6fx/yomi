@@ -64,6 +64,19 @@ declare global {
       onUpdateError(cb: (info: { message: string }) => void): () => void
       downloadUpdate(): void
       installUpdate(): void
+      // Integrations
+      getIntegrations(): Promise<{
+        id: string
+        provider: string
+        displayName: string
+        scopes: string[]
+        connected: boolean
+        lastSyncAt: string | null
+        expiresAt: string | null
+        createdAt: string
+      }[]>
+      connectIntegration(id: string): Promise<{ ok?: boolean; error?: string; kind?: string }>
+      disconnectIntegration(provider: string): Promise<{ ok?: boolean; error?: string }>
     }
   }
 }
