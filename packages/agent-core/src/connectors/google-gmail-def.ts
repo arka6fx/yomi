@@ -1,6 +1,7 @@
 import { tool, type ToolSet } from "ai"
 import { z } from "zod"
 import type { ConnectorDef, ConnectorContext } from "./connector-def.js"
+import { connectorError } from "./connector-def.js"
 import { GoogleGmailConnector } from "./google-gmail.js"
 
 function notConnectedError(): { error: string; hint: string } {
@@ -40,7 +41,7 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
           if (emails.length === 0) return { results: [], message: "No emails found." }
           return { results: emails, formatted: emails.map(formatEmail).join("\n\n") }
         } catch (err) {
-          return { error: err instanceof Error ? err.message : "Search failed" }
+          return connectorError(err)
         }
       },
     }),
@@ -67,7 +68,7 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
             labels: email.labels,
           }
         } catch (err) {
-          return { error: err instanceof Error ? err.message : "Read failed" }
+          return connectorError(err)
         }
       },
     }),
@@ -85,7 +86,7 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
           if (emails.length === 0) return { emails: [], message: "Inbox is clear — no unread emails." }
           return { count: emails.length, emails, formatted: emails.map(formatEmail).join("\n\n") }
         } catch (err) {
-          return { error: err instanceof Error ? err.message : "Failed to fetch unread emails" }
+          return connectorError(err)
         }
       },
     }),
@@ -126,7 +127,7 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
             })),
           }
         } catch (err) {
-          return { error: err instanceof Error ? err.message : "Summarize failed" }
+          return connectorError(err)
         }
       },
     }),
@@ -156,7 +157,7 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
             message: `Email sent to ${to.join(", ")} with subject "${subject}".`,
           }
         } catch (err) {
-          return { error: err instanceof Error ? err.message : "Send failed" }
+          return connectorError(err)
         }
       },
     }),

@@ -1,6 +1,7 @@
 import { tool, type ToolSet } from "ai"
 import { z } from "zod"
 import type { ConnectorDef, ConnectorContext } from "./connector-def.js"
+import { connectorError } from "./connector-def.js"
 
 export function createNotionTools(ctx: ConnectorContext): ToolSet {
   async function notion<T>(path: string, init?: RequestInit): Promise<T> {
@@ -60,7 +61,7 @@ export function createNotionTools(ctx: ConnectorContext): ToolSet {
           if (results.length === 0) return { results: [], message: "No results found." }
           return { count: results.length, results }
         } catch (err) {
-          return { error: err instanceof Error ? err.message : "Search failed" }
+          return connectorError(err)
         }
       },
     }),
@@ -106,7 +107,7 @@ export function createNotionTools(ctx: ConnectorContext): ToolSet {
 
           return { id: page.id, title: title || "(Untitled)", url: page.url, content: content.slice(0, 5000) }
         } catch (err) {
-          return { error: err instanceof Error ? err.message : "Failed to fetch page" }
+          return connectorError(err)
         }
       },
     }),
@@ -169,7 +170,7 @@ export function createNotionTools(ctx: ConnectorContext): ToolSet {
           if (rows.length === 0) return { rows: [], message: "No rows found." }
           return { count: rows.length, rows }
         } catch (err) {
-          return { error: err instanceof Error ? err.message : "Query failed" }
+          return connectorError(err)
         }
       },
     }),

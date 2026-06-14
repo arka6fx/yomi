@@ -1,6 +1,7 @@
 import { tool, type ToolSet } from "ai"
 import { z } from "zod"
 import type { ConnectorDef, ConnectorContext } from "./connector-def.js"
+import { connectorError } from "./connector-def.js"
 
 export function createCalendarTools(ctx: ConnectorContext): ToolSet {
   async function calendar<T>(path: string, init?: RequestInit): Promise<T> {
@@ -74,7 +75,7 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
           if (events.length === 0) return { events: [], message: "No events found in this time range." }
           return { count: events.length, events }
         } catch (err) {
-          return { error: err instanceof Error ? err.message : "Failed to fetch events" }
+          return connectorError(err)
         }
       },
     }),
@@ -111,7 +112,7 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
             link: event.htmlLink,
           }
         } catch (err) {
-          return { error: err instanceof Error ? err.message : "Failed to fetch event" }
+          return connectorError(err)
         }
       },
     }),
@@ -152,7 +153,7 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
                 : `${busy.length} busy slot(s) found.`,
           }
         } catch (err) {
-          return { error: err instanceof Error ? err.message : "Failed to check availability" }
+          return connectorError(err)
         }
       },
     }),

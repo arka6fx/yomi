@@ -1,6 +1,7 @@
 import { tool, type ToolSet } from "ai"
 import { z } from "zod"
 import type { ConnectorDef, ConnectorContext } from "./connector-def.js"
+import { connectorError } from "./connector-def.js"
 
 export function createGitHubTools(ctx: ConnectorContext): ToolSet {
   async function gh<T>(path: string, init?: RequestInit): Promise<T> {
@@ -63,7 +64,7 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
             })),
           }
         } catch (err) {
-          return { error: err instanceof Error ? err.message : "Failed to fetch PRs" }
+          return connectorError(err)
         }
       },
     }),
@@ -112,7 +113,7 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
             },
           }
         } catch (err) {
-          return { error: err instanceof Error ? err.message : "Failed to fetch PR" }
+          return connectorError(err)
         }
       },
     }),
@@ -159,7 +160,7 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
             })),
           }
         } catch (err) {
-          return { error: err instanceof Error ? err.message : "Failed to fetch issues" }
+          return connectorError(err)
         }
       },
     }),
@@ -198,7 +199,7 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
             comments: issue.comments,
           }
         } catch (err) {
-          return { error: err instanceof Error ? err.message : "Failed to fetch issue" }
+          return connectorError(err)
         }
       },
     }),

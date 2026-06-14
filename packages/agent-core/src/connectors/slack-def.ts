@@ -1,6 +1,7 @@
 import { tool, type ToolSet } from "ai"
 import { z } from "zod"
 import type { ConnectorDef, ConnectorContext } from "./connector-def.js"
+import { connectorError } from "./connector-def.js"
 
 export function createSlackTools(ctx: ConnectorContext): ToolSet {
   async function slack<T>(path: string, init?: RequestInit): Promise<T> {
@@ -49,7 +50,7 @@ export function createSlackTools(ctx: ConnectorContext): ToolSet {
             nextCursor: data.response_metadata?.next_cursor ?? null,
           }
         } catch (err) {
-          return { error: err instanceof Error ? err.message : "Failed to list channels" }
+          return connectorError(err)
         }
       },
     }),
@@ -84,7 +85,7 @@ export function createSlackTools(ctx: ConnectorContext): ToolSet {
           if (matches.length === 0) return { results: [], message: "No results found." }
           return { count: matches.length, results: matches }
         } catch (err) {
-          return { error: err instanceof Error ? err.message : "Search failed" }
+          return connectorError(err)
         }
       },
     }),
@@ -103,7 +104,7 @@ export function createSlackTools(ctx: ConnectorContext): ToolSet {
           })
           return { ok: true, channel: data.channel, ts: data.ts }
         } catch (err) {
-          return { error: err instanceof Error ? err.message : "Failed to send message" }
+          return connectorError(err)
         }
       },
     }),
