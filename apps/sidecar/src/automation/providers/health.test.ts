@@ -1,40 +1,17 @@
-import { platform } from "node:os"
 import { describe, expect, it } from "bun:test"
-import { createNativeProvider } from "./native.js"
+import { nativeProvider } from "./native.js"
 import { createWorkflowProvider } from "./workflow.js"
-import type { UiaPort } from "./types.js"
-
-const okUia: UiaPort = {
-  getWindowInfo: async () => ({ window: "Visual Studio Code" }),
-  findWindow: async () => null,
-}
-const deadUia: UiaPort = {
-  getWindowInfo: async () => {
-    throw new Error("uia-helper exited")
-  },
-  findWindow: async () => null,
-}
 
 describe("native provider health", () => {
-  it("reports healthy on Windows when the helper responds; gates off Windows", async () => {
-    const health = await createNativeProvider(okUia).healthCheck()
-    if (platform() === "win32") {
-      expect(health.ok).toBe(true)
-      expect(health.detail).toContain("Visual Studio Code")
-    } else {
-      expect(health.ok).toBe(false)
-      expect(health.detail).toContain("Windows")
-    }
+  it("is always unavailable (desktop automation not shipping)", async () => {
+    const health = await nativeProvider.healthCheck()
+    expect(health.ok).toBe(false)
+    expect(health.detail).toContain("not available")
   })
 
-  it("reports unhealthy when the helper is unreachable on Windows", async () => {
-    const health = await createNativeProvider(deadUia).healthCheck()
-    if (platform() === "win32") expect(health.ok).toBe(false)
-  })
-
-  it("always reports a platform in diagnostics", async () => {
-    const diag = await createNativeProvider(okUia).diagnostics()
-    expect(diag.platform).toBe(platform())
+  it("diagnostics report available: false", async () => {
+    const diag = await nativeProvider.diagnostics()
+    expect(diag.available).toBe(false)
   })
 })
 
