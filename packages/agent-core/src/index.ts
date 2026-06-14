@@ -8,6 +8,7 @@ export {
   type ConnectorRegistryDeps,
 } from "./connectors/registry.js"
 export { GoogleGmailConnector } from "./connectors/google-gmail.js"
+export { googleGmailDef, createGmailTools } from "./connectors/google-gmail-def.js"
 export type {
   Connector,
   ConnectorStatus,
@@ -18,6 +19,15 @@ export type {
   EmailDraft,
   SendResult,
 } from "./connectors/types.js"
+export type {
+  ConnectorDef,
+  ConnectorCategory,
+  AuthConfig,
+  ConnectorContext,
+  ToolFactory,
+  DeveloperSetup,
+  ApiKeyField,
+} from "./connectors/connector-def.js"
 
 export { createConnectorTools } from "./tools.js"
 export {
