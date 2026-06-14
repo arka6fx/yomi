@@ -85,8 +85,9 @@ function planFeatures(key: string): string[] {
     `${l.chat.toLocaleString()} AI chats / month`,
     `${l.voiceMinutes} min voice`,
     `${plan.includedCredits.toLocaleString()} credits / month`,
-    l.reasoning > 0 ? `${l.reasoning} reasoning` : "",
-    l.desktopAutomation > 0 ? `${l.desktopAutomation} desktop runs` : "",
+    l.reasoning > 0 ? `${l.reasoning} reasoning uses` : "",
+    `${l.connectors} app connectors`,
+    l.botMessages > 0 ? `${l.botMessages.toLocaleString()} bot messages / month` : "",
   ].filter(Boolean)
 }
 
@@ -621,14 +622,16 @@ billingRouter.get("/subscription", authenticate, async (c) => {
       voice: { used: voiceUsed, limit: featureLimitForUser(user, "voiceMinutes") },
       screenshots: { used: screenshotUsed, limit: featureLimitForUser(user, "screenshots") },
       reasoning: { used: reasoningUsed, limit: featureLimitForUser(user, "reasoning") },
-      desktopAutomation: { used: agentUsed, limit: featureLimitForUser(user, "desktopAutomation") },
+      connectors: { used: 0, limit: featureLimitForUser(user, "connectors") },
+      botMessages: { used: agentUsed, limit: featureLimitForUser(user, "botMessages") },
     },
     planLimits: {
       chat: getPlan(effectivePlanForUser(user)).limits.chat,
       voiceMinutes: getPlan(effectivePlanForUser(user)).limits.voiceMinutes,
       screenshots: getPlan(effectivePlanForUser(user)).limits.screenshots,
       reasoning: getPlan(effectivePlanForUser(user)).limits.reasoning,
-      desktopAutomation: getPlan(effectivePlanForUser(user)).limits.desktopAutomation,
+      connectors: getPlan(effectivePlanForUser(user)).limits.connectors,
+      botMessages: getPlan(effectivePlanForUser(user)).limits.botMessages,
     },
     dailyChatUsed: user.dailyChatCount,
     dailyVoiceUsed: user.dailyVoiceCount,

@@ -9,11 +9,11 @@ import { platform } from "node:os"
 import { appendFile, mkdir, writeFile, rm } from "node:fs/promises"
 import { existsSync } from "node:fs"
 import { homedir } from "node:os"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 import { uia } from "./client.js"
 import type { UiaElement } from "@yomi/shared"
 
-const LOG_FILE = join(import.meta.dir, "../../../../notepad-e2e-log.txt")
+const LOG_FILE = join(import.meta.dir, "../../../../debug/notepad-e2e-log.txt")
 let logBuf = ""
 async function log(line: string) {
   const ts = new Date().toISOString().slice(11, 23)
@@ -22,7 +22,7 @@ async function log(line: string) {
 }
 async function flushLog() {
   if (logBuf) {
-    await mkdir(join(homedir(), ".yomi", "logs"), { recursive: true })
+    await mkdir(dirname(LOG_FILE), { recursive: true })
     await appendFile(LOG_FILE, logBuf, "utf8"); logBuf = ""
   }
 }

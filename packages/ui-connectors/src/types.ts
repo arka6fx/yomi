@@ -1,6 +1,12 @@
-import type { ConnectorCategory } from "@yomi/agent-core"
-
-export type { ConnectorCategory }
+export type ConnectorCategory =
+  | "productivity"
+  | "file-storage"
+  | "email"
+  | "data-analytics"
+  | "communication"
+  | "developer"
+  | "data"
+  | "other"
 
 export interface ConnectorInfo {
   id: string

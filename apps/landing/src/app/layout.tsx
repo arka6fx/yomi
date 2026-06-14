@@ -25,10 +25,16 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: {
     template: "%s | Yomi",
-    default: "Yomi - Your AI buddy on every screen",
+    default: "Yomi — AI assistant for your screen, voice, and apps",
   },
-  description: "Yomi sees your screen, hears your voice, and acts so you touch your laptop less.",
+  description:
+    "Yomi is an AI assistant that sees your screen, hears your voice, and connects to Gmail, Calendar, Drive, GitHub, Notion, Slack, and more — so you can get answers without switching windows.",
   manifest: "/site.webmanifest",
+  // To verify domain ownership with Google Search Console:
+  // 1. Go to search.google.com/search-console → Add property → URL prefix → yomi.arka6fx.com
+  // 2. Choose "HTML tag" verification method and copy the content value
+  // 3. Uncomment the line below and paste the value
+  // verification: { google: "PASTE_VERIFICATION_CODE_HERE" },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },

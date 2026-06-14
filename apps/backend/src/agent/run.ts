@@ -8,6 +8,7 @@ import {
 import {
   hasBillablePlanAccess,
   requestLimitForUser,
+  featureLimitForUser,
   isOwnerUser,
 } from "../entitlements.js"
 import * as authSchema from "../auth-schema.js"
@@ -102,10 +103,15 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     })
     .catch(() => { /* best-effort */ })
 
-  // Build a per-request connector registry with in-process token resolution.
+  // Connector limit: cap how many connected providers the agent may use this turn.
+  const connectorLimit = isOwnerUser(user) ? Infinity : (featureLimitForUser(user, "connectors") ?? Infinity)
+
   const registry = new ConnectorRegistry({
     getAccessToken,
-    listConnectedProviders,
+    listConnectedProviders: async (userId: string) => {
+      const all = await listConnectedProviders(userId)
+      return Number.isFinite(connectorLimit) ? all.slice(0, connectorLimit) : all
+    },
   })
   await registry.init(opts.userId)
 

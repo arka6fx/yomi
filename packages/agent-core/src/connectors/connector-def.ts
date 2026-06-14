@@ -22,6 +22,9 @@ export type ConnectorCategory =
   | "security"
   | "hr"
   | "meetings"
+  | "communication"
+  | "developer"
+  | "data"
 
 export interface ApiKeyField {
   name: string

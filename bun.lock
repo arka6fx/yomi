@@ -54,6 +54,7 @@
       "dependencies": {
         "@fontsource/caveat": "^5.2.8",
         "@yomi/shared": "workspace:*",
+        "@yomi/ui-connectors": "workspace:*",
         "electron-updater": "^6.8.9",
         "framer-motion": "^11.0.0",
         "react": "^18.3.0",
@@ -81,6 +82,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@neondatabase/serverless": "^0.10.4",
+        "@yomi/ui-connectors": "workspace:*",
         "better-auth": "^1.2.0",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
@@ -184,6 +186,23 @@
     "packages/typescript-config": {
       "name": "@yomi/typescript-config",
       "version": "0.0.0",
+    },
+    "packages/ui-connectors": {
+      "name": "@yomi/ui-connectors",
+      "version": "0.0.0",
+      "dependencies": {
+        "@yomi/agent-core": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/node": "^20.0.0",
+        "@types/react": "^18.3.0",
+        "@yomi/eslint-config": "workspace:*",
+        "@yomi/typescript-config": "workspace:*",
+        "typescript": "^5.5.0",
+      },
+      "peerDependencies": {
+        "react": ">=18.0.0",
+      },
     },
   },
   "packages": {
@@ -674,6 +693,8 @@
     "@yomi/sidecar": ["@yomi/sidecar@workspace:apps/sidecar"],
 
     "@yomi/typescript-config": ["@yomi/typescript-config@workspace:packages/typescript-config"],
+
+    "@yomi/ui-connectors": ["@yomi/ui-connectors@workspace:packages/ui-connectors"],
 
     "@yomi/uia-helper": ["@yomi/uia-helper@workspace:apps/uia-helper"],
 

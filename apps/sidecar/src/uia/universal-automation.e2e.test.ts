@@ -8,7 +8,7 @@ import { platform } from "node:os"
 import { appendFile, mkdir, writeFile, rm } from "node:fs/promises"
 import { existsSync } from "node:fs"
 import { homedir } from "node:os"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 import { uia, matchElement } from "./client.js"
 import { hooks, toolGuardrail } from "../harness/hooks.js"
 import { recover, executeWithRecovery, type RecoveryContext } from "./recovery.js"
@@ -16,7 +16,7 @@ import { rememberStrategy, recallBestStrategy, getStrategyStats } from "./proced
 import { classifyIntent } from "./act-executor.js"
 import type { UiaElement } from "@yomi/shared"
 
-const LOG_FILE = join(import.meta.dir, "../../../../universal-automation-e2e-log.txt")
+const LOG_FILE = join(import.meta.dir, "../../../../debug/universal-automation-e2e-log.txt")
 let logBuf = ""
 async function log(line: string) {
   const ts = new Date().toISOString().slice(11, 23)
@@ -24,7 +24,7 @@ async function log(line: string) {
 }
 async function flushLog() {
   if (logBuf) {
-    await mkdir(join(homedir(), ".yomi", "logs"), { recursive: true })
+    await mkdir(dirname(LOG_FILE), { recursive: true })
     await appendFile(LOG_FILE, logBuf, "utf8"); logBuf = ""
   }
 }
@@ -356,7 +356,7 @@ describe("Universal Windows Desktop Automation", () => {
     report.strategyStats = await getStrategyStats()
 
     // Write report
-    const reportPath = join(import.meta.dir, "../../../../universal-automation-report.json")
+    const reportPath = join(import.meta.dir, "../../../../debug/universal-automation-report.json")
     await writeFile(reportPath, JSON.stringify(report, null, 2), "utf8")
     await log(`Report: ${report.totals.pass}/${report.totals.total} pass (${(report.totals.pass / Math.max(1, report.totals.total) * 100).toFixed(1)}%)`)
     await log(`Report saved: ${reportPath}`)

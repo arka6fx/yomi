@@ -8,7 +8,7 @@ import { useYomiStore } from "./store"
 import type { HotkeyState, ChatEntry, SubscriptionInfo } from "./store"
 import { EnergyVad } from "@yomi/shared"
 import { ThemeCtx, type Theme, type ThemeId } from "./theme"
-import { MissionControl } from "./mission/MissionControl"
+// import { MissionControl } from "./mission/MissionControl" // disabled — desktop automation hidden
 
 // Hands-free voice loop tuning (renderer-side end-of-speech auto-stop).
 const VAD_SILENCE_HANGOVER_MS = 1500 // silence after speech before we auto-stop and process
@@ -1497,25 +1497,10 @@ function CopyButton({ text }: { text: string }) {
 
 // ── Text Input ─────────────────────────────────────────────────────────────────
 
-const ACCENT_ORANGE = "#FF5C35"
-
-const SUGGESTION_CHIPS = [
-  { label: "Summarize emails", query: "Summarize my last 5 emails" },
-  { label: "Calendar today", query: "What's on my calendar today?" },
-  { label: "Open PRs", query: "Review my open pull requests" },
-]
-
-function greetingFor(name: string | null | undefined): string {
-  const hour = new Date().getHours()
-  const prefix = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"
-  return name ? `${prefix}, ${name.split(" ")[0]}` : prefix
-}
-
 function TextInputPanel({ surfaceBg }: { surfaceBg: string }) {
   const [value, setValue] = React.useState("")
   const inputRef = useRef<HTMLInputElement>(null)
   const valueRef = useRef("")
-  const subscription = useYomiStore((s) => s.subscription)
 
   useEffect(() => {
     valueRef.current = value
@@ -1528,8 +1513,8 @@ function TextInputPanel({ surfaceBg }: { surfaceBg: string }) {
     })
   }, [])
 
-  const submit = React.useCallback((override?: string) => {
-    const text = (override ?? valueRef.current).trim()
+  const submit = React.useCallback(() => {
+    const text = valueRef.current.trim()
     if (!text) return
     setValue("")
     valueRef.current = ""
@@ -1537,211 +1522,82 @@ function TextInputPanel({ surfaceBg }: { surfaceBg: string }) {
   }, [])
 
   return (
-    <div style={{ fontFamily: UI_FONT, animation: "slideUp 0.2s cubic-bezier(0.16,1,0.3,1)" }} className="drag yomi-hit-area">
-      {/* Greeting */}
-      <div style={{ marginBottom: 10, paddingLeft: 2 }}>
-        <div style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", lineHeight: 1.2 }}>
-          {greetingFor(subscription?.name)}
-        </div>
-        <div style={{ fontSize: 11.5, color: ACCENT_ORANGE, marginTop: 3, fontWeight: 500 }}>
-          Your AI buddy — ask me anything
-        </div>
-      </div>
-
-      {/* Main input container */}
-      <div
-        style={{
-          background: surfaceBg,
-          border: "1px solid var(--border-hi)",
-          borderRadius: 16,
-          overflow: "hidden",
-          boxShadow: "0 8px 40px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(255,255,255,0.04)",
-        }}
-      >
-        <div style={{ padding: "10px 12px", display: "flex", alignItems: "center", gap: 8 }}>
-          {/* + affordance */}
-          <button
-            className="no-drag"
-            title="Attach or mention"
-            style={{
-              background: "none",
-              border: "1px solid var(--border)",
-              borderRadius: 7,
-              width: 28,
-              height: 28,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 16,
-              color: "var(--dim)",
-              cursor: "pointer",
-              flexShrink: 0,
-              transition: "color .15s, border-color .15s",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; e.currentTarget.style.borderColor = "var(--border-hi)" }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--dim)"; e.currentTarget.style.borderColor = "var(--border)" }}
-          >
-            +
-          </button>
-
-          {/* Text input */}
-          <input
-            ref={inputRef}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") { e.preventDefault(); submit() }
-            }}
-            placeholder={'Ask me anything or type "@" to mention files or users'}
-            className="no-drag"
-            style={{
-              flex: 1,
-              background: "none",
-              border: "none",
-              outline: "none",
-              fontSize: 12.5,
-              fontFamily: UI_FONT,
-              color: "var(--text)",
-              caretColor: "var(--accent)",
-              minWidth: 0,
-            }}
-          />
-
-          {/* Right cluster: model selector + mic + send */}
-          <div className="no-drag" style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-            {/* Model selector — cosmetic, shows current routing */}
-            <button
-              style={{
-                background: "var(--accent-d)",
-                border: "1px solid var(--border)",
-                borderRadius: 7,
-                padding: "3px 8px",
-                fontSize: 11,
-                color: "var(--accent)",
-                fontFamily: UI_FONT,
-                cursor: "default",
-                display: "flex",
-                alignItems: "center",
-                gap: 3,
-                whiteSpace: "nowrap",
-              }}
-            >
-              Auto ⚡ <span style={{ opacity: 0.6, fontSize: 9 }}>▾</span>
-            </button>
-
-            {/* Mic button */}
-            <button
-              onClick={() => window.yomi.triggerVoice()}
-              className="no-drag"
-              title="Voice (Ctrl+Space)"
-              style={{
-                background: "none",
-                border: "1px solid var(--border)",
-                borderRadius: 7,
-                width: 28,
-                height: 28,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 13,
-                color: "var(--dim)",
-                cursor: "pointer",
-                transition: "color .15s, border-color .15s",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; e.currentTarget.style.borderColor = "var(--border-hi)" }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--dim)"; e.currentTarget.style.borderColor = "var(--border)" }}
-            >
-              🎙
-            </button>
-
-            {/* Send button — filled */}
-            <button
-              onClick={() => submit()}
-              className="no-drag"
-              title="Send (Enter)"
-              style={{
-                background: "var(--accent)",
-                border: "none",
-                borderRadius: 7,
-                width: 28,
-                height: 28,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 13,
-                color: "#fff",
-                cursor: "pointer",
-                transition: "opacity .15s",
-                opacity: value.trim() ? 1 : 0.45,
-              }}
-              onMouseEnter={(e) => { if (value.trim()) e.currentTarget.style.opacity = "0.85" }}
-              onMouseLeave={(e) => { e.currentTarget.style.opacity = value.trim() ? "1" : "0.45" }}
-            >
-              ↑
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Suggestion chips */}
-      <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
-        {SUGGESTION_CHIPS.map((chip) => (
-          <button
-            key={chip.label}
-            className="no-drag"
-            onClick={() => submit(chip.query)}
-            style={{
-              background: "var(--accent-d)",
-              border: "1px solid var(--border)",
-              borderRadius: 20,
-              padding: "4px 11px",
-              fontSize: 11,
-              color: "var(--dim)",
-              fontFamily: UI_FONT,
-              cursor: "pointer",
-              transition: "color .15s, border-color .15s",
-              whiteSpace: "nowrap",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; e.currentTarget.style.borderColor = "var(--border-hi)" }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--dim)"; e.currentTarget.style.borderColor = "var(--border)" }}
-          >
-            {chip.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Connect your apps strip */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginTop: 8,
-          padding: "6px 10px",
-          background: "rgba(255,255,255,0.03)",
-          borderRadius: 9,
-          border: "1px solid var(--border)",
-        }}
-      >
-        <span style={{ fontSize: 11, color: "var(--dim)", fontFamily: UI_FONT }}>
-          Connect your apps
-        </span>
-        <button
-          className="no-drag"
-          onClick={() => window.yomi.openDashboard()}
+    <div
+      style={{
+        background: surfaceBg,
+        border: "1px solid var(--border-hi)",
+        borderRadius: 9,
+        overflow: "hidden",
+        boxShadow: "0 8px 40px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(255,255,255,0.04)",
+        animation: "slideUp 0.2s cubic-bezier(0.16,1,0.3,1)",
+      }}
+      className="drag yomi-hit-area"
+    >
+      <div style={{ padding: "8px 10px", display: "flex", alignItems: "center", gap: 8 }}>
+        <span
           style={{
-            background: "none",
-            border: "none",
-            fontSize: 11,
-            color: ACCENT_ORANGE,
+            fontSize: 10.5,
+            color: "var(--section-label)",
+            letterSpacing: "0.12em",
             fontFamily: UI_FONT,
-            cursor: "pointer",
-            padding: 0,
-            fontWeight: 500,
+            fontWeight: 700,
+            flexShrink: 0,
           }}
         >
-          Integrations →
+          ASK
+        </span>
+        <input
+          ref={inputRef}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") { e.preventDefault(); submit() }
+          }}
+          placeholder="Type your question…"
+          className="no-drag"
+          style={{
+            flex: 1,
+            background: "none",
+            border: "none",
+            outline: "none",
+            fontSize: 12.5,
+            fontFamily: UI_FONT,
+            color: "var(--text)",
+            caretColor: "var(--accent)",
+          }}
+        />
+        <button
+          onClick={submit}
+          className="no-drag"
+          style={{
+            background: "var(--accent-d)",
+            border: "1px solid var(--border-hi)",
+            borderRadius: 4,
+            padding: "3px 10px",
+            fontSize: 11.5,
+            color: "var(--accent)",
+            fontFamily: UI_FONT,
+            cursor: "pointer",
+            flexShrink: 0,
+            transition: "all .15s",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "var(--accent-g)"
+            e.currentTarget.style.color = "var(--text)"
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "var(--accent-d)"
+            e.currentTarget.style.color = "var(--accent)"
+          }}
+        >
+          Send ↵
         </button>
+      </div>
+      <div style={{ height: 1, background: "var(--menu-sep)" }} />
+      <div
+        style={{ padding: "5px 12px 6px", fontSize: 11, color: "var(--dim)", fontFamily: UI_FONT }}
+      >
+        Esc to cancel · text only, no voice
       </div>
     </div>
   )
@@ -2063,6 +1919,7 @@ function MenuCard({
   onClose,
   onHoverEnter,
   onHoverLeave,
+  cardRef,
 }: {
   subscription: SubscriptionInfo | null
   plan?: string
@@ -2071,6 +1928,7 @@ function MenuCard({
   onClose: () => void
   onHoverEnter: () => void
   onHoverLeave: () => void
+  cardRef?: React.RefObject<HTMLDivElement>
 }) {
   const { theme: t, setTheme } = React.useContext(ThemeCtx)
   const [nameDraft, setNameDraft] = React.useState(subscription?.name ?? "")
@@ -2169,6 +2027,7 @@ function MenuCard({
         }}
       />
       <motion.div
+        ref={cardRef}
         className="no-drag yomi-hit-area yomi-menu-zone"
         onMouseEnter={onHoverEnter}
         onMouseLeave={onHoverLeave}
@@ -2186,7 +2045,8 @@ function MenuCard({
           border: `1px solid ${t.borderHi}`,
           borderRadius: 16,
           boxShadow: t.menuShadow,
-          overflow: "hidden",
+          overflowX: "hidden",
+          overflowY: "auto",
           transformOrigin: "top right",
         }}
       >
@@ -2571,9 +2431,10 @@ function Toolbar({
   onMenuScheduleClose: () => void
 }) {
   const { ttsEnabled, toggleTts, pendingAct, clearPendingAct } = useYomiStore()
-  const automationRuns = useYomiStore((s) => s.automationRuns)
-  const missionsOpen = useYomiStore((s) => s.missionsOpen)
-  const toggleMissions = useYomiStore((s) => s.toggleMissions)
+  // automation disabled — keep store subscriptions so the type stays narrow
+  const _automationRuns = useYomiStore((s) => s.automationRuns)
+  const _missionsOpen = useYomiStore((s) => s.missionsOpen)
+  const _toggleMissions = useYomiStore((s) => s.toggleMissions)
   const { theme: t } = React.useContext(ThemeCtx)
 
   return (
@@ -2689,28 +2550,7 @@ function Toolbar({
           }}
           className="no-drag"
         >
-          {/* Missions — opens Mission Control when automations have streamed in. */}
-          {automationRuns.length > 0 && (
-            <button
-              onClick={toggleMissions}
-              title="Mission Control"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-                fontFamily: UI_FONT,
-                fontSize: 11,
-                fontWeight: 500,
-                color: missionsOpen ? t.hambColorActive : t.hambColor,
-                background: missionsOpen ? t.hambBgActive : t.hambBg,
-                border: `1px solid ${missionsOpen ? t.hambBorderActive : t.hambBorder}`,
-                borderRadius: 7,
-                padding: "3px 8px",
-              }}
-            >
-              <span style={{ fontSize: 9 }}>◆</span> Missions · {automationRuns.length}
-            </button>
-          )}
+          {/* Missions button disabled — desktop automation hidden */}
 
           {/* Voice mode button */}
           <button
@@ -3028,43 +2868,12 @@ function Toolbar({
 function Notch({ state, voiceTurnBusy }: { state: HotkeyState; voiceTurnBusy: boolean }) {
   const { theme: t } = React.useContext(ThemeCtx)
   const entries = useYomiStore((s) => s.entries)
-  const automationRuns = useYomiStore((s) => s.automationRuns)
-  const activeAutomationRunId = useYomiStore((s) => s.activeAutomationRunId)
-  const replayAutomation = useYomiStore((s) => s.replayAutomation)
-  const activeRun =
-    automationRuns.find((run) => run.id === activeAutomationRunId) ?? automationRuns[0] ?? null
-  const runLive =
-    activeRun &&
-    !["completed", "failed"].includes(activeRun.state) &&
-    Date.now() - Date.parse(activeRun.startedAt) < 60_000
-  const runRecentlyDone =
-    activeRun?.endedAt && Date.now() - Date.parse(activeRun.endedAt) < 12_000
-  const active = state !== "idle" || voiceTurnBusy || Boolean(runLive || runRecentlyDone)
+  // automation disabled
+  const active = state !== "idle" || voiceTurnBusy
 
   let statusLabel = ""
   let loaderKind: LoaderKind = "processing"
-  if (activeRun && (runLive || runRecentlyDone)) {
-    statusLabel =
-      activeRun.state === "needs_approval"
-        ? "Needs approval"
-        : activeRun.state === "waiting"
-          ? "Waiting"
-          : activeRun.state === "completed"
-            ? "Completed"
-            : activeRun.state === "failed"
-              ? "Failed"
-              : activeRun.state === "recovering"
-                ? "Recovering"
-                : activeRun.state === "thinking"
-                  ? "Thinking"
-                  : "Executing"
-    loaderKind =
-      activeRun.state === "waiting" || activeRun.state === "needs_approval"
-        ? "typing"
-        : activeRun.state === "completed" || activeRun.state === "failed"
-          ? "speaking"
-          : "processing"
-  } else if (state === "listening") {
+  if (state === "listening") {
     statusLabel = "Listening"
     loaderKind = "listening"
   } else if (voiceTurnBusy) {
@@ -3080,12 +2889,8 @@ function Notch({ state, voiceTurnBusy }: { state: HotkeyState; voiceTurnBusy: bo
 
   const latest = entries[entries.length - 1]
   let contextText: string | null = null
-  if (activeRun && (runLive || runRecentlyDone)) {
-    const progress =
-      activeRun.step && activeRun.maxSteps ? `Step ${activeRun.step}/${activeRun.maxSteps}` : null
-    const confidence =
-      typeof activeRun.confidence === "number" ? `${Math.round(activeRun.confidence * 100)}%` : null
-    contextText = [activeRun.owner.label, progress, confidence].filter(Boolean).join(" · ")
+  if (false) {
+    // automation context — disabled
   } else if (state === "listening" || voiceTurnBusy) contextText = "Esc to stop"
   else if (state === "text-input") contextText = "text only, no voice"
   else if (state === "processing") contextText = latest?.transcript?.trim() || "Working on it"
@@ -3175,48 +2980,7 @@ function Notch({ state, voiceTurnBusy }: { state: HotkeyState; voiceTurnBusy: bo
                 {statusLabel}
               </span>
             </div>
-            {activeRun && (runLive || runRecentlyDone) && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  maxWidth: 290,
-                  marginTop: 2,
-                }}
-              >
-                <span
-                  style={{
-                    minWidth: 0,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                    fontSize: 11,
-                    color: "rgba(255,255,255,0.72)",
-                  }}
-                >
-                  {activeRun.currentStep || activeRun.task}
-                </span>
-                {activeRun.replayId && activeRun.state === "completed" && (
-                  <button
-                    onClick={() => replayAutomation(activeRun.replayId!)}
-                    style={{
-                      border: `1px solid ${t.hambBorder}`,
-                      borderRadius: 5,
-                      background: t.hambBg,
-                      color: t.hambColor,
-                      fontSize: 10.5,
-                      fontFamily: UI_FONT,
-                      cursor: "pointer",
-                      padding: "1px 6px",
-                      flexShrink: 0,
-                    }}
-                  >
-                    Replay
-                  </button>
-                )}
-              </div>
-            )}
+            {/* automation run details removed — desktop automation hidden */}
           </div>
         </motion.div>
       )}
@@ -3538,6 +3302,7 @@ const App: React.FC = () => {
   const [updateNotice, setUpdateNotice] = React.useState<UpdateNotice>(null)
   const menuCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const menuOpenedAtRef = useRef<number>(0)
+  const menuCardRef = useRef<HTMLDivElement | null>(null)
 
   const openMenu = useCallback(() => {
     if (menuCloseTimerRef.current) {
@@ -3771,11 +3536,15 @@ const App: React.FC = () => {
 
       const minHeight = authState === "unauthenticated" || authState === "waiting" ? 460 : compactHeight
       const root = rootRef.current
-      // Menu card uses position:absolute inside root — scrollHeight naturally includes it.
-      // No fixed menuExtra needed; actual menu height drives the resize via ResizeObserver.
+      // position:absolute children don't affect scrollHeight. Use offsetTop+offsetHeight
+      // (layout dimensions, unaffected by framer-motion transforms) to get the true bottom.
+      const menuBottom = menuCardRef.current
+        ? menuCardRef.current.offsetTop + menuCardRef.current.offsetHeight
+        : 0
       const nextHeight = Math.ceil(Math.max(
         minHeight,
         (root?.scrollHeight ?? 0),
+        menuBottom,
       ))
       if (Math.abs(nextHeight - lastHeight) < 2) return
       lastHeight = nextHeight
@@ -3789,6 +3558,7 @@ const App: React.FC = () => {
 
     const resizeObserver = new ResizeObserver(scheduleResize)
     if (rootRef.current) resizeObserver.observe(rootRef.current)
+    if (menuCardRef.current) resizeObserver.observe(menuCardRef.current)
 
     scheduleResize()
     const settleFrame = requestAnimationFrame(scheduleResize)
@@ -3798,7 +3568,7 @@ const App: React.FC = () => {
       cancelAnimationFrame(settleFrame)
       resizeObserver.disconnect()
     }
-  }, [authState, entries.length, hotkeyState, updateNotice, voiceTurnBusy])
+  }, [authState, entries.length, hotkeyState, updateNotice, voiceTurnBusy, menuOpen])
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -4335,8 +4105,7 @@ const App: React.FC = () => {
       {/* Notch — state display that hangs from the bottom of the toolbar */}
       <Notch state={hotkeyState} voiceTurnBusy={voiceTurnBusy} />
 
-      {/* Mission Control — drops under the notch when Missions is toggled. */}
-      <MissionControl />
+      {/* MissionControl disabled — desktop automation hidden */}
 
       {/* Chat content — no wrapper card; ResponsePanel and TextInputPanel are self-styled */}
       <AnimatePresence>
@@ -4414,6 +4183,7 @@ const App: React.FC = () => {
             onClose={closeMenuNow}
             onHoverEnter={cancelMenuClose}
             onHoverLeave={scheduleMenuClose}
+            cardRef={menuCardRef}
           />
         )}
       </AnimatePresence>

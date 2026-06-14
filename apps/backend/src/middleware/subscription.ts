@@ -8,15 +8,15 @@ import {
 } from "../entitlements.js"
 import type { FeatureKey } from "@yomi/shared/plans"
 
-export type AccessKind = "chat" | "voice" | "agent" | "screenshot" | "reasoning" | "desktop_automation"
+export type AccessKind = "chat" | "voice" | "agent" | "screenshot" | "reasoning" | "bot_message"
 
 const KIND_FEATURE_MAP: Record<AccessKind, FeatureKey | null> = {
   chat: "chat",
   voice: "voiceMinutes",
-  agent: "desktopAutomation",
+  agent: "botMessages",
   screenshot: "screenshots",
   reasoning: "reasoning",
-  desktop_automation: "desktopAutomation",
+  bot_message: "botMessages",
 }
 
 export function requireAccess(kind: AccessKind) {

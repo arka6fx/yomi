@@ -14,6 +14,7 @@ export async function initMemoryDir(): Promise<void> {
     mkdir(root, { recursive: true }),
     mkdir(join(root, "projects"), { recursive: true }),
     mkdir(join(root, "sessions"), { recursive: true }),
+    mkdir(join(root, "debug"), { recursive: true }),
     // Skills directory is a sibling of notepad/ — created here so the agent
     // and the curator can rely on it existing on every startup.
     mkdir(join(root, "skills"), { recursive: true }),
