@@ -12,6 +12,8 @@ interface TelegramUpdate {
     from?: { id: number; first_name?: string; username?: string }
     chat: { id: number; type: string }
     text?: string
+    voice?: { file_id: string; duration: number; mime_type?: string }
+    audio?: { file_id: string; mime_type?: string }
   }
 }
 
@@ -146,16 +148,37 @@ export class TelegramAdapter implements PlatformAdapter {
           this.lastUpdateId = update.update_id
         }
         const msg = update.message
-        if (!msg?.text) continue
+        if (!msg) continue
         if (msg.chat.type === "channel") continue
+
+        const hasText = !!msg.text
+        const voiceFile = msg.voice ?? msg.audio
+        if (!hasText && !voiceFile) continue
+
+        let audioUrl: string | undefined
+        let audioMimeType: string | undefined
+
+        if (voiceFile) {
+          // Resolve file path via getFile API
+          try {
+            const fileRes = await fetch(`${this.apiUrl}/getFile?file_id=${voiceFile.file_id}`)
+            const fileData = (await fileRes.json()) as { ok: boolean; result?: { file_path?: string } }
+            if (fileData.ok && fileData.result?.file_path) {
+              audioUrl = `https://api.telegram.org/file/bot${this.token}/${fileData.result.file_path}`
+              audioMimeType = voiceFile.mime_type ?? "audio/ogg"
+            }
+          } catch { /* best-effort — message will have empty text */ }
+        }
 
         const gatewayMsg: GatewayMessage = {
           platform: "telegram",
           chatId: String(msg.chat.id),
           userId: String(msg.from?.id ?? "unknown"),
-          text: msg.text,
+          text: msg.text ?? "",
           messageId: String(msg.message_id),
           timestamp: new Date().toISOString(),
+          audioUrl,
+          audioMimeType,
         }
         this.messageHandler(gatewayMsg)
       }

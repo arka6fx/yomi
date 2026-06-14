@@ -310,6 +310,10 @@ export interface GatewayMessage {
   text: string
   messageId?: string
   timestamp: string
+  /** URL of an audio file (voice note) to transcribe before processing */
+  audioUrl?: string
+  /** MIME type of the audio file, defaults to audio/ogg */
+  audioMimeType?: string
 }
 
 export interface GatewaySessionInfo {
