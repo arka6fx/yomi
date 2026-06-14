@@ -114,12 +114,13 @@ const sidecarResolver: SidecarResolver = async (userId, platform) => {
     return undefined
   }
 }
-getDefaultGateway().setSidecarResolver(sidecarResolver)
-
-// Start the messaging gateway
-getDefaultGateway().start(process.env["YOMI_PLAN"]).then(() => {
-  console.warn("[gateway] started successfully")
-})
+export function startGateway(): void {
+  const gateway = getDefaultGateway()
+  gateway.setSidecarResolver(sidecarResolver)
+  gateway.start(process.env["YOMI_PLAN"]).catch((err) => {
+    console.error("[gateway] failed to start:", err)
+  })
+}
 
 if (typeof process !== "undefined" && typeof process.on === "function") {
   process.on("unhandledRejection", (err) => {
