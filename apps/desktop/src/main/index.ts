@@ -359,6 +359,77 @@ app.whenReady().then(async () => {
     }
   })
 
+  // ── Bot channels (Telegram / Discord messaging gateway) ─────────────────────
+
+  ipcMain.handle("yomi:gateway-connections", async () => {
+    const token = loadToken()
+    if (!token) return []
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/gateway/connections`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) return []
+      const data = (await res.json()) as { platform: string; connectedAt: string }[]
+      return Array.isArray(data) ? data : []
+    } catch {
+      return []
+    }
+  })
+
+  // Telegram one-click — returns a t.me deep link, opened in the browser
+  ipcMain.handle("yomi:gateway-connect-telegram", async () => {
+    const token = loadToken()
+    if (!token) return { error: "Not signed in" }
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/gateway/telegram/token`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = (await res.json()) as { deepLink?: string; error?: string }
+      if (!res.ok || !data.deepLink) return { error: data.error ?? "Failed to connect" }
+      await shell.openExternal(data.deepLink)
+      return { ok: true }
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Connect failed" }
+    }
+  })
+
+  // Discord — capture the OAuth redirect (Bearer auth) and open it in the browser
+  ipcMain.handle("yomi:gateway-connect-discord", async () => {
+    const token = loadToken()
+    if (!token) return { error: "Not signed in" }
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/gateway/discord/auth`, {
+        headers: { Authorization: `Bearer ${token}` },
+        redirect: "manual",
+      })
+      if (res.status === 302 || res.status === 301) {
+        const location = res.headers.get("location")
+        if (location) {
+          await shell.openExternal(location)
+          return { ok: true }
+        }
+      }
+      return { error: `Connect failed: ${res.status}` }
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Connect failed" }
+    }
+  })
+
+  ipcMain.handle("yomi:gateway-unlink", async (_e, platform: string) => {
+    const token = loadToken()
+    if (!token) return { error: "Not signed in" }
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/gateway/connections/${platform}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      return res.ok ? { ok: true } : { error: `Unlink failed: ${res.status}` }
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Unlink failed" }
+    }
+  })
+
   setInterval(updateOverlayMousePassthrough, 50)
 
   // ── Load overlay ────────────────────────────────────────────────────────────

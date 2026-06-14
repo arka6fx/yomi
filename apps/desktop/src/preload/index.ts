@@ -312,6 +312,24 @@ contextBridge.exposeInMainWorld("yomi", {
     return ipcRenderer.invoke("yomi:disconnect-integration", provider)
   },
 
+  // ── Bot channels (Telegram / Discord) ───────────────────────────────────────
+
+  getBotConnections(): Promise<{ platform: string; connectedAt: string }[]> {
+    return ipcRenderer.invoke("yomi:gateway-connections")
+  },
+
+  connectTelegramBot(): Promise<{ ok?: boolean; error?: string }> {
+    return ipcRenderer.invoke("yomi:gateway-connect-telegram")
+  },
+
+  connectDiscordBot(): Promise<{ ok?: boolean; error?: string }> {
+    return ipcRenderer.invoke("yomi:gateway-connect-discord")
+  },
+
+  unlinkBot(platform: string): Promise<{ ok?: boolean; error?: string }> {
+    return ipcRenderer.invoke("yomi:gateway-unlink", platform)
+  },
+
   onUpdateError(cb: (info: { message: string }) => void): () => void {
     const h = (_: Electron.IpcRendererEvent, info: { message: string }) => cb(info)
     ipcRenderer.on("yomi:update-error", h)
