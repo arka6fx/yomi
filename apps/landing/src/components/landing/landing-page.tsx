@@ -274,6 +274,12 @@ export function LandingPage() {
     if (p === "windows") setActive(p)
   }, [])
 
+  // forward oauth error redirects (/?error=) to the signin page
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("error")
+    if (code) router.replace(`/signin?error=${encodeURIComponent(code)}`)
+  }, [router])
+
   const current = platforms[active]
   const heroDownloadLabel = "Get for Windows"
 

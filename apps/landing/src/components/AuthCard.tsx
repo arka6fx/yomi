@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { ArrowLeft, Loader2 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { BrandMark } from "@/components/BrandMark"
@@ -29,6 +29,13 @@ interface AuthCardProps {
 export default function AuthCard({ defaultMode, plan, callbackURL, initialError }: AuthCardProps) {
   const [loading, setLoading] = useState<"github" | "google" | null>(null)
   const [error, setError] = useState(initialError ? mapAuthError(initialError) : "")
+
+  // read ?error= client-side so the page can stay statically prerendered
+  useEffect(() => {
+    if (initialError) return
+    const code = new URLSearchParams(window.location.search).get("error")
+    if (code) setError(mapAuthError(code))
+  }, [initialError])
 
   const busy = loading !== null
 
