@@ -1,0 +1,3040 @@
+{
+  "window": "#general | AI Assembly - Discord",
+  "elements": [
+    {
+      "ref": "w1e1",
+      "role": "Pane",
+      "name": "#general | AI Assembly - Discord",
+      "automationId": "",
+      "rect": {
+        "x": 502,
+        "y": 471,
+        "width": 1280,
+        "height": 720
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e2",
+      "role": "Document",
+      "name": "#general | AI Assembly",
+      "automationId": "794320",
+      "rect": {
+        "x": 502,
+        "y": 471,
+        "width": 1280,
+        "height": 720
+      },
+      "patterns": [
+        "Value",
+        "Scroll",
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "https://discord.com/channels/1122532303730643016/1226911417027006594",
+      "rangeValue": null,
+      "childCount": 20
+    },
+    {
+      "ref": "w1e3",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e4",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e5",
+      "role": "Button",
+      "name": "Go back",
+      "automationId": "",
+      "rect": {
+        "x": 511,
+        "y": 475,
+        "width": 26,
+        "height": 24
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e6",
+      "role": "Button",
+      "name": "Go forward",
+      "automationId": "",
+      "rect": {
+        "x": 539,
+        "y": 475,
+        "width": 26,
+        "height": 24
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": false,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e7",
+      "role": "Text",
+      "name": "AI Assembly",
+      "automationId": "",
+      "rect": {
+        "x": 1116,
+        "y": 478,
+        "width": 76,
+        "height": 18
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e8",
+      "role": "Button",
+      "name": "Inbox",
+      "automationId": "",
+      "rect": {
+        "x": 1593,
+        "y": 475,
+        "width": 24,
+        "height": 24
+      },
+      "patterns": [
+        "Invoke",
+        "ExpandCollapse",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e9",
+      "role": "Hyperlink",
+      "name": "Help",
+      "automationId": "",
+      "rect": {
+        "x": 1629,
+        "y": 475,
+        "width": 24,
+        "height": 24
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "https://support.discord.com/",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e10",
+      "role": "Button",
+      "name": "Help",
+      "automationId": "",
+      "rect": {
+        "x": 1629,
+        "y": 475,
+        "width": 24,
+        "height": 24
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e11",
+      "role": "Button",
+      "name": "Minimize",
+      "automationId": "",
+      "rect": {
+        "x": 1678,
+        "y": 471,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e12",
+      "role": "Button",
+      "name": "Maximize",
+      "automationId": "",
+      "rect": {
+        "x": 1714,
+        "y": 471,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e13",
+      "role": "Button",
+      "name": "Close",
+      "automationId": "",
+      "rect": {
+        "x": 1750,
+        "y": 471,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e14",
+      "role": "Button",
+      "name": "Dismiss",
+      "automationId": "",
+      "rect": {
+        "x": 1746,
+        "y": 504,
+        "width": 36,
+        "height": 36
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e15",
+      "role": "Text",
+      "name": "Connect your Spotify account to display your music in your status!",
+      "automationId": "",
+      "rect": {
+        "x": 940,
+        "y": 513,
+        "width": 398,
+        "height": 18
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e16",
+      "role": "Button",
+      "name": "Connect",
+      "automationId": "",
+      "rect": {
+        "x": 1357,
+        "y": 510,
+        "width": 74,
+        "height": 24
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e17",
+      "role": "Group",
+      "name": "Servers sidebar",
+      "automationId": "",
+      "rect": {
+        "x": 502,
+        "y": 503,
+        "width": 72,
+        "height": 638
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e18",
+      "role": "Tree",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 502,
+        "y": 503,
+        "width": 72,
+        "height": 638
+      },
+      "patterns": [
+        "Invoke",
+        "Selection",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 24
+    },
+    {
+      "ref": "w1e19",
+      "role": "TreeItem",
+      "name": "Direct Messages",
+      "automationId": "",
+      "rect": {
+        "x": 518,
+        "y": 507,
+        "width": 40,
+        "height": 40
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e20",
+      "role": "TreeItem",
+      "name": "Yomi HQ",
+      "automationId": "",
+      "rect": {
+        "x": 518,
+        "y": 564,
+        "width": 40,
+        "height": 40
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e21",
+      "role": "Text",
+      "name": "Yomi HQ",
+      "automationId": "",
+      "rect": {
+        "x": 537,
+        "y": 563,
+        "width": 61,
+        "height": 21
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e22",
+      "role": "TreeItem",
+      "name": "Dibyo Banerjee's server",
+      "automationId": "",
+      "rect": {
+        "x": 518,
+        "y": 612,
+        "width": 40,
+        "height": 40
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e23",
+      "role": "Text",
+      "name": "Dibyo Banerjee's server",
+      "automationId": "",
+      "rect": {
+        "x": 537,
+        "y": 611,
+        "width": 164,
+        "height": 21
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e24",
+      "role": "TreeItem",
+      "name": "1 mention, supermemory Dev Hub, Voice call active",
+      "automationId": "",
+      "rect": {
+        "x": 518,
+        "y": 660,
+        "width": 40,
+        "height": 40
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e25",
+      "role": "Text",
+      "name": "1",
+      "automationId": "",
+      "rect": {
+        "x": 547,
+        "y": 684,
+        "width": 6,
+        "height": 16
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e26",
+      "role": "Button",
+      "name": "Community Server",
+      "automationId": "",
+      "rect": {
+        "x": 537,
+        "y": 660,
+        "width": 27,
+        "height": 20
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e27",
+      "role": "Text",
+      "name": "supermemory Dev Hub",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e28",
+      "role": "Image",
+      "name": "Lofi Radio",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e29",
+      "role": "TreeItem",
+      "name": "4 mentions, Theo's Typesafe Cult",
+      "automationId": "",
+      "rect": {
+        "x": 518,
+        "y": 708,
+        "width": 40,
+        "height": 40
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e30",
+      "role": "Text",
+      "name": "4",
+      "automationId": "",
+      "rect": {
+        "x": 546,
+        "y": 732,
+        "width": 8,
+        "height": 16
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e31",
+      "role": "Button",
+      "name": "Community Server",
+      "automationId": "",
+      "rect": {
+        "x": 537,
+        "y": 708,
+        "width": 27,
+        "height": 20
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e32",
+      "role": "Text",
+      "name": "Theo's Typesafe Cult",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e33",
+      "role": "TreeItem",
+      "name": "2 mentions, CampusX",
+      "automationId": "",
+      "rect": {
+        "x": 518,
+        "y": 756,
+        "width": 40,
+        "height": 40
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e34",
+      "role": "Text",
+      "name": "2",
+      "automationId": "",
+      "rect": {
+        "x": 546,
+        "y": 780,
+        "width": 8,
+        "height": 16
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e35",
+      "role": "Text",
+      "name": "CampusX",
+      "automationId": "",
+      "rect": {
+        "x": 537,
+        "y": 755,
+        "width": 68,
+        "height": 21
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e36",
+      "role": "TreeItem",
+      "name": "Unread messages, ThePrimeagen",
+      "automationId": "",
+      "rect": {
+        "x": 518,
+        "y": 804,
+        "width": 40,
+        "height": 40
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e37",
+      "role": "Button",
+      "name": "Discord Partner",
+      "automationId": "",
+      "rect": {
+        "x": 537,
+        "y": 804,
+        "width": 27,
+        "height": 20
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e38",
+      "role": "Text",
+      "name": "ThePrimeagen",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e39",
+      "role": "TreeItem",
+      "name": "AI Assembly",
+      "automationId": "",
+      "rect": {
+        "x": 518,
+        "y": 852,
+        "width": 40,
+        "height": 40
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e40",
+      "role": "Text",
+      "name": "AI Assembly",
+      "automationId": "",
+      "rect": {
+        "x": 537,
+        "y": 851,
+        "width": 87,
+        "height": 21
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e41",
+      "role": "TreeItem",
+      "name": "Add a Server",
+      "automationId": "",
+      "rect": {
+        "x": 518,
+        "y": 900,
+        "width": 40,
+        "height": 40
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e42",
+      "role": "TreeItem",
+      "name": "Discover",
+      "automationId": "",
+      "rect": {
+        "x": 518,
+        "y": 948,
+        "width": 40,
+        "height": 40
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e43",
+      "role": "Group",
+      "name": "AI Assembly (server)",
+      "automationId": "",
+      "rect": {
+        "x": 574,
+        "y": 541,
+        "width": 303,
+        "height": 650
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e44",
+      "role": "Button",
+      "name": "AI Assembly, server actions",
+      "automationId": "",
+      "rect": {
+        "x": 582,
+        "y": 548,
+        "width": 121,
+        "height": 33
+      },
+      "patterns": [
+        "Invoke",
+        "ExpandCollapse",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e45",
+      "role": "Button",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 837,
+        "y": 548,
+        "width": 32,
+        "height": 33
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e46",
+      "role": "Text",
+      "name": "Invite to Server",
+      "automationId": "",
+      "rect": {
+        "x": 582,
+        "y": 561,
+        "width": 105,
+        "height": 21
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e47",
+      "role": "Group",
+      "name": "",
+      "automationId": "channels",
+      "rect": {
+        "x": 574,
+        "y": 589,
+        "width": 302,
+        "height": 548
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e48",
+      "role": "List",
+      "name": "Channels",
+      "automationId": "",
+      "rect": {
+        "x": 574,
+        "y": 589,
+        "width": 294,
+        "height": 320
+      },
+      "patterns": [
+        "Invoke",
+        "Selection",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 8
+    },
+    {
+      "ref": "w1e49",
+      "role": "ListItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 574,
+        "y": 601,
+        "width": 294,
+        "height": 34
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e50",
+      "role": "Button",
+      "name": "Events",
+      "automationId": "upcoming-events-1122532303730643016",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e51",
+      "role": "ListItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 574,
+        "y": 647,
+        "width": 294,
+        "height": 40
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e52",
+      "role": "Button",
+      "name": "Text Channels (category)",
+      "automationId": "",
+      "rect": {
+        "x": 590,
+        "y": 663,
+        "width": 270,
+        "height": 24
+      },
+      "patterns": [
+        "Invoke",
+        "ExpandCollapse",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e53",
+      "role": "Text",
+      "name": "Text Channels",
+      "automationId": "",
+      "rect": {
+        "x": 590,
+        "y": 666,
+        "width": 85,
+        "height": 18
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e54",
+      "role": "ListItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 574,
+        "y": 687,
+        "width": 294,
+        "height": 34
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e55",
+      "role": "Hyperlink",
+      "name": "general (text channel)",
+      "automationId": "",
+      "rect": {
+        "x": 582,
+        "y": 688,
+        "width": 286,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "https://discord.com/channels/1122532303730643016/1226911417027006594",
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e56",
+      "role": "Image",
+      "name": "Text icon",
+      "automationId": "",
+      "rect": {
+        "x": 590,
+        "y": 694,
+        "width": 20,
+        "height": 20
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e57",
+      "role": "Text",
+      "name": "Text",
+      "automationId": "",
+      "rect": {
+        "x": 724,
+        "y": 700,
+        "width": 29,
+        "height": 22
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e58",
+      "role": "Button",
+      "name": "Invite to Channel",
+      "automationId": "",
+      "rect": {
+        "x": 844,
+        "y": 696,
+        "width": 16,
+        "height": 16
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e59",
+      "role": "Text",
+      "name": "Invite to Channel",
+      "automationId": "",
+      "rect": {
+        "x": 849,
+        "y": 700,
+        "width": 115,
+        "height": 22
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e60",
+      "role": "ListItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 574,
+        "y": 721,
+        "width": 294,
+        "height": 34
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e61",
+      "role": "Hyperlink",
+      "name": "clips-and-highlights (text channel)",
+      "automationId": "",
+      "rect": {
+        "x": 582,
+        "y": 722,
+        "width": 286,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "https://discord.com/channels/1122532303730643016/1122532304401727561",
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e62",
+      "role": "Image",
+      "name": "Text icon",
+      "automationId": "",
+      "rect": {
+        "x": 590,
+        "y": 728,
+        "width": 20,
+        "height": 20
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e63",
+      "role": "Text",
+      "name": "Text",
+      "automationId": "",
+      "rect": {
+        "x": 724,
+        "y": 734,
+        "width": 29,
+        "height": 22
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e64",
+      "role": "Text",
+      "name": "Invite to Channel",
+      "automationId": "",
+      "rect": {
+        "x": 859,
+        "y": 734,
+        "width": 115,
+        "height": 22
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e65",
+      "role": "ListItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 574,
+        "y": 755,
+        "width": 294,
+        "height": 34
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e66",
+      "role": "Hyperlink",
+      "name": "bot (text channel)",
+      "automationId": "",
+      "rect": {
+        "x": 582,
+        "y": 756,
+        "width": 286,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "https://discord.com/channels/1122532303730643016/1227496940011393055",
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e67",
+      "role": "Image",
+      "name": "Text icon",
+      "automationId": "",
+      "rect": {
+        "x": 590,
+        "y": 762,
+        "width": 20,
+        "height": 20
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e68",
+      "role": "Text",
+      "name": "Text",
+      "automationId": "",
+      "rect": {
+        "x": 724,
+        "y": 768,
+        "width": 29,
+        "height": 22
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e69",
+      "role": "Text",
+      "name": "Invite to Channel",
+      "automationId": "",
+      "rect": {
+        "x": 859,
+        "y": 768,
+        "width": 115,
+        "height": 22
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e70",
+      "role": "ListItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 574,
+        "y": 789,
+        "width": 294,
+        "height": 40
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e71",
+      "role": "Button",
+      "name": "Voice Channels (category)",
+      "automationId": "",
+      "rect": {
+        "x": 590,
+        "y": 805,
+        "width": 270,
+        "height": 24
+      },
+      "patterns": [
+        "Invoke",
+        "ExpandCollapse",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e72",
+      "role": "Text",
+      "name": "Voice Channels",
+      "automationId": "",
+      "rect": {
+        "x": 590,
+        "y": 808,
+        "width": 92,
+        "height": 18
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e73",
+      "role": "ListItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 574,
+        "y": 829,
+        "width": 294,
+        "height": 34
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e74",
+      "role": "Button",
+      "name": "Lobby (voice channel)",
+      "automationId": "",
+      "rect": {
+        "x": 582,
+        "y": 830,
+        "width": 286,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e75",
+      "role": "Image",
+      "name": "Voice icon",
+      "automationId": "",
+      "rect": {
+        "x": 590,
+        "y": 836,
+        "width": 20,
+        "height": 20
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e76",
+      "role": "Text",
+      "name": "Voice",
+      "automationId": "",
+      "rect": {
+        "x": 724,
+        "y": 842,
+        "width": 38,
+        "height": 22
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e77",
+      "role": "Text",
+      "name": "Open Chat",
+      "automationId": "",
+      "rect": {
+        "x": 859,
+        "y": 842,
+        "width": 74,
+        "height": 22
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e78",
+      "role": "Text",
+      "name": "Invite to Voice",
+      "automationId": "",
+      "rect": {
+        "x": 859,
+        "y": 842,
+        "width": 96,
+        "height": 22
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e79",
+      "role": "ListItem",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 574,
+        "y": 863,
+        "width": 294,
+        "height": 34
+      },
+      "patterns": [
+        "Invoke",
+        "SelectionItem",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e80",
+      "role": "Button",
+      "name": "Gaming (voice channel)",
+      "automationId": "",
+      "rect": {
+        "x": 582,
+        "y": 864,
+        "width": 286,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 4
+    },
+    {
+      "ref": "w1e81",
+      "role": "Image",
+      "name": "Voice icon",
+      "automationId": "",
+      "rect": {
+        "x": 590,
+        "y": 870,
+        "width": 20,
+        "height": 20
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e82",
+      "role": "Text",
+      "name": "Voice",
+      "automationId": "",
+      "rect": {
+        "x": 724,
+        "y": 876,
+        "width": 38,
+        "height": 22
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e83",
+      "role": "Text",
+      "name": "Open Chat",
+      "automationId": "",
+      "rect": {
+        "x": 859,
+        "y": 876,
+        "width": 74,
+        "height": 22
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e84",
+      "role": "Text",
+      "name": "Invite to Voice",
+      "automationId": "",
+      "rect": {
+        "x": 859,
+        "y": 876,
+        "width": 96,
+        "height": 22
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e85",
+      "role": "Separator",
+      "name": "Resize Sidebar",
+      "automationId": "",
+      "rect": {
+        "x": 873,
+        "y": 503,
+        "width": 4,
+        "height": 688
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "RangeValue",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "375",
+      "rangeValue": 375,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e86",
+      "role": "Group",
+      "name": "User status and settings",
+      "automationId": "",
+      "rect": {
+        "x": 510,
+        "y": 1125,
+        "width": 359,
+        "height": 58
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 9
+    },
+    {
+      "ref": "w1e87",
+      "role": "Button",
+      "name": "Manage profile and status",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "ExpandCollapse",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e88",
+      "role": "Text",
+      "name": "Arka",
+      "automationId": "",
+      "rect": {
+        "x": 562,
+        "y": 1135,
+        "width": 33,
+        "height": 21
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e89",
+      "role": "Text",
+      "name": "arka3fx",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e90",
+      "role": "Text",
+      "name": "Invisible",
+      "automationId": "",
+      "rect": {
+        "x": 562,
+        "y": 1155,
+        "width": 42,
+        "height": 16
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e91",
+      "role": "Button",
+      "name": "Mute",
+      "automationId": "",
+      "rect": {
+        "x": 710,
+        "y": 1138,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e92",
+      "role": "Image",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 716,
+        "y": 1144,
+        "width": 20,
+        "height": 20
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e93",
+      "role": "Button",
+      "name": "Input Options",
+      "automationId": "",
+      "rect": {
+        "x": 743,
+        "y": 1138,
+        "width": 16,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e94",
+      "role": "Button",
+      "name": "Deafen",
+      "automationId": "",
+      "rect": {
+        "x": 767,
+        "y": 1138,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "Toggle",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e95",
+      "role": "Image",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 773,
+        "y": 1144,
+        "width": 20,
+        "height": 20
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e96",
+      "role": "Button",
+      "name": "Output Options",
+      "automationId": "",
+      "rect": {
+        "x": 800,
+        "y": 1138,
+        "width": 16,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e97",
+      "role": "Button",
+      "name": "User Settings",
+      "automationId": "",
+      "rect": {
+        "x": 824,
+        "y": 1138,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e98",
+      "role": "Image",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 830,
+        "y": 1144,
+        "width": 20,
+        "height": 20
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e99",
+      "role": "Group",
+      "name": "Channel header",
+      "automationId": "",
+      "rect": {
+        "x": 877,
+        "y": 541,
+        "width": 905,
+        "height": 48
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 10
+    },
+    {
+      "ref": "w1e100",
+      "role": "Text",
+      "name": "Text Channel",
+      "automationId": "",
+      "rect": {
+        "x": 893,
+        "y": 563,
+        "width": 88,
+        "height": 21
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e101",
+      "role": "Text",
+      "name": "AI Assembly",
+      "automationId": "",
+      "rect": {
+        "x": 921,
+        "y": 563,
+        "width": 85,
+        "height": 21
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e102",
+      "role": "Text",
+      "name": ":",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e103",
+      "role": "Text",
+      "name": "general",
+      "automationId": "",
+      "rect": {
+        "x": 921,
+        "y": 553,
+        "width": 51,
+        "height": 22
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e104",
+      "role": "Button",
+      "name": "Threads",
+      "automationId": "",
+      "rect": {
+        "x": 1362,
+        "y": 548,
+        "width": 32,
+        "height": 33
+      },
+      "patterns": [
+        "Invoke",
+        "ExpandCollapse",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e105",
+      "role": "Button",
+      "name": "Notification Settings",
+      "automationId": "",
+      "rect": {
+        "x": 1402,
+        "y": 548,
+        "width": 32,
+        "height": 33
+      },
+      "patterns": [
+        "Invoke",
+        "ExpandCollapse",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e106",
+      "role": "Button",
+      "name": "Pinned Messages",
+      "automationId": "",
+      "rect": {
+        "x": 1442,
+        "y": 548,
+        "width": 32,
+        "height": 33
+      },
+      "patterns": [
+        "Invoke",
+        "ExpandCollapse",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e107",
+      "role": "Button",
+      "name": "Show Member List",
+      "automationId": "",
+      "rect": {
+        "x": 1482,
+        "y": 548,
+        "width": 32,
+        "height": 33
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e108",
+      "role": "Text",
+      "name": "Search AI Assembly",
+      "automationId": "",
+      "rect": {
+        "x": 1535,
+        "y": 555,
+        "width": 120,
+        "height": 19
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e109",
+      "role": "ComboBox",
+      "name": "Search",
+      "automationId": "",
+      "rect": {
+        "x": 1531,
+        "y": 551,
+        "width": 214,
+        "height": 49
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ExpandCollapse",
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "\n",
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e110",
+      "role": "Group",
+      "name": "general (channel)",
+      "automationId": "",
+      "rect": {
+        "x": 877,
+        "y": 589,
+        "width": 905,
+        "height": 602
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 10
+    },
+    {
+      "ref": "w1e111",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 877,
+        "y": 589,
+        "width": 905,
+        "height": 552
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e112",
+      "role": "List",
+      "name": "Messages in general",
+      "automationId": "",
+      "rect": {
+        "x": 877,
+        "y": 951,
+        "width": 889,
+        "height": 190
+      },
+      "patterns": [
+        "Invoke",
+        "Selection",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 3
+    },
+    {
+      "ref": "w1e113",
+      "role": "Text",
+      "name": "Welcome to",
+      "automationId": "",
+      "rect": {
+        "x": 1240,
+        "y": 981,
+        "width": 163,
+        "height": 43
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e114",
+      "role": "Text",
+      "name": "AI Assembly",
+      "automationId": "",
+      "rect": {
+        "x": 1236,
+        "y": 1021,
+        "width": 171,
+        "height": 43
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e115",
+      "role": "Text",
+      "name": "This is the beginning of this server.",
+      "automationId": "",
+      "rect": {
+        "x": 1219,
+        "y": 1071,
+        "width": 205,
+        "height": 18
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e116",
+      "role": "MenuItem",
+      "name": "More message options",
+      "automationId": "",
+      "rect": {
+        "x": 897,
+        "y": 1138,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ExpandCollapse",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e117",
+      "role": "Edit",
+      "name": "Message #general",
+      "automationId": "",
+      "rect": {
+        "x": 949,
+        "y": 1126,
+        "width": 620,
+        "height": 56
+      },
+      "patterns": [
+        "Invoke",
+        "Value",
+        "ScrollItem",
+        "Text",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": "﻿\n",
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e118",
+      "role": "Text",
+      "name": "﻿",
+      "automationId": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": true,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e119",
+      "role": "Button",
+      "name": "Send a gift",
+      "automationId": "",
+      "rect": {
+        "x": 1569,
+        "y": 1138,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e120",
+      "role": "Image",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 1575,
+        "y": 1142,
+        "width": 20,
+        "height": 24
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e121",
+      "role": "Button",
+      "name": "Open GIF picker",
+      "automationId": "",
+      "rect": {
+        "x": 1609,
+        "y": 1138,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ExpandCollapse",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e122",
+      "role": "Image",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 1615,
+        "y": 1144,
+        "width": 20,
+        "height": 20
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e123",
+      "role": "Text",
+      "name": "Send GIF",
+      "automationId": "",
+      "rect": {
+        "x": 1569,
+        "y": 1150,
+        "width": 62,
+        "height": 22
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e124",
+      "role": "Button",
+      "name": "Open sticker picker",
+      "automationId": "",
+      "rect": {
+        "x": 1649,
+        "y": 1138,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ExpandCollapse",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e125",
+      "role": "Image",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 1655,
+        "y": 1144,
+        "width": 20,
+        "height": 20
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e126",
+      "role": "Button",
+      "name": "Add Emoji",
+      "automationId": "",
+      "rect": {
+        "x": 1689,
+        "y": 1138,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ExpandCollapse",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e127",
+      "role": "Button",
+      "name": "Apps",
+      "automationId": "",
+      "rect": {
+        "x": 1729,
+        "y": 1138,
+        "width": 32,
+        "height": 32
+      },
+      "patterns": [
+        "Invoke",
+        "ExpandCollapse",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e128",
+      "role": "Image",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 1735,
+        "y": 1144,
+        "width": 20,
+        "height": 20
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e129",
+      "role": "Group",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 884,
+        "y": 1190,
+        "width": 1,
+        "height": 1
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e130",
+      "role": "Image",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 502,
+        "y": 471,
+        "width": 1280,
+        "height": 720
+      },
+      "patterns": [
+        "Invoke",
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e131",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 502,
+        "y": 471,
+        "width": 1280,
+        "height": 720
+      },
+      "patterns": [
+        "LegacyIAccessible"
+      ],
+      "enabled": false,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    },
+    {
+      "ref": "w1e132",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 502,
+        "y": 471,
+        "width": 1280,
+        "height": 720
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e133",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 502,
+        "y": 471,
+        "width": 1280,
+        "height": 720
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e134",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 502,
+        "y": 471,
+        "width": 1280,
+        "height": 720
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e135",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 502,
+        "y": 471,
+        "width": 1280,
+        "height": 720
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 1
+    },
+    {
+      "ref": "w1e136",
+      "role": "Pane",
+      "name": "",
+      "automationId": "",
+      "rect": {
+        "x": 502,
+        "y": 471,
+        "width": 1280,
+        "height": 720
+      },
+      "patterns": [
+        "ScrollItem",
+        "LegacyIAccessible"
+      ],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    }
+  ],
+  "truncated": false,
+  "view": "control"
+}

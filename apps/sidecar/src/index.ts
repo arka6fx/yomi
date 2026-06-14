@@ -19,9 +19,8 @@ import { duckSpotify } from "./tools/system.js"
 import type { ProviderId } from "./automation/providers/types.js"
 // import { resolveAgent } from "./automation/agents/registry.js"
 // import { knowledgeHint, recallKnowledge } from "./automation/knowledge.js"
-// import { handleGatewayMessage, startGatewayPoll, stopGatewayPoll } from "./gateway/receive.js"
-// import type { GatewayMessage, Plan } from "@yomi/shared"
-import type { Plan } from "@yomi/shared"
+import { handleGatewayMessage, startGatewayPoll, stopGatewayPoll } from "./gateway/receive.js"
+import type { GatewayMessage, Plan } from "@yomi/shared"
 import { initUsageStore, logUsageEvent } from "./insights/usage-store.js"
 import { generateReport, getMaxLookback, formatTerminal } from "./insights/insights-engine.js"
 
@@ -319,8 +318,17 @@ app.get("/insights", (c) => {
   return c.json(report)
 })
 
-// ── Gateway receive — will provide later ────────────────────────────────────
-// app.post("/gateway/receive", async (c) => { ... });
+// ── Gateway receive ─────────────────────────────────────────────────────────
+app.post("/gateway/receive", async (c) => {
+  const auth = c.req.header("Authorization")
+  const secret = process.env.SIDECAR_SECRET
+  if (secret && auth !== `Bearer ${secret}`) {
+    return c.json({ error: "Unauthorized" }, 401)
+  }
+  const msg = (await c.req.json()) as GatewayMessage
+  await handleGatewayMessage(msg)
+  return c.json({ ok: true })
+});
 
 app.onError((err, c) => {
   console.error(err)
@@ -330,7 +338,7 @@ app.onError((err, c) => {
 // Tear down on shutdown.
 for (const sig of ["SIGINT", "SIGTERM", "beforeExit"] as const) {
   process.on(sig, () => {
-    // stopGatewayPoll() // will provide later
+    stopGatewayPoll()
     getDefaultScheduler().stop()
     getDefaultPluginManager().shutdown()
     // void closeMcp().finally(() => process.exit(0))
@@ -339,7 +347,7 @@ for (const sig of ["SIGINT", "SIGTERM", "beforeExit"] as const) {
 }
 
 const port = parseInt(process.env.SIDECAR_PORT || "3002", 10)
-// startGatewayPoll() // will provide later
+startGatewayPoll()
 console.warn(`Sidecar listening on :${port}`)
 
 export default { port, fetch: app.fetch }

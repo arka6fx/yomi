@@ -9,13 +9,11 @@ import { authRoutesRouter } from "./routes/auth-routes.js"
 import { profileRouter } from "./routes/profile.js"
 import { ragRouter } from "./routes/rag.js"
 import { proxyRouter } from "./routes/proxy.js"
-// import { gatewayRouter } from "./gateway/routes.js"
-// import { getDefaultGateway } from "./gateway/gateway-runner.js"
-// import type { SidecarResolver } from "./gateway/gateway-runner.js"
-// import { eq, and } from "drizzle-orm"
-// import { db, platformConnections, devices } from "@yomi/db"
+import { gatewayRouter } from "./gateway/routes.js"
+import { getDefaultGateway } from "./gateway/gateway-runner.js"
+import type { SidecarResolver } from "./gateway/gateway-runner.js"
 import { eq, and } from "drizzle-orm"
-import { db, devices } from "@yomi/db"
+import { db, platformConnections, devices } from "@yomi/db"
 
 const app = new Hono()
 
@@ -91,14 +89,34 @@ app.route("/api/billing", billingRouter)
 app.route("/api/user", profileRouter)
 app.route("/api/rag", ragRouter)
 app.route("/api/v1", proxyRouter)
-// app.route("/api/gateway", gatewayRouter) // will provide later
-// 
-// // Register sidecar URL resolver from platform connections — will provide later
-// const sidecarResolver: SidecarResolver = async (userId, platform) => { ... }
-// getDefaultGateway().setSidecarResolver(sidecarResolver)
-// 
-// // Start the messaging gateway — will provide later
-// getDefaultGateway().start(process.env["YOMI_PLAN"]).then(() => { ... })
+app.route("/api/gateway", gatewayRouter)
+
+// Register sidecar URL resolver from platform connections
+const sidecarResolver: SidecarResolver = async (userId, platform) => {
+  try {
+    const row = await db
+      .select({ url: devices.sidecarUrl })
+      .from(platformConnections)
+      .innerJoin(devices, eq(devices.userId, platformConnections.userId))
+      .where(
+        and(
+          eq(platformConnections.userId, userId),
+          eq(platformConnections.platform, platform),
+        ),
+      )
+      .limit(1)
+      .then((r) => r[0])
+    return row?.url ?? undefined
+  } catch {
+    return undefined
+  }
+}
+getDefaultGateway().setSidecarResolver(sidecarResolver)
+
+// Start the messaging gateway
+getDefaultGateway().start(process.env["YOMI_PLAN"]).then(() => {
+  console.warn("[gateway] started successfully")
+})
 
 if (typeof process !== "undefined" && typeof process.on === "function") {
   process.on("unhandledRejection", (err) => {

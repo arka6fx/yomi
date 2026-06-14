@@ -1,8 +1,9 @@
 import type { Plan } from "@yomi/shared"
 import { buildAgentPrompt, loadYomiMd } from "../harness/prompt.js"
-import { getDesktopFocusContext } from "../harness/hooks.js"
 import { loadMemoryContext } from "../memory/subsystem.js"
 import { memoryEnabled } from "./deps.js"
+
+function getDesktopFocusContext(): string { return "" }
 
 const EMPTY_MEMORY = {
   memorySummary: "",

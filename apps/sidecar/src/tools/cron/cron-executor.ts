@@ -22,7 +22,7 @@ const CRON_TIMEOUT_MS = 180_000 // 3 minutes
 // Tools that cron sessions are NOT allowed to use.
 const CRON_BLOCKED_TOOLS = new Set([
   "cronjob",
-  // "send_whatsapp_message", // will provide later
+  // "send_message", // messaging tools require gateway
 ])
 
 function buildCronToolSet() {

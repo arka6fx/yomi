@@ -1,0 +1,55 @@
+﻿data: {"type":"automation_started","run":{"id":"run-1781287103610-3","owner":{"id":"automation","label":"Automation Agent"},"task":"Open my AI testing note","state":"thinking","startedAt":"2026-06-12T17:58:23.610Z","confidence":0.82,"timeline":[],"replayId":"replay-run-1781287103610-3"}}
+
+data: {"type":"automation_preview","runId":"run-1781287103610-3","preview":{"steps":["Inspect current context","Choose the right tool","Run the requested action"],"estimatedSeconds":15,"risk":"safe","confidence":0.82}}
+
+data: {"type":"automation_timeline","runId":"run-1781287103610-3","item":{"id":"item-6","at":"2026-06-12T17:58:23.614Z","label":"Prepared automation preview","status":"planned"}}
+
+data: {"type":"agent_text","text":"I'll"}
+
+data: {"type":"agent_text","text":" open"}
+
+data: {"type":"agent_text","text":" your"}
+
+data: {"type":"agent_text","text":" AI"}
+
+data: {"type":"agent_text","text":" testing"}
+
+data: {"type":"agent_text","text":" note"}
+
+data: {"type":"agent_text","text":" located"}
+
+data: {"type":"agent_text","text":" at"}
+
+data: {"type":"agent_text","text":" Documents"}
+
+data: {"type":"agent_text","text":"\\"}
+
+data: {"type":"agent_text","text":"Y"}
+
+data: {"type":"agent_text","text":"omi"}
+
+data: {"type":"agent_text","text":"Tests"}
+
+data: {"type":"agent_text","text":"\\"}
+
+data: {"type":"agent_text","text":"AI"}
+
+data: {"type":"agent_text","text":" Testing"}
+
+data: {"type":"agent_text","text":".txt"}
+
+data: {"type":"agent_text","text":" now"}
+
+data: {"type":"agent_text","text":"."}
+
+data: {"type":"automation_step","runId":"run-1781287103610-3","state":"executing","currentStep":"Agent step 1","step":1,"maxSteps":20,"estimatedSeconds":15,"confidence":0.82}
+
+data: {"type":"agent_step","iteration":1,"max":20}
+
+data: {"type":"automation_timeline","runId":"run-1781287103610-3","item":{"id":"item-7","at":"2026-06-12T17:58:25.606Z","label":"I'll open your AI testing note located at Documents\\YomiTests\\AI Testing.txt now.","status":"done"}}
+
+data: {"type":"automation_completed","runId":"run-1781287103610-3","summary":"I'll open your AI testing note located at Documents\\YomiTests\\AI Testing.txt now.","replayId":"replay-run-1781287103610-3"}
+
+data: {"type":"done"}
+
+

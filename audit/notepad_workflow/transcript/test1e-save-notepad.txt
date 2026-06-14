@@ -1,0 +1,71 @@
+﻿data: {"type":"automation_started","run":{"id":"run-1781286783215-6","owner":{"id":"windows","label":"Windows Agent"},"task":"save this notepad file as Documents\\YomiTests\\AI Testing.txt","state":"thinking","startedAt":"2026-06-12T17:53:03.215Z","confidence":0.82,"timeline":[{"id":"item-22","at":"2026-06-12T17:53:03.220Z","label":"Prepared automation preview","status":"planned"}],"replayId":"replay-run-1781286783215-6","estimatedSeconds":15}}
+
+data: {"type":"automation_preview","runId":"run-1781286783215-6","preview":{"steps":["Inspect current context","Choose the right tool","Run the requested action"],"estimatedSeconds":15,"risk":"moderate","confidence":0.82}}
+
+data: {"type":"automation_timeline","runId":"run-1781286783215-6","item":{"id":"item-22","at":"2026-06-12T17:53:03.220Z","label":"Prepared automation preview","status":"planned"}}
+
+data: {"type":"automation_step","runId":"run-1781286783215-6","state":"thinking","currentStep":"Analyzing request","estimatedSeconds":15,"confidence":0.82}
+
+data: {"type":"automation_step","runId":"run-1781286783215-6","state":"thinking","currentStep":"Planning steps","maxSteps":3,"estimatedSeconds":15,"confidence":0.82}
+
+data: {"type":"automation_timeline","runId":"run-1781286783215-6","item":{"id":"item-23","at":"2026-06-12T17:53:03.231Z","label":"Built execution plan","status":"planned"}}
+
+data: {"type":"automation_timeline","runId":"run-1781286783215-6","item":{"id":"item-24","at":"2026-06-12T17:53:03.235Z","label":"Spawned Windows Agent","status":"planned","detail":"provider: native"}}
+
+data: {"type":"automation_timeline","runId":"run-1781286783215-6","item":{"id":"item-25","at":"2026-06-12T17:53:03.339Z","label":"Loaded memory: memorySummary, memoryIndex, localMemory, cloudRagContext, staticProfile, recentSession","status":"done"}}
+
+data: {"type":"automation_timeline","runId":"run-1781286783215-6","item":{"id":"item-26","at":"2026-06-12T17:53:03.342Z","label":"Recalled prior experience (3 workflows, 1 fixes)","status":"done"}}
+
+data: {"type":"automation_step","runId":"run-1781286783215-6","state":"executing","currentStep":"Executing plan (Windows Agent)","estimatedSeconds":15,"confidence":0.82}
+
+data: {"type":"agent_text","text":"I'll"}
+
+data: {"type":"agent_text","text":" save"}
+
+data: {"type":"agent_text","text":" your"}
+
+data: {"type":"agent_text","text":" current"}
+
+data: {"type":"agent_text","text":" Not"}
+
+data: {"type":"agent_text","text":"epad"}
+
+data: {"type":"agent_text","text":" file"}
+
+data: {"type":"agent_text","text":" as"}
+
+data: {"type":"agent_text","text":" Documents"}
+
+data: {"type":"agent_text","text":"\\"}
+
+data: {"type":"agent_text","text":"Y"}
+
+data: {"type":"agent_text","text":"omi"}
+
+data: {"type":"agent_text","text":"Tests"}
+
+data: {"type":"agent_text","text":"\\"}
+
+data: {"type":"agent_text","text":"AI"}
+
+data: {"type":"agent_text","text":" Testing"}
+
+data: {"type":"agent_text","text":".txt"}
+
+data: {"type":"agent_text","text":"."}
+
+data: {"type":"automation_step","runId":"run-1781286783215-6","state":"executing","currentStep":"Agent step 1","step":1,"maxSteps":20,"estimatedSeconds":15,"confidence":0.82}
+
+data: {"type":"agent_step","iteration":1,"max":20}
+
+data: {"type":"automation_step","runId":"run-1781286783215-6","state":"executing","currentStep":"Validating outcome","estimatedSeconds":15,"confidence":0.82}
+
+data: {"type":"automation_timeline","runId":"run-1781286783215-6","item":{"id":"item-27","at":"2026-06-12T17:53:04.595Z","label":"Validation passed (rubric)","status":"done"}}
+
+data: {"type":"automation_timeline","runId":"run-1781286783215-6","item":{"id":"item-28","at":"2026-06-12T17:53:04.600Z","label":"I'll save your current Notepad file as Documents\\YomiTests\\AI Testing.txt.","status":"done"}}
+
+data: {"type":"automation_completed","runId":"run-1781286783215-6","summary":"I'll save your current Notepad file as Documents\\YomiTests\\AI Testing.txt.","replayId":"replay-run-1781286783215-6"}
+
+data: {"type":"done"}
+
+

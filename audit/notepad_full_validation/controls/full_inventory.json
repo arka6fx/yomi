@@ -1,0 +1,605 @@
+﻿[
+    {
+        "ControlType":  "ControlType.Pane",
+        "Name":  "",
+        "ClassName":  "NotepadTextBox",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "84,153,886,674",
+        "HasKeyboardFocus":  true
+    },
+    {
+        "ControlType":  "ControlType.Document",
+        "Name":  "Text editor",
+        "ClassName":  "RichEditD2DPT",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "84,153,886,674",
+        "HasKeyboardFocus":  true
+    },
+    {
+        "ControlType":  "ControlType.Pane",
+        "Name":  "",
+        "ClassName":  "Microsoft.UI.Content.DesktopChildSiteBridge",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "124,88,670,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Pane",
+        "Name":  "",
+        "ClassName":  "InputSiteWindowClass",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "124,88,670,32",
+        "HasKeyboardFocus":  true
+    },
+    {
+        "ControlType":  "ControlType.Tab",
+        "Name":  "",
+        "ClassName":  "Microsoft.UI.Xaml.Controls.TabView",
+        "AutomationId":  "Tabs",
+        "IsEnabled":  true,
+        "BoundingRect":  "124,88,670,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.List",
+        "Name":  "",
+        "ClassName":  "ListView",
+        "AutomationId":  "TabListView",
+        "IsEnabled":  true,
+        "BoundingRect":  "126,88,633,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.TabItem",
+        "Name":  "Untitled. Unmodified.",
+        "ClassName":  "ListViewItem",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "Empty",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Text",
+        "Name":  "Untitled",
+        "ClassName":  "TextBlock",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "Empty",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.TabItem",
+        "Name":  "yomi-test-note.txt. Unmodified.",
+        "ClassName":  "ListViewItem",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "Empty",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Text",
+        "Name":  "yomi-test-note.txt",
+        "ClassName":  "TextBlock",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "Empty",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.TabItem",
+        "Name":  "Grocery.md. Unmodified.",
+        "ClassName":  "ListViewItem",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "Empty",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Text",
+        "Name":  "Grocery.md",
+        "ClassName":  "TextBlock",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "Empty",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.TabItem",
+        "Name":  "System tool test content. Modified.",
+        "ClassName":  "ListViewItem",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "Empty",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Text",
+        "Name":  "System tool test content",
+        "ClassName":  "TextBlock",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "Empty",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.TabItem",
+        "Name":  "System tool test content. Modified.",
+        "ClassName":  "ListViewItem",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "Empty",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Text",
+        "Name":  "System tool test content",
+        "ClassName":  "TextBlock",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "Empty",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.TabItem",
+        "Name":  "Hello from Yomi!. Modified.",
+        "ClassName":  "ListViewItem",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "Empty",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Text",
+        "Name":  "Hello from Yomi!",
+        "ClassName":  "TextBlock",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "Empty",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.TabItem",
+        "Name":  "Grocery list for weekend. Modified.",
+        "ClassName":  "ListViewItem",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "Empty",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Text",
+        "Name":  "Grocery list for weekend",
+        "ClassName":  "TextBlock",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "Empty",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.TabItem",
+        "Name":  "Hello from Yomi!.txt. Unmodified.",
+        "ClassName":  "ListViewItem",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "Empty",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Text",
+        "Name":  "Hello from Yomi!.txt",
+        "ClassName":  "TextBlock",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "Empty",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.TabItem",
+        "Name":  "Grocery list for weekend.txt. Modified.",
+        "ClassName":  "ListViewItem",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "169,88,65,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Text",
+        "Name":  "Grocery list for weekend.txt",
+        "ClassName":  "TextBlock",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "169,96,28,15",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.TabItem",
+        "Name":  "System tool test content. Modified.",
+        "ClassName":  "ListViewItem",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "234,88,80,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Text",
+        "Name":  "System tool test content",
+        "ClassName":  "TextBlock",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "243,96,34,15",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.TabItem",
+        "Name":  "System tool test content. Modified.",
+        "ClassName":  "ListViewItem",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "314,88,80,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Text",
+        "Name":  "System tool test content",
+        "ClassName":  "TextBlock",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "323,96,34,15",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.TabItem",
+        "Name":  "Hello from Yomi!. Modified.",
+        "ClassName":  "ListViewItem",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "394,88,80,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Text",
+        "Name":  "Hello from Yomi!",
+        "ClassName":  "TextBlock",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "403,96,34,15",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.TabItem",
+        "Name":  "Grocery list for weekend. Modified.",
+        "ClassName":  "ListViewItem",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "474,88,80,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Text",
+        "Name":  "Grocery list for weekend",
+        "ClassName":  "TextBlock",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "483,96,34,15",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.TabItem",
+        "Name":  "Line dit. Modified.",
+        "ClassName":  "ListViewItem",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "554,88,80,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Text",
+        "Name":  "Line dit",
+        "ClassName":  "TextBlock",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "563,96,34,15",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.TabItem",
+        "Name":  "yomi-notepad-draft.txt. Unmodified.",
+        "ClassName":  "ListViewItem",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "630,88,86,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Text",
+        "Name":  "yomi-notepad-draft.txt",
+        "ClassName":  "TextBlock",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "643,96,30,15",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Button",
+        "Name":  "Close Tab",
+        "ClassName":  "Button",
+        "AutomationId":  "CloseButton",
+        "IsEnabled":  true,
+        "BoundingRect":  "677,92,32,24",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Button",
+        "Name":  "Add New Tab",
+        "ClassName":  "Button",
+        "AutomationId":  "AddButton",
+        "IsEnabled":  true,
+        "BoundingRect":  "762,93,32,24",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Pane",
+        "Name":  "",
+        "ClassName":  "Microsoft.UI.Content.DesktopChildSiteBridge",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "84,120,886,33",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Pane",
+        "Name":  "",
+        "ClassName":  "InputSiteWindowClass",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "84,120,886,33",
+        "HasKeyboardFocus":  true
+    },
+    {
+        "ControlType":  "ControlType.MenuBar",
+        "Name":  "",
+        "ClassName":  "",
+        "AutomationId":  "MenuBar",
+        "IsEnabled":  true,
+        "BoundingRect":  "84,120,159,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.MenuItem",
+        "Name":  "File",
+        "ClassName":  "Microsoft.UI.Xaml.Controls.MenuBarItem",
+        "AutomationId":  "File",
+        "IsEnabled":  true,
+        "BoundingRect":  "88,120,41,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.MenuItem",
+        "Name":  "Edit",
+        "ClassName":  "Microsoft.UI.Xaml.Controls.MenuBarItem",
+        "AutomationId":  "Edit",
+        "IsEnabled":  true,
+        "BoundingRect":  "137,120,44,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.MenuItem",
+        "Name":  "View",
+        "ClassName":  "Microsoft.UI.Xaml.Controls.MenuBarItem",
+        "AutomationId":  "View",
+        "IsEnabled":  true,
+        "BoundingRect":  "189,120,50,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Button",
+        "Name":  "Headings",
+        "ClassName":  "Microsoft.UI.Xaml.Controls.DropDownButton",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "363,120,56,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Button",
+        "Name":  "Lists",
+        "ClassName":  "Microsoft.UI.Xaml.Controls.DropDownButton",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "419,120,56,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Button",
+        "Name":  "Bold (Ctrl+B)",
+        "ClassName":  "ToggleButton",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "475,120,32,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Button",
+        "Name":  "Italic (Ctrl+I)",
+        "ClassName":  "ToggleButton",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "507,120,32,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Button",
+        "Name":  "Strikethrough (Ctrl+Shift+X)",
+        "ClassName":  "ToggleButton",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "539,120,32,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Button",
+        "Name":  "Link (Ctrl+K)",
+        "ClassName":  "ToggleButton",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "571,120,32,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Button",
+        "Name":  "Table",
+        "ClassName":  "Microsoft.UI.Xaml.Controls.DropDownButton",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "603,120,56,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Button",
+        "Name":  "Clear formatting (Ctrl+Space)",
+        "ClassName":  "ToggleButton",
+        "AutomationId":  "",
+        "IsEnabled":  true,
+        "BoundingRect":  "659,120,32,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Button",
+        "Name":  "Writing tools",
+        "ClassName":  "Microsoft.UI.Xaml.Controls.DropDownButton",
+        "AutomationId":  "RewriteDropDownButton",
+        "IsEnabled":  true,
+        "BoundingRect":  "804,120,56,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Button",
+        "Name":  "What\u0027s new",
+        "ClassName":  "Button",
+        "AutomationId":  "FREButton",
+        "IsEnabled":  true,
+        "BoundingRect":  "864,121,30,30",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Button",
+        "Name":  "User avatar",
+        "ClassName":  "Button",
+        "AutomationId":  "AvatarButton",
+        "IsEnabled":  true,
+        "BoundingRect":  "898,120,30,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Button",
+        "Name":  "Settings",
+        "ClassName":  "Button",
+        "AutomationId":  "SettingsButton",
+        "IsEnabled":  true,
+        "BoundingRect":  "932,120,30,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Window",
+        "Name":  "",
+        "ClassName":  "Microsoft.UI.Xaml.Controls.TeachingTip",
+        "AutomationId":  "PrivacyTeachingTip",
+        "IsEnabled":  true,
+        "BoundingRect":  "Empty",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Pane",
+        "Name":  "",
+        "ClassName":  "Microsoft.UI.Xaml.Controls.TeachingTip",
+        "AutomationId":  "PsDownloadDetailTeachingTip",
+        "IsEnabled":  true,
+        "BoundingRect":  "Empty",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Pane",
+        "Name":  "Local AI model must complete downloading to use this feature while signed out.",
+        "ClassName":  "Microsoft.UI.Xaml.Controls.TeachingTip",
+        "AutomationId":  "PsDownloadLightTeachingTip",
+        "IsEnabled":  true,
+        "BoundingRect":  "Empty",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Pane",
+        "Name":  "",
+        "ClassName":  "Microsoft.UI.Content.DesktopChildSiteBridge",
+        "AutomationId":  "",
+        "IsEnabled":  false,
+        "BoundingRect":  "84,827,886,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Pane",
+        "Name":  "",
+        "ClassName":  "InputSiteWindowClass",
+        "AutomationId":  "",
+        "IsEnabled":  false,
+        "BoundingRect":  "84,827,886,32",
+        "HasKeyboardFocus":  true
+    },
+    {
+        "ControlType":  "ControlType.Text",
+        "Name":  "Line 1,\nColumn 1",
+        "ClassName":  "TextBlock",
+        "AutomationId":  "ContentTextBlock",
+        "IsEnabled":  true,
+        "BoundingRect":  "100,835,59,16",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Text",
+        "Name":  "110 characters",
+        "ClassName":  "TextBlock",
+        "AutomationId":  "ContentTextBlock",
+        "IsEnabled":  true,
+        "BoundingRect":  "189,835,75,16",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Text",
+        "Name":  "Plain text",
+        "ClassName":  "TextBlock",
+        "AutomationId":  "ContentTextBlock",
+        "IsEnabled":  true,
+        "BoundingRect":  "387,827,62,32",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Text",
+        "Name":  "Zoom",
+        "ClassName":  "TextBlock",
+        "AutomationId":  "ContentTextBlock",
+        "IsEnabled":  true,
+        "BoundingRect":  "599,835,32,16",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Text",
+        "Name":  " Windows (CRLF)",
+        "ClassName":  "TextBlock",
+        "AutomationId":  "ContentTextBlock",
+        "IsEnabled":  true,
+        "BoundingRect":  "667,835,91,16",
+        "HasKeyboardFocus":  false
+    },
+    {
+        "ControlType":  "ControlType.Text",
+        "Name":  " UTF-8",
+        "ClassName":  "TextBlock",
+        "AutomationId":  "ContentTextBlock",
+        "IsEnabled":  true,
+        "BoundingRect":  "835,835,36,16",
+        "HasKeyboardFocus":  false
+    }
+]

@@ -97,14 +97,14 @@ export function classifyAutomationOwner(task: string): AutomationOwner {
   const text = task.toLowerCase()
   if (/\bspotify|music|song|track|playlist\b/.test(text))
     return { id: "spotify", label: "Spotify Agent" }
-  // if (/\bwhats\s*app|whatsapp|telegram|message|text|msg|send\b/.test(text))
-  //   return { id: "messaging", label: "Messaging Agent" } // will provide later
+  if (/\bwhats\s*app|whatsapp|telegram|message|text|msg|send\b/.test(text))
+    return { id: "messaging", label: "Messaging Agent" }
   // if (/\bbrowser|website|web|url|chrome|edge|search|open\s+https?:\/\//.test(text))
   //   return { id: "browser", label: "Browser Agent" } // will provide later
   if (/\bcalendar|meeting|reminder|schedule|event\b/.test(text))
     return { id: "calendar", label: "Calendar Agent" }
-  if (/\bfile|folder|notepad|save|delete|rename|copy|paste\b/.test(text))
-    return { id: "windows", label: "Windows Agent" }
+  // if (/\bfile|folder|notepad|save|delete|rename|copy|paste\b/.test(text))
+  //   return { id: "windows", label: "Windows Agent" } // will provide later
   if (/\bresearch|summari[sz]e|find|compare|investigate\b/.test(text))
     return { id: "research", label: "Research Agent" }
   return { id: "automation", label: "Automation Agent" }
@@ -126,15 +126,13 @@ export function buildAutomationPreview(task: string): AutomationPreview {
   const base =
     owner.id === "spotify"
       ? ["Find Spotify", "Run playback action"]
-      // : owner.id === "browser"
-      //   ? ["Open browser context", "Inspect page", "Run requested web action"]
-      //   : owner.id === "messaging"
-      //     ? [
-      //         "Open messaging app",
-      //         "Find recipient or chat",
-      //         "Prepare message",
-      //         "Wait for approval if sending",
-      //       ]
+      : owner.id === "messaging"
+        ? [
+            "Connect to messaging platform",
+            "Find recipient or chat",
+            "Prepare message",
+            "Send message",
+          ]
       : ["Inspect current context", "Choose the right tool", "Run the requested action"]
   return {
     steps: base,

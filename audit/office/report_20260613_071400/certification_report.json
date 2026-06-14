@@ -1,0 +1,91 @@
+{
+    "TestSuiteVersion":  "1.0",
+    "UIAInventory":  "Failed: At C:\\Users\\arkag\\Projects\\yomi\\audit\\office\\uia\\capture_uia.ps1:37 char:83\r\n+ ... ternId = [System.Windows.Automation.AutomationPatterns]::$($p)Pattern\r\n+                                                                   ~~~~~~~\nUnexpected token \u0027Pattern\u0027 in expression or statement.",
+    "Stress":  {
+                   "Error":  "At C:\\Users\\arkag\\Projects\\yomi\\audit\\office\\stress\\run_stress.ps1:55 char:9\r\n+         Failures = $failureDetails\r\n+         ~~~~~~~~\nDuplicate keys \u0027Failures\u0027 are not allowed in hash literals."
+               },
+    "Certification":  {
+                          "Word":  {
+                                       "Passed":  0,
+                                       "Total":  0,
+                                       "Certified":  false,
+                                       "Failed":  0,
+                                       "Reasons":  [
+                                                       "Test suite error: The term \u0027Start-TestSuite\u0027 is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again."
+                                                   ]
+                                   },
+                          "Outlook":  {
+                                          "Passed":  0,
+                                          "Total":  0,
+                                          "Certified":  false,
+                                          "Failed":  0,
+                                          "Reasons":  [
+                                                          "Test suite error: The term \u0027Start-TestSuite\u0027 is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again."
+                                                      ]
+                                      },
+                          "OneNote":  {
+                                          "Passed":  0,
+                                          "Total":  0,
+                                          "Certified":  false,
+                                          "Failed":  0,
+                                          "Reasons":  [
+                                                          "Test suite error: The term \u0027Start-TestSuite\u0027 is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again."
+                                                      ]
+                                      },
+                          "PowerPoint":  {
+                                             "Passed":  0,
+                                             "Total":  0,
+                                             "Certified":  false,
+                                             "Failed":  0,
+                                             "Reasons":  [
+                                                             "Test suite error: The term \u0027Start-TestSuite\u0027 is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again."
+                                                         ]
+                                         },
+                          "Excel":  {
+                                        "Passed":  0,
+                                        "Total":  0,
+                                        "Certified":  false,
+                                        "Failed":  0,
+                                        "Reasons":  [
+                                                        "Test suite error: The term \u0027Start-TestSuite\u0027 is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again."
+                                                    ]
+                                    }
+                      },
+    "Timestamp":  "2026-06-13T07:14:00.4796513+05:30",
+    "Overall":  {
+                    "Summary":  "SOME APPLICATIONS NOT CERTIFIED",
+                    "AllCertified":  false
+                },
+    "Applications":  {
+                         "Outlook":  {
+                                         "Error":  "The term \u0027Start-TestSuite\u0027 is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+                                         "Failed":  0,
+                                         "Total":  0,
+                                         "Passed":  0
+                                     },
+                         "Word":  {
+                                      "Error":  "The term \u0027Start-TestSuite\u0027 is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+                                      "Failed":  0,
+                                      "Total":  0,
+                                      "Passed":  0
+                                  },
+                         "PowerPoint":  {
+                                            "Error":  "The term \u0027Start-TestSuite\u0027 is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+                                            "Failed":  0,
+                                            "Total":  0,
+                                            "Passed":  0
+                                        },
+                         "Excel":  {
+                                       "Error":  "The term \u0027Start-TestSuite\u0027 is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+                                       "Failed":  0,
+                                       "Total":  0,
+                                       "Passed":  0
+                                   },
+                         "OneNote":  {
+                                         "Error":  "The term \u0027Start-TestSuite\u0027 is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+                                         "Failed":  0,
+                                         "Total":  0,
+                                         "Passed":  0
+                                     }
+                     }
+}

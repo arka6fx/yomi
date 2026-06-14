@@ -1,0 +1,406 @@
+{
+  "generated": "2026-06-12T21:22:00Z",
+  "environment": {
+    "os": "Windows 11",
+    "uiaHelperOk": true
+  },
+  "summary": {
+    "total": 40,
+    "pass": 38,
+    "fail": 2,
+    "passRate": 0.95
+  },
+  "capabilities": [
+    {
+      "capability": "uia_helper_ping",
+      "category": "Infrastructure",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "app_launch_notepad",
+      "category": "Application Management",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "window_get_info",
+      "category": "Window Management",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "ui_get_tree",
+      "category": "UI Automation",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "ui_find_element",
+      "category": "UI Automation",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "ui_type_text",
+      "category": "UI Automation",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "ui_set_value",
+      "category": "UI Automation",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1,
+      "knownFailures": [],
+      "notes": "Fixed: falls back to type_text for Document controls lacking Value pattern"
+    },
+    {
+      "capability": "window_move",
+      "category": "Window Management",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "window_resize",
+      "category": "Window Management",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "press_key",
+      "category": "System Administration",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "clipboard_get",
+      "category": "System Administration",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "clipboard_set",
+      "category": "System Administration",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "ui_scroll",
+      "category": "UI Automation",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1,
+      "knownFailures": [],
+      "notes": "Fixed: falls back to PageDown/PageUp for Document controls lacking Scroll pattern"
+    },
+    {
+      "capability": "mouse_get_position",
+      "category": "System Administration",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "mouse_click",
+      "category": "System Administration",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "window_get_foreground",
+      "category": "Window Management",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1,
+      "knownFailures": [],
+      "notes": "Fixed: corrected response property path"
+    },
+    {
+      "capability": "window_minimize",
+      "category": "Window Management",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "window_restore",
+      "category": "Window Management",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "window_set_foreground",
+      "category": "Window Management",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "app_close_notepad",
+      "category": "Application Management",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "process_list",
+      "category": "System Administration",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "process_kill",
+      "category": "System Administration",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "process_kill_verify",
+      "category": "System Administration",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "screen_capture_full",
+      "category": "Vision",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "screen_monitor_count",
+      "category": "System Administration",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1,
+      "knownFailures": [],
+      "notes": "Fixed: corrected response parsing (result.count)"
+    },
+    {
+      "capability": "screen_resolution",
+      "category": "System Administration",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "app_find_window_settings",
+      "category": "Application Management",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "ui_get_tree_settings",
+      "category": "UI Automation",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "ui_find_toggles",
+      "category": "UI Automation",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1,
+      "knownFailures": [],
+      "notes": "Fixed: searches by role + Toggle pattern + subpage navigation"
+    },
+    {
+      "capability": "ui_expand_collapse",
+      "category": "UI Automation",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1,
+      "knownFailures": [],
+      "notes": "Fixed: navigates to Display subpage before scanning"
+    },
+    {
+      "capability": "app_find_chrome",
+      "category": "Application Management",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "ui_get_tree_chrome",
+      "category": "UI Automation",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "ui_find_chrome_address_bar",
+      "category": "UI Automation",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "media_play_pause",
+      "category": "Media Control",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "media_next_track",
+      "category": "Media Control",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "media_previous_track",
+      "category": "Media Control",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1,
+      "knownFailures": [],
+      "notes": "Fixed: changed key from 'previous_track' to 'prev_track'"
+    },
+    {
+      "capability": "window_probe_responsive",
+      "category": "System Administration",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "window_wait_input_idle",
+      "category": "System Administration",
+      "status": "verified",
+      "successRate": 1.0,
+      "confidence": 1.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1
+    },
+    {
+      "capability": "app_launch_explorer",
+      "category": "Application Management",
+      "status": "failing",
+      "successRate": 0.0,
+      "confidence": 0.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1,
+      "knownFailures": ["Could not find Explorer window"]
+    },
+    {
+      "capability": "app_launch_calculator",
+      "category": "Application Management",
+      "status": "failing",
+      "successRate": 0.0,
+      "confidence": 0.0,
+      "lastTested": "2026-06-12T21:22:00Z",
+      "testCount": 1,
+      "knownFailures": ["Could not find Calculator window"]
+    }
+  ],
+  "certified": [],
+  "degraded": [
+    "app_launch_explorer",
+    "app_launch_calculator"
+  ],
+  "failing": [],
+  "fixed": [
+    "ui_set_value",
+    "ui_scroll",
+    "window_get_foreground",
+    "screen_monitor_count",
+    "ui_find_toggles",
+    "ui_expand_collapse",
+    "media_previous_track"
+  ]
+}

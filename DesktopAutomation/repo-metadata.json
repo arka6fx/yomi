@@ -1,0 +1,52 @@
+{
+  "flaui": {
+    "url": "https://github.com/FlaUI/FlaUI",
+    "cloned_at": "2026-06-12",
+    "last_commit": "7d600d5",
+    "last_commit_msg": "fix unsupporedexception (#704)",
+    "description": "FlaUI is a .NET library for automating Windows UI applications using Microsoft UI Automation (UIA) framework",
+    "language": "C#",
+    "stars": 3500,
+    "license": "MIT"
+  },
+  "accessibility_insights": {
+    "url": "https://github.com/microsoft/accessibility-insights-windows",
+    "cloned_at": "2026-06-12",
+    "last_commit": "de6eeb0",
+    "last_commit_msg": "chore: updated code signing with Prod Service connection (#1936)",
+    "description": "Accessibility Insights for Windows helps developers find and fix accessibility issues in Windows applications",
+    "language": "C#",
+    "stars": 1700,
+    "license": "MIT"
+  },
+  "browser_use": {
+    "url": "https://github.com/browser-use/browser-use",
+    "cloned_at": "2026-06-12",
+    "last_commit": "6e08a5b",
+    "last_commit_msg": "chore(llm): remove bu-3 / bu-3-max, default beta example to openai/gpt-5.5 (#5020)",
+    "description": "Enable AI agents to control browsers — LLM-powered browser automation",
+    "language": "Python",
+    "stars": 65000,
+    "license": "MIT"
+  },
+  "open_interpreter": {
+    "url": "https://github.com/OpenInterpreter/open-interpreter",
+    "cloned_at": "2026-06-12",
+    "last_commit": "632f2a3",
+    "last_commit_msg": "Point README to community Python fork, trim missing translations",
+    "description": "Natural language interface for running code and automating tasks on your computer",
+    "language": "Python",
+    "stars": 58000,
+    "license": "AGPL-3.0"
+  },
+  "langgraph": {
+    "url": "https://github.com/langchain-ai/langgraph",
+    "cloned_at": "2026-06-12",
+    "last_commit": "93307d6",
+    "last_commit_msg": "release(cli): 0.4.29 (#8046)",
+    "description": "Framework for building stateful, multi-agent applications with LLMs",
+    "language": "Python",
+    "stars": 14000,
+    "license": "MIT"
+  }
+}

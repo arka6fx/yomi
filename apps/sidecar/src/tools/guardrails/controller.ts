@@ -14,8 +14,8 @@ const IDEMPOTENT_TOOL_NAMES: ReadonlySet<string> = new Set([
   "read_file",
   "list_files",
   "search",
-  "get_ui_tree",
-  "press_key",
+  // "get_ui_tree",
+  // "press_key",
   // "browser_snapshot",   // will provide later
   // "browser_console",
 ])
@@ -36,13 +36,13 @@ const MUTATING_TOOL_NAMES: ReadonlySet<string> = new Set([
   // "browser_scroll",
   // "browser_navigate",
   // "browser_fill_form",
-  // "send_whatsapp_message",
-  "control_spotify",
-  "play_spotify",
-  "adjust_spotify_volume",
-  "adjust_volume",
-  "save_windows_notepad_as",
-  "write_windows_notepad",
+  "send_message",
+  // "control_spotify",
+  // "play_spotify",
+  // "adjust_spotify_volume",
+  // "adjust_volume",
+  // "save_windows_notepad_as",
+  // "write_windows_notepad",
 ])
 
 export interface ToolCallGuardrailConfig {

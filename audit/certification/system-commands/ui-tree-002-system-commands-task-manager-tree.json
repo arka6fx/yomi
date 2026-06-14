@@ -1,0 +1,25 @@
+{
+  "window": "Task Manager",
+  "elements": [
+    {
+      "ref": "w1e1",
+      "role": "Window",
+      "name": "Task Manager",
+      "automationId": "",
+      "rect": {
+        "x": 838,
+        "y": 189,
+        "width": 959,
+        "height": 832
+      },
+      "patterns": [],
+      "enabled": true,
+      "offscreen": false,
+      "value": null,
+      "rangeValue": null,
+      "childCount": 0
+    }
+  ],
+  "truncated": false,
+  "view": "control"
+}

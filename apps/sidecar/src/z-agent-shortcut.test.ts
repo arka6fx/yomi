@@ -52,7 +52,6 @@ async function drain(input: Parameters<typeof agentPipeline>[0]) {
   const events = []
   for await (const event of agentPipeline(input, {
     hooks: fakeHooks,
-    system: fakeSystem,
     writeSessionTurn: async (turn) => {
       sessionTurns.push(turn)
     },
@@ -174,7 +173,6 @@ describe("agent shortcut memory", () => {
       { text: "play lofi beats on spotify", plan: "max" },
       {
         hooks: fakeHooks,
-        system: fakeSystem,
         writeSessionTurn: async (turn) => {
           sessionTurns.push(turn)
         },

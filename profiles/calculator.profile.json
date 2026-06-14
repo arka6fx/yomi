@@ -1,0 +1,45 @@
+{
+  "app": "Calculator",
+  "version": "Windows 11 UWP",
+  "processName": "CalculatorApp",
+  "windowTitlePattern": "Calculator",
+  "framework": "UWP (UIA)",
+  "lastValidated": "2026-06-12T19:07:36Z",
+  "validationPassRate": 1.0,
+  "launchCommand": "calc.exe",
+  "windows": {
+    "main": {
+      "title": "Calculator",
+      "controlType": "Window",
+      "uwp": true
+    }
+  },
+  "controls": {
+    "display": {
+      "role": "Text",
+      "name": "Display",
+      "patterns": ["Text"]
+    },
+    "buttons": {
+      "role": "Button",
+      "patterns": ["Invoke"],
+      "count": 74
+    }
+  },
+  "commonWorkflows": {
+    "press_digit": {
+      "methods": [
+        {"method": "invoke_element", "confidence": 0.8, "note": "Find Button by name (e.g., '7') then invoke"}
+      ],
+      "evidence": "Display text changes"
+    },
+    "close": {
+      "methods": [
+        {"method": "close_window", "confidence": 0.8}
+      ]
+    }
+  },
+  "knownRecoveryStrategies": {
+    "launch_failed": ["Try calc.exe directly", "Search start menu for Calculator"]
+  }
+}

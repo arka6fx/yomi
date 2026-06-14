@@ -1,0 +1,45 @@
+# Window Management E2E Log
+# Started: 2026-06-12T12:21:38.524Z
+
+[12:21:38.525] === Window Management E2E Started ===
+[12:21:38.708] OK: helper ping
+[12:21:39.341] Discovering apps: Explorer, Notepad, Calculator
+[12:21:39.429]   Explorer: not running — trying launch...
+[12:21:40.391]   Explorer: FOUND hwnd=262816
+[12:21:40.454]   Notepad: not running — trying launch...
+[12:21:41.470]   Notepad: FOUND hwnd=525456
+[12:21:41.519]   Calculator: not running — trying launch...
+[12:21:42.162]   Calculator: FOUND hwnd=1378952
+[12:21:42.682] Explorer before maximize: "Desktop - File Explorer"
+[12:21:42.741] maximize_window: {"ok":true}
+[12:21:43.410] minimize_window: {"ok":true}
+[12:21:46.309] Explorer after restore: window="Desktop - File Explorer" elements=132
+[12:21:46.310] Explorer closing hwnd=262816
+[12:21:46.311] close_window: {"ok":true}
+[12:21:47.130] Explorer after close: window="undefined"
+[12:21:47.582] Notepad before maximize: "*System tool test contenttestn - Notepad"
+[12:21:47.632] maximize_window: {"ok":true}
+[12:21:48.256] minimize_window: {"ok":true}
+[12:21:50.616] Notepad after restore: window="*System tool test contenttestn - Notepad" elements=71
+[12:21:50.616] Notepad closing hwnd=525456
+[12:21:50.617] close_window: {"ok":true}
+[12:21:51.425] Notepad after close: window="undefined"
+[12:21:51.835] Calculator before maximize: "Calculator"
+[12:21:51.846] maximize_window: {"ok":true}
+[12:21:52.470] minimize_window: {"ok":true}
+[12:21:54.569] Calculator after restore: window="Calculator" elements=74
+[12:21:54.569] Calculator closing hwnd=1378952
+[12:21:54.570] close_window: {"ok":true}
+[12:21:55.373] Calculator after close: window="undefined"
+[12:21:56.437] Stress test hwnd: 330760
+[12:21:57.794]   cycle 1/3 done
+[12:21:59.060]   cycle 2/3 done
+[12:22:00.309]   cycle 3/3 done
+[12:22:00.316] After 3x toggle cycles: exists=true
+[12:22:01.127] After close: window="undefined"
+[12:22:01.128] closeWindow fake hwnd: {"ok":true}
+[12:22:04.017] After double-minimize: exists=true
+[12:22:08.509] After double-maximize: elements=71
+[12:22:12.765] Notepad after Alt+F4: still exists hwnd=4392722
+[12:22:13.268] Closing 0 tracked windows...
+[12:22:14.121] === Window Management E2E Completed ===

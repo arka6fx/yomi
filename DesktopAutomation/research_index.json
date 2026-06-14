@@ -1,0 +1,586 @@
+{
+  "research_corpus": {
+    "name": "Yomi Desktop Automation Research Corpus",
+    "created": "2026-06-12",
+    "last_updated": "2026-06-12",
+    "purpose": "Continuously searchable knowledge source for Yomi desktop automation platform evolution"
+  },
+  "sources": [
+    {
+      "id": "flaui",
+      "name": "FlaUI",
+      "url": "https://github.com/FlaUI/FlaUI",
+      "cloned": true,
+      "last_commit": "7d600d5",
+      "commit_msg": "fix unsupporedexception (#704)",
+      "areas": ["accessibility", "uia_patterns", "desktop_automation"],
+      "implementation_potential": "very_high",
+      "entries": [
+        {
+          "concept": "Retry mechanism",
+          "files": [],
+          "summary": "Analyze FlaUI's retry/retry-on-error patterns for element interaction",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "UIA tree traversal",
+          "files": [],
+          "summary": "FlaUI's tree walking patterns, caching, and optimization strategies",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Pattern interface abstraction",
+          "files": [],
+          "summary": "How FlaUI wraps UIA patterns with a clean .NET interface layer",
+          "implementationPotential": "medium"
+        },
+        {
+          "concept": "Multi-framework support",
+          "files": [],
+          "summary": "How FlaUI supports both UIA2 and UIA3 (managed vs COM) providers",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Wait/condition primitives",
+          "files": [],
+          "summary": "FlaUI's WaitWhile, WaitUntil, WaitUntilResponsive patterns",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Element capture caching",
+          "files": [],
+          "summary": "Snapshot pattern for element references to avoid stale COM pointers",
+          "implementationPotential": "high"
+        }
+      ]
+    },
+    {
+      "id": "accessibility_insights",
+      "name": "Accessibility Insights for Windows",
+      "url": "https://github.com/microsoft/accessibility-insights-windows",
+      "cloned": true,
+      "last_commit": "de6eeb0",
+      "commit_msg": "chore: updated code signing with Prod Service connection (#1936)",
+      "areas": ["accessibility", "testing", "uia_patterns", "automation_testing"],
+      "implementation_potential": "high",
+      "entries": [
+        {
+          "concept": "UIA tree visualization",
+          "files": [],
+          "summary": "How Accessibility Insights renders and traverses the live UIA tree",
+          "implementationPotential": "medium"
+        },
+        {
+          "concept": "Automation testing patterns",
+          "files": [],
+          "summary": "AT test framework for validating UI automation behavior",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Hierarchical tree diffing",
+          "files": [],
+          "summary": "Tree change detection between UI states",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Element property inspection",
+          "files": [],
+          "summary": "How they surface all UIA properties for debugging",
+          "implementationPotential": "medium"
+        },
+        {
+          "concept": "Pattern availability detection",
+          "files": [],
+          "summary": "How they detect which patterns are available on an element",
+          "implementationPotential": "medium"
+        },
+        {
+          "concept": "Focus tracking and event logging",
+          "files": [],
+          "summary": "UIA event subscription for focus and structure changes",
+          "implementationPotential": "high"
+        }
+      ]
+    },
+    {
+      "id": "browser_use",
+      "name": "Browser Use",
+      "url": "https://github.com/browser-use/browser-use",
+      "cloned": true,
+      "last_commit": "6e08a5b",
+      "commit_msg": "chore(llm): remove bu-3 / bu-3-max, default beta example to openai/gpt-5.5 (#5020)",
+      "areas": ["browser_automation", "agent_architecture", "ai_automation"],
+      "implementation_potential": "very_high",
+      "entries": [
+        {
+          "concept": "Browser agent loop",
+          "files": [],
+          "summary": "How Browser Use maintains context and action loop across pages",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Element selector strategy",
+          "files": [],
+          "summary": "Multi-strategy element resolution: CSS/XPath/text/role",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Action extraction from LLM",
+          "files": [],
+          "summary": "How parsed LLM output maps to browser actions",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Self-healing selectors",
+          "files": [],
+          "summary": "Selector fallbacks and retry on stale elements",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Context management",
+          "files": [],
+          "summary": "Tab/window/scenario isolation and switching",
+          "implementationPotential": "medium"
+        },
+        {
+          "concept": "DOM access optimization",
+          "files": [],
+          "summary": "Efficient DOM state extraction for LLM consumption",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Stealth/detection avoidance",
+          "files": [],
+          "summary": "Patterns for avoiding bot detection during automation",
+          "implementationPotential": "medium"
+        },
+        {
+          "concept": "Screenshot-based grounding",
+          "files": [],
+          "summary": "Using screenshots + vision to disambiguate elements",
+          "implementationPotential": "high"
+        }
+      ]
+    },
+    {
+      "id": "open_interpreter",
+      "name": "Open Interpreter",
+      "url": "https://github.com/OpenInterpreter/open-interpreter",
+      "cloned": true,
+      "last_commit": "632f2a3",
+      "commit_msg": "Point README to community Python fork, trim missing translations",
+      "areas": ["agent_architecture", "code_execution", "tool_calling"],
+      "implementation_potential": "high",
+      "entries": [
+        {
+          "concept": "Streaming code execution",
+          "files": [],
+          "summary": "Real-time output streaming during code execution",
+          "implementationPotential": "medium"
+        },
+        {
+          "concept": "Tool definition system",
+          "files": [],
+          "summary": "Dynamic tool generation and registration pattern",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Conversation memory",
+          "files": [],
+          "summary": "Chat history summarization and context management",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Permission system",
+          "files": [],
+          "summary": "Code execution permission model (safe/approve/reject)",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Shell integration",
+          "files": [],
+          "summary": "Safe shell command execution patterns",
+          "implementationPotential": "medium"
+        },
+        {
+          "concept": "Multi-modal I/O",
+          "files": [],
+          "summary": "Handling images, code, text in agent responses",
+          "implementationPotential": "medium"
+        },
+        {
+          "concept": "Error recovery",
+          "files": [],
+          "summary": "Auto-correction when executed code fails",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "OS automation patterns",
+          "files": [],
+          "summary": "Desktop/OS command integration for automation",
+          "implementationPotential": "medium"
+        }
+      ]
+    },
+    {
+      "id": "langgraph",
+      "name": "LangGraph",
+      "url": "https://github.com/langchain-ai/langgraph",
+      "cloned": true,
+      "last_commit": "93307d6",
+      "commit_msg": "release(cli): 0.4.29 (#8046)",
+      "areas": ["agent_architecture", "state_machines", "agent_orchestration"],
+      "implementation_potential": "high",
+      "entries": [
+        {
+          "concept": "State graph architecture",
+          "files": [],
+          "summary": "How LangGraph defines state nodes and transitions for complex agents",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Human-in-the-loop",
+          "files": [],
+          "summary": "Interrupt/resume patterns for human approval",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Parallel node execution",
+          "files": [],
+          "summary": "Fan-out/fan-in for concurrent tool calls",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Checkpointing",
+          "files": [],
+          "summary": "State persistence and recovery across turns",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Sub-graphs",
+          "files": [],
+          "summary": "Nested graph composition for complex workflows",
+          "implementationPotential": "medium"
+        },
+        {
+          "concept": "Dynamic state routing",
+          "files": [],
+          "summary": "Conditional edges from LLM decisions",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Map-reduce patterns",
+          "files": [],
+          "summary": "Parallel sub-agent execution with result aggregation",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Persistence backends",
+          "files": [],
+          "summary": "In-memory vs SQLite vs PostgreSQL state storage",
+          "implementationPotential": "medium"
+        }
+      ]
+    },
+    {
+      "id": "microsoft_uia",
+      "name": "Microsoft UI Automation",
+      "url": "https://learn.microsoft.com/en-us/windows/win32/winauto/",
+      "cloned": false,
+      "type": "api_reference",
+      "areas": ["accessibility", "uia_patterns", "windows_api"],
+      "implementation_potential": "very_high",
+      "entries": [
+        {
+          "concept": "ScrollItemPattern",
+          "files": ["DesktopAutomation/MicrosoftUIA/knowledge-index.md"],
+          "summary": "Bring offscreen elements into viewport automatically",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "CacheRequest",
+          "files": ["DesktopAutomation/MicrosoftUIA/knowledge-index.md"],
+          "summary": "Batch property reads to reduce cross-process IPC overhead",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Event subscriptions",
+          "files": ["DesktopAutomation/MicrosoftUIA/knowledge-index.md"],
+          "summary": "FocusChanged, WindowOpened/Closed, StructureChanged events",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "TextPattern",
+          "files": ["DesktopAutomation/MicrosoftUIA/knowledge-index.md"],
+          "summary": "Advanced text manipulation beyond ValuePattern",
+          "implementationPotential": "medium"
+        },
+        {
+          "concept": "SynchronizedInputPattern",
+          "files": ["DesktopAutomation/MicrosoftUIA/knowledge-index.md"],
+          "summary": "Safer keyboard input in modal dialogs",
+          "implementationPotential": "medium"
+        },
+        {
+          "concept": "VirtualizedItemPattern",
+          "files": ["DesktopAutomation/MicrosoftUIA/knowledge-index.md"],
+          "summary": "Handle large virtualized lists (infinite scrolling)",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "TransformPattern",
+          "files": ["DesktopAutomation/MicrosoftUIA/knowledge-index.md"],
+          "summary": "Move/resize windows without Win32 P/Invoke",
+          "implementationPotential": "medium"
+        }
+      ]
+    },
+    {
+      "id": "opencv",
+      "name": "OpenCV",
+      "url": "https://docs.opencv.org/",
+      "cloned": false,
+      "type": "api_reference",
+      "areas": ["computer_vision", "image_processing", "template_matching"],
+      "implementation_potential": "high",
+      "entries": [
+        {
+          "concept": "Template matching",
+          "files": ["DesktopAutomation/OpenCV/knowledge-index.md"],
+          "summary": "Find UI elements by visual appearance (icon, button, widget)",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Screen diff detection",
+          "files": ["DesktopAutomation/OpenCV/knowledge-index.md"],
+          "summary": "Detect changed regions between screenshots via cv2.absdiff",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Multi-scale matching",
+          "files": ["DesktopAutomation/OpenCV/knowledge-index.md"],
+          "summary": "DPI-independent element finding via image pyramid",
+          "implementationPotential": "medium"
+        },
+        {
+          "concept": "Contour/region detection",
+          "files": ["DesktopAutomation/OpenCV/knowledge-index.md"],
+          "summary": "Detect UI regions, buttons, windows by visual structure",
+          "implementationPotential": "medium"
+        },
+        {
+          "concept": "Corner detection",
+          "files": ["DesktopAutomation/OpenCV/knowledge-index.md"],
+          "summary": "Find window corners and edges for precise positioning",
+          "implementationPotential": "low"
+        },
+        {
+          "concept": "Flash detection",
+          "files": ["DesktopAutomation/OpenCV/knowledge-index.md"],
+          "summary": "Briefly flash target UI element → diff → precise location",
+          "implementationPotential": "medium"
+        }
+      ]
+    },
+    {
+      "id": "paddleocr",
+      "name": "PaddleOCR",
+      "url": "https://paddlepaddle.github.io/PaddleOCR/",
+      "cloned": false,
+      "type": "api_reference",
+      "areas": ["ocr", "text_detection", "text_recognition"],
+      "implementation_potential": "high",
+      "entries": [
+        {
+          "concept": "OCR cache",
+          "files": ["DesktopAutomation/PaddleOCR/knowledge-index.md"],
+          "summary": "Hash-based dedup for repeated screenshots of same region",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Region-based OCR",
+          "files": ["DesktopAutomation/PaddleOCR/knowledge-index.md"],
+          "summary": "Only OCR the target region, not full screen",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Text grounding",
+          "files": ["DesktopAutomation/PaddleOCR/knowledge-index.md"],
+          "summary": "OCR bbox → semantic grouping (forms, button groups)",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Stale ref recovery via OCR",
+          "files": ["DesktopAutomation/PaddleOCR/knowledge-index.md"],
+          "summary": "Find element by OCR text when UIA ref is stale",
+          "implementationPotential": "medium"
+        },
+        {
+          "concept": "Accessibility bridge",
+          "files": ["DesktopAutomation/PaddleOCR/knowledge-index.md"],
+          "summary": "OCR as accessibility data source for non-UIA apps",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Layout analysis",
+          "files": ["DesktopAutomation/PaddleOCR/knowledge-index.md"],
+          "summary": "PP-Structure document/UI layout parsing",
+          "implementationPotential": "low"
+        }
+      ]
+    },
+    {
+      "id": "playwright",
+      "name": "Playwright",
+      "url": "https://playwright.dev/docs/intro",
+      "cloned": false,
+      "type": "api_reference",
+      "areas": ["browser_automation", "testing", "web_automation"],
+      "implementation_potential": "very_high",
+      "entries": [
+        {
+          "concept": "Auto-waiting",
+          "files": ["DesktopAutomation/Playwright/knowledge-index.md"],
+          "summary": "Automatic actionability checks before every interaction",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Selector priority engine",
+          "files": ["DesktopAutomation/Playwright/knowledge-index.md"],
+          "summary": "Smart selector generation and fallback strategies",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Actionability pipeline",
+          "files": ["DesktopAutomation/Playwright/knowledge-index.md"],
+          "summary": "Pre-click checks: visible, enabled, stable, not obscured",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Network-aware waits",
+          "files": ["DesktopAutomation/Playwright/knowledge-index.md"],
+          "summary": "Wait for API responses to confirm action completion",
+          "implementationPotential": "medium"
+        },
+        {
+          "concept": "Session recording",
+          "files": ["DesktopAutomation/Playwright/knowledge-index.md"],
+          "summary": "Visual timeline + screenshots per step for debugging",
+          "implementationPotential": "medium"
+        },
+        {
+          "concept": "Dialog handling",
+          "files": ["DesktopAutomation/Playwright/knowledge-index.md"],
+          "summary": "Auto-dismiss/handle unexpected dialogs during automation",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Browser context isolation",
+          "files": ["DesktopAutomation/Playwright/knowledge-index.md"],
+          "summary": "Context-per-task for clean state isolation",
+          "implementationPotential": "medium"
+        },
+        {
+          "concept": "Tracing",
+          "files": ["DesktopAutomation/Playwright/knowledge-index.md"],
+          "summary": "Full action timeline with DOM snapshots and network logs",
+          "implementationPotential": "low"
+        }
+      ]
+    },
+    {
+      "id": "win32",
+      "name": "Win32 API",
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/",
+      "cloned": false,
+      "type": "api_reference",
+      "areas": ["windows_api", "native_automation", "input_simulation"],
+      "implementation_potential": "high",
+      "entries": [
+        {
+          "concept": "AttachThreadInput for foreground",
+          "files": ["DesktopAutomation/Win32/knowledge-index.md"],
+          "summary": "Reliable SetForegroundWindow via thread attachment",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "AllowSetForegroundWindow",
+          "files": ["DesktopAutomation/Win32/knowledge-index.md"],
+          "summary": "Grant foreground permission for cross-process win focus",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "EnumWindows as UIA fallback",
+          "files": ["DesktopAutomation/Win32/knowledge-index.md"],
+          "summary": "Fallback window enumeration when UIA tree is unavailable",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "SendInput with scan codes",
+          "files": ["DesktopAutomation/Win32/knowledge-index.md"],
+          "summary": "Low-level keyboard simulation when UIA patterns fail",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "WaitForInputIdle",
+          "files": ["DesktopAutomation/Win32/knowledge-index.md"],
+          "summary": "Wait for freshly launched app to be ready for input",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "CreateProcess with SW_HIDE",
+          "files": ["DesktopAutomation/Win32/knowledge-index.md"],
+          "summary": "Launch apps without console flash",
+          "implementationPotential": "medium"
+        },
+        {
+          "concept": "WindowFromPoint hit-testing",
+          "files": ["DesktopAutomation/Win32/knowledge-index.md"],
+          "summary": "Cross-reference UIA rects with actual HWND at point",
+          "implementationPotential": "medium"
+        }
+      ]
+    },
+    {
+      "id": "hermes",
+      "name": "Hermes Messaging Gateway",
+      "url": "internal",
+      "cloned": false,
+      "type": "architecture_reference",
+      "areas": ["messaging", "cloud_gateway", "webhooks"],
+      "implementation_potential": "medium",
+      "entries": [
+        {
+          "concept": "Unified messaging abstraction",
+          "files": ["DesktopAutomation/Hermes/knowledge-index.md"],
+          "summary": "Single tool interface across platforms",
+          "implementationPotential": "high"
+        },
+        {
+          "concept": "Offline queue",
+          "files": ["DesktopAutomation/Hermes/knowledge-index.md"],
+          "summary": "Message queuing for offline operation",
+          "implementationPotential": "medium"
+        },
+        {
+          "concept": "Platform-aware formatting",
+          "files": ["DesktopAutomation/Hermes/knowledge-index.md"],
+          "summary": "Auto-format content per platform (markdown->HTML, etc.)",
+          "implementationPotential": "low"
+        },
+        {
+          "concept": "Reconnection handling",
+          "files": ["DesktopAutomation/Hermes/knowledge-index.md"],
+          "summary": "Transparent reconnect with message replay",
+          "implementationPotential": "medium"
+        }
+      ]
+    }
+  ],
+  "gap_analysis": {
+    "run_on": "2026-06-12",
+    "last_full_analysis": null,
+    "high_priority_gaps": []
+  },
+  "feature_adoption_log": []
+}

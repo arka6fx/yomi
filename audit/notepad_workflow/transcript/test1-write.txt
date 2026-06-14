@@ -1,0 +1,19 @@
+﻿data: {"type":"automation_started","run":{"id":"run-1781287050657-1","owner":{"id":"windows","label":"Windows Agent"},"task":"write Title AI Testing and This file was created by Yomi during workflow validation in notepad","state":"thinking","startedAt":"2026-06-12T17:57:30.657Z","confidence":0.82,"timeline":[],"replayId":"replay-run-1781287050657-1"}}
+
+data: {"type":"automation_preview","runId":"run-1781287050657-1","preview":{"steps":["Inspect current context","Choose the right tool","Run the requested action"],"estimatedSeconds":15,"risk":"safe","confidence":0.82}}
+
+data: {"type":"automation_timeline","runId":"run-1781287050657-1","item":{"id":"item-1","at":"2026-06-12T17:57:30.663Z","label":"Prepared automation preview","status":"planned"}}
+
+data: {"type":"agent_tool_call","tool":"write_windows_notepad","args":{"text":"Title AI Testing and This file was created by Yomi during workflow validation"}}
+
+data: {"type":"agent_tool_result","tool":"write_windows_notepad","result":{"ok":true,"app":"Notepad","method":"opened_draft_file"}}
+
+data: {"type":"agent_text","text":"I wrote it in Windows Notepad."}
+
+data: {"type":"automation_timeline","runId":"run-1781287050657-1","item":{"id":"item-2","at":"2026-06-12T17:57:31.471Z","label":"I wrote it in Windows Notepad.","status":"done"}}
+
+data: {"type":"automation_completed","runId":"run-1781287050657-1","summary":"I wrote it in Windows Notepad.","replayId":"replay-run-1781287050657-1"}
+
+data: {"type":"done"}
+
+
