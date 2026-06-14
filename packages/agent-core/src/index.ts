@@ -9,6 +9,10 @@ export {
 } from "./connectors/registry.js"
 export { GoogleGmailConnector } from "./connectors/google-gmail.js"
 export { googleGmailDef, createGmailTools } from "./connectors/google-gmail-def.js"
+export { googleCalendarDef, createCalendarTools } from "./connectors/google-calendar-def.js"
+export { googleDriveDef, createDriveTools } from "./connectors/google-drive-def.js"
+export { githubDef, createGitHubTools } from "./connectors/github-def.js"
+export { ALL_CONNECTOR_DEFS } from "./connectors/all-defs.js"
 export type {
   Connector,
   ConnectorStatus,

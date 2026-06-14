@@ -164,7 +164,7 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
 }
 
 export const googleGmailDef: ConnectorDef = {
-  id: "google-gmail",
+  id: "google",  // matches provider key in mcp_connections for existing connections
   name: "Google Gmail",
   category: "email",
   icon: "gmail",

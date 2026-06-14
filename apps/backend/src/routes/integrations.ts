@@ -5,10 +5,16 @@ import { authenticate } from "../auth.js"
 import {
   encryptTokens,
   decryptTokens,
-  refreshGoogleAccessToken,
   type OAuthTokens,
 } from "../services/token-encryption.js"
 import { getAccessToken as getAccessTokenService } from "../services/integration-tokens.js"
+import { getConnectorDef } from "../connectors/registry.js"
+import {
+  buildAuthUrl,
+  handleOAuth2Callback,
+  storeApiKeyCredential,
+  storeConnectionString,
+} from "../connectors/executors/oauth2-executor.js"
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 const GOOGLE_REVOKE_URL = "https://oauth2.googleapis.com/revoke"
@@ -202,6 +208,124 @@ integrationsRouter.get("/callback/google", async (c) => {
     })
 
   return c.redirect(`${appUrl}/dashboard?integration_success=google`)
+})
+
+// ── Generic connector start ──────────────────────────────────────────────────
+// For OAuth2 connectors: redirects to provider consent page.
+// For api_key / connection_string: returns field config for the frontend modal.
+
+integrationsRouter.get("/connect/:id", authenticate, (c) => {
+  const id = c.req.param("id") ?? ""
+  const userId = c.get("user").id
+  const def = getConnectorDef(id)
+  if (!def) return c.json({ error: `Unknown connector: ${id}` }, 404)
+
+  if (def.auth.kind === "oauth2") {
+    try {
+      const url = buildAuthUrl(def, userId)
+      return c.redirect(url)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "OAuth setup failed"
+      console.error(`[integrations/connect/${id}]`, msg)
+      return c.json({ error: msg }, 500)
+    }
+  }
+
+  if (def.auth.kind === "api_key") {
+    return c.json({
+      kind: "api_key",
+      fields: def.auth.fields,
+      docsUrl: def.setup.docsUrl,
+    })
+  }
+
+  if (def.auth.kind === "connection_string") {
+    return c.json({
+      kind: "connection_string",
+      field: def.auth.field,
+    })
+  }
+
+  return c.json({ error: "Unknown auth kind" }, 400)
+})
+
+// ── Generic OAuth2 callback ──────────────────────────────────────────────────
+
+integrationsRouter.get("/callback/:id", async (c) => {
+  const id = c.req.param("id") ?? ""
+  const code = c.req.query("code")
+  const stateRaw = c.req.query("state") ?? ""
+  const error = c.req.query("error")
+
+  const appUrl = process.env.BETTER_AUTH_URL ?? "http://localhost:3000"
+
+  if (error || !code) {
+    return c.redirect(
+      `${appUrl}/dashboard?integration_error=${encodeURIComponent(error ?? "cancelled")}`,
+    )
+  }
+
+  const def = getConnectorDef(id)
+  if (!def) {
+    return c.redirect(`${appUrl}/dashboard?integration_error=unknown_connector`)
+  }
+
+  const { redirectTo } = await handleOAuth2Callback(def, code, stateRaw)
+  return c.redirect(redirectTo)
+})
+
+// ── Connect: API key (POST) ──────────────────────────────────────────────────
+
+integrationsRouter.post("/connect/api-key/:id", authenticate, async (c) => {
+  const id = c.req.param("id") ?? ""
+  const userId = c.get("user").id
+  const def = getConnectorDef(id)
+  if (!def) return c.json({ error: `Unknown connector: ${id}` }, 404)
+  if (def.auth.kind !== "api_key") return c.json({ error: "Not an api_key connector" }, 400)
+
+  let fields: Record<string, string>
+  try {
+    const body = await c.req.json()
+    fields = body.fields as Record<string, string>
+    if (!fields) throw new Error("fields required")
+  } catch {
+    return c.json({ error: "Invalid body" }, 400)
+  }
+
+  // Optional live verification
+  if (def.auth.verify) {
+    try {
+      const ok = await def.auth.verify(fields)
+      if (!ok) return c.json({ error: "API key verification failed" }, 422)
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : "Verification failed" }, 422)
+    }
+  }
+
+  await storeApiKeyCredential(def, userId, fields)
+  return c.json({ ok: true })
+})
+
+// ── Connect: Connection string / DSN (POST) ──────────────────────────────────
+
+integrationsRouter.post("/connect/dsn/:id", authenticate, async (c) => {
+  const id = c.req.param("id") ?? ""
+  const userId = c.get("user").id
+  const def = getConnectorDef(id)
+  if (!def) return c.json({ error: `Unknown connector: ${id}` }, 404)
+  if (def.auth.kind !== "connection_string") return c.json({ error: "Not a connection_string connector" }, 400)
+
+  let dsn: string
+  try {
+    const body = await c.req.json()
+    dsn = body.dsn as string
+    if (!dsn) throw new Error("dsn required")
+  } catch {
+    return c.json({ error: "Invalid body — expected { dsn: string }" }, 400)
+  }
+
+  await storeConnectionString(def, userId, dsn)
+  return c.json({ ok: true })
 })
 
 // ── Disconnect integration ───────────────────────────────────────────────────

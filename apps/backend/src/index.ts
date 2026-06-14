@@ -11,6 +11,7 @@ import { ragRouter } from "./routes/rag.js"
 import { proxyRouter } from "./routes/proxy.js"
 import { gatewayRouter } from "./gateway/routes.js"
 import { integrationsRouter } from "./routes/integrations.js"
+import "./connectors/defs/index.js" // registers all ConnectorDefs at startup
 import { getDefaultGateway } from "./gateway/gateway-runner.js"
 import type { SidecarResolver } from "./gateway/gateway-runner.js"
 import { eq, and } from "drizzle-orm"
