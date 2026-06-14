@@ -1,6 +1,6 @@
 // Script to locally test the Dodo webhook handler.
 // Run with: bun run --env-file .env src/test-local-webhook.ts
-import { db } from "@yomi/db"
+import { db, creditAccounts } from "@yomi/db"
 import { user } from "./auth-schema.js"
 import { eq } from "drizzle-orm"
 import { createHmac } from "node:crypto"
@@ -144,9 +144,7 @@ async function run() {
   // Since user tables and credits tables exist, let's verify if payment_records or credit_grants was created
   // Wait, let's query credit account if any
   console.log("Checking if credits were updated/granted...")
-  const userCredits = await db.query.creditAccounts?.findFirst({
-    where: (t, { eq }) => eq(t.userId, testUser!.id),
-  })
+  const [userCredits] = await db.select().from(creditAccounts).where(eq(creditAccounts.userId, testUser!.id))
   console.log(`User Credits: ${JSON.stringify(userCredits ?? "No credit account found")}`)
   
   if (creditRes.status === 200) {

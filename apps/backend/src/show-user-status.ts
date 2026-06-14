@@ -1,4 +1,4 @@
-import { db } from "@yomi/db"
+import { db, creditAccounts } from "@yomi/db"
 import { user } from "./auth-schema.js"
 import { eq } from "drizzle-orm"
 
@@ -8,10 +8,8 @@ async function run() {
   console.log(JSON.stringify(userRecord, null, 2))
 
   console.log("\n=== Current User Credits ===")
-  const userCredits = await db.query.creditAccounts?.findFirst({
-    where: (t, { eq }) => eq(t.userId, userRecord!.id),
-  })
-  console.log(JSON.stringify(userCredits, null, 2))
+  const [userCredits] = await db.select().from(creditAccounts).where(eq(creditAccounts.userId, userRecord!.id))
+  console.log(JSON.stringify(userCredits ?? null, null, 2))
 }
 
 run().catch(console.error).then(() => process.exit(0))
