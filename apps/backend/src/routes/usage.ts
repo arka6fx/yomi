@@ -103,6 +103,24 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
   let featureUsed = 0
   let requestsUsedBefore = 0
 
+  // Credit check first for Explore users — free tier has no subscription fallback
+  let cachedCreditSummary: Awaited<ReturnType<typeof getCreditSummary>> | null = null
+  if (!isOwnerUser(user) && effectivePlan === "explore") {
+    cachedCreditSummary = await getCreditSummary(user.id)
+    if (cachedCreditSummary.balance < creditsRequired) {
+      return c.json(
+        {
+          error: "You've used all your Yomi credits. Upgrade to Pro or Max to continue.",
+          code: "insufficient_credits",
+          plan: effectivePlan,
+          creditsRemaining: cachedCreditSummary.balance,
+          upgradeUrl: "/dashboard?upgrade=true",
+        },
+        402,
+      )
+    }
+  }
+
   // Feature-level quota enforcement
   if (!isOwnerUser(user)) {
     const featureLimit = featureLimitForUser(user, featureKey)
@@ -168,7 +186,7 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
     }
   }
 
-  const creditsBefore = await getCreditSummary(user.id)
+  const creditsBefore = cachedCreditSummary ?? await getCreditSummary(user.id)
   const requiresCredits = creditsBefore.balance >= creditsRequired
 
   // Record usage event
