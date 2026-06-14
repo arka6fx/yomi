@@ -2,6 +2,7 @@ import type {
   LanguageModelV1,
   LanguageModelV1CallOptions,
   LanguageModelV1CallWarning,
+  LanguageModelV1FunctionTool,
   LanguageModelV1Message,
   LanguageModelV1StreamPart,
 } from "@ai-sdk/provider"
@@ -9,21 +10,36 @@ import type {
 const DEFAULT_MODEL = "gpt-4.1-mini"
 const DEFAULT_BASE_URL = "https://api.openai.com/v1"
 
-type ChatMessage = {
-  role: "system" | "user" | "assistant"
-  content:
-    | string
-    | Array<
-        | { type: "text"; text: string }
-        | { type: "image_url"; image_url: { url: string } }
-      >
+type ToolCallObject = {
+  id: string
+  type: "function"
+  function: { name: string; arguments: string }
 }
+
+type ChatMessage =
+  | {
+      role: "system" | "user"
+      content: string | Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }>
+    }
+  | {
+      role: "assistant"
+      content: string | null
+      tool_calls?: ToolCallObject[]
+    }
+  | {
+      role: "tool"
+      tool_call_id: string
+      content: string
+    }
 
 type ChatCompletionResponse = {
   id?: string
   model?: string
   choices?: Array<{
-    message?: { content?: string | null }
+    message?: {
+      content?: string | null
+      tool_calls?: ToolCallObject[]
+    }
     finish_reason?: string | null
   }>
   usage?: {
@@ -35,7 +51,15 @@ type ChatCompletionResponse = {
 type ChatCompletionChunk = {
   model?: string
   choices?: Array<{
-    delta?: { content?: string | null }
+    delta?: {
+      content?: string | null
+      tool_calls?: Array<{
+        index?: number
+        id?: string
+        type?: "function"
+        function?: { name?: string; arguments?: string }
+      }>
+    }
     finish_reason?: string | null
   }>
   usage?: {
@@ -81,7 +105,9 @@ function messageText(message: LanguageModelV1Message): string {
     .join("\n")
 }
 
-function userContent(message: Exclude<LanguageModelV1Message, { role: "system" }>): ChatMessage["content"] {
+type UserContent = string | Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }>
+
+function userContent(message: Exclude<LanguageModelV1Message, { role: "system" }>): UserContent {
   const parts: Array<
     | { type: "text"; text: string }
     | { type: "image_url"; image_url: { url: string } }
@@ -114,14 +140,45 @@ function chatMessages(options: LanguageModelV1CallOptions): ChatMessage[] {
       messages.push({ role: "system", content: message.content })
       continue
     }
+
     if (message.role === "tool") {
-      messages.push({ role: "user", content: messageText(message) })
+      // Each tool-result part becomes a separate "tool" role message (OpenAI format)
+      for (const part of message.content) {
+        if (part.type === "tool-result") {
+          messages.push({
+            role: "tool",
+            tool_call_id: part.toolCallId,
+            content: typeof part.result === "string" ? part.result : JSON.stringify(part.result),
+          })
+        }
+      }
       continue
     }
-    messages.push({
-      role: message.role,
-      content: userContent(message),
-    })
+
+    if (message.role === "assistant") {
+      const toolCalls: ToolCallObject[] = []
+      const textParts: string[] = []
+      for (const part of message.content) {
+        if (part.type === "text") {
+          textParts.push(part.text)
+        } else if (part.type === "tool-call") {
+          toolCalls.push({
+            id: part.toolCallId,
+            type: "function",
+            function: { name: part.toolName, arguments: JSON.stringify(part.args) },
+          })
+        }
+      }
+      messages.push({
+        role: "assistant",
+        content: textParts.join("\n") || null,
+        ...(toolCalls.length ? { tool_calls: toolCalls } : {}),
+      })
+      continue
+    }
+
+    // user role
+    messages.push({ role: "user", content: userContent(message) })
   }
 
   if (options.responseFormat?.type === "json") {
@@ -135,6 +192,26 @@ function chatMessages(options: LanguageModelV1CallOptions): ChatMessage[] {
 }
 
 function requestBody(modelId: string, options: LanguageModelV1CallOptions, stream: boolean) {
+  // tools/toolChoice live in options.mode in AI SDK v1
+  const modeTools = options.mode.type === "regular" ? (options.mode.tools ?? []) : []
+  const modeToolChoice = options.mode.type === "regular" ? options.mode.toolChoice : undefined
+
+  const fnTools = modeTools
+    .filter((t): t is LanguageModelV1FunctionTool => t.type === "function")
+    .map((t) => ({
+      type: "function" as const,
+      function: { name: t.name, description: t.description, parameters: t.parameters },
+    }))
+
+  const toolChoice =
+    fnTools.length && modeToolChoice
+      ? modeToolChoice.type === "required"
+        ? "required"
+        : modeToolChoice.type === "none"
+          ? "none"
+          : "auto"
+      : undefined
+
   return {
     model: modelId,
     messages: chatMessages(options),
@@ -143,6 +220,7 @@ function requestBody(modelId: string, options: LanguageModelV1CallOptions, strea
     top_p: options.topP,
     stop: options.stopSequences,
     stream,
+    ...(fnTools.length ? { tools: fnTools, tool_choice: toolChoice ?? "auto" } : {}),
     ...(stream ? { stream_options: { include_usage: true } } : {}),
     ...(options.responseFormat?.type === "json"
       ? { response_format: { type: "json_object" } }
@@ -207,8 +285,18 @@ export function createModel(modelId = DEFAULT_MODEL): LanguageModelV1 {
       const response = await chatCompletion(body, options.abortSignal)
       const json = (await response.json()) as ChatCompletionResponse
       const choice = json.choices?.[0]
+      const message = choice?.message
+
+      const toolCalls = (message?.tool_calls ?? []).map((tc) => ({
+        toolCallType: "function" as const,
+        toolCallId: tc.id,
+        toolName: tc.function.name,
+        args: tc.function.arguments,
+      }))
+
       return {
-        text: choice?.message?.content ?? "",
+        text: message?.content ?? "",
+        toolCalls,
         finishReason: finishReason(choice?.finish_reason),
         usage: tokenUsage(json.usage?.prompt_tokens, json.usage?.completion_tokens),
         rawCall: { rawPrompt: options.prompt, rawSettings: body },
@@ -221,6 +309,10 @@ export function createModel(modelId = DEFAULT_MODEL): LanguageModelV1 {
     async doStream(options) {
       const body = requestBody(modelId, options, true)
       const response = await chatCompletion(body, options.abortSignal)
+
+      // Accumulator for streaming tool-call deltas (index → {id, name, args so far})
+      const toolCallAccum: Record<number, { id: string; name: string; args: string }> = {}
+
       const stream = new ReadableStream<LanguageModelV1StreamPart>({
         async start(controller) {
           const reader = response.body?.getReader()
@@ -248,15 +340,57 @@ export function createModel(modelId = DEFAULT_MODEL): LanguageModelV1 {
                 const chunk = parseSseLine(line.trim())
                 if (!chunk) continue
                 const choice = chunk.choices?.[0]
-                const delta = choice?.delta?.content
+                if (!choice) continue
+
+                // Text delta
+                const delta = choice.delta?.content
                 if (delta) controller.enqueue({ type: "text-delta", textDelta: delta })
-                if (choice?.finish_reason) stopReason = choice.finish_reason
+
+                // Tool-call deltas (streamed in fragments)
+                for (const tc of choice.delta?.tool_calls ?? []) {
+                  const idx = tc.index ?? 0
+                  if (!toolCallAccum[idx]) {
+                    toolCallAccum[idx] = { id: tc.id ?? "", name: tc.function?.name ?? "", args: "" }
+                    controller.enqueue({
+                      type: "tool-call-delta",
+                      toolCallType: "function",
+                      toolCallId: toolCallAccum[idx].id,
+                      toolName: toolCallAccum[idx].name,
+                      argsTextDelta: "",
+                    })
+                  }
+                  if (tc.function?.name) toolCallAccum[idx].name += tc.function.name
+                  if (tc.function?.arguments) {
+                    toolCallAccum[idx].args += tc.function.arguments
+                    controller.enqueue({
+                      type: "tool-call-delta",
+                      toolCallType: "function",
+                      toolCallId: toolCallAccum[idx].id,
+                      toolName: toolCallAccum[idx].name,
+                      argsTextDelta: tc.function.arguments,
+                    })
+                  }
+                }
+
+                if (choice.finish_reason) stopReason = choice.finish_reason
                 if (chunk.usage) {
                   inputTokens = chunk.usage.prompt_tokens ?? inputTokens
                   outputTokens = chunk.usage.completion_tokens ?? outputTokens
                 }
               }
             }
+
+            // Emit completed tool-calls
+            for (const tc of Object.values(toolCallAccum)) {
+              controller.enqueue({
+                type: "tool-call",
+                toolCallType: "function",
+                toolCallId: tc.id,
+                toolName: tc.name,
+                args: tc.args,
+              })
+            }
+
             controller.enqueue({
               type: "finish",
               finishReason: finishReason(stopReason),
