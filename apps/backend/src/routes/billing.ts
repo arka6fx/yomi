@@ -160,7 +160,7 @@ function dodoAuth(): string {
   return `Bearer ${apiKey}`
 }
 
-async function dodo<T>(path: string, body?: unknown): Promise<T> {
+async function dodo<T>(path: string, body?: unknown, method?: string): Promise<T> {
   const { apiBase, apiKey, mode } = getDodoConfig()
   const url = `${apiBase.replace(/\/+$/, "")}${path}`
 
@@ -174,10 +174,12 @@ async function dodo<T>(path: string, body?: unknown): Promise<T> {
     throw new Error(`Dodo API has an invalid URL: ${url} (mode=${mode})`)
   }
 
+  const httpMethod = method ?? (body === undefined ? "GET" : "POST")
+
   let res: Response
   try {
     res = await fetch(url, {
-      method: body === undefined ? "GET" : "POST",
+      method: httpMethod,
       headers: {
         Authorization: dodoAuth(),
         "Content-Type": "application/json",
@@ -394,7 +396,7 @@ billingRouter.post("/create-subscription", authenticate, async (c) => {
         ...(isUpgrade ? { isUpgrade: "true", previousPlan: user.plan } : {}),
       },
     })
-    const checkoutId = String(checkout["id"] ?? checkout["checkout_id"] ?? "")
+    const checkoutId = String(checkout["session_id"] ?? checkout["id"] ?? checkout["checkout_id"] ?? "")
     const url = checkoutUrl(checkout)
     if (!url) throw new Error("Dodo checkout response did not include a checkout URL")
 
@@ -403,7 +405,7 @@ billingRouter.post("/create-subscription", authenticate, async (c) => {
       provider: "dodo",
       kind: "subscription",
       productKey: plan,
-      providerOrderId: checkoutId,
+      providerOrderId: checkoutId || null,
       amountCents: config.priceCents,
       currency: "USD",
       status: "created",
@@ -451,7 +453,7 @@ billingRouter.post("/create-credit-pack", authenticate, async (c) => {
       provider: "dodo",
       kind: "credit_pack",
       productKey: config.key,
-      providerOrderId: String(checkout["id"] ?? checkout["checkout_id"] ?? ""),
+      providerOrderId: String(checkout["session_id"] ?? checkout["id"] ?? checkout["checkout_id"] ?? "") || null,
       amountCents: config.priceCents,
       currency: config.currency,
       status: "created",
@@ -477,16 +479,11 @@ billingRouter.post("/cancel-subscription", authenticate, async (c) => {
   if (!user.dodoSubscriptionId) return c.json({ error: "No active subscription" }, 404)
 
   try {
-    await dodo(`/subscriptions/${user.dodoSubscriptionId}/cancel`, {})
+    // Dodo has no /cancel endpoint — use PATCH to set cancel_at_next_billing_date.
+    // Subscription stays "active" until the billing period ends; webhook fires subscription.cancelled then.
+    await dodo(`/subscriptions/${user.dodoSubscriptionId}`, { cancel_at_next_billing_date: true }, "PATCH")
 
-    // Optimistically mark subscription as cancelling so the dashboard reflects it immediately.
-    // The webhook (subscription.cancelled) will finalize status to "inactive" and reset plan.
-    await db
-      .update(authSchema.user)
-      .set({ subscriptionStatus: "cancelling" })
-      .where(and(eq(authSchema.user.id, user.id), eq(authSchema.user.dodoSubscriptionId, user.dodoSubscriptionId)))
-
-    return c.json({ ok: true })
+    return c.json({ ok: true, message: "Your subscription will cancel at the end of the billing period." })
   } catch (err) {
     console.error("[yomi/billing] cancel-subscription failed:", err)
     const msg = err instanceof Error ? err.message : "Unknown error"
@@ -699,7 +696,7 @@ async function handleSubscriptionActive(entity: DodoEntity, eventId: string) {
   if (isUpgrade && existing?.dodoSubscriptionId && existing.dodoSubscriptionId !== subId) {
     try {
       console.warn(`[yomi/billing] cancelling old subscription ${existing.dodoSubscriptionId} for upgrade to ${plan}`)
-      await dodo(`/subscriptions/${existing.dodoSubscriptionId}/cancel`, {})
+      await dodo(`/subscriptions/${existing.dodoSubscriptionId}`, { cancel_at_next_billing_date: true }, "PATCH")
     } catch (err) {
       console.warn("[yomi/billing] failed to cancel old subscription on upgrade:", err)
     }
