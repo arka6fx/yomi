@@ -84,7 +84,7 @@ export async function rememberStrategy(strat: Omit<Strategy, "successCount" | "f
   store.strategies.sort((a, b) => b.lastUsed - a.lastUsed)
   await saveStore(store)
   cache = null // invalidate
-  return existing || store.strategies[store.strategies.length - 1]
+  return existing || store.strategies[store.strategies.length - 1]!
 }
 
 export async function recallBestStrategy(app: string, goal: string): Promise<Strategy | null> {

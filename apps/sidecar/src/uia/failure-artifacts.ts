@@ -1,10 +1,26 @@
 import { mkdir, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import type { UiaAction, UiaSnapshot } from "@yomi/shared"
-import type { ActAttempt } from "../tools/act-helpers.js"
 import type { RecoveryResult } from "./recovery.js"
-import { uia, UiaRpcError } from "./client.js"
+import { uia } from "./client.js"
 import { notepadDir } from "../memory/loader.js"
+import { captureScreen as captureScreenFromVision } from "./vision-layer.js"
+
+type ActAttempt = {
+  attempt: number
+  ref: string
+  stale: boolean
+  error: string
+}
+
+class UiaRpcError extends Error {
+  code?: string
+  constructor(message: string, code?: string) {
+    super(message)
+    this.name = "UiaRpcError"
+    this.code = code
+  }
+}
 
 export type FailureArtifactInput = {
   runId: string
@@ -55,7 +71,7 @@ export async function writeFailureArtifact(input: FailureArtifactInput): Promise
   const files: string[] = []
   const snapshot = input.snapshot ?? await uia.getUiTree().catch(() => null)
   const focusTree = input.focusTree ?? await uia.getFocusTree(5).catch(() => null)
-  const screenshot = input.screenshotB64 ?? (await uia.captureScreen().catch(() => null))?.image_b64
+  const screenshot = input.screenshotB64 ?? (await captureScreenFromVision().catch(() => null))?.image_b64
 
   await writeJson(dir, "action.json", input.action, files)
   await writeJson(dir, "error.json", serializeError(input.error), files)

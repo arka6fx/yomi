@@ -361,6 +361,18 @@ class UiaClient {
   async maximizeWindow(hwnd: number): Promise<{ ok: boolean }> {
     return this.call<{ ok: boolean }>("maximize_window", { hwnd })
   }
+
+  async captureScreen(screen = 0): Promise<{ ok: boolean; image_b64?: string; width?: number; height?: number }> {
+    return this.call("capture_screen", { screen })
+  }
+
+  async captureRegion(x: number, y: number, width: number, height: number): Promise<{ ok: boolean; image_b64?: string; width?: number; height?: number }> {
+    return this.call("capture_region", { x, y, width, height })
+  }
+
+  async windowScreenshot(hwnd?: number): Promise<{ ok: boolean; image_b64?: string; width?: number; height?: number }> {
+    return this.call("window_screenshot", { hwnd })
+  }
 }
 
 export const uia = new UiaClient()
