@@ -2432,8 +2432,11 @@ function Toolbar({
 }) {
   const { ttsEnabled, toggleTts, pendingAct, clearPendingAct } = useYomiStore()
   // automation disabled — keep store subscriptions so the type stays narrow
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _automationRuns = useYomiStore((s) => s.automationRuns)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _missionsOpen = useYomiStore((s) => s.missionsOpen)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _toggleMissions = useYomiStore((s) => s.toggleMissions)
   const { theme: t } = React.useContext(ThemeCtx)
 
@@ -2889,6 +2892,7 @@ function Notch({ state, voiceTurnBusy }: { state: HotkeyState; voiceTurnBusy: bo
 
   const latest = entries[entries.length - 1]
   let contextText: string | null = null
+  // eslint-disable-next-line no-constant-condition
   if (false) {
     // automation context — disabled
   } else if (state === "listening" || voiceTurnBusy) contextText = "Esc to stop"
