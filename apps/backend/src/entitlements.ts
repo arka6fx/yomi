@@ -67,15 +67,18 @@ export function getPlanConfig(user: EntitlementUser) {
   return getPlan(plan)
 }
 
-export function hasBillablePlanAccess(user: EntitlementUser & { subscriptionStatus?: string | null; currentPeriodEnd?: Date | null }): boolean {
+export function hasBillablePlanAccess(user: EntitlementUser & { subscriptionStatus?: string | null; currentPeriodEnd?: Date | null; trialEndDate?: Date | null }): boolean {
   if (isOwnerUser(user)) return true
   const plan = effectivePlanForUser(user)
-  if (plan === "explore") return true
+
+  if (plan === "explore") {
+    if (!user.trialEndDate) return true
+    return new Date() < user.trialEndDate
+  }
+
   if (user.subscriptionStatus === "active" || user.subscriptionStatus === "trialing") return true
 
   if (user.subscriptionStatus === "past_due") {
-    // If currentPeriodEnd is missing (activation webhook never wrote it), treat the
-    // payment failure as happening right now so the user still gets a 7-day grace window.
     const refMs = user.currentPeriodEnd?.getTime() ?? Date.now()
     const graceEnd = new Date(refMs + 7 * 24 * 60 * 60 * 1000)
     if (new Date() < graceEnd) return true

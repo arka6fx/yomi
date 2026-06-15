@@ -94,7 +94,9 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
     const status = user.subscriptionStatus ?? "inactive"
     const msg = status === "past_due"
       ? "Payment didn't go through — Yomi is paused. Update your payment method in the dashboard."
-      : "Subscription isn't active. Head to the dashboard to sort it out."
+      : status === "inactive" && effectivePlan === "explore"
+        ? "Your 30-day free trial has ended. Upgrade to Pro to keep using Yomi."
+        : "Subscription isn't active. Head to the dashboard to sort it out."
     return c.json(
       { error: msg, code: "subscription_inactive", plan: effectivePlan },
       402,
