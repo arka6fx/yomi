@@ -198,7 +198,7 @@ Production targets Cloudflare:
 - public site/dashboard: Cloudflare Pages from `apps/landing`
 - database: Neon Postgres
 - billing: Dodo Payments
-- desktop installers: still published to `arka6fx/yomi-releases`
+- desktop installers: published as GitHub releases on `arka6fx/yomi`
 
 See [SETUP_GUIDE.md](./SETUP_GUIDE.md) for the current runbook.
 

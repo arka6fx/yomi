@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 export async function GET() {
   try {
     const res = await fetch(
-      "https://api.github.com/repos/arka6fx/yomi-releases/releases/latest",
+      "https://api.github.com/repos/arka6fx/yomi/releases/latest",
       { next: { revalidate: 300 } },
     )
     if (!res.ok) return redirectToReleases()
@@ -22,6 +22,6 @@ export async function GET() {
 
 function redirectToReleases() {
   return NextResponse.redirect(
-    "https://github.com/arka6fx/yomi-releases/releases/latest",
+    "https://github.com/arka6fx/yomi/releases/latest",
   )
 }
