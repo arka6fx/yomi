@@ -1035,16 +1035,7 @@ export function LandingPage() {
           >
             <span className="mt-0.5 shrink-0 text-base leading-none text-muted-foreground">ℹ</span>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              Downloads come directly from{" "}
-              <a
-                href="https://github.com/arka6fx/yomi/releases"
-                className="text-primary hover:underline"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                GitHub Releases
-              </a>
-              . Yomi is pre-release.{" "}
+              Yomi is pre-release.{" "}
               <Link href="/signup" className="text-primary hover:underline">
                 sign up for early access
                 <ArrowRight size={12} className="ml-0.5 inline" />

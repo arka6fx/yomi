@@ -68,5 +68,5 @@ linux:
 publish:
   provider: github
   owner: arka6fx
-  repo: yomi
+  repo: yomi-releases
   releaseType: release

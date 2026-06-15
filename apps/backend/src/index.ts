@@ -45,20 +45,29 @@ app.use(
 
 app.get("/health", (c) => c.json({ status: "ok", version: "0.1.0" }))
 
-// Download proxy — redirects to the latest Windows installer from GitHub Releases
+// Download proxy — streams the latest Windows installer directly from GitHub Releases
 app.get("/api/download", async (c) => {
   try {
     const res = await fetch(
-      "https://api.github.com/repos/arka6fx/yomi/releases/latest",
+      "https://api.github.com/repos/arka6fx/yomi-releases/releases/latest",
       { headers: { Accept: "application/vnd.github+json" } },
     )
     if (!res.ok) throw new Error("GitHub API error")
     const release = await res.json() as { assets: { name: string; browser_download_url: string }[] }
     const exe = release.assets.find((a) => a.name.endsWith(".exe"))
     if (!exe) throw new Error("No .exe asset")
-    return c.redirect(exe.browser_download_url)
+    const assetRes = await fetch(exe.browser_download_url)
+    if (!assetRes.ok) throw new Error("Asset fetch error")
+    return new Response(assetRes.body, {
+      status: 200,
+      headers: {
+        "Content-Type": assetRes.headers.get("Content-Type") ?? "application/octet-stream",
+        "Content-Length": assetRes.headers.get("Content-Length") ?? "",
+        "Content-Disposition": `attachment; filename="${exe.name}"`,
+      },
+    })
   } catch {
-    return c.redirect("https://github.com/arka6fx/yomi/releases/latest")
+    return c.redirect("https://github.com/arka6fx/yomi-releases/releases/latest")
   }
 })
 
