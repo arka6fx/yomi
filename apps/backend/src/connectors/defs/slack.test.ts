@@ -31,9 +31,8 @@ describe("Slack connector def", () => {
     expect(def?.id).toBe("slack")
     expect(def?.auth.clientIdEnv).toBe("SLACK_CLIENT_ID")
     expect(def?.auth.redirectPath).toBe("/api/integrations/callback/slack")
-    expect(def?.auth.scopes).toContain("channels:read")
-    expect(def?.auth.scopes).toContain("chat:write")
-    expect(def?.auth.extraAuthParams).toEqual({ "user_scope": "search:read" })
+    expect(def?.auth.scopes).toEqual([])
+    expect(def?.auth.extraAuthParams).toEqual({ "user_scope": "search:read channels:read users:read chat:write" })
   })
 
   it("3. tools function is defined", async () => {

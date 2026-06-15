@@ -8,6 +8,7 @@ type TestUser = {
   plan: string
   subscriptionStatus: string
   trialEndDate: Date | null
+  currentPeriodEnd: Date | null
 }
 
 let currentUser: TestUser
@@ -22,6 +23,7 @@ function user(overrides: Partial<TestUser> = {}): TestUser {
     plan: "explore",
     subscriptionStatus: "inactive",
     trialEndDate: null,
+    currentPeriodEnd: null,
     ...overrides,
   }
 }
@@ -63,7 +65,7 @@ describe("requireAccess", () => {
   })
 
   it("blocks Pro past_due on voice", async () => {
-    currentUser = user({ plan: "pro", subscriptionStatus: "past_due" })
+    currentUser = user({ plan: "pro", subscriptionStatus: "past_due", currentPeriodEnd: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000) })
 
     const res = await app("voice").request("/")
     const body = await res.json() as { code?: string }
@@ -73,7 +75,7 @@ describe("requireAccess", () => {
   })
 
   it("blocks Pro past_due on chat", async () => {
-    currentUser = user({ plan: "pro", subscriptionStatus: "past_due" })
+    currentUser = user({ plan: "pro", subscriptionStatus: "past_due", currentPeriodEnd: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000) })
 
     const res = await app("chat").request("/")
     const body = await res.json() as { code?: string }
@@ -83,7 +85,7 @@ describe("requireAccess", () => {
   })
 
   it("blocks Pro past_due on agent", async () => {
-    currentUser = user({ plan: "pro", subscriptionStatus: "past_due" })
+    currentUser = user({ plan: "pro", subscriptionStatus: "past_due", currentPeriodEnd: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000) })
 
     const res = await app("agent").request("/")
     const body = await res.json() as { code?: string }
