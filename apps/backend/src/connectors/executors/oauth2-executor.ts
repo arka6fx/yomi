@@ -37,7 +37,9 @@ export function buildAuthUrl(def: BackendConnectorDef, userId: string): string {
   url.searchParams.set("client_id", clientId)
   url.searchParams.set("redirect_uri", redirectUri)
   url.searchParams.set("response_type", "code")
-  url.searchParams.set("scope", auth.scopes.join(" "))
+  if (auth.scopes.length > 0) {
+    url.searchParams.set("scope", auth.scopes.join(" "))
+  }
   url.searchParams.set("state", state)
 
   if (auth.extraAuthParams) {
@@ -59,13 +61,18 @@ export async function handleOAuth2Callback(
   code: string,
   stateRaw: string,
 ): Promise<CallbackResult> {
-  if (def.auth.kind !== "oauth2") throw new Error(`${def.id} is not an oauth2 connector`)
+  if (def.auth.kind !== "oauth2") {
+    console.error(`[integrations/${def.id}] not an oauth2 connector`)
+    return { redirectTo: `${appUrl()}/dashboard?integration_error=connector_misconfigured` }
+  }
   const auth = def.auth
 
   const clientId = process.env[auth.clientIdEnv]
   const clientSecret = process.env[auth.clientSecretEnv]
   if (!clientId || !clientSecret) {
-    throw new Error(`${auth.clientIdEnv} or ${auth.clientSecretEnv} not set`)
+    const missing = !clientId ? auth.clientIdEnv : auth.clientSecretEnv
+    console.error(`[integrations/${def.id}] env var not set: ${missing}`)
+    return { redirectTo: `${appUrl()}/dashboard?integration_error=${encodeURIComponent(`${missing} not configured`)}` }
   }
 
   // Decode and validate state (10-minute TTL)
@@ -152,31 +159,49 @@ export async function handleOAuth2Callback(
   } catch { /* best-effort */ }
 
   // Persist encrypted tokens (upsert on userId + provider)
-  const encrypted = encryptTokens(tokens)
+  let encrypted: string
+  try {
+    encrypted = encryptTokens(tokens)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "token encryption failed"
+    console.error(`[integrations/${def.id}] encrypt error:`, msg)
+    return {
+      redirectTo: `${appUrl()}/dashboard?integration_error=${encodeURIComponent(msg)}`,
+    }
+  }
+
   const scopes = (tokens.scope ?? auth.scopes.join(" ")).split(/[\s,]+/).filter(Boolean)
 
-  await db
-    .insert(mcpConnections)
-    .values({
-      userId,
-      provider: def.id,
-      oauthTokens: encrypted,
-      scopes,
-      expiresAt: tokens.expiresAt ? new Date(tokens.expiresAt) : null,
-      displayName,
-      lastSyncAt: new Date(),
-    })
-    .onConflictDoUpdate({
-      target: [mcpConnections.userId, mcpConnections.provider],
-      set: {
+  try {
+    await db
+      .insert(mcpConnections)
+      .values({
+        userId,
+        provider: def.id,
         oauthTokens: encrypted,
         scopes,
         expiresAt: tokens.expiresAt ? new Date(tokens.expiresAt) : null,
         displayName,
         lastSyncAt: new Date(),
-        updatedAt: new Date(),
-      },
-    })
+      })
+      .onConflictDoUpdate({
+        target: [mcpConnections.userId, mcpConnections.provider],
+        set: {
+          oauthTokens: encrypted,
+          scopes,
+          expiresAt: tokens.expiresAt ? new Date(tokens.expiresAt) : null,
+          displayName,
+          lastSyncAt: new Date(),
+          updatedAt: new Date(),
+        },
+      })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "database error"
+    console.error(`[integrations/${def.id}] db upsert error (userId=${userId}):`, msg)
+    return {
+      redirectTo: `${appUrl()}/dashboard?integration_error=${encodeURIComponent("Failed to save connection. Try reconnecting.")}`,
+    }
+  }
 
   return { redirectTo: `${appUrl()}/dashboard?integration_success=${def.id}` }
 }

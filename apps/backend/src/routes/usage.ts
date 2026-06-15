@@ -1,6 +1,6 @@
 import { Hono } from "hono"
 import { db, usageEvents } from "@yomi/db"
-import { and, eq, gte, sql } from "drizzle-orm"
+import { and, eq, gte, inArray, sql } from "drizzle-orm"
 import { authenticate } from "../auth.js"
 import {
   effectivePlanForUser,
@@ -11,7 +11,7 @@ import {
   isOwnerUser,
 } from "../entitlements.js"
 import type { FeatureKey } from "@yomi/shared/plans"
-import { consumeCredits, getCreditSummary } from "../services/credit-ledger.js"
+import { consumeCredits, getCreditSummary, expireCredits } from "../services/credit-ledger.js"
 import { creditsForUsage, type BillableUsageKind } from "../services/credit-pricing.js"
 
 export const usageRouter = new Hono()
@@ -67,13 +67,18 @@ async function featureUsage(userId: string, kinds: string[], periodStart: Date):
       and(
         eq(usageEvents.userId, userId),
         gte(usageEvents.createdAt, periodStart),
-        sql`${usageEvents.kind} = any(array[${kinds.map(k => sql.raw(`'${k}'`)).join(",")}])`,
+        inArray(usageEvents.kind, kinds),
       ),
     )
   return Number(row?.count ?? 0)
 }
 
 usageRouter.post("/interactions/reserve", authenticate, async (c) => {
+  // Sweep expired credit grants before any balance check so stale credits
+  // never count toward a user's available balance. Fire-and-forget per-request;
+  // the debitCredits inside is idempotent so concurrent sweeps are safe.
+  expireCredits().catch(() => {})
+
   const user = c.get("user")
   const body = (await c.req.json().catch(() => ({}))) as ReserveBody
   const kind = body.kind
@@ -88,8 +93,8 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
   if (!hasBillablePlanAccess(user)) {
     const status = user.subscriptionStatus ?? "inactive"
     const msg = status === "past_due"
-      ? "Your payment is past due. Update your payment method to restore full access."
-      : "Your subscription needs attention before Yomi can process more requests."
+      ? "Payment didn't go through — Yomi is paused. Update your payment method in the dashboard."
+      : "Subscription isn't active. Head to the dashboard to sort it out."
     return c.json(
       { error: msg, code: "subscription_inactive", plan: effectivePlan },
       402,
@@ -98,10 +103,21 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
 
   const featureKey = FEATURE_KIND_MAP[kind]!
   const periodStart = currentMonthStart()
+  const nextReset = new Date(Date.UTC(periodStart.getUTCFullYear(), periodStart.getUTCMonth() + 1, 1))
+  const resetDay = nextReset.toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" })
   const creditKind = CREDIT_KIND_MAP[kind]
   const creditsRequired = creditsForUsage(creditKind, { durationSeconds: body.duration })
   let featureUsed = 0
   let requestsUsedBefore = 0
+
+  const FEATURE_LABEL: Record<string, string> = {
+    chat: "chat",
+    voiceMinutes: "voice",
+    screenshots: "screenshots",
+    reasoning: "reasoning",
+    botMessages: "bot messages",
+    connectors: "connectors",
+  }
 
   // Credit check first for Explore users — free tier has no subscription fallback
   let cachedCreditSummary: Awaited<ReturnType<typeof getCreditSummary>> | null = null
@@ -110,7 +126,7 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
     if (cachedCreditSummary.balance < creditsRequired) {
       return c.json(
         {
-          error: "You've used all your Yomi credits. Upgrade to Pro or Max to continue.",
+          error: `Free credits used up for this month. Resets ${resetDay} — or upgrade for more.`,
           code: "insufficient_credits",
           plan: effectivePlan,
           creditsRemaining: cachedCreditSummary.balance,
@@ -127,9 +143,10 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
     if (featureLimit !== null) {
       if (featureLimit === 0) {
         const plan = getPlanConfig(user)
+        const label = FEATURE_LABEL[featureKey] ?? featureKey
         return c.json(
           {
-            error: `${plan.name} does not include ${featureKey}. Upgrade to access this feature.`,
+            error: `${label.charAt(0).toUpperCase() + label.slice(1)} isn't on your ${plan.name} plan. Upgrade to unlock it.`,
             code: "feature_not_available",
             plan: effectivePlan,
             feature: featureKey,
@@ -148,16 +165,17 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
       featureUsed = await featureUsage(user.id, eventKinds, periodStart)
       if (featureUsed >= featureLimit) {
         const plan = getPlanConfig(user)
+        const label = FEATURE_LABEL[featureKey] ?? featureKey
         return c.json(
           {
-            error: `${plan.name} monthly ${featureKey} limit reached. Upgrade to continue.`,
+            error: `You've hit your ${label} limit for ${plan.name}. Resets ${resetDay}.`,
             code: "feature_quota_exceeded",
             plan: effectivePlan,
             feature: featureKey,
             used: featureUsed,
             limit: featureLimit,
             upgradeUrl: "/dashboard?upgrade=true",
-            resetAt: new Date(Date.UTC(periodStart.getUTCFullYear(), periodStart.getUTCMonth() + 1, 1)),
+            resetAt: nextReset,
           },
           402,
         )
@@ -173,13 +191,14 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
       const plan = getPlanConfig(user)
       return c.json(
         {
-          error: `${plan.name} monthly request limit reached. Buy credits or upgrade to continue.`,
+          error: `You've hit your request limit for ${plan.name}. Resets ${resetDay}.`,
           code: "request_quota_exceeded",
           plan: effectivePlan,
+          feature: "chat",
           used: requestsUsedBefore,
           limit,
           upgradeUrl: "/dashboard?credits=true",
-          resetAt: new Date(Date.UTC(periodStart.getUTCFullYear(), periodStart.getUTCMonth() + 1, 1)),
+          resetAt: nextReset,
         },
         402,
       )

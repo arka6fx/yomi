@@ -40,13 +40,15 @@ export interface ConnectorTheme {
   btnBg: string
   btnText: string
   font: string
+  backdropFilter?: string
+  cardShadow?: string
 }
 
 export const DARK_THEME: ConnectorTheme = {
-  bg: "#111111",
-  surface: "#1a1a1a",
-  border: "rgba(255,255,255,0.08)",
-  borderHi: "rgba(255,255,255,0.16)",
+  bg: "rgba(5, 8, 18, 0.4)",
+  surface: "rgba(10, 14, 28, 0.58)",
+  border: "rgba(255,255,255,0.07)",
+  borderHi: "rgba(255,255,255,0.14)",
   text: "#e8e8e8",
   dim: "#888",
   accent: "#e07b39",
@@ -55,9 +57,11 @@ export const DARK_THEME: ConnectorTheme = {
   successBg: "rgba(16,185,129,0.1)",
   successBorder: "rgba(16,185,129,0.2)",
   successText: "#10B981",
-  btnBg: "rgba(255,255,255,0.06)",
+  btnBg: "rgba(255,255,255,0.07)",
   btnText: "#ccc",
   font: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  backdropFilter: "blur(20px) saturate(160%)",
+  cardShadow: "0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)",
 }
 
 export const LIGHT_THEME: ConnectorTheme = {

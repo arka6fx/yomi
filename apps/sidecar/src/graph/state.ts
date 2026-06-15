@@ -1,6 +1,7 @@
 import { Annotation } from "@langchain/langgraph"
 import type { CoreMessage } from "ai"
 import type { AutomationState, Plan } from "@yomi/shared"
+import type { ErrorClass } from "./error-classifier.js"
 
 // Graph state for the agent-path orchestrator. Mirrors the spec's required fields.
 // Non-serializable per-request deps (emit, signal, tools, guards) live on GraphDeps, NOT here,
@@ -53,6 +54,7 @@ export const GraphAnnotation = Annotation.Root({
   // Recovery
   recoveryCount: Annotation<number>({ reducer: (_, v) => v, default: () => 0 }),
   lastError: Annotation<string | null>({ reducer: (_, v) => v, default: () => null }),
+  errorClass: Annotation<ErrorClass>({ reducer: (_, v) => v, default: () => "unknown" }),
   // The error the last recovery addressed + the corrective strategy it applied. Completion records
   // these as a learned recovery when the subsequent attempt validates.
   recoveryError: Annotation<string>({ reducer: (_, v) => v, default: () => "" }),

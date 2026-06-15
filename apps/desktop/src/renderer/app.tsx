@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo, useCallback } from "react"
+import React, { useEffect, useRef, useMemo, useCallback, useState } from "react"
 import { createRoot } from "react-dom/client"
 // Bundle Caveat locally — CSP blocks the Google Fonts @import in the Electron renderer
 import "@fontsource/caveat/latin-600.css"
@@ -8,6 +8,7 @@ import { useYomiStore } from "./store"
 import type { HotkeyState, ChatEntry, SubscriptionInfo } from "./store"
 import { EnergyVad } from "@yomi/shared"
 import { ThemeCtx, type Theme, type ThemeId } from "./theme"
+import { ConnectorIcon } from "@yomi/ui-connectors"
 // import { MissionControl } from "./mission/MissionControl" // disabled — desktop automation hidden
 
 // Hands-free voice loop tuning (renderer-side end-of-speech auto-stop).
@@ -100,8 +101,8 @@ const AMBER: Theme = {
   dragDot: "rgba(255,224,194,1)",
   appBorder: "1px solid rgba(255,224,194,0.09)",
   appBorderListen: "1px solid rgba(255,200,130,0.22)",
-  appShadow: "0 16px 60px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(255,224,194,0.04)",
-  appShadowListen: "0 0 0 1px rgba(255,200,130,0.06), 0 16px 60px rgba(0,0,0,0.65)",
+  appShadow: "0 2px 8px rgba(0,0,0,0.28), 0 0 0 0.5px rgba(255,224,194,0.04)",
+  appShadowListen: "0 0 0 1px rgba(255,200,130,0.06), 0 2px 8px rgba(0,0,0,0.3)",
   scrollThumb: "rgba(255,224,194,0.18)",
   scrollThumbHover: "rgba(255,224,194,0.35)",
   sliderTrack: "rgba(255,224,194,0.1)",
@@ -181,8 +182,8 @@ const BLUE: Theme = {
   dragDot: "rgba(96,165,250,1)",
   appBorder: "1px solid rgba(59,130,246,0.14)",
   appBorderListen: "1px solid rgba(96,165,250,0.32)",
-  appShadow: "0 16px 60px rgba(0,0,0,0.65), 0 0 0 0.5px rgba(59,130,246,0.06)",
-  appShadowListen: "0 0 0 1px rgba(96,165,250,0.1), 0 16px 60px rgba(0,0,0,0.7)",
+  appShadow: "0 2px 8px rgba(0,0,0,0.3), 0 0 0 0.5px rgba(59,130,246,0.06)",
+  appShadowListen: "0 0 0 1px rgba(96,165,250,0.1), 0 2px 8px rgba(0,0,0,0.3)",
   scrollThumb: "rgba(59,130,246,0.25)",
   scrollThumbHover: "rgba(96,165,250,0.45)",
   sliderTrack: "rgba(59,130,246,0.15)",
@@ -262,8 +263,8 @@ const GREEN: Theme = {
   dragDot: "rgba(74,222,128,1)",
   appBorder: "1px solid rgba(34,197,94,0.15)",
   appBorderListen: "1px solid rgba(74,222,128,0.32)",
-  appShadow: "0 16px 60px rgba(0,0,0,0.65), 0 0 0 0.5px rgba(34,197,94,0.06)",
-  appShadowListen: "0 0 0 1px rgba(74,222,128,0.1), 0 16px 60px rgba(0,0,0,0.7)",
+  appShadow: "0 2px 8px rgba(0,0,0,0.3), 0 0 0 0.5px rgba(34,197,94,0.06)",
+  appShadowListen: "0 0 0 1px rgba(74,222,128,0.1), 0 2px 8px rgba(0,0,0,0.3)",
   scrollThumb: "rgba(34,197,94,0.25)",
   scrollThumbHover: "rgba(74,222,128,0.45)",
   sliderTrack: "rgba(34,197,94,0.15)",
@@ -343,8 +344,8 @@ const VIOLET: Theme = {
   dragDot: "rgba(167,139,250,1)",
   appBorder: "1px solid rgba(139,92,246,0.16)",
   appBorderListen: "1px solid rgba(167,139,250,0.32)",
-  appShadow: "0 16px 60px rgba(0,0,0,0.65), 0 0 0 0.5px rgba(139,92,246,0.06)",
-  appShadowListen: "0 0 0 1px rgba(167,139,250,0.1), 0 16px 60px rgba(0,0,0,0.7)",
+  appShadow: "0 2px 8px rgba(0,0,0,0.3), 0 0 0 0.5px rgba(139,92,246,0.06)",
+  appShadowListen: "0 0 0 1px rgba(167,139,250,0.1), 0 2px 8px rgba(0,0,0,0.3)",
   scrollThumb: "rgba(139,92,246,0.25)",
   scrollThumbHover: "rgba(167,139,250,0.45)",
   sliderTrack: "rgba(139,92,246,0.15)",
@@ -424,8 +425,8 @@ const HOTPINK: Theme = {
   dragDot: "rgba(244,114,182,1)",
   appBorder: "1px solid rgba(236,72,153,0.16)",
   appBorderListen: "1px solid rgba(244,114,182,0.32)",
-  appShadow: "0 16px 60px rgba(0,0,0,0.65), 0 0 0 0.5px rgba(236,72,153,0.06)",
-  appShadowListen: "0 0 0 1px rgba(244,114,182,0.1), 0 16px 60px rgba(0,0,0,0.7)",
+  appShadow: "0 2px 8px rgba(0,0,0,0.3), 0 0 0 0.5px rgba(236,72,153,0.06)",
+  appShadowListen: "0 0 0 1px rgba(244,114,182,0.1), 0 2px 8px rgba(0,0,0,0.3)",
   scrollThumb: "rgba(236,72,153,0.25)",
   scrollThumbHover: "rgba(244,114,182,0.45)",
   sliderTrack: "rgba(236,72,153,0.15)",
@@ -505,8 +506,8 @@ const PURPLE: Theme = {
   dragDot: "rgba(192,132,252,1)",
   appBorder: "1px solid rgba(168,85,247,0.16)",
   appBorderListen: "1px solid rgba(192,132,252,0.32)",
-  appShadow: "0 16px 60px rgba(0,0,0,0.65), 0 0 0 0.5px rgba(168,85,247,0.06)",
-  appShadowListen: "0 0 0 1px rgba(192,132,252,0.1), 0 16px 60px rgba(0,0,0,0.7)",
+  appShadow: "0 2px 8px rgba(0,0,0,0.3), 0 0 0 0.5px rgba(168,85,247,0.06)",
+  appShadowListen: "0 0 0 1px rgba(192,132,252,0.1), 0 2px 8px rgba(0,0,0,0.3)",
   scrollThumb: "rgba(168,85,247,0.25)",
   scrollThumbHover: "rgba(192,132,252,0.45)",
   sliderTrack: "rgba(168,85,247,0.15)",
@@ -586,8 +587,8 @@ const BLACK: Theme = {
   dragDot: "rgba(200,200,200,1)",
   appBorder: "1px solid rgba(255,255,255,0.1)",
   appBorderListen: "1px solid rgba(255,255,255,0.2)",
-  appShadow: "0 16px 60px rgba(0,0,0,0.9), 0 0 0 0.5px rgba(255,255,255,0.04)",
-  appShadowListen: "0 0 0 1px rgba(255,255,255,0.08), 0 16px 60px rgba(0,0,0,0.9)",
+  appShadow: "0 2px 8px rgba(0,0,0,0.35), 0 0 0 0.5px rgba(255,255,255,0.04)",
+  appShadowListen: "0 0 0 1px rgba(255,255,255,0.08), 0 2px 8px rgba(0,0,0,0.35)",
   scrollThumb: "rgba(255,255,255,0.15)",
   scrollThumbHover: "rgba(255,255,255,0.3)",
   sliderTrack: "rgba(255,255,255,0.1)",
@@ -1499,6 +1500,7 @@ function CopyButton({ text }: { text: string }) {
 
 function TextInputPanel({ surfaceBg }: { surfaceBg: string }) {
   const [value, setValue] = React.useState("")
+  const [connectedProviders, setConnectedProviders] = useState<string[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
   const valueRef = useRef("")
 
@@ -1511,6 +1513,14 @@ function TextInputPanel({ surfaceBg }: { surfaceBg: string }) {
     requestAnimationFrame(() => {
       inputRef.current?.focus()
     })
+  }, [])
+
+  useEffect(() => {
+    window.yomi.getIntegrations?.().then(integrations => {
+      if (integrations) {
+        setConnectedProviders(integrations.filter(i => i.connected).map(i => i.provider))
+      }
+    }).catch(() => {})
   }, [])
 
   const submit = React.useCallback(() => {
@@ -1594,10 +1604,62 @@ function TextInputPanel({ surfaceBg }: { surfaceBg: string }) {
         </button>
       </div>
       <div style={{ height: 1, background: "var(--menu-sep)" }} />
+      {/* Connector shelf */}
       <div
-        style={{ padding: "5px 12px 6px", fontSize: 11, color: "var(--dim)", fontFamily: UI_FONT }}
+        style={{
+          padding: "5px 10px 6px",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          fontFamily: UI_FONT,
+        }}
       >
-        Esc to cancel · text only, no voice
+        <span style={{ fontSize: 10.5, color: "var(--dim)", flexShrink: 0, whiteSpace: "nowrap" as const }}>
+          Connect your apps
+        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, flex: 1, overflow: "hidden" }}>
+          {connectedProviders.slice(0, 8).map(p => (
+            <button
+              key={p}
+              title={p}
+              onClick={() => window.yomi.openIntegrationsPage()}
+              className="no-drag"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                background: "none",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                flexShrink: 0,
+                lineHeight: 0,
+                opacity: 1,
+                transition: "opacity .15s",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.7" }}
+              onMouseLeave={(e) => { e.currentTarget.style.opacity = "1" }}
+            >
+              <ConnectorIcon id={p} size={20} />
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => window.yomi.openIntegrationsPage()}
+          className="no-drag"
+          style={{
+            background: "none",
+            border: "none",
+            color: "var(--accent)",
+            fontSize: 10.5,
+            cursor: "pointer",
+            padding: 0,
+            flexShrink: 0,
+            fontFamily: UI_FONT,
+            whiteSpace: "nowrap" as const,
+          }}
+        >
+          Integrations →
+        </button>
       </div>
     </div>
   )
@@ -1643,17 +1705,19 @@ function ResponsePanel({
           width: 2,
           background: entry.error
             ? "var(--error)"
-            : entry.notice
-              ? "var(--accent)"
-              : entry.isStreaming
-                ? "linear-gradient(to bottom, var(--accent), var(--accent-d))"
-                : "var(--border-hi)",
+            : entry.limitWarning
+              ? "#f59e0b"
+              : entry.notice
+                ? "var(--accent)"
+                : entry.isStreaming
+                  ? "linear-gradient(to bottom, var(--accent), var(--accent-d))"
+                  : "var(--border-hi)",
           transition: "background .3s",
         }}
       />
 
       {/* Transcript strip */}
-      {(entry.transcript || entry.error || entry.notice) && (
+      {(entry.transcript || entry.error || entry.notice || entry.limitWarning) && (
         <div
           style={{
             display: "flex",
@@ -1674,27 +1738,62 @@ function ResponsePanel({
               flexShrink: 0,
               color: entry.error
                 ? "var(--error)"
-                : entry.notice
-                  ? "var(--accent)"
-                  : "var(--section-label)",
+                : entry.limitWarning
+                  ? "#f59e0b"
+                  : entry.notice
+                    ? "var(--accent)"
+                    : "var(--section-label)",
             }}
           >
-            {entry.error ? "ERR" : entry.notice ? "YOMI" : "YOU"}
+            {entry.error ? "ERR" : entry.limitWarning ? "LIMIT" : entry.notice ? "YOMI" : "YOU"}
           </span>
           <span
             style={{
               fontSize: 13,
               fontFamily: UI_FONT,
-              color: entry.error ? "var(--error)" : entry.notice ? "var(--accent)" : "var(--dim)",
-              fontStyle: entry.error || entry.notice ? "normal" : "italic",
+              color: entry.error
+                ? "var(--error)"
+                : entry.limitWarning
+                  ? "#f59e0b"
+                  : entry.notice
+                    ? "var(--accent)"
+                    : "var(--dim)",
+              fontStyle: entry.error || entry.limitWarning || entry.notice ? "normal" : "italic",
               flex: 1,
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
             }}
           >
-            {entry.error ? `⚠ ${entry.error}` : entry.notice ? entry.notice : entry.transcript}
+            {entry.error
+              ? `⚠ ${entry.error}`
+              : entry.limitWarning
+                ? `⚠ ${entry.limitWarning.message}`
+                : entry.notice
+                  ? entry.notice
+                  : entry.transcript}
           </span>
+          {entry.limitWarning && (
+            <button
+              className="no-drag"
+              onClick={() => window.yomi.openDashboard()}
+              style={{
+                background: "#f59e0b22",
+                border: "1px solid #f59e0b66",
+                color: "#f59e0b",
+                fontSize: 10,
+                fontFamily: UI_FONT,
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                padding: "2px 6px",
+                borderRadius: 4,
+                flexShrink: 0,
+                cursor: "pointer",
+              }}
+            >
+              UPGRADE
+            </button>
+          )}
           <button
             onClick={onDismiss}
             className="no-drag"
@@ -1725,7 +1824,7 @@ function ResponsePanel({
 
       {/* Body — active entry expands to full content height (outer list scrolls);
                older entries scroll individually within their 300px cap */}
-      {!entry.error && entry.text !== "" && (
+      {!entry.error && !entry.limitWarning && entry.text !== "" && (
         <div
           className="no-drag"
           style={
@@ -1751,7 +1850,7 @@ function ResponsePanel({
         </div>
       )}
 
-      {!entry.error && entry.ttsError && (
+      {!entry.error && !entry.limitWarning && entry.ttsError && (
         <div
           className="no-drag"
           style={{
@@ -1772,7 +1871,7 @@ function ResponsePanel({
       )}
 
       {/* Copy */}
-      {!entry.error && !entry.isStreaming && entry.text && (
+      {!entry.error && !entry.limitWarning && !entry.isStreaming && entry.text && (
         <div
           style={{
             padding: "0 12px 8px",
@@ -1883,6 +1982,13 @@ const HamburgerIcon = () => (
     <rect y="10" width="13" height="1.5" rx="0.75" />
   </svg>
 )
+
+const IntegrationsSVG = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <path d="M17 7H7a5 5 0 0 0 0 10h10a5 5 0 0 0 0-10zm0 8H7a3 3 0 0 1 0-6h10a3 3 0 0 1 0 6zm0-4a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+  </svg>
+)
+
 
 const MicSVG = () => (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -2732,6 +2838,42 @@ function Toolbar({
               }}
             >
               {ttsEnabled ? "Sound" : "Muted"}
+            </span>
+          </button>
+
+          {/* Integrations button — opens dashboard in browser */}
+          <button
+            onClick={() => window.yomi.openIntegrationsPage()}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = t.hambColorActive
+              e.currentTarget.style.background = t.hambBgActive
+              e.currentTarget.style.borderColor = t.hambBorderActive
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = t.hambColor
+              e.currentTarget.style.background = t.hambBg
+              e.currentTarget.style.borderColor = t.hambBorder
+            }}
+            style={{
+              background: t.hambBg,
+              border: `1px solid ${t.hambBorder}`,
+              borderRadius: 5,
+              cursor: "pointer",
+              color: t.hambColor,
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              padding: "2px 7px",
+              height: 22,
+              flexShrink: 0,
+              transition: "all .15s",
+            }}
+            title="Integrations"
+            className="no-drag"
+          >
+            <IntegrationsSVG />
+            <span style={{ fontSize: 11, fontFamily: UI_FONT, letterSpacing: "0.03em", fontWeight: 500 }}>
+              Integrations
             </span>
           </button>
 
@@ -3686,9 +3828,8 @@ const App: React.FC = () => {
       processorRef.current = null
       return
     }
-    // Starting a new voice query: stop any in-progress TTS and always enable audio output
+    // Starting a new voice query: stop any in-progress TTS playback.
     resetAudioPlayback()
-    useYomiStore.setState({ ttsEnabled: true })
     let cancelled = false
     let micSrc: MediaStreamAudioSourceNode | null = null
     let proc: AudioWorkletNode | null = null

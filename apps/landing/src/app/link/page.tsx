@@ -45,6 +45,7 @@ function LinkPageContent() {
   }, [session, isPending, router])
 
   const [discordReady, setDiscordReady] = useState(false)
+  const [discordConnecting, setDiscordConnecting] = useState(false)
   const [telegramConnecting, setTelegramConnecting] = useState(false)
   const [telegramError, setTelegramError] = useState("")
 
@@ -88,6 +89,11 @@ function LinkPageContent() {
     } finally {
       setLoading(false)
     }
+  }
+
+  function handleDiscordConnect() {
+    setDiscordConnecting(true)
+    window.location.href = "/api/gateway/discord/auth"
   }
 
   async function handleTelegramConnect() {
@@ -265,6 +271,23 @@ function LinkPageContent() {
                   <p className="text-xs text-destructive">{telegramError}</p>
                 )}
 
+                {/* Discord OAuth flow */}
+                <button
+                  onClick={handleDiscordConnect}
+                  disabled={discordConnecting}
+                  className="w-full flex items-center justify-between gap-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-4 py-3 text-sm hover:bg-indigo-500/20 transition-colors disabled:opacity-50"
+                >
+                  <span className="flex items-center gap-2">
+                    <MessageCircle size={14} className="text-indigo-400" />
+                    <span className="text-indigo-300 font-medium">Connect Discord</span>
+                  </span>
+                  {discordConnecting ? (
+                    <Loader2 size={14} className="animate-spin text-indigo-400" />
+                  ) : (
+                    <span className="text-xs text-indigo-400/60">Authorize then /link</span>
+                  )}
+                </button>
+
                 {/* Manual code entry (fallback for old flow) */}
                 <div className="border-t border-border/30 pt-3">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
@@ -276,24 +299,6 @@ function LinkPageContent() {
                     <li>Enter that code above to link your account</li>
                     <li>Now you can talk to Yomi from anywhere!</li>
                   </ol>
-                </div>
-
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {Object.entries(PLATFORM_INFO).map(([key, info]) =>
-                    info.inviteUrl ? (
-                      <a
-                        key={key}
-                        href={info.inviteUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 transition-colors bg-sky-500/10 rounded-lg px-3 py-1.5"
-                      >
-                        <MessageCircle size={12} />
-                        {info.name}
-                      </a>
-                    ) : null,
-                  )}
-
                 </div>
               </div>
             </>

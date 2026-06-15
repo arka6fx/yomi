@@ -10,7 +10,7 @@ export type ReserveKind = "chat" | "voice" | "screenshot" | "reasoning" | "bot_m
 
 type ReserveResult =
   | { ok: true }
-  | { ok: false; error: string; code: string; upgradeUrl?: string }
+  | { ok: false; error: string; code: string; feature?: string; upgradeUrl?: string }
 
 export async function reserveInteraction(kind: ReserveKind): Promise<ReserveResult> {
   const token = sessionToken()
@@ -33,6 +33,7 @@ export async function reserveInteraction(kind: ReserveKind): Promise<ReserveResu
       ok: false,
       error: typeof data["error"] === "string" ? data["error"] : "Usage limit reached.",
       code: typeof data["code"] === "string" ? data["code"] : "quota_exceeded",
+      feature: typeof data["feature"] === "string" ? data["feature"] : undefined,
       ...(typeof data["upgradeUrl"] === "string" ? { upgradeUrl: data["upgradeUrl"] } : {}),
     }
   } catch {

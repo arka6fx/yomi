@@ -7,7 +7,7 @@ import Footer from "@/components/Footer"
 export const metadata: Metadata = {
   title: "Support",
   description:
-    "Get help with Yomi. Report bugs, ask questions about billing, app connectors, or your account. Reach us by email at owner@example.com.",
+    "Get help with Yomi. Report bugs, ask questions about billing, app connectors, or your account. Reach us by email at contact.arkagarai@gmail.com.",
   alternates: { canonical: "https://yomi.arka6fx.com/support" },
 }
 

@@ -314,6 +314,24 @@ export function LandingPage() {
     <div className="site-texture-bg min-h-screen text-foreground">
       <Nav />
 
+      {/* App Purpose Summary — immediately visible before the hero for Google OAuth reviewers */}
+      <div className="border-b border-white/5 bg-background/60 px-4 py-3 sm:px-6">
+        <div className="mx-auto max-w-5xl text-center">
+          <p className="text-xs leading-relaxed text-muted-foreground sm:text-sm">
+            <span className="font-medium text-foreground">Yomi</span> is a Windows AI assistant
+            that connects to your Gmail, Google Calendar, Google Drive, GitHub, Slack, and other
+            work apps so you can query and act on your data in natural language — from your desktop
+            or Telegram.{" "}
+            <a
+              href="#google-data"
+              className="text-primary underline underline-offset-2 transition-colors hover:text-primary/80"
+            >
+              Why we need Google Sign-In →
+            </a>
+          </p>
+        </div>
+      </div>
+
       <section id="hero" className="px-4 pb-10 pt-6 sm:px-6 lg:pb-12">
         <div className="relative mx-auto min-h-[calc(100vh-96px)] max-w-7xl overflow-hidden rounded-[28px] border border-white/10 bg-zinc-950 shadow-2xl shadow-black/50 sm:rounded-[36px]">
           <div
@@ -469,14 +487,15 @@ export function LandingPage() {
       <section id="google-data" className="mx-auto max-w-3xl px-6 py-10">
         <div className="mb-8 text-center">
           <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            Google Integration
+            Google Sign-In &amp; Data Policy
           </p>
           <h2 className="font-accent text-3xl font-medium text-foreground sm:text-4xl">
-            How Yomi Uses Google Data
+            Why Yomi Needs Google Sign-In
           </h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
-            Yomi requests Google API access solely to answer your questions and complete tasks you
-            explicitly request. No Google data is stored after a request completes.
+            Yomi uses Google Sign-In to authenticate your identity and to request permission to
+            access your Gmail, Calendar, and Drive data. Below you will find exactly why
+            sign-in is required and how your data is handled.
           </p>
         </div>
         <div className="space-y-4">
@@ -502,6 +521,71 @@ export function LandingPage() {
               </a>
               , including the Limited Use requirements.
             </p>
+          </div>
+
+          {/* Why Google Sign-In is required */}
+          <div className="rounded-2xl border border-sky-500/15 bg-sky-500/5 p-6 text-sm text-muted-foreground">
+            <p className="mb-4 font-medium text-foreground">Why Google Sign-In is required</p>
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 font-mono text-xs font-medium text-primary">
+                  1
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">To verify your identity</p>
+                  <p className="mt-0.5">
+                    Yomi uses Google&apos;s authentication system to confirm who you are, so it can
+                    securely associate your connected apps, settings, and preferences with your
+                    account. Anonymous access is not possible because Yomi operates on your
+                    personal email, calendar, and file data — it cannot function without knowing
+                    which Google account to query.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 font-mono text-xs font-medium text-primary">
+                  2
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">
+                    To request permission to read your Gmail, Calendar, and Drive
+                  </p>
+                  <p className="mt-0.5">
+                    Google&apos;s OAuth consent screen lets you choose exactly which services Yomi
+                    may access. Yomi cannot retrieve your emails or calendar events without your
+                    explicit authorization. Each permission is granted individually and can be
+                    revoked at any time from your Yomi dashboard or from{" "}
+                    <a
+                      href="https://myaccount.google.com/permissions"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline underline-offset-2"
+                    >
+                      Google Account settings
+                    </a>
+                    .
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 font-mono text-xs font-medium text-primary">
+                  3
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">
+                    Your data is never stored, sold, or shared
+                  </p>
+                  <p className="mt-0.5">
+                    When you ask a question, Yomi fetches only the data needed to answer it and
+                    discards it immediately after responding. No email content, calendar data, or
+                    Drive files are retained on Yomi&apos;s servers between requests. Your Google
+                    data is never sold, never used to train AI models, and is not shared with any
+                    third party except the AI inference provider used to generate your response
+                    — and solely for that purpose.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="rounded-2xl glass-card p-6 text-sm text-muted-foreground">

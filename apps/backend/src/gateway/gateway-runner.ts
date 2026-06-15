@@ -125,7 +125,7 @@ export class GatewayRunner {
     const appUrl = process.env["YOMI_APP_URL"]
       ?? process.env["NEXT_PUBLIC_APP_URL"]
       ?? process.env["BETTER_AUTH_URL"]
-      ?? "https://yomi.ai"
+      ?? "https://yomi.arka6fx.com"
     return (
       "Welcome to Yomi! Your account isn't linked yet.\n\n" +
       `Your code: *${code}*\n\n` +
@@ -562,27 +562,19 @@ export class GatewayRunner {
       }
     }
 
-    // ── Intent classification ─────────────────────────────────────────────────
-    // Desktop-action intents can only run if the sidecar is online.
-    // Data-query intents always run here on the backend.
+    // ── Sidecar-first routing ─────────────────────────────────────────────────
+    // Try to forward every message to the sidecar when it is online — it runs
+    // the optimised fast+agent pipeline with connector tools and low latency.
+    // Desktop-only actions (click, type, move, etc.) require the sidecar and
+    // show an "open the app" message when it is offline.
     const intent = classifyIntent(msg.text)
 
-    if (intent === "desktop-action") {
-      let sidecarUrl: string | undefined
-      if (this.sidecarResolver) {
-        sidecarUrl = await this.sidecarResolver(yomiUserId, msg.platform)
-      }
+    let sidecarUrl: string | undefined
+    if (this.sidecarResolver) {
+      sidecarUrl = await this.sidecarResolver(yomiUserId, msg.platform)
+    }
 
-      if (!sidecarUrl) {
-        await this.sendMessage(
-          msg.platform,
-          msg.chatId,
-          "That needs your desktop to be online. Open the Yomi app and try again.",
-        ).catch(() => {})
-        return
-      }
-
-      // Forward to sidecar for local execution
+    if (sidecarUrl) {
       void this.sendTyping(msg.platform, msg.chatId).catch(() => {})
       try {
         const res = await fetch(`${sidecarUrl}/gateway/receive`, {
@@ -591,18 +583,26 @@ export class GatewayRunner {
             "Content-Type": "application/json",
             Authorization: `Bearer ${this.sidecarSecret}`,
           },
-          body: JSON.stringify(msg),
+          body: JSON.stringify({ ...msg, yomiUserId }),
         })
-        if (!res.ok) throw new Error(`Sidecar returned ${res.status}`)
-        // Sidecar handles the reply
-        return
+        if (res.ok) return // sidecar handles the reply back to the user
+        throw new Error(`Sidecar returned ${res.status}`)
       } catch (err) {
         console.warn("[gateway] sidecar forward failed:", err)
-        // Fall through to backend agent as fallback
+        // Fall through to backend agent for data-query; hard-fail for desktop-action
       }
     }
 
-    // ── Backend agent path ────────────────────────────────────────────────────
+    if (intent === "desktop-action") {
+      await this.sendMessage(
+        msg.platform,
+        msg.chatId,
+        "That needs your desktop to be online. Open the Yomi app and try again.",
+      ).catch(() => {})
+      return
+    }
+
+    // ── Backend agent path (sidecar offline, data query only) ─────────────────
     void this.sendTyping(msg.platform, msg.chatId).catch(() => {})
 
     try {
@@ -703,10 +703,25 @@ export class GatewayRunner {
         "Available commands:\n" +
         "/stop — Stop the current operation\n" +
         "/new — Start a new conversation\n" +
+        "/screenshot — Capture and analyse your desktop screen\n" +
+        "/voice — Start voice mode on your desktop\n" +
+        "/move left|right|up|down — Nudge the Yomi window\n" +
+        "/type <text> — Submit a text query to the Yomi desktop\n" +
         "/approve — Approve a pending action\n" +
         "/deny — Deny a pending action\n" +
         "/help — Show this message"
       )
+    }
+
+    // Remote desktop trigger commands — return null so they fall through
+    // to the sidecar-first routing path which handles them via /gateway/receive.
+    if (
+      text === "/screenshot" ||
+      text === "/voice" ||
+      /^\/move\s+(left|right|up|down)$/i.test(text) ||
+      /^\/type\s+.+/.test(text)
+    ) {
+      return null
     }
 
     return null

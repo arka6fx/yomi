@@ -287,6 +287,7 @@ export type SseEvent =
   | { type: "automation_recovering"; runId: string; reason: string }
   | { type: "done" }
   | { type: "error"; message: string }
+  | { type: "usage_limit"; code: string; feature: string; message: string; upgradeUrl?: string }
   // Gateway events (Spec 19 — Messaging Gateway)
   | { type: "gateway_connected"; platform: PlatformType }
   | { type: "gateway_disconnected"; platform: PlatformType }
@@ -307,6 +308,8 @@ export interface GatewayMessage {
   platform: PlatformType
   chatId: string
   userId: string
+  /** Resolved Yomi user ID — set by the backend gateway before forwarding to the sidecar */
+  yomiUserId?: string
   text: string
   messageId?: string
   timestamp: string

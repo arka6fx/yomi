@@ -4,8 +4,11 @@ import type { ToolSet } from "ai"
 // Adds a reconnect hint when the underlying API returned 401 or 403.
 export function connectorError(err: unknown): { error: string; hint?: string } {
   const msg = err instanceof Error ? err.message : String(err)
+  const appUrl = (typeof process !== "undefined" && process.env["YOMI_APP_URL"]) || "https://yomi.arka6fx.com"
   const isAuth = /(?:→|HTTP)\s*(401|403)\b/.test(msg)
-  return isAuth ? { error: msg, hint: "Reconnect at /integrations" } : { error: msg }
+  return isAuth
+    ? { error: msg, hint: `Token expired or revoked — reconnect at ${appUrl}/dashboard` }
+    : { error: msg }
 }
 
 export type ConnectorCategory =

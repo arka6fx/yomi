@@ -172,6 +172,23 @@ function DashboardContent() {
   const [integrationLoadingId, setIntegrationLoadingId] = useState<string | null>(null)
   const [showWelcome, setShowWelcome] = useState(false)
 
+  const [apiKeyModal, setApiKeyModal] = useState<{
+    id: string
+    fields: Array<{ name: string; label: string; placeholder?: string; secret: boolean }>
+    docsUrl?: string
+  } | null>(null)
+  const [apiKeyValues, setApiKeyValues] = useState<Record<string, string>>({})
+  const [apiKeySubmitting, setApiKeySubmitting] = useState(false)
+  const [apiKeyError, setApiKeyError] = useState("")
+
+  const [dsnModal, setDsnModal] = useState<{
+    id: string
+    field: { label: string; placeholder: string }
+  } | null>(null)
+  const [dsnValue, setDsnValue] = useState("")
+  const [dsnSubmitting, setDsnSubmitting] = useState(false)
+  const [dsnError, setDsnError] = useState("")
+
   const [platformLinks, setPlatformLinks] = useState<PlatformLink[]>([])
   const [platformsLoading, setPlatformsLoading] = useState(true)
   const [unlinking, setUnlinking] = useState<string | null>(null)
@@ -337,8 +354,82 @@ function DashboardContent() {
 
   async function handleConnectIntegration(id: string) {
     const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ""
-    // Redirect to backend OAuth flow; callback will redirect back here
+    const info = buildCatalog([]).find((c) => c.id === id)
+
+    if (info?.authKind === "api_key" || info?.authKind === "connection_string") {
+      setIntegrationLoadingId(id)
+      try {
+        const res = await fetch(`${apiBase}/api/integrations/connect/${id}`, {
+          headers: { Authorization: `Bearer ${session!.session.token}` },
+        })
+        const data = await res.json() as { kind: string; fields?: Array<{ name: string; label: string; placeholder?: string; secret: boolean }>; field?: { label: string; placeholder: string }; docsUrl?: string }
+        if (data.kind === "api_key" && data.fields) {
+          setApiKeyModal({ id, fields: data.fields, docsUrl: data.docsUrl })
+          setApiKeyValues({})
+          setApiKeyError("")
+        } else if (data.kind === "connection_string" && data.field) {
+          setDsnModal({ id, field: data.field })
+          setDsnValue("")
+          setDsnError("")
+        }
+      } catch { /* best-effort */ } finally {
+        setIntegrationLoadingId(null)
+      }
+      return
+    }
+
+    // OAuth2: redirect to provider consent page
     window.location.href = `${apiBase}/api/integrations/connect/${id}`
+  }
+
+  async function handleSubmitApiKey() {
+    if (!apiKeyModal || !session) return
+    setApiKeySubmitting(true)
+    setApiKeyError("")
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ""
+      const res = await fetch(`${apiBase}/api/integrations/connect/api-key/${apiKeyModal.id}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.session.token}`,
+        },
+        body: JSON.stringify({ fields: apiKeyValues }),
+      })
+      const data = await res.json() as { ok?: boolean; error?: string }
+      if (!res.ok) throw new Error(data.error ?? "Failed to connect")
+      setConnectedProviders((prev) => [...prev, apiKeyModal.id])
+      setApiKeyModal(null)
+    } catch (err) {
+      setApiKeyError(err instanceof Error ? err.message : "Connection failed")
+    } finally {
+      setApiKeySubmitting(false)
+    }
+  }
+
+  async function handleSubmitDsn() {
+    if (!dsnModal || !session) return
+    setDsnSubmitting(true)
+    setDsnError("")
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ""
+      const res = await fetch(`${apiBase}/api/integrations/connect/dsn/${dsnModal.id}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.session.token}`,
+        },
+        body: JSON.stringify({ dsn: dsnValue }),
+      })
+      const data = await res.json() as { ok?: boolean; error?: string }
+      if (!res.ok) throw new Error(data.error ?? "Failed to connect")
+      setConnectedProviders((prev) => [...prev, dsnModal.id])
+      setDsnModal(null)
+    } catch (err) {
+      setDsnError(err instanceof Error ? err.message : "Connection failed")
+    } finally {
+      setDsnSubmitting(false)
+    }
   }
 
   async function handleDisconnectIntegration(id: string) {
@@ -1015,6 +1106,104 @@ function DashboardContent() {
 
         </> /* end account tab */}
       </main>
+
+      {/* API Key modal */}
+      {apiKeyModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md space-y-4 shadow-xl">
+            <div>
+              <h2 className="text-lg font-light text-foreground" style={{ letterSpacing: "-0.02em" }}>
+                Add API Key
+              </h2>
+              {apiKeyModal.docsUrl && (
+                <a
+                  href={apiKeyModal.docsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
+                >
+                  <ExternalLink size={10} />
+                  How to get your API key
+                </a>
+              )}
+            </div>
+            <div className="space-y-3">
+              {apiKeyModal.fields.map((field) => (
+                <div key={field.name}>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-widest">
+                    {field.label}
+                  </label>
+                  <input
+                    type={field.secret ? "password" : "text"}
+                    placeholder={field.placeholder}
+                    value={apiKeyValues[field.name] ?? ""}
+                    onChange={(e) =>
+                      setApiKeyValues((prev) => ({ ...prev, [field.name]: e.target.value }))
+                    }
+                    onKeyDown={(e) => e.key === "Enter" && handleSubmitApiKey()}
+                    className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-mono text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                    autoFocus
+                  />
+                </div>
+              ))}
+            </div>
+            {apiKeyError && <p className="text-xs text-destructive">{apiKeyError}</p>}
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => setApiKeyModal(null)}
+                className="flex-1 text-sm text-muted-foreground border border-border rounded-xl px-4 py-2.5 hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitApiKey}
+                disabled={apiKeySubmitting || apiKeyModal.fields.some((f) => !apiKeyValues[f.name]?.trim())}
+                className="flex-1 flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-xl text-sm font-medium px-4 py-2.5 hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {apiKeySubmitting && <Loader2 size={14} className="animate-spin" />}
+                Connect
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Connection string modal */}
+      {dsnModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md space-y-4 shadow-xl">
+            <h2 className="text-lg font-light text-foreground" style={{ letterSpacing: "-0.02em" }}>
+              {dsnModal.field.label}
+            </h2>
+            <input
+              type="text"
+              placeholder={dsnModal.field.placeholder}
+              value={dsnValue}
+              onChange={(e) => setDsnValue(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSubmitDsn()}
+              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-mono text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+              autoFocus
+            />
+            {dsnError && <p className="text-xs text-destructive">{dsnError}</p>}
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => setDsnModal(null)}
+                className="flex-1 text-sm text-muted-foreground border border-border rounded-xl px-4 py-2.5 hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitDsn}
+                disabled={dsnSubmitting || !dsnValue.trim()}
+                className="flex-1 flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-xl text-sm font-medium px-4 py-2.5 hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {dsnSubmitting && <Loader2 size={14} className="animate-spin" />}
+                Connect
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

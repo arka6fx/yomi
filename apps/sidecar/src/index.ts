@@ -20,6 +20,8 @@ import type { ProviderId } from "./automation/providers/types.js"
 // import { resolveAgent } from "./automation/agents/registry.js"
 // import { knowledgeHint, recallKnowledge } from "./automation/knowledge.js"
 import { handleGatewayMessage, startGatewayPoll, stopGatewayPoll } from "./gateway/receive.js"
+import { initConnectorRegistryFromSession } from "./connectors/registry.js"
+import { consumePending, resolveTrigger, rejectTrigger } from "./gateway/remote-queue.js"
 import type { GatewayMessage, Plan } from "@yomi/shared"
 import { initUsageStore, logUsageEvent } from "./insights/usage-store.js"
 import { generateReport, getMaxLookback, formatTerminal } from "./insights/insights-engine.js"
@@ -64,6 +66,10 @@ getDefaultPluginManager().init().catch((err) => console.warn("[yomi] plugin init
 
 // Initialize the local usage store (SQLite) for usage analytics.
 initUsageStore().catch((err) => console.warn("[yomi] usage store init failed:", err))
+
+// Initialize connector registry from the session token so desktop /query calls
+// have connector tools available from the first request.
+initConnectorRegistryFromSession().catch(() => {})
 
 // Start the cron scheduler as a background service.
 // The scheduler checks plan entitlement internally — if the plan doesn't support
@@ -326,9 +332,35 @@ app.post("/gateway/receive", async (c) => {
     return c.json({ error: "Unauthorized" }, 401)
   }
   const msg = (await c.req.json()) as GatewayMessage
-  await handleGatewayMessage(msg)
+  void handleGatewayMessage(msg)
   return c.json({ ok: true })
-});
+})
+
+// ── Remote desktop trigger queue ─────────────────────────────────────────────
+// The desktop polls GET /remote/pending every few seconds. When a bot sends a
+// /screenshot, /voice, or /move command, it is queued here and the desktop
+// executes it, then posts the result to POST /remote/result.
+app.use("/remote/*", authMiddleware)
+
+app.get("/remote/pending", (c) => {
+  return c.json({ triggers: consumePending() })
+})
+
+app.post("/remote/result", async (c) => {
+  let body: { id?: string; text?: string; error?: string }
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400)
+  }
+  if (!body.id) return c.json({ error: "id required" }, 400)
+  if (body.error) {
+    rejectTrigger(body.id, body.error)
+  } else {
+    resolveTrigger(body.id, body.text ?? "")
+  }
+  return c.json({ ok: true })
+})
 
 app.onError((err, c) => {
   console.error(err)

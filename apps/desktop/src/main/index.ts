@@ -3,12 +3,14 @@ import {
   BrowserWindow,
   clipboard,
   desktopCapturer,
+  dialog,
   globalShortcut,
   ipcMain,
   screen,
   shell,
 } from "electron"
 import type { Rectangle } from "electron"
+import { readFile } from "node:fs/promises"
 import path from "node:path"
 import { SidecarManager } from "./sidecar"
 import { checkStoredToken, startDeviceCodeFlow, clearToken, loadToken, BACKEND_URL } from "./auth"
@@ -250,6 +252,22 @@ app.whenReady().then(async () => {
   ipcMain.on("yomi:open-dashboard", () => {
     const base = process.env["YOMI_LANDING_URL"] ?? "https://yomi.arka6fx.com"
     openTrustedExternal(`${base}/dashboard`)
+  })
+
+  ipcMain.on("yomi:open-integrations", () => {
+    const base = process.env["YOMI_LANDING_URL"] ?? "https://yomi.arka6fx.com"
+    openTrustedExternal(`${base}/dashboard`)
+  })
+
+  ipcMain.handle("yomi:pick-attachment", async () => {
+    const result = await dialog.showOpenDialog({
+      filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp"] }],
+      properties: ["openFile"],
+    })
+    if (result.canceled || !result.filePaths[0]) return null
+    const filePath = result.filePaths[0]
+    const b64 = (await readFile(filePath)).toString("base64")
+    return { path: filePath, b64 }
   })
 
   // Handle 401 from subscription check — triggers re-auth

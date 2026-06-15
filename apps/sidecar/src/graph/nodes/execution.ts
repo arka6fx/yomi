@@ -6,6 +6,7 @@ import { toolGuardrail } from "../../harness/hooks.js"
 import { compressContext } from "../../agent/index.js"
 import { AGENT_MODEL, BURST_STEPS, type GraphDeps } from "../deps.js"
 import type { GraphState, ToolHistoryItem } from "../state.js"
+import { classifyError, type ErrorClass } from "../error-classifier.js"
 
 // 1M tokens for GPT-4.1. Used by the turn-level compressor when no
 // model-aware context length is available.
@@ -62,6 +63,7 @@ export function makeExecutionNode(deps: GraphDeps) {
     let stepCount = state.stepCount
     let assistantText = ""
     let lastError: string | null = null
+    let errorClass: ErrorClass = "unknown"
     let broke = false
     const newTools: ToolHistoryItem[] = []
 
@@ -97,7 +99,10 @@ export function makeExecutionNode(deps: GraphDeps) {
           const e = event as { toolName: string; result: unknown }
           const failed = toolFailed(e.result)
           newTools.push({ tool: e.toolName, failed })
-          if (failed) lastError = `tool ${e.toolName} failed`
+          if (failed) {
+            lastError = `tool ${e.toolName} failed`
+            errorClass = "tool_failure"
+          }
           deps.bridge.timeline(
             `Finished ${e.toolName}`,
             failed ? "failed" : "done",
@@ -125,6 +130,7 @@ export function makeExecutionNode(deps: GraphDeps) {
         case "error": {
           const err = (event as { error: unknown }).error
           lastError = err instanceof Error ? err.message : String(err)
+          errorClass = classifyError(err)
           broke = true
           break
         }
@@ -178,6 +184,7 @@ export function makeExecutionNode(deps: GraphDeps) {
       toolHistory: newTools,
       stepCount,
       lastError,
+      errorClass,
       summaryText,
       validationStatus: "pending",
       agentStatus: "executing",

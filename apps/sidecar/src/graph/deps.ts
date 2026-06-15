@@ -7,7 +7,7 @@ import type { UiaPort } from "../automation/providers/types.js"
 import type { writeSessionTurn } from "../memory/subsystem.js"
 import type { EventBridge } from "./events.js"
 
-export type WriteSessionTurn = typeof writeSessionTurn
+export type WriteSessionTurn = (turn: Parameters<typeof writeSessionTurn>[0]) => void
 
 // Per-request, non-serializable dependencies threaded to every node factory.
 // Kept off GraphState so the graph stays checkpointable in a later phase.

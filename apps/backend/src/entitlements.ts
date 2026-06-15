@@ -73,8 +73,11 @@ export function hasBillablePlanAccess(user: EntitlementUser & { subscriptionStat
   if (plan === "explore") return true
   if (user.subscriptionStatus === "active" || user.subscriptionStatus === "trialing") return true
 
-  if (user.subscriptionStatus === "past_due" && user.currentPeriodEnd) {
-    const graceEnd = new Date(user.currentPeriodEnd.getTime() + 7 * 24 * 60 * 60 * 1000)
+  if (user.subscriptionStatus === "past_due") {
+    // If currentPeriodEnd is missing (activation webhook never wrote it), treat the
+    // payment failure as happening right now so the user still gets a 7-day grace window.
+    const refMs = user.currentPeriodEnd?.getTime() ?? Date.now()
+    const graceEnd = new Date(refMs + 7 * 24 * 60 * 60 * 1000)
     if (new Date() < graceEnd) return true
   }
 

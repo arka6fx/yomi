@@ -8,6 +8,7 @@ import {
   scanForThreats,
 } from "../tools/guardrails/index.js"
 import { getDefaultPluginManager } from "../plugins/plugin-manager.js"
+import { flushSessionWriteQueue } from "../memory/subsystem.js"
 
 // Focus tracking and tree-diff have been removed.
 // Desktop automation is commented out — will be restored later.
@@ -30,13 +31,27 @@ const DENYLIST = [
   /wget[^|]+\|\s*(?:ba)?sh/, // wget | sh
 ]
 
-// ~4000 tokens at ~4 chars/token
-const TOOL_OUTPUT_MAX_CHARS = 16_000
+// ~12 500 tokens at ~4 chars/token — generous enough for Gmail threads and PR diffs
+const TOOL_OUTPUT_MAX_CHARS = 50_000
+// Prevents runaway line-tables (e.g. repo file listings) from consuming the context
+const TOOL_OUTPUT_MAX_LINES = 500
 
 function trimMiddle(text: string, maxChars: number): string {
   const head = Math.floor(maxChars * 0.5)
   const tail = Math.floor(maxChars * 0.3)
   return `${text.slice(0, head)}\n\n[...trimmed ${text.length - head - tail} chars...]\n\n${text.slice(-tail)}`
+}
+
+function trimLines(text: string, maxLines: number): string {
+  const lines = text.split("\n")
+  if (lines.length <= maxLines) return text
+  const head = Math.floor(maxLines * 0.6)
+  const tail = Math.floor(maxLines * 0.3)
+  return [
+    ...lines.slice(0, head),
+    `\n[...trimmed ${lines.length - head - tail} lines...]\n`,
+    ...lines.slice(-tail),
+  ].join("\n")
 }
 
 function todaySessionPath(): string {
@@ -128,10 +143,16 @@ function buildHooks(): Hooks {
         }
       }
 
-      if (resultText.length > TOOL_OUTPUT_MAX_CHARS) {
-        const trimmed = trimMiddle(resultText, TOOL_OUTPUT_MAX_CHARS)
+      let trimmed = resultText
+      if (trimmed.split("\n").length > TOOL_OUTPUT_MAX_LINES) {
+        trimmed = trimLines(trimmed, TOOL_OUTPUT_MAX_LINES)
+      }
+      if (trimmed.length > TOOL_OUTPUT_MAX_CHARS) {
+        trimmed = trimMiddle(trimmed, TOOL_OUTPUT_MAX_CHARS)
+      }
+      if (trimmed !== resultText) {
         console.warn(
-          `[yomi/hooks] trimmed ${toolName} output: ${resultText.length} → ${trimmed.length} chars`,
+          `[yomi/hooks] trimmed ${toolName} output: ${resultText.length} chars / ${resultText.split("\n").length} lines → ${trimmed.length} chars`,
         )
         return trimmed
       }
@@ -151,7 +172,7 @@ function buildHooks(): Hooks {
     },
 
     async onSessionEnd() {
-      // Compaction is triggered directly from agentPipeline after each run.
+      await flushSessionWriteQueue()
     },
   }
 

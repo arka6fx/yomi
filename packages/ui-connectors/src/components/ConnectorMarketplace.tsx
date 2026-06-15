@@ -77,6 +77,9 @@ export function ConnectorTile({ info, t, onConnect, onDisconnect, loading, limit
         gap: 10,
         opacity: !info.available ? 0.55 : 1,
         boxSizing: "border-box" as const,
+        backdropFilter: t.backdropFilter,
+        WebkitBackdropFilter: t.backdropFilter,
+        boxShadow: t.cardShadow,
       }}
     >
       {/* Icon + name row */}
@@ -87,7 +90,7 @@ export function ConnectorTile({ info, t, onConnect, onDisconnect, loading, limit
             height: 40,
             borderRadius: 8,
             background: t.btnBg,
-            border: `1px solid ${t.border}`,
+            border: `1px solid ${t.borderHi}`,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -215,6 +218,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   engineering: "Engineering",
   knowledge: "Knowledge",
   "data-analytics": "Data & Analytics",
+  data: "Databases",
   crm: "CRM",
   support: "Support",
   finance: "Finance",
@@ -222,6 +226,8 @@ const CATEGORY_LABELS: Record<string, string> = {
   security: "Security",
   hr: "HR",
   meetings: "Meetings",
+  developer: "Developer",
+  communication: "Communication",
 }
 
 interface ConnectorMarketplaceProps {
@@ -268,7 +274,7 @@ export function ConnectorMarketplace({
               }}
             >
               <span>{label}</span>
-              <span style={{ flex: 1, height: 1, background: t.border }} />
+              <span style={{ flex: 1, height: 1, background: t.borderHi }} />
             </div>
             <div
               style={{

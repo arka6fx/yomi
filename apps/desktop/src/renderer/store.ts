@@ -9,6 +9,12 @@ import type {
 export type HotkeyState = "idle" | "listening" | "processing" | "text-input"
 export type AuthState = "checking" | "unauthenticated" | "waiting" | "authenticated"
 
+export interface LimitWarning {
+  feature: string
+  message: string
+  upgradeUrl?: string
+}
+
 export interface ChatEntry {
   id: number
   transcript: string
@@ -18,6 +24,8 @@ export interface ChatEntry {
   // Rendered in the warm accent style instead of the red error style.
   notice: string | null
   ttsError: string | null
+  // Shown when a plan feature quota is hit — distinct amber style with upgrade link.
+  limitWarning: LimitWarning | null
   isStreaming: boolean
 }
 
@@ -155,6 +163,7 @@ export const useYomiStore = create<YomiState>((set) => ({
                 error: null,
                 notice: null,
                 ttsError: null,
+                limitWarning: null,
                 isStreaming: true,
               },
             ],
@@ -306,6 +315,30 @@ export const useYomiStore = create<YomiState>((set) => ({
           activeId: null,
         }))
         break
+      case "usage_limit": {
+        const warning: LimitWarning = { feature: event.feature, message: event.message, upgradeUrl: event.upgradeUrl }
+        set((s) => {
+          if (s.activeId !== null) {
+            return {
+              hotkeyState: "idle",
+              entries: s.entries.map((e) =>
+                e.id === s.activeId ? { ...e, limitWarning: warning, isStreaming: false } : e,
+              ),
+              activeId: null,
+            }
+          }
+          const id = nextId++
+          return {
+            hotkeyState: "idle",
+            entries: [
+              ...s.entries,
+              { id, transcript: "", text: "", error: null, notice: null, ttsError: null, limitWarning: warning, isStreaming: false },
+            ],
+            activeId: null,
+          }
+        })
+        break
+      }
       case "error":
         set((s) => {
           const soft = isSoftNotice(event.message)
@@ -346,6 +379,7 @@ export const useYomiStore = create<YomiState>((set) => ({
                 error: soft ? null : event.message,
                 notice: soft ? event.message : null,
                 ttsError: null,
+                limitWarning: null,
                 isStreaming: false,
               },
             ],
@@ -367,7 +401,12 @@ export const useYomiStore = create<YomiState>((set) => ({
 
   dismissEntry: (id) => set((s) => ({ entries: s.entries.filter((e) => e.id !== id) })),
 
-  toggleTts: () => set((s) => ({ ttsEnabled: !s.ttsEnabled })),
+  toggleTts: () =>
+    set((s) => {
+      const next = !s.ttsEnabled
+      window.yomi.setTts(next)
+      return { ttsEnabled: next }
+    }),
   clearPendingAct: () => set({ pendingAct: null }),
   replayAutomation: (replayId) => window.yomi.replayAutomation(replayId),
   toggleMissions: () => set((s) => ({ missionsOpen: !s.missionsOpen })),

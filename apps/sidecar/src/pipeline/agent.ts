@@ -150,7 +150,13 @@ export async function* agentPipeline(
 ): AsyncGenerator<SseEvent> {
   const reservation = await reserveInteraction("chat")
   if (!reservation.ok) {
-    yield { type: "error", message: reservation.error }
+    yield {
+      type: "usage_limit",
+      code: reservation.code,
+      feature: reservation.feature ?? "chat",
+      message: reservation.error,
+      upgradeUrl: reservation.upgradeUrl,
+    }
     return
   }
 

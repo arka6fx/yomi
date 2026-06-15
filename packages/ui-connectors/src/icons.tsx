@@ -17,24 +17,29 @@ function GmailIcon({ size = 24 }: IconProps) {
 
 function GoogleCalendarIcon({ size = 24 }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <rect x="3" y="4" width="18" height="17" rx="2" fill="#fff" stroke="#4285F4" strokeWidth="1.5" />
-      <rect x="3" y="4" width="18" height="5" rx="2" fill="#4285F4" />
-      <rect x="3" y="7" width="18" height="2" fill="#4285F4" />
-      <path d="M8 3v3M16 3v3" stroke="#4285F4" strokeWidth="1.5" strokeLinecap="round" />
-      <rect x="7" y="13" width="3" height="3" rx="0.5" fill="#EA4335" />
-      <rect x="11" y="13" width="3" height="3" rx="0.5" fill="#FBBC04" />
-      <rect x="15" y="13" width="2" height="3" rx="0.5" fill="#34A853" />
+    <svg width={size} height={size} viewBox="0 0 48 48">
+      <rect width="22" height="22" x="13" y="13" fill="#fff" />
+      <polygon fill="#1e88e5" points="25.68,20.92 26.688,22.36 28.272,21.208 28.272,29.56 30,29.56 30,18.616 28.56,18.616" />
+      <path fill="#1e88e5" d="M22.943,23.745c0.625-0.574,1.013-1.37,1.013-2.249c0-1.747-1.533-3.168-3.417-3.168 c-1.602,0-2.972,1.009-3.33,2.453l1.657,0.421c0.165-0.664,0.868-1.146,1.673-1.146c0.942,0,1.709,0.646,1.709,1.44 c0,0.794-0.767,1.44-1.709,1.44h-0.997v1.728h0.997c1.081,0,1.993,0.751,1.993,1.64c0,0.904-0.866,1.64-1.931,1.64 c-0.962,0-1.784-0.61-1.914-1.418L17,26.802c0.262,1.636,1.81,2.87,3.6,2.87c2.007,0,3.64-1.511,3.64-3.368 C24.24,25.281,23.736,24.363,22.943,23.745z" />
+      <polygon fill="#fbc02d" points="34,42 14,42 13,38 14,34 34,34 35,38" />
+      <polygon fill="#4caf50" points="38,35 42,34 42,14 38,13 34,14 34,34" />
+      <path fill="#1e88e5" d="M34,14l1-4l-1-4H9C7.343,6,6,7.343,6,9v25l4,1l4-1V14H34z" />
+      <polygon fill="#e53935" points="34,34 34,42 42,34" />
+      <path fill="#1565c0" d="M39,6h-5v8h8V9C42,7.343,40.657,6,39,6z" />
+      <path fill="#1565c0" d="M9,42h5v-8H6v5C6,40.657,7.343,42,9,42z" />
     </svg>
   )
 }
 
 function GoogleDriveIcon({ size = 24 }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M9 3L3 13.5H9L15 3H9Z" fill="#4285F4" />
-      <path d="M15 3L21 13.5L18 19H12L9 13.5L15 3Z" fill="#FBBC04" />
-      <path d="M3 13.5L6 19H18L21 13.5H3Z" fill="#34A853" />
+    <svg width={size} height={size} viewBox="0 0 48 48">
+      <path fill="#1e88e5" d="M38.59,39c-0.535,0.93-0.298,1.68-1.195,2.197C36.498,41.715,35.465,42,34.39,42H13.61 c-1.074,0-2.106-0.285-3.004-0.802C9.708,40.681,9.945,39.93,9.41,39l7.67-9h13.84L38.59,39z" />
+      <path fill="#fbc02d" d="M27.463,6.999c1.073-0.002,2.104-0.716,3.001-0.198c0.897,0.519,1.66,1.27,2.197,2.201l10.39,17.996 c0.537,0.93,0.807,1.967,0.808,3.002c0.001,1.037-1.267,2.073-1.806,3.001l-11.127-3.005l-6.924-11.993L27.463,6.999z" />
+      <path fill="#e53935" d="M43.86,30c0,1.04-0.27,2.07-0.81,3l-3.67,6.35c-0.53,0.78-1.21,1.4-1.99,1.85L30.92,30H43.86z" />
+      <path fill="#4caf50" d="M5.947,33.001c-0.538-0.928-1.806-1.964-1.806-3c0.001-1.036,0.27-2.073,0.808-3.004l10.39-17.996 c0.537-0.93,1.3-1.682,2.196-2.2c0.897-0.519,1.929,0.195,3.002,0.197l3.459,11.009l-6.922,11.989L5.947,33.001z" />
+      <path fill="#1565c0" d="M17.08,30l-6.47,11.2c-0.78-0.45-1.46-1.07-1.99-1.85L4.95,33c-0.54-0.93-0.81-1.96-0.81-3H17.08z" />
+      <path fill="#2e7d32" d="M30.46,6.8L24,18L17.53,6.8c0.78-0.45,1.66-0.73,2.6-0.79L27.46,6C28.54,6,29.57,6.28,30.46,6.8z" />
     </svg>
   )
 }
@@ -98,23 +103,13 @@ function TelegramIcon({ size = 24 }: IconProps) {
   )
 }
 
-function PostgresIcon({ size = 24 }: IconProps) {
+function DatabaseIcon({ size = 24 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <ellipse cx="12" cy="7" rx="9" ry="4" fill="#336791" />
-      <path d="M3 7v10c0 2.21 4.03 4 9 4s9-1.79 9-4V7" stroke="#336791" strokeWidth="1.5" fill="none" />
-      <path d="M21 12c0 2.21-4.03 4-9 4S3 14.21 3 12" stroke="#336791" strokeWidth="1.5" fill="none" />
-      <ellipse cx="12" cy="7" rx="9" ry="4" fill="none" stroke="#4a90d9" strokeWidth="1.5" />
-    </svg>
-  )
-}
-
-function MySQLIcon({ size = 24 }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M12 3C7.03 3 3 5.24 3 8s4.03 5 9 5 9-2.24 9-5-4.03-5-9-5z" fill="#F29111" />
-      <path d="M3 8v4c0 2.76 4.03 5 9 5s9-2.24 9-5V8" stroke="#F29111" strokeWidth="1.5" fill="none" />
-      <path d="M3 12v4c0 2.76 4.03 5 9 5s9-2.24 9-5v-4" stroke="#F29111" strokeWidth="1" fill="none" />
+      <path d="M3.03509 12.9431C3.24245 14.9227 4.10472 16.8468 5.62188 18.364C7.13904 19.8811 9.0631 20.7434 11.0428 20.9508L3.03509 12.9431Z" fill="#94a3b8" />
+      <path d="M3 11.4938L12.4921 20.9858C13.2976 20.9407 14.0981 20.7879 14.8704 20.5273L3.4585 9.11548C3.19793 9.88771 3.0451 10.6883 3 11.4938Z" fill="#94a3b8" />
+      <path d="M3.86722 8.10999L15.8758 20.1186C16.4988 19.8201 17.0946 19.4458 17.6493 18.9956L4.99021 6.33659C4.54006 6.89125 4.16573 7.487 3.86722 8.10999Z" fill="#94a3b8" />
+      <path d="M5.66301 5.59517C9.18091 2.12137 14.8488 2.135 18.3498 5.63604C21.8508 9.13708 21.8645 14.8049 18.3907 18.3228L5.66301 5.59517Z" fill="#94a3b8" />
     </svg>
   )
 }
@@ -141,8 +136,8 @@ const ICON_MAP: Record<string, React.FC<IconProps>> = {
   discord: DiscordIcon,
   "discord-connector": DiscordIcon,
   telegram: TelegramIcon,
-  postgres: PostgresIcon,
-  mysql: MySQLIcon,
+  postgres: DatabaseIcon,
+  mysql: DatabaseIcon,
 }
 
 export function ConnectorIcon({ id, size = 24 }: { id: string; size?: number }) {
