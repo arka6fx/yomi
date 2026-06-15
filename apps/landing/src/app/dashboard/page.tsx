@@ -877,7 +877,7 @@ function DashboardContent() {
                   {sub!.creditTransactions!.slice(0, 5).map((tx) => (
                     <div key={tx.id} className="flex items-center justify-between gap-4 text-sm">
                       <div>
-                        <p className="text-foreground capitalize">{tx.reason ?? tx.type}</p>
+                        <p className="text-foreground capitalize">{tx.type === "grant" ? "Credits added" : tx.type === "consume" ? "Credits used" : tx.type}</p>
                         <p className="text-xs text-muted-foreground">
                           {new Date(tx.createdAt).toLocaleDateString("en-US", {
                             month: "short",
