@@ -15,7 +15,7 @@ type GitHubRelease = {
 
 async function getLatestRelease() {
   try {
-    const res = await fetch('https://api.github.com/repos/arka6fx/yomi/releases/latest', {
+    const res = await fetch('https://api.github.com/repos/arka6fx/yomi-releases/releases/latest', {
       next: { revalidate: 3600 }
     })
     
@@ -28,7 +28,7 @@ async function getLatestRelease() {
     
     return {
       version: release.tag_name,
-      downloadUrl: windowsAsset?.browser_download_url ?? 'https://github.com/arka6fx/yomi/releases/latest',
+      downloadUrl: windowsAsset?.browser_download_url ?? 'https://github.com/arka6fx/yomi-releases/releases/latest',
       publishedAt: release.published_at,
       releaseNotes: release.body || 'No release notes available.',
       assetName: windowsAsset?.name || 'Yomi-Setup.exe',
@@ -52,7 +52,7 @@ export default async function DownloadPage() {
             Desktop app releases haven't been published yet.
           </p>
           <a 
-            href="https://github.com/arka6fx/yomi/releases" 
+            href="https://github.com/arka6fx/yomi-releases/releases" 
             target="_blank" 
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"
@@ -144,7 +144,7 @@ export default async function DownloadPage() {
         
         <div className="text-center">
           <a
-            href="https://github.com/arka6fx/yomi/releases"
+            href="https://github.com/arka6fx/yomi-releases/releases"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors"

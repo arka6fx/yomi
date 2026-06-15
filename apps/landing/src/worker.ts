@@ -1,6 +1,6 @@
 const BACKEND_URL = "https://api.yomi.arka6fx.com"
-const GITHUB_RELEASES_URL = "https://api.github.com/repos/arka6fx/yomi/releases/latest"
-const GITHUB_RELEASES_FALLBACK = "https://github.com/arka6fx/yomi/releases/latest"
+const GITHUB_RELEASES_URL = "https://api.github.com/repos/arka6fx/yomi-releases/releases/latest"
+const GITHUB_RELEASES_FALLBACK = "https://github.com/arka6fx/yomi-releases/releases/latest"
 
 async function proxyToBackend(request: Request, targetPath: string) {
   const target = new URL(targetPath, BACKEND_URL)
@@ -22,7 +22,19 @@ async function handleDownload() {
     const exeAsset = release.assets?.find((asset) => asset.name.endsWith(".exe"))
     if (!exeAsset) return Response.redirect(GITHUB_RELEASES_FALLBACK, 302)
 
-    return Response.redirect(exeAsset.browser_download_url, 302)
+    const assetRes = await fetch(exeAsset.browser_download_url)
+    if (!assetRes.ok) return Response.redirect(GITHUB_RELEASES_FALLBACK, 302)
+
+    const filename = exeAsset.name
+    const headers = new Headers(assetRes.headers)
+    headers.set("Content-Disposition", `attachment; filename="${filename}"`)
+    headers.set("Access-Control-Allow-Origin", "*")
+
+    return new Response(assetRes.body, {
+      status: 200,
+      statusText: "OK",
+      headers,
+    })
   } catch {
     return Response.redirect(GITHUB_RELEASES_FALLBACK, 302)
   }
