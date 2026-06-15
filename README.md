@@ -1,7 +1,10 @@
 # Yomi
 
-Cross-platform AI buddy. Yomi sees your screen, hears your voice, answers fast,
-and can run foreground automation when a task needs more than a quick response.
+AI productivity assistant. Connects to your Google Workspace (Gmail, Calendar,
+Drive) and to GitHub, Slack, Notion, Linear, Discord, and more so you can query,
+draft, and act on your work in natural language. Sees your screen, hears your
+voice, and accepts typed questions — from the desktop or Telegram, without
+switching apps or copy-pasting context. Windows now; macOS coming soon.
 
 ## Architecture
 
@@ -28,8 +31,8 @@ backend, never in the desktop bundle.
 
 | Request | Path | Target |
 | --- | --- | --- |
-| Quick ask / screen Q&A | STT or text -> screenshot -> one LLM call -> optional TTS | under 2-3s |
-| Autonomous task | router -> ReAct/LangGraph loop -> tools/subagents -> progress events | foreground, seconds-minutes |
+| Quick ask / screen Q&A | STT or text → screenshot → one LLM call → optional TTS | under 2–3 s |
+| Tool-use query | router → LangGraph loop → connector tools → response | seconds |
 
 Do not switch models mid-turn. The router decides fast path vs agent path at
 the start of a turn.

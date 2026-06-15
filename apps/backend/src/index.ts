@@ -122,12 +122,6 @@ export function startGateway(): Promise<void> {
   })
 }
 
-if (typeof process !== "undefined" && typeof process.on === "function") {
-  process.on("unhandledRejection", (err) => {
-    console.error("[unhandledRejection]", err)
-  })
-}
-
 const PORT = Number(process.env["PORT"] ?? 3001)
 
 if (typeof Bun !== "undefined") {

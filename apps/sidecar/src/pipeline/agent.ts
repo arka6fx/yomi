@@ -8,6 +8,7 @@ import { LoopGuards } from "../harness/guards.js"
 import { compressContext } from "../agent/index.js"
 import { compact } from "../memory/compactor.js"
 import { loadMemoryContext, writeSessionTurn } from "../memory/subsystem.js"
+import { reserveInteraction } from "../automation/usage.js"
 // import { setActEmitter } from "../uia/act-bus.js"    // will provide later
 // import { getMcpTools } from "../mcp/client.js"       // will provide later
 // import { wrapBrowserTools } from "../mcp/safety.js"   // will provide later
@@ -147,6 +148,12 @@ export async function* agentPipeline(
     signal?: AbortSignal
   },
 ): AsyncGenerator<SseEvent> {
+  const reservation = await reserveInteraction("chat")
+  if (!reservation.ok) {
+    yield { type: "error", message: reservation.error }
+    return
+  }
+
   const system = await getAgentPrompt(req.text, req.plan)
   const guards = new LoopGuards()
   const activeHooks = opts?.hooks ?? hooks

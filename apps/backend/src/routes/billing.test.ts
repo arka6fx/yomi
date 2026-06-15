@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, it, mock } from "bun:test"
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, mock } from "bun:test"
 import { Hono } from "hono"
 import { createHmac } from "node:crypto"
 
@@ -70,6 +70,13 @@ mock.module("@yomi/db", () => ({
   usageEvents: {},
   paymentRecords: {},
   processedPaymentEvents: {},
+  mcpConnections: {},
+  // Stubs for exports consumed by rag/usage tests loaded in the same suite
+  ragChunks: {},
+  ragDocuments: {},
+  ragEmbeddings: {},
+  ragRetrievalLogs: {},
+  ragSources: {},
 }))
 
 mock.module("../auth.js", () => ({
@@ -91,6 +98,8 @@ mock.module("../services/credit-ledger.js", () => ({
   }),
   grantCredits: async (input: any) => mockState.grantCredits(input),
   recentCreditTransactions: async () => [],
+  // Stub for usage tests loaded in the same suite
+  consumeCredits: async () => ({ ok: true }),
 }))
 
 mock.module("../services/payment-events.js", () => ({
@@ -108,6 +117,10 @@ beforeAll(async () => {
   billingRouter = mod.billingRouter
   getDodoConfig = mod.getDodoConfig
   verifyDodoWebhook = mod.verifyDodoWebhook
+})
+
+afterAll(() => {
+  mock.restore()
 })
 
 function app() {

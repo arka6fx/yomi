@@ -1,5 +1,5 @@
 import { Hono } from "hono"
-import { eq, and } from "drizzle-orm"
+import { eq, and, sql } from "drizzle-orm"
 import { db, mcpConnections } from "@yomi/db"
 import { authenticate } from "../auth.js"
 import {
@@ -15,6 +15,25 @@ import {
   storeApiKeyCredential,
   storeConnectionString,
 } from "../connectors/executors/oauth2-executor.js"
+import { featureLimitForUser } from "../entitlements.js"
+
+async function connectorCount(userId: string): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(mcpConnections)
+    .where(eq(mcpConnections.userId, userId))
+  return Number(row?.count ?? 0)
+}
+
+async function checkConnectorLimit(user: { id: string; plan?: string | null; subscriptionStatus?: string | null; [key: string]: unknown }): Promise<{ ok: true } | { ok: false; message: string }> {
+  const limit = featureLimitForUser(user as never, "connectors")
+  if (limit === null) return { ok: true } // unlimited
+  const used = await connectorCount(user.id)
+  if (used >= limit) {
+    return { ok: false, message: `Connector limit reached (${used}/${limit}). Upgrade your plan to connect more.` }
+  }
+  return { ok: true }
+}
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 const GOOGLE_REVOKE_URL = "https://oauth2.googleapis.com/revoke"
@@ -106,13 +125,20 @@ integrationsRouter.get("/status", authenticate, async (c) => {
 
 // ── Start Google OAuth flow ──────────────────────────────────────────────────
 
-integrationsRouter.get("/connect/google", authenticate, (c) => {
-  if (!checkOAuthRateLimit(c.get("user").id)) {
+integrationsRouter.get("/connect/google", authenticate, async (c) => {
+  const user = c.get("user")
+  if (!checkOAuthRateLimit(user.id)) {
     return c.json({ error: "Too many connect attempts — please wait a minute" }, 429)
   }
 
+  const limitCheck = await checkConnectorLimit(user)
+  if (!limitCheck.ok) {
+    const appUrl = process.env.BETTER_AUTH_URL ?? "http://localhost:3000"
+    return c.redirect(`${appUrl}/dashboard?integration_error=${encodeURIComponent(limitCheck.message)}`)
+  }
+
   const state = Buffer.from(
-    JSON.stringify({ userId: c.get("user").id, ts: Date.now() }),
+    JSON.stringify({ userId: user.id, ts: Date.now() }),
   ).toString("base64url")
 
   const url = new URL("https://accounts.google.com/o/oauth2/v2/auth")
@@ -233,12 +259,18 @@ integrationsRouter.get("/callback/google", async (c) => {
 // For OAuth2 connectors: redirects to provider consent page.
 // For api_key / connection_string: returns field config for the frontend modal.
 
-integrationsRouter.get("/connect/:id", authenticate, (c) => {
+integrationsRouter.get("/connect/:id", authenticate, async (c) => {
   const id = c.req.param("id") ?? ""
-  const userId = c.get("user").id
+  const user = c.get("user")
 
-  if (!checkOAuthRateLimit(userId)) {
+  if (!checkOAuthRateLimit(user.id)) {
     return c.json({ error: "Too many connect attempts — please wait a minute" }, 429)
+  }
+
+  const limitCheck = await checkConnectorLimit(user)
+  if (!limitCheck.ok) {
+    const appUrl = process.env.BETTER_AUTH_URL ?? "http://localhost:3000"
+    return c.redirect(`${appUrl}/dashboard?integration_error=${encodeURIComponent(limitCheck.message)}`)
   }
 
   const def = getConnectorDef(id)
@@ -246,7 +278,7 @@ integrationsRouter.get("/connect/:id", authenticate, (c) => {
 
   if (def.auth.kind === "oauth2") {
     try {
-      const url = buildAuthUrl(def, userId)
+      const url = buildAuthUrl(def, user.id)
       return c.redirect(url)
     } catch (err) {
       const msg = err instanceof Error ? err.message : "OAuth setup failed"
@@ -307,6 +339,9 @@ integrationsRouter.post("/connect/api-key/:id", authenticate, async (c) => {
   if (!def) return c.json({ error: `Unknown connector: ${id}` }, 404)
   if (def.auth.kind !== "api_key") return c.json({ error: "Not an api_key connector" }, 400)
 
+  const limitCheck = await checkConnectorLimit(c.get("user"))
+  if (!limitCheck.ok) return c.json({ error: limitCheck.message }, 402)
+
   let fields: Record<string, string>
   try {
     const body = await c.req.json()
@@ -338,6 +373,9 @@ integrationsRouter.post("/connect/dsn/:id", authenticate, async (c) => {
   const def = getConnectorDef(id)
   if (!def) return c.json({ error: `Unknown connector: ${id}` }, 404)
   if (def.auth.kind !== "connection_string") return c.json({ error: "Not a connection_string connector" }, 400)
+
+  const limitCheck = await checkConnectorLimit(c.get("user"))
+  if (!limitCheck.ok) return c.json({ error: limitCheck.message }, 402)
 
   let dsn: string
   try {

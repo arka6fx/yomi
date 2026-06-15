@@ -23,6 +23,7 @@ import {
   grantCredits,
   recentCreditTransactions,
 } from "../services/credit-ledger.js"
+import { listConnectedProviders } from "../services/integration-tokens.js"
 import { payloadHash, recordPaymentEvent, upsertPaymentRecord } from "../services/payment-events.js"
 
 type DodoMode = "test" | "live"
@@ -479,9 +480,7 @@ billingRouter.post("/cancel-subscription", authenticate, async (c) => {
   if (!user.dodoSubscriptionId) return c.json({ error: "No active subscription" }, 404)
 
   try {
-    // Dodo has no /cancel endpoint — use PATCH to set cancel_at_next_billing_date.
-    // Subscription stays "active" until the billing period ends; webhook fires subscription.cancelled then.
-    await dodo(`/subscriptions/${user.dodoSubscriptionId}`, { cancel_at_next_billing_date: true }, "PATCH")
+    await dodo(`/subscriptions/${user.dodoSubscriptionId}/cancel`, undefined, "POST")
 
     return c.json({ ok: true, message: "Your subscription will cancel at the end of the billing period." })
   } catch (err) {
@@ -601,11 +600,17 @@ billingRouter.get("/subscription", authenticate, async (c) => {
   const requestsRemaining = requestsLimit === null ? null : Math.max(requestsLimit - requestsUsed, 0)
   const resetAt = new Date(Date.UTC(requestPeriodStart.getUTCFullYear(), requestPeriodStart.getUTCMonth() + 1, 1))
 
+  const connectedProviders = await listConnectedProviders(user.id)
+  const connectorLimit = featureLimitForUser(user, "connectors")
+
+  const effectivePlan = effectivePlanForUser(user)
+  const planConfig = getPlan(effectivePlan)
+
   return c.json({
     name: user.name,
     email: user.email,
     role: effectiveRoleForUser(user),
-    plan: effectivePlanForUser(user),
+    plan: effectivePlan,
     status: user.subscriptionStatus,
     trialEndDate: user.trialEndDate,
     currentPeriodEnd: user.currentPeriodEnd,
@@ -619,16 +624,16 @@ billingRouter.get("/subscription", authenticate, async (c) => {
       voice: { used: voiceUsed, limit: featureLimitForUser(user, "voiceMinutes") },
       screenshots: { used: screenshotUsed, limit: featureLimitForUser(user, "screenshots") },
       reasoning: { used: reasoningUsed, limit: featureLimitForUser(user, "reasoning") },
-      connectors: { used: 0, limit: featureLimitForUser(user, "connectors") },
+      connectors: { used: connectedProviders.length, limit: connectorLimit },
       botMessages: { used: agentUsed, limit: featureLimitForUser(user, "botMessages") },
     },
     planLimits: {
-      chat: getPlan(effectivePlanForUser(user)).limits.chat,
-      voiceMinutes: getPlan(effectivePlanForUser(user)).limits.voiceMinutes,
-      screenshots: getPlan(effectivePlanForUser(user)).limits.screenshots,
-      reasoning: getPlan(effectivePlanForUser(user)).limits.reasoning,
-      connectors: getPlan(effectivePlanForUser(user)).limits.connectors,
-      botMessages: getPlan(effectivePlanForUser(user)).limits.botMessages,
+      chat: planConfig.limits.chat,
+      voiceMinutes: planConfig.limits.voiceMinutes,
+      screenshots: planConfig.limits.screenshots,
+      reasoning: planConfig.limits.reasoning,
+      connectors: planConfig.limits.connectors,
+      botMessages: planConfig.limits.botMessages,
     },
     dailyChatUsed: user.dailyChatCount,
     dailyVoiceUsed: user.dailyVoiceCount,
@@ -637,6 +642,9 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     credits: await getCreditSummary(user.id),
     creditPacks: Object.values(CREDIT_PACKS),
     creditTransactions: await recentCreditTransactions(user.id, 10),
+    billingWarning: user.subscriptionStatus === "past_due"
+      ? "Your payment is past due. Please update your payment method."
+      : null,
   })
 })
 

@@ -50,9 +50,10 @@ interface ConnectorTileProps {
   onConnect: (id: string) => void
   onDisconnect: (id: string) => void
   loading?: boolean
+  limitReached?: boolean
 }
 
-export function ConnectorTile({ info, t, onConnect, onDisconnect, loading }: ConnectorTileProps) {
+export function ConnectorTile({ info, t, onConnect, onDisconnect, loading, limitReached }: ConnectorTileProps) {
   const [confirmDisconnect, setConfirmDisconnect] = useState(false)
 
   function handleDisconnectClick() {
@@ -148,6 +149,24 @@ export function ConnectorTile({ info, t, onConnect, onDisconnect, loading }: Con
             >
               {loading ? "Disconnecting..." : confirmDisconnect ? "Confirm disconnect?" : "Disconnect"}
             </button>
+          ) : limitReached ? (
+            <div
+              style={{
+                width: "100%",
+                fontFamily: t.font,
+                fontSize: 11,
+                fontWeight: 600,
+                color: t.dim,
+                background: "transparent",
+                border: `1px solid ${t.border}`,
+                borderRadius: 6,
+                padding: "6px 0",
+                textAlign: "center" as const,
+                boxSizing: "border-box" as const,
+              }}
+            >
+              Limit reached — upgrade to connect
+            </div>
           ) : (
             <button
               onClick={() => onConnect(info.id)}
@@ -211,6 +230,7 @@ interface ConnectorMarketplaceProps {
   onConnect: (id: string) => void
   onDisconnect: (id: string) => void
   loadingId?: string | null
+  limitReached?: boolean
 }
 
 export function ConnectorMarketplace({
@@ -219,6 +239,7 @@ export function ConnectorMarketplace({
   onConnect,
   onDisconnect,
   loadingId,
+  limitReached,
 }: ConnectorMarketplaceProps) {
   const categories = Array.from(
     new Set(connectors.map((c) => c.category)),
@@ -264,6 +285,7 @@ export function ConnectorMarketplace({
                   onConnect={onConnect}
                   onDisconnect={onDisconnect}
                   loading={loadingId === info.id}
+                  limitReached={limitReached && !info.connected}
                 />
               ))}
             </div>

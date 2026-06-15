@@ -64,3 +64,6 @@ apps/landing/next-env.d.ts
 
 # Vendored examples (not part of Yomi workspace)
 examples/
+
+# Desktop automation research (large external repos, not part of Yomi workspace)
+DesktopAutomation/
