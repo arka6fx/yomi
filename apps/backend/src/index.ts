@@ -49,7 +49,7 @@ async function getLatestExeUrl(): Promise<string | null> {
   try {
     const res = await fetch(
       "https://api.github.com/repos/arka6fx/yomi-releases/releases/latest",
-      { headers: { Accept: "application/vnd.github+json" } },
+      { headers: { Accept: "application/vnd.github+json", "User-Agent": "yomi-backend" } },
     )
     if (!res.ok) return null
     const release = await res.json() as { assets: { name: string; browser_download_url: string }[] }

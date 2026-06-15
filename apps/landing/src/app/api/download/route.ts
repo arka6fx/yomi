@@ -3,7 +3,7 @@ const FALLBACK = "https://github.com/arka6fx/yomi-releases/releases/latest"
 
 async function getExeUrl(): Promise<string | null> {
   try {
-    const res = await fetch(API, { next: { revalidate: 300 } })
+    const res = await fetch(API, { next: { revalidate: 300 }, headers: { "User-Agent": "yomi-landing" } })
     if (!res.ok) return null
     const release = await res.json()
     const exe = release.assets.find((a: { name: string }) => a.name.endsWith(".exe"))
