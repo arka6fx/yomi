@@ -430,6 +430,8 @@ billingRouter.post("/create-subscription", authenticate, async (c) => {
 billingRouter.post("/create-credit-pack", authenticate, async (c) => {
   const { pack } = (await c.req.json()) as { pack: string }
   const user = c.get("user")
+  const plan = effectivePlanForUser(user)
+  if (plan === "explore") return c.json({ error: "Credit packs are only available on Pro and Max plans" }, 403)
   const config = getCreditPack(pack)
   if (!config) return c.json({ error: "Invalid credit pack" }, 400)
 
@@ -641,7 +643,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     dailyImageUsed: user.dailyImageCount,
     tokensUsedThisPeriod,
     credits: await getCreditSummary(user.id),
-    creditPacks: Object.values(CREDIT_PACKS),
+    creditPacks: effectivePlan !== "explore" ? Object.values(CREDIT_PACKS) : [],
     creditTransactions: await recentCreditTransactions(user.id, 10),
     billingWarning: user.subscriptionStatus === "past_due"
       ? "Your payment is past due. Please update your payment method."
