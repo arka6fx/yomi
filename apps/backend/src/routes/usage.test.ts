@@ -12,6 +12,7 @@ type TestUser = {
   trialInteractionLimit: number
   dailyChatCount: number
   dailyVoiceCount: number
+  currentPeriodEnd: Date | null
 }
 
 type ReserveBody = {
@@ -72,6 +73,7 @@ mock.module("../services/credit-ledger.js", () => ({
     balance: 0,
     insufficient: true,
   }),
+  expireCredits: async () => 0,
 }))
 
 mock.module("../auth.js", () => ({
@@ -109,6 +111,7 @@ function user(overrides: Partial<TestUser> = {}): TestUser {
     plan: "explore",
     subscriptionStatus: "inactive",
     trialEndDate: null,
+    currentPeriodEnd: null,
     trialInteractionUsed: 100,
     trialInteractionLimit: 100,
     dailyChatCount: 10000,
@@ -138,6 +141,7 @@ describe("POST /api/usage/interactions/reserve", () => {
     currentUser = user({
       plan: "pro",
       subscriptionStatus: "past_due",
+      currentPeriodEnd: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
       trialInteractionUsed: 12,
       dailyChatCount: 345,
       dailyVoiceCount: 67,
