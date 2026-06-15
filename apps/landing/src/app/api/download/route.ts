@@ -1,36 +1,20 @@
-export async function GET() {
+const API = "https://api.github.com/repos/arka6fx/yomi-releases/releases/latest"
+const FALLBACK = "https://github.com/arka6fx/yomi-releases/releases/latest"
+
+async function getExeUrl(): Promise<string | null> {
   try {
-    const res = await fetch(
-      "https://api.github.com/repos/arka6fx/yomi-releases/releases/latest",
-      { next: { revalidate: 300 } },
-    )
-    if (!res.ok) return redirectToReleases()
-
+    const res = await fetch(API, { next: { revalidate: 300 } })
+    if (!res.ok) return null
     const release = await res.json()
-    const exeAsset = release.assets.find(
-      (a: { name: string }) => a.name.endsWith(".exe"),
-    )
-    if (!exeAsset) return redirectToReleases()
-
-    // Follow the GitHub-to-CDN redirect to get the canonical CDN URL
-    const cdnRes = await fetch(exeAsset.browser_download_url, { redirect: "manual" })
-    const cdnUrl = cdnRes.headers.get("location")
-    if (!cdnUrl) return redirectToReleases()
-
-    return new Response(null, {
-      status: 302,
-      headers: { Location: cdnUrl },
-    })
+    const exe = release.assets.find((a: { name: string }) => a.name.endsWith(".exe"))
+    return exe?.browser_download_url ?? null
   } catch {
-    return redirectToReleases()
+    return null
   }
 }
 
-function redirectToReleases() {
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: "https://github.com/arka6fx/yomi-releases/releases/latest",
-    },
-  })
+export async function GET() {
+  const url = await getExeUrl()
+  if (!url) return new Response(null, { status: 302, headers: { Location: FALLBACK } })
+  return new Response(null, { status: 302, headers: { Location: url } })
 }

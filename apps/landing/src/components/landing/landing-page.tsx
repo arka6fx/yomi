@@ -250,11 +250,21 @@ export function LandingPage() {
   const router = useRouter()
   const [detected, setDetected] = useState<Platform>("unknown")
   const [active, setActive] = useState<Exclude<Platform, "unknown">>("windows")
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
 
   useEffect(() => {
     const p = detectPlatform()
     setDetected(p)
     if (p === "windows") setActive(p)
+  }, [])
+
+  useEffect(() => {
+    fetch("/api/download-url")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.url) setDownloadUrl(data.url)
+      })
+      .catch(() => {})
   }, [])
 
   // forward oauth error redirects (/?error=) to the signin page
@@ -990,9 +1000,7 @@ export function LandingPage() {
                   ) : (
                     <a
                       key={opt.label}
-                      href={opt.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      href={opt.label === "Installer" && downloadUrl ? downloadUrl : opt.href}
                       className={className}
                     >
                       {content}
