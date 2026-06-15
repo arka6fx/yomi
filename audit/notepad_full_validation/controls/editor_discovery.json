@@ -1,9 +1,0 @@
-﻿{
-    "ControlType":  "ControlType.Document",
-    "Name":  "Text editor",
-    "HasKeyboardFocus":  true,
-    "IsKeyboardFocusable":  true,
-    "BoundingRect":  "84,153,886,674",
-    "ClassName":  "RichEditD2DPT",
-    "IsEnabled":  true
-}

@@ -480,6 +480,11 @@ function DashboardContent() {
               onConnect={handleConnectIntegration}
               onDisconnect={handleDisconnectIntegration}
               loadingId={integrationLoadingId}
+              limitReached={
+                sub?.features?.connectors?.limit !== null &&
+                sub?.features?.connectors?.limit !== undefined &&
+                sub.features.connectors.used >= sub.features.connectors.limit
+              }
             />
           </motion.div>
         )}
@@ -661,6 +666,7 @@ function DashboardContent() {
                   const pct = feat.limit && feat.limit > 0 ? Math.min(100, (feat.used / feat.limit) * 100) : 0
                   const isUnlimited = feat.limit === null
                   const isDisabled = feat.limit === 0
+                  const isAtLimit = !isDisabled && !isUnlimited && feat.limit !== null && feat.used >= feat.limit
 
                   return (
                     <div key={key} className={cn("space-y-1.5", isDisabled && "opacity-40")}>
@@ -689,6 +695,14 @@ function DashboardContent() {
                             style={{ width: `${Math.min(100, pct)}%` }}
                           />
                         </div>
+                      )}
+                      {isAtLimit && (
+                        <p className="text-xs text-destructive">
+                          Limit reached —{" "}
+                          <a href="/dashboard?plan=pro" className="underline hover:text-destructive/80">
+                            upgrade to continue
+                          </a>
+                        </p>
                       )}
                     </div>
                   )

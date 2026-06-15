@@ -1,7 +1,10 @@
 # Yomi — AGENTS.md
 
-Cross-platform AI buddy. Sees your screen, hears your voice, acts so you touch
-your laptop less. Mac (menu bar / notch), Windows (system tray).
+AI productivity assistant. Connects to your Google Workspace (Gmail, Calendar,
+Drive) and to GitHub, Slack, Notion, Linear, Discord, and more so you can query,
+draft, and act on your work in natural language. Sees your screen, hears your
+voice, and accepts typed questions — from the desktop or Telegram, without
+switching apps or copy-pasting context. Windows now; macOS coming soon.
 
 ---
 
@@ -112,6 +115,32 @@ sessions/        YYYY-MM-DD-topic.md  summaries
 
 Always preload `yomi.md`; JIT-load everything else. Compact: recall → precision →
 write `memory.md`. Retrieve: index → files → ripgrep. No vector DB needed.
+
+---
+
+## Cloudflare Workers — I/O rules (non-negotiable)
+
+CF Workers bind native I/O (WebSockets, TCP, streams) to the originating request
+context. Reusing any native I/O object across requests throws:
+`"Cannot perform I/O on behalf of a different request. (I/O type: Native)"`
+
+**Rules that must never be broken:**
+
+- **Use `neon()` HTTP mode, never `Pool`.** `Pool` opens a WebSocket (native I/O)
+  and cannot be reused across requests. `packages/db/src/index.ts` must import
+  `neon` from `@neondatabase/serverless` and `drizzle` from `drizzle-orm/neon-http`.
+  `Pool` / `drizzle-orm/neon-serverless` are banned in the backend Worker.
+
+- **Never pass a cached promise to `ctx.waitUntil()` from a different request.**
+  A promise created in request A carries its I/O context. Calling
+  `ctx.waitUntil(thatPromise)` in request B is a violation.
+
+- **Never store Request, Response, ReadableStream, or body references in
+  module-level variables.** These are all native I/O. Only plain data (strings,
+  plain objects, numbers) may live at module scope.
+
+- **Singleton auth instance is safe** — `betterAuth()` itself holds no native I/O.
+  It makes `fetch()` calls (not WebSockets) per request via the DB adapter.
 
 ---
 

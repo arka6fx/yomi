@@ -79,6 +79,41 @@
       "when": 1779840000000,
       "tag": "0010_linking_codes",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1780185600000,
+      "tag": "0011_credit_ledger",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1780272000000,
+      "tag": "0012_dodo_payments",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1780358400000,
+      "tag": "0013_integrations",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1780444800000,
+      "tag": "0014_device_codes",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1749945600000,
+      "tag": "0015_telegram_link_tokens",
+      "breakpoints": true
     }
   ]
 }

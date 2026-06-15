@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto"
+import { randomBytes, createHmac } from "node:crypto"
 import { Hono } from "hono"
 import { eq, and } from "drizzle-orm"
 import { db, platformConnections, linkingCodes } from "@yomi/db"
@@ -143,15 +143,35 @@ gatewayRouter.post("/telegram/token", authenticate, async (c) => {
 
 // ── Discord OAuth2 identify flow ─────────────────────────────────────────────
 
-// In-memory state store for CSRF protection (10-min TTL)
-const oauthStateStore = new Map<string, { createdAt: number; userId: string }>()
 const OAUTH_STATE_TTL = 10 * 60 * 1000
 
-function pruneOauthStore() {
-  const now = Date.now()
-  for (const [key, val] of oauthStateStore) {
-    if (now - val.createdAt > OAUTH_STATE_TTL) oauthStateStore.delete(key)
-  }
+// Stateless CSRF state: "<random>.<userId>.<ts>.<hmac>" — no in-memory store needed.
+// Works across all CF instances without shared state.
+function signOauthState(userId: string): string {
+  const random = randomBytes(16).toString("hex")
+  const ts = Date.now()
+  const payload = `${random}.${userId}.${ts}`
+  const sig = createHmac("sha256", process.env["BETTER_AUTH_SECRET"] ?? "dev")
+    .update(payload)
+    .digest("hex")
+    .slice(0, 32)
+  return `${payload}.${sig}`
+}
+
+function verifyOauthState(state: string): { userId: string } | null {
+  const parts = state.split(".")
+  if (parts.length !== 4) return null
+  const [random, userId, tsStr, sig] = parts as [string, string, string, string]
+  const ts = Number(tsStr)
+  if (!userId || !random || Number.isNaN(ts)) return null
+  if (Date.now() - ts > OAUTH_STATE_TTL) return null
+  const payload = `${random}.${userId}.${tsStr}`
+  const expected = createHmac("sha256", process.env["BETTER_AUTH_SECRET"] ?? "dev")
+    .update(payload)
+    .digest("hex")
+    .slice(0, 32)
+  if (sig !== expected) return null
+  return { userId }
 }
 
 // Initiate OAuth — user clicks "Add Discord" on landing/dashboard
@@ -163,11 +183,7 @@ gatewayRouter.get("/discord/auth", authenticate, (c) => {
     return c.redirect("/link?error=discord_not_configured")
   }
 
-  pruneOauthStore()
-  const stateData = randomBytes(16).toString("hex")
-  // Encode Yomi user ID in state: random.userId
-  const state = `${stateData}.${user.id}`
-  oauthStateStore.set(state, { createdAt: Date.now(), userId: user.id })
+  const state = signOauthState(user.id)
 
   const url = new URL("https://discord.com/api/oauth2/authorize")
   url.searchParams.set("client_id", clientId)
@@ -192,9 +208,8 @@ gatewayRouter.get("/discord/callback", async (c) => {
     return c.redirect("/link?error=discord_auth_failed")
   }
 
-  const stored = oauthStateStore.get(state)
-  oauthStateStore.delete(state)
-  if (!stored || Date.now() - stored.createdAt > OAUTH_STATE_TTL) {
+  const stored = verifyOauthState(state)
+  if (!stored) {
     console.warn("[discord-oauth] invalid/expired state")
     return c.redirect("/link?error=discord_auth_failed")
   }

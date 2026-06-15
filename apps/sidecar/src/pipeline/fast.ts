@@ -9,6 +9,7 @@ import {
   loadMemoryContext,
   writeSessionTurn,
 } from "../memory/subsystem.js"
+import { reserveInteraction } from "../automation/usage.js"
 
 const MODEL = process.env.AI_CREDITS_FAST_MODEL || "gpt-4.1-mini"
 
@@ -391,6 +392,12 @@ export async function* fastPipeline(
   req: FastQueryRequest,
   signal?: AbortSignal,
 ): AsyncGenerator<SseEvent> {
+  const reservation = await reserveInteraction("chat")
+  if (!reservation.ok) {
+    yield { type: "error", message: reservation.error }
+    return
+  }
+
   let text: string | null
   try {
     text = await resolveText(req)
