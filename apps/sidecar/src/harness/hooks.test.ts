@@ -101,7 +101,7 @@ describe("hooks.onPostToolUse — output trim (regression)", () => {
   })
 
   it("truncates oversized tool output to within the configured cap", async () => {
-    const big = "x".repeat(20_000)
+    const big = "x".repeat(60_000)
     const out = await hooks.onPostToolUse("read_file", big, { path: "big.md" })
     const text = typeof out === "string" ? out : JSON.stringify(out)
     expect(text.length).toBeLessThan(big.length)
