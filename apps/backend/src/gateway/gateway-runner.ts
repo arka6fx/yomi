@@ -535,7 +535,8 @@ export class GatewayRunner {
   }
 
   private async onIncoming(msg: GatewayMessage): Promise<void> {
-    console.warn(`[gateway] onIncoming platform=${msg.platform} from=${msg.userId} chat=${msg.chatId} text="${msg.text.slice(0, 80)}"`)
+    try {
+      console.warn(`[gateway] onIncoming platform=${msg.platform} from=${msg.userId} chat=${msg.chatId} text="${msg.text.slice(0, 80)}"`)
 
     // Telegram deep-link intercept: /start <TOKEN>
     if (
@@ -671,6 +672,16 @@ export class GatewayRunner {
         msg.chatId,
         "Sorry, I ran into an error. Please try again.",
       ).catch(() => {})
+    }
+    } catch (err) {
+      console.warn("[gateway] onIncoming uncaught error:", err)
+      try {
+        await this.sendMessage(
+          msg.platform,
+          msg.chatId,
+          "Sorry, something went wrong. Please try again.",
+        )
+      } catch { /* ignore — best-effort */ }
     }
   }
 
