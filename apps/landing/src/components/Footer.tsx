@@ -32,7 +32,7 @@ export default function Footer() {
               href="mailto:contact.arkagarai@gmail.com"
               className="transition-colors hover:text-white/70"
             >
-              arkagarai292@gmail.com
+              contact.arkagarai@gmail.com
             </a>
           </div>
           <div>

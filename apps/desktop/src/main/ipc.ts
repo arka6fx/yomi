@@ -115,6 +115,7 @@ const SCREEN_LABEL = "Analyze my screen"
 
 let pcmChunks: Float32Array[] = []
 let capturedSampleRate = 16000
+let ttsPreference = true
 
 // One controller covers the entire pipeline: screenshot/STT → sidecar SSE stream.
 // Created at the top of each pipeline so ESC aborts any step, not just the fetch.
@@ -275,8 +276,12 @@ export function initSidecarIpc(
     capturedSampleRate = sampleRate
   })
 
+  ipcMain.on("yomi:set-tts", (_e, enabled: boolean) => {
+    ttsPreference = enabled
+  })
+
   // Text query: text-only output (no TTS)
-  ipcMain.on("yomi:text-query", async (_e, text: string) => {
+  ipcMain.on("yomi:text-query", async (_e, text: string, attachmentB64?: string | null) => {
     if (!text?.trim()) {
       resetToIdle()
       return
@@ -294,7 +299,12 @@ export function initSidecarIpc(
         resetToIdle()
         return
       }
-      await streamQuery(sidecar, overlayWin, text.trim(), capture, false, plan, ctrl)
+      // When the user attached a file, inject it as the primary screenshot so the
+      // LLM sees the attached image rather than (or in addition to) the screen.
+      const effectiveCapture = attachmentB64
+        ? { ...capture, screenshot_b64: attachmentB64 }
+        : capture
+      await streamQuery(sidecar, overlayWin, text.trim(), effectiveCapture, false, plan, ctrl)
     } catch (err) {
       if ((err as Error).name === "AbortError") return
       send(overlayWin, {
@@ -360,6 +370,9 @@ export function initSidecarIpc(
     bargeInToListening()
   })
 
+  // Start polling the sidecar for remote triggers from the Telegram/Discord bot.
+  startRemotePoll(sidecar, overlayWin)
+
   return {
     // Voice query: STT → LLM → TTS
     onListenStop: async () => {
@@ -395,7 +408,7 @@ export function initSidecarIpc(
           return
         }
 
-        await streamQuery(sidecar, overlayWin, transcript, capture, true, plan, ctrl)
+        await streamQuery(sidecar, overlayWin, transcript, capture, ttsPreference, plan, ctrl)
       } catch (err) {
         if ((err as Error).name === "AbortError") return
         send(overlayWin, {
@@ -410,6 +423,108 @@ export function initSidecarIpc(
     },
     onAbort: abortCurrent,
     onScreenshot: runScreenshot,
+  }
+}
+
+let remotePollTimer: ReturnType<typeof setInterval> | null = null
+
+function startRemotePoll(sidecar: SidecarManager, overlayWin: BrowserWindow): void {
+  if (remotePollTimer) return
+  remotePollTimer = setInterval(() => void pollRemoteTriggers(sidecar, overlayWin), 3_000)
+}
+
+async function pollRemoteTriggers(sidecar: SidecarManager, overlayWin: BrowserWindow): Promise<void> {
+  try {
+    const res = await fetch(`${sidecar.baseUrl}/remote/pending`, {
+      headers: { "x-sidecar-secret": sidecar.secret },
+    })
+    if (!res.ok) return
+    const data = (await res.json()) as { triggers?: { id: string; action: string; payload: Record<string, string> }[] }
+    if (!data.triggers?.length) return
+    for (const trigger of data.triggers) {
+      void executeRemoteTrigger(sidecar, overlayWin, trigger)
+    }
+  } catch {
+    // ignore — sidecar may not be ready yet
+  }
+}
+
+async function executeRemoteTrigger(
+  sidecar: SidecarManager,
+  overlayWin: BrowserWindow,
+  trigger: { id: string; action: string; payload: Record<string, string> },
+): Promise<void> {
+  const { id, action, payload } = trigger
+
+  const postResult = async (text: string, error?: string) => {
+    await fetch(`${sidecar.baseUrl}/remote/result`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-sidecar-secret": sidecar.secret },
+      body: JSON.stringify({ id, text, error }),
+    }).catch(() => {})
+  }
+
+  try {
+    if (action === "screenshot") {
+      const capture = await captureScreen()
+      // Run the screen through the fast pipeline and collect the text response.
+      const ctrl = new AbortController()
+      const chunks: string[] = []
+      const body = JSON.stringify({
+        text: SCREEN_PROMPT,
+        screenshot_b64: capture.screenshot_b64,
+        screenshots: capture.displays.map(({ screen, screenshot_b64, imageWidth, imageHeight, isCursorScreen }) => ({
+          screen,
+          screenshot_b64,
+          width: imageWidth,
+          height: imageHeight,
+          is_cursor_screen: isCursorScreen,
+        })),
+        tts: false,
+      })
+      const streamRes = await fetch(`${sidecar.baseUrl}/query/fast`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-sidecar-secret": sidecar.secret },
+        body,
+        signal: ctrl.signal,
+      })
+      if (streamRes.ok && streamRes.body) {
+        const reader = streamRes.body.getReader()
+        const dec = new TextDecoder()
+        let buf = ""
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += dec.decode(value, { stream: true })
+          const lines = buf.split("\n")
+          buf = lines.pop() ?? ""
+          for (const line of lines) {
+            if (!line.startsWith("data:")) continue
+            try {
+              const ev = JSON.parse(line.slice(5).trim()) as SseEvent
+              if (ev.type === "llm_chunk") chunks.push(ev.text)
+            } catch { /* ignore */ }
+          }
+        }
+      }
+      await postResult(chunks.join("") || "Screenshot captured but no text generated.")
+    } else if (action === "voice") {
+      if (!overlayWin.isDestroyed()) overlayWin.webContents.send("yomi:trigger-voice")
+      await postResult("Voice mode started.")
+    } else if (action === "move") {
+      const dir = payload["direction"] ?? "right"
+      const dx = dir === "left" ? -200 : dir === "right" ? 200 : 0
+      const dy = dir === "up" ? -200 : dir === "down" ? 200 : 0
+      if (!overlayWin.isDestroyed()) {
+        const [x, y] = overlayWin.getPosition()
+        overlayWin.setPosition(x + dx, y + dy)
+      }
+      await postResult(`Window moved ${dir}.`)
+    } else {
+      await postResult("", `Unknown action: ${action}`)
+    }
+  } catch (err) {
+    await postResult("", err instanceof Error ? err.message : "Unknown error")
   }
 }
 
@@ -559,14 +674,21 @@ async function streamQuery(
 ): Promise<void> {
   pipelineCtrl = ctrl // keep reference current (startPipeline may have rotated it)
 
-  // Imperative/desktop commands route to the agent (it has the UIA tools).
-  const useAgent = !forceAnswer && (shouldUseSystemAction(text) || shouldUseAgent(text))
-  const routedText = useAgent ? stripDetachedPhrase(text) : text
+  // Imperative/desktop commands route directly to /query/agent (needs UIA tools, no router).
+  // Everything else goes to /query (unified) so the sidecar's intent router decides fast vs agent —
+  // this lets connector queries ("show my emails", "check calendar") reach the agent tool path.
+  // forceAnswer (screenshot button) bypasses routing and hits /query/fast directly.
+  const useDesktopAgent = !forceAnswer && (shouldUseSystemAction(text) || shouldUseAgent(text))
+  const routedText = useDesktopAgent ? stripDetachedPhrase(text) : text
 
   // Interactive actions are hands-free: no chat transcript unless an error/confirmation needs UI.
 
-  const endpoint = useAgent ? "/query/agent" : "/query/fast"
-  const body = useAgent
+  const endpoint = forceAnswer
+    ? "/query/fast"
+    : useDesktopAgent
+      ? "/query/agent"
+      : "/query"
+  const body = useDesktopAgent
     ? { text: routedText, screenshot_b64: capture.screenshot_b64, plan, history: actHistory.slice() }
     : {
         text,
@@ -583,6 +705,7 @@ async function streamQuery(
         tts,
         plan,
       }
+  const useAgent = useDesktopAgent
   const overlayWasFocusable = useAgent ? overlayWin.isFocusable() : null
   if (useAgent && overlayWasFocusable) {
     // Real-input UIA tools follow foreground focus; keep Yomi visible but unable to retake it.

@@ -28,14 +28,15 @@ function makeTokenProvider(): TokenProvider {
 }
 
 function makeConnectedProvidersLister(): ConnectedProvidersLister {
-  return async (_userId: string): Promise<string[]> => {
+  return async (userId: string): Promise<string[]> => {
     const backendUrl =
       process.env["YOMI_BACKEND_URL"] ?? process.env["BACKEND_URL"] ?? "http://localhost:3001"
     const secret = process.env["SIDECAR_SECRET"] ?? ""
     try {
-      const res = await fetch(`${backendUrl}/api/integrations/status`, {
-        headers: { "x-sidecar-secret": secret },
-      })
+      const res = await fetch(
+        `${backendUrl}/api/integrations/status?userId=${encodeURIComponent(userId)}`,
+        { headers: { "x-sidecar-secret": secret } },
+      )
       if (res.ok) {
         const data = (await res.json()) as { connected: string[] }
         return data.connected
@@ -64,4 +65,24 @@ export function getConnectorRegistry(): ConnectorRegistry {
 export async function initConnectorRegistry(userId: string): Promise<void> {
   const reg = getConnectorRegistry()
   await reg.init(userId)
+}
+
+// Called at sidecar startup to initialize the registry using the session token.
+// Best-effort: failures are silently ignored.
+export async function initConnectorRegistryFromSession(): Promise<void> {
+  const sessionToken = process.env["YOMI_SESSION_TOKEN"]
+  if (!sessionToken) return
+  const backendUrl =
+    process.env["YOMI_BACKEND_URL"] ?? process.env["BACKEND_URL"] ?? "http://localhost:3001"
+  try {
+    const res = await fetch(`${backendUrl}/api/auth/get-session`, {
+      headers: { Authorization: `Bearer ${sessionToken}` },
+    })
+    if (!res.ok) return
+    const data = (await res.json()) as { user?: { id: string } }
+    const userId = data.user?.id
+    if (userId) await initConnectorRegistry(userId)
+  } catch {
+    // best-effort
+  }
 }

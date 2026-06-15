@@ -12,8 +12,12 @@ import { makeCompletionNode } from "./nodes/completion.js"
 
 // Build the agent-path StateGraph. Structure is static; per-request deps (emit/signal/tools) are
 // baked into node factories, so each request gets an isolated compiled graph (concurrency-safe).
+//
+// planning and memory run in parallel from orchestrator — neither depends on the other's output
+// (memory reads state.goal + state.plan[subscription tier], both set before orchestrator fires).
+// A barrier join ["planning","memory"] → "route" ensures both complete before execution routing.
 export function buildGraph(deps: GraphDeps) {
-  const afterMemory = (s: GraphState) =>
+  const route = (s: GraphState) =>
     s.executionMode === "approval" ? "humanApproval" : "execution"
   const afterApproval = (s: GraphState) =>
     s.permissionStatus === "denied" ? "completion" : "execution"
@@ -26,15 +30,20 @@ export function buildGraph(deps: GraphDeps) {
     .addNode("orchestrator", makeOrchestratorNode(deps))
     .addNode("planning", makePlanningNode(deps))
     .addNode("memory", makeMemoryNode(deps))
+    .addNode("route", async (_: GraphState): Promise<Partial<GraphState>> => ({}))
     .addNode("humanApproval", makeHumanApprovalNode(deps))
-    .addNode("execution", makeExecutionNode(deps))
+    .addNode("execution", makeExecutionNode(deps), {
+      // Retry transient connector/LLM errors (429s, timeouts) before escalating to Recovery.
+      retryPolicy: { maxAttempts: 3, initialInterval: 500, backoffFactor: 2 },
+    })
     .addNode("validation", makeValidationNode(deps))
     .addNode("recovery", makeRecoveryNode(deps))
     .addNode("completion", makeCompletionNode(deps))
     .addEdge(START, "orchestrator")
     .addEdge("orchestrator", "planning")
-    .addEdge("planning", "memory")
-    .addConditionalEdges("memory", afterMemory, {
+    .addEdge("orchestrator", "memory")
+    .addEdge(["planning", "memory"], "route")
+    .addConditionalEdges("route", route, {
       humanApproval: "humanApproval",
       execution: "execution",
     })

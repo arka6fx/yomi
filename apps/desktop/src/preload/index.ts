@@ -135,6 +135,10 @@ contextBridge.exposeInMainWorld("yomi", {
     ipcRenderer.send("yomi:audio-chunk", pcm, sampleRate)
   },
 
+  setTts(enabled: boolean): void {
+    ipcRenderer.send("yomi:set-tts", enabled)
+  },
+
   // ── Window control ────────────────────────────────────────────────────────
 
   startDrag(offsetX: number, offsetY: number): void {
@@ -163,8 +167,8 @@ contextBridge.exposeInMainWorld("yomi", {
 
   // ── Queries ───────────────────────────────────────────────────────────────
 
-  submitTextQuery(text: string): void {
-    ipcRenderer.send("yomi:text-query", text)
+  submitTextQuery(text: string, attachmentB64?: string): void {
+    ipcRenderer.send("yomi:text-query", text, attachmentB64 ?? null)
   },
 
   copyText(text: string): Promise<{ ok: boolean }> {
@@ -241,6 +245,14 @@ contextBridge.exposeInMainWorld("yomi", {
 
   openDashboard(): void {
     ipcRenderer.send("yomi:open-dashboard")
+  },
+
+  openIntegrationsPage(): void {
+    ipcRenderer.send("yomi:open-integrations")
+  },
+
+  pickAttachment(): Promise<{ path: string; b64: string } | null> {
+    return ipcRenderer.invoke("yomi:pick-attachment")
   },
 
   confirmAct(id: string, approved: boolean): void {

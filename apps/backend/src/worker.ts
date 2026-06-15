@@ -21,8 +21,8 @@ export default {
       if (!url.pathname.startsWith("/api/auth/")) {
         if (!gatewayPromise) {
           gatewayPromise = startGateway()
+          ctx.waitUntil(gatewayPromise)
         }
-        ctx.waitUntil(gatewayPromise)
       }
 
       return await app.fetch(request, env, ctx as never)

@@ -1,7 +1,7 @@
 import { Hono } from "hono"
 import { eq, and, sql } from "drizzle-orm"
 import { db, mcpConnections } from "@yomi/db"
-import { authenticate } from "../auth.js"
+import { authenticate, getAuth } from "../auth.js"
 import {
   encryptTokens,
   decryptTokens,
@@ -112,13 +112,27 @@ integrationsRouter.get("/", authenticate, async (c) => {
 })
 
 // ── Status check — returns just which providers are connected ────────────────
+// Accepts sidecar-secret + ?userId=<id> (same auth pattern as /token/:provider)
+// or a normal user session for dashboard use.
 
-integrationsRouter.get("/status", authenticate, async (c) => {
-  const user = c.get("user")
+integrationsRouter.get("/status", async (c) => {
+  const sidecarSecret = process.env.SIDECAR_SECRET
+  const header = c.req.header("x-sidecar-secret")
+  const queryUserId = c.req.query("userId")
+
+  let userId: string
+  if (sidecarSecret && header === sidecarSecret && queryUserId) {
+    userId = queryUserId
+  } else {
+    const session = await getAuth().api.getSession({ headers: c.req.raw.headers })
+    if (!session?.user) return c.json({ error: "Unauthorized" }, 401)
+    userId = session.user.id
+  }
+
   const rows = await db
     .select({ provider: mcpConnections.provider })
     .from(mcpConnections)
-    .where(eq(mcpConnections.userId, user.id))
+    .where(eq(mcpConnections.userId, userId))
 
   return c.json({ connected: rows.map((r) => r.provider) })
 })
@@ -226,31 +240,45 @@ integrationsRouter.get("/callback/google", async (c) => {
   } catch { /* best-effort */ }
 
   // Persist encrypted tokens
-  const encrypted = encryptTokens(tokens)
+  let encrypted: string
+  try {
+    encrypted = encryptTokens(tokens)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "token encryption failed"
+    console.error("[yomi/integrations] google encrypt error:", msg)
+    return c.redirect(`${appUrl}/dashboard?integration_error=${encodeURIComponent(msg)}`)
+  }
+
   const scopes = (tokens.scope ?? GOOGLE_SCOPES).split(/[\s,]+/).filter(Boolean)
 
-  await db
-    .insert(mcpConnections)
-    .values({
-      userId,
-      provider: "google",
-      oauthTokens: encrypted,
-      scopes,
-      expiresAt: tokens.expiresAt ? new Date(tokens.expiresAt) : null,
-      displayName,
-      lastSyncAt: new Date(),
-    })
-    .onConflictDoUpdate({
-      target: [mcpConnections.userId, mcpConnections.provider],
-      set: {
+  try {
+    await db
+      .insert(mcpConnections)
+      .values({
+        userId,
+        provider: "google",
         oauthTokens: encrypted,
         scopes,
         expiresAt: tokens.expiresAt ? new Date(tokens.expiresAt) : null,
         displayName,
         lastSyncAt: new Date(),
-        updatedAt: new Date(),
-      },
-    })
+      })
+      .onConflictDoUpdate({
+        target: [mcpConnections.userId, mcpConnections.provider],
+        set: {
+          oauthTokens: encrypted,
+          scopes,
+          expiresAt: tokens.expiresAt ? new Date(tokens.expiresAt) : null,
+          displayName,
+          lastSyncAt: new Date(),
+          updatedAt: new Date(),
+        },
+      })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "database error"
+    console.error("[yomi/integrations] google db upsert error:", msg)
+    return c.redirect(`${appUrl}/dashboard?integration_error=${encodeURIComponent("Failed to save connection. Try reconnecting.")}`)
+  }
 
   return c.redirect(`${appUrl}/dashboard?integration_success=google`)
 })
@@ -326,8 +354,14 @@ integrationsRouter.get("/callback/:id", async (c) => {
     return c.redirect(`${appUrl}/dashboard?integration_error=unknown_connector`)
   }
 
-  const { redirectTo } = await handleOAuth2Callback(def, code, stateRaw)
-  return c.redirect(redirectTo)
+  try {
+    const { redirectTo } = await handleOAuth2Callback(def, code, stateRaw)
+    return c.redirect(redirectTo)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "callback failed"
+    console.error(`[integrations/callback/${id}] unhandled error:`, err)
+    return c.redirect(`${appUrl}/dashboard?integration_error=${encodeURIComponent(msg)}`)
+  }
 })
 
 // ── Connect: API key (POST) ──────────────────────────────────────────────────

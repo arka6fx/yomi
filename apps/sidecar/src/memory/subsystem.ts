@@ -72,8 +72,20 @@ export async function retrieveArchiveContext(query: string, maxChars = 3000): Pr
   return await retrieveCloudRagContext(query, maxChars)
 }
 
-export async function writeSessionTurn(turn: SessionTurn): Promise<void> {
-  await appendSessionTurn(turn)
+// Async FIFO write queue — serialises session writes so back-to-back turns
+// never land out of order, and never block the response pipeline on slow I/O.
+let _writeQueue: Promise<void> = Promise.resolve()
+
+export function writeSessionTurn(turn: SessionTurn): void {
+  _writeQueue = _writeQueue
+    .then(() => appendSessionTurn(turn))
+    .catch(() => {
+      // ignore — best-effort session logging
+    })
+}
+
+export async function flushSessionWriteQueue(): Promise<void> {
+  await _writeQueue
 }
 
 export async function captureStructuredMemory(turn: {

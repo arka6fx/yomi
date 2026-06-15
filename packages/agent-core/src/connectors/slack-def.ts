@@ -161,21 +161,22 @@ export const slackDef: ConnectorDef = {
   auth: {
     kind: "oauth2",
     authUrl: "https://slack.com/oauth/v2/authorize",
-    tokenUrl: "https://api.slack.com/methods/oauth.v2.access",
-    scopes: ["search:read", "channels:read", "chat:write"],
+    tokenUrl: "https://slack.com/api/oauth.v2.access",
+    // No bot scopes — we store the user token (authed_user.access_token).
+    // All permissions must be user scopes so the stored credential covers them.
+    scopes: [],
     clientIdEnv: "SLACK_CLIENT_ID",
     clientSecretEnv: "SLACK_CLIENT_SECRET",
     redirectPath: "/api/integrations/callback/slack",
-    // Slack returns the user token under authed_user.access_token for user scopes
-    extraAuthParams: { "user_scope": "search:read" },
+    extraAuthParams: { "user_scope": "search:read channels:read users:read chat:write" },
   },
   setup: {
     providerConsoleUrl: "https://api.slack.com/apps",
     steps: [
       "Go to api.slack.com/apps → Create New App → From scratch",
       "Add OAuth Redirect URL: ${BACKEND_URL}/api/integrations/callback/slack",
-      "Under OAuth & Permissions → Bot Token Scopes: channels:read, chat:write",
-      "Under User Token Scopes: search:read (search requires user token)",
+      "Under OAuth & Permissions → User Token Scopes: search:read, channels:read, users:read, chat:write",
+      "No Bot Token Scopes needed — Yomi uses the user token",
       "Install to workspace and copy the Client ID and Client Secret",
     ],
     collect: [

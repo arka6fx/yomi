@@ -11,6 +11,7 @@ import { ragRouter } from "./routes/rag.js"
 import { proxyRouter } from "./routes/proxy.js"
 import { gatewayRouter } from "./gateway/routes.js"
 import { integrationsRouter } from "./routes/integrations.js"
+import { adminRouter } from "./routes/admin.js"
 import "./connectors/defs/index.js" // registers all ConnectorDefs at startup
 import { getDefaultGateway } from "./gateway/gateway-runner.js"
 import type { SidecarResolver } from "./gateway/gateway-runner.js"
@@ -93,6 +94,7 @@ app.route("/api/rag", ragRouter)
 app.route("/api/v1", proxyRouter)
 app.route("/api/gateway", gatewayRouter)
 app.route("/api/integrations", integrationsRouter)
+app.route("/api/admin", adminRouter)
 
 // Register sidecar URL resolver from platform connections
 const sidecarResolver: SidecarResolver = async (userId, platform) => {
@@ -131,6 +133,7 @@ if (typeof Bun !== "undefined") {
   })
 
   console.warn(`Backend listening on :${server.port}`)
+  startGateway().catch((err) => console.error("[gateway] startup error:", err))
 }
 
 export { app }

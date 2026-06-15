@@ -164,8 +164,8 @@ function findSentenceEnd(buf: string): number {
 // first clause boundary (comma/semicolon/colon) past a minimum length, or fall back to a
 // word boundary near the max. Only used for the opening segment — later segments use
 // full-sentence boundaries to keep prosody natural. Returns the slice length or -1.
-const FIRST_SEG_MIN = 12
-const FIRST_SEG_MAX = 64
+const FIRST_SEG_MIN = 10
+const FIRST_SEG_MAX = 48
 function findFirstSegmentCut(buf: string): number {
   const clause = buf.slice(0, FIRST_SEG_MAX).match(/[,;:]\s/)
   if (clause && clause.index !== undefined && clause.index >= FIRST_SEG_MIN) {
@@ -394,7 +394,13 @@ export async function* fastPipeline(
 ): AsyncGenerator<SseEvent> {
   const reservation = await reserveInteraction("chat")
   if (!reservation.ok) {
-    yield { type: "error", message: reservation.error }
+    yield {
+      type: "usage_limit",
+      code: reservation.code,
+      feature: reservation.feature ?? "chat",
+      message: reservation.error,
+      upgradeUrl: reservation.upgradeUrl,
+    }
     return
   }
 
@@ -430,8 +436,9 @@ export async function* fastPipeline(
     // Skip the memory write for a barged-in (partial) turn.
     if (!signal?.aborted && memoryEnabled(req.plan) && output.trim()) {
       writeSessionTurn({ kind: "fast", mode: "answer", input: text, output })
-        .then(() => captureStructuredMemory({ input: text, output, mode: "answer" }))
-        .catch((err) => console.warn("[yomi/fast] memory write failed:", err))
+      captureStructuredMemory({ input: text, output, mode: "answer" }).catch((err: unknown) =>
+        console.warn("[yomi/fast] memory capture failed:", err),
+      )
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown pipeline error"

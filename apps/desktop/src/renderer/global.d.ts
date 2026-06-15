@@ -23,6 +23,7 @@ declare global {
       onStateChange(cb: (s: HotkeyState) => void): () => void
       // Audio
       sendAudioChunk(pcm: ArrayBuffer, sampleRate: number): void
+      setTts(enabled: boolean): void
       // Window control
       startDrag(offsetX: number, offsetY: number): void
       moveDrag(screenX: number, screenY: number): void
@@ -31,7 +32,7 @@ declare global {
       setHitRegions(regions: { x: number; y: number; width: number; height: number }[]): void
       nudge(dx: number, dy: number): void
       // Queries
-      submitTextQuery(text: string): void
+      submitTextQuery(text: string, attachmentB64?: string): void
       copyText(text: string): Promise<{ ok: boolean }>
       // Subscription
       getSubscriptionInfo(): Promise<SubscriptionInfo | null>
@@ -51,6 +52,8 @@ declare global {
       quit(): void
       openUpgrade(): void
       openDashboard(): void
+      openIntegrationsPage(): void
+      pickAttachment(): Promise<{ path: string; b64: string } | null>
       // Act mode (Spec 16)
       confirmAct(id: string, approved: boolean): void
       replayAutomation(replayId: string): void

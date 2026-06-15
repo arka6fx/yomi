@@ -26,11 +26,19 @@ export interface RunAgentLoopOptions {
   signal?: AbortSignal
 }
 
-const DEFAULT_SYSTEM =
-  "You are Yomi, a helpful AI assistant. Answer the user concisely. " +
-  "When the user asks about their email or connected apps, use the available " +
-  "tools to fetch real data before answering. If a tool reports a service is " +
-  "not connected, tell the user it isn't connected yet rather than guessing."
+function defaultSystem(): string {
+  const today = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
+  const appUrl = process.env["YOMI_APP_URL"] ?? "https://yomi.arka6fx.com"
+  return (
+    `You are Yomi, a helpful AI assistant. Today is ${today}. Answer the user concisely. ` +
+    "When the user asks about their email or connected apps, use the available " +
+    "tools to fetch real data before answering. " +
+    "If a tool reports a service is not connected, tell the user it isn't connected yet " +
+    `and suggest they connect it at ${appUrl}/dashboard. ` +
+    "If a tool returns an authorization or token error, tell the user their integration " +
+    `may have expired and suggest they reconnect at ${appUrl}/dashboard.`
+  )
+}
 
 function agentModel(override?: string): string {
   return override || process.env["AI_CREDITS_AGENT_MODEL"] || "gpt-4.1"
@@ -57,7 +65,7 @@ export async function runAgentLoop(opts: RunAgentLoopOptions): Promise<string> {
 
   const result = await generateText({
     model: createModel(agentModel(opts.model)),
-    system: opts.system ?? DEFAULT_SYSTEM,
+    system: opts.system ?? defaultSystem(),
     messages,
     tools,
     maxSteps: maxSteps(opts.maxSteps),
