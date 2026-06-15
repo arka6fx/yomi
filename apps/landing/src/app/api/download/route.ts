@@ -12,18 +12,14 @@ export async function GET() {
     )
     if (!exeAsset) return redirectToReleases()
 
-    const assetRes = await fetch(exeAsset.browser_download_url)
-    if (!assetRes.ok) return redirectToReleases()
+    // Follow the GitHub-to-CDN redirect to get the canonical CDN URL
+    const cdnRes = await fetch(exeAsset.browser_download_url, { redirect: "manual" })
+    const cdnUrl = cdnRes.headers.get("location")
+    if (!cdnUrl) return redirectToReleases()
 
-    const filename = exeAsset.name
-    const headers = new Headers(assetRes.headers)
-    headers.set("Content-Disposition", `attachment; filename="${filename}"`)
-    headers.set("Access-Control-Allow-Origin", "*")
-
-    return new Response(assetRes.body, {
-      status: 200,
-      statusText: "OK",
-      headers,
+    return new Response(null, {
+      status: 302,
+      headers: { Location: cdnUrl },
     })
   } catch {
     return redirectToReleases()

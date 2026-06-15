@@ -45,7 +45,7 @@ app.use(
 
 app.get("/health", (c) => c.json({ status: "ok", version: "0.1.0" }))
 
-// Download proxy — streams the latest Windows installer directly from GitHub Releases
+// Download proxy — redirects to the CDN URL for the latest Windows installer
 app.get("/api/download", async (c) => {
   try {
     const res = await fetch(
@@ -56,16 +56,10 @@ app.get("/api/download", async (c) => {
     const release = await res.json() as { assets: { name: string; browser_download_url: string }[] }
     const exe = release.assets.find((a) => a.name.endsWith(".exe"))
     if (!exe) throw new Error("No .exe asset")
-    const assetRes = await fetch(exe.browser_download_url)
-    if (!assetRes.ok) throw new Error("Asset fetch error")
-    return new Response(assetRes.body, {
-      status: 200,
-      headers: {
-        "Content-Type": assetRes.headers.get("Content-Type") ?? "application/octet-stream",
-        "Content-Length": assetRes.headers.get("Content-Length") ?? "",
-        "Content-Disposition": `attachment; filename="${exe.name}"`,
-      },
-    })
+    const cdnRes = await fetch(exe.browser_download_url, { redirect: "manual" })
+    const cdnUrl = cdnRes.headers.get("location")
+    if (!cdnUrl) throw new Error("No CDN redirect")
+    return c.redirect(cdnUrl)
   } catch {
     return c.redirect("https://github.com/arka6fx/yomi-releases/releases/latest")
   }

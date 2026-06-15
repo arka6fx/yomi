@@ -22,19 +22,14 @@ async function handleDownload() {
     const exeAsset = release.assets?.find((asset) => asset.name.endsWith(".exe"))
     if (!exeAsset) return Response.redirect(GITHUB_RELEASES_FALLBACK, 302)
 
-    const assetRes = await fetch(exeAsset.browser_download_url)
-    if (!assetRes.ok) return Response.redirect(GITHUB_RELEASES_FALLBACK, 302)
+    // Follow the short-lived GitHub-to-CDN redirect to get the canonical CDN URL
+    // (CloudFront / objects.githubusercontent.com) and redirect straight there,
+    // avoiding the yomi-releases repo URL entirely.
+    const cdnRes = await fetch(exeAsset.browser_download_url, { redirect: "manual" })
+    const cdnUrl = cdnRes.headers.get("location")
+    if (!cdnUrl) return Response.redirect(exeAsset.browser_download_url, 302)
 
-    const filename = exeAsset.name
-    const headers = new Headers(assetRes.headers)
-    headers.set("Content-Disposition", `attachment; filename="${filename}"`)
-    headers.set("Access-Control-Allow-Origin", "*")
-
-    return new Response(assetRes.body, {
-      status: 200,
-      statusText: "OK",
-      headers,
-    })
+    return Response.redirect(cdnUrl, 302)
   } catch {
     return Response.redirect(GITHUB_RELEASES_FALLBACK, 302)
   }
