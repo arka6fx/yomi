@@ -8,31 +8,29 @@ async function proxyToBackend(request: Request, targetPath: string) {
   return fetch(upstreamRequest)
 }
 
-async function handleDownload() {
+async function getAssetUrl(): Promise<string | null> {
   try {
     const res = await fetch(GITHUB_RELEASES_URL, {
-      headers: {
-        Accept: "application/vnd.github+json",
-      },
+      headers: { Accept: "application/vnd.github+json" },
     })
-
-    if (!res.ok) return Response.redirect(GITHUB_RELEASES_FALLBACK, 302)
-
+    if (!res.ok) return null
     const release = (await res.json()) as { assets?: Array<{ name: string; browser_download_url: string }> }
     const exeAsset = release.assets?.find((asset) => asset.name.endsWith(".exe"))
-    if (!exeAsset) return Response.redirect(GITHUB_RELEASES_FALLBACK, 302)
-
-    // Follow the short-lived GitHub-to-CDN redirect to get the canonical CDN URL
-    // (CloudFront / objects.githubusercontent.com) and redirect straight there,
-    // avoiding the yomi-releases repo URL entirely.
-    const cdnRes = await fetch(exeAsset.browser_download_url, { redirect: "manual" })
-    const cdnUrl = cdnRes.headers.get("location")
-    if (!cdnUrl) return Response.redirect(exeAsset.browser_download_url, 302)
-
-    return Response.redirect(cdnUrl, 302)
+    return exeAsset?.browser_download_url ?? null
   } catch {
-    return Response.redirect(GITHUB_RELEASES_FALLBACK, 302)
+    return null
   }
+}
+
+async function handleDownload() {
+  const url = await getAssetUrl()
+  if (url) return Response.redirect(url, 302)
+  return Response.redirect(GITHUB_RELEASES_FALLBACK, 302)
+}
+
+async function handleDownloadUrl() {
+  const url = await getAssetUrl()
+  return Response.json({ url }, { status: url ? 200 : 404 })
 }
 
 export default {
@@ -41,6 +39,9 @@ export default {
 
     if (url.pathname === "/api/download") {
       return handleDownload()
+    }
+    if (url.pathname === "/api/download-url") {
+      return handleDownloadUrl()
     }
 
     if (url.pathname.startsWith("/api/")) {
