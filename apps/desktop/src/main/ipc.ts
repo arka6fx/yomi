@@ -516,8 +516,8 @@ async function executeRemoteTrigger(
       const dx = dir === "left" ? -200 : dir === "right" ? 200 : 0
       const dy = dir === "up" ? -200 : dir === "down" ? 200 : 0
       if (!overlayWin.isDestroyed()) {
-        const [x, y] = overlayWin.getPosition()
-        overlayWin.setPosition(x + dx, y + dy)
+        const pos = overlayWin.getPosition()
+        overlayWin.setPosition((pos[0] ?? 0) + dx, (pos[1] ?? 0) + dy)
       }
       await postResult(`Window moved ${dir}.`)
     } else {
