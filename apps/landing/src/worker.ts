@@ -11,7 +11,10 @@ async function proxyToBackend(request: Request, targetPath: string) {
 async function getAssetUrl(): Promise<string | null> {
   try {
     const res = await fetch(GITHUB_RELEASES_URL, {
-      headers: { Accept: "application/vnd.github+json" },
+      headers: {
+        Accept: "application/vnd.github+json",
+        "User-Agent": "yomi-landing",
+      },
     })
     if (!res.ok) return null
     const release = (await res.json()) as { assets?: Array<{ name: string; browser_download_url: string }> }
