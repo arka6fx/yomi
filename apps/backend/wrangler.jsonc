@@ -22,7 +22,8 @@
     "BETTER_AUTH_BASE_URL": "https://api.yomi.arka6fx.com",
     "CORS_ORIGIN": "https://yomi.arka6fx.com",
     "AI_CREDITS_BASE_URL": "https://api.aicredits.in/v1",
-    "AI_CREDITS_EMBEDDING_MODEL": "text-embedding-3-small"
+    "AI_CREDITS_EMBEDDING_MODEL": "text-embedding-3-small",
+    "NEXT_PUBLIC_APP_URL": "https://yomi.arka6fx.com"
   },
   "env": {
     "staging": {
