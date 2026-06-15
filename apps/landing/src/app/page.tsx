@@ -51,7 +51,7 @@ const jsonLd = {
         email: "owner@example.com",
         contactType: "customer support",
       },
-      sameAs: ["https://github.com/arka6fx/yomi-releases"],
+      sameAs: ["https://github.com/arka6fx/yomi"],
     },
     {
       "@type": "SoftwareApplication",

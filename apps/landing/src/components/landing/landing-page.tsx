@@ -1037,7 +1037,7 @@ export function LandingPage() {
             <p className="text-sm leading-relaxed text-muted-foreground">
               Downloads come directly from{" "}
               <a
-                href="https://github.com/arka6fx/yomi-releases/releases"
+                href="https://github.com/arka6fx/yomi/releases"
                 className="text-primary hover:underline"
                 target="_blank"
                 rel="noopener noreferrer"

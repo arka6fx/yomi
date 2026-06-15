@@ -198,8 +198,8 @@ Speech:     ElevenLabs scribe_v2 + eleven_flash_v2_5
 
 ## Desktop releases
 
-Production web/backend deploys from `main`. Desktop installers are separate:
-publish Windows releases to `arka6fx/yomi-releases` via `.github/workflows/release.yml`.
+Production web/backend deploys from `main`. Desktop installers are published
+as GitHub releases on `arka6fx/yomi` via `.github/workflows/release.yml`.
 
 When STT/TTS or sidecar code changes, build and publish a new desktop installer.
 The installer must include `apps/sidecar/dist/sidecar-win32-x64.exe`; verify the
