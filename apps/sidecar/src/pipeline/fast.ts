@@ -8,6 +8,7 @@ import {
   captureStructuredMemory,
   loadMemoryContext,
   writeSessionTurn,
+  type MemoryContextBundle,
 } from "../memory/subsystem.js"
 import { reserveInteraction } from "../automation/usage.js"
 
@@ -31,11 +32,12 @@ async function getFastPrompt(
   text: string,
   hasScreen: boolean,
   plan: Plan | undefined,
+  preloaded?: Promise<MemoryContextBundle>,
 ): Promise<string> {
   if (cachedYomiMd === null) cachedYomiMd = await loadYomiMd()
   const memory = memoryEnabled(plan)
   const localCtx = memory
-    ? await loadMemoryContext(text)
+    ? await (preloaded ?? loadMemoryContext(text))
     : {
         memorySummary: "",
         memoryIndex: "",
@@ -164,8 +166,8 @@ function findSentenceEnd(buf: string): number {
 // first clause boundary (comma/semicolon/colon) past a minimum length, or fall back to a
 // word boundary near the max. Only used for the opening segment — later segments use
 // full-sentence boundaries to keep prosody natural. Returns the slice length or -1.
-const FIRST_SEG_MIN = 10
-const FIRST_SEG_MAX = 48
+const FIRST_SEG_MIN = 6
+const FIRST_SEG_MAX = 32
 function findFirstSegmentCut(buf: string): number {
   const clause = buf.slice(0, FIRST_SEG_MAX).match(/[,;:]\s/)
   if (clause && clause.index !== undefined && clause.index >= FIRST_SEG_MIN) {
@@ -215,6 +217,8 @@ async function* answerPipeline(
   plan?: Plan,
   screenshots: ScreenImage[] = [],
   signal?: AbortSignal,
+  history?: { role: "user" | "assistant"; text: string }[],
+  preloadedMemory?: Promise<MemoryContextBundle>,
 ): AsyncGenerator<SseEvent> {
   const content: Array<{ type: "text"; text: string } | { type: "image"; image: string }> = [
     { type: "text", text },
@@ -246,12 +250,13 @@ async function* answerPipeline(
     }
   }
 
-  const systemPrompt = await getFastPrompt(text, hasScreen, plan)
+  const systemPrompt = await getFastPrompt(text, hasScreen, plan, preloadedMemory)
 
   const result = streamText({
     model: createModel(MODEL),
     messages: [
       { role: "system" as const, content: systemPrompt },
+      ...(history ?? []).map((h) => ({ role: h.role as "user" | "assistant", content: h.text })),
       { role: "user" as const, content },
     ],
     maxTokens: maxOutputTokensFor(text),
@@ -392,6 +397,14 @@ export async function* fastPipeline(
   req: FastQueryRequest,
   signal?: AbortSignal,
 ): AsyncGenerator<SseEvent> {
+  // For text queries (typed / Telegram / gateway) the query is known immediately —
+  // kick off memory loading in parallel with the quota check so it overlaps network
+  // I/O rather than running sequentially after STT.
+  const earlyMemory: Promise<MemoryContextBundle> | undefined =
+    memoryEnabled(req.plan) && req.text?.trim()
+      ? loadMemoryContext(req.text.trim())
+      : undefined
+
   const reservation = await reserveInteraction("chat")
   if (!reservation.ok) {
     yield {
@@ -428,6 +441,8 @@ export async function* fastPipeline(
       req.plan,
       req.screenshots ?? [],
       signal,
+      req.history,
+      earlyMemory,
     )) {
       if (signal?.aborted) break
       if (event.type === "llm_chunk") output += event.text

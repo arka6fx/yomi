@@ -22,7 +22,7 @@ export function createDiscordTools(ctx: ConnectorContext): ToolSet {
   }
 
   return {
-    "discord.getProfile": tool({
+    "discord-getProfile": tool({
       description: "Get the authenticated user's Discord profile — username, discriminator, and avatar.",
       parameters: z.object({}),
       execute: async () => {
@@ -49,7 +49,7 @@ export function createDiscordTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
-    "discord.listServers": tool({
+    "discord-listServers": tool({
       description: "List Discord servers (guilds) the user is a member of.",
       parameters: z.object({
         limit: z.number().int().min(1).max(50).default(20).describe("Max servers to return"),
@@ -76,7 +76,7 @@ export function createDiscordTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
-    "discord.getServer": tool({
+    "discord-getServer": tool({
       description: "Get details about a specific Discord server by its ID.",
       parameters: z.object({
         serverId: z.string().describe("Discord server (guild) ID"),
@@ -105,7 +105,7 @@ export function createDiscordTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
-    "discord.listChannels": tool({
+    "discord-listChannels": tool({
       description: "List text channels in a Discord server the user belongs to.",
       parameters: z.object({
         serverId: z.string().describe("Discord server (guild) ID"),

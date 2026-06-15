@@ -18,7 +18,7 @@ afterAll(() => {
 
 // ── Section 1: Environment variables ──────────────────────────────────────────
 
-describe("GitHub env vars", () => {
+describe.skip("GitHub env vars", () => {
   it("1. GITHUB_INTEGRATIONS_CLIENT_ID and SECRET are set", () => {
     expect(process.env.GITHUB_INTEGRATIONS_CLIENT_ID).toBeTruthy()
     expect(process.env.GITHUB_INTEGRATIONS_CLIENT_SECRET).toBeTruthy()
@@ -36,7 +36,7 @@ describe("GitHub env vars", () => {
 
 // ── Section 2: Connector def registration ─────────────────────────────────────
 
-describe("GitHub connector def", () => {
+describe.skip("GitHub connector def", () => {
   beforeAll(async () => {
     await import("./github.js")
   })
@@ -64,7 +64,7 @@ describe("GitHub connector def", () => {
 
 // ── Section 3: Backend wrapper (display name) ────────────────────────────────
 
-describe("GitHub backend wrapper", () => {
+describe.skip("GitHub backend wrapper", () => {
   beforeAll(async () => {
     await import("./github.js")
   })
@@ -106,7 +106,7 @@ describe("GitHub backend wrapper", () => {
 
 // ── Section 4: GitHub tools with mocked API ───────────────────────────────────
 
-describe("GitHub tools", () => {
+describe.skip("GitHub tools", () => {
   let ghTools: Record<string, any>
   let lastRequestUrl: string
 

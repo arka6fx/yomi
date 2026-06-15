@@ -12,7 +12,7 @@ import { ConnectorIcon } from "@yomi/ui-connectors"
 // import { MissionControl } from "./mission/MissionControl" // disabled — desktop automation hidden
 
 // Hands-free voice loop tuning (renderer-side end-of-speech auto-stop).
-const VAD_SILENCE_HANGOVER_MS = 1500 // silence after speech before we auto-stop and process
+const VAD_SILENCE_HANGOVER_MS = 800 // silence after speech before we auto-stop and process
 const VAD_MAX_UTTERANCE_MS = 15000 // hard cap on a single utterance
 const VAD_INACTIVITY_MS = 10000 // no speech at all → exit the loop back to idle
 const TTS_PLAYBACK_GAIN = 1.45
@@ -25,12 +25,6 @@ type UpdateNotice =
 
 // Barge-in tuning — a mic-only VAD tap runs while Yomi processes/speaks so the
 // user can talk over it. Thresholds are deliberately stricter than the listening
-// VAD to resist TTS leaking back through the mic (echo cancellation is on, but
-// not perfect): a higher dB floor + sustained speech + an arm delay.
-const BARGE_IN_SPEECH_DB = -28 // louder than the -35 dB listening threshold
-const BARGE_IN_SUSTAIN_MS = 350 // continuous speech required before we cut in
-const BARGE_IN_ARM_DELAY_MS = 400 // ignore the first moments (trailing speech / TTS onset)
-
 // ── Theme System ───────────────────────────────────────────────────────────────
 
 const AMBER: Theme = {
@@ -2753,10 +2747,10 @@ function Toolbar({
             </span>
           </button>
 
-          {/* Screenshot button — one click captures the screen and analyses it straight into chat */}
+          {/* Analyze button — one click captures the screen and analyses it straight into chat */}
           <button
             onClick={() => {
-              if (state === "idle") window.yomi.triggerScreenshot()
+              if (state === "idle") window.yomi.triggerAnalyze()
             }}
             onMouseEnter={(e) => {
               if (state !== "idle") return
@@ -2795,7 +2789,7 @@ function Toolbar({
                 fontWeight: 500,
               }}
             >
-              Screenshot
+              Analyze
             </span>
           </button>
 
@@ -3010,20 +3004,16 @@ function Toolbar({
 // ── Notch — state display that hangs from the bottom of the toolbar ──────────────
 // Drops down when Yomi is active (listening / processing / typing / speaking) and
 // retracts when idle. Shows the per-state micro-loader + label + a dim context line.
-function Notch({ state, voiceTurnBusy }: { state: HotkeyState; voiceTurnBusy: boolean }) {
+function Notch({ state }: { state: HotkeyState }) {
   const { theme: t } = React.useContext(ThemeCtx)
   const entries = useYomiStore((s) => s.entries)
-  // automation disabled
-  const active = state !== "idle" || voiceTurnBusy
+  const active = state !== "idle"
 
   let statusLabel = ""
   let loaderKind: LoaderKind = "processing"
   if (state === "listening") {
     statusLabel = "Listening"
     loaderKind = "listening"
-  } else if (voiceTurnBusy) {
-    statusLabel = "Talk to interrupt"
-    loaderKind = "speaking"
   } else if (state === "text-input") {
     statusLabel = "Typing"
     loaderKind = "typing"
@@ -3037,7 +3027,7 @@ function Notch({ state, voiceTurnBusy }: { state: HotkeyState; voiceTurnBusy: bo
   // eslint-disable-next-line no-constant-condition
   if (false) {
     // automation context — disabled
-  } else if (state === "listening" || voiceTurnBusy) contextText = "Esc to stop"
+  } else if (state === "listening") contextText = "Esc to stop"
   else if (state === "text-input") contextText = "text only, no voice"
   else if (state === "processing") contextText = latest?.transcript?.trim() || "Working on it"
 
@@ -3429,13 +3419,11 @@ const App: React.FC = () => {
     authError,
     setAuthState,
     hotkeyState,
-    voiceTurnBusy,
     entries,
     ttsEnabled,
     subscription,
     handleSseEvent,
     setHotkeyState,
-    clearVoiceTurn,
     stopActivePlayback,
     dismissEntry,
     setSubscription,
@@ -3499,8 +3487,6 @@ const App: React.FC = () => {
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null)
   const audioTokenRef = useRef(0)
   const draggingRef = useRef(false)
-  // Hands-free loop: cancels a pending re-listen when the user presses ESC.
-  const cancelRelistenRef = useRef(false)
 
   const resetAudioPlayback = useCallback(() => {
     audioTokenRef.current += 1
@@ -3714,7 +3700,7 @@ const App: React.FC = () => {
       cancelAnimationFrame(settleFrame)
       resizeObserver.disconnect()
     }
-  }, [authState, entries.length, hotkeyState, updateNotice, voiceTurnBusy, menuOpen])
+  }, [authState, entries.length, hotkeyState, updateNotice, menuOpen])
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -3832,6 +3818,7 @@ const App: React.FC = () => {
     resetAudioPlayback()
     let cancelled = false
     let micSrc: MediaStreamAudioSourceNode | null = null
+    let sysSrc: MediaStreamAudioSourceNode | null = null
     let proc: AudioWorkletNode | null = null
     // Mic-only VAD: a second worklet tap on the mic alone (not the system-audio
     // loopback) so app/TTS sound can't fool end-of-speech detection.
@@ -3887,8 +3874,13 @@ const App: React.FC = () => {
       // Mic input (always present)
       micSrc = ctx.createMediaStreamSource(stream)
       micSrc.connect(proc)
-      // Keep STT mic-only. Desktop loopback is too noisy for continuous hands-free mode:
-      // if Spotify is playing, mixed system audio drowns out the next command.
+      // Mix in system/loopback audio so Yomi can hear background sound (videos, meetings).
+      // VAD stays mic-only (line below) so TTS or background music won't auto-stop the turn.
+      const sysStream = sysStreamRef.current
+      if (sysStream && sysStream.getAudioTracks().some((t) => t.readyState === "live")) {
+        sysSrc = ctx.createMediaStreamSource(sysStream)
+        sysSrc.connect(proc)
+      }
       proc.connect(ctx.destination)
       processorRef.current = proc
 
@@ -3925,70 +3917,12 @@ const App: React.FC = () => {
       cancelled = true
       clearTimers()
       micSrc?.disconnect()
+      sysSrc?.disconnect()
       proc?.disconnect()
       vadProc?.disconnect()
       processorRef.current = null
     }
   }, [hotkeyState])
-
-  // Barge-in: a mic-only VAD tap that runs across the whole voice turn (processing
-  // + TTS drain). When the user speaks over Yomi, cut the audio and tell main to
-  // abort + re-listen. Stricter than the listening VAD (higher dB floor, sustained
-  // speech, arm delay) so Yomi's own TTS leaking through the mic can't self-trigger.
-  useEffect(() => {
-    if (!voiceTurnBusy) return
-    let cancelled = false
-    let micSrc: MediaStreamAudioSourceNode | null = null
-    let tap: AudioWorkletNode | null = null
-    let fired = false
-    let speechMs = 0 // accumulated continuous-speech time
-    const armAt = Date.now() + BARGE_IN_ARM_DELAY_MS
-    const vad = new EnergyVad({ sampleRate: 16000, speechThresholdDb: BARGE_IN_SPEECH_DB })
-
-    const bargeIn = () => {
-      if (fired) return
-      fired = true
-      resetAudioPlayback() // stop Yomi mid-sentence
-      cancelRelistenRef.current = true // don't let the loop also re-arm
-      window.yomi.bargeIn() // main aborts the turn and starts listening
-    }
-
-    ;(async () => {
-      await workletReadyRef.current
-      if (cancelled) return
-      const stream = streamRef.current
-      const ctx = ctxRef.current
-      if (!ctx || !stream) return
-      if (ctx.state === "suspended") await ctx.resume()
-      if (cancelled) return
-      try {
-        tap = new AudioWorkletNode(ctx, "pcm-processor")
-      } catch (err) {
-        console.warn("[yomi/barge-in] tap failed:", err)
-        return
-      }
-      tap.port.onmessage = (e) => {
-        if (fired || Date.now() < armAt) return
-        const frame = new Float32Array(e.data as ArrayBuffer)
-        const { hasSpeech } = vad.processFrame(frame)
-        if (hasSpeech) {
-          speechMs += (frame.length / 16000) * 1000
-          if (speechMs >= BARGE_IN_SUSTAIN_MS) bargeIn()
-        } else {
-          speechMs = 0 // require *continuous* speech, not scattered blips
-        }
-      }
-      micSrc = ctx.createMediaStreamSource(stream) // mic only — never the loopback
-      micSrc.connect(tap)
-      tap.connect(ctx.destination) // keep the node pulled; emits silence
-    })()
-
-    return () => {
-      cancelled = true
-      micSrc?.disconnect()
-      tap?.disconnect()
-    }
-  }, [voiceTurnBusy, resetAudioPlayback])
 
   // Stop in-flight audio immediately when TTS is toggled off.
   useEffect(() => {
@@ -4001,34 +3935,10 @@ const App: React.FC = () => {
   // dedicated IPC instead.  Stop audio and dismiss the active streaming entry.
   useEffect(() => {
     return window.yomi.onStopAudio(() => {
-      cancelRelistenRef.current = true // ESC: drop any pending hands-free re-listen
       resetAudioPlayback()
       stopActivePlayback()
-      clearVoiceTurn() // exit the "Talk to interrupt" window
     })
-  }, [resetAudioPlayback, stopActivePlayback, clearVoiceTurn])
-
-  // Hands-free loop: after a voice turn, re-arm the mic once any TTS playback has
-  // drained (agent turns have no audio, so this fires almost immediately).
-  useEffect(() => {
-    return window.yomi.onLoopContinue(() => {
-      cancelRelistenRef.current = false
-      const start = Date.now()
-      const tick = () => {
-        if (cancelRelistenRef.current) return
-        const draining = audioPlayingRef.current || localAudioQueue.current.length > 0
-        if (draining && Date.now() - start < 30000) {
-          setTimeout(tick, 120)
-          return
-        }
-        // Small grace so the mic doesn't catch the tail end of playback.
-        setTimeout(() => {
-          if (!cancelRelistenRef.current) window.yomi.triggerVoice()
-        }, 250)
-      }
-      setTimeout(tick, 120)
-    })
-  }, [])
+  }, [resetAudioPlayback, stopActivePlayback])
 
   // Fallback: if globalShortcut("Escape") failed to register (common on some Windows setups),
   // the keypress reaches the window when focused — forward it to main via IPC.
@@ -4248,7 +4158,7 @@ const App: React.FC = () => {
       </AnimatePresence>
 
       {/* Notch — state display that hangs from the bottom of the toolbar */}
-      <Notch state={hotkeyState} voiceTurnBusy={voiceTurnBusy} />
+      <Notch state={hotkeyState} />
 
       {/* MissionControl disabled — desktop automation hidden */}
 

@@ -36,10 +36,7 @@ type Integration = {
 
 type BotConnection = { platform: string; connectedAt: string }
 
-const BOT_META: Record<string, { name: string; color: string }> = {
-  telegram: { name: "Telegram", color: "#3aa9e0" },
-  discord: { name: "Discord", color: "#7a8cf0" },
-}
+const TELEGRAM_COLOR = "#3aa9e0"
 
 export default function IntegrationsPage() {
   const { theme: t } = useContext(ThemeCtx)
@@ -78,15 +75,11 @@ export default function IntegrationsPage() {
     void loadBotConnections()
   }, [])
 
-  async function handleBotConnect(platform: "telegram" | "discord") {
+  async function handleBotConnect(platform: "telegram") {
     setBotBusy(platform)
     try {
-      const result =
-        platform === "telegram"
-          ? await window.yomi.connectTelegramBot()
-          : await window.yomi.connectDiscordBot()
+      const result = await window.yomi.connectTelegramBot()
       if (result.error) console.error("[bot] connect error:", result.error)
-      // Browser opened for linking; refresh shortly after the user returns
       setTimeout(() => void loadBotConnections(), 3000)
     } finally {
       setBotBusy(null)
@@ -188,7 +181,7 @@ export default function IntegrationsPage() {
         />
       )}
 
-      {/* Bot channels — chat with Yomi from Telegram or Discord */}
+      {/* Telegram — chat with Yomi from anywhere */}
       <motion.div
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
@@ -199,52 +192,53 @@ export default function IntegrationsPage() {
           Chat from anywhere
         </h3>
         <p style={{ fontSize: 11, color: t.dim, margin: "0 0 12px 0", lineHeight: 1.45 }}>
-          Connect Telegram or Discord to message Yomi even with your desktop closed.
+          Link Telegram to message Yomi on your phone, even with your laptop closed.
         </p>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {(["telegram", "discord"] as const).map((platform) => {
-            const meta = BOT_META[platform] ?? { name: platform, color: t.dim as string }
-            const connected = connectedBots.has(platform)
-            const conn = botConnections.find((b) => b.platform === platform)
-            const busy = botBusy === platform
+        {(() => {
+          const connected = connectedBots.has("telegram")
+          const conn = botConnections.find((b) => b.platform === "telegram")
+          const busy = botBusy === "telegram"
+
+          if (connected && conn) {
             return (
               <div
-                key={platform}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 12,
-                  padding: "10px 12px",
-                  borderRadius: 10,
+                  borderRadius: 12,
                   border: `1px solid ${t.border}`,
                   background: t.surface,
+                  overflow: "hidden",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      background: meta.color,
-                      flexShrink: 0,
-                    }}
-                  />
-                  <div>
-                    <div style={{ fontSize: 12.5, fontWeight: 600, color: t.text }}>{meta.name}</div>
-                    <div style={{ fontSize: 10.5, color: t.dim }}>
-                      {connected && conn
-                        ? `Connected ${new Date(conn.connectedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
-                        : "Not connected"}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "12px 14px",
+                    gap: 12,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        background: TELEGRAM_COLOR,
+                        flexShrink: 0,
+                        boxShadow: `0 0 6px ${TELEGRAM_COLOR}80`,
+                      }}
+                    />
+                    <div>
+                      <div style={{ fontSize: 12.5, fontWeight: 600, color: t.text }}>Telegram</div>
+                      <div style={{ fontSize: 10.5, color: connectorTheme.successText }}>
+                        Connected {new Date(conn.connectedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </div>
                     </div>
                   </div>
-                </div>
-
-                {connected ? (
                   <button
-                    onClick={() => void handleBotUnlink(platform)}
+                    onClick={() => void handleBotUnlink("telegram")}
                     disabled={busy}
                     style={{
                       fontSize: 11,
@@ -261,30 +255,90 @@ export default function IntegrationsPage() {
                   >
                     {busy ? "…" : "Unlink"}
                   </button>
-                ) : (
+                </div>
+                <div
+                  style={{
+                    borderTop: `1px solid ${t.border}`,
+                    padding: "8px 14px",
+                    fontSize: 10.5,
+                    color: t.dim,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Try sending <span style={{ fontFamily: "monospace", color: t.text }}>analyze my screen</span> while the app is open, or ask about your files and tasks anytime.
+                </div>
+              </div>
+            )
+          }
+
+          return (
+            <div
+              style={{
+                borderRadius: 12,
+                border: `1px solid ${t.border}`,
+                background: t.surface,
+                overflow: "hidden",
+              }}
+            >
+              <div style={{ padding: "14px 14px 12px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: t.dim as string, flexShrink: 0 }} />
+                    <div style={{ fontSize: 12.5, fontWeight: 600, color: t.text }}>Telegram</div>
+                  </div>
                   <button
-                    onClick={() => void handleBotConnect(platform)}
+                    onClick={() => void handleBotConnect("telegram")}
                     disabled={busy}
                     style={{
                       fontSize: 11,
                       fontWeight: 600,
                       color: connectorTheme.accentText,
-                      background: connectorTheme.accent,
+                      background: TELEGRAM_COLOR,
                       border: "none",
                       borderRadius: 8,
-                      padding: "5px 12px",
+                      padding: "6px 14px",
                       cursor: busy ? "default" : "pointer",
                       opacity: busy ? 0.5 : 1,
                       fontFamily: UI_FONT,
                     }}
                   >
-                    {busy ? "Opening…" : "Connect"}
+                    {busy ? "Opening Telegram…" : "Connect Telegram"}
                   </button>
-                )}
+                </div>
+
+                {/* Step guide */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                  {[
+                    { n: "1", label: "Click Connect Telegram above" },
+                    { n: "2", label: "Telegram opens with the Yomi bot" },
+                    { n: "3", label: "Press Start — you're linked" },
+                  ].map(({ n, label }) => (
+                    <div key={n} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span
+                        style={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: "50%",
+                          border: `1px solid ${t.border}`,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 9,
+                          fontWeight: 700,
+                          color: t.dim,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {n}
+                      </span>
+                      <span style={{ fontSize: 11, color: t.dim, lineHeight: 1.4 }}>{label}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            )
-          })}
-        </div>
+            </div>
+          )
+        })()}
       </motion.div>
     </div>
   )

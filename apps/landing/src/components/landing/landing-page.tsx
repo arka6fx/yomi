@@ -22,15 +22,8 @@ import { authClient } from "@/lib/auth-client"
 import Footer from "@/components/Footer"
 import Nav from "@/components/Nav"
 import {
-  GmailIcon,
-  GoogleCalendarIcon,
   GoogleDriveIcon,
-  GitHubIcon,
   NotionIcon,
-  SlackIcon,
-  LinearIcon,
-  DiscordIcon,
-  TelegramIcon,
 } from "@/components/brand-icons"
 
 type Platform = "mac" | "windows" | "unknown"
@@ -124,20 +117,10 @@ const FEATURES = [
 ]
 
 const CONNECTORS = [
-  { Icon: GmailIcon, name: "Gmail", description: "Read, draft, and manage emails" },
-  { Icon: GoogleCalendarIcon, name: "Google Calendar", description: "View schedules and upcoming events" },
   { Icon: GoogleDriveIcon, name: "Google Drive", description: "Search and retrieve files from your Drive" },
-  { Icon: GitHubIcon, name: "GitHub", description: "PRs, issues, and code search" },
   { Icon: NotionIcon, name: "Notion", description: "Search pages and databases" },
-  { Icon: SlackIcon, name: "Slack", description: "Search messages, send replies" },
-  { Icon: LinearIcon, name: "Linear", description: "Issues, projects, and sprints" },
-  { Icon: DiscordIcon, name: "Discord", description: "Chat in servers and channels" },
 ]
 
-const BOT_CHANNELS = [
-  { Icon: TelegramIcon, name: "Telegram", description: "Text or send voice notes — works while your laptop is closed" },
-  { Icon: DiscordIcon, name: "Discord", description: "Chat in any server channel Yomi joins" },
-]
 
 const PLANS = [
   {
@@ -155,8 +138,8 @@ const PLANS = [
       "50 local memories",
       "Window controls & docking",
       "Streaming responses",
-      "2 app connectors",
-      "20 bot messages / month",
+      "App connectors",
+      "20 Telegram bot messages / month",
     ],
     cta: "Get started free",
     popular: false,
@@ -174,8 +157,8 @@ const PLANS = [
       "2,000 AI chats / month",
       "180 min voice / month",
       "400 screenshot analyses",
-      "All 8 app connectors",
-      "200 Telegram & Discord bot messages / month",
+      "App connectors",
+      "200 Telegram bot messages / month",
     ],
     cta: "Subscribe",
     popular: true,
@@ -193,8 +176,8 @@ const PLANS = [
       "Everything in Pro",
       "8,000 AI chats / month",
       "750 min voice / month",
-      "All 8 app connectors",
-      "500 Telegram & Discord bot messages / month",
+      "App connectors",
+      "500 Telegram bot messages / month",
       "Experimental features first",
     ],
     cta: "Subscribe",
@@ -314,23 +297,6 @@ export function LandingPage() {
     <div className="site-texture-bg min-h-screen text-foreground">
       <Nav />
 
-      {/* App Purpose Summary — immediately visible before the hero for Google OAuth reviewers */}
-      <div className="border-b border-white/5 bg-background/60 px-4 py-3 sm:px-6">
-        <div className="mx-auto max-w-5xl text-center">
-          <p className="text-xs leading-relaxed text-muted-foreground sm:text-sm">
-            <span className="font-medium text-foreground">Yomi</span> is a Windows AI assistant
-            that connects to your Gmail, Google Calendar, Google Drive, GitHub, Slack, and other
-            work apps so you can query and act on your data in natural language — from your desktop
-            or Telegram.{" "}
-            <a
-              href="#google-data"
-              className="text-primary underline underline-offset-2 transition-colors hover:text-primary/80"
-            >
-              Why we need Google Sign-In →
-            </a>
-          </p>
-        </div>
-      </div>
 
       <section id="hero" className="px-4 pb-10 pt-6 sm:px-6 lg:pb-12">
         <div className="relative mx-auto min-h-[calc(100vh-96px)] max-w-7xl overflow-hidden rounded-[28px] border border-white/10 bg-zinc-950 shadow-2xl shadow-black/50 sm:rounded-[36px]">
@@ -383,20 +349,17 @@ export function LandingPage() {
                   <span className="font-accent text-5xl leading-none text-[#eaf4ff]">*</span>
                   <div className="max-w-sm space-y-3">
                     <p className="text-sm leading-5 text-white/78 sm:text-base sm:leading-6">
-                      Yomi is an AI productivity assistant that reads your Gmail, Google Calendar,
-                      and Google Drive to answer questions you ask in natural language. It also
-                      connects to GitHub, Slack, Notion, Linear, and more.
+                      Sees your screen, hears your voice, connects to Google Drive and Notion.
+                      Ask anything — get answers instantly.
                     </p>
-                    <p className="text-sm leading-5 text-white/55 sm:text-sm sm:leading-6">
-                      Ask anything about your work from the desktop or from Telegram — without
-                      switching apps or copy-pasting context.
+                    <p className="text-xs leading-5 text-white/50">
+                      Desktop or Telegram. No app-switching. No copy-paste.
                     </p>
-                    <p className="text-xs leading-5 text-white/40">
-                      Google data (Gmail · Calendar · Drive) is read only when you ask a question
-                      and is never stored.{" "}
+                    <p className="text-xs leading-5 text-white/30">
+                      Drive data is never stored.{" "}
                       <a
                         href="#google-data"
-                        className="underline underline-offset-2 transition-colors hover:text-white/60"
+                        className="underline underline-offset-2 transition-colors hover:text-white/50"
                       >
                         Learn more
                       </a>
@@ -467,18 +430,14 @@ export function LandingPage() {
         </div>
         <div className="space-y-4 text-center text-sm leading-relaxed text-muted-foreground">
           <p>
-            Yomi is an AI productivity assistant that connects to your Google Workspace — Gmail,
-            Google Calendar, and Google Drive — so you can query, analyze, and act on your work
-            using natural language, without switching apps or copy-pasting context.
+            Yomi is an AI productivity assistant that connects to your Google Drive and Notion so
+            you can query, analyze, and act on your work using natural language, without switching
+            apps or copy-pasting context.
           </p>
           <p>
-            Ask Yomi to search your inbox, find a file, check your calendar, or draft a reply, all
-            from a single interface on your desktop or via Telegram. Yomi only accesses your Google
-            data when you ask a question, and for no other purpose.
-          </p>
-          <p>
-            Yomi also connects to GitHub, Slack, Notion, Linear, and Discord so you can manage
-            tasks, search code, and automate cross-app workflows entirely through conversation.
+            Ask Yomi to find a file, summarize a doc, or search your Notion workspace — all from a
+            single interface on your desktop or via Telegram. Yomi only accesses your data when you
+            ask a question, and for no other purpose.
           </p>
         </div>
       </section>
@@ -494,8 +453,8 @@ export function LandingPage() {
           </h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
             Yomi uses Google Sign-In to authenticate your identity and to request permission to
-            access your Gmail, Calendar, and Drive data. Below you will find exactly why
-            sign-in is required and how your data is handled.
+            access your Drive data. Below you will find exactly why sign-in is required and how
+            your data is handled.
           </p>
         </div>
         <div className="space-y-4">
@@ -503,11 +462,10 @@ export function LandingPage() {
           <div className="rounded-2xl border border-primary/20 bg-primary/5 px-6 py-4 text-sm text-muted-foreground">
             <p className="mb-1 font-medium text-foreground">App purpose</p>
             <p>
-              Yomi is a personal AI assistant. It accesses your Google account data — with your
-              explicit permission — to answer questions you ask in natural language. For example:
-              &ldquo;What emails did I get from Acme this week?&rdquo; or &ldquo;Find the Q3
-              report in my Drive.&rdquo; Yomi reads data on-demand per request and never
-              stores it.
+              Yomi is a personal AI assistant. It accesses your Google Drive — with your explicit
+              permission — to answer questions you ask in natural language. For example:
+              &ldquo;Find the Q3 report in my Drive.&rdquo; or &ldquo;What does the product spec
+              say about pricing?&rdquo; Yomi reads data on-demand per request and never stores it.
             </p>
             <p className="mt-2 text-xs text-muted-foreground/70">
               Yomi&apos;s use of Google API data complies with the{" "}
@@ -537,7 +495,7 @@ export function LandingPage() {
                     Yomi uses Google&apos;s authentication system to confirm who you are, so it can
                     securely associate your connected apps, settings, and preferences with your
                     account. Anonymous access is not possible because Yomi operates on your
-                    personal email, calendar, and file data — it cannot function without knowing
+                    personal file data — it cannot function without knowing
                     which Google account to query.
                   </p>
                 </div>
@@ -548,11 +506,11 @@ export function LandingPage() {
                 </div>
                 <div>
                   <p className="font-medium text-foreground">
-                    To request permission to read your Gmail, Calendar, and Drive
+                    To request permission to access your Drive
                   </p>
                   <p className="mt-0.5">
                     Google&apos;s OAuth consent screen lets you choose exactly which services Yomi
-                    may access. Yomi cannot retrieve your emails or calendar events without your
+                    may access. Yomi cannot retrieve your Drive files without your
                     explicit authorization. Each permission is granted individually and can be
                     revoked at any time from your Yomi dashboard or from{" "}
                     <a
@@ -577,8 +535,8 @@ export function LandingPage() {
                   </p>
                   <p className="mt-0.5">
                     When you ask a question, Yomi fetches only the data needed to answer it and
-                    discards it immediately after responding. No email content, calendar data, or
-                    Drive files are retained on Yomi&apos;s servers between requests. Your Google
+                    discards it immediately after responding. No Drive files are retained on
+                    Yomi&apos;s servers between requests. Your Google
                     data is never sold, never used to train AI models, and is not shared with any
                     third party except the AI inference provider used to generate your response
                     — and solely for that purpose.
@@ -597,36 +555,6 @@ export function LandingPage() {
               Depending on the integrations you enable, Yomi may request:
             </p>
             <ul className="mb-4 space-y-4">
-              <li className="flex items-start gap-3">
-                <Check size={14} className="mt-0.5 shrink-0 text-primary" />
-                <div>
-                  <p className="font-medium text-foreground">Gmail</p>
-                  <p className="mt-0.5">
-                    <span className="font-mono text-xs text-muted-foreground/70">gmail.readonly · gmail.modify · gmail.send</span>
-                  </p>
-                  <p className="mt-1">
-                    <strong className="text-foreground/80">Purpose:</strong> To search your inbox,
-                    summarize email threads, and draft or send replies when you ask. For example:{" "}
-                    &ldquo;What did Sarah say about the project?&rdquo; or &ldquo;Draft a reply
-                    declining the meeting.&rdquo;
-                  </p>
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <Check size={14} className="mt-0.5 shrink-0 text-primary" />
-                <div>
-                  <p className="font-medium text-foreground">Google Calendar</p>
-                  <p className="mt-0.5">
-                    <span className="font-mono text-xs text-muted-foreground/70">calendar.readonly</span>
-                  </p>
-                  <p className="mt-1">
-                    <strong className="text-foreground/80">Purpose:</strong> To answer schedule
-                    questions, find free time, and surface upcoming events when you ask. For
-                    example: &ldquo;What&apos;s on my calendar today?&rdquo; or &ldquo;When is my
-                    next meeting with the design team?&rdquo;
-                  </p>
-                </div>
-              </li>
               <li className="flex items-start gap-3">
                 <Check size={14} className="mt-0.5 shrink-0 text-primary" />
                 <div>
@@ -739,7 +667,7 @@ export function LandingPage() {
           </p>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto flex max-w-lg justify-center gap-3">
           {CONNECTORS.map((c, i) => (
             <motion.div
               key={c.name}
@@ -747,7 +675,7 @@ export function LandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: i * 0.06 }}
-              className="flex items-start gap-3 rounded-2xl glass-card p-4"
+              className="flex flex-1 items-start gap-3 rounded-2xl glass-card p-4"
             >
               <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/6 ring-1 ring-inset ring-white/10">
                 <c.Icon size={18} />
@@ -760,32 +688,6 @@ export function LandingPage() {
           ))}
         </div>
 
-        {/* Bot channels */}
-        <div className="mt-12">
-          <p className="mb-6 text-center text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            Also available on
-          </p>
-          <div className="mx-auto grid max-w-lg gap-4 sm:grid-cols-2">
-            {BOT_CHANNELS.map((ch, i) => (
-              <motion.div
-                key={ch.name}
-                initial={{ opacity: 0, y: 12 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: i * 0.1 }}
-                className="flex items-start gap-3 rounded-2xl glass-card p-5"
-              >
-                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/6 ring-1 ring-inset ring-white/10">
-                  <ch.Icon size={22} />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">{ch.name}</p>
-                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{ch.description}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
       </section>
 
       {/* ── Data & Integrations transparency ─────────────────────────────── */}
@@ -806,45 +708,20 @@ export function LandingPage() {
         <div className="mx-auto max-w-3xl overflow-hidden rounded-2xl glass-card">
           {[
             {
-              provider: "Google — Gmail",
-              scopes: "gmail.readonly, gmail.modify, gmail.send",
-              why: "To read, search, and summarise your emails when you ask. For example: “What did Sarah say about the project?” or “Draft a reply to the last email from Acme.”",
-            },
-            {
-              provider: "Google — Calendar",
-              scopes: "calendar.readonly",
-              why: 'To answer schedule questions like "What’s on my calendar today?" or "Find me a free hour this week."',
-            },
-            {
-              provider: "Google — Drive",
+              provider: "Google Drive",
               scopes: "drive.file",
               why: "To list and read files you choose to share with Yomi, so you can ask questions about their content.",
-            },
-            {
-              provider: "GitHub",
-              scopes: "repo, read:user",
-              why: "To list pull requests and issues and search code in your repositories when you ask.",
             },
             {
               provider: "Notion",
               scopes: "Public integration",
               why: "To search pages, read content, and create or update pages and database entries.",
             },
-            {
-              provider: "Slack",
-              scopes: "channels:read, chat:write, search:read",
-              why: "To search messages, list channels, and send replies on your behalf.",
-            },
-            {
-              provider: "Linear",
-              scopes: "read, write",
-              why: "To list, create, and update issues and projects in your Linear workspace.",
-            },
           ].map((row, i) => (
             <div
               key={row.provider}
               className={`flex flex-col gap-1 px-6 py-4 text-sm sm:flex-row sm:gap-4 ${
-                i < 6 ? "border-b border-border" : ""
+                i < 1 ? "border-b border-border" : ""
               }`}
             >
               <div className="w-44 shrink-0 font-medium text-foreground">{row.provider}</div>

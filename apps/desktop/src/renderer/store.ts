@@ -62,12 +62,12 @@ interface YomiState {
   authState: AuthState
   authError: string
   hotkeyState: HotkeyState
-  // True for the whole voice turn (processing + TTS drain) — gates the
-  // "Talk to interrupt" label and the barge-in mic tap. Outlives `processing`
-  // because TTS keeps playing after the state returns to idle.
-  voiceTurnBusy: boolean
   entries: ChatEntry[]
   activeId: number | null
+  // Reserved chat ID allocated when voice listening starts — consumed by the
+  // first `transcript` event so the turn has a stable ID from the moment
+  // the user begins speaking.
+  listeningId: number | null
   ttsEnabled: boolean
   pendingAct: { id: string; label: string } | null
   automationRuns: AutomationRun[]
@@ -90,7 +90,6 @@ interface YomiState {
 
   setAuthState: (s: AuthState, error?: string) => void
   setHotkeyState: (state: HotkeyState) => void
-  clearVoiceTurn: () => void
   handleSseEvent: (event: SseEvent) => void
   stopActivePlayback: () => void
   dismissEntry: (id: number) => void
@@ -113,9 +112,9 @@ export const useYomiStore = create<YomiState>((set) => ({
   authState: "checking",
   authError: "",
   hotkeyState: "idle",
-  voiceTurnBusy: false,
   entries: [],
   activeId: null,
+  listeningId: null,
   ttsEnabled: true,
   pendingAct: null,
   automationRuns: [],
@@ -137,23 +136,24 @@ export const useYomiStore = create<YomiState>((set) => ({
   subscriptionLoading: false,
 
   setAuthState: (authState, error = "") => set({ authState, authError: error }),
-  // A voice turn (listening → processing) arms `voiceTurnBusy`, which the
-  // re-listen/barge-in (→ listening) later clears.
   setHotkeyState: (next) =>
     set((s) => {
       const patch: Partial<YomiState> = { hotkeyState: next }
-      if (next === "processing" && s.hotkeyState === "listening") patch.voiceTurnBusy = true
-      else if (next === "listening") patch.voiceTurnBusy = false
+      if (next === "listening") {
+        patch.listeningId = nextId++ // reserve an ID so this voice turn is trackable from first mic open
+      } else if (next === "idle") {
+        patch.listeningId = null // discard if the turn was abandoned before a transcript arrived
+      }
       return patch
     }),
-  clearVoiceTurn: () => set({ voiceTurnBusy: false }),
 
   handleSseEvent: (event) => {
     switch (event.type) {
       case "transcript":
         set((s) => {
-          const id = nextId++
+          const id = s.listeningId !== null ? s.listeningId : nextId++
           return {
+            listeningId: null,
             entries: [
               ...s.entries,
               {

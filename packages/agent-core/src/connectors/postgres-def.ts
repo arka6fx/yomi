@@ -14,7 +14,7 @@ function assertReadOnly(sql: string): void {
 
 export function createPostgresTools(ctx: ConnectorContext): ToolSet {
   return {
-    "postgres.query": tool({
+    "postgres-query": tool({
       description:
         "Run a read-only SQL SELECT query against the connected PostgreSQL database. Maximum 50 rows returned.",
       parameters: z.object({
@@ -58,7 +58,7 @@ export function createPostgresTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
-    "postgres.listTables": tool({
+    "postgres-listTables": tool({
       description: "List all user tables in the connected PostgreSQL database.",
       parameters: z.object({}),
       execute: async () => {

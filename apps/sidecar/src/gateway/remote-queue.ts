@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto"
 
-export type RemoteAction = "screenshot" | "voice" | "move" | "text"
+export type RemoteAction = "screenshot" | "analyze" | "voice" | "move" | "text"
 
 export interface RemoteTrigger {
   id: string

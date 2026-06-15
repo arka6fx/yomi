@@ -9,7 +9,7 @@ import {
   resetToIdle,
   activateProcessing,
   endVoiceTurn,
-  bargeInToListening,
+  triggerVoiceMode,
 } from "./hotkey"
 import { BACKEND_URL, loadToken } from "./auth"
 
@@ -77,7 +77,7 @@ type AutomationWorkflowsResponse = {
   workflows: AutomationWorkflowReplay[]
 }
 
-// Screen-analysis prompt for the Screenshot button / Ctrl+S. The chat shows SCREEN_LABEL instead.
+// Screen-analysis prompt for the Analyze button / Ctrl+S. The chat shows SCREEN_LABEL instead.
 const SCREEN_PROMPT = `Analyze what's on my screen and use the standard answer-block format.
 
 If you see a CODING or ALGORITHM problem, respond in exactly this structure:
@@ -120,14 +120,10 @@ let ttsPreference = true
 // One controller covers the entire pipeline: screenshot/STT → sidecar SSE stream.
 // Created at the top of each pipeline so ESC aborts any step, not just the fetch.
 let pipelineCtrl: AbortController | null = null
-// True only while a barge-in abort is in flight, so streamQuery's AbortError
-// branch doesn't reset to idle and stomp the fresh listening state.
-let bargingIn = false
 let agentAutomationFocusSuppressed = false
 
 function startPipeline(): AbortController {
   pipelineCtrl?.abort() // cancel any in-flight pipeline
-  bargingIn = false
   const ctrl = new AbortController()
   pipelineCtrl = ctrl
   return ctrl
@@ -137,7 +133,7 @@ function startPipeline(): AbortController {
 export function abortCurrent(): void {
   pipelineCtrl?.abort()
   pipelineCtrl = null
-  pcmChunks = [] // discard any buffered voice chunks
+  pcmChunks = []
   actHistory = [] // drop the multi-turn act context too
 }
 
@@ -149,7 +145,7 @@ export function initSidecarIpc(
   onListenStop: () => Promise<void>
   onTextQuery: () => void
   onAbort: () => void
-  onScreenshot: () => Promise<void>
+  onAnalyze: () => Promise<void>
 } {
   ipcMain.removeHandler("yomi:automation-health")
   ipcMain.handle("yomi:automation-health", async (): Promise<AutomationHealthResponse> => {
@@ -316,8 +312,8 @@ export function initSidecarIpc(
   })
 
   // Capture the screen and stream a screen analysis straight into chat (no Enter).
-  // Shared by the Screenshot toolbar button and its global hotkey.
-  const runScreenshot = async (): Promise<void> => {
+  // Shared by the Analyze toolbar button and its global hotkey.
+  const runAnalyze = async (): Promise<void> => {
     if (getHotkeyState() !== "idle") return
     const ctrl = startPipeline()
     activateProcessing()
@@ -355,19 +351,8 @@ export function initSidecarIpc(
       resetToIdle()
     }
   }
-  ipcMain.on("yomi:trigger-screenshot", () => {
-    void runScreenshot()
-  })
-
-  // Barge-in: abort the in-flight voice turn (if any) and start listening for the
-  // new request. During the TTS-drain tail the fetch is already done (pipelineCtrl
-  // null), so we just transition to listening.
-  ipcMain.on("yomi:barge-in", () => {
-    if (pipelineCtrl) {
-      bargingIn = true
-      abortCurrent()
-    }
-    bargeInToListening()
+  ipcMain.on("yomi:trigger-analyze", () => {
+    void runAnalyze()
   })
 
   // Start polling the sidecar for remote triggers from the Telegram/Discord bot.
@@ -422,7 +407,7 @@ export function initSidecarIpc(
       /* state managed by hotkey.ts transition */
     },
     onAbort: abortCurrent,
-    onScreenshot: runScreenshot,
+    onAnalyze: runAnalyze,
   }
 }
 
@@ -465,13 +450,13 @@ async function executeRemoteTrigger(
   }
 
   try {
-    if (action === "screenshot") {
+    if (action === "screenshot" || action === "analyze") {
       const capture = await captureScreen()
-      // Run the screen through the fast pipeline and collect the text response.
+      const queryText = action === "analyze" && payload["text"] ? payload["text"] : SCREEN_PROMPT
       const ctrl = new AbortController()
       const chunks: string[] = []
       const body = JSON.stringify({
-        text: SCREEN_PROMPT,
+        text: queryText,
         screenshot_b64: capture.screenshot_b64,
         screenshots: capture.displays.map(({ screen, screenshot_b64, imageWidth, imageHeight, isCursorScreen }) => ({
           screen,
@@ -481,6 +466,7 @@ async function executeRemoteTrigger(
           is_cursor_screen: isCursorScreen,
         })),
         tts: false,
+        plan: "max",
       })
       const streamRes = await fetch(`${sidecar.baseUrl}/query/fast`, {
         method: "POST",
@@ -509,8 +495,8 @@ async function executeRemoteTrigger(
       }
       await postResult(chunks.join("") || "Screenshot captured but no text generated.")
     } else if (action === "voice") {
-      if (!overlayWin.isDestroyed()) overlayWin.webContents.send("yomi:trigger-voice")
-      await postResult("Voice mode started.")
+      const started = triggerVoiceMode()
+      await postResult(started ? "Voice mode started — speak your query." : "Yomi is busy, try again in a moment.")
     } else if (action === "move") {
       const dir = payload["direction"] ?? "right"
       const dx = dir === "left" ? -200 : dir === "right" ? 200 : 0
@@ -669,7 +655,7 @@ async function streamQuery(
   tts: boolean,
   plan: Plan,
   ctrl: AbortController,
-  transcriptLabel?: string, // shown in chat instead of `text` (e.g. for the Screenshot button)
+  transcriptLabel?: string, // shown in chat instead of `text` (e.g. for the Analyze button)
   forceAnswer = false, // skip all intent routing — always the fast screen-answer path
 ): Promise<void> {
   pipelineCtrl = ctrl // keep reference current (startPipeline may have rotated it)
@@ -677,7 +663,7 @@ async function streamQuery(
   // Imperative/desktop commands route directly to /query/agent (needs UIA tools, no router).
   // Everything else goes to /query (unified) so the sidecar's intent router decides fast vs agent —
   // this lets connector queries ("show my emails", "check calendar") reach the agent tool path.
-  // forceAnswer (screenshot button) bypasses routing and hits /query/fast directly.
+  // forceAnswer (Analyze button) bypasses routing and hits /query/fast directly.
   const useDesktopAgent = !forceAnswer && (shouldUseSystemAction(text) || shouldUseAgent(text))
   const routedText = useDesktopAgent ? stripDetachedPhrase(text) : text
 
@@ -780,8 +766,7 @@ async function streamQuery(
     }
   } catch (err) {
     if ((err as Error).name === "AbortError") {
-      if (!bargingIn) resetToIdle()
-      bargingIn = false
+      resetToIdle()
       return
     }
     // Only surface socket errors if no error event was already received

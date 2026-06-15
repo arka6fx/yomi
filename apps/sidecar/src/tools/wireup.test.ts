@@ -107,13 +107,13 @@ describe("connector tools are wired into createAgentTools", () => {
   it("includes def tools from the registry when a connector is connected", async () => {
     const { getConnectorRegistry } = await import("../connectors/registry.js")
     const reg = getConnectorRegistry()
-    const fakeToolSet = { "notion.search": { description: "search notion", parameters: {}, execute: async () => ({}) } }
+    const fakeToolSet = { "notion-search": { description: "search notion", parameters: {}, execute: async () => ({}) } }
     const original = reg.getAllDefTools.bind(reg)
     reg.getAllDefTools = () => fakeToolSet as never
 
     try {
       const tools: Record<string, unknown> = createAgentTools()
-      expect(tools["notion.search"]).toBeDefined()
+      expect(tools["notion-search"]).toBeDefined()
     } finally {
       reg.getAllDefTools = original
     }
