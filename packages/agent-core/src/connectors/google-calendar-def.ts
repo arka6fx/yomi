@@ -23,7 +23,7 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
   }
 
   return {
-    "calendar.listEvents": tool({
+    "calendar-listEvents": tool({
       description:
         "List upcoming calendar events. Returns events from the user's primary Google Calendar within the specified time range.",
       parameters: z.object({
@@ -80,7 +80,7 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
-    "calendar.getEvent": tool({
+    "calendar-getEvent": tool({
       description: "Get details for a specific calendar event by its ID.",
       parameters: z.object({
         eventId: z.string().describe("Google Calendar event ID"),
@@ -117,7 +117,7 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
-    "calendar.findFreeTime": tool({
+    "calendar-findFreeTime": tool({
       description:
         "Find free time slots in the user's calendar. Useful for scheduling. Returns busy periods and implied free windows.",
       parameters: z.object({

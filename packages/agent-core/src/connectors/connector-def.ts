@@ -5,7 +5,16 @@ import type { ToolSet } from "ai"
 export function connectorError(err: unknown): { error: string; hint?: string } {
   const msg = err instanceof Error ? err.message : String(err)
   const appUrl = (typeof process !== "undefined" && process.env["YOMI_APP_URL"]) || "https://yomi.arka6fx.com"
-  const isAuth = /(?:→|HTTP)\s*(401|403)\b/.test(msg)
+  const isAuth = /(?:→|status)\s*(401|403)\b|unauthorized|forbidden|invalid.*token|token.*invalid|revoked/i.test(msg)
+  const isNotionPermission = /restricted_resource|object_not_found/i.test(msg)
+  if (isNotionPermission) {
+    return {
+      error: msg,
+      hint:
+        "Notion returned a permission error. Make sure you've shared the relevant pages or databases " +
+        "with the Yomi integration (••• → Add connections) inside Notion.",
+    }
+  }
   return isAuth
     ? { error: msg, hint: `Token expired or revoked — reconnect at ${appUrl}/dashboard` }
     : { error: msg }

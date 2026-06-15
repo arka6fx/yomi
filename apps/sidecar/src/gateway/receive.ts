@@ -10,6 +10,37 @@ type AgentDriver = (
   opts?: { emit?: (e: SseEvent) => void; signal?: AbortSignal },
 ) => AsyncGenerator<SseEvent>
 
+// Per-chat in-memory conversation history for multi-turn gateway sessions.
+// Keyed by "platform:chatId". Entries expire after HISTORY_TTL_MS of inactivity.
+const MAX_HISTORY_TURNS = 8
+const HISTORY_TTL_MS = 60 * 60 * 1000
+
+type ChatTurn = { role: "user" | "assistant"; text: string }
+type ChatSession = { turns: ChatTurn[]; lastAt: number }
+const chatHistories = new Map<string, ChatSession>()
+
+function chatKey(msg: GatewayMessage): string {
+  return `${msg.platform}:${msg.chatId}`
+}
+
+function getHistory(msg: GatewayMessage): ChatTurn[] {
+  const entry = chatHistories.get(chatKey(msg))
+  if (!entry || Date.now() - entry.lastAt > HISTORY_TTL_MS) return []
+  return entry.turns
+}
+
+function pushHistory(msg: GatewayMessage, userText: string, assistantText: string): void {
+  const key = chatKey(msg)
+  const entry = chatHistories.get(key) ?? { turns: [], lastAt: 0 }
+  entry.turns.push({ role: "user", text: userText })
+  if (assistantText) entry.turns.push({ role: "assistant", text: assistantText })
+  if (entry.turns.length > MAX_HISTORY_TURNS * 2) {
+    entry.turns = entry.turns.slice(-MAX_HISTORY_TURNS * 2)
+  }
+  entry.lastAt = Date.now()
+  chatHistories.set(key, entry)
+}
+
 async function getAgentDriver(): Promise<AgentDriver> {
   if (process.env.YOMI_LEGACY_AGENT === "1") return agentPipeline as AgentDriver
   const { runGraph } = await import("../graph/run.js")
@@ -79,6 +110,19 @@ export async function handleGatewayMessage(msg: GatewayMessage): Promise<void> {
     return
   }
 
+  // Natural-language screen analysis: capture the screen then answer the user's question.
+  const ANALYZE_SCREEN_RE = /\b(analyze|look\s+at|check|what(?:'s|\s+is)\s+on)\s+(?:my\s+)?screen\b/i
+  if (ANALYZE_SCREEN_RE.test(text)) {
+    try {
+      const result = await enqueueTrigger("analyze", { text })
+      await sendReply(msg.platform, msg.chatId, result)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Screen analysis failed — is the Yomi desktop open?"
+      await sendReply(msg.platform, msg.chatId, `⚠️ ${message}`)
+    }
+    return
+  }
+
   if (text === "/voice") {
     try {
       await enqueueTrigger("voice")
@@ -113,23 +157,32 @@ export async function handleGatewayMessage(msg: GatewayMessage): Promise<void> {
 
   // ── Normal fast / agent pipeline ─────────────────────────────────────────
   const intent = await classifyIntent({ text })
+  const history = getHistory(msg)
 
-  const chunks: string[] = []
   if (intent.path === "fast") {
-    for await (const event of fastPipeline({ text, tts: false })) {
+    const chunks: string[] = []
+    for await (const event of fastPipeline({ text, tts: false, plan: "max", history })) {
       if (event.type === "llm_chunk") chunks.push(event.text)
     }
-    if (chunks.length) await sendReply(msg.platform, msg.chatId, chunks.join(""))
+    const reply = chunks.join("")
+    if (reply) {
+      pushHistory(msg, text, reply)
+      await sendReply(msg.platform, msg.chatId, reply)
+    }
   } else {
     if (msg.yomiUserId) {
       await initConnectorRegistry(msg.yomiUserId).catch(() => {})
     }
     const driver = await getAgentDriver()
     const agentChunks: string[] = []
-    for await (const event of driver({ text, plan: "max" })) {
+    for await (const event of driver({ text, plan: "max", history })) {
       if (event.type === "agent_text") agentChunks.push(event.text)
     }
-    if (agentChunks.length) await sendReply(msg.platform, msg.chatId, agentChunks.join(""))
+    const reply = agentChunks.join("")
+    if (reply) {
+      pushHistory(msg, text, reply)
+      await sendReply(msg.platform, msg.chatId, reply)
+    }
   }
 }
 

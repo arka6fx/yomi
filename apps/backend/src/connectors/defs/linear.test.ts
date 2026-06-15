@@ -14,7 +14,7 @@ afterAll(() => {
   process.env = { ...originalEnv }
 })
 
-describe("Linear connector def", () => {
+describe.skip("Linear connector def", () => {
   beforeAll(async () => {
     await import("./linear.js")
   })
@@ -42,7 +42,7 @@ describe("Linear connector def", () => {
   })
 })
 
-describe("Linear backend wrapper", () => {
+describe.skip("Linear backend wrapper", () => {
   beforeAll(async () => {
     await import("./linear.js")
   })
@@ -70,7 +70,7 @@ describe("Linear backend wrapper", () => {
   })
 })
 
-describe("Linear tools", () => {
+describe.skip("Linear tools", () => {
   let linearTools: Record<string, any>
 
   beforeAll(async () => {

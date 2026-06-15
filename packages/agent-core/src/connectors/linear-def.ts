@@ -25,7 +25,7 @@ function createLinearToolsFrom(provider: string) {
     }
 
     return {
-      "linear.listIssues": tool({
+      "linear-listIssues": tool({
         description:
           "List issues from Linear. Optionally filter by team, assignee, or state. Returns up to 25 issues.",
         parameters: z.object({
@@ -108,7 +108,7 @@ function createLinearToolsFrom(provider: string) {
         },
       }),
 
-      "linear.getIssue": tool({
+      "linear-getIssue": tool({
         description: "Get full details for a specific Linear issue by its identifier (e.g. ENG-123).",
         parameters: z.object({
           identifier: z.string().describe("Issue identifier like ENG-123"),
@@ -176,7 +176,7 @@ function createLinearToolsFrom(provider: string) {
         },
       }),
 
-      "linear.createIssue": tool({
+      "linear-createIssue": tool({
         description: "Create a new Linear issue.",
         parameters: z.object({
           title: z.string().max(250).describe("Issue title"),
@@ -231,7 +231,7 @@ function createLinearToolsFrom(provider: string) {
         },
       }),
 
-      "linear.updateIssue": tool({
+      "linear-updateIssue": tool({
         description: "Update the state, assignee, or priority of a Linear issue.",
         parameters: z.object({
           identifier: z.string().describe("Issue identifier like ENG-123"),

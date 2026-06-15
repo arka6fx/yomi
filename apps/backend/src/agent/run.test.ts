@@ -41,6 +41,9 @@ mock.module("@yomi/db", () => ({
   ragChunks: {},
   ragDocuments: {},
   ragSources: {},
+  ragEmbeddings: {},
+  ragRetrievalLogs: {},
+  paymentRecords: {},
 }))
 
 mock.module("@yomi/agent-core", () => ({
@@ -68,6 +71,11 @@ mock.module("../services/credit-ledger.js", () => ({
     consumeCreditsCalled = true
     return { ok: true, charged: 1, balance: mockCreditBalance - 1 }
   },
+  expireCredits: async () => 0,
+  recentCreditTransactions: async () => [],
+  grantCredits: async () => ({ ok: true }),
+  refundCredits: async () => ({ ok: true }),
+  createPaymentRecord: async () => ({ id: "pay_1" }),
 }))
 
 mock.module("../auth-schema.js", () => ({ user: {} }))

@@ -40,14 +40,12 @@ declare global {
       onSubscriptionUpdate(cb: (info: SubscriptionUpdate) => void): () => void
       // Audio control
       onStopAudio(cb: () => void): () => void
-      onLoopContinue(cb: () => void): () => void
       getDesktopSourceId(): Promise<string | null>
       requestEscape(): void
       triggerVoice(): void
       triggerText(): void
-      triggerScreenshot(): void
+      triggerAnalyze(): void
       stopListening(): void
-      bargeIn(): void
       // App control
       quit(): void
       openUpgrade(): void

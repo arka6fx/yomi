@@ -83,6 +83,12 @@ interface GmailListResponse {
   resultSizeEstimate?: number
 }
 
+interface GmailThread {
+  id: string
+  historyId?: string
+  messages?: GmailMessage[]
+}
+
 export class GoogleGmailConnector implements Connector {
   readonly provider = "google"
   readonly displayName = "Google Gmail"
@@ -171,6 +177,55 @@ export class GoogleGmailConnector implements Connector {
 
   async summarizeEmailsRaw(messageIds: string[]): Promise<EmailDetail[]> {
     return Promise.all(messageIds.map((id) => this.readEmail(id)))
+  }
+
+  private async modifyMessage(messageId: string, addLabelIds: string[] = [], removeLabelIds: string[] = []): Promise<void> {
+    await this.gmail<GmailMessage>(`/messages/${messageId}/modify`, {
+      method: "POST",
+      body: JSON.stringify({ addLabelIds, removeLabelIds }),
+    })
+  }
+
+  async markAsRead(messageId: string): Promise<void> {
+    await this.modifyMessage(messageId, [], ["UNREAD"])
+  }
+
+  async markAsUnread(messageId: string): Promise<void> {
+    await this.modifyMessage(messageId, ["UNREAD"], [])
+  }
+
+  async archiveEmail(messageId: string): Promise<void> {
+    await this.modifyMessage(messageId, [], ["INBOX"])
+  }
+
+  async trashEmail(messageId: string): Promise<void> {
+    await this.gmail<GmailMessage>(`/messages/${messageId}/trash`, { method: "POST" })
+  }
+
+  async getThread(threadId: string): Promise<{ id: string; messages: EmailDetail[] }> {
+    const thread = await this.gmail<GmailThread>(`/threads/${threadId}?format=full`)
+    const messages = await Promise.all(
+      (thread.messages ?? []).map(async (msg) => {
+        const hdrs = msg.payload?.headers ?? []
+        const dateVal = header(hdrs, "Date")
+        return {
+          id: msg.id,
+          threadId: msg.threadId,
+          subject: header(hdrs, "Subject") || "(no subject)",
+          from: header(hdrs, "From") || "",
+          to: headerList(hdrs, "To"),
+          cc: headerList(hdrs, "Cc"),
+          bcc: headerList(hdrs, "Bcc"),
+          date: dateVal || new Date(Number(msg.internalDate ?? 0)).toISOString(),
+          snippet: msg.snippet ?? "",
+          isRead: !(msg.labelIds ?? []).includes("UNREAD"),
+          labels: (msg.labelIds ?? []).filter((l) => !["INBOX", "UNREAD"].includes(l)),
+          body: msg.payload ? extractText(msg.payload) : "",
+          htmlBody: msg.payload ? extractHtml(msg.payload) : undefined,
+        } satisfies EmailDetail
+      }),
+    )
+    return { id: thread.id, messages }
   }
 
   async sendEmail(draft: EmailDraft): Promise<SendResult> {

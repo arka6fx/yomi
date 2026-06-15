@@ -197,13 +197,6 @@ contextBridge.exposeInMainWorld("yomi", {
     return () => ipcRenderer.off("yomi:stop-audio", h)
   },
 
-  // Hands-free loop: main asks the renderer to re-listen for the next task.
-  onLoopContinue(cb: () => void): () => void {
-    const h = () => cb()
-    ipcRenderer.on("yomi:loop-continue", h)
-    return () => ipcRenderer.off("yomi:loop-continue", h)
-  },
-
   getDesktopSourceId(): Promise<string | null> {
     return ipcRenderer.invoke("yomi:get-desktop-source-id")
   },
@@ -221,18 +214,12 @@ contextBridge.exposeInMainWorld("yomi", {
   },
 
   // One-click screen analysis straight into chat (no Enter).
-  triggerScreenshot(): void {
-    ipcRenderer.send("yomi:trigger-screenshot")
+  triggerAnalyze(): void {
+    ipcRenderer.send("yomi:trigger-analyze")
   },
 
   stopListening(): void {
     ipcRenderer.send("yomi:stop-listening")
-  },
-
-  // Barge-in: user spoke while Yomi was processing/speaking — abort the current
-  // turn and start listening for the new request.
-  bargeIn(): void {
-    ipcRenderer.send("yomi:barge-in")
   },
 
   quit(): void {

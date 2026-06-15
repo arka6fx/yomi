@@ -27,7 +27,7 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
   const gmail = new GoogleGmailConnector(ctx.userId, ctx.getAccessToken)
 
   return {
-    "gmail.searchEmails": tool({
+    "gmail-searchEmails": tool({
       description:
         "Search Gmail for emails matching a query string (supports Gmail search operators like from:, subject:, after:, before:, has:attachment). Returns matching emails with ID, sender, subject, date, and snippet.",
       parameters: z.object({
@@ -46,7 +46,7 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
-    "gmail.readEmail": tool({
+    "gmail-readEmail": tool({
       description:
         "Read the full content of a single Gmail message by its ID. Returns the full body, headers (from, to, cc), and metadata.",
       parameters: z.object({
@@ -73,7 +73,7 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
-    "gmail.getUnreadEmails": tool({
+    "gmail-getUnreadEmails": tool({
       description:
         "Get the most recent unread emails from the Gmail inbox. Returns email summaries with IDs, senders, subjects, and snippets.",
       parameters: z.object({
@@ -91,7 +91,7 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
-    "gmail.summarizeEmails": tool({
+    "gmail-summarizeEmails": tool({
       description:
         "Fetch and return the raw content of emails to summarize. Pass specific message IDs, or leave empty to summarize the last 5 unread emails. Use the returned content to write a human-friendly summary.",
       parameters: z.object({
@@ -132,7 +132,7 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
-    "gmail.sendEmail": tool({
+    "gmail-sendEmail": tool({
       description:
         "Send an email via Gmail. IMPORTANT: Always show the user a confirmation before calling this tool — display the To, Subject, and first 200 chars of body and ask them to confirm. Use act_proposed if available.",
       parameters: z.object({
@@ -161,6 +161,102 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
         }
       },
     }),
+
+    "gmail-markAsRead": tool({
+      description: "Mark a Gmail message as read (removes the UNREAD label).",
+      parameters: z.object({
+        messageId: z.string().describe("The Gmail message ID to mark as read"),
+      }),
+      execute: async ({ messageId }) => {
+        if (!gmail.isConnected()) return notConnectedError()
+        try {
+          await gmail.markAsRead(messageId)
+          return { ok: true, message: `Message ${messageId} marked as read.` }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "gmail-markAsUnread": tool({
+      description: "Mark a Gmail message as unread (adds the UNREAD label).",
+      parameters: z.object({
+        messageId: z.string().describe("The Gmail message ID to mark as unread"),
+      }),
+      execute: async ({ messageId }) => {
+        if (!gmail.isConnected()) return notConnectedError()
+        try {
+          await gmail.markAsUnread(messageId)
+          return { ok: true, message: `Message ${messageId} marked as unread.` }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "gmail-archiveEmail": tool({
+      description:
+        "Archive a Gmail message by removing it from the inbox (removes the INBOX label). IMPORTANT: Confirm with the user before archiving.",
+      parameters: z.object({
+        messageId: z.string().describe("The Gmail message ID to archive"),
+      }),
+      execute: async ({ messageId }) => {
+        if (!gmail.isConnected()) return notConnectedError()
+        try {
+          await gmail.archiveEmail(messageId)
+          return { ok: true, message: `Message ${messageId} archived.` }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "gmail-trashEmail": tool({
+      description:
+        "Move a Gmail message to the trash. IMPORTANT: Always confirm with the user before calling this tool.",
+      parameters: z.object({
+        messageId: z.string().describe("The Gmail message ID to move to trash"),
+      }),
+      execute: async ({ messageId }) => {
+        if (!gmail.isConnected()) return notConnectedError()
+        try {
+          await gmail.trashEmail(messageId)
+          return { ok: true, message: `Message ${messageId} moved to trash.` }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "gmail-getThread": tool({
+      description:
+        "Fetch all messages in a Gmail thread by threadId. Returns messages in order, each with full body and headers.",
+      parameters: z.object({
+        threadId: z.string().describe("The Gmail thread ID (returned by search or read operations)"),
+      }),
+      execute: async ({ threadId }) => {
+        if (!gmail.isConnected()) return notConnectedError()
+        try {
+          const thread = await gmail.getThread(threadId)
+          return {
+            threadId: thread.id,
+            messageCount: thread.messages.length,
+            messages: thread.messages.map((m) => ({
+              id: m.id,
+              subject: m.subject,
+              from: m.from,
+              to: m.to,
+              date: m.date,
+              body: m.body.slice(0, 4000),
+              isRead: m.isRead,
+              labels: m.labels,
+            })),
+          }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
   }
 }
 
@@ -177,8 +273,8 @@ export const googleGmailDef: ConnectorDef = {
     tokenUrl: "https://oauth2.googleapis.com/token",
     scopes: [
       "https://www.googleapis.com/auth/gmail.readonly",
-      "https://www.googleapis.com/auth/gmail.modify",
       "https://www.googleapis.com/auth/gmail.send",
+      "https://www.googleapis.com/auth/gmail.modify",
       "https://www.googleapis.com/auth/userinfo.email",
     ],
     clientIdEnv: "GOOGLE_INTEGRATIONS_CLIENT_ID",

@@ -24,7 +24,7 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
   }
 
   return {
-    "github.listPRs": tool({
+    "github-listPRs": tool({
       description:
         "List open pull requests in a GitHub repository. Returns PR number, title, author, branch, and URL.",
       parameters: z.object({
@@ -69,7 +69,7 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
-    "github.getPR": tool({
+    "github-getPR": tool({
       description: "Get details for a specific GitHub pull request, including description and review status.",
       parameters: z.object({
         owner: z.string().describe("Repository owner"),
@@ -118,7 +118,7 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
-    "github.listIssues": tool({
+    "github-listIssues": tool({
       description: "List issues in a GitHub repository. Returns issue number, title, author, labels, and URL.",
       parameters: z.object({
         owner: z.string().describe("Repository owner"),
@@ -165,7 +165,7 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
-    "github.getIssue": tool({
+    "github-getIssue": tool({
       description: "Get details for a specific GitHub issue, including body and comments count.",
       parameters: z.object({
         owner: z.string().describe("Repository owner"),

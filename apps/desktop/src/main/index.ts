@@ -600,7 +600,7 @@ async function completeSetup(token: string) {
       }
     }
 
-    const { onListenStop, onTextQuery, onAbort, onScreenshot } = initSidecarIpc(sidecar, overlayWin)
+    const { onListenStop, onTextQuery, onAbort, onAnalyze } = initSidecarIpc(sidecar, overlayWin)
 
     initHotkey({
       onStateChange: (s) => {
@@ -621,16 +621,11 @@ async function completeSetup(token: string) {
       onListenStop,
       onTextQuery,
       onAbort,
-      onScreenshot,
+      onAnalyze,
       // Fires on every ESC press regardless of state — stops TTS playback even
       // when the pipeline has already finished and state is back to idle.
       onAnyEscape: () => {
         overlayWin?.webContents.send("yomi:stop-audio")
-      },
-      // Hands-free loop: after a voice turn the renderer re-arms the mic (once
-      // any TTS playback has drained) by calling triggerVoice().
-      onLoopContinue: () => {
-        overlayWin?.webContents.send("yomi:loop-continue")
       },
     })
 

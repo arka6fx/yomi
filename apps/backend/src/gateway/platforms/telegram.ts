@@ -2,7 +2,6 @@ import type { GatewayMessage, PlatformType } from "@yomi/shared"
 import type { PlatformAdapter } from "../platform-adapter.js"
 import { removeMarkdown, truncateMessage } from "../platform-adapter.js"
 
-const POLL_INTERVAL_MS = 3_000
 const API_BASE = "https://api.telegram.org/bot"
 
 interface TelegramUpdate {
@@ -26,7 +25,6 @@ interface TelegramResponse {
 export class TelegramAdapter implements PlatformAdapter {
   readonly platform: PlatformType = "telegram"
   private token: string
-  private pollTimer: ReturnType<typeof setInterval> | null = null
   private lastUpdateId = 0
   private messageHandler: ((msg: GatewayMessage) => void) | null = null
   private connected = false
@@ -52,7 +50,6 @@ export class TelegramAdapter implements PlatformAdapter {
   }
 
   async disconnect(): Promise<void> {
-    this.stopPolling()
     this.connected = false
     console.warn("[gateway/telegram] disconnected")
   }
@@ -122,13 +119,17 @@ export class TelegramAdapter implements PlatformAdapter {
   }
 
   private startPolling(): void {
-    this.pollTimer = setInterval(() => void this.poll(), POLL_INTERVAL_MS)
+    void this.pollLoop()
   }
 
-  private stopPolling(): void {
-    if (this.pollTimer) {
-      clearInterval(this.pollTimer)
-      this.pollTimer = null
+  private async pollLoop(): Promise<void> {
+    while (this.connected) {
+      try {
+        await this.poll()
+      } catch {
+        // brief pause on network error before retry
+        await new Promise((r) => setTimeout(r, 2_000))
+      }
     }
   }
 
@@ -136,7 +137,7 @@ export class TelegramAdapter implements PlatformAdapter {
     if (!this.connected || !this.messageHandler) return
     try {
       const params = new URLSearchParams({
-        timeout: "2",
+        timeout: "25",
         offset: String(this.lastUpdateId + 1),
       })
       const res = await fetch(`${this.apiUrl}/getUpdates?${params}`)

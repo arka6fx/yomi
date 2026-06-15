@@ -13,7 +13,7 @@ function assertReadOnly(sql: string): void {
 
 export function createMysqlTools(ctx: ConnectorContext): ToolSet {
   return {
-    "mysql.query": tool({
+    "mysql-query": tool({
       description:
         "Run a read-only SQL SELECT query against the connected MySQL database. Maximum 50 rows returned.",
       parameters: z.object({
@@ -57,7 +57,7 @@ export function createMysqlTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
-    "mysql.listTables": tool({
+    "mysql-listTables": tool({
       description: "List all user tables in the connected MySQL database.",
       parameters: z.object({}),
       execute: async () => {

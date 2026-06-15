@@ -148,11 +148,6 @@ const PLATFORM_META: Record<string, { name: string; color: string; inviteUrl: st
     color: "bg-sky-500/10 text-sky-400",
     inviteUrl: "https://t.me/yomi_assistant_bot",
   },
-  discord: {
-    name: "Discord",
-    color: "bg-indigo-500/10 text-indigo-400",
-    inviteUrl: "/api/gateway/discord/auth",
-  },
 }
 
 function DashboardContent() {
@@ -985,7 +980,7 @@ function DashboardContent() {
                   Linked accounts
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Connect Telegram or Discord to chat with Yomi from anywhere.
+                  Connect Telegram to chat with Yomi from anywhere.
                 </p>
               </div>
               <Link
@@ -1018,7 +1013,7 @@ function DashboardContent() {
                         className="inline-flex items-center gap-1.5 text-xs bg-muted hover:bg-muted/80 text-foreground rounded-lg px-3 py-1.5 transition-colors"
                       >
                         <MessageCircle size={12} />
-                        {meta.name === "Discord" ? "Add " + meta.name : "Add " + meta.name + " bot"}
+                        {"Add " + meta.name + " bot"}
                         <ExternalLink size={10} />
                       </a>
                     ) : null,

@@ -23,7 +23,7 @@ export function createSlackTools(ctx: ConnectorContext): ToolSet {
   }
 
   return {
-    "slack.listChannels": tool({
+    "slack-listChannels": tool({
       description: "List public Slack channels the bot has access to.",
       parameters: z.object({
         limit: z.number().int().min(1).max(100).default(20).describe("Max channels to return"),
@@ -55,7 +55,7 @@ export function createSlackTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
-    "slack.searchMessages": tool({
+    "slack-searchMessages": tool({
       description: "Search Slack messages across all accessible channels.",
       parameters: z.object({
         query: z.string().describe("Search query (supports Slack search modifiers like in:#channel from:@user)"),
@@ -90,7 +90,7 @@ export function createSlackTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
-    "slack.listUsers": tool({
+    "slack-listUsers": tool({
       description: "List members in the Slack workspace. Returns user ID, display name, and online status.",
       parameters: z.object({
         limit: z.number().int().min(1).max(100).default(20).describe("Max users to return"),
@@ -130,7 +130,7 @@ export function createSlackTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
-    "slack.sendMessage": tool({
+    "slack-sendMessage": tool({
       description: "Send a message to a Slack channel or DM. Only available when write access is granted.",
       parameters: z.object({
         channel: z.string().describe("Channel ID or name (e.g. #general or C01234567)"),
