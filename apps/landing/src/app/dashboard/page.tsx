@@ -95,46 +95,56 @@ const PLANS = [
   {
     key: "explore",
     name: "Explore",
-    price: "Free",
-    priceSub: "forever",
+    price: "$0",
+    priceSub: "/ month",
     annual: "$0 / year",
-    desc: "Screen-aware AI with 2 app connectors. No card needed.",
+    badge: "Free",
+    desc: "Start with screen-aware AI, voice, and memory basics. No card needed.",
     icon: Sparkles,
     features: [
       "100 AI chats / month",
       "20 min voice / month",
-      "25 screenshots",
-      "2 app connectors",
-      "20 bot messages / month",
+      "25 screenshot analyses",
+      "50 local memories",
+      "Window controls & docking",
+      "Streaming responses",
+      "App connectors",
+      "20 Telegram bot messages / month",
     ],
   },
   {
     key: "pro",
     name: "Pro",
     price: "$14.99",
-    priceSub: "/ mo",
+    priceSub: "/ month",
     annual: "$144 / year",
-    desc: "All 8 connectors, Telegram & Discord bot, and higher limits.",
+    badge: "Most Popular",
+    desc: "Daily screen, voice, memory, and images — with higher limits than Explore.",
     icon: Crown,
     features: [
       "2,000 AI chats / month",
-      "All 8 app connectors",
-      "200 bot messages / month",
+      "180 min voice / month",
+      "400 screenshot analyses",
+      "App connectors",
+      "200 Telegram bot messages / month",
     ],
   },
   {
     key: "max",
     name: "Max",
     price: "$39.99",
-    priceSub: "/ mo",
+    priceSub: "/ month",
     annual: "$384 / year",
-    desc: "High-volume voice, bots, and early access features.",
+    badge: "Power users",
+    desc: "High-volume voice, screenshots, and bots for power users.",
     icon: Cuboid,
     features: [
+      "Everything in Pro",
       "8,000 AI chats / month",
-      "All 8 app connectors",
-      "500 bot messages / month",
-      "Early access features",
+      "750 min voice / month",
+      "App connectors",
+      "500 Telegram bot messages / month",
+      "Experimental features first",
     ],
   },
 ]
@@ -905,28 +915,42 @@ function DashboardContent() {
               {PLANS.map((plan, i) => {
                 const isCurrent = plan.key === currentPlanKey
                 const isUpgrade = i > currentPlanIdx
+                const Icon = plan.icon
 
                 return (
                   <div
                     key={plan.key}
                     className={cn(
-                      "rounded-xl border p-4 flex flex-col gap-3 transition-colors",
+                      "relative rounded-xl border p-5 flex flex-col gap-4 transition-colors",
                       isCurrent
                         ? "border-primary bg-primary/5"
                         : "border-border bg-card",
+                      plan.key === "pro" && !isCurrent
+                        ? "border-primary/30 shadow-[0_0_30px_-12px_hsl(var(--primary)/0.25)]"
+                        : "",
                     )}
                   >
+                    {plan.key === "pro" && !isCurrent && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                        <span className="whitespace-nowrap rounded-full bg-primary px-3 py-0.5 text-[11px] font-medium text-primary-foreground">
+                          Most Popular
+                        </span>
+                      </div>
+                    )}
                     <div className="flex-1">
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-sm font-medium text-foreground">{plan.name}</span>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Icon size={16} className="text-primary" />
+                          <span className="text-sm font-medium text-foreground">{plan.name}</span>
+                        </div>
                         {isCurrent && <Check size={13} className="text-primary" />}
                       </div>
-                      <div className="flex items-baseline gap-0.5 mb-0.5">
-                        <span className="text-xl font-light text-foreground">{plan.price}</span>
+                      <div className="flex items-baseline gap-1 mb-0.5">
+                        <span className="text-lg font-light text-foreground">{plan.price}</span>
                         <span className="text-xs text-muted-foreground">{plan.priceSub}</span>
                       </div>
-                      <p className="text-[11px] text-muted-foreground mb-1">{plan.annual}</p>
-                      <p className="text-xs text-muted-foreground mb-2 leading-relaxed">
+                      <p className="text-[11px] text-muted-foreground mb-2">{plan.annual}</p>
+                      <p className="text-xs text-muted-foreground mb-2.5 leading-relaxed">
                         {plan.desc}
                       </p>
                       <ul className="space-y-1">
