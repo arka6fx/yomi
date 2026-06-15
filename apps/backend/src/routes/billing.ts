@@ -582,6 +582,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
           "agent_run",
           "screenshot",
           "reasoning",
+          "bot_message",
         ]),
       ),
     )
@@ -592,7 +593,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
 
   const chatUsed = countMap["request_chat"] ?? 0
   const voiceUsed = countMap["request_voice"] ?? 0
-  const agentUsed = countMap["agent_run"] ?? 0
+  const agentUsed = (countMap["agent_run"] ?? 0) + (countMap["bot_message"] ?? 0)
   const screenshotUsed = countMap["screenshot"] ?? 0
   const reasoningUsed = countMap["reasoning"] ?? 0
   const requestsUsed = chatUsed + voiceUsed
