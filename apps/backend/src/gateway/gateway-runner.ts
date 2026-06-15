@@ -2,18 +2,24 @@ import { createHash, randomBytes } from "node:crypto"
 import { eq, and, lt } from "drizzle-orm"
 import { db, platformConnections, linkingCodes, telegramLinkTokens } from "@yomi/db"
 import type { PlatformType, GatewayMessage, GatewaySessionInfo } from "@yomi/shared"
+import type { AgentMessage } from "@yomi/agent-core"
 import type { PlatformAdapter } from "./platform-adapter.js"
 import { TelegramAdapter } from "./platforms/telegram.js"
 import { DiscordAdapter } from "./platforms/discord.js"
 import { runAgent } from "../agent/run.js"
 import { transcribeAudioUrl } from "../services/transcription.js"
 
-// Patterns that suggest the user wants the desktop to do something local
+// Patterns that suggest the user wants the desktop to do something local.
+// Keep these narrow — many common words (file, open, screen) appear in data queries too.
 const DESKTOP_ACTION_PATTERNS = [
-  /\b(click|open|close|type|scroll|drag|move|resize|minimize|maximize|window|app|application)\b/i,
-  /\b(screenshot|screen|desktop|file|folder|copy|paste|select|highlight)\b/i,
-  /\b(play|pause|skip|volume|mute|spotify|music|video)\b/i,
-  /\b(terminal|shell|command|run|execute)\b/i,
+  /\b(click|right.click|double.click|drag\s+(?:and\s+)?drop)\b/i,
+  /\b(scroll\s+(?:up|down|left|right)|move\s+(?:the\s+)?(?:cursor|mouse|window))\b/i,
+  /\b(minimize|maximize|resize\s+(?:the\s+)?window|close\s+(?:the\s+)?window)\b/i,
+  /\b(take\s+a?\s*screenshot|capture\s+(?:my\s+)?screen|screenshot\s+of\s+my)\b/i,
+  /\b(analyze\s+(?:my\s+)?screen|look\s+at\s+(?:my\s+)?screen|what(?:'s|\s+is)\s+on\s+(?:my\s+)?screen|check\s+(?:my\s+)?screen)\b/i,
+  /\b(press\s+(?:ctrl|alt|shift|win|cmd|enter|escape|tab|f\d+))\b/i,
+  /\b(launch\s+(?:the\s+)?app|quit\s+(?:the\s+)?app|open\s+(?:the\s+)?app)\b/i,
+  /\b(set\s+(?:the\s+)?volume|mute\s+(?:the\s+)?(?:audio|mic)|play\s+(?:on\s+)?spotify)\b/i,
 ]
 
 function classifyIntent(text: string): "data-query" | "desktop-action" {
@@ -26,6 +32,8 @@ function classifyIntent(text: string): "data-query" | "desktop-action" {
 const SESSION_TTL_MS = 60 * 60 * 1000
 const SESSION_CLEANUP_INTERVAL_MS = 5 * 60 * 1000
 const LINK_CODE_TTL_MS = 10 * 60 * 1000
+const HISTORY_MAX_TURNS = 8
+const HISTORY_TTL_MS = 60 * 60 * 1000
 
 interface LinkingCode {
   platform: PlatformType
@@ -56,9 +64,15 @@ export type SidecarResolver = (
   platform: PlatformType,
 ) => string | undefined | Promise<string | undefined>
 
+interface ConversationEntry {
+  turns: AgentMessage[]
+  lastAt: number
+}
+
 export class GatewayRunner {
   private adapters: Map<PlatformType, PlatformAdapter> = new Map()
   private sessions: Map<string, GatewaySession> = new Map()
+  private conversationHistories: Map<string, ConversationEntry> = new Map()
   private running = false
   private defaultSidecarUrl: string
   private sidecarSecret: string
@@ -152,6 +166,33 @@ export class GatewayRunner {
       console.warn(`[gateway] isUserLinked DB error:`, err)
       return false
     }
+  }
+
+  private historyKey(platform: PlatformType, chatId: string): string {
+    return `${platform}:${chatId}`
+  }
+
+  private getHistory(platform: PlatformType, chatId: string): AgentMessage[] {
+    const key = this.historyKey(platform, chatId)
+    const entry = this.conversationHistories.get(key)
+    if (!entry || Date.now() - entry.lastAt > HISTORY_TTL_MS) return []
+    return entry.turns
+  }
+
+  private appendHistory(platform: PlatformType, chatId: string, userText: string, assistantText: string): void {
+    const key = this.historyKey(platform, chatId)
+    const entry = this.conversationHistories.get(key) ?? { turns: [], lastAt: 0 }
+    entry.turns.push({ role: "user", content: userText })
+    entry.turns.push({ role: "assistant", content: assistantText })
+    if (entry.turns.length > HISTORY_MAX_TURNS * 2) {
+      entry.turns = entry.turns.slice(-HISTORY_MAX_TURNS * 2)
+    }
+    entry.lastAt = Date.now()
+    this.conversationHistories.set(key, entry)
+  }
+
+  private clearHistory(platform: PlatformType, chatId: string): void {
+    this.conversationHistories.delete(this.historyKey(platform, chatId))
   }
 
   setSidecarResolver(resolver: SidecarResolver): void {
@@ -485,6 +526,7 @@ export class GatewayRunner {
         Authorization: `Bearer ${this.sidecarSecret}`,
       },
       body: JSON.stringify(msg),
+      signal: AbortSignal.timeout(4_000),
     })
     if (!res.ok) {
       const text = await res.text().catch(() => "unknown")
@@ -603,14 +645,26 @@ export class GatewayRunner {
     }
 
     // ── Backend agent path (sidecar offline, data query only) ─────────────────
+    // Keep the typing indicator alive — Telegram clears it after ~5 s.
     void this.sendTyping(msg.platform, msg.chatId).catch(() => {})
+    const typingInterval = setInterval(
+      () => void this.sendTyping(msg.platform, msg.chatId).catch(() => {}),
+      4_000,
+    )
+
+    const history = this.getHistory(msg.platform, msg.chatId)
 
     try {
-      const result = await runAgent({ userId: yomiUserId, text: msg.text })
+      const result = await runAgent({ userId: yomiUserId, text: msg.text, history })
+      clearInterval(typingInterval)
+      if (result.text) {
+        this.appendHistory(msg.platform, msg.chatId, msg.text, result.text)
+      }
       await this.sendMessage(msg.platform, msg.chatId, result.text).catch((err) => {
         console.warn("[gateway] failed to send agent reply:", err)
       })
     } catch (err) {
+      clearInterval(typingInterval)
       console.warn("[gateway] runAgent error:", err)
       await this.sendMessage(
         msg.platform,
@@ -687,6 +741,7 @@ export class GatewayRunner {
       _session.messageCount = 0
       _session.createdAt = Date.now()
       _session.lastActivityAt = Date.now()
+      this.clearHistory(msg.platform, msg.chatId)
       return "Started a new conversation. How can I help you?"
     }
 
@@ -742,6 +797,11 @@ export class GatewayRunner {
     for (const [id, session] of this.sessions) {
       if (now - session.lastActivityAt > SESSION_TTL_MS) {
         this.sessions.delete(id)
+      }
+    }
+    for (const [key, entry] of this.conversationHistories) {
+      if (now - entry.lastAt > HISTORY_TTL_MS) {
+        this.conversationHistories.delete(key)
       }
     }
   }
