@@ -119,7 +119,9 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     const msg =
       status === "past_due"
         ? "Your payment is past due. Update your payment method to restore full access."
-        : "Your subscription is inactive. Visit the dashboard to manage your plan."
+        : status === "inactive" && user.plan === "explore"
+          ? "Your 30-day free trial has ended. Upgrade to Pro to keep using Yomi."
+          : "Your subscription is inactive. Visit the dashboard to manage your plan."
     return { text: msg, quotaError: true }
   }
 

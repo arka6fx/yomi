@@ -88,6 +88,7 @@ function createAuth() {
                       plan: "explore",
                       subscriptionStatus: "inactive",
                       trialInteractionLimit: REGULAR_INTERACTION_LIMIT,
+                      trialEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
                     },
               )
               .where(eq(authSchema.user.id, createdUser.id))
