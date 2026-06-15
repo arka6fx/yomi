@@ -744,17 +744,21 @@ async function handleSubscriptionActive(entity: DodoEntity, eventId: string) {
 
   if (config.includedCredits <= 0) return
 
-  await grantCredits({
-    userId,
-    amount: config.includedCredits,
-    source: "subscription_cycle",
-    sourceId: `${subId ?? "subscription"}:${periodEnd?.toISOString() ?? eventId}`,
-    idempotencyKey: `dodo:${eventId}:subscription_credits`,
-    paymentId,
-    expiresAt: subscriptionCreditExpiry(periodEnd),
-    reason: `${config.name} monthly credits`,
-    metadata: { provider: "dodo", subscriptionId: subId, plan, isRenewal },
-  })
+  try {
+    await grantCredits({
+      userId,
+      amount: config.includedCredits,
+      source: "subscription_cycle",
+      sourceId: `${subId ?? "subscription"}:${periodEnd?.toISOString() ?? eventId}`,
+      idempotencyKey: `dodo:${eventId}:subscription_credits`,
+      paymentId,
+      expiresAt: subscriptionCreditExpiry(periodEnd),
+      reason: `${config.name} monthly credits`,
+      metadata: { provider: "dodo", subscriptionId: subId, plan, isRenewal },
+    })
+  } catch (err) {
+    console.error("[yomi/billing] grantCredits failed for subscription", eventId, err)
+  }
 }
 
 async function handleSubscriptionEnd(entity: DodoEntity) {
@@ -833,18 +837,22 @@ async function handlePaymentSucceeded(entity: DodoEntity, eventId: string) {
   })
 
   const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
-  await grantCredits({
-    userId: meta.userId,
-    amount: pack.credits,
-    source: "credit_pack",
-    sourceId: stringField(entity, ["payment_id", "id", "checkout_id"]) ?? eventId,
-    idempotencyKey: `dodo:${eventId}:credit_pack:${pack.key}`,
-    paymentId,
-    expiresAt,
-    reason: `${pack.name} purchase`,
-    metadata: {
-      provider: "dodo",
-      productKey: pack.key,
-    },
-  })
+  try {
+    await grantCredits({
+      userId: meta.userId,
+      amount: pack.credits,
+      source: "credit_pack",
+      sourceId: stringField(entity, ["payment_id", "id", "checkout_id"]) ?? eventId,
+      idempotencyKey: `dodo:${eventId}:credit_pack:${pack.key}`,
+      paymentId,
+      expiresAt,
+      reason: `${pack.name} purchase`,
+      metadata: {
+        provider: "dodo",
+        productKey: pack.key,
+      },
+    })
+  } catch (err) {
+    console.error("[yomi/billing] grantCredits failed for payment", eventId, err)
+  }
 }
