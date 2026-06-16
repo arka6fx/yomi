@@ -1,7 +1,7 @@
 // @yomi/agent-core — shared model provider, connectors, and lean agent loop.
 // Used by the sidecar (desktop chat) and the backend (server-side gateway).
 
-export { createModel } from "./model.js"
+export { createModel, embedText } from "./model.js"
 
 export {
   ConnectorRegistry,

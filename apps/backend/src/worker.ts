@@ -4,7 +4,7 @@ interface ExecutionContext {
   waitUntil(promise: Promise<unknown>): void
 }
 
-let gatewayPromise: Promise<void> | null = null
+let gatewayStarted = false
 
 export default {
   async fetch(request: Request, env: Record<string, unknown>, ctx: ExecutionContext) {
@@ -15,14 +15,15 @@ export default {
         }
       }
 
-      // Start gateway only on non-auth requests to avoid I/O conflicts with
-      // Better Auth (OAuth callback / session validation) on critical paths.
+      // Start gateway once — each request gets its own isolated waitUntil
+      // so the promise is properly bound to the current request context.
       const url = new URL(request.url)
-      if (!url.pathname.startsWith("/api/auth/")) {
-        if (!gatewayPromise) {
-          gatewayPromise = startGateway()
-          ctx.waitUntil(gatewayPromise)
-        }
+      if (!url.pathname.startsWith("/api/auth/") && !gatewayStarted) {
+        gatewayStarted = true
+        ctx.waitUntil(startGateway().catch((err) => {
+          console.error("[gateway] start error:", err)
+          gatewayStarted = false
+        }))
       }
 
       return await app.fetch(request, env, ctx as never)

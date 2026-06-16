@@ -52,8 +52,8 @@ describe("memory subsystem", () => {
     expect(ctx.recentSession).toContain("User asked about the memory subsystem.")
     expect(ctx.staticProfile).toContain("Static profile summary.")
     expect(ctx.dynamicProfile).toContain("Dynamic profile summary.")
-    // localMemory and cloudRagContext are FTS5-dependent — may be empty strings
-    // in a bare test environment, but the keys must exist
+    // localMemory and cloudRagContext are FTS/embedding-dependent
+    // — may be empty strings in a bare test environment, but the keys must exist
     expect(ctx).toHaveProperty("localMemory")
     expect(ctx).toHaveProperty("cloudRagContext")
   })

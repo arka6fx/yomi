@@ -60,6 +60,26 @@ const cases: Case[] = [
     path: "fast",
     label: "question about creating, not create request",
   },
+
+  // Connector queries (Notion, Drive, Gmail, GitHub, etc.) — always agent path
+  { text: "what's in my Notion?", path: "agent", minConf: 0.85, label: "notion question" },
+  { text: "find my notion tasks", path: "agent", minConf: 0.85, label: "notion task search" },
+  { text: "search my google drive for the report", path: "agent", minConf: 0.85, label: "drive search" },
+  { text: "show me files from drive", path: "agent", minConf: 0.85, label: "drive list files" },
+  { text: "check my gmail for invoices", path: "agent", minConf: 0.85, label: "gmail search" },
+  { text: "any new email from amazon?", path: "agent", minConf: 0.85, label: "email check" },
+  { text: "what meeting do I have today?", path: "agent", minConf: 0.85, label: "calendar query" },
+  { text: "create a github issue", path: "agent", minConf: 0.85, label: "github action" },
+  { text: "check my slack messages", path: "agent", minConf: 0.85, label: "slack query" },
+  { text: "what's on my linear board?", path: "agent", minConf: 0.85, label: "linear query" },
+  { text: "send a message on discord", path: "agent", minConf: 0.85, label: "discord action" },
+  { text: "show my todo list", path: "agent", minConf: 0.85, label: "todo query" },
+
+  // Even short connector queries (question word + connector) must go to agent
+  // This is the specific bug that was fixed — short connector questions were
+  // going to fast path because fast signals (+0.6) outweighed connector (+0.5).
+  { text: "what in notion", path: "agent", minConf: 0.85, label: "short notion question" },
+  { text: "my drive", path: "agent", minConf: 0.85, label: "short drive mention" },
 ]
 
 describe("scoreHeuristic", () => {

@@ -446,6 +446,7 @@ export class GatewayRunner {
   }
 
   private async onIncoming(msg: GatewayMessage): Promise<void> {
+    let typingInterval: ReturnType<typeof setInterval> | undefined
     try {
       console.warn(`[gateway] onIncoming platform=${msg.platform} from=${msg.userId} chat=${msg.chatId} text="${msg.text.slice(0, 80)}"`)
 
@@ -523,13 +524,20 @@ export class GatewayRunner {
     // show an "open the app" message when it is offline.
     const intent = classifyIntent(msg.text)
 
+    // Keep the typing indicator alive for ANY processing path —
+    // Telegram clears it after ~5 s so refresh every 4 s.
+    void this.sendTyping(msg.platform, msg.chatId).catch(() => {})
+    typingInterval = setInterval(
+      () => void this.sendTyping(msg.platform, msg.chatId).catch(() => {}),
+      4_000,
+    )
+
     let sidecarUrl: string | undefined
     if (this.sidecarResolver) {
       sidecarUrl = await this.sidecarResolver(yomiUserId, msg.platform)
     }
 
     if (sidecarUrl) {
-      void this.sendTyping(msg.platform, msg.chatId).catch(() => {})
       try {
         const res = await fetch(`${sidecarUrl}/gateway/receive`, {
           method: "POST",
@@ -539,7 +547,7 @@ export class GatewayRunner {
           },
           body: JSON.stringify({ ...msg, yomiUserId }),
         })
-        if (res.ok) return // sidecar handles the reply back to the user
+        if (res.ok) { clearInterval(typingInterval); return }
         throw new Error(`Sidecar returned ${res.status}`)
       } catch (err) {
         console.warn("[gateway] sidecar forward failed:", err)
@@ -548,6 +556,7 @@ export class GatewayRunner {
     }
 
     if (intent === "desktop-action") {
+      clearInterval(typingInterval)
       await this.sendMessage(
         msg.platform,
         msg.chatId,
@@ -557,12 +566,6 @@ export class GatewayRunner {
     }
 
     // ── Backend agent path (sidecar offline, data query only) ─────────────────
-    // Keep the typing indicator alive — Telegram clears it after ~5 s.
-    void this.sendTyping(msg.platform, msg.chatId).catch(() => {})
-    const typingInterval = setInterval(
-      () => void this.sendTyping(msg.platform, msg.chatId).catch(() => {}),
-      4_000,
-    )
 
     const history = this.getHistory(msg.platform, msg.chatId)
 
@@ -585,6 +588,7 @@ export class GatewayRunner {
       ).catch(() => {})
     }
     } catch (err) {
+      clearInterval(typingInterval)
       console.warn("[gateway] onIncoming uncaught error:", err)
       try {
         await this.sendMessage(

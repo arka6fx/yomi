@@ -85,7 +85,7 @@ function buildMemoryBlock(
   // Retrieved blocks are numbered ([1], [2], …) — require inline citation of any source used.
   if (ctx.localMemory || ctx.cloudRagContext) {
     parts.push(
-      `<citation_rule>When you use a fact from a numbered retrieved block above, cite its bracketed number inline like [1]. Only cite sources you actually used; never invent a number.</citation_rule>`,
+      `<citation_rule>When you use a fact from a retrieved block above, cite its bracketed number or label inline like [1]. Only cite sources you actually used; never invent a number.</citation_rule>`,
     )
   }
   if (ctx.recentSession) parts.push(`<recent_chat>\n${ctx.recentSession.trim()}\n</recent_chat>`)

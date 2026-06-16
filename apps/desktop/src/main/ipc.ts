@@ -733,6 +733,7 @@ async function streamQuery(
         if (!line.startsWith("data: ")) continue
         const event = JSON.parse(line.slice(6)) as SseEvent
         if (event.type === "agent_text") agentTextBuf += event.text
+        if (event.type === "llm_chunk") agentTextBuf += event.text
         if (event.type === "transcript" && transcriptLabel) event.text = transcriptLabel
         if (event.type === "act_proposed" && overlayWasFocusable && !overlayWin.isDestroyed()) {
           overlayWin.setFocusable(true)
@@ -744,7 +745,7 @@ async function streamQuery(
         }
         if (event.type === "done") {
           sawDone = true
-          if (useAgent) pushActTurn(text, agentTextBuf)
+          pushActTurn(text, agentTextBuf || "")
           endVoiceTurn()
         }
         if (event.type === "error") {

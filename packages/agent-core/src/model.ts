@@ -8,6 +8,7 @@ import type {
 } from "@ai-sdk/provider"
 
 const DEFAULT_MODEL = "gpt-5.4-mini"
+const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
 const DEFAULT_BASE_URL = "https://api.openai.com/v1"
 
 type ToolCallObject = {
@@ -268,6 +269,42 @@ function parseSseLine(line: string): ChatCompletionChunk | null {
   const data = line.slice(5).trim()
   if (!data || data === "[DONE]") return null
   return JSON.parse(data) as ChatCompletionChunk
+}
+
+type EmbeddingResponse = {
+  data: Array<{ embedding: number[] }>
+  usage?: { prompt_tokens: number; total_tokens: number }
+}
+
+export async function embedText(text: string): Promise<number[]> {
+  const cleaned = text
+    .replace(/\r/g, "")
+    .replace(/data:image\/[a-zA-Z]+;base64,[A-Za-z0-9+/=]+/g, "[redacted image]")
+    .replace(/[A-Za-z0-9+/=]{400,}/g, "[redacted base64]")
+    .slice(0, 8000)
+    .trim()
+  if (!cleaned) return []
+
+  const modelId = process.env["AI_CREDITS_EMBEDDING_MODEL"] || DEFAULT_EMBEDDING_MODEL
+  const key = apiKey()
+
+  const response = await fetch(`${baseUrl()}/embeddings`, {
+    method: "POST",
+    headers: {
+      ...(key ? { Authorization: `Bearer ${key}` } : {}),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ model: modelId, input: cleaned }),
+  })
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "")
+    console.warn(`[yomi/embed] embedding request failed (${response.status}): ${text || response.statusText}`)
+    return []
+  }
+
+  const json = (await response.json()) as EmbeddingResponse
+  return json.data?.[0]?.embedding ?? []
 }
 
 export function createModel(modelId = DEFAULT_MODEL): LanguageModelV1 {

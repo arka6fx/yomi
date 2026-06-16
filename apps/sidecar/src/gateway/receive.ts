@@ -175,30 +175,31 @@ export async function handleGatewayMessage(msg: GatewayMessage): Promise<void> {
   const intent = await classifyIntent({ text })
   const history = getHistory(msg)
 
+  let reply: string | null = null
   if (intent.path === "fast") {
     const chunks: string[] = []
     for await (const event of fastPipeline({ text, tts: false, plan: "max", history, skipReserve: true })) {
       if (event.type === "llm_chunk") chunks.push(event.text)
+      if (event.type === "error") chunks.push(event.message)
+      if (event.type === "usage_limit") chunks.push(event.message)
     }
-    const reply = chunks.join("")
-    if (reply) {
-      pushHistory(msg, text, reply)
-      await sendReply(msg.platform, msg.chatId, reply)
-    }
+    reply = chunks.join("")
   } else {
     if (msg.yomiUserId) {
       await initConnectorRegistry(msg.yomiUserId).catch(() => {})
     }
     const driver = await getAgentDriver()
-    const agentChunks: string[] = []
+    const chunks: string[] = []
     for await (const event of driver({ text, plan: "max", history, skipReserve: true })) {
-      if (event.type === "agent_text") agentChunks.push(event.text)
+      if (event.type === "agent_text") chunks.push(event.text)
+      if (event.type === "error") chunks.push(event.message)
+      if (event.type === "usage_limit") chunks.push(event.message)
     }
-    const reply = agentChunks.join("")
-    if (reply) {
-      pushHistory(msg, text, reply)
-      await sendReply(msg.platform, msg.chatId, reply)
-    }
+    reply = chunks.join("")
+  }
+  if (reply) {
+    pushHistory(msg, text, reply)
+    await sendReply(msg.platform, msg.chatId, reply)
   }
 }
 

@@ -2062,7 +2062,7 @@ function MenuCard({
 
   const shortcuts = [
     { label: "Voice", keys: ["Ctrl", "Space"] },
-    { label: "Type", keys: ["Ctrl", "Enter"] },
+    { label: "AI Chats", keys: ["Ctrl", "Enter"] },
     { label: "Screen", keys: ["Ctrl", "S"] },
     { label: "Stop / cancel", keys: ["Esc"] },
     { label: "Move", keys: ["Ctrl", "Arrows"] },
@@ -2732,7 +2732,7 @@ function Toolbar({
               flexShrink: 0,
               transition: "all .15s",
             }}
-            title="Type (Ctrl+Enter)"
+            title="AI Chats (Ctrl+Enter)"
           >
             <TypeSVG />
             <span
@@ -2743,7 +2743,7 @@ function Toolbar({
                 fontWeight: 500,
               }}
             >
-              Type
+              AI Chats
             </span>
           </button>
 

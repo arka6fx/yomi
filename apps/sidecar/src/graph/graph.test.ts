@@ -108,7 +108,7 @@ afterEach(() => {
   __resetAutomationRunsForTest()
 })
 
-const graphDescribe_ = process.env.CI ? describe.skip : describe
+const graphDescribe_ = describe
 graphDescribe_("agent graph", () => {
   it("runs a clean task to completion", async () => {
     const { deps, events } = makeDeps({
