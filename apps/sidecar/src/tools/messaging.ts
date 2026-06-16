@@ -6,14 +6,14 @@ export function createMessagingTools() {
   return {
     send_message: tool({
       description:
-        "Send a message to a connected messaging platform (Telegram, Discord). " +
+        "Send a message to a connected messaging platform (Telegram). " +
         "Requires the platform to be linked to the user's account first.",
       parameters: jsonSchema<{ platform: string; chatId: string; text: string }>({
         type: "object",
         properties: {
           platform: {
             type: "string",
-            enum: ["telegram", "discord"],
+            enum: ["telegram"],
             description: "Target messaging platform",
           },
           chatId: { type: "string", description: "Recipient chat/channel ID" },

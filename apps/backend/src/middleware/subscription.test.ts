@@ -29,7 +29,7 @@ function user(overrides: Partial<TestUser> = {}): TestUser {
   }
 }
 
-function app(kind: "chat" | "voice" | "agent" | "screenshot" | "reasoning" | "bot_message") {
+function app(kind: "chat" | "voice" | "agent" | "analyze" | "bot_message") {
   const hono = new Hono()
   hono.get(
     "/",
@@ -48,7 +48,7 @@ describe("requireAccess", () => {
   })
 
   it("allows active Explore trial users through all trigger access checks", async () => {
-    for (const kind of ["chat", "voice", "agent", "screenshot", "reasoning", "bot_message"] as const) {
+    for (const kind of ["chat", "voice", "agent", "analyze", "bot_message"] as const) {
       const res = await app(kind).request("/")
 
       expect(res.status).toBe(200)
@@ -58,7 +58,7 @@ describe("requireAccess", () => {
   it("blocks expired Explore trial users with a subscription error", async () => {
     currentUser = user({ trialEndDate: new Date(Date.now() - 1000) })
 
-    for (const kind of ["chat", "voice", "agent", "screenshot", "reasoning", "bot_message"] as const) {
+    for (const kind of ["chat", "voice", "agent", "analyze", "bot_message"] as const) {
       const res = await app(kind).request("/")
       const body = await res.json() as { code?: string }
 

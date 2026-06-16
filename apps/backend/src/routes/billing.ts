@@ -19,6 +19,7 @@ import {
 } from "@yomi/shared/plans"
 import {
   createPaymentRecord,
+  expireUserCredits,
   getCreditSummary,
   grantCredits,
   recentCreditTransactions,
@@ -88,7 +89,7 @@ function planFeatures(key: string): string[] {
     key === "explore"
       ? `${plan.includedCredits.toLocaleString()} trial credits`
       : `${plan.includedCredits.toLocaleString()} credits / month`,
-    l.reasoning > 0 ? `${l.reasoning} reasoning uses` : "",
+    l.analyze > 0 ? `${l.analyze} screen analyze` : "",
     `${l.connectors} app connectors`,
     l.botMessages > 0 ? `${l.botMessages.toLocaleString()} bot messages / month` : "",
   ].filter(Boolean)
@@ -586,8 +587,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
           "request_voice",
           "stt",
           "agent_run",
-          "screenshot",
-          "reasoning",
+          "analyze",
           "bot_message",
         ]),
       ),
@@ -600,8 +600,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
   const chatUsed = countMap["request_chat"] ?? 0
   const voiceUsed = countMap["request_voice"] ?? 0
   const agentUsed = (countMap["agent_run"] ?? 0) + (countMap["bot_message"] ?? 0)
-  const screenshotUsed = countMap["screenshot"] ?? 0
-  const reasoningUsed = countMap["reasoning"] ?? 0
+  const analyzeUsed = countMap["analyze"] ?? 0
   const requestsUsed = chatUsed + voiceUsed
   const requestsLimit = requestLimitForUser(user)
   const requestsRemaining = requestsLimit === null ? null : Math.max(requestsLimit - requestsUsed, 0)
@@ -624,11 +623,14 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     creditConsumption[row.kind] = Number(row.creditsCharged)
   }
 
-  const connectedProviders = await listConnectedProviders(user.id)
-  const connectorLimit = featureLimitForUser(user, "connectors")
-
   const effectivePlan = effectivePlanForUser(user)
   const planConfig = getPlan(effectivePlan)
+
+  const totalCreditsUsed = Object.values(creditConsumption).reduce((sum, v) => sum + v, 0)
+  const totalCredits = planConfig.includedCredits + totalCreditsUsed
+
+  const connectedProviders = await listConnectedProviders(user.id)
+  const connectorLimit = featureLimitForUser(user, "connectors")
 
   const trialDaysTotal = 30
   let trialDaysUsed = 0
@@ -666,16 +668,14 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     features: {
       chat: { used: chatUsed, limit: requestsLimit },
       voice: { used: voiceUsed, limit: featureLimitForUser(user, "voiceMinutes") },
-      screenshots: { used: screenshotUsed, limit: featureLimitForUser(user, "screenshots") },
-      reasoning: { used: reasoningUsed, limit: featureLimitForUser(user, "reasoning") },
+      analyze: { used: analyzeUsed, limit: featureLimitForUser(user, "analyze") },
       connectors: { used: connectedProviders.length, limit: connectorLimit },
       botMessages: { used: agentUsed, limit: featureLimitForUser(user, "botMessages") },
     },
     planLimits: {
       chat: planConfig.limits.chat,
       voiceMinutes: planConfig.limits.voiceMinutes,
-      screenshots: planConfig.limits.screenshots,
-      reasoning: planConfig.limits.reasoning,
+      analyze: planConfig.limits.analyze,
       connectors: planConfig.limits.connectors,
       botMessages: planConfig.limits.botMessages,
     },
@@ -684,6 +684,8 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     dailyImageUsed: user.dailyImageCount,
     tokensUsedThisPeriod,
     credits: await getCreditSummary(user.id),
+    creditsUsed: totalCreditsUsed,
+    totalCredits,
     creditConsumption,
     creditPacks: effectivePlan !== "explore" ? Object.values(CREDIT_PACKS) : [],
     creditTransactions: await recentCreditTransactions(user.id, 10),
@@ -785,6 +787,28 @@ async function handleSubscriptionActive(entity: DodoEntity, eventId: string) {
       currentPeriodEnd: periodEnd,
     })
     .where(eq(authSchema.user.id, userId))
+
+  if (existing?.plan === "explore" && plan !== "explore") {
+    const monthStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1))
+    await db.delete(usageEvents).where(
+      and(
+        eq(usageEvents.userId, userId),
+        gte(usageEvents.createdAt, monthStart),
+      ),
+    )
+
+    try {
+      const expired = await expireUserCredits(userId, {
+        sources: ["subscription_cycle", "promo"],
+        reason: "credits expired on upgrade from Explore",
+      })
+      if (expired > 0) {
+        console.log(`[yomi/billing] expired ${expired} credits on upgrade from Explore to ${plan}`)
+      }
+    } catch (err) {
+      console.error("[yomi/billing] failed to expire credits on upgrade:", err)
+    }
+  }
 
   if (config.includedCredits <= 0) return
 

@@ -17,7 +17,7 @@ export interface PromptContext {
   recentSession?: string
   connectedProviders?: string[]
   hasScreen?: boolean // whether a screenshot is attached to this turn
-  desktopFocusChange?: string // non-empty when UIA focus switched to a new window
+  // desktopFocusChange?: string // will provide later
 }
 
 // Read ~/.yomi/yomi.md at call time; returns empty string if absent.
@@ -45,7 +45,7 @@ function resolveCtx(ctx: PromptContext): Required<PromptContext> {
     recentSession: ctx.recentSession ?? "",
     connectedProviders: ctx.connectedProviders ?? [],
     hasScreen: ctx.hasScreen ?? false,
-    desktopFocusChange: ctx.desktopFocusChange ?? "",
+    // desktopFocusChange: ctx.desktopFocusChange ?? "", // will provide later
   }
 }
 
@@ -242,11 +242,11 @@ ${memCtx}${skillCtx}`
 }
 
 export function buildAgentPrompt(ctx: PromptContext): string {
-  const { userName, os, today, yomiMd, desktopFocusChange, connectedProviders, ...memoryCtx } = resolveCtx(ctx)
+  const { userName, os, today, yomiMd, connectedProviders, ...memoryCtx } = resolveCtx(ctx)
   const userCtx = yomiMd ? `<user_context>\n${yomiMd}\n</user_context>\n\n` : ""
   const memCtx = buildMemoryBlock(memoryCtx)
   const skillCtx = getSkillIndexBlock()
-  const focusCtx = ""
+  // const focusCtx = "" // desktop automation context — will provide later
   const appUrl = process.env["YOMI_APP_URL"] ?? "https://yomi.arka6fx.com"
   const connectedCtx = connectedProviders.length > 0
     ? `<connected_integrations>\n${connectedProviders.join(", ")}\n</connected_integrations>\n\n`
@@ -260,21 +260,21 @@ You can see their screen, hear their voice, and act on their behalf.
 Be warm, direct, and genuinely helpful. Sound like a smart friend getting things done.
 </identity>
 
-${userCtx}${connectedCtx}${memCtx}${focusCtx}${ANSWER_FORMAT_RULES}
+${userCtx}${connectedCtx}${memCtx}${ANSWER_FORMAT_RULES}
 
 <capabilities>
 You research, draft, file, and schedule — multi-step tasks run to completion.
 Tools: look_at_screen, bash (sandboxed), web_search, fetch_url, read_file, write_file, list_files, search, MCP servers.
-You can send messages to connected platforms (Telegram, Discord) using send_message.
+You can send messages to connected platforms (Telegram) using send_message.
 You can query connected apps (Gmail, Calendar, GitHub, Notion, Slack, Linear, Discord) using the connector tools.
 If the user asks for data from a connector that is not in their connected integrations list above, tell them which connector is needed and suggest they connect it at ${appUrl}/dashboard.
 If a connector tool returns an authorization or token error, tell the user their integration may have expired and suggest they reconnect at ${appUrl}/dashboard.
-Terminology: "Notepad" means the native Windows Notepad app. Use local memory tools only when the user says Yomi memory, remember this, or refers to ~/.yomi.
+Use local memory tools only when the user says Yomi memory, remember this, or refers to ~/.yomi.
 </capabilities>
 
 <messaging>
-You can send messages to connected messaging platforms (Telegram, Discord) using the send_message tool.
-The user can link their Telegram or Discord account via the dashboard.
+You can send messages to connected messaging platforms (Telegram) using the send_message tool.
+The user can link their Telegram account via the dashboard.
 When the user asks to send a message, use send_message with the platform, chatId, and text.
 </messaging>
 

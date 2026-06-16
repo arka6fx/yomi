@@ -6,12 +6,14 @@ import { resolveAgent } from "../../automation/agents/registry.js"
 // provider-specific check first (e.g. Spotify "is a track playing?"); it is tri-state so it only
 // overrides on POSITIVE evidence. On "inconclusive" we fall back to the phase-1 rubric: the burst
 // recorded no error and no tool reported failure (lastError unset).
+// Desktop automation (UIA) is currently disabled — pass a no-op uia stub.
+const noopUia = { findWindow: async () => null, getWindowInfo: async () => ({ window: "" }) } as const
 export function makeValidationNode(deps: GraphDeps) {
   return async (state: GraphState): Promise<Partial<GraphState>> => {
     deps.bridge.step("Validating outcome", { state: "executing" })
     const agent = resolveAgent(state.goal)
     const verdict = await agent
-      .validate({ goal: state.goal, lastError: state.lastError, uia: deps.uia })
+      .validate({ goal: state.goal, lastError: state.lastError, uia: noopUia })
       .catch(() => "inconclusive" as const)
 
     const passed = verdict === "pass" ? true : verdict === "fail" ? false : !state.lastError

@@ -321,10 +321,6 @@ contextBridge.exposeInMainWorld("yomi", {
     return ipcRenderer.invoke("yomi:gateway-connect-telegram")
   },
 
-  connectDiscordBot(): Promise<{ ok?: boolean; error?: string }> {
-    return ipcRenderer.invoke("yomi:gateway-connect-discord")
-  },
-
   unlinkBot(platform: string): Promise<{ ok?: boolean; error?: string }> {
     return ipcRenderer.invoke("yomi:gateway-unlink", platform)
   },

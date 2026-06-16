@@ -581,7 +581,7 @@ export async function compressContext(
     opts.auxModelId ??
     process.env["COMPRESSOR_MODEL"] ??
     process.env["AI_CREDITS_FAST_MODEL"] ??
-    "gpt-5.5-mini"
+    "gpt-5.4-mini"
   const factory = opts.modelFactory ?? createModel
   const model = factory(auxModelId)
   if (!model) {

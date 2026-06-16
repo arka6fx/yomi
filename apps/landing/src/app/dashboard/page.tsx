@@ -53,16 +53,14 @@ type Sub = {
   features: {
     chat: FeatureUsage
     voice: FeatureUsage
-    screenshots: FeatureUsage
-    reasoning: FeatureUsage
+    analyze: FeatureUsage
     connectors: FeatureUsage
     botMessages: FeatureUsage
   }
   planLimits?: {
     chat: number
     voiceMinutes: number
-    screenshots: number
-    reasoning: number
+    analyze: number
     connectors: number
     botMessages: number
   }
@@ -79,6 +77,8 @@ type Sub = {
     expiringSoonAt: string | null
   }
   creditConsumption?: Record<string, number>
+  creditsUsed?: number
+  totalCredits?: number
   creditPacks?: Array<{
     key: string
     name: string
@@ -102,10 +102,9 @@ type Sub = {
 }
 
 const CREDIT_USAGE_LABELS: Record<string, string> = {
-  request_chat: "AI chat",
+request_chat: "AI chat",
   request_voice: "Voice",
-  screenshot: "Screenshot analysis",
-  reasoning: "Reasoning",
+  analyze: "Screen analyze",
   bot_message: "Bot message",
 }
 
@@ -141,7 +140,7 @@ const PLANS = [
     features: [
       "100 AI chats during trial",
       "20 min voice during trial",
-      "25 screenshot analyses",
+      "25 screen analyze",
       "50 local memories",
       "Window controls & docking",
       "Streaming responses",
@@ -161,7 +160,7 @@ const PLANS = [
     features: [
       "2,000 AI chats / month",
       "180 min voice / month",
-      "400 screenshot analyses",
+      "400 screen analyze",
       "App connectors",
       "200 Telegram bot messages / month",
     ],
@@ -719,7 +718,7 @@ function DashboardContent() {
                             : "bg-sky-500/10 text-sky-300",
                     )}
                   >
-                    {isOwner ? "owner" : sub.status === "past_due" ? "past due" : sub.status}
+                    {isOwner ? "owner" : sub.status === "past_due" ? "past due" : sub.plan === "explore" ? "trial" : sub.status}
                   </span>
                 )}
               </div>
@@ -797,6 +796,40 @@ function DashboardContent() {
                     <span className="text-sm text-muted-foreground">credits available</span>
                   </div>
                 )}
+
+                {/* Credits progress bar */}
+                {sub && sub.plan !== "explore" && (sub.creditsUsed ?? 0) > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{sub.creditsUsed} of {sub.totalCredits} credits used</span>
+                      <span>{sub.credits?.balance ?? 0} remaining</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all"
+                        style={{ width: `${Math.min(100, ((sub.creditsUsed ?? 0) / (sub.totalCredits ?? 1)) * 100)}%` }}
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {([
+                        { key: "request_chat", label: "AI Chat", Icon: MessageSquare as LucideIcon },
+                        { key: "request_voice", label: "Voice", Icon: Mic as LucideIcon },
+                        { key: "analyze", label: "Analyze", Icon: ScanLine as LucideIcon },
+                        { key: "bot_message", label: "Bot", Icon: Bot as LucideIcon },
+                      ] as const).map(({ key, label, Icon }) => {
+                        const amount = sub.creditConsumption?.[key] ?? 0
+                        if (amount === 0) return null
+                        return (
+                          <div key={key} className="flex items-center gap-1.5">
+                            <Icon size={11} className="text-muted-foreground shrink-0" />
+                            <span className="text-xs text-muted-foreground truncate">{label}</span>
+                            <span className="text-xs font-medium text-foreground tabular-nums ml-auto">{amount}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -830,8 +863,7 @@ function DashboardContent() {
                 {([
                   { key: "chat" as const, label: "AI Chats", Icon: MessageSquare as LucideIcon, creditKey: "request_chat" },
                   { key: "voice" as const, label: "Voice", Icon: Mic as LucideIcon, creditKey: "request_voice" },
-                  { key: "screenshots" as const, label: "Screenshot Analyses", Icon: ScanLine as LucideIcon, creditKey: "screenshot" },
-                  { key: "reasoning" as const, label: "Reasoning", Icon: Sparkles as LucideIcon, creditKey: "reasoning" },
+                  { key: "analyze" as const, label: "Screen Analyze", Icon: ScanLine as LucideIcon, creditKey: "analyze" },
                   { key: "botMessages" as const, label: "Bot Messages", Icon: Bot as LucideIcon, creditKey: "bot_message" },
                 ]).map(({ key, label, Icon, creditKey }) => {
                   const feat = sub.features[key]
@@ -998,8 +1030,7 @@ function DashboardContent() {
                   {([
                     { key: "request_chat", label: "AI Chat", Icon: MessageSquare as LucideIcon },
                     { key: "request_voice", label: "Voice", Icon: Mic as LucideIcon },
-                    { key: "screenshot", label: "Screenshots", Icon: ScanLine as LucideIcon },
-                    { key: "reasoning", label: "Reasoning", Icon: Sparkles as LucideIcon },
+                    { key: "analyze", label: "Analyze", Icon: ScanLine as LucideIcon },
                     { key: "bot_message", label: "Bot Messages", Icon: Bot as LucideIcon },
                   ]).map(({ key, label, Icon }) => {
                     const amount = sub.creditConsumption?.[key] ?? 0

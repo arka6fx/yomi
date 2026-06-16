@@ -98,7 +98,7 @@ function app() {
   return hono
 }
 
-function reserve(kind: "chat" | "voice" | "screenshot" | "reasoning" | "bot_message" = "chat") {
+function reserve(kind: "chat" | "voice" | "analyze" | "bot_message" = "chat") {
   return app().request("/api/usage/interactions/reserve", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -135,7 +135,7 @@ describe("POST /api/usage/interactions/reserve", () => {
     mockCreditBalance = 0
     mockConsumeCreditsOk = false
 
-    for (const kind of ["chat", "voice", "screenshot", "reasoning", "bot_message"] as const) {
+    for (const kind of ["chat", "voice", "analyze", "bot_message"] as const) {
       const res = await reserve(kind)
       const body = (await res.json()) as ReserveBody
 

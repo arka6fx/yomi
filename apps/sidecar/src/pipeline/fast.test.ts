@@ -52,6 +52,7 @@ let lastStreamTextMessages: unknown[] = []
 let lastStreamTextOptions: Record<string, unknown> = {}
 let appendSessionCalls = 0
 let loadRecentSessionCalls = 0
+let captureMemoryCalls = 0
 const sttMock = {
   shouldThrow: false,
   reset(): void {
@@ -136,19 +137,21 @@ mock.module("../memory/subsystem.js", () => ({
   loadMemoryContext: async () => {
     loadRecentSessionCalls++
     return {
-      memorySummary: "",
-      memoryIndex: "",
+      memorySummary: "## Memory Summary\nUser likes Python.",
+      memoryIndex: "## Index\n- session 2026-06-16",
       localMemory: "User: remember my project\nAssistant: It is Yomi.",
-      cloudRagContext: "",
-      staticProfile: "",
-      dynamicProfile: "",
-      recentSession: "",
+      cloudRagContext: "[1] Project Yomi is an AI productivity assistant.",
+      staticProfile: "## Static Profile\nName: User\nLanguage: English",
+      dynamicProfile: "## Dynamic Profile\nProject: Yomi\nStatus: Active",
+      recentSession: "## Recent Chat\nUser: What's my project?\nAssistant: Yomi.",
     }
   },
   writeSessionTurn: async () => {
     appendSessionCalls++
   },
-  captureStructuredMemory: async () => {},
+  captureStructuredMemory: async () => {
+    captureMemoryCalls++
+  },
 }))
 
 mock.module("../insights/usage-store.js", () => ({
@@ -250,6 +253,7 @@ describe("fastPipeline — generator", () => {
     lastStreamTextOptions = {}
     appendSessionCalls = 0
     loadRecentSessionCalls = 0
+    captureMemoryCalls = 0
     streamChunks = ["Hello", " world", "!"]
 
     delete process.env.AI_CREDITS_FAST_MODEL
@@ -358,11 +362,63 @@ describe("fastPipeline — generator", () => {
     expect(JSON.stringify(lastStreamTextMessages)).toContain("remember my project")
   })
 
+  it("max plan also loads memory and writes session turn", async () => {
+    await collect(fastPipeline({ text: "what is my project", plan: "max" }))
+
+    expect(loadRecentSessionCalls).toBe(1)
+    expect(appendSessionCalls).toBe(1)
+  })
+
+  it("pro plan captures structured memory after successful response", async () => {
+    await collect(fastPipeline({ text: "I like Rust", plan: "pro" }))
+
+    expect(captureMemoryCalls).toBe(1)
+  })
+
+  it("explore plan does NOT capture structured memory", async () => {
+    await collect(fastPipeline({ text: "I like Rust", plan: "explore" }))
+
+    expect(captureMemoryCalls).toBe(0)
+  })
+
+  it("voice (audio_b64) with pro plan loads memory using transcribed text", async () => {
+    const dummyWav = Buffer.alloc(44).toString("base64")
+    const events = (await collect(
+      fastPipeline({ audio_b64: dummyWav, plan: "pro" }),
+    )) as any[]
+
+    expect(events[0]).toMatchObject({ type: "transcript", text: "transcribed from audio" })
+    expect(events.some((e) => e.type === "llm_chunk")).toBe(true)
+    expect(loadRecentSessionCalls).toBe(1)
+  })
+
+  it("pro plan: all 7 memory context fields appear in the system prompt", async () => {
+    await collect(fastPipeline({ text: "tell me about my project", plan: "pro" }))
+
+    const sysMsg = lastStreamTextMessages[0] as any
+    expect(sysMsg.role).toBe("system")
+    const content = sysMsg.content as string
+    expect(content).toContain("<static_profile>")
+    expect(content).toContain("<dynamic_profile>")
+    expect(content).toContain("<index>")
+    expect(content).toContain("<summary>")
+    expect(content).toContain("<local_retrieved>")
+    expect(content).toContain("<cloud_rag_context>")
+    expect(content).toContain("<recent_chat>")
+  })
+
+  it("no plan (undefined) does not load memory", async () => {
+    await collect(fastPipeline({ text: "remember this" }))
+
+    expect(loadRecentSessionCalls).toBe(0)
+    expect(appendSessionCalls).toBe(0)
+  })
+
   // -------------------------------------------------------------------------
   // Model selection
   // -------------------------------------------------------------------------
 
-  it("default model is gpt-5.5-mini when AI_CREDITS_FAST_MODEL is unset", async () => {
+  it("default model is gpt-5.4-mini when AI_CREDITS_FAST_MODEL is unset", async () => {
     delete process.env.AI_CREDITS_FAST_MODEL
     const events = (await collect(fastPipeline({ text: "Hello" }))) as any[]
     expect(events.some((e) => e.type === "llm_chunk")).toBe(true)

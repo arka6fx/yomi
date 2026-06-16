@@ -13,8 +13,7 @@ export interface PlanConfig {
   limits: {
     chat: number
     voiceMinutes: number
-    screenshots: number
-    reasoning: number
+    analyze: number
     connectors: number
     botMessages: number
   }
@@ -31,8 +30,7 @@ export const PLANS: Record<string, PlanConfig> = {
     limits: {
       chat: 100,
       voiceMinutes: 20,
-      screenshots: 25,
-      reasoning: 5,
+      analyze: 25,
       connectors: 2,
       botMessages: 20,
     },
@@ -47,8 +45,7 @@ export const PLANS: Record<string, PlanConfig> = {
     limits: {
       chat: 2000,
       voiceMinutes: 180,
-      screenshots: 400,
-      reasoning: 100,
+      analyze: 400,
       connectors: 8,
       botMessages: 200,
     },
@@ -63,8 +60,7 @@ export const PLANS: Record<string, PlanConfig> = {
     limits: {
       chat: 8000,
       voiceMinutes: 750,
-      screenshots: 2000,
-      reasoning: 500,
+      analyze: 2000,
       connectors: 8,
       botMessages: 500,
     },
@@ -76,8 +72,7 @@ export type FeatureKey = keyof (typeof PLANS)["explore"]["limits"]
 export type UsageCreditKind =
   | "chat"
   | "voice"
-  | "screenshot"
-  | "reasoning"
+  | "analyze"
   | "bot_message"
 
 export interface CreditPackConfig {
@@ -119,8 +114,7 @@ export const CREDIT_PACKS: Record<string, CreditPackConfig> = {
 export const CREDIT_COSTS: Record<UsageCreditKind, number> = {
   chat: 1,
   voice: 2,
-  screenshot: 1,
-  reasoning: 5,
+  analyze: 1,
   bot_message: 1,
 }
 

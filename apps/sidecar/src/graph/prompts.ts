@@ -4,8 +4,6 @@ import { loadMemoryContext } from "../memory/subsystem.js"
 import { memoryEnabled } from "./deps.js"
 import { getConnectorRegistry } from "../connectors/registry.js"
 
-function getDesktopFocusContext(): string { return "" }
-
 const EMPTY_MEMORY = {
   memorySummary: "",
   memoryIndex: "",
@@ -37,7 +35,7 @@ export async function buildGraphSystemPrompt(
     .map(([key]) => key)
   const connectedProviders = getConnectorRegistry().getConnected()
   return {
-    systemPrompt: buildAgentPrompt({ yomiMd: cachedYomiMd, ...memoryCtx, desktopFocusChange: getDesktopFocusContext(), connectedProviders }),
+    systemPrompt: buildAgentPrompt({ yomiMd: cachedYomiMd, ...memoryCtx, connectedProviders }),
     memoryRefs,
   }
 }

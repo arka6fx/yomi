@@ -8,14 +8,13 @@ import {
 } from "../entitlements.js"
 import type { FeatureKey } from "@yomi/shared/plans"
 
-export type AccessKind = "chat" | "voice" | "agent" | "screenshot" | "reasoning" | "bot_message"
+export type AccessKind = "chat" | "voice" | "agent" | "analyze" | "bot_message"
 
 const KIND_FEATURE_MAP: Record<AccessKind, FeatureKey | null> = {
   chat: "chat",
   voice: "voiceMinutes",
   agent: "botMessages",
-  screenshot: "screenshots",
-  reasoning: "reasoning",
+  analyze: "analyze",
   bot_message: "botMessages",
 }
 

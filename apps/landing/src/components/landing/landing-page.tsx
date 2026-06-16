@@ -134,7 +134,7 @@ const PLANS = [
     features: [
       "100 AI chats during trial",
       "20 min voice during trial",
-      "25 screenshot analyses",
+      "25 screen analyze",
       "50 local memories",
       "Window controls & docking",
       "Streaming responses",
@@ -156,7 +156,7 @@ const PLANS = [
     features: [
       "2,000 AI chats / month",
       "180 min voice / month",
-      "400 screenshot analyses",
+      "400 screen analyze",
       "App connectors",
       "200 Telegram bot messages / month",
     ],
@@ -171,7 +171,7 @@ const PLANS = [
     period: "/ month",
     annual: "$384 / year",
     badge: "Power users",
-    description: "High-volume voice, screenshots, and bots for power users.",
+    description: "High-volume voice, analyze, and bots for power users.",
     features: [
       "Everything in Pro",
       "8,000 AI chats / month",

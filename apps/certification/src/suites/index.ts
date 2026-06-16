@@ -5,7 +5,6 @@ import { MediaControlsSuite } from "./media-controls.js"
 import { SystemCommandsSuite } from "./system-commands.js"
 import { WhatsAppSuite } from "./whatsapp.js"
 import { TelegramSuite } from "./telegram.js"
-import { DiscordSuite } from "./discord.js"
 import { InstagramSuite } from "./instagram.js"
 import { WindowsSettingsSuite } from "./windows-settings.js"
 import { BrowserSuite } from "./browser.js"
@@ -27,7 +26,6 @@ export function registerAllSuites(): BaseSuite[] {
     new SystemCommandsSuite(),
     new WhatsAppSuite(),
     new TelegramSuite(),
-    new DiscordSuite(),
     new InstagramSuite(),
     new WindowsSettingsSuite(),
     new BrowserSuite(),

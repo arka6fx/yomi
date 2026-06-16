@@ -412,27 +412,7 @@ app.whenReady().then(async () => {
     }
   })
 
-  // Discord — capture the OAuth redirect (Bearer auth) and open it in the browser
-  ipcMain.handle("yomi:gateway-connect-discord", async () => {
-    const token = loadToken()
-    if (!token) return { error: "Not signed in" }
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/gateway/discord/auth`, {
-        headers: { Authorization: `Bearer ${token}` },
-        redirect: "manual",
-      })
-      if (res.status === 302 || res.status === 301) {
-        const location = res.headers.get("location")
-        if (location) {
-          await shell.openExternal(location)
-          return { ok: true }
-        }
-      }
-      return { error: `Connect failed: ${res.status}` }
-    } catch (err) {
-      return { error: err instanceof Error ? err.message : "Connect failed" }
-    }
-  })
+
 
   ipcMain.handle("yomi:gateway-unlink", async (_e, platform: string) => {
     const token = loadToken()

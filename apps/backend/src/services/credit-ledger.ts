@@ -6,7 +6,7 @@ import {
   paymentRecords,
   usageEvents,
 } from "@yomi/db"
-import { and, asc, desc, eq, gt, isNull, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm"
 
 type CreditMetadata = Record<string, unknown>
 
@@ -347,6 +347,44 @@ export async function refundCredits(input: {
   metadata?: CreditMetadata
 }) {
   return debitCredits({ ...input, type: "refund" })
+}
+
+export async function expireUserCredits(
+  userId: string,
+  options?: { sources?: string[]; reason?: string },
+): Promise<number> {
+  const expired = await db
+    .select({
+      id: creditGrants.id,
+      creditsRemaining: creditGrants.creditsRemaining,
+    })
+    .from(creditGrants)
+    .where(
+      and(
+        eq(creditGrants.userId, userId),
+        eq(creditGrants.status, "active"),
+        gt(creditGrants.creditsRemaining, 0),
+        options?.sources ? inArray(creditGrants.source, options.sources) : sql`1=1`,
+      ),
+    )
+
+  let totalExpired = 0
+  for (const grant of expired) {
+    const result = await debitCredits({
+      userId,
+      amount: grant.creditsRemaining,
+      type: "expire",
+      idempotencyKey: `expire:upgrade:${grant.id}`,
+      reason: options?.reason ?? "credits expired on plan upgrade",
+      metadata: { grantId: grant.id },
+    })
+    if (result.ok) {
+      totalExpired += result.charged
+      await db.update(creditGrants).set({ status: "expired", creditsRemaining: 0 }).where(eq(creditGrants.id, grant.id))
+    }
+  }
+
+  return totalExpired
 }
 
 export async function expireCredits(now = new Date()): Promise<number> {

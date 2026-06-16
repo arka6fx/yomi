@@ -9,11 +9,11 @@ import { agentPipeline } from "./pipeline/agent.js"
 import { transcribe } from "./stt.js"
 import { classifyIntent } from "./router/intent.js"
 import { initMemorySubsystem } from "./memory/subsystem.js"
-import { resolveConfirmation } from "./uia/act-bus.js"
+// import { resolveConfirmation } from "./uia/act-bus.js" // will provide later
 // import { closeMcp } from "./mcp/client.js" // will provide later
 import { getDefaultScheduler } from "./tools/cron/cron-scheduler.js"
 import { getDefaultPluginManager } from "./plugins/plugin-manager.js"
-import { duckSpotify } from "./tools/system.js"
+// import { duckSpotify } from "./tools/system.js" // will provide later
 // import { getReplayCommand, listWorkflowReplays } from "./automation/runs.js"
 // import { allProviders, getProvider } from "./automation/providers/registry.js"
 import type { ProviderId } from "./automation/providers/types.js"
@@ -260,18 +260,18 @@ app.post("/query/agent", async (c) => {
 // app.post("/automation/providers/:id/repair", async (c) => { ... });
 // app.get("/automation/knowledge", (c) => { ... });
 
-// Act-mode confirmation callback (Spec 16): desktop posts the user's yes/no for a risky action.
-app.post("/act/confirm", async (c) => {
-  let body: { id?: string; approved?: boolean }
-  try {
-    body = await c.req.json()
-  } catch {
-    return c.json({ error: "Invalid JSON body" }, 400)
-  }
-  if (!body.id) return c.json({ error: "id required" }, 400)
-  const resolved = resolveConfirmation(body.id, body.approved === true)
-  return c.json({ ok: resolved })
-})
+// Act-mode confirmation callback — will provide later.
+// app.post("/act/confirm", async (c) => {
+//   let body: { id?: string; approved?: boolean }
+//   try {
+//     body = await c.req.json()
+//   } catch {
+//     return c.json({ error: "Invalid JSON body" }, 400)
+//   }
+//   if (!body.id) return c.json({ error: "id required" }, 400)
+//   const resolved = resolveConfirmation(body.id, body.approved === true)
+//   return c.json({ ok: resolved })
+// })
 
 // ── Automation routes — will provide later ──────────────────────────────────
 // app.post("/automation/replay", async (c) => { ... });
@@ -300,13 +300,12 @@ app.post("/stt", async (c) => {
   }
 })
 
-// Duck/restore Spotify volume around a listening turn so the playing song doesn't drown out the
-// user's voice. The desktop calls this on entering/leaving the listening state.
-app.post("/spotify/duck", async (c) => {
-  const body = await c.req.json().catch(() => ({}) as { duck?: boolean })
-  const result = await duckSpotify(body?.duck === true)
-  return c.json(result as Record<string, unknown>)
-})
+// Duck/restore Spotify volume — commented out until desktop automation is re-enabled.
+// app.post("/spotify/duck", async (c) => {
+//   const body = await c.req.json().catch(() => ({}) as { duck?: boolean })
+//   const result = await duckSpotify(body?.duck === true)
+//   return c.json(result as Record<string, unknown>)
+// })
 
 // Usage insights endpoint — returns analytics report for the given lookback period.
 // Query params: days (number, default 7), plan (string, default "explore").
