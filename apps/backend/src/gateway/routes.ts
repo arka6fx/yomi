@@ -3,6 +3,7 @@ import { eq, and } from "drizzle-orm"
 import { db, platformConnections } from "@yomi/db"
 import { getDefaultGateway } from "./gateway-runner.js"
 import { authenticate } from "../auth.js"
+import { TelegramAdapter, type TelegramUpdate } from "./platforms/telegram.js"
 import type { PlatformType } from "@yomi/shared"
 
 export const gatewayRouter = new Hono()
@@ -138,4 +139,27 @@ gatewayRouter.post("/telegram/token", authenticate, async (c) => {
     console.warn("[gateway] telegram token creation error:", err)
     return c.json({ error: "Failed to create token" }, 500)
   }
+})
+
+// Telegram webhook — Telegram calls this when users send messages to the bot.
+// The URL path includes the bot token so only Telegram can hit the right endpoint.
+// Additionally, Telegram sends X-Telegram-Bot-Api-Secret-Token matching the bot
+// token (set via setWebhook secret_token) as a second authentication layer.
+gatewayRouter.post("/telegram/webhook/:token", async (c) => {
+  const token = c.req.param("token")
+  const expectedToken = process.env["TELEGRAM_BOT_TOKEN"]
+  if (!expectedToken || token !== expectedToken) return c.text("Not found", 404)
+
+  const secretHeader = c.req.header("X-Telegram-Bot-Api-Secret-Token")
+  if (secretHeader !== expectedToken) return c.text("Forbidden", 403)
+
+  const update = await c.req.json<TelegramUpdate>().catch(() => null)
+  if (!update) return c.text("Bad Request", 400)
+
+  const gateway = getDefaultGateway()
+  const adapter = gateway.getAdapter("telegram")
+  if (!(adapter instanceof TelegramAdapter)) return c.text("No Telegram adapter", 503)
+
+  await adapter.processUpdate(update)
+  return c.json({ ok: true })
 })
