@@ -63,7 +63,7 @@ The user pasted the prompt. You are in a multi-step dialog. Detect what you can,
 
 11. **Validation.** Run `scripts/validate.sh`. Report each check as it passes. If any fails, surface the error and stop. **[wait for user if anything fails]**
 
-12. **Persist skill.** Ask: "Save the Spin skill to `.claude/skills/turnstile-spin/SKILL.md` so I can reuse it on follow-up tasks?" Default yes. **[wait for user]** Then run `scripts/persist-skill.sh --path <agent-specific-path>`.
+12. **Persist skill.** Ask: "Save the Spin skill to `.opencode/skills/turnstile-spin/SKILL.md` so I can reuse it on follow-up tasks?" Default yes. **[wait for user]** Then run `scripts/persist-skill.sh --path <agent-specific-path>`.
 
 13. **Final report.** Print the structured summary: what was created, what was validated, what to do next.
 

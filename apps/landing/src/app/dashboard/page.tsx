@@ -37,7 +37,12 @@ type Sub = {
   role: string
   plan: string
   status: string
+  trialStartDate: string | null
   trialEndDate: string | null
+  trialDaysUsed: number
+  trialDaysRemaining: number
+  trialDaysTotal: number
+  trialExpired: boolean
   currentPeriodEnd: string | null
   dodoSubscriptionId: string | null
   requestsUsed: number
@@ -73,6 +78,7 @@ type Sub = {
     expiringSoon: number
     expiringSoonAt: string | null
   }
+  creditConsumption?: Record<string, number>
   creditPacks?: Array<{
     key: string
     name: string
@@ -217,7 +223,12 @@ function DashboardContent() {
           role: "user",
           plan: "explore",
           status: "inactive",
+          trialStartDate: null,
           trialEndDate: null,
+          trialDaysUsed: 0,
+          trialDaysRemaining: 30,
+          trialDaysTotal: 30,
+          trialExpired: false,
           currentPeriodEnd: null,
           requestsUsed: 0,
           requestsLimit: 100,
@@ -246,6 +257,7 @@ function DashboardContent() {
             expiringSoon: 0,
             expiringSoonAt: null,
           },
+          creditConsumption: {},
           creditPacks: [],
           creditTransactions: [],
         }),
@@ -720,34 +732,63 @@ function DashboardContent() {
             <div className="flex items-start justify-between gap-6 mb-6">
               <div>
                 <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
-                  Usage this month
+                  {sub?.plan === "explore" ? "Free trial" : "Usage this month"}
                 </p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-light text-foreground">
-                    {sub?.requestsRemaining ?? "—"}
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    {sub?.requestsLimit !== null && sub?.requestsLimit !== undefined
-                      ? `requests left of ${sub.requestsLimit}`
-                      : "unlimited requests"}
-                  </span>
-                </div>
-                {sub?.resetAt && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Resets{" "}
-                    {new Date(sub.resetAt).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </p>
+                {sub?.plan === "explore" && sub?.trialEndDate ? (
+                  <div className="space-y-1">
+                    {sub.trialExpired ? (
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle size={20} className="text-destructive" />
+                        <span className="text-2xl font-light text-destructive">Trial ended</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl font-light text-foreground">
+                          {sub.trialDaysRemaining}
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          days remaining
+                        </span>
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {sub.trialExpired
+                        ? "Your free trial has ended."
+                        : `${sub.trialDaysUsed} of ${sub.trialDaysTotal} days used`}
+                      {" "}Resets {sub.resetAt ? new Date(sub.resetAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "monthly"}.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-light text-foreground tabular-nums">
+                      {sub?.credits?.balance ?? 0}
+                    </span>
+                    <span className="text-sm text-muted-foreground">credits available</span>
+                  </div>
                 )}
               </div>
             </div>
 
-            {sub?.requestsRemaining === 0 && sub?.requestsLimit !== null && (
-              <div className="mb-6 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-                <p className="text-sm text-destructive">
-                  You've used all requests for this month. Upgrade to continue or wait for the reset.
+            {sub?.plan === "explore" && sub?.trialExpired && (
+              <div className="mb-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20">
+                <p className="text-sm text-destructive font-medium mb-1">Free trial has ended</p>
+                <p className="text-xs text-destructive/80 mb-3">
+                  You've used all 100 AI chats and 20 voice minutes. Upgrade to Pro or Max to continue using Yomi.
+                </p>
+                <a
+                  href="/dashboard?plan=pro"
+                  className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors"
+                >
+                  <Crown size={12} />
+                  Upgrade to Pro — $14.99/mo
+                </a>
+              </div>
+            )}
+
+            {sub?.plan !== "explore" && sub?.credits?.balance === 0 && (
+              <div className="mb-6 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                <p className="text-sm text-yellow-400">
+                  No credits remaining. Purchase a credit pack to continue.
                 </p>
               </div>
             )}
@@ -756,18 +797,19 @@ function DashboardContent() {
             {sub?.features && (
               <div className="space-y-4">
                 {([
-                  { key: "chat" as const, label: "AI Chats", Icon: MessageSquare as LucideIcon },
-                  { key: "voice" as const, label: "Voice", Icon: Mic as LucideIcon },
-                  { key: "screenshots" as const, label: "Screenshot Analyses", Icon: ScanLine as LucideIcon },
-                  { key: "connectors" as const, label: "App Connectors", Icon: Plug as LucideIcon },
-                  { key: "botMessages" as const, label: "Bot Messages", Icon: Bot as LucideIcon },
-                ]).map(({ key, label, Icon }) => {
+                  { key: "chat" as const, label: "AI Chats", Icon: MessageSquare as LucideIcon, creditKey: "request_chat" },
+                  { key: "voice" as const, label: "Voice", Icon: Mic as LucideIcon, creditKey: "request_voice" },
+                  { key: "screenshots" as const, label: "Screenshot Analyses", Icon: ScanLine as LucideIcon, creditKey: "screenshot" },
+                  { key: "reasoning" as const, label: "Reasoning", Icon: Sparkles as LucideIcon, creditKey: "reasoning" },
+                  { key: "botMessages" as const, label: "Bot Messages", Icon: Bot as LucideIcon, creditKey: "bot_message" },
+                ]).map(({ key, label, Icon, creditKey }) => {
                   const feat = sub.features[key]
                   if (!feat) return null
                   const pct = feat.limit && feat.limit > 0 ? Math.min(100, (feat.used / feat.limit) * 100) : 0
                   const isUnlimited = feat.limit === null
                   const isDisabled = feat.limit === 0
                   const isAtLimit = !isDisabled && !isUnlimited && feat.limit !== null && feat.used >= feat.limit
+                  const creditsUsed = sub.creditConsumption?.[creditKey] ?? 0
 
                   return (
                     <div key={key} className={cn("space-y-1.5", isDisabled && "opacity-40")}>
@@ -780,9 +822,9 @@ function DashboardContent() {
                           {isDisabled ? (
                             "Not available"
                           ) : isUnlimited ? (
-                            `${feat.used} used`
+                            `${feat.used} used${creditsUsed > 0 ? ` · ${creditsUsed} cr` : ""}`
                           ) : (
-                            `${feat.used} / ${feat.limit}`
+                            `${feat.used} / ${feat.limit}${creditsUsed > 0 ? ` · ${creditsUsed} cr` : ""}`
                           )}
                         </span>
                       </div>
@@ -808,6 +850,36 @@ function DashboardContent() {
                     </div>
                   )
                 })}
+                {/* App Connectors — shown without credit cost */}
+                {sub?.features?.connectors && (() => {
+                  const feat = sub.features.connectors
+                  const pct = feat.limit && feat.limit > 0 ? Math.min(100, (feat.used / feat.limit) * 100) : 0
+                  const isUnlimited = feat.limit === null
+                  return (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2 text-foreground">
+                          <Plug size={15} className="text-muted-foreground shrink-0" />
+                          App Connectors
+                        </span>
+                        <span className="text-muted-foreground text-xs tabular-nums">
+                          {isUnlimited ? `${feat.used} used` : `${feat.used} / ${feat.limit}`}
+                        </span>
+                      </div>
+                      {!isUnlimited && (
+                        <div className="relative w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className={cn(
+                              "absolute inset-y-0 left-0 transition-[width] duration-500",
+                              pct >= 90 ? "bg-destructive" : pct >= 70 ? "bg-yellow-500" : "bg-primary",
+                            )}
+                            style={{ width: `${Math.min(100, pct)}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
             )}
           </div>
@@ -853,22 +925,67 @@ function DashboardContent() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full sm:w-auto">
-                {(sub?.creditPacks ?? []).map((pack) => (
-                  <button
-                    key={pack.key}
-                    onClick={() => handleBuyCredits(pack.key)}
-                    disabled={creditLoading !== null}
-                    className="rounded-xl border border-border bg-background px-3 py-2 text-left hover:border-primary/60 transition-colors disabled:opacity-50"
-                  >
-                    <span className="block text-sm font-medium text-foreground">{pack.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {creditLoading === pack.key ? "Starting..." : pack.priceDisplay}
-                    </span>
-                  </button>
-                ))}
-              </div>
+              {sub?.plan !== "explore" ? (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full sm:w-auto">
+                  {(sub?.creditPacks ?? []).map((pack) => (
+                    <button
+                      key={pack.key}
+                      onClick={() => handleBuyCredits(pack.key)}
+                      disabled={creditLoading !== null}
+                      className="rounded-xl border border-border bg-background px-3 py-2 text-left hover:border-primary/60 transition-colors disabled:opacity-50"
+                    >
+                      <span className="block text-sm font-medium text-foreground">{pack.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {creditLoading === pack.key ? "Starting..." : pack.priceDisplay}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="w-full sm:w-auto">
+                  <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-center">
+                    <p className="text-xs text-muted-foreground mb-2">Add credits on Pro or Max</p>
+                    <a
+                      href="/dashboard?plan=pro"
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                    >
+                      <Crown size={11} />
+                      Upgrade to Pro
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
+
+            {/* Credit consumption this month */}
+            {sub?.creditConsumption && Object.keys(sub.creditConsumption).length > 0 && (
+              <div className="mb-6 border-t border-border pt-4">
+                <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
+                  Credits consumed this month
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {([
+                    { key: "request_chat", label: "AI Chat", Icon: MessageSquare as LucideIcon },
+                    { key: "request_voice", label: "Voice", Icon: Mic as LucideIcon },
+                    { key: "screenshot", label: "Screenshots", Icon: ScanLine as LucideIcon },
+                    { key: "reasoning", label: "Reasoning", Icon: Sparkles as LucideIcon },
+                    { key: "bot_message", label: "Bot Messages", Icon: Bot as LucideIcon },
+                  ]).map(({ key, label, Icon }) => {
+                    const amount = sub.creditConsumption?.[key] ?? 0
+                    if (amount === 0) return null
+                    return (
+                      <div key={key} className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2">
+                        <Icon size={13} className="text-muted-foreground shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-xs text-muted-foreground truncate">{label}</p>
+                          <p className="text-sm font-medium text-foreground tabular-nums">{amount} cr</p>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {(sub?.creditTransactions?.length ?? 0) > 0 && (
               <div className="border-t border-border pt-4">

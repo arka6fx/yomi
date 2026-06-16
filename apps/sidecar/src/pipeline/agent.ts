@@ -41,7 +41,7 @@ import {
   whatsAppMessageRequest,
 } from "./shortcuts.js"
 
-const AGENT_MODEL = process.env.AI_CREDITS_AGENT_MODEL || "gpt-4.1"
+const AGENT_MODEL = process.env.AI_CREDITS_AGENT_MODEL || "gpt-5.5"
 const MAX_STEPS = parseInt(process.env.AGENT_MAX_STEPS || "20", 10)
 // 1M tokens for GPT-4.1. Used by the turn-level compressor when no
 // model-aware context length is available.

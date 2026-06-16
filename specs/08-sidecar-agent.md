@@ -12,7 +12,7 @@
 Define the ReAct loop that handles complex multi-step requests routed as
 `agent`. The agent pipeline runs inside the sidecar and has access to a
 sandboxed tool runtime, memory, and subagent orchestration. Default model:
-`gpt-4.1`.
+`gpt-5.5`.
 
 ## Invariants
 
@@ -144,13 +144,13 @@ const result = await subagent.done()
 Subagents share the same tool set but have a narrower system prompt focused on
 their goal.
 
-Subagent model defaults to `gpt-4.1` (same as agent pipeline).
+Subagent model defaults to `gpt-5.5` (same as agent pipeline).
 
 **Spec 18 enhancement:** On the AutomationGraph path (paid automation tiers),
 sub-agents are
 provider-routed via `resolveAgent(goal)`, which picks the model and scopes tools
-based on the subtask category (e.g. "code" → gpt-4.1 with code tools, "browser"
-→ gpt-4.1-mini with browser tools only). This is gated behind
+based on the subtask category (e.g. "code" → gpt-5.5 with code tools, "browser"
+→ gpt-5.5-mini with browser tools only). This is gated behind
 `YOMI_LEGACY_AGENT=1` for fallback to the original behavior.
 
 ### Wiring

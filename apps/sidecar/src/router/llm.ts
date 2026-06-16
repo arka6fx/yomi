@@ -18,7 +18,7 @@ const RouterDecision = jsonSchema<{ path: "fast" | "agent"; confidence: number; 
 })
 
 const TIMEOUT_MS = parseInt(process.env.ROUTER_LLM_TIMEOUT_MS || "250", 10)
-const MODEL = process.env.ROUTER_MODEL || process.env.AI_CREDITS_FAST_MODEL || "gpt-4.1-mini"
+const MODEL = process.env.ROUTER_MODEL || process.env.AI_CREDITS_FAST_MODEL || "gpt-5.5-mini"
 
 function buildPrompt(input: RouterInput): string {
   const parts = [`User request: "${input.text}"`]

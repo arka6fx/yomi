@@ -8,7 +8,7 @@ import { scheduleCloudRagSync } from "./cloud-rag.js"
 import { getDefaultCurator } from "../agent/curator.js"
 
 const COMPACT_MODEL =
-  process.env.COMPACT_MODEL || process.env.AI_CREDITS_FAST_MODEL || "gpt-4.1-mini"
+  process.env.COMPACT_MODEL || process.env.AI_CREDITS_FAST_MODEL || "gpt-5.5-mini"
 // Minimum session log size before we bother calling the LLM.
 const MIN_SESSION_CHARS = 200
 

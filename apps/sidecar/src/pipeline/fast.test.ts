@@ -362,7 +362,7 @@ describe("fastPipeline — generator", () => {
   // Model selection
   // -------------------------------------------------------------------------
 
-  it("default model is gpt-4.1-mini when AI_CREDITS_FAST_MODEL is unset", async () => {
+  it("default model is gpt-5.5-mini when AI_CREDITS_FAST_MODEL is unset", async () => {
     delete process.env.AI_CREDITS_FAST_MODEL
     const events = (await collect(fastPipeline({ text: "Hello" }))) as any[]
     expect(events.some((e) => e.type === "llm_chunk")).toBe(true)

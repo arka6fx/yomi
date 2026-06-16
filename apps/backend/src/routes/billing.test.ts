@@ -460,7 +460,7 @@ describe("Dodo billing — credit pack checkout", () => {
     }) as typeof fetch
     currentUser = {
       id: "user_1", name: "Arka", email: "arka@example.com",
-      plan: "explore", subscriptionStatus: "inactive", dodoSubscriptionId: null,
+      plan: "pro", subscriptionStatus: "active", dodoSubscriptionId: "sub_1",
     }
     setDodoEnv("test")
   })
@@ -486,6 +486,12 @@ describe("Dodo billing — credit pack checkout", () => {
     process.env.DODO_TEST_PRODUCT_CREDITS_500 = ""
     const res = await createCreditPack("credits_500")
     expect(res.status).toBe(500)
+  })
+
+  it("blocks Explore plan users from purchasing credit packs", async () => {
+    currentUser = { ...currentUser, plan: "explore", subscriptionStatus: "inactive", dodoSubscriptionId: null }
+    const res = await createCreditPack("credits_500")
+    expect(res.status).toBe(403)
   })
 })
 

@@ -10,7 +10,7 @@ import { createSystemTools } from "../tools/system.js"
 import type { CoreMessage, ToolSet } from "ai"
 import type { Plan } from "@yomi/shared"
 
-const AGENT_MODEL = process.env["AI_CREDITS_AGENT_MODEL"] || "gpt-4.1"
+const AGENT_MODEL = process.env["AI_CREDITS_AGENT_MODEL"] || "gpt-5.5"
 const NOTEPAD = join(homedir(), ".yomi")
 
 export type SubagentRole = "leaf" | "orchestrator"

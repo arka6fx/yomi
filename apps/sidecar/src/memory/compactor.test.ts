@@ -22,7 +22,7 @@ mock.module("ai", () => ({
 }))
 
 mock.module("../pipeline/model.js", () => ({
-  createModel: (modelId: string) => ({ provider: "aws-bedrock", modelId }),
+  createModel: (modelId: string) => ({ provider: "openai", modelId }),
 }))
 
 import { compact } from "./compactor.js"
