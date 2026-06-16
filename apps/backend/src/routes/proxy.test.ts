@@ -1,5 +1,15 @@
-import { describe, it, expect, beforeEach, afterEach } from "bun:test"
+import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test"
 import { Hono } from "hono"
+
+let mockAuthSession: { user: { id: string }; session: { id: string } } | null = { user: { id: "test-user" }, session: { id: "test-session" } }
+
+mock.module("../auth.js", () => ({
+  getAuth: () => ({
+    api: {
+      getSession: async () => mockAuthSession,
+    },
+  }),
+}))
 
 const originalEnv = { ...process.env }
 let elevenlabsCalls: { url: string; headers: Record<string, string>; body?: unknown }[] = []
@@ -23,6 +33,7 @@ beforeEach(() => {
   elevenlabsCalls = []
   process.env.ELEVENLABS_API_KEY = "test-elevenlabs-key"
   process.env.SIDECAR_SECRET = "test-sidecar-secret"
+  mockAuthSession = null
 })
 
 afterEach(() => {
@@ -117,6 +128,27 @@ describe("POST /api/stt (STT proxy)", () => {
     expect(res.status).toBe(401)
     const json = await res.json() as Record<string, unknown>
     expect(json.error).toContain("ElevenLabs STT failed")
+  })
+
+  it("accepts Authorization Bearer token instead of sidecar secret", async () => {
+    mockElevenLabs(200, { text: "bearer auth works" })
+    mockAuthSession = { user: { id: "test-user" }, session: { id: "test-session" } }
+
+    const { sttRouter } = await import("./stt.js")
+    const app = new Hono().route("/api/stt", sttRouter)
+
+    const form = new FormData()
+    form.set("file", new Blob(["audio data"]), "test.wav")
+
+    const res = await app.request("/api/stt", {
+      method: "POST",
+      headers: { Authorization: "Bearer test-session-token" },
+      body: form,
+    })
+
+    expect(res.status).toBe(200)
+    const json = await res.json() as Record<string, unknown>
+    expect(json.text).toBe("bearer auth works")
   })
 })
 
@@ -247,5 +279,24 @@ describe("POST /api/tts (TTS proxy)", () => {
     expect(res.status).toBe(400)
     const json = await res.json() as Record<string, unknown>
     expect(json.error).toContain("ElevenLabs TTS failed")
+  })
+
+  it("TTS accepts Authorization Bearer token instead of sidecar secret", async () => {
+    mockElevenLabs(200, "fake-mp3", "audio/mpeg")
+    mockAuthSession = { user: { id: "test-user" }, session: { id: "test-session" } }
+
+    const { ttsRouter } = await import("./tts.js")
+    const app = new Hono().route("/api/tts", ttsRouter)
+
+    const res = await app.request("/api/tts", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer test-session-token",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ text: "hello", voice_id: "voice-1" }),
+    })
+
+    expect(res.status).toBe(200)
   })
 })

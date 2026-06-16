@@ -1,11 +1,23 @@
 import { Hono } from "hono"
+import type { Context } from "hono"
+import { getAuth } from "../auth.js"
+
+async function isAuthorized(c: Context): Promise<boolean> {
+  const secret = process.env.SIDECAR_SECRET
+  const header = c.req.header("x-sidecar-secret")
+  if (secret && header === secret) return true
+  if (!secret && header === secret) return true
+
+  const session = await getAuth().api.getSession({ headers: c.req.raw.headers }).catch(() => null)
+  if (session?.user) return true
+
+  return false
+}
 
 export const ttsRouter = new Hono()
 
 ttsRouter.post("/", async (c) => {
-  const secret = process.env.SIDECAR_SECRET
-  const header = c.req.header("x-sidecar-secret")
-  if (secret && header !== secret) return c.json({ error: "Unauthorized" }, 401)
+  if (!(await isAuthorized(c))) return c.json({ error: "Unauthorized" }, 401)
 
   const apiKey = process.env["ELEVENLABS_API_KEY"]
   if (!apiKey) return c.json({ error: "ELEVENLABS_API_KEY not configured" }, 500)
