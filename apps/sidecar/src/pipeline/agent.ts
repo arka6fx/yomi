@@ -148,16 +148,18 @@ export async function* agentPipeline(
     signal?: AbortSignal
   },
 ): AsyncGenerator<SseEvent> {
-  const reservation = await reserveInteraction("chat")
-  if (!reservation.ok) {
-    yield {
-      type: "usage_limit",
-      code: reservation.code,
-      feature: reservation.feature ?? "chat",
-      message: reservation.error,
-      upgradeUrl: reservation.upgradeUrl,
+  if (!req.skipReserve) {
+    const reservation = await reserveInteraction("chat")
+    if (!reservation.ok) {
+      yield {
+        type: "usage_limit",
+        code: reservation.code,
+        feature: reservation.feature ?? "chat",
+        message: reservation.error,
+        upgradeUrl: reservation.upgradeUrl,
+      }
+      return
     }
-    return
   }
 
   const system = await getAgentPrompt(req.text, req.plan)

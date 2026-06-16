@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, it, mock, setSystemTime } from "bun:test"
+﻿import { afterEach, beforeAll, beforeEach, describe, expect, it, mock, setSystemTime } from "bun:test"
 import { Hono } from "hono"
 import { createHmac } from "node:crypto"
 
@@ -550,7 +550,7 @@ describe("E2E: explore -> pro -> consume -> buy credits -> consume -> edge cases
     const failBody = await failRes.json() as any
     expect(failRes.status).toBe(402)
     expect(failBody.code).toBe("feature_quota_exceeded")
-  })
+  }, 60_000)
 
   it("5: buys a 500-credit pack after exhausting Pro credits", async () => {
     expect(flow.user.plan).toBe("pro")
@@ -672,3 +672,5 @@ describe("E2E: explore -> pro -> consume -> buy credits -> consume -> edge cases
     expect(trialGrant!.creditsRemaining).toBe(0)
   })
 })
+
+

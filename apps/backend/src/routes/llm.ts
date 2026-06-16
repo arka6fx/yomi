@@ -46,7 +46,7 @@ llmRouter.all("/proxy/*", async (c) => {
     return c.newResponse(res.body)
   }
 
-  return c.newResponse(res.body, { status: res.status, headers: { "Content-Type": ct } })
+  return new Response(res.body, { status: res.status, headers: { "Content-Type": ct } })
 })
 
 // Legacy endpoint kept to avoid 404 for any clients still hitting it

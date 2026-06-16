@@ -405,16 +405,18 @@ export async function* fastPipeline(
       ? loadMemoryContext(req.text.trim())
       : undefined
 
-  const reservation = await reserveInteraction("chat")
-  if (!reservation.ok) {
-    yield {
-      type: "usage_limit",
-      code: reservation.code,
-      feature: reservation.feature ?? "chat",
-      message: reservation.error,
-      upgradeUrl: reservation.upgradeUrl,
+  if (!req.skipReserve) {
+    const reservation = await reserveInteraction("chat")
+    if (!reservation.ok) {
+      yield {
+        type: "usage_limit",
+        code: reservation.code,
+        feature: reservation.feature ?? "chat",
+        message: reservation.error,
+        upgradeUrl: reservation.upgradeUrl,
+      }
+      return
     }
-    return
   }
 
   let text: string | null
