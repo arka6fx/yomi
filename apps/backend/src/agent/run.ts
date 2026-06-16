@@ -34,6 +34,7 @@ async function fetchUser(userId: string) {
       role: authSchema.user.role,
       plan: authSchema.user.plan,
       subscriptionStatus: authSchema.user.subscriptionStatus,
+      trialEndDate: authSchema.user.trialEndDate,
       currentPeriodEnd: authSchema.user.currentPeriodEnd,
     })
     .from(authSchema.user)
@@ -149,12 +150,16 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     }
   }
 
-  // Credit balance check for Explore users
+  // Credit balance check for Explore users — their one-time signup credits can run out before trial ends
   if (!isOwnerUser(user) && effectivePlanForUser(user) === "explore") {
     const summary = await getCreditSummary(opts.userId)
     if (summary.balance < 1) {
+      const trialExpired = !user.trialEndDate || Date.now() >= user.trialEndDate.getTime()
+      const msg = trialExpired
+        ? "Your free trial has ended. Upgrade to Pro or Max to keep using Yomi."
+        : "Free credits are one-time on the Explore plan. Upgrade to Pro or Max to get monthly credits."
       return {
-        text: "Free credits used up for this month. Upgrade your plan for more.",
+        text: msg,
         quotaError: true,
       }
     }

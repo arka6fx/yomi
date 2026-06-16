@@ -265,6 +265,23 @@ function DashboardContent() {
       .finally(() => setSubPending(false))
   }, [session])
 
+  // Poll billing data every 30s to keep usage meters current
+  useEffect(() => {
+    if (!session) return
+    const interval = setInterval(async () => {
+      try {
+        const r = await fetch("/api/billing/subscription", {
+          headers: { Authorization: `Bearer ${session.session.token}` },
+        })
+        if (r.ok) {
+          const d: Sub = await r.json()
+          setSub(d)
+        }
+      } catch { /* ignore polling errors */ }
+    }, 30_000)
+    return () => clearInterval(interval)
+  }, [session])
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     setDesiredPlan(params.get("plan"))
