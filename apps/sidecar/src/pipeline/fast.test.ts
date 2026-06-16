@@ -539,13 +539,14 @@ describe("fastPipeline — generator", () => {
     expect(ttsMock.calls).toEqual(["One sentence."])
   })
 
-  it("TTS: yields multiple audio_chunk events per sentence when synth returns multiple chunks", async () => {
+  it("TTS: yields a single combined audio_chunk event per sentence when synth returns multiple chunks", async () => {
     ttsMock.engine = "elevenlabs"
     ttsMock.chunks = [new Uint8Array([1]), new Uint8Array([2]), new Uint8Array([3])]
     streamChunks = ["One sentence."]
     const events = (await collect(fastPipeline({ text: "hi" }))) as any[]
     const audio = events.filter((e) => e.type === "audio_chunk")
-    expect(audio).toHaveLength(3)
+    expect(audio).toHaveLength(1)
+    expect(audio[0].base64).toBe(Buffer.from([1, 2, 3]).toString("base64"))
   })
 
   it("TTS: audio_chunk events preserve sentence order even when later synthesis finishes first", async () => {
@@ -557,7 +558,7 @@ describe("fastPipeline — generator", () => {
     const audio = events
       .filter((e) => e.type === "audio_chunk")
       .map((e) => Buffer.from(e.base64, "base64")[0])
-    expect(audio).toEqual([1, 2, 3])
+    expect(audio).toEqual([1, 3])
   })
 
   it("TTS: done is still the last event when audio is present", async () => {
