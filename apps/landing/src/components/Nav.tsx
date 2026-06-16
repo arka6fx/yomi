@@ -56,7 +56,11 @@ export default function Nav() {
                   Dashboard
                 </Link>
                 <button
-                  onClick={() => authClient.signOut().then(() => router.push("/"))}
+                  onClick={async () => {
+                    try { await fetch("/api/auth/sign-out-all", { method: "POST" }) } catch {}
+                    await authClient.signOut()
+                    router.push("/")
+                  }}
                   className="bg-primary text-primary-foreground text-sm font-medium px-4 py-1.5 rounded-xl hover:bg-primary/90 transition-colors"
                 >
                   Sign out
