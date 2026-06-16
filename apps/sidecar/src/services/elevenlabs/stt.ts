@@ -32,6 +32,5 @@ export async function elevenLabsTranscribe(wav: Uint8Array): Promise<ElevenLabsS
 
   const json = (await response.json()) as { text?: unknown }
   const text = typeof json.text === "string" ? json.text.trim() : ""
-  if (!text) throw new Error("STT proxy returned no transcript")
   return { text }
 }
