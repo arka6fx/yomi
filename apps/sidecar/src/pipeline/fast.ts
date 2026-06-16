@@ -39,14 +39,14 @@ async function getFastPrompt(
   const localCtx = memory
     ? await (preloaded ?? loadMemoryContext(text))
     : {
-        memorySummary: "",
-        memoryIndex: "",
-        localMemory: "",
-        cloudRagContext: "",
-        staticProfile: "",
-        dynamicProfile: "",
-        recentSession: "",
-      }
+      memorySummary: "",
+      memoryIndex: "",
+      localMemory: "",
+      cloudRagContext: "",
+      staticProfile: "",
+      dynamicProfile: "",
+      recentSession: "",
+    }
   return buildFastPrompt({ yomiMd: cachedYomiMd, ...localCtx, hasScreen })
 }
 
@@ -322,9 +322,16 @@ async function* answerPipeline(
       if (!speech) return
       const audioPromise = fetchAudio(speech) // start immediately
       audioChain = audioChain.then(async () => {
-        for (const chunk of await audioPromise) {
-          queue.push({ type: "audio_chunk", base64: Buffer.from(chunk).toString("base64") })
+        const chunks = await audioPromise
+        if (chunks.length === 0) return
+        const totalLen = chunks.reduce((acc, c) => acc + c.length, 0)
+        const merged = new Uint8Array(totalLen)
+        let offset = 0
+        for (const c of chunks) {
+          merged.set(c, offset)
+          offset += c.length
         }
+        queue.push({ type: "audio_chunk", base64: Buffer.from(merged).toString("base64") })
       })
     }
 

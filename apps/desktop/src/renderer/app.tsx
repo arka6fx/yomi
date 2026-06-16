@@ -19,7 +19,7 @@ const TTS_PLAYBACK_GAIN = 1.45
 
 type UpdateNotice =
   | { status: "available"; version: string; releaseDate: string }
-  | { status: "downloading"; version: string }
+  | { status: "downloading"; version: string; percent: number; bytesPerSecond: number }
   | { status: "downloaded"; version: string }
   | null
 
@@ -3626,12 +3626,19 @@ const App: React.FC = () => {
     const offDownloaded = window.yomi.onUpdateDownloaded((info) => {
       setUpdateNotice({ status: "downloaded", ...info })
     })
+    const offProgress = window.yomi.onUpdateProgress((info) => {
+      setUpdateNotice((prev) => {
+        if (!prev || prev.status !== "downloading") return prev
+        return { ...prev, percent: info.percent, bytesPerSecond: info.bytesPerSecond }
+      })
+    })
     const offError = window.yomi.onUpdateError((info) => {
       console.warn("[yomi] updater error:", info.message)
     })
     return () => {
       offAvailable()
       offDownloaded()
+      offProgress()
       offError()
     }
   }, [])
@@ -3646,7 +3653,7 @@ const App: React.FC = () => {
         return
       }
       if (updateNotice.status === "available") {
-        setUpdateNotice({ status: "downloading", version: updateNotice.version })
+        setUpdateNotice({ status: "downloading", version: updateNotice.version, percent: 0, bytesPerSecond: 0 })
         window.yomi.downloadUpdate()
       }
     },
@@ -4108,51 +4115,93 @@ const App: React.FC = () => {
               boxSizing: "border-box",
             }}
           >
-            <span>
-              {updateNotice.status === "available"
-                ? `Yomi ${updateNotice.version} is available.`
-                : updateNotice.status === "downloading"
-                  ? `Downloading Yomi ${updateNotice.version}...`
-                  : `Yomi ${updateNotice.version} is ready to install.`}
-            </span>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button
-                className="no-drag"
-                onClick={handleUpdateClick}
-                disabled={updateNotice.status === "downloading"}
-                style={{
-                  border: `1px solid ${t.borderHi}`,
-                  borderRadius: 8,
-                  background: t.accentD,
-                  color: t.text,
-                  padding: "5px 9px",
-                  fontSize: 11,
-                  cursor: updateNotice.status === "downloading" ? "default" : "pointer",
-                  opacity: updateNotice.status === "downloading" ? 0.7 : 1,
-                }}
-              >
-                {updateNotice.status === "available"
-                  ? "Download"
-                  : updateNotice.status === "downloading"
-                    ? "Downloading"
-                    : "Restart"}
-              </button>
-              <button
-                className="no-drag"
-                onClick={() => setUpdateNotice(null)}
-                style={{
-                  border: "none",
-                  background: "transparent",
-                  color: t.dim,
-                  cursor: "pointer",
-                  fontSize: 14,
-                  lineHeight: 1,
-                }}
-                aria-label="Dismiss update notice"
-              >
-                ×
-              </button>
-            </div>
+            {updateNotice.status === "downloading" ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                    <span>{`Downloading Yomi ${updateNotice.version}`}</span>
+                    <span style={{ fontSize: 10, color: t.dim, fontVariantNumeric: "tabular-nums" }}>
+                      {`${Math.round(updateNotice.percent)}%`}
+                      {updateNotice.bytesPerSecond > 0 && ` · ${(updateNotice.bytesPerSecond / 1024 / 1024).toFixed(1)} MB/s`}
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      height: 4,
+                      borderRadius: 2,
+                      background: "rgba(255,255,255,0.08)",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: "100%",
+                        width: `${Math.min(100, updateNotice.percent)}%`,
+                        borderRadius: 2,
+                        background: `linear-gradient(90deg, ${t.accentD}, ${t.accent})`,
+                        transition: "width 0.3s ease",
+                      }}
+                    />
+                  </div>
+                </div>
+                <button
+                  className="no-drag"
+                  onClick={() => setUpdateNotice(null)}
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    color: t.dim,
+                    cursor: "pointer",
+                    fontSize: 14,
+                    lineHeight: 1,
+                    flexShrink: 0,
+                  }}
+                  aria-label="Dismiss update notice"
+                >
+                  ×
+                </button>
+              </div>
+            ) : (
+              <>
+                <span>
+                  {updateNotice.status === "available"
+                    ? `Yomi ${updateNotice.version} is available.`
+                    : `Yomi ${updateNotice.version} is ready to install.`}
+                </span>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    className="no-drag"
+                    onClick={handleUpdateClick}
+                    style={{
+                      border: `1px solid ${t.borderHi}`,
+                      borderRadius: 8,
+                      background: t.accentD,
+                      color: t.text,
+                      padding: "5px 9px",
+                      fontSize: 11,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {updateNotice.status === "available" ? "Download" : "Restart"}
+                  </button>
+                  <button
+                    className="no-drag"
+                    onClick={() => setUpdateNotice(null)}
+                    style={{
+                      border: "none",
+                      background: "transparent",
+                      color: t.dim,
+                      cursor: "pointer",
+                      fontSize: 14,
+                      lineHeight: 1,
+                    }}
+                    aria-label="Dismiss update notice"
+                  >
+                    ×
+                  </button>
+                </div>
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
