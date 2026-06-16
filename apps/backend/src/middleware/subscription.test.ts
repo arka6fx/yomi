@@ -12,6 +12,7 @@ type TestUser = {
 }
 
 let currentUser: TestUser
+const activeTrialEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
 const { requireAccess } = await import("./subscription.js")
 
@@ -22,13 +23,13 @@ function user(overrides: Partial<TestUser> = {}): TestUser {
     role: "user",
     plan: "explore",
     subscriptionStatus: "inactive",
-    trialEndDate: null,
+    trialEndDate: activeTrialEndDate,
     currentPeriodEnd: null,
     ...overrides,
   }
 }
 
-function app(kind: "chat" | "voice" | "agent") {
+function app(kind: "chat" | "voice" | "agent" | "screenshot" | "reasoning" | "bot_message") {
   const hono = new Hono()
   hono.get(
     "/",
@@ -46,22 +47,24 @@ describe("requireAccess", () => {
     currentUser = user()
   })
 
-  it("allows Explore chat without quota checks", async () => {
-    const res = await app("chat").request("/")
+  it("allows active Explore trial users through all trigger access checks", async () => {
+    for (const kind of ["chat", "voice", "agent", "screenshot", "reasoning", "bot_message"] as const) {
+      const res = await app(kind).request("/")
 
-    expect(res.status).toBe(200)
+      expect(res.status).toBe(200)
+    }
   })
 
-  it("allows Explore voice", async () => {
-    const res = await app("voice").request("/")
+  it("blocks expired Explore trial users with a subscription error", async () => {
+    currentUser = user({ trialEndDate: new Date(Date.now() - 1000) })
 
-    expect(res.status).toBe(200)
-  })
+    for (const kind of ["chat", "voice", "agent", "screenshot", "reasoning", "bot_message"] as const) {
+      const res = await app(kind).request("/")
+      const body = await res.json() as { code?: string }
 
-  it("allows Explore agent (now includes limited desktop automation)", async () => {
-    const res = await app("agent").request("/")
-
-    expect(res.status).toBe(200)
+      expect(res.status).toBe(402)
+      expect(body.code).toBe("subscription_inactive")
+    }
   })
 
   it("blocks Pro past_due on voice", async () => {

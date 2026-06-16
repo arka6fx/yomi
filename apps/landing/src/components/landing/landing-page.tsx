@@ -130,10 +130,10 @@ const PLANS = [
     period: "/ month",
     annual: "$0 / year",
     badge: "Free",
-    description: "Start with screen-aware AI, voice, and memory basics. No card needed.",
+    description: "Try screen-aware AI, voice, and memory basics for 30 days. No card needed.",
     features: [
-      "100 AI chats / month",
-      "20 min voice / month",
+      "100 AI chats during trial",
+      "20 min voice during trial",
       "25 screenshot analyses",
       "50 local memories",
       "Window controls & docking",
@@ -893,7 +893,7 @@ export function LandingPage() {
           viewport={{ once: true }}
           className="mt-8 text-center text-xs text-muted-foreground"
         >
-          * Fair usage protection applies. Explore is free with monthly limits.
+          * Fair usage protection applies. Explore is a 30-day free trial.
         </motion.p>
       </section>
 

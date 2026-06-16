@@ -78,6 +78,8 @@ function createAuth() {
           // Set role and plan right after Better Auth inserts the user row.
           after: async (createdUser) => {
             const isOwner = isOwnerUser(createdUser)
+            const trialStartDate = new Date()
+            const trialEndDate = new Date(trialStartDate.getTime() + 30 * 24 * 60 * 60 * 1000)
 
             await db
               .update(authSchema.user)
@@ -89,7 +91,8 @@ function createAuth() {
                       plan: "explore",
                       subscriptionStatus: "inactive",
                       trialInteractionLimit: REGULAR_INTERACTION_LIMIT,
-                      trialEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                      trialStartDate,
+                      trialEndDate,
                     },
               )
               .where(eq(authSchema.user.id, createdUser.id))
@@ -102,9 +105,9 @@ function createAuth() {
                 source: "subscription_cycle",
                 sourceId: `signup:${createdUser.id}:explore`,
                 idempotencyKey: `signup:${createdUser.id}:explore_credits`,
-                expiresAt: new Date(Date.now() + 35 * 24 * 60 * 60 * 1000),
-                reason: "Explore monthly credits",
-                metadata: { plan: "explore" },
+                expiresAt: trialEndDate,
+                reason: "Explore trial credits",
+                metadata: { plan: "explore", trialDays: 30 },
               }).catch((err) => console.error("[signup] grantCredits failed:", createdUser.id, err))
             }
           },

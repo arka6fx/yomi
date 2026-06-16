@@ -5,6 +5,7 @@ let mockBotMessageCount = 0
 let mockCreditBalance = 100
 let lastInsertedKind: string | null = null
 let consumeCreditsCalled = false
+const activeTrialEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
 const fakeDbWithCount = {
   select: () => ({
@@ -88,6 +89,7 @@ function makeUser(overrides: Record<string, unknown> = {}) {
     plan: "explore",
     subscriptionStatus: "active",
     currentPeriodEnd: null,
+    trialEndDate: activeTrialEndDate,
     ...overrides,
   }
 }

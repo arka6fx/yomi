@@ -93,8 +93,39 @@ type Sub = {
     amount: number
     balanceAfter: number
     reason: string | null
+    usageEventId: string | null
+    usageKind: string | null
+    usageCreditsCharged: number | null
+    usageCreatedAt: string | null
     createdAt: string
   }>
+}
+
+const CREDIT_USAGE_LABELS: Record<string, string> = {
+  request_chat: "AI chat",
+  request_voice: "Voice",
+  screenshot: "Screenshot analysis",
+  reasoning: "Reasoning",
+  bot_message: "Bot message",
+}
+
+function creditActivityTitle(tx: NonNullable<Sub["creditTransactions"]>[number]) {
+  if (tx.type === "grant") return "Credits added"
+  if (tx.type === "consume") return tx.usageKind ? `Used on ${CREDIT_USAGE_LABELS[tx.usageKind] ?? tx.usageKind}` : "Credits used"
+  return tx.type
+}
+
+function creditActivityDetail(tx: NonNullable<Sub["creditTransactions"]>[number]) {
+  const happenedAt = new Date(tx.usageCreatedAt ?? tx.createdAt).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })
+  const parts = [happenedAt]
+  if (tx.reason) parts.push(tx.reason)
+  if (tx.usageEventId) parts.push(`request ${tx.usageEventId.slice(0, 8)}`)
+  return parts.join(" · ")
 }
 
 const PLANS = [
@@ -104,12 +135,12 @@ const PLANS = [
     price: "$0",
     priceSub: "/ month",
     annual: "$0 / year",
-    badge: "Free",
-    desc: "Start with screen-aware AI, voice, and memory basics. No card needed.",
+    badge: "30-day trial",
+    desc: "Try screen-aware AI, voice, and memory basics for 30 days. No card needed.",
     icon: Sparkles,
     features: [
-      "100 AI chats / month",
-      "20 min voice / month",
+      "100 AI chats during trial",
+      "20 min voice during trial",
       "25 screenshot analyses",
       "50 local memories",
       "Window controls & docking",
@@ -172,6 +203,7 @@ function DashboardContent() {
 
   const [sub, setSub] = useState<Sub | null>(null)
   const [subPending, setSubPending] = useState(true)
+  const [subLoadError, setSubLoadError] = useState("")
   const [billingLoading, setBillingLoading] = useState<string | null>(null)
   const [billingError, setBillingError] = useState("")
   const [creditLoading, setCreditLoading] = useState<string | null>(null)
@@ -217,51 +249,14 @@ function DashboardContent() {
         if (!r.ok) throw new Error(`billing ${r.status}`)
         return r.json()
       })
-      .then((d: Sub) => setSub(d))
-      .catch(() =>
-        setSub({
-          role: "user",
-          plan: "explore",
-          status: "inactive",
-          trialStartDate: null,
-          trialEndDate: null,
-          trialDaysUsed: 0,
-          trialDaysRemaining: 30,
-          trialDaysTotal: 30,
-          trialExpired: false,
-          currentPeriodEnd: null,
-          requestsUsed: 0,
-          requestsLimit: 100,
-          requestsRemaining: 100,
-          resetAt: null,
-          features: {
-            chat: { used: 0, limit: 100 },
-            voice: { used: 0, limit: 20 },
-            screenshots: { used: 0, limit: 25 },
-            reasoning: { used: 0, limit: 5 },
-            connectors: { used: 0, limit: 2 },
-            botMessages: { used: 0, limit: 20 },
-          },
-          dodoSubscriptionId: null,
-          billingWarning: null,
-          planLimits: { chat: 100, voiceMinutes: 20, screenshots: 25, reasoning: 5, connectors: 2, botMessages: 20 },
-          dailyChatUsed: 0,
-          dailyVoiceUsed: 0,
-          dailyImageUsed: 0,
-          tokensUsedThisPeriod: 0,
-          credits: {
-            balance: 0,
-            lifetimeGranted: 0,
-            lifetimeConsumed: 0,
-            lifetimeRefunded: 0,
-            expiringSoon: 0,
-            expiringSoonAt: null,
-          },
-          creditConsumption: {},
-          creditPacks: [],
-          creditTransactions: [],
-        }),
-      )
+      .then((d: Sub) => {
+        setSub(d)
+        setSubLoadError("")
+      })
+      .catch(() => {
+        setSub(null)
+        setSubLoadError("Couldn't load billing and usage data. Please retry in a moment.")
+      })
       .finally(() => setSubPending(false))
   }, [session])
 
@@ -513,6 +508,9 @@ function DashboardContent() {
   const isOwner = sub?.role === "owner"
   const currentPlanKey = sub?.plan ?? "explore"
   const currentPlanIdx = PLANS.findIndex((p) => p.key === currentPlanKey)
+  const trialEndLabel = sub?.trialEndDate
+    ? new Date(sub.trialEndDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    : null
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
@@ -672,6 +670,20 @@ function DashboardContent() {
           </motion.div>
         )}
 
+        {subLoadError && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 flex items-start gap-3"
+          >
+            <AlertTriangle size={16} className="text-destructive mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm text-destructive font-medium">Usage data unavailable</p>
+              <p className="text-xs text-destructive/80">{subLoadError}</p>
+            </div>
+          </motion.div>
+        )}
+
         {/* Plan card */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -690,7 +702,9 @@ function DashboardContent() {
                 >
                   {subPending
                     ? "—"
-                    : (PLANS.find((p) => p.key === currentPlanKey)?.name ?? currentPlanKey)}
+                    : sub
+                      ? (PLANS.find((p) => p.key === currentPlanKey)?.name ?? currentPlanKey)
+                      : "Unavailable"}
                 </span>
                 {!subPending && sub && (
                   <span
@@ -772,7 +786,7 @@ function DashboardContent() {
                       {sub.trialExpired
                         ? "Your free trial has ended."
                         : `${sub.trialDaysUsed} of ${sub.trialDaysTotal} days used`}
-                      {" "}Resets {sub.resetAt ? new Date(sub.resetAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "monthly"}.
+                      {" "}{trialEndLabel ? `Ends ${trialEndLabel}.` : "Ends after 30 days."}
                     </p>
                   </div>
                 ) : (
@@ -790,7 +804,7 @@ function DashboardContent() {
               <div className="mb-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20">
                 <p className="text-sm text-destructive font-medium mb-1">Free trial has ended</p>
                 <p className="text-xs text-destructive/80 mb-3">
-                  You've used all 100 AI chats and 20 voice minutes. Upgrade to Pro or Max to continue using Yomi.
+                  Your 30-day Explore trial has ended. Upgrade to Pro or Max to continue using Yomi.
                 </p>
                 <a
                   href="/dashboard?plan=pro"
@@ -1013,15 +1027,12 @@ function DashboardContent() {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  {sub!.creditTransactions!.slice(0, 5).map((tx) => (
+                  {sub!.creditTransactions!.slice(0, 10).map((tx) => (
                     <div key={tx.id} className="flex items-center justify-between gap-4 text-sm">
-                      <div>
-                        <p className="text-foreground capitalize">{tx.type === "grant" ? "Credits added" : tx.type === "consume" ? "Credits used" : tx.type}</p>
+                      <div className="min-w-0">
+                        <p className="text-foreground capitalize">{creditActivityTitle(tx)}</p>
                         <p className="text-xs text-muted-foreground">
-                          {new Date(tx.createdAt).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                          })}
+                          {creditActivityDetail(tx)}
                         </p>
                       </div>
                       <div className="text-right">

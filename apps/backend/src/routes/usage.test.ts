@@ -30,6 +30,9 @@ type ReserveBody = {
 
 let currentUser: TestUser
 let mockRequestCount = 0
+let mockCreditBalance = 0
+let mockConsumeCreditsOk = false
+const activeTrialEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
 const fakeDb = {
   update: () => {
@@ -60,7 +63,7 @@ mock.module("@yomi/db", () => ({
 
 mock.module("../services/credit-ledger.js", () => ({
   getCreditSummary: async () => ({
-    balance: 0,
+    balance: mockCreditBalance,
     lifetimeGranted: 0,
     lifetimeConsumed: 0,
     lifetimeRefunded: 0,
@@ -68,10 +71,10 @@ mock.module("../services/credit-ledger.js", () => ({
     expiringSoonAt: null,
   }),
   consumeCredits: async () => ({
-    ok: false,
-    charged: 0,
-    balance: 0,
-    insufficient: true,
+    ok: mockConsumeCreditsOk,
+    charged: mockConsumeCreditsOk ? 1 : 0,
+    balance: mockConsumeCreditsOk ? Math.max(mockCreditBalance - 1, 0) : mockCreditBalance,
+    insufficient: !mockConsumeCreditsOk,
   }),
   expireCredits: async () => 0,
 }))
@@ -95,7 +98,7 @@ function app() {
   return hono
 }
 
-function reserve(kind: "chat" | "voice" = "chat") {
+function reserve(kind: "chat" | "voice" | "screenshot" | "reasoning" | "bot_message" = "chat") {
   return app().request("/api/usage/interactions/reserve", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -110,7 +113,7 @@ function user(overrides: Partial<TestUser> = {}): TestUser {
     role: "user",
     plan: "explore",
     subscriptionStatus: "inactive",
-    trialEndDate: null,
+    trialEndDate: activeTrialEndDate,
     currentPeriodEnd: null,
     trialInteractionUsed: 100,
     trialInteractionLimit: 100,
@@ -124,6 +127,35 @@ describe("POST /api/usage/interactions/reserve", () => {
   beforeEach(() => {
     currentUser = user()
     mockRequestCount = 0
+    mockCreditBalance = 0
+    mockConsumeCreditsOk = false
+  })
+
+  it("allows Explore trial users to reserve every trigger type with credits", async () => {
+    mockCreditBalance = 100
+    mockConsumeCreditsOk = true
+
+    for (const kind of ["chat", "voice", "screenshot", "reasoning", "bot_message"] as const) {
+      const res = await reserve(kind)
+      const body = (await res.json()) as ReserveBody
+
+      expect(res.status).toBe(200)
+      expect(body.ok).toBe(true)
+      expect(body.plan).toBe("explore")
+    }
+  })
+
+  it("returns quota errors, not subscription errors, when Explore trial credits run out", async () => {
+    mockCreditBalance = 0
+
+    for (const kind of ["chat", "voice", "screenshot", "reasoning", "bot_message"] as const) {
+      const res = await reserve(kind)
+      const body = (await res.json()) as ReserveBody
+
+      expect(res.status).toBe(402)
+      expect(body.code).toBe("insufficient_credits")
+      expect(body.plan).toBe("explore")
+    }
   })
 
   it("blocks exhausted Explore users without credits", async () => {

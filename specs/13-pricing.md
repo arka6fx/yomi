@@ -10,7 +10,7 @@ behavior.
 - Plans are **Explore**, **Pro**, and **Max**.
 - Internal plan keys remain `explore`, `pro`, and `max`.
 - Dodo Payments is the sole payment processor.
-- Explore is free with monthly limits, not a time-limited trial.
+- Explore is a 30-day free trial with strict trial limits.
 - Pro is the primary revenue plan and includes limited foreground automation.
 - Max raises limits for power users and full foreground automation.
 - Do not offer unlimited GPT-4.1, voice, image generation, or automation.
@@ -21,7 +21,7 @@ behavior.
 
 | Plan    | Internal key | Price     | Annual suggestion | Core positioning                       |
 | ----------- | ------------ | --------: | ----------------: | -------------------------------------- |
-| Explore     | `explore`    |        $0 |                $0 | Free starter with strict limits        |
+| Explore     | `explore`    |        $0 |                $0 | 30-day free trial with strict limits   |
 | Pro         | `pro`        | $14.99/mo |           $144/yr | Daily assistant + limited automation   |
 | Max         | `max`        | $39.99/mo |           $384/yr | Power-user automation + high limits    |
 

@@ -4,6 +4,7 @@ import {
   creditTransactions,
   db,
   paymentRecords,
+  usageEvents,
 } from "@yomi/db"
 import { and, asc, desc, eq, gt, isNull, or, sql } from "drizzle-orm"
 
@@ -95,9 +96,14 @@ export async function recentCreditTransactions(userId: string, limit = 20) {
       amount: creditTransactions.amount,
       balanceAfter: creditTransactions.balanceAfter,
       reason: creditTransactions.reason,
+      usageEventId: creditTransactions.usageEventId,
+      usageKind: usageEvents.kind,
+      usageCreditsCharged: usageEvents.creditsCharged,
+      usageCreatedAt: usageEvents.createdAt,
       createdAt: creditTransactions.createdAt,
     })
     .from(creditTransactions)
+    .leftJoin(usageEvents, eq(usageEvents.id, creditTransactions.usageEventId))
     .where(eq(creditTransactions.userId, userId))
     .orderBy(desc(creditTransactions.createdAt))
     .limit(limit)

@@ -6,9 +6,12 @@ type TestUser = {
   id: string
   name?: string | null
   email?: string | null
+  role?: string | null
   plan: string
   subscriptionStatus: string
   dodoSubscriptionId: string | null
+  trialEndDate?: Date | null
+  currentPeriodEnd?: Date | null
 }
 
 type FetchCall = {
@@ -22,8 +25,12 @@ let fetchCalls: FetchCall[] = []
 
 let mockState: {
   dbSelectResult: any[]
+  dbSelectQueue: any[][]
   dbUpdateResult: any
   dbInsertReturning: any[]
+  connectedProviders: string[]
+  creditSummary: any
+  recentCreditTransactions: any[]
   recordPaymentEvent: (input: any) => Promise<{ duplicate: boolean }>
   upsertPaymentRecord: (input: any) => Promise<string | null>
   grantCredits: (input: any) => Promise<any>
@@ -33,8 +40,19 @@ let mockState: {
 function resetMockState() {
   mockState = {
     dbSelectResult: [],
+    dbSelectQueue: [],
     dbUpdateResult: {},
     dbInsertReturning: [],
+    connectedProviders: [],
+    creditSummary: {
+      balance: 0,
+      lifetimeGranted: 0,
+      lifetimeConsumed: 0,
+      lifetimeRefunded: 0,
+      expiringSoon: 0,
+      expiringSoonAt: null,
+    },
+    recentCreditTransactions: [],
     recordPaymentEvent: async () => ({ duplicate: false }),
     upsertPaymentRecord: async () => "payment_1",
     grantCredits: async () => ({ granted: true, balance: 100 }),
@@ -42,12 +60,22 @@ function resetMockState() {
   }
 }
 
+function nextSelectRows() {
+  return mockState.dbSelectQueue.length > 0 ? mockState.dbSelectQueue.shift()! : mockState.dbSelectResult
+}
+
 const fakeDb = {
   select: () => ({
     from: () => ({
-      where: () => ({
-        limit: () => Promise.resolve(mockState.dbSelectResult),
-      }),
+      where: () => {
+        const promise = Promise.resolve(nextSelectRows())
+        return {
+          limit: () => promise,
+          groupBy: () => promise,
+          then: promise.then.bind(promise),
+          catch: promise.catch.bind(promise),
+        }
+      },
     }),
   }),
   update: () => ({
@@ -88,18 +116,15 @@ mock.module("../auth.js", () => ({
 
 mock.module("../services/credit-ledger.js", () => ({
   createPaymentRecord: async (input: any) => mockState.createPaymentRecord(input),
-  getCreditSummary: async () => ({
-    balance: 0,
-    lifetimeGranted: 0,
-    lifetimeConsumed: 0,
-    lifetimeRefunded: 0,
-    expiringSoon: 0,
-    expiringSoonAt: null,
-  }),
+  getCreditSummary: async () => mockState.creditSummary,
   grantCredits: async (input: any) => mockState.grantCredits(input),
-  recentCreditTransactions: async () => [],
+  recentCreditTransactions: async () => mockState.recentCreditTransactions,
   // Stub for usage tests loaded in the same suite
   consumeCredits: async () => ({ ok: true }),
+}))
+
+mock.module("../services/integration-tokens.js", () => ({
+  listConnectedProviders: async () => mockState.connectedProviders,
 }))
 
 mock.module("../services/payment-events.js", () => ({
@@ -197,6 +222,10 @@ function createCreditPack(pack: string) {
 
 function cancelSubscription() {
   return app().request("/api/billing/cancel-subscription", { method: "POST" })
+}
+
+function getSubscription() {
+  return app().request("/api/billing/subscription")
 }
 
 function sendWebhook(body: Record<string, unknown>, headers?: Record<string, string>) {
@@ -300,6 +329,42 @@ describe("Dodo billing — configuration", () => {
     process.env.DODO_ENV = "test"
     const config = getDodoConfig()
     expect(config.apiKey).toBeNull()
+  })
+})
+
+// ── Plan Catalog ──────────────────────────────────────────────────────
+
+describe("Dodo billing — plan catalog", () => {
+  beforeEach(() => {
+    resetMockState()
+    currentUser = {
+      id: "user_1", name: "Arka", email: "arka@example.com",
+      plan: "explore", subscriptionStatus: "inactive", dodoSubscriptionId: null,
+    }
+  })
+
+  it("lists all subscription plans with credits and Explore trial copy", async () => {
+    const res = await app().request("/api/billing/plans")
+    const body = await res.json() as any
+
+    expect(res.status).toBe(200)
+    expect(body.plans.map((plan: any) => plan.key)).toEqual(["explore", "pro", "max"])
+
+    const explore = body.plans.find((plan: any) => plan.key === "explore")
+    expect(explore.amountCents).toBe(0)
+    expect(explore.includedCredits).toBe(100)
+    expect(explore.features).toContain("100 AI chats during trial")
+    expect(explore.features).toContain("100 trial credits")
+
+    const pro = body.plans.find((plan: any) => plan.key === "pro")
+    expect(pro.amountCents).toBe(1499)
+    expect(pro.includedCredits).toBe(2500)
+    expect(pro.features).toContain("2,500 credits / month")
+
+    const max = body.plans.find((plan: any) => plan.key === "max")
+    expect(max.amountCents).toBe(3999)
+    expect(max.includedCredits).toBe(10000)
+    expect(max.features).toContain("10,000 credits / month")
   })
 })
 
@@ -477,6 +542,28 @@ describe("Dodo billing — credit pack checkout", () => {
     expect(body.short_url).toBe("https://checkout.example/pack")
   })
 
+  it("creates checkout metadata for every credit pack", async () => {
+    const packs = [
+      ["credits_500", "test_500"],
+      ["credits_2000", "test_2000"],
+      ["credits_6000", "test_6000"],
+    ] as const
+
+    for (const [pack, productId] of packs) {
+      fetchCalls = []
+      const res = await createCreditPack(pack)
+      expect(res.status).toBe(200)
+
+      const payload = JSON.parse(String(fetchCalls[0]?.init?.body ?? "{}"))
+      expect(payload.product_cart?.[0]?.product_id).toBe(productId)
+      expect(payload.metadata).toEqual({
+        userId: "user_1",
+        kind: "credit_pack",
+        productKey: pack,
+      })
+    }
+  })
+
   it("returns 400 for an invalid pack key", async () => {
     const res = await createCreditPack("invalid_pack")
     expect(res.status).toBe(400)
@@ -536,6 +623,115 @@ describe("Dodo billing — cancel subscription", () => {
     globalThis.fetch = (async () => new Response("Error", { status: 500 })) as unknown as typeof fetch
     const res = await cancelSubscription()
     expect(res.status).toBe(502)
+  })
+})
+
+// ── Subscription Summary ──────────────────────────────────────────────
+
+describe("Dodo billing — subscription summary", () => {
+  beforeEach(() => {
+    resetMockState()
+    currentUser = {
+      id: "user_1", name: "Arka", email: "arka@example.com",
+      plan: "pro", subscriptionStatus: "active", dodoSubscriptionId: "sub_1",
+    }
+  })
+
+  it("returns plan limits, credit balance, credit consumption, packs, and per-request credit activity", async () => {
+    const usageAt = new Date("2026-06-16T10:30:00Z")
+    mockState.connectedProviders = ["github", "slack"]
+    mockState.creditSummary = {
+      balance: 497,
+      lifetimeGranted: 3000,
+      lifetimeConsumed: 503,
+      lifetimeRefunded: 0,
+      expiringSoon: 25,
+      expiringSoonAt: new Date("2026-06-20T00:00:00Z"),
+    }
+    mockState.recentCreditTransactions = [
+      {
+        id: "tx_consume_1",
+        type: "consume",
+        amount: -1,
+        balanceAfter: 497,
+        reason: "chat usage",
+        usageEventId: "usage_123456789",
+        usageKind: "request_chat",
+        usageCreditsCharged: 1,
+        usageCreatedAt: usageAt,
+        createdAt: usageAt,
+      },
+      {
+        id: "tx_grant_1",
+        type: "grant",
+        amount: 500,
+        balanceAfter: 500,
+        reason: "500 credits purchase",
+        usageEventId: null,
+        usageKind: null,
+        usageCreditsCharged: null,
+        usageCreatedAt: null,
+        createdAt: new Date("2026-06-16T10:00:00Z"),
+      },
+    ]
+    mockState.dbSelectQueue = [
+      [
+        {
+          id: "user_1",
+          name: "Arka",
+          email: "arka@example.com",
+          createdAt: new Date("2026-06-01T00:00:00Z"),
+          role: "user",
+          plan: "pro",
+          subscriptionStatus: "active",
+          trialStartDate: null,
+          trialEndDate: null,
+          currentPeriodEnd: new Date("2026-07-01T00:00:00Z"),
+          dodoSubscriptionId: "sub_1",
+          trialInteractionUsed: 0,
+          trialInteractionLimit: 100,
+          dailyChatCount: 2,
+          dailyVoiceCount: 1,
+          dailyImageCount: 0,
+        },
+      ],
+      [{ inputTokens: 100, outputTokens: 50 }],
+      [
+        { kind: "request_chat", count: 2 },
+        { kind: "request_voice", count: 1 },
+        { kind: "screenshot", count: 1 },
+        { kind: "bot_message", count: 1 },
+      ],
+      [
+        { kind: "request_chat", creditsCharged: 2 },
+        { kind: "screenshot", creditsCharged: 1 },
+      ],
+    ]
+
+    const res = await getSubscription()
+    const body = await res.json() as any
+
+    expect(res.status).toBe(200)
+    expect(body.plan).toBe("pro")
+    expect(body.status).toBe("active")
+    expect(body.requestsUsed).toBe(3)
+    expect(body.requestsLimit).toBe(2000)
+    expect(body.features.connectors).toEqual({ used: 2, limit: 8 })
+    expect(body.features.screenshots).toEqual({ used: 1, limit: 400 })
+    expect(body.tokensUsedThisPeriod).toBe(150)
+    expect(body.credits.balance).toBe(497)
+    expect(body.creditConsumption).toEqual({ request_chat: 2, screenshot: 1 })
+    expect(body.creditPacks.map((pack: any) => pack.key)).toEqual(["credits_500", "credits_2000", "credits_6000"])
+    expect(body.creditTransactions[0]).toMatchObject({
+      id: "tx_consume_1",
+      type: "consume",
+      amount: -1,
+      balanceAfter: 497,
+      reason: "chat usage",
+      usageEventId: "usage_123456789",
+      usageKind: "request_chat",
+      usageCreditsCharged: 1,
+    })
   })
 })
 
@@ -607,6 +803,41 @@ describe("Dodo billing — webhook processing", () => {
     expect(grantCalls.length).toBe(1)
     expect(grantCalls[0]?.amount).toBe(2500)
     expect(grantCalls[0]?.source).toBe("subscription_cycle")
+  })
+
+  it("grants the correct included credits for every paid subscription plan", async () => {
+    const plans = [
+      ["pro", 2500],
+      ["max", 10000],
+    ] as const
+
+    for (const [plan, includedCredits] of plans) {
+      const grantCalls: any[] = []
+      mockState.grantCredits = async (input: any) => {
+        grantCalls.push(input)
+        return { granted: true, balance: includedCredits }
+      }
+
+      const body = {
+        type: "subscription.active",
+        data: {
+          subscription_id: `dodo_sub_${plan}`,
+          customer_id: "dodo_cus_1",
+          current_period_end: new Date(Date.now() + 30 * 86400000).toISOString(),
+          metadata: { userId: "user_1", kind: "subscription", plan },
+        },
+      }
+
+      const res = await sendWebhook(body)
+      expect(res.status).toBe(200)
+      expect(grantCalls).toHaveLength(1)
+      expect(grantCalls[0]).toMatchObject({
+        amount: includedCredits,
+        source: "subscription_cycle",
+        reason: `${plan === "pro" ? "Pro" : "Max"} monthly credits`,
+        metadata: { provider: "dodo", plan },
+      })
+    }
   })
 
   it("detects upgrades and cancels the old Dodo subscription", async () => {
@@ -703,6 +934,47 @@ describe("Dodo billing — webhook processing", () => {
     expect(grantCalls.length).toBe(1)
     expect(grantCalls[0]?.amount).toBe(500)
     expect(grantCalls[0]?.source).toBe("credit_pack")
+  })
+
+  it("grants the correct credits for every credit pack payment", async () => {
+    const packs = [
+      ["credits_500", 500, "500 credits"],
+      ["credits_2000", 2000, "2,000 credits"],
+      ["credits_6000", 6000, "6,000 credits"],
+    ] as const
+
+    for (const [productKey, credits, name] of packs) {
+      const grantCalls: any[] = []
+      mockState.grantCredits = async (input: any) => {
+        grantCalls.push(input)
+        return { granted: true, balance: credits }
+      }
+
+      const body = {
+        type: "payment.succeeded",
+        data: {
+          payment_id: `pay_${productKey}`,
+          checkout_id: `checkout_${productKey}`,
+          amount: 499,
+          currency: "USD",
+          metadata: {
+            userId: "user_1",
+            kind: "credit_pack",
+            productKey,
+          },
+        },
+      }
+
+      const res = await sendWebhook(body)
+      expect(res.status).toBe(200)
+      expect(grantCalls).toHaveLength(1)
+      expect(grantCalls[0]).toMatchObject({
+        amount: credits,
+        source: "credit_pack",
+        reason: `${name} purchase`,
+        metadata: { provider: "dodo", productKey },
+      })
+    }
   })
 
   it("deduplicates identical webhook events", async () => {

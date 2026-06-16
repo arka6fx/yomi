@@ -150,14 +150,14 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     }
   }
 
-  // Credit balance check for Explore users — their one-time signup credits can run out before trial ends
+  // Credit balance check for Explore users — trial credits can run out before the trial ends.
   if (!isOwnerUser(user) && effectivePlanForUser(user) === "explore") {
     const summary = await getCreditSummary(opts.userId)
     if (summary.balance < 1) {
       const trialExpired = !user.trialEndDate || Date.now() >= user.trialEndDate.getTime()
       const msg = trialExpired
         ? "Your free trial has ended. Upgrade to Pro or Max to keep using Yomi."
-        : "Free credits are one-time on the Explore plan. Upgrade to Pro or Max to get monthly credits."
+        : "Explore trial credits are used up. Upgrade to Pro or Max to get monthly credits."
       return {
         text: msg,
         quotaError: true,
