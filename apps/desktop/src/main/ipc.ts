@@ -675,7 +675,7 @@ async function streamQuery(
       ? "/query/agent"
       : "/query"
   const body = useDesktopAgent
-      ? { text: routedText, screenshot_b64: capture.screenshot_b64, plan, history: actHistory.slice() }
+      ? { text: routedText, screenshot_b64: capture.screenshot_b64, plan, history: actHistory.slice(), skipReserve: true }
       : {
           text,
           screenshot_b64: capture.screenshot_b64,
