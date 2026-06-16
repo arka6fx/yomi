@@ -62,6 +62,7 @@ declare global {
       // Auto-update
       onUpdateAvailable(cb: (info: { version: string; releaseDate: string }) => void): () => void
       onUpdateDownloaded(cb: (info: { version: string }) => void): () => void
+      onUpdateProgress(cb: (info: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => void): () => void
       onUpdateError(cb: (info: { message: string }) => void): () => void
       downloadUpdate(): void
       installUpdate(): void

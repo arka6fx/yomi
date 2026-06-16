@@ -280,6 +280,12 @@ contextBridge.exposeInMainWorld("yomi", {
     return () => ipcRenderer.off("yomi:update-downloaded", h)
   },
 
+  onUpdateProgress(cb: (info: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => void): () => void {
+    const h = (_: Electron.IpcRendererEvent, info: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => cb(info)
+    ipcRenderer.on("yomi:update-progress", h)
+    return () => ipcRenderer.off("yomi:update-progress", h)
+  },
+
   downloadUpdate(): void {
     ipcRenderer.send("yomi:download-update")
   },

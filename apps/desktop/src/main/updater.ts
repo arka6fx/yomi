@@ -23,6 +23,15 @@ export function initAutoUpdater(win: BrowserWindow): void {
     })
   })
 
+  autoUpdater.on("download-progress", (info) => {
+    win.webContents.send("yomi:update-progress", {
+      percent: info.percent,
+      bytesPerSecond: info.bytesPerSecond,
+      transferred: info.transferred,
+      total: info.total,
+    })
+  })
+
   autoUpdater.on("error", (err) => {
     console.warn("[yomi/updater] error:", err.message)
     win.webContents.send("yomi:update-error", { message: err.message })
