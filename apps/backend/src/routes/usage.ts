@@ -121,14 +121,18 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
     connectors: "connectors",
   }
 
-  // Credit check first for Explore users — free tier has no subscription fallback
+  // Credit check for Explore users — their one-time signup credits can run out before trial ends
   let cachedCreditSummary: Awaited<ReturnType<typeof getCreditSummary>> | null = null
   if (!isOwnerUser(user) && effectivePlan === "explore") {
     cachedCreditSummary = await getCreditSummary(user.id)
     if (cachedCreditSummary.balance < creditsRequired) {
+      const trialExpired = !user.trialEndDate || Date.now() >= user.trialEndDate.getTime()
+      const msg = trialExpired
+        ? "Your free trial has ended. Upgrade to Pro or Max to keep using Yomi."
+        : "Free credits are one-time on the Explore plan. Upgrade to Pro or Max to get monthly credits."
       return c.json(
         {
-          error: `Free credits used up for this month. Resets ${resetDay} — or upgrade for more.`,
+          error: msg,
           code: "insufficient_credits",
           plan: effectivePlan,
           creditsRemaining: cachedCreditSummary.balance,
@@ -208,7 +212,6 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
   }
 
   const creditsBefore = cachedCreditSummary ?? await getCreditSummary(user.id)
-  const requiresCredits = creditsBefore.balance >= creditsRequired
 
   // Record usage event
   const eventKind = kind === "chat" ? "request_chat"
@@ -231,7 +234,8 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
   let creditsRemaining = creditsBefore.balance
   let paidBy = "legacy_quota"
 
-  if (!isOwnerUser(user) && requiresCredits && event) {
+  // Consume credits for non-owner users who have a positive credit balance
+  if (!isOwnerUser(user) && creditsBefore.balance >= creditsRequired && event) {
     const debit = await consumeCredits({
       userId: user.id,
       amount: creditsRequired,
