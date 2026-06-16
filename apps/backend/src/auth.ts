@@ -143,6 +143,7 @@ function createAuth() {
         clientId: process.env["GOOGLE_CLIENT_ID"]!,
         clientSecret: process.env["GOOGLE_CLIENT_SECRET"]!,
         redirectURI: googleRedirectUri,
+        prompt: "select_account",
       },
       github: {
         clientId: process.env["GITHUB_CLIENT_ID"]!,

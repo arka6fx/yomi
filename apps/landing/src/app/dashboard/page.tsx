@@ -470,6 +470,7 @@ function DashboardContent() {
   }
 
   async function handleSignOut() {
+    try { await fetch("/api/auth/sign-out-all", { method: "POST" }) } catch {}
     await authClient.signOut()
     router.push("/")
   }
