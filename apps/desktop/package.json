@@ -1,6 +1,6 @@
 {
   "name": "@yomi/desktop",
-  "version": "1.0.15",
+  "version": "0.0.1",
   "description": "Yomi desktop companion shell",
   "author": "Yomi",
   "private": true,

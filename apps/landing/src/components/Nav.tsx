@@ -57,7 +57,11 @@ export default function Nav() {
                 </Link>
                 <button
                   onClick={async () => {
-                    try { await fetch("/api/auth/sign-out-all", { method: "POST" }) } catch {}
+                    try {
+                      await fetch("/api/auth/sign-out-all", { method: "POST" })
+                    } catch {
+                      // best-effort
+                    }
                     await authClient.signOut()
                     router.push("/")
                   }}
