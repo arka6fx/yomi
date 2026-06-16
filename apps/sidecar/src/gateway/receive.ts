@@ -4,6 +4,7 @@ import { fastPipeline } from "../pipeline/fast.js"
 import { agentPipeline } from "../pipeline/agent.js"
 import { initConnectorRegistry } from "../connectors/registry.js"
 import { enqueueTrigger } from "./remote-queue.js"
+import { reserveInteraction } from "../automation/usage.js"
 
 type AgentDriver = (
   req: AgentQueryRequest,
@@ -156,12 +157,27 @@ export async function handleGatewayMessage(msg: GatewayMessage): Promise<void> {
   }
 
   // ── Normal fast / agent pipeline ─────────────────────────────────────────
+
+  // Reserve bot_message usage so the dashboard correctly counts bot interactions
+  // against the plan's botMessages limit, instead of charging as "chat".
+  const reservation = await reserveInteraction("bot_message")
+  if (!reservation.ok) {
+    await sendReply(
+      msg.platform,
+      msg.chatId,
+      reservation.upgradeUrl
+        ? `${reservation.error} — Upgrade: ${reservation.upgradeUrl}`
+        : reservation.error,
+    )
+    return
+  }
+
   const intent = await classifyIntent({ text })
   const history = getHistory(msg)
 
   if (intent.path === "fast") {
     const chunks: string[] = []
-    for await (const event of fastPipeline({ text, tts: false, plan: "max", history })) {
+    for await (const event of fastPipeline({ text, tts: false, plan: "max", history, skipReserve: true })) {
       if (event.type === "llm_chunk") chunks.push(event.text)
     }
     const reply = chunks.join("")
@@ -175,7 +191,7 @@ export async function handleGatewayMessage(msg: GatewayMessage): Promise<void> {
     }
     const driver = await getAgentDriver()
     const agentChunks: string[] = []
-    for await (const event of driver({ text, plan: "max", history })) {
+    for await (const event of driver({ text, plan: "max", history, skipReserve: true })) {
       if (event.type === "agent_text") agentChunks.push(event.text)
     }
     const reply = agentChunks.join("")

@@ -191,6 +191,7 @@ export interface FastQueryRequest {
   tts?: boolean // true = voice output; false = text only (default: true)
   plan?: Plan // controls local-only memory injection/writes
   history?: { role: "user" | "assistant"; text: string }[]
+  skipReserve?: boolean // when true, the pipeline skips its own reserveInteraction("chat") call
 }
 
 export interface AgentQueryRequest {
@@ -199,6 +200,7 @@ export interface AgentQueryRequest {
   task?: string
   plan?: Plan // controls local-only memory injection/writes
   history?: { role: "user" | "assistant"; text: string }[] // prior turns for the conversational act loop
+  skipReserve?: boolean // when true, the pipeline skips its own reserveInteraction("chat") call
 }
 
 export interface CloudRagSnippet {
