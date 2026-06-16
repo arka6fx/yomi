@@ -150,8 +150,9 @@ gatewayRouter.post("/telegram/webhook/:token", async (c) => {
   const expectedToken = process.env["TELEGRAM_BOT_TOKEN"]
   if (!expectedToken || token !== expectedToken) return c.text("Not found", 404)
 
+  const expectedSecret = expectedToken.replace(/[^A-Za-z0-9_-]/g, "")
   const secretHeader = c.req.header("X-Telegram-Bot-Api-Secret-Token")
-  if (secretHeader !== expectedToken) return c.text("Forbidden", 403)
+  if (secretHeader !== expectedSecret) return c.text("Forbidden", 403)
 
   const update = await c.req.json<TelegramUpdate>().catch(() => null)
   if (!update) return c.text("Bad Request", 400)

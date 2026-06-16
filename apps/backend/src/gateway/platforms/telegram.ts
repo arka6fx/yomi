@@ -61,7 +61,7 @@ export class TelegramAdapter implements PlatformAdapter {
         url: this.webhookUrl,
         allowed_updates: ["message"],
         drop_pending_updates: true,
-        secret_token: this.botToken,
+        secret_token: this.botToken.replace(/[^A-Za-z0-9_-]/g, ""),
       }),
     })
     const whData = (await whRes.json()) as TelegramResponse
