@@ -26,45 +26,7 @@ export async function GET(req: NextRequest) {
     const data = await safeJson(res)
     return NextResponse.json(data, { status: res.status })
   } catch {
-    return NextResponse.json({
-      role: "user",
-      plan: "explore",
-      status: "inactive",
-      trialStartDate: null,
-      trialEndDate: null,
-      trialDaysUsed: 0,
-      trialDaysRemaining: 30,
-      trialDaysTotal: 30,
-      trialExpired: false,
-      currentPeriodEnd: null,
-      requestsUsed: 0,
-      requestsLimit: 100,
-      requestsRemaining: 100,
-      resetAt: null,
-      features: {
-        chat: { used: 0, limit: 100 },
-        voice: { used: 0, limit: 20 },
-        screenshots: { used: 0, limit: 25 },
-        reasoning: { used: 0, limit: 5 },
-        connectors: { used: 0, limit: 2 },
-        botMessages: { used: 0, limit: 20 },
-      },
-      dailyChatUsed: 0,
-      dailyVoiceUsed: 0,
-      dailyImageUsed: 0,
-      tokensUsedThisPeriod: 0,
-      credits: {
-        balance: 0,
-        lifetimeGranted: 0,
-        lifetimeConsumed: 0,
-        lifetimeRefunded: 0,
-        expiringSoon: 0,
-        expiringSoonAt: null,
-      },
-      creditConsumption: {},
-      creditPacks: [],
-      creditTransactions: [],
-    })
+    return NextResponse.json({ error: "Backend unreachable" }, { status: 502 })
   }
 }
 

@@ -72,7 +72,7 @@ export function hasBillablePlanAccess(user: EntitlementUser & { subscriptionStat
   const plan = effectivePlanForUser(user)
 
   if (plan === "explore") {
-    if (!user.trialEndDate) return true
+    if (!user.trialEndDate) return false
     return new Date() < user.trialEndDate
   }
 

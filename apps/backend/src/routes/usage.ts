@@ -121,7 +121,7 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
     connectors: "connectors",
   }
 
-  // Credit check for Explore users — their one-time signup credits can run out before trial ends
+  // Credit check for Explore users — trial credits can run out before the trial ends.
   let cachedCreditSummary: Awaited<ReturnType<typeof getCreditSummary>> | null = null
   if (!isOwnerUser(user) && effectivePlan === "explore") {
     cachedCreditSummary = await getCreditSummary(user.id)
@@ -129,7 +129,7 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
       const trialExpired = !user.trialEndDate || Date.now() >= user.trialEndDate.getTime()
       const msg = trialExpired
         ? "Your free trial has ended. Upgrade to Pro or Max to keep using Yomi."
-        : "Free credits are one-time on the Explore plan. Upgrade to Pro or Max to get monthly credits."
+        : "Explore trial credits are used up. Upgrade to Pro or Max to get monthly credits."
       return c.json(
         {
           error: msg,

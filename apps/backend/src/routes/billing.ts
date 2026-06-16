@@ -83,9 +83,11 @@ function planFeatures(key: string): string[] {
   if (!plan) return []
   const l = plan.limits
   return [
-    `${l.chat.toLocaleString()} AI chats / month`,
-    `${l.voiceMinutes} min voice`,
-    `${plan.includedCredits.toLocaleString()} credits / month`,
+    key === "explore" ? `${l.chat.toLocaleString()} AI chats during trial` : `${l.chat.toLocaleString()} AI chats / month`,
+    key === "explore" ? `${l.voiceMinutes} min voice during trial` : `${l.voiceMinutes} min voice`,
+    key === "explore"
+      ? `${plan.includedCredits.toLocaleString()} trial credits`
+      : `${plan.includedCredits.toLocaleString()} credits / month`,
     l.reasoning > 0 ? `${l.reasoning} reasoning uses` : "",
     `${l.connectors} app connectors`,
     l.botMessages > 0 ? `${l.botMessages.toLocaleString()} bot messages / month` : "",
@@ -537,6 +539,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
       id: authSchema.user.id,
       name: authSchema.user.name,
       email: authSchema.user.email,
+      createdAt: authSchema.user.createdAt,
       role: authSchema.user.role,
       plan: authSchema.user.plan,
       subscriptionStatus: authSchema.user.subscriptionStatus,
@@ -627,16 +630,18 @@ billingRouter.get("/subscription", authenticate, async (c) => {
   const effectivePlan = effectivePlanForUser(user)
   const planConfig = getPlan(effectivePlan)
 
-  const trialStart = user.trialStartDate
-  const trialEnd = user.trialEndDate
   const trialDaysTotal = 30
   let trialDaysUsed = 0
   let trialDaysRemaining = 0
   let trialExpired = false
-  if (effectivePlan === "explore" && trialStart && trialEnd) {
+  let trialStart = user.trialStartDate
+  let trialEnd = user.trialEndDate
+  if (effectivePlan === "explore") {
+    trialStart ??= user.createdAt
+    trialEnd ??= new Date(trialStart.getTime() + trialDaysTotal * 24 * 60 * 60 * 1000)
     const usedMs = Date.now() - trialStart.getTime()
     trialDaysUsed = Math.max(0, Math.min(trialDaysTotal, Math.floor((usedMs / (1000 * 60 * 60 * 24)))))
-    trialDaysRemaining = Math.max(0, Math.floor((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    trialDaysRemaining = Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     trialExpired = Date.now() >= trialEnd.getTime()
   }
 
@@ -646,8 +651,8 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     role: effectiveRoleForUser(user),
     plan: effectivePlan,
     status: user.subscriptionStatus,
-    trialStartDate: user.trialStartDate,
-    trialEndDate: user.trialEndDate,
+    trialStartDate: trialStart,
+    trialEndDate: trialEnd,
     trialDaysUsed,
     trialDaysRemaining,
     trialDaysTotal,
