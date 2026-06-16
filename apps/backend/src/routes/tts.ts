@@ -33,7 +33,7 @@ ttsRouter.post("/", async (c) => {
   if (!voice_id) return c.json({ error: "voice_id field required" }, 400)
 
   const outputFormat = "mp3_22050_32"
-  const latencyOpt = "4"
+  const latencyOpt = "0"
 
   const res = await fetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${voice_id}/stream?output_format=${outputFormat}&optimize_streaming_latency=${latencyOpt}`,
