@@ -27,23 +27,21 @@ type UsageEventBody = {
 }
 
 type ReserveBody = {
-  kind: "chat" | "voice" | "screenshot" | "reasoning" | "bot_message"
+  kind: "chat" | "voice" | "analyze" | "bot_message"
   duration?: number  // voice duration in seconds
 }
 
 const FEATURE_KIND_MAP: Record<string, FeatureKey> = {
   chat: "chat",
   voice: "voiceMinutes",
-  screenshot: "screenshots",
-  reasoning: "reasoning",
+  analyze: "analyze",
   bot_message: "botMessages",
 }
 
 const CREDIT_KIND_MAP: Record<ReserveBody["kind"], BillableUsageKind> = {
   chat: "chat",
   voice: "voice",
-  screenshot: "screenshot",
-  reasoning: "reasoning",
+  analyze: "analyze",
   bot_message: "bot_message",
 }
 
@@ -83,6 +81,8 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as ReserveBody
   const kind = body.kind
 
+  console.warn(`[usage/reserve] kind=${kind} user=${user?.email} plan=${user?.plan} subStatus=${user?.subscriptionStatus}`)
+
   const validKinds = Object.keys(FEATURE_KIND_MAP)
   if (!validKinds.includes(kind)) {
     return c.json({ error: `kind must be one of: ${validKinds.join(", ")}`, code: "invalid_usage_kind" }, 400)
@@ -115,13 +115,12 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
   const FEATURE_LABEL: Record<string, string> = {
     chat: "chat",
     voiceMinutes: "voice",
-    screenshots: "screenshots",
-    reasoning: "reasoning",
+    analyze: "screen analyze",
     botMessages: "bot messages",
     connectors: "connectors",
   }
 
-  // Feature-level quota enforcement
+// Feature-level quota enforcement
   if (!isOwnerUser(user)) {
     const featureLimit = featureLimitForUser(user, featureKey)
     if (featureLimit !== null) {
@@ -148,21 +147,24 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
 
       featureUsed = await featureUsage(user.id, eventKinds, periodStart)
       if (featureUsed >= featureLimit) {
-        const plan = getPlanConfig(user)
-        const label = FEATURE_LABEL[featureKey] ?? featureKey
-        return c.json(
-          {
-            error: `You've hit your ${label} limit for ${plan.name}. Resets ${resetDay}.`,
-            code: "feature_quota_exceeded",
-            plan: effectivePlan,
-            feature: featureKey,
-            used: featureUsed,
-            limit: featureLimit,
-            upgradeUrl: "/dashboard?upgrade=true",
-            resetAt: nextReset,
-          },
-          402,
-        )
+        const creditsBefore = await getCreditSummary(user.id)
+        if (creditsBefore.balance < creditsRequired) {
+          const plan = getPlanConfig(user)
+          const label = FEATURE_LABEL[featureKey] ?? featureKey
+          return c.json(
+            {
+              error: `You've hit your ${label} limit for ${plan.name}. Resets ${resetDay}.`,
+              code: "feature_quota_exceeded",
+              plan: effectivePlan,
+              feature: featureKey,
+              used: featureUsed,
+              limit: featureLimit,
+              upgradeUrl: "/dashboard?upgrade=true",
+              resetAt: nextReset,
+            },
+            402,
+          )
+        }
       }
     }
   }
@@ -172,20 +174,23 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
     const limit = requestLimitForUser(user)
     requestsUsedBefore = await featureUsage(user.id, REQUEST_KINDS, periodStart)
     if (limit !== null && requestsUsedBefore >= limit) {
-      const plan = getPlanConfig(user)
-      return c.json(
-        {
-          error: `You've hit your request limit for ${plan.name}. Resets ${resetDay}.`,
-          code: "request_quota_exceeded",
-          plan: effectivePlan,
-          feature: "chat",
-          used: requestsUsedBefore,
-          limit,
-          upgradeUrl: "/dashboard?credits=true",
-          resetAt: nextReset,
-        },
-        402,
-      )
+      const creditsSummary = await getCreditSummary(user.id)
+      if (creditsSummary.balance < creditsRequired) {
+        const plan = getPlanConfig(user)
+        return c.json(
+          {
+            error: `You've hit your request limit for ${plan.name}. Resets ${resetDay}.`,
+            code: "request_quota_exceeded",
+            plan: effectivePlan,
+            feature: "chat",
+            used: requestsUsedBefore,
+            limit,
+            upgradeUrl: "/dashboard?credits=true",
+            resetAt: nextReset,
+          },
+          402,
+        )
+      }
     }
   }
 

@@ -91,7 +91,7 @@ function makeDeps(opts: {
       return opts.model
     },
     toolsPromise: Promise.resolve(noopTools),
-    uia: { getWindowInfo: async () => ({ window: "" }), findWindow: async () => null },
+    // uia — desktop automation disabled
     writeTurn: async () => {},
     requestApproval: opts.requestApproval ?? (async () => true),
     markClosed: () => {},

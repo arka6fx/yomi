@@ -78,10 +78,9 @@ declare global {
       }[]>
       connectIntegration(id: string): Promise<{ ok?: boolean; error?: string; kind?: string }>
       disconnectIntegration(provider: string): Promise<{ ok?: boolean; error?: string }>
-      // Bot channels (Telegram / Discord)
+      // Bot channels (Telegram)
       getBotConnections(): Promise<{ platform: string; connectedAt: string }[]>
       connectTelegramBot(): Promise<{ ok?: boolean; error?: string }>
-      connectDiscordBot(): Promise<{ ok?: boolean; error?: string }>
       unlinkBot(platform: string): Promise<{ ok?: boolean; error?: string }>
     }
   }

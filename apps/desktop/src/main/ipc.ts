@@ -318,7 +318,7 @@ export function initSidecarIpc(
     const ctrl = startPipeline()
     activateProcessing()
     try {
-      const plan = await reserveInteraction(overlayWin, "chat", ctrl.signal)
+      const plan = await reserveInteraction(overlayWin, "analyze", ctrl.signal)
       if (ctrl.signal.aborted) {
         resetToIdle()
         return
@@ -328,7 +328,6 @@ export function initSidecarIpc(
         resetToIdle()
         return
       }
-      reportUsage("screenshot")
       // transcriptLabel keeps the verbose prompt out of chat; forceAnswer skips intent routing
       // (so words inside the prompt can't misroute it to the agent) and never re-arms the mic.
       await streamQuery(
@@ -531,7 +530,7 @@ type ReserveResponse = {
   dailyVoiceUsed?: number
 }
 
-type ReserveKind = "chat" | "voice"
+type ReserveKind = "chat" | "voice" | "analyze"
 
 async function reserveInteraction(
   win: BrowserWindow,
@@ -550,6 +549,7 @@ async function reserveInteraction(
 
   const data = (await res.json().catch(() => ({}))) as ReserveResponse
   if (!res.ok) {
+    console.error(`[yomi/reserve] failed: ${res.status} ${JSON.stringify(data)}`)
     throw new Error(data.error ?? `Usage check failed (${res.status})`)
   }
 
@@ -713,8 +713,9 @@ async function streamQuery(
     })
     if (!res.ok || !res.body) {
       pipelineCtrl = null
-      console.error(`[yomi/voice] ${endpoint} HTTP ${res.status}`)
-      throw new Error(`Sidecar ${res.status}`)
+      const errorText = await res.text()
+      console.error(`[yomi/streamQuery] ${endpoint} HTTP ${res.status}: ${errorText}`)
+      throw new Error(`Sidecar ${res.status}: ${errorText}`)
     }
 
     const reader = res.body.getReader()

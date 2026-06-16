@@ -121,6 +121,7 @@ mock.module("../services/credit-ledger.js", () => ({
   recentCreditTransactions: async () => mockState.recentCreditTransactions,
   // Stub for usage tests loaded in the same suite
   consumeCredits: async () => ({ ok: true }),
+  expireUserCredits: async () => 0,
 }))
 
 mock.module("../services/integration-tokens.js", () => ({
@@ -699,12 +700,12 @@ describe("Dodo billing — subscription summary", () => {
       [
         { kind: "request_chat", count: 2 },
         { kind: "request_voice", count: 1 },
-        { kind: "screenshot", count: 1 },
+        { kind: "analyze", count: 1 },
         { kind: "bot_message", count: 1 },
       ],
       [
         { kind: "request_chat", creditsCharged: 2 },
-        { kind: "screenshot", creditsCharged: 1 },
+        { kind: "analyze", creditsCharged: 1 },
       ],
     ]
 
@@ -717,10 +718,10 @@ describe("Dodo billing — subscription summary", () => {
     expect(body.requestsUsed).toBe(3)
     expect(body.requestsLimit).toBe(2000)
     expect(body.features.connectors).toEqual({ used: 2, limit: 8 })
-    expect(body.features.screenshots).toEqual({ used: 1, limit: 400 })
+    expect(body.features.analyze).toEqual({ used: 1, limit: 400 })
     expect(body.tokensUsedThisPeriod).toBe(150)
     expect(body.credits.balance).toBe(497)
-    expect(body.creditConsumption).toEqual({ request_chat: 2, screenshot: 1 })
+    expect(body.creditConsumption).toEqual({ request_chat: 2, analyze: 1 })
     expect(body.creditPacks.map((pack: any) => pack.key)).toEqual(["credits_500", "credits_2000", "credits_6000"])
     expect(body.creditTransactions[0]).toMatchObject({
       id: "tx_consume_1",

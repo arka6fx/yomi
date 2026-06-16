@@ -76,7 +76,7 @@ async function getAgentPrompt(text: string, plan: Plan | undefined): Promise<str
         dynamicProfile: "",
         recentSession: "",
       }
-  return buildAgentPrompt({ yomiMd: cachedYomiMd, ...memoryCtx, desktopFocusChange: "" })
+  return buildAgentPrompt({ yomiMd: cachedYomiMd, ...memoryCtx })
 }
 
 // Detached-mode phrasing is stripped so it does not pollute command parsing.

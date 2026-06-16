@@ -3,7 +3,7 @@ import type { AgentQueryRequest, Plan, SseEvent } from "@yomi/shared"
 import type { Hooks } from "../harness/hooks.js"
 import type { LoopGuards } from "../harness/guards.js"
 import type { AutomationSession } from "../automation/runs.js"
-import type { UiaPort } from "../automation/providers/types.js"
+// import type { UiaPort } from "../automation/providers/types.js" // will provide later
 import type { writeSessionTurn } from "../memory/subsystem.js"
 import type { EventBridge } from "./events.js"
 
@@ -22,8 +22,8 @@ export interface GraphDeps {
   // Model factory for the execution burst (injectable for tests; defaults to createModel).
   modelFactory: (id: string) => LanguageModelV1
   toolsPromise: Promise<ToolSet>
-  // UIA port for provider/agent validation (injectable for tests; defaults to the uia singleton).
-  uia: UiaPort
+  // UIA port — commented out until desktop automation is re-enabled.
+  // uia: UiaPort
   writeTurn: WriteSessionTurn
   // Coarse human-approval gate (injectable for tests). Resolves true=approved.
   requestApproval: (label: string, reason: string) => Promise<boolean>

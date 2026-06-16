@@ -7,7 +7,7 @@ import type {
   LanguageModelV1StreamPart,
 } from "@ai-sdk/provider"
 
-const DEFAULT_MODEL = "gpt-5.5-mini"
+const DEFAULT_MODEL = "gpt-5.4-mini"
 const DEFAULT_BASE_URL = "https://api.openai.com/v1"
 
 type ToolCallObject = {

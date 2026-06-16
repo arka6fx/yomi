@@ -72,6 +72,7 @@ export function hasBillablePlanAccess(user: EntitlementUser & { subscriptionStat
   const plan = effectivePlanForUser(user)
 
   if (plan === "explore") {
+    console.warn(`[hasBillablePlanAccess] explore trial check: trialEndDate=${user.trialEndDate} now=${new Date()} result=${!user.trialEndDate ? 'false(no trialEndDate)' : new Date() < user.trialEndDate}`)
     if (!user.trialEndDate) return false
     return new Date() < user.trialEndDate
   }

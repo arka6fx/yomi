@@ -56,7 +56,7 @@ export type ActivitySection = {
 
 // Model pricing in cents per 1K tokens (approximate)
 const MODEL_PRICING: Record<string, { inputCentsPer1K: number; outputCentsPer1K: number }> = {
-  "gpt-5.5-mini": { inputCentsPer1K: 0.04, outputCentsPer1K: 0.16 },
+  "gpt-5.4-mini": { inputCentsPer1K: 0.04, outputCentsPer1K: 0.16 },
   "gpt-5.5": { inputCentsPer1K: 0.2, outputCentsPer1K: 0.8 },
 }
 
