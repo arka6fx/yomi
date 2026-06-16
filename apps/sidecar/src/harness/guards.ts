@@ -88,10 +88,11 @@ export class LoopGuards {
   onToolCall(toolName: string, args: unknown): GuardResult {
     this.toolCallsInWindow++
     if (!CHEAP_TOOLS.has(toolName)) this.hasNonCheapCallInStep = true
-    // Desktop automation is commented out — will provide later.
-    // if (toolName === "get_ui_tree") {
-    //   return { break: false }
-    // }
+    // Repeated get_ui_tree snapshots are allowed while UI state settles.
+    // Desktop automation proper will be restored later.
+    if (toolName === "get_ui_tree") {
+      return { break: false }
+    }
 
     const key = `${toolName}:${JSON.stringify(args)}`
     if (

@@ -10,8 +10,14 @@ import { mkdir } from "fs/promises"
 // import { emitActResult, requestConfirmation } from "../uia/act-bus.js"
 // import { blockedGuard, actFailed, guardedAct } from "./act-helpers.js"
 
-// Re-export for system.test.ts — will provide later.
-// export { actFailed }
+// actFailed stub — desktop UIA will provide the real implementation later.
+export function actFailed(result: unknown): boolean {
+  if (!result || typeof result !== "object") return false
+  const r = result as Record<string, unknown>
+  if (r.ok === false) return true
+  if (r.error) return true
+  return false
+}
 
 // function cleanAppName(name: string): string {
 //   return name.replace(/['";\r\n`$]/g, "").trim()
