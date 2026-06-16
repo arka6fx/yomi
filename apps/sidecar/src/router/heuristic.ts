@@ -21,6 +21,13 @@ export function scoreHeuristic(input: RouterInput): IntentClassification {
     return { path: "agent", confidence: 0.95, reason: "explicit trigger", source: "heuristic" }
   }
 
+  // Connector queries (Notion, Drive, Gmail, GitHub, etc.) must reach the agent path
+  // because the fast pipeline has zero tools. Short-circuit before scoring so that even
+  // simple questions like "what's in my Notion?" don't get classified as fast.
+  if (CONNECTOR_QUERY.test(text)) {
+    return { path: "agent", confidence: 0.85, reason: "connector query", source: "heuristic" }
+  }
+
   let fastScore = 0
   const fastReasons: string[] = []
   let agentScore = 0
@@ -39,10 +46,6 @@ export function scoreHeuristic(input: RouterInput): IntentClassification {
     fastReasons.push("fast verb")
   }
 
-  if (CONNECTOR_QUERY.test(text)) {
-    agentScore += 0.5
-    agentReasons.push("connector query")
-  }
   if (AGENT_VERBS.test(text)) {
     agentScore += 0.4
     agentReasons.push("action verb")

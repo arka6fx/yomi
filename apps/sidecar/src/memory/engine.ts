@@ -2,7 +2,7 @@ import { Database } from "bun:sqlite"
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { generateText } from "ai"
-import { createModel } from "../pipeline/model.js"
+import { createModel, embedText } from "@yomi/agent-core"
 import { initMemoryDir, notepadDir } from "./loader.js"
 
 export type MemoryStatus = "active" | "superseded" | "uncertain" | "forgotten"
@@ -109,6 +109,11 @@ function openDb(): Database {
       content text not null,
       updated_at text not null
     );
+    create table if not exists memory_embeddings (
+      memory_id text primary key references memories(id) on delete cascade,
+      embedding blob not null,
+      updated_at text not null
+    );
     create index if not exists memories_status_idx on memories(status);
     create index if not exists memories_topic_idx on memories(topic);
   `)
@@ -177,7 +182,26 @@ export function retrieveLocalMemoryContext(query: string, maxChars = 3000): stri
   return out.join("\n")
 }
 
-function insertMemory(memory: ExtractedMemory, sourcePath: string, sourceTurnId: string): void {
+function vecF32(embedding: number[]): Uint8Array | null {
+  if (embedding.length === 0) return null
+  const f32 = new Float32Array(embedding)
+  return new Uint8Array(f32.buffer, f32.byteOffset, f32.byteLength)
+}
+
+function cosineSimilarity(a: Float32Array, b: Float32Array): number {
+  let dot = 0, na = 0, nb = 0
+  for (let i = 0; i < a.length; i++) {
+    const ai = a[i]!
+    const bi = b[i]!
+    dot += ai * bi
+    na += ai * ai
+    nb += bi * bi
+  }
+  const denom = Math.sqrt(na) * Math.sqrt(nb)
+  return denom === 0 ? 0 : dot / denom
+}
+
+function insertMemory(memory: ExtractedMemory, sourcePath: string, sourceTurnId: string): string | null {
   const database = openDb()
   const id = crypto.randomUUID()
   const now = nowISO()
@@ -185,7 +209,7 @@ function insertMemory(memory: ExtractedMemory, sourcePath: string, sourceTurnId:
   const scope = cleanText(memory.scope ?? "global", 80) || "global"
   const topic = cleanText(memory.topic, 120)
   const content = cleanText(memory.content, 1200)
-  if (!topic || !content || confidence < 0.45) return
+  if (!topic || !content || confidence < 0.45) return null
 
   if (memory.replaces_topic) {
     const replaceTopic = cleanText(memory.replaces_topic, 120)
@@ -206,6 +230,8 @@ function insertMemory(memory: ExtractedMemory, sourcePath: string, sourceTurnId:
     content,
     scope,
   ])
+
+  return id
 }
 
 function parseMemories(text: string): ExtractedMemory[] {
@@ -214,6 +240,22 @@ function parseMemories(text: string): ExtractedMemory[] {
     return Array.isArray(parsed.memories) ? parsed.memories : []
   } catch {
     return []
+  }
+}
+
+async function storeEmbedding(memoryId: string, text: string): Promise<void> {
+  if (!memoryId) return
+  try {
+    const embedding = await embedText(text)
+    const blob = vecF32(embedding)
+    if (!blob) return
+    openDb().run("insert or replace into memory_embeddings (memory_id, embedding, updated_at) values (?, ?, ?)", [
+      memoryId,
+      blob,
+      nowISO(),
+    ])
+  } catch {
+    // best-effort — semantic search degrades gracefully
   }
 }
 
@@ -251,10 +293,24 @@ Assistant: ${output}`,
   })
 
   const sourceTurnId = crypto.randomUUID()
-  for (const memory of parseMemories(text)) {
-    insertMemory(memory, turn.sourcePath ?? "", sourceTurnId)
+  const memories = parseMemories(text)
+  const ids: string[] = []
+  for (const memory of memories) {
+    const id = insertMemory(memory, turn.sourcePath ?? "", sourceTurnId)
+    if (id) ids.push(id)
   }
+
+  // Generate embeddings in parallel best-effort
+  const texts = memoryTextsForEmbedding(memories)
+  if (ids.length > 0 && texts.length > 0) {
+    await Promise.allSettled(ids.map((id, i) => storeEmbedding(id, texts[i] ?? "")))
+  }
+
   await updateUserProfiles()
+}
+
+function memoryTextsForEmbedding(memories: ExtractedMemory[]): string[] {
+  return memories.map((m) => `${m.kind}: ${m.topic} — ${m.content}`)
 }
 
 export async function updateUserProfiles(): Promise<void> {
@@ -302,6 +358,194 @@ export async function updateUserProfiles(): Promise<void> {
     "insert into profiles (key, content, updated_at) values (?, ?, ?) on conflict(key) do update set content = excluded.content, updated_at = excluded.updated_at",
     ["dynamic", dynamic, now],
   )
+}
+
+type EmbeddingRow = {
+  memoryId: string
+  kind: string
+  topic: string
+  content: string
+  confidence: number
+  sourcePath: string | null
+}
+
+// ── Hybrid RAG: Reciprocal Rank Fusion of keyword + semantic search ──
+
+const RRF_K = 60
+const RRF_TOP_K = 10
+
+type ScoredMemory = {
+  id: string
+  kind: string
+  topic: string
+  content: string
+  confidence: number
+  sourcePath: string | null
+  rrfScore: number
+  sourceTags: string[] // "keyword" | "semantic"
+}
+
+function queryTerms(query: string): string {
+  return cleanText(query, 400)
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .split(/\s+/)
+    .filter((term) => term.length > 2)
+    .slice(0, 8)
+    .map((term) => `"${term.replace(/"/g, "")}"*`)
+    .join(" OR ")
+}
+
+function searchKeywordRanked(query: string): ScoredMemory[] {
+  const terms = queryTerms(query)
+  if (!terms) return []
+
+  const rows = openDb()
+    .query<RetrievedMemory, [string]>(
+      `
+    select m.id, m.kind, m.topic, m.content, m.confidence, m.source_path as sourcePath
+    from memory_fts f
+    join memories m on m.id = f.id
+    where memory_fts match ?
+      and m.status = 'active'
+      and m.confidence >= 0.45
+    order by bm25(memory_fts), m.updated_at desc
+    limit 8
+  `,
+    )
+    .all(terms)
+
+  return rows.map((row, i) => ({
+    id: row.id,
+    kind: row.kind,
+    topic: row.topic,
+    content: row.content,
+    confidence: row.confidence,
+    sourcePath: row.sourcePath,
+    rrfScore: 1 / (RRF_K + i + 1),
+    sourceTags: ["keyword"],
+  }))
+}
+
+async function searchSemanticRanked(query: string): Promise<ScoredMemory[]> {
+  const q = cleanText(query, 400)
+  if (!q) return []
+
+  const database = openDb()
+  const rows = database
+    .query<EmbeddingRow & { embedding: Uint8Array }, []>(
+      `
+    select m.id as memoryId, m.kind, m.topic, m.content, m.confidence, m.source_path as sourcePath, e.embedding as embedding
+    from memory_embeddings e
+    join memories m on m.id = e.memory_id
+    where m.status = 'active' and m.confidence >= 0.45
+    order by m.confidence desc, m.updated_at desc
+    limit 40
+  `,
+    )
+    .all()
+
+  if (rows.length === 0) return []
+
+  let queryVec: Float32Array | null = null
+  try {
+    const raw = await embedText(q)
+    if (raw.length === 0) return []
+    queryVec = new Float32Array(raw)
+  } catch {
+    return []
+  }
+
+  const scored: Array<{ row: EmbeddingRow; score: number }> = []
+
+  for (const row of rows) {
+    const embeddingArr = row.embedding
+    if (!embeddingArr || embeddingArr.length === 0) continue
+    try {
+      const vec = new Float32Array(embeddingArr.buffer, embeddingArr.byteOffset, embeddingArr.byteLength / 4)
+      if (vec.length !== queryVec.length) continue
+      const score = cosineSimilarity(vec, queryVec)
+      if (score > 0.45) {
+        scored.push({ row, score })
+      }
+    } catch {
+      // skip corrupt embedding
+    }
+  }
+
+  scored.sort((a, b) => b.score - a.score)
+
+  return scored.slice(0, 8).map(({ row }, i) => ({
+    id: row.memoryId,
+    kind: row.kind,
+    topic: row.topic,
+    content: row.content,
+    confidence: row.confidence,
+    sourcePath: row.sourcePath,
+    rrfScore: 1 / (RRF_K + i + 1),
+    sourceTags: ["semantic"],
+  }))
+}
+
+export async function retrieveHybridMemoryContext(query: string, maxChars = 4000): Promise<string> {
+  const [keywordResults, semanticResults] = await Promise.all([
+    Promise.resolve().then(() => searchKeywordRanked(query)),
+    searchSemanticRanked(query),
+  ])
+
+  // Fuse with RRF — merge by id, sum scores, union source tags
+  const fused = new Map<string, ScoredMemory>()
+
+  for (const r of keywordResults) {
+    fused.set(r.id, { ...r, sourceTags: [...r.sourceTags] })
+  }
+
+  for (const r of semanticResults) {
+    const existing = fused.get(r.id)
+    if (existing) {
+      existing.rrfScore += r.rrfScore
+      existing.sourceTags.push("semantic")
+    } else {
+      fused.set(r.id, { ...r, sourceTags: [...r.sourceTags] })
+    }
+  }
+
+  const sorted = [...fused.values()]
+    .sort((a, b) => b.rrfScore - a.rrfScore)
+    .slice(0, RRF_TOP_K)
+
+  const out: string[] = []
+  let used = 0
+  for (const mem of sorted) {
+    const tag = mem.sourceTags.length > 1 ? "keyword+semantic" : mem.sourceTags[0]
+    const snippet = `- [${mem.kind} (${tag})] ${mem.topic}: ${mem.content}${mem.sourcePath ? ` (source: ${mem.sourcePath})` : ""}`
+    if (used + snippet.length > maxChars) break
+    out.push(snippet)
+    used += snippet.length
+  }
+  return out.join("\n")
+}
+
+export async function reindexEmbeddings(): Promise<number> {
+  await initMemoryEngine()
+  const database = openDb()
+  const rows = database
+    .query<{ id: string; topic: string; content: string; kind: string }, []>(
+      "select id, kind, topic, content from memories where status = 'active'",
+    )
+    .all()
+
+  let count = 0
+  for (const row of rows) {
+    const text = `${row.kind}: ${row.topic} — ${row.content}`
+    try {
+      await storeEmbedding(row.id, text)
+      count++
+    } catch {
+      // skip individual failures
+    }
+  }
+  return count
 }
 
 export async function forgetLocalMemory(queryOrId: string): Promise<number> {

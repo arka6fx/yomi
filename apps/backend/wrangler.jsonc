@@ -60,7 +60,9 @@
         "AI_CREDITS_EMBEDDING_MODEL": "text-embedding-3-small",
         "AI_CREDITS_FAST_MODEL": "gpt-5.5-mini",
         "AI_CREDITS_AGENT_MODEL": "gpt-5.5",
-        "NEXT_PUBLIC_APP_URL": "https://yomi.arka6fx.com"
+        "NEXT_PUBLIC_APP_URL": "https://yomi.arka6fx.com",
+        "TELEGRAM_BOT_USERNAME": "yomi_assistant_bot",
+        "TELEGRAM_DEEP_LINK_ENABLED": "true"
       }
     }
   }

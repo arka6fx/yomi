@@ -3,7 +3,7 @@ import {
   closeMemoryEngine,
   initMemoryEngine,
   readProfile,
-  retrieveLocalMemoryContext,
+  retrieveHybridMemoryContext,
   captureTurnMemory,
 } from "./engine.js"
 import { closeLocalRag, initLocalRag } from "./local-rag.js"
@@ -46,7 +46,7 @@ export async function loadMemoryContext(query: string): Promise<MemoryContextBun
   ] = await Promise.all([
     loadMemorySummary(),
     loadMemoryIndex(),
-    Promise.resolve(retrieveLocalMemoryContext(query, 3000)),
+    retrieveHybridMemoryContext(query, 3500),
     retrieveCloudRagContext(query, 3000),
     readProfile("static"),
     readProfile("dynamic"),
@@ -64,8 +64,8 @@ export async function loadMemoryContext(query: string): Promise<MemoryContextBun
   }
 }
 
-export function retrieveMemoryContext(query: string, maxChars = 3000): string {
-  return retrieveLocalMemoryContext(query, maxChars)
+export async function retrieveMemoryContext(query: string, maxChars = 3000): Promise<string> {
+  return await retrieveHybridMemoryContext(query, maxChars)
 }
 
 export async function retrieveArchiveContext(query: string, maxChars = 3000): Promise<string> {
@@ -98,3 +98,4 @@ export async function captureStructuredMemory(turn: {
 }
 
 export { initLocalRag }
+export { reindexEmbeddings } from "./engine.js"

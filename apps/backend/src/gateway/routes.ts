@@ -109,7 +109,7 @@ gatewayRouter.post("/link", authenticate, async (c) => {
 })
 
 // Sidecar calls this to send a reply back through the platform
-gatewayRouter.post("/send", async (c) => {
+gatewayRouter.post("/send", authenticate, async (c) => {
   const body = await c.req.json().catch(() => ({})) as {
     platform?: PlatformType
     chatId?: string

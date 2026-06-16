@@ -11,6 +11,7 @@ let fastCallArgs: unknown[] = []
 
 let agentCallArgs: unknown[] = []
 let agentChunks: string[] = []
+let agentExtraEvents: { type: string; message?: string }[] = []
 
 let connectorInitCalls: string[] = []
 let enqueueTriggerCalls: { action: string; opts?: unknown }[] = []
@@ -34,11 +35,16 @@ mock.module("../router/intent.js", () => ({
   },
 }))
 
+let fastExtraEvents: { type: string; message?: string }[] = []
+
 mock.module("../pipeline/fast.js", () => ({
   fastPipeline: async function* (req: unknown) {
     fastCallArgs.push(req)
     for (const chunk of fastChunks) {
       yield { type: "llm_chunk", text: chunk }
+    }
+    for (const ev of fastExtraEvents) {
+      yield ev as unknown as never
     }
   },
 }))
@@ -49,6 +55,9 @@ mock.module("../pipeline/agent.js", () => ({
     for (const chunk of agentChunks) {
       yield { type: "agent_text", text: chunk }
     }
+    for (const ev of agentExtraEvents) {
+      yield ev as unknown as never
+    }
   },
 }))
 
@@ -57,6 +66,9 @@ mock.module("../graph/run.js", () => ({
     agentCallArgs.push(req)
     for (const chunk of agentChunks) {
       yield { type: "agent_text", text: chunk }
+    }
+    for (const ev of agentExtraEvents) {
+      yield ev as unknown as never
     }
   },
 }))
@@ -102,9 +114,11 @@ beforeEach(() => {
   classifyResult = { path: "fast", confidence: 0.9, reason: "mocked", source: "heuristic" }
   classifyCallCount = 0
   fastChunks = ["Hello!", " How can I help?"]
+  fastExtraEvents = []
   fastCallArgs = []
   agentCallArgs = []
   agentChunks = ["Here's what I found in Notion..."]
+  agentExtraEvents = []
   connectorInitCalls = []
   enqueueTriggerCalls = []
   enqueueTriggerResult = ""
@@ -326,5 +340,101 @@ describe("handleGatewayMessage", () => {
     const sendCall = fetchCalls.find((c) => c.url.includes("/api/gateway/send"))
     const body = JSON.parse(sendCall!.body!)
     expect(body.text).toBe("I can see VS Code with TypeScript")
+  })
+
+  // ── Error events from pipeline ────────────────────────────────────────────
+
+  it("sends error events as reply in fast path", async () => {
+    fastChunks = []
+    fastExtraEvents = [{ type: "error", message: "LLM API rate limited" }]
+    await handleGatewayMessage(sampleMsg)
+    const sendCall = fetchCalls.find((c) => c.url.includes("/api/gateway/send"))
+    expect(sendCall).toBeDefined()
+    const body = JSON.parse(sendCall!.body!)
+    expect(body.text).toBe("LLM API rate limited")
+  })
+
+  it("sends error events as reply in agent path", async () => {
+    classifyResult = { path: "agent", confidence: 0.9, reason: "complex", source: "llm" }
+    agentChunks = []
+    agentExtraEvents = [{ type: "error", message: "Model overloaded" }]
+    await handleGatewayMessage(sampleMsg)
+    const sendCall = fetchCalls.find((c) => c.url.includes("/api/gateway/send"))
+    expect(sendCall).toBeDefined()
+    const body = JSON.parse(sendCall!.body!)
+    expect(body.text).toBe("Model overloaded")
+  })
+
+  it("sends usage_limit events as reply in fast path", async () => {
+    fastChunks = []
+    fastExtraEvents = [{ type: "usage_limit", message: "Daily limit reached", code: "quota_exceeded", feature: "analyze" }]
+    await handleGatewayMessage(sampleMsg)
+    const sendCall = fetchCalls.find((c) => c.url.includes("/api/gateway/send"))
+    expect(sendCall).toBeDefined()
+    const body = JSON.parse(sendCall!.body!)
+    expect(body.text).toBe("Daily limit reached")
+  })
+
+  it("sends usage_limit events as reply in agent path", async () => {
+    classifyResult = { path: "agent", confidence: 0.9, reason: "complex", source: "llm" }
+    agentChunks = []
+    agentExtraEvents = [{ type: "usage_limit", message: "Bot message limit exceeded", code: "quota_exceeded", feature: "botMessages" }]
+    await handleGatewayMessage(sampleMsg)
+    const sendCall = fetchCalls.find((c) => c.url.includes("/api/gateway/send"))
+    expect(sendCall).toBeDefined()
+    const body = JSON.parse(sendCall!.body!)
+    expect(body.text).toBe("Bot message limit exceeded")
+  })
+
+  // ── Error events combined with text chunks ────────────────────────────────
+
+  it("includes error text alongside llm_chunks in fast path", async () => {
+    fastChunks = ["Partial response "]
+    fastExtraEvents = [{ type: "error", message: "then cut off" }]
+    await handleGatewayMessage(sampleMsg)
+    const sendCall = fetchCalls.find((c) => c.url.includes("/api/gateway/send"))
+    const body = JSON.parse(sendCall!.body!)
+    expect(body.text).toBe("Partial response then cut off")
+  })
+
+  it("includes error text alongside agent_text in agent path", async () => {
+    classifyResult = { path: "agent", confidence: 0.9, reason: "complex", source: "llm" }
+    agentChunks = ["Found some data "]
+    agentExtraEvents = [{ type: "error", message: "but tool failed" }]
+    await handleGatewayMessage(sampleMsg)
+    const sendCall = fetchCalls.find((c) => c.url.includes("/api/gateway/send"))
+    const body = JSON.parse(sendCall!.body!)
+    expect(body.text).toBe("Found some data but tool failed")
+  })
+
+  // ── Voice trigger without error ──────────────────────────────────────────
+
+  it("/voice returns success message via sendReply", async () => {
+    enqueueTriggerResult = "triggered"
+    await handleGatewayMessage({ ...sampleMsg, text: "/voice" })
+    expect(enqueueTriggerCalls.length).toBe(1)
+    expect(enqueueTriggerCalls[0]!.action).toBe("voice")
+    const sendCall = fetchCalls.find((c) => c.url.includes("/api/gateway/send"))
+    expect(sendCall).toBeDefined()
+    const body = JSON.parse(sendCall!.body!)
+    expect(body.text).toContain("Voice mode")
+  })
+
+  it("voice trigger handles enqueueTrigger failure gracefully", async () => {
+    enqueueTriggerResult = new Error("Voice failed")
+    await handleGatewayMessage({ ...sampleMsg, text: "/voice" })
+    const sendCall = fetchCalls.find((c) => c.url.includes("/api/gateway/send"))
+    const body = JSON.parse(sendCall!.body!)
+    expect(body.text).toContain("Voice failed")
+  })
+
+  // ── Empty / no-op reply does not send ─────────────────────────────────────
+
+  it("does not send reply when no chunks or error events emitted", async () => {
+    fastChunks = []
+    fastExtraEvents = []
+    await handleGatewayMessage(sampleMsg)
+    const sendCalls = fetchCalls.filter((c) => c.url.includes("/api/gateway/send"))
+    expect(sendCalls.length).toBe(0)
   })
 })
