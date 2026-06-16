@@ -10,12 +10,15 @@ function voiceId(): string {
 }
 
 export async function* elevenLabsSynthesize(text: string): AsyncGenerator<Uint8Array> {
+  const token = process.env["YOMI_SESSION_TOKEN"] ?? ""
+  const secret = process.env["SIDECAR_SECRET"] ?? ""
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  if (secret) headers["x-sidecar-secret"] = secret
+  if (token) headers["Authorization"] = `Bearer ${token}`
+
   const response = await fetch(`${backendUrl()}/api/tts`, {
     method: "POST",
-    headers: {
-      "x-sidecar-secret": process.env["SIDECAR_SECRET"] ?? "",
-      "Content-Type": "application/json",
-    },
+    headers,
     body: JSON.stringify({
       text,
       voice_id: voiceId(),

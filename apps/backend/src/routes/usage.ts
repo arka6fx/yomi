@@ -153,7 +153,7 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
           const label = FEATURE_LABEL[featureKey] ?? featureKey
           return c.json(
             {
-              error: `You've hit your ${label} limit for ${plan.name}. Resets ${resetDay}.`,
+              error: `You've hit your ${label} limit for ${plan.name}.${plan.key !== "explore" ? ` Resets ${resetDay}.` : ""}`,
               code: "feature_quota_exceeded",
               plan: effectivePlan,
               feature: featureKey,
@@ -179,7 +179,7 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
         const plan = getPlanConfig(user)
         return c.json(
           {
-            error: `You've hit your request limit for ${plan.name}. Resets ${resetDay}.`,
+            error: `You've hit your request limit for ${plan.name}.${plan.key !== "explore" ? ` Resets ${resetDay}.` : ""}`,
             code: "request_quota_exceeded",
             plan: effectivePlan,
             feature: "chat",

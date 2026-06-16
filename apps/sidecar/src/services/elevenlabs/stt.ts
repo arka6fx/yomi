@@ -13,9 +13,15 @@ export async function elevenLabsTranscribe(wav: Uint8Array): Promise<ElevenLabsS
   form.set("model_id", process.env["ELEVENLABS_STT_MODEL"] || DEFAULT_STT_MODEL)
   form.set("file", new Blob([wav], { type: "audio/wav" }), "audio.wav")
 
+  const token = process.env["YOMI_SESSION_TOKEN"] ?? ""
+  const secret = process.env["SIDECAR_SECRET"] ?? ""
+  const headers: Record<string, string> = {}
+  if (secret) headers["x-sidecar-secret"] = secret
+  if (token) headers["Authorization"] = `Bearer ${token}`
+
   const response = await fetch(`${backendUrl()}/api/stt`, {
     method: "POST",
-    headers: { "x-sidecar-secret": process.env["SIDECAR_SECRET"] ?? "" },
+    headers,
     body: form,
   })
 

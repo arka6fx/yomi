@@ -46,6 +46,15 @@ describe("elevenLabsTranscribe (STT via proxy)", () => {
     expect(result.text).toBe("hello from stt proxy")
   })
 
+  it("sends Authorization Bearer token when SIDECAR_SECRET is absent", async () => {
+    delete process.env.SIDECAR_SECRET
+    process.env.YOMI_SESSION_TOKEN = "test-session-token"
+    const { elevenLabsTranscribe } = await import("./stt.js")
+    await elevenLabsTranscribe(new Uint8Array(100))
+    expect(getHeader(0, "Authorization")).toBe("Bearer test-session-token")
+    expect(getHeader(0, "x-sidecar-secret")).toBeUndefined()
+  })
+
   it("throws on proxy error", async () => {
     globalThis.fetch = async () => new Response("bad request", { status: 400 })
     const { elevenLabsTranscribe } = await import("./stt.js")
@@ -75,6 +84,18 @@ describe("elevenLabsSynthesize (TTS via proxy)", () => {
     expect(body.voice_id).toBe("EXAVITQu4vr4xnSDxMaL")
     expect(body.model_id).toBe("eleven_flash_v2_5")
     expect(chunks.length).toBe(1)
+  })
+
+  it("sends Authorization Bearer token when SIDECAR_SECRET is absent", async () => {
+    delete process.env.SIDECAR_SECRET
+    process.env.YOMI_SESSION_TOKEN = "test-session-token"
+    const { elevenLabsSynthesize } = await import("./tts.js")
+    const chunks: Uint8Array[] = []
+    for await (const chunk of elevenLabsSynthesize("hello world")) {
+      chunks.push(chunk)
+    }
+    expect(getHeader(0, "Authorization")).toBe("Bearer test-session-token")
+    expect(getHeader(0, "x-sidecar-secret")).toBeUndefined()
   })
 
   it("throws on proxy error", async () => {
