@@ -121,28 +121,6 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
     connectors: "connectors",
   }
 
-  // Credit check for Explore users — trial credits can run out before the trial ends.
-  let cachedCreditSummary: Awaited<ReturnType<typeof getCreditSummary>> | null = null
-  if (!isOwnerUser(user) && effectivePlan === "explore") {
-    cachedCreditSummary = await getCreditSummary(user.id)
-    if (cachedCreditSummary.balance < creditsRequired) {
-      const trialExpired = !user.trialEndDate || Date.now() >= user.trialEndDate.getTime()
-      const msg = trialExpired
-        ? "Your free trial has ended. Upgrade to Pro or Max to keep using Yomi."
-        : "Explore trial credits are used up. Upgrade to Pro or Max to get monthly credits."
-      return c.json(
-        {
-          error: msg,
-          code: "insufficient_credits",
-          plan: effectivePlan,
-          creditsRemaining: cachedCreditSummary.balance,
-          upgradeUrl: "/dashboard?upgrade=true",
-        },
-        402,
-      )
-    }
-  }
-
   // Feature-level quota enforcement
   if (!isOwnerUser(user)) {
     const featureLimit = featureLimitForUser(user, featureKey)
@@ -211,7 +189,7 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
     }
   }
 
-  const creditsBefore = cachedCreditSummary ?? await getCreditSummary(user.id)
+  const creditsBefore = await getCreditSummary(user.id)
 
   // Record usage event
   const eventKind = kind === "chat" ? "request_chat"

@@ -131,9 +131,9 @@ describe("POST /api/usage/interactions/reserve", () => {
     mockConsumeCreditsOk = false
   })
 
-  it("allows Explore trial users to reserve every trigger type with credits", async () => {
-    mockCreditBalance = 100
-    mockConsumeCreditsOk = true
+  it("allows Explore trial users to reserve every trigger type even with 0 credits", async () => {
+    mockCreditBalance = 0
+    mockConsumeCreditsOk = false
 
     for (const kind of ["chat", "voice", "screenshot", "reasoning", "bot_message"] as const) {
       const res = await reserve(kind)
@@ -145,28 +145,24 @@ describe("POST /api/usage/interactions/reserve", () => {
     }
   })
 
-  it("returns quota errors, not subscription errors, when Explore trial credits run out", async () => {
-    mockCreditBalance = 0
+  it("blocks expired Explore trial users with subscription_inactive error", async () => {
+    currentUser = user({ trialEndDate: new Date(Date.now() - 1000) })
+    const res = await reserve()
+    const body = (await res.json()) as ReserveBody
 
-    for (const kind of ["chat", "voice", "screenshot", "reasoning", "bot_message"] as const) {
-      const res = await reserve(kind)
-      const body = (await res.json()) as ReserveBody
-
-      expect(res.status).toBe(402)
-      expect(body.code).toBe("insufficient_credits")
-      expect(body.plan).toBe("explore")
-    }
+    expect(res.status).toBe(402)
+    expect(body.code).toBe("subscription_inactive")
+    expect(body.plan).toBe("explore")
   })
 
-  it("blocks exhausted Explore users without credits", async () => {
+  it("blocks Explore users who exceed feature limits with feature_quota_exceeded", async () => {
     mockRequestCount = 100
     const res = await reserve()
     const body = (await res.json()) as ReserveBody
 
     expect(res.status).toBe(402)
-    expect(body.code).toBe("insufficient_credits")
+    expect(body.code).toBe("feature_quota_exceeded")
     expect(body.plan).toBe("explore")
-    expect(body.creditsRemaining).toBe(0)
   })
 
   it("blocks inactive Pro users with subscription_inactive", async () => {

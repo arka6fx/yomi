@@ -127,12 +127,21 @@ describe("runAgent metering", () => {
     expect(result.text).toInclude("bot messages")
   })
 
-  it("blocks explore user with 0 credits", async () => {
+  it("allows explore user with 0 credits if trial is active", async () => {
     mockUser = makeUser({ plan: "explore", subscriptionStatus: "active" })
     mockCreditBalance = 0
     const { runAgent } = await import("./run.js")
     const result = await runAgent({ userId: "user_1", text: "hi" })
+    expect(result.quotaError).toBeUndefined()
+    expect(result.text).toBe("The answer is 42.")
+  })
+
+  it("blocks explore user with expired trial", async () => {
+    mockUser = makeUser({ plan: "explore", subscriptionStatus: "active", trialEndDate: new Date(Date.now() - 1000) })
+    const { runAgent } = await import("./run.js")
+    const result = await runAgent({ userId: "user_1", text: "hi" })
     expect(result.quotaError).toBe(true)
+    expect(result.text).toInclude("inactive")
   })
 
   it("logs a bot_message event (not gateway_message)", async () => {
