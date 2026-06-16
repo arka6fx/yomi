@@ -121,7 +121,7 @@ describe("connector tools are wired into createAgentTools", () => {
 
   it("includes legacy integration tools (gmail)", () => {
     const tools: Record<string, unknown> = createAgentTools()
-    expect(tools["gmail.searchEmails"]).toBeDefined()
-    expect(tools["gmail.sendEmail"]).toBeDefined()
+    expect(tools["gmail-searchEmails"]).toBeDefined()
+    expect(tools["gmail-sendEmail"]).toBeDefined()
   })
 })
