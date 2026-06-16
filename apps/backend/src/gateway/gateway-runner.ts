@@ -453,7 +453,6 @@ export class GatewayRunner {
     // Telegram deep-link intercept: /start <TOKEN>
     if (
       msg.platform === "telegram" &&
-      process.env["TELEGRAM_DEEP_LINK_ENABLED"] === "true" &&
       msg.text.startsWith("/start ") &&
       msg.text.length > 7
     ) {
