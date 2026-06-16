@@ -61,10 +61,11 @@ describe("elevenLabsTranscribe (STT via proxy)", () => {
     await expect(elevenLabsTranscribe(new Uint8Array(100))).rejects.toThrow("STT proxy failed")
   })
 
-  it("throws when proxy returns no transcript", async () => {
+  it("returns empty string when proxy returns no transcript", async () => {
     globalThis.fetch = async () => new Response(JSON.stringify({ text: "" }), { status: 200 })
     const { elevenLabsTranscribe } = await import("./stt.js")
-    await expect(elevenLabsTranscribe(new Uint8Array(100))).rejects.toThrow("no transcript")
+    const res = await elevenLabsTranscribe(new Uint8Array(100))
+    expect(res.text).toBe("")
   })
 })
 
