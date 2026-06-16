@@ -165,10 +165,22 @@ Speech:     ElevenLabs scribe_v2 + eleven_flash_v2_5
 
 ## Desktop releases
 
+**CRITICAL: All releases go to `arka6fx/yomi-releases` only. Never create tags or releases in the main yomi repo.**
+
 Production web/backend deploys from `main`. Desktop installers published as GitHub
 releases on `arka6fx/yomi-releases` via `.github/workflows/release.yml`.
 
-When STT/TTS or sidecar code changes, build and publish a new desktop installer.
+### Release process (follow every time):
+
+1. **Push all changes to `main`** on the yomi repo first.
+2. **Trigger the release workflow:** `gh workflow run release.yml --ref main -f version=<ver> -f notes="<desc>"`
+3. **Wait for the workflow to complete** (~45 min). It builds the sidecar binary, Electron app, and publishes the `.exe` + `.blockmap` + `latest.yml` to `arka6fx/yomi-releases`.
+4. **Never create a release manually with `gh release create`.** Always use the workflow.
+5. **Never create git tags in the yomi repo.** Tags are auto-managed by the release workflow on yomi-releases.
+6. **The landing page download (/api/download) automatically picks up the latest asset** from yomi-releases — no manual update needed.
+
+### Installer validation:
+
 The installer must include `apps/sidecar/dist/sidecar-win32-x64.exe`; verify the
 binary contains `eleven_flash_v2_5` and `scribe_v2` and does not contain
 `amazon.nova-2-sonic-v1:0` or `minimax.minimax-m2.5` before release.

@@ -170,6 +170,7 @@ app.post("/query", async (c) => {
         text,
         screenshot_b64: body.screenshot_b64,
         plan: body.plan,
+        history: body.history,
       }
       const emit = (e: SseEvent) => {
         void stream.writeSSE({ data: JSON.stringify(e) })

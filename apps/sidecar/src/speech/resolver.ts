@@ -10,6 +10,7 @@ export function resolveTts(): TtsEngine {
   const explicit = process.env.TTS_ENGINE?.toLowerCase() as TtsEngine | undefined
   if (explicit === "elevenlabs" || explicit === "none") return explicit
   if (process.env.ELEVENLABS_API_KEY) return "elevenlabs"
+  if (process.env.SIDECAR_SECRET) return "elevenlabs"
   return "none"
 }
 

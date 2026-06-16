@@ -73,9 +73,7 @@ function baseUrl(): string {
 }
 
 function apiKey(): string {
-  const key = process.env["AI_CREDITS_API_KEY"]
-  if (!key) throw new Error("AI Credits credentials are missing")
-  return key
+  return process.env["AI_CREDITS_API_KEY"] ?? ""
 }
 
 function imageUrl(part: { image: unknown; mimeType?: string }): string {
@@ -248,10 +246,11 @@ function warnings(_options: LanguageModelV1CallOptions): LanguageModelV1CallWarn
 }
 
 async function chatCompletion(body: unknown, signal?: AbortSignal): Promise<Response> {
+  const key = apiKey()
   const response = await fetch(`${baseUrl()}/chat/completions`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey()}`,
+      ...(key ? { Authorization: `Bearer ${key}` } : {}),
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),

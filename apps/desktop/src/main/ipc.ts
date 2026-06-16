@@ -675,22 +675,23 @@ async function streamQuery(
       ? "/query/agent"
       : "/query"
   const body = useDesktopAgent
-    ? { text: routedText, screenshot_b64: capture.screenshot_b64, plan, history: actHistory.slice() }
-    : {
-        text,
-        screenshot_b64: capture.screenshot_b64,
-        screenshots: capture.displays.map(
-          ({ screen, screenshot_b64, imageWidth, imageHeight, isCursorScreen }) => ({
-            screen,
-            screenshot_b64,
-            width: imageWidth,
-            height: imageHeight,
-            is_cursor_screen: isCursorScreen,
-          }),
-        ),
-        tts,
-        plan,
-      }
+      ? { text: routedText, screenshot_b64: capture.screenshot_b64, plan, history: actHistory.slice() }
+      : {
+          text,
+          screenshot_b64: capture.screenshot_b64,
+          screenshots: capture.displays.map(
+            ({ screen, screenshot_b64, imageWidth, imageHeight, isCursorScreen }) => ({
+              screen,
+              screenshot_b64,
+              width: imageWidth,
+              height: imageHeight,
+              is_cursor_screen: isCursorScreen,
+            }),
+          ),
+          tts,
+          plan,
+          history: actHistory.slice(),
+        }
   const useAgent = useDesktopAgent
   const overlayWasFocusable = useAgent ? overlayWin.isFocusable() : null
   if (useAgent && overlayWasFocusable) {

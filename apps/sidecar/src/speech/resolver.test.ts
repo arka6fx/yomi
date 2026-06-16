@@ -4,6 +4,7 @@ import { resolveTts } from "./resolver.js"
 beforeEach(() => {
   delete process.env.TTS_ENGINE
   delete process.env.ELEVENLABS_API_KEY
+  delete process.env.SIDECAR_SECRET
 })
 
 describe("resolveTts", () => {
@@ -24,6 +25,11 @@ describe("resolveTts", () => {
 
   it("TTS_ENGINE=elevenlabs is honoured", () => {
     process.env.TTS_ENGINE = "elevenlabs"
+    expect(resolveTts()).toBe("elevenlabs")
+  })
+
+  it("returns elevenlabs when SIDECAR_SECRET is set (proxy mode)", () => {
+    process.env.SIDECAR_SECRET = "test-secret"
     expect(resolveTts()).toBe("elevenlabs")
   })
 })
