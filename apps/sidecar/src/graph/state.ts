@@ -1,4 +1,3 @@
-import { Annotation } from "@langchain/langgraph"
 import type { CoreMessage } from "ai"
 import type { AutomationState, Plan } from "@yomi/shared"
 import type { ErrorClass } from "./error-classifier.js"
@@ -16,59 +15,70 @@ export interface ToolHistoryItem {
   failed: boolean
 }
 
-// append-and-flatten reducer for list channels
-function appendList<T>() {
+export interface GraphState {
+  taskId: string
+  goal: string
+  plan: Plan | undefined
+  systemPrompt: string
+  messages: CoreMessage[]
+  steps: string[]
+  executionMode: ExecutionMode
+  currentStep: string
+  agentId: string
+  providerId: string
+  agentStatus: AutomationState
+  validationStatus: ValidationStatus
+  permissionStatus: PermissionStatus
+  recoveryCount: number
+  lastError: string | null
+  errorClass: ErrorClass
+  recoveryError: string
+  recoveryStrategy: string
+  toolHistory: ToolHistoryItem[]
+  memoryRefs: string[]
+  stepCount: number
+  summaryText: string
+  failed: boolean
+  finalSummary: string
+}
+
+export type GraphInput = Partial<GraphState> & Pick<GraphState, "goal">
+
+export function createInitialState(input: GraphInput): GraphState {
   return {
-    reducer: (acc: T[], v: T[] | T): T[] => acc.concat(Array.isArray(v) ? v : [v]),
-    default: (): T[] => [],
+    taskId: input.taskId ?? "",
+    goal: input.goal,
+    plan: input.plan,
+    systemPrompt: input.systemPrompt ?? "",
+    messages: input.messages ?? [],
+    steps: input.steps ?? [],
+    executionMode: input.executionMode ?? "foreground",
+    currentStep: input.currentStep ?? "",
+    agentId: input.agentId ?? "automation",
+    providerId: input.providerId ?? "native",
+    agentStatus: input.agentStatus ?? "thinking",
+    validationStatus: input.validationStatus ?? "pending",
+    permissionStatus: input.permissionStatus ?? "none",
+    recoveryCount: input.recoveryCount ?? 0,
+    lastError: input.lastError ?? null,
+    errorClass: input.errorClass ?? "unknown",
+    recoveryError: input.recoveryError ?? "",
+    recoveryStrategy: input.recoveryStrategy ?? "",
+    toolHistory: input.toolHistory ?? [],
+    memoryRefs: input.memoryRefs ?? [],
+    stepCount: input.stepCount ?? 0,
+    summaryText: input.summaryText ?? "",
+    failed: input.failed ?? false,
+    finalSummary: input.finalSummary ?? "",
   }
 }
 
-export const GraphAnnotation = Annotation.Root({
-  // Identity / inputs
-  taskId: Annotation<string>(), // = automation run id
-  goal: Annotation<string>(),
-  plan: Annotation<Plan | undefined>({ reducer: (_, v) => v, default: () => undefined }),
-
-  // Conversation carried across execution bursts
-  systemPrompt: Annotation<string>({ reducer: (_, v) => v, default: () => "" }),
-  messages: Annotation<CoreMessage[]>(appendList<CoreMessage>()),
-
-  // Plan / control
-  steps: Annotation<string[]>({ reducer: (_, v) => v, default: () => [] }),
-  executionMode: Annotation<ExecutionMode>({ reducer: (_, v) => v, default: () => "foreground" }),
-  currentStep: Annotation<string>({ reducer: (_, v) => v, default: () => "" }),
-
-  // Routing: which sub-agent + provider handles this turn (set by Planning, read by Execution/Validation)
-  agentId: Annotation<string>({ reducer: (_, v) => v, default: () => "automation" }),
-  providerId: Annotation<string>({ reducer: (_, v) => v, default: () => "native" }),
-
-  // Status
-  agentStatus: Annotation<AutomationState>({ reducer: (_, v) => v, default: () => "thinking" }),
-  validationStatus: Annotation<ValidationStatus>({
-    reducer: (_, v) => v,
-    default: () => "pending",
-  }),
-  permissionStatus: Annotation<PermissionStatus>({ reducer: (_, v) => v, default: () => "none" }),
-
-  // Recovery
-  recoveryCount: Annotation<number>({ reducer: (_, v) => v, default: () => 0 }),
-  lastError: Annotation<string | null>({ reducer: (_, v) => v, default: () => null }),
-  errorClass: Annotation<ErrorClass>({ reducer: (_, v) => v, default: () => "unknown" }),
-  // The error the last recovery addressed + the corrective strategy it applied. Completion records
-  // these as a learned recovery when the subsequent attempt validates.
-  recoveryError: Annotation<string>({ reducer: (_, v) => v, default: () => "" }),
-  recoveryStrategy: Annotation<string>({ reducer: (_, v) => v, default: () => "" }),
-
-  // Bookkeeping
-  toolHistory: Annotation<ToolHistoryItem[]>(appendList<ToolHistoryItem>()),
-  memoryRefs: Annotation<string[]>(appendList<string>()),
-  stepCount: Annotation<number>({ reducer: (_, v) => v, default: () => 0 }),
-  summaryText: Annotation<string>({ reducer: (_, v) => v, default: () => "" }),
-
-  // Outcome
-  failed: Annotation<boolean>({ reducer: (_, v) => v, default: () => false }),
-  finalSummary: Annotation<string>({ reducer: (_, v) => v, default: () => "" }),
-})
-
-export type GraphState = typeof GraphAnnotation.State
+export function mergeGraphState(state: GraphState, patch: Partial<GraphState>): GraphState {
+  return {
+    ...state,
+    ...patch,
+    messages: patch.messages ? state.messages.concat(patch.messages) : state.messages,
+    toolHistory: patch.toolHistory ? state.toolHistory.concat(patch.toolHistory) : state.toolHistory,
+    memoryRefs: patch.memoryRefs ? state.memoryRefs.concat(patch.memoryRefs) : state.memoryRefs,
+  }
+}

@@ -7,12 +7,21 @@ import { Loader2, Check, MonitorSmartphone } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import Link from "next/link"
 
+function buildDeviceRedirect(code: string | null, provider: string | null) {
+  const params = new URLSearchParams()
+  if (code) params.set("code", code)
+  if (provider) params.set("provider", provider)
+  return `/device${params.size ? `?${params.toString()}` : ""}`
+}
+
 function DeviceContent() {
   const router = useRouter()
 
   const { data: session, isPending } = authClient.useSession()
   const [urlCode, setUrlCode] = useState<string | null>(null)
   const [provider, setProvider] = useState<string | null>(null)
+  const [fresh, setFresh] = useState(false)
+  const [switchingAccount, setSwitchingAccount] = useState(false)
   const [code, setCode] = useState("")
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
@@ -57,10 +66,24 @@ function DeviceContent() {
     const params = new URLSearchParams(window.location.search)
     const codeParam = params.get("code")?.trim().toUpperCase() ?? null
     const providerParam = params.get("provider") ?? null
+    const freshParam = params.get("fresh") === "1"
     setUrlCode(codeParam)
     if (codeParam) setCode(codeParam)
     if (providerParam) setProvider(providerParam)
+    setFresh(freshParam)
   }, [])
+
+  // Desktop Google sign-in must not reuse a stale web session from another account.
+  useEffect(() => {
+    if (isPending || !session || !urlCode || provider !== "google" || !fresh || switchingAccount) return
+    setSwitchingAccount(true)
+    authClient
+      .signOut()
+      .catch(() => undefined)
+      .finally(() => {
+        router.replace(`/signin?redirect=${encodeURIComponent(buildDeviceRedirect(urlCode, provider))}&provider=google`)
+      })
+  }, [isPending, session, urlCode, provider, fresh, switchingAccount, router])
 
   // Auto-confirm when user arrives with code in URL and is already logged in
   useEffect(() => {
@@ -76,7 +99,7 @@ function DeviceContent() {
   useEffect(() => {
     if (isPending || session || !urlCode) return
     const providerSuffix = provider ? `&provider=${encodeURIComponent(provider)}` : ""
-    router.replace(`/signin?redirect=${encodeURIComponent(`/device?code=${urlCode}`)}${providerSuffix}`)
+    router.replace(`/signin?redirect=${encodeURIComponent(buildDeviceRedirect(urlCode, provider))}${providerSuffix}`)
   }, [isPending, session, urlCode, provider, router])
 
   async function handleConfirm(e: React.FormEvent) {
@@ -88,7 +111,7 @@ function DeviceContent() {
   }
 
   // Full-screen loader while session loads (avoids flicker when auto-confirming)
-  if (isPending) {
+  if (isPending || switchingAccount) {
     return (
       <div className="flex flex-col items-center gap-3 py-8">
         <Loader2 className="animate-spin text-muted-foreground" size={20} />

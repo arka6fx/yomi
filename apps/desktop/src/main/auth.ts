@@ -88,7 +88,6 @@ export async function checkStoredToken(): Promise<string | null> {
 }
 
 // Runs the device-code OAuth flow (RFC 8628).
-// Opens the browser silently — the device page auto-confirms if already logged in.
 export async function startDeviceCodeFlow(
   provider: string | undefined,
   onDeviceUrl: (url: string) => void,
@@ -110,8 +109,11 @@ export async function startDeviceCodeFlow(
     interval: number
   }
 
-  const providerParam = provider ? `&provider=${encodeURIComponent(provider)}` : ""
-  onDeviceUrl(`${verification_uri}?code=${user_code}${providerParam}`)
+  const url = new URL(verification_uri)
+  url.searchParams.set("code", user_code)
+  if (provider) url.searchParams.set("provider", provider)
+  if (provider === "google") url.searchParams.set("fresh", "1")
+  onDeviceUrl(url.toString())
 
   const token = await pollForToken(device_code, interval * 1000)
   saveToken(token)
