@@ -32,7 +32,7 @@ export interface GraphDeps {
   markClosed: () => void
 }
 
-export const AGENT_MODEL = process.env["AI_CREDITS_AGENT_MODEL"] || "gpt-4.1"
+export const AGENT_MODEL = process.env["AI_CREDITS_AGENT_MODEL"] || "gpt-5.5"
 // Steps per execution burst. Defaults to the legacy 20 so single-burst reach matches the old
 // loop; Validation/Recovery wrap the burst rather than shrinking it. Tune down via env.
 export const BURST_STEPS = parseInt(process.env["AGENT_MAX_STEPS"] || "20", 10)

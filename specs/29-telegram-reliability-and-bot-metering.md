@@ -446,7 +446,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     .values({
       userId: opts.userId,
       kind: "bot_message",
-      model: process.env["AI_CREDITS_AGENT_MODEL"] ?? "gpt-4.1",
+      model: process.env["AI_CREDITS_AGENT_MODEL"] ?? "gpt-5.5",
       inputTokens: 0,
       outputTokens: 0,
       costCents: 0,

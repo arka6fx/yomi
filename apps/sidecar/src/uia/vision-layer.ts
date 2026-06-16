@@ -273,7 +273,7 @@ export async function screenDescribe(imageB64?: string): Promise<{ ok: boolean; 
         method: "POST",
         headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "gpt-4.1-mini",
+          model: "gpt-5.5-mini",
           messages: [{
             role: "user",
             content: [

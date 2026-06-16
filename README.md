@@ -87,8 +87,8 @@ GITHUB_CLIENT_SECRET=...
 
 AI_CREDITS_API_KEY=...
 AI_CREDITS_BASE_URL=...
-AI_CREDITS_FAST_MODEL=gpt-4.1-mini
-AI_CREDITS_AGENT_MODEL=gpt-4.1
+AI_CREDITS_FAST_MODEL=gpt-5.5-mini
+AI_CREDITS_AGENT_MODEL=gpt-5.5
 
 ELEVENLABS_API_KEY=...
 ELEVENLABS_VOICE_ID=EXAVITQu4vr4xnSDxMaL
@@ -222,8 +222,8 @@ http://localhost:3001/api/auth/callback/google
 
 | Capability | Provider / default |
 | --- | --- |
-| Fast LLM | AI Credits/OpenAI-compatible endpoint, `gpt-4.1-mini` |
-| Agent LLM | AI Credits/OpenAI-compatible endpoint, `gpt-4.1` |
+| Fast LLM | AI Credits/OpenAI-compatible endpoint, `gpt-5.5-mini` |
+| Agent LLM | AI Credits/OpenAI-compatible endpoint, `gpt-5.5` |
 | STT | ElevenLabs `scribe_v2` |
 | TTS | ElevenLabs `eleven_flash_v2_5` |
 

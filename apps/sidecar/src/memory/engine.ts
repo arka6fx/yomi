@@ -44,7 +44,7 @@ type ExtractedMemory = {
 }
 
 const EXTRACTION_MODEL =
-  process.env.MEMORY_EXTRACTION_MODEL || process.env.AI_CREDITS_FAST_MODEL || "gpt-4.1-mini"
+  process.env.MEMORY_EXTRACTION_MODEL || process.env.AI_CREDITS_FAST_MODEL || "gpt-5.5-mini"
 const MAX_PROFILE_CHARS = 3000
 
 let db: Database | null = null

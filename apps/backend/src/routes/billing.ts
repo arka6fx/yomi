@@ -540,6 +540,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
       role: authSchema.user.role,
       plan: authSchema.user.plan,
       subscriptionStatus: authSchema.user.subscriptionStatus,
+      trialStartDate: authSchema.user.trialStartDate,
       trialEndDate: authSchema.user.trialEndDate,
       currentPeriodEnd: authSchema.user.currentPeriodEnd,
       dodoSubscriptionId: authSchema.user.dodoSubscriptionId,
@@ -603,11 +604,41 @@ billingRouter.get("/subscription", authenticate, async (c) => {
   const requestsRemaining = requestsLimit === null ? null : Math.max(requestsLimit - requestsUsed, 0)
   const resetAt = new Date(Date.UTC(requestPeriodStart.getUTCFullYear(), requestPeriodStart.getUTCMonth() + 1, 1))
 
+  const creditConsumptionRows = await db
+    .select({ kind: usageEvents.kind, creditsCharged: sql<number>`sum(${usageEvents.creditsCharged})` })
+    .from(usageEvents)
+    .where(
+      and(
+        eq(usageEvents.userId, user.id),
+        gte(usageEvents.createdAt, requestPeriodStart),
+        sql`${usageEvents.creditsCharged} > 0`,
+      ),
+    )
+    .groupBy(usageEvents.kind)
+
+  const creditConsumption: Record<string, number> = {}
+  for (const row of creditConsumptionRows) {
+    creditConsumption[row.kind] = Number(row.creditsCharged)
+  }
+
   const connectedProviders = await listConnectedProviders(user.id)
   const connectorLimit = featureLimitForUser(user, "connectors")
 
   const effectivePlan = effectivePlanForUser(user)
   const planConfig = getPlan(effectivePlan)
+
+  const trialStart = user.trialStartDate
+  const trialEnd = user.trialEndDate
+  const trialDaysTotal = 30
+  let trialDaysUsed = 0
+  let trialDaysRemaining = 0
+  let trialExpired = false
+  if (effectivePlan === "explore" && trialStart && trialEnd) {
+    const usedMs = Date.now() - trialStart.getTime()
+    trialDaysUsed = Math.max(0, Math.min(trialDaysTotal, Math.floor((usedMs / (1000 * 60 * 60 * 24)))))
+    trialDaysRemaining = Math.max(0, Math.floor((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    trialExpired = Date.now() >= trialEnd.getTime()
+  }
 
   return c.json({
     name: user.name,
@@ -615,7 +646,12 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     role: effectiveRoleForUser(user),
     plan: effectivePlan,
     status: user.subscriptionStatus,
+    trialStartDate: user.trialStartDate,
     trialEndDate: user.trialEndDate,
+    trialDaysUsed,
+    trialDaysRemaining,
+    trialDaysTotal,
+    trialExpired,
     currentPeriodEnd: user.currentPeriodEnd,
     dodoSubscriptionId: user.dodoSubscriptionId,
     requestsUsed,
@@ -643,6 +679,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     dailyImageUsed: user.dailyImageCount,
     tokensUsedThisPeriod,
     credits: await getCreditSummary(user.id),
+    creditConsumption,
     creditPacks: effectivePlan !== "explore" ? Object.values(CREDIT_PACKS) : [],
     creditTransactions: await recentCreditTransactions(user.id, 10),
     billingWarning: user.subscriptionStatus === "past_due"
