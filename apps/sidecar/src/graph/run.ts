@@ -2,6 +2,7 @@ import type { AgentQueryRequest, SseEvent } from "@yomi/shared"
 import { hooks, type Hooks } from "../harness/hooks.js"
 import { LoopGuards } from "../harness/guards.js"
 import { createModel } from "../pipeline/model.js"
+import { synthesize, resolveTts } from "../pipeline/tts.js"
 import { writeSessionTurn } from "../memory/subsystem.js"
 // Desktop automation imports — will provide later.
 // import { setActEmitter, requestConfirmation } from "../uia/act-bus.js"
@@ -247,8 +248,33 @@ export async function* runGraph(
       channel.close()
     })
 
+  const ttsEnabled = req.tts !== false && resolveTts() !== "none"
+  let graphFullText = ""
+
   try {
-    for await (const event of channel.iterate()) yield event
+    for await (const event of channel.iterate()) {
+      if (ttsEnabled && event.type === "agent_text") graphFullText += event.text
+      if (event.type === "done" && ttsEnabled && graphFullText.trim()) {
+        try {
+          const chunks: Uint8Array[] = []
+          for await (const audio of synthesize(graphFullText.trim())) chunks.push(audio)
+          if (chunks.length > 0) {
+            const totalLen = chunks.reduce((acc, c) => acc + c.length, 0)
+            const merged = new Uint8Array(totalLen)
+            let offset = 0
+            for (const c of chunks) {
+              merged.set(c, offset)
+              offset += c.length
+            }
+            yield { type: "audio_chunk", base64: Buffer.from(merged).toString("base64") }
+          }
+        } catch (err) {
+          console.warn("[yomi/graph] TTS synthesis failed:", err instanceof Error ? err.message : String(err))
+          yield { type: "tts_error", message: "Voice synthesis failed. Text response is still available." }
+        }
+      }
+      yield event
+    }
   } finally {
     await runPromise
   }
