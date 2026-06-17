@@ -215,8 +215,8 @@ app.post("/query/fast", async (c) => {
     return c.json({ error: "text or audio_b64 field is required" }, 400)
   }
 
-  logUsageEvent({ kind: "fast_query" })
   return streamSSE(c, async (stream) => {
+    logUsageEvent({ kind: "fast_query" })
     try {
       for await (const event of fastPipeline(body, c.req.raw.signal)) {
         await stream.writeSSE({ data: JSON.stringify(event) })
@@ -238,8 +238,8 @@ app.post("/query/agent", async (c) => {
   }
   if (!body.text?.trim()) return c.json({ error: "text field is required" }, 400)
 
-  logUsageEvent({ kind: "agent_run" })
   return streamSSE(c, async (stream) => {
+    logUsageEvent({ kind: "agent_run" })
     const emit = (e: SseEvent) => {
       void stream.writeSSE({ data: JSON.stringify(e) })
     }
@@ -364,7 +364,9 @@ app.post("/remote/result", async (c) => {
 })
 
 app.onError((err, c) => {
-  console.error(err)
+  const path = c.req.path
+  const method = c.req.method
+  console.error(`[yomi] unhandled ${method} ${path}:`, err)
   return c.json({ error: "Internal server error" }, 500)
 })
 
