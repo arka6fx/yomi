@@ -13,7 +13,7 @@ import {
 } from "../memory/subsystem.js"
 import { reserveInteraction } from "../automation/usage.js"
 
-const MODEL = process.env.AI_CREDITS_FAST_MODEL || "gpt-5.4-mini"
+const MODEL = process.env.AI_CREDITS_FAST_MODEL || "gpt-5.5-mini"
 
 // yomi.md is stable per-session; memory files change after compaction so load fresh each turn.
 let cachedYomiMd: string | null = null

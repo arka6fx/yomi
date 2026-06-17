@@ -93,7 +93,7 @@ export function createCronJobTool(ctx: { plan?: Plan }): ToolSet {
           },
           model: {
             type: "string",
-            description: "Model override (e.g. 'gpt-5.5').",
+            description: "Model override (e.g. 'gpt-5.5-mini').",
           },
           provider: {
             type: "string",

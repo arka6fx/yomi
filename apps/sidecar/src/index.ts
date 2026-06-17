@@ -3,7 +3,7 @@ import { join } from "node:path"
 import { Hono } from "hono"
 import type { MiddlewareHandler } from "hono"
 import { streamSSE } from "hono/streaming"
-import type { AgentQueryRequest, FastQueryRequest, SseEvent } from "@yomi/shared"
+import type { AgentQueryRequest, FastQueryRequest, IntentClassification, SseEvent } from "@yomi/shared"
 import { fastPipeline, resolveText } from "./pipeline/fast.js"
 import { agentPipeline } from "./pipeline/agent.js"
 import { transcribe } from "./stt.js"
@@ -147,23 +147,38 @@ app.post("/query", async (c) => {
       return
     }
 
-    const decision = await classifyIntent({
-      text,
-      screenshot_b64: body.screenshot_b64,
-      history: body.history,
-    })
-    await stream.writeSSE({
-      data: JSON.stringify({
-        type: "router_decision",
-        path: decision.path,
-        confidence: decision.confidence,
-        reason: decision.reason,
-        source: decision.source,
-      } satisfies SseEvent),
-    })
+    let decision: IntentClassification
+    try {
+      decision = await classifyIntent({
+        text,
+        screenshot_b64: body.screenshot_b64,
+        history: body.history,
+      })
+    } catch (err) {
+      console.warn(`[yomi/query] classifyIntent failed, defaulting to fast:`, err)
+      decision = { path: "fast", confidence: 0.5, reason: "classifier error fallback", source: "heuristic" }
+    }
+    try {
+      await stream.writeSSE({
+        data: JSON.stringify({
+          type: "router_decision",
+          path: decision.path,
+          confidence: decision.confidence,
+          reason: decision.reason,
+          source: decision.source,
+        } satisfies SseEvent),
+      })
+    } catch {
+      // stream closed — client disconnected
+      return
+    }
 
     const kind = decision.path === "agent" ? "agent_run" : "fast_query"
-    logUsageEvent({ kind })
+    try {
+      logUsageEvent({ kind })
+    } catch (err) {
+      console.warn(`[yomi/query] logUsageEvent failed:`, err)
+    }
 
     if (decision.path === "agent") {
       const agentReq: AgentQueryRequest = {
@@ -174,7 +189,7 @@ app.post("/query", async (c) => {
         tts: body.tts,
       }
       const emit = (e: SseEvent) => {
-        void stream.writeSSE({ data: JSON.stringify(e) })
+        stream.writeSSE({ data: JSON.stringify(e) }).catch(() => {})
       }
       try {
         const driver = await getAgentDriver()
@@ -183,9 +198,7 @@ app.post("/query", async (c) => {
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : "Internal error"
-        await stream.writeSSE({
-          data: JSON.stringify({ type: "error", message } satisfies SseEvent),
-        })
+        try { await stream.writeSSE({ data: JSON.stringify({ type: "error", message } satisfies SseEvent) }) } catch { /* stream closed */ }
       }
     } else {
       const normalised: FastQueryRequest = { ...body, text }
@@ -195,9 +208,7 @@ app.post("/query", async (c) => {
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : "Internal error"
-        await stream.writeSSE({
-          data: JSON.stringify({ type: "error", message } satisfies SseEvent),
-        })
+        try { await stream.writeSSE({ data: JSON.stringify({ type: "error", message } satisfies SseEvent) }) } catch { /* stream closed */ }
       }
     }
   })
@@ -216,14 +227,18 @@ app.post("/query/fast", async (c) => {
   }
 
   return streamSSE(c, async (stream) => {
-    logUsageEvent({ kind: "fast_query" })
+    try {
+      logUsageEvent({ kind: "fast_query" })
+    } catch (err) {
+      console.warn(`[yomi/query/fast] logUsageEvent failed:`, err)
+    }
     try {
       for await (const event of fastPipeline(body, c.req.raw.signal)) {
         await stream.writeSSE({ data: JSON.stringify(event) })
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Internal error"
-      await stream.writeSSE({ data: JSON.stringify({ type: "error", message } satisfies SseEvent) })
+      try { await stream.writeSSE({ data: JSON.stringify({ type: "error", message } satisfies SseEvent) }) } catch { /* stream closed */ }
     }
   })
 })
@@ -239,9 +254,13 @@ app.post("/query/agent", async (c) => {
   if (!body.text?.trim()) return c.json({ error: "text field is required" }, 400)
 
   return streamSSE(c, async (stream) => {
-    logUsageEvent({ kind: "agent_run" })
+    try {
+      logUsageEvent({ kind: "agent_run" })
+    } catch (err) {
+      console.warn(`[yomi/query/agent] logUsageEvent failed:`, err)
+    }
     const emit = (e: SseEvent) => {
-      void stream.writeSSE({ data: JSON.stringify(e) })
+      stream.writeSSE({ data: JSON.stringify(e) }).catch(() => {})
     }
     try {
       const driver = await getAgentDriver()
@@ -250,7 +269,7 @@ app.post("/query/agent", async (c) => {
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Internal error"
-      await stream.writeSSE({ data: JSON.stringify({ type: "error", message } satisfies SseEvent) })
+      try { await stream.writeSSE({ data: JSON.stringify({ type: "error", message } satisfies SseEvent) }) } catch { /* stream closed */ }
     }
   })
 })
@@ -283,10 +302,20 @@ app.post("/query/agent", async (c) => {
 // app.get("/automation/knowledge", (c) => { ... });
 
 app.post("/stt", async (c) => {
-  const form = await c.req.formData()
+  let form: FormData
+  try {
+    form = await c.req.formData()
+  } catch {
+    return c.json({ error: "Invalid form data" }, 400)
+  }
   const audio = form.get("audio")
   if (!audio || typeof audio === "string") return c.json({ error: "audio file required" }, 400)
-  const bytes = new Uint8Array(await audio.arrayBuffer())
+  let bytes: Uint8Array
+  try {
+    bytes = new Uint8Array(await audio.arrayBuffer())
+  } catch {
+    return c.json({ error: "Invalid audio data" }, 400)
+  }
   if (bytes.byteLength <= 44) return c.json({ error: "audio file is empty" }, 400)
   try {
     const text = await transcribe(bytes)
@@ -367,7 +396,10 @@ app.onError((err, c) => {
   const path = c.req.path
   const method = c.req.method
   console.error(`[yomi] unhandled ${method} ${path}:`, err)
-  return c.json({ error: "Internal server error" }, 500)
+  const message = process.env["YOMI_DEV"] === "true"
+    ? err instanceof Error ? err.message : String(err)
+    : "Internal server error"
+  return c.json({ error: message }, 500)
 })
 
 // Tear down on shutdown.

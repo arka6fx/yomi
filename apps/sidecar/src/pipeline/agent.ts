@@ -45,7 +45,7 @@ import {
 
 const AGENT_MODEL = process.env.AI_CREDITS_AGENT_MODEL || "gpt-5.5"
 const MAX_STEPS = parseInt(process.env.AGENT_MAX_STEPS || "20", 10)
-// 1M tokens for GPT-4.1. Used by the turn-level compressor when no
+// 1M tokens for GPT-5.4-mini. Used by the turn-level compressor when no
 // model-aware context length is available.
 const DEFAULT_MODEL_CONTEXT_WINDOW = 1_000_000
 

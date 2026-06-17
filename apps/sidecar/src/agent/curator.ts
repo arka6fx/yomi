@@ -302,7 +302,7 @@ export class Curator {
         opts.modelId ??
         process.env["CURATOR_MODEL"] ??
         process.env["AI_CREDITS_FAST_MODEL"] ??
-        "gpt-5.4-mini",
+        "gpt-5.5-mini",
     }
   }
 
