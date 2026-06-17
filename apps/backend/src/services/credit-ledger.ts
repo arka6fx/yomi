@@ -163,59 +163,57 @@ export async function grantCredits(input: {
 
   await ensureCreditAccount(input.userId)
 
-  return db.transaction(async (tx) => {
-    await tx.execute(sql`select 1 from ${creditAccounts} where ${creditAccounts.userId} = ${input.userId} for update`)
-
-    const [grant] = await tx
-      .insert(creditGrants)
-      .values({
-        userId: input.userId,
-        paymentId: input.paymentId ?? null,
-        source: input.source,
-        sourceId: input.sourceId,
-        creditsGranted: input.amount,
-        creditsRemaining: input.amount,
-        expiresAt: input.expiresAt ?? null,
-        metadata: input.metadata ?? null,
-      })
-      .onConflictDoNothing()
-      .returning({ id: creditGrants.id })
-
-    if (!grant) {
-      const [account] = await tx
-        .select({ availableCredits: creditAccounts.availableCredits })
-        .from(creditAccounts)
-        .where(eq(creditAccounts.userId, input.userId))
-        .limit(1)
-      return { granted: false, balance: account?.availableCredits ?? 0 }
-    }
-
-    const [account] = await tx
-      .update(creditAccounts)
-      .set({
-        availableCredits: sql`${creditAccounts.availableCredits} + ${input.amount}`,
-        lifetimeGranted: sql`${creditAccounts.lifetimeGranted} + ${input.amount}`,
-        updatedAt: new Date(),
-      })
-      .where(eq(creditAccounts.userId, input.userId))
-      .returning({ availableCredits: creditAccounts.availableCredits })
-
-    const balance = account?.availableCredits ?? input.amount
-
-    await tx.insert(creditTransactions).values({
+  // Insert grant (idempotent via onConflictDoNothing)
+  const [grant] = await db
+    .insert(creditGrants)
+    .values({
       userId: input.userId,
-      grantId: grant.id,
       paymentId: input.paymentId ?? null,
-      type: "grant",
-      amount: input.amount,
-      balanceAfter: balance,
-      idempotencyKey: input.idempotencyKey,
-      reason: input.reason ?? null,
+      source: input.source,
+      sourceId: input.sourceId,
+      creditsGranted: input.amount,
+      creditsRemaining: input.amount,
+      expiresAt: input.expiresAt ?? null,
       metadata: input.metadata ?? null,
     })
+    .onConflictDoNothing()
+    .returning({ id: creditGrants.id })
 
-    return { granted: true, balance }
+  if (!grant) {
+    const [account] = await db
+      .select({ availableCredits: creditAccounts.availableCredits })
+      .from(creditAccounts)
+      .where(eq(creditAccounts.userId, input.userId))
+      .limit(1)
+    return { granted: false, balance: account?.availableCredits ?? 0 }
+  }
+
+  // Atomic update — single-statement, no transaction needed
+  const [account] = await db
+    .update(creditAccounts)
+    .set({
+      availableCredits: sql`${creditAccounts.availableCredits} + ${input.amount}`,
+      lifetimeGranted: sql`${creditAccounts.lifetimeGranted} + ${input.amount}`,
+      updatedAt: new Date(),
+    })
+    .where(eq(creditAccounts.userId, input.userId))
+    .returning({ availableCredits: creditAccounts.availableCredits })
+
+  const balance = account?.availableCredits ?? input.amount
+
+  await db.insert(creditTransactions).values({
+    userId: input.userId,
+    grantId: grant.id,
+    paymentId: input.paymentId ?? null,
+    type: "grant",
+    amount: input.amount,
+    balanceAfter: balance,
+    idempotencyKey: input.idempotencyKey,
+    reason: input.reason ?? null,
+    metadata: input.metadata ?? null,
   })
+
+  return { granted: true, balance }
 }
 
 async function debitCredits(input: {
@@ -235,96 +233,100 @@ async function debitCredits(input: {
 
   await ensureCreditAccount(input.userId)
 
-  return db.transaction(async (tx) => {
-    await tx.execute(sql`select 1 from ${creditAccounts} where ${creditAccounts.userId} = ${input.userId} for update`)
+  // Read current balance
+  const [account] = await db
+    .select({ availableCredits: creditAccounts.availableCredits })
+    .from(creditAccounts)
+    .where(eq(creditAccounts.userId, input.userId))
+    .limit(1)
 
-    const [account] = await tx
-      .select({ availableCredits: creditAccounts.availableCredits })
-      .from(creditAccounts)
-      .where(eq(creditAccounts.userId, input.userId))
-      .limit(1)
+  const balanceBefore = account?.availableCredits ?? 0
+  if (balanceBefore < input.amount) {
+    return { ok: false, charged: 0, balance: balanceBefore, insufficient: true }
+  }
 
-    const balanceBefore = account?.availableCredits ?? 0
-    if (balanceBefore < input.amount) {
-      return { ok: false, charged: 0, balance: balanceBefore, insufficient: true }
-    }
-
-    const now = new Date()
-    const grants = await tx
-      .select({
-        id: creditGrants.id,
-        creditsRemaining: creditGrants.creditsRemaining,
-      })
-      .from(creditGrants)
-      .where(
-        and(
-          eq(creditGrants.userId, input.userId),
-          eq(creditGrants.status, "active"),
-          gt(creditGrants.creditsRemaining, 0),
-          or(isNull(creditGrants.expiresAt), gt(creditGrants.expiresAt, now)),
-        ),
-      )
-      .orderBy(sql`${creditGrants.expiresAt} asc nulls last`, asc(creditGrants.createdAt))
-
-    let remaining = input.amount
-    const grantBreakdown: Array<{ grantId: string; amount: number }> = []
-
-    for (const grant of grants) {
-      if (remaining <= 0) break
-      const debit = Math.min(remaining, grant.creditsRemaining)
-      remaining -= debit
-      grantBreakdown.push({ grantId: grant.id, amount: debit })
-
-      const nextRemaining = grant.creditsRemaining - debit
-      await tx
-        .update(creditGrants)
-        .set({
-          creditsRemaining: nextRemaining,
-          status: nextRemaining === 0 ? "depleted" : "active",
-        })
-        .where(eq(creditGrants.id, grant.id))
-    }
-
-    if (remaining > 0) {
-      return { ok: false, charged: 0, balance: balanceBefore, insufficient: true }
-    }
-
-    const accountUpdate = {
-      availableCredits: sql`${creditAccounts.availableCredits} - ${input.amount}`,
-      updatedAt: new Date(),
-      ...(input.type === "consume"
-        ? { lifetimeConsumed: sql`${creditAccounts.lifetimeConsumed} + ${input.amount}` }
-        : {}),
-      ...(input.type === "refund"
-        ? { lifetimeRefunded: sql`${creditAccounts.lifetimeRefunded} + ${input.amount}` }
-        : {}),
-    }
-
-    const [updated] = await tx
-      .update(creditAccounts)
-      .set(accountUpdate)
-      .where(eq(creditAccounts.userId, input.userId))
-      .returning({ availableCredits: creditAccounts.availableCredits })
-
-    const balance = updated?.availableCredits ?? balanceBefore - input.amount
-
-    await tx.insert(creditTransactions).values({
-      userId: input.userId,
-      usageEventId: input.usageEventId ?? null,
-      paymentId: input.paymentId ?? null,
-      type: input.type,
-      amount: -input.amount,
-      balanceAfter: balance,
-      idempotencyKey: input.idempotencyKey,
-      reason: input.reason ?? null,
-      metadata: {
-        ...(input.metadata ?? {}),
-        grantBreakdown,
-      },
+  // Read active grants sorted by expiry
+  const now = new Date()
+  const grants = await db
+    .select({
+      id: creditGrants.id,
+      creditsRemaining: creditGrants.creditsRemaining,
     })
+    .from(creditGrants)
+    .where(
+      and(
+        eq(creditGrants.userId, input.userId),
+        eq(creditGrants.status, "active"),
+        gt(creditGrants.creditsRemaining, 0),
+        or(isNull(creditGrants.expiresAt), gt(creditGrants.expiresAt, now)),
+      ),
+    )
+    .orderBy(sql`${creditGrants.expiresAt} asc nulls last`, asc(creditGrants.createdAt))
 
-    return { ok: true, charged: input.amount, balance }
+  let remaining = input.amount
+  const grantBreakdown: Array<{ grantId: string; amount: number }> = []
+
+  for (const grant of grants) {
+    if (remaining <= 0) break
+    const debit = Math.min(remaining, grant.creditsRemaining)
+    remaining -= debit
+    grantBreakdown.push({ grantId: grant.id, amount: debit })
+
+    const nextRemaining = grant.creditsRemaining - debit
+    await db
+      .update(creditGrants)
+      .set({
+        creditsRemaining: nextRemaining,
+        status: nextRemaining === 0 ? "depleted" : "active",
+      })
+      .where(eq(creditGrants.id, grant.id))
+  }
+
+  if (remaining > 0) {
+    return { ok: false, charged: 0, balance: balanceBefore, insufficient: true }
+  }
+
+  // Atomic balance deduction — single-statement with WHERE guard
+  const accountUpdate = {
+    availableCredits: sql`${creditAccounts.availableCredits} - ${input.amount}`,
+    updatedAt: new Date(),
+    ...(input.type === "consume"
+      ? { lifetimeConsumed: sql`${creditAccounts.lifetimeConsumed} + ${input.amount}` }
+      : {}),
+    ...(input.type === "refund"
+      ? { lifetimeRefunded: sql`${creditAccounts.lifetimeRefunded} + ${input.amount}` }
+      : {}),
+  }
+
+  const [updated] = await db
+    .update(creditAccounts)
+    .set(accountUpdate)
+    .where(and(eq(creditAccounts.userId, input.userId), sql`${creditAccounts.availableCredits} >= ${input.amount}`))
+    .returning({ availableCredits: creditAccounts.availableCredits })
+
+  // If the atomic update returned no rows, balance changed under us
+  if (!updated) {
+    return { ok: false, charged: 0, balance: balanceBefore, insufficient: true }
+  }
+
+  const balance = updated.availableCredits
+
+  await db.insert(creditTransactions).values({
+    userId: input.userId,
+    usageEventId: input.usageEventId ?? null,
+    paymentId: input.paymentId ?? null,
+    type: input.type,
+    amount: -input.amount,
+    balanceAfter: balance,
+    idempotencyKey: input.idempotencyKey,
+    reason: input.reason ?? null,
+    metadata: {
+      ...(input.metadata ?? {}),
+      grantBreakdown,
+    },
   })
+
+  return { ok: true, charged: input.amount, balance }
 }
 
 export async function consumeCredits(input: {

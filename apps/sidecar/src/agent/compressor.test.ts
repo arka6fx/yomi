@@ -332,7 +332,7 @@ describe("compressContext", () => {
     expect(auxModelId).toBe("gpt-5.5-nano")
   })
 
-  it("defaults the aux model to gpt-5.4-mini", async () => {
+  it("defaults the aux model to gpt-5.5-mini", async () => {
     delete process.env["COMPRESSOR_MODEL"]
     generatedText = "## Active Task\n- x"
     const head = [system("s"), user("a"), assistant("b"), user("c")]
@@ -340,18 +340,18 @@ describe("compressContext", () => {
     const messages = [...head, ...middle, user("latest")]
 
     await compressContext(messages, baseOpts)
-    expect(auxModelId).toBe("gpt-5.4-mini")
+    expect(auxModelId).toBe("gpt-5.5-mini")
   })
 
   it("respects the COMPRESSOR_MODEL env var", async () => {
-    process.env["COMPRESSOR_MODEL"] = "gpt-5.5"
+    process.env["COMPRESSOR_MODEL"] = "gpt-5.5-mini"
     generatedText = "## Active Task\n- x"
     const head = [system("s"), user("a"), assistant("b"), user("c")]
     const middle = Array.from({ length: 4 }, () => longUserMessage(20_000))
     const messages = [...head, ...middle, user("latest")]
 
     await compressContext(messages, baseOpts)
-    expect(auxModelId).toBe("gpt-5.5")
+    expect(auxModelId).toBe("gpt-5.5-mini")
     delete process.env["COMPRESSOR_MODEL"]
   })
 
@@ -369,7 +369,7 @@ describe("compressContext", () => {
         return fakeModel(id)
       },
     })
-    expect(factoryId).toBe("gpt-5.4-mini")
+    expect(factoryId).toBe("gpt-5.5-mini")
   })
 
   it("returns the original messages when the LLM call throws", async () => {

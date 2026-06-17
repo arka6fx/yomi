@@ -7,7 +7,7 @@ import type {
   LanguageModelV1StreamPart,
 } from "@ai-sdk/provider"
 
-const DEFAULT_MODEL = "gpt-5.4-mini"
+const DEFAULT_MODEL = "gpt-5.5"
 const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
 const DEFAULT_BASE_URL = "https://api.openai.com/v1"
 
