@@ -1,9 +1,11 @@
 import { streamText, type ToolSet } from "ai"
 import type { AgentQueryRequest, Plan, SseEvent } from "@yomi/shared"
 import { createModel } from "./model.js"
+import { synthesize, resolveTts } from "./tts.js"
 import { createAgentTools } from "../tools/index.js"
 import { hooks, toolGuardrail, type Hooks } from "../harness/hooks.js"
 import { buildAgentPrompt, loadYomiMd } from "../harness/prompt.js"
+import { getConnectorRegistry } from "../connectors/registry.js"
 import { LoopGuards } from "../harness/guards.js"
 import { compressContext } from "../agent/index.js"
 import { compact } from "../memory/compactor.js"
@@ -76,7 +78,8 @@ async function getAgentPrompt(text: string, plan: Plan | undefined): Promise<str
         dynamicProfile: "",
         recentSession: "",
       }
-  return buildAgentPrompt({ yomiMd: cachedYomiMd, ...memoryCtx })
+  const connectedProviders = getConnectorRegistry().getConnected()
+  return buildAgentPrompt({ yomiMd: cachedYomiMd, ...memoryCtx, connectedProviders })
 }
 
 // Detached-mode phrasing is stripped so it does not pollute command parsing.
@@ -170,6 +173,9 @@ export async function* agentPipeline(
 
   // Track pending message drafts for follow-up resolution
   let pendingMessageDraft: { recipient: string; message: string } | null = null
+
+  const ttsEnabled = req.tts !== false && resolveTts() !== "none"
+  let fullText = ""
 
   try {
     if (signal?.aborted) {
@@ -265,6 +271,7 @@ export async function* agentPipeline(
       switch (event.type) {
         case "text-delta":
           textTail = (textTail + event.textDelta).slice(-200)
+          if (ttsEnabled) fullText += event.textDelta
           yield { type: "agent_text", text: event.textDelta }
           break
         case "tool-call": {
@@ -311,6 +318,25 @@ export async function* agentPipeline(
       compact({ plan: req.plan }).catch((err) =>
         console.warn("[yomi/agent] compaction error:", err),
       )
+    }
+    if (ttsEnabled && fullText.trim()) {
+      try {
+        const chunks: Uint8Array[] = []
+        for await (const audio of synthesize(fullText.trim())) chunks.push(audio)
+        if (chunks.length > 0) {
+          const totalLen = chunks.reduce((acc, c) => acc + c.length, 0)
+          const merged = new Uint8Array(totalLen)
+          let offset = 0
+          for (const c of chunks) {
+            merged.set(c, offset)
+            offset += c.length
+          }
+          yield { type: "audio_chunk", base64: Buffer.from(merged).toString("base64") }
+        }
+      } catch (err) {
+        console.warn("[yomi/agent] TTS synthesis failed:", err instanceof Error ? err.message : String(err))
+        yield { type: "tts_error", message: "Voice synthesis failed. Text response is still available." }
+      }
     }
     yield { type: "done" }
   } finally {

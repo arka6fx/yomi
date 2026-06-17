@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { join } from "node:path"
+import { ALL_CONNECTOR_DEFS } from "@yomi/agent-core"
 import { buildSkillIndexBlock } from "../tools/skills/skill-index.js"
 
 export interface PromptContext {
@@ -177,11 +178,28 @@ function getSkillIndexBlock(): string {
   return cachedSkillIndexBlock
 }
 
+export function buildConnectorInfo(connectedProviders: string[]): string {
+  const availableNames = ALL_CONNECTOR_DEFS.map((d) => d.name).sort()
+  const connectedNames = ALL_CONNECTOR_DEFS.filter((d) =>
+    connectedProviders.includes(d.id),
+  ).map((d) => d.name)
+  const connectedStr =
+    connectedNames.length > 0
+      ? connectedNames.join(", ")
+      : "none"
+  return `<connector_info>
+Available connectors: ${availableNames.join(", ")}.
+Currently connected: ${connectedStr}.
+</connector_info>`
+}
+
 export function buildFastPrompt(ctx: PromptContext): string {
   const { userName, os, today, yomiMd, hasScreen, connectedProviders, ...memoryCtx } = resolveCtx(ctx)
   const userCtx = yomiMd ? `<user_context>\n${yomiMd}\n</user_context>\n\n` : ""
   const memCtx = buildMemoryBlock(memoryCtx)
   const skillCtx = getSkillIndexBlock()
+  const appUrl = process.env["YOMI_APP_URL"] ?? "https://yomi.arka6fx.com"
+  const connInfo = buildConnectorInfo(connectedProviders)
 
   const screenLine = hasScreen
     ? "A screenshot of their current screen is attached — use it to answer."
@@ -224,6 +242,8 @@ ${FAST_EXAMPLES}
 <rules>
 - Keep it to 1–3 sentences unless the user asks for code, an application, a biography, a draft, or a walkthrough.
 - Never fabricate file contents or URLs. Use look_at_screen to verify.
+- If the user asks about an app from the available connectors list that is NOT connected: you MUST say they need to connect it at ${appUrl}/dashboard. Do NOT guess or make up information about their account.
+- If the user asks about an app NOT in the available connectors list: say it isn't available as a Yomi connector yet but work is in progress.
 </rules>
 
 <screen_context>
@@ -238,6 +258,7 @@ When a screenshot is attached, analyze it to understand what the user is asking 
 ${capLine}
 </capabilities>
 
+${connInfo}
 ${memCtx}${skillCtx}`
 }
 
@@ -248,9 +269,7 @@ export function buildAgentPrompt(ctx: PromptContext): string {
   const skillCtx = getSkillIndexBlock()
   // const focusCtx = "" // desktop automation context — will provide later
   const appUrl = process.env["YOMI_APP_URL"] ?? "https://yomi.arka6fx.com"
-  const connectedCtx = connectedProviders.length > 0
-    ? `<connected_integrations>\n${connectedProviders.join(", ")}\n</connected_integrations>\n\n`
-    : ""
+  const connInfo = buildConnectorInfo(connectedProviders)
 
   return `\
 <identity>
@@ -260,14 +279,15 @@ You can see their screen, hear their voice, and act on their behalf.
 Be warm, direct, and genuinely helpful. Sound like a smart friend getting things done.
 </identity>
 
-${userCtx}${connectedCtx}${memCtx}${ANSWER_FORMAT_RULES}
+${userCtx}${memCtx}${ANSWER_FORMAT_RULES}
+
+${connInfo}
 
 <capabilities>
 You research, draft, file, and schedule — multi-step tasks run to completion.
 Tools: look_at_screen, bash (sandboxed), web_search, fetch_url, read_file, write_file, list_files, search, MCP servers.
 You can send messages to connected platforms (Telegram) using send_message.
-You can query connected apps (Gmail, Calendar, GitHub, Notion, Slack, Linear, Discord) using the connector tools.
-If the user asks for data from a connector that is not in their connected integrations list above, tell them which connector is needed and suggest they connect it at ${appUrl}/dashboard.
+You can query connected apps using the connector tools — but ONLY for connectors listed as connected above.
 If a connector tool returns an authorization or token error, tell the user their integration may have expired and suggest they reconnect at ${appUrl}/dashboard.
 Use local memory tools only when the user says Yomi memory, remember this, or refers to ~/.yomi.
 </capabilities>
@@ -289,5 +309,7 @@ ${AGENT_EXAMPLES}
 - If a bash command would be destructive, explain and ask the user first.
 - Write working notes to scratchpad.md during long tasks using write_file.
 - When done, summarise what changed and what's still open.
+- If the user asks about an app from the available connectors list that is NOT connected: you MUST say they need to connect it at ${appUrl}/dashboard. Do NOT try to use a tool for an app that isn't connected — it will fail.
+- If the user asks about an app NOT in the available connectors list: say it isn't available as a Yomi connector yet but work is in progress.
 </rules>${skillCtx}`
 }

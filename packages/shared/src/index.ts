@@ -198,6 +198,7 @@ export interface AgentQueryRequest {
   text: string
   screenshot_b64?: string
   task?: string
+  tts?: boolean // true = voice output; false = text only (default: true)
   plan?: Plan // controls local-only memory injection/writes
   history?: { role: "user" | "assistant"; text: string }[] // prior turns for the conversational act loop
   skipReserve?: boolean // when true, the pipeline skips its own reserveInteraction("chat") call

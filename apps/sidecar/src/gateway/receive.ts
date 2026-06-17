@@ -172,6 +172,12 @@ export async function handleGatewayMessage(msg: GatewayMessage): Promise<void> {
     return
   }
 
+  // Ensure connector registry is initialized so both fast and agent
+  // paths can check which connectors are available vs connected.
+  if (msg.yomiUserId) {
+    await initConnectorRegistry(msg.yomiUserId).catch(() => {})
+  }
+
   const intent = await classifyIntent({ text })
   const history = getHistory(msg)
 
@@ -185,9 +191,6 @@ export async function handleGatewayMessage(msg: GatewayMessage): Promise<void> {
     }
     reply = chunks.join("")
   } else {
-    if (msg.yomiUserId) {
-      await initConnectorRegistry(msg.yomiUserId).catch(() => {})
-    }
     const driver = await getAgentDriver()
     const chunks: string[] = []
     for await (const event of driver({ text, plan: "max", history, skipReserve: true })) {

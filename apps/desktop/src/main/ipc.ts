@@ -675,7 +675,7 @@ async function streamQuery(
       ? "/query/agent"
       : "/query"
   const body = useDesktopAgent
-      ? { text: routedText, screenshot_b64: capture.screenshot_b64, plan, history: actHistory.slice(), skipReserve: true }
+      ? { text: routedText, screenshot_b64: capture.screenshot_b64, tts, plan, history: actHistory.slice(), skipReserve: true }
       : {
           text,
           screenshot_b64: capture.screenshot_b64,
@@ -834,6 +834,7 @@ function shouldUseSystemAction(text: string): boolean {
 function shouldShowInteractiveEvent(event: SseEvent): boolean {
   return (
     event.type === "agent_text" ||
+    event.type === "audio_chunk" ||
     event.type === "act_proposed" ||
     event.type === "act_result" ||
     event.type.startsWith("automation_") ||

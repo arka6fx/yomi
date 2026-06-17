@@ -4,6 +4,7 @@ import { transcribe } from "../speech/transcribe.js"
 import { synthesize, resolveTts } from "./tts.js"
 import { createModel } from "./model.js"
 import { buildFastPrompt, loadYomiMd } from "../harness/prompt.js"
+import { getConnectorRegistry } from "../connectors/registry.js"
 import {
   captureStructuredMemory,
   loadMemoryContext,
@@ -47,7 +48,8 @@ async function getFastPrompt(
       dynamicProfile: "",
       recentSession: "",
     }
-  return buildFastPrompt({ yomiMd: cachedYomiMd, ...localCtx, hasScreen })
+  const connectedProviders = getConnectorRegistry().getConnected()
+  return buildFastPrompt({ yomiMd: cachedYomiMd, ...localCtx, hasScreen, connectedProviders })
 }
 
 // Tiny single-consumer queue so multiple async producers (LLM text + N concurrent
