@@ -192,7 +192,7 @@ const PLATFORM_META: Record<string, { name: string; color: string; inviteUrl: st
   telegram: {
     name: "Telegram",
     color: "bg-sky-500/10 text-sky-400",
-    inviteUrl: "https://t.me/yomi_assistant_bot",
+    inviteUrl: "",
   },
 }
 
@@ -1205,25 +1205,15 @@ function DashboardContent() {
             ) : platformLinks.length === 0 ? (
               <div className="rounded-xl border border-dashed border-border/60 p-4 text-center">
                 <p className="text-sm text-muted-foreground mb-3">
-                  No accounts linked yet. Message the Yomi bot to get started.
+                  No accounts linked yet. Use the secure Telegram link flow to get started.
                 </p>
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  {Object.entries(PLATFORM_META).map(([key, meta]) =>
-                    meta.inviteUrl ? (
-                      <a
-                        key={key}
-                        href={meta.inviteUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs bg-muted hover:bg-muted/80 text-foreground rounded-lg px-3 py-1.5 transition-colors"
-                      >
-                        <MessageCircle size={12} />
-                        {"Add " + meta.name + " bot"}
-                        <ExternalLink size={10} />
-                      </a>
-                    ) : null,
-                  )}
-                </div>
+                <Link
+                  href="/link"
+                  className="inline-flex items-center gap-1.5 text-xs bg-muted hover:bg-muted/80 text-foreground rounded-lg px-3 py-1.5 transition-colors"
+                >
+                  <MessageCircle size={12} />
+                  Connect Telegram
+                </Link>
               </div>
             ) : (
               <div className="space-y-2">
