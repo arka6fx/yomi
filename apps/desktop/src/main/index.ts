@@ -6,6 +6,7 @@ import {
   dialog,
   globalShortcut,
   ipcMain,
+  nativeImage,
   screen,
   shell,
 } from "electron"
@@ -31,6 +32,7 @@ import { initAutoUpdater, downloadUpdate, installUpdate } from "./updater"
 // Transparent frameless windows need software compositing on some GPU/driver combos
 if (process.platform === "win32") {
   app.commandLine.appendSwitch("disable-gpu-program-cache")
+  app.setAppUserModelId("com.yomi.app")
 }
 
 let overlayWin: BrowserWindow | null = null
@@ -111,6 +113,7 @@ app.whenReady().then(async () => {
   const iconPath = app.isPackaged
     ? path.join(process.resourcesPath, "icon.ico")
     : path.join(__dirname, "../../build/icon.ico")
+  const appIcon = nativeImage.createFromPath(iconPath)
 
   overlayWin = new BrowserWindow({
     ...initialBounds,
@@ -120,7 +123,7 @@ app.whenReady().then(async () => {
     skipTaskbar: true,
     resizable: false,
     show: false,
-    icon: iconPath,
+    icon: appIcon.isEmpty() ? iconPath : appIcon,
     backgroundColor: "#00000000",
     hasShadow: false,
     webPreferences: {
