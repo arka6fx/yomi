@@ -3,8 +3,7 @@ import { classifyIntent } from "../router/intent.js"
 import { fastPipeline } from "../pipeline/fast.js"
 import { agentPipeline } from "../pipeline/agent.js"
 import { initConnectorRegistry } from "../connectors/registry.js"
-import { enqueueTrigger } from "./remote-queue.js"
-import { reserveInteraction } from "../automation/usage.js"
+import { reserveInteraction } from "../usage/reserve.js"
 
 type AgentDriver = (
   req: AgentQueryRequest,
@@ -58,10 +57,8 @@ export function startGatewayPoll(): void {
     console.warn("[gateway/poll] no YOMI_SESSION_TOKEN — skipping poll")
     return
   }
-  // Backend now handles gateway messages server-side — skip the sidecar poll
-  // to prevent dual-delivery when YOMI_GATEWAY_BACKEND=1.
   if (process.env.YOMI_GATEWAY_BACKEND === "1") {
-    console.warn("[gateway/poll] backend handles gateway — sidecar poll disabled")
+    console.warn("[gateway/poll] backend handles gateway messages — sidecar poll disabled")
     return
   }
   if (polling) return
@@ -95,66 +92,6 @@ async function poll(): Promise<void> {
 
 export async function handleGatewayMessage(msg: GatewayMessage): Promise<void> {
   const text = msg.text.trim()
-
-  // ── Remote desktop triggers ──────────────────────────────────────────────
-  // These commands are dispatched to the desktop via the remote-queue and
-  // resolved once the desktop posts the result back to /remote/result.
-
-  if (text === "/screenshot") {
-    try {
-      const result = await enqueueTrigger("screenshot")
-      await sendReply(msg.platform, msg.chatId, result)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Screenshot failed"
-      await sendReply(msg.platform, msg.chatId, `⚠️ ${message}`)
-    }
-    return
-  }
-
-  // Natural-language screen analysis: capture the screen then answer the user's question.
-  const ANALYZE_SCREEN_RE = /\b(analyze|look\s+at|check|what(?:'s|\s+is)\s+on)\s+(?:my\s+)?screen\b/i
-  if (ANALYZE_SCREEN_RE.test(text)) {
-    try {
-      const result = await enqueueTrigger("analyze", { text })
-      await sendReply(msg.platform, msg.chatId, result)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Screen analysis failed — is the Yomi desktop open?"
-      await sendReply(msg.platform, msg.chatId, `⚠️ ${message}`)
-    }
-    return
-  }
-
-  if (text === "/voice") {
-    try {
-      await enqueueTrigger("voice")
-      await sendReply(msg.platform, msg.chatId, "🎙️ Voice mode started on your desktop.")
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Voice trigger failed"
-      await sendReply(msg.platform, msg.chatId, `⚠️ ${message}`)
-    }
-    return
-  }
-
-  const moveMatch = /^\/move\s+(left|right|up|down)$/i.exec(text)
-  if (moveMatch) {
-    const direction = moveMatch[1]!.toLowerCase()
-    try {
-      await enqueueTrigger("move", { direction })
-      await sendReply(msg.platform, msg.chatId, `↕ Yomi window nudged ${direction}.`)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Move failed"
-      await sendReply(msg.platform, msg.chatId, `⚠️ ${message}`)
-    }
-    return
-  }
-
-  const typeMatch = /^\/type\s+(.+)$/is.exec(text)
-  if (typeMatch) {
-    // /type <query> runs the query through the normal pipeline on the desktop
-    const query = typeMatch[1]!.trim()
-    // Fall through to normal pipeline with the extracted query
-    return handleGatewayMessage({ ...msg, text: query })
-  }
 
   // ── Normal fast / agent pipeline ─────────────────────────────────────────
 

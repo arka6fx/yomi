@@ -1,187 +1,160 @@
-import { tool, jsonSchema } from "ai"
-import { join } from "path"
-import { homedir } from "os"
-import { readdir, readFile, writeFile, mkdir } from "fs/promises"
+import { jsonSchema, tool } from "ai"
 
-const SESSIONS_DIR = join(homedir(), ".yomi", "sessions")
-
-const NOTEPAD = join(homedir(), ".yomi")
-
-type RgJsonLine = RgMatchLine | { type: string }
-type RgMatchLine = {
-  type: "match"
-  data: {
-    path: { text: string }
-    line_number: number
-    lines: { text: string }
-  }
+type MemoryEntry = {
+  id: string
+  kind: string
+  scope: string
+  topic: string
+  content: string
+  confidence: number
+  sourceType?: string | null
+  sourcePath?: string | null
+  customId?: string | null
+  summary?: string | null
+  isStatic?: boolean
+  updatedAt?: string
 }
 
-async function ensureParentDir(filePath: string) {
-  await mkdir(join(filePath, ".."), { recursive: true })
+function backendBaseUrl(): string {
+  return process.env["YOMI_BACKEND_URL"] ?? process.env["BACKEND_URL"] ?? "http://localhost:3001"
+}
+
+function sessionToken(): string {
+  return process.env["YOMI_SESSION_TOKEN"] ?? ""
+}
+
+async function memoryRequest<T>(path: string, body: Record<string, unknown>): Promise<T | null> {
+  const token = sessionToken()
+  if (!token) return null
+  const res = await fetch(`${backendBaseUrl()}${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) return null
+  return (await res.json()) as T
+}
+
+async function memoryGet<T>(path: string): Promise<T | null> {
+  const token = sessionToken()
+  if (!token) return null
+  const res = await fetch(`${backendBaseUrl()}${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) return null
+  return (await res.json()) as T
 }
 
 export function createMemoryTools() {
   return {
-    list_files: tool({
-      description: "List files in the notepad directory (~/.yomi/)",
-      parameters: jsonSchema<{ dir: string }>({
+    add_memory: tool({
+      description:
+        "Store a durable memory fact, preference, decision, project note, or open thread in Yomi's canonical backend memory store.",
+      parameters: jsonSchema<{
+        content: string
+        customId?: string
+        topic?: string
+        summary?: string
+        kind?: "preference" | "fact" | "project" | "decision" | "open_thread" | "correction"
+        scope?: string
+        confidence?: number
+        sourcePath?: string
+        isStatic?: boolean
+        forgetAfter?: string
+      }>({
         type: "object",
         properties: {
-          dir: { type: "string", description: "Subdirectory relative to ~/.yomi/", default: "" },
+          content: { type: "string", description: "The memory content to remember" },
+          customId: { type: "string", description: "Stable id for idempotent upserts" },
+          topic: { type: "string", description: "Short title for the memory" },
+          summary: { type: "string", description: "Optional short summary" },
+          kind: { type: "string", description: "Memory category" },
+          scope: { type: "string", description: "Project, person, app, or global scope", default: "global" },
+          confidence: { type: "number", description: "Confidence from 0 to 100", default: 80 },
+          sourcePath: { type: "string", description: "Optional source identifier" },
+          isStatic: { type: "boolean", description: "Whether this is stable profile memory" },
+          forgetAfter: { type: "string", description: "Optional ISO timestamp after which to forget" },
         },
+        required: ["content"],
+      }),
+      execute: async ({ content, customId, topic, summary, kind = "fact", scope = "global", confidence = 80, sourcePath, isStatic, forgetAfter }) => {
+        const result = await memoryRequest<{ memory?: MemoryEntry }>("/api/memory/add", {
+          content,
+          customId,
+          topic,
+          summary,
+          kind,
+          scope,
+          confidence,
+          sourceType: "agent_tool",
+          sourcePath,
+          isStatic,
+          forgetAfter,
+        })
+        if (!result?.memory) return { error: "Memory store unavailable. Sign in to sync durable memories." }
+        return { ok: true, memory: result.memory }
+      },
+    }),
+
+    list_memories: tool({
+      description: "List recent active durable memories from Yomi's canonical backend memory store.",
+      parameters: jsonSchema<{ limit?: number }>({
+        type: "object",
+        properties: { limit: { type: "number", description: "Maximum entries to return", default: 50 } },
         required: [],
       }),
-      execute: async ({ dir }) => {
-        const target = join(NOTEPAD, dir ?? "")
-        try {
-          const entries = await readdir(target, { withFileTypes: true })
-          return entries.map((e) => ({ name: e.name, type: e.isDirectory() ? "dir" : "file" }))
-        } catch {
-          return { error: `Cannot read directory: ${dir || "~/.yomi/"}` }
-        }
+      execute: async ({ limit = 50 }) => {
+        const data = await memoryGet<{ memories?: MemoryEntry[] }>(`/api/memory/entries?limit=${encodeURIComponent(String(limit))}`)
+        return data?.memories?.length ? data.memories : { message: "No cloud memories found." }
       },
     }),
 
-    read_file: tool({
-      description: "Read a file from the notepad (~/.yomi/)",
-      parameters: jsonSchema<{ path: string }>({
-        type: "object",
-        properties: {
-          path: { type: "string", description: "Path relative to ~/.yomi/" },
-        },
-        required: ["path"],
-      }),
-      execute: async ({ path }) => {
-        try {
-          return await readFile(join(NOTEPAD, path), "utf-8")
-        } catch {
-          return { error: `File not found: ${path}` }
-        }
-      },
-    }),
-
-    write_file: tool({
-      description: "Write content to a file in the notepad (~/.yomi/)",
-      parameters: jsonSchema<{ path: string; content: string }>({
-        type: "object",
-        properties: {
-          path: { type: "string", description: "Path relative to ~/.yomi/" },
-          content: { type: "string" },
-        },
-        required: ["path", "content"],
-      }),
-      execute: async ({ path, content }) => {
-        const full = join(NOTEPAD, path)
-        await ensureParentDir(full)
-        await writeFile(full, content, "utf-8")
-        return { ok: true, path }
-      },
-    }),
-
-    search: tool({
-      description: "Search for text across all notepad files (~/.yomi/) using ripgrep",
-      parameters: jsonSchema<{ query: string }>({
-        type: "object",
-        properties: {
-          query: { type: "string" },
-        },
-        required: ["query"],
-      }),
-      execute: async ({ query }) => {
-        const proc = Bun.spawn(["rg", "--json", "--max-count", "3", query, NOTEPAD], {
-          stdout: "pipe",
-          stderr: "pipe",
-        })
-        const out = await new Response(proc.stdout).text()
-        await proc.exited
-        const matches = out
-          .trim()
-          .split("\n")
-          .filter(Boolean)
-          .map((line) => {
-            try {
-              return JSON.parse(line) as RgJsonLine
-            } catch {
-              return null
-            }
-          })
-          .filter((item): item is RgMatchLine => item !== null && item.type === "match")
-          .map((item) => ({
-            file: item.data.path.text,
-            line: item.data.line_number,
-            text: item.data.lines.text.trim(),
-          }))
-        return matches.length > 0 ? matches : { message: "No results found" }
-      },
-    }),
-
-    search_sessions: tool({
+    retrieve_memory: tool({
       description:
-        "Search past conversation sessions for a topic, decision, or prior answer. Returns matching turns with surrounding context. Use when the user references something from a previous conversation.",
+        "Retrieve relevant durable memories from Yomi's backend memory store. Use before answering when user asks about preferences, prior decisions, projects, or remembered facts.",
       parameters: jsonSchema<{ query: string; limit?: number }>({
         type: "object",
         properties: {
-          query: { type: "string", description: "Search terms or phrase to find in past sessions" },
-          limit: {
-            type: "number",
-            description: "Max number of matching turns to return (default 5)",
-          },
+          query: { type: "string", description: "Memory search query" },
+          limit: { type: "number", description: "Maximum memory entries to return", default: 8 },
         },
         required: ["query"],
       }),
-      execute: async ({ query, limit = 5 }) => {
-        // ripgrep with context lines over the sessions directory
-        const proc = Bun.spawn(
-          [
-            "rg",
-            "--json",
-            "--max-count",
-            String(limit),
-            "--context",
-            "3",
-            "--ignore-case",
-            query,
-            SESSIONS_DIR,
-          ],
-          { stdout: "pipe", stderr: "pipe" },
-        )
-        const out = await new Response(proc.stdout).text()
-        await proc.exited
+      execute: async ({ query, limit = 8 }) => {
+        const result = await memoryRequest<{ memories?: MemoryEntry[] }>("/api/memory/search", {
+          query,
+          limit,
+          maxChars: 4000,
+        })
+        return result?.memories?.length ? result.memories : { message: "No memories found." }
+      },
+    }),
 
-        type RgLine =
-          | { type: "match"; data: { path: { text: string }; line_number: number; lines: { text: string } } }
-          | { type: "context"; data: { path: { text: string }; line_number: number; lines: { text: string } } }
-          | { type: string }
-
-        const lines = out
-          .trim()
-          .split("\n")
-          .filter(Boolean)
-          .map((l) => {
-            try { return JSON.parse(l) as RgLine } catch { return null }
-          })
-          .filter((l): l is RgLine => l !== null && (l.type === "match" || l.type === "context"))
-
-        if (lines.length === 0) return { message: "No sessions matched." }
-
-        // Group consecutive lines into snippets separated by file boundary or gap
-        const snippets: Array<{ file: string; lines: string[] }> = []
-        let current: { file: string; lines: string[] } | null = null
-        for (const l of lines) {
-          const entry = l as { type: string; data: { path: { text: string }; line_number: number; lines: { text: string } } }
-          const file = entry.data.path.text.replace(SESSIONS_DIR, "sessions")
-          if (!current || current.file !== file) {
-            current = { file, lines: [] }
-            snippets.push(current)
-          }
-          current.lines.push(entry.data.lines.text.trimEnd())
-        }
-
-        return snippets.slice(0, limit).map((s) => ({
-          session: s.file,
-          excerpt: s.lines.join("\n"),
-        }))
+    delete_memory: tool({
+      description:
+        "Forget/delete matching memories from Yomi's backend memory store. Use when the user asks to forget, remove, or correct remembered information.",
+      parameters: jsonSchema<{ id?: string; customId?: string; query?: string; hard?: boolean }>({
+        type: "object",
+        properties: {
+          id: { type: "string", description: "Exact memory id to forget" },
+          customId: { type: "string", description: "Stable custom memory id to forget" },
+          query: { type: "string", description: "Topic/content search if id is unknown" },
+          hard: { type: "boolean", description: "Permanently delete instead of soft-forgetting" },
+        },
+        required: [],
+      }),
+      execute: async ({ id, customId, query, hard }) => {
+        if (!id && !customId && !query) return { error: "Provide id, customId, or query." }
+        const result = await memoryRequest<{ forgotten?: number; deleted?: number; ids?: string[] }>("/api/memory/forget", {
+          id,
+          customId,
+          query,
+          hard,
+        })
+        return result ? { ok: true, ...result } : { error: "Memory store unavailable. Sign in to manage durable memories." }
       },
     }),
   }

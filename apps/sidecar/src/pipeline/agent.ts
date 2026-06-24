@@ -4,44 +4,20 @@ import { createModel } from "./model.js"
 import { synthesize, resolveTts } from "./tts.js"
 import { createAgentTools } from "../tools/index.js"
 import { hooks, toolGuardrail, type Hooks } from "../harness/hooks.js"
-import { buildAgentPrompt, loadYomiMd } from "../harness/prompt.js"
+import { buildAgentPrompt, loadSoulMd, loadYomiMd } from "../harness/prompt.js"
 import { getConnectorRegistry } from "../connectors/registry.js"
 import { LoopGuards } from "../harness/guards.js"
 import { compressContext } from "../agent/index.js"
-import { compact } from "../memory/compactor.js"
 import { loadMemoryContext, writeSessionTurn } from "../memory/subsystem.js"
-import { reserveInteraction } from "../automation/usage.js"
-// import { setActEmitter } from "../uia/act-bus.js"    // will provide later
-// import { getMcpTools } from "../mcp/client.js"       // will provide later
-// import { wrapBrowserTools } from "../mcp/safety.js"   // will provide later
-// import {
-//   completeAutomation,
-//   failAutomation,
-//   previewAutomation,
-//   redactAutomationPayload,
-//   startAutomationRun,
-//   stepAutomation,
-//   timelineAutomation,
-//   waitingAutomation,
-// } from "../automation/runs.js"
-// import {
-//   adjustSystemVolume,
-//   adjustSpotifyVolume,
-//   controlSpotifyPlayback,
-//   playSpotify,
-//   saveWindowsNotepadAs,
-//   writeWindowsNotepad,
-// } from "../tools/system.js"    // will provide later
+import { reserveInteraction } from "../usage/reserve.js"
 import {
   normalizeSpokenRecipient,
   pendingDraftRecipientRequest,
-  // playbackControl,
   reminderDraftRequest,
-  // spotifyPlaybackQuery,
   stripDetachedPhrases,
-  // volumeAction,
   whatsAppMessageRequest,
 } from "./shortcuts.js"
+import { maybeHandleSoulOnboarding } from "./soul-onboarding.js"
 
 const AGENT_MODEL = process.env.AI_CREDITS_AGENT_MODEL || "gpt-5.5"
 const MAX_STEPS = parseInt(process.env.AGENT_MAX_STEPS || "20", 10)
@@ -60,18 +36,21 @@ export function __resetAgentShortcutStateForTest(): void {
 
 // yomi.md is stable per-session; memory files change after compaction so load fresh each turn.
 let cachedYomiMd: string | null = null
+let cachedSoulMd: string | null = null
 function memoryEnabled(plan: Plan | undefined): boolean {
   return plan === "pro" || plan === "max"
 }
 
 async function getAgentPrompt(text: string, plan: Plan | undefined): Promise<string> {
   if (cachedYomiMd === null) cachedYomiMd = await loadYomiMd()
+  if (cachedSoulMd === null) cachedSoulMd = await loadSoulMd()
   const memory = memoryEnabled(plan)
   const memoryCtx = memory
     ? await loadMemoryContext(text)
     : {
         memorySummary: "",
         memoryIndex: "",
+        durableMemory: "",
         localMemory: "",
         cloudRagContext: "",
         staticProfile: "",
@@ -79,7 +58,7 @@ async function getAgentPrompt(text: string, plan: Plan | undefined): Promise<str
         recentSession: "",
       }
   const connectedProviders = getConnectorRegistry().getConnected()
-  return buildAgentPrompt({ yomiMd: cachedYomiMd, ...memoryCtx, connectedProviders })
+  return buildAgentPrompt({ yomiMd: cachedYomiMd, soulMd: cachedSoulMd, ...memoryCtx, connectedProviders })
 }
 
 // Detached-mode phrasing is stripped so it does not pollute command parsing.
@@ -90,8 +69,6 @@ async function getAgentPrompt(text: string, plan: Plan | undefined): Promise<str
 // export function windowsNotepadRequest(...): ... { ... }
 
 // Re-export for test imports (canonical definition in shortcuts.ts).
-// export { whatsAppMessageRequest } from "./shortcuts.js" // will provide later
-
 type WriteSessionTurn = typeof writeSessionTurn
 type ExecutableTool = { execute?: (args: unknown, opts: unknown) => PromiseLike<unknown> }
 type AgentStreamEvent =
@@ -151,6 +128,13 @@ export async function* agentPipeline(
     signal?: AbortSignal
   },
 ): AsyncGenerator<SseEvent> {
+  const soulOnboarding = maybeHandleSoulOnboarding(req.text)
+  if (soulOnboarding) {
+    yield { type: "agent_text", text: soulOnboarding }
+    yield { type: "done" }
+    return
+  }
+
   if (!req.skipReserve) {
     const reservation = await reserveInteraction("chat")
     if (!reservation.ok) {
@@ -217,11 +201,9 @@ export async function* agentPipeline(
     }
 
     // Build tools for the full agent loop.
-    const mcpTools = {}
     const tools = applyHooks(
       {
         ...createAgentTools({ screenshotB64: req.screenshot_b64, plan: req.plan }),
-        ...mcpTools,
       },
       activeHooks,
     )
@@ -315,9 +297,6 @@ export async function* agentPipeline(
     await activeHooks.onStop(summary)
     if (memoryEnabled(req.plan)) {
       await writeTurn({ kind: "agent", input: req.text, output: summary, summary })
-      compact({ plan: req.plan }).catch((err) =>
-        console.warn("[yomi/agent] compaction error:", err),
-      )
     }
     if (ttsEnabled && fullText.trim()) {
       try {

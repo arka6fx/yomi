@@ -35,6 +35,24 @@ async function checkConnectorLimit(user: { id: string; plan?: string | null; sub
   return { ok: true }
 }
 
+async function resolveInternalUser(c: { req: { raw: Request; header: (name: string) => string | undefined; query: (name: string) => string | undefined } }): Promise<{ userId: string } | { error: string; status: 401 | 403 | 503 }> {
+  const queryUserId = c.req.query("userId")
+  const session = await getAuth().api.getSession({ headers: c.req.raw.headers })
+  if (session?.user) {
+    if (queryUserId && queryUserId !== session.user.id) return { error: "Forbidden", status: 403 }
+    return { userId: session.user.id }
+  }
+
+  const secret = process.env.SIDECAR_SECRET
+  if (!secret) return { error: "SIDECAR_SECRET not configured", status: 503 }
+  if (process.env["YOMI_ALLOW_SIDECAR_TOKEN_BROKER"] !== "1") {
+    return { error: "Unauthorized", status: 401 }
+  }
+  if (c.req.header("x-sidecar-secret") !== secret) return { error: "Unauthorized", status: 401 }
+  if (!queryUserId) return { error: "userId required", status: 401 }
+  return { userId: queryUserId }
+}
+
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 const GOOGLE_REVOKE_URL = "https://oauth2.googleapis.com/revoke"
 const GOOGLE_SCOPES = [
@@ -116,18 +134,9 @@ integrationsRouter.get("/", authenticate, async (c) => {
 // or a normal user session for dashboard use.
 
 integrationsRouter.get("/status", async (c) => {
-  const sidecarSecret = process.env.SIDECAR_SECRET
-  const header = c.req.header("x-sidecar-secret")
-  const queryUserId = c.req.query("userId")
-
-  let userId: string
-  if (sidecarSecret && header === sidecarSecret && queryUserId) {
-    userId = queryUserId
-  } else {
-    const session = await getAuth().api.getSession({ headers: c.req.raw.headers })
-    if (!session?.user) return c.json({ error: "Unauthorized" }, 401)
-    userId = session.user.id
-  }
+  const resolved = await resolveInternalUser(c)
+  if ("error" in resolved) return c.json({ error: resolved.error }, resolved.status)
+  const userId = resolved.userId
 
   const rows = await db
     .select({ provider: mcpConnections.provider })
@@ -462,13 +471,10 @@ integrationsRouter.delete("/:provider", authenticate, async (c) => {
 // Delegates to integration-tokens.ts so backend agents reuse the same logic.
 
 integrationsRouter.get("/token/:provider", async (c) => {
-  const secret = process.env.SIDECAR_SECRET
-  const header = c.req.header("x-sidecar-secret")
-  if (secret && header !== secret) return c.json({ error: "Unauthorized" }, 401)
-
-  const userId = c.req.query("userId")
+  const resolved = await resolveInternalUser(c)
+  if ("error" in resolved) return c.json({ error: resolved.error }, resolved.status)
+  const userId = resolved.userId
   const provider = c.req.param("provider")
-  if (!userId) return c.json({ error: "userId required" }, 400)
 
   try {
     const accessToken = await getAccessTokenService(userId, provider)

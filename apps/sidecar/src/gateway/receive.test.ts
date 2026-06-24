@@ -14,13 +14,11 @@ let agentChunks: string[] = []
 let agentExtraEvents: { type: string; message?: string }[] = []
 
 let connectorInitCalls: string[] = []
-let enqueueTriggerCalls: { action: string; opts?: unknown }[] = []
-let enqueueTriggerResult: unknown = ""
 
 const originalFetch = globalThis.fetch
 let fetchCalls: { url: string; method: string; body?: string }[] = []
 
-mock.module("../automation/usage.js", () => ({
+mock.module("../usage/reserve.js", () => ({
   reserveInteraction: async (kind: string) => {
     reserveCalls.push({ kind })
     return reserveResult
@@ -90,14 +88,6 @@ mock.module("../connectors/registry.js", () => ({
   },
 }))
 
-mock.module("./remote-queue.js", () => ({
-  enqueueTrigger: async (action: string, opts?: unknown) => {
-    enqueueTriggerCalls.push({ action, opts })
-    if (enqueueTriggerResult instanceof Error) throw enqueueTriggerResult
-    return enqueueTriggerResult
-  },
-}))
-
 const { handleGatewayMessage } = await import("./receive.js")
 
 const sampleMsg = {
@@ -120,8 +110,6 @@ beforeEach(() => {
   agentChunks = ["Here's what I found in Notion..."]
   agentExtraEvents = []
   connectorInitCalls = []
-  enqueueTriggerCalls = []
-  enqueueTriggerResult = ""
   fetchCalls = []
   globalThis.fetch = async (url: string, opts?: RequestInit) => {
     fetchCalls.push({ url: url as string, method: opts?.method ?? "GET", body: opts?.body as string | undefined })
@@ -293,53 +281,18 @@ describe("handleGatewayMessage", () => {
 
   // ── Remote desktop triggers ──────────────────────────────────────────────
 
-  it("/screenshot dispatches via enqueueTrigger and returns result", async () => {
-    enqueueTriggerResult = "data:image/png;base64,screenshot"
-    await handleGatewayMessage({ ...sampleMsg, text: "/screenshot" })
-    expect(enqueueTriggerCalls.length).toBe(1)
-    expect(enqueueTriggerCalls[0]!.action).toBe("screenshot")
-    const sendCall = fetchCalls.find((c) => c.url.includes("/api/gateway/send"))
-    expect(sendCall).toBeDefined()
-    const body = JSON.parse(sendCall!.body!)
-    expect(body.text).toBe("data:image/png;base64,screenshot")
-  })
-
-  it("/screenshot handles errors gracefully", async () => {
-    enqueueTriggerResult = new Error("Screenshot failed")
-    await handleGatewayMessage({ ...sampleMsg, text: "/screenshot" })
-    const sendCall = fetchCalls.find((c) => c.url.includes("/api/gateway/send"))
-    const body = JSON.parse(sendCall!.body!)
-    expect(body.text).toContain("Screenshot failed")
-  })
-
-  it("/voice dispatches enqueueTrigger", async () => {
+  it("former desktop commands are processed as normal text", async () => {
     await handleGatewayMessage({ ...sampleMsg, text: "/voice" })
-    expect(enqueueTriggerCalls.length).toBe(1)
-    expect(enqueueTriggerCalls[0]!.action).toBe("voice")
-  })
-
-  it("/move dispatches enqueueTrigger with direction", async () => {
-    await handleGatewayMessage({ ...sampleMsg, text: "/move left" })
-    expect(enqueueTriggerCalls.length).toBe(1)
-    expect(enqueueTriggerCalls[0]!.action).toBe("move")
-    expect(enqueueTriggerCalls[0]!.opts).toEqual({ direction: "left" })
-  })
-
-  it("/type extracts query and processes it through pipeline", async () => {
-    await handleGatewayMessage({ ...sampleMsg, text: "/type find my notes" })
     expect(fastCallArgs.length).toBe(1)
     const arg = fastCallArgs[0] as Record<string, unknown>
-    expect(arg.text).toBe("find my notes")
+    expect(arg.text).toBe("/voice")
   })
 
-  it("screen analysis phrases dispatch enqueueTrigger with analyze action", async () => {
-    enqueueTriggerResult = "I can see VS Code with TypeScript"
+  it("screen analysis phrases are processed as normal text", async () => {
     await handleGatewayMessage({ ...sampleMsg, text: "look at my screen" })
-    expect(enqueueTriggerCalls.length).toBe(1)
-    expect(enqueueTriggerCalls[0]!.action).toBe("analyze")
-    const sendCall = fetchCalls.find((c) => c.url.includes("/api/gateway/send"))
-    const body = JSON.parse(sendCall!.body!)
-    expect(body.text).toBe("I can see VS Code with TypeScript")
+    expect(fastCallArgs.length).toBe(1)
+    const arg = fastCallArgs[0] as Record<string, unknown>
+    expect(arg.text).toBe("look at my screen")
   })
 
   // ── Error events from pipeline ────────────────────────────────────────────
@@ -405,27 +358,6 @@ describe("handleGatewayMessage", () => {
     const sendCall = fetchCalls.find((c) => c.url.includes("/api/gateway/send"))
     const body = JSON.parse(sendCall!.body!)
     expect(body.text).toBe("Found some data but tool failed")
-  })
-
-  // ── Voice trigger without error ──────────────────────────────────────────
-
-  it("/voice returns success message via sendReply", async () => {
-    enqueueTriggerResult = "triggered"
-    await handleGatewayMessage({ ...sampleMsg, text: "/voice" })
-    expect(enqueueTriggerCalls.length).toBe(1)
-    expect(enqueueTriggerCalls[0]!.action).toBe("voice")
-    const sendCall = fetchCalls.find((c) => c.url.includes("/api/gateway/send"))
-    expect(sendCall).toBeDefined()
-    const body = JSON.parse(sendCall!.body!)
-    expect(body.text).toContain("Voice mode")
-  })
-
-  it("voice trigger handles enqueueTrigger failure gracefully", async () => {
-    enqueueTriggerResult = new Error("Voice failed")
-    await handleGatewayMessage({ ...sampleMsg, text: "/voice" })
-    const sendCall = fetchCalls.find((c) => c.url.includes("/api/gateway/send"))
-    const body = JSON.parse(sendCall!.body!)
-    expect(body.text).toContain("Voice failed")
   })
 
   // ── Empty / no-op reply does not send ─────────────────────────────────────

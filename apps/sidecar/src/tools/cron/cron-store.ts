@@ -1,4 +1,4 @@
-// File-based job store — reads/writes ~/.yomi/cron/jobs.json atomically.
+// File-based job store — reads/writes sidecar app-data cron/jobs.json atomically.
 // Tick lock prevents duplicate ticks across processes.
 
 import { readFile, writeFile, rename, unlink, mkdir } from "node:fs/promises"

@@ -428,6 +428,117 @@ app.whenReady().then(async () => {
     }
   })
 
+  // ── Local management (sessions, memory, schedules, diagnostics) ─────────────
+
+  async function sidecarJson<T>(pathName: string, init?: RequestInit): Promise<T> {
+    if (!sidecarInstance) throw new Error("Sidecar is not ready")
+    const res = await fetch(`${sidecarInstance.baseUrl}${pathName}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        "x-sidecar-secret": sidecarInstance.secret,
+        ...(init?.headers ?? {}),
+      },
+    })
+    const data = (await res.json().catch(() => ({}))) as T & { error?: string }
+    if (!res.ok) throw new Error(data.error ?? `Sidecar ${res.status}`)
+    return data
+  }
+
+  ipcMain.handle("yomi:get-sessions", async (_e, query: string) => {
+    try {
+      const q = query?.trim() ? `?q=${encodeURIComponent(query.trim())}` : ""
+      const data = await sidecarJson<{ sessions?: unknown[] }>(`/management/sessions${q}`)
+      return data.sessions ?? []
+    } catch {
+      return []
+    }
+  })
+
+  ipcMain.handle("yomi:delete-session", async (_e, id: number) => {
+    try {
+      return await sidecarJson<{ ok?: boolean; deleted?: boolean }>(`/management/sessions/${id}`, { method: "DELETE" })
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Delete failed" }
+    }
+  })
+
+  ipcMain.handle("yomi:get-memories", async (_e, query: string) => {
+    try {
+      const q = query?.trim() ? `?q=${encodeURIComponent(query.trim())}` : ""
+      const data = await sidecarJson<{ memories?: unknown[] }>(`/management/memories${q}`)
+      return data.memories ?? []
+    } catch {
+      return []
+    }
+  })
+
+  ipcMain.handle("yomi:add-memory", async (_e, input: { content: string; topic?: string; kind?: string; scope?: string }) => {
+    try {
+      return await sidecarJson<{ memory?: unknown }>("/management/memories", {
+        method: "POST",
+        body: JSON.stringify(input),
+      })
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Memory add failed" }
+    }
+  })
+
+  ipcMain.handle("yomi:delete-memory", async (_e, id: string) => {
+    try {
+      return await sidecarJson<{ ok?: boolean }>(`/management/memories/${encodeURIComponent(id)}`, { method: "DELETE" })
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Memory delete failed" }
+    }
+  })
+
+  ipcMain.handle("yomi:get-schedules", async () => {
+    try {
+      const data = await sidecarJson<{ schedules?: unknown[] }>("/management/schedules")
+      return data.schedules ?? []
+    } catch {
+      return []
+    }
+  })
+
+  ipcMain.handle("yomi:save-schedule", async (_e, input: { id?: string; schedule: string; prompt: string; deliverTo?: string[]; enabled?: boolean }) => {
+    try {
+      return await sidecarJson<{ schedule?: unknown }>("/management/schedules", {
+        method: "POST",
+        body: JSON.stringify(input),
+      })
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Schedule save failed" }
+    }
+  })
+
+  ipcMain.handle("yomi:set-schedule-enabled", async (_e, id: string, enabled: boolean) => {
+    try {
+      return await sidecarJson<{ schedule?: unknown }>(`/management/schedules/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ enabled }),
+      })
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Schedule update failed" }
+    }
+  })
+
+  ipcMain.handle("yomi:delete-schedule", async (_e, id: string) => {
+    try {
+      return await sidecarJson<{ ok?: boolean; deleted?: boolean }>(`/management/schedules/${encodeURIComponent(id)}`, { method: "DELETE" })
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Schedule delete failed" }
+    }
+  })
+
+  ipcMain.handle("yomi:get-diagnostics", async () => {
+    try {
+      return await sidecarJson<{ diagnostics?: unknown; logs?: string[] }>("/management/diagnostics")
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Diagnostics unavailable" }
+    }
+  })
+
   setInterval(updateOverlayMousePassthrough, 50)
 
   // ── Load overlay ────────────────────────────────────────────────────────────

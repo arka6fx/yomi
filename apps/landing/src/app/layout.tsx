@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     "Gmail AI",
     "Google Drive AI",
     "AI for work",
-    "natural language automation",
+    "natural language productivity",
     "Yomi",
   ],
   authors: [{ name: "Arka Garai", url: "https://yomi.arka6fx.com" }],

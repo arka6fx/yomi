@@ -1,16 +1,15 @@
-import { readFile } from "node:fs/promises"
-import { homedir } from "node:os"
-import { join } from "node:path"
 import { ALL_CONNECTOR_DEFS } from "@yomi/agent-core"
-import { buildSkillIndexBlock } from "../tools/skills/skill-index.js"
+import { formatAgentSoul } from "@yomi/shared"
 
 export interface PromptContext {
   userName?: string
   os?: string
   today?: string
   yomiMd?: string
+  soulMd?: string
   memorySummary?: string
   memoryIndex?: string
+  durableMemory?: string
   localMemory?: string
   cloudRagContext?: string
   staticProfile?: string
@@ -21,13 +20,12 @@ export interface PromptContext {
   // desktopFocusChange?: string // will provide later
 }
 
-// Read ~/.yomi/yomi.md at call time; returns empty string if absent.
 export async function loadYomiMd(): Promise<string> {
-  try {
-    return await readFile(join(homedir(), ".yomi", "yomi.md"), "utf8")
-  } catch {
-    return ""
-  }
+  return ""
+}
+
+export async function loadSoulMd(): Promise<string> {
+  return process.env["YOMI_AGENT_SOUL"] ?? ""
 }
 
 // Resolve userName and os from env/process when not supplied by caller.
@@ -37,8 +35,10 @@ function resolveCtx(ctx: PromptContext): Required<PromptContext> {
     os: ctx.os ?? process.platform,
     today: ctx.today ?? new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
     yomiMd: ctx.yomiMd ?? "",
+    soulMd: ctx.soulMd ?? "",
     memorySummary: ctx.memorySummary ?? "",
     memoryIndex: ctx.memoryIndex ?? "",
+    durableMemory: ctx.durableMemory ?? "",
     localMemory: ctx.localMemory ?? "",
     cloudRagContext: ctx.cloudRagContext ?? "",
     staticProfile: ctx.staticProfile ?? "",
@@ -55,6 +55,7 @@ function buildMemoryBlock(
     Required<PromptContext>,
     | "memorySummary"
     | "memoryIndex"
+    | "durableMemory"
     | "localMemory"
     | "cloudRagContext"
     | "staticProfile"
@@ -65,6 +66,7 @@ function buildMemoryBlock(
   if (
     !ctx.memorySummary &&
     !ctx.memoryIndex &&
+    !ctx.durableMemory &&
     !ctx.localMemory &&
     !ctx.cloudRagContext &&
     !ctx.staticProfile &&
@@ -79,12 +81,14 @@ function buildMemoryBlock(
     parts.push(`<dynamic_profile>\n${ctx.dynamicProfile.trim()}\n</dynamic_profile>`)
   if (ctx.memoryIndex) parts.push(`<index>\n${ctx.memoryIndex.trim()}\n</index>`)
   if (ctx.memorySummary) parts.push(`<summary>\n${ctx.memorySummary.trim()}\n</summary>`)
+  if (ctx.durableMemory)
+    parts.push(`<durable_memories>\n${ctx.durableMemory.trim()}\n</durable_memories>`)
   if (ctx.localMemory)
     parts.push(`<local_retrieved>\n${ctx.localMemory.trim()}\n</local_retrieved>`)
   if (ctx.cloudRagContext)
     parts.push(`<cloud_rag_context>\n${ctx.cloudRagContext.trim()}\n</cloud_rag_context>`)
   // Retrieved blocks are numbered ([1], [2], …) — require inline citation of any source used.
-  if (ctx.localMemory || ctx.cloudRagContext) {
+  if (ctx.durableMemory || ctx.localMemory || ctx.cloudRagContext) {
     parts.push(
       `<citation_rule>When you use a fact from a retrieved block above, cite its bracketed number or label inline like [1]. Only cite sources you actually used; never invent a number.</citation_rule>`,
     )
@@ -105,7 +109,7 @@ const FAST_EXAMPLES = `\
 const AGENT_EXAMPLES = `\
 1. Screen Q&A: "what does this error mean?" → look_at_screen, answer in 2 sentences
 2. Quick fix: "fix this" → look_at_screen, bash, confirm
-3. Research + draft: "research X and draft an email" → web_search loop → write_file draft → ask to send
+3. Research + draft: "research X and draft an email" → web_search loop → draft answer → ask to send
 4. Schedule: "book lunch with Alex on Friday" → calendar MCP → confirm slot → create event
 5. File operation: "move all screenshots to ~/Desktop/screenshots" → bash + confirm`
 
@@ -141,41 +145,8 @@ For ordinary questions:
 - Then put the direct final answer in an answer block when there is a concrete answer to copy, choose, or act on.
 </answer_format>`
 
-// Cached skill-index block. The prompt builders are sync (many call sites
-// depend on this), so we read the index once and refresh it explicitly via
-// `refreshSkillIndexBlock()`. The cache lives in this module so both the
-// fast and agent paths share a single read.
-let cachedSkillIndexBlock = ""
-
-// First-call lazy load — used by the prompt builders when the cache is
-// empty. Wrapped in a fire-and-forget so a slow disk read never blocks
-// the fast path; the next refresh will catch up.
-let indexLoadInFlight: Promise<void> | null = null
-function ensureSkillIndexLoaded(): void {
-  if (cachedSkillIndexBlock || indexLoadInFlight) return
-  indexLoadInFlight = buildSkillIndexBlock()
-    .then((b) => {
-      cachedSkillIndexBlock = b
-    })
-    .catch(() => {
-      // Empty on failure — fast path doesn't need to block.
-      cachedSkillIndexBlock = ""
-    })
-    .finally(() => {
-      indexLoadInFlight = null
-    })
-}
-
-// Refresh the cached skill-index block. Called by the skill-write tools
-// (create/edit/patch/delete) so a freshly written skill surfaces in the
-// system prompt within the same session.
 export async function refreshSkillIndexBlock(): Promise<void> {
-  cachedSkillIndexBlock = await buildSkillIndexBlock()
-}
-
-function getSkillIndexBlock(): string {
-  ensureSkillIndexLoaded()
-  return cachedSkillIndexBlock
+  return
 }
 
 export function buildConnectorInfo(connectedProviders: string[]): string {
@@ -194,10 +165,10 @@ Currently connected: ${connectedStr}.
 }
 
 export function buildFastPrompt(ctx: PromptContext): string {
-  const { userName, os, today, yomiMd, hasScreen, connectedProviders, ...memoryCtx } = resolveCtx(ctx)
+  const { userName, os, today, yomiMd, soulMd, hasScreen, connectedProviders, ...memoryCtx } = resolveCtx(ctx)
   const userCtx = yomiMd ? `<user_context>\n${yomiMd}\n</user_context>\n\n` : ""
+  const soulCtx = `${formatAgentSoul(soulMd)}\n\n`
   const memCtx = buildMemoryBlock(memoryCtx)
-  const skillCtx = getSkillIndexBlock()
   const appUrl = process.env["YOMI_APP_URL"] ?? "https://yomi.arka6fx.com"
   const connInfo = buildConnectorInfo(connectedProviders)
 
@@ -222,7 +193,7 @@ You speak aloud — so your answers are heard, not read.
 Be warm, direct, and genuinely helpful. Sound like a smart friend, not a search engine.
 </identity>
 
-${userCtx}${ANSWER_FORMAT_RULES}
+${soulCtx}${userCtx}${ANSWER_FORMAT_RULES}
 
 <voice_rules>
 CRITICAL — your response is converted to speech:
@@ -259,15 +230,14 @@ ${capLine}
 </capabilities>
 
 ${connInfo}
-${memCtx}${skillCtx}`
+${memCtx}`
 }
 
 export function buildAgentPrompt(ctx: PromptContext): string {
-  const { userName, os, today, yomiMd, connectedProviders, ...memoryCtx } = resolveCtx(ctx)
+  const { userName, os, today, yomiMd, soulMd, connectedProviders, ...memoryCtx } = resolveCtx(ctx)
   const userCtx = yomiMd ? `<user_context>\n${yomiMd}\n</user_context>\n\n` : ""
+  const soulCtx = `${formatAgentSoul(soulMd)}\n\n`
   const memCtx = buildMemoryBlock(memoryCtx)
-  const skillCtx = getSkillIndexBlock()
-  // const focusCtx = "" // desktop automation context — will provide later
   const appUrl = process.env["YOMI_APP_URL"] ?? "https://yomi.arka6fx.com"
   const connInfo = buildConnectorInfo(connectedProviders)
 
@@ -275,21 +245,21 @@ export function buildAgentPrompt(ctx: PromptContext): string {
 <identity>
 You are Yomi, ${userName}'s sharp, friendly AI companion on their ${os} desktop.
 Today is ${today}.
-You can see their screen, hear their voice, and act on their behalf.
+You can answer from their shared screen, voice, messages, memory, and connected apps.
 Be warm, direct, and genuinely helpful. Sound like a smart friend getting things done.
 </identity>
 
-${userCtx}${memCtx}${ANSWER_FORMAT_RULES}
+${soulCtx}${userCtx}${memCtx}${ANSWER_FORMAT_RULES}
 
 ${connInfo}
 
 <capabilities>
-You research, draft, file, and schedule — multi-step tasks run to completion.
-Tools: look_at_screen, bash (sandboxed), web_search, fetch_url, read_file, write_file, list_files, search, MCP servers.
+You research, draft, file, and schedule through connected services and local notes.
+Tools: look_at_screen, bash (sandboxed), web_search, fetch_url, memory tools, connector tools.
 You can send messages to connected platforms (Telegram) using send_message.
 You can query connected apps using the connector tools — but ONLY for connectors listed as connected above.
 If a connector tool returns an authorization or token error, tell the user their integration may have expired and suggest they reconnect at ${appUrl}/dashboard.
-Use local memory tools only when the user says Yomi memory, remember this, or refers to ~/.yomi.
+Use memory tools only when the user says Yomi memory, remember this, asks what you remember, or refers to prior context.
 </capabilities>
 
 <messaging>
@@ -298,8 +268,6 @@ The user can link their Telegram account via the dashboard.
 When the user asks to send a message, use send_message with the platform, chatId, and text.
 </messaging>
 
-// browser_automation and desktop UIA automation are disabled — will provide later
-
 <examples>
 ${AGENT_EXAMPLES}
 </examples>
@@ -307,9 +275,9 @@ ${AGENT_EXAMPLES}
 <rules>
 - Never fabricate file contents or URLs. Use look_at_screen or fetch_url to verify.
 - If a bash command would be destructive, explain and ask the user first.
-- Write working notes to scratchpad.md during long tasks using write_file.
+- Keep working notes in your response or durable memory when the user explicitly asks you to remember them.
 - When done, summarise what changed and what's still open.
 - If the user asks about an app from the available connectors list that is NOT connected: you MUST say they need to connect it at ${appUrl}/dashboard. Do NOT try to use a tool for an app that isn't connected — it will fail.
 - If the user asks about an app NOT in the available connectors list: say it isn't available as a Yomi connector yet but work is in progress.
-</rules>${skillCtx}`
+</rules>`
 }

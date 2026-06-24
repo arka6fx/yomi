@@ -86,7 +86,7 @@ mock.module("./insights/usage-store.js", () => ({
   querySessionLengths: () => [],
 }))
 
-mock.module("./automation/usage.js", () => ({
+mock.module("./usage/reserve.js", () => ({
   reserveInteraction: async (_kind: string) => reserveResult,
   reportUsage: (_kind: string) => {},
 }))
@@ -107,14 +107,6 @@ mock.module("./gateway/remote-queue.js", () => ({
   consumePending: () => [],
   resolveTrigger: () => {},
   rejectTrigger: () => {},
-}))
-
-mock.module("./plugins/plugin-manager.js", () => ({
-  getDefaultPluginManager: () => ({
-    getTools: () => ({}),
-    init: async () => {},
-    shutdown: () => {},
-  }),
 }))
 
 mock.module("./tools/cron/cron-scheduler.js", () => ({

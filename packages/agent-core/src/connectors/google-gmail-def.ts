@@ -134,7 +134,7 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
 
     "gmail-sendEmail": tool({
       description:
-        "Send an email via Gmail. IMPORTANT: Always show the user a confirmation before calling this tool — display the To, Subject, and first 200 chars of body and ask them to confirm. Use act_proposed if available.",
+        "Send an email via Gmail. IMPORTANT: confirm the To, Subject, and first 200 chars of body with the user before calling this tool.",
       parameters: z.object({
         to: z.array(z.string()).describe("Recipient email addresses"),
         subject: z.string().describe("Email subject line"),
@@ -149,6 +149,25 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
       execute: async ({ to, subject, body, cc, bcc, replyToMessageId }) => {
         if (!gmail.isConnected()) return notConnectedError()
         try {
+          if (ctx.createPendingAction) {
+            const preview = [
+              `To: ${to.join(", ")}`,
+              cc?.length ? `Cc: ${cc.join(", ")}` : null,
+              bcc?.length ? `Bcc: ${bcc.join(", ")}` : null,
+              `Subject: ${subject}`,
+              "",
+              body.slice(0, 1200),
+            ].filter(Boolean).join("\n")
+            return await ctx.createPendingAction({
+              connector: "google",
+              action: "gmail.sendEmail",
+              risk: "send",
+              title: `Send email to ${to.join(", ")}`,
+              preview,
+              confirmText: "Send email",
+              payload: { to, subject, body, cc, bcc, replyToMessageId },
+            })
+          }
           const result = await gmail.sendEmail({ to, subject, body, cc, bcc, replyToMessageId })
           return {
             ok: true,

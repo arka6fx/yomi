@@ -7,6 +7,7 @@ import type {
   TokenProvider,
   ConnectedProvidersLister,
 } from "./types.js"
+import type { ConnectorContext } from "./connector-def.js"
 
 // Dependencies injected so the registry runs in both runtimes: the sidecar
 // fetches tokens/status over HTTP from the backend; the backend resolves them
@@ -14,6 +15,7 @@ import type {
 export interface ConnectorRegistryDeps {
   getAccessToken: TokenProvider
   listConnectedProviders: ConnectedProvidersLister
+  createPendingAction?: ConnectorContext["createPendingAction"]
 }
 
 // Registry maps provider name → connector instance for the current user.
@@ -67,7 +69,11 @@ export class ConnectorRegistry {
     for (const def of ALL_CONNECTOR_DEFS) {
       if (this.connectedProviders.has(def.id)) {
         this.connectedDefIds.add(def.id)
-        const tools = def.tools({ userId: this.userId, getAccessToken: this.deps.getAccessToken })
+        const tools = def.tools({
+          userId: this.userId,
+          getAccessToken: this.deps.getAccessToken,
+          createPendingAction: this.deps.createPendingAction,
+        })
         Object.assign(this.defTools, tools)
       }
     }

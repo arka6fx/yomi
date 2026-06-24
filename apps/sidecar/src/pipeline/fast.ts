@@ -3,20 +3,22 @@ import type { FastQueryRequest, Plan, ScreenImage, SseEvent } from "@yomi/shared
 import { transcribe } from "../speech/transcribe.js"
 import { synthesize, resolveTts } from "./tts.js"
 import { createModel } from "./model.js"
-import { buildFastPrompt, loadYomiMd } from "../harness/prompt.js"
+import { buildFastPrompt, loadSoulMd, loadYomiMd } from "../harness/prompt.js"
 import { getConnectorRegistry } from "../connectors/registry.js"
+import { maybeHandleSoulOnboarding } from "./soul-onboarding.js"
 import {
   captureStructuredMemory,
   loadMemoryContext,
   writeSessionTurn,
   type MemoryContextBundle,
 } from "../memory/subsystem.js"
-import { reserveInteraction } from "../automation/usage.js"
+import { reserveInteraction } from "../usage/reserve.js"
 
 const MODEL = process.env.AI_CREDITS_FAST_MODEL || "gpt-5.5-mini"
 
 // yomi.md is stable per-session; memory files change after compaction so load fresh each turn.
 let cachedYomiMd: string | null = null
+let cachedSoulMd: string | null = null
 function memoryEnabled(plan: Plan | undefined): boolean {
   return plan === "pro" || plan === "max"
 }
@@ -36,12 +38,14 @@ async function getFastPrompt(
   preloaded?: Promise<MemoryContextBundle>,
 ): Promise<string> {
   if (cachedYomiMd === null) cachedYomiMd = await loadYomiMd()
+  if (cachedSoulMd === null) cachedSoulMd = await loadSoulMd()
   const memory = memoryEnabled(plan)
   const localCtx = memory
     ? await (preloaded ?? loadMemoryContext(text))
     : {
       memorySummary: "",
       memoryIndex: "",
+      durableMemory: "",
       localMemory: "",
       cloudRagContext: "",
       staticProfile: "",
@@ -49,7 +53,7 @@ async function getFastPrompt(
       recentSession: "",
     }
   const connectedProviders = getConnectorRegistry().getConnected()
-  return buildFastPrompt({ yomiMd: cachedYomiMd, ...localCtx, hasScreen, connectedProviders })
+  return buildFastPrompt({ yomiMd: cachedYomiMd, soulMd: cachedSoulMd, ...localCtx, hasScreen, connectedProviders })
 }
 
 // Tiny single-consumer queue so multiple async producers (LLM text + N concurrent
@@ -442,6 +446,13 @@ export async function* fastPipeline(
   }
 
   yield { type: "transcript", text }
+
+  const soulOnboarding = maybeHandleSoulOnboarding(text)
+  if (soulOnboarding) {
+    yield { type: "llm_chunk", text: soulOnboarding }
+    yield { type: "done" }
+    return
+  }
 
   try {
     let output = ""

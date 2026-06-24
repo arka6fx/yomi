@@ -153,7 +153,7 @@ export function createIntegrationTools() {
     // ── Send email (requires confirmation) ────────────────────────────────
     "gmail-sendEmail": tool({
       description:
-        "Send an email via Gmail. IMPORTANT: Always show the user a confirmation before calling this tool — display the To, Subject, and first 200 chars of body and ask them to confirm. Use act_proposed if available.",
+        "Send an email via Gmail. IMPORTANT: confirm the To, Subject, and first 200 chars of body with the user before calling this tool.",
       parameters: z.object({
         to: z.array(z.string()).describe("Recipient email addresses"),
         subject: z.string().describe("Email subject line"),

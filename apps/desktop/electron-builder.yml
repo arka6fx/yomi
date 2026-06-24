@@ -28,11 +28,6 @@ extraResources:
       - sidecar-win32-x64.exe
   - from: ../../.env
     to: sidecar/.env
-  - from: ../uia-helper/dist/
-    to: uia
-    filter:
-      - uia-helper.exe
-
 win:
   icon: build/icon.ico
   artifactName: ${productName}-${version}-${arch}.${ext}

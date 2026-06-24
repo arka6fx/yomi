@@ -1,18 +1,8 @@
 import { createHash } from "node:crypto"
-import { retrieveLocalRagContext, scanArchiveSources, type ArchiveSource } from "./local-rag.js"
+import { generateText } from "ai"
+import { createModel } from "@yomi/agent-core"
 
-const MIRROR_SOURCE_TYPE = "mirror"
-const SYNC_DEBOUNCE_MS = 1000
 const SEARCH_LIMIT = 8
-
-type CloudSource = {
-  id: string
-  name: string
-  path?: string | null
-  sourceType: string
-  status: string
-  updatedAt?: string
-}
 
 type CloudSearchSnippet = {
   sourceName: string
@@ -27,9 +17,30 @@ type SyncResponse = {
   removed?: number
 }
 
-let syncTimer: ReturnType<typeof setTimeout> | null = null
-let syncInFlight: Promise<void> | null = null
-let syncFollowUp = false
+type CloudMemoryEntry = {
+  kind: string
+  topic: string
+  content: string
+  confidence: number
+  sourcePath?: string | null
+  matchedBy?: string[]
+}
+
+type CloudMemoryProfile = {
+  profile?: {
+    static?: string[]
+    dynamic?: string[]
+  }
+}
+
+type ExtractedMemory = {
+  kind: "preference" | "fact" | "project" | "decision" | "open_thread" | "correction"
+  scope?: string
+  topic: string
+  content: string
+  confidence?: number
+  replaces_topic?: string
+}
 
 function backendBaseUrl(): string {
   return process.env["YOMI_BACKEND_URL"] ?? process.env["BACKEND_URL"] ?? "http://localhost:3001"
@@ -42,28 +53,6 @@ function sessionToken(): string {
 function authHeaders(): Record<string, string> {
   const token = sessionToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
-}
-
-function cloudHash(source: ArchiveSource): string {
-  return createHash("sha256").update(`${source.path}\0${source.content}`).digest("hex")
-}
-
-function encodeSources(sources: ArchiveSource[]) {
-  return sources.map((source) => ({
-    path: source.path,
-    title: source.title,
-    content: source.content,
-    contentHash: cloudHash(source),
-    updatedAt: source.updatedAt,
-  }))
-}
-
-function scheduleLater(): void {
-  if (syncTimer) clearTimeout(syncTimer)
-  syncTimer = setTimeout(() => {
-    syncTimer = null
-    void performCloudRagSync()
-  }, SYNC_DEBOUNCE_MS)
 }
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T | null> {
@@ -79,59 +68,132 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T | null>
   return (await res.json()) as T
 }
 
-async function fetchRemoteMirrorSources(): Promise<CloudSource[]> {
-  const data = await fetchJson<{ sources?: CloudSource[] }>("/api/rag/sources")
-  return (data?.sources ?? []).filter((source) => source.sourceType === MIRROR_SOURCE_TYPE)
-}
-
 export function scheduleCloudRagSync(_reason = "change"): void {
-  if (!sessionToken()) return
-  scheduleLater()
+  return
 }
 
 export async function performCloudRagSync(): Promise<void> {
-  const token = sessionToken()
-  if (!token) return
+  return
+}
 
-  if (syncInFlight) {
-    syncFollowUp = true
-    return syncInFlight
-  }
+export async function performCloudMemorySync(): Promise<void> {
+  return
+}
 
-  const run = (async () => {
-    try {
-      const localSources = await scanArchiveSources()
-      const remoteSources = await fetchRemoteMirrorSources().catch(() => [])
-      const currentPaths = new Set(localSources.map((source) => source.path))
-      const removedPaths = remoteSources
-        .map((source) => source.path ?? source.name)
-        .filter((name) => !currentPaths.has(name))
-
-      const payload = {
-        sources: encodeSources(localSources),
-        removedPaths,
-      }
-      const response = await fetchJson<SyncResponse>("/api/rag/sync", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      })
-      if (!response) {
-        throw new Error("Cloud RAG sync failed")
-      }
-    } catch (err) {
-      console.warn("[yomi/cloud-rag] sync failed:", err instanceof Error ? err.message : err)
-    }
-  })()
-
-  syncInFlight = run
+function parseMemories(text: string): ExtractedMemory[] {
   try {
-    await run
-  } finally {
-    syncInFlight = null
-    if (syncFollowUp) {
-      syncFollowUp = false
-      scheduleLater()
+    const parsed = JSON.parse(text) as { memories?: ExtractedMemory[] }
+    return Array.isArray(parsed.memories) ? parsed.memories : []
+  } catch {
+    return []
+  }
+}
+
+function cleanTurnText(value: string, max = 1800): string {
+  return value
+    .replace(/\r/g, "")
+    .replace(/data:image\/[a-zA-Z]+;base64,[A-Za-z0-9+/=]+/g, "[redacted image]")
+    .replace(/[A-Za-z0-9+/=]{400,}/g, "[redacted base64]")
+    .replace(/\n{3,}/g, "\n\n")
+    .slice(0, max)
+    .trim()
+}
+
+export async function captureCloudMemory(turn: {
+  input: string
+  output: string
+  mode?: string
+  sourcePath?: string
+}): Promise<void> {
+  if (!sessionToken()) return
+  const input = cleanTurnText(turn.input)
+  const output = cleanTurnText(turn.output)
+  if (!input || !output) return
+
+  const model = process.env["MEMORY_EXTRACTION_MODEL"] || process.env["AI_CREDITS_FAST_MODEL"] || "gpt-5.5-mini"
+  const { text } = await generateText({
+    model: createModel(model),
+    messages: [
+      {
+        role: "user",
+        content: `Extract durable user memory from this Yomi interaction.
+
+Return strict JSON only:
+{"memories":[{"kind":"preference|fact|project|decision|open_thread|correction","scope":"global|project|app|session","topic":"short key","content":"one concise memory","confidence":0.0,"replaces_topic":"optional old topic"}]}
+
+Rules:
+- Store only useful future context.
+- Do not store screenshots, audio, base64, secrets, passwords, or one-off trivia.
+- Prefer high precision. If uncertain, omit it.
+- Use replaces_topic only for clear corrections or updates.
+
+User: ${input}
+Assistant: ${output}`,
+      },
+    ],
+  })
+
+  const memories = parseMemories(text)
+  if (!memories.length) return
+  await fetchJson<SyncResponse>("/api/memory/sync", {
+    method: "POST",
+    body: JSON.stringify({
+      memories: memories.map((memory) => ({
+        customId: `turn:${createHash("sha256").update(`${memory.kind}\0${memory.topic}\0${memory.content}`).digest("hex")}`,
+        kind: memory.kind,
+        scope: memory.scope ?? "global",
+        topic: memory.topic,
+        content: memory.content,
+        confidence: Math.round(Math.max(0, Math.min(1, memory.confidence ?? 0.7)) * 100),
+        sourceType: "sidecar_turn",
+        sourcePath: turn.sourcePath,
+        isStatic: memory.kind === "preference" || memory.kind === "fact",
+      })),
+    }),
+  })
+}
+
+export async function retrieveCloudMemoryContext(query: string, maxChars = 3000): Promise<string> {
+  if (!sessionToken()) return ""
+  const data = await fetchJson<{ memories?: CloudMemoryEntry[] }>("/api/memory/search", {
+    method: "POST",
+    body: JSON.stringify({ query, limit: SEARCH_LIMIT, maxChars }),
+  })
+  const memories = data?.memories ?? []
+  const out: string[] = []
+  let used = 0
+  for (const row of memories) {
+    const matched = row.matchedBy?.length ? ` (${row.matchedBy.join("+")})` : ""
+    const snippet = `- [${row.kind}${matched}, confidence ${row.confidence}] ${row.topic}: ${row.content}${row.sourcePath ? ` (source: ${row.sourcePath})` : ""}`
+    if (used + snippet.length > maxChars) break
+    out.push(snippet)
+    used += snippet.length
+  }
+  return out.join("\n")
+}
+
+export async function retrieveCloudMemoryProfile(query: string, maxChars = 2500): Promise<{ staticProfile: string; dynamicProfile: string }> {
+  if (!sessionToken()) return { staticProfile: "", dynamicProfile: "" }
+  const data = await fetchJson<CloudMemoryProfile>("/api/memory/profile", {
+    method: "POST",
+    body: JSON.stringify({ query, limit: 32 }),
+  })
+  const staticFacts = data?.profile?.static ?? []
+  const dynamicFacts = data?.profile?.dynamic ?? []
+  const format = (title: string, facts: string[]) => {
+    const lines: string[] = []
+    let used = 0
+    for (const fact of facts) {
+      const line = `- ${fact}`
+      if (used + line.length > maxChars) break
+      lines.push(line)
+      used += line.length
     }
+    return lines.length ? `${title}\n${lines.join("\n")}` : ""
+  }
+  return {
+    staticProfile: format("## Static Profile", staticFacts),
+    dynamicProfile: format("## Dynamic Context", dynamicFacts),
   }
 }
 
@@ -167,5 +229,5 @@ async function searchCloudRag(query: string, maxChars: number): Promise<string> 
 export async function retrieveCloudRagContext(query: string, maxChars = 3000): Promise<string> {
   const cloud = await searchCloudRag(query, maxChars)
   if (cloud) return cloud
-  return await retrieveLocalRagContext(query, maxChars)
+  return ""
 }

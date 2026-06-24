@@ -1,17 +1,10 @@
-import { appendFile, mkdir } from "node:fs/promises"
-import { homedir } from "node:os"
-import { join } from "node:path"
 import { initMemoryDir } from "../memory/loader.js"
 import {
   appendGuidance,
   ToolCallGuardrailController,
   scanForThreats,
 } from "../tools/guardrails/index.js"
-import { getDefaultPluginManager } from "../plugins/plugin-manager.js"
 import { flushSessionWriteQueue } from "../memory/subsystem.js"
-
-// Focus tracking and tree-diff have been removed.
-// Desktop automation is commented out — will be restored later.
 
 export interface Hooks {
   onSessionStart(): Promise<void>
@@ -52,12 +45,6 @@ function trimLines(text: string, maxLines: number): string {
     `\n[...trimmed ${lines.length - head - tail} lines...]\n`,
     ...lines.slice(-tail),
   ].join("\n")
-}
-
-function todaySessionPath(): string {
-  const d = new Date()
-  const date = d.toISOString().slice(0, 10) // YYYY-MM-DD
-  return join(homedir(), ".yomi", "sessions", `${date}-dev.md`)
 }
 
 function toolArgsToText(args: unknown): string {
@@ -160,70 +147,12 @@ function buildHooks(): Hooks {
     },
 
     async onStop(summary) {
-      const path = todaySessionPath()
-      const hhmm = new Date().toTimeString().slice(0, 5)
-      const line = `## ${hhmm} — ${summary}\n`
-      try {
-        await mkdir(join(homedir(), ".yomi", "sessions"), { recursive: true })
-        await appendFile(path, line, "utf8")
-      } catch (err) {
-        console.warn("[yomi/hooks] onStop: failed to write session log:", err)
-      }
+      void summary
     },
 
     async onSessionEnd() {
       await flushSessionWriteQueue()
     },
-  }
-
-  // Merge plugin hooks into the chain. Plugin hooks run after the guardrail /
-  // threat checks but before the final output trim. The plugin manager may be
-  // uninitialised (loaded lazily from index.ts), so guard.
-  let pluginHooks: Partial<Hooks> = {}
-  try {
-    pluginHooks = getDefaultPluginManager().getPluginHooks()
-  } catch {
-    // Plugin manager not loaded — use base hooks
-  }
-
-  if (pluginHooks.onPreToolUse) {
-    const orig = base.onPreToolUse.bind(base)
-    base.onPreToolUse = async (toolName, args) => {
-      const r = await orig(toolName, args)
-      if (!r.ok) return r
-      return pluginHooks.onPreToolUse!(toolName, args)
-    }
-  }
-  if (pluginHooks.onPostToolUse) {
-    const orig = base.onPostToolUse.bind(base)
-    base.onPostToolUse = async (toolName, result, args) => {
-      const r = await orig(toolName, result, args)
-      return pluginHooks.onPostToolUse!(toolName, r, args)
-    }
-  }
-  if (pluginHooks.onSessionStart) {
-    const orig = base.onSessionStart.bind(base)
-    base.onSessionStart = async () => { await orig(); await pluginHooks.onSessionStart!() }
-  }
-  if (pluginHooks.onSessionEnd) {
-    const orig = base.onSessionEnd.bind(base)
-    base.onSessionEnd = async () => { await orig(); await pluginHooks.onSessionEnd!() }
-  }
-  if (pluginHooks.onUserPromptSubmit) {
-    const orig = base.onUserPromptSubmit.bind(base)
-    base.onUserPromptSubmit = async (p) => { await orig(p); await pluginHooks.onUserPromptSubmit!(p) }
-  }
-  if (pluginHooks.onStop) {
-    const orig = base.onStop.bind(base)
-    base.onStop = async (s) => { await orig(s); await pluginHooks.onStop!(s) }
-  }
-  if (pluginHooks.onMemoryWrite) {
-    const orig = base.onMemoryWrite?.bind(base) ?? (async () => ({ ok: true } as const))
-    base.onMemoryWrite = async (content, metadata) => {
-      const r = await orig(content, metadata)
-      if (!r.ok) return r
-      return pluginHooks.onMemoryWrite!(content, metadata)
-    }
   }
 
   return base

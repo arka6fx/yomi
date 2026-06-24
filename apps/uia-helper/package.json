@@ -1,9 +1,0 @@
-{
-  "name": "@yomi/uia-helper",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Windows UI Automation helper (C#/FlaUI) driven by the sidecar over JSON-RPC stdio",
-  "scripts": {
-    "build": "dotnet publish -c Release -r win-x64 -p:PublishSingleFile=true --self-contained -o dist"
-  }
-}

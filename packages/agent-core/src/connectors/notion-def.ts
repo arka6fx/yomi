@@ -27,6 +27,19 @@ export function createNotionTools(ctx: ConnectorContext): ToolSet {
     return richText.map((r) => r.plain_text).join("")
   }
 
+  function requireConfirmed(confirmed?: boolean): { error: string; needsConfirmation: true } | null {
+    return confirmed === true
+      ? null
+      : {
+          error: "Notion write blocked: ask the user to confirm this exact change, then call the tool with confirmed=true.",
+          needsConfirmation: true,
+        }
+  }
+
+  function textBlock(type: "paragraph" | "heading_1" | "heading_2" | "bulleted_list_item", content: string): Record<string, unknown> {
+    return { object: "block", type, [type]: { rich_text: [{ type: "text", text: { content } }] } }
+  }
+
   function blockToText(block: Record<string, unknown>): string {
     const type = block.type as string
     const data = block[type] as Record<string, unknown> | undefined
@@ -69,19 +82,35 @@ export function createNotionTools(ctx: ConnectorContext): ToolSet {
     }
   }
 
-  async function fetchAllBlocks(blockId: string, maxBlocks = 100): Promise<string> {
-    const data = await notion<{
-      results?: (Record<string, unknown> & { has_children?: boolean; type?: string })[]
-      has_more?: boolean
-      next_cursor?: string
-    }>(`/blocks/${blockId}/children?page_size=${Math.min(maxBlocks, 100)}`)
-
+  async function fetchAllBlocks(blockId: string, maxBlocks = 200, depth = 0): Promise<string> {
     const lines: string[] = []
-    for (const block of data.results ?? []) {
-      const line = blockToText(block)
-      if (line) lines.push(line)
+    let cursor: string | undefined
+    while (lines.length < maxBlocks) {
+      const qs = new URLSearchParams({ page_size: String(Math.min(100, maxBlocks - lines.length)) })
+      if (cursor) qs.set("start_cursor", cursor)
+      const data = await notion<{
+        results?: (Record<string, unknown> & { id?: string; has_children?: boolean; type?: string })[]
+        has_more?: boolean
+        next_cursor?: string
+      }>(`/blocks/${blockId}/children?${qs}`)
+
+      for (const block of data.results ?? []) {
+        const line = blockToText(block)
+        if (line) lines.push(line)
+        if (block.id && block.has_children && depth < 2 && lines.length < maxBlocks) {
+          const childText = await fetchAllBlocks(block.id, maxBlocks - lines.length, depth + 1)
+          if (childText) lines.push(childText)
+        }
+      }
+      if (!data.has_more || !data.next_cursor) break
+      cursor = data.next_cursor
     }
     return lines.join("\n")
+  }
+
+  async function getDatabaseTitleProperty(databaseId: string, fallback = "Name"): Promise<string> {
+    const db = await notion<{ properties?: Record<string, { type?: string }> }>(`/databases/${databaseId}`)
+    return Object.entries(db.properties ?? {}).find(([, prop]) => prop.type === "title")?.[0] ?? fallback
   }
 
   const NO_ACCESS_HINT =
@@ -246,16 +275,23 @@ export function createNotionTools(ctx: ConnectorContext): ToolSet {
           .optional()
           .describe("Additional property values as {propertyName: stringValue} — for database pages only"),
         content: z.string().optional().describe("Optional plain-text content to add as a paragraph block"),
+        titleProperty: z.string().optional().describe("Database title property name. If omitted, Yomi discovers it."),
+        confirmed: z.boolean().optional().describe("Must be true after the user explicitly confirms this write."),
       }),
-      execute: async ({ parentType, parentId, title, properties, content }) => {
+      execute: async ({ parentType, parentId, title, properties, content, titleProperty, confirmed }) => {
         try {
+          const blocked = requireConfirmed(confirmed)
+          if (blocked) return blocked
           const parent =
             parentType === "database"
               ? { database_id: parentId }
               : { page_id: parentId }
 
+          const titleKey = parentType === "database"
+            ? (titleProperty ?? await getDatabaseTitleProperty(parentId))
+            : "title"
           const props: Record<string, unknown> = {
-            title: { title: [{ text: { content: title } }] },
+            [titleKey]: { title: [{ text: { content: title } }] },
           }
           if (properties && parentType === "database") {
             for (const [key, value] of Object.entries(properties)) {
@@ -295,11 +331,23 @@ export function createNotionTools(ctx: ConnectorContext): ToolSet {
           .optional()
           .describe("Property values to update as {propertyName: stringValue}"),
         archived: z.boolean().optional().describe("Set to true to archive (trash) the page"),
+        titleProperty: z.string().optional().describe("Title property name for database pages. Defaults to the first title property on the page."),
+        confirmed: z.boolean().optional().describe("Must be true after the user explicitly confirms this write."),
       }),
-      execute: async ({ pageId, title, properties, archived }) => {
+      execute: async ({ pageId, title, properties, archived, titleProperty, confirmed }) => {
         try {
+          const blocked = requireConfirmed(confirmed)
+          if (blocked) return blocked
           const props: Record<string, unknown> = {}
-          if (title) props.title = { title: [{ text: { content: title } }] }
+          if (title) {
+            if (titleProperty) {
+              props[titleProperty] = { title: [{ text: { content: title } }] }
+            } else {
+              const page = await notion<{ properties?: Record<string, { type?: string }> }>(`/pages/${pageId}`)
+              const titleKey = Object.entries(page.properties ?? {}).find(([, prop]) => prop.type === "title")?.[0] ?? "title"
+              props[titleKey] = { title: [{ text: { content: title } }] }
+            }
+          }
           if (properties) {
             for (const [key, value] of Object.entries(properties)) {
               props[key] = { rich_text: [{ text: { content: value } }] }
@@ -326,21 +374,24 @@ export function createNotionTools(ctx: ConnectorContext): ToolSet {
       parameters: z.object({
         pageId: z.string().describe("Notion page ID to append to"),
         content: z.string().describe("Text content to append (supports markdown-like: # for h1, ## for h2, • for bullets)"),
+        confirmed: z.boolean().optional().describe("Must be true after the user explicitly confirms this write."),
       }),
-      execute: async ({ pageId, content }) => {
+      execute: async ({ pageId, content, confirmed }) => {
         try {
+          const blocked = requireConfirmed(confirmed)
+          if (blocked) return blocked
           const lines = content.split("\n").filter((l) => l.trim())
           const children = lines.map((line) => {
             if (line.startsWith("# ")) {
-              return { object: "block", type: "heading_1", heading_1: { rich_text: [{ type: "text", text: { content: line.slice(2) } }] } }
+              return textBlock("heading_1", line.slice(2))
             }
             if (line.startsWith("## ")) {
-              return { object: "block", type: "heading_2", heading_2: { rich_text: [{ type: "text", text: { content: line.slice(3) } }] } }
+              return textBlock("heading_2", line.slice(3))
             }
             if (line.startsWith("• ") || line.startsWith("- ")) {
-              return { object: "block", type: "bulleted_list_item", bulleted_list_item: { rich_text: [{ type: "text", text: { content: line.slice(2) } }] } }
+              return textBlock("bulleted_list_item", line.slice(2))
             }
-            return { object: "block", type: "paragraph", paragraph: { rich_text: [{ type: "text", text: { content: line } }] } }
+            return textBlock("paragraph", line)
           })
 
           await notion<unknown>(`/blocks/${pageId}/children`, {
@@ -363,14 +414,16 @@ export function createNotionTools(ctx: ConnectorContext): ToolSet {
           .string()
           .optional()
           .describe("Optional text to filter by (applied to title property)"),
+        titleProperty: z.string().optional().describe("Database title property name. If omitted, Yomi discovers it."),
         limit: z.number().int().min(1).max(20).default(10).describe("Max rows to return"),
       }),
-      execute: async ({ databaseId, filter, limit }) => {
+      execute: async ({ databaseId, filter, titleProperty, limit }) => {
         try {
           const body: Record<string, unknown> = { page_size: limit }
           if (filter) {
+            const titleKey = titleProperty ?? (await getDatabaseTitleProperty(databaseId))
             body.filter = {
-              property: "Name",
+              property: titleKey,
               title: { contains: filter },
             }
           }
@@ -437,11 +490,16 @@ export function createNotionTools(ctx: ConnectorContext): ToolSet {
           .record(z.string())
           .optional()
           .describe("Additional property values as {propertyName: stringValue}"),
+        titleProperty: z.string().optional().describe("Database title property name. If omitted, Yomi discovers it."),
+        confirmed: z.boolean().optional().describe("Must be true after the user explicitly confirms this write."),
       }),
-      execute: async ({ databaseId, title, properties }) => {
+      execute: async ({ databaseId, title, properties, titleProperty, confirmed }) => {
         try {
+          const blocked = requireConfirmed(confirmed)
+          if (blocked) return blocked
+          const titleKey = titleProperty ?? (await getDatabaseTitleProperty(databaseId))
           const props: Record<string, unknown> = {
-            Name: { title: [{ text: { content: title } }] },
+            [titleKey]: { title: [{ text: { content: title } }] },
           }
           if (properties) {
             for (const [key, value] of Object.entries(properties)) {

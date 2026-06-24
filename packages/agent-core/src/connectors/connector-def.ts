@@ -80,6 +80,15 @@ export interface DeveloperSetup {
 export interface ConnectorContext {
   userId: string
   getAccessToken: (userId: string, provider: string) => Promise<string>
+  createPendingAction?: (input: {
+    connector: string
+    action: string
+    risk: "write" | "send" | "paid" | "irreversible"
+    title: string
+    preview: string
+    confirmText?: string
+    payload: unknown
+  }) => Promise<{ id: string; status: string; message: string }>
 }
 
 export type ToolFactory = (ctx: ConnectorContext) => ToolSet

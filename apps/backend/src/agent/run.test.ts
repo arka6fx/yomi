@@ -5,6 +5,8 @@ let mockBotMessageCount = 0
 let mockCreditBalance = 100
 let lastInsertedKind: string | null = null
 let consumeCreditsCalled = false
+let lastAgentSystem: string | undefined
+let mockExecuteRows: unknown[] = []
 const activeTrialEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
 const fakeDbWithCount = {
@@ -33,7 +35,7 @@ const fakeDbWithCount = {
       }
     },
   }),
-  execute: () => Promise.resolve({ rows: [] }),
+  execute: () => Promise.resolve({ rows: mockExecuteRows }),
 }
 
 mock.module("@yomi/db", () => ({
@@ -44,14 +46,22 @@ mock.module("@yomi/db", () => ({
   ragSources: {},
   ragEmbeddings: {},
   ragRetrievalLogs: {},
+  memoryEntries: {},
+  memorySources: {},
+  memoryRelations: {},
+  memoryEmbeddings: {},
   paymentRecords: {},
 }))
 
 mock.module("@yomi/agent-core", () => ({
+  createModel: (model: string) => model,
   ConnectorRegistry: class {
     async init() {}
   },
-  runAgentLoop: async () => "The answer is 42.",
+  runAgentLoop: async (opts: { system?: string }) => {
+    lastAgentSystem = opts.system
+    return "The answer is 42."
+  },
 }))
 
 mock.module("../services/integration-tokens.js", () => ({
@@ -101,6 +111,9 @@ describe("runAgent metering", () => {
     mockCreditBalance = 100
     lastInsertedKind = null
     consumeCreditsCalled = false
+    lastAgentSystem = undefined
+    mockExecuteRows = []
+    delete process.env["YOMI_AGENT_SOUL"]
   })
 
   it("returns error when user not found", async () => {
@@ -156,6 +169,37 @@ describe("runAgent metering", () => {
     const { runAgent } = await import("./run.js")
     await runAgent({ userId: "user_1", text: "hi" })
     expect(consumeCreditsCalled).toBe(true)
+  })
+
+  it("passes the agent soul in the backend system prompt", async () => {
+    mockUser = makeUser()
+    const { runAgent } = await import("./run.js")
+    await runAgent({ userId: "user_1", text: "hi" })
+    expect(lastAgentSystem).toContain("<agent_soul>")
+    expect(lastAgentSystem).toContain("You are Yomi: sharp, warm, and practical.")
+  })
+
+  it("supports a backend soul override", async () => {
+    process.env["YOMI_AGENT_SOUL"] = "Be concise and precise."
+    mockUser = makeUser()
+    const { runAgent } = await import("./run.js")
+    await runAgent({ userId: "user_1", text: "hi" })
+    expect(lastAgentSystem).toContain("<agent_soul>\nBe concise and precise.\n</agent_soul>")
+    expect(lastAgentSystem).not.toContain("You are Yomi: sharp, warm, and practical.")
+  })
+
+  it("injects static and dynamic memory profiles in the backend system prompt", async () => {
+    mockExecuteRows = [
+      { content: "Prefers TypeScript", summary: null, isStatic: true },
+      { content: "Working on Yomi memory", summary: null, isStatic: false },
+    ]
+    mockUser = makeUser()
+    const { runAgent } = await import("./run.js")
+    await runAgent({ userId: "user_1", text: "what do you remember?" })
+    expect(lastAgentSystem).toContain("<static_profile>")
+    expect(lastAgentSystem).toContain("Prefers TypeScript")
+    expect(lastAgentSystem).toContain("<dynamic_profile>")
+    expect(lastAgentSystem).toContain("Working on Yomi memory")
   })
 
   it("owner bypasses all quota and credit checks", async () => {

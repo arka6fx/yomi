@@ -19,15 +19,6 @@ describe("LoopGuards", () => {
     })
   })
 
-  it("allows repeated get_ui_tree snapshots while UI state settles", () => {
-    const guards = new LoopGuards()
-
-    expect(guards.onToolCall("get_ui_tree", { maxNodes: 400 })).toEqual({ break: false })
-    expect(guards.onToolCall("get_ui_tree", { maxNodes: 400 })).toEqual({ break: false })
-    expect(guards.onToolCall("get_ui_tree", { maxNodes: 400 })).toEqual({ break: false })
-    expect(guards.onToolCall("get_ui_tree", { maxNodes: 400 })).toEqual({ break: false })
-  })
-
   it("does not count non-consecutive duplicate calls as a loop", () => {
     const guards = new LoopGuards()
 

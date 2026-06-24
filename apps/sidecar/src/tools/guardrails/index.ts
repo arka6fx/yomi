@@ -1,6 +1,6 @@
 export { scanForThreats, firstThreatMessage, type ThreatScope } from "./threat-patterns.js"
 
-export { checkYomiPath, isBlockedUrl, isBinaryExtension, type PathCheck } from "./path-security.js"
+export { isBlockedUrl, isBinaryExtension } from "./path-security.js"
 
 export {
   ToolCallGuardrailController,

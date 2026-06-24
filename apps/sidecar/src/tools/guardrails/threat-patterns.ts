@@ -143,17 +143,10 @@ const PATTERNS: PatternEntry[] = [
   // Persistence / SSH backdoor (strict scope)
   { regex: /authorized_keys/i, id: "ssh_backdoor", scope: "strict" },
   { regex: /\$HOME\/\.ssh|~\/\.ssh/i, id: "ssh_access", scope: "strict" },
-  { regex: /\$HOME\/\.yomi\/\.env|~\/\.yomi\/\.env/i, id: "yomi_env", scope: "strict" },
   {
     regex:
       /(update|modify|edit|write|change|append|add\s+to)\s+.*(?:AGENTS\.md|CLAUDE\.md|\.cursorrules|\.clinerules)/i,
     id: "agent_config_mod",
-    scope: "strict",
-  },
-  {
-    regex:
-      /(update|modify|edit|write|change|append|add\s+to)\s+.*\.yomi\/(config\.yaml|memory\.md|SOUL\.md)/i,
-    id: "yomi_config_mod",
     scope: "strict",
   },
 
