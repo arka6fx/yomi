@@ -7,7 +7,7 @@
   "main": "out/main/index.js",
   "scripts": {
     "dev": "cross-env ELECTRON_OZONE_PLATFORM_HINT=auto YOMI_DEV=true electron-vite dev",
-    "build": "bun run build:deps && electron-vite build && electron-builder --config electron-builder.yml",
+    "build": "electron-vite build && electron-builder --config electron-builder.yml",
     "build:app": "electron-vite build",
     "build:ci": "electron-vite build",
     "build:deps": "bun --filter @yomi/sidecar build",

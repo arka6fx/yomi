@@ -27,6 +27,9 @@ export async function elevenLabsTranscribe(wav: Uint8Array): Promise<ElevenLabsS
 
   if (!response.ok) {
     const body = await response.text().catch(() => "")
+    if (response.status === 401) {
+      throw new Error("STT proxy unauthorized. Please sign in to Yomi again.")
+    }
     throw new Error(`STT proxy failed (${response.status}): ${body || response.statusText}`)
   }
 

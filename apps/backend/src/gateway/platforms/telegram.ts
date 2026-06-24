@@ -25,7 +25,7 @@ interface TelegramResponse {
 export class TelegramAdapter implements PlatformAdapter {
   readonly platform: PlatformType = "telegram"
   readonly botToken: string
-  private messageHandler: ((msg: GatewayMessage) => void) | null = null
+  private messageHandler: ((msg: GatewayMessage) => void | Promise<void>) | null = null
   private connected = false
   botUsername: string | null = null
 
@@ -82,7 +82,7 @@ export class TelegramAdapter implements PlatformAdapter {
     console.warn("[gateway/telegram] disconnected")
   }
 
-  setMessageHandler(handler: (msg: GatewayMessage) => void): void {
+  setMessageHandler(handler: (msg: GatewayMessage) => void | Promise<void>): void {
     this.messageHandler = handler
   }
 
@@ -122,7 +122,7 @@ export class TelegramAdapter implements PlatformAdapter {
       audioUrl,
       audioMimeType,
     }
-    this.messageHandler(gatewayMsg)
+    await this.messageHandler(gatewayMsg)
   }
 
   async sendMessage(

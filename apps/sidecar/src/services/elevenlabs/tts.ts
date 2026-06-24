@@ -32,6 +32,9 @@ export async function* elevenLabsSynthesize(text: string): AsyncGenerator<Uint8A
 
   if (!response.ok) {
     const body = await response.text().catch(() => "")
+    if (response.status === 401) {
+      throw new Error("TTS proxy unauthorized. Please sign in to Yomi again.")
+    }
     throw new Error(`TTS proxy failed (${response.status}): ${body || response.statusText}`)
   }
 
