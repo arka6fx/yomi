@@ -216,6 +216,51 @@ export const agentRuns = pgTable(
   }),
 )
 
+export const agentSessions = pgTable(
+  "agent_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    platform: text("platform").notNull(),
+    chatId: text("chat_id").notNull(),
+    title: text("title"),
+    summary: text("summary"),
+    status: text("status").notNull().default("active"),
+    messageCount: integer("message_count").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    lastMessageAt: timestamp("last_message_at").notNull().defaultNow(),
+    closedAt: timestamp("closed_at"),
+  },
+  (t) => ({
+    userPlatformIdx: index("agent_sessions_user_platform_idx").on(t.userId, t.platform, t.chatId),
+    userStatusIdx: index("agent_sessions_user_status_idx").on(t.userId, t.status, t.lastMessageAt),
+  }),
+)
+
+export const agentMessages = pgTable(
+  "agent_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => agentSessions.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: text("role").notNull(),
+    content: text("content").notNull(),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    sessionCreatedIdx: index("agent_messages_session_created_idx").on(t.sessionId, t.createdAt),
+    userCreatedIdx: index("agent_messages_user_created_idx").on(t.userId, t.createdAt),
+  }),
+)
+
 export const memoryBlobs = pgTable(
   "memory_blobs",
   {

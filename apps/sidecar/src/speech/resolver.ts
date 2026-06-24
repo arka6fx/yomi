@@ -11,6 +11,7 @@ export function resolveTts(): TtsEngine {
   if (explicit === "elevenlabs" || explicit === "none") return explicit
   if (process.env.ELEVENLABS_API_KEY) return "elevenlabs"
   if (process.env.SIDECAR_SECRET) return "elevenlabs"
+  if (process.env.YOMI_BACKEND_URL || process.env.BACKEND_URL) return "elevenlabs"
   return "none"
 }
 

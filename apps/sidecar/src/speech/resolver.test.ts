@@ -5,6 +5,8 @@ beforeEach(() => {
   delete process.env.TTS_ENGINE
   delete process.env.ELEVENLABS_API_KEY
   delete process.env.SIDECAR_SECRET
+  delete process.env.YOMI_BACKEND_URL
+  delete process.env.BACKEND_URL
 })
 
 describe("resolveTts", () => {
@@ -30,6 +32,11 @@ describe("resolveTts", () => {
 
   it("returns elevenlabs when SIDECAR_SECRET is set (proxy mode)", () => {
     process.env.SIDECAR_SECRET = "test-secret"
+    expect(resolveTts()).toBe("elevenlabs")
+  })
+
+  it("returns elevenlabs when backend proxy URL is set", () => {
+    process.env.YOMI_BACKEND_URL = "https://api.yomi.arka6fx.com"
     expect(resolveTts()).toBe("elevenlabs")
   })
 })

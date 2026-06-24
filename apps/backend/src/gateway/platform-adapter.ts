@@ -14,7 +14,7 @@ export interface PlatformAdapter {
     chatId: string,
     messageId: string,
   ): Promise<{ ok: boolean; error?: string }>
-  setMessageHandler(handler: (msg: GatewayMessage) => void): void
+  setMessageHandler(handler: (msg: GatewayMessage) => void | Promise<void>): void
 }
 
 export function removeMarkdown(text: string): string {

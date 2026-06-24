@@ -6,6 +6,12 @@ import type { AgentMessage } from "@yomi/agent-core"
 import type { PlatformAdapter } from "./platform-adapter.js"
 import { TelegramAdapter } from "./platforms/telegram.js"
 import { runAgent } from "../agent/run.js"
+import {
+  appendAgentTurn,
+  closeAgentSession,
+  getOrCreateAgentSession,
+  loadAgentHistory,
+} from "../services/agent-sessions.js"
 import { transcribeAudioUrl } from "../services/transcription.js"
 
 const SESSION_TTL_MS = 60 * 60 * 1000
@@ -56,6 +62,7 @@ export class GatewayRunner {
   private adapters: Map<PlatformType, PlatformAdapter> = new Map()
   private sessions: Map<string, GatewaySession> = new Map()
   private conversationHistories: Map<string, ConversationEntry> = new Map()
+  private activeRuns: Map<string, AbortController> = new Map()
   private running = false
   private defaultSidecarUrl: string
   private sidecarSecret: string
@@ -177,24 +184,51 @@ export class GatewayRunner {
     this.conversationHistories.delete(this.historyKey(platform, chatId))
   }
 
+  private async formatPendingActions(userId: string): Promise<string> {
+    const { listPendingActions } = await import("../services/pending-actions.js")
+    const actions = await listPendingActions(userId)
+    if (actions.length === 0) return "No pending approvals."
+    return actions
+      .map((a) => `${a.id}\n${a.title}\n${a.preview}\nReply: approve ${a.id} or deny ${a.id}`)
+      .join("\n\n")
+  }
+
   private async handleApprovalCommand(userId: string, text: string): Promise<string | null> {
     const trimmed = text.trim()
-    if (/^(pending|approvals|pending approvals)$/i.test(trimmed)) {
-      const { listPendingActions } = await import("../services/pending-actions.js")
-      const actions = await listPendingActions(userId)
-      if (actions.length === 0) return "No pending approvals."
-      return actions
-        .map((a) => `${a.id}\n${a.title}\n${a.preview}\nReply: approve ${a.id} or deny ${a.id}`)
-        .join("\n\n")
+    const command = trimmed.replace(/^\//, "")
+    if (/^(pending|approvals|pending approvals)$/i.test(command)) {
+      return this.formatPendingActions(userId)
     }
 
-    const match = /^(approve|confirm|send|deny|reject|cancel)\s+([0-9a-f-]{36})$/i.exec(trimmed)
-    if (!match) return null
-    const command = match[1]?.toLowerCase()
-    const id = match[2]
-    if (!command || !id) return null
+    if (/^(approve|yes|deny|no)$/i.test(command)) {
+      const { approvePendingAction, denyPendingAction, listPendingActions } = await import(
+        "../services/pending-actions.js"
+      )
+      const actions = await listPendingActions(userId)
+      if (actions.length === 0) return "No pending approvals."
+      if (actions.length > 1) return await this.formatPendingActions(userId)
+      const id = actions[0]!.id
+      if (/^(approve|yes)$/i.test(command)) {
+        try {
+          const result = await approvePendingAction(userId, id)
+          if (!result) return "I couldn't find that pending action. It may have expired or already been handled."
+          return result.status === "executed" ? "Approved and executed." : `Approved: ${result.status}`
+        } catch (err) {
+          return `Approval failed: ${err instanceof Error ? err.message : String(err)}`
+        }
+      }
+      const denied = await denyPendingAction(userId, id)
+      if (!denied) return "I couldn't find that pending action. It may have expired or already been handled."
+      return "Denied."
+    }
 
-    if (command === "approve" || command === "confirm" || command === "send") {
+    const match = /^(?:\/)?(approve|confirm|send|deny|reject|cancel)\s+([0-9a-f-]{36})$/i.exec(trimmed)
+    if (!match) return null
+    const actionCommand = match[1]?.toLowerCase()
+    const id = match[2]
+    if (!actionCommand || !id) return null
+
+    if (actionCommand === "approve" || actionCommand === "confirm" || actionCommand === "send") {
       try {
         const { approvePendingAction } = await import("../services/pending-actions.js")
         const result = await approvePendingAction(userId, id)
@@ -211,13 +245,17 @@ export class GatewayRunner {
     return "Denied."
   }
 
+  private runKey(platform: PlatformType, chatId: string): string {
+    return `${platform}:${chatId}`
+  }
+
   setSidecarResolver(resolver: SidecarResolver): void {
     this.sidecarResolver = resolver
   }
 
   registerAdapter(adapter: PlatformAdapter): void {
     this.adapters.set(adapter.platform, adapter)
-    adapter.setMessageHandler((msg) => void this.onIncoming(msg))
+    adapter.setMessageHandler((msg) => this.onIncoming(msg))
   }
 
   async start(_plan?: string): Promise<void> {
@@ -366,6 +404,8 @@ export class GatewayRunner {
     }
     this.adapters.clear()
     this.sessions.clear()
+    for (const controller of this.activeRuns.values()) controller.abort()
+    this.activeRuns.clear()
 
     if (this.cleanupTimer) {
       clearInterval(this.cleanupTimer)
@@ -524,7 +564,7 @@ export class GatewayRunner {
     }
 
     // Control commands (/stop /new /help) are handled locally — no LLM needed.
-    const controlReply = this.handleControlCommand(msg, session)
+    const controlReply = await this.handleControlCommand(msg, session, yomiUserId)
     if (controlReply) {
       await this.sendMessage(msg.platform, msg.chatId, controlReply).catch(() => {})
       return
@@ -599,25 +639,57 @@ export class GatewayRunner {
 
     // ── Backend agent path ───────────────────────────────────────────────────
 
-    const history = this.getHistory(msg.platform, msg.chatId)
+    let persistentSession: { id: string } | null = null
+    let history = this.getHistory(msg.platform, msg.chatId)
 
     try {
+      persistentSession = await getOrCreateAgentSession({
+        userId: yomiUserId,
+        platform: msg.platform,
+        chatId: msg.chatId,
+      })
+      history = await loadAgentHistory(persistentSession.id)
+    } catch (err) {
+      console.warn("[gateway] persistent session unavailable, using in-memory history:", err)
+    }
+
+    let runController: AbortController | null = null
+    try {
       console.warn(`[gateway] backend agent start user=${yomiUserId} platform=${msg.platform} chat=${msg.chatId}`)
+      runController = new AbortController()
+      this.activeRuns.set(this.runKey(msg.platform, msg.chatId), runController)
       const result = await runAgent({
         userId: yomiUserId,
         text: msg.text,
         history,
+        signal: runController.signal,
         sourcePlatform: msg.platform,
         sourceChatId: msg.chatId,
       })
       clearInterval(typingInterval)
+      this.activeRuns.delete(this.runKey(msg.platform, msg.chatId))
+      if (runController.signal.aborted) return
       if (result.text) {
-        this.appendHistory(msg.platform, msg.chatId, msg.text, result.text)
+        if (persistentSession) {
+          await appendAgentTurn({
+            sessionId: persistentSession.id,
+            userId: yomiUserId,
+            userText: msg.text,
+            assistantText: result.text,
+          }).catch((err) => {
+            console.warn("[gateway] append persistent session failed:", err)
+            this.appendHistory(msg.platform, msg.chatId, msg.text, result.text)
+          })
+        } else {
+          this.appendHistory(msg.platform, msg.chatId, msg.text, result.text)
+        }
       }
       console.warn(`[gateway] backend agent done user=${yomiUserId} platform=${msg.platform} chat=${msg.chatId} chars=${result.text.length}`)
       await this.sendMessageAndLog(msg.platform, msg.chatId, result.text || "I couldn't produce a reply. Please try again.", "backend-agent-reply")
     } catch (err) {
       clearInterval(typingInterval)
+      this.activeRuns.delete(this.runKey(msg.platform, msg.chatId))
+      if (runController?.signal.aborted) return
       console.warn("[gateway] runAgent error:", err)
       await this.sendMessageAndLog(
         msg.platform,
@@ -685,11 +757,15 @@ export class GatewayRunner {
     return session
   }
 
-  private handleControlCommand(msg: GatewayMessage, _session: GatewaySession): string | null {
+  private async handleControlCommand(msg: GatewayMessage, _session: GatewaySession, yomiUserId: string): Promise<string | null> {
     const text = msg.text.trim()
 
     if (text === "/stop") {
-      return "Current operation stopped. How can I help you next?"
+      const controller = this.activeRuns.get(this.runKey(msg.platform, msg.chatId))
+      if (!controller) return "No operation is currently running."
+      controller.abort()
+      this.activeRuns.delete(this.runKey(msg.platform, msg.chatId))
+      return "Stopping the current operation."
     }
 
     if (text === "/new") {
@@ -697,22 +773,20 @@ export class GatewayRunner {
       _session.createdAt = Date.now()
       _session.lastActivityAt = Date.now()
       this.clearHistory(msg.platform, msg.chatId)
+      await closeAgentSession({ userId: yomiUserId, platform: msg.platform, chatId: msg.chatId }).catch((err) => {
+        console.warn("[gateway] close persistent session failed:", err)
+      })
       return "Started a new conversation. How can I help you?"
-    }
-
-    if (text === "/approve" || text === "/yes") {
-      return "Approval received. (Approval handling depends on the current operation.)"
-    }
-
-    if (text === "/deny" || text === "/no") {
-      return "Action denied. How else can I help you?"
     }
 
     if (text === "/help") {
       return (
         "Available commands:\n" +
-        "/stop — Stop the current operation\n" +
         "/new — Start a new conversation\n" +
+        "/stop — Stop the current operation\n" +
+        "/pending — Show pending approvals\n" +
+        "/approve — Approve the only pending action, or show choices\n" +
+        "/deny — Deny the only pending action, or show choices\n" +
         "/help — Show this message"
       )
     }
