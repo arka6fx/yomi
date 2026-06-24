@@ -60,6 +60,51 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
   }
 
   return {
+    "drive-getStorageQuota": tool({
+      description:
+        "Get the user's Google Drive storage usage and remaining free space. " +
+        "Use this when the user asks how much Drive space is left, how full their Drive is, " +
+        "or how much storage they've used. Returns bytes used, total limit, and free space.",
+      parameters: z.object({}),
+      execute: async () => {
+        try {
+          const data = await driveJson<{
+            storageQuota?: {
+              limit?: string
+              usage?: string
+              usageInDrive?: string
+              usageInDriveTrash?: string
+            }
+          }>("/about?fields=storageQuota")
+          const q = data.storageQuota ?? {}
+          const usage = q.usage ? Number(q.usage) : null
+          const limit = q.limit ? Number(q.limit) : null
+          const fmt = (bytes: number | null): string | null => {
+            if (bytes === null || Number.isNaN(bytes)) return null
+            const units = ["B", "KB", "MB", "GB", "TB"]
+            let n = bytes
+            let i = 0
+            while (n >= 1024 && i < units.length - 1) {
+              n /= 1024
+              i++
+            }
+            return `${n.toFixed(n >= 10 || i === 0 ? 0 : 1)} ${units[i]}`
+          }
+          const free = limit !== null && usage !== null ? Math.max(0, limit - usage) : null
+          return {
+            used: fmt(usage),
+            total: limit === null ? "unlimited" : fmt(limit),
+            free: limit === null ? "unlimited" : fmt(free),
+            percentUsed: limit !== null && usage !== null && limit > 0 ? Math.round((usage / limit) * 100) : null,
+            usedBytes: usage,
+            limitBytes: limit,
+          }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
     "drive-searchFiles": tool({
       description:
         "Search for files in the user's Google Drive by name or type. " +

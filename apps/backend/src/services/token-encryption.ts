@@ -10,10 +10,34 @@ export interface OAuthTokens {
 
 const ALGO = "aes-256-gcm"
 
-function getKey(): Buffer {
-  const hex = process.env.ENCRYPTION_KEY
-  if (!hex || hex.length !== 64) throw new Error("ENCRYPTION_KEY must be a 64-char hex string")
+function parseKey(hex: string | undefined, label: string): Buffer {
+  if (!hex || hex.length !== 64) throw new Error(`${label} must be a 64-char hex string`)
   return Buffer.from(hex, "hex")
+}
+
+// Primary key used for all new writes.
+function getKey(): Buffer {
+  return parseKey(process.env.ENCRYPTION_KEY, "ENCRYPTION_KEY")
+}
+
+// All keys valid for DECRYPTION: primary first, then any comma-separated
+// ENCRYPTION_KEY_FALLBACKS. This lets a token encrypted under a previous/other
+// key (e.g. a different environment sharing the same database, or a rotated key)
+// still be read without forcing the user to reconnect. New tokens always
+// re-encrypt under the primary key.
+function getDecryptKeys(): Buffer[] {
+  const keys: Buffer[] = [getKey()]
+  const fallbacks = process.env.ENCRYPTION_KEY_FALLBACKS
+  if (fallbacks) {
+    for (const hex of fallbacks.split(",").map((s) => s.trim()).filter(Boolean)) {
+      try {
+        keys.push(parseKey(hex, "ENCRYPTION_KEY_FALLBACKS entry"))
+      } catch {
+        // Skip malformed fallback entries rather than failing all decryption.
+      }
+    }
+  }
+  return keys
 }
 
 // Returns base64(iv + authTag + ciphertext)
@@ -29,15 +53,24 @@ export function encryptTokens(tokens: OAuthTokens): string {
 }
 
 export function decryptTokens(ciphertext: string): OAuthTokens {
-  const key = getKey()
   const buf = Buffer.from(ciphertext, "base64")
   const iv = buf.subarray(0, 12)
   const tag = buf.subarray(12, 28)
   const data = buf.subarray(28)
-  const decipher = createDecipheriv(ALGO, key, iv)
-  decipher.setAuthTag(tag)
-  const plain = Buffer.concat([decipher.update(data), decipher.final()]).toString("utf8")
-  return JSON.parse(plain) as OAuthTokens
+
+  let lastErr: unknown
+  for (const key of getDecryptKeys()) {
+    try {
+      const decipher = createDecipheriv(ALGO, key, iv)
+      decipher.setAuthTag(tag)
+      const plain = Buffer.concat([decipher.update(data), decipher.final()]).toString("utf8")
+      return JSON.parse(plain) as OAuthTokens
+    } catch (err) {
+      // GCM auth tag mismatch (wrong key) → try the next candidate key.
+      lastErr = err
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error("decryption failed")
 }
 
 // Refresh a Google access token using the stored refresh token.
