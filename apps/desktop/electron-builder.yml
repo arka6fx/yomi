@@ -35,7 +35,7 @@ win:
     - target: nsis
       arch: [x64]
   requestedExecutionLevel: asInvoker
-  signAndEditExecutable: false
+  signAndEditExecutable: true
   signExts: []
   signtoolOptions:
     sign: build/win-sign-noop.cjs
