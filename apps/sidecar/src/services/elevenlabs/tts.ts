@@ -9,6 +9,15 @@ function voiceId(): string {
   return process.env["ELEVENLABS_VOICE_ID"] || DEFAULT_VOICE_ID
 }
 
+function voiceSettings() {
+  return {
+    stability: Number(process.env["ELEVENLABS_STABILITY"] ?? "0.45"),
+    similarity_boost: Number(process.env["ELEVENLABS_SIMILARITY_BOOST"] ?? "0.85"),
+    style: Number(process.env["ELEVENLABS_STYLE"] ?? "0.15"),
+    use_speaker_boost: process.env["ELEVENLABS_SPEAKER_BOOST"] !== "0",
+  }
+}
+
 export async function* elevenLabsSynthesize(text: string): AsyncGenerator<Uint8Array> {
   const token = process.env["YOMI_SESSION_TOKEN"] ?? ""
   const secret = process.env["SIDECAR_SECRET"] ?? ""
@@ -23,10 +32,7 @@ export async function* elevenLabsSynthesize(text: string): AsyncGenerator<Uint8A
       text,
       voice_id: voiceId(),
       model_id: process.env["ELEVENLABS_TTS_MODEL"] || DEFAULT_TTS_MODEL,
-      voice_settings: {
-        stability: 0.3,
-        similarity_boost: 0.75,
-      },
+      voice_settings: voiceSettings(),
     }),
   })
 

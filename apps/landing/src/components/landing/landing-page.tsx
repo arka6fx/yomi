@@ -134,7 +134,7 @@ const PLANS = [
     features: [
       "100 AI chats during trial",
       "20 min voice during trial",
-      "25 screen analyze",
+      "25 image/screen analyze",
       "50 local memories",
       "Window controls & docking",
       "Streaming responses",
@@ -156,7 +156,7 @@ const PLANS = [
     features: [
       "2,000 AI chats / month",
       "180 min voice / month",
-      "400 screen analyze",
+      "400 image/screen analyze",
       "App connectors",
       "200 Telegram bot messages / month",
     ],

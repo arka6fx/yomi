@@ -89,8 +89,8 @@ function planFeatures(key: string): string[] {
     key === "explore"
       ? `${plan.includedCredits.toLocaleString()} trial credits`
       : `${plan.includedCredits.toLocaleString()} credits / month`,
-    l.analyze > 0 ? `${l.analyze} screen analyze` : "",
-    `${l.connectors} app connectors`,
+    l.analyze > 0 ? `${l.analyze} image/screen analyze` : "",
+    "App connectors",
     l.botMessages > 0 ? `${l.botMessages.toLocaleString()} bot messages / month` : "",
   ].filter(Boolean)
 }

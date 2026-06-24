@@ -70,7 +70,13 @@ export async function getAccessToken(userId: string, provider: string): Promise<
 
   if (!row) throw new Error(`${provider} is not connected for this user`)
 
-  let tokens = decryptTokens(row.oauthTokens)
+  let tokens: OAuthTokens
+  try {
+    tokens = decryptTokens(row.oauthTokens)
+  } catch (err) {
+    console.warn(`[integration-tokens] decrypt failed for ${provider}:`, err instanceof Error ? err.message : err)
+    throw new Error(`${provider} credentials could not be decrypted. Please reconnect this integration.`)
+  }
 
   // Skip refresh for non-expiring credentials (api_key, connection_string, GitHub OAuth)
   const expiresAt = tokens.expiresAt ?? null

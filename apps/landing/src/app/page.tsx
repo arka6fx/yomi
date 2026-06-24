@@ -69,7 +69,7 @@ const jsonLd = {
           name: "Explore",
           price: "0",
           priceCurrency: "USD",
-          description: "Free tier — 100 AI chats/month, 2 app connectors",
+          description: "Free tier — 100 AI chats/month and app connectors",
         },
         {
           "@type": "Offer",
@@ -77,7 +77,7 @@ const jsonLd = {
           price: "14.99",
           priceCurrency: "USD",
           billingDuration: "P1M",
-          description: "2,000 AI chats/month, all 8 connectors",
+          description: "2,000 AI chats/month and app connectors",
         },
         {
           "@type": "Offer",
@@ -85,7 +85,7 @@ const jsonLd = {
           price: "39.99",
           priceCurrency: "USD",
           billingDuration: "P1M",
-          description: "8,000 AI chats/month, all connectors, early access",
+          description: "8,000 AI chats/month, app connectors, early access",
         },
       ],
       author: {
@@ -125,7 +125,7 @@ const jsonLd = {
           name: "Is Yomi free?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yes. Yomi has a free Explore plan with 100 AI chats per month and 2 app connectors. Paid plans start at $14.99/month for higher limits and all 8 connectors.",
+            text: "Yes. Yomi has a free Explore plan with 100 AI chats per month and app connectors. Paid plans start at $14.99/month for higher usage limits.",
           },
         },
         {

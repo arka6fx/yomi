@@ -258,7 +258,9 @@ describe("POST /api/tts (TTS proxy)", () => {
 
     const reqBody = JSON.parse(elevenlabsCalls[0]!.body as string) as Record<string, unknown>
     expect(reqBody.model_id).toBe("eleven_flash_v2_5")
-    expect((reqBody.voice_settings as Record<string, unknown>).stability).toBe(0.3)
+    expect((reqBody.voice_settings as Record<string, unknown>).stability).toBe(0.45)
+    expect((reqBody.voice_settings as Record<string, unknown>).similarity_boost).toBe(0.85)
+    expect((reqBody.voice_settings as Record<string, unknown>).use_speaker_boost).toBe(true)
   })
 
   it("forwards upstream TTS errors", async () => {

@@ -29,9 +29,14 @@ const fakeDb = {
 
 mock.module("@yomi/db", () => ({
   db: fakeDb,
+  creditAccounts: {},
+  creditGrants: {},
+  creditTransactions: {},
+  paymentRecords: {},
   platformConnections: { id: "id", userId: "userId", platform: "platform", platformUserId: "platformUserId", platformChatId: "platformChatId" },
   linkingCodes: {},
   telegramLinkTokens: {},
+  usageEvents: { id: "id" },
 }))
 
 mock.module("../agent/run.js", () => ({
@@ -81,6 +86,22 @@ mock.module("../services/pending-actions.js", () => ({
 
 mock.module("../services/transcription.js", () => ({
   transcribeAudioUrl: async () => "",
+}))
+
+mock.module("../services/credit-ledger.js", () => ({
+  consumeCredits: async () => ({ ok: true, charged: 1, balance: 99 }),
+  createPaymentRecord: async () => "payment_1",
+  getCreditSummary: async () => ({
+    balance: 0,
+    lifetimeGranted: 0,
+    lifetimeConsumed: 0,
+    lifetimeRefunded: 0,
+    expiringSoon: 0,
+    expiringSoonAt: null,
+  }),
+  grantCredits: async () => ({ granted: true, balance: 100 }),
+  recentCreditTransactions: async () => [],
+  expireUserCredits: async () => 0,
 }))
 
 const { GatewayRunner } = await import("./gateway-runner.js")
@@ -201,7 +222,10 @@ describe("GatewayRunner production routing", () => {
     })
 
     expect(agentCalls).toHaveLength(0)
-    expect(closedSessions).toEqual([{ userId: "user_1", platform: "telegram", chatId: "chat_1" }])
+    expect(closedSessions).toEqual([
+      { userId: "user_1", platform: "telegram", chatId: "chat_1" },
+      { userId: "user_1", platform: "yomi", chatId: "global" },
+    ])
     expect(adapter.messages.at(-1)?.text).toBe("Started a new conversation. How can I help you?")
   })
 
