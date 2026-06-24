@@ -1,8 +1,9 @@
 import { createHash, randomBytes } from "node:crypto"
+import { generateText } from "ai"
 import { eq, and, lt } from "drizzle-orm"
-import { db, platformConnections, linkingCodes, telegramLinkTokens } from "@yomi/db"
+import { db, platformConnections, linkingCodes, telegramLinkTokens, usageEvents } from "@yomi/db"
 import type { PlatformType, GatewayMessage, GatewaySessionInfo } from "@yomi/shared"
-import type { AgentMessage } from "@yomi/agent-core"
+import { createModel, type AgentMessage } from "@yomi/agent-core"
 import type { PlatformAdapter } from "./platform-adapter.js"
 import { TelegramAdapter } from "./platforms/telegram.js"
 import { runAgent } from "../agent/run.js"
@@ -13,12 +14,16 @@ import {
   loadAgentHistory,
 } from "../services/agent-sessions.js"
 import { transcribeAudioUrl } from "../services/transcription.js"
+import { synthesizeSpeech } from "../services/tts.js"
+import { consumeCredits } from "../services/credit-ledger.js"
 
 const SESSION_TTL_MS = 60 * 60 * 1000
 const SESSION_CLEANUP_INTERVAL_MS = 5 * 60 * 1000
 const LINK_CODE_TTL_MS = 10 * 60 * 1000
 const HISTORY_MAX_TURNS = 8
 const HISTORY_TTL_MS = 60 * 60 * 1000
+const SHARED_SESSION_PLATFORM = "yomi"
+const SHARED_SESSION_CHAT_ID = "global"
 
 function directSidecarEnabled(): boolean {
   return process.env["YOMI_GATEWAY_DIRECT_SIDECAR"] === "1"
@@ -185,12 +190,17 @@ export class GatewayRunner {
   }
 
   private async formatPendingActions(userId: string): Promise<string> {
-    const { listPendingActions } = await import("../services/pending-actions.js")
-    const actions = await listPendingActions(userId)
-    if (actions.length === 0) return "No pending approvals."
-    return actions
-      .map((a) => `${a.id}\n${a.title}\n${a.preview}\nReply: approve ${a.id} or deny ${a.id}`)
-      .join("\n\n")
+    try {
+      const { listPendingActions } = await import("../services/pending-actions.js")
+      const actions = await listPendingActions(userId)
+      if (actions.length === 0) return "No pending approvals."
+      return actions
+        .map((a) => `${a.id}\n${a.title}\n${a.preview}\nReply: approve ${a.id} or deny ${a.id}`)
+        .join("\n\n")
+    } catch (err) {
+      console.warn("[gateway] pending approvals unavailable:", err)
+      return "Pending approvals are temporarily unavailable. Please try again in a moment."
+    }
   }
 
   private async handleApprovalCommand(userId: string, text: string): Promise<string | null> {
@@ -201,10 +211,18 @@ export class GatewayRunner {
     }
 
     if (/^(approve|yes|deny|no)$/i.test(command)) {
-      const { approvePendingAction, denyPendingAction, listPendingActions } = await import(
-        "../services/pending-actions.js"
-      )
-      const actions = await listPendingActions(userId)
+      let actions: Awaited<ReturnType<typeof import("../services/pending-actions.js")["listPendingActions"]>>
+      let approvePendingAction: typeof import("../services/pending-actions.js")["approvePendingAction"]
+      let denyPendingAction: typeof import("../services/pending-actions.js")["denyPendingAction"]
+      try {
+        const pending = await import("../services/pending-actions.js")
+        approvePendingAction = pending.approvePendingAction
+        denyPendingAction = pending.denyPendingAction
+        actions = await pending.listPendingActions(userId)
+      } catch (err) {
+        console.warn("[gateway] pending approval command unavailable:", err)
+        return "Pending approvals are temporarily unavailable. Please try again in a moment."
+      }
       if (actions.length === 0) return "No pending approvals."
       if (actions.length > 1) return await this.formatPendingActions(userId)
       const id = actions[0]!.id
@@ -217,9 +235,14 @@ export class GatewayRunner {
           return `Approval failed: ${err instanceof Error ? err.message : String(err)}`
         }
       }
-      const denied = await denyPendingAction(userId, id)
-      if (!denied) return "I couldn't find that pending action. It may have expired or already been handled."
-      return "Denied."
+      try {
+        const denied = await denyPendingAction(userId, id)
+        if (!denied) return "I couldn't find that pending action. It may have expired or already been handled."
+        return "Denied."
+      } catch (err) {
+        console.warn("[gateway] deny pending action failed:", err)
+        return "Deny failed. Please try again."
+      }
     }
 
     const match = /^(?:\/)?(approve|confirm|send|deny|reject|cancel)\s+([0-9a-f-]{36})$/i.exec(trimmed)
@@ -239,14 +262,115 @@ export class GatewayRunner {
       }
     }
 
-    const { denyPendingAction } = await import("../services/pending-actions.js")
-    const denied = await denyPendingAction(userId, id)
-    if (!denied) return "I couldn't find that pending action. It may have expired or already been handled."
-    return "Denied."
+    try {
+      const { denyPendingAction } = await import("../services/pending-actions.js")
+      const denied = await denyPendingAction(userId, id)
+      if (!denied) return "I couldn't find that pending action. It may have expired or already been handled."
+      return "Denied."
+    } catch (err) {
+      console.warn("[gateway] deny pending action failed:", err)
+      return "Deny failed. Please try again."
+    }
   }
 
   private runKey(platform: PlatformType, chatId: string): string {
     return `${platform}:${chatId}`
+  }
+
+  private wantsVoiceReply(text: string): boolean {
+    return /\b(voice reply|reply in voice|send (me )?(a )?(voice|voicemail|voice note|audio)|say it aloud|read it out)\b/i.test(text)
+  }
+
+  private async analyzeImage(msg: GatewayMessage, history: AgentMessage[]): Promise<string> {
+    if (!msg.imageUrl) return "I couldn't access the image. Please send it again."
+    const imageRes = await fetch(msg.imageUrl, { signal: AbortSignal.timeout(10_000) })
+    if (!imageRes.ok) throw new Error(`Failed to download image: ${imageRes.status}`)
+    const contentType = imageRes.headers.get("content-type") || msg.imageMimeType || "image/jpeg"
+    const bytes = await imageRes.arrayBuffer()
+    if (bytes.byteLength > 8 * 1024 * 1024) return "That image is too large for me to analyze. Please send a smaller image."
+    const image = `data:${contentType};base64,${Buffer.from(bytes).toString("base64")}`
+    const prompt = msg.text.trim() || "Analyze this image. Keep the answer concise and useful."
+    const result = await generateText({
+      model: createModel(process.env["AI_CREDITS_AGENT_MODEL"] || "gpt-5.5"),
+      system: "You are Yomi. Analyze the image and answer concisely. If the user asks for details, include only the useful details.",
+      messages: [
+        ...history.slice(-8).map((h) => ({ role: h.role as "user" | "assistant" | "system", content: h.content })),
+        {
+          role: "user" as const,
+          content: [
+            { type: "text" as const, text: prompt },
+            { type: "image" as const, image },
+          ],
+        },
+      ],
+      maxTokens: 420,
+    })
+    return result.text.trim() || "I couldn't produce an image analysis. Please try again."
+  }
+
+  private async sendVoiceReplyIfRequested(msg: GatewayMessage, text: string, yomiUserId: string): Promise<boolean> {
+    if (msg.platform !== "telegram" || !this.wantsVoiceReply(msg.text)) return false
+    const adapter = this.adapters.get("telegram")
+    if (!(adapter instanceof TelegramAdapter)) return false
+    const spokenText = text.replace(/https?:\/\/\S+/g, "").slice(0, 1200).trim()
+    if (!spokenText) return false
+    try {
+      const audio = await synthesizeSpeech(spokenText)
+      const result = await adapter.sendVoice(msg.chatId, audio.audio, {
+        replyTo: msg.messageId,
+        caption: text.length > 500 ? text.slice(0, 500) : undefined,
+      })
+      if (!result.ok) console.warn(`[gateway] telegram voice send failed: ${result.error ?? "unknown"}`)
+      if (result.ok) {
+        const estimatedMinutes = Math.max(1, Math.ceil(spokenText.length / 900))
+        await this.recordGatewayCreditAddon({
+          userId: yomiUserId,
+          kind: "request_voice",
+          amount: estimatedMinutes * 2,
+          reason: "telegram voice reply",
+          metadata: { direction: "output", estimatedMinutes },
+        })
+      }
+      return result.ok
+    } catch (err) {
+      console.warn("[gateway] telegram voice synthesis failed:", err)
+      return false
+    }
+  }
+
+  private async recordGatewayCreditAddon(input: {
+    userId: string
+    kind: "analyze" | "request_voice"
+    amount: number
+    reason: string
+    metadata?: Record<string, unknown>
+  }): Promise<void> {
+    if (input.amount <= 0) return
+    const [event] = await db.insert(usageEvents).values({
+      userId: input.userId,
+      kind: input.kind,
+      model: input.kind === "analyze" ? process.env["AI_CREDITS_AGENT_MODEL"] ?? "gpt-5.5" : "eleven_flash_v2_5",
+      inputTokens: 0,
+      outputTokens: 0,
+      costCents: 0,
+      creditsCharged: 0,
+      status: "done",
+      metadata: { source: "telegram", ...input.metadata },
+    }).returning({ id: usageEvents.id }).catch(() => [])
+    if (!event?.id) return
+
+    const debit = await consumeCredits({
+      userId: input.userId,
+      amount: input.amount,
+      usageEventId: event.id,
+      idempotencyKey: `telegram-addon:${event.id}:consume`,
+      reason: input.reason,
+      metadata: { kind: input.kind, source: "telegram", ...input.metadata },
+    }).catch(() => null)
+
+    if (debit?.ok) {
+      await db.update(usageEvents).set({ creditsCharged: debit.charged }).where(eq(usageEvents.id, event.id)).catch(() => {})
+    }
   }
 
   setSidecarResolver(resolver: SidecarResolver): void {
@@ -579,6 +703,14 @@ export class GatewayRunner {
           await this.sendMessage(msg.platform, msg.chatId, "I couldn't make out the audio. Please try again or type your message.").catch(() => {})
           return
         }
+        const inputMinutes = Math.max(1, Math.ceil((msg.audioDurationSeconds ?? 60) / 60))
+        await this.recordGatewayCreditAddon({
+          userId: yomiUserId,
+          kind: "request_voice",
+          amount: inputMinutes * 2,
+          reason: "telegram voice input",
+          metadata: { direction: "input", durationSeconds: msg.audioDurationSeconds ?? null },
+        })
         console.warn(`[gateway] voice transcript: "${transcript.slice(0, 100)}"`)
         // Show transcript so user can see what was heard
         await this.sendMessage(msg.platform, msg.chatId, `🎙️ _Heard:_ ${transcript}`).catch(() => {})
@@ -645,12 +777,47 @@ export class GatewayRunner {
     try {
       persistentSession = await getOrCreateAgentSession({
         userId: yomiUserId,
-        platform: msg.platform,
-        chatId: msg.chatId,
+        platform: SHARED_SESSION_PLATFORM,
+        chatId: SHARED_SESSION_CHAT_ID,
       })
       history = await loadAgentHistory(persistentSession.id)
     } catch (err) {
       console.warn("[gateway] persistent session unavailable, using in-memory history:", err)
+    }
+
+    if (msg.imageUrl) {
+      try {
+        const imageReply = await this.analyzeImage(msg, history)
+        await this.recordGatewayCreditAddon({
+          userId: yomiUserId,
+          kind: "analyze",
+          amount: 1,
+          reason: "telegram image analysis",
+          metadata: { imageMimeType: msg.imageMimeType ?? null },
+        })
+        if (persistentSession) {
+          await appendAgentTurn({
+            sessionId: persistentSession.id,
+            userId: yomiUserId,
+            userText: msg.text || "[image]",
+            assistantText: imageReply,
+          }).catch((err) => {
+            console.warn("[gateway] append image session failed:", err)
+            this.appendHistory(msg.platform, msg.chatId, msg.text || "[image]", imageReply)
+          })
+        } else {
+          this.appendHistory(msg.platform, msg.chatId, msg.text || "[image]", imageReply)
+        }
+        clearInterval(typingInterval)
+        if (!(await this.sendVoiceReplyIfRequested(msg, imageReply, yomiUserId))) {
+          await this.sendMessageAndLog(msg.platform, msg.chatId, imageReply, "telegram-image-reply", { replyTo: msg.messageId })
+        }
+      } catch (err) {
+        clearInterval(typingInterval)
+        console.warn("[gateway] image analysis error:", err)
+        await this.sendMessageAndLog(msg.platform, msg.chatId, "Sorry, I couldn't analyze that image. Please try again.", "telegram-image-error", { replyTo: msg.messageId })
+      }
+      return
     }
 
     let runController: AbortController | null = null
@@ -685,7 +852,10 @@ export class GatewayRunner {
         }
       }
       console.warn(`[gateway] backend agent done user=${yomiUserId} platform=${msg.platform} chat=${msg.chatId} chars=${result.text.length}`)
-      await this.sendMessageAndLog(msg.platform, msg.chatId, result.text || "I couldn't produce a reply. Please try again.", "backend-agent-reply")
+      const reply = result.text || "I couldn't produce a reply. Please try again."
+      if (!(await this.sendVoiceReplyIfRequested(msg, reply, yomiUserId))) {
+        await this.sendMessageAndLog(msg.platform, msg.chatId, reply, "backend-agent-reply")
+      }
     } catch (err) {
       clearInterval(typingInterval)
       this.activeRuns.delete(this.runKey(msg.platform, msg.chatId))
@@ -769,12 +939,20 @@ export class GatewayRunner {
     }
 
     if (text === "/new") {
+      const controller = this.activeRuns.get(this.runKey(msg.platform, msg.chatId))
+      if (controller) {
+        controller.abort()
+        this.activeRuns.delete(this.runKey(msg.platform, msg.chatId))
+      }
       _session.messageCount = 0
       _session.createdAt = Date.now()
       _session.lastActivityAt = Date.now()
       this.clearHistory(msg.platform, msg.chatId)
       await closeAgentSession({ userId: yomiUserId, platform: msg.platform, chatId: msg.chatId }).catch((err) => {
         console.warn("[gateway] close persistent session failed:", err)
+      })
+      await closeAgentSession({ userId: yomiUserId, platform: SHARED_SESSION_PLATFORM, chatId: SHARED_SESSION_CHAT_ID }).catch((err) => {
+        console.warn("[gateway] close shared session failed:", err)
       })
       return "Started a new conversation. How can I help you?"
     }

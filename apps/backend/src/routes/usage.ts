@@ -115,7 +115,7 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
   const FEATURE_LABEL: Record<string, string> = {
     chat: "chat",
     voiceMinutes: "voice",
-    analyze: "screen analyze",
+    analyze: "image/screen analyze",
     botMessages: "bot messages",
     connectors: "connectors",
   }

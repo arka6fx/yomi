@@ -77,6 +77,40 @@ export function abortCurrent(): void {
   conversationHistory = []
 }
 
+async function cloudConversationHeaders(): Promise<Record<string, string> | null> {
+  const token = await loadToken()
+  if (!token) return null
+  return { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
+}
+
+async function refreshCloudConversationHistory(signal?: AbortSignal): Promise<void> {
+  const headers = await cloudConversationHeaders()
+  if (!headers) return
+  const res = await fetch(`${BACKEND_URL}/api/conversation/shared`, { headers, signal })
+  if (!res.ok) return
+  const data = await res.json() as { history?: Array<{ role: "user" | "assistant" | "system"; content: string }> }
+  const history = (data.history ?? [])
+    .filter((m) => m.role === "user" || m.role === "assistant")
+    .map((m) => ({ role: m.role as "user" | "assistant", text: m.content }))
+  conversationHistory = history.slice(-CONVERSATION_HISTORY_MAX)
+}
+
+async function appendCloudConversationTurn(userText: string, assistantText: string): Promise<void> {
+  const headers = await cloudConversationHeaders()
+  if (!headers) return
+  await fetch(`${BACKEND_URL}/api/conversation/shared/turn`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ userText, assistantText }),
+  }).catch(() => {})
+}
+
+async function resetCloudConversation(): Promise<void> {
+  const headers = await cloudConversationHeaders()
+  if (!headers) return
+  await fetch(`${BACKEND_URL}/api/conversation/shared/reset`, { method: "POST", headers }).catch(() => {})
+}
+
 // Registers sidecar-dependent IPC handlers. Called once after first auth.
 export function initSidecarIpc(
   sidecar: SidecarManager,
@@ -98,7 +132,16 @@ export function initSidecarIpc(
 
   // Text query: text-only output (no TTS)
   ipcMain.on("yomi:text-query", async (_e, text: string, attachmentB64?: string | null) => {
-    if (!text?.trim()) {
+    const trimmed = text?.trim()
+    if (!trimmed) {
+      resetToIdle()
+      return
+    }
+    if (trimmed === "/new") {
+      conversationHistory = []
+      await resetCloudConversation()
+      send(overlayWin, { type: "llm_chunk", text: "Started a new conversation. How can I help you?" })
+      send(overlayWin, { type: "done" })
       resetToIdle()
       return
     }
@@ -110,6 +153,7 @@ export function initSidecarIpc(
         resetToIdle()
         return
       }
+      await refreshCloudConversationHistory(ctrl.signal).catch(() => {})
       const capture = await captureScreen()
       if (ctrl.signal.aborted) {
         resetToIdle()
@@ -120,7 +164,7 @@ export function initSidecarIpc(
       const effectiveCapture = attachmentB64
         ? { ...capture, screenshot_b64: attachmentB64 }
         : capture
-      await streamQuery(sidecar, overlayWin, text.trim(), effectiveCapture, false, plan, ctrl)
+      await streamQuery(sidecar, overlayWin, trimmed, effectiveCapture, false, plan, ctrl)
     } catch (err) {
       if ((err as Error).name === "AbortError") return
       send(overlayWin, {
@@ -143,6 +187,7 @@ export function initSidecarIpc(
         resetToIdle()
         return
       }
+      await refreshCloudConversationHistory(ctrl.signal).catch(() => {})
       const capture = await captureScreen()
       if (ctrl.signal.aborted) {
         resetToIdle()
@@ -191,6 +236,7 @@ export function initSidecarIpc(
       try {
         const plan = await reserveInteraction(overlayWin, "voice", ctrl.signal)
         if (ctrl.signal.aborted) return
+        await refreshCloudConversationHistory(ctrl.signal).catch(() => {})
         const wav = buildWav(chunks, capturedSampleRate)
         const [transcript, capture] = await Promise.all([
           transcribe(wav, sidecar, ctrl.signal),
@@ -429,7 +475,7 @@ async function streamQuery(
         if (shouldShowInteractiveEvent(event)) send(overlayWin, event)
         if (event.type === "done") {
           sawDone = true
-          pushConversationTurn(text, agentTextBuf || "")
+          pushConversationTurn(transcriptLabel ?? text, agentTextBuf || "")
           endVoiceTurn()
         }
         if (event.type === "error") {
@@ -480,6 +526,7 @@ function pushConversationTurn(userText: string, assistantText: string): void {
   if (conversationHistory.length > CONVERSATION_HISTORY_MAX) {
     conversationHistory = conversationHistory.slice(-CONVERSATION_HISTORY_MAX)
   }
+  void appendCloudConversationTurn(userText, assistantText || "(done)")
 }
 
 function shouldShowInteractiveEvent(event: SseEvent): boolean {

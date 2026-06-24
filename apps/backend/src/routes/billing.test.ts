@@ -112,6 +112,11 @@ mock.module("../auth.js", () => ({
     c.set("user", currentUser)
     await next()
   },
+  getAuth: () => ({
+    api: {
+      getSession: async () => ({ user: currentUser, session: { id: "session_1" } }),
+    },
+  }),
 }))
 
 mock.module("../services/credit-ledger.js", () => ({
@@ -717,7 +722,7 @@ describe("Dodo billing — subscription summary", () => {
     expect(body.status).toBe("active")
     expect(body.requestsUsed).toBe(3)
     expect(body.requestsLimit).toBe(2000)
-    expect(body.features.connectors).toEqual({ used: 2, limit: 8 })
+    expect(body.features.connectors).toEqual({ used: 2, limit: null })
     expect(body.features.analyze).toEqual({ used: 1, limit: 400 })
     expect(body.tokensUsedThisPeriod).toBe(150)
     expect(body.credits.balance).toBe(497)

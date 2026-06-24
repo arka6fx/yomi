@@ -33,6 +33,16 @@ import { ConnectorMarketplace, buildCatalog, DARK_THEME } from "@yomi/ui-connect
 
 type FeatureUsage = { used: number; limit: number | null }
 
+type IntegrationHealth = {
+  provider: string
+  displayName: string
+  connected: boolean
+  healthy: boolean
+  status: "connected" | "needs_reconnect"
+  message: string | null
+  updatedAt: string
+}
+
 type Sub = {
   role: string
   plan: string
@@ -61,7 +71,7 @@ type Sub = {
     chat: number
     voiceMinutes: number
     analyze: number
-    connectors: number
+    connectors: number | null
     botMessages: number
   }
   dailyChatUsed: number
@@ -102,9 +112,9 @@ type Sub = {
 }
 
 const CREDIT_USAGE_LABELS: Record<string, string> = {
-request_chat: "AI chat",
+  request_chat: "AI chat",
   request_voice: "Voice",
-  analyze: "Screen analyze",
+  analyze: "Image/screen analyze",
   bot_message: "Bot message",
 }
 
@@ -140,7 +150,7 @@ const PLANS = [
     features: [
       "100 AI chats during trial",
       "20 min voice during trial",
-      "25 screen analyze",
+      "25 image/screen analyze",
       "50 local memories",
       "Window controls & docking",
       "Streaming responses",
@@ -160,7 +170,7 @@ const PLANS = [
     features: [
       "2,000 AI chats / month",
       "180 min voice / month",
-      "400 screen analyze",
+      "400 image/screen analyze",
       "App connectors",
       "200 Telegram bot messages / month",
     ],
@@ -211,6 +221,7 @@ function DashboardContent() {
 
   const [activeTab, setActiveTab] = useState<"account" | "integrations">("account")
   const [connectedProviders, setConnectedProviders] = useState<string[]>([])
+  const [integrationHealth, setIntegrationHealth] = useState<IntegrationHealth[]>([])
   const [integrationLoadingId, setIntegrationLoadingId] = useState<string | null>(null)
   const [showWelcome, setShowWelcome] = useState(false)
 
@@ -288,11 +299,14 @@ function DashboardContent() {
   useEffect(() => {
     if (!session) return
     const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ""
-    fetch(`${apiBase}/api/integrations/status`, {
+    fetch(`${apiBase}/api/integrations/status?health=1`, {
       headers: { Authorization: `Bearer ${session.session.token}` },
     })
-      .then((r) => r.ok ? r.json() : { connected: [] })
-      .then((d: { connected: string[] }) => setConnectedProviders(d.connected))
+      .then((r) => r.ok ? r.json() : { connected: [], integrations: [] })
+      .then((d: { connected: string[]; integrations?: IntegrationHealth[] }) => {
+        setConnectedProviders(d.connected)
+        setIntegrationHealth(Array.isArray(d.integrations) ? d.integrations : [])
+      })
       .catch(() => {}) // ignore — integrations tab is best-effort
   }, [session])
 
@@ -507,9 +521,6 @@ function DashboardContent() {
   const isOwner = sub?.role === "owner"
   const currentPlanKey = sub?.plan ?? "explore"
   const currentPlanIdx = PLANS.findIndex((p) => p.key === currentPlanKey)
-  const trialEndLabel = sub?.trialEndDate
-    ? new Date(sub.trialEndDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-    : null
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
@@ -591,6 +602,100 @@ function DashboardContent() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
+            <div className="mb-5 rounded-2xl border border-border bg-card p-6">
+              <div className="flex items-start justify-between gap-4 mb-5">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
+                    Telegram
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Chat with Yomi from anywhere. Text costs 1 base credit; voice and image analysis add credits only when used.
+                  </p>
+                </div>
+                <Link
+                  href="/link"
+                  className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-xl font-medium px-3 py-1.5 text-xs hover:bg-primary/90 transition-colors shrink-0"
+                >
+                  <Plus size={12} />
+                  Link new
+                </Link>
+              </div>
+
+              {platformsLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 size={14} className="animate-spin" />
+                  Loading...
+                </div>
+              ) : platformLinks.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border/60 p-4 text-center">
+                  <p className="text-sm text-muted-foreground mb-3">
+                    No Telegram account linked yet. Use the secure Telegram link flow to get started.
+                  </p>
+                  <Link
+                    href="/link"
+                    className="inline-flex items-center gap-1.5 text-xs bg-muted hover:bg-muted/80 text-foreground rounded-lg px-3 py-1.5 transition-colors"
+                  >
+                    <MessageCircle size={12} />
+                    Connect Telegram
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {platformLinks.map((link) => {
+                    const meta = PLATFORM_META[link.platform] ?? {
+                      name: link.platform,
+                      color: "bg-muted text-muted-foreground",
+                      inviteUrl: "",
+                    }
+                    return (
+                      <div
+                        key={link.platform}
+                        className="flex items-center justify-between rounded-xl border border-border px-4 py-3"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={cn(
+                              "text-xs px-2 py-0.5 rounded-full font-medium capitalize",
+                              meta.color,
+                            )}
+                          >
+                            {meta.name}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            Connected{" "}
+                            {new Date(link.connectedAt).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href="/link"
+                            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            Manage
+                          </Link>
+                          <button
+                            onClick={() => handleUnlink(link.platform)}
+                            disabled={unlinking === link.platform}
+                            className="flex items-center gap-1 text-xs text-destructive/70 hover:text-destructive transition-colors disabled:opacity-50"
+                          >
+                            {unlinking === link.platform ? (
+                              <Loader2 size={12} className="animate-spin" />
+                            ) : (
+                              <Trash2 size={12} />
+                            )}
+                            Unlink
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
             {new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").has("integration_success") && (
               <div className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-400">
                 Integration connected successfully.
@@ -601,17 +706,43 @@ function DashboardContent() {
                 Integration failed: {new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("integration_error")}
               </div>
             )}
+            {integrationHealth.some((item) => !item.healthy) && (
+              <div className="mb-4 rounded-2xl border border-yellow-500/25 bg-yellow-500/10 p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle size={16} className="text-yellow-400 mt-0.5 shrink-0" />
+                  <div className="space-y-3 flex-1">
+                    <div>
+                      <p className="text-sm font-medium text-yellow-300">Some integrations need reconnecting</p>
+                      <p className="text-xs text-yellow-200/75 mt-1">
+                        Yomi will avoid stale tokens once you reconnect these providers.
+                      </p>
+                    </div>
+                    <div className="grid gap-2">
+                      {integrationHealth.filter((item) => !item.healthy).map((item) => (
+                        <div key={item.provider} className="flex items-center justify-between gap-3 rounded-xl bg-background/50 border border-yellow-500/15 px-3 py-2">
+                          <div className="min-w-0">
+                            <p className="text-sm text-foreground truncate">{item.displayName}</p>
+                            <p className="text-xs text-muted-foreground truncate">{item.message ?? "Authentication failed"}</p>
+                          </div>
+                          <button
+                            onClick={() => handleConnectIntegration(item.provider)}
+                            className="shrink-0 rounded-lg bg-yellow-400 text-black px-3 py-1.5 text-xs font-medium hover:bg-yellow-300 transition-colors"
+                          >
+                            Reconnect
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             <ConnectorMarketplace
               connectors={buildCatalog(connectedProviders)}
               theme={DARK_THEME}
               onConnect={handleConnectIntegration}
               onDisconnect={handleDisconnectIntegration}
               loadingId={integrationLoadingId}
-              limitReached={
-                sub?.features?.connectors?.limit !== null &&
-                sub?.features?.connectors?.limit !== undefined &&
-                sub.features.connectors.used >= sub.features.connectors.limit
-              }
             />
           </motion.div>
         )}
@@ -752,7 +883,7 @@ function DashboardContent() {
           </div>
         </motion.div>
 
-        {/* Usage section — per-feature breakdown */}
+        {/* Usage section — single credit meter */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -762,76 +893,77 @@ function DashboardContent() {
             <div className="flex items-start justify-between gap-6 mb-6">
               <div>
                 <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
-                  {sub?.plan === "explore" ? "Free trial" : "Usage this month"}
+                  Credits meter
                 </p>
-                {sub?.plan === "explore" && sub?.trialEndDate ? (
-                  <div className="space-y-1">
-                    {sub.trialExpired ? (
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle size={20} className="text-destructive" />
-                        <span className="text-2xl font-light text-destructive">Trial ended</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-light text-foreground">
-                          {sub.trialDaysRemaining}
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          days remaining
-                        </span>
-                      </div>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      {sub.trialExpired
-                        ? "Your free trial has ended."
-                        : `${sub.trialDaysUsed} of ${sub.trialDaysTotal} days used`}
-                      {" "}{trialEndLabel ? `Ends ${trialEndLabel}.` : "Ends after 30 days."}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-light text-foreground tabular-nums">
-                      {sub?.credits?.balance ?? 0}
-                    </span>
-                    <span className="text-sm text-muted-foreground">credits available</span>
-                  </div>
-                )}
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-light text-foreground tabular-nums">
+                    {sub?.creditsUsed ?? 0}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    of {sub?.totalCredits ?? sub?.credits?.balance ?? 0} credits used
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {sub?.credits?.balance ?? 0} credits available
+                  {sub?.plan === "explore" ? ". Extra credit packs unlock on Pro and Max." : ". Add credits any time on Pro or Max."}
+                </p>
+              </div>
+            </div>
 
-                {/* Credits progress bar */}
-                {sub && sub.plan !== "explore" && (sub.creditsUsed ?? 0) > 0 && (
-                  <div className="mt-4 space-y-2">
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{sub.creditsUsed} of {sub.totalCredits} credits used</span>
-                      <span>{sub.credits?.balance ?? 0} remaining</span>
+            {sub && (
+              <div className="space-y-5">
+                <div className="space-y-2">
+                  <div className="h-3 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{ width: `${Math.min(100, ((sub.creditsUsed ?? 0) / Math.max(sub.totalCredits ?? 1, 1)) * 100)}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{sub.creditsUsed ?? 0} used</span>
+                    <span>{sub.credits?.balance ?? 0} remaining</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {([
+                    { label: "AI chat", cost: "1 credit", Icon: MessageSquare as LucideIcon },
+                    { label: "Telegram text", cost: "1 base credit", Icon: Bot as LucideIcon },
+                    { label: "Image/screen", cost: "+1 credit", Icon: ScanLine as LucideIcon },
+                    { label: "Voice input/output", cost: "+2 credits/min", Icon: Mic as LucideIcon },
+                  ]).map(({ label, cost, Icon }) => (
+                    <div key={label} className="rounded-xl border border-border bg-background/50 p-3">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                        <Icon size={13} />
+                        {label}
+                      </div>
+                      <p className="text-sm font-medium text-foreground">{cost}</p>
                     </div>
-                    <div className="h-2 rounded-full bg-muted overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-primary transition-all"
-                        style={{ width: `${Math.min(100, ((sub.creditsUsed ?? 0) / (sub.totalCredits ?? 1)) * 100)}%` }}
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 gap-2">
-                      {([
-                        { key: "request_chat", label: "AI Chat", Icon: MessageSquare as LucideIcon },
-                        { key: "request_voice", label: "Voice", Icon: Mic as LucideIcon },
-                        { key: "analyze", label: "Analyze", Icon: ScanLine as LucideIcon },
-                        { key: "bot_message", label: "Bot", Icon: Bot as LucideIcon },
-                      ] as const).map(({ key, label, Icon }) => {
-                        const amount = sub.creditConsumption?.[key] ?? 0
-                        if (amount === 0) return null
-                        return (
-                          <div key={key} className="flex items-center gap-1.5">
-                            <Icon size={11} className="text-muted-foreground shrink-0" />
-                            <span className="text-xs text-muted-foreground truncate">{label}</span>
-                            <span className="text-xs font-medium text-foreground tabular-nums ml-auto">{amount}</span>
-                          </div>
-                        )
-                      })}
-                    </div>
+                  ))}
+                </div>
+
+                {sub.creditConsumption && Object.keys(sub.creditConsumption).length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {([
+                      { key: "request_chat", label: "AI chat", Icon: MessageSquare as LucideIcon },
+                      { key: "request_voice", label: "Voice", Icon: Mic as LucideIcon },
+                      { key: "analyze", label: "Image/screen", Icon: ScanLine as LucideIcon },
+                      { key: "bot_message", label: "Telegram text", Icon: Bot as LucideIcon },
+                    ]).map(({ key, label, Icon }) => {
+                      const amount = sub.creditConsumption?.[key] ?? 0
+                      if (amount === 0) return null
+                      return (
+                        <div key={key} className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2">
+                          <Icon size={13} className="text-muted-foreground shrink-0" />
+                          <span className="text-xs text-muted-foreground truncate">{label}</span>
+                          <span className="text-sm font-medium text-foreground tabular-nums ml-auto">{amount}</span>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>
-            </div>
+            )}
 
             {sub?.plan === "explore" && sub?.trialExpired && (
               <div className="mb-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20">
@@ -857,98 +989,23 @@ function DashboardContent() {
               </div>
             )}
 
-            {/* Per-feature bars */}
-            {sub?.features && (
-              <div className="space-y-4">
-                {([
-                  { key: "chat" as const, label: "AI Chats", Icon: MessageSquare as LucideIcon, creditKey: "request_chat" },
-                  { key: "voice" as const, label: "Voice", Icon: Mic as LucideIcon, creditKey: "request_voice" },
-                  { key: "analyze" as const, label: "Screen Analyze", Icon: ScanLine as LucideIcon, creditKey: "analyze" },
-                  { key: "botMessages" as const, label: "Bot Messages", Icon: Bot as LucideIcon, creditKey: "bot_message" },
-                ]).map(({ key, label, Icon, creditKey }) => {
-                  const feat = sub.features[key]
-                  if (!feat) return null
-                  const pct = feat.limit && feat.limit > 0 ? Math.min(100, (feat.used / feat.limit) * 100) : 0
-                  const isUnlimited = feat.limit === null
-                  const isDisabled = feat.limit === 0
-                  const isAtLimit = !isDisabled && !isUnlimited && feat.limit !== null && feat.used >= feat.limit
-                  const creditsUsed = sub.creditConsumption?.[creditKey] ?? 0
-
-                  return (
-                    <div key={key} className={cn("space-y-1.5", isDisabled && "opacity-40")}>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="flex items-center gap-2 text-foreground">
-                          <Icon size={15} className="text-muted-foreground shrink-0" />
-                          {label}
-                        </span>
-                        <span className="text-muted-foreground text-xs tabular-nums">
-                          {isDisabled ? (
-                            "Not available"
-                          ) : isUnlimited ? (
-                            `${feat.used} used${creditsUsed > 0 ? ` · ${creditsUsed} cr` : ""}`
-                          ) : (
-                            `${feat.used} / ${feat.limit}${creditsUsed > 0 ? ` · ${creditsUsed} cr` : ""}`
-                          )}
-                        </span>
-                      </div>
-                      {!isDisabled && !isUnlimited && (
-                        <div className="relative w-full h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className={cn(
-                              "absolute inset-y-0 left-0 transition-[width] duration-500",
-                              pct >= 90 ? "bg-destructive" : pct >= 70 ? "bg-yellow-500" : "bg-primary",
-                            )}
-                            style={{ width: `${Math.min(100, pct)}%` }}
-                          />
-                        </div>
-                      )}
-                      {isAtLimit && (
-                        <p className="text-xs text-destructive">
-                          Limit reached —{" "}
-                          <a href="/dashboard?plan=pro" className="underline hover:text-destructive/80">
-                            upgrade to continue
-                          </a>
-                        </p>
-                      )}
-                    </div>
-                  )
-                })}
-                {/* App Connectors — shown without credit cost */}
-                {sub?.features?.connectors && (() => {
-                  const feat = sub.features.connectors
-                  const pct = feat.limit && feat.limit > 0 ? Math.min(100, (feat.used / feat.limit) * 100) : 0
-                  const isUnlimited = feat.limit === null
-                  return (
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="flex items-center gap-2 text-foreground">
-                          <Plug size={15} className="text-muted-foreground shrink-0" />
-                          App Connectors
-                        </span>
-                        <span className="text-muted-foreground text-xs tabular-nums">
-                          {isUnlimited ? `${feat.used} used` : `${feat.used} / ${feat.limit}`}
-                        </span>
-                      </div>
-                      {!isUnlimited && (
-                        <div className="relative w-full h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className={cn(
-                              "absolute inset-y-0 left-0 transition-[width] duration-500",
-                              pct >= 90 ? "bg-destructive" : pct >= 70 ? "bg-yellow-500" : "bg-primary",
-                            )}
-                            style={{ width: `${Math.min(100, pct)}%` }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )
-                })()}
+            {sub?.features?.connectors && (
+              <div className="mt-5 flex items-center justify-between rounded-xl border border-border bg-background/40 px-4 py-3 text-sm">
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <Plug size={15} />
+                  App connectors
+                </span>
+                <span className="text-foreground tabular-nums">
+                  {sub.features.connectors.limit === null
+                    ? `${sub.features.connectors.used} connected`
+                    : `${sub.features.connectors.used} / ${sub.features.connectors.limit}`}
+                </span>
               </div>
             )}
           </div>
         </motion.div>
 
-        {/* Credits */}
+        {/* Credit packs and activity */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -958,7 +1015,7 @@ function DashboardContent() {
             <div className="flex flex-wrap items-start justify-between gap-6 mb-6">
               <div>
                 <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
-                  Credits
+                  Credit packs and activity
                 </p>
                 <div className="flex items-center gap-3">
                   <WalletCards size={24} className="text-primary" />
@@ -981,7 +1038,7 @@ function DashboardContent() {
                       </p>
                     ) : (
                       <p className="text-xs text-muted-foreground mt-1">
-                        Credits are used for overages and one-time packs.
+                        Purchase packs on Pro or Max. Usage is tracked in the meter above.
                       </p>
                     )}
                   </div>
@@ -1019,35 +1076,6 @@ function DashboardContent() {
                 </div>
               )}
             </div>
-
-            {/* Credit consumption this month */}
-            {sub?.creditConsumption && Object.keys(sub.creditConsumption).length > 0 && (
-              <div className="mb-6 border-t border-border pt-4">
-                <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
-                  Credits consumed this month
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {([
-                    { key: "request_chat", label: "AI Chat", Icon: MessageSquare as LucideIcon },
-                    { key: "request_voice", label: "Voice", Icon: Mic as LucideIcon },
-                    { key: "analyze", label: "Analyze", Icon: ScanLine as LucideIcon },
-                    { key: "bot_message", label: "Bot Messages", Icon: Bot as LucideIcon },
-                  ]).map(({ key, label, Icon }) => {
-                    const amount = sub.creditConsumption?.[key] ?? 0
-                    if (amount === 0) return null
-                    return (
-                      <div key={key} className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2">
-                        <Icon size={13} className="text-muted-foreground shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-xs text-muted-foreground truncate">{label}</p>
-                          <p className="text-sm font-medium text-foreground tabular-nums">{amount} cr</p>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
 
             {(sub?.creditTransactions?.length ?? 0) > 0 && (
               <div className="border-t border-border pt-4">
@@ -1171,107 +1199,6 @@ function DashboardContent() {
             </div>
           </motion.div>
         )}
-
-        {/* Linked accounts */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          <div className="rounded-2xl border border-border bg-card p-6">
-            <div className="flex items-start justify-between gap-4 mb-5">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
-                  Linked accounts
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Connect Telegram to chat with Yomi from anywhere.
-                </p>
-              </div>
-              <Link
-                href="/link"
-                className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-xl font-medium px-3 py-1.5 text-xs hover:bg-primary/90 transition-colors shrink-0"
-              >
-                <Plus size={12} />
-                Link new
-              </Link>
-            </div>
-
-            {platformsLoading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 size={14} className="animate-spin" />
-                Loading...
-              </div>
-            ) : platformLinks.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border/60 p-4 text-center">
-                <p className="text-sm text-muted-foreground mb-3">
-                  No accounts linked yet. Use the secure Telegram link flow to get started.
-                </p>
-                <Link
-                  href="/link"
-                  className="inline-flex items-center gap-1.5 text-xs bg-muted hover:bg-muted/80 text-foreground rounded-lg px-3 py-1.5 transition-colors"
-                >
-                  <MessageCircle size={12} />
-                  Connect Telegram
-                </Link>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {platformLinks.map((link) => {
-                  const meta = PLATFORM_META[link.platform] ?? {
-                    name: link.platform,
-                    color: "bg-muted text-muted-foreground",
-                    inviteUrl: "",
-                  }
-                  return (
-                    <div
-                      key={link.platform}
-                      className="flex items-center justify-between rounded-xl border border-border px-4 py-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={cn(
-                            "text-xs px-2 py-0.5 rounded-full font-medium capitalize",
-                            meta.color,
-                          )}
-                        >
-                          {meta.name}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          Connected{" "}
-                          {new Date(link.connectedAt).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Link
-                          href="/link"
-                          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          Manage
-                        </Link>
-                        <button
-                          onClick={() => handleUnlink(link.platform)}
-                          disabled={unlinking === link.platform}
-                          className="flex items-center gap-1 text-xs text-destructive/70 hover:text-destructive transition-colors disabled:opacity-50"
-                        >
-                          {unlinking === link.platform ? (
-                            <Loader2 size={12} className="animate-spin" />
-                          ) : (
-                            <Trash2 size={12} />
-                          )}
-                          Unlink
-                        </button>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        </motion.div>
 
         {/* Download CTA */}
         <motion.div

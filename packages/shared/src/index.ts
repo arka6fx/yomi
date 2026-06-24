@@ -202,6 +202,12 @@ export interface GatewayMessage {
   audioUrl?: string
   /** MIME type of the audio file, defaults to audio/ogg */
   audioMimeType?: string
+  /** Audio duration in seconds when supplied by the platform */
+  audioDurationSeconds?: number
+  /** URL of an image file to analyze before processing */
+  imageUrl?: string
+  /** MIME type of the image file, defaults to image/jpeg */
+  imageMimeType?: string
 }
 
 export interface GatewaySessionInfo {

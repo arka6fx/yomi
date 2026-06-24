@@ -1,5 +1,5 @@
 import { Hono } from "hono"
-import { eq, and, sql } from "drizzle-orm"
+import { eq, and } from "drizzle-orm"
 import { db, mcpConnections } from "@yomi/db"
 import { authenticate, getAuth } from "../auth.js"
 import {
@@ -15,24 +15,29 @@ import {
   storeApiKeyCredential,
   storeConnectionString,
 } from "../connectors/executors/oauth2-executor.js"
-import { featureLimitForUser } from "../entitlements.js"
 
-async function connectorCount(userId: string): Promise<number> {
-  const [row] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(mcpConnections)
-    .where(eq(mcpConnections.userId, userId))
-  return Number(row?.count ?? 0)
-}
-
-async function checkConnectorLimit(user: { id: string; plan?: string | null; subscriptionStatus?: string | null; [key: string]: unknown }): Promise<{ ok: true } | { ok: false; message: string }> {
-  const limit = featureLimitForUser(user as never, "connectors")
-  if (limit === null) return { ok: true } // unlimited
-  const used = await connectorCount(user.id)
-  if (used >= limit) {
-    return { ok: false, message: `Connector limit reached (${used}/${limit}). Upgrade your plan to connect more.` }
+async function checkProviderHealth(userId: string, provider: string): Promise<{ ok: boolean; message?: string }> {
+  try {
+    const token = await getAccessTokenService(userId, provider)
+    if (provider === "notion") {
+      const res = await fetch("https://api.notion.com/v1/users/me", {
+        headers: { Authorization: `Bearer ${token}`, "Notion-Version": "2022-06-28" },
+        signal: AbortSignal.timeout(5_000),
+      })
+      if (!res.ok) return { ok: false, message: `Notion returned ${res.status}. Reconnect Notion.` }
+    }
+    if (provider.startsWith("google-")) {
+      const res = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(5_000),
+      })
+      if (!res.ok) return { ok: false, message: `Google returned ${res.status}. Reconnect this Google integration.` }
+    }
+    return { ok: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Authentication failed"
+    return { ok: false, message }
   }
-  return { ok: true }
 }
 
 async function resolveInternalUser(c: { req: { raw: Request; header: (name: string) => string | undefined; query: (name: string) => string | undefined } }): Promise<{ userId: string } | { error: string; status: 401 | 403 | 503 }> {
@@ -139,11 +144,26 @@ integrationsRouter.get("/status", async (c) => {
   const userId = resolved.userId
 
   const rows = await db
-    .select({ provider: mcpConnections.provider })
+    .select({ provider: mcpConnections.provider, displayName: mcpConnections.displayName, updatedAt: mcpConnections.updatedAt })
     .from(mcpConnections)
     .where(eq(mcpConnections.userId, userId))
 
-  return c.json({ connected: rows.map((r) => r.provider) })
+  if (c.req.query("health") !== "1") return c.json({ connected: rows.map((r) => r.provider) })
+
+  const integrations = await Promise.all(rows.map(async (row) => {
+    const health = await checkProviderHealth(userId, row.provider)
+    return {
+      provider: row.provider,
+      displayName: row.displayName ?? row.provider,
+      connected: true,
+      healthy: health.ok,
+      status: health.ok ? "connected" : "needs_reconnect",
+      message: health.message ?? null,
+      updatedAt: row.updatedAt.toISOString(),
+    }
+  }))
+
+  return c.json({ connected: rows.map((r) => r.provider), integrations })
 })
 
 // ── Start Google OAuth flow ──────────────────────────────────────────────────
@@ -152,12 +172,6 @@ integrationsRouter.get("/connect/google", authenticate, async (c) => {
   const user = c.get("user")
   if (!checkOAuthRateLimit(user.id)) {
     return c.json({ error: "Too many connect attempts — please wait a minute" }, 429)
-  }
-
-  const limitCheck = await checkConnectorLimit(user)
-  if (!limitCheck.ok) {
-    const appUrl = process.env.BETTER_AUTH_URL ?? "http://localhost:3000"
-    return c.redirect(`${appUrl}/dashboard?integration_error=${encodeURIComponent(limitCheck.message)}`)
   }
 
   const state = Buffer.from(
@@ -304,12 +318,6 @@ integrationsRouter.get("/connect/:id", authenticate, async (c) => {
     return c.json({ error: "Too many connect attempts — please wait a minute" }, 429)
   }
 
-  const limitCheck = await checkConnectorLimit(user)
-  if (!limitCheck.ok) {
-    const appUrl = process.env.BETTER_AUTH_URL ?? "http://localhost:3000"
-    return c.redirect(`${appUrl}/dashboard?integration_error=${encodeURIComponent(limitCheck.message)}`)
-  }
-
   const def = getConnectorDef(id)
   if (!def) return c.json({ error: `Unknown connector: ${id}` }, 404)
 
@@ -382,9 +390,6 @@ integrationsRouter.post("/connect/api-key/:id", authenticate, async (c) => {
   if (!def) return c.json({ error: `Unknown connector: ${id}` }, 404)
   if (def.auth.kind !== "api_key") return c.json({ error: "Not an api_key connector" }, 400)
 
-  const limitCheck = await checkConnectorLimit(c.get("user"))
-  if (!limitCheck.ok) return c.json({ error: limitCheck.message }, 402)
-
   let fields: Record<string, string>
   try {
     const body = await c.req.json()
@@ -416,9 +421,6 @@ integrationsRouter.post("/connect/dsn/:id", authenticate, async (c) => {
   const def = getConnectorDef(id)
   if (!def) return c.json({ error: `Unknown connector: ${id}` }, 404)
   if (def.auth.kind !== "connection_string") return c.json({ error: "Not a connection_string connector" }, 400)
-
-  const limitCheck = await checkConnectorLimit(c.get("user"))
-  if (!limitCheck.ok) return c.json({ error: limitCheck.message }, 402)
 
   let dsn: string
   try {

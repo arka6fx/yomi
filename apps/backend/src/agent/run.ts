@@ -250,6 +250,15 @@ function buildSystemWithContext(memoryContext: string, ragContext: string, profi
   )
 }
 
+function maxOutputTokensFor(text: string): number {
+  const q = text.toLowerCase()
+  if (/\b(write|draft|compose|essay|article|report|code|program|function|debug|detailed|step by step)\b/.test(q)) {
+    return 900
+  }
+  if (/\b(summary|summarize|explain|compare|plan)\b/.test(q)) return 650
+  return 420
+}
+
 // Run the lean agent loop server-side, with entitlement checks and usage logging.
 // Called from the gateway when the desktop is offline. Returns the agent's final
 // text reply, or a user-facing error message if quota or billing blocks it.
@@ -295,9 +304,6 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     }
   }
 
-  // Connector limit: cap how many connected providers the agent may use this turn.
-  const connectorLimit = isOwnerUser(user) ? Infinity : (featureLimitForUser(user, "connectors") ?? Infinity)
-
   const registry = new ConnectorRegistry({
     getAccessToken,
     createPendingAction: async (input) => {
@@ -310,8 +316,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       })
     },
     listConnectedProviders: async (userId: string) => {
-      const all = await listConnectedProviders(userId)
-      return Number.isFinite(connectorLimit) ? all.slice(0, connectorLimit) : all
+      return listConnectedProviders(userId)
     },
   })
   await registry.init(opts.userId)
@@ -331,6 +336,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       text: opts.text,
       history: opts.history,
       system: buildSystemWithContext(memoryContext, ragContext, profile),
+      maxTokens: maxOutputTokensFor(opts.text),
       signal: opts.signal,
     })
   } catch (err) {

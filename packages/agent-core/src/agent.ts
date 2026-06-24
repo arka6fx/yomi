@@ -21,6 +21,8 @@ export interface RunAgentLoopOptions {
   model?: string
   // Max ReAct steps. Defaults to AGENT_MAX_STEPS or 12.
   maxSteps?: number
+  // Hard cap response verbosity for chat surfaces.
+  maxTokens?: number
   // Extra tools to merge in (beyond the connector tools).
   extraTools?: ToolSet
   signal?: AbortSignal
@@ -68,6 +70,7 @@ export async function runAgentLoop(opts: RunAgentLoopOptions): Promise<string> {
     messages,
     tools,
     maxSteps: maxSteps(opts.maxSteps),
+    maxTokens: opts.maxTokens,
     abortSignal: opts.signal,
   })
 

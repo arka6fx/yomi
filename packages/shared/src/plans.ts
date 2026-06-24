@@ -14,7 +14,7 @@ export interface PlanConfig {
     chat: number
     voiceMinutes: number
     analyze: number
-    connectors: number
+    connectors: number | null
     botMessages: number
   }
 }
@@ -31,7 +31,7 @@ export const PLANS: Record<string, PlanConfig> = {
       chat: 100,
       voiceMinutes: 20,
       analyze: 25,
-      connectors: 2,
+      connectors: null,
       botMessages: 20,
     },
   },
@@ -46,7 +46,7 @@ export const PLANS: Record<string, PlanConfig> = {
       chat: 2000,
       voiceMinutes: 180,
       analyze: 400,
-      connectors: 8,
+      connectors: null,
       botMessages: 200,
     },
   },
@@ -61,7 +61,7 @@ export const PLANS: Record<string, PlanConfig> = {
       chat: 8000,
       voiceMinutes: 750,
       analyze: 2000,
-      connectors: 8,
+      connectors: null,
       botMessages: 500,
     },
   },
@@ -122,7 +122,7 @@ export function getPlan(key: string): PlanConfig {
   return (PLANS[key] ?? PLANS["explore"]) as PlanConfig
 }
 
-export function featureLimit(plan: string, feature: FeatureKey): number {
+export function featureLimit(plan: string, feature: FeatureKey): PlanConfig["limits"][FeatureKey] {
   return getPlan(plan).limits[feature]
 }
 
