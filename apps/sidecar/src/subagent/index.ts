@@ -1,17 +1,12 @@
 import { streamText } from "ai"
-import { join } from "path"
-import { homedir } from "os"
-import { readFile } from "fs/promises"
 import { createModel } from "../pipeline/model.js"
 import { createMemoryTools } from "../tools/memory.js"
 import { createWebTools } from "../tools/web.js"
-import { createSkillTools, createSkillReadTools } from "../tools/skills/index.js"
 import { createSystemTools } from "../tools/system.js"
 import type { CoreMessage, ToolSet } from "ai"
 import type { Plan } from "@yomi/shared"
 
 const AGENT_MODEL = process.env["AI_CREDITS_AGENT_MODEL"] || "gpt-5.5"
-const NOTEPAD = join(homedir(), ".yomi")
 
 export type SubagentRole = "leaf" | "orchestrator"
 
@@ -35,26 +30,15 @@ export interface SubagentResult {
 }
 
 const LEAF_TOOLS = new Set([
-  "read_file", "list_files", "search",
+  "add_memory", "retrieve_memory", "list_memories", "delete_memory",
   "web_search", "fetch_url",
-  "skill_list", "skill_view", "skill_read_file",
 ])
 
 const ORCHESTRATOR_TOOLS = new Set([
-  "read_file", "list_files", "search",
+  "add_memory", "retrieve_memory", "list_memories", "delete_memory",
   "web_search", "fetch_url",
-  "skill_list", "skill_view", "skill_read_file",
-  "skill_create", "skill_edit", "skill_patch", "skill_delete",
-  "skill_write_file", "skill_remove_file",
-  "bash", "write_file",
+  "bash",
   "look_at_screen",
-  "play_spotify", "adjust_volume",
-  "get_ui_tree", "invoke_element", "set_value", "toggle_element",
-  "click_element", "type_text", "press_key",
-  "media_control", "control_spotify_playback",
-  "adjust_system_volume", "adjust_spotify_volume", "duck_spotify",
-  "open_user_chrome", "write_windows_notepad",
-  "append_windows_notepad", "save_windows_notepad_as",
 ])
 
 function checkPlanAccess(plan: Plan | undefined, role: SubagentRole): string | null {
@@ -69,7 +53,6 @@ function buildRoleTools(role: SubagentRole, plan: Plan | undefined): ToolSet {
     const all = {
       ...createMemoryTools(),
       ...createWebTools(),
-      ...createSkillReadTools({ plan }),
     }
     return Object.fromEntries(Object.entries(all).filter(([k]) => LEAF_TOOLS.has(k)))
   }
@@ -77,7 +60,6 @@ function buildRoleTools(role: SubagentRole, plan: Plan | undefined): ToolSet {
   const all = {
     ...createMemoryTools(),
     ...createWebTools(),
-    ...createSkillTools({ plan }),
     ...createSystemTools({}),
   }
   return Object.fromEntries(Object.entries(all).filter(([k]) => ORCHESTRATOR_TOOLS.has(k)))
@@ -85,13 +67,7 @@ function buildRoleTools(role: SubagentRole, plan: Plan | undefined): ToolSet {
 
 async function loadContext(context?: string[]): Promise<string> {
   if (!context?.length) return ""
-  const parts = await Promise.allSettled(
-    context.map((p) => readFile(join(NOTEPAD, p), "utf-8")),
-  )
-  const text = parts
-    .filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled")
-    .map((r) => r.value)
-    .join("\n\n---\n\n")
+  const text = context.join("\n\n---\n\n")
   return text ? `<context>\n${text}\n</context>` : ""
 }
 

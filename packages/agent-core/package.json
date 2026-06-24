@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./connectors/google-gmail": "./src/connectors/google-gmail.ts"
   },
   "scripts": {
     "build:ci": "exit 0",

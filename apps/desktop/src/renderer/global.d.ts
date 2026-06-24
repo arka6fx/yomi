@@ -1,13 +1,6 @@
 import type { SseEvent } from "@yomi/shared"
 import type { HotkeyState } from "./store"
-import type {
-  AutomationHealthResponse,
-  AutomationKnowledgeResponse,
-  AutomationProviderRepairResponse,
-  AutomationWorkflowsResponse,
-  SubscriptionInfo,
-  SubscriptionUpdate,
-} from "../preload/index"
+import type { SubscriptionInfo, SubscriptionUpdate } from "../preload/index"
 
 type AuthStatus = "ok" | "needed" | "waiting" | "error"
 
@@ -52,13 +45,6 @@ declare global {
       openDashboard(): void
       openIntegrationsPage(): void
       pickAttachment(): Promise<{ path: string; b64: string } | null>
-      // Act mode (Spec 16)
-      confirmAct(id: string, approved: boolean): void
-      replayAutomation(replayId: string): void
-      getAutomationHealth(): Promise<AutomationHealthResponse>
-      repairAutomationProvider(providerId: string): Promise<AutomationProviderRepairResponse>
-      getAutomationKnowledge(goal: string): Promise<AutomationKnowledgeResponse>
-      getAutomationWorkflows(): Promise<AutomationWorkflowsResponse>
       // Auto-update
       onUpdateAvailable(cb: (info: { version: string; releaseDate: string }) => void): () => void
       onUpdateDownloaded(cb: (info: { version: string }) => void): () => void
@@ -83,6 +69,17 @@ declare global {
       getBotConnections(): Promise<{ platform: string; connectedAt: string }[]>
       connectTelegramBot(): Promise<{ ok?: boolean; error?: string }>
       unlinkBot(platform: string): Promise<{ ok?: boolean; error?: string }>
+      // Local management
+      getSessions(query?: string): Promise<unknown[]>
+      deleteSession(id: number): Promise<{ ok?: boolean; deleted?: boolean; error?: string }>
+      getMemories(query?: string): Promise<unknown[]>
+      addMemory(input: { content: string; topic?: string; kind?: string; scope?: string }): Promise<{ memory?: unknown; error?: string }>
+      deleteMemory(id: string): Promise<{ ok?: boolean; error?: string }>
+      getSchedules(): Promise<unknown[]>
+      saveSchedule(input: { id?: string; schedule: string; prompt: string; deliverTo?: string[]; enabled?: boolean }): Promise<{ schedule?: unknown; error?: string }>
+      setScheduleEnabled(id: string, enabled: boolean): Promise<{ schedule?: unknown; error?: string }>
+      deleteSchedule(id: string): Promise<{ ok?: boolean; deleted?: boolean; error?: string }>
+      getDiagnostics(): Promise<{ diagnostics?: unknown; logs?: string[]; error?: string }>
     }
   }
 }

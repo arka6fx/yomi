@@ -1,6 +1,8 @@
-import { eq, and, gte, sql } from "drizzle-orm"
-import { db, usageEvents, ragChunks, ragDocuments, ragSources } from "@yomi/db"
-import { ConnectorRegistry, runAgentLoop, type AgentMessage } from "@yomi/agent-core"
+import { eq, and, gte, sql, desc, ilike, or } from "drizzle-orm"
+import { generateText } from "ai"
+import { db, usageEvents, ragChunks, ragDocuments, ragSources, memoryEntries } from "@yomi/db"
+import { ConnectorRegistry, createModel, runAgentLoop, type AgentMessage } from "@yomi/agent-core"
+import { formatAgentSoul } from "@yomi/shared"
 import {
   getAccessToken,
   listConnectedProviders,
@@ -13,12 +15,15 @@ import {
 } from "../entitlements.js"
 import { getCreditSummary, consumeCredits } from "../services/credit-ledger.js"
 import * as authSchema from "../auth-schema.js"
+import { upsertMemory } from "../routes/memory.js"
 
 export interface RunAgentOptions {
   userId: string
   text: string
   history?: AgentMessage[]
   signal?: AbortSignal
+  sourcePlatform?: string
+  sourceChatId?: string
 }
 
 export interface RunAgentResult {
@@ -83,8 +88,141 @@ async function fetchRagContext(userId: string, query: string, maxChars = 3000): 
   }
 }
 
-function buildSystemWithContext(ragContext: string): string | undefined {
-  if (!ragContext) return undefined
+async function fetchMemoryContext(userId: string, query: string, maxChars = 2000): Promise<string> {
+  try {
+    const safe = query.trim().slice(0, 400)
+    if (!safe) return ""
+    const rows = await db
+      .select({
+        kind: memoryEntries.kind,
+        topic: memoryEntries.topic,
+        content: memoryEntries.content,
+        confidence: memoryEntries.confidence,
+        sourcePath: memoryEntries.sourcePath,
+      })
+      .from(memoryEntries)
+      .where(
+        and(
+          eq(memoryEntries.userId, userId),
+          eq(memoryEntries.status, "active"),
+          or(
+            ilike(memoryEntries.topic, `%${safe}%`),
+            ilike(memoryEntries.content, `%${safe}%`),
+            ilike(memoryEntries.kind, `%${safe}%`),
+            ilike(memoryEntries.scope, `%${safe}%`),
+          ),
+        ),
+      )
+      .orderBy(desc(memoryEntries.confidence), desc(memoryEntries.updatedAt))
+      .limit(8)
+
+    const out: string[] = []
+    let used = 0
+    for (const row of rows) {
+      const snippet = `- [${row.kind}, confidence ${row.confidence}] ${row.topic}: ${row.content}${row.sourcePath ? ` (source: ${row.sourcePath})` : ""}`
+      if (used + snippet.length > maxChars) break
+      out.push(snippet)
+      used += snippet.length
+    }
+    return out.join("\n")
+  } catch {
+    return ""
+  }
+}
+
+async function fetchMemoryProfile(userId: string, maxChars = 2500): Promise<{ staticProfile: string; dynamicProfile: string }> {
+  try {
+    type Row = { content: string; summary: string | null; isStatic: boolean }
+    const result = await db.execute(sql`
+      select content, summary, is_static as "isStatic"
+      from memory_entries
+      where user_id = ${userId}
+        and status = 'active'
+        and is_latest = true
+      order by is_static desc, confidence desc, updated_at desc
+      limit 48
+    `)
+    const rows = (Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? [])) as Row[]
+    const format = (title: string, isStatic: boolean) => {
+      const out: string[] = []
+      let used = 0
+      for (const row of rows) {
+        if (row.isStatic !== isStatic) continue
+        const line = `- ${row.summary || row.content}`
+        if (used + line.length > maxChars) break
+        out.push(line)
+        used += line.length
+      }
+      return out.length ? `${title}\n${out.join("\n")}` : ""
+    }
+    return { staticProfile: format("## Static Profile", true), dynamicProfile: format("## Dynamic Context", false) }
+  } catch {
+    return { staticProfile: "", dynamicProfile: "" }
+  }
+}
+
+type ExtractedMemory = {
+  kind?: string
+  scope?: string
+  topic?: string
+  content?: string
+  confidence?: number
+  replaces_topic?: string
+}
+
+function parseExtractedMemories(text: string): ExtractedMemory[] {
+  try {
+    const parsed = JSON.parse(text) as { memories?: ExtractedMemory[] }
+    return Array.isArray(parsed.memories) ? parsed.memories : []
+  } catch {
+    return []
+  }
+}
+
+async function captureBackendMemory(userId: string, input: string, output: string): Promise<void> {
+  if (!process.env["AI_CREDITS_API_KEY"] || process.env["YOMI_DISABLE_MEMORY_CAPTURE"] === "1") return
+  const cleanInput = input.replace(/\r/g, "").slice(0, 1800).trim()
+  const cleanOutput = output.replace(/\r/g, "").slice(0, 1800).trim()
+  if (!cleanInput || !cleanOutput) return
+
+  const { text } = await generateText({
+    model: createModel(process.env["MEMORY_EXTRACTION_MODEL"] || process.env["AI_CREDITS_FAST_MODEL"] || "gpt-5.5-mini"),
+    messages: [
+      {
+        role: "user",
+        content: `Extract durable user memory from this Yomi backend-agent interaction.
+
+Return strict JSON only:
+{"memories":[{"kind":"preference|fact|project|decision|open_thread|correction","scope":"global|project|app|session","topic":"short key","content":"one concise memory","confidence":0.0,"replaces_topic":"optional old topic"}]}
+
+Rules:
+- Store only useful future context.
+- Do not store secrets, passwords, API keys, or one-off trivia.
+- Prefer high precision. If uncertain, omit it.
+- Use replaces_topic only for clear corrections or updates.
+
+User: ${cleanInput}
+Assistant: ${cleanOutput}`,
+      },
+    ],
+  })
+
+  for (const memory of parseExtractedMemories(text)) {
+    if (!memory.content || !memory.topic) continue
+    await upsertMemory(userId, {
+      kind: memory.kind || "fact",
+      scope: memory.scope || "global",
+      topic: memory.topic,
+      content: memory.content,
+      confidence: Math.round(Math.max(0, Math.min(1, memory.confidence ?? 0.7)) * 100),
+      sourceType: "backend_agent_turn",
+      isStatic: memory.kind === "preference" || memory.kind === "fact",
+      replaces_topic: memory.replaces_topic,
+    })
+  }
+}
+
+function buildSystemWithContext(memoryContext: string, ragContext: string, profile?: { staticProfile: string; dynamicProfile: string }): string {
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -92,16 +230,23 @@ function buildSystemWithContext(ragContext: string): string | undefined {
     day: "numeric",
   })
   const appUrl = process.env["YOMI_APP_URL"] ?? "https://yomi.arka6fx.com"
+  const soul = process.env["YOMI_AGENT_SOUL"]
   return (
     `You are Yomi, a helpful AI assistant. Today is ${today}. Answer the user concisely.\n` +
+    `${formatAgentSoul(soul)}\n\n` +
     `When the user asks about their email or connected apps, use the available tools to fetch real data before answering.\n` +
     `If a tool reports a service is not connected, suggest they connect it at ${appUrl}/dashboard.\n` +
     `If a tool returns an authorization or token error, suggest they reconnect at ${appUrl}/dashboard.\n\n` +
-    `<memory>\n` +
-    `[System note: Background context retrieved from your notes. Treat as reference only — respond to the current user message.]\n\n` +
-    `<cloud_rag_context>\n${ragContext}\n</cloud_rag_context>\n` +
-    `<citation_rule>When you use a fact from a numbered retrieved block above, cite its number inline as [1]. Only cite sources you actually used.</citation_rule>\n` +
-    `</memory>`
+    (memoryContext || ragContext || profile?.staticProfile || profile?.dynamicProfile
+      ? `<memory>\n` +
+        `[System note: Background context retrieved from your notes. Treat as reference only — respond to the current user message.]\n\n` +
+        (profile?.staticProfile ? `<static_profile>\n${profile.staticProfile}\n</static_profile>\n` : "") +
+        (profile?.dynamicProfile ? `<dynamic_profile>\n${profile.dynamicProfile}\n</dynamic_profile>\n` : "") +
+        (memoryContext ? `<durable_memories>\n${memoryContext}\n</durable_memories>\n` : "") +
+        (ragContext ? `<cloud_rag_context>\n${ragContext}\n</cloud_rag_context>\n` : "") +
+        `<citation_rule>When you use a fact from a numbered retrieved block above, cite its number inline as [1]. Only cite sources you actually used.</citation_rule>\n` +
+        `</memory>`
+      : "")
   )
 }
 
@@ -155,6 +300,15 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
 
   const registry = new ConnectorRegistry({
     getAccessToken,
+    createPendingAction: async (input) => {
+      const { createPendingAction } = await import("../services/pending-actions.js")
+      return createPendingAction({
+        userId: opts.userId,
+        sourcePlatform: opts.sourcePlatform,
+        sourceChatId: opts.sourceChatId,
+        ...input,
+      })
+    },
     listConnectedProviders: async (userId: string) => {
       const all = await listConnectedProviders(userId)
       return Number.isFinite(connectorLimit) ? all.slice(0, connectorLimit) : all
@@ -164,7 +318,11 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
 
   const appUrl = process.env["YOMI_APP_URL"] ?? "https://yomi.arka6fx.com"
 
-  const ragContext = await fetchRagContext(opts.userId, opts.text)
+  const [memoryContext, ragContext, profile] = await Promise.all([
+    fetchMemoryContext(opts.userId, opts.text),
+    fetchRagContext(opts.userId, opts.text),
+    fetchMemoryProfile(opts.userId),
+  ])
 
   let text: string
   try {
@@ -172,7 +330,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       registry,
       text: opts.text,
       history: opts.history,
-      system: buildSystemWithContext(ragContext),
+      system: buildSystemWithContext(memoryContext, ragContext, profile),
       signal: opts.signal,
     })
   } catch (err) {
@@ -194,6 +352,8 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
         `check your integrations at ${appUrl}/dashboard if this keeps happening.`
     }
   }
+
+  await captureBackendMemory(opts.userId, opts.text, text).catch(() => {})
 
   // Log a bot_message usage event after the LLM call.
   const event = await db

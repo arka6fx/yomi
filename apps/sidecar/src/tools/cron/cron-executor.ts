@@ -9,7 +9,6 @@ import { createModel } from "../../pipeline/model.js"
 import { createMemoryTools } from "../memory.js"
 import { createWebTools } from "../web.js"
 import { createSystemTools } from "../system.js"
-import { createSkillTools } from "../skills/index.js"
 import { scanForThreats } from "../guardrails/index.js"
 import { notepadDir } from "../../memory/loader.js"
 import { saveCronOutput } from "./cron-store.js"
@@ -30,7 +29,6 @@ function buildCronToolSet() {
     ...createMemoryTools(),
     ...createWebTools(),
     ...createSystemTools({}),
-    ...createSkillTools({}),
   }
   return Object.fromEntries(
     Object.entries(all).filter(([name]) => !CRON_BLOCKED_TOOLS.has(name)),
@@ -38,17 +36,8 @@ function buildCronToolSet() {
 }
 
 async function loadJobSkills(skills: string[]): Promise<string> {
-  const blocks: string[] = []
-  for (const name of skills) {
-    try {
-      const path = join(notepadDir(), "skills", name, "SKILL.md")
-      const content = await readFile(path, "utf-8")
-      blocks.push(`<skill name="${name}">\n${content}\n</skill>`)
-    } catch {
-      console.warn(`[cron] skill "${name}" not found, skipping`)
-    }
-  }
-  return blocks.join("\n\n")
+  void skills
+  return ""
 }
 
 async function runScript(script: string): Promise<string> {

@@ -94,7 +94,7 @@ mock.module("./insights/usage-store.js", () => ({
   querySessionLengths: () => [],
 }))
 
-mock.module("./automation/usage.js", () => ({
+mock.module("./usage/reserve.js", () => ({
   reserveInteraction: async (_kind: string) => reserveResult,
   reportUsage: (_kind: string) => {},
 }))
@@ -119,14 +119,6 @@ mock.module("./gateway/remote-queue.js", () => ({
   consumePending: () => [],
   resolveTrigger: (_id: string, _text: string) => {},
   rejectTrigger: (_id: string, _error: string) => {},
-}))
-
-mock.module("./plugins/plugin-manager.js", () => ({
-  getDefaultPluginManager: () => ({
-    getTools: () => ({}),
-    init: async () => {},
-    shutdown: () => {},
-  }),
 }))
 
 mock.module("./tools/cron/cron-scheduler.js", () => ({
@@ -344,35 +336,28 @@ describe("Telegram gateway -- handleGatewayMessage", () => {
     expect(body.text).toBe("Your Notion has project plans.")
   })
 
-  it("handles /screenshot remote trigger", async () => {
+  it("treats /screenshot as normal text, not a desktop trigger", async () => {
     enqueueTriggerResult = "data:image/png;base64,screenshot"
     await handleGatewayMessage({ ...sampleMsg, text: "/screenshot" })
-    expect(enqueueTriggerCalls.length).toBe(1)
-    expect(enqueueTriggerCalls[0]!.action).toBe("screenshot")
+    expect(enqueueTriggerCalls.length).toBe(0)
     const sendCall = fetchCalls.find((c) => c.url.includes("/api/gateway/send"))
     expect(sendCall).toBeDefined()
-    const body = JSON.parse(sendCall!.body!)
-    expect(body.text).toContain("screenshot")
   })
 
-  it("handles /voice remote trigger", async () => {
+  it("treats /voice as normal text, not a desktop trigger", async () => {
     await handleGatewayMessage({ ...sampleMsg, text: "/voice" })
-    expect(enqueueTriggerCalls.length).toBe(1)
-    expect(enqueueTriggerCalls[0]!.action).toBe("voice")
+    expect(enqueueTriggerCalls.length).toBe(0)
   })
 
-  it("handles /move with direction", async () => {
+  it("treats /move as normal text, not a desktop trigger", async () => {
     await handleGatewayMessage({ ...sampleMsg, text: "/move up" })
-    expect(enqueueTriggerCalls.length).toBe(1)
-    expect(enqueueTriggerCalls[0]!.action).toBe("move")
-    expect(enqueueTriggerCalls[0]!.opts).toEqual({ direction: "up" })
+    expect(enqueueTriggerCalls.length).toBe(0)
   })
 
-  it("handles screen analysis via analyze trigger", async () => {
+  it("treats screen analysis text as normal text, not a desktop trigger", async () => {
     enqueueTriggerResult = "I see VS Code open"
     await handleGatewayMessage({ ...sampleMsg, text: "analyze my screen" })
-    expect(enqueueTriggerCalls.length).toBe(1)
-    expect(enqueueTriggerCalls[0]!.action).toBe("analyze")
+    expect(enqueueTriggerCalls.length).toBe(0)
   })
 
   it("sends error reply when reservation fails", async () => {
@@ -399,130 +384,29 @@ describe("Telegram gateway -- handleGatewayMessage", () => {
 // =============================================================================
 
 describe("memory subsystem + RAG", () => {
-  let tempDir = ""
-  let todayStr: string
-
-  beforeAll(() => {
-    todayStr = new Date().toISOString().slice(0, 10)
-  })
-
   beforeEach(async () => {
-    tempDir = await mkdtemp(join(tmpdir(), "yomi-integration-"))
-    process.env["YOMI_NOTEPAD_DIR"] = tempDir
-
-    await mkdir(join(tempDir, "sessions"), { recursive: true })
-    await mkdir(join(tempDir, "memory"), { recursive: true })
-    await mkdir(join(tempDir, "projects", "yomi"), { recursive: true })
-
-    await writeFile(join(tempDir, "memory.md"), "# Long-term memory\n\nUser prefers Python.\n", "utf-8")
-    await writeFile(join(tempDir, "memory-index.md"), "## Index\n- session 2026-06-16\n", "utf-8")
-    await writeFile(
-      join(tempDir, "sessions", `${todayStr}-dev.md`),
-      "## 2026-06-16T10:00:00.000Z - fast\n\nUser: remember my project\n\nAssistant: Yomi is an AI assistant.\n",
-      "utf-8",
-    )
-    await writeFile(
-      join(tempDir, "memory", "profile.static.md"),
-      "## Static profile\n\nName: Arkady\nLanguage: English\n",
-      "utf-8",
-    )
-    await writeFile(
-      join(tempDir, "memory", "profile.dynamic.md"),
-      "## Dynamic profile\n\nProject: Yomi\nStatus: Active\n",
-      "utf-8",
-    )
-
     await initMemorySubsystem()
   })
 
-  afterEach(async () => {
+  afterEach(() => {
     closeMemorySubsystem()
-    delete process.env["YOMI_NOTEPAD_DIR"]
-    await rm(tempDir, { recursive: true, force: true })
   })
 
-  it("loadMemoryContext returns all 7 fields from real files", async () => {
+  it("loadMemoryContext returns backend-memory bundle fields", async () => {
     const ctx = await loadMemoryContext("test query")
-    expect(ctx.memorySummary).toContain("User prefers Python")
-    expect(ctx.memoryIndex).toContain("session 2026-06-16")
-    expect(ctx.recentSession).toContain("remember my project")
-    expect(ctx.staticProfile).toContain("Arkady")
-    expect(ctx.dynamicProfile).toContain("Yomi")
-    expect(ctx.localMemory).toBeDefined()
-    expect(ctx.cloudRagContext).toBeDefined()
-  })
 
-  it("loadMemoryContext returns empty strings when no files exist", async () => {
-    closeMemorySubsystem()
-    await rm(tempDir, { recursive: true, force: true })
-    tempDir = await mkdtemp(join(tmpdir(), "yomi-integration-empty-"))
-    process.env["YOMI_NOTEPAD_DIR"] = tempDir
-    await mkdir(join(tempDir, "sessions"), { recursive: true })
-    await mkdir(join(tempDir, "memory"), { recursive: true })
-    await initMemorySubsystem()
-
-    const ctx = await loadMemoryContext("anything")
     expect(ctx.memorySummary).toBe("")
     expect(ctx.memoryIndex).toBe("")
+    expect(ctx.durableMemory).toBeDefined()
     expect(ctx.localMemory).toBe("")
-    expect(ctx.cloudRagContext).toBe("")
     expect(ctx.staticProfile).toBe("")
     expect(ctx.dynamicProfile).toBe("")
     expect(ctx.recentSession).toBe("")
   })
 
-  it("writeSessionTurn appends to today's session file", async () => {
+  it("writeSessionTurn is a no-op compatibility shim", async () => {
     writeSessionTurn({ kind: "fast", input: "test input", output: "test output" })
-    await new Promise((r) => setTimeout(r, 100))
-
-    const { loadRecentSession } = await import("./memory/session.js")
-    const recent = await loadRecentSession(5000)
-    expect(recent).toContain("test input")
-    expect(recent).toContain("test output")
-  })
-
-  it("local RAG indexes and retrieves session content", async () => {
-    const { indexLocalRagSources, retrieveLocalRagContext } = await import("./memory/local-rag.js")
-
-    await writeFile(
-      join(tempDir, "projects", "yomi", "context.md"),
-      "Yomi uses local memory RAG for historical decisions.",
-      "utf-8",
-    )
-    await writeFile(
-      join(tempDir, "sessions", "2026-06-15-dev.md"),
-      "User discussed RAG retrieval strategies for Yomi.",
-      "utf-8",
-    )
-
-    await indexLocalRagSources()
-    const context = await retrieveLocalRagContext("RAG historical decisions", 2000)
-
-    expect(context).toContain("projects/yomi/context.md")
-    expect(context).toContain("RAG")
-  })
-
-  it("memory engine hybrid RAG runs without error", async () => {
-    const { retrieveHybridMemoryContext } = await import("./memory/engine.js")
-    const results = await retrieveHybridMemoryContext("projects", 2000)
-    expect(typeof results).toBe("string")
-  })
-
-  it("truncates long memory fields to their caps", async () => {
-    closeMemorySubsystem()
-    await rm(tempDir, { recursive: true, force: true })
-    tempDir = await mkdtemp(join(tmpdir(), "yomi-memory-caps-"))
-    process.env["YOMI_NOTEPAD_DIR"] = tempDir
-    await mkdir(join(tempDir, "memory"), { recursive: true })
-    await initMemorySubsystem()
-    await writeFile(join(tempDir, "memory.md"), "x".repeat(10_000), "utf-8")
-    await writeFile(join(tempDir, "memory-index.md"), "y".repeat(5_000), "utf-8")
-    await writeFile(join(tempDir, "memory", "profile.static.md"), "z".repeat(5_000), "utf-8")
-
-    const ctx = await loadMemoryContext("caps")
-    expect(ctx.memorySummary.length).toBeLessThanOrEqual(4000)
-    expect(ctx.memoryIndex.length).toBeLessThanOrEqual(2000)
-    expect(ctx.staticProfile.length).toBeLessThanOrEqual(3000)
+    expect(true).toBe(true)
   })
 })
 
@@ -533,23 +417,24 @@ describe("memory subsystem + RAG", () => {
 describe("tool calling -- agent tools, hooks, and guardrails", () => {
   it("createAgentTools wires all tool categories", () => {
     const tools: Record<string, unknown> = createAgentTools()
-    expect(tools["list_files"]).toBeDefined()
-    expect(tools["read_file"]).toBeDefined()
-    expect(tools["write_file"]).toBeDefined()
+    expect(tools["add_memory"]).toBeDefined()
+    expect(tools["retrieve_memory"]).toBeDefined()
+    expect(tools["list_memories"]).toBeDefined()
+    expect(tools["delete_memory"]).toBeDefined()
     expect(tools["bash"]).toBeDefined()
     expect(tools["web_search"]).toBeDefined()
     expect(tools["fetch_url"]).toBeDefined()
-    expect(tools["skill_list"]).toBeDefined()
-    expect(tools["skill_view"]).toBeDefined()
+    expect(tools["skill_list"]).toBeUndefined()
+    expect(tools["skill_view"]).toBeUndefined()
     expect(tools["delegate_task"]).toBeDefined()
     expect(tools["cronjob"]).toBeDefined()
     expect(tools["send_message"]).toBeDefined()
     expect(tools["list_platforms"]).toBeDefined()
   })
 
-  it("skill tools are present for pro plan", () => {
+  it("skill tools are disabled for pro plan", () => {
     const pro = createAgentTools({ plan: "pro" }) as Record<string, any>
-    expect(pro["skill_create"]).toBeDefined()
+    expect(pro["skill_create"]).toBeUndefined()
   })
 
   it("system tool execute functions are wired", () => {

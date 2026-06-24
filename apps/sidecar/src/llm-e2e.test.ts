@@ -99,7 +99,7 @@ mock.module("./insights/usage-store.js", () => ({
   querySessionLengths: () => [],
 }))
 
-mock.module("./automation/usage.js", () => ({
+mock.module("./usage/reserve.js", () => ({
   reserveInteraction: async (_kind: string) => reserveResult,
   reportUsage: (_kind: string) => {},
 }))
@@ -124,14 +124,6 @@ mock.module("./gateway/remote-queue.js", () => ({
   consumePending: () => [],
   resolveTrigger: (_id: string, _text: string) => {},
   rejectTrigger: (_id: string, _error: string) => {},
-}))
-
-mock.module("./plugins/plugin-manager.js", () => ({
-  getDefaultPluginManager: () => ({
-    getTools: () => ({}),
-    init: async () => {},
-    shutdown: () => {},
-  }),
 }))
 
 mock.module("./tools/cron/cron-scheduler.js", () => ({
@@ -611,47 +603,38 @@ describe("Telegram bot gateway", () => {
     expect(body.text).toContain("graph agent response")
   })
 
-  it("handles /screenshot trigger and returns result", async () => {
+  it("treats /screenshot as normal text, not a desktop trigger", async () => {
     enqueueTriggerResult = "data:image/png;base64,screenshot-data"
     await handleGatewayMessage({ ...sampleMsg, text: "/screenshot" })
-    expect(enqueueTriggerCalls).toHaveLength(1)
-    expect(enqueueTriggerCalls[0]!.action).toBe("screenshot")
+    expect(enqueueTriggerCalls).toHaveLength(0)
     const sendCall = fetchCalls.find((c) => c.url.includes("/api/gateway/send"))
     expect(sendCall).toBeDefined()
-    const body = JSON.parse(sendCall!.body!)
-    expect(body.text).toContain("screenshot")
   })
 
-  it("handles /voice remote trigger", async () => {
+  it("treats /voice as normal text, not a desktop trigger", async () => {
     await handleGatewayMessage({ ...sampleMsg, text: "/voice" })
-    expect(enqueueTriggerCalls).toHaveLength(1)
-    expect(enqueueTriggerCalls[0]!.action).toBe("voice")
+    expect(enqueueTriggerCalls).toHaveLength(0)
   })
 
-  it("handles /move with direction", async () => {
+  it("treats /move as normal text, not a desktop trigger", async () => {
     await handleGatewayMessage({ ...sampleMsg, text: "/move left" })
-    expect(enqueueTriggerCalls).toHaveLength(1)
-    expect(enqueueTriggerCalls[0]!.action).toBe("move")
-    expect(enqueueTriggerCalls[0]!.opts).toEqual({ direction: "left" })
+    expect(enqueueTriggerCalls).toHaveLength(0)
   })
 
-  it("handles screen analysis via analyze keyword", async () => {
+  it("treats screen analysis text as normal text, not a desktop trigger", async () => {
     enqueueTriggerResult = "I see VS Code with a terminal open"
     await handleGatewayMessage({ ...sampleMsg, text: "analyze my screen" })
-    expect(enqueueTriggerCalls).toHaveLength(1)
-    expect(enqueueTriggerCalls[0]!.action).toBe("analyze")
+    expect(enqueueTriggerCalls).toHaveLength(0)
   })
 
-  it("handles 'look at' screen analysis", async () => {
+  it("treats 'look at' screen analysis as normal text", async () => {
     await handleGatewayMessage({ ...sampleMsg, text: "look at my screen" })
-    expect(enqueueTriggerCalls).toHaveLength(1)
-    expect(enqueueTriggerCalls[0]!.action).toBe("analyze")
+    expect(enqueueTriggerCalls).toHaveLength(0)
   })
 
-  it("handles 'check my screen' analysis", async () => {
+  it("treats 'check my screen' analysis as normal text", async () => {
     await handleGatewayMessage({ ...sampleMsg, text: "check my screen" })
-    expect(enqueueTriggerCalls).toHaveLength(1)
-    expect(enqueueTriggerCalls[0]!.action).toBe("analyze")
+    expect(enqueueTriggerCalls).toHaveLength(0)
   })
 
   it("sends usage limit error when reservation fails", async () => {

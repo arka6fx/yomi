@@ -57,12 +57,10 @@ Current self-serve launch plans:
 | `fast_query` / chat          |  100/mo | 2,000/mo | 8,000/mo |
 | `stt` / voice                |  20 min |  180 min |  750 min |
 | `advanced_reasoning`         |    5/mo |   100/mo |   500/mo |
-| `desktop_automation_run`     |       0 |    75/mo |   750/mo |
-| `browser_automation_run`     |       0 |    40/mo |   500/mo |
 | `image_generation`           |       0 |    30/mo |   200/mo |
 
-Explore is a free monthly tier with strict limits. Pro includes bounded
-foreground automation; Max raises automation and reasoning limits.
+Explore is a free monthly tier with strict limits. Pro and Max raise chat,
+voice, reasoning, connector, and memory limits.
 
 ## LLM Proxy
 
@@ -109,6 +107,20 @@ Mirror indexing parameters:
 Cloud search returns compact snippets with source metadata. The sidecar keeps a
 local archive fallback but treats cloud results as primary when available.
 
+## Memory API
+
+Routes in `apps/backend/src/routes/memory.ts`:
+
+| Route | Purpose |
+| --- | --- |
+| `POST /api/memory/add` | Add or upsert a durable memory fact |
+| `GET /api/memory/entries` | List active durable memories |
+| `POST /api/memory/search` | Retrieve memories by topic/content/scope |
+| `PATCH /api/memory/:id` | Update and version a memory |
+| `POST /api/memory/sync` | Bulk sidecar-to-cloud memory sync |
+| `POST /api/memory/forget` | Soft-forget or hard-delete memories |
+| `DELETE /api/memory/:id` | Forget or hard-delete one memory |
+
 ## Implemented Files
 
 - `apps/backend/src/index.ts`
@@ -116,9 +128,6 @@ local archive fallback but treats cloud results as primary when available.
 - `apps/backend/src/routes/usage.ts`
 - `apps/backend/src/routes/llm.ts`
 - `apps/backend/src/routes/rag.ts`
+- `apps/backend/src/routes/memory.ts`
 - `apps/backend/src/auth.ts`
 - `apps/backend/src/usage.ts`
-
-## Future Work
-
-- Full backend quota enforcement for reasoning/image/automation limits.

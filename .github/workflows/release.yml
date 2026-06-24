@@ -64,10 +64,6 @@ jobs:
         working-directory: apps/sidecar
         run: bun run build
 
-      - name: Build UIA helper
-        working-directory: apps/uia-helper
-        run: dotnet publish -c Release -r win-x64 -p:PublishSingleFile=true --self-contained -o dist
-
       - name: Build Electron app
         working-directory: apps/desktop
         run: bunx electron-vite build
@@ -77,4 +73,3 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: bunx electron-builder --config electron-builder.yml --win --publish always
-

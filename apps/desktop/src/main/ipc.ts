@@ -9,73 +9,14 @@ import {
   resetToIdle,
   activateProcessing,
   endVoiceTurn,
-  triggerVoiceMode,
 } from "./hotkey"
 import { BACKEND_URL, loadToken } from "./auth"
 
 // The mic only ever opens on the Voice button / Ctrl+Space — nothing here re-arms listening.
-// Conversation history for multi-turn act commands, sent with each agent query for context.
-let actHistory: { role: "user" | "assistant"; text: string }[] = []
-const ACT_HISTORY_MAX = 16 // last 8 turns (user + assistant each)
+let conversationHistory: { role: "user" | "assistant"; text: string }[] = []
+const CONVERSATION_HISTORY_MAX = 16 // last 8 turns (user + assistant each)
 
 type Plan = "explore" | "pro" | "max"
-
-type AutomationProviderHealth = {
-  id: string
-  label: string
-  ok: boolean
-  detail?: string
-  diagnostics?: Record<string, unknown>
-}
-
-type AutomationHealthResponse = {
-  ok: boolean
-  providers: AutomationProviderHealth[]
-}
-
-type AutomationProviderRepairResponse = {
-  provider: AutomationProviderHealth
-}
-
-type AutomationKnowledgeResponse = {
-  agent: { id: string; label: string; provider: string }
-  hint: string | null
-  workflows: {
-    id: string
-    agentId: string
-    goal: string
-    tools: string[]
-    stepCount: number
-    recoveryCount: number
-    durationMs: number
-    outcome: "success" | "failure"
-    summary: string
-    createdAt: string
-  }[]
-  recoveries: {
-    id: string
-    agentId: string
-    goalKey: string
-    error: string
-    strategy: string
-    createdAt: string
-  }[]
-}
-
-type AutomationWorkflowReplay = {
-  replayId: string
-  task: string
-  ownerId: string
-  ownerLabel: string
-  status: string
-  startedAt: string
-  endedAt: string | null
-  summary: string | null
-}
-
-type AutomationWorkflowsResponse = {
-  workflows: AutomationWorkflowReplay[]
-}
 
 // Screen-analysis prompt for the Analyze button / Ctrl+S. The chat shows SCREEN_LABEL instead.
 const SCREEN_PROMPT = `Analyze what's on my screen and use the standard answer-block format.
@@ -120,7 +61,6 @@ let ttsPreference = true
 // One controller covers the entire pipeline: screenshot/STT → sidecar SSE stream.
 // Created at the top of each pipeline so ESC aborts any step, not just the fetch.
 let pipelineCtrl: AbortController | null = null
-let agentAutomationFocusSuppressed = false
 
 function startPipeline(): AbortController {
   pipelineCtrl?.abort() // cancel any in-flight pipeline
@@ -134,7 +74,7 @@ export function abortCurrent(): void {
   pipelineCtrl?.abort()
   pipelineCtrl = null
   pcmChunks = []
-  actHistory = [] // drop the multi-turn act context too
+  conversationHistory = []
 }
 
 // Registers sidecar-dependent IPC handlers. Called once after first auth.
@@ -147,126 +87,6 @@ export function initSidecarIpc(
   onAbort: () => void
   onAnalyze: () => Promise<void>
 } {
-  ipcMain.removeHandler("yomi:automation-health")
-  ipcMain.handle("yomi:automation-health", async (): Promise<AutomationHealthResponse> => {
-    const res = await fetch(`${sidecar.baseUrl}/automation/health`, {
-      headers: { "x-sidecar-secret": sidecar.secret },
-    })
-    const body = (await res.json().catch(() => ({}))) as Partial<AutomationHealthResponse> & {
-      error?: string
-    }
-    if (!res.ok) throw new Error(body.error ?? `Automation health ${res.status}`)
-    return { ok: body.ok === true, providers: body.providers ?? [] }
-  })
-  ipcMain.removeHandler("yomi:automation-provider-repair")
-  ipcMain.handle(
-    "yomi:automation-provider-repair",
-    async (_event, providerId: string): Promise<AutomationProviderRepairResponse> => {
-      if (!providerId) throw new Error("Provider id required")
-      const res = await fetch(`${sidecar.baseUrl}/automation/providers/${providerId}/repair`, {
-        method: "POST",
-        headers: { "x-sidecar-secret": sidecar.secret },
-      })
-      const body = (await res.json().catch(() => ({}))) as Partial<AutomationProviderRepairResponse> & {
-        error?: string
-      }
-      if (!res.ok || !body.provider) {
-        throw new Error(body.error ?? `Automation provider repair ${res.status}`)
-      }
-      return { provider: body.provider }
-    },
-  )
-  ipcMain.removeHandler("yomi:automation-knowledge")
-  ipcMain.handle("yomi:automation-knowledge", async (_event, goal: string): Promise<AutomationKnowledgeResponse> => {
-    const trimmed = goal?.trim()
-    if (!trimmed) throw new Error("Goal required")
-    const res = await fetch(
-      `${sidecar.baseUrl}/automation/knowledge?goal=${encodeURIComponent(trimmed)}`,
-      {
-        headers: { "x-sidecar-secret": sidecar.secret },
-      },
-    )
-    const body = (await res.json().catch(() => ({}))) as Partial<AutomationKnowledgeResponse> & {
-      error?: string
-    }
-    if (!res.ok || !body.agent) throw new Error(body.error ?? `Automation knowledge ${res.status}`)
-    return {
-      agent: body.agent,
-      hint: body.hint ?? null,
-      workflows: body.workflows ?? [],
-      recoveries: body.recoveries ?? [],
-    }
-  })
-  ipcMain.removeHandler("yomi:automation-workflows")
-  ipcMain.handle("yomi:automation-workflows", async (): Promise<AutomationWorkflowsResponse> => {
-    const res = await fetch(`${sidecar.baseUrl}/automation/workflows?limit=8`, {
-      headers: { "x-sidecar-secret": sidecar.secret },
-    })
-    const body = (await res.json().catch(() => ({}))) as Partial<AutomationWorkflowsResponse> & {
-      error?: string
-    }
-    if (!res.ok) throw new Error(body.error ?? `Automation workflows ${res.status}`)
-    return { workflows: body.workflows ?? [] }
-  })
-
-  // Forward the user's confirm/cancel for a risky action back to the sidecar (Spec 16).
-  ipcMain.on("yomi:act-confirm", async (_e, id: string, approved: boolean) => {
-    try {
-      await fetch(`${sidecar.baseUrl}/act/confirm`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-sidecar-secret": sidecar.secret },
-        body: JSON.stringify({ id, approved }),
-      })
-      if (agentAutomationFocusSuppressed && !overlayWin.isDestroyed()) {
-        overlayWin.blur()
-        overlayWin.setFocusable(false)
-      }
-    } catch (err) {
-      console.error("[yomi/act] confirm failed", err)
-    }
-  })
-
-  ipcMain.on("yomi:automation-replay", async (_e, replayId: string) => {
-    if (!replayId) return
-    const ctrl = startPipeline()
-    activateProcessing()
-    try {
-      const plan = await reserveInteraction(overlayWin, "chat", ctrl.signal)
-      const res = await fetch(`${sidecar.baseUrl}/automation/replay`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-sidecar-secret": sidecar.secret },
-        body: JSON.stringify({ replayId, plan }),
-        signal: ctrl.signal,
-      })
-      if (!res.ok || !res.body) throw new Error(`Sidecar replay ${res.status}`)
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let buf = ""
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buf += decoder.decode(value, { stream: true })
-        const lines = buf.split("\n")
-        buf = lines.pop()!
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue
-          send(overlayWin, JSON.parse(line.slice(6)) as SseEvent)
-        }
-      }
-      endVoiceTurn()
-    } catch (err) {
-      if ((err as Error).name !== "AbortError") {
-        send(overlayWin, {
-          type: "error",
-          message: err instanceof Error ? err.message : "Replay failed",
-        })
-        resetToIdle()
-      }
-    } finally {
-      pipelineCtrl = null
-    }
-  })
-
   ipcMain.on("yomi:audio-chunk", (_e, pcm: ArrayBuffer, sampleRate: number) => {
     pcmChunks.push(new Float32Array(pcm))
     capturedSampleRate = sampleRate
@@ -354,9 +174,6 @@ export function initSidecarIpc(
     void runAnalyze()
   })
 
-  // Start polling the sidecar for remote triggers from the Telegram/Discord bot.
-  startRemotePoll(sidecar, overlayWin)
-
   return {
     // Voice query: STT → LLM → TTS
     onListenStop: async () => {
@@ -407,109 +224,6 @@ export function initSidecarIpc(
     },
     onAbort: abortCurrent,
     onAnalyze: runAnalyze,
-  }
-}
-
-let remotePollTimer: ReturnType<typeof setInterval> | null = null
-
-function startRemotePoll(sidecar: SidecarManager, overlayWin: BrowserWindow): void {
-  if (remotePollTimer) return
-  remotePollTimer = setInterval(() => void pollRemoteTriggers(sidecar, overlayWin), 3_000)
-}
-
-async function pollRemoteTriggers(sidecar: SidecarManager, overlayWin: BrowserWindow): Promise<void> {
-  try {
-    const res = await fetch(`${sidecar.baseUrl}/remote/pending`, {
-      headers: { "x-sidecar-secret": sidecar.secret },
-    })
-    if (!res.ok) return
-    const data = (await res.json()) as { triggers?: { id: string; action: string; payload: Record<string, string> }[] }
-    if (!data.triggers?.length) return
-    for (const trigger of data.triggers) {
-      void executeRemoteTrigger(sidecar, overlayWin, trigger)
-    }
-  } catch {
-    // ignore — sidecar may not be ready yet
-  }
-}
-
-async function executeRemoteTrigger(
-  sidecar: SidecarManager,
-  overlayWin: BrowserWindow,
-  trigger: { id: string; action: string; payload: Record<string, string> },
-): Promise<void> {
-  const { id, action, payload } = trigger
-
-  const postResult = async (text: string, error?: string) => {
-    await fetch(`${sidecar.baseUrl}/remote/result`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-sidecar-secret": sidecar.secret },
-      body: JSON.stringify({ id, text, error }),
-    }).catch(() => {})
-  }
-
-  try {
-    if (action === "screenshot" || action === "analyze") {
-      const capture = await captureScreen()
-      const queryText = action === "analyze" && payload["text"] ? payload["text"] : SCREEN_PROMPT
-      const ctrl = new AbortController()
-      const chunks: string[] = []
-      const body = JSON.stringify({
-        text: queryText,
-        screenshot_b64: capture.screenshot_b64,
-        screenshots: capture.displays.map(({ screen, screenshot_b64, imageWidth, imageHeight, isCursorScreen }) => ({
-          screen,
-          screenshot_b64,
-          width: imageWidth,
-          height: imageHeight,
-          is_cursor_screen: isCursorScreen,
-        })),
-        tts: false,
-        plan: "max",
-      })
-      const streamRes = await fetch(`${sidecar.baseUrl}/query/fast`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-sidecar-secret": sidecar.secret },
-        body,
-        signal: ctrl.signal,
-      })
-      if (streamRes.ok && streamRes.body) {
-        const reader = streamRes.body.getReader()
-        const dec = new TextDecoder()
-        let buf = ""
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          buf += dec.decode(value, { stream: true })
-          const lines = buf.split("\n")
-          buf = lines.pop() ?? ""
-          for (const line of lines) {
-            if (!line.startsWith("data:")) continue
-            try {
-              const ev = JSON.parse(line.slice(5).trim()) as SseEvent
-              if (ev.type === "llm_chunk") chunks.push(ev.text)
-            } catch { /* ignore */ }
-          }
-        }
-      }
-      await postResult(chunks.join("") || "Screenshot captured but no text generated.")
-    } else if (action === "voice") {
-      const started = triggerVoiceMode()
-      await postResult(started ? "Voice mode started — speak your query." : "Yomi is busy, try again in a moment.")
-    } else if (action === "move") {
-      const dir = payload["direction"] ?? "right"
-      const dx = dir === "left" ? -200 : dir === "right" ? 200 : 0
-      const dy = dir === "up" ? -200 : dir === "down" ? 200 : 0
-      if (!overlayWin.isDestroyed()) {
-        const pos = overlayWin.getPosition()
-        overlayWin.setPosition((pos[0] ?? 0) + dx, (pos[1] ?? 0) + dy)
-      }
-      await postResult(`Window moved ${dir}.`)
-    } else {
-      await postResult("", `Unknown action: ${action}`)
-    }
-  } catch (err) {
-    await postResult("", err instanceof Error ? err.message : "Unknown error")
   }
 }
 
@@ -660,45 +374,22 @@ async function streamQuery(
 ): Promise<void> {
   pipelineCtrl = ctrl // keep reference current (startPipeline may have rotated it)
 
-  // Imperative/desktop commands route directly to /query/agent (needs UIA tools, no router).
-  // Everything else goes to /query (unified) so the sidecar's intent router decides fast vs agent —
-  // this lets connector queries ("show my emails", "check calendar") reach the agent tool path.
-  // forceAnswer (Analyze button) bypasses routing and hits /query/fast directly.
-  const useDesktopAgent = !forceAnswer && (shouldUseSystemAction(text) || shouldUseAgent(text))
-  const routedText = useDesktopAgent ? stripDetachedPhrase(text) : text
-
-  // Interactive actions are hands-free: no chat transcript unless an error/confirmation needs UI.
-
-  const endpoint = forceAnswer
-    ? "/query/fast"
-    : useDesktopAgent
-      ? "/query/agent"
-      : "/query"
-  const body = useDesktopAgent
-      ? { text: routedText, screenshot_b64: capture.screenshot_b64, tts, plan, history: actHistory.slice(), skipReserve: true }
-      : {
-          text,
-          screenshot_b64: capture.screenshot_b64,
-          screenshots: capture.displays.map(
-            ({ screen, screenshot_b64, imageWidth, imageHeight, isCursorScreen }) => ({
-              screen,
-              screenshot_b64,
-              width: imageWidth,
-              height: imageHeight,
-              is_cursor_screen: isCursorScreen,
-            }),
-          ),
-          tts,
-          plan,
-          history: actHistory.slice(),
-        }
-  const useAgent = useDesktopAgent
-  const overlayWasFocusable = useAgent ? overlayWin.isFocusable() : null
-  if (useAgent && overlayWasFocusable) {
-    // Real-input UIA tools follow foreground focus; keep Yomi visible but unable to retake it.
-    overlayWin.setFocusable(false)
-    if (overlayWin.isFocused()) overlayWin.blur()
-    agentAutomationFocusSuppressed = true
+  const endpoint = forceAnswer ? "/query/fast" : "/query"
+  const body = {
+    text,
+    screenshot_b64: capture.screenshot_b64,
+    screenshots: capture.displays.map(
+      ({ screen, screenshot_b64, imageWidth, imageHeight, isCursorScreen }) => ({
+        screen,
+        screenshot_b64,
+        width: imageWidth,
+        height: imageHeight,
+        is_cursor_screen: isCursorScreen,
+      }),
+    ),
+    tts,
+    plan,
+    history: conversationHistory.slice(),
   }
 
   let sawDone = false
@@ -735,17 +426,10 @@ async function streamQuery(
         if (event.type === "agent_text") agentTextBuf += event.text
         if (event.type === "llm_chunk") agentTextBuf += event.text
         if (event.type === "transcript" && transcriptLabel) event.text = transcriptLabel
-        if (event.type === "act_proposed" && overlayWasFocusable && !overlayWin.isDestroyed()) {
-          overlayWin.setFocusable(true)
-          overlayWin.show()
-          overlayWin.focus()
-        }
-        if (!useAgent || shouldShowInteractiveEvent(event)) {
-          send(overlayWin, event)
-        }
+        if (shouldShowInteractiveEvent(event)) send(overlayWin, event)
         if (event.type === "done") {
           sawDone = true
-          pushActTurn(text, agentTextBuf || "")
+          pushConversationTurn(text, agentTextBuf || "")
           endVoiceTurn()
         }
         if (event.type === "error") {
@@ -784,60 +468,27 @@ async function streamQuery(
     endVoiceTurn()
     return
   } finally {
-    agentAutomationFocusSuppressed = false
-    if (overlayWasFocusable && !overlayWin.isDestroyed()) overlayWin.setFocusable(true)
     pipelineCtrl = null
   }
 
   if (!sawDone) endVoiceTurn()
 }
 
-// Append a completed agent turn to the rolling history (used for follow-up commands on a manual press).
-function pushActTurn(userText: string, assistantText: string): void {
-  actHistory.push({ role: "user", text: userText.trim() })
-  actHistory.push({ role: "assistant", text: assistantText.trim() || "(done)" })
-  if (actHistory.length > ACT_HISTORY_MAX) actHistory = actHistory.slice(-ACT_HISTORY_MAX)
-}
-
-// Strip detached-mode wording so foreground automation receives a clean task.
-function stripDetachedPhrase(text: string): string {
-  return (
-    text
-      .replace(/\b(in the background|in background|in the bg|in bg)\b/gi, "")
-      .replace(/\bwithout\s+switching\b/gi, "")
-      .replace(/\bwithout\s+interrupting(?:\s+me)?\b/gi, "")
-      .replace(/\bwhile\s+i\s+(?:keep|am)\s+working\b/gi, "")
-      .replace(/\bdon'?t\s+switch\s+away\b/gi, "")
-      .replace(/\bquietly\b/gi, "")
-      .replace(/\s{2,}/g, " ")
-      .trim() || text.trim()
-  )
-}
-
-// Imperative UI commands → desktop automation tasks for the agent (Spec 16).
-function shouldUseAgent(text: string): boolean {
-  return /\b(open|click|press|type|enter|fill|select|choose|check|uncheck|toggle|close|switch|go to|navigate|delete|send|save|copy|paste|rename|create|run|play|pause|resume|spotify|volume|sound|audio|louder|quieter|mute|unmute|increase|decrease|lower|raise|inc|dec|text|message|msg|whats\s*app|whatsapp|tell|ping)\b/i.test(
-    text,
-  )
-}
-
-function shouldUseSystemAction(text: string): boolean {
-  return (
-    /\b(volume|sound|audio|song|louder|quieter|mute|unmute|increase|decrease|lower|raise|inc|dec|spotify|whats\s*app|whatsapp)\b/i.test(
-      text,
-    ) ||
-    /\bplay\b.+\b(song|track|music|by)\b/i.test(text) ||
-    /\b(text|message|msg)\b/i.test(text)
-  )
+function pushConversationTurn(userText: string, assistantText: string): void {
+  conversationHistory.push({ role: "user", text: userText.trim() })
+  conversationHistory.push({ role: "assistant", text: assistantText.trim() || "(done)" })
+  if (conversationHistory.length > CONVERSATION_HISTORY_MAX) {
+    conversationHistory = conversationHistory.slice(-CONVERSATION_HISTORY_MAX)
+  }
 }
 
 function shouldShowInteractiveEvent(event: SseEvent): boolean {
   return (
     event.type === "agent_text" ||
+    event.type === "llm_chunk" ||
+    event.type === "transcript" ||
     event.type === "audio_chunk" ||
-    event.type === "act_proposed" ||
-    event.type === "act_result" ||
-    event.type.startsWith("automation_") ||
+    event.type === "usage_limit" ||
     event.type === "error"
   )
 }

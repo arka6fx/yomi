@@ -49,9 +49,8 @@ function maxSteps(override?: number): number {
   return parseInt(process.env["AGENT_MAX_STEPS"] || "12", 10)
 }
 
-// Lean, text-only tool-calling ReAct loop over the AI Credits model provider and
-// connector tools. No vision, STT/TTS, or UIA — those stay sidecar-only. Runs in
-// both the sidecar and the backend; returns the agent's final text answer.
+// Lean, text-only tool-calling loop over the AI Credits model provider and
+// connector tools. Runs in both the sidecar and backend; returns final text.
 export async function runAgentLoop(opts: RunAgentLoopOptions): Promise<string> {
   const tools: ToolSet = {
     ...createConnectorTools(opts.registry),

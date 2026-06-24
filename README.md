@@ -1,10 +1,9 @@
 # Yomi
 
-AI productivity assistant. Connects to your Google Workspace (Gmail, Calendar,
-Drive) and to GitHub, Slack, Notion, Linear, Discord, and more so you can query,
-draft, and act on your work in natural language. Sees your screen, hears your
-voice, and accepts typed questions — from the desktop or Telegram, without
-switching apps or copy-pasting context. Windows now; macOS coming soon.
+AI productivity assistant. Connects to Google Workspace (Gmail, Calendar,
+Drive), GitHub, Slack, Notion, Linear, Discord, and more so you can query,
+draft, summarize, and schedule in natural language. It accepts desktop voice,
+desktop text, screen Q&A, and Telegram messages without copy-pasting context.
 
 ## Architecture
 
@@ -15,24 +14,24 @@ landing site.
 apps/backend/   Hono Worker    auth, billing, LLM proxy, usage metering
 apps/desktop/   Electron       tray/notch UI, hotkeys, screen and mic capture
 apps/landing/   Next.js 16     landing, auth pages, dashboard, downloads
-apps/sidecar/   Bun service    router, fast path, agent loop, memory, MCP
-apps/uia-helper C# / FlaUI     Windows UI Automation helper
+apps/sidecar/   Bun service    router, fast path, agent loop, memory
 
 packages/db/    Drizzle schema and Neon client
 packages/shared Desktop, sidecar, backend contracts
 packages/*config Shared TypeScript and ESLint config
 ```
 
-The sidecar is the local brain. The desktop app stays thin: capture, UI, and
-foreground system integration. Provider keys live in environment files or the
-backend, never in the desktop bundle.
+The backend is canonical for account auth, billing, Telegram, connectors, and
+durable memory. The sidecar is local-first for voice/screen context, local notes,
+and private memory sync. The desktop app stays thin: capture, UI, and hotkeys.
 
 ## Request Paths
 
 | Request | Path | Target |
 | --- | --- | --- |
-| Quick ask / screen Q&A | STT or text → screenshot → one LLM call → optional TTS | under 2–3 s |
-| Tool-use query | router → LangGraph loop → connector tools → response | seconds |
+| Quick ask / screen Q&A | STT or text → optional screenshot → one LLM call → optional TTS | under 2–3 s |
+| Connector query | router → agent loop → connector tools → response | seconds |
+| Telegram query | backend gateway → backend agent → connector/memory tools → reply | seconds |
 
 Do not switch models mid-turn. The router decides fast path vs agent path at
 the start of a turn.
@@ -252,14 +251,10 @@ Current order:
 | 12 | [Backend](specs/12-backend.md) |
 | 13 | [Pricing](specs/13-pricing.md) |
 | 14 | [Landing page](specs/14-landing-page.md) |
-| 16 | [Windows app automation](specs/16-windows-app-automation.md) |
-| 17 | [Browser automation](specs/17-browser-automation.md) |
-| 18 | [Automation orchestration](specs/18-automation-orchestration.md) |
 
 ## Privacy
 
 - No silent recording. The tray/notch UI shows when listening or capturing.
-- Password managers and banking apps must be blocklisted from capture.
-- Desktop automation is foreground-specific.
+- Password managers and banking apps must be blocklisted from screen capture.
 - Memory is user-owned and export/delete must remain possible.
 - OAuth tokens are encrypted at rest.

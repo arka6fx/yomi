@@ -1,9 +1,6 @@
 import { describe, expect, it } from "bun:test"
-import { buildFastPrompt } from "./prompt.js"
-import { closeMemorySubsystem, loadMemoryContext } from "../memory/subsystem.js"
-import { mkdtemp, rm, writeFile } from "node:fs/promises"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { buildAgentPrompt, buildFastPrompt } from "./prompt.js"
+import { loadMemoryContext } from "../memory/subsystem.js"
 
 describe("prompt memory injection", () => {
   it("includes memory summary and index when provided", () => {
@@ -31,21 +28,29 @@ describe("prompt memory injection", () => {
     expect(prompt).toContain("Format biographies and long explanations")
   })
 
-  it("caps loaded memory context", async () => {
-    const tempDir = await mkdtemp(join(tmpdir(), "yomi-prompt-"))
-    process.env["YOMI_NOTEPAD_DIR"] = tempDir
-    try {
-      await writeFile(join(tempDir, "memory.md"), "a".repeat(5000), "utf-8")
-      await writeFile(join(tempDir, "memory-index.md"), "b".repeat(3000), "utf-8")
+  it("includes the default agent soul in fast and agent prompts", () => {
+    const fastPrompt = buildFastPrompt({})
+    const agentPrompt = buildAgentPrompt({})
 
-      const ctx = await loadMemoryContext("memory")
+    expect(fastPrompt).toContain("<agent_soul>")
+    expect(fastPrompt).toContain("You are Yomi: sharp, warm, and practical.")
+    expect(agentPrompt).toContain("<agent_soul>")
+    expect(agentPrompt).toContain("Do not fake access, results, files, memories, or connector data")
+  })
 
-      expect(ctx.memorySummary.length).toBe(4000)
-      expect(ctx.memoryIndex.length).toBe(2000)
-    } finally {
-      closeMemorySubsystem()
-      delete process.env["YOMI_NOTEPAD_DIR"]
-      await rm(tempDir, { recursive: true, force: true })
-    }
+  it("uses a provided soul override", () => {
+    const prompt = buildFastPrompt({ soulMd: "Use terse answers and dry humor." })
+
+    expect(prompt).toContain("<agent_soul>\nUse terse answers and dry humor.\n</agent_soul>")
+    expect(prompt).not.toContain("You are Yomi: sharp, warm, and practical.")
+  })
+
+  it("does not read local markdown memory files", async () => {
+    const ctx = await loadMemoryContext("memory")
+
+    expect(ctx.memorySummary).toBe("")
+    expect(ctx.memoryIndex).toBe("")
+    expect(ctx.localMemory).toBe("")
+    expect(ctx.recentSession).toBe("")
   })
 })

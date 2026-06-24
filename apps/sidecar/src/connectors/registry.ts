@@ -14,9 +14,15 @@ function makeTokenProvider(): TokenProvider {
     const backendUrl =
       process.env["YOMI_BACKEND_URL"] ?? process.env["BACKEND_URL"] ?? "http://localhost:3001"
     const secret = process.env["SIDECAR_SECRET"] ?? ""
+    const sessionToken = process.env["YOMI_SESSION_TOKEN"] ?? ""
     const res = await fetch(
       `${backendUrl}/api/integrations/token/${encodeURIComponent(provider)}?userId=${encodeURIComponent(userId)}`,
-      { headers: { "x-sidecar-secret": secret } },
+      {
+        headers: {
+          ...(secret ? { "x-sidecar-secret": secret } : {}),
+          ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+        },
+      },
     )
     if (!res.ok) {
       const body = (await res.json().catch(() => ({}))) as { error?: string }
@@ -32,10 +38,16 @@ function makeConnectedProvidersLister(): ConnectedProvidersLister {
     const backendUrl =
       process.env["YOMI_BACKEND_URL"] ?? process.env["BACKEND_URL"] ?? "http://localhost:3001"
     const secret = process.env["SIDECAR_SECRET"] ?? ""
+    const sessionToken = process.env["YOMI_SESSION_TOKEN"] ?? ""
     try {
       const res = await fetch(
         `${backendUrl}/api/integrations/status?userId=${encodeURIComponent(userId)}`,
-        { headers: { "x-sidecar-secret": secret } },
+        {
+          headers: {
+            ...(secret ? { "x-sidecar-secret": secret } : {}),
+            ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+          },
+        },
       )
       if (res.ok) {
         const data = (await res.json()) as { connected: string[] }

@@ -2,14 +2,11 @@
 import { createMemoryTools } from "./memory.js"
 import { createSystemTools } from "./system.js"
 import { createWebTools } from "./web.js"
-// import { createUiaAdvancedTools } from "./uia-advanced.js"
-import { createSkillTools } from "./skills/index.js"
 import { createDelegateTaskTool } from "../subagent/delegate-tool.js"
 import { createCronJobTool } from "./cron/cronjob-tool.js"
 import { createMessagingTools } from "./messaging.js"
 import { createIntegrationTools } from "./integrations.js"
 import { getConnectorRegistry } from "../connectors/registry.js"
-import { getDefaultPluginManager } from "../plugins/plugin-manager.js"
 
 export interface AgentToolsContext {
   screenshotB64?: string
@@ -21,13 +18,10 @@ export function createAgentTools(ctx: AgentToolsContext = {}) {
     ...createMemoryTools(),
     ...createSystemTools(ctx),
     ...createWebTools(),
-    // ...createUiaAdvancedTools(),
-    ...createSkillTools({ plan: ctx.plan }),
     ...createDelegateTaskTool({ plan: ctx.plan }),
     ...createCronJobTool({ plan: ctx.plan }),
     ...createMessagingTools(),
     ...createIntegrationTools(),
     ...getConnectorRegistry().getAllDefTools(),
-    ...getDefaultPluginManager().getTools(),
   }
 }

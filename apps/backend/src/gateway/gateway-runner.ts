@@ -8,31 +8,15 @@ import { TelegramAdapter } from "./platforms/telegram.js"
 import { runAgent } from "../agent/run.js"
 import { transcribeAudioUrl } from "../services/transcription.js"
 
-// Patterns that suggest the user wants the desktop to do something local.
-// Keep these narrow — many common words (file, open, screen) appear in data queries too.
-const DESKTOP_ACTION_PATTERNS = [
-  /\b(click|right.click|double.click|drag\s+(?:and\s+)?drop)\b/i,
-  /\b(scroll\s+(?:up|down|left|right)|move\s+(?:the\s+)?(?:cursor|mouse|window))\b/i,
-  /\b(minimize|maximize|resize\s+(?:the\s+)?window|close\s+(?:the\s+)?window)\b/i,
-  /\b(take\s+a?\s*screenshot|capture\s+(?:my\s+)?screen|screenshot\s+of\s+my)\b/i,
-  /\b(analyze\s+(?:my\s+)?screen|look\s+at\s+(?:my\s+)?screen|what(?:'s|\s+is)\s+on\s+(?:my\s+)?screen|check\s+(?:my\s+)?screen)\b/i,
-  /\b(press\s+(?:ctrl|alt|shift|win|cmd|enter|escape|tab|f\d+))\b/i,
-  /\b(launch\s+(?:the\s+)?app|quit\s+(?:the\s+)?app|open\s+(?:the\s+)?app)\b/i,
-  /\b(set\s+(?:the\s+)?volume|mute\s+(?:the\s+)?(?:audio|mic)|play\s+(?:on\s+)?spotify)\b/i,
-]
-
-function classifyIntent(text: string): "data-query" | "desktop-action" {
-  for (const p of DESKTOP_ACTION_PATTERNS) {
-    if (p.test(text)) return "desktop-action"
-  }
-  return "data-query"
-}
-
 const SESSION_TTL_MS = 60 * 60 * 1000
 const SESSION_CLEANUP_INTERVAL_MS = 5 * 60 * 1000
 const LINK_CODE_TTL_MS = 10 * 60 * 1000
 const HISTORY_MAX_TURNS = 8
 const HISTORY_TTL_MS = 60 * 60 * 1000
+
+function directSidecarEnabled(): boolean {
+  return process.env["YOMI_GATEWAY_DIRECT_SIDECAR"] === "1"
+}
 
 interface LinkingCode {
   platform: PlatformType
@@ -77,7 +61,6 @@ export class GatewayRunner {
   private sidecarSecret: string
   private sidecarResolver: SidecarResolver | null = null
   private cleanupTimer: ReturnType<typeof setInterval> | null = null
-  private pendingMessages: Map<string, GatewayMessage[]> = new Map()
 
   constructor(sidecarUrl?: string, sidecarSecret?: string) {
     this.defaultSidecarUrl = sidecarUrl ?? process.env["SIDECAR_URL"] ?? "http://localhost:3002"
@@ -192,6 +175,40 @@ export class GatewayRunner {
 
   private clearHistory(platform: PlatformType, chatId: string): void {
     this.conversationHistories.delete(this.historyKey(platform, chatId))
+  }
+
+  private async handleApprovalCommand(userId: string, text: string): Promise<string | null> {
+    const trimmed = text.trim()
+    if (/^(pending|approvals|pending approvals)$/i.test(trimmed)) {
+      const { listPendingActions } = await import("../services/pending-actions.js")
+      const actions = await listPendingActions(userId)
+      if (actions.length === 0) return "No pending approvals."
+      return actions
+        .map((a) => `${a.id}\n${a.title}\n${a.preview}\nReply: approve ${a.id} or deny ${a.id}`)
+        .join("\n\n")
+    }
+
+    const match = /^(approve|confirm|send|deny|reject|cancel)\s+([0-9a-f-]{36})$/i.exec(trimmed)
+    if (!match) return null
+    const command = match[1]?.toLowerCase()
+    const id = match[2]
+    if (!command || !id) return null
+
+    if (command === "approve" || command === "confirm" || command === "send") {
+      try {
+        const { approvePendingAction } = await import("../services/pending-actions.js")
+        const result = await approvePendingAction(userId, id)
+        if (!result) return "I couldn't find that pending action. It may have expired or already been handled."
+        return result.status === "executed" ? "Approved and executed." : `Approved: ${result.status}`
+      } catch (err) {
+        return `Approval failed: ${err instanceof Error ? err.message : String(err)}`
+      }
+    }
+
+    const { denyPendingAction } = await import("../services/pending-actions.js")
+    const denied = await denyPendingAction(userId, id)
+    if (!denied) return "I couldn't find that pending action. It may have expired or already been handled."
+    return "Denied."
   }
 
   setSidecarResolver(resolver: SidecarResolver): void {
@@ -377,6 +394,22 @@ export class GatewayRunner {
     return adapter.sendMessage(chatId, text, options)
   }
 
+  private async sendMessageAndLog(
+    platform: PlatformType,
+    chatId: string,
+    text: string,
+    context: string,
+    options?: { replyTo?: string },
+  ): Promise<void> {
+    const result = await this.sendMessage(platform, chatId, text, options).catch((err) => ({
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    }))
+    if (!result.ok) {
+      console.warn(`[gateway] sendMessage failed context=${context} platform=${platform} chat=${chatId}: ${result.error ?? "unknown"}`)
+    }
+  }
+
   async sendTyping(platform: PlatformType, chatId: string): Promise<void> {
     const adapter = this.adapters.get(platform)
     if (!adapter) return
@@ -484,6 +517,12 @@ export class GatewayRunner {
     session.messageCount++
     session.lastActivityAt = Date.now()
 
+    const approvalReply = await this.handleApprovalCommand(yomiUserId, msg.text)
+    if (approvalReply) {
+      await this.sendMessage(msg.platform, msg.chatId, approvalReply).catch(() => {})
+      return
+    }
+
     // Control commands (/stop /new /help) are handled locally — no LLM needed.
     const controlReply = this.handleControlCommand(msg, session)
     if (controlReply) {
@@ -516,12 +555,10 @@ export class GatewayRunner {
       }
     }
 
-    // ── Sidecar-first routing ─────────────────────────────────────────────────
-    // Try to forward every message to the sidecar when it is online — it runs
-    // the optimised fast+agent pipeline with connector tools and low latency.
-    // Desktop-only actions (click, type, move, etc.) require the sidecar and
-    // show an "open the app" message when it is offline.
-    const intent = classifyIntent(msg.text)
+    // ── Backend-first routing ─────────────────────────────────────────────────
+    // Production messaging runs in the backend so Telegram is not coupled to a
+    // user's localhost sidecar. Direct sidecar forwarding is only for explicit
+    // dev/tunnel setups.
 
     // Keep the typing indicator alive for ANY processing path —
     // Telegram clears it after ~5 s so refresh every 4 s.
@@ -532,7 +569,7 @@ export class GatewayRunner {
     )
 
     let sidecarUrl: string | undefined
-    if (this.sidecarResolver) {
+    if (directSidecarEnabled() && this.sidecarResolver) {
       sidecarUrl = await this.sidecarResolver(yomiUserId, msg.platform)
     }
 
@@ -545,46 +582,49 @@ export class GatewayRunner {
             Authorization: `Bearer ${this.sidecarSecret}`,
           },
           body: JSON.stringify({ ...msg, yomiUserId }),
+          signal: AbortSignal.timeout(4_000),
         })
-        if (res.ok) { clearInterval(typingInterval); return }
-        throw new Error(`Sidecar returned ${res.status}`)
+        if (res.ok) {
+          console.warn(`[gateway] forwarded to sidecar platform=${msg.platform} user=${yomiUserId} chat=${msg.chatId}`)
+          clearInterval(typingInterval)
+          return
+        }
+        const body = await res.text().catch(() => "")
+        throw new Error(`Sidecar returned ${res.status}: ${body.slice(0, 200)}`)
       } catch (err) {
         console.warn("[gateway] sidecar forward failed:", err)
-        // Fall through to backend agent for data-query; hard-fail for desktop-action
+        // Fall through to backend agent.
       }
     }
 
-    if (intent === "desktop-action") {
-      clearInterval(typingInterval)
-      await this.sendMessage(
-        msg.platform,
-        msg.chatId,
-        "That needs your desktop to be online. Open the Yomi app and try again.",
-      ).catch(() => {})
-      return
-    }
-
-    // ── Backend agent path (sidecar offline, data query only) ─────────────────
+    // ── Backend agent path ───────────────────────────────────────────────────
 
     const history = this.getHistory(msg.platform, msg.chatId)
 
     try {
-      const result = await runAgent({ userId: yomiUserId, text: msg.text, history })
+      console.warn(`[gateway] backend agent start user=${yomiUserId} platform=${msg.platform} chat=${msg.chatId}`)
+      const result = await runAgent({
+        userId: yomiUserId,
+        text: msg.text,
+        history,
+        sourcePlatform: msg.platform,
+        sourceChatId: msg.chatId,
+      })
       clearInterval(typingInterval)
       if (result.text) {
         this.appendHistory(msg.platform, msg.chatId, msg.text, result.text)
       }
-      await this.sendMessage(msg.platform, msg.chatId, result.text).catch((err) => {
-        console.warn("[gateway] failed to send agent reply:", err)
-      })
+      console.warn(`[gateway] backend agent done user=${yomiUserId} platform=${msg.platform} chat=${msg.chatId} chars=${result.text.length}`)
+      await this.sendMessageAndLog(msg.platform, msg.chatId, result.text || "I couldn't produce a reply. Please try again.", "backend-agent-reply")
     } catch (err) {
       clearInterval(typingInterval)
       console.warn("[gateway] runAgent error:", err)
-      await this.sendMessage(
+      await this.sendMessageAndLog(
         msg.platform,
         msg.chatId,
         "Sorry, I ran into an error. Please try again.",
-      ).catch(() => {})
+        "backend-agent-error",
+      )
     }
     } catch (err) {
       clearInterval(typingInterval)
@@ -619,21 +659,11 @@ export class GatewayRunner {
     }
   }
 
-  private queueForUser(yomiUserId: string, msg: GatewayMessage): void {
-    const queue = this.pendingMessages.get(yomiUserId)
-    if (queue) {
-      queue.push(msg)
-    } else {
-      this.pendingMessages.set(yomiUserId, [msg])
-    }
-  }
-
-  // Sidecar polls this to pull pending messages
-  getPendingMessages(yomiUserId: string): GatewayMessage[] {
-    const messages = this.pendingMessages.get(yomiUserId)
-    if (!messages || messages.length === 0) return []
-    this.pendingMessages.delete(yomiUserId)
-    return messages
+  // Kept for backward compatibility with released sidecars. Telegram no longer
+  // queues desktop-trigger messages here; backend handles messaging directly.
+  async getPendingMessages(yomiUserId: string): Promise<GatewayMessage[]> {
+    void yomiUserId
+    return []
   }
 
   private getOrCreateSession(msg: GatewayMessage): GatewaySession {
@@ -683,25 +713,8 @@ export class GatewayRunner {
         "Available commands:\n" +
         "/stop — Stop the current operation\n" +
         "/new — Start a new conversation\n" +
-        "/screenshot — Capture and analyse your desktop screen\n" +
-        "/voice — Start voice mode on your desktop\n" +
-        "/move left|right|up|down — Nudge the Yomi window\n" +
-        "/type <text> — Submit a text query to the Yomi desktop\n" +
-        "/approve — Approve a pending action\n" +
-        "/deny — Deny a pending action\n" +
         "/help — Show this message"
       )
-    }
-
-    // Remote desktop trigger commands — return null so they fall through
-    // to the sidecar-first routing path which handles them via /gateway/receive.
-    if (
-      text === "/screenshot" ||
-      text === "/voice" ||
-      /^\/move\s+(left|right|up|down)$/i.test(text) ||
-      /^\/type\s+.+/.test(text)
-    ) {
-      return null
     }
 
     return null

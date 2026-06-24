@@ -15,9 +15,9 @@ gatewayRouter.get("/status", (c) => {
 })
 
 // Sidecar polls this to pull pending messages
-gatewayRouter.get("/pending", authenticate, (c) => {
+gatewayRouter.get("/pending", authenticate, async (c) => {
   const user = c.get("user")
-  const messages = getDefaultGateway().getPendingMessages(user.id)
+  const messages = await getDefaultGateway().getPendingMessages(user.id)
   return c.json({ messages })
 })
 
@@ -157,10 +157,18 @@ gatewayRouter.post("/telegram/webhook/:token", async (c) => {
   const update = await c.req.json<TelegramUpdate>().catch(() => null)
   if (!update) return c.text("Bad Request", 400)
 
+  console.warn(`[gateway/telegram] webhook update=${update.update_id} hasMessage=${update.message ? "yes" : "no"}`)
+
   const gateway = getDefaultGateway()
   const adapter = gateway.getAdapter("telegram")
-  if (!(adapter instanceof TelegramAdapter)) return c.text("No Telegram adapter", 503)
+  if (!(adapter instanceof TelegramAdapter)) {
+    console.warn("[gateway/telegram] adapter missing, attempting lazy gateway start")
+    await gateway.start()
+  }
 
-  await adapter.processUpdate(update)
+  const readyAdapter = gateway.getAdapter("telegram")
+  if (!(readyAdapter instanceof TelegramAdapter)) return c.text("No Telegram adapter", 503)
+
+  await readyAdapter.processUpdate(update)
   return c.json({ ok: true })
 })

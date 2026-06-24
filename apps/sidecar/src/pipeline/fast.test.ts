@@ -119,26 +119,13 @@ mock.module("./tts.js", () => ({
   },
 }))
 
-mock.module("../memory/session.js", () => ({
-  appendSessionTurn: async () => {
-    appendSessionCalls++
-  },
-  loadRecentSession: async () => {
-    loadRecentSessionCalls++
-    return "User: remember my project\nAssistant: It is Yomi."
-  },
-}))
-
-mock.module("../memory/compactor.js", () => ({
-  compact: async () => {},
-}))
-
 mock.module("../memory/subsystem.js", () => ({
   loadMemoryContext: async () => {
     loadRecentSessionCalls++
     return {
       memorySummary: "## Memory Summary\nUser likes Python.",
       memoryIndex: "## Index\n- session 2026-06-16",
+      durableMemory: "- [preference] language: User likes Python.",
       localMemory: "User: remember my project\nAssistant: It is Yomi.",
       cloudRagContext: "[1] Project Yomi is an AI productivity assistant.",
       staticProfile: "## Static Profile\nName: User\nLanguage: English",

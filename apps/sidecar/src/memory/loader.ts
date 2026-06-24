@@ -1,42 +1,25 @@
-import { readFile, mkdir } from "node:fs/promises"
+import { mkdir } from "node:fs/promises"
 import { homedir } from "node:os"
 import { join } from "node:path"
 
-export const NOTEPAD = join(homedir(), ".yomi")
+export const SIDECAR_DATA_DIR = process.platform === "win32"
+  ? join(process.env["LOCALAPPDATA"] ?? homedir(), "Yomi", "sidecar")
+  : join(process.env["XDG_DATA_HOME"] ?? join(homedir(), ".local", "share"), "yomi", "sidecar")
+
+export function sidecarDataDir(): string {
+  return process.env["YOMI_SIDECAR_DATA_DIR"] ?? process.env["YOMI_NOTEPAD_DIR"] ?? SIDECAR_DATA_DIR
+}
 
 export function notepadDir(): string {
-  return process.env["YOMI_NOTEPAD_DIR"] ?? NOTEPAD
+  return sidecarDataDir()
 }
 
 export async function initMemoryDir(): Promise<void> {
-  const root = notepadDir()
+  const root = sidecarDataDir()
   await Promise.all([
     mkdir(root, { recursive: true }),
-    mkdir(join(root, "projects"), { recursive: true }),
-    mkdir(join(root, "sessions"), { recursive: true }),
     mkdir(join(root, "debug"), { recursive: true }),
-    // Skills directory is a sibling of notepad/ — created here so the agent
-    // and the curator can rely on it existing on every startup.
-    mkdir(join(root, "skills"), { recursive: true }),
-    mkdir(join(root, "skills", ".archive"), { recursive: true }),
     mkdir(join(root, "cron"), { recursive: true }),
     mkdir(join(root, "cron", "output"), { recursive: true }),
-    mkdir(join(root, "plugins"), { recursive: true }),
   ])
-}
-
-export async function loadMemorySummary(): Promise<string> {
-  try {
-    return await readFile(join(notepadDir(), "memory.md"), "utf-8")
-  } catch {
-    return ""
-  }
-}
-
-export async function loadMemoryIndex(): Promise<string> {
-  try {
-    return await readFile(join(notepadDir(), "memory-index.md"), "utf-8")
-  } catch {
-    return ""
-  }
 }

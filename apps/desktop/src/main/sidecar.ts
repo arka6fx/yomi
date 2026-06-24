@@ -45,15 +45,6 @@ function sidecarBinPath(): string {
     : path.join(__dirname, "../../../sidecar/dist", name)
 }
 
-// Resolve the UIA helper exe (Spec 16). Packaged: <resources>/uia/ (extraResources).
-// Dev: apps/uia-helper/dist/ (built via `dotnet publish`). Passed to the sidecar as YOMI_UIA_HELPER.
-function uiaHelperPath(): string {
-  const name = "uia-helper.exe"
-  return app.isPackaged
-    ? path.join(process.resourcesPath, "uia", name)
-    : path.join(__dirname, "../../../uia-helper/dist", name)
-}
-
 const HEALTH_INTERVAL_MS = 10_000
 const HEALTH_FAIL_THRESHOLD = 3
 
@@ -78,7 +69,6 @@ export class SidecarManager {
           SIDECAR_SECRET: this.secret,
           YOMI_SESSION_TOKEN: this.sessionToken,
           YOMI_BACKEND_URL: BACKEND_URL,
-          YOMI_UIA_HELPER: uiaHelperPath(),
         },
         stdio: ["ignore", "pipe", "pipe"],
         windowsHide: true,

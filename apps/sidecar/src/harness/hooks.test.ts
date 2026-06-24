@@ -29,7 +29,7 @@ describe("hooks.onPreToolUse — threat scan", () => {
   })
 
   it("allows bash commands that don't match the injection patterns", async () => {
-    const result = await hooks.onPreToolUse("bash", { command: "ls -la ~/.yomi/" })
+    const result = await hooks.onPreToolUse("bash", { command: "ls -la ./tmp/" })
     expect(result.ok).toBe(true)
   })
 })

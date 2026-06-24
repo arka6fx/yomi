@@ -26,67 +26,6 @@ export type SubscriptionUpdate = Partial<SubscriptionInfo> & {
   plan?: string
 }
 
-export interface AutomationProviderHealth {
-  id: string
-  label: string
-  ok: boolean
-  detail?: string
-  diagnostics?: Record<string, unknown>
-}
-
-export interface AutomationHealthResponse {
-  ok: boolean
-  providers: AutomationProviderHealth[]
-}
-
-export interface AutomationProviderRepairResponse {
-  provider: AutomationProviderHealth
-}
-
-export interface AutomationKnowledgeWorkflow {
-  id: string
-  agentId: string
-  goal: string
-  tools: string[]
-  stepCount: number
-  recoveryCount: number
-  durationMs: number
-  outcome: "success" | "failure"
-  summary: string
-  createdAt: string
-}
-
-export interface AutomationKnowledgeRecovery {
-  id: string
-  agentId: string
-  goalKey: string
-  error: string
-  strategy: string
-  createdAt: string
-}
-
-export interface AutomationKnowledgeResponse {
-  agent: { id: string; label: string; provider: string }
-  hint: string | null
-  workflows: AutomationKnowledgeWorkflow[]
-  recoveries: AutomationKnowledgeRecovery[]
-}
-
-export interface AutomationWorkflowReplay {
-  replayId: string
-  task: string
-  ownerId: string
-  ownerLabel: string
-  status: string
-  startedAt: string
-  endedAt: string | null
-  summary: string | null
-}
-
-export interface AutomationWorkflowsResponse {
-  workflows: AutomationWorkflowReplay[]
-}
-
 contextBridge.exposeInMainWorld("yomi", {
   // ── Auth ──────────────────────────────────────────────────────────────────
 
@@ -242,30 +181,6 @@ contextBridge.exposeInMainWorld("yomi", {
     return ipcRenderer.invoke("yomi:pick-attachment")
   },
 
-  confirmAct(id: string, approved: boolean): void {
-    ipcRenderer.send("yomi:act-confirm", id, approved)
-  },
-
-  replayAutomation(replayId: string): void {
-    ipcRenderer.send("yomi:automation-replay", replayId)
-  },
-
-  getAutomationHealth(): Promise<AutomationHealthResponse> {
-    return ipcRenderer.invoke("yomi:automation-health")
-  },
-
-  repairAutomationProvider(providerId: string): Promise<AutomationProviderRepairResponse> {
-    return ipcRenderer.invoke("yomi:automation-provider-repair", providerId)
-  },
-
-  getAutomationKnowledge(goal: string): Promise<AutomationKnowledgeResponse> {
-    return ipcRenderer.invoke("yomi:automation-knowledge", goal)
-  },
-
-  getAutomationWorkflows(): Promise<AutomationWorkflowsResponse> {
-    return ipcRenderer.invoke("yomi:automation-workflows")
-  },
-
   // ── Auto-update ──────────────────────────────────────────────────────────
 
   onUpdateAvailable(cb: (info: { version: string; releaseDate: string }) => void): () => void {
@@ -329,6 +244,48 @@ contextBridge.exposeInMainWorld("yomi", {
 
   unlinkBot(platform: string): Promise<{ ok?: boolean; error?: string }> {
     return ipcRenderer.invoke("yomi:gateway-unlink", platform)
+  },
+
+  // ── Local management ───────────────────────────────────────────────────────
+
+  getSessions(query?: string): Promise<unknown[]> {
+    return ipcRenderer.invoke("yomi:get-sessions", query ?? "")
+  },
+
+  deleteSession(id: number): Promise<{ ok?: boolean; deleted?: boolean; error?: string }> {
+    return ipcRenderer.invoke("yomi:delete-session", id)
+  },
+
+  getMemories(query?: string): Promise<unknown[]> {
+    return ipcRenderer.invoke("yomi:get-memories", query ?? "")
+  },
+
+  addMemory(input: { content: string; topic?: string; kind?: string; scope?: string }): Promise<{ memory?: unknown; error?: string }> {
+    return ipcRenderer.invoke("yomi:add-memory", input)
+  },
+
+  deleteMemory(id: string): Promise<{ ok?: boolean; error?: string }> {
+    return ipcRenderer.invoke("yomi:delete-memory", id)
+  },
+
+  getSchedules(): Promise<unknown[]> {
+    return ipcRenderer.invoke("yomi:get-schedules")
+  },
+
+  saveSchedule(input: { id?: string; schedule: string; prompt: string; deliverTo?: string[]; enabled?: boolean }): Promise<{ schedule?: unknown; error?: string }> {
+    return ipcRenderer.invoke("yomi:save-schedule", input)
+  },
+
+  setScheduleEnabled(id: string, enabled: boolean): Promise<{ schedule?: unknown; error?: string }> {
+    return ipcRenderer.invoke("yomi:set-schedule-enabled", id, enabled)
+  },
+
+  deleteSchedule(id: string): Promise<{ ok?: boolean; deleted?: boolean; error?: string }> {
+    return ipcRenderer.invoke("yomi:delete-schedule", id)
+  },
+
+  getDiagnostics(): Promise<{ diagnostics?: unknown; logs?: string[]; error?: string }> {
+    return ipcRenderer.invoke("yomi:get-diagnostics")
   },
 
   onUpdateError(cb: (info: { message: string }) => void): () => void {

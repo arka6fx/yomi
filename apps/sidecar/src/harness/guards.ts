@@ -24,7 +24,6 @@ const CHEAP_TOOLS = new Set([
   "forget",
   "look_at_screen",
   "transcribe",
-  "read_file",
 ])
 
 // Plan-based context-compression threshold. Callers feed in the current
@@ -88,12 +87,6 @@ export class LoopGuards {
   onToolCall(toolName: string, args: unknown): GuardResult {
     this.toolCallsInWindow++
     if (!CHEAP_TOOLS.has(toolName)) this.hasNonCheapCallInStep = true
-    // Repeated get_ui_tree snapshots are allowed while UI state settles.
-    // Desktop automation proper will be restored later.
-    if (toolName === "get_ui_tree") {
-      return { break: false }
-    }
-
     const key = `${toolName}:${JSON.stringify(args)}`
     if (
       this.recentCalls.length === DUP_CALL_THRESHOLD - 1 &&

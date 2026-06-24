@@ -67,3 +67,6 @@ examples/
 
 # Desktop automation research (large external repos, not part of Yomi workspace)
 DesktopAutomation/
+
+# Local reference repos cloned for research
+ref/

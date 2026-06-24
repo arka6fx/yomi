@@ -1,21 +1,22 @@
-import { initMemoryDir, loadMemoryIndex, loadMemorySummary } from "./loader.js"
 import {
-  closeMemoryEngine,
-  initMemoryEngine,
-  readProfile,
-  retrieveHybridMemoryContext,
-  captureTurnMemory,
-} from "./engine.js"
-import { closeLocalRag, initLocalRag } from "./local-rag.js"
-import { appendSessionTurn, loadRecentSession, type SessionTurn } from "./session.js"
-import { retrieveCloudRagContext, scheduleCloudRagSync } from "./cloud-rag.js"
+  captureCloudMemory,
+  retrieveCloudMemoryProfile,
+  retrieveCloudMemoryContext,
+  retrieveCloudRagContext,
+} from "./cloud-rag.js"
 
-const MAX_MEMORY_SUMMARY_CHARS = 4000
-const MAX_MEMORY_INDEX_CHARS = 2000
+export type SessionTurn = {
+  kind: "fast" | "agent"
+  input: string
+  output: string
+  mode?: string
+  summary?: string
+}
 
 export type MemoryContextBundle = {
   memorySummary: string
   memoryIndex: string
+  durableMemory: string
   localMemory: string
   cloudRagContext: string
   staticProfile: string
@@ -24,68 +25,46 @@ export type MemoryContextBundle = {
 }
 
 export async function initMemorySubsystem(): Promise<void> {
-  await initMemoryDir()
-  await Promise.all([initMemoryEngine(), initLocalRag()])
-  scheduleCloudRagSync("startup")
+  return
 }
 
 export function closeMemorySubsystem(): void {
-  closeMemoryEngine()
-  closeLocalRag()
+  return
 }
 
 export async function loadMemoryContext(query: string): Promise<MemoryContextBundle> {
-  const [
-    memorySummary,
-    memoryIndex,
-    localMemory,
-    cloudRagContext,
-    staticProfile,
-    dynamicProfile,
-    recentSession,
-  ] = await Promise.all([
-    loadMemorySummary(),
-    loadMemoryIndex(),
-    retrieveHybridMemoryContext(query, 3500),
+  const [durableMemory, cloudRagContext, profile] = await Promise.all([
+    retrieveCloudMemoryContext(query, 3500),
     retrieveCloudRagContext(query, 3000),
-    readProfile("static"),
-    readProfile("dynamic"),
-    loadRecentSession(),
+    retrieveCloudMemoryProfile(query, 2500),
   ])
 
   return {
-    memorySummary: memorySummary.slice(0, MAX_MEMORY_SUMMARY_CHARS),
-    memoryIndex: memoryIndex.slice(0, MAX_MEMORY_INDEX_CHARS),
-    localMemory,
+    memorySummary: "",
+    memoryIndex: "",
+    durableMemory,
+    localMemory: "",
     cloudRagContext,
-    staticProfile,
-    dynamicProfile,
-    recentSession,
+    staticProfile: profile.staticProfile,
+    dynamicProfile: profile.dynamicProfile,
+    recentSession: "",
   }
 }
 
 export async function retrieveMemoryContext(query: string, maxChars = 3000): Promise<string> {
-  return await retrieveHybridMemoryContext(query, maxChars)
+  return await retrieveCloudMemoryContext(query, maxChars)
 }
 
 export async function retrieveArchiveContext(query: string, maxChars = 3000): Promise<string> {
   return await retrieveCloudRagContext(query, maxChars)
 }
 
-// Async FIFO write queue — serialises session writes so back-to-back turns
-// never land out of order, and never block the response pipeline on slow I/O.
-let _writeQueue: Promise<void> = Promise.resolve()
-
-export function writeSessionTurn(turn: SessionTurn): void {
-  _writeQueue = _writeQueue
-    .then(() => appendSessionTurn(turn))
-    .catch(() => {
-      // ignore — best-effort session logging
-    })
+export function writeSessionTurn(_turn: SessionTurn): void {
+  return
 }
 
 export async function flushSessionWriteQueue(): Promise<void> {
-  await _writeQueue
+  return
 }
 
 export async function captureStructuredMemory(turn: {
@@ -94,8 +73,13 @@ export async function captureStructuredMemory(turn: {
   mode?: string
   sourcePath?: string
 }): Promise<void> {
-  await captureTurnMemory(turn)
+  await captureCloudMemory(turn)
 }
 
-export { initLocalRag }
-export { reindexEmbeddings } from "./engine.js"
+export async function initLocalRag(): Promise<void> {
+  return
+}
+
+export async function reindexEmbeddings(): Promise<number> {
+  return 0
+}

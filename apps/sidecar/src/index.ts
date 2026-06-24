@@ -9,22 +9,26 @@ import { agentPipeline } from "./pipeline/agent.js"
 import { transcribe } from "./stt.js"
 import { classifyIntent } from "./router/intent.js"
 import { initMemorySubsystem } from "./memory/subsystem.js"
-// import { resolveConfirmation } from "./uia/act-bus.js" // will provide later
-// import { closeMcp } from "./mcp/client.js" // will provide later
 import { getDefaultScheduler } from "./tools/cron/cron-scheduler.js"
-import { getDefaultPluginManager } from "./plugins/plugin-manager.js"
-// import { duckSpotify } from "./tools/system.js" // will provide later
-// import { getReplayCommand, listWorkflowReplays } from "./automation/runs.js"
-// import { allProviders, getProvider } from "./automation/providers/registry.js"
-import type { ProviderId } from "./automation/providers/types.js"
-// import { resolveAgent } from "./automation/agents/registry.js"
-// import { knowledgeHint, recallKnowledge } from "./automation/knowledge.js"
 import { handleGatewayMessage, startGatewayPoll, stopGatewayPoll } from "./gateway/receive.js"
 import { initConnectorRegistryFromSession } from "./connectors/registry.js"
-import { consumePending, resolveTrigger, rejectTrigger } from "./gateway/remote-queue.js"
 import type { GatewayMessage, Plan } from "@yomi/shared"
 import { initUsageStore, logUsageEvent } from "./insights/usage-store.js"
 import { generateReport, getMaxLookback, formatTerminal } from "./insights/insights-engine.js"
+import {
+  addMemory,
+  forgetMemory,
+  getDiagnostics,
+  listMemories,
+  listSchedules,
+  listSessions,
+  readRecentLogs,
+  removeSchedule,
+  removeSessionTurn,
+  searchMemories,
+  setScheduleEnabled,
+  upsertSchedule,
+} from "./management.js"
 
 // Load .env from the sidecar binary's directory (production) or project root (dev).
 // Compiled binaries don't inherit the bun --env-file flag, so we parse it manually.
@@ -56,13 +60,8 @@ function loadDotEnv(): void {
 }
 loadDotEnv()
 
-// Ensure ~/.yomi/ directory tree exists before serving any requests.
+// Ensure sidecar runtime state exists before serving requests.
 initMemorySubsystem().catch((err) => console.warn("[yomi] memory subsystem init failed:", err))
-
-// Load plugins from ~/.yomi/plugins/. This runs before the cron scheduler so
-// plugin hooks are available to the harness when the scheduler fires its first
-// tick. Failures are non-fatal — plugins that fail to load are silently skipped.
-getDefaultPluginManager().init().catch((err) => console.warn("[yomi] plugin init failed:", err))
 
 // Initialize the local usage store (SQLite) for usage analytics.
 initUsageStore().catch((err) => console.warn("[yomi] usage store init failed:", err))
@@ -109,10 +108,8 @@ const authMiddleware: MiddlewareHandler = async (c, next) => {
 app.use("/query", authMiddleware)
 app.use("/query/*", authMiddleware)
 app.use("/stt", authMiddleware)
-app.use("/act/*", authMiddleware)
-app.use("/automation/*", authMiddleware)
-app.use("/spotify/*", authMiddleware)
 app.use("/insights", authMiddleware)
+app.use("/management/*", authMiddleware)
 app.get("/health", (c) => {
   return c.json({ status: "ok", version: VERSION })
 })
@@ -274,33 +271,6 @@ app.post("/query/agent", async (c) => {
   })
 })
 
-// ── Desktop automation routes — will provide later ──────────────────────────
-// app.post("/automation/replay", async (c) => {
-// app.get("/automation/workflows", (c) => { ... });
-// app.get("/automation/health", async (c) => { ... });
-// app.post("/automation/providers/:id/repair", async (c) => { ... });
-// app.get("/automation/knowledge", (c) => { ... });
-
-// Act-mode confirmation callback — will provide later.
-// app.post("/act/confirm", async (c) => {
-//   let body: { id?: string; approved?: boolean }
-//   try {
-//     body = await c.req.json()
-//   } catch {
-//     return c.json({ error: "Invalid JSON body" }, 400)
-//   }
-//   if (!body.id) return c.json({ error: "id required" }, 400)
-//   const resolved = resolveConfirmation(body.id, body.approved === true)
-//   return c.json({ ok: resolved })
-// })
-
-// ── Automation routes — will provide later ──────────────────────────────────
-// app.post("/automation/replay", async (c) => { ... });
-// app.get("/automation/workflows", (c) => { ... });
-// app.get("/automation/health", async (c) => { ... });
-// app.post("/automation/providers/:id/repair", async (c) => { ... });
-// app.get("/automation/knowledge", (c) => { ... });
-
 app.post("/stt", async (c) => {
   let form: FormData
   try {
@@ -331,13 +301,6 @@ app.post("/stt", async (c) => {
   }
 })
 
-// Duck/restore Spotify volume — commented out until desktop automation is re-enabled.
-// app.post("/spotify/duck", async (c) => {
-//   const body = await c.req.json().catch(() => ({}) as { duck?: boolean })
-//   const result = await duckSpotify(body?.duck === true)
-//   return c.json(result as Record<string, unknown>)
-// })
-
 // Usage insights endpoint — returns analytics report for the given lookback period.
 // Query params: days (number, default 7), plan (string, default "explore").
 app.get("/insights", (c) => {
@@ -354,6 +317,96 @@ app.get("/insights", (c) => {
   return c.json(report)
 })
 
+// ── Local management endpoints ────────────────────────────────────────────────
+
+app.get("/management/sessions", async (c) => {
+  const limit = Number.parseInt(c.req.query("limit") ?? "100", 10)
+  const query = c.req.query("q")
+  const sessions = await listSessions({ limit: Number.isFinite(limit) ? limit : 100, query })
+  return c.json({ sessions })
+})
+
+app.delete("/management/sessions/:id", async (c) => {
+  const id = Number.parseInt(c.req.param("id"), 10)
+  if (!Number.isFinite(id)) return c.json({ error: "Invalid session id" }, 400)
+  const deleted = await removeSessionTurn(id)
+  return c.json({ ok: true, deleted })
+})
+
+app.get("/management/memories", async (c) => {
+  try {
+    const limit = Number.parseInt(c.req.query("limit") ?? "100", 10)
+    const query = c.req.query("q")?.trim()
+    const memories = query
+      ? await searchMemories(query, Number.isFinite(limit) ? limit : 100)
+      : await listMemories(Number.isFinite(limit) ? limit : 100)
+    return c.json({ memories })
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : "Memory request failed" }, 502)
+  }
+})
+
+app.post("/management/memories", async (c) => {
+  try {
+    const body = (await c.req.json()) as { content?: string; topic?: string; kind?: string; scope?: string }
+    if (!body.content?.trim()) return c.json({ error: "content is required" }, 400)
+    const memory = await addMemory({ ...body, content: body.content.trim() })
+    return c.json({ memory })
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : "Memory add failed" }, 502)
+  }
+})
+
+app.delete("/management/memories/:id", async (c) => {
+  try {
+    const result = await forgetMemory(c.req.param("id"), c.req.query("hard") === "true")
+    return c.json({ ok: true, ...result })
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : "Memory delete failed" }, 502)
+  }
+})
+
+app.get("/management/schedules", async (c) => {
+  const schedules = await listSchedules()
+  return c.json({ schedules })
+})
+
+app.post("/management/schedules", async (c) => {
+  try {
+    const body = (await c.req.json()) as { id?: string; schedule?: string; prompt?: string; deliverTo?: string[]; enabled?: boolean }
+    if (!body.schedule?.trim()) return c.json({ error: "schedule is required" }, 400)
+    if (!body.prompt?.trim()) return c.json({ error: "prompt is required" }, 400)
+    const schedule = await upsertSchedule({
+      id: body.id,
+      schedule: body.schedule.trim(),
+      prompt: body.prompt.trim(),
+      deliverTo: body.deliverTo,
+      enabled: body.enabled,
+    })
+    return c.json({ schedule })
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : "Schedule save failed" }, 400)
+  }
+})
+
+app.patch("/management/schedules/:id", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as { enabled?: boolean }
+  if (typeof body.enabled !== "boolean") return c.json({ error: "enabled boolean is required" }, 400)
+  const schedule = await setScheduleEnabled(c.req.param("id"), body.enabled)
+  if (!schedule) return c.json({ error: "schedule not found" }, 404)
+  return c.json({ schedule })
+})
+
+app.delete("/management/schedules/:id", async (c) => {
+  const deleted = await removeSchedule(c.req.param("id"))
+  return c.json({ ok: true, deleted })
+})
+
+app.get("/management/diagnostics", async (c) => {
+  const [diagnostics, logs] = await Promise.all([getDiagnostics(), readRecentLogs()])
+  return c.json({ diagnostics, logs })
+})
+
 // ── Gateway receive ─────────────────────────────────────────────────────────
 app.post("/gateway/receive", async (c) => {
   const auth = c.req.header("Authorization")
@@ -363,32 +416,6 @@ app.post("/gateway/receive", async (c) => {
   }
   const msg = (await c.req.json()) as GatewayMessage
   void handleGatewayMessage(msg)
-  return c.json({ ok: true })
-})
-
-// ── Remote desktop trigger queue ─────────────────────────────────────────────
-// The desktop polls GET /remote/pending every few seconds. When a bot sends a
-// /screenshot, /voice, or /move command, it is queued here and the desktop
-// executes it, then posts the result to POST /remote/result.
-app.use("/remote/*", authMiddleware)
-
-app.get("/remote/pending", (c) => {
-  return c.json({ triggers: consumePending() })
-})
-
-app.post("/remote/result", async (c) => {
-  let body: { id?: string; text?: string; error?: string }
-  try {
-    body = await c.req.json()
-  } catch {
-    return c.json({ error: "Invalid JSON body" }, 400)
-  }
-  if (!body.id) return c.json({ error: "id required" }, 400)
-  if (body.error) {
-    rejectTrigger(body.id, body.error)
-  } else {
-    resolveTrigger(body.id, body.text ?? "")
-  }
   return c.json({ ok: true })
 })
 
@@ -407,8 +434,6 @@ for (const sig of ["SIGINT", "SIGTERM", "beforeExit"] as const) {
   process.on(sig, () => {
     stopGatewayPoll()
     getDefaultScheduler().stop()
-    getDefaultPluginManager().shutdown()
-    // void closeMcp().finally(() => process.exit(0))
     process.exit(0)
   })
 }
@@ -418,8 +443,3 @@ startGatewayPoll()
 console.warn(`Sidecar listening on :${port}`)
 
 export default { port, fetch: app.fetch }
-
-function isProviderId(id: string): id is ProviderId {
-  return id === "native" || id === "api" || id === "workflow"
-  // "browser" — will provide later
-}

@@ -9,7 +9,6 @@ import type { HotkeyState, ChatEntry, SubscriptionInfo } from "./store"
 import { EnergyVad } from "@yomi/shared"
 import { ThemeCtx, type Theme, type ThemeId } from "./theme"
 import { ConnectorIcon } from "@yomi/ui-connectors"
-// import { MissionControl } from "./mission/MissionControl" // disabled — desktop automation hidden
 
 // Hands-free voice loop tuning (renderer-side end-of-speech auto-stop).
 const VAD_SILENCE_HANGOVER_MS = 800 // silence after speech before we auto-stop and process
@@ -22,6 +21,12 @@ type UpdateNotice =
   | { status: "downloading"; version: string; percent: number; bytesPerSecond: number }
   | { status: "downloaded"; version: string }
   | null
+
+type ManagementTab = "sessions" | "memory" | "schedules" | "status"
+
+type SessionRow = { id: number; transcript: string; text: string; timestamp: string }
+type MemoryRow = { id: string; topic?: string; kind?: string; scope?: string; content: string; updatedAt?: string }
+type ScheduleRow = { id: string; schedule: string; prompt: string; enabled: boolean; lastRunAt: string | null; lastRunStatus: string | null; runCount: number }
 
 // Barge-in tuning — a mic-only VAD tap runs while Yomi processes/speaks so the
 // user can talk over it. Thresholds are deliberately stricter than the listening
@@ -2015,6 +2020,7 @@ function MenuCard({
   subscription,
   plan,
   onProfileNameSave,
+  onOpenManage,
   onSignOut,
   onClose,
   onHoverEnter,
@@ -2024,6 +2030,7 @@ function MenuCard({
   subscription: SubscriptionInfo | null
   plan?: string
   onProfileNameSave: (name: string) => Promise<void>
+  onOpenManage: () => void
   onSignOut: () => void
   onClose: () => void
   onHoverEnter: () => void
@@ -2440,6 +2447,13 @@ function MenuCard({
             </button>
           )}
           <MenuBtn
+            label="Manage sessions, memory, schedules"
+            onClick={() => {
+              onOpenManage()
+              onClose()
+            }}
+          />
+          <MenuBtn
             label="Sign out"
             onClick={() => {
               onSignOut()
@@ -2530,14 +2544,7 @@ function Toolbar({
   onMenuOpen: () => void
   onMenuScheduleClose: () => void
 }) {
-  const { ttsEnabled, toggleTts, pendingAct, clearPendingAct } = useYomiStore()
-  // automation disabled — keep store subscriptions so the type stays narrow
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _automationRuns = useYomiStore((s) => s.automationRuns)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _missionsOpen = useYomiStore((s) => s.missionsOpen)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _toggleMissions = useYomiStore((s) => s.toggleMissions)
+  const { ttsEnabled, toggleTts } = useYomiStore()
   const { theme: t } = React.useContext(ThemeCtx)
 
   return (
@@ -2653,8 +2660,6 @@ function Toolbar({
           }}
           className="no-drag"
         >
-          {/* Missions button disabled — desktop automation hidden */}
-
           {/* Voice mode button */}
           <button
             onClick={() => {
@@ -2871,75 +2876,6 @@ function Toolbar({
             </span>
           </button>
 
-          {/* Confirm prompt for a risky action awaiting the user's go-ahead */}
-          {pendingAct && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                marginLeft: 4,
-                padding: "2px 8px",
-                height: 22,
-                borderRadius: 5,
-                background: "rgba(220,38,38,0.16)",
-                border: "1px solid rgba(248,113,113,0.5)",
-                color: "rgba(254,226,226,0.95)",
-                fontSize: 11,
-                fontFamily: UI_FONT,
-                fontWeight: 600,
-              }}
-            >
-              <span
-                style={{
-                  maxWidth: 150,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {pendingAct.label}?
-              </span>
-              <button
-                onClick={() => {
-                  window.yomi.confirmAct(pendingAct.id, true)
-                  clearPendingAct()
-                }}
-                style={{
-                  cursor: "pointer",
-                  border: "none",
-                  borderRadius: 4,
-                  padding: "1px 7px",
-                  fontWeight: 700,
-                  background: "rgba(34,197,94,0.85)",
-                  color: "#04210f",
-                  fontFamily: UI_FONT,
-                  fontSize: 11,
-                }}
-              >
-                Yes
-              </button>
-              <button
-                onClick={() => {
-                  window.yomi.confirmAct(pendingAct.id, false)
-                  clearPendingAct()
-                }}
-                style={{
-                  cursor: "pointer",
-                  border: "1px solid rgba(255,255,255,0.25)",
-                  borderRadius: 4,
-                  padding: "1px 7px",
-                  background: "transparent",
-                  color: "rgba(255,255,255,0.85)",
-                  fontFamily: UI_FONT,
-                  fontSize: 11,
-                }}
-              >
-                No
-              </button>
-            </div>
-          )}
-
           {state === "listening" && (
             <>
               <Chip
@@ -3024,10 +2960,7 @@ function Notch({ state }: { state: HotkeyState }) {
 
   const latest = entries[entries.length - 1]
   let contextText: string | null = null
-  // eslint-disable-next-line no-constant-condition
-  if (false) {
-    // automation context — disabled
-  } else if (state === "listening") contextText = "Esc to stop"
+  if (state === "listening") contextText = "Esc to stop"
   else if (state === "text-input") contextText = "text only, no voice"
   else if (state === "processing") contextText = latest?.transcript?.trim() || "Working on it"
 
@@ -3116,7 +3049,6 @@ function Notch({ state }: { state: HotkeyState }) {
                 {statusLabel}
               </span>
             </div>
-            {/* automation run details removed — desktop automation hidden */}
           </div>
         </motion.div>
       )}
@@ -3411,6 +3343,76 @@ function SignInPanel({
   )
 }
 
+function ManagementPanel({ onClose }: { onClose: () => void }) {
+  const { theme: t } = React.useContext(ThemeCtx)
+  const [tab, setTab] = useState<ManagementTab>("sessions")
+  const [query, setQuery] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [sessions, setSessions] = useState<SessionRow[]>([])
+  const [memories, setMemories] = useState<MemoryRow[]>([])
+  const [schedules, setSchedules] = useState<ScheduleRow[]>([])
+  const [diagnostics, setDiagnostics] = useState<unknown>(null)
+  const [logs, setLogs] = useState<string[]>([])
+  const [memoryDraft, setMemoryDraft] = useState("")
+  const [scheduleDraft, setScheduleDraft] = useState("every day 9am")
+  const [promptDraft, setPromptDraft] = useState("")
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError("")
+    try {
+      if (tab === "sessions") setSessions((await window.yomi.getSessions(query)) as SessionRow[])
+      if (tab === "memory") setMemories((await window.yomi.getMemories(query)) as MemoryRow[])
+      if (tab === "schedules") setSchedules((await window.yomi.getSchedules()) as ScheduleRow[])
+      if (tab === "status") {
+        const result = await window.yomi.getDiagnostics()
+        if (result.error) setError(result.error)
+        setDiagnostics(result.diagnostics ?? null)
+        setLogs(result.logs ?? [])
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load")
+    } finally {
+      setLoading(false)
+    }
+  }, [query, tab])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const tabs: { id: ManagementTab; label: string }[] = [
+    { id: "sessions", label: "Sessions" },
+    { id: "memory", label: "Memory" },
+    { id: "schedules", label: "Schedules" },
+    { id: "status", label: "Status" },
+  ]
+  const card: React.CSSProperties = { background: t.surface, border: `1px solid ${t.border}`, borderRadius: 9, padding: 10 }
+  const button: React.CSSProperties = { background: t.hambBg, border: `1px solid ${t.hambBorder}`, borderRadius: 6, color: t.btnText, cursor: "pointer", fontFamily: UI_FONT, fontSize: 11, padding: "5px 8px" }
+
+  return (
+    <motion.div className="yomi-hit-area no-drag" initial={{ y: 12, opacity: 0, scale: 0.99 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: -8, opacity: 0, scale: 0.99 }} transition={{ type: "spring", stiffness: 380, damping: 28 }} style={{ marginTop: 8, width: 880, maxWidth: "calc(100vw - 40px)", maxHeight: 620, overflow: "hidden", background: t.bg, border: `1px solid ${t.borderHi}`, borderRadius: 12, boxShadow: t.menuShadow, color: t.text, fontFamily: UI_FONT }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: 12, borderBottom: `1px solid ${t.menuSep}` }}>
+        <div><div style={{ fontSize: 14, fontWeight: 800 }}>Yomi Control Center</div><div style={{ fontSize: 11, color: t.dim }}>Sessions, durable memory, scheduled work, and diagnostics</div></div>
+        <button onClick={onClose} style={{ ...button, color: t.dangerText }}>Close</button>
+      </div>
+      <div style={{ display: "flex", gap: 6, padding: "10px 12px", borderBottom: `1px solid ${t.menuSep}` }}>
+        {tabs.map((item) => <button key={item.id} onClick={() => setTab(item.id)} style={{ ...button, background: tab === item.id ? t.hambBgActive : t.hambBg, color: tab === item.id ? t.hambColorActive : t.btnText }}>{item.label}</button>)}
+        {(tab === "sessions" || tab === "memory") && <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search" style={{ flex: 1, background: t.kbdBg, border: `1px solid ${t.kbdBorder}`, borderRadius: 6, color: t.text, fontFamily: UI_FONT, fontSize: 12, padding: "5px 8px", outline: "none" }} />}
+      </div>
+      {error && <div style={{ padding: "8px 12px", color: t.error, fontSize: 12 }}>{error}</div>}
+      <div className="custom-scrollbar" style={{ padding: 12, maxHeight: 500, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
+        {loading && <div style={{ color: t.dim, fontSize: 12 }}>Loading...</div>}
+        {!loading && tab === "sessions" && sessions.map((row) => <div key={row.id} style={card}><div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}><strong style={{ fontSize: 12 }}>{row.transcript || "Untitled turn"}</strong><button style={button} onClick={async () => { await window.yomi.deleteSession(row.id); void load() }}>Delete</button></div><div style={{ color: t.dim, fontSize: 10.5, marginTop: 2 }}>{new Date(row.timestamp).toLocaleString()}</div><div style={{ fontSize: 12, lineHeight: 1.55, marginTop: 6, whiteSpace: "pre-wrap" }}>{row.text.slice(0, 600)}</div></div>)}
+        {!loading && tab === "memory" && <><div style={card}><textarea value={memoryDraft} onChange={(e) => setMemoryDraft(e.target.value)} placeholder="Add a durable memory" style={{ width: "100%", minHeight: 52, resize: "vertical", boxSizing: "border-box", background: t.kbdBg, border: `1px solid ${t.kbdBorder}`, borderRadius: 6, color: t.text, fontFamily: UI_FONT, padding: 8 }} /><button style={{ ...button, marginTop: 6 }} onClick={async () => { if (!memoryDraft.trim()) return; const result = await window.yomi.addMemory({ content: memoryDraft.trim() }); if (result.error) setError(result.error); else { setMemoryDraft(""); void load() } }}>Add memory</button></div>{memories.map((row) => <div key={row.id} style={card}><div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}><strong style={{ fontSize: 12 }}>{row.topic || row.kind || "Memory"}</strong><button style={button} onClick={async () => { await window.yomi.deleteMemory(row.id); void load() }}>Forget</button></div><div style={{ color: t.dim, fontSize: 10.5, marginTop: 2 }}>{row.scope ?? "global"}</div><div style={{ fontSize: 12, lineHeight: 1.55, marginTop: 6, whiteSpace: "pre-wrap" }}>{row.content}</div></div>)}</>}
+        {!loading && tab === "schedules" && <><div style={card}><input value={scheduleDraft} onChange={(e) => setScheduleDraft(e.target.value)} style={{ width: "100%", boxSizing: "border-box", background: t.kbdBg, border: `1px solid ${t.kbdBorder}`, borderRadius: 6, color: t.text, fontFamily: UI_FONT, padding: 8 }} /><textarea value={promptDraft} onChange={(e) => setPromptDraft(e.target.value)} placeholder="What should Yomi do?" style={{ width: "100%", minHeight: 52, marginTop: 6, resize: "vertical", boxSizing: "border-box", background: t.kbdBg, border: `1px solid ${t.kbdBorder}`, borderRadius: 6, color: t.text, fontFamily: UI_FONT, padding: 8 }} /><button style={{ ...button, marginTop: 6 }} onClick={async () => { if (!promptDraft.trim()) return; const result = await window.yomi.saveSchedule({ schedule: scheduleDraft, prompt: promptDraft.trim() }); if (result.error) setError(result.error); else { setPromptDraft(""); void load() } }}>Save schedule</button></div>{schedules.map((row) => <div key={row.id} style={card}><div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><strong style={{ fontSize: 12 }}>{row.schedule}</strong><div style={{ display: "flex", gap: 6 }}><button style={button} onClick={async () => { await window.yomi.setScheduleEnabled(row.id, !row.enabled); void load() }}>{row.enabled ? "Pause" : "Resume"}</button><button style={button} onClick={async () => { await window.yomi.deleteSchedule(row.id); void load() }}>Delete</button></div></div><div style={{ color: t.dim, fontSize: 10.5, marginTop: 2 }}>{row.runCount} runs · {row.lastRunStatus ?? "never run"}</div><div style={{ fontSize: 12, lineHeight: 1.55, marginTop: 6 }}>{row.prompt}</div></div>)}</>}
+        {!loading && tab === "status" && <><pre style={{ ...card, margin: 0, color: t.text, whiteSpace: "pre-wrap", fontSize: 11 }}>{JSON.stringify(diagnostics, null, 2)}</pre><pre style={{ ...card, margin: 0, color: t.dim, whiteSpace: "pre-wrap", fontSize: 11 }}>{logs.join("\n") || "No local debug logs found."}</pre></>}
+      </div>
+    </motion.div>
+  )
+}
+
 // ── App ────────────────────────────────────────────────────────────────────────
 
 const App: React.FC = () => {
@@ -3433,6 +3435,7 @@ const App: React.FC = () => {
   const [loadingProvider, setLoadingProvider] = React.useState<"github" | "google" | null>(null)
   const [lastProvider, setLastProvider] = React.useState<"github" | "google" | null>(null)
   const [menuOpen, setMenuOpen] = React.useState(false)
+  const [managementOpen, setManagementOpen] = React.useState(false)
   const [updateNotice, setUpdateNotice] = React.useState<UpdateNotice>(null)
   const menuCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const menuOpenedAtRef = useRef<number>(0)
@@ -3707,7 +3710,7 @@ const App: React.FC = () => {
       cancelAnimationFrame(settleFrame)
       resizeObserver.disconnect()
     }
-  }, [authState, entries.length, hotkeyState, updateNotice, menuOpen])
+  }, [authState, entries.length, hotkeyState, updateNotice, menuOpen, managementOpen])
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -4014,7 +4017,7 @@ const App: React.FC = () => {
       window.removeEventListener("resize", sendHitRegions)
       window.yomi.setHitRegions([])
     }
-  }, [authState, entries.length, hotkeyState, menuOpen, updateNotice])
+  }, [authState, entries.length, hotkeyState, menuOpen, updateNotice, managementOpen])
 
   // ── Sign-in states ──────────────────────────────────────────────────────────
 
@@ -4206,10 +4209,12 @@ const App: React.FC = () => {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {managementOpen && <ManagementPanel onClose={() => setManagementOpen(false)} />}
+      </AnimatePresence>
+
       {/* Notch — state display that hangs from the bottom of the toolbar */}
       <Notch state={hotkeyState} />
-
-      {/* MissionControl disabled — desktop automation hidden */}
 
       {/* Chat content — no wrapper card; ResponsePanel and TextInputPanel are self-styled */}
       <AnimatePresence>
@@ -4283,6 +4288,7 @@ const App: React.FC = () => {
             subscription={subscription}
             plan={subscription?.plan}
             onProfileNameSave={handleProfileNameSave}
+            onOpenManage={() => setManagementOpen(true)}
             onSignOut={() => window.yomi.signOut()}
             onClose={closeMenuNow}
             onHoverEnter={cancelMenuClose}

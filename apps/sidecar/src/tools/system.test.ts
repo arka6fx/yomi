@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test"
 import { actFailed } from "./system.js"
 
-describe("actFailed (decides when a UIA action should re-snapshot + retry)", () => {
+describe("actFailed", () => {
   it("treats an explicit ok:false from the action ladder as a failure", () => {
     expect(
       actFailed({ ok: false, error: "no activation method succeeded", tried: ["Invoke:Timeout"] }),

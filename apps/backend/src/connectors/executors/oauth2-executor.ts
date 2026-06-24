@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from "node:crypto"
 import { eq, and } from "drizzle-orm"
 import { db, mcpConnections } from "@yomi/db"
 import { encryptTokens, type OAuthTokens } from "../../services/token-encryption.js"
@@ -11,13 +12,30 @@ function appUrl(): string {
   return process.env.BETTER_AUTH_URL ?? "http://localhost:3000"
 }
 
-// Encodes userId + timestamp for CSRF protection. Decoded by handleOAuth2Callback.
+function stateSecret(): string {
+  const secret = process.env["OAUTH_STATE_SECRET"] ?? process.env["BETTER_AUTH_SECRET"]
+  if (!secret) throw new Error("OAUTH_STATE_SECRET or BETTER_AUTH_SECRET not set")
+  return secret
+}
+
+function signState(payload: string): string {
+  return createHmac("sha256", stateSecret()).update(payload).digest("base64url")
+}
+
+// Encodes userId + timestamp with an HMAC signature for CSRF protection.
 function encodeState(userId: string): string {
-  return Buffer.from(JSON.stringify({ userId, ts: Date.now() })).toString("base64url")
+  const payload = Buffer.from(JSON.stringify({ userId, ts: Date.now() })).toString("base64url")
+  return `${payload}.${signState(payload)}`
 }
 
 function decodeState(state: string): { userId: string; ts: number } {
-  const decoded = JSON.parse(Buffer.from(state, "base64url").toString("utf8"))
+  const [payload, signature] = state.split(".")
+  if (!payload || !signature) throw new Error("invalid state format")
+  const expected = signState(payload)
+  const sig = Buffer.from(signature)
+  const exp = Buffer.from(expected)
+  if (sig.length !== exp.length || !timingSafeEqual(sig, exp)) throw new Error("invalid state signature")
+  const decoded = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"))
   if (!decoded.userId) throw new Error("missing userId in state")
   return decoded as { userId: string; ts: number }
 }

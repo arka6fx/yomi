@@ -5,6 +5,19 @@ export type UserRole = "user" | "owner"
 export type Plan = "explore" | "pro" | "max"
 export type SubscriptionStatus = "inactive" | "active" | "past_due"
 
+export const DEFAULT_AGENT_SOUL = `\
+You are Yomi: sharp, warm, and practical.
+Speak plainly. Prefer the shortest complete answer over a polished essay.
+Be useful before being clever. If the user is stuck, reduce the problem to the next concrete step.
+Ask at most one clarifying question when it changes the outcome; otherwise make a reasonable assumption and move.
+Do not fake access, results, files, memories, or connector data. Say what you know, what you checked, and what remains uncertain.
+Keep boundaries firm: no unsafe help, no hidden actions, no pretending to control apps or accounts without an explicit available tool.`
+
+export function formatAgentSoul(soul: string | undefined): string {
+  const text = soul?.trim() || DEFAULT_AGENT_SOUL
+  return text ? `<agent_soul>\n${text}\n</agent_soul>` : ""
+}
+
 export interface ChunkOptions {
   targetChars?: number
   overlap?: number
@@ -67,108 +80,7 @@ export interface ScreenImage {
   is_cursor_screen?: boolean
 }
 
-// UIA app automation (Spec 16) — shapes the uia-helper emits and the sidecar/desktop consume.
-export interface UiaElement {
-  ref: string // stable within the latest snapshot only: "w<window>e<element>"
-  role: string // control type: "Button", "Edit", "MenuItem", ...
-  name: string
-  automationId?: string
-  rect: { x: number; y: number; width: number; height: number } // physical screen px
-  patterns: string[] // ["Invoke","Value","Toggle","ExpandCollapse","SelectionItem","Selection","Scroll","ScrollItem","Text","LegacyIAccessible"]
-  enabled: boolean
-  offscreen?: boolean // rect is empty or outside the window — needs ScrollIntoView/vision
-  value?: string | null
-  rangeValue?: number | null // RangeValuePattern current (e.g. Spotify volume slider 0..100)
-  childCount?: number // number of direct children (0 = leaf; omitted = unknown)
-}
-
-export interface UiaSnapshot {
-  window: string
-  elements: UiaElement[]
-  truncated?: boolean // true when the tree was cut off by node/depth limits
-  diff?: TreeDiff // changes since the last snapshot, computed by the sidecar
-}
-
-export interface TreeDiff {
-  added: UiaElement[] // elements that appeared since the last snapshot
-  removed: UiaElement[] // elements that disappeared since the last snapshot
-  changed: UiaElement[] // elements that existed before but have different properties
-}
-
-export interface FocusChangeEvent {
-  hwnd: number
-  window: string
-}
-
-export type UiaAction =
-  | { kind: "invoke"; ref: string }
-  | { kind: "set_value"; ref: string; text: string }
-  | { kind: "toggle"; ref: string }
-  | { kind: "click_point"; x: number; y: number; button?: "left" | "right" | "middle" }
-  | { kind: "expand"; ref: string }
-  | { kind: "collapse"; ref: string }
-  | { kind: "scroll"; ref: string; horizontalPercent?: number; verticalPercent?: number }
-  | { kind: "right_click"; ref: string }
-  | { kind: "select_text"; ref: string; start: number; length: number }
-
 export type IntentPath = "fast" | "agent"
-
-export type AutomationState =
-  | "idle"
-  | "thinking"
-  | "executing"
-  | "waiting"
-  | "needs_approval"
-  | "completed"
-  | "failed"
-  | "recovering"
-
-export type AutomationRisk = "safe" | "moderate" | "dangerous"
-
-export interface AutomationOwner {
-  id: string
-  label: string
-}
-
-export interface AutomationPreview {
-  steps: string[]
-  estimatedSeconds: number
-  risk: AutomationRisk
-  confidence: number
-}
-
-export interface AutomationTimelineItem {
-  id: string
-  at: string
-  label: string
-  status: "planned" | "running" | "waiting" | "done" | "failed" | "skipped"
-  detail?: string
-}
-
-export interface AutomationRun {
-  id: string
-  owner: AutomationOwner
-  task: string
-  state: AutomationState
-  startedAt: string
-  endedAt?: string
-  currentStep?: string
-  nextStep?: string
-  step?: number
-  maxSteps?: number
-  estimatedSeconds?: number
-  confidence?: number
-  replayId?: string
-  timeline: AutomationTimelineItem[]
-}
-
-export interface AutomationReplay {
-  id: string
-  runId: string
-  task: string
-  owner: AutomationOwner
-  createdAt: string
-}
 
 export interface IntentClassification {
   path: IntentPath
@@ -253,41 +165,11 @@ export type SseEvent =
       reason: string
       source: "heuristic" | "llm"
     }
-  // Act loop (Spec 16) — propose an action (risky ones await voice confirm), then report the result.
-  // `rect` (physical screen px) lets the desktop highlight the target before acting.
-  | {
-      type: "act_proposed"
-      id: string
-      action: UiaAction
-      label: string
-      risky: boolean
-      rect?: { x: number; y: number; width: number; height: number }
-    }
-  | { type: "act_result"; ok: boolean; label: string; detail?: string }
   // Agent-path events
   | { type: "agent_text"; text: string }
   | { type: "agent_tool_call"; tool: string; args: Record<string, unknown> }
   | { type: "agent_tool_result"; tool: string; result: unknown }
   | { type: "agent_step"; iteration: number; max: number }
-  // Automation Mission Control (Spec 18)
-  | { type: "automation_started"; run: AutomationRun }
-  | { type: "automation_preview"; runId: string; preview: AutomationPreview }
-  | {
-      type: "automation_step"
-      runId: string
-      state: AutomationState
-      currentStep: string
-      nextStep?: string
-      step?: number
-      maxSteps?: number
-      estimatedSeconds?: number
-      confidence?: number
-    }
-  | { type: "automation_timeline"; runId: string; item: AutomationTimelineItem }
-  | { type: "automation_waiting"; runId: string; reason: string; risk: AutomationRisk }
-  | { type: "automation_completed"; runId: string; summary: string; replayId?: string }
-  | { type: "automation_failed"; runId: string; error: string; replayId?: string }
-  | { type: "automation_recovering"; runId: string; reason: string }
   | { type: "done" }
   | { type: "error"; message: string }
   | { type: "usage_limit"; code: string; feature: string; message: string; upgradeUrl?: string }

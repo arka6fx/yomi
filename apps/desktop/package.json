@@ -10,7 +10,7 @@
     "build": "bun run build:deps && electron-vite build && electron-builder --config electron-builder.yml",
     "build:app": "electron-vite build",
     "build:ci": "electron-vite build",
-    "build:deps": "bun --filter @yomi/sidecar build && bun --filter @yomi/uia-helper build",
+    "build:deps": "bun --filter @yomi/sidecar build",
     "pack": "bun run build:deps && electron-vite build && electron-builder --config electron-builder.yml --dir",
     "dist:win": "bun run build:deps && electron-vite build && electron-builder --config electron-builder.yml --win",
     "preview": "electron-vite preview",

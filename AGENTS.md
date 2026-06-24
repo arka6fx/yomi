@@ -1,8 +1,8 @@
 # Yomi — AGENTS.md
 
 AI productivity assistant. Connects to Google Workspace (Gmail, Calendar, Drive) and
-GitHub, Slack, Notion, Linear, Discord, and more. Sees your screen, hears your voice,
-accepts typed questions from desktop or Telegram. Windows first; macOS later.
+GitHub, Slack, Notion, Linear, Discord, and more. Accepts desktop voice, desktop text,
+screen Q&A, and Telegram messages. Backend-first for Telegram and durable memory.
 
 ---
 
@@ -11,8 +11,8 @@ accepts typed questions from desktop or Telegram. Windows first; macOS later.
 | Request type           | Architecture                   | Budget           |
 | ---------------------- | ------------------------------ | ---------------- |
 | Quick ask / screen Q&A | Linear pipeline                | < 2 s            |
-| Screen-aware guidance  | Linear pipeline + vision       | < 3 s            |
-| Autonomous task        | LangGraph graph + connectors   | seconds–minutes  |
+| Connector task         | Agent loop + connector tools   | seconds–minutes  |
+| Telegram task          | Backend agent + memory/tools   | seconds–minutes  |
 
 **Intent router** decides fast vs agent at start of every turn. Never switch models
 mid-turn — loses prompt cache and causes tool-vocab mismatch.
@@ -25,8 +25,8 @@ mid-turn — loses prompt cache and causes tool-vocab mismatch.
 apps/backend/        Hono/Bun — auth, billing, LLM proxy, metering
 apps/desktop/        Electron — tray/menubar/notch, hotkeys, capture
 apps/landing/        Next.js  — marketing, dashboard, account linking
-apps/sidecar/        Bun      — router, fast pipeline, LangGraph agent, notepad
-packages/agent-core/ ConnectorDef, ConnectorRegistry, LangGraph tools
+apps/sidecar/        Bun      — router, fast pipeline, agent loop, notepad
+packages/agent-core/ ConnectorDef, ConnectorRegistry, agent tools
 packages/db/         Drizzle schema + Neon
 packages/shared/     TypeScript contracts (desktop ↔ sidecar ↔ backend)
 packages/ui-connectors/ Connector UI components
@@ -45,7 +45,7 @@ bun install && bun run dev        # install + run all in watch mode
 - **Desktop:** Electron (Tauri-ready). Device-code flow only for auth
 - **Backend:** Hono on Bun, Better Auth (Google + GitHub OAuth), Drizzle + Neon
 - **Billing:** Dodo Payments
-- **Agent orchestration:** LangGraph (`@langchain/langgraph` JS, in-process in sidecar)
+- **Agent orchestration:** AI SDK agent loop with connector tools; backend agent for Telegram
 
 ---
 
@@ -56,11 +56,11 @@ DESKTOP SHELL  (Electron)
   tray/menubar/notch · global hotkey · push-to-talk · screen + mic capture
   ↕ local socket (low-latency authenticated IPC)
 LOCAL SIDECAR  (Bun)
-  intent router · fast pipeline (STT → vision → LLM → TTS)
-  LangGraph agent loop · connector tools · notepad memory
+  intent router · fast pipeline (STT → optional screenshot → LLM → TTS)
+  agent loop · connector tools · local notepad memory
   ↕ authenticated HTTPS
 CLOUD BACKEND  (Hono/Bun)
-  Better Auth · Dodo webhooks · LLM proxy · usage metering · memory sync
+  Better Auth · Dodo webhooks · LLM proxy · usage metering · Telegram · canonical memory
 ```
 
 ---
@@ -69,11 +69,11 @@ CLOUD BACKEND  (Hono/Bun)
 
 `harness = system prompt + tools + connectors + memory + hooks`
 
-**Fast path:** `STT → speculative screenshot → 1 LLM call → TTS`
+**Fast path:** `STT → optional screenshot → 1 LLM call → TTS`
 Tools: `look_at_screen`, `transcribe`, `speak`. No tool-selection loop.
 
-**Agent path:** LangGraph graph + full tool set:
-- Core: filesystem r/w, bash (sandboxed), web search/fetch, cron, messaging
+**Agent path:** AI SDK loop + full tool set:
+- Core: filesystem r/w, bash (sandboxed), web search/fetch, cron, messaging, memory
 - Connectors: Gmail, Google Calendar, Google Drive, GitHub, Notion, Slack,
   Linear, Postgres, MySQL, Discord — loaded from `ConnectorRegistry`
 
@@ -101,8 +101,9 @@ projects/<proj>/ context.md, scratchpad.md
 sessions/        YYYY-MM-DD-topic.md  summaries
 ```
 
-Always preload `yomi.md`; JIT-load everything else. Compact: recall → precision →
-write `memory.md`. Retrieve: index → files → ripgrep. No vector DB needed.
+Always preload `yomi.md`; JIT-load everything else. Backend memory is canonical for
+durable facts, document provenance, Telegram, and connector agents. Sidecar memory is
+local/private working memory and syncs durable facts to `/api/memory/*` when signed in.
 
 ---
 
@@ -126,6 +127,7 @@ Better Auth: `user / session / account / verification`. User table extended with
 `plan`, `subscription_status`, `daily_interaction_count`, `daily_interaction_date`.
 
 App tables: `devices`, `subscriptions`, `usage_events` (append-only), `memory_blobs`,
+`memory_entries`, `memory_sources`, `memory_relations`, `memory_embeddings`,
 `agent_runs`, `mcp_connections` (oauth_tokens encrypted), `hook_logs` (PII redacted).
 
 ---

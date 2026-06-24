@@ -331,6 +331,96 @@ export const ragRetrievalLogs = pgTable(
   }),
 )
 
+export const memoryEntries = pgTable(
+  "memory_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    customId: text("custom_id"),
+    contentHash: text("content_hash").notNull(),
+    kind: text("kind").notNull().default("fact"),
+    scope: text("scope").notNull().default("global"),
+    topic: text("topic").notNull(),
+    summary: text("summary"),
+    content: text("content").notNull(),
+    status: text("status").notNull().default("active"),
+    confidence: integer("confidence").notNull().default(70),
+    sourceType: text("source_type"),
+    sourcePath: text("source_path"),
+    version: integer("version").notNull().default(1),
+    isLatest: boolean("is_latest").notNull().default(true),
+    isStatic: boolean("is_static").notNull().default(false),
+    rootMemoryId: uuid("root_memory_id"),
+    parentMemoryId: uuid("parent_memory_id"),
+    forgetAfter: timestamp("forget_after"),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    userStatusIdx: index("memory_entries_user_status_idx").on(t.userId, t.status, t.updatedAt),
+    userTopicIdx: index("memory_entries_user_topic_idx").on(t.userId, t.topic),
+    userCustomUnique: unique("memory_entries_user_custom_unique").on(t.userId, t.customId),
+    userHashIdx: index("memory_entries_user_hash_idx").on(t.userId, t.contentHash),
+  }),
+)
+
+export const memorySources = pgTable(
+  "memory_sources",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    memoryId: uuid("memory_id")
+      .notNull()
+      .references(() => memoryEntries.id, { onDelete: "cascade" }),
+    documentId: uuid("document_id").references(() => ragDocuments.id, { onDelete: "set null" }),
+    chunkId: uuid("chunk_id").references(() => ragChunks.id, { onDelete: "set null" }),
+    sourcePath: text("source_path"),
+    relevance: integer("relevance").notNull().default(100),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    memoryIdx: index("memory_sources_memory_idx").on(t.memoryId),
+  }),
+)
+
+export const memoryRelations = pgTable(
+  "memory_relations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    fromMemoryId: uuid("from_memory_id")
+      .notNull()
+      .references(() => memoryEntries.id, { onDelete: "cascade" }),
+    toMemoryId: uuid("to_memory_id")
+      .notNull()
+      .references(() => memoryEntries.id, { onDelete: "cascade" }),
+    relationType: text("relation_type").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    userFromIdx: index("memory_relations_user_from_idx").on(t.userId, t.fromMemoryId),
+    relationUnique: unique("memory_relations_unique").on(t.fromMemoryId, t.toMemoryId, t.relationType),
+  }),
+)
+
+export const memoryEmbeddings = pgTable(
+  "memory_embeddings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    memoryId: uuid("memory_id")
+      .notNull()
+      .references(() => memoryEntries.id, { onDelete: "cascade" }),
+    model: text("model").notNull(),
+    embedding: vector("embedding").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    userIdx: index("memory_embeddings_user_idx").on(t.userId),
+    memoryIdx: index("memory_embeddings_memory_idx").on(t.memoryId),
+  }),
+)
+
 export const mcpConnections = pgTable(
   "mcp_connections",
   {
@@ -391,6 +481,38 @@ export const platformConnections = pgTable(
     ),
     userIdx: index("platform_connections_user_idx").on(t.userId),
     platformIdx: index("platform_connections_platform_idx").on(t.platform, t.platformUserId),
+  }),
+)
+
+export const pendingActions = pgTable(
+  "pending_actions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    connector: text("connector").notNull(),
+    action: text("action").notNull(),
+    risk: text("risk").notNull(),
+    title: text("title").notNull(),
+    preview: text("preview").notNull(),
+    confirmText: text("confirm_text"),
+    payload: jsonb("payload").notNull(),
+    status: text("status").notNull().default("pending"),
+    result: jsonb("result"),
+    sourcePlatform: text("source_platform"),
+    sourceChatId: text("source_chat_id"),
+    requestedByRunId: uuid("requested_by_run_id").references(() => agentRuns.id, { onDelete: "set null" }),
+    expiresAt: timestamp("expires_at").notNull(),
+    decidedAt: timestamp("decided_at"),
+    executedAt: timestamp("executed_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    userStatusIdx: index("pending_actions_user_status_idx").on(t.userId, t.status, t.createdAt),
+    expiresIdx: index("pending_actions_expires_idx").on(t.status, t.expiresAt),
+    connectorActionIdx: index("pending_actions_connector_action_idx").on(t.connector, t.action),
   }),
 )
 
