@@ -779,6 +779,10 @@ export class GatewayRunner {
       return "Started a new conversation. How can I help you?"
     }
 
+    if (text === "/start") {
+      return "Yomi is connected. Send a message, voice note, or /help to see available commands."
+    }
+
     if (text === "/help") {
       return (
         "Available commands:\n" +
