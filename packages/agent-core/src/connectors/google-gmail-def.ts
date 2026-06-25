@@ -247,6 +247,23 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
+    "gmail-deletePermanently": tool({
+      description:
+        "Permanently delete a Gmail message — this bypasses Trash and CANNOT be recovered. IMPORTANT: Always confirm with the user first, and prefer gmail-trashEmail unless they explicitly want permanent deletion.",
+      parameters: z.object({
+        messageId: z.string().describe("The Gmail message ID to permanently delete"),
+      }),
+      execute: async ({ messageId }) => {
+        if (!gmail.isConnected()) return notConnectedError()
+        try {
+          await gmail.deleteEmailPermanently(messageId)
+          return { ok: true, message: `Message ${messageId} permanently deleted.` }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
     "gmail-getThread": tool({
       description:
         "Fetch all messages in a Gmail thread by threadId. Returns messages in order, each with full body and headers.",
@@ -291,9 +308,10 @@ export const googleGmailDef: ConnectorDef = {
     authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
     tokenUrl: "https://oauth2.googleapis.com/token",
     scopes: [
-      "https://www.googleapis.com/auth/gmail.readonly",
-      "https://www.googleapis.com/auth/gmail.send",
-      "https://www.googleapis.com/auth/gmail.modify",
+      // Full mailbox access (read, send, modify, permanent delete). This is the
+      // broadest Gmail scope and is "restricted" — requires Google CASA
+      // verification for public release, or test-user allowlisting for personal use.
+      "https://mail.google.com/",
       "https://www.googleapis.com/auth/userinfo.email",
     ],
     clientIdEnv: "GOOGLE_INTEGRATIONS_CLIENT_ID",

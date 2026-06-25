@@ -186,3 +186,195 @@ describe.skip("Linear tools", () => {
     expect(authHeader).toBe("Bearer lin_fake_token")
   })
 })
+
+// ── Linear write tools (assignee + comments) ──────────────────────────────────
+
+describe("Linear write tools", () => {
+  let linearTools: Record<string, any>
+
+  beforeAll(async () => {
+    await import("./linear.js")
+  })
+
+  beforeEach(async () => {
+    const { getConnectorDef } = await import("../registry.js")
+    const def = getConnectorDef("linear")
+    linearTools = def?.tools({ userId: "u", getAccessToken: async () => "lin_fake_token" }) ?? {}
+  })
+
+  afterEach(() => {
+    mock.restore()
+  })
+
+  it("12. linear-updateIssue assigns to me via viewer id", async () => {
+    const queries: string[] = []
+    let updateInput: any
+    global.fetch = mock(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse((init?.body as string) ?? "{}")
+      queries.push(body.query ?? "")
+      if (body.query?.includes("GetIssueId")) {
+        return new Response(JSON.stringify({
+          data: { issue: { id: "iss-1", team: { states: { nodes: [] } } } },
+        }))
+      }
+      if (body.query?.includes("viewer")) {
+        return new Response(JSON.stringify({ data: { viewer: { id: "user-me" } } }))
+      }
+      updateInput = body.variables?.input
+      return new Response(JSON.stringify({
+        data: { issueUpdate: { success: true, issue: { identifier: "ENG-1", url: "https://linear.app/issue/ENG-1", state: { name: "Todo" } } } },
+      }))
+    })
+    const result = await linearTools["linear-updateIssue"].execute!({ identifier: "ENG-1", assignee: "me" })
+    expect(result.ok).toBeTrue()
+    expect(updateInput.assigneeId).toBe("user-me")
+  })
+
+  it("13. linear-updateIssue resolves a named assignee", async () => {
+    let updateInput: any
+    global.fetch = mock(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse((init?.body as string) ?? "{}")
+      if (body.query?.includes("GetIssueId")) {
+        return new Response(JSON.stringify({
+          data: { issue: { id: "iss-1", team: { states: { nodes: [] } } } },
+        }))
+      }
+      if (body.query?.includes("users")) {
+        return new Response(JSON.stringify({
+          data: { users: { nodes: [{ id: "user-alice", name: "Alice", email: "alice@co.com" }] } },
+        }))
+      }
+      updateInput = body.variables?.input
+      return new Response(JSON.stringify({
+        data: { issueUpdate: { success: true, issue: { identifier: "ENG-1", url: "u", state: { name: "Todo" } } } },
+      }))
+    })
+    const result = await linearTools["linear-updateIssue"].execute!({ identifier: "ENG-1", assignee: "Alice" })
+    expect(result.ok).toBeTrue()
+    expect(updateInput.assigneeId).toBe("user-alice")
+  })
+
+  it("14. linear-addComment posts a comment", async () => {
+    let commentInput: any
+    global.fetch = mock(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse((init?.body as string) ?? "{}")
+      if (body.query?.includes("GetIssueId")) {
+        return new Response(JSON.stringify({ data: { issue: { id: "iss-1" } } }))
+      }
+      commentInput = body.variables
+      return new Response(JSON.stringify({
+        data: { commentCreate: { success: true, comment: { id: "c-1", url: "https://linear.app/issue/ENG-1#comment-c-1" } } },
+      }))
+    })
+    const result = await linearTools["linear-addComment"].execute!({ identifier: "ENG-1", body: "Looks good" })
+    expect(result.ok).toBeTrue()
+    expect(result.url).toInclude("comment")
+    expect(commentInput.body).toBe("Looks good")
+  })
+
+  it("15. linear-listTeams returns teams", async () => {
+    global.fetch = mock(async () =>
+      new Response(JSON.stringify({ data: { teams: { nodes: [{ id: "t1", name: "Engineering", key: "ENG" }] } } })),
+    )
+    const result = await linearTools["linear-listTeams"].execute!({})
+    expect(result.count).toBe(1)
+    expect(result.teams[0].key).toBe("ENG")
+  })
+
+  it("16. linear-listProjects returns projects", async () => {
+    global.fetch = mock(async () =>
+      new Response(JSON.stringify({ data: { projects: { nodes: [{ id: "p1", name: "Q3 Launch", state: "started", url: "https://linear.app/project/p1" }] } } })),
+    )
+    const result = await linearTools["linear-listProjects"].execute!({})
+    expect(result.count).toBe(1)
+    expect(result.projects[0].name).toBe("Q3 Launch")
+  })
+
+  it("17. linear-listLabels returns labels", async () => {
+    global.fetch = mock(async () =>
+      new Response(JSON.stringify({ data: { issueLabels: { nodes: [{ id: "l1", name: "bug" }, { id: "l2", name: "feature" }] } } })),
+    )
+    const result = await linearTools["linear-listLabels"].execute!({})
+    expect(result.labels).toContain("bug")
+    expect(result.labels).toContain("feature")
+  })
+
+  it("18. linear-updateIssue moves issue to a project", async () => {
+    let updateInput: any
+    global.fetch = mock(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse((init?.body as string) ?? "{}")
+      if (body.query?.includes("GetIssueId")) {
+        return new Response(JSON.stringify({ data: { issue: { id: "iss-1", team: { states: { nodes: [] } } } } }))
+      }
+      if (body.query?.includes("FindProject")) {
+        return new Response(JSON.stringify({ data: { projects: { nodes: [{ id: "proj-1", name: "Q3 Launch" }] } } }))
+      }
+      updateInput = body.variables?.input
+      return new Response(JSON.stringify({ data: { issueUpdate: { success: true, issue: { identifier: "ENG-1", url: "u", state: { name: "Todo" } } } } }))
+    })
+    const result = await linearTools["linear-updateIssue"].execute!({ identifier: "ENG-1", project: "Q3" })
+    expect(result.ok).toBeTrue()
+    expect(updateInput.projectId).toBe("proj-1")
+  })
+})
+
+// ── Linear approval-gating ────────────────────────────────────────────────────
+
+describe("Linear approval-gating", () => {
+  let linearTools: Record<string, any>
+  let fetchCalled: boolean
+  let pendingInput: any
+
+  beforeAll(async () => {
+    await import("./linear.js")
+  })
+
+  beforeEach(async () => {
+    const { getConnectorDef } = await import("../registry.js")
+    const def = getConnectorDef("linear")
+    pendingInput = undefined
+    linearTools = def?.tools({
+      userId: "u",
+      getAccessToken: async () => "lin_fake_token",
+      createPendingAction: async (input: any) => {
+        pendingInput = input
+        return { id: "pa-1", status: "pending", message: `Approval required: ${input.title}. Action ID: pa-1` }
+      },
+    }) ?? {}
+    fetchCalled = false
+    global.fetch = mock(async () => {
+      fetchCalled = true
+      return new Response(JSON.stringify({ data: {} }))
+    })
+  })
+
+  afterEach(() => mock.restore())
+
+  it("19. linear-createIssue queues a pending action", async () => {
+    const result = await linearTools["linear-createIssue"].execute!({ title: "Gated", teamName: "Engineering", priority: "high" })
+    expect(result.status).toBe("pending")
+    expect(fetchCalled).toBeFalse()
+    expect(pendingInput.action).toBe("linear-createIssue")
+    expect(pendingInput.connector).toBe("linear")
+  })
+
+  it("20. linear-addComment queues a pending action", async () => {
+    const result = await linearTools["linear-addComment"].execute!({ identifier: "ENG-1", body: "gated comment" })
+    expect(result.status).toBe("pending")
+    expect(fetchCalled).toBeFalse()
+    expect(pendingInput.action).toBe("linear-addComment")
+  })
+
+  it("21. linear-updateIssue is NOT gated (reversible edit)", async () => {
+    global.fetch = mock(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse((init?.body as string) ?? "{}")
+      if (body.query?.includes("GetIssueId")) {
+        return new Response(JSON.stringify({ data: { issue: { id: "iss-1", team: { states: { nodes: [{ id: "st", name: "Done" }] } } } } }))
+      }
+      return new Response(JSON.stringify({ data: { issueUpdate: { success: true, issue: { identifier: "ENG-1", url: "u", state: { name: "Done" } } } } }))
+    })
+    const result = await linearTools["linear-updateIssue"].execute!({ identifier: "ENG-1", state: "Done" })
+    expect(pendingInput).toBeUndefined()
+    expect(result.ok).toBeTrue()
+  })
+})

@@ -1,7 +1,7 @@
 import { tool, type ToolSet } from "ai"
 import { z } from "zod"
 import type { ConnectorDef, ConnectorContext } from "./connector-def.js"
-import { connectorError } from "./connector-def.js"
+import { connectorError, gateWrite } from "./connector-def.js"
 
 async function gqlLinear<T>(token: string, query: string, variables?: Record<string, unknown>): Promise<T> {
   const res = await fetch("https://api.linear.app/graphql", {
@@ -188,7 +188,20 @@ function createLinearToolsFrom(provider: string) {
             .default("none")
             .describe("Issue priority"),
         }),
-        execute: async ({ title, description, teamName, priority }) => {
+        execute: async (args) => {
+          const { title, description, teamName, priority } = args
+          return gateWrite(
+            ctx,
+            {
+              connector: provider,
+              action: "linear-createIssue",
+              risk: "write",
+              title: `Create Linear issue in ${teamName}`,
+              preview: `${title}\n\n${(description ?? "").slice(0, 800)}`,
+              confirmText: "Create issue",
+            },
+            args,
+            async () => {
           try {
             const token = await getToken()
             // First resolve team ID
@@ -228,17 +241,29 @@ function createLinearToolsFrom(provider: string) {
           } catch (err) {
             return connectorError(err)
           }
+            },
+          )
         },
       }),
 
       "linear-updateIssue": tool({
-        description: "Update the state, assignee, or priority of a Linear issue.",
+        description:
+          "Update the state, priority, or assignee of a Linear issue. IMPORTANT: confirm the change with the user before calling this tool.",
         parameters: z.object({
           identifier: z.string().describe("Issue identifier like ENG-123"),
           state: z.string().optional().describe("New state name (e.g. 'In Progress', 'Done')"),
           priority: z.enum(["urgent", "high", "medium", "low", "none"]).optional(),
+          assignee: z
+            .string()
+            .optional()
+            .describe("Assignee: 'me', or a teammate's name/email. Use 'unassign' to clear."),
+          project: z.string().optional().describe("Move the issue to this project (by name)"),
+          labels: z
+            .array(z.string())
+            .optional()
+            .describe("Replace the issue's labels with these (by name)"),
         }),
-        execute: async ({ identifier, state, priority }) => {
+        execute: async ({ identifier, state, priority, assignee, project, labels }) => {
           try {
             const token = await getToken()
             const getQuery = `
@@ -263,6 +288,60 @@ function createLinearToolsFrom(provider: string) {
               const priorityMap: Record<string, number> = { urgent: 1, high: 2, medium: 3, low: 4, none: 0 }
               input.priority = priorityMap[priority]
             }
+            if (assignee) {
+              if (assignee.toLowerCase() === "unassign" || assignee.toLowerCase() === "none") {
+                input.assigneeId = null
+              } else if (assignee.toLowerCase() === "me") {
+                const me = await gqlLinear<{ viewer: { id: string } }>(token, `{ viewer { id } }`)
+                input.assigneeId = me.viewer.id
+              } else {
+                const usersQuery = `
+                  query FindUser($q: String!) {
+                    users(filter: { or: [{ name: { containsIgnoreCase: $q } }, { email: { containsIgnoreCase: $q } }] }, first: 1) {
+                      nodes { id name email }
+                    }
+                  }
+                `
+                const userData = await gqlLinear<{
+                  users: { nodes: { id: string; name: string; email: string }[] }
+                }>(token, usersQuery, { q: assignee })
+                const user = userData.users.nodes[0]
+                if (!user) return { error: `Assignee not found: ${assignee}` }
+                input.assigneeId = user.id
+              }
+            }
+            if (project) {
+              const projQuery = `
+                query FindProject($q: String!) {
+                  projects(filter: { name: { containsIgnoreCase: $q } }, first: 1) {
+                    nodes { id name }
+                  }
+                }
+              `
+              const projData = await gqlLinear<{
+                projects: { nodes: { id: string; name: string }[] }
+              }>(token, projQuery, { q: project })
+              const proj = projData.projects.nodes[0]
+              if (!proj) return { error: `Project not found: ${project}` }
+              input.projectId = proj.id
+            }
+            if (labels?.length) {
+              const labelQuery = `
+                query FindLabels($names: [String!]) {
+                  issueLabels(filter: { name: { in: $names } }) {
+                    nodes { id name }
+                  }
+                }
+              `
+              const labelData = await gqlLinear<{
+                issueLabels: { nodes: { id: string; name: string }[] }
+              }>(token, labelQuery, { names: labels })
+              input.labelIds = labelData.issueLabels.nodes.map((l) => l.id)
+            }
+
+            if (Object.keys(input).length === 0) {
+              return { error: "Nothing to update — provide state, priority, assignee, project, or labels." }
+            }
 
             const mutation = `
               mutation UpdateIssue($id: String!, $input: IssueUpdateInput!) {
@@ -278,6 +357,122 @@ function createLinearToolsFrom(provider: string) {
 
             if (!result.issueUpdate.success) return { error: "Update failed" }
             return { ok: true, ...result.issueUpdate.issue }
+          } catch (err) {
+            return connectorError(err)
+          }
+        },
+      }),
+
+      "linear-addComment": tool({
+        description:
+          "Add a comment to a Linear issue. IMPORTANT: confirm the comment text with the user before calling this tool.",
+        parameters: z.object({
+          identifier: z.string().describe("Issue identifier like ENG-123"),
+          body: z.string().describe("Comment body (markdown)"),
+        }),
+        execute: async (args) => {
+          const { identifier, body } = args
+          return gateWrite(
+            ctx,
+            {
+              connector: provider,
+              action: "linear-addComment",
+              risk: "write",
+              title: `Comment on Linear issue ${identifier}`,
+              preview: body.slice(0, 800),
+              confirmText: "Post comment",
+            },
+            args,
+            async () => {
+          try {
+            const token = await getToken()
+            const getQuery = `
+              query GetIssueId($id: String!) {
+                issue(id: $id) { id }
+              }
+            `
+            const issueData = await gqlLinear<{ issue: { id: string } }>(token, getQuery, { id: identifier })
+
+            const mutation = `
+              mutation AddComment($issueId: String!, $body: String!) {
+                commentCreate(input: { issueId: $issueId, body: $body }) {
+                  success
+                  comment { id url }
+                }
+              }
+            `
+            const result = await gqlLinear<{
+              commentCreate: { success: boolean; comment: { id: string; url: string } }
+            }>(token, mutation, { issueId: issueData.issue.id, body })
+
+            if (!result.commentCreate.success) return { error: "Comment failed" }
+            return { ok: true, ...result.commentCreate.comment }
+          } catch (err) {
+            return connectorError(err)
+          }
+            },
+          )
+        },
+      }),
+
+      "linear-listTeams": tool({
+        description: "List the teams in your Linear workspace (name + key).",
+        parameters: z.object({}),
+        execute: async () => {
+          try {
+            const token = await getToken()
+            const data = await gqlLinear<{
+              teams: { nodes: { id: string; name: string; key: string }[] }
+            }>(token, `{ teams(first: 50) { nodes { id name key } } }`)
+            const teams = data.teams.nodes.map((t) => ({ name: t.name, key: t.key }))
+            if (teams.length === 0) return { teams: [], message: "No teams found." }
+            return { count: teams.length, teams }
+          } catch (err) {
+            return connectorError(err)
+          }
+        },
+      }),
+
+      "linear-listProjects": tool({
+        description: "List projects in your Linear workspace, optionally filtered by name.",
+        parameters: z.object({
+          query: z.string().optional().describe("Filter by project name (partial match)"),
+        }),
+        execute: async ({ query }) => {
+          try {
+            const token = await getToken()
+            const gql = `
+              query ListProjects($filter: ProjectFilter) {
+                projects(filter: $filter, first: 50) {
+                  nodes { id name state url }
+                }
+              }
+            `
+            const filter = query ? { name: { containsIgnoreCase: query } } : undefined
+            const data = await gqlLinear<{
+              projects: { nodes: { id: string; name: string; state: string; url: string }[] }
+            }>(token, gql, { filter })
+            const projects = data.projects.nodes.map((p) => ({ name: p.name, state: p.state, url: p.url }))
+            if (projects.length === 0) return { projects: [], message: "No projects found." }
+            return { count: projects.length, projects }
+          } catch (err) {
+            return connectorError(err)
+          }
+        },
+      }),
+
+      "linear-listLabels": tool({
+        description: "List the issue labels available in your Linear workspace.",
+        parameters: z.object({}),
+        execute: async () => {
+          try {
+            const token = await getToken()
+            const data = await gqlLinear<{
+              issueLabels: { nodes: { id: string; name: string }[] }
+            }>(token, `{ issueLabels(first: 100) { nodes { id name } } }`)
+            const labels = data.issueLabels.nodes.map((l) => l.name)
+            if (labels.length === 0) return { labels: [], message: "No labels found." }
+            return { count: labels.length, labels }
           } catch (err) {
             return connectorError(err)
           }

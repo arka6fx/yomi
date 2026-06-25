@@ -21,10 +21,7 @@ import { authClient } from "@/lib/auth-client"
 
 import Footer from "@/components/Footer"
 import Nav from "@/components/Nav"
-import {
-  GoogleDriveIcon,
-  NotionIcon,
-} from "@/components/brand-icons"
+import { ConnectorIcon } from "@yomi/ui-connectors"
 
 type Platform = "mac" | "windows" | "unknown"
 
@@ -116,9 +113,17 @@ const FEATURES = [
   },
 ]
 
-const CONNECTORS = [
-  { Icon: GoogleDriveIcon, name: "Google Drive", description: "Search and retrieve files from your Drive" },
-  { Icon: NotionIcon, name: "Notion", description: "Search pages and databases" },
+const CONNECTORS: { id: string; name: string; description: string }[] = [
+  { id: "google", name: "Gmail", description: "Read, send, and organize email" },
+  { id: "google-calendar", name: "Google Calendar", description: "Create and manage events" },
+  { id: "google-drive", name: "Google Drive", description: "Find, read, and edit files" },
+  { id: "google-classroom", name: "Google Classroom", description: "Assignments, due dates, grades" },
+  { id: "github", name: "GitHub", description: "Repos, issues, and pull requests" },
+  { id: "notion", name: "Notion", description: "Search pages and databases" },
+  { id: "slack", name: "Slack", description: "Read context, send approved messages" },
+  { id: "linear", name: "Linear", description: "Issues and project tracking" },
+  { id: "postgres", name: "Postgres", description: "Query your database" },
+  { id: "mysql", name: "MySQL", description: "Query your database" },
 ]
 
 
@@ -677,22 +682,22 @@ export function LandingPage() {
           </p>
         </div>
 
-        <div className="mx-auto flex max-w-lg justify-center gap-3">
+        <div className="mx-auto grid max-w-4xl grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {CONNECTORS.map((c, i) => (
             <motion.div
-              key={c.name}
+              key={c.id}
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.06 }}
-              className="flex flex-1 items-start gap-3 rounded-2xl glass-card p-4"
+              transition={{ duration: 0.4, delay: i * 0.04 }}
+              className="flex items-start gap-3 rounded-2xl glass-card p-4"
             >
-              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/6 ring-1 ring-inset ring-white/10">
-                <c.Icon size={18} />
+              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/6 ring-1 ring-inset ring-white/10">
+                <ConnectorIcon id={c.id} size={20} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-foreground">{c.name}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">{c.description}</p>
+                <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{c.description}</p>
               </div>
             </motion.div>
           ))}

@@ -1,4 +1,4 @@
-import { Hono } from "hono"
+import { Hono, type Context } from "hono"
 import { eq, and } from "drizzle-orm"
 import { db, platformConnections } from "@yomi/db"
 import { getDefaultGateway } from "./gateway-runner.js"
@@ -7,6 +7,17 @@ import { TelegramAdapter, type TelegramUpdate } from "./platforms/telegram.js"
 import type { PlatformType } from "@yomi/shared"
 
 export const gatewayRouter = new Hono()
+
+// Run async work after the response is sent. On Cloudflare Workers this uses
+// executionCtx.waitUntil so the isolate stays alive; in local dev (bun server)
+// there is no execution context, so we just let the promise run detached.
+function runInBackground(c: Context, promise: Promise<unknown>): void {
+  try {
+    c.executionCtx.waitUntil(promise)
+  } catch {
+    void promise
+  }
+}
 
 // Gateway status for monitoring
 gatewayRouter.get("/status", (c) => {
@@ -169,6 +180,13 @@ gatewayRouter.post("/telegram/webhook/:token", async (c) => {
   const readyAdapter = gateway.getAdapter("telegram")
   if (!(readyAdapter instanceof TelegramAdapter)) return c.text("No Telegram adapter", 503)
 
-  await readyAdapter.processUpdate(update)
+  // Acknowledge Telegram immediately and process in the background. Telegram
+  // delivers a chat's updates sequentially and waits for a 2xx before sending
+  // the next one, so awaiting the full agent run here would stall delivery and
+  // pile up pending updates (the bot appears to stop replying). On a stateless
+  // Worker a slow run also risks hitting CPU/time limits and webhook retries.
+  runInBackground(c, readyAdapter.processUpdate(update).catch((err) => {
+    console.warn("[gateway/telegram] background processUpdate error:", err)
+  }))
   return c.json({ ok: true })
 })

@@ -19,7 +19,10 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
       const body = await res.text()
       throw new Error(`Calendar API ${path} → ${res.status}: ${body.slice(0, 200)}`)
     }
-    return res.json() as Promise<T>
+    // DELETE and some writes return 204 No Content — don't try to parse JSON.
+    if (res.status === 204) return undefined as T
+    const text = await res.text()
+    return (text ? JSON.parse(text) : undefined) as T
   }
 
   return {
@@ -157,6 +160,83 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
         }
       },
     }),
+
+    "calendar-createEvent": tool({
+      description:
+        "Create a new event on the user's primary Google Calendar. Provide ISO 8601 start/end datetimes including a timezone offset (e.g. 2026-07-01T14:00:00-04:00). Confirm the details with the user before creating.",
+      parameters: z.object({
+        title: z.string().describe("Event title / summary"),
+        start: z.string().describe("Start datetime, ISO 8601 with offset, e.g. 2026-07-01T14:00:00-04:00"),
+        end: z.string().describe("End datetime, ISO 8601 with offset"),
+        description: z.string().optional().describe("Event description / notes"),
+        location: z.string().optional().describe("Event location"),
+        attendees: z.array(z.string()).optional().describe("Attendee email addresses to invite"),
+      }),
+      execute: async ({ title, start, end, description, location, attendees }) => {
+        try {
+          const event = await calendar<{ id: string; htmlLink?: string }>("/calendars/primary/events", {
+            method: "POST",
+            body: JSON.stringify({
+              summary: title,
+              start: { dateTime: start },
+              end: { dateTime: end },
+              description,
+              location,
+              attendees: attendees?.map((email) => ({ email })),
+            }),
+          })
+          return { ok: true, eventId: event.id, link: event.htmlLink, message: `Event "${title}" created.` }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "calendar-updateEvent": tool({
+      description:
+        "Update an existing calendar event. Only the fields you pass are changed. Get the eventId from calendar-listEvents first, and confirm the changes with the user.",
+      parameters: z.object({
+        eventId: z.string().describe("Google Calendar event ID to update"),
+        title: z.string().optional().describe("New title / summary"),
+        start: z.string().optional().describe("New start datetime, ISO 8601 with offset"),
+        end: z.string().optional().describe("New end datetime, ISO 8601 with offset"),
+        description: z.string().optional().describe("New description"),
+        location: z.string().optional().describe("New location"),
+      }),
+      execute: async ({ eventId, title, start, end, description, location }) => {
+        try {
+          const patch: Record<string, unknown> = {}
+          if (title !== undefined) patch["summary"] = title
+          if (start !== undefined) patch["start"] = { dateTime: start }
+          if (end !== undefined) patch["end"] = { dateTime: end }
+          if (description !== undefined) patch["description"] = description
+          if (location !== undefined) patch["location"] = location
+          const event = await calendar<{ id: string; htmlLink?: string }>(
+            `/calendars/primary/events/${encodeURIComponent(eventId)}`,
+            { method: "PATCH", body: JSON.stringify(patch) },
+          )
+          return { ok: true, eventId: event.id, link: event.htmlLink, message: "Event updated." }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "calendar-deleteEvent": tool({
+      description:
+        "Delete a calendar event by ID. IMPORTANT: Always confirm with the user before calling this — the event is removed from the calendar.",
+      parameters: z.object({
+        eventId: z.string().describe("Google Calendar event ID to delete"),
+      }),
+      execute: async ({ eventId }) => {
+        try {
+          await calendar(`/calendars/primary/events/${encodeURIComponent(eventId)}`, { method: "DELETE" })
+          return { ok: true, message: `Event ${eventId} deleted.` }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
   }
 }
 
@@ -165,14 +245,16 @@ export const googleCalendarDef: ConnectorDef = {
   name: "Google Calendar",
   category: "productivity",
   icon: "google-calendar",
-  description: "View events, check availability, and manage your Google Calendar.",
-  readOnlyByDefault: true,
+  description: "View events, check availability, and create, edit, or delete events on your Google Calendar.",
+  readOnlyByDefault: false,
   auth: {
     kind: "oauth2",
     authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
     tokenUrl: "https://oauth2.googleapis.com/token",
     scopes: [
-      "https://www.googleapis.com/auth/calendar.readonly",
+      // Full Calendar access (read + create/edit/delete events). Sensitive scope —
+      // requires Google OAuth verification for public use; test users work for personal use.
+      "https://www.googleapis.com/auth/calendar",
       "https://www.googleapis.com/auth/userinfo.email",
     ],
     clientIdEnv: "GOOGLE_INTEGRATIONS_CLIENT_ID",
@@ -186,7 +268,7 @@ export const googleCalendarDef: ConnectorDef = {
       "Use the same Google Cloud project as Gmail (GOOGLE_INTEGRATIONS_CLIENT_ID)",
       "Enable Google Calendar API under APIs & Services → Library",
       "Add Authorized Redirect URI: ${BACKEND_URL}/api/integrations/callback/google-calendar",
-      "NOTE: calendar.readonly is a sensitive scope — requires Google OAuth verification before non-owner users can connect",
+      "NOTE: the full calendar scope is a sensitive scope — requires Google OAuth verification before non-owner users can connect",
     ],
     collect: [
       { env: "GOOGLE_INTEGRATIONS_CLIENT_ID", label: "Google Client ID (same as Gmail)", secret: false },

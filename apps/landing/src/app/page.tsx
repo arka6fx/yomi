@@ -6,7 +6,7 @@ export const dynamic = "force-static"
 
 const TITLE = "Yomi — AI Productivity Assistant for Windows"
 const DESC =
-  "Yomi sees your screen, hears your voice, and connects to Gmail, Google Calendar, Google Drive, GitHub, Slack, Notion, Linear, and Discord. Ask questions about your work in natural language — no copy-pasting, no window switching."
+  "Yomi sees your screen, hears your voice, and connects to Gmail, Google Calendar, Google Drive, Google Classroom, GitHub, Slack, Notion, and Linear. Ask questions about your work in natural language — no copy-pasting, no window switching."
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -103,7 +103,6 @@ const jsonLd = {
         "Slack integration",
         "Notion integration",
         "Linear integration",
-        "Discord integration",
         "Telegram bot",
         "System tray app",
         "Local memory notepad",
@@ -117,7 +116,7 @@ const jsonLd = {
           name: "What is Yomi?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yomi is an AI productivity assistant that runs in your Windows system tray. It sees your screen, hears your voice, and connects to Gmail, Google Calendar, Google Drive, GitHub, Slack, Notion, Linear, and Discord so you can ask questions about your work in natural language.",
+            text: "Yomi is an AI productivity assistant that runs in your Windows system tray. It sees your screen, hears your voice, and connects to Gmail, Google Calendar, Google Drive, Google Classroom, GitHub, Slack, Notion, and Linear so you can ask questions about your work in natural language.",
           },
         },
         {

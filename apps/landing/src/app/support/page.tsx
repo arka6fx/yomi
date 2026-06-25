@@ -37,9 +37,9 @@ const channels = [
 
 export default function SupportPage() {
   return (
-    <>
+    <div className="site-texture-bg min-h-screen text-foreground">
       <Nav />
-      <main className="min-h-screen bg-[#050914] pt-16">
+      <main className="pt-16">
         <section className="mx-auto max-w-5xl px-6 py-24">
           <p className="mb-3 font-mono text-xs uppercase tracking-widest text-sky-100/50">
             Contact
@@ -91,6 +91,6 @@ export default function SupportPage() {
         </section>
       </main>
       <Footer />
-    </>
+    </div>
   )
 }

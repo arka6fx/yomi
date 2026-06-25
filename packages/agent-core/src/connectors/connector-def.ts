@@ -91,6 +91,32 @@ export interface ConnectorContext {
   }) => Promise<{ id: string; status: string; message: string }>
 }
 
+// Wraps a write so it requires user approval when the host supports it.
+// When `ctx.createPendingAction` is present the action is queued for confirmation
+// (the agent gets an "approval required" message) and `run` is NOT executed.
+// When it's absent — e.g. the pending-action executor replaying an approved
+// action, or unit tests — `run` executes immediately and performs the real call.
+// `action` must be the tool's key so the executor can replay it; `args` becomes
+// the stored payload passed back to that same tool on approval.
+export async function gateWrite<T>(
+  ctx: ConnectorContext,
+  meta: {
+    connector: string
+    action: string
+    risk: "write" | "send" | "paid" | "irreversible"
+    title: string
+    preview: string
+    confirmText?: string
+  },
+  args: unknown,
+  run: () => Promise<T>,
+): Promise<T | { id: string; status: string; message: string }> {
+  if (ctx.createPendingAction) {
+    return ctx.createPendingAction({ ...meta, payload: args })
+  }
+  return run()
+}
+
 export type ToolFactory = (ctx: ConnectorContext) => ToolSet
 
 export interface ConnectorDef {
@@ -103,4 +129,9 @@ export interface ConnectorDef {
   setup: DeveloperSetup
   tools: ToolFactory
   readOnlyByDefault: boolean
+  // True when the connector's tools can only run in a Node runtime (e.g. raw TCP
+  // database drivers like `pg`/`mysql2`). The Cloudflare Workers backend excludes
+  // these so the agent never advertises a tool it can't execute. The desktop
+  // sidecar runs in Node and keeps them.
+  requiresNodeRuntime?: boolean
 }

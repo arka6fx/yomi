@@ -380,7 +380,7 @@ app.whenReady().then(async () => {
     }
   })
 
-  // ── Bot channels (Telegram / Discord messaging gateway) ─────────────────────
+  // ── Bot channels (Telegram messaging gateway) ───────────────────────────────
 
   ipcMain.handle("yomi:gateway-connections", async () => {
     const token = loadToken()

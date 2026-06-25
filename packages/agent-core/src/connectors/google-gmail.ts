@@ -202,6 +202,20 @@ export class GoogleGmailConnector implements Connector {
     await this.gmail<GmailMessage>(`/messages/${messageId}/trash`, { method: "POST" })
   }
 
+  async deleteEmailPermanently(messageId: string): Promise<void> {
+    // DELETE returns 204 No Content, so call fetch directly rather than the
+    // JSON helper (which would fail trying to parse an empty body).
+    const token = await this.getAccessToken(this.userId, "google")
+    const res = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) {
+      const body = await res.text()
+      throw new Error(`Gmail API DELETE /messages/${messageId} → ${res.status}: ${body.slice(0, 200)}`)
+    }
+  }
+
   async getThread(threadId: string): Promise<{ id: string; messages: EmailDetail[] }> {
     const thread = await this.gmail<GmailThread>(`/threads/${threadId}?format=full`)
     const messages = await Promise.all(

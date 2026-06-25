@@ -1,5 +1,5 @@
 // ElevenLabs scribe_v2 transcription — mirrors sidecar STT, no Bedrock.
-// Used by the gateway to transcribe Telegram/Discord voice notes.
+// Used by the gateway to transcribe Telegram voice notes.
 
 const ELEVENLABS_URL = "https://api.elevenlabs.io/v1/speech-to-text"
 const MODEL = "scribe_v2"

@@ -11,9 +11,9 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <>
+    <div className="site-texture-bg min-h-screen text-foreground">
       <Nav />
-      <main className="bg-[#050914] pt-16">
+      <main className="pt-16">
         <div className="mx-auto max-w-3xl px-6 py-24">
           <p className="mb-3 font-mono text-xs uppercase tracking-widest text-sky-100/50">Legal</p>
           <h1 className="mb-2 font-accent text-5xl font-medium text-[#eaf4ff]">Privacy Policy</h1>
@@ -222,7 +222,7 @@ export default function PrivacyPage() {
         </div>
       </main>
       <Footer />
-    </>
+    </div>
   )
 }
 

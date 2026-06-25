@@ -10,7 +10,7 @@ const WINDOWS_NOTEPAD_ACTION =
   /\b(?:write|wright|type|put|draft|save|store|note)\b.*\b(?:the\s+)?(?:windows\s+)?notepad\b/i
 // Connector-related queries must reach the agent path so connector tools are available
 const CONNECTOR_QUERY =
-  /\b(email|gmail|inbox|calendar|event|meeting|github|pr|pull.?request|issue|notion|slack|linear|drive|discord|channel|todo|task|repo|repository)\b/i
+  /\b(email|gmail|inbox|calendar|event|meeting|github|pr|pull.?request|issue|notion|slack|linear|drive|channel|todo|task|repo|repository)\b/i
 
 export function scoreHeuristic(input: RouterInput): IntentClassification {
   const text = input.text.trim()

@@ -222,7 +222,7 @@ Assistant: ${cleanOutput}`,
   }
 }
 
-function buildSystemWithContext(memoryContext: string, ragContext: string, profile?: { staticProfile: string; dynamicProfile: string }): string {
+function buildSystemWithContext(memoryContext: string, ragContext: string, profile?: { staticProfile: string; dynamicProfile: string }, desktopOnlyConnected: string[] = []): string {
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -236,7 +236,12 @@ function buildSystemWithContext(memoryContext: string, ragContext: string, profi
     `${formatAgentSoul(soul)}\n\n` +
     `When the user asks about their email or connected apps, use the available tools to fetch real data before answering.\n` +
     `If a tool reports a service is not connected, suggest they connect it at ${appUrl}/dashboard.\n` +
-    `If a tool returns an authorization or token error, suggest they reconnect at ${appUrl}/dashboard.\n\n` +
+    `If a tool returns an authorization or token error, suggest they reconnect at ${appUrl}/dashboard.\n` +
+    (desktopOnlyConnected.length > 0
+      ? `The user has connected these services that only work in the Yomi desktop app, not here: ${desktopOnlyConnected.join(", ")}. ` +
+        `If they ask you to use one (e.g. running a database query), explain you can't access it from this chat and ask them to use the Yomi desktop app.\n`
+      : "") +
+    `\n` +
     (memoryContext || ragContext || profile?.staticProfile || profile?.dynamicProfile
       ? `<memory>\n` +
         `[System note: Background context retrieved from your notes. Treat as reference only — respond to the current user message.]\n\n` +
@@ -305,6 +310,10 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   }
 
   const registry = new ConnectorRegistry({
+    // The backend agent runs on Cloudflare Workers, which can't run the raw-TCP
+    // database drivers (pg/mysql2). Skip Node-only connectors so the agent never
+    // offers a DB tool it can't execute — those work via the desktop sidecar.
+    excludeNodeOnly: true,
     getAccessToken,
     createPendingAction: async (input) => {
       const { createPendingAction } = await import("../services/pending-actions.js")
@@ -335,7 +344,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       registry,
       text: opts.text,
       history: opts.history,
-      system: buildSystemWithContext(memoryContext, ragContext, profile),
+      system: buildSystemWithContext(memoryContext, ragContext, profile, registry.getDesktopOnlyConnected()),
       maxTokens: maxOutputTokensFor(opts.text),
       signal: opts.signal,
     })
@@ -377,15 +386,29 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     .returning({ id: usageEvents.id })
     .catch(() => [])
 
-  // Deduct credits (best-effort).
-  if (!isOwnerUser(user) && event[0]?.id) {
-    consumeCredits({
-      userId: opts.userId,
-      amount: 1,
-      usageEventId: event[0].id,
-      idempotencyKey: `gateway:${event[0].id}:consume`,
-      metadata: { kind: "bot_message" },
-    }).catch(() => {})
+  // Deduct credits and reflect the charge on the usage event so the dashboard
+  // credit meter (which sums usageEvents.creditsCharged > 0) shows bot usage.
+  // Awaited — on the stateless Worker a fire-and-forget debit can be dropped
+  // before it commits, leaving the balance and meter stuck.
+  const eventId = event[0]?.id
+  if (!isOwnerUser(user) && eventId) {
+    try {
+      const debit = await consumeCredits({
+        userId: opts.userId,
+        amount: 1,
+        usageEventId: eventId,
+        idempotencyKey: `gateway:${eventId}:consume`,
+        metadata: { kind: "bot_message" },
+      })
+      if (debit.ok) {
+        await db
+          .update(usageEvents)
+          .set({ creditsCharged: debit.charged })
+          .where(eq(usageEvents.id, eventId))
+      }
+    } catch (err) {
+      console.warn("[runAgent] credit debit failed:", err)
+    }
   }
 
   return { text }

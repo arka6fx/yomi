@@ -1,7 +1,7 @@
 import { tool, type ToolSet } from "ai"
 import { z } from "zod"
 import type { ConnectorDef, ConnectorContext } from "./connector-def.js"
-import { connectorError } from "./connector-def.js"
+import { connectorError, gateWrite } from "./connector-def.js"
 
 export function createGitHubTools(ctx: ConnectorContext): ToolSet {
   async function gh<T>(path: string, init?: RequestInit): Promise<T> {
@@ -203,6 +203,376 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
         }
       },
     }),
+
+    "github-createIssue": tool({
+      description:
+        "Create a new issue in a GitHub repository. IMPORTANT: confirm the repo, title, and body with the user before calling this tool.",
+      parameters: z.object({
+        owner: z.string().describe("Repository owner (username or org)"),
+        repo: z.string().describe("Repository name"),
+        title: z.string().describe("Issue title"),
+        body: z.string().optional().describe("Issue body (markdown)"),
+        labels: z.array(z.string()).optional().describe("Label names to apply"),
+        assignees: z.array(z.string()).optional().describe("GitHub usernames to assign"),
+      }),
+      execute: async (args) => {
+        const { owner, repo, title, body, labels, assignees } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "github",
+            action: "github-createIssue",
+            risk: "write",
+            title: `Create GitHub issue in ${owner}/${repo}`,
+            preview: `${title}\n\n${(body ?? "").slice(0, 800)}`,
+            confirmText: "Create issue",
+          },
+          args,
+          async () => {
+            try {
+              const issue = await gh<{ number: number; title: string; html_url: string; state: string }>(
+                `/repos/${owner}/${repo}/issues`,
+                {
+                  method: "POST",
+                  body: JSON.stringify({ title, body, labels, assignees }),
+                },
+              )
+              return {
+                ok: true,
+                number: issue.number,
+                title: issue.title,
+                state: issue.state,
+                url: issue.html_url,
+              }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
+
+    "github-updateIssue": tool({
+      description:
+        "Update a GitHub issue: close/reopen it or edit its title, body, or labels. IMPORTANT: confirm the change with the user before calling this tool.",
+      parameters: z.object({
+        owner: z.string().describe("Repository owner"),
+        repo: z.string().describe("Repository name"),
+        issueNumber: z.number().int().describe("Issue number"),
+        state: z.enum(["open", "closed"]).optional().describe("Set to 'closed' to close, 'open' to reopen"),
+        title: z.string().optional().describe("New title"),
+        body: z.string().optional().describe("New body (markdown)"),
+        labels: z.array(z.string()).optional().describe("Replace labels with this set"),
+      }),
+      execute: async ({ owner, repo, issueNumber, state, title, body, labels }) => {
+        try {
+          const patch: Record<string, unknown> = {}
+          if (state) patch.state = state
+          if (title !== undefined) patch.title = title
+          if (body !== undefined) patch.body = body
+          if (labels !== undefined) patch.labels = labels
+          if (Object.keys(patch).length === 0) {
+            return { error: "Nothing to update — provide at least one of state, title, body, or labels." }
+          }
+          const issue = await gh<{ number: number; title: string; state: string; html_url: string }>(
+            `/repos/${owner}/${repo}/issues/${issueNumber}`,
+            { method: "PATCH", body: JSON.stringify(patch) },
+          )
+          return {
+            ok: true,
+            number: issue.number,
+            title: issue.title,
+            state: issue.state,
+            url: issue.html_url,
+          }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "github-commentOnIssue": tool({
+      description:
+        "Add a comment to a GitHub issue or pull request (PRs share the issue comment endpoint). IMPORTANT: confirm the comment text with the user before calling this tool.",
+      parameters: z.object({
+        owner: z.string().describe("Repository owner"),
+        repo: z.string().describe("Repository name"),
+        issueNumber: z.number().int().describe("Issue or pull request number"),
+        body: z.string().describe("Comment body (markdown)"),
+      }),
+      execute: async (args) => {
+        const { owner, repo, issueNumber, body } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "github",
+            action: "github-commentOnIssue",
+            risk: "write",
+            title: `Comment on ${owner}/${repo}#${issueNumber}`,
+            preview: body.slice(0, 800),
+            confirmText: "Post comment",
+          },
+          args,
+          async () => {
+            try {
+              const comment = await gh<{ id: number; html_url: string }>(
+                `/repos/${owner}/${repo}/issues/${issueNumber}/comments`,
+                { method: "POST", body: JSON.stringify({ body }) },
+              )
+              return { ok: true, id: comment.id, url: comment.html_url }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
+
+    "github-createPR": tool({
+      description:
+        "Open a new pull request in a GitHub repository. IMPORTANT: confirm the title, head branch, and base branch with the user before calling this tool.",
+      parameters: z.object({
+        owner: z.string().describe("Repository owner"),
+        repo: z.string().describe("Repository name"),
+        title: z.string().describe("Pull request title"),
+        head: z.string().describe("Branch with your changes (e.g. 'feature-x' or 'user:feature-x')"),
+        base: z.string().describe("Branch you want to merge into (e.g. 'main')"),
+        body: z.string().optional().describe("Pull request description (markdown)"),
+        draft: z.boolean().optional().describe("Open as a draft PR"),
+      }),
+      execute: async (args) => {
+        const { owner, repo, title, head, base, body, draft } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "github",
+            action: "github-createPR",
+            risk: "write",
+            title: `Open PR in ${owner}/${repo}: ${head} → ${base}`,
+            preview: `${title}\n\n${(body ?? "").slice(0, 800)}`,
+            confirmText: "Open pull request",
+          },
+          args,
+          async () => {
+            try {
+              const pr = await gh<{ number: number; title: string; html_url: string; draft: boolean }>(
+                `/repos/${owner}/${repo}/pulls`,
+                { method: "POST", body: JSON.stringify({ title, head, base, body, draft }) },
+              )
+              return {
+                ok: true,
+                number: pr.number,
+                title: pr.title,
+                draft: pr.draft,
+                url: pr.html_url,
+              }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
+
+    "github-mergePR": tool({
+      description:
+        "Merge a GitHub pull request. This is irreversible — IMPORTANT: confirm with the user before calling this tool.",
+      parameters: z.object({
+        owner: z.string().describe("Repository owner"),
+        repo: z.string().describe("Repository name"),
+        prNumber: z.number().int().describe("Pull request number"),
+        method: z
+          .enum(["merge", "squash", "rebase"])
+          .default("merge")
+          .describe("Merge strategy"),
+        commitTitle: z.string().optional().describe("Override the merge commit title"),
+      }),
+      execute: async (args) => {
+        const { owner, repo, prNumber, method, commitTitle } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "github",
+            action: "github-mergePR",
+            risk: "irreversible",
+            title: `Merge ${owner}/${repo}#${prNumber} (${method})`,
+            preview: commitTitle ?? `Merge pull request #${prNumber} using ${method}`,
+            confirmText: "Merge pull request",
+          },
+          args,
+          async () => {
+            try {
+              const result = await gh<{ sha: string; merged: boolean; message: string }>(
+                `/repos/${owner}/${repo}/pulls/${prNumber}/merge`,
+                {
+                  method: "PUT",
+                  body: JSON.stringify({ merge_method: method, commit_title: commitTitle }),
+                },
+              )
+              return { ok: result.merged, sha: result.sha, message: result.message }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
+
+    "github-reviewPR": tool({
+      description:
+        "Submit a review on a GitHub pull request: approve, request changes, or comment. IMPORTANT: confirm with the user before calling this tool.",
+      parameters: z.object({
+        owner: z.string().describe("Repository owner"),
+        repo: z.string().describe("Repository name"),
+        prNumber: z.number().int().describe("Pull request number"),
+        event: z
+          .enum(["APPROVE", "REQUEST_CHANGES", "COMMENT"])
+          .describe("Review verdict"),
+        body: z.string().optional().describe("Review comment (required for REQUEST_CHANGES/COMMENT)"),
+      }),
+      execute: async (args) => {
+        const { owner, repo, prNumber, event, body } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "github",
+            action: "github-reviewPR",
+            risk: "write",
+            title: `${event} review on ${owner}/${repo}#${prNumber}`,
+            preview: body ?? event,
+            confirmText: "Submit review",
+          },
+          args,
+          async () => {
+            try {
+              const review = await gh<{ id: number; state: string; html_url: string }>(
+                `/repos/${owner}/${repo}/pulls/${prNumber}/reviews`,
+                { method: "POST", body: JSON.stringify({ event, body }) },
+              )
+              return { ok: true, id: review.id, state: review.state, url: review.html_url }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
+
+    "github-addLabels": tool({
+      description: "Add one or more labels to a GitHub issue or pull request.",
+      parameters: z.object({
+        owner: z.string().describe("Repository owner"),
+        repo: z.string().describe("Repository name"),
+        issueNumber: z.number().int().describe("Issue or pull request number"),
+        labels: z.array(z.string()).min(1).describe("Label names to add"),
+      }),
+      execute: async ({ owner, repo, issueNumber, labels }) => {
+        try {
+          const result = await gh<{ name: string }[]>(
+            `/repos/${owner}/${repo}/issues/${issueNumber}/labels`,
+            { method: "POST", body: JSON.stringify({ labels }) },
+          )
+          return { ok: true, labels: result.map((l) => l.name) }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "github-createBranch": tool({
+      description: "Create a new branch in a GitHub repository from an existing branch.",
+      parameters: z.object({
+        owner: z.string().describe("Repository owner"),
+        repo: z.string().describe("Repository name"),
+        branch: z.string().describe("New branch name"),
+        fromBranch: z.string().default("main").describe("Branch to fork from"),
+      }),
+      execute: async ({ owner, repo, branch, fromBranch }) => {
+        try {
+          const ref = await gh<{ object: { sha: string } }>(
+            `/repos/${owner}/${repo}/git/ref/heads/${fromBranch}`,
+          )
+          const created = await gh<{ ref: string; object: { sha: string } }>(
+            `/repos/${owner}/${repo}/git/refs`,
+            {
+              method: "POST",
+              body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: ref.object.sha }),
+            },
+          )
+          return { ok: true, ref: created.ref, sha: created.object.sha }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "github-listRepos": tool({
+      description: "List repositories the authenticated user has access to.",
+      parameters: z.object({
+        affiliation: z
+          .enum(["owner", "collaborator", "organization_member"])
+          .optional()
+          .describe("Filter by relationship to the repo"),
+        sort: z.enum(["created", "updated", "pushed", "full_name"]).default("pushed"),
+        limit: z.number().int().min(1).max(50).default(20).describe("Max repos to return"),
+      }),
+      execute: async ({ affiliation, sort, limit }) => {
+        try {
+          const params = new URLSearchParams({
+            sort,
+            per_page: String(limit),
+            ...(affiliation ? { affiliation } : {}),
+          })
+          const repos = await gh<
+            {
+              full_name: string
+              private: boolean
+              html_url: string
+              description?: string
+              default_branch: string
+              updated_at: string
+            }[]
+          >(`/user/repos?${params}`)
+          if (repos.length === 0) return { repos: [], message: "No repositories found." }
+          return {
+            count: repos.length,
+            repos: repos.map((r) => ({
+              fullName: r.full_name,
+              private: r.private,
+              description: r.description ?? null,
+              defaultBranch: r.default_branch,
+              url: r.html_url,
+              updated: r.updated_at,
+            })),
+          }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "github-listBranches": tool({
+      description: "List branches in a GitHub repository.",
+      parameters: z.object({
+        owner: z.string().describe("Repository owner"),
+        repo: z.string().describe("Repository name"),
+        limit: z.number().int().min(1).max(50).default(20).describe("Max branches to return"),
+      }),
+      execute: async ({ owner, repo, limit }) => {
+        try {
+          const branches = await gh<{ name: string; protected: boolean }[]>(
+            `/repos/${owner}/${repo}/branches?per_page=${limit}`,
+          )
+          if (branches.length === 0) return { branches: [], message: "No branches found." }
+          return {
+            count: branches.length,
+            branches: branches.map((b) => ({ name: b.name, protected: b.protected })),
+          }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
   }
 }
 
@@ -211,8 +581,9 @@ export const githubDef: ConnectorDef = {
   name: "GitHub",
   category: "engineering",
   icon: "github",
-  description: "View pull requests, issues, and repositories from your GitHub account.",
-  readOnlyByDefault: true,
+  description:
+    "View and manage pull requests and issues: list, read, create, comment, update/close, and open PRs.",
+  readOnlyByDefault: false,
   auth: {
     kind: "oauth2",
     authUrl: "https://github.com/login/oauth/authorize",

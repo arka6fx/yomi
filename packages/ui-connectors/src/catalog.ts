@@ -32,10 +32,19 @@ const CATALOG_DEFS: Array<{
   {
     id: "google-drive",
     name: "Google Drive",
-    description: "Search, read, and navigate your Drive files.",
+    description: "Search, read, create, edit, and delete your Drive files.",
     category: "productivity",
     authKind: "oauth2",
     icon: "cloud",
+    available: true,
+  },
+  {
+    id: "google-classroom",
+    name: "Google Classroom",
+    description: "Read your classes, assignments, due dates, announcements, and grades.",
+    category: "productivity",
+    authKind: "oauth2",
+    icon: "graduation-cap",
     available: true,
   },
   {
@@ -99,15 +108,6 @@ const CATALOG_DEFS: Array<{
     category: "data",
     authKind: "connection_string",
     icon: "database",
-    available: true,
-  },
-  {
-    id: "discord-connector",
-    name: "Discord",
-    description: "Read Discord server context and send approved messages.",
-    category: "communication",
-    authKind: "oauth2",
-    icon: "message-circle",
     available: true,
   },
 ]
