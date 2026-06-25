@@ -4,6 +4,7 @@ import type { AgentMessage } from "@yomi/agent-core"
 import type { PlatformAdapter } from "./platform-adapter.js"
 
 let agentCalls: { userId: string; text: string; history?: AgentMessage[]; signal?: AbortSignal }[] = []
+let agentHangs = false
 let loadedHistory: AgentMessage[] = []
 let appendedTurns: { sessionId: string; userId: string; userText: string; assistantText: string }[] = []
 let closedSessions: { userId: string; platform: string; chatId: string }[] = []
@@ -52,6 +53,15 @@ mock.module("../agent/run.js", () => ({
     signal?: AbortSignal
   }) => {
     agentCalls.push({ userId, text, history, signal })
+    if (agentHangs) {
+      // Mimic the real runAgent: when the abort signal fires it stops and
+      // returns (it does not throw), yielding no usable text.
+      await new Promise<void>((resolve) => {
+        if (signal?.aborted) return resolve()
+        signal?.addEventListener("abort", () => resolve())
+      })
+      return { text: "" }
+    }
     return { text: "backend reply" }
   },
 }))
@@ -128,6 +138,8 @@ const originalFetch = globalThis.fetch
 
 beforeEach(() => {
   agentCalls = []
+  agentHangs = false
+  delete process.env.YOMI_AGENT_RUN_TIMEOUT_MS
   loadedHistory = []
   appendedTurns = []
   closedSessions = []
@@ -186,6 +198,25 @@ describe("GatewayRunner production routing", () => {
     ])
     await expect(runner.getPendingMessages("user_1")).resolves.toHaveLength(0)
     expect(adapter.messages.at(-1)?.text).toBe("backend reply")
+  })
+
+  it("aborts a hung agent run after the timeout and tells the user", async () => {
+    process.env.YOMI_AGENT_RUN_TIMEOUT_MS = "30"
+    agentHangs = true
+    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "do something very slow",
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(agentCalls[0]?.signal?.aborted).toBe(true)
+    expect(adapter.messages.at(-1)?.text).toMatch(/too long/i)
   })
 
   it("loads persisted session history for backend agent context", async () => {

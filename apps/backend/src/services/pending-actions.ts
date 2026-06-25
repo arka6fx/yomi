@@ -133,7 +133,38 @@ async function executePendingAction(row: {
       message: `Email sent to ${payload.to.join(", ")}.`,
     }
   }
+
+  // Generic connector-tool replay: `action` is the tool key and `payload` the
+  // original tool arguments. We rebuild the connector's tools WITHOUT a
+  // createPendingAction hook so gateWrite() runs the real API call instead of
+  // re-queuing the action, then invoke the same tool the agent called.
+  const result = await replayConnectorTool(row)
+  if (result !== undefined) return result
+
   throw new Error(`No executor registered for ${row.connector}:${row.action}`)
+}
+
+async function replayConnectorTool(row: {
+  userId: string
+  connector: string
+  action: string
+  payload: unknown
+}): Promise<unknown | undefined> {
+  // Importing the defs index registers every backend ConnectorDef.
+  await import("../connectors/defs/index.js")
+  const [{ getConnectorDef }, { getAccessToken }] = await Promise.all([
+    import("../connectors/registry.js"),
+    import("./integration-tokens.js"),
+  ])
+  const def = getConnectorDef(row.connector)
+  if (!def) return undefined
+  const tools = def.tools({ userId: row.userId, getAccessToken }) as Record<
+    string,
+    { execute?: (args: unknown, opts: unknown) => Promise<unknown> }
+  >
+  const t = tools[row.action]
+  if (!t?.execute) return undefined
+  return t.execute(row.payload, { toolCallId: row.action, messages: [] })
 }
 
 export async function denyPendingAction(userId: string, id: string) {

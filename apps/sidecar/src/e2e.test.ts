@@ -205,7 +205,7 @@ describe("ALL_CONNECTOR_DEFS", () => {
     expect(ids).toContain("google-drive")
   })
 
-  it("includes Gmail, Calendar, GitHub, Notion, Slack, Linear, Discord", () => {
+  it("includes Gmail, Calendar, GitHub, Notion, Slack, Linear", () => {
     const ids = ALL_CONNECTOR_DEFS.map((d) => d.id)
     // Note: connector IDs may differ from display names
     const idSet = new Set(ids)
@@ -215,7 +215,6 @@ describe("ALL_CONNECTOR_DEFS", () => {
     expect(ids).toContain("notion")
     expect(ids).toContain("slack")
     expect(ids).toContain("linear")
-    expect(idSet.has("discord") || idSet.has("discord-connector")).toBe(true)
   })
 
   it("has at least 8 connectors registered", () => {
@@ -310,7 +309,6 @@ describe("heuristic router — connector routing", () => {
     "what meeting do i have",
     "find that slack message",
     "linear tickets assigned to me",
-    "send a discord message",
   ]
 
   for (const q of connectorQueries) {

@@ -232,7 +232,7 @@ contextBridge.exposeInMainWorld("yomi", {
     return ipcRenderer.invoke("yomi:disconnect-integration", provider)
   },
 
-  // ── Bot channels (Telegram / Discord) ───────────────────────────────────────
+  // ── Bot channels (Telegram) ─────────────────────────────────────────────────
 
   getBotConnections(): Promise<{ platform: string; connectedAt: string }[]> {
     return ipcRenderer.invoke("yomi:gateway-connections")

@@ -16,6 +16,11 @@ export interface ConnectorRegistryDeps {
   getAccessToken: TokenProvider
   listConnectedProviders: ConnectedProvidersLister
   createPendingAction?: ConnectorContext["createPendingAction"]
+  // Set by hosts that can't run Node-only connectors (the Cloudflare Workers
+  // backend). When true, defs flagged `requiresNodeRuntime` are skipped so the
+  // agent never advertises a tool that would fail at execution. Defaults to
+  // false — the sidecar runs in Node and keeps every connector.
+  excludeNodeOnly?: boolean
 }
 
 // Registry maps provider name → connector instance for the current user.
@@ -24,6 +29,10 @@ export class ConnectorRegistry {
   private connectors = new Map<string, Connector>()
   private defTools: ToolSet = {}
   private connectedDefIds: Set<string> = new Set()
+  // Names of connected connectors skipped because they need a Node runtime the
+  // current host lacks (Workers). Surfaced so the agent can tell the user the
+  // service works from the desktop app.
+  private desktopOnlyNames: string[] = []
   private userId: string | null = null
   private connectedProviders: Set<string> = new Set()
   private lastRefreshed = 0
@@ -54,6 +63,7 @@ export class ConnectorRegistry {
     this.connectors.clear()
     this.defTools = {}
     this.connectedDefIds.clear()
+    this.desktopOnlyNames = []
 
     // Legacy Gmail path: stored as "google" in mcp_connections for existing rows.
     // Kept so registry.get("google") still works for sidecar backward compat.
@@ -67,6 +77,10 @@ export class ConnectorRegistry {
     // Def-based path: iterate all registered ConnectorDefs and load tools for
     // any that the user has connected (provider key matches mcp_connections row).
     for (const def of ALL_CONNECTOR_DEFS) {
+      if (this.deps.excludeNodeOnly && def.requiresNodeRuntime) {
+        if (this.connectedProviders.has(def.id)) this.desktopOnlyNames.push(def.name)
+        continue
+      }
       if (this.connectedProviders.has(def.id)) {
         this.connectedDefIds.add(def.id)
         const tools = def.tools({
@@ -83,6 +97,13 @@ export class ConnectorRegistry {
   // This is the primary path for the agent loop.
   getAllDefTools(): ToolSet {
     return this.defTools
+  }
+
+  // Names of connected connectors that were skipped on this host because they
+  // require a Node runtime (only set when excludeNodeOnly is true). The agent
+  // uses this to steer the user to the desktop app for those services.
+  getDesktopOnlyConnected(): string[] {
+    return [...this.desktopOnlyNames]
   }
 
   get(provider: string): Connector | null {

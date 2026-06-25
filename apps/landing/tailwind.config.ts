@@ -41,8 +41,9 @@ const config: Config = {
         ring: "hsl(var(--ring))",
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "Geist", "sans-serif"],
+        sans: ["var(--font-sans)", "Manrope", "sans-serif"],
         accent: ["var(--font-accent)", "EB Garamond", "serif"],
+        serif: ["var(--font-serif)", "Playfair Display", "Georgia", "serif"],
         display: ["var(--font-caveat)", "cursive"],
         mono: [
           "var(--font-mono)",

@@ -54,7 +54,7 @@
   }
 
   body {
-    font-family: var(--font-sans), Geist, sans-serif;
+    font-family: var(--font-sans), Manrope, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }

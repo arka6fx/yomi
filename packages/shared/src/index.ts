@@ -180,7 +180,7 @@ export type SseEvent =
   | { type: "gateway_message"; platform: PlatformType; chatId: string; userId: string; text: string }
   | { type: "gateway_session"; platform: PlatformType; chatId: string; active: boolean }
 
-export type PlatformType = "telegram" | "discord"
+export type PlatformType = "telegram"
 
 export interface PlatformConfig {
   type: PlatformType

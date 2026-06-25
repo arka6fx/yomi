@@ -72,7 +72,6 @@ const cases: Case[] = [
   { text: "create a github issue", path: "agent", minConf: 0.85, label: "github action" },
   { text: "check my slack messages", path: "agent", minConf: 0.85, label: "slack query" },
   { text: "what's on my linear board?", path: "agent", minConf: 0.85, label: "linear query" },
-  { text: "send a message on discord", path: "agent", minConf: 0.85, label: "discord action" },
   { text: "show my todo list", path: "agent", minConf: 0.85, label: "todo query" },
 
   // Even short connector queries (question word + connector) must go to agent

@@ -32,6 +32,8 @@ const HISTORY_MAX_TURNS = 8
 const HISTORY_TTL_MS = 60 * 60 * 1000
 const SHARED_SESSION_PLATFORM = "yomi"
 const SHARED_SESSION_CHAT_ID = "global"
+const AGENT_TIMEOUT_MESSAGE =
+  "That took too long, so I stopped. Please try again, or rephrase your request to make it simpler."
 
 function directSidecarEnabled(): boolean {
   return process.env["YOMI_GATEWAY_DIRECT_SIDECAR"] === "1"
@@ -907,10 +909,20 @@ export class GatewayRunner {
     }
 
     let runController: AbortController | null = null
+    let runTimedOut = false
+    let runTimeout: ReturnType<typeof setTimeout> | undefined
     try {
       console.warn(`[gateway] backend agent start user=${yomiUserId} platform=${msg.platform} chat=${msg.chatId}`)
       runController = new AbortController()
       this.activeRuns.set(this.runKey(msg.platform, msg.chatId), runController)
+      // Hard cap on a single agent run. On a stateless Worker nothing else can
+      // abort a hung run (the in-memory /stop and /new controllers live in other
+      // isolates), so without this a stuck tool/model call would hang forever.
+      const timeoutMs = Number(process.env["YOMI_AGENT_RUN_TIMEOUT_MS"] ?? 60_000)
+      runTimeout = setTimeout(() => {
+        runTimedOut = true
+        runController?.abort()
+      }, timeoutMs)
       const result = await runAgent({
         userId: yomiUserId,
         text: msg.text,
@@ -919,9 +931,15 @@ export class GatewayRunner {
         sourcePlatform: msg.platform,
         sourceChatId: msg.chatId,
       })
+      clearTimeout(runTimeout)
       clearInterval(typingInterval)
       this.activeRuns.delete(this.runKey(msg.platform, msg.chatId))
-      if (runController.signal.aborted) return
+      if (runController.signal.aborted) {
+        if (runTimedOut) {
+          await this.sendMessageAndLog(msg.platform, msg.chatId, AGENT_TIMEOUT_MESSAGE, "agent-timeout")
+        }
+        return
+      }
       if (result.text) {
         if (persistentSession) {
           await appendAgentTurn({
@@ -943,8 +961,13 @@ export class GatewayRunner {
         await this.sendMessageAndLog(msg.platform, msg.chatId, reply, "backend-agent-reply")
       }
     } catch (err) {
+      if (runTimeout) clearTimeout(runTimeout)
       clearInterval(typingInterval)
       this.activeRuns.delete(this.runKey(msg.platform, msg.chatId))
+      if (runTimedOut) {
+        await this.sendMessageAndLog(msg.platform, msg.chatId, AGENT_TIMEOUT_MESSAGE, "agent-timeout")
+        return
+      }
       if (runController?.signal.aborted) return
       console.warn("[gateway] runAgent error:", err)
       await this.sendMessageAndLog(

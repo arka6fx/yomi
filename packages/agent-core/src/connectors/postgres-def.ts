@@ -101,6 +101,7 @@ export const postgresDef: ConnectorDef = {
   icon: "postgres",
   description: "Run read-only SQL queries against a PostgreSQL database. Only SELECT statements allowed.",
   readOnlyByDefault: true,
+  requiresNodeRuntime: true, // uses the `pg` TCP driver — Node-only, not Workers
   auth: {
     kind: "connection_string",
     field: {

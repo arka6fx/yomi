@@ -5,8 +5,10 @@ let mockBotMessageCount = 0
 let mockCreditBalance = 100
 let lastInsertedKind: string | null = null
 let consumeCreditsCalled = false
+let lastUpdatedCreditsCharged: number | null = null
 let lastAgentSystem: string | undefined
 let mockExecuteRows: unknown[] = []
+let mockDesktopOnlyConnected: string[] = []
 const activeTrialEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
 const fakeDbWithCount = {
@@ -35,6 +37,12 @@ const fakeDbWithCount = {
       }
     },
   }),
+  update: () => ({
+    set: (v: Record<string, unknown>) => {
+      if ("creditsCharged" in v) lastUpdatedCreditsCharged = v["creditsCharged"] as number
+      return { where: () => Promise.resolve() }
+    },
+  }),
   execute: () => Promise.resolve({ rows: mockExecuteRows }),
 }
 
@@ -57,6 +65,9 @@ mock.module("@yomi/agent-core", () => ({
   createModel: (model: string) => model,
   ConnectorRegistry: class {
     async init() {}
+    getDesktopOnlyConnected() {
+      return mockDesktopOnlyConnected
+    }
   },
   runAgentLoop: async (opts: { system?: string }) => {
     lastAgentSystem = opts.system
@@ -111,8 +122,10 @@ describe("runAgent metering", () => {
     mockCreditBalance = 100
     lastInsertedKind = null
     consumeCreditsCalled = false
+    lastUpdatedCreditsCharged = null
     lastAgentSystem = undefined
     mockExecuteRows = []
+    mockDesktopOnlyConnected = []
     delete process.env["YOMI_AGENT_SOUL"]
   })
 
@@ -171,6 +184,13 @@ describe("runAgent metering", () => {
     expect(consumeCreditsCalled).toBe(true)
   })
 
+  it("writes creditsCharged back to the bot_message usage event so the meter reflects it", async () => {
+    mockUser = makeUser()
+    const { runAgent } = await import("./run.js")
+    await runAgent({ userId: "user_1", text: "hi" })
+    expect(lastUpdatedCreditsCharged).toBe(1)
+  })
+
   it("passes the agent soul in the backend system prompt", async () => {
     mockUser = makeUser()
     const { runAgent } = await import("./run.js")
@@ -200,6 +220,23 @@ describe("runAgent metering", () => {
     expect(lastAgentSystem).toContain("Prefers TypeScript")
     expect(lastAgentSystem).toContain("<dynamic_profile>")
     expect(lastAgentSystem).toContain("Working on Yomi memory")
+  })
+
+  it("notes desktop-only connected services in the system prompt", async () => {
+    mockUser = makeUser()
+    mockDesktopOnlyConnected = ["PostgreSQL", "MySQL"]
+    const { runAgent } = await import("./run.js")
+    await runAgent({ userId: "user_1", text: "query my db" })
+    expect(lastAgentSystem).toContain("only work in the Yomi desktop app")
+    expect(lastAgentSystem).toContain("PostgreSQL, MySQL")
+  })
+
+  it("omits the desktop-only note when nothing is desktop-only", async () => {
+    mockUser = makeUser()
+    mockDesktopOnlyConnected = []
+    const { runAgent } = await import("./run.js")
+    await runAgent({ userId: "user_1", text: "hi" })
+    expect(lastAgentSystem).not.toContain("only work in the Yomi desktop app")
   })
 
   it("owner bypasses all quota and credit checks", async () => {

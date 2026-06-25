@@ -264,3 +264,263 @@ describe.skip("GitHub tools", () => {
     expect(apiVersion).toBe("2022-11-28")
   })
 })
+
+// ── Section 5: GitHub write tools ─────────────────────────────────────────────
+
+describe("GitHub write tools", () => {
+  let ghTools: Record<string, any>
+  let lastRequest: { url: string; method?: string; body?: any }
+
+  beforeAll(async () => {
+    await import("./github.js")
+  })
+
+  beforeEach(async () => {
+    const { getConnectorDef } = await import("../registry.js")
+    const def = getConnectorDef("github")
+    // No createPendingAction → tools execute directly (gating happens upstream).
+    ghTools = def?.tools({ userId: "u", getAccessToken: async () => "gho_fake_token" }) ?? {}
+    lastRequest = { url: "" }
+
+    global.fetch = mock(async (url: string, init?: RequestInit) => {
+      const path = new URL(url).pathname
+      lastRequest = {
+        url: url.toString(),
+        method: init?.method,
+        body: init?.body ? JSON.parse(init.body as string) : undefined,
+      }
+      if (init?.method === "POST" && path === "/repos/owner/repo/issues") {
+        return new Response(JSON.stringify({
+          number: 7, title: lastRequest.body.title,
+          html_url: "https://github.com/owner/repo/issues/7", state: "open",
+        }), { status: 201 })
+      }
+      if (init?.method === "PATCH" && path === "/repos/owner/repo/issues/7") {
+        return new Response(JSON.stringify({
+          number: 7, title: "Important bug", state: lastRequest.body.state ?? "open",
+          html_url: "https://github.com/owner/repo/issues/7",
+        }))
+      }
+      if (init?.method === "POST" && path === "/repos/owner/repo/issues/7/comments") {
+        return new Response(JSON.stringify({
+          id: 999, html_url: "https://github.com/owner/repo/issues/7#issuecomment-999",
+        }), { status: 201 })
+      }
+      if (init?.method === "POST" && path === "/repos/owner/repo/pulls") {
+        return new Response(JSON.stringify({
+          number: 12, title: lastRequest.body.title,
+          html_url: "https://github.com/owner/repo/pull/12", draft: false,
+        }), { status: 201 })
+      }
+      return new Response("Not Found", { status: 404 })
+    })
+  })
+
+  afterEach(() => {
+    mock.restore()
+  })
+
+  it("17. github-createIssue posts and returns issue number + url", async () => {
+    const result = await ghTools["github-createIssue"].execute!({
+      owner: "owner", repo: "repo", title: "New bug", body: "details", labels: ["bug"],
+    })
+    expect(result.ok).toBeTrue()
+    expect(result.number).toBe(7)
+    expect(result.url).toInclude("/issues/7")
+    expect(lastRequest.method).toBe("POST")
+    expect(lastRequest.body.title).toBe("New bug")
+    expect(lastRequest.body.labels).toContain("bug")
+  })
+
+  it("18. github-updateIssue closes an issue", async () => {
+    const result = await ghTools["github-updateIssue"].execute!({
+      owner: "owner", repo: "repo", issueNumber: 7, state: "closed",
+    })
+    expect(result.ok).toBeTrue()
+    expect(result.state).toBe("closed")
+    expect(lastRequest.method).toBe("PATCH")
+    expect(lastRequest.body.state).toBe("closed")
+  })
+
+  it("19. github-commentOnIssue posts a comment (works for PRs too)", async () => {
+    const result = await ghTools["github-commentOnIssue"].execute!({
+      owner: "owner", repo: "repo", issueNumber: 7, body: "Thanks for the report",
+    })
+    expect(result.ok).toBeTrue()
+    expect(result.url).toInclude("issuecomment")
+    expect(lastRequest.method).toBe("POST")
+    expect(lastRequest.body.body).toBe("Thanks for the report")
+  })
+
+  it("20. github-createPR opens a pull request", async () => {
+    const result = await ghTools["github-createPR"].execute!({
+      owner: "owner", repo: "repo", title: "My PR", head: "feature", base: "main", body: "desc",
+    })
+    expect(result.ok).toBeTrue()
+    expect(result.number).toBe(12)
+    expect(result.url).toInclude("/pull/12")
+    expect(lastRequest.body.head).toBe("feature")
+    expect(lastRequest.body.base).toBe("main")
+  })
+
+  it("21. write tools surface auth errors via connectorError", async () => {
+    global.fetch = mock(async () => new Response("Forbidden", { status: 403 }))
+    const result = await ghTools["github-createIssue"].execute!({
+      owner: "owner", repo: "repo", title: "x",
+    })
+    expect(result.error).toBeDefined()
+    expect(result.hint).toInclude("reconnect")
+  })
+})
+
+// ── Section 6: GitHub advanced ops (merge, review, labels, branches, repos) ────
+
+describe("GitHub advanced ops", () => {
+  let ghTools: Record<string, any>
+  let lastRequest: { url: string; method?: string; body?: any }
+
+  beforeAll(async () => {
+    await import("./github.js")
+  })
+
+  beforeEach(async () => {
+    const { getConnectorDef } = await import("../registry.js")
+    const def = getConnectorDef("github")
+    ghTools = def?.tools({ userId: "u", getAccessToken: async () => "gho_fake_token" }) ?? {}
+    lastRequest = { url: "" }
+
+    global.fetch = mock(async (url: string, init?: RequestInit) => {
+      const path = new URL(url).pathname
+      lastRequest = {
+        url: url.toString(),
+        method: init?.method,
+        body: init?.body ? JSON.parse(init.body as string) : undefined,
+      }
+      if (init?.method === "PUT" && path === "/repos/owner/repo/pulls/5/merge") {
+        return new Response(JSON.stringify({ sha: "abc123", merged: true, message: "Pull Request successfully merged" }))
+      }
+      if (init?.method === "POST" && path === "/repos/owner/repo/pulls/5/reviews") {
+        return new Response(JSON.stringify({ id: 88, state: "APPROVED", html_url: "https://github.com/owner/repo/pull/5#pullrequestreview-88" }))
+      }
+      if (init?.method === "POST" && path === "/repos/owner/repo/issues/7/labels") {
+        return new Response(JSON.stringify([{ name: "bug" }, { name: "urgent" }]))
+      }
+      if (path === "/repos/owner/repo/git/ref/heads/main") {
+        return new Response(JSON.stringify({ object: { sha: "basesha" } }))
+      }
+      if (init?.method === "POST" && path === "/repos/owner/repo/git/refs") {
+        return new Response(JSON.stringify({ ref: "refs/heads/feature", object: { sha: "basesha" } }))
+      }
+      if (path === "/user/repos") {
+        return new Response(JSON.stringify([
+          { full_name: "owner/repo", private: false, html_url: "https://github.com/owner/repo", description: "d", default_branch: "main", updated_at: "2024-01-01T00:00:00Z" },
+        ]))
+      }
+      if (path === "/repos/owner/repo/branches") {
+        return new Response(JSON.stringify([{ name: "main", protected: true }, { name: "dev", protected: false }]))
+      }
+      return new Response("Not Found", { status: 404 })
+    })
+  })
+
+  afterEach(() => {
+    mock.restore()
+  })
+
+  it("22. github-mergePR merges via PUT", async () => {
+    const result = await ghTools["github-mergePR"].execute!({ owner: "owner", repo: "repo", prNumber: 5, method: "squash" })
+    expect(result.ok).toBeTrue()
+    expect(result.sha).toBe("abc123")
+    expect(lastRequest.method).toBe("PUT")
+    expect(lastRequest.body.merge_method).toBe("squash")
+  })
+
+  it("23. github-reviewPR submits an approval", async () => {
+    const result = await ghTools["github-reviewPR"].execute!({ owner: "owner", repo: "repo", prNumber: 5, event: "APPROVE" })
+    expect(result.ok).toBeTrue()
+    expect(result.state).toBe("APPROVED")
+    expect(lastRequest.body.event).toBe("APPROVE")
+  })
+
+  it("24. github-addLabels adds labels", async () => {
+    const result = await ghTools["github-addLabels"].execute!({ owner: "owner", repo: "repo", issueNumber: 7, labels: ["bug", "urgent"] })
+    expect(result.ok).toBeTrue()
+    expect(result.labels).toContain("urgent")
+  })
+
+  it("25. github-createBranch resolves base sha then creates the ref", async () => {
+    const result = await ghTools["github-createBranch"].execute!({ owner: "owner", repo: "repo", branch: "feature", fromBranch: "main" })
+    expect(result.ok).toBeTrue()
+    expect(result.ref).toBe("refs/heads/feature")
+    expect(lastRequest.body.sha).toBe("basesha")
+  })
+
+  it("26. github-listRepos returns repos", async () => {
+    const result = await ghTools["github-listRepos"].execute!({ sort: "pushed", limit: 20 })
+    expect(result.count).toBe(1)
+    expect(result.repos[0].fullName).toBe("owner/repo")
+  })
+
+  it("27. github-listBranches returns branches", async () => {
+    const result = await ghTools["github-listBranches"].execute!({ owner: "owner", repo: "repo", limit: 20 })
+    expect(result.count).toBe(2)
+    expect(result.branches[0].name).toBe("main")
+  })
+})
+
+// ── Section 7: approval-gating ────────────────────────────────────────────────
+
+describe("GitHub approval-gating", () => {
+  let ghTools: Record<string, any>
+  let fetchCalled: boolean
+  let pendingInput: any
+
+  beforeAll(async () => {
+    await import("./github.js")
+  })
+
+  beforeEach(async () => {
+    const { getConnectorDef } = await import("../registry.js")
+    const def = getConnectorDef("github")
+    pendingInput = undefined
+    ghTools = def?.tools({
+      userId: "u",
+      getAccessToken: async () => "gho_fake_token",
+      createPendingAction: async (input: any) => {
+        pendingInput = input
+        return { id: "pa-1", status: "pending", message: `Approval required: ${input.title}. Action ID: pa-1` }
+      },
+    }) ?? {}
+    fetchCalled = false
+    global.fetch = mock(async () => {
+      fetchCalled = true
+      return new Response(JSON.stringify({}))
+    })
+  })
+
+  afterEach(() => mock.restore())
+
+  it("28. github-createIssue queues a pending action instead of calling the API", async () => {
+    const result = await ghTools["github-createIssue"].execute!({ owner: "owner", repo: "repo", title: "Gated issue", body: "b" })
+    expect(result.status).toBe("pending")
+    expect(result.message).toInclude("Approval required")
+    expect(fetchCalled).toBeFalse()
+    expect(pendingInput.action).toBe("github-createIssue")
+    expect(pendingInput.connector).toBe("github")
+    expect(pendingInput.payload.title).toBe("Gated issue")
+  })
+
+  it("29. github-mergePR gates as irreversible", async () => {
+    const result = await ghTools["github-mergePR"].execute!({ owner: "owner", repo: "repo", prNumber: 5, method: "merge" })
+    expect(result.status).toBe("pending")
+    expect(pendingInput.risk).toBe("irreversible")
+    expect(fetchCalled).toBeFalse()
+  })
+
+  it("30. read tools are NOT gated", async () => {
+    global.fetch = mock(async () => new Response(JSON.stringify([])))
+    const result = await ghTools["github-listPRs"].execute!({ owner: "o", repo: "r", state: "open", limit: 5 })
+    expect(pendingInput).toBeUndefined()
+    expect(result.prs).toBeDefined()
+  })
+})

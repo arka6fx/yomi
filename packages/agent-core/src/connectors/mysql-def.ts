@@ -99,6 +99,7 @@ export const mysqlDef: ConnectorDef = {
   icon: "mysql",
   description: "Run read-only SQL queries against a MySQL database. Only SELECT statements allowed.",
   readOnlyByDefault: true,
+  requiresNodeRuntime: true, // uses the `mysql2` TCP driver — Node-only, not Workers
   auth: {
     kind: "connection_string",
     field: {

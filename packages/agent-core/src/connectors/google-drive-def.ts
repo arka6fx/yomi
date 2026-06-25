@@ -44,7 +44,10 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
       const body = await res.text()
       throw new Error(`Drive API ${path} → ${res.status}: ${body.slice(0, 200)}`)
     }
-    return res.json() as Promise<T>
+    // DELETE returns 204 No Content — don't try to parse JSON.
+    if (res.status === 204) return undefined as T
+    const text = await res.text()
+    return (text ? JSON.parse(text) : undefined) as T
   }
 
   async function driveRaw(path: string): Promise<Response> {
@@ -110,7 +113,7 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
         "Search for files in the user's Google Drive by name or type. " +
         "Returns file names, types, last modified date, and direct view links. " +
         "Always include the link in your response. " +
-        "Note: only files the user has opened with or created via this app are accessible (drive.file scope).",
+        "This connector has full Drive access, so it can search the user's entire Google Drive.",
       parameters: z.object({
         query: z
           .string()
@@ -142,8 +145,7 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
             return {
               files: [],
               message:
-                "No files found. This connector uses drive.file scope, which only sees files you've opened or created through Yomi. " +
-                "To access a file, open it in Google Drive and use 'Open with → Yomi', or ask Yomi to create a new file.",
+                "No files matched that query. Try a broader search term, or check the file exists in this Google account's Drive.",
             }
           }
           return {
@@ -362,6 +364,57 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
         }
       },
     }),
+
+    "drive-updateFile": tool({
+      description:
+        "Rename a Google Drive file and/or move it between folders. Get the fileId from drive-searchFiles or drive-listFiles first.",
+      parameters: z.object({
+        fileId: z.string().describe("Google Drive file ID"),
+        name: z.string().optional().describe("New file name"),
+        addToFolderId: z.string().optional().describe("Folder ID to move the file into"),
+        removeFromFolderId: z.string().optional().describe("Folder ID to remove the file from (e.g. its current parent)"),
+      }),
+      execute: async ({ fileId, name, addToFolderId, removeFromFolderId }) => {
+        try {
+          const params = new URLSearchParams({ fields: "id,name,webViewLink,parents" })
+          if (addToFolderId) params.set("addParents", addToFolderId)
+          if (removeFromFolderId) params.set("removeParents", removeFromFolderId)
+          const body: Record<string, unknown> = {}
+          if (name !== undefined) body["name"] = name
+          const file = await driveJson<{ id: string; name: string; webViewLink?: string }>(
+            `/files/${fileId}?${params}`,
+            { method: "PATCH", body: JSON.stringify(body) },
+          )
+          return { ok: true, id: file.id, name: file.name, link: file.webViewLink, message: "File updated." }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "drive-deleteFile": tool({
+      description:
+        "Delete a Google Drive file. By default moves it to Trash (recoverable for ~30 days); set permanent=true to delete it forever. IMPORTANT: Always confirm with the user before calling this.",
+      parameters: z.object({
+        fileId: z.string().describe("Google Drive file ID to delete"),
+        permanent: z
+          .boolean()
+          .default(false)
+          .describe("If true, permanently delete (cannot be undone). Otherwise move to Trash."),
+      }),
+      execute: async ({ fileId, permanent }) => {
+        try {
+          if (permanent) {
+            await driveJson(`/files/${fileId}`, { method: "DELETE" })
+            return { ok: true, message: `File ${fileId} permanently deleted.` }
+          }
+          await driveJson(`/files/${fileId}`, { method: "PATCH", body: JSON.stringify({ trashed: true }) })
+          return { ok: true, message: `File ${fileId} moved to Trash (recoverable).` }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
   }
 }
 
@@ -377,7 +430,10 @@ export const googleDriveDef: ConnectorDef = {
     authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
     tokenUrl: "https://oauth2.googleapis.com/token",
     scopes: [
-      "https://www.googleapis.com/auth/drive.file",
+      // Full Drive access (read, create, edit, delete any file). Broadest Drive
+      // scope and "restricted" — requires Google CASA verification for public
+      // release, or test-user allowlisting for personal use.
+      "https://www.googleapis.com/auth/drive",
       "https://www.googleapis.com/auth/userinfo.email",
     ],
     clientIdEnv: "GOOGLE_INTEGRATIONS_CLIENT_ID",
@@ -390,7 +446,7 @@ export const googleDriveDef: ConnectorDef = {
     steps: [
       "Enable Google Drive API under APIs & Services → Library",
       "Add Authorized Redirect URI: ${BACKEND_URL}/api/integrations/callback/google-drive",
-      "Using drive.file scope (non-restricted — no CASA audit needed)",
+      "Uses full drive scope (restricted): add your email under OAuth consent screen → Test users for personal use, or complete Google CASA verification to release to all users",
     ],
     collect: [
       { env: "GOOGLE_INTEGRATIONS_CLIENT_ID", label: "Google Client ID", secret: false },

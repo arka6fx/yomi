@@ -1,3 +1,5 @@
+"use client"
+
 import React, { useState } from "react"
 import { ConnectorIcon } from "../icons"
 import { DARK_THEME } from "../types"
