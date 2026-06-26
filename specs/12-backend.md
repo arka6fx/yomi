@@ -10,7 +10,8 @@ and cloud archive mirroring/search.
 - Hono is the backend framework.
 - LLM and speech provider keys live only in backend/server environments.
 - Dodo Payments is the payment processor.
-- Usage and feature gates are enforced at backend API boundaries.
+- Usage is gated by a single credit balance (pure-credit model) at backend API
+  boundaries; `services/metering.ts` `chargeUsage()` is the only charging chokepoint.
 - Structured memory stays in the sidecar; the backend hosts the mirrored archive
   index for Cloud RAG search.
 
@@ -21,7 +22,8 @@ app.route("/api/billing", billingRoutes)
 app.route("/api/usage", usageRoutes)
 app.route("/api/llm", llmRoutes)
 app.route("/api/rag", ragRoutes)
-app.post("/api/stt", sttHandler)
+app.post("/api/stt", sttHandler)   // machine-to-machine (sidecar secret) only
+app.post("/api/tts", ttsHandler)   // machine-to-machine (sidecar secret) only
 app.on(["GET", "POST"], "/api/auth/*", auth.handler)
 ```
 
@@ -50,17 +52,20 @@ Current self-serve launch plans:
 
 ## Usage Metering
 
-`usage_events` is append-only. Daily counters are enforced by usage kind:
+`usage_events` is append-only. Usage is gated purely by the credit balance — there are
+no per-feature monthly caps. Every billable action goes through
+`services/metering.ts` `chargeUsage({ user, kind, durationSeconds? })`:
 
-| Kind                         | Explore |      Pro |      Max |
-| ---------------------------- | ------: | -------: | -------: |
-| `fast_query` / chat          |  100/mo | 2,000/mo | 8,000/mo |
-| `stt` / voice                |  20 min |  180 min |  750 min |
-| `advanced_reasoning`         |    5/mo |   100/mo |   500/mo |
-| `image_generation`           |       0 |    30/mo |   200/mo |
+1. Owner email → record event, no charge, bypass.
+2. `hasBillablePlanAccess` (Explore trial active / paid sub active / past_due grace).
+3. `balance >= creditsForUsage(kind)` else block — Explore → `subscription_required`,
+   Pro/Max → `credits_exhausted`.
+4. Insert `usage_events` row, `consumeCredits`, write back `creditsCharged`.
 
-Explore is a free monthly tier with strict limits. Pro and Max raise chat,
-voice, reasoning, connector, and memory limits.
+Credit costs: chat 1 · image/screen analyze 1 · voice 2/min · Telegram message 1.
+Monthly allotments: Explore 100, Pro 2,500, Max 10,000. See spec 13. Callers:
+`routes/usage.ts` (`POST /interactions/reserve`), `agent/run.ts` (Telegram
+bot_message), `gateway/gateway-runner.ts` (telegram voice/image).
 
 ## LLM Proxy
 
@@ -73,13 +78,15 @@ voice, reasoning, connector, and memory limits.
 
 The desktop never receives provider keys.
 
-## STT Proxy
+## STT / TTS Proxy
 
-`POST /api/stt`
+`POST /api/stt` and `POST /api/tts`
 
-- accepts audio payloads from the sidecar
-- calls ElevenLabs `scribe_v2`
-- enforces voice caps by plan
+- accept payloads from the sidecar only — **machine-to-machine, sidecar-secret auth
+  only** (no user-session access), so the credit meter can't be bypassed
+- STT calls ElevenLabs `scribe_v2`; TTS calls `eleven_flash_v2_5`
+- not the metering point: voice is charged once at `/api/usage/interactions/reserve`
+  (kind `voice`, per actual minute)
 
 ## Cloud RAG API
 
@@ -126,8 +133,11 @@ Routes in `apps/backend/src/routes/memory.ts`:
 - `apps/backend/src/index.ts`
 - `apps/backend/src/routes/billing.ts`
 - `apps/backend/src/routes/usage.ts`
+- `apps/backend/src/routes/stt.ts`, `apps/backend/src/routes/tts.ts`
 - `apps/backend/src/routes/llm.ts`
 - `apps/backend/src/routes/rag.ts`
 - `apps/backend/src/routes/memory.ts`
+- `apps/backend/src/services/metering.ts` (`chargeUsage` chokepoint)
+- `apps/backend/src/services/credit-ledger.ts`, `apps/backend/src/services/credit-pricing.ts`
+- `apps/backend/src/gateway/gateway-runner.ts`, `apps/backend/src/agent/run.ts`
 - `apps/backend/src/auth.ts`
-- `apps/backend/src/usage.ts`

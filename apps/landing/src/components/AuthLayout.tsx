@@ -1,8 +1,7 @@
-import { Star } from "lucide-react"
 import { BrandMark } from "@/components/BrandMark"
 
 const STEPS = [
-  { label: "Sign in with Google or GitHub", caption: "One tap — no password to remember." },
+  { label: "Sign in with Google or GitHub", caption: "One tap. No password to remember." },
   { label: "Connect your apps", caption: "Gmail, Calendar, Drive, GitHub, and more." },
   { label: "Chat from desktop or Telegram", caption: "Ask Yomi anything, anywhere." },
 ]
@@ -20,7 +19,7 @@ export default function AuthLayout({
     <main className="min-h-dvh w-full bg-background lg:grid lg:grid-cols-[1fr_1.05fr]">
       {/* Left — brand / onboarding */}
       <aside
-        className="relative hidden overflow-hidden p-10 lg:flex lg:flex-col lg:justify-between"
+        className="relative hidden overflow-hidden p-10 lg:flex lg:flex-col lg:justify-between xl:p-14"
         style={{
           background:
             "radial-gradient(120% 80% at 50% 120%, rgba(255,255,255,0.20), transparent 60%)," +
@@ -44,57 +43,41 @@ export default function AuthLayout({
         </div>
 
         <div className="relative max-w-md">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-white/80 ring-1 ring-white/15 backdrop-blur">
-            <Star size={11} className="fill-white/80 text-white/80" />
-            AI assistant
-          </span>
-          <h2 className="mt-5 font-serif text-4xl font-medium leading-[1.1] text-white">
-            Your apps, one{" "}
-            <span className="font-serif italic">conversation.</span>
+          <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-white/55">
+            Sign in to Yomi
+          </p>
+          <h2 className="mt-4 font-serif text-5xl leading-[1.03] text-white xl:text-6xl">
+            Your apps,
+            <br />
+            one <span className="italic">conversation.</span>
           </h2>
-          <p className="mt-4 text-sm leading-relaxed text-white/70">
-            Sign in to connect your tools, then ask Yomi anything — from your desktop or right inside Telegram.
+          <p className="mt-5 max-w-sm text-sm leading-relaxed text-white/70">
+            Connect your tools once, then ask Yomi anything. From your desktop, or
+            right inside Telegram.
           </p>
 
-          <ol className="mt-9 space-y-2.5">
-            {STEPS.map((step, i) => {
-              const active = i === 0
-              return (
-                <li
-                  key={step.label}
-                  className={
-                    active
-                      ? "flex items-start gap-3 rounded-xl bg-white px-4 py-3 shadow-lg shadow-black/10"
-                      : "flex items-start gap-3 rounded-xl px-4 py-3 ring-1 ring-white/10"
-                  }
-                >
-                  <span
-                    className={
-                      active
-                        ? "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-[#1f6fc4] text-[11px] font-semibold text-white"
-                        : "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-white/15 text-[11px] font-semibold text-white/80"
-                    }
-                  >
-                    {i + 1}
+          {/* Editorial stepper: serif italic figures carry the real sequence */}
+          <ol className="mt-10 space-y-5">
+            {STEPS.map((step, i) => (
+              <li key={step.label} className="flex items-baseline gap-4">
+                <span className="w-6 shrink-0 font-serif text-3xl italic leading-none text-white/30 tabular-nums">
+                  {i + 1}
+                </span>
+                <span>
+                  <span className="block text-sm font-medium text-white/90">{step.label}</span>
+                  <span className="mt-0.5 block text-xs leading-relaxed text-white/55">
+                    {step.caption}
                   </span>
-                  <span>
-                    <span className={active ? "block text-sm font-medium text-[#0b1e44]" : "block text-sm font-medium text-white/90"}>
-                      {step.label}
-                    </span>
-                    <span className={active ? "block text-xs text-[#0b1e44]/60" : "block text-xs text-white/55"}>
-                      {step.caption}
-                    </span>
-                  </span>
-                </li>
-              )
-            })}
+                </span>
+              </li>
+            ))}
           </ol>
         </div>
 
-        <p className="relative text-xs text-white/50">
+        <p className="relative text-xs text-white/45">
           {mode === "signup"
-            ? "Free to start · upgrade anytime · cancel whenever."
-            : "Secure OAuth sign-in · we never see your password."}
+            ? "Free to start. Upgrade anytime, cancel whenever."
+            : "Secure OAuth sign-in. We never see your password."}
         </p>
       </aside>
 

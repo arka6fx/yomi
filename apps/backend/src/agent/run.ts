@@ -1,19 +1,14 @@
-import { eq, and, gte, sql, desc, ilike, or } from "drizzle-orm"
+import { eq, and, sql, desc, ilike, or } from "drizzle-orm"
 import { generateText } from "ai"
-import { db, usageEvents, ragChunks, ragDocuments, ragSources, memoryEntries } from "@yomi/db"
+import { db, ragChunks, ragDocuments, ragSources, memoryEntries } from "@yomi/db"
 import { ConnectorRegistry, createModel, runAgentLoop, type AgentMessage } from "@yomi/agent-core"
 import { formatAgentSoul } from "@yomi/shared"
 import {
   getAccessToken,
   listConnectedProviders,
 } from "../services/integration-tokens.js"
-import {
-  hasBillablePlanAccess,
-  featureLimitForUser,
-  isOwnerUser,
-  effectivePlanForUser,
-} from "../entitlements.js"
-import { getCreditSummary, consumeCredits } from "../services/credit-ledger.js"
+import { hasBillablePlanAccess } from "../entitlements.js"
+import { chargeUsage } from "../services/metering.js"
 import * as authSchema from "../auth-schema.js"
 import { upsertMemory } from "../routes/memory.js"
 
@@ -46,11 +41,6 @@ async function fetchUser(userId: string) {
     .where(eq(authSchema.user.id, userId))
     .limit(1)
   return row ?? null
-}
-
-function currentMonthStart(): Date {
-  const now = new Date()
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
 }
 
 // Full-text search over the user's cloud RAG archive (synced from the sidecar).
@@ -288,28 +278,12 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     return { text: msg, quotaError: true }
   }
 
-  // Entitlement: botMessages monthly limit
-  if (!isOwnerUser(user)) {
-    const limit = featureLimitForUser(user, "botMessages")
-    if (limit !== null && limit > 0) {
-      const [countRow] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(usageEvents)
-        .where(
-          and(
-            eq(usageEvents.userId, opts.userId),
-            eq(usageEvents.kind, "bot_message"),
-            gte(usageEvents.createdAt, currentMonthStart()),
-          ),
-        )
-      const used = Number(countRow?.count ?? 0)
-      if (used >= limit) {
-        return {
-          text: `You've used ${used} of ${limit} bot messages this month. Upgrade your plan to continue.`,
-          quotaError: true,
-        }
-      }
-    }
+  // Credits are the single gate: charge before doing any paid work. The helper
+  // records the bot_message usage event and consumes the credit; if the balance
+  // can't cover it (or the plan is inactive) we return the block message and bail.
+  const charge = await chargeUsage({ user, kind: "bot_message" })
+  if (!charge.ok) {
+    return { text: charge.message, quotaError: true }
   }
 
   const registry = new ConnectorRegistry({
@@ -373,46 +347,6 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
 
   await captureBackendMemory(opts.userId, opts.text, text).catch(() => {})
 
-  // Log a bot_message usage event after the LLM call.
-  const event = await db
-    .insert(usageEvents)
-    .values({
-      userId: opts.userId,
-      kind: "bot_message",
-      model: process.env["AI_CREDITS_AGENT_MODEL"] ?? "gpt-5.5",
-      inputTokens: 0,
-      outputTokens: 0,
-      costCents: 0,
-      creditsCharged: 0,
-      status: "done",
-    })
-    .returning({ id: usageEvents.id })
-    .catch(() => [])
-
-  // Deduct credits and reflect the charge on the usage event so the dashboard
-  // credit meter (which sums usageEvents.creditsCharged > 0) shows bot usage.
-  // Awaited — on the stateless Worker a fire-and-forget debit can be dropped
-  // before it commits, leaving the balance and meter stuck.
-  const eventId = event[0]?.id
-  if (!isOwnerUser(user) && eventId) {
-    try {
-      const debit = await consumeCredits({
-        userId: opts.userId,
-        amount: 1,
-        usageEventId: eventId,
-        idempotencyKey: `gateway:${eventId}:consume`,
-        metadata: { kind: "bot_message" },
-      })
-      if (debit.ok) {
-        await db
-          .update(usageEvents)
-          .set({ creditsCharged: debit.charged })
-          .where(eq(usageEvents.id, eventId))
-      }
-    } catch (err) {
-      console.warn("[runAgent] credit debit failed:", err)
-    }
-  }
-
+  // Usage was already recorded and credits consumed by chargeUsage() up front.
   return { text }
 }

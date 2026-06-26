@@ -19,16 +19,17 @@ import {
   ReceiptText,
   Plug,
   MessageSquare,
-  MessageCircle,
   Mic,
   ScanLine,
   Bot,
   Plus,
   ExternalLink,
+  Zap,
   type LucideIcon,
 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
+import { TelegramIcon } from "@/components/TelegramIcon"
 import { ConnectorMarketplace, buildCatalog, DARK_THEME } from "@yomi/ui-connectors"
 
 type FeatureUsage = { used: number; limit: number | null }
@@ -143,19 +144,16 @@ const PLANS = [
     name: "Explore",
     price: "$0",
     priceSub: "/ month",
-    annual: "$0 / year",
     badge: "30-day trial",
-    desc: "Try screen-aware AI, voice, and memory basics for 30 days. No card needed.",
+    desc: "Try screen-aware AI, voice, and memory for 30 days. No card needed.",
     icon: Sparkles,
     features: [
-      "100 AI chats during trial",
-      "20 min voice during trial",
-      "25 image/screen analyze",
-      "50 local memories",
-      "Window controls & docking",
-      "Streaming responses",
-      "App connectors",
-      "20 Telegram bot messages / month",
+      "100 credits (30-day trial)",
+      "Screen-aware AI & voice",
+      "Image/screen analyze",
+      "Local memory notepad",
+      "Unlimited app connectors",
+      "Telegram bot",
     ],
   },
   {
@@ -163,16 +161,15 @@ const PLANS = [
     name: "Pro",
     price: "$14.99",
     priceSub: "/ month",
-    annual: "$144 / year",
     badge: "Most Popular",
-    desc: "Daily screen, voice, memory, and images — with higher limits than Explore.",
+    desc: "Screen, voice, memory, and images for everyday work.",
     icon: Crown,
     features: [
-      "2,000 AI chats / month",
-      "180 min voice / month",
-      "400 image/screen analyze",
-      "App connectors",
-      "200 Telegram bot messages / month",
+      "2,500 credits / month",
+      "Buy extra credit packs anytime",
+      "Screen, voice, memory & images",
+      "Unlimited app connectors",
+      "Telegram bot",
     ],
   },
   {
@@ -180,16 +177,14 @@ const PLANS = [
     name: "Max",
     price: "$39.99",
     priceSub: "/ month",
-    annual: "$384 / year",
     badge: "Power users",
-    desc: "High-volume voice, screenshots, and bots for power users.",
+    desc: "High-volume credits for power users.",
     icon: Cuboid,
     features: [
       "Everything in Pro",
-      "8,000 AI chats / month",
-      "750 min voice / month",
-      "App connectors",
-      "500 Telegram bot messages / month",
+      "10,000 credits / month",
+      "Buy extra credit packs anytime",
+      "Unlimited app connectors",
       "Experimental features first",
     ],
   },
@@ -596,40 +591,83 @@ function DashboardContent() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <div className="mb-5 rounded-2xl border border-border bg-card p-6">
-              <div className="flex items-start justify-between gap-4 mb-5">
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
-                    Telegram
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Chat with Yomi from anywhere. Text costs 1 base credit; voice and image analysis add credits only when used.
-                  </p>
+            <div className="mb-5 overflow-hidden rounded-2xl border border-border bg-card">
+              {/* Header: Telegram brand identity + state */}
+              <div className="flex items-start justify-between gap-4 border-b border-border/60 p-6">
+                <div className="flex items-start gap-3.5">
+                  <TelegramIcon size={44} className="shrink-0 drop-shadow-[0_4px_14px_rgba(34,158,217,0.35)]" />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-foreground">Telegram</h3>
+                      {!platformsLoading && (
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
+                            platformLinks.length > 0
+                              ? "bg-emerald-500/10 text-emerald-400"
+                              : "bg-muted text-muted-foreground",
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "h-1.5 w-1.5 rounded-full",
+                              platformLinks.length > 0 ? "bg-emerald-400" : "bg-muted-foreground/50",
+                            )}
+                          />
+                          {platformLinks.length > 0 ? "Active" : "Not connected"}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                      Chat with Yomi from any device, right inside Telegram.
+                    </p>
+                    <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                      {[
+                        { label: "Text", cost: "1 credit" },
+                        { label: "Voice", cost: "+2/min" },
+                        { label: "Image", cost: "+1" },
+                      ].map((c) => (
+                        <span
+                          key={c.label}
+                          className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-1.5 py-0.5"
+                        >
+                          <span className="text-muted-foreground/70">{c.label}</span>
+                          <span className="font-medium text-foreground/80 tabular-nums">{c.cost}</span>
+                        </span>
+                      ))}
+                      <span className="text-muted-foreground/60">· charged only when used</span>
+                    </div>
+                  </div>
                 </div>
-                <Link
-                  href="/link"
-                  className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-xl font-medium px-3 py-1.5 text-xs hover:bg-primary/90 transition-colors shrink-0"
-                >
-                  <Plus size={12} />
-                  Link new
-                </Link>
+                {platformLinks.length > 0 && (
+                  <Link
+                    href="/link"
+                    className="flex shrink-0 items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/50"
+                  >
+                    <Plus size={12} />
+                    Link new
+                  </Link>
+                )}
               </div>
 
+              <div className="p-6 pt-5">
               {platformsLoading ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 size={14} className="animate-spin" />
-                  Loading...
+                  Loading…
                 </div>
               ) : platformLinks.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-border/60 p-4 text-center">
-                  <p className="text-sm text-muted-foreground mb-3">
-                    No Telegram account linked yet. Use the secure Telegram link flow to get started.
+                <div className="rounded-xl border border-dashed border-border/70 bg-background/40 px-5 py-7 text-center">
+                  <TelegramIcon size={48} className="mx-auto mb-3" />
+                  <p className="text-sm font-medium text-foreground">Connect Telegram to chat anywhere</p>
+                  <p className="mx-auto mt-1 max-w-xs text-xs text-muted-foreground">
+                    Link your account with a secure one-time code. Takes a few seconds.
                   </p>
                   <Link
                     href="/link"
-                    className="inline-flex items-center gap-1.5 text-xs bg-muted hover:bg-muted/80 text-foreground rounded-lg px-3 py-1.5 transition-colors"
+                    className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                   >
-                    <MessageCircle size={12} />
+                    <TelegramIcon size={15} />
                     Connect Telegram
                   </Link>
                 </div>
@@ -644,36 +682,32 @@ function DashboardContent() {
                     return (
                       <div
                         key={link.platform}
-                        className="flex items-center justify-between rounded-xl border border-border px-4 py-3"
+                        className="flex items-center justify-between rounded-xl border border-border bg-background/40 px-4 py-3 transition-colors hover:border-border/80"
                       >
                         <div className="flex items-center gap-3">
-                          <span
-                            className={cn(
-                              "text-xs px-2 py-0.5 rounded-full font-medium capitalize",
-                              meta.color,
-                            )}
-                          >
-                            {meta.name}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            Connected{" "}
-                            {new Date(link.connectedAt).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                            })}
-                          </span>
+                          <TelegramIcon size={32} className="shrink-0" />
+                          <div className="leading-tight">
+                            <p className="text-sm font-medium capitalize text-foreground">{meta.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Linked{" "}
+                              {new Date(link.connectedAt).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                              })}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
                           <Link
                             href="/link"
-                            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                            className="text-xs text-muted-foreground transition-colors hover:text-foreground"
                           >
                             Manage
                           </Link>
                           <button
                             onClick={() => handleUnlink(link.platform)}
                             disabled={unlinking === link.platform}
-                            className="flex items-center gap-1 text-xs text-destructive/70 hover:text-destructive transition-colors disabled:opacity-50"
+                            className="flex items-center gap-1 text-xs text-destructive/70 transition-colors hover:text-destructive disabled:opacity-50"
                           >
                             {unlinking === link.platform ? (
                               <Loader2 size={12} className="animate-spin" />
@@ -688,6 +722,7 @@ function DashboardContent() {
                   })}
                 </div>
               )}
+              </div>
             </div>
 
             {new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").has("integration_success") && (
@@ -755,7 +790,7 @@ function DashboardContent() {
             <div>
               <p className="text-sm font-medium text-foreground">Welcome to Yomi!</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Download the desktop app to get started — it lives in your system tray and
+                Download the desktop app to get started. It lives in your system tray and
                 responds to{" "}
                 <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono text-[10px]">
                   Ctrl+Space
@@ -959,27 +994,43 @@ function DashboardContent() {
               </div>
             )}
 
-            {sub?.plan === "explore" && sub?.trialExpired && (
-              <div className="mb-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20">
-                <p className="text-sm text-destructive font-medium mb-1">Free trial has ended</p>
-                <p className="text-xs text-destructive/80 mb-3">
-                  Your 30-day Explore trial has ended. Upgrade to Pro or Max to continue using Yomi.
+            {/* Explore users out of credits (trial expired OR balance spent) must subscribe — no free top-ups. */}
+            {sub?.plan === "explore" && (sub?.trialExpired || sub?.credits?.balance === 0) && (
+              <div className="mt-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20">
+                <p className="text-sm text-destructive font-medium mb-1">
+                  {sub.trialExpired ? "Free trial has ended" : "You're out of trial credits"}
                 </p>
-                <a
-                  href="/dashboard?plan=pro"
-                  className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors"
+                <p className="text-xs text-destructive/80 mb-3">
+                  {sub.trialExpired
+                    ? "Your 30-day Explore trial has ended. Subscribe to Pro or Max to continue using Yomi."
+                    : "You've used all your trial credits. Subscribe to Pro or Max to keep using Yomi. You can buy extra credit packs once subscribed."}
+                </p>
+                <button
+                  onClick={() => handleUpgrade("pro")}
+                  disabled={billingLoading !== null}
+                  className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
                 >
                   <Crown size={12} />
-                  Upgrade to Pro — $14.99/mo
-                </a>
+                  Subscribe to Pro · $14.99/mo
+                </button>
               </div>
             )}
 
+            {/* Subscribed users out of credits buy a pack (packs section is just below). */}
             {sub?.plan !== "explore" && sub?.credits?.balance === 0 && (
-              <div className="mb-6 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                <p className="text-sm text-yellow-400">
-                  No credits remaining. Purchase a credit pack to continue.
+              <div className="mt-6 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                <p className="text-sm text-yellow-400 font-medium mb-1">No credits remaining</p>
+                <p className="text-xs text-yellow-400/80 mb-3">
+                  You've used all your credits for this period. Buy a credit pack below to keep going{sub?.resetAt ? `, or they reset on ${new Date(sub.resetAt).toLocaleDateString("en-US", { month: "long", day: "numeric" })}` : ""}.
                 </p>
+                <button
+                  onClick={() => sub?.creditPacks?.[0] && handleBuyCredits(sub.creditPacks[0].key)}
+                  disabled={creditLoading !== null || !sub?.creditPacks?.length}
+                  className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  <Zap size={12} />
+                  Buy {sub?.creditPacks?.[0]?.name ?? "credits"}
+                </button>
               </div>
             )}
 
@@ -1152,7 +1203,6 @@ function DashboardContent() {
                         <span className="text-lg font-light text-foreground">{plan.price}</span>
                         <span className="text-xs text-muted-foreground">{plan.priceSub}</span>
                       </div>
-                      <p className="text-[11px] text-muted-foreground mb-2">{plan.annual}</p>
                       <p className="text-xs text-muted-foreground mb-2.5 leading-relaxed">
                         {plan.desc}
                       </p>

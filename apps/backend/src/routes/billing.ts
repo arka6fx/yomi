@@ -627,7 +627,11 @@ billingRouter.get("/subscription", authenticate, async (c) => {
   const planConfig = getPlan(effectivePlan)
 
   const totalCreditsUsed = Object.values(creditConsumption).reduce((sum, v) => sum + v, 0)
-  const totalCredits = planConfig.includedCredits + totalCreditsUsed
+  // Single honest meter: remaining balance + what's already been consumed this period.
+  // Stable within a billing period (only grows when a credit pack is purchased), so the
+  // progress bar reads "used / total" correctly — unlike the old includedCredits + used.
+  const creditSummary = await getCreditSummary(user.id)
+  const totalCredits = creditSummary.balance + totalCreditsUsed
 
   const connectedProviders = await listConnectedProviders(user.id)
   const connectorLimit = featureLimitForUser(user, "connectors")
@@ -683,7 +687,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     dailyVoiceUsed: user.dailyVoiceCount,
     dailyImageUsed: user.dailyImageCount,
     tokensUsedThisPeriod,
-    credits: await getCreditSummary(user.id),
+    credits: creditSummary,
     creditsUsed: totalCreditsUsed,
     totalCredits,
     creditConsumption,

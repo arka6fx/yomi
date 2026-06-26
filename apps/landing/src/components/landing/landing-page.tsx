@@ -133,18 +133,15 @@ const PLANS = [
     name: "Explore",
     price: "$0",
     period: "/ month",
-    annual: "$0 / year",
     badge: "Free",
-    description: "Try screen-aware AI, voice, and memory basics for 30 days. No card needed.",
+    description: "Try screen-aware AI, voice, and memory for 30 days. No card needed.",
     features: [
-      "100 AI chats during trial",
-      "20 min voice during trial",
-      "25 image/screen analyze",
-      "50 local memories",
-      "Window controls & docking",
-      "Streaming responses",
-      "App connectors",
-      "20 Telegram bot messages / month",
+      "100 credits (30-day trial)",
+      "Screen-aware AI & voice",
+      "Image/screen analyze",
+      "Local memory notepad",
+      "Unlimited app connectors",
+      "Telegram bot",
     ],
     cta: "Get started free",
     popular: false,
@@ -155,15 +152,14 @@ const PLANS = [
     name: "Pro",
     price: "$14.99",
     period: "/ month",
-    annual: "$144 / year",
     badge: "Most Popular",
-    description: "Daily screen, voice, memory, and images — with higher limits than Explore.",
+    description: "Screen, voice, memory, and images for everyday work.",
     features: [
-      "2,000 AI chats / month",
-      "180 min voice / month",
-      "400 image/screen analyze",
-      "App connectors",
-      "200 Telegram bot messages / month",
+      "2,500 credits / month",
+      "Buy extra credit packs anytime",
+      "Screen, voice, memory & images",
+      "Unlimited app connectors",
+      "Telegram bot",
     ],
     cta: "Subscribe",
     popular: true,
@@ -174,15 +170,13 @@ const PLANS = [
     name: "Max",
     price: "$39.99",
     period: "/ month",
-    annual: "$384 / year",
     badge: "Power users",
-    description: "High-volume voice, analyze, and bots for power users.",
+    description: "High-volume credits for power users.",
     features: [
       "Everything in Pro",
-      "8,000 AI chats / month",
-      "750 min voice / month",
-      "App connectors",
-      "500 Telegram bot messages / month",
+      "10,000 credits / month",
+      "Buy extra credit packs anytime",
+      "Unlimited app connectors",
       "Experimental features first",
     ],
     cta: "Subscribe",
@@ -475,7 +469,7 @@ export function LandingPage() {
             apps or copy-pasting context.
           </p>
           <p>
-            Ask Yomi to find a file, summarize a document, or pull context from your workspace — all
+            Ask Yomi to find a file, summarize a document, or pull context from your workspace, all
             from a single interface on your desktop or via Telegram. Yomi only accesses your data when
             you ask a question, and for no other purpose.
           </p>
@@ -502,8 +496,8 @@ export function LandingPage() {
           <div className="rounded-2xl border border-primary/20 bg-primary/5 px-6 py-4 text-sm text-muted-foreground">
             <p className="mb-1 font-medium text-foreground">App purpose</p>
             <p>
-              Yomi is a personal AI assistant. It accesses your Google Drive — with your explicit
-              permission — to answer questions you ask in natural language. For example:
+              Yomi is a personal AI assistant. It accesses your Google Drive, with your explicit
+              permission, to answer questions you ask in natural language. For example:
               &ldquo;Find the Q3 report in my Drive.&rdquo; or &ldquo;What does the product spec
               say about pricing?&rdquo; Yomi reads data on-demand per request and never stores it.
             </p>
@@ -535,7 +529,7 @@ export function LandingPage() {
                     Yomi uses Google&apos;s authentication system to confirm who you are, so it can
                     securely associate your connected apps, settings, and preferences with your
                     account. Anonymous access is not possible because Yomi operates on your
-                    personal file data — it cannot function without knowing
+                    personal file data, so it cannot function without knowing
                     which Google account to query.
                   </p>
                 </div>
@@ -578,8 +572,8 @@ export function LandingPage() {
                     discards it immediately after responding. No Drive files are retained on
                     Yomi&apos;s servers between requests. Your Google
                     data is never sold, never used to train AI models, and is not shared with any
-                    third party except the AI inference provider used to generate your response
-                    — and solely for that purpose.
+                    third party except the AI inference provider used to generate your response,
+                    and solely for that purpose.
                   </p>
                 </div>
               </div>
@@ -703,7 +697,7 @@ export function LandingPage() {
             Your tools, one conversation away.
           </h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
-            Connect your apps once. Ask Yomi from the desktop or from Telegram — even with your laptop closed.
+            Connect your apps once. Ask Yomi from the desktop or from Telegram, even with your laptop closed.
           </p>
         </div>
 
@@ -887,7 +881,6 @@ export function LandingPage() {
                     </span>
                     <span className="text-sm text-muted-foreground">{plan.period}</span>
                   </div>
-                  <p className="mb-2 text-xs text-muted-foreground">{plan.annual}</p>
                   <p className="text-sm text-muted-foreground">{plan.description}</p>
                 </div>
 
@@ -923,7 +916,7 @@ export function LandingPage() {
           viewport={{ once: true }}
           className="mt-8 text-center text-xs text-muted-foreground"
         >
-          * Fair usage protection applies. Explore is a 30-day free trial.
+          * Credits: 1 per AI chat, +1 per image/screen, 2 per voice minute, 1 per Telegram message. Explore is a 30-day free trial; Pro and Max can buy extra credit packs.
         </motion.p>
       </section>
 

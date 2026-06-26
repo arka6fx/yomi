@@ -9,7 +9,7 @@ import { BrandMark } from "@/components/BrandMark"
 function mapAuthError(code: string): string {
   switch (code) {
     case "please_restart_the_process":
-      return "Session expired — please try signing in again."
+      return "Session expired. Please sign in again."
     case "account_not_linked":
       return "This email is already registered with a different provider."
     case "provider_rejected":
@@ -78,12 +78,20 @@ export default function AuthCard({ defaultMode, plan, callbackURL, initialError 
         </span>
       </div>
 
-      <h1 className="font-serif text-3xl font-medium tracking-tight text-foreground">
-        {isSignup ? "Create your account" : "Welcome back"}
+      <h1 className="font-serif text-4xl leading-tight text-foreground">
+        {isSignup ? (
+          <>
+            Create your <span className="italic">account</span>
+          </>
+        ) : (
+          <>
+            Welcome <span className="italic">back</span>
+          </>
+        )}
       </h1>
-      <p className="mt-2 text-sm text-muted-foreground">
+      <p className="mt-2.5 text-sm text-muted-foreground">
         {isSignup
-          ? "Start free in seconds — continue with a provider below."
+          ? "Start free in seconds. Continue with a provider below."
           : "Sign in to your Yomi account to continue."}
       </p>
 
@@ -123,7 +131,7 @@ export default function AuthCard({ defaultMode, plan, callbackURL, initialError 
       </div>
 
       <p className="mt-4 text-center text-xs text-muted-foreground">
-        Secure OAuth — Yomi never sees your password.
+        Secure OAuth. Yomi never sees your password.
       </p>
 
       {error && <p className="mt-4 text-center text-xs text-destructive">{error}</p>}

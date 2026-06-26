@@ -130,7 +130,7 @@ describe("POST /api/stt (STT proxy)", () => {
     expect(json.error).toContain("ElevenLabs STT failed")
   })
 
-  it("accepts Authorization Bearer token instead of sidecar secret", async () => {
+  it("rejects a user Bearer token without the sidecar secret (no meter bypass)", async () => {
     mockElevenLabs(200, { text: "bearer auth works" })
     mockAuthSession = { user: { id: "test-user" }, session: { id: "test-session" } }
 
@@ -146,9 +146,9 @@ describe("POST /api/stt (STT proxy)", () => {
       body: form,
     })
 
-    expect(res.status).toBe(200)
-    const json = await res.json() as Record<string, unknown>
-    expect(json.text).toBe("bearer auth works")
+    // STT/TTS are machine-to-machine only — a plain user session must not be able to
+    // call ElevenLabs directly and bypass the credit meter.
+    expect(res.status).toBe(401)
   })
 })
 
@@ -283,7 +283,7 @@ describe("POST /api/tts (TTS proxy)", () => {
     expect(json.error).toContain("ElevenLabs TTS failed")
   })
 
-  it("TTS accepts Authorization Bearer token instead of sidecar secret", async () => {
+  it("TTS rejects a user Bearer token without the sidecar secret (no meter bypass)", async () => {
     mockElevenLabs(200, "fake-mp3", "audio/mpeg")
     mockAuthSession = { user: { id: "test-user" }, session: { id: "test-session" } }
 
@@ -299,6 +299,6 @@ describe("POST /api/tts (TTS proxy)", () => {
       body: JSON.stringify({ text: "hello", voice_id: "voice-1" }),
     })
 
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(401)
   })
 })

@@ -69,7 +69,7 @@ const jsonLd = {
           name: "Explore",
           price: "0",
           priceCurrency: "USD",
-          description: "Free tier — 100 AI chats/month and app connectors",
+          description: "Free 30-day trial — 100 monthly credits and unlimited app connectors",
         },
         {
           "@type": "Offer",
@@ -77,7 +77,7 @@ const jsonLd = {
           price: "14.99",
           priceCurrency: "USD",
           billingDuration: "P1M",
-          description: "2,000 AI chats/month and app connectors",
+          description: "2,500 monthly credits, unlimited app connectors, Telegram bot",
         },
         {
           "@type": "Offer",
@@ -85,7 +85,7 @@ const jsonLd = {
           price: "39.99",
           priceCurrency: "USD",
           billingDuration: "P1M",
-          description: "8,000 AI chats/month, app connectors, early access",
+          description: "10,000 monthly credits, unlimited app connectors, early access",
         },
       ],
       author: {
@@ -124,7 +124,7 @@ const jsonLd = {
           name: "Is Yomi free?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yes. Yomi has a free Explore plan with 100 AI chats per month and app connectors. Paid plans start at $14.99/month for higher usage limits.",
+            text: "Yes. Yomi has a free 30-day Explore trial with 100 credits and unlimited app connectors. Paid plans start at $14.99/month (Pro: 2,500 credits/mo) and credits are spent per action — 1 per AI chat, 2 per voice minute.",
           },
         },
         {

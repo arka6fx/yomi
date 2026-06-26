@@ -69,28 +69,35 @@ export function ConnectorTile({ info, t, onConnect, onDisconnect, loading, limit
 
   return (
     <div
+      onMouseEnter={(e) => {
+        if (info.available) e.currentTarget.style.borderColor = t.borderHi
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = t.border
+      }}
       style={{
         background: t.surface,
         border: `1px solid ${t.border}`,
-        borderRadius: 12,
-        padding: 16,
+        borderRadius: 14,
+        padding: 18,
         display: "flex",
         flexDirection: "column" as const,
-        gap: 10,
+        gap: 14,
         opacity: !info.available ? 0.55 : 1,
         boxSizing: "border-box" as const,
         backdropFilter: t.backdropFilter,
         WebkitBackdropFilter: t.backdropFilter,
         boxShadow: t.cardShadow,
+        transition: "border-color 0.15s ease",
       }}
     >
       {/* Icon + name row */}
-      <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+      <div style={{ display: "flex", gap: 13, alignItems: "flex-start" }}>
         <div
           style={{
-            width: 40,
-            height: 40,
-            borderRadius: 8,
+            width: 42,
+            height: 42,
+            borderRadius: 11,
             background: t.btnBg,
             border: `1px solid ${t.borderHi}`,
             display: "flex",
@@ -99,11 +106,11 @@ export function ConnectorTile({ info, t, onConnect, onDisconnect, loading, limit
             flexShrink: 0,
           }}
         >
-          <ConnectorIcon id={info.id} size={22} />
+          <ConnectorIcon id={info.id} size={23} />
         </div>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: t.text, fontFamily: t.font }}>
+            <span style={{ fontSize: 14, fontWeight: 600, letterSpacing: "-0.01em", color: t.text, fontFamily: t.font }}>
               {info.name}
             </span>
             {!info.available && (
@@ -124,7 +131,7 @@ export function ConnectorTile({ info, t, onConnect, onDisconnect, loading, limit
             )}
             {info.connected && <ConnectedBadge t={t} displayName={info.displayName} />}
           </div>
-          <p style={{ fontSize: 11, color: t.dim, marginTop: 4, lineHeight: 1.4, margin: "4px 0 0 0", fontFamily: t.font }}>
+          <p style={{ fontSize: 12, color: t.dim, lineHeight: 1.5, margin: "5px 0 0 0", fontFamily: t.font }}>
             {info.description}
           </p>
         </div>
@@ -178,7 +185,7 @@ export function ConnectorTile({ info, t, onConnect, onDisconnect, loading, limit
                 boxSizing: "border-box" as const,
               }}
             >
-              Limit reached — upgrade to connect
+              Limit reached. Upgrade to connect
             </div>
           ) : (
             <button
@@ -209,9 +216,9 @@ export function ConnectorTile({ info, t, onConnect, onDisconnect, loading, limit
               }}
             >
               {info.authKind === "api_key"
-                ? "Add API Key"
+                ? "Add API key"
                 : info.authKind === "connection_string"
-                  ? "Add Connection String"
+                  ? "Add connection string"
                   : "Connect"}
             </button>
           )}
@@ -262,35 +269,46 @@ export function ConnectorMarketplace({
   )
 
   return (
-    <div style={{ display: "flex", flexDirection: "column" as const, gap: 28 }}>
+    <div style={{ display: "flex", flexDirection: "column" as const, gap: 32 }}>
       {categories.map((category) => {
         const group = connectors.filter((c) => c.category === category)
         const label = CATEGORY_LABELS[category] ?? category
+        const connectedCount = group.filter((c) => c.connected).length
 
         return (
           <div key={category}>
             <div
               style={{
-                fontSize: 10,
-                letterSpacing: "0.08em",
-                fontWeight: 700,
-                color: t.dim,
-                marginBottom: 10,
-                textTransform: "uppercase" as const,
-                fontFamily: t.font,
+                marginBottom: 12,
                 display: "flex",
                 alignItems: "center",
-                gap: 8,
+                gap: 10,
               }}
             >
-              <span>{label}</span>
+              <span
+                style={{
+                  fontSize: 11,
+                  letterSpacing: "0.14em",
+                  fontWeight: 700,
+                  color: t.dim,
+                  textTransform: "uppercase" as const,
+                  fontFamily: t.font,
+                }}
+              >
+                {label}
+              </span>
+              {connectedCount > 0 && (
+                <span style={{ fontSize: 10, fontWeight: 600, color: t.successText, fontFamily: t.font }}>
+                  {connectedCount} connected
+                </span>
+              )}
               <span style={{ flex: 1, height: 1, background: t.borderHi }} />
             </div>
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-                gap: 12,
+                gridTemplateColumns: "repeat(auto-fill, minmax(248px, 1fr))",
+                gap: 14,
               }}
             >
               {group.map((info) => (

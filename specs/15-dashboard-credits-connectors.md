@@ -1,5 +1,9 @@
 # Dashboard Credits & Connector Plan
 
+> Status: implemented (historical plan). Billing is now **pure credits** (credits are the
+> only usage gate); the dashboard meter shows `creditsUsed / totalCredits` where
+> `totalCredits = balance + consumed this period`. Current model: spec 13.
+
 ## Goals
 
 - Simplify dashboard metering around a single credits meter instead of per-feature bars.
