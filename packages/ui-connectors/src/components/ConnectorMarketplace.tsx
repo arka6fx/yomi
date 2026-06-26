@@ -136,16 +136,24 @@ export function ConnectorTile({ info, t, onConnect, onDisconnect, loading, limit
           {info.connected ? (
             <button
               onClick={handleDisconnectClick}
-              onMouseLeave={() => setConfirmDisconnect(false)}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = t.accent
+                e.currentTarget.style.borderColor = t.accent
+              }}
+              onMouseLeave={(e) => {
+                setConfirmDisconnect(false)
+                e.currentTarget.style.color = t.dim
+                e.currentTarget.style.borderColor = t.border
+              }}
               disabled={loading}
               style={{
                 width: "100%",
                 fontFamily: t.font,
                 fontSize: 11,
                 fontWeight: 600,
-                color: confirmDisconnect ? t.error : t.dim,
+                color: confirmDisconnect ? t.accent : t.dim,
                 background: "transparent",
-                border: `1px solid ${confirmDisconnect ? t.error : t.border}`,
+                border: `1px solid ${confirmDisconnect ? t.accent : t.border}`,
                 borderRadius: 6,
                 padding: "6px 0",
                 cursor: "pointer",

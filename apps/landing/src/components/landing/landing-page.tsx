@@ -326,7 +326,7 @@ export function LandingPage() {
           <div className="absolute inset-0 opacity-[0.16] hero-grain" />
           <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-black/65 to-transparent" />
 
-          <div className="relative z-10 flex min-h-[calc(100vh-96px)] flex-col justify-end px-5 pb-6 pt-24 sm:px-8 sm:pb-8 lg:px-10">
+          <div className="relative z-10 flex min-h-[calc(100vh-96px)] flex-col justify-between px-5 pb-6 pt-24 sm:px-8 sm:pb-8 lg:px-10">
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -344,6 +344,21 @@ export function LandingPage() {
               <span>Windows now · macOS coming soon</span>
             </motion.div>
 
+            {/* big centered tagline — the heart of the hero */}
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.85, delay: 0.25 }}
+              className="mx-auto flex max-w-4xl flex-col items-center px-2 text-center"
+            >
+              <p className="font-serif text-4xl leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-6xl">
+                Sees your <span className="italic text-sky-200">screen</span>, hears your{" "}
+                <span className="italic text-sky-200">voice</span>, and works across{" "}
+                <span className="italic">your everyday apps</span>.
+              </p>
+            </motion.div>
+
+            <div>
             <div className="grid items-end gap-8 lg:grid-cols-[1fr_360px]">
               <motion.h1
                 initial={{ opacity: 0, y: 28 }}
@@ -360,52 +375,58 @@ export function LandingPage() {
                 transition={{ duration: 0.8, delay: 0.35 }}
                 className="pb-1 lg:pb-6"
               >
-                <div className="mb-6 flex items-start gap-5">
-                  <span className="font-accent text-5xl leading-none text-[#eaf4ff]">*</span>
-                  <div className="max-w-sm space-y-3">
-                    <p className="text-sm leading-5 text-white/78 sm:text-base sm:leading-6">
-                      Sees your screen, hears your voice, connects to Google Drive and Notion.
-                      Ask anything — get answers instantly.
-                    </p>
-                    <p className="text-xs leading-5 text-white/50">
-                      Desktop or Telegram. No app-switching. No copy-paste.
-                    </p>
-                    <p className="text-xs leading-5 text-white/30">
-                      Drive data is never stored.{" "}
-                      <a
-                        href="#google-data"
-                        className="underline underline-offset-2 transition-colors hover:text-white/50"
+                <div className="mb-7 max-w-md">
+                  <div className="flex flex-wrap gap-2">
+                    {["Desktop", "Telegram", "No copy-paste"].map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full border border-white/12 bg-white/5 px-3 py-1 text-xs font-medium tracking-wide text-white/65 backdrop-blur-sm"
                       >
-                        Learn more
-                      </a>
-                    </p>
-                  </div>
-                </div>
-                <div className="flex flex-col items-start gap-3">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <Link
-                      href="/signup"
-                      className="group inline-flex h-12 items-center gap-4 rounded-full bg-[#eaf4ff] px-6 text-sm font-semibold text-slate-950 transition hover:bg-white"
-                    >
-                      Get started
-                      <span className="grid h-8 w-8 place-items-center rounded-full bg-zinc-950 text-white transition group-hover:translate-x-1">
-                        <ArrowRight size={16} />
+                        {tag}
                       </span>
-                    </Link>
-                    <button
-                      onClick={() => scrollTo("how-it-works")}
-                      className="inline-flex h-12 items-center rounded-full border border-white/15 bg-white/10 px-6 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/15"
-                    >
-                      See how it works
-                    </button>
+                    ))}
                   </div>
+
+                  <p className="mt-4 font-serif text-sm italic text-white/40">
+                    Your data is never stored.{" "}
+                    <a
+                      href="#google-data"
+                      className="font-sans text-xs not-italic underline underline-offset-2 transition-colors hover:text-white/65"
+                    >
+                      Learn more
+                    </a>
+                  </p>
+                </div>
+                <div className="grid w-full max-w-md grid-cols-2 gap-3">
+                  <Link
+                    href="/signup"
+                    className="group inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-xl bg-[#eaf4ff] px-5 text-sm font-semibold text-slate-950 transition hover:bg-white"
+                  >
+                    Get started
+                    <span className="grid h-6 w-6 place-items-center rounded-full bg-zinc-950 text-white transition group-hover:translate-x-0.5">
+                      <ArrowRight size={14} />
+                    </span>
+                  </Link>
+                  <button
+                    onClick={() => scrollTo("how-it-works")}
+                    className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-white/15 bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/15"
+                  >
+                    See how it works
+                  </button>
                   <button
                     onClick={() => scrollTo("download")}
-                    className="inline-flex h-12 items-center gap-2 self-center rounded-lg border border-sky-200/40 bg-[linear-gradient(135deg,#38bdf8_0%,#2563eb_100%)] px-5 text-sm font-semibold text-white shadow-[0_10px_28px_rgba(37,99,235,0.36),inset_0_1px_0_rgba(255,255,255,0.28)] transition hover:scale-[1.02] hover:shadow-[0_14px_36px_rgba(37,99,235,0.48),inset_0_1px_0_rgba(255,255,255,0.34)]"
+                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-sky-200/40 bg-[linear-gradient(135deg,#38bdf8_0%,#2563eb_100%)] px-5 text-sm font-semibold text-white shadow-[0_10px_28px_rgba(37,99,235,0.36),inset_0_1px_0_rgba(255,255,255,0.28)] transition hover:scale-[1.02] hover:shadow-[0_14px_36px_rgba(37,99,235,0.48),inset_0_1px_0_rgba(255,255,255,0.34)]"
                   >
                     <WindowsMark />
                     {heroDownloadLabel}
                   </button>
+                  <Link
+                    href="/signup"
+                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/15"
+                  >
+                    <ConnectorIcon id="telegram" size={17} />
+                    Text Yomi
+                  </Link>
                 </div>
               </motion.div>
             </div>
@@ -429,6 +450,7 @@ export function LandingPage() {
                 Visible capture states
               </span>
             </motion.div>
+            </div>
           </div>
         </div>
       </section>
@@ -445,14 +467,14 @@ export function LandingPage() {
         </div>
         <div className="space-y-4 text-center text-sm leading-relaxed text-muted-foreground">
           <p>
-            Yomi is an AI productivity assistant that connects to your Google Drive and Notion so
+            Yomi is an AI productivity assistant that connects to the apps you already use so
             you can query, analyze, and act on your work using natural language, without switching
             apps or copy-pasting context.
           </p>
           <p>
-            Ask Yomi to find a file, summarize a doc, or search your Notion workspace — all from a
-            single interface on your desktop or via Telegram. Yomi only accesses your data when you
-            ask a question, and for no other purpose.
+            Ask Yomi to find a file, summarize a document, or pull context from your workspace — all
+            from a single interface on your desktop or via Telegram. Yomi only accesses your data when
+            you ask a question, and for no other purpose.
           </p>
         </div>
       </section>
@@ -692,8 +714,8 @@ export function LandingPage() {
               transition={{ duration: 0.4, delay: i * 0.04 }}
               className="flex items-start gap-3 rounded-2xl glass-card p-4"
             >
-              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/6 ring-1 ring-inset ring-white/10">
-                <ConnectorIcon id={c.id} size={20} />
+              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white text-neutral-900 ring-1 ring-inset ring-black/5">
+                <ConnectorIcon id={c.id} size={28} />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-medium text-foreground">{c.name}</p>

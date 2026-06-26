@@ -1,34 +1,28 @@
 import type { Metadata } from "next"
-import { EB_Garamond, Manrope, JetBrains_Mono, Playfair_Display } from "next/font/google"
+import { Inter, Instrument_Serif, JetBrains_Mono } from "next/font/google"
 import { caveat } from "@/lib/fonts"
 import { Providers } from "@/components/providers"
 import { cn } from "@/lib/utils"
 import "./globals.css"
 
-const manrope = Manrope({
+// Body / UI typeface — Inter (optical 14..32, full weight range).
+const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
 })
 
-const ebGaramond = EB_Garamond({
+// Display / heading typeface — Instrument Serif (roman + italic accent).
+const instrumentSerif = Instrument_Serif({
   subsets: ["latin"],
-  variable: "--font-accent",
-  weight: ["400", "500", "600", "700"],
+  variable: "--font-heading",
+  weight: ["400"],
+  style: ["normal", "italic"],
 })
 
 const mono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
   weight: ["400", "500"],
-})
-
-// High-contrast display serif for headings — matches the elegant serif in the
-// landing reference (roman + italic accent).
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  variable: "--font-serif",
-  weight: ["400", "500", "600", "700", "800", "900"],
-  style: ["normal", "italic"],
 })
 
 const META_DESC =
@@ -113,11 +107,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="en"
       className={cn(
         "dark antialiased",
-        manrope.variable,
-        ebGaramond.variable,
+        inter.variable,
+        instrumentSerif.variable,
         caveat.variable,
         mono.variable,
-        playfair.variable,
       )}
     >
       <body className="bg-background text-foreground min-h-dvh">

@@ -28,7 +28,14 @@ export function BrandMark({ withText = true, size = "md", className = "" }: Bran
         width={48}
         height={48}
       />
-      {withText && <span className="font-display text-xl font-bold text-foreground">Yomi</span>}
+      {withText && (
+        <span
+          className="text-2xl font-bold leading-none text-foreground"
+          style={{ fontFamily: "var(--font-caveat), cursive" }}
+        >
+          Yomi
+        </span>
+      )}
     </Link>
   )
 }
