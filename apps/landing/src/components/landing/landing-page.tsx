@@ -313,7 +313,11 @@ export function LandingPage() {
       {/* persistent sticky nav, floats above the full-bleed hero image */}
       <Nav />
 
-      <section id="hero" className="relative -mt-[76px] flex min-h-screen flex-col overflow-hidden bg-zinc-950">
+      <section
+        id="hero"
+        style={{ marginTop: "-74px" }}
+        className="relative flex min-h-screen flex-col overflow-hidden bg-zinc-950"
+      >
         {/* full-bleed hero image + overlays — spans the entire section, behind the nav */}
         <div
           className="absolute inset-0 scale-105 bg-cover bg-[center_34%] opacity-90"
