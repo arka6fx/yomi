@@ -55,7 +55,7 @@ export function ConversationManager({ token }: { token: string }) {
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
+    <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
       <div className="mb-5 flex items-start justify-between gap-4">
         <div className="flex items-start gap-3.5">
           <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary/10">

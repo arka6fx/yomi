@@ -27,6 +27,7 @@ import {
   Zap,
   Brain,
   Clock,
+  Activity,
   type LucideIcon,
 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
@@ -35,6 +36,7 @@ import { TelegramIcon } from "@/components/TelegramIcon"
 import { MemoryManager } from "@/components/dashboard/MemoryManager"
 import { SchedulesManager } from "@/components/dashboard/SchedulesManager"
 import { ConversationManager } from "@/components/dashboard/ConversationManager"
+import { StatusManager } from "@/components/dashboard/StatusManager"
 import { ConnectorMarketplace, buildCatalog, DARK_THEME } from "@yomi/ui-connectors"
 
 type FeatureUsage = { used: number; limit: number | null }
@@ -219,7 +221,7 @@ function DashboardContent() {
   const [desiredPlan, setDesiredPlan] = useState<string | null>(null)
   const [cancelling, setCancelling] = useState(false)
 
-  const [activeTab, setActiveTab] = useState<"account" | "integrations" | "memory" | "schedules" | "conversation">("account")
+  const [activeTab, setActiveTab] = useState<"account" | "integrations" | "memory" | "schedules" | "conversation" | "status">("account")
   const [connectedProviders, setConnectedProviders] = useState<string[]>([])
   const [integrationHealth, setIntegrationHealth] = useState<IntegrationHealth[]>([])
   const [integrationLoadingId, setIntegrationLoadingId] = useState<string | null>(null)
@@ -541,11 +543,11 @@ function DashboardContent() {
 
       {/* Nav */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
-        <div className="max-w-4xl mx-auto px-6 py-3 flex items-center justify-between">
-          <Link href="/" className="font-display text-xl font-bold text-foreground select-none">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+          <Link href="/" className="font-display text-xl font-bold text-foreground select-none shrink-0">
             Yomi
           </Link>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             <span className="text-sm text-muted-foreground hidden sm:block truncate max-w-[200px]">
               {session.user.email}
             </span>
@@ -566,7 +568,7 @@ function DashboardContent() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-12 space-y-10 relative z-10">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8 sm:space-y-10 relative z-10">
         {/* Welcome */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -579,31 +581,34 @@ function DashboardContent() {
           <p className="text-muted-foreground mt-1 text-sm">Your Yomi account overview.</p>
         </motion.div>
 
-        {/* Tab switcher */}
-        <div className="flex gap-1 border-b border-border">
-          {(["account", "integrations", "memory", "schedules", "conversation"] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={cn(
-                "flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px",
-                activeTab === tab
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {tab === "integrations" && <Plug size={13} />}
-              {tab === "memory" && <Brain size={13} />}
-              {tab === "schedules" && <Clock size={13} />}
-              {tab === "conversation" && <MessageSquare size={13} />}
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              {tab === "integrations" && connectedProviders.length > 0 && (
-                <span className="ml-1 bg-primary/20 text-primary text-xs px-1.5 py-0.5 rounded-full leading-none">
-                  {connectedProviders.length}
-                </span>
-              )}
-            </button>
-          ))}
+        {/* Tab switcher — horizontally scrollable on small screens */}
+        <div className="-mx-4 sm:mx-0 overflow-x-auto no-scrollbar border-b border-border">
+          <div className="flex gap-1 px-4 sm:px-0 min-w-max">
+            {(["account", "integrations", "memory", "schedules", "conversation", "status"] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap",
+                  activeTab === tab
+                    ? "border-primary text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {tab === "integrations" && <Plug size={13} />}
+                {tab === "memory" && <Brain size={13} />}
+                {tab === "schedules" && <Clock size={13} />}
+                {tab === "conversation" && <MessageSquare size={13} />}
+                {tab === "status" && <Activity size={13} />}
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab === "integrations" && connectedProviders.length > 0 && (
+                  <span className="ml-1 bg-primary/20 text-primary text-xs px-1.5 py-0.5 rounded-full leading-none">
+                    {connectedProviders.length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Integrations tab */}
@@ -615,7 +620,7 @@ function DashboardContent() {
           >
             <div className="mb-5 overflow-hidden rounded-2xl border border-border bg-card">
               {/* Header: Telegram brand identity + state */}
-              <div className="flex items-start justify-between gap-4 border-b border-border/60 p-6">
+              <div className="flex items-start justify-between gap-3 sm:gap-4 border-b border-border/60 p-5 sm:p-6">
                 <div className="flex items-start gap-3.5">
                   <TelegramIcon size={44} className="shrink-0 drop-shadow-[0_4px_14px_rgba(34,158,217,0.35)]" />
                   <div>
@@ -672,7 +677,7 @@ function DashboardContent() {
                 )}
               </div>
 
-              <div className="p-6 pt-5">
+              <div className="p-5 pt-4 sm:p-6 sm:pt-5">
               {platformsLoading ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 size={14} className="animate-spin" />
@@ -831,6 +836,17 @@ function DashboardContent() {
           </motion.div>
         )}
 
+        {/* Status tab */}
+        {activeTab === "status" && session && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <StatusManager token={session.session.token} />
+          </motion.div>
+        )}
+
         {/* Account tab content — only shown when account tab active */}
         {activeTab === "account" && <>
 
@@ -904,7 +920,7 @@ function DashboardContent() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.08 }}
         >
-          <div className="rounded-2xl border border-border bg-card p-6 flex flex-wrap items-start justify-between gap-6">
+          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 flex flex-wrap items-start justify-between gap-6">
             <div>
               <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
                 Current plan
@@ -973,7 +989,7 @@ function DashboardContent() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.12 }}
         >
-          <div className="rounded-2xl border border-border bg-card p-6">
+          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
             <div className="flex items-start justify-between gap-6 mb-6">
               <div>
                 <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
@@ -1111,7 +1127,7 @@ function DashboardContent() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.14 }}
         >
-          <div className="rounded-2xl border border-border bg-card p-6">
+          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-6 mb-6">
               <div>
                 <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
