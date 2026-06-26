@@ -349,7 +349,7 @@ export function LandingPage() {
               transition={{ duration: 0.85, delay: 0.25 }}
               className="mx-auto flex max-w-5xl flex-col items-center px-2 text-center"
             >
-              <p className="font-serif text-5xl font-medium leading-[1.04] tracking-tight text-white drop-shadow-[0_2px_24px_rgba(8,31,66,0.55)] sm:text-6xl lg:text-7xl xl:text-[5.5rem]">
+              <p className="font-serif text-5xl leading-[1.04] tracking-tight text-white drop-shadow-[0_2px_24px_rgba(8,31,66,0.55)] sm:text-6xl lg:text-7xl xl:text-[5.5rem]">
                 Sees your <span className="italic text-sky-300">screen</span>, hears your{" "}
                 <span className="italic text-cyan-200">voice</span>, and works across{" "}
                 <span className="italic text-blue-200">your everyday apps</span>.
@@ -362,7 +362,7 @@ export function LandingPage() {
                 initial={{ opacity: 0, y: 28 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.9, delay: 0.2 }}
-                className="font-accent text-[4.8rem] font-medium leading-[0.82] tracking-normal text-[#eaf4ff] sm:text-[7.2rem] md:text-[9rem] lg:text-[11.2rem]"
+                className="font-accent text-[4.8rem] leading-[0.82] tracking-normal text-[#eaf4ff] sm:text-[7.2rem] md:text-[9rem] lg:text-[11.2rem]"
               >
                 Yomi
               </motion.h1>
@@ -458,8 +458,8 @@ export function LandingPage() {
           <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
             About
           </p>
-          <h2 className="font-accent text-3xl font-medium text-foreground sm:text-4xl">
-            What is Yomi?
+          <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
+            What is <span className="italic">Yomi</span>?
           </h2>
         </div>
         <div className="space-y-4 text-center text-sm leading-relaxed text-muted-foreground">
@@ -482,7 +482,7 @@ export function LandingPage() {
           <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
             Google Sign-In &amp; Data Policy
           </p>
-          <h2 className="font-accent text-3xl font-medium text-foreground sm:text-4xl">
+          <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
             Why Yomi Needs Google Sign-In
           </h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
@@ -618,8 +618,8 @@ export function LandingPage() {
           <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
             How it works
           </p>
-          <h2 className="font-accent text-3xl font-medium text-foreground sm:text-4xl">
-            Three ways to interact.
+          <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
+            Three ways to <span className="italic">interact</span>.
           </h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
             Voice, type, or just press enter. Every interaction counts the same.
@@ -662,8 +662,8 @@ export function LandingPage() {
           <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
             Built to disappear
           </p>
-          <h2 className="font-accent text-3xl font-medium text-foreground sm:text-4xl">
-            Everything you need, nothing you don't.
+          <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
+            Everything you need, <span className="italic">nothing</span> you don't.
           </h2>
         </div>
 
@@ -693,8 +693,8 @@ export function LandingPage() {
           <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
             Supported Integrations
           </p>
-          <h2 className="font-accent text-3xl font-medium text-foreground sm:text-4xl">
-            Your tools, one conversation away.
+          <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
+            Your tools, one <span className="italic">conversation</span> away.
           </h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
             Connect your apps once. Ask Yomi from the desktop or from Telegram, even with your laptop closed.
@@ -730,8 +730,8 @@ export function LandingPage() {
           <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
             Transparency
           </p>
-          <h2 className="font-accent text-3xl font-medium text-foreground sm:text-4xl">
-            What Yomi accesses, and why.
+          <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
+            What Yomi accesses, and <span className="italic">why</span>.
           </h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
             Yomi only reads data when you ask a question. Nothing is stored between queries.
@@ -833,8 +833,8 @@ export function LandingPage() {
           <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
             Pricing
           </p>
-          <h2 className="font-accent text-3xl font-medium text-foreground sm:text-4xl">
-            Simple, honest pricing.
+          <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
+            Simple, <span className="italic">honest</span> pricing.
           </h2>
           <p className="mt-3 text-sm text-muted-foreground">
             Start free. Upgrade when you outgrow it.
@@ -876,7 +876,7 @@ export function LandingPage() {
                     )}
                   </div>
                   <div className="mb-2 flex items-baseline gap-1">
-                    <span className="font-accent text-4xl font-medium text-foreground">
+                    <span className="font-accent text-4xl text-foreground">
                       {plan.price}
                     </span>
                     <span className="text-sm text-muted-foreground">{plan.period}</span>
@@ -925,8 +925,8 @@ export function LandingPage() {
           <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
             Download
           </p>
-          <h2 className="font-accent text-3xl font-medium text-foreground sm:text-4xl">
-            Get Yomi.
+          <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
+            Get <span className="italic">Yomi</span>.
           </h2>
           <motion.p
             initial={{ opacity: 0 }}
@@ -987,7 +987,7 @@ export function LandingPage() {
               transition={{ duration: 0.25 }}
               className="space-y-3"
             >
-              <h2 className="font-accent text-xl font-medium text-foreground">
+              <h2 className="font-accent text-2xl text-foreground">
                 {current.title} downloads
               </h2>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -1033,7 +1033,7 @@ export function LandingPage() {
               </div>
 
               <div className="space-y-3 pt-4">
-                <h2 className="font-accent text-xl font-medium text-foreground">
+                <h2 className="font-accent text-2xl text-foreground">
                   Install instructions
                 </h2>
                 <ol className="space-y-3">

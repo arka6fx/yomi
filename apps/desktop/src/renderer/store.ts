@@ -1,5 +1,6 @@
 import { create } from "zustand"
 import type { SseEvent } from "@yomi/shared"
+import { humanizeDashes } from "@yomi/shared"
 
 export type HotkeyState = "idle" | "listening" | "processing" | "text-input"
 export type AuthState = "checking" | "unauthenticated" | "waiting" | "authenticated"
@@ -117,7 +118,9 @@ export const useYomiStore = create<YomiState>((set) => ({
       case "agent_text":
         set((s) => ({
           entries: s.entries.map((e) =>
-            e.id === s.activeId ? { ...e, text: e.text + event.text, isStreaming: true } : e,
+            e.id === s.activeId
+              ? { ...e, text: humanizeDashes(e.text + event.text), isStreaming: true }
+              : e,
           ),
         }))
         break

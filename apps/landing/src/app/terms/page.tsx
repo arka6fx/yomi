@@ -5,7 +5,7 @@ import Footer from "@/components/Footer"
 export const metadata: Metadata = {
   title: "Terms of Service",
   description:
-    "Yomi Terms of Service — the agreement between you and Yomi governing your use of the desktop app, API integrations, and subscription plans.",
+    "Yomi Terms of Service: the agreement between you and Yomi governing your use of the desktop app, API integrations, and subscription plans.",
   alternates: { canonical: "https://yomi.arka6fx.com/terms" },
 }
 
@@ -16,7 +16,7 @@ export default function TermsPage() {
       <main className="pt-16">
         <div className="mx-auto max-w-3xl px-6 py-24">
           <p className="mb-3 font-mono text-xs uppercase tracking-widest text-sky-100/50">Legal</p>
-          <h1 className="mb-2 font-accent text-5xl font-medium text-[#eaf4ff]">Terms of Service</h1>
+          <h1 className="mb-2 font-accent text-5xl text-[#eaf4ff]">Terms of Service</h1>
           <p className="mb-16 text-sm text-white/40">Last updated: June 2026</p>
 
           <div className="space-y-10 text-sm leading-7 text-white/55">
@@ -154,7 +154,7 @@ export default function TermsPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-3">
-      <h2 className="font-accent text-2xl font-medium text-[#eaf4ff]">{title}</h2>
+      <h2 className="font-accent text-2xl text-[#eaf4ff]">{title}</h2>
       <div className="space-y-3 [&_a]:text-sky-100 [&_a]:transition-colors [&_a]:hover:text-white [&_li]:relative [&_li]:pl-4 [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-xs [&_li]:before:text-sky-100 [&_li]:before:content-['›'] [&_ul]:list-none [&_ul]:space-y-1.5">
         {children}
       </div>

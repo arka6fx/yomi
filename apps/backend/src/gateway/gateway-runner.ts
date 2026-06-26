@@ -16,6 +16,7 @@ import {
 import { transcribeAudioUrl } from "../services/transcription.js"
 import { synthesizeSpeech } from "../services/tts.js"
 import { consumeCredits, getCreditSummary } from "../services/credit-ledger.js"
+import { advanceSoulOnboarding } from "../services/soul.js"
 import { creditsForUsage, type BillableUsageKind } from "../services/credit-pricing.js"
 import {
   hasBillablePlanAccess,
@@ -520,31 +521,22 @@ export class GatewayRunner {
         .set({ used: true, telegramUserId: platformUserId })
         .where(eq(telegramLinkTokens.token, token))
 
-      // Create platform_connections entry
-      const existing = await db
-        .select({ id: platformConnections.id })
-        .from(platformConnections)
-        .where(
-          and(
-            eq(platformConnections.platform, "telegram"),
-            eq(platformConnections.platformUserId, platformUserId),
-          ),
-        )
-        .limit(1)
-        .then((r) => r[0])
-
-      if (existing) {
-        console.warn(`[telegram-deeplink] user already linked: yomiUser=${row.userId} telegramUser=${platformUserId}`)
-        await this.sendMessage("telegram", chatId, "ℹ️ This Telegram account is already linked to Yomi.")
-        return
-      }
-
-      await db.insert(platformConnections).values({
-        userId: row.userId,
-        platform: "telegram",
-        platformUserId: platformUserId,
-        platformChatId: chatId,
-      })
+      // Upsert the platform_connections entry. The user explicitly initiated this
+      // link with a fresh token, so always point the Telegram account at the token's
+      // Yomi user (re-linking, or moving it to a different account, both work) and
+      // refresh the chat id. Keyed on the (platform, platformUserId) unique index.
+      await db
+        .insert(platformConnections)
+        .values({
+          userId: row.userId,
+          platform: "telegram",
+          platformUserId: platformUserId,
+          platformChatId: chatId,
+        })
+        .onConflictDoUpdate({
+          target: [platformConnections.platform, platformConnections.platformUserId],
+          set: { userId: row.userId, platformChatId: chatId, updatedAt: new Date() },
+        })
 
       console.warn(`[telegram-deeplink] link success: yomiUser=${row.userId} telegramUser=${platformUserId} token=${token}`)
       await this.sendMessage("telegram", chatId, "✅ Telegram successfully linked to your Yomi account.")
@@ -752,6 +744,23 @@ export class GatewayRunner {
     if (controlReply) {
       await this.sendMessage(msg.platform, msg.chatId, controlReply).catch(() => {})
       return
+    }
+
+    // ── First-contact personality onboarding ──────────────────────────────────
+    // On a user's first off-device message, ask them to define Yomi's personality;
+    // their next reply (or "default") is saved per-user and reused thereafter. State
+    // is DB-backed so it survives the stateless multi-isolate Workers. Runs before
+    // the voice/image/agent branches so onboarding turns never do paid work.
+    try {
+      const onboardingReply = await advanceSoulOnboarding(yomiUserId, msg.text)
+      if (onboardingReply) {
+        clearInterval(typingInterval)
+        await this.sendMessage(msg.platform, msg.chatId, onboardingReply).catch(() => {})
+        return
+      }
+    } catch (err) {
+      // Never block a real message on an onboarding bookkeeping failure.
+      console.warn("[gateway] soul onboarding error:", err)
     }
 
     // ── Voice note transcription ──────────────────────────────────────────────

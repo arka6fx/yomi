@@ -21,7 +21,7 @@ export const TOOL_DESCRIPTIONS: Record<FastToolName | AgentToolName, string> = {
   look_at_screen: "Capture a screenshot of the user's current screen",
   speak: "Speak a response aloud to the user via TTS",
   bash: "Run a shell command (sandboxed; denylist enforced)",
-  web_search: "Search the web — returns titles, URLs, and snippets",
+  web_search: "Search the web; returns titles, URLs, and snippets",
   fetch_url: "Fetch the text content of a URL",
   cronjob: "Create, list, view, update, delete, pause, or resume scheduled cron jobs",
   send_message: "Send a message to a connected messaging platform (Telegram)",

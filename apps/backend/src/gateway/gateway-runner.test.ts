@@ -11,6 +11,9 @@ let closedSessions: { userId: string; platform: string; chatId: string }[] = []
 let pendingActions: { id: string; title: string; preview: string }[] = []
 let approvedActions: string[] = []
 let deniedActions: string[] = []
+let soulCalls: { userId: string; text: string }[] = []
+// null = onboarding complete, proceed to the agent (default for most tests).
+let soulOnboardingReply: string | null = null
 
 const fakeDb = {
   select: () => ({
@@ -98,6 +101,13 @@ mock.module("../services/transcription.js", () => ({
   transcribeAudioUrl: async () => "",
 }))
 
+mock.module("../services/soul.js", () => ({
+  advanceSoulOnboarding: async (userId: string, text: string) => {
+    soulCalls.push({ userId, text })
+    return soulOnboardingReply
+  },
+}))
+
 mock.module("../services/credit-ledger.js", () => ({
   consumeCredits: async () => ({ ok: true, charged: 1, balance: 99 }),
   createPaymentRecord: async () => "payment_1",
@@ -146,6 +156,8 @@ beforeEach(() => {
   pendingActions = []
   approvedActions = []
   deniedActions = []
+  soulCalls = []
+  soulOnboardingReply = null
   delete process.env.YOMI_GATEWAY_DIRECT_SIDECAR
   globalThis.fetch = (async () => {
     throw new Error("sidecar fetch should not run")
@@ -178,6 +190,26 @@ describe("GatewayRunner production routing", () => {
     expect(appendedTurns).toEqual([
       { sessionId: "session_1", userId: "user_1", userText: "search my notion notes", assistantText: "backend reply" },
     ])
+  })
+
+  it("intercepts a first-contact message with the personality ask and skips the agent", async () => {
+    soulOnboardingReply = "Hey, I'm Yomi. Define my personality?"
+    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "hi",
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(soulCalls).toEqual([{ userId: "user_1", text: "hi" }])
+    // Onboarding short-circuits: the ask is sent and the agent never runs (no charge).
+    expect(adapter.messages.at(-1)?.text).toBe("Hey, I'm Yomi. Define my personality?")
+    expect(agentCalls).toEqual([])
   })
 
   it("handles former desktop actions with the backend agent instead of queueing", async () => {

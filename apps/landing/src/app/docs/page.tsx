@@ -19,7 +19,7 @@ import Footer from "@/components/Footer"
 export const metadata: Metadata = {
   title: "Docs",
   description:
-    "Everything Yomi can do today — the desktop assistant, Telegram bot, app connectors, memory, voice, and how plans and credits work.",
+    "Everything Yomi can do today: the desktop assistant, Telegram bot, app connectors, memory, voice, and how plans and credits work.",
   alternates: { canonical: "https://yomi.arka6fx.com/docs" },
 }
 
@@ -80,7 +80,7 @@ function Section({
   return (
     <section id={id} className="scroll-mt-28 border-t border-border/60 py-12 first:border-t-0 first:pt-0">
       <Eyebrow>{eyebrow}</Eyebrow>
-      <h2 className="mt-4 font-serif text-3xl font-medium tracking-tight text-foreground sm:text-4xl">{title}</h2>
+      <h2 className="mt-4 font-serif text-3xl tracking-tight text-foreground sm:text-4xl">{title}</h2>
       <div className="mt-5 space-y-4 text-[15px] leading-relaxed text-muted-foreground">{children}</div>
     </section>
   )
@@ -115,11 +115,11 @@ export default function DocsPage() {
             <Sparkles size={11} />
             Documentation
           </Eyebrow>
-          <h1 className="mt-5 font-serif text-4xl font-medium tracking-tight sm:text-5xl">
+          <h1 className="mt-5 font-serif text-4xl tracking-tight sm:text-5xl">
             Everything Yomi does, <span className="font-serif italic text-primary">today</span>.
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
-            A complete, honest map of what&apos;s shipped — the desktop assistant, the Telegram bot, every app
+            A complete, honest map of what&apos;s shipped: the desktop assistant, the Telegram bot, every app
             connector, memory, voice, and how plans and credits work.
           </p>
         </div>
@@ -146,7 +146,7 @@ export default function DocsPage() {
           <Section id="overview" eyebrow="Overview" title="What Yomi is">
             <p>
               Yomi is an AI assistant that runs in your Windows system tray. It can <strong className="text-foreground">see your screen</strong>,{" "}
-              <strong className="text-foreground">hear your voice</strong>, and <strong className="text-foreground">act across your apps</strong> —
+              <strong className="text-foreground">hear your voice</strong>, and <strong className="text-foreground">act across your apps</strong>,
               so you can ask questions about your work in plain language instead of switching windows and copy-pasting.
             </p>
             <p>
@@ -159,7 +159,7 @@ export default function DocsPage() {
           <Section id="getting-started" eyebrow="Setup" title="Getting started">
             <ol className="space-y-3">
               {[
-                ["Download for Windows", "Grab the installer and launch Yomi — it lives in your system tray."],
+                ["Download for Windows", "Grab the installer and launch Yomi. It lives in your system tray."],
                 ["Sign in", "Continue with Google or GitHub. No password to manage."],
                 ["Connect your apps", "Link Gmail, Calendar, Drive and others from the dashboard with one click each."],
                 ["Link Telegram (optional)", "Use the dashboard's secure link flow to chat with Yomi from your phone."],
@@ -186,13 +186,13 @@ export default function DocsPage() {
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               <Feature icon={<Monitor size={17} />} title="Screen-aware answers">
-                Ask about whatever&apos;s on screen — a doc, an error, a dashboard — and get a grounded answer.
+                Ask about whatever&apos;s on screen, like a doc, an error, or a dashboard, and get a grounded answer.
               </Feature>
               <Feature icon={<Keyboard size={17} />} title="Voice & text hotkeys">
                 Trigger Yomi by hotkey, then type or speak. A fast path replies in about two seconds.
               </Feature>
               <Feature icon={<ShieldCheck size={17} />} title="Visible capture states">
-                You always see when Yomi is capturing the screen — nothing happens silently.
+                You always see when Yomi is capturing the screen, so nothing happens silently.
               </Feature>
               <Feature icon={<Sparkles size={17} />} title="Two routing paths">
                 Simple questions take the quick path; anything needing your apps runs the full agent.
@@ -265,7 +265,7 @@ export default function DocsPage() {
 
           <Section id="approvals" eyebrow="Control" title="Approvals & safety">
             <p>
-              Actions that send or change things — like sending an email — pause for your approval first. Review the
+              Actions that send or change things, like sending an email, pause for your approval first. Review the
               preview, then approve or deny (on Telegram, use <span className="font-mono text-primary">/approve</span> and{" "}
               <span className="font-mono text-primary">/deny</span>). Yomi never sends on your behalf without a confirmation.
             </p>
@@ -273,7 +273,7 @@ export default function DocsPage() {
 
           <Section id="plans" eyebrow="Billing" title="Plans & credits">
             <p>
-              Every interaction draws from a single credit balance — 1 credit per AI chat, +1 per image/screen,
+              Every interaction draws from a single credit balance: 1 credit per AI chat, +1 per image/screen,
               2 per voice minute, 1 per Telegram message. Each plan includes a monthly credit allowance. When you
               run out, Explore upgrades to a paid plan and Pro/Max can top up with credit packs.
             </p>
@@ -309,7 +309,7 @@ export default function DocsPage() {
           <Section id="privacy" eyebrow="Trust" title="Privacy">
             <ul className="space-y-2.5">
               {[
-                "Screen capture is always visible — Yomi never reads your screen silently.",
+                "Screen capture is always visible. Yomi never reads your screen silently.",
                 "Connected-app data is used to answer your request, not stored beyond what's needed.",
                 "Google Drive file contents are not retained.",
                 "You can disconnect any app at any time from the dashboard.",

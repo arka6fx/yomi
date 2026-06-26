@@ -15,8 +15,7 @@
       "when": 1748008200000,
       "tag": "0001_stripe_to_razorpay",
       "breakpoints": true
-    }
-    ,
+    },
     {
       "idx": 2,
       "version": "7",
@@ -113,6 +112,48 @@
       "version": "7",
       "when": 1749945600000,
       "tag": "0015_telegram_link_tokens",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1781878474903,
+      "tag": "0016_explore_trial_dates",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1781964874903,
+      "tag": "0017_memory_entries",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1782051274903,
+      "tag": "0018_pending_actions",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1782137674903,
+      "tag": "0019_agent_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1782310474903,
+      "tag": "0020_user_agent_soul",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1782479674903,
+      "tag": "0021_schedules",
       "breakpoints": true
     }
   ]

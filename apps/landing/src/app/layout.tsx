@@ -26,13 +26,13 @@ const mono = JetBrains_Mono({
 })
 
 const META_DESC =
-  "Yomi is an AI assistant that sees your screen, hears your voice, and connects to Gmail, Calendar, Drive, GitHub, Notion, Slack, and more — so you can get answers without switching windows."
+  "Yomi is an AI assistant that sees your screen, hears your voice, and connects to Gmail, Calendar, Drive, GitHub, Notion, Slack, and more, so you can get answers without switching windows."
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://yomi.arka6fx.com"),
   title: {
     template: "%s | Yomi",
-    default: "Yomi — AI assistant for your screen, voice, and apps",
+    default: "Yomi: AI assistant for your screen, voice, and apps",
   },
   description: META_DESC,
   keywords: [
@@ -58,20 +58,20 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "https://yomi.arka6fx.com",
     siteName: "Yomi",
-    title: "Yomi — AI assistant for your screen, voice, and apps",
+    title: "Yomi: AI assistant for your screen, voice, and apps",
     description: META_DESC,
     images: [
       {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "Yomi — AI assistant for your screen, voice, and apps",
+        alt: "Yomi: AI assistant for your screen, voice, and apps",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Yomi — AI assistant for your screen, voice, and apps",
+    title: "Yomi: AI assistant for your screen, voice, and apps",
     description: META_DESC,
     images: ["/opengraph-image"],
     creator: "@yomi_app",

@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 export const metadata: Metadata = {
   title: "Download",
   description:
-    "Download the Yomi desktop app for Windows. Installs in seconds — runs quietly in your system tray and responds to Ctrl+Space for voice or Ctrl+Enter to type.",
+    "Download the Yomi desktop app for Windows. Installs in seconds and runs quietly in your system tray, responding to Ctrl+Space for voice or Ctrl+Enter to type.",
   alternates: { canonical: "https://yomi.arka6fx.com/download" },
   openGraph: {
     title: "Download Yomi for Windows",

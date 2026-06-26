@@ -5,7 +5,7 @@ import Footer from "@/components/Footer"
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "Read Yomi's Privacy Policy — how we handle your data, what Google API scopes we request, and your rights to access, export, or delete your information.",
+    "Read Yomi's Privacy Policy: how we handle your data, what Google API scopes we request, and your rights to access, export, or delete your information.",
   alternates: { canonical: "https://yomi.arka6fx.com/privacy" },
 }
 
@@ -16,21 +16,21 @@ export default function PrivacyPage() {
       <main className="pt-16">
         <div className="mx-auto max-w-3xl px-6 py-24">
           <p className="mb-3 font-mono text-xs uppercase tracking-widest text-sky-100/50">Legal</p>
-          <h1 className="mb-2 font-accent text-5xl font-medium text-[#eaf4ff]">Privacy Policy</h1>
+          <h1 className="mb-2 font-accent text-5xl text-[#eaf4ff]">Privacy Policy</h1>
           <p className="mb-16 text-sm text-white/40">Last updated: June 2026</p>
 
           <div className="max-w-none space-y-10 text-sm leading-7 text-white/55">
             <Section title="Overview">
               <p>
                 Yomi is an AI assistant that sees your screen, hears your voice, and connects to
-                your apps — Gmail, Google Calendar, Google Drive, GitHub, Notion, Slack, Linear,
+                your apps: Gmail, Google Calendar, Google Drive, GitHub, Notion, Slack, Linear,
                 and others. It is designed to be private by default: data from your connected apps
                 is used only to answer your direct queries and is not stored, shared, or used to
                 train AI models.
               </p>
             </Section>
 
-            <Section title="Google API Services — User Data">
+            <Section title="Google API Services: User Data">
               <p>
                 Yomi&apos;s use of information received from Google APIs adheres to the{" "}
                 <a
@@ -48,17 +48,17 @@ export default function PrivacyPage() {
                   <strong className="text-label">Gmail</strong> (
                   <code className="text-sky-100/70">gmail.readonly</code>,{" "}
                   <code className="text-sky-100/70">gmail.modify</code>,{" "}
-                  <code className="text-sky-100/70">gmail.send</code>) — to read, search, and
+                  <code className="text-sky-100/70">gmail.send</code>) to read, search, and
                   send emails when you ask Yomi a question about your inbox.
                 </li>
                 <li>
                   <strong className="text-label">Google Calendar</strong> (
-                  <code className="text-sky-100/70">calendar.readonly</code>) — to answer
+                  <code className="text-sky-100/70">calendar.readonly</code>) to answer
                   schedule queries such as &ldquo;What&apos;s on my calendar today?&rdquo;
                 </li>
                 <li>
                   <strong className="text-label">Google Drive</strong> (
-                  <code className="text-sky-100/70">drive.file</code>) — to list and read files
+                  <code className="text-sky-100/70">drive.file</code>) to list and read files
                   you have chosen to share with Yomi.
                 </li>
               </ul>
@@ -85,19 +85,19 @@ export default function PrivacyPage() {
               <p>We collect the minimum data needed to operate the service:</p>
               <ul>
                 <li>
-                  <strong className="text-label">Account data</strong> — email address, OAuth
+                  <strong className="text-label">Account data</strong>: email address, OAuth
                   provider identifier (Google or GitHub). No passwords stored.
                 </li>
                 <li>
-                  <strong className="text-label">Usage events</strong> — query count, agent runs,
+                  <strong className="text-label">Usage events</strong>: query count, agent runs,
                   token usage, and cost. Used for metering and billing. No prompt content stored.
                 </li>
                 <li>
-                  <strong className="text-label">Device metadata</strong> — OS, app version,
+                  <strong className="text-label">Device metadata</strong>: OS, app version,
                   last-seen timestamp. Used for support and compatibility.
                 </li>
                 <li>
-                  <strong className="text-label">Memory blobs</strong> — if cloud sync is enabled,
+                  <strong className="text-label">Memory blobs</strong>: if cloud sync is enabled,
                   your Yomi notepad is encrypted and synced. You can delete it at any time.
                 </li>
               </ul>
@@ -126,7 +126,7 @@ export default function PrivacyPage() {
               <p>We use the following third-party services:</p>
               <ul>
                 <li>
-                  <strong className="text-label">Google APIs</strong> — Gmail, Calendar, and Drive
+                  <strong className="text-label">Google APIs</strong>: Gmail, Calendar, and Drive
                   data accessed on your behalf when you ask Yomi a question. Governed by
                   Google&apos;s{" "}
                   <a
@@ -140,21 +140,21 @@ export default function PrivacyPage() {
                   including Limited Use requirements.
                 </li>
                 <li>
-                  <strong className="text-label">AI Credits / OpenAI-compatible API</strong> — LLM
+                  <strong className="text-label">AI Credits / OpenAI-compatible API</strong>: LLM
                   inference via our proxy. Query content (including excerpts from connected apps)
                   is sent to the LLM provider only to generate a response and is subject to their
                   privacy policy. We do not enable training data use.
                 </li>
                 <li>
-                  <strong className="text-label">ElevenLabs</strong> — cloud STT and TTS for voice
+                  <strong className="text-label">ElevenLabs</strong>: cloud STT and TTS for voice
                   features.
                 </li>
                 <li>
-                  <strong className="text-label">Dodo Payments</strong> — payment processing. We
+                  <strong className="text-label">Dodo Payments</strong>: payment processing. We
                   never store card details.
                 </li>
                 <li>
-                  <strong className="text-label">Neon (Postgres)</strong> — encrypted database
+                  <strong className="text-label">Neon (Postgres)</strong>: encrypted database
                   hosting for account data, usage events, and encrypted OAuth tokens.
                 </li>
               </ul>
@@ -229,7 +229,7 @@ export default function PrivacyPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-3">
-      <h2 className="font-accent text-2xl font-medium text-[#eaf4ff]">{title}</h2>
+      <h2 className="font-accent text-2xl text-[#eaf4ff]">{title}</h2>
       <div className="space-y-3 [&_a]:text-sky-100 [&_a]:transition-colors [&_a]:hover:text-white [&_li]:relative [&_li]:pl-4 [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-xs [&_li]:before:text-sky-100 [&_li]:before:content-['›'] [&_strong]:font-medium [&_strong]:text-white/80 [&_ul]:list-none [&_ul]:space-y-1.5">
         {children}
       </div>

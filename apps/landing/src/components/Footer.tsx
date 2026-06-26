@@ -19,7 +19,7 @@ export default function Footer() {
         <div className="grid gap-6 text-xs text-white/40 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <p className="mb-1 font-medium text-white/60">Product</p>
-            <p>Yomi — AI Productivity Assistant</p>
+            <p>Yomi: AI Productivity Assistant</p>
           </div>
           <div>
             <p className="mb-1 font-medium text-white/60">Developer</p>
