@@ -232,7 +232,10 @@ function buildSystemWithContext(memoryContext: string, ragContext: string, profi
   const appUrl = process.env["YOMI_APP_URL"] ?? "https://yomi.arka6fx.com"
   const soul = process.env["YOMI_AGENT_SOUL"]
   return (
-    `You are Yomi, a helpful AI assistant. Today is ${today}. Answer the user concisely.\n` +
+    `You are Yomi, a helpful AI assistant. Today is ${today}.\n` +
+    `Keep replies brief and to the point — this is a chat/messaging interface, not a document. ` +
+    `Aim for a short paragraph; use a few bullet points only when genuinely listing items. ` +
+    `Skip preamble, don't restate the question, and avoid long explanations or section headers unless the user explicitly asks for detail or a long-form answer.\n` +
     `${formatAgentSoul(soul)}\n\n` +
     `When the user asks about their email or connected apps, use the available tools to fetch real data before answering.\n` +
     `If a tool reports a service is not connected, suggest they connect it at ${appUrl}/dashboard.\n` +
@@ -258,10 +261,10 @@ function buildSystemWithContext(memoryContext: string, ragContext: string, profi
 function maxOutputTokensFor(text: string): number {
   const q = text.toLowerCase()
   if (/\b(write|draft|compose|essay|article|report|code|program|function|debug|detailed|step by step)\b/.test(q)) {
-    return 900
+    return 750
   }
-  if (/\b(summary|summarize|explain|compare|plan)\b/.test(q)) return 650
-  return 420
+  if (/\b(summary|summarize|explain|compare|plan)\b/.test(q)) return 450
+  return 280
 }
 
 // Run the lean agent loop server-side, with entitlement checks and usage logging.

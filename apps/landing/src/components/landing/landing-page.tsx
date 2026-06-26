@@ -310,23 +310,23 @@ export function LandingPage() {
 
   return (
     <div className="site-texture-bg min-h-screen text-foreground">
+      {/* persistent sticky nav, floats above the full-bleed hero image */}
       <Nav />
 
+      <section id="hero" className="relative -mt-[76px] flex min-h-screen flex-col overflow-hidden bg-zinc-950">
+        {/* full-bleed hero image + overlays — spans the entire section, behind the nav */}
+        <div
+          className="absolute inset-0 scale-105 bg-cover bg-[center_34%] opacity-90"
+          style={{
+            backgroundImage:
+              "url('https://images.unsplash.com/photo-1499346030926-9a72daac6c63?auto=format&fit=crop&w=2400&q=88')",
+          }}
+        />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_64%_18%,rgba(219,234,254,0.22),transparent_20%),linear-gradient(180deg,rgba(8,31,66,0.04)_0%,rgba(8,31,66,0.22)_34%,rgba(3,8,20,0.74)_72%,rgba(3,8,20,0.98)_100%)]" />
+        <div className="absolute inset-0 opacity-[0.16] hero-grain" />
+        <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-black/65 to-transparent" />
 
-      <section id="hero" className="px-4 pb-10 pt-6 sm:px-6 lg:pb-12">
-        <div className="relative mx-auto min-h-[calc(100vh-96px)] max-w-7xl overflow-hidden rounded-[28px] border border-white/10 bg-zinc-950 shadow-2xl shadow-black/50 sm:rounded-[36px]">
-          <div
-            className="absolute inset-0 scale-105 bg-cover bg-[center_34%] opacity-90"
-            style={{
-              backgroundImage:
-                "url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2400&q=88')",
-            }}
-          />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_64%_18%,rgba(219,234,254,0.22),transparent_20%),linear-gradient(180deg,rgba(8,31,66,0.04)_0%,rgba(8,31,66,0.22)_34%,rgba(3,8,20,0.74)_72%,rgba(3,8,20,0.98)_100%)]" />
-          <div className="absolute inset-0 opacity-[0.16] hero-grain" />
-          <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-black/65 to-transparent" />
-
-          <div className="relative z-10 flex min-h-[calc(100vh-96px)] flex-col justify-between px-5 pb-6 pt-24 sm:px-8 sm:pb-8 lg:px-10">
+        <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 flex-col justify-between px-5 pb-8 pt-28 sm:px-8 sm:pb-10 lg:px-10">
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -349,12 +349,12 @@ export function LandingPage() {
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.85, delay: 0.25 }}
-              className="mx-auto flex max-w-4xl flex-col items-center px-2 text-center"
+              className="mx-auto flex max-w-5xl flex-col items-center px-2 text-center"
             >
-              <p className="font-serif text-4xl leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-6xl">
-                Sees your <span className="italic text-sky-200">screen</span>, hears your{" "}
-                <span className="italic text-sky-200">voice</span>, and works across{" "}
-                <span className="italic">your everyday apps</span>.
+              <p className="font-serif text-5xl font-medium leading-[1.04] tracking-tight text-white drop-shadow-[0_2px_24px_rgba(8,31,66,0.55)] sm:text-6xl lg:text-7xl xl:text-[5.5rem]">
+                Sees your <span className="italic text-sky-300">screen</span>, hears your{" "}
+                <span className="italic text-cyan-200">voice</span>, and works across{" "}
+                <span className="italic text-blue-200">your everyday apps</span>.
               </p>
             </motion.div>
 
@@ -452,10 +452,9 @@ export function LandingPage() {
             </motion.div>
             </div>
           </div>
-        </div>
       </section>
 
-      {/* ── What is Yomi? ────────────────────────────────────────────────── */}
+      {/* ── What is Yomi?────────────────────────────────────────────────── */}
       <section id="about" className="mx-auto max-w-3xl px-6 py-20">
         <div className="mb-8 text-center">
           <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
