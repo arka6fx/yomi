@@ -46,21 +46,6 @@ export const devices = pgTable("devices", {
   lastSeen: timestamp("last_seen").notNull().defaultNow(),
 })
 
-export const subscriptions = pgTable("subscriptions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id),
-  providerCustomerId: text("provider_customer_id").notNull().default(""),
-  providerSubscriptionId: text("provider_subscription_id"),
-  plan: text("plan").notNull().default("explore"), // "explore" | "pro" | "max"
-  status: text("status").notNull().default("active"),
-  currentPeriodEnd: timestamp("current_period_end"),
-  cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-})
-
 export const usageEvents = pgTable(
   "usage_events",
   {
@@ -195,27 +180,6 @@ export const processedPaymentEvents = pgTable(
   }),
 )
 
-export const agentRuns = pgTable(
-  "agent_runs",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id),
-    deviceId: uuid("device_id").references(() => devices.id),
-    status: text("status").notNull(), // "running" | "done" | "failed" | "cancelled"
-    task: text("task").notNull(),
-    startedAt: timestamp("started_at").notNull().defaultNow(),
-    endedAt: timestamp("ended_at"),
-    stepsCount: integer("steps_count").notNull().default(0),
-    tokensUsed: integer("tokens_used").notNull().default(0),
-    summary: text("summary"),
-  },
-  (t) => ({
-    userStatusIdx: index("agent_runs_user_status_idx").on(t.userId, t.status),
-  }),
-)
-
 export const agentSessions = pgTable(
   "agent_sessions",
   {
@@ -287,25 +251,6 @@ export const schedules = pgTable(
   (t) => ({
     userIdx: index("schedules_user_idx").on(t.userId),
     dueIdx: index("schedules_due_idx").on(t.enabled, t.nextRunAt),
-  }),
-)
-
-export const memoryBlobs = pgTable(
-  "memory_blobs",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id),
-    path: text("path").notNull(), // relative path within ~/.yomi/
-    contentHash: text("content_hash").notNull(), // sha256 of plaintext content
-    sizeBytes: integer("size_bytes").notNull(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-    // Actual content in blob storage (R2 or S3), not this table
-  },
-  (t) => ({
-    userPathUnique: unique("memory_blobs_user_path_unique").on(t.userId, t.path),
-    userPathIdx: index("memory_blobs_user_path_idx").on(t.userId, t.path),
   }),
 )
 
@@ -516,25 +461,6 @@ export const mcpConnections = pgTable(
   }),
 )
 
-export const hookLogs = pgTable(
-  "hook_logs",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id),
-    agentRunId: uuid("agent_run_id").references(() => agentRuns.id),
-    hook: text("hook").notNull(), // "preToolUse" | "postToolUse" | "stop" | "sessionEnd"
-    tool: text("tool"),
-    decision: text("decision"), // "allow" | "deny" | "trim"
-    payloadRedacted: jsonb("payload_redacted"), // sanitised — no PII, no screen content
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-  },
-  (t) => ({
-    agentRunIdx: index("hook_logs_agent_run_idx").on(t.agentRunId),
-  }),
-)
-
 export const platformConnections = pgTable(
   "platform_connections",
   {
@@ -576,7 +502,7 @@ export const pendingActions = pgTable(
     result: jsonb("result"),
     sourcePlatform: text("source_platform"),
     sourceChatId: text("source_chat_id"),
-    requestedByRunId: uuid("requested_by_run_id").references(() => agentRuns.id, { onDelete: "set null" }),
+    requestedByRunId: uuid("requested_by_run_id"), // optional agent-run correlation id (no FK)
     expiresAt: timestamp("expires_at").notNull(),
     decidedAt: timestamp("decided_at"),
     executedAt: timestamp("executed_at"),

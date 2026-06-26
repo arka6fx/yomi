@@ -240,3 +240,14 @@
     mix-blend-mode: overlay;
   }
 }
+
+@layer utilities {
+  /* Hide scrollbars while keeping horizontal scroll (used by the dashboard tab bar on mobile) */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
