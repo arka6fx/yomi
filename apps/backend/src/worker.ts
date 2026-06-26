@@ -14,7 +14,7 @@ let gatewayStarted = false
 
 function propagateEnv(env: Record<string, unknown>): void {
   for (const [key, value] of Object.entries(env)) {
-    if (typeof value === "string") process.env[key] = value.replace(/^﻿/, "")
+    if (typeof value === "string") process.env[key] = value.replace(/^\uFEFF/, "")
   }
 }
 
