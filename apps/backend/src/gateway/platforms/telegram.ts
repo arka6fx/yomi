@@ -1,4 +1,5 @@
 import type { GatewayMessage, PlatformType } from "@yomi/shared"
+import { humanizeDashes } from "@yomi/shared"
 import type { PlatformAdapter } from "../platform-adapter.js"
 import { removeMarkdown, truncateMessage } from "../platform-adapter.js"
 
@@ -160,7 +161,7 @@ export class TelegramAdapter implements PlatformAdapter {
     options?: { replyTo?: string },
   ): Promise<{ ok: boolean; messageId?: string; error?: string }> {
     try {
-      const clean = truncateMessage(removeMarkdown(text))
+      const clean = truncateMessage(humanizeDashes(removeMarkdown(text)))
       const body: Record<string, unknown> = {
         chat_id: chatId,
         text: clean,

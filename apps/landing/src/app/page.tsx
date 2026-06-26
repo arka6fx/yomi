@@ -4,9 +4,9 @@ import { LandingPage } from "@/components/landing/landing-page"
 // static prerender — LandingPage forwards ?error= to /signin client-side
 export const dynamic = "force-static"
 
-const TITLE = "Yomi — AI Productivity Assistant for Windows"
+const TITLE = "Yomi: AI Productivity Assistant for Windows"
 const DESC =
-  "Yomi sees your screen, hears your voice, and connects to Gmail, Google Calendar, Google Drive, Google Classroom, GitHub, Slack, Notion, and Linear. Ask questions about your work in natural language — no copy-pasting, no window switching."
+  "Yomi sees your screen, hears your voice, and connects to Gmail, Google Calendar, Google Drive, Google Classroom, GitHub, Slack, Notion, and Linear. Ask questions about your work in natural language, with no copy-pasting and no window switching."
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -69,7 +69,7 @@ const jsonLd = {
           name: "Explore",
           price: "0",
           priceCurrency: "USD",
-          description: "Free 30-day trial — 100 monthly credits and unlimited app connectors",
+          description: "Free 30-day trial with 100 monthly credits and unlimited app connectors",
         },
         {
           "@type": "Offer",
@@ -124,7 +124,7 @@ const jsonLd = {
           name: "Is Yomi free?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yes. Yomi has a free 30-day Explore trial with 100 credits and unlimited app connectors. Paid plans start at $14.99/month (Pro: 2,500 credits/mo) and credits are spent per action — 1 per AI chat, 2 per voice minute.",
+            text: "Yes. Yomi has a free 30-day Explore trial with 100 credits and unlimited app connectors. Paid plans start at $14.99/month (Pro: 2,500 credits/mo). Credits are spent per action: 1 per AI chat, 2 per voice minute.",
           },
         },
         {

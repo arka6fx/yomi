@@ -261,6 +261,35 @@ export const agentMessages = pgTable(
   }),
 )
 
+// Cloud-managed scheduled jobs. Created/edited from the dashboard, executed by the
+// backend Worker's cron trigger so they run even when the desktop is closed.
+export const schedules = pgTable(
+  "schedules",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    schedule: text("schedule").notNull(), // raw input, e.g. "every day 9am"
+    scheduleType: text("schedule_type").notNull(), // duration | phrase | cron | iso
+    prompt: text("prompt").notNull(),
+    deliverTo: jsonb("deliver_to"), // string[] of delivery targets (e.g. ["telegram"])
+    enabled: boolean("enabled").notNull().default(true),
+    oneShot: boolean("one_shot").notNull().default(false),
+    nextRunAt: timestamp("next_run_at"), // null when not schedulable / disabled
+    lastRunAt: timestamp("last_run_at"),
+    lastRunStatus: text("last_run_status"), // success | error
+    lastRunError: text("last_run_error"),
+    runCount: integer("run_count").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    userIdx: index("schedules_user_idx").on(t.userId),
+    dueIdx: index("schedules_due_idx").on(t.enabled, t.nextRunAt),
+  }),
+)
+
 export const memoryBlobs = pgTable(
   "memory_blobs",
   {

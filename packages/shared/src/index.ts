@@ -18,6 +18,15 @@ export function formatAgentSoul(soul: string | undefined): string {
   return text ? `<agent_soul>\n${text}\n</agent_soul>` : ""
 }
 
+// Replace em (U+2014) and en (U+2013) dashes — along with any spaces hugging them —
+// with a comma and a space, so Yomi's replies read like natural human writing instead
+// of looking AI-generated. Only U+2014/U+2013 are touched: hyphen-minus "-" (markdown
+// bullets, "->", code) is left alone. Idempotent — the output contains no em/en dashes,
+// so it is safe to re-run on a growing stream buffer.
+export function humanizeDashes(text: string): string {
+  return text.replace(/\s*[—–]\s*/g, ", ")
+}
+
 export interface ChunkOptions {
   targetChars?: number
   overlap?: number

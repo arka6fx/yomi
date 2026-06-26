@@ -25,11 +25,16 @@ import {
   Plus,
   ExternalLink,
   Zap,
+  Brain,
+  Clock,
   type LucideIcon,
 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
 import { TelegramIcon } from "@/components/TelegramIcon"
+import { MemoryManager } from "@/components/dashboard/MemoryManager"
+import { SchedulesManager } from "@/components/dashboard/SchedulesManager"
+import { ConversationManager } from "@/components/dashboard/ConversationManager"
 import { ConnectorMarketplace, buildCatalog, DARK_THEME } from "@yomi/ui-connectors"
 
 type FeatureUsage = { used: number; limit: number | null }
@@ -214,7 +219,7 @@ function DashboardContent() {
   const [desiredPlan, setDesiredPlan] = useState<string | null>(null)
   const [cancelling, setCancelling] = useState(false)
 
-  const [activeTab, setActiveTab] = useState<"account" | "integrations">("account")
+  const [activeTab, setActiveTab] = useState<"account" | "integrations" | "memory" | "schedules" | "conversation">("account")
   const [connectedProviders, setConnectedProviders] = useState<string[]>([])
   const [integrationHealth, setIntegrationHealth] = useState<IntegrationHealth[]>([])
   const [integrationLoadingId, setIntegrationLoadingId] = useState<string | null>(null)
@@ -307,13 +312,27 @@ function DashboardContent() {
 
   useEffect(() => {
     if (!session) return
-    fetch("/api/gateway/connections", {
-      headers: { Authorization: `Bearer ${session.session.token}` },
-    })
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then((d: PlatformLink[]) => setPlatformLinks(Array.isArray(d) ? d : []))
-      .catch(() => setPlatformLinks([]))
-      .finally(() => setPlatformsLoading(false))
+    const token = session.session.token
+    let cancelled = false
+    const load = () => {
+      fetch("/api/gateway/connections", { headers: { Authorization: `Bearer ${token}` } })
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+        .then((d: PlatformLink[]) => { if (!cancelled) setPlatformLinks(Array.isArray(d) ? d : []) })
+        .catch(() => { if (!cancelled) setPlatformLinks([]) })
+        .finally(() => { if (!cancelled) setPlatformsLoading(false) })
+    }
+    load()
+    // Re-check when the user returns to this tab/window — linking happens on Telegram
+    // (often on another device), so the connection appears without a manual reload.
+    const onFocus = () => load()
+    const onVisible = () => { if (document.visibilityState === "visible") load() }
+    window.addEventListener("focus", onFocus)
+    document.addEventListener("visibilitychange", onVisible)
+    return () => {
+      cancelled = true
+      window.removeEventListener("focus", onFocus)
+      document.removeEventListener("visibilitychange", onVisible)
+    }
   }, [session])
 
   useEffect(() => {
@@ -562,7 +581,7 @@ function DashboardContent() {
 
         {/* Tab switcher */}
         <div className="flex gap-1 border-b border-border">
-          {(["account", "integrations"] as const).map((tab) => (
+          {(["account", "integrations", "memory", "schedules", "conversation"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -574,6 +593,9 @@ function DashboardContent() {
               )}
             >
               {tab === "integrations" && <Plug size={13} />}
+              {tab === "memory" && <Brain size={13} />}
+              {tab === "schedules" && <Clock size={13} />}
+              {tab === "conversation" && <MessageSquare size={13} />}
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
               {tab === "integrations" && connectedProviders.length > 0 && (
                 <span className="ml-1 bg-primary/20 text-primary text-xs px-1.5 py-0.5 rounded-full leading-none">
@@ -776,6 +798,39 @@ function DashboardContent() {
           </motion.div>
         )}
 
+        {/* Memory tab */}
+        {activeTab === "memory" && session && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <MemoryManager token={session.session.token} />
+          </motion.div>
+        )}
+
+        {/* Schedules tab */}
+        {activeTab === "schedules" && session && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <SchedulesManager token={session.session.token} />
+          </motion.div>
+        )}
+
+        {/* Conversation tab */}
+        {activeTab === "conversation" && session && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <ConversationManager token={session.session.token} />
+          </motion.div>
+        )}
+
         {/* Account tab content — only shown when account tab active */}
         {activeTab === "account" && <>
 
@@ -860,7 +915,7 @@ function DashboardContent() {
                   style={{ letterSpacing: "-0.02em" }}
                 >
                   {subPending
-                    ? "—"
+                    ? "…"
                     : sub
                       ? (PLANS.find((p) => p.key === currentPlanKey)?.name ?? currentPlanKey)
                       : "Unavailable"}

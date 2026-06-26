@@ -28,6 +28,11 @@ export const user = pgTable("user", {
   dailyImageCount: integer("daily_image_count").notNull().default(0),
   agentUsageCount: integer("agent_usage_count").notNull().default(0),
   dailyResetDate: text("daily_reset_date"), // YYYY-MM-DD
+  // Per-user agent personality ("soul"), captured via first-contact onboarding on
+  // off-device platforms. null = use the built-in default soul.
+  agentSoul: text("agent_soul"),
+  // Onboarding state machine: "unprompted" -> "awaiting" -> "done".
+  soulOnboarding: text("soul_onboarding").notNull().default("unprompted"),
 })
 
 export const session = pgTable("session", {

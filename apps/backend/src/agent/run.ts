@@ -36,6 +36,7 @@ async function fetchUser(userId: string) {
       subscriptionStatus: authSchema.user.subscriptionStatus,
       trialEndDate: authSchema.user.trialEndDate,
       currentPeriodEnd: authSchema.user.currentPeriodEnd,
+      agentSoul: authSchema.user.agentSoul,
     })
     .from(authSchema.user)
     .where(eq(authSchema.user.id, userId))
@@ -66,7 +67,7 @@ async function fetchRagContext(userId: string, query: string, maxChars = 3000): 
     const blocks: string[] = []
     let used = 0
     for (const [i, row] of rows.entries()) {
-      const header = `[${i + 1}] ${row.sourceName}${row.title && row.title !== row.sourceName ? ` — ${row.title}` : ""}`
+      const header = `[${i + 1}] ${row.sourceName}${row.title && row.title !== row.sourceName ? `: ${row.title}` : ""}`
       const block = `${header}\n${row.content}`
       if (used + block.length > maxChars) break
       blocks.push(block)
@@ -212,7 +213,7 @@ Assistant: ${cleanOutput}`,
   }
 }
 
-function buildSystemWithContext(memoryContext: string, ragContext: string, profile?: { staticProfile: string; dynamicProfile: string }, desktopOnlyConnected: string[] = []): string {
+function buildSystemWithContext(memoryContext: string, ragContext: string, profile?: { staticProfile: string; dynamicProfile: string }, desktopOnlyConnected: string[] = [], userSoul?: string | null): string {
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -220,12 +221,13 @@ function buildSystemWithContext(memoryContext: string, ragContext: string, profi
     day: "numeric",
   })
   const appUrl = process.env["YOMI_APP_URL"] ?? "https://yomi.arka6fx.com"
-  const soul = process.env["YOMI_AGENT_SOUL"]
+  // Prefer the user's onboarded personality; fall back to the global env soul, then
+  // to the built-in default (handled by formatAgentSoul when undefined).
+  const soul = userSoul?.trim() || process.env["YOMI_AGENT_SOUL"]
   return (
     `You are Yomi, a helpful AI assistant. Today is ${today}.\n` +
-    `Keep replies brief and to the point — this is a chat/messaging interface, not a document. ` +
-    `Aim for a short paragraph; use a few bullet points only when genuinely listing items. ` +
-    `Skip preamble, don't restate the question, and avoid long explanations or section headers unless the user explicitly asks for detail or a long-form answer.\n` +
+    `This is a chat/messaging interface, not a document. Keep replies as long as they need to be and no longer: answer directly, skip preamble, don't restate the question, and never pad to fill space. A sentence or two is usually plenty; use a few bullet points only when genuinely listing items, and expand only when the user asks for detail or the task truly needs it. Don't be curt either, just say what's useful.\n` +
+    `Write the way a sharp, friendly person texts. Do not use em dashes or en dashes; use commas, periods, or parentheses instead.\n` +
     `${formatAgentSoul(soul)}\n\n` +
     `When the user asks about their email or connected apps, use the available tools to fetch real data before answering.\n` +
     `If a tool reports a service is not connected, suggest they connect it at ${appUrl}/dashboard.\n` +
@@ -237,7 +239,7 @@ function buildSystemWithContext(memoryContext: string, ragContext: string, profi
     `\n` +
     (memoryContext || ragContext || profile?.staticProfile || profile?.dynamicProfile
       ? `<memory>\n` +
-        `[System note: Background context retrieved from your notes. Treat as reference only — respond to the current user message.]\n\n` +
+        `[System note: Background context retrieved from your notes. Treat as reference only, respond to the current user message.]\n\n` +
         (profile?.staticProfile ? `<static_profile>\n${profile.staticProfile}\n</static_profile>\n` : "") +
         (profile?.dynamicProfile ? `<dynamic_profile>\n${profile.dynamicProfile}\n</dynamic_profile>\n` : "") +
         (memoryContext ? `<durable_memories>\n${memoryContext}\n</durable_memories>\n` : "") +
@@ -321,7 +323,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       registry,
       text: opts.text,
       history: opts.history,
-      system: buildSystemWithContext(memoryContext, ragContext, profile, registry.getDesktopOnlyConnected()),
+      system: buildSystemWithContext(memoryContext, ragContext, profile, registry.getDesktopOnlyConnected(), user.agentSoul),
       maxTokens: maxOutputTokensFor(opts.text),
       signal: opts.signal,
     })
@@ -335,9 +337,9 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
         `Your integration token may have expired or been revoked. ` +
         `Please reconnect at ${appUrl}/dashboard.`
     } else if (/\b(429|rate.limit|too many requests)\b/i.test(msg)) {
-      text = "Rate limit hit — please wait a moment and try again."
+      text = "Rate limit hit, please wait a moment and try again."
     } else if (/\b(timeout|ETIMEDOUT|ECONNREFUSED|ENOTFOUND|network)\b/i.test(msg)) {
-      text = "Network error — couldn't reach a required service. Please try again."
+      text = "Network error, couldn't reach a required service. Please try again."
     } else {
       text =
         `Something went wrong: ${msg.slice(0, 300)}\n\nPlease try again, or ` +

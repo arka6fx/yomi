@@ -45,7 +45,7 @@ export default function SupportPage() {
             Contact
           </p>
           <div className="max-w-3xl">
-            <h1 className="font-accent text-5xl font-medium text-[#eaf4ff] sm:text-6xl">
+            <h1 className="font-accent text-5xl text-[#eaf4ff] sm:text-6xl">
               Support for Yomi.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-8 text-white/55">
@@ -66,7 +66,7 @@ export default function SupportPage() {
                   rel={channel.href.startsWith("http") ? "noopener noreferrer" : undefined}
                 >
                   <Icon className="mb-8 h-5 w-5 text-sky-100/70" aria-hidden="true" />
-                  <h2 className="font-accent text-2xl font-medium text-[#eaf4ff]">
+                  <h2 className="font-accent text-2xl text-[#eaf4ff]">
                     {channel.title}
                   </h2>
                   <p className="mt-3 min-h-24 text-sm leading-7 text-white/50">
@@ -81,7 +81,7 @@ export default function SupportPage() {
           </div>
 
           <div className="mt-14 rounded-2xl border border-white/10 bg-[#08111f] p-6 text-sm leading-7 text-white/55">
-            <h2 className="font-accent text-2xl font-medium text-[#eaf4ff]">Before you write</h2>
+            <h2 className="font-accent text-2xl text-[#eaf4ff]">Before you write</h2>
             <ul className="mt-4 list-none space-y-2 [&_li]:relative [&_li]:pl-4 [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-sky-100 [&_li]:before:content-['›']">
               <li>For login issues, include whether you used Google or GitHub.</li>
               <li>For desktop issues, include Windows version and Yomi app version.</li>

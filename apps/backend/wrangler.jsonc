@@ -9,6 +9,9 @@
     "enabled": true,
     "head_sampling_rate": 1
   },
+  "triggers": {
+    "crons": ["* * * * *"]
+  },
   "vars": {
     "ENVIRONMENT": "development",
     "BETTER_AUTH_URL": "https://yomi.arka6fx.com",
@@ -23,6 +26,9 @@
   "env": {
     "staging": {
       "name": "yomi-backend-staging",
+      "triggers": {
+        "crons": ["* * * * *"]
+      },
       "vars": {
         "ENVIRONMENT": "staging",
         "DODO_ENV": "test",
@@ -44,6 +50,9 @@
     },
     "production": {
       "name": "yomi-backend",
+      "triggers": {
+        "crons": ["* * * * *"]
+      },
       "vars": {
         "ENVIRONMENT": "production",
         "DODO_ENV": "live",
