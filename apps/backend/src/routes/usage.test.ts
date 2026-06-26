@@ -8,10 +8,6 @@ type TestUser = {
   plan: string
   subscriptionStatus: string
   trialEndDate: Date | null
-  trialInteractionUsed: number
-  trialInteractionLimit: number
-  dailyChatCount: number
-  dailyVoiceCount: number
   currentPeriodEnd: Date | null
 }
 
@@ -19,39 +15,29 @@ type ReserveBody = {
   ok?: boolean
   code?: string
   plan?: string
+  paidBy?: string
+  creditsRequired?: number
+  creditsCharged?: number
   creditsRemaining?: number
-  requestsUsed?: number
-  requestsLimit?: number | null
-  requestsRemaining?: number | null
   resetAt?: string
-  dailyChatUsed?: number
-  dailyVoiceUsed?: number
+  usageWarning?: string
 }
 
 let currentUser: TestUser
-let mockRequestCount = 0
 let mockCreditBalance = 0
-let mockConsumeCreditsOk = false
 const activeTrialEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
+// Minimal db stub: inserts return an id, updates are no-ops. Credit logic lives in the
+// mocked credit-ledger below, which is what the metering helper actually gates on.
 const fakeDb = {
-  update: () => {
-    return {
-      set: () => ({
-        where: () => ({
-          returning: () => Promise.resolve([]),
-        }),
-      }),
-    }
-  },
+  update: () => ({
+    set: () => ({
+      where: () => Promise.resolve([]),
+    }),
+  }),
   insert: () => ({
     values: () => ({
       returning: () => Promise.resolve([{ id: "usage_1" }]),
-    }),
-  }),
-  select: () => ({
-    from: () => ({
-      where: () => Promise.resolve([{ count: mockRequestCount }]),
     }),
   }),
 }
@@ -70,12 +56,14 @@ mock.module("../services/credit-ledger.js", () => ({
     expiringSoon: 0,
     expiringSoonAt: null,
   }),
-  consumeCredits: async () => ({
-    ok: mockConsumeCreditsOk,
-    charged: mockConsumeCreditsOk ? 1 : 0,
-    balance: mockConsumeCreditsOk ? Math.max(mockCreditBalance - 1, 0) : mockCreditBalance,
-    insufficient: !mockConsumeCreditsOk,
-  }),
+  // Honour the requested amount so creditsRequired/creditsCharged line up, and only
+  // succeed when the (mocked) balance can cover it — mirrors the real ledger guard.
+  consumeCredits: async (input: { amount: number }) => {
+    if (mockCreditBalance < input.amount) {
+      return { ok: false, charged: 0, balance: mockCreditBalance, insufficient: true }
+    }
+    return { ok: true, charged: input.amount, balance: mockCreditBalance - input.amount }
+  },
   expireCredits: async () => 0,
 }))
 
@@ -98,11 +86,11 @@ function app() {
   return hono
 }
 
-function reserve(kind: "chat" | "voice" | "analyze" | "bot_message" = "chat") {
+function reserve(kind: "chat" | "voice" | "analyze" | "bot_message" = "chat", duration?: number) {
   return app().request("/api/usage/interactions/reserve", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ kind }),
+    body: JSON.stringify(duration !== undefined ? { kind, duration } : { kind }),
   })
 }
 
@@ -115,10 +103,6 @@ function user(overrides: Partial<TestUser> = {}): TestUser {
     subscriptionStatus: "inactive",
     trialEndDate: activeTrialEndDate,
     currentPeriodEnd: null,
-    trialInteractionUsed: 100,
-    trialInteractionLimit: 100,
-    dailyChatCount: 10000,
-    dailyVoiceCount: 200,
     ...overrides,
   }
 }
@@ -126,72 +110,94 @@ function user(overrides: Partial<TestUser> = {}): TestUser {
 describe("POST /api/usage/interactions/reserve", () => {
   beforeEach(() => {
     currentUser = user()
-    mockRequestCount = 0
     mockCreditBalance = 0
-    mockConsumeCreditsOk = false
   })
 
-  it("allows Explore trial users to reserve every trigger type even with 0 credits", async () => {
+  it("blocks Explore trial users with 0 credits (must subscribe)", async () => {
     mockCreditBalance = 0
-    mockConsumeCreditsOk = false
-
     for (const kind of ["chat", "voice", "analyze", "bot_message"] as const) {
       const res = await reserve(kind)
       const body = (await res.json()) as ReserveBody
-
-      expect(res.status).toBe(200)
-      expect(body.ok).toBe(true)
+      expect(res.status).toBe(402)
+      expect(body.code).toBe("subscription_required")
       expect(body.plan).toBe("explore")
     }
   })
 
-  it("blocks expired Explore trial users with subscription_inactive error", async () => {
+  it("allows Explore trial users with credits and consumes them", async () => {
+    mockCreditBalance = 10
+    const res = await reserve("chat")
+    const body = (await res.json()) as ReserveBody
+    expect(res.status).toBe(200)
+    expect(body.ok).toBe(true)
+    expect(body.plan).toBe("explore")
+    expect(body.paidBy).toBe("credits")
+    expect(body.creditsRequired).toBe(1)
+    expect(body.creditsRemaining).toBe(9)
+  })
+
+  it("blocks expired Explore trial users with subscription_inactive", async () => {
     currentUser = user({ trialEndDate: new Date(Date.now() - 1000) })
+    mockCreditBalance = 100
     const res = await reserve()
     const body = (await res.json()) as ReserveBody
-
     expect(res.status).toBe(402)
     expect(body.code).toBe("subscription_inactive")
     expect(body.plan).toBe("explore")
   })
 
-  it("blocks Explore users who exceed feature limits with feature_quota_exceeded", async () => {
-    mockRequestCount = 100
-    const res = await reserve()
-    const body = (await res.json()) as ReserveBody
-
-    expect(res.status).toBe(402)
-    expect(body.code).toBe("feature_quota_exceeded")
-    expect(body.plan).toBe("explore")
-  })
-
-  it("blocks inactive Pro users with subscription_inactive", async () => {
+  it("blocks past_due Pro users beyond grace with subscription_inactive", async () => {
     currentUser = user({
       plan: "pro",
       subscriptionStatus: "past_due",
       currentPeriodEnd: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-      trialInteractionUsed: 12,
-      dailyChatCount: 345,
-      dailyVoiceCount: 67,
     })
-
+    mockCreditBalance = 100
     const res = await reserve("voice")
     const body = (await res.json()) as ReserveBody
-
     expect(res.status).toBe(402)
     expect(body.code).toBe("subscription_inactive")
     expect(body.plan).toBe("pro")
   })
 
-  it("allows Max with active subscription", async () => {
-    currentUser = user({ plan: "max", subscriptionStatus: "active" })
-
+  it("blocks active Pro users with 0 credits (buy a pack)", async () => {
+    currentUser = user({ plan: "pro", subscriptionStatus: "active" })
+    mockCreditBalance = 0
     const res = await reserve("chat")
     const body = (await res.json()) as ReserveBody
+    expect(res.status).toBe(402)
+    expect(body.code).toBe("credits_exhausted")
+    expect(body.plan).toBe("pro")
+  })
 
+  it("allows Max with active subscription and credits", async () => {
+    currentUser = user({ plan: "max", subscriptionStatus: "active" })
+    mockCreditBalance = 50
+    const res = await reserve("chat")
+    const body = (await res.json()) as ReserveBody
     expect(res.status).toBe(200)
-    expect(body.plan).toBe("max")
     expect(body.ok).toBe(true)
+    expect(body.plan).toBe("max")
+  })
+
+  it("charges voice per minute using the reported duration", async () => {
+    currentUser = user({ plan: "pro", subscriptionStatus: "active" })
+    mockCreditBalance = 50
+    const res = await reserve("voice", 120) // 2 minutes -> 4 credits
+    const body = (await res.json()) as ReserveBody
+    expect(res.status).toBe(200)
+    expect(body.creditsRequired).toBe(4)
+    expect(body.creditsRemaining).toBe(46)
+  })
+
+  it("lets owners through with 0 credits (bypass)", async () => {
+    currentUser = user({ email: "arkagarai292@gmail.com" })
+    mockCreditBalance = 0
+    const res = await reserve("chat")
+    const body = (await res.json()) as ReserveBody
+    expect(res.status).toBe(200)
+    expect(body.ok).toBe(true)
+    expect(body.paidBy).toBe("owner")
   })
 
   it("rejects invalid kind", async () => {
@@ -201,7 +207,6 @@ describe("POST /api/usage/interactions/reserve", () => {
       body: JSON.stringify({ kind: "invalid_kind" }),
     })
     const body = (await res.json()) as ReserveBody
-
     expect(res.status).toBe(400)
     expect(body.code).toBe("invalid_usage_kind")
   })

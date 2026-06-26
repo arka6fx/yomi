@@ -144,18 +144,27 @@ describe("runAgent metering", () => {
     expect(result.text).toInclude("inactive")
   })
 
-  it("blocks when botMessages monthly limit is reached", async () => {
+  it("blocks explore user out of credits (must subscribe)", async () => {
     mockUser = makeUser({ plan: "explore", subscriptionStatus: "active" })
-    mockBotMessageCount = 20
+    mockCreditBalance = 0
     const { runAgent } = await import("./run.js")
     const result = await runAgent({ userId: "user_1", text: "hi" })
     expect(result.quotaError).toBe(true)
-    expect(result.text).toInclude("bot messages")
+    expect(result.text).toInclude("trial credits")
   })
 
-  it("allows explore user with 0 credits if trial is active", async () => {
-    mockUser = makeUser({ plan: "explore", subscriptionStatus: "active" })
+  it("blocks subscribed user out of credits (buy a pack)", async () => {
+    mockUser = makeUser({ plan: "pro", subscriptionStatus: "active" })
     mockCreditBalance = 0
+    const { runAgent } = await import("./run.js")
+    const result = await runAgent({ userId: "user_1", text: "hi" })
+    expect(result.quotaError).toBe(true)
+    expect(result.text).toInclude("credit pack")
+  })
+
+  it("allows explore user with credits if trial is active", async () => {
+    mockUser = makeUser({ plan: "explore", subscriptionStatus: "active" })
+    mockCreditBalance = 100
     const { runAgent } = await import("./run.js")
     const result = await runAgent({ userId: "user_1", text: "hi" })
     expect(result.quotaError).toBeUndefined()

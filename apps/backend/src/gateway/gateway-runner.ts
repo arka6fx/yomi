@@ -1,9 +1,8 @@
 import { createHash, randomBytes } from "node:crypto"
 import { generateText } from "ai"
-import { eq, and, lt, gte, inArray, sql } from "drizzle-orm"
+import { eq, and, lt } from "drizzle-orm"
 import { db, platformConnections, linkingCodes, telegramLinkTokens, usageEvents } from "@yomi/db"
 import type { PlatformType, GatewayMessage, GatewaySessionInfo } from "@yomi/shared"
-import type { FeatureKey } from "@yomi/shared/plans"
 import { createModel, type AgentMessage } from "@yomi/agent-core"
 import type { PlatformAdapter } from "./platform-adapter.js"
 import { TelegramAdapter } from "./platforms/telegram.js"
@@ -16,9 +15,9 @@ import {
 } from "../services/agent-sessions.js"
 import { transcribeAudioUrl } from "../services/transcription.js"
 import { synthesizeSpeech } from "../services/tts.js"
-import { consumeCredits } from "../services/credit-ledger.js"
+import { consumeCredits, getCreditSummary } from "../services/credit-ledger.js"
+import { creditsForUsage, type BillableUsageKind } from "../services/credit-pricing.js"
 import {
-  featureLimitForUser,
   hasBillablePlanAccess,
   isOwnerUser,
   getPlanConfig,
@@ -383,16 +382,15 @@ export class GatewayRunner {
     }
   }
 
-  // Hard-cap feature-quota enforcement for the Telegram voice and image surfaces.
-  // Mirrors the desktop /interactions/reserve precedence: feature usage is the
-  // count of the relevant usage events this month, compared against the plan's
-  // per-feature limit. The text path is gated inside runAgent (botMessages); this
-  // closes the gap where voice/image did paid work without any limit check.
+  // Credit gate for the Telegram voice and image surfaces. Credits are the single
+  // source of truth: owners bypass, an active plan is required, and the request is
+  // blocked when the credit balance can't cover the feature's base cost. The text
+  // path is gated inside runAgent (chargeUsage); this closes the gap where
+  // voice/image did paid work without a credit check.
   // Returns a user-facing block message, or null when the request may proceed.
   private async featureQuotaBlock(
     yomiUserId: string,
-    feature: FeatureKey,
-    eventKinds: string[],
+    kind: BillableUsageKind,
     label: string,
   ): Promise<string | null> {
     const [user] = await db
@@ -416,36 +414,21 @@ export class GatewayRunner {
       return status === "past_due"
         ? "Your payment is past due. Update your payment method to restore access."
         : status === "inactive" && (user.plan ?? "explore") === "explore"
-          ? "Your 30-day free trial has ended. Upgrade to Pro to keep using Yomi."
+          ? "Your 30-day free trial has ended. Subscribe to Pro or Max to keep using Yomi."
           : "Your subscription is inactive. Visit the dashboard to manage your plan."
     }
 
-    const limit = featureLimitForUser(user, feature)
-    if (limit === null) return null // unlimited on this plan
-
     const plan = getPlanConfig(user)
-    if (limit === 0) {
-      return `${label.charAt(0).toUpperCase() + label.slice(1)} isn't on your ${plan.name} plan. Upgrade to unlock it.`
-    }
-
-    const now = new Date()
-    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
-    const [row] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(usageEvents)
-      .where(
-        and(
-          eq(usageEvents.userId, yomiUserId),
-          gte(usageEvents.createdAt, monthStart),
-          inArray(usageEvents.kind, eventKinds),
-        ),
-      )
-    const used = Number(row?.count ?? 0)
-    if (used >= limit) {
-      const resetDay = new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 1))
+    const cost = creditsForUsage(kind)
+    const summary = await getCreditSummary(yomiUserId)
+    if (summary.balance < cost) {
+      if (plan.key === "explore") {
+        return "You're out of trial credits. Subscribe to Pro or Max to keep using Yomi."
+      }
+      const now = new Date()
+      const resetDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
         .toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" })
-      const resets = plan.key !== "explore" ? ` Resets ${resetDay}.` : ""
-      return `You've hit your ${label} limit for ${plan.name}.${resets} Upgrade your plan to continue.`
+      return `You're out of credits for ${label}. Buy a credit pack to continue. Resets ${resetDay}.`
     }
     return null
   }
@@ -773,7 +756,7 @@ export class GatewayRunner {
 
     // ── Voice note transcription ──────────────────────────────────────────────
     if (msg.audioUrl) {
-      const voiceBlock = await this.featureQuotaBlock(yomiUserId, "voiceMinutes", ["request_voice"], "voice")
+      const voiceBlock = await this.featureQuotaBlock(yomiUserId, "voice", "voice")
       if (voiceBlock) {
         await this.sendMessage(msg.platform, msg.chatId, voiceBlock).catch(() => {})
         return
@@ -868,7 +851,7 @@ export class GatewayRunner {
     }
 
     if (msg.imageUrl) {
-      const analyzeBlock = await this.featureQuotaBlock(yomiUserId, "analyze", ["analyze"], "image analysis")
+      const analyzeBlock = await this.featureQuotaBlock(yomiUserId, "analyze", "image analysis")
       if (analyzeBlock) {
         clearInterval(typingInterval)
         await this.sendMessage(msg.platform, msg.chatId, analyzeBlock).catch(() => {})

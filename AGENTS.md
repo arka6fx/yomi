@@ -124,24 +124,44 @@ CF Workers bind native I/O to the originating request context.
 ## Database
 
 Better Auth: `user / session / account / verification`. User table extended with
-`plan`, `subscription_status`, `daily_interaction_count`, `daily_interaction_date`.
+`plan`, `subscription_status`, `trial_start_date`, `trial_end_date`,
+`current_period_end`, `dodo_subscription_id`.
 
-App tables: `devices`, `subscriptions`, `usage_events` (append-only), `memory_blobs`,
-`memory_entries`, `memory_sources`, `memory_relations`, `memory_embeddings`,
-`agent_runs`, `mcp_connections` (oauth_tokens encrypted), `hook_logs` (PII redacted).
+Billing/metering tables: `usage_events` (append-only), `credit_accounts` (balance +
+lifetime totals), `credit_grants` (per-batch with expiry), `credit_transactions`
+(audit log), `payment_records`, `processed_payment_events`, `subscriptions`.
+
+Other app tables: `devices`, `agent_runs`, `agent_sessions`, `agent_messages`,
+`memory_blobs`, `memory_entries`, `memory_sources`, `memory_relations`,
+`memory_embeddings`, `rag_sources / rag_documents / rag_chunks / rag_embeddings /
+rag_retrieval_logs`, `mcp_connections` (oauth_tokens encrypted), `platform_connections`,
+`pending_actions`, `hook_logs` (PII redacted), `linking_codes`, `telegram_link_tokens`,
+`device_codes`. Schema: `packages/db/src/schema.ts`.
 
 ---
 
-## Plans
+## Plans & credits
 
-| Plan    | Price      | Key limits                                              |
-| ------- | ---------- | ------------------------------------------------------- |
-| Explore | $0/mo      | 100 chats/mo; limited voice/screen/memory; 2 connectors |
-| Pro     | $14.99/mo  | 2 000 chats/mo; limited reasoning, voice, images; 8     |
-| Max     | $39.99/mo  | Higher limits; 8 connectors                             |
+Billing is **pure credits** — a single credit balance is the only usage gate.
+Per-feature monthly caps were removed; connectors are unlimited on every plan.
 
-Fair-use: never unlimited. Dodo USD: Pro = 1499¢, Max = 3999¢.
-India-local: Pro ₹999/mo, Max ₹2 999/mo. Billing routes: `apps/backend/src/routes/billing.ts`.
+| Plan    | Price      | Monthly credits |
+| ------- | ---------- | --------------- |
+| Explore | $0/mo      | 100 (30-day free trial) |
+| Pro     | $14.99/mo  | 2 500           |
+| Max     | $39.99/mo  | 10 000          |
+
+Credit costs: chat 1 · image/screen analyze 1 · voice 2/min · Telegram message 1.
+Out of credits → Explore must subscribe, Pro/Max buy a credit pack. Owner email
+bypasses all checks. Dodo USD: Pro 1499¢, Max 3999¢. Credit packs: 500/$4.99,
+2 000/$14.99, 6 000/$39.99.
+
+Single chokepoint: `apps/backend/src/services/metering.ts` → `chargeUsage()`
+(owner bypass → active-plan check → `balance ≥ cost` → record event + consume).
+Callers: `routes/usage.ts` (`/interactions/reserve`), `agent/run.ts` (Telegram
+bot_message), `gateway/gateway-runner.ts` (telegram voice/image). Ledger:
+`services/credit-ledger.ts` + `services/credit-pricing.ts`. Plan source of truth:
+`packages/shared/src/plans.ts`. Billing/webhooks: `apps/backend/src/routes/billing.ts`.
 
 ---
 

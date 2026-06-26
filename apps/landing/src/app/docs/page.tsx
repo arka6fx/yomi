@@ -273,8 +273,9 @@ export default function DocsPage() {
 
           <Section id="plans" eyebrow="Billing" title="Plans & credits">
             <p>
-              Every interaction draws from a credit balance. Each plan includes a monthly credit allowance and
-              per-feature limits; Pro and Max can top up with credit packs.
+              Every interaction draws from a single credit balance — 1 credit per AI chat, +1 per image/screen,
+              2 per voice minute, 1 per Telegram message. Each plan includes a monthly credit allowance. When you
+              run out, Explore upgrades to a paid plan and Pro/Max can top up with credit packs.
             </p>
             <div className="grid gap-4 sm:grid-cols-3">
               {[

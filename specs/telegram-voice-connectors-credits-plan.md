@@ -1,5 +1,8 @@
 # Yomi Reliability And UX Fix Plan
 
+> Status: implemented (historical plan). Billing is now **pure credits** — per-feature
+> limits were removed entirely (not just collapsed). Current pricing/enforcement: spec 13.
+
 ## Goals
 
 - Improve Desktop and Telegram voice quality without requiring an ElevenLabs upgrade.

@@ -17,7 +17,7 @@ export default function TermsPage() {
         <div className="mx-auto max-w-3xl px-6 py-24">
           <p className="mb-3 font-mono text-xs uppercase tracking-widest text-sky-100/50">Legal</p>
           <h1 className="mb-2 font-accent text-5xl font-medium text-[#eaf4ff]">Terms of Service</h1>
-          <p className="mb-16 text-sm text-white/40">Last updated: June 2025</p>
+          <p className="mb-16 text-sm text-white/40">Last updated: June 2026</p>
 
           <div className="space-y-10 text-sm leading-7 text-white/55">
             <Section title="Acceptance">
@@ -59,10 +59,18 @@ export default function TermsPage() {
               </ul>
             </Section>
 
-            <Section title="Subscriptions and billing">
+            <Section title="Subscriptions, credits, and billing">
               <ul>
                 <li>
                   Paid plans are billed monthly via Dodo Payments. Prices are listed at yomi.arka6fx.com/pricing.
+                </li>
+                <li>
+                  Usage is metered in credits. Each plan includes a monthly credit allowance that
+                  resets each billing cycle; unused monthly credits do not roll over.
+                </li>
+                <li>
+                  Pro and Max may purchase one-time credit packs. Credit packs and consumed credits
+                  are non-refundable.
                 </li>
                 <li>
                   Monthly plans can be cancelled at any time from your Yomi dashboard.
@@ -80,14 +88,6 @@ export default function TermsPage() {
                 The Free tier is provided as-is. We may adjust Free tier limits at any time.
                 Sustained abuse of the Free tier (e.g., circumventing limits) may result in account
                 suspension.
-              </p>
-            </Section>
-
-            <Section title="Bring your own key (BYOK)">
-              <p>
-                If you provide your own API key, you are responsible for all costs incurred through
-                that key. Yomi stores your key encrypted at rest and never logs prompt content. You
-                can remove your key at any time from Settings.
               </p>
             </Section>
 

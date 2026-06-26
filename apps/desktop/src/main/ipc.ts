@@ -234,7 +234,11 @@ export function initSidecarIpc(
       }
 
       try {
-        const plan = await reserveInteraction(overlayWin, "voice", ctrl.signal)
+        // Charge voice per actual recorded length (2 credits/min) instead of a flat rate.
+        const recordedSeconds = capturedSampleRate > 0
+          ? chunks.reduce((s, c) => s + c.length, 0) / capturedSampleRate
+          : undefined
+        const plan = await reserveInteraction(overlayWin, "voice", ctrl.signal, recordedSeconds)
         if (ctrl.signal.aborted) return
         await refreshCloudConversationHistory(ctrl.signal).catch(() => {})
         const wav = buildWav(chunks, capturedSampleRate)
@@ -296,6 +300,7 @@ async function reserveInteraction(
   win: BrowserWindow,
   kind: ReserveKind,
   signal: AbortSignal,
+  durationSeconds?: number,
 ): Promise<Plan> {
   const token = loadToken()
   if (!token) throw new Error("Please sign in again")
@@ -303,7 +308,9 @@ async function reserveInteraction(
   const res = await fetch(`${BACKEND_URL}/api/usage/interactions/reserve`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ kind }),
+    body: JSON.stringify(
+      durationSeconds !== undefined ? { kind, duration: durationSeconds } : { kind },
+    ),
     signal,
   })
 

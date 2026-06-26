@@ -96,6 +96,19 @@ const flow = {
     this.grantIdCounter = 0
     this.paymentRecords = []
     this.paymentIdCounter = 0
+    // Signup hook grants 100 Explore trial credits — with pure-credit gating these are
+    // what lets a trial user do anything at all.
+    this.grantIdCounter++
+    this.creditGrants.push({
+      id: `grant_${this.grantIdCounter}`,
+      userId: "user_lily",
+      source: "subscription_cycle",
+      creditsGranted: 100,
+      creditsRemaining: 100,
+      expiresAt: activeTrialEnd1,
+      createdAt: now1,
+      status: "active",
+    })
   },
 }
 
@@ -467,14 +480,15 @@ describe("E2E: explore -> pro -> consume -> buy credits -> consume -> edge cases
     expect(flow.user.plan).toBe("explore")
     expect(flow.user.subscriptionStatus).toBe("inactive")
     expect(flow.user.trialEndDate).toEqual(activeTrialEnd1)
-    expect(flow.creditGrants.length).toBe(0)
+    expect(flow.creditGrants.length).toBe(1) // 100 trial credits from signup
 
-    // Can reserve chat (trial active)
+    // Can reserve chat (trial active, credits available)
     const res = await reserveChat()
     const body = await res.json() as any
     expect(res.status).toBe(200)
     expect(body.ok).toBe(true)
     expect(body.plan).toBe("explore")
+    expect(body.paidBy).toBe("credits")
     expect(flow.usageEvents.length).toBe(1)
   })
 
@@ -518,22 +532,19 @@ describe("E2E: explore -> pro -> consume -> buy credits -> consume -> edge cases
       .filter((g) => g.status === "active")
       .reduce((s, g) => s + g.creditsRemaining, 0)
     expect(balance).toBe(2500)
-    expect(flow.creditGrants.length).toBe(1)
-    expect(flow.creditGrants[0].source).toBe("subscription_cycle")
-    expect(flow.creditGrants[0].creditsGranted).toBe(2500)
+    // Trial grant (now expired) + new Pro grant.
+    expect(flow.creditGrants.length).toBe(2)
+    const proGrant = flow.creditGrants.find((g) => g.status === "active")
+    expect(proGrant).toBeDefined()
+    expect(proGrant!.source).toBe("subscription_cycle")
+    expect(proGrant!.creditsGranted).toBe(2500)
   })
 
-  it("4: consumes all 2000 Pro monthly credits + 500 overflow via credits", async () => {
-    // At this point: featureLimit = 2000, creditGrants = [2500 credits]
-    // First 2000 chats: within feature limit but credits consumed anyway (code always consumes)
-    // After 2000: feature limit hit -> uses credits -> 500 more chats
-    // After 2500 total: no credits left
-
-    const CHAT_LIMIT = 2000
+  it("4: consumes all 2500 Pro credits, then blocks with credits_exhausted", async () => {
+    // Pure-credit gating: 2500 credits = 2500 chats (1 credit each), then blocked.
     const TOTAL_CREDITS = 2500
     let lastBody: any = null
 
-    // Consume 2500 chats (2000 within limit + 500 via credits)
     for (let i = 0; i < TOTAL_CREDITS; i++) {
       const res = await reserveChat()
       expect(res.status).toBe(200)
@@ -541,15 +552,14 @@ describe("E2E: explore -> pro -> consume -> buy credits -> consume -> edge cases
       expect(lastBody.ok).toBe(true)
     }
 
-    // After 2500 chats, all credits consumed, feature limit exhausted
-    expect(lastBody.featureUsed).toBeGreaterThanOrEqual(2000)
+    // After 2500 chats, all credits consumed.
     expect(lastBody.creditsRemaining).toBe(0)
 
-    // Feature limit is hit and no credits remain -> next request fails
+    // No credits remain -> next request is blocked (buy a pack on Pro).
     const failRes = await reserveChat()
     const failBody = await failRes.json() as any
     expect(failRes.status).toBe(402)
-    expect(failBody.code).toBe("feature_quota_exceeded")
+    expect(failBody.code).toBe("credits_exhausted")
   }, 60_000)
 
   it("5: buys a 500-credit pack after exhausting Pro credits", async () => {
@@ -618,12 +628,15 @@ describe("E2E: explore -> pro -> consume -> buy credits -> consume -> edge cases
     const failRes = await reserveChat()
     const failBody = await failRes.json() as any
     expect(failRes.status).toBe(402)
-    expect(failBody.code).toBe("feature_quota_exceeded")
+    expect(failBody.code).toBe("credits_exhausted")
   })
 
   it("7: Explore trial credits are not usable after Pro upgrade", async () => {
-    // Reset and start fresh
+    // Reset and start fresh — drop the auto-seeded trial grant so this test controls
+    // the grant ids it asserts on below.
     flow.reset()
+    flow.creditGrants = []
+    flow.grantIdCounter = 0
 
     // Grant 100 trial credits (simulating auth.ts signup hook)
     flow.grantIdCounter++
