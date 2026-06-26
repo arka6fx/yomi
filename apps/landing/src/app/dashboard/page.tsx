@@ -523,13 +523,7 @@ function DashboardContent() {
   const currentPlanIdx = PLANS.findIndex((p) => p.key === currentPlanKey)
 
   return (
-    <div className="min-h-dvh bg-background text-foreground">
-      <div className="fixed inset-0 pointer-events-none">
-        <div
-          className="absolute -top-32 left-1/2 -translate-x-1/2 w-[800px] h-[500px] rounded-full blur-[160px]"
-          style={{ background: "radial-gradient(circle, rgba(255,175,80,0.05), transparent 65%)" }}
-        />
-      </div>
+    <div className="site-texture-bg min-h-dvh text-foreground">
 
       {/* Nav */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">

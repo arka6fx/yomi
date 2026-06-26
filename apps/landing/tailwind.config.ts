@@ -41,10 +41,11 @@ const config: Config = {
         ring: "hsl(var(--ring))",
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "Manrope", "sans-serif"],
-        accent: ["var(--font-accent)", "EB Garamond", "serif"],
-        serif: ["var(--font-serif)", "Playfair Display", "Georgia", "serif"],
-        display: ["var(--font-caveat)", "cursive"],
+        // Body / UI = Inter; headings/display/accent = Instrument Serif.
+        sans: ["var(--font-sans)", "Inter", "sans-serif"],
+        accent: ["var(--font-heading)", "Instrument Serif", "serif"],
+        serif: ["var(--font-heading)", "Instrument Serif", "Georgia", "serif"],
+        display: ["var(--font-heading)", "Instrument Serif", "serif"],
         mono: [
           "var(--font-mono)",
           "ui-monospace",
