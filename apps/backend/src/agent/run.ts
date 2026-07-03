@@ -252,6 +252,9 @@ function buildSystemWithContext(memoryContext: string, ragContext: string, profi
 
 function maxOutputTokensFor(text: string): number {
   const q = text.toLowerCase()
+  if (/\b(gmail|email|inbox|calendar|schedule|drive|file|files|classroom|github|slack|notion|linear)\b/.test(q)) {
+    return 900
+  }
   if (/\b(write|draft|compose|essay|article|report|code|program|function|debug|detailed|step by step)\b/.test(q)) {
     return 750
   }
