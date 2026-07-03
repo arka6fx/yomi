@@ -122,8 +122,6 @@ const CONNECTORS: { id: string; name: string; description: string }[] = [
   { id: "notion", name: "Notion", description: "Search pages and databases" },
   { id: "slack", name: "Slack", description: "Read context, send approved messages" },
   { id: "linear", name: "Linear", description: "Issues and project tracking" },
-  { id: "postgres", name: "Postgres", description: "Query your database" },
-  { id: "mysql", name: "MySQL", description: "Query your database" },
 ]
 
 

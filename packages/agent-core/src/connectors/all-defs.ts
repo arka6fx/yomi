@@ -7,8 +7,6 @@ import { githubDef } from "./github-def.js"
 import { notionDef } from "./notion-def.js"
 import { slackDef } from "./slack-def.js"
 import { linearDef, linearApiKeyDef } from "./linear-def.js"
-import { postgresDef } from "./postgres-def.js"
-import { mysqlDef } from "./mysql-def.js"
 
 // All registered ConnectorDefs, in display order.
 // Each def.id must match the provider key stored in mcp_connections.
@@ -23,6 +21,5 @@ export const ALL_CONNECTOR_DEFS: ConnectorDef[] = [
   slackDef,
   linearDef,
   linearApiKeyDef,
-  postgresDef,
-  mysqlDef,
+
 ]

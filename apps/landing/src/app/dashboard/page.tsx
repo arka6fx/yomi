@@ -225,6 +225,7 @@ function DashboardContent() {
   const [connectedProviders, setConnectedProviders] = useState<string[]>([])
   const [integrationHealth, setIntegrationHealth] = useState<IntegrationHealth[]>([])
   const [integrationLoadingId, setIntegrationLoadingId] = useState<string | null>(null)
+  const [integrationConnectError, setIntegrationConnectError] = useState("")
   const [showWelcome, setShowWelcome] = useState(false)
 
   const [apiKeyModal, setApiKeyModal] = useState<{
@@ -413,6 +414,7 @@ function DashboardContent() {
   async function handleConnectIntegration(id: string) {
     const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ""
     const info = buildCatalog([]).find((c) => c.id === id)
+    setIntegrationConnectError("")
 
     if (info?.authKind === "api_key" || info?.authKind === "connection_string") {
       setIntegrationLoadingId(id)
@@ -436,8 +438,24 @@ function DashboardContent() {
       return
     }
 
-    // OAuth2: redirect to provider consent page
-    window.location.href = `${apiBase}/api/integrations/connect/${id}`
+    // OAuth2: fetch with Bearer token to get the redirect URL, then navigate
+    try {
+      setIntegrationLoadingId(id)
+      const res = await fetch(`${apiBase}/api/integrations/connect/${id}`, {
+        headers: { Authorization: `Bearer ${session!.session.token}`, Accept: "application/json" },
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error ?? `HTTP ${res.status}`)
+      }
+      const data = await res.json() as { redirectUrl?: string }
+      if (!data.redirectUrl) throw new Error("Missing OAuth redirect URL")
+      window.location.href = data.redirectUrl
+    } catch (err) {
+      setIntegrationConnectError(err instanceof Error ? err.message : "Connection failed")
+    } finally {
+      setIntegrationLoadingId(null)
+    }
   }
 
   async function handleSubmitApiKey() {
@@ -760,6 +778,11 @@ function DashboardContent() {
             {new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").has("integration_error") && (
               <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
                 Integration failed: {new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("integration_error")}
+              </div>
+            )}
+            {integrationConnectError && (
+              <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                Integration failed: {integrationConnectError}
               </div>
             )}
             {integrationHealth.some((item) => !item.healthy) && (

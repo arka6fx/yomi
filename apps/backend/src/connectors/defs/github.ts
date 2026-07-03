@@ -9,6 +9,7 @@ export const backendGithubDef: BackendConnectorDef = {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/vnd.github+json",
+        "User-Agent": "yomi-app",
         "X-GitHub-Api-Version": "2022-11-28",
       },
     })

@@ -16,8 +16,6 @@ export { githubDef, createGitHubTools } from "./connectors/github-def.js"
 export { notionDef, createNotionTools } from "./connectors/notion-def.js"
 export { slackDef, createSlackTools } from "./connectors/slack-def.js"
 export { linearDef, linearApiKeyDef, createLinearTools, createLinearApiKeyTools } from "./connectors/linear-def.js"
-export { postgresDef, createPostgresTools } from "./connectors/postgres-def.js"
-export { mysqlDef, createMysqlTools } from "./connectors/mysql-def.js"
 export { ALL_CONNECTOR_DEFS } from "./connectors/all-defs.js"
 export type {
   Connector,

@@ -54,6 +54,22 @@ function parseGmailSendPayload(payload: unknown): GmailSendPayload {
 }
 
 export async function createPendingAction(input: CreatePendingActionInput) {
+  const [existing] = await db
+    .select({ id: pendingActions.id, status: pendingActions.status })
+    .from(pendingActions)
+    .where(
+      and(
+        eq(pendingActions.userId, input.userId),
+        eq(pendingActions.connector, input.connector),
+        eq(pendingActions.action, input.action),
+        eq(pendingActions.status, "pending"),
+      ),
+    )
+    .limit(1)
+  if (existing) {
+    return { id: existing.id, status: existing.status, message: `Approval required: ${input.title}. Action ID: ${existing.id}` }
+  }
+
   const now = Date.now()
   const expiresAt = new Date(now + (input.expiresInMinutes ?? 30) * 60 * 1000)
   const [row] = await db

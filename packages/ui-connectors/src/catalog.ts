@@ -92,24 +92,6 @@ const CATALOG_DEFS: Array<{
     icon: "key-round",
     available: true,
   },
-  {
-    id: "postgres",
-    name: "PostgreSQL",
-    description: "Query a PostgreSQL database using a connection string.",
-    category: "data",
-    authKind: "connection_string",
-    icon: "database",
-    available: true,
-  },
-  {
-    id: "mysql",
-    name: "MySQL",
-    description: "Query a MySQL database using a connection string.",
-    category: "data",
-    authKind: "connection_string",
-    icon: "database",
-    available: true,
-  },
 ]
 
 export function buildCatalog(connectedProviders: string[] = []): ConnectorInfo[] {

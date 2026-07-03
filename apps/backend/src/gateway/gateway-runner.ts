@@ -234,7 +234,6 @@ export class GatewayRunner {
         return "Pending approvals are temporarily unavailable. Please try again in a moment."
       }
       if (actions.length === 0) return "No pending approvals."
-      if (actions.length > 1) return await this.formatPendingActions(userId)
       const id = actions[0]!.id
       if (/^(approve|yes)$/i.test(command)) {
         try {

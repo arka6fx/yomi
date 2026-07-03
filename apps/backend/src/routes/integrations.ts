@@ -33,6 +33,21 @@ async function checkProviderHealth(userId: string, provider: string): Promise<{ 
       })
       if (!res.ok) return { ok: false, message: `Google returned ${res.status}. Reconnect this Google integration.` }
     }
+    if (provider === "github") {
+      const res = await fetch("https://api.github.com/user", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json",
+          "User-Agent": "yomi-app",
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
+        signal: AbortSignal.timeout(5_000),
+      })
+      if (!res.ok) {
+        const body = await res.text().catch(() => "")
+        return { ok: false, message: `GitHub returned ${res.status}${body ? `: ${body.slice(0, 160)}` : ""}. Reconnect GitHub.` }
+      }
+    }
     return { ok: true }
   } catch (err) {
     const message = err instanceof Error ? err.message : "Authentication failed"
@@ -324,6 +339,10 @@ integrationsRouter.get("/connect/:id", authenticate, async (c) => {
   if (def.auth.kind === "oauth2") {
     try {
       const url = buildAuthUrl(def, user.id)
+      const accept = c.req.header("Accept") ?? ""
+      if (accept.includes("application/json")) {
+        return c.json({ redirectUrl: url })
+      }
       return c.redirect(url)
     } catch (err) {
       const msg = err instanceof Error ? err.message : "OAuth setup failed"
