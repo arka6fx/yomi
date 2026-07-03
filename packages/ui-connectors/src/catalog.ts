@@ -12,7 +12,7 @@ const CATALOG_DEFS: Array<{
   available: boolean
 }> = [
   {
-    id: "google-gmail",
+    id: "google",
     name: "Gmail",
     description: "Read, search, summarize, and send email with approval.",
     category: "email",
