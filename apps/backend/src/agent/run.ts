@@ -252,14 +252,14 @@ function buildSystemWithContext(memoryContext: string, ragContext: string, profi
 
 function maxOutputTokensFor(text: string): number {
   const q = text.toLowerCase()
-  if (/\b(gmail|email|inbox|calendar|schedule|drive|file|files|classroom|github|slack|notion|linear)\b/.test(q)) {
+  if (/\b(gmail|email|inbox|calendar|schedule|drive|file|files|doc|docs|sheet|sheets|slide|slides|document|spreadsheet|classroom|github|slack|notion|linear)\b/.test(q)) {
     return 900
   }
   if (/\b(write|draft|compose|essay|article|report|code|program|function|debug|detailed|step by step)\b/.test(q)) {
     return 750
   }
   if (/\b(summary|summarize|explain|compare|plan)\b/.test(q)) return 450
-  return 280
+  return 450
 }
 
 // Run the lean agent loop server-side, with entitlement checks and usage logging.
