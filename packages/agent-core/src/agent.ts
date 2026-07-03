@@ -51,6 +51,46 @@ function maxSteps(override?: number): number {
   return parseInt(process.env["AGENT_MAX_STEPS"] || "12", 10)
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function formatToolItem(item: unknown): string | null {
+  if (!isRecord(item)) return null
+  const name = typeof item["name"] === "string" ? item["name"] : typeof item["title"] === "string" ? item["title"] : null
+  if (!name) return null
+  const type = typeof item["type"] === "string" ? ` (${item["type"]})` : ""
+  const link = typeof item["link"] === "string" ? `, ${item["link"]}` : ""
+  return `- ${name}${type}${link}`
+}
+
+function formatToolResultValue(value: unknown): string | null {
+  if (!isRecord(value)) return null
+  if (typeof value["message"] === "string") return value["message"]
+
+  for (const key of ["files", "emails", "events", "courses", "assignments", "announcements"] as const) {
+    const items = value[key]
+    if (!Array.isArray(items)) continue
+    if (items.length === 0) return `No ${key} found.`
+    const lines = items.map(formatToolItem).filter((line): line is string => Boolean(line)).slice(0, 10)
+    if (lines.length > 0) return lines.join("\n")
+  }
+
+  const preview = JSON.stringify(value, null, 2)
+  return preview.length > 1400 ? `${preview.slice(0, 1400)}...` : preview
+}
+
+function fallbackFromToolResults(toolResults: readonly unknown[]): string {
+  const blocks: string[] = []
+  for (const toolResult of toolResults) {
+    const value = isRecord(toolResult) && "result" in toolResult ? toolResult["result"] : toolResult
+    const formatted = formatToolResultValue(value)
+    if (formatted) blocks.push(formatted)
+  }
+  if (blocks.length === 0) return ""
+  return blocks.join("\n\n")
+}
+
 // Lean, text-only tool-calling loop over the AI Credits model provider and
 // connector tools. Runs in both the sidecar and backend; returns final text.
 export async function runAgentLoop(opts: RunAgentLoopOptions): Promise<string> {
@@ -74,5 +114,13 @@ export async function runAgentLoop(opts: RunAgentLoopOptions): Promise<string> {
     abortSignal: opts.signal,
   })
 
+  if (result.text.trim()) return result.text
+
+  const fallback = fallbackFromToolResults(result.toolResults)
+  if (fallback) return fallback
+
+  console.warn(
+    `[agent] empty final text finishReason=${result.finishReason} toolCalls=${result.toolCalls.length} toolResults=${result.toolResults.length}`,
+  )
   return result.text
 }
