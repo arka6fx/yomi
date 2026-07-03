@@ -45,8 +45,6 @@ const CONNECTORS: { id: string; name: string; access: string }[] = [
   { id: "notion", name: "Notion", access: "Search and read your shared pages and databases" },
   { id: "slack", name: "Slack", access: "Read channel context and send approved messages" },
   { id: "linear", name: "Linear", access: "Issues and project tracking (OAuth or API key)" },
-  { id: "postgres", name: "Postgres", access: "Query your database with a read-only connection" },
-  { id: "mysql", name: "MySQL", access: "Query your database with a read-only connection" },
 ]
 
 const TELEGRAM_COMMANDS: { cmd: string; what: string }[] = [
@@ -222,7 +220,7 @@ export default function DocsPage() {
 
           <Section id="connectors" eyebrow="Integrations" title="App connectors">
             <p>
-              Connect the tools you already use. Yomi requests OAuth access (or a key for databases) and only acts
+              Connect the tools you already use. Yomi requests OAuth access (or an API key) and only acts
               when you ask. Connect and manage them from your dashboard.
             </p>
             <div className="grid gap-3 sm:grid-cols-2">

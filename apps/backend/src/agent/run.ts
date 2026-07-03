@@ -292,9 +292,6 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   }
 
   const registry = new ConnectorRegistry({
-    // The backend agent runs on Cloudflare Workers, which can't run the raw-TCP
-    // database drivers (pg/mysql2). Skip Node-only connectors so the agent never
-    // offers a DB tool it can't execute — those work via the desktop sidecar.
     excludeNodeOnly: true,
     getAccessToken,
     createPendingAction: async (input) => {

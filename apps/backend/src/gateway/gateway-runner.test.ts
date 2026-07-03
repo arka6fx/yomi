@@ -292,7 +292,7 @@ describe("GatewayRunner production routing", () => {
     expect(adapter.messages.at(-1)?.text).toBe("Started a new conversation. How can I help you?")
   })
 
-  it("shows pending approvals for /approve when multiple actions exist", async () => {
+  it("approves the most recent pending action with /approve", async () => {
     pendingActions = [
       { id: "11111111-1111-1111-1111-111111111111", title: "Send email", preview: "To: a@example.com" },
       { id: "22222222-2222-2222-2222-222222222222", title: "Create event", preview: "Tomorrow" },
@@ -310,9 +310,8 @@ describe("GatewayRunner production routing", () => {
     })
 
     expect(agentCalls).toHaveLength(0)
-    expect(approvedActions).toHaveLength(0)
-    expect(adapter.messages.at(-1)?.text).toContain("Send email")
-    expect(adapter.messages.at(-1)?.text).toContain("Create event")
+    expect(approvedActions).toEqual(["11111111-1111-1111-1111-111111111111"])
+    expect(adapter.messages.at(-1)?.text).toContain("Approved")
   })
 
   it("approves the only pending action with /approve", async () => {

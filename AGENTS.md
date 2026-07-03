@@ -84,14 +84,6 @@ Tools: `look_at_screen`, `transcribe`, `speak`. No tool-selection loop.
 
 ---
 
-## Connectors (`packages/agent-core/src/connectors/`)
-
-Each connector is a `ConnectorDef` with `id`, `auth`, `setup` instructions, and a
-`tools` factory. `ConnectorRegistry.getAllDefTools()` merges all connected providers.
-Adding a new connector = add one `ConnectorDef` to `all-defs.ts`. No other changes.
-
----
-
 ## Notepad (`~/.yomi/`)
 
 ```
@@ -187,40 +179,22 @@ Speech:     ElevenLabs scribe_v2 + eleven_flash_v2_5
 
 ## Desktop releases
 
-**CRITICAL: All releases go to `arka6fx/yomi-releases` only. Never create tags or releases in the main yomi repo.**
-
-Production web/backend deploys from `main`. Desktop installers published as GitHub
-releases on `arka6fx/yomi-releases` via `.github/workflows/release.yml`.
+**CRITICAL: All releases go to `arka6fx/yomi-releases` only.** Never create tags or
+releases in the main yomi repo. Production web/backend deploy from `main`.
 
 ### Release process (follow every time):
 
 1. **Push all changes to `main`** on the yomi repo first.
-2. **Trigger the release workflow:** `gh workflow run release.yml --ref main -f version=<ver> -f notes="<desc>"`
-3. **Wait for the workflow to complete** (~45 min). It builds the sidecar binary, Electron app, and publishes the `.exe` + `.blockmap` + `latest.yml` to `arka6fx/yomi-releases`.
+2. **Trigger workflow:** `gh workflow run release.yml --ref main -f version=<ver> -f notes="<desc>"`
+3. **Wait for completion** (~45 min). It builds sidecar, Electron app, and publishes `.exe`, `.blockmap`, and `latest.yml` to `arka6fx/yomi-releases`.
 4. **Never create a release manually with `gh release create`.** Always use the workflow.
 5. **Never create git tags in the yomi repo.** Tags are auto-managed by the release workflow on yomi-releases.
 6. **The landing page download (/api/download) automatically picks up the latest asset** from yomi-releases — no manual update needed.
-
-### Installer validation:
 
 The installer must include `apps/sidecar/dist/sidecar-win32-x64.exe`; verify the
 binary contains `eleven_flash_v2_5` and `scribe_v2` and does not contain
 `amazon.nova-2-sonic-v1:0` or `minimax.minimax-m2.5` before release.
 
 ---
-
-## Code style
-
-One-liners on non-obvious logic only. Never multi-line docstrings. Conventional
-commits: `feat:`, `fix:`, `refactor:`, `perf:`, `style:`, `test:`, `chore:`, `docs:`.
-Lowercase, no full stops, max 72 chars summary. No em-dashes.
-
----
-
-## Cleanup (always do before pushing)
-
-- `bun run ci` passes locally or `gh run list` shows green
-- No unused imports, no `as any` in non-test files
-- No noisy debug logs in production paths
-- Empty catches are intentional (`// ignore` or `// best-effort`)
-- Conventional commit messages on all pushes
+## Code style & cleanup
+One-liners on non-obvious logic only. Never multi-line docstrings. Conventional commits (`feat:`, `fix:`, `refactor:`, `perf:`, `style:`, `test:`, `chore:`, `docs:`) are lowercase, no full stops, max 72 chars, no em-dashes; before pushing, ensure `bun run ci` passes or `gh run list` is green, no unused imports, no `as any` in non-test files, no noisy production debug logs, and empty catches use `// ignore` or `// best-effort`.

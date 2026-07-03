@@ -12,6 +12,7 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: "application/vnd.github+json",
+        "User-Agent": "yomi-app",
         "X-GitHub-Api-Version": "2022-11-28",
         ...(init?.headers ?? {}),
       },
