@@ -325,13 +325,13 @@ describe("fastPipeline — generator", () => {
   it("answer mode: gives long writing requests a moderate output budget", async () => {
     await collect(fastPipeline({ text: "write an application for leave" }))
 
-    expect(lastStreamTextOptions.maxTokens).toBe(1400)
+    expect(lastStreamTextOptions.maxTokens).toBe(1120)
   })
 
   it("answer mode: keeps ordinary questions on the small output budget", async () => {
     await collect(fastPipeline({ text: "what is photosynthesis" }))
 
-    expect(lastStreamTextOptions.maxTokens).toBe(800)
+    expect(lastStreamTextOptions.maxTokens).toBe(640)
   })
 
   it("explore plan does not load or write memory", async () => {

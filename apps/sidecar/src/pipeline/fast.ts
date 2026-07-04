@@ -200,20 +200,22 @@ function sanitizeSentenceForSpeech(sentence: string): string {
 
 function maxOutputTokensFor(text: string): number {
   const q = text.toLowerCase()
+  let base: number
   if (
     /\b(application|letter|biography|bio|essay|article|story|speech|report|write|draft|compose)\b/.test(
       q,
     )
   ) {
-    return 1400
+    base = 1400
+  } else if (/\b(code|program|function|algorithm|leetcode|solution|complexity|debug)\b/.test(q)) {
+    base = 1200
+  } else if (/\b(explain in detail|walkthrough|step by step|detailed|briefly but complete)\b/.test(q)) {
+    base = 1100
+  } else {
+    base = 800
   }
-  if (/\b(code|program|function|algorithm|leetcode|solution|complexity|debug)\b/.test(q)) {
-    return 1200
-  }
-  if (/\b(explain in detail|walkthrough|step by step|detailed|briefly but complete)\b/.test(q)) {
-    return 1100
-  }
-  return 800
+  const scale = Math.min(1.5, Math.max(0.8, text.length / 500))
+  return Math.round(base * scale)
 }
 
 type StreamUsageStats = {
