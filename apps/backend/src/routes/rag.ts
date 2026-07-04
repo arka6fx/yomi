@@ -10,6 +10,7 @@ import type {
   RagSourceInfo,
 } from "@yomi/shared"
 import { authenticate } from "../auth.js"
+import { requireConsent } from "../middleware/consent.js"
 import { effectivePlanForUser, isOwnerUser } from "../entitlements.js"
 import { llmRerank, mmrRerank, parseVector, type RerankCandidate } from "../lib/rerank.js"
 
@@ -227,7 +228,7 @@ async function deleteMirrorSource(userId: string, name: string): Promise<boolean
 
 ragRouter.use("*", authenticate)
 
-ragRouter.post("/sources", async (c) => {
+ragRouter.post("/sources", requireConsent("cloud_memory"), async (c) => {
   const user = c.get("user")
   if (!ragAllowed(user))
     return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
@@ -250,7 +251,7 @@ ragRouter.post("/sources", async (c) => {
   return c.json(source)
 })
 
-ragRouter.get("/sources", async (c) => {
+ragRouter.get("/sources", requireConsent("cloud_memory"), async (c) => {
   const user = c.get("user")
   if (!ragAllowed(user))
     return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
@@ -280,7 +281,7 @@ ragRouter.get("/sources", async (c) => {
   return c.json({ sources: rows })
 })
 
-ragRouter.post("/sync", async (c) => {
+ragRouter.post("/sync", requireConsent("cloud_memory"), async (c) => {
   const user = c.get("user")
   if (!ragAllowed(user))
     return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
@@ -305,7 +306,7 @@ ragRouter.post("/sync", async (c) => {
   return c.json({ synced, removed })
 })
 
-ragRouter.post("/documents", async (c) => {
+ragRouter.post("/documents", requireConsent("cloud_memory"), async (c) => {
   const user = c.get("user")
   if (!ragAllowed(user))
     return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
@@ -375,7 +376,7 @@ ragRouter.post("/documents", async (c) => {
   return c.json({ document, chunks: chunks.length })
 })
 
-ragRouter.post("/search", async (c) => {
+ragRouter.post("/search", requireConsent("cloud_memory"), async (c) => {
   const user = c.get("user")
   if (!ragAllowed(user))
     return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)

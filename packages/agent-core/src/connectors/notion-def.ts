@@ -517,6 +517,154 @@ export function createNotionTools(ctx: ConnectorContext): ToolSet {
         }
       },
     }),
+
+    "notion-listDatabases": tool({
+      description:
+        "List all Notion databases shared with the integration, with their IDs and titles. Use to discover available databases.",
+      parameters: z.object({
+        limit: z.number().int().min(1).max(50).default(20).describe("Max databases to return"),
+      }),
+      execute: async ({ limit }) => {
+        try {
+          const data = await notion<{
+            results?: {
+              id: string
+              object: string
+              url: string
+              title?: { plain_text: string }[]
+              last_edited_time?: string
+            }[]
+          }>("/search", {
+            method: "POST",
+            body: JSON.stringify({
+              page_size: limit,
+              sort: { direction: "descending", timestamp: "last_edited_time" },
+              filter: { value: "database", property: "object" },
+            }),
+          })
+          const databases = (data.results ?? []).map((r) => ({
+            id: r.id,
+            title: extractPlainText(r.title) || "(Untitled)",
+            url: r.url,
+            lastEdited: r.last_edited_time,
+          }))
+          if (databases.length === 0) return { databases: [], message: "No databases found." }
+          return { count: databases.length, databases }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "notion-createDatabase": tool({
+      description:
+        "Create a new Notion database as a child of an existing page. Specify the parent page ID, database title, and property names (all created as rich_text type). For complex property types, use the propertiesJson parameter.",
+      parameters: z.object({
+        parentPageId: z.string().describe("ID of the parent page to create the database under"),
+        title: z.string().describe("Title of the new database"),
+        propertyNames: z.array(z.string()).optional().describe("Property/column names (all created as rich_text)"),
+        propertiesJson: z.string().optional().describe("JSON string of full property definitions for advanced types: {\"Status\":{\"select\":{\"options\":[{\"name\":\"Todo\",\"color\":\"gray\"}]}}}"),
+        confirmed: z.boolean().optional().describe("Must be true after the user explicitly confirms this write."),
+      }),
+      execute: async ({ parentPageId, title, propertyNames, propertiesJson, confirmed }) => {
+        try {
+          const blocked = requireConfirmed(confirmed)
+          if (blocked) return blocked
+          let properties: Record<string, unknown> = {}
+          if (propertiesJson) {
+            try { properties = JSON.parse(propertiesJson) } catch {
+              return { error: "Invalid propertiesJson: must be valid JSON" }
+            }
+          } else if (propertyNames?.length) {
+            for (const name of propertyNames) {
+              properties[name] = { rich_text: {} }
+            }
+          }
+          // Ensure at least a title property
+          if (!properties.title) {
+            properties.title = { title: {} }
+          }
+          const db = await notion<{ id: string; url?: string }>("/databases", {
+            method: "POST",
+            body: JSON.stringify({
+              parent: { type: "page_id", page_id: parentPageId },
+              title: [{ type: "text", text: { content: title } }],
+              properties,
+            }),
+          })
+          return { id: db.id, url: db.url, title }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "notion-listUsers": tool({
+      description: "List users in the Notion workspace who have access to the integration.",
+      parameters: z.object({
+        limit: z.number().int().min(1).max(50).default(20).describe("Max users to return"),
+      }),
+      execute: async ({ limit }) => {
+        try {
+          const data = await notion<{
+            results?: {
+              id: string
+              name?: string
+              avatar_url?: string
+              type?: string
+              person?: { email?: string }
+            }[]
+          }>(`/users?page_size=${limit}`)
+          const users = (data.results ?? []).map((u) => ({
+            id: u.id,
+            name: u.name ?? "(Unknown)",
+            avatar: u.avatar_url ?? null,
+            type: u.type ?? "bot",
+            email: u.person?.email ?? null,
+          }))
+          if (users.length === 0) return { users: [], message: "No users found." }
+          return { count: users.length, users }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "notion-getDatabaseSchema": tool({
+      description:
+        "Get the full schema (property definitions) of a Notion database. Returns each property name, type, and configuration details.",
+      parameters: z.object({
+        databaseId: z.string().describe("Notion database ID"),
+      }),
+      execute: async ({ databaseId }) => {
+        try {
+          const db = await notion<{
+            id: string
+            title?: { plain_text: string }[]
+            url?: string
+            properties?: Record<string, {
+              type: string
+              id: string
+              [key: string]: unknown
+            }>
+          }>(`/databases/${databaseId}`)
+          const title = extractPlainText(db.title) || "(Untitled)"
+          const properties = Object.entries(db.properties ?? {}).map(([name, prop]) => ({
+            name,
+            type: prop.type,
+            id: prop.id,
+          }))
+          return {
+            id: db.id,
+            title,
+            propertyCount: properties.length,
+            properties,
+          }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
   }
 }
 

@@ -1,5 +1,6 @@
 import { Hono } from "hono"
 import { db, usageEvents } from "@yomi/db"
+import { and, eq } from "drizzle-orm"
 import { authenticate } from "../auth.js"
 import { expireCredits } from "../services/credit-ledger.js"
 import { chargeUsage, lowCreditWarning, type ChargeKind } from "../services/metering.js"
@@ -19,6 +20,16 @@ type UsageEventBody = {
 type ReserveBody = {
   kind: ChargeKind
   duration?: number // voice duration in seconds
+}
+
+type FinalizeBody = {
+  usageEventId?: string
+  model?: string
+  inputTokens?: number
+  outputTokens?: number
+  costCents?: number
+  status?: "done" | "error" | "cancelled"
+  metadata?: Record<string, unknown>
 }
 
 const VALID_KINDS: ChargeKind[] = ["chat", "voice", "analyze", "bot_message"]
@@ -67,6 +78,7 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
     creditsRemaining: result.balance,
     paidBy: result.paidBy,
     resetAt: nextMonthReset(),
+    usageEventId: result.usageEventId,
   }
 
   if (user.subscriptionStatus === "past_due") {
@@ -77,6 +89,34 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
   if (warning) resp["usageWarning"] = warning
 
   return c.json(resp)
+})
+
+usageRouter.post("/interactions/finalize", authenticate, async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as FinalizeBody
+  const user = c.get("user")
+  const usageEventId = body.usageEventId
+
+  if (!usageEventId) {
+    return c.json({ error: "usageEventId is required", code: "invalid_usage_event" }, 400)
+  }
+
+  const inputTokens = Math.max(0, Math.floor(body.inputTokens ?? 0))
+  const outputTokens = Math.max(0, Math.floor(body.outputTokens ?? 0))
+  const costCents = Math.max(0, Math.floor(body.costCents ?? 0))
+
+  await db
+    .update(usageEvents)
+    .set({
+      model: body.model ?? null,
+      inputTokens,
+      outputTokens,
+      costCents,
+      status: body.status ?? "done",
+      metadata: body.metadata ?? null,
+    })
+    .where(and(eq(usageEvents.id, usageEventId), eq(usageEvents.userId, user.id)))
+
+  return c.json({ ok: true })
 })
 
 usageRouter.post("/", authenticate, async (c) => {

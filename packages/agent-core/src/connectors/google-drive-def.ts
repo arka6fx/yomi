@@ -1,7 +1,7 @@
 import { tool, type ToolSet } from "ai"
 import { z } from "zod"
 import type { ConnectorDef, ConnectorContext } from "./connector-def.js"
-import { connectorError } from "./connector-def.js"
+import { connectorError, gateWrite } from "./connector-def.js"
 
 const GOOGLE_MIME_LABELS: Record<string, string> = {
   "application/vnd.google-apps.document": "Google Doc",
@@ -321,47 +321,61 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
         content: z.string().describe("Plain text content for the document"),
         folderId: z.string().optional().describe("Optional folder ID to create the file in"),
       }),
-      execute: async ({ name, content, folderId }) => {
-        try {
-          const token = await ctx.getAccessToken(ctx.userId, "google-drive")
+      execute: async (args) => {
+        const { name, content, folderId } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "google-drive",
+            action: "drive-createFile",
+            risk: "write",
+            title: `Create Google Doc: ${name}`,
+            preview: `${name}\n\n${content.slice(0, 500)}`,
+            confirmText: "Create document",
+          },
+          args,
+          async () => {
+            try {
+              const token = await ctx.getAccessToken(ctx.userId, "google-drive")
 
-          // Create a Google Doc via multipart upload
-          const metadata: Record<string, unknown> = {
-            name,
-            mimeType: "application/vnd.google-apps.document",
-          }
-          if (folderId) metadata.parents = [folderId]
+              const metadata: Record<string, unknown> = {
+                name,
+                mimeType: "application/vnd.google-apps.document",
+              }
+              if (folderId) metadata.parents = [folderId]
 
-          const boundary = "yomi_boundary_xyz"
-          const body = [
-            `--${boundary}`,
-            "Content-Type: application/json; charset=UTF-8",
-            "",
-            JSON.stringify(metadata),
-            `--${boundary}`,
-            "Content-Type: text/plain; charset=UTF-8",
-            "",
-            content,
-            `--${boundary}--`,
-          ].join("\r\n")
+              const boundary = "yomi_boundary_xyz"
+              const body = [
+                `--${boundary}`,
+                "Content-Type: application/json; charset=UTF-8",
+                "",
+                JSON.stringify(metadata),
+                `--${boundary}`,
+                "Content-Type: text/plain; charset=UTF-8",
+                "",
+                content,
+                `--${boundary}--`,
+              ].join("\r\n")
 
-          const res = await fetch(
-            "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink",
-            {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": `multipart/related; boundary=${boundary}`,
-              },
-              body,
-            },
-          )
-          if (!res.ok) throw new Error(`Create failed: ${res.status}: ${await res.text()}`)
-          const file = (await res.json()) as { id: string; name: string; webViewLink: string }
-          return { id: file.id, name: file.name, link: file.webViewLink }
-        } catch (err) {
-          return connectorError(err)
-        }
+              const res = await fetch(
+                "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink",
+                {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": `multipart/related; boundary=${boundary}`,
+                  },
+                  body,
+                },
+              )
+              if (!res.ok) throw new Error(`Create failed: ${res.status}: ${await res.text()}`)
+              const file = (await res.json()) as { id: string; name: string; webViewLink: string }
+              return { id: file.id, name: file.name, link: file.webViewLink }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
       },
     }),
 
@@ -374,21 +388,39 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
         addToFolderId: z.string().optional().describe("Folder ID to move the file into"),
         removeFromFolderId: z.string().optional().describe("Folder ID to remove the file from (e.g. its current parent)"),
       }),
-      execute: async ({ fileId, name, addToFolderId, removeFromFolderId }) => {
-        try {
-          const params = new URLSearchParams({ fields: "id,name,webViewLink,parents" })
-          if (addToFolderId) params.set("addParents", addToFolderId)
-          if (removeFromFolderId) params.set("removeParents", removeFromFolderId)
-          const body: Record<string, unknown> = {}
-          if (name !== undefined) body["name"] = name
-          const file = await driveJson<{ id: string; name: string; webViewLink?: string }>(
-            `/files/${fileId}?${params}`,
-            { method: "PATCH", body: JSON.stringify(body) },
-          )
-          return { ok: true, id: file.id, name: file.name, link: file.webViewLink, message: "File updated." }
-        } catch (err) {
-          return connectorError(err)
-        }
+      execute: async (args) => {
+        const { fileId, name, addToFolderId, removeFromFolderId } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "google-drive",
+            action: "drive-updateFile",
+            risk: "write",
+            title: `Update Drive file ${fileId}`,
+            preview: [
+              name ? `New name: ${name}` : null,
+              addToFolderId ? `Move to folder: ${addToFolderId}` : null,
+            ].filter(Boolean).join("\n"),
+            confirmText: "Update file",
+          },
+          args,
+          async () => {
+            try {
+              const params = new URLSearchParams({ fields: "id,name,webViewLink,parents" })
+              if (addToFolderId) params.set("addParents", addToFolderId)
+              if (removeFromFolderId) params.set("removeParents", removeFromFolderId)
+              const body: Record<string, unknown> = {}
+              if (name !== undefined) body["name"] = name
+              const file = await driveJson<{ id: string; name: string; webViewLink?: string }>(
+                `/files/${fileId}?${params}`,
+                { method: "PATCH", body: JSON.stringify(body) },
+              )
+              return { ok: true, id: file.id, name: file.name, link: file.webViewLink, message: "File updated." }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
       },
     }),
 
@@ -402,17 +434,226 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
           .default(false)
           .describe("If true, permanently delete (cannot be undone). Otherwise move to Trash."),
       }),
-      execute: async ({ fileId, permanent }) => {
+      execute: async (args) => {
+        const { fileId, permanent } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "google-drive",
+            action: "drive-deleteFile",
+            risk: permanent ? "irreversible" : "write",
+            title: permanent ? `Permanently delete Drive file ${fileId}` : `Trash Drive file ${fileId}`,
+            preview: `${permanent ? "Permanently delete" : "Move to Trash"} file ${fileId}.${permanent ? " This CANNOT be undone." : ""}`,
+            confirmText: permanent ? "Delete permanently" : "Move to trash",
+          },
+          args,
+          async () => {
+            try {
+              if (permanent) {
+                await driveJson(`/files/${fileId}`, { method: "DELETE" })
+                return { ok: true, message: `File ${fileId} permanently deleted.` }
+              }
+              await driveJson(`/files/${fileId}`, { method: "PATCH", body: JSON.stringify({ trashed: true }) })
+              return { ok: true, message: `File ${fileId} moved to Trash (recoverable).` }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
+
+    "drive-shareFile": tool({
+      description: "Share a Google Drive file with specific users or make it accessible via a link. Set role to 'reader', 'commenter', or 'writer'.",
+      parameters: z.object({
+        fileId: z.string().describe("Google Drive file ID to share"),
+        emailAddress: z.string().optional().describe("Email of the user to share with. Omit to create a shareable link."),
+        role: z.enum(["reader", "commenter", "writer"]).default("reader").describe("Permission level"),
+        sendNotificationEmail: z.boolean().default(true).describe("Whether to send a notification email"),
+      }),
+      execute: async (args) => {
+        const { fileId, emailAddress, role, sendNotificationEmail } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "google-drive",
+            action: "drive-shareFile",
+            risk: "write",
+            title: `Share Drive file ${fileId}`,
+            preview: [
+              `File ID: ${fileId}`,
+              emailAddress ? `Invite: ${emailAddress} (${role})` : `Create shareable link (${role})`,
+            ].filter(Boolean).join("\n"),
+            confirmText: "Share file",
+          },
+          args,
+          async () => {
+            try {
+              const token = await ctx.getAccessToken(ctx.userId, "google-drive")
+
+              if (emailAddress) {
+                const res = await fetch(
+                  `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}/permissions?sendNotificationEmail=${sendNotificationEmail}&fields=id`,
+                  {
+                    method: "POST",
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                      type: "user",
+                      role,
+                      emailAddress,
+                    }),
+                  },
+                )
+                if (!res.ok) throw new Error(`Share failed: ${res.status}: ${await res.text()}`)
+                const perm = (await res.json()) as { id: string }
+                return { ok: true, permissionId: perm.id, message: `Shared with ${emailAddress} as ${role}.` }
+              }
+
+              const res = await fetch(
+                `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}/permissions?fields=id`,
+                {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    type: "anyone",
+                    role,
+                  }),
+                },
+              )
+              if (!res.ok) throw new Error(`Share failed: ${res.status}: ${await res.text()}`)
+              const perm = (await res.json()) as { id: string }
+              return { ok: true, permissionId: perm.id, message: `Anyone with the link can ${role}.` }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
+
+    "drive-copyFile": tool({
+      description:
+        "Copy (duplicate) a Google Drive file. Optionally specify a new name and target folder. Returns the new file's ID and link.",
+      parameters: z.object({
+        fileId: z.string().describe("Google Drive file ID to copy"),
+        name: z.string().optional().describe("New name for the copy. Defaults to 'Copy of <original>'"),
+        parentFolderId: z.string().optional().describe("Folder ID to place the copy in"),
+      }),
+      execute: async (args) => {
+        return gateWrite(
+          ctx,
+          {
+            connector: "google-drive",
+            action: "drive-copyFile",
+            risk: "write",
+            title: `Copy Drive file ${args.fileId}`,
+            preview: args.name ? `Copy as "${args.name}"` : "Create a copy",
+            confirmText: "Copy file",
+          },
+          args,
+          async () => {
+            try {
+              const { fileId, name, parentFolderId } = args
+              const body: Record<string, unknown> = {}
+              if (name) body.name = name
+              if (parentFolderId) body.parents = [parentFolderId]
+              const file = await driveJson<{ id: string; name: string; webViewLink?: string }>(
+                `/files/${encodeURIComponent(fileId)}/copy?fields=id,name,webViewLink`,
+                { method: "POST", body: JSON.stringify(body) },
+              )
+              return { ok: true, id: file.id, name: file.name, link: file.webViewLink }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
+
+    "drive-listPermissions": tool({
+      description: "List all users and groups who have access to a Google Drive file, along with their role (reader, commenter, writer, owner).",
+      parameters: z.object({
+        fileId: z.string().describe("Google Drive file ID"),
+      }),
+      execute: async ({ fileId }) => {
         try {
-          if (permanent) {
-            await driveJson(`/files/${fileId}`, { method: "DELETE" })
-            return { ok: true, message: `File ${fileId} permanently deleted.` }
-          }
-          await driveJson(`/files/${fileId}`, { method: "PATCH", body: JSON.stringify({ trashed: true }) })
-          return { ok: true, message: `File ${fileId} moved to Trash (recoverable).` }
+          const data = await driveJson<{
+            permissions?: {
+              id: string
+              type: string
+              role: string
+              emailAddress?: string
+              displayName?: string
+              domain?: string
+              deleted?: boolean
+            }[]
+          }>(`/files/${encodeURIComponent(fileId)}/permissions?fields=permissions(id,type,role,emailAddress,displayName,domain,deleted)&pageSize=100`)
+          const perms = (data.permissions ?? []).map((p) => ({
+            id: p.id,
+            type: p.type, // "user", "group", "domain", "anyone"
+            role: p.role,
+            email: p.emailAddress ?? null,
+            name: p.displayName ?? null,
+            domain: p.domain ?? null,
+            deleted: p.deleted ?? false,
+          }))
+          if (perms.length === 0) return { permissions: [], message: "No permissions found." }
+          return { count: perms.length, permissions: perms }
         } catch (err) {
           return connectorError(err)
         }
+      },
+    }),
+
+    "drive-createFolder": tool({
+      description: "Create a new folder in Google Drive. Optionally specify a parent folder to nest it inside.",
+      parameters: z.object({
+        name: z.string().describe("Name of the new folder"),
+        parentFolderId: z.string().optional().describe("ID of the parent folder to create this folder in"),
+      }),
+      execute: async (args) => {
+        const { name, parentFolderId } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "google-drive",
+            action: "drive-createFolder",
+            risk: "write",
+            title: `Create Drive folder: ${name}`,
+            preview: `Create folder "${name}"${parentFolderId ? ` inside ${parentFolderId}` : ""}`,
+            confirmText: "Create folder",
+          },
+          args,
+          async () => {
+            try {
+              const metadata: Record<string, unknown> = {
+                name,
+                mimeType: "application/vnd.google-apps.folder",
+              }
+              if (parentFolderId) metadata.parents = [parentFolderId]
+
+              const file = await driveJson<{ id: string; name: string; webViewLink?: string }>("/files", {
+                method: "POST",
+                body: JSON.stringify(metadata),
+              })
+              return {
+                ok: true,
+                id: file.id,
+                name: file.name,
+                link: file.webViewLink,
+                message: `Folder "${name}" created.`,
+              }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
       },
     }),
   }

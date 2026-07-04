@@ -64,7 +64,8 @@ interface GmailHeader {
 interface GmailPayload {
   mimeType?: string
   headers?: GmailHeader[]
-  body?: { data?: string; size?: number }
+  filename?: string
+  body?: { data?: string; size?: number; attachmentId?: string }
   parts?: GmailPayload[]
 }
 
@@ -240,6 +241,116 @@ export class GoogleGmailConnector implements Connector {
       }),
     )
     return { id: thread.id, messages }
+  }
+
+  async listLabels(): Promise<{ id: string; name: string; type: string }[]> {
+    const data = await this.gmail<{ labels?: { id: string; name: string; type: string }[] }>(
+      "/labels",
+    )
+    return data.labels ?? []
+  }
+
+  async applyLabels(messageId: string, addLabelIds: string[], removeLabelIds: string[]): Promise<void> {
+    await this.modifyMessage(messageId, addLabelIds, removeLabelIds)
+  }
+
+  async createDraft(draft: EmailDraft): Promise<{ id: string; messageId: string }> {
+    const to = draft.to.join(", ")
+    const cc = draft.cc?.join(", ") ?? ""
+    const bcc = draft.bcc?.join(", ") ?? ""
+    const lines = [
+      `To: ${to}`,
+      cc ? `Cc: ${cc}` : null,
+      bcc ? `Bcc: ${bcc}` : null,
+      `Subject: ${draft.subject}`,
+      "MIME-Version: 1.0",
+      "Content-Type: text/plain; charset=UTF-8",
+      "",
+      draft.body,
+    ].filter((l) => l !== null)
+
+    const rawMsg = lines.join("\r\n")
+    const encoded = Buffer.from(rawMsg).toString("base64url")
+
+    const body: Record<string, unknown> = { message: { raw: encoded } }
+    if (draft.replyToMessageId) {
+      try {
+        const orig = await this.gmail<GmailMessage>(`/messages/${draft.replyToMessageId}?format=metadata`)
+        ;(body.message as Record<string, string>).threadId = orig.threadId
+      } catch { /* best-effort */ }
+    }
+
+    const result = await this.gmail<{ id: string; message: { id: string } }>("/drafts", {
+      method: "POST",
+      body: JSON.stringify(body),
+    })
+    return { id: result.id, messageId: result.message.id }
+  }
+
+  async getAttachment(messageId: string, attachmentId: string): Promise<{ filename: string; mimeType: string; data: string; size: number }> {
+    const msg = await this.gmail<GmailMessage>(`/messages/${messageId}?format=full`)
+    const findAttachment = (payload: GmailPayload): GmailPayload | null => {
+      if (payload.body?.attachmentId) {
+        const found = payload.parts?.find((p) => p.body?.attachmentId === attachmentId)
+        return found ?? null
+      }
+      if (payload.parts) {
+        for (const part of payload.parts) {
+          const found = findAttachment(part)
+          if (found) return found
+        }
+      }
+      return null
+    }
+    const part = msg.payload ? findAttachment(msg.payload) : null
+    const att = await this.gmail<{ attachmentId: string; data: string; size: number }>(
+      `/messages/${messageId}/attachments/${attachmentId}`,
+    )
+    return { filename: part?.filename ?? "attachment", mimeType: part?.mimeType ?? "application/octet-stream", data: att.data, size: att.size }
+  }
+
+  async listDrafts(): Promise<{ id: string; messageId: string; subject: string; from: string; date: string }[]> {
+    const data = await this.gmail<{ drafts?: { id: string; message: { id: string } }[]; resultSizeEstimate?: number }>(
+      "/drafts",
+    )
+    const draftIds = data.drafts ?? []
+    return Promise.all(
+      draftIds.map(async (d) => {
+        try {
+          const detail = await this.gmail<GmailMessage>(`/drafts/${d.id}?format=metadata`)
+          const hdrs = detail.payload?.headers ?? []
+          return {
+            id: d.id,
+            messageId: detail.id,
+            subject: header(hdrs, "Subject") || "(no subject)",
+            from: header(hdrs, "From") || "",
+            date: header(hdrs, "Date") || new Date(Number(detail.internalDate ?? 0)).toISOString(),
+          }
+        } catch {
+          return { id: d.id, messageId: d.message.id, subject: "(unknown)", from: "", date: "" }
+        }
+      }),
+    )
+  }
+
+  async sendDraft(draftId: string): Promise<SendResult> {
+    const result = await this.gmail<{ id: string; message: { id: string; threadId: string } }>(
+      `/drafts/send`,
+      { method: "POST", body: JSON.stringify({ id: draftId }) },
+    )
+    return { messageId: result.message.id, threadId: result.message.threadId }
+  }
+
+  async createLabel(name: string, labelVisibility?: string, messageVisibility?: string): Promise<{ id: string; name: string; type: string }> {
+    const label = await this.gmail<{ id: string; name: string; type: string }>("/labels", {
+      method: "POST",
+      body: JSON.stringify({
+        name,
+        labelListVisibility: labelVisibility ?? "labelShow",
+        messageListVisibility: messageVisibility ?? "show",
+      }),
+    })
+    return { id: label.id, name: label.name, type: label.type }
   }
 
   async sendEmail(draft: EmailDraft): Promise<SendResult> {

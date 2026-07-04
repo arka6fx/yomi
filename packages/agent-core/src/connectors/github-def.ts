@@ -37,10 +37,7 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
       parameters: z.object({
         owner: z.string().describe("Repository owner (username or org)"),
         repo: z.string().describe("Repository name"),
-        state: z
-          .enum(["open", "closed", "all"])
-          .default("open")
-          .describe("PR state filter"),
+        state: z.enum(["open", "closed", "all"]).default("open").describe("PR state filter"),
         limit: z.number().int().min(1).max(30).default(10).describe("Max PRs to return"),
       }),
       execute: async ({ owner, repo, state, limit }) => {
@@ -77,7 +74,8 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
     }),
 
     "github-getPR": tool({
-      description: "Get details for a specific GitHub pull request, including description and review status.",
+      description:
+        "Get details for a specific GitHub pull request, including description and review status.",
       parameters: z.object({
         owner: z.string().describe("Repository owner"),
         repo: z.string().describe("Repository name"),
@@ -126,7 +124,8 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
     }),
 
     "github-listIssues": tool({
-      description: "List issues in a GitHub repository. Returns issue number, title, author, labels, and URL.",
+      description:
+        "List issues in a GitHub repository. Returns issue number, title, author, labels, and URL.",
       parameters: z.object({
         owner: z.string().describe("Repository owner"),
         repo: z.string().describe("Repository name"),
@@ -237,13 +236,15 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
           args,
           async () => {
             try {
-              const issue = await gh<{ number: number; title: string; html_url: string; state: string }>(
-                `/repos/${owner}/${repo}/issues`,
-                {
-                  method: "POST",
-                  body: JSON.stringify({ title, body, labels, assignees }),
-                },
-              )
+              const issue = await gh<{
+                number: number
+                title: string
+                html_url: string
+                state: string
+              }>(`/repos/${owner}/${repo}/issues`, {
+                method: "POST",
+                body: JSON.stringify({ title, body, labels, assignees }),
+              })
               return {
                 ok: true,
                 number: issue.number,
@@ -266,35 +267,63 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
         owner: z.string().describe("Repository owner"),
         repo: z.string().describe("Repository name"),
         issueNumber: z.number().int().describe("Issue number"),
-        state: z.enum(["open", "closed"]).optional().describe("Set to 'closed' to close, 'open' to reopen"),
+        state: z
+          .enum(["open", "closed"])
+          .optional()
+          .describe("Set to 'closed' to close, 'open' to reopen"),
         title: z.string().optional().describe("New title"),
         body: z.string().optional().describe("New body (markdown)"),
         labels: z.array(z.string()).optional().describe("Replace labels with this set"),
       }),
-      execute: async ({ owner, repo, issueNumber, state, title, body, labels }) => {
-        try {
-          const patch: Record<string, unknown> = {}
-          if (state) patch.state = state
-          if (title !== undefined) patch.title = title
-          if (body !== undefined) patch.body = body
-          if (labels !== undefined) patch.labels = labels
-          if (Object.keys(patch).length === 0) {
-            return { error: "Nothing to update — provide at least one of state, title, body, or labels." }
-          }
-          const issue = await gh<{ number: number; title: string; state: string; html_url: string }>(
-            `/repos/${owner}/${repo}/issues/${issueNumber}`,
-            { method: "PATCH", body: JSON.stringify(patch) },
-          )
-          return {
-            ok: true,
-            number: issue.number,
-            title: issue.title,
-            state: issue.state,
-            url: issue.html_url,
-          }
-        } catch (err) {
-          return connectorError(err)
-        }
+      execute: async (args) => {
+        const { owner, repo, issueNumber, state, title, body, labels } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "github",
+            action: "github-updateIssue",
+            risk: "write",
+            title: `Update ${owner}/${repo}#${issueNumber}`,
+            preview: [
+              state ? `State: ${state}` : null,
+              title ? `Title: ${title}` : null,
+            ].filter(Boolean).join("\n"),
+            confirmText: "Update issue",
+          },
+          args,
+          async () => {
+            try {
+              const patch: Record<string, unknown> = {}
+              if (state) patch.state = state
+              if (title !== undefined) patch.title = title
+              if (body !== undefined) patch.body = body
+              if (labels !== undefined) patch.labels = labels
+              if (Object.keys(patch).length === 0) {
+                return {
+                  error: "Nothing to update — provide at least one of state, title, body, or labels.",
+                }
+              }
+              const issue = await gh<{
+                number: number
+                title: string
+                state: string
+                html_url: string
+              }>(`/repos/${owner}/${repo}/issues/${issueNumber}`, {
+                method: "PATCH",
+                body: JSON.stringify(patch),
+              })
+              return {
+                ok: true,
+                number: issue.number,
+                title: issue.title,
+                state: issue.state,
+                url: issue.html_url,
+              }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
       },
     }),
 
@@ -342,7 +371,9 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
         owner: z.string().describe("Repository owner"),
         repo: z.string().describe("Repository name"),
         title: z.string().describe("Pull request title"),
-        head: z.string().describe("Branch with your changes (e.g. 'feature-x' or 'user:feature-x')"),
+        head: z
+          .string()
+          .describe("Branch with your changes (e.g. 'feature-x' or 'user:feature-x')"),
         base: z.string().describe("Branch you want to merge into (e.g. 'main')"),
         body: z.string().optional().describe("Pull request description (markdown)"),
         draft: z.boolean().optional().describe("Open as a draft PR"),
@@ -362,10 +393,15 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
           args,
           async () => {
             try {
-              const pr = await gh<{ number: number; title: string; html_url: string; draft: boolean }>(
-                `/repos/${owner}/${repo}/pulls`,
-                { method: "POST", body: JSON.stringify({ title, head, base, body, draft }) },
-              )
+              const pr = await gh<{
+                number: number
+                title: string
+                html_url: string
+                draft: boolean
+              }>(`/repos/${owner}/${repo}/pulls`, {
+                method: "POST",
+                body: JSON.stringify({ title, head, base, body, draft }),
+              })
               return {
                 ok: true,
                 number: pr.number,
@@ -388,10 +424,7 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
         owner: z.string().describe("Repository owner"),
         repo: z.string().describe("Repository name"),
         prNumber: z.number().int().describe("Pull request number"),
-        method: z
-          .enum(["merge", "squash", "rebase"])
-          .default("merge")
-          .describe("Merge strategy"),
+        method: z.enum(["merge", "squash", "rebase"]).default("merge").describe("Merge strategy"),
         commitTitle: z.string().optional().describe("Override the merge commit title"),
       }),
       execute: async (args) => {
@@ -432,10 +465,11 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
         owner: z.string().describe("Repository owner"),
         repo: z.string().describe("Repository name"),
         prNumber: z.number().int().describe("Pull request number"),
-        event: z
-          .enum(["APPROVE", "REQUEST_CHANGES", "COMMENT"])
-          .describe("Review verdict"),
-        body: z.string().optional().describe("Review comment (required for REQUEST_CHANGES/COMMENT)"),
+        event: z.enum(["APPROVE", "REQUEST_CHANGES", "COMMENT"]).describe("Review verdict"),
+        body: z
+          .string()
+          .optional()
+          .describe("Review comment (required for REQUEST_CHANGES/COMMENT)"),
       }),
       execute: async (args) => {
         const { owner, repo, prNumber, event, body } = args
@@ -473,16 +507,31 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
         issueNumber: z.number().int().describe("Issue or pull request number"),
         labels: z.array(z.string()).min(1).describe("Label names to add"),
       }),
-      execute: async ({ owner, repo, issueNumber, labels }) => {
-        try {
-          const result = await gh<{ name: string }[]>(
-            `/repos/${owner}/${repo}/issues/${issueNumber}/labels`,
-            { method: "POST", body: JSON.stringify({ labels }) },
-          )
-          return { ok: true, labels: result.map((l) => l.name) }
-        } catch (err) {
-          return connectorError(err)
-        }
+      execute: async (args) => {
+        const { owner, repo, issueNumber, labels } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "github",
+            action: "github-addLabels",
+            risk: "write",
+            title: `Add labels to ${owner}/${repo}#${issueNumber}`,
+            preview: `Labels: ${labels.join(", ")}`,
+            confirmText: "Add labels",
+          },
+          args,
+          async () => {
+            try {
+              const result = await gh<{ name: string }[]>(
+                `/repos/${owner}/${repo}/issues/${issueNumber}/labels`,
+                { method: "POST", body: JSON.stringify({ labels }) },
+              )
+              return { ok: true, labels: result.map((l) => l.name) }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
       },
     }),
 
@@ -494,22 +543,37 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
         branch: z.string().describe("New branch name"),
         fromBranch: z.string().default("main").describe("Branch to fork from"),
       }),
-      execute: async ({ owner, repo, branch, fromBranch }) => {
-        try {
-          const ref = await gh<{ object: { sha: string } }>(
-            `/repos/${owner}/${repo}/git/ref/heads/${fromBranch}`,
-          )
-          const created = await gh<{ ref: string; object: { sha: string } }>(
-            `/repos/${owner}/${repo}/git/refs`,
-            {
-              method: "POST",
-              body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: ref.object.sha }),
-            },
-          )
-          return { ok: true, ref: created.ref, sha: created.object.sha }
-        } catch (err) {
-          return connectorError(err)
-        }
+      execute: async (args) => {
+        const { owner, repo, branch, fromBranch } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "github",
+            action: "github-createBranch",
+            risk: "write",
+            title: `Create branch ${branch} in ${owner}/${repo}`,
+            preview: `${branch} ← ${fromBranch}`,
+            confirmText: "Create branch",
+          },
+          args,
+          async () => {
+            try {
+              const ref = await gh<{ object: { sha: string } }>(
+                `/repos/${owner}/${repo}/git/ref/heads/${fromBranch}`,
+              )
+              const created = await gh<{ ref: string; object: { sha: string } }>(
+                `/repos/${owner}/${repo}/git/refs`,
+                {
+                  method: "POST",
+                  body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: ref.object.sha }),
+                },
+              )
+              return { ok: true, ref: created.ref, sha: created.object.sha }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
       },
     }),
 
@@ -590,7 +654,12 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
                 default_branch: string
               }>("/user/repos", {
                 method: "POST",
-                body: JSON.stringify({ name, description, private: isPrivate, auto_init: autoInit }),
+                body: JSON.stringify({
+                  name,
+                  description,
+                  private: isPrivate,
+                  auto_init: autoInit,
+                }),
               })
               return {
                 ok: true,
@@ -617,8 +686,14 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
         path: z.string().min(1).describe("File path within the repository"),
         content: z.string().describe("File contents"),
         message: z.string().min(1).describe("Commit message"),
-        branch: z.string().optional().describe("Branch to write to. Defaults to the repository default branch"),
-        sha: z.string().optional().describe("Existing file SHA, required by GitHub when updating a file"),
+        branch: z
+          .string()
+          .optional()
+          .describe("Branch to write to. Defaults to the repository default branch"),
+        sha: z
+          .string()
+          .optional()
+          .describe("Existing file SHA, required by GitHub when updating a file"),
       }),
       execute: async (args) => {
         const { owner, repo, path, content, message, branch, sha } = args
@@ -641,10 +716,13 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
               const result = await gh<{
                 content: { path: string; sha: string; html_url: string }
                 commit: { sha: string; html_url: string }
-              }>(`/repos/${owner}/${repo}/contents/${encodedPath}${params.size ? `?${params}` : ""}`, {
-                method: "PUT",
-                body: JSON.stringify({ message, content: base64Encode(content), branch, sha }),
-              })
+              }>(
+                `/repos/${owner}/${repo}/contents/${encodedPath}${params.size ? `?${params}` : ""}`,
+                {
+                  method: "PUT",
+                  body: JSON.stringify({ message, content: base64Encode(content), branch, sha }),
+                },
+              )
               return {
                 ok: true,
                 path: result.content.path,
@@ -683,6 +761,298 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
         }
       },
     }),
+
+    "github-listNotifications": tool({
+      description:
+        "List the authenticated user's GitHub notifications across repositories. Use this when the user asks for latest GitHub notifications, mentions, review requests, or subscribed issue/PR updates.",
+      parameters: z.object({
+        all: z
+          .boolean()
+          .default(false)
+          .describe("If true, include already-read notifications. Defaults to unread only."),
+        participating: z
+          .boolean()
+          .default(false)
+          .describe(
+            "If true, only include notifications where the user is directly participating.",
+          ),
+        limit: z.number().int().min(1).max(50).default(20).describe("Max notifications to return"),
+      }),
+      execute: async ({ all, participating, limit }) => {
+        try {
+          const params = new URLSearchParams({
+            all: String(all),
+            participating: String(participating),
+            per_page: String(limit),
+          })
+          const notifications = await gh<
+            {
+              id: string
+              unread: boolean
+              reason: string
+              updated_at: string
+              repository: { full_name: string; html_url: string }
+              subject: {
+                title: string
+                type: string
+                url: string
+                latest_comment_url?: string
+              }
+              url: string
+            }[]
+          >(`/notifications?${params}`)
+          if (notifications.length === 0) {
+            return {
+              notifications: [],
+              message: all
+                ? "No GitHub notifications found."
+                : "No unread GitHub notifications found.",
+            }
+          }
+          return {
+            count: notifications.length,
+            notifications: notifications.map((n) => ({
+              id: n.id,
+              unread: n.unread,
+              reason: n.reason,
+              updated: n.updated_at,
+              repository: n.repository.full_name,
+              repositoryUrl: n.repository.html_url,
+              subject: n.subject.title,
+              subjectType: n.subject.type,
+              apiUrl: n.subject.url,
+              latestCommentApiUrl: n.subject.latest_comment_url ?? null,
+            })),
+          }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "github-getNotificationSubject": tool({
+      description:
+        "Resolve a GitHub notification into a readable issue, pull request, or discussion. Pass the apiUrl or latestCommentApiUrl from github-listNotifications. Returns the subject details including title, body, state, and author.",
+      parameters: z.object({
+        subjectUrl: z.string().describe("The apiUrl or latestCommentApiUrl from a notification"),
+      }),
+      execute: async ({ subjectUrl }) => {
+        try {
+          const data = await gh<{
+            title?: string
+            body?: string
+            state?: string
+            user?: { login: string }
+            html_url?: string
+            created_at?: string
+            updated_at?: string
+            number?: number
+          }>(`/${new URL(subjectUrl).pathname}`)
+          return {
+            title: data.title ?? "(no title)",
+            body: data.body?.slice(0, 3000),
+            state: data.state,
+            author: data.user?.login,
+            url: data.html_url,
+            createdAt: data.created_at,
+            updatedAt: data.updated_at,
+          }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "github-markNotificationRead": tool({
+      description:
+        "Mark a single notification thread as read. Get the thread ID from github-listNotifications. The notification will no longer appear in the default (unread) feed.",
+      parameters: z.object({
+        threadId: z.string().describe("Notification thread ID from github-listNotifications"),
+      }),
+      execute: async (args) => {
+        const { threadId } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "github",
+            action: "github-markNotificationRead",
+            risk: "write",
+            title: "Mark notification read",
+            preview: `Mark notification ${threadId} as read`,
+            confirmText: "Mark as read",
+          },
+          args,
+          async () => {
+            try {
+              await gh<undefined>(`/notifications/threads/${encodeURIComponent(threadId)}`, {
+                method: "PATCH",
+                body: JSON.stringify({}),
+              })
+              return { ok: true, message: `Notification ${threadId} marked as read.` }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
+
+    "github-getFileContents": tool({
+      description:
+        "Get the contents of a single file from a GitHub repository. Returns the decoded text content and metadata. Use this to read source files, configs, READMEs, etc.",
+      parameters: z.object({
+        owner: z.string().describe("Repository owner"),
+        repo: z.string().describe("Repository name"),
+        path: z.string().min(1).describe("File path within the repository (e.g. 'README.md' or 'src/index.ts')"),
+        branch: z.string().optional().describe("Branch name (defaults to the repository default branch)"),
+      }),
+      execute: async ({ owner, repo, path, branch }) => {
+        try {
+          const params = new URLSearchParams()
+          if (branch) params.set("ref", branch)
+          const encodedPath = path.split("/").map(encodeURIComponent).join("/")
+          const data = await gh<{
+            name: string
+            path: string
+            content?: string
+            encoding?: string
+            size: number
+            sha: string
+            html_url: string
+            type: string
+          }>(`/repos/${owner}/${repo}/contents/${encodedPath}${params.size ? `?${params}` : ""}`)
+
+          if (data.type !== "file") {
+            return { error: `Path '${path}' is a ${data.type}, not a file. Use a file path.` }
+          }
+
+          let content = ""
+          if (data.content && data.encoding === "base64") {
+            content = Buffer.from(data.content, "base64").toString("utf8")
+          }
+
+          return {
+            name: data.name,
+            path: data.path,
+            size: data.size,
+            sha: data.sha,
+            url: data.html_url,
+            content: content.slice(0, 20000),
+            truncated: content.length > 20000,
+          }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "github-listCommits": tool({
+      description: "List commits in a GitHub repository. Returns commit SHA, author, date, and message.",
+      parameters: z.object({
+        owner: z.string().describe("Repository owner"),
+        repo: z.string().describe("Repository name"),
+        branch: z.string().optional().describe("Branch name to list commits from (defaults to default branch)"),
+        limit: z.number().int().min(1).max(30).default(10).describe("Max commits to return"),
+      }),
+      execute: async ({ owner, repo, branch, limit }) => {
+        try {
+          const params = new URLSearchParams({ per_page: String(limit) })
+          if (branch) params.set("sha", branch)
+          const commits = await gh<
+            {
+              sha: string
+              commit: { message: string; author: { name: string; date: string } }
+              author: { login: string; avatar_url: string } | null
+              html_url: string
+            }[]
+          >(`/repos/${owner}/${repo}/commits?${params}`)
+          if (commits.length === 0) return { commits: [], message: "No commits found." }
+          return {
+            count: commits.length,
+            commits: commits.map((c) => ({
+              sha: c.sha.slice(0, 7),
+              fullSha: c.sha,
+              message: c.commit.message.split("\n")[0],
+              author: c.author?.login ?? c.commit.author.name,
+              date: c.commit.author.date,
+              url: c.html_url,
+            })),
+          }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "github-listWorkflows": tool({
+      description:
+        "List GitHub Actions workflows and their current status for a repository. Returns workflow name, state (active/disabled), and latest run info if available.",
+      parameters: z.object({
+        owner: z.string().describe("Repository owner"),
+        repo: z.string().describe("Repository name"),
+        limit: z.number().int().min(1).max(20).default(10).describe("Max workflows to return"),
+      }),
+      execute: async ({ owner, repo, limit }) => {
+        try {
+          const workflows = await gh<{
+            total_count: number
+            workflows?: {
+              id: number
+              name: string
+              path: string
+              state: string
+              created_at: string
+              updated_at: string
+              html_url: string
+              badge_url?: string
+            }[]
+          }>(`/repos/${owner}/${repo}/actions/workflows?per_page=${limit}`)
+          const list = (workflows.workflows ?? []).map((w) => ({
+            id: w.id,
+            name: w.name,
+            path: w.path,
+            state: w.state,
+            updated: w.updated_at,
+            url: w.html_url,
+          }))
+          if (list.length === 0) return { workflows: [], message: "No workflows found." }
+          return { count: list.length, workflows: list }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "github-markAllNotificationsRead": tool({
+      description:
+        "Mark ALL notifications as read for the authenticated user. This is a bulk action — always confirm with the user before calling. Use when the user explicitly says to clear all notifications.",
+      parameters: z.object({}),
+      execute: async (args) => {
+        return gateWrite(
+          ctx,
+          {
+            connector: "github",
+            action: "github-markAllNotificationsRead",
+            risk: "write",
+            title: "Mark all notifications read",
+            preview: "This will mark ALL GitHub notifications as read. This cannot be undone.",
+            confirmText: "Mark all as read",
+          },
+          args,
+          async () => {
+            try {
+              await gh<undefined>("/notifications", {
+                method: "PUT",
+                body: JSON.stringify({}),
+              })
+              return { ok: true, message: "All notifications marked as read." }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
   }
 }
 
@@ -691,15 +1061,14 @@ export const githubDef: ConnectorDef = {
   name: "GitHub",
   category: "engineering",
   icon: "github",
-  description:
-    "View and manage repositories, files, pull requests, and issues.",
+  description: "View and manage repositories, files, pull requests, and issues.",
   readOnlyByDefault: false,
   auth: {
     kind: "oauth2",
     authUrl: "https://github.com/login/oauth/authorize",
     tokenUrl: "https://github.com/login/oauth/access_token",
     // GitHub tokens do not expire by default — no expiresAt stored
-    scopes: ["repo", "read:user"],
+    scopes: ["repo", "read:user", "notifications"],
     clientIdEnv: "GITHUB_INTEGRATIONS_CLIENT_ID",
     clientSecretEnv: "GITHUB_INTEGRATIONS_CLIENT_SECRET",
     redirectPath: "/api/integrations/callback/github",
@@ -711,6 +1080,7 @@ export const githubDef: ConnectorDef = {
       "Application name: Yomi",
       "Homepage URL: ${BACKEND_URL}",
       "Authorization callback URL: ${BACKEND_URL}/api/integrations/callback/github",
+      "Request scopes: repo, read:user, notifications",
       "Click Register application, then copy the Client ID and Client Secret",
     ],
     collect: [

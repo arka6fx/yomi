@@ -234,6 +234,10 @@ function getSubscription() {
   return app().request("/api/billing/subscription")
 }
 
+function getUsageSummary() {
+  return app().request("/api/billing/usage-summary")
+}
+
 function sendWebhook(body: Record<string, unknown>, headers?: Record<string, string>) {
   const raw = JSON.stringify(body)
   return app().request("/api/billing/webhook", {
@@ -349,7 +353,7 @@ describe("Dodo billing — plan catalog", () => {
     }
   })
 
-  it("lists all subscription plans with credits and Explore trial copy", async () => {
+  it("lists all subscription plans with credit-oriented feature copy", async () => {
     const res = await app().request("/api/billing/plans")
     const body = await res.json() as any
 
@@ -359,13 +363,16 @@ describe("Dodo billing — plan catalog", () => {
     const explore = body.plans.find((plan: any) => plan.key === "explore")
     expect(explore.amountCents).toBe(0)
     expect(explore.includedCredits).toBe(100)
-    expect(explore.features).toContain("100 AI chats during trial")
     expect(explore.features).toContain("100 trial credits")
+    expect(explore.features).toContain("Screen-aware AI and voice")
+    expect(explore.features).toContain("Unlimited app connectors")
+    expect(explore.features).toContain("30-day free trial")
 
     const pro = body.plans.find((plan: any) => plan.key === "pro")
     expect(pro.amountCents).toBe(1499)
     expect(pro.includedCredits).toBe(2500)
     expect(pro.features).toContain("2,500 credits / month")
+    expect(pro.features).toContain("Credit packs available")
 
     const max = body.plans.find((plan: any) => plan.key === "max")
     expect(max.amountCents).toBe(3999)
@@ -643,7 +650,7 @@ describe("Dodo billing — subscription summary", () => {
     }
   })
 
-  it("returns plan limits, credit balance, credit consumption, packs, and per-request credit activity", async () => {
+  it("returns plan limits, credit balance, packs, and sanitized credit totals", async () => {
     const usageAt = new Date("2026-06-16T10:30:00Z")
     mockState.connectedProviders = ["github", "slack"]
     mockState.creditSummary = {
@@ -726,17 +733,75 @@ describe("Dodo billing — subscription summary", () => {
     expect(body.features.analyze).toEqual({ used: 1, limit: 400 })
     expect(body.tokensUsedThisPeriod).toBe(150)
     expect(body.credits.balance).toBe(497)
-    expect(body.creditConsumption).toEqual({ request_chat: 2, analyze: 1 })
+    expect(body.creditConsumption).toBeUndefined()
     expect(body.creditPacks.map((pack: any) => pack.key)).toEqual(["credits_500", "credits_2000", "credits_6000"])
-    expect(body.creditTransactions[0]).toMatchObject({
-      id: "tx_consume_1",
-      type: "consume",
-      amount: -1,
-      balanceAfter: 497,
-      reason: "chat usage",
-      usageEventId: "usage_123456789",
-      usageKind: "request_chat",
-      usageCreditsCharged: 1,
+    expect(body.creditTransactions).toBeUndefined()
+  })
+
+  it("returns sanitized usage summary for the dashboard", async () => {
+    const usageAt = new Date("2026-06-16T10:30:00Z")
+    mockState.creditSummary = {
+      balance: 497,
+      lifetimeGranted: 3000,
+      lifetimeConsumed: 503,
+      lifetimeRefunded: 0,
+      expiringSoon: 25,
+      expiringSoonAt: new Date("2026-06-20T00:00:00Z"),
+    }
+    mockState.recentCreditTransactions = [
+      {
+        id: "tx_consume_1",
+        type: "consume",
+        amount: -1,
+        balanceAfter: 497,
+        reason: "chat usage",
+        usageEventId: "usage_123456789",
+        usageKind: "request_chat",
+        usageCreditsCharged: 1,
+        usageCreatedAt: usageAt,
+        createdAt: usageAt,
+      },
+      {
+        id: "tx_grant_1",
+        type: "grant",
+        amount: 500,
+        balanceAfter: 500,
+        reason: "500 credits purchase",
+        usageEventId: null,
+        usageKind: null,
+        usageCreditsCharged: null,
+        usageCreatedAt: null,
+        createdAt: new Date("2026-06-16T10:00:00Z"),
+      },
+    ]
+    mockState.dbSelectQueue = [
+      [{ creditsCharged: 3 }],
+      [{ date: "2026-06-16", credits: 3 }],
+    ]
+
+    const res = await getUsageSummary()
+    const body = await res.json() as any
+
+    expect(res.status).toBe(200)
+    expect(body.credits).toMatchObject({
+      remaining: 497,
+      included: 2500,
+      used: 3,
+      totalAvailableThisPeriod: 500,
+      expiringSoon: 25,
+    })
+    expect(body.monthlyUsage.days).toEqual([{ date: "2026-06-16", credits: 3 }])
+    expect(body.recentActivity[0]).toEqual({
+      id: "activity-0-1781605800000",
+      label: "Desktop assistant",
+      category: "desktop_assistant",
+      credits: 1,
+      createdAt: usageAt.toISOString(),
+    })
+    expect(body.recentActivity[1]).toMatchObject({
+      label: "Credits Added",
+      category: "credits_added",
+      credits: 500,
     })
   })
 })

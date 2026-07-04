@@ -1,4 +1,4 @@
-import { boolean, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core"
+import { boolean, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core"
 
 // Better Auth core tables — text PKs to match Better Auth's default ID generation
 export const user = pgTable("user", {
@@ -33,6 +33,14 @@ export const user = pgTable("user", {
   agentSoul: text("agent_soul"),
   // Onboarding state machine: "unprompted" -> "awaiting" -> "done".
   soulOnboarding: text("soul_onboarding").notNull().default("unprompted"),
+  deletedAt: timestamp("deleted_at"),
+  privacyPreferences: jsonb("privacy_preferences").notNull().default({}),
+  consentVersion: text("consent_version"),
+  consentTimestamp: timestamp("consent_timestamp"),
+  privacyPolicyVersion: text("privacy_policy_version"),
+  termsVersion: text("terms_version"),
+  lastExportAt: timestamp("last_export_at"),
+  exportCount: integer("export_count").notNull().default(0),
 })
 
 export const session = pgTable("session", {

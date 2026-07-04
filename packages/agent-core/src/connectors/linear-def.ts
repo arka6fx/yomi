@@ -478,6 +478,202 @@ function createLinearToolsFrom(provider: string) {
           }
         },
       }),
+
+      "linear-listStates": tool({
+        description: "List all workflow states (e.g. Todo, In Progress, Done) for a team. Use this before updating an issue's state to find valid state names.",
+        parameters: z.object({
+          teamName: z.string().describe("Team name to list states for"),
+        }),
+        execute: async ({ teamName }) => {
+          try {
+            const token = await getToken()
+            const query = `
+              query ListTeamStates($name: String!) {
+                teams(filter: { name: { containsIgnoreCase: $name } }, first: 1) {
+                  nodes {
+                    id
+                    name
+                    states { nodes { id name type position color } }
+                  }
+                }
+              }
+            `
+            const data = await gqlLinear<{
+              teams: { nodes: { id: string; name: string; states: { nodes: { id: string; name: string; type: string; position: number; color?: string }[] } }[] }
+            }>(token, query, { name: teamName })
+            const team = data.teams.nodes[0]
+            if (!team) return { error: `Team not found: ${teamName}` }
+            const states = team.states.nodes.map((s) => ({
+              id: s.id,
+              name: s.name,
+              type: s.type,
+              position: s.position,
+            }))
+            return { team: team.name, count: states.length, states }
+          } catch (err) {
+            return connectorError(err)
+          }
+        },
+      }),
+
+      "linear-createLabel": tool({
+        description:
+          "Create a new label in a Linear team. Labels are used to categorize and filter issues.",
+        parameters: z.object({
+          teamName: z.string().describe("Team name to create the label in"),
+          name: z.string().describe("Label name"),
+          color: z.string().optional().describe("Label color as hex (e.g. '#ff0000')"),
+          description: z.string().optional().describe("Label description"),
+        }),
+        execute: async (args) => {
+          const { teamName, name, color, description } = args
+          return gateWrite(
+            ctx,
+            {
+              connector: provider,
+              action: "linear-createLabel",
+              risk: "write",
+              title: `Create Linear label: ${name}`,
+              preview: `Create label "${name}" in team ${teamName}`,
+              confirmText: "Create label",
+            },
+            args,
+            async () => {
+              try {
+                const token = await getToken()
+                const teamQuery = `
+                  query GetTeam($name: String!) {
+                    teams(filter: { name: { containsIgnoreCase: $name } }, first: 1) {
+                      nodes { id name }
+                    }
+                  }
+                `
+                const teamData = await gqlLinear<{
+                  teams: { nodes: { id: string; name: string }[] }
+                }>(token, teamQuery, { name: teamName })
+                const team = teamData.teams.nodes[0]
+                if (!team) return { error: `Team not found: ${teamName}` }
+
+                const mutation = `
+                  mutation CreateLabel($name: String!, $teamId: String!, $color: String, $description: String) {
+                    issueLabelCreate(input: { name: $name, teamId: $teamId, color: $color, description: $description }) {
+                      success
+                      label { id name }
+                    }
+                  }
+                `
+                const result = await gqlLinear<{
+                  issueLabelCreate: { success: boolean; label: { id: string; name: string } }
+                }>(token, mutation, { name, teamId: team.id, color: color ?? null, description: description ?? null })
+
+                if (!result.issueLabelCreate.success) return { error: "Label creation failed" }
+                return { ok: true, id: result.issueLabelCreate.label.id, name: result.issueLabelCreate.label.name }
+              } catch (err) {
+                return connectorError(err)
+              }
+            },
+          )
+        },
+      }),
+
+      "linear-deleteIssue": tool({
+        description:
+          "Permanently delete a Linear issue by its identifier. This CANNOT be undone — always confirm with the user.",
+        parameters: z.object({
+          identifier: z.string().describe("Issue identifier like ENG-123"),
+        }),
+        execute: async (args) => {
+          const { identifier } = args
+          return gateWrite(
+            ctx,
+            {
+              connector: provider,
+              action: "linear-deleteIssue",
+              risk: "irreversible",
+              title: `Delete Linear issue ${identifier}`,
+              preview: `Permanently delete issue ${identifier}. This CANNOT be undone.`,
+              confirmText: "Delete issue",
+            },
+            args,
+            async () => {
+              try {
+                const token = await getToken()
+                const getQuery = `
+                  query GetIssueId($id: String!) {
+                    issue(id: $id) { id identifier }
+                  }
+                `
+                const issueData = await gqlLinear<{ issue: { id: string; identifier: string } }>(
+                  token, getQuery, { id: identifier }
+                )
+
+                const mutation = `
+                  mutation DeleteIssue($id: String!) {
+                    issueDelete(id: $id) { success }
+                  }
+                `
+                const result = await gqlLinear<{ issueDelete: { success: boolean } }>(
+                  token, mutation, { id: issueData.issue.id },
+                )
+
+                if (!result.issueDelete.success) return { error: "Delete failed" }
+                return { ok: true, identifier: issueData.issue.identifier, message: `Issue ${identifier} deleted.` }
+              } catch (err) {
+                return connectorError(err)
+              }
+            },
+          )
+        },
+      }),
+
+      "linear-listCycles": tool({
+        description: "List active and upcoming cycles for a team. Returns cycle name, start/end dates, and completion status.",
+        parameters: z.object({
+          teamName: z.string().describe("Team name to list cycles for"),
+        }),
+        execute: async ({ teamName }) => {
+          try {
+            const token = await getToken()
+            const query = `
+              query ListTeamCycles($name: String!) {
+                teams(filter: { name: { containsIgnoreCase: $name } }, first: 1) {
+                  nodes {
+                    id
+                    name
+                    cycles(first: 10, orderBy: startsAt) {
+                      nodes {
+                        id
+                        name
+                        startsAt
+                        endsAt
+                        completedAt
+                        progress
+                      }
+                    }
+                  }
+                }
+              }
+            `
+            const data = await gqlLinear<{
+              teams: { nodes: { id: string; name: string; cycles: { nodes: { id: string; name: string; startsAt: string; endsAt: string; completedAt?: string; progress?: number }[] } }[] }
+            }>(token, query, { name: teamName })
+            const team = data.teams.nodes[0]
+            if (!team) return { error: `Team not found: ${teamName}` }
+            const cycles = team.cycles.nodes.map((c) => ({
+              id: c.id,
+              name: c.name,
+              startsAt: c.startsAt,
+              endsAt: c.endsAt,
+              completed: c.completedAt !== null && c.completedAt !== undefined,
+              progress: c.progress ?? 0,
+            }))
+            if (cycles.length === 0) return { cycles: [], message: "No cycles found for this team." }
+            return { team: team.name, count: cycles.length, cycles }
+          } catch (err) {
+            return connectorError(err)
+          }
+        },
+      }),
     }
   }
 }

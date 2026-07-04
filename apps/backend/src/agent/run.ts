@@ -1,6 +1,6 @@
 import { eq, and, sql, desc, ilike, or } from "drizzle-orm"
 import { generateText } from "ai"
-import { db, ragChunks, ragDocuments, ragSources, memoryEntries } from "@yomi/db"
+import { db, ragSources, memoryEntries } from "@yomi/db"
 import { ConnectorRegistry, createModel, runAgentLoop, type AgentMessage } from "@yomi/agent-core"
 import { formatAgentSoul } from "@yomi/shared"
 import {
@@ -9,6 +9,7 @@ import {
 } from "../services/integration-tokens.js"
 import { hasBillablePlanAccess } from "../entitlements.js"
 import { chargeUsage } from "../services/metering.js"
+import { checkConsent } from "../services/privacy/checks.js"
 import * as authSchema from "../auth-schema.js"
 import { upsertMemory } from "../routes/memory.js"
 
@@ -311,10 +312,15 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
 
   const appUrl = process.env["YOMI_APP_URL"] ?? "https://yomi.arka6fx.com"
 
+  const [memoryConsent, cloudMemoryConsent] = await Promise.all([
+    checkConsent(opts.userId, "memory"),
+    checkConsent(opts.userId, "cloud_memory"),
+  ])
+
   const [memoryContext, ragContext, profile] = await Promise.all([
-    fetchMemoryContext(opts.userId, opts.text),
-    fetchRagContext(opts.userId, opts.text),
-    fetchMemoryProfile(opts.userId),
+    memoryConsent.allowed ? fetchMemoryContext(opts.userId, opts.text) : "",
+    cloudMemoryConsent.allowed ? fetchRagContext(opts.userId, opts.text) : "",
+    memoryConsent.allowed ? fetchMemoryProfile(opts.userId) : { staticProfile: "", dynamicProfile: "" },
   ])
 
   let text: string
@@ -347,7 +353,9 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     }
   }
 
-  await captureBackendMemory(opts.userId, opts.text, text).catch(() => {})
+  if (memoryConsent.allowed) {
+    await captureBackendMemory(opts.userId, opts.text, text).catch(() => {})
+  }
 
   // Usage was already recorded and credits consumed by chargeUsage() up front.
   return { text }

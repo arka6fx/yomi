@@ -3,6 +3,7 @@ import { generateText } from "ai"
 import { eq, and, lt } from "drizzle-orm"
 import { db, platformConnections, linkingCodes, telegramLinkTokens, usageEvents } from "@yomi/db"
 import type { PlatformType, GatewayMessage, GatewaySessionInfo } from "@yomi/shared"
+import { checkConsent } from "../services/privacy/checks.js"
 import { createModel, type AgentMessage } from "@yomi/agent-core"
 import type { PlatformAdapter } from "./platform-adapter.js"
 import { TelegramAdapter } from "./platforms/telegram.js"
@@ -731,6 +732,8 @@ export class GatewayRunner {
     console.warn(`[gateway] resolved yomiUserId=${yomiUserId ?? "unknown"} text="${msg.text.slice(0, 60)}"`)
     if (!yomiUserId) return
 
+    const conversationConsent = await checkConsent(yomiUserId, "conversation_history").catch(() => ({ allowed: true, reason: null }))
+
     const session = this.getOrCreateSession(msg)
     session.messageCount++
     session.lastActivityAt = Date.now()
@@ -877,7 +880,7 @@ export class GatewayRunner {
           reason: "telegram image analysis",
           metadata: { imageMimeType: msg.imageMimeType ?? null },
         })
-        if (persistentSession) {
+        if (conversationConsent.allowed && persistentSession) {
           await appendAgentTurn({
             sessionId: persistentSession.id,
             userId: yomiUserId,
@@ -935,7 +938,7 @@ export class GatewayRunner {
         return
       }
       if (result.text) {
-        if (persistentSession) {
+        if (conversationConsent.allowed && persistentSession) {
           await appendAgentTurn({
             sessionId: persistentSession.id,
             userId: yomiUserId,

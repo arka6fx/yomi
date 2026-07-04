@@ -2,6 +2,7 @@ import { Hono } from "hono"
 import { eq, and } from "drizzle-orm"
 import { db, mcpConnections } from "@yomi/db"
 import { authenticate, getAuth } from "../auth.js"
+import { requireConsent } from "../middleware/consent.js"
 import {
   encryptTokens,
   decryptTokens,
@@ -409,7 +410,7 @@ integrationsRouter.get("/callback/:id", async (c) => {
 
 // ── Connect: API key (POST) ──────────────────────────────────────────────────
 
-integrationsRouter.post("/connect/api-key/:id", authenticate, async (c) => {
+integrationsRouter.post("/connect/api-key/:id", authenticate, requireConsent("connector_data"), async (c) => {
   const id = c.req.param("id") ?? ""
   const userId = c.get("user").id
   const def = getConnectorDef(id)
@@ -441,7 +442,7 @@ integrationsRouter.post("/connect/api-key/:id", authenticate, async (c) => {
 
 // ── Connect: Connection string / DSN (POST) ──────────────────────────────────
 
-integrationsRouter.post("/connect/dsn/:id", authenticate, async (c) => {
+integrationsRouter.post("/connect/dsn/:id", authenticate, requireConsent("connector_data"), async (c) => {
   const id = c.req.param("id") ?? ""
   const userId = c.get("user").id
   const def = getConnectorDef(id)

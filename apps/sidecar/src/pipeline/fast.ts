@@ -12,7 +12,7 @@ import {
   writeSessionTurn,
   type MemoryContextBundle,
 } from "../memory/subsystem.js"
-import { reserveInteraction } from "../usage/reserve.js"
+import { finalizeInteractionUsage, reserveInteraction } from "../usage/reserve.js"
 
 const MODEL = process.env.AI_CREDITS_FAST_MODEL || "gpt-5.5-mini"
 
@@ -216,6 +216,22 @@ function maxOutputTokensFor(text: string): number {
   return 800
 }
 
+type StreamUsageStats = {
+  inputTokens: number
+  outputTokens: number
+}
+
+function streamUsage(event: unknown): StreamUsageStats | null {
+  if (typeof event !== "object" || event === null) return null
+  if (!("type" in event) || event.type !== "finish") return null
+  if (!("usage" in event) || typeof event.usage !== "object" || event.usage === null) return null
+  const usage = event.usage as { promptTokens?: unknown; completionTokens?: unknown }
+  return {
+    inputTokens: typeof usage.promptTokens === "number" ? usage.promptTokens : 0,
+    outputTokens: typeof usage.completionTokens === "number" ? usage.completionTokens : 0,
+  }
+}
+
 async function* answerPipeline(
   text: string,
   screenshotB64?: string,
@@ -225,6 +241,7 @@ async function* answerPipeline(
   signal?: AbortSignal,
   history?: { role: "user" | "assistant"; text: string }[],
   preloadedMemory?: Promise<MemoryContextBundle>,
+  telemetry?: StreamUsageStats,
 ): AsyncGenerator<SseEvent> {
   const content: Array<{ type: "text"; text: string } | { type: "image"; image: string }> = [
     { type: "text", text },
@@ -367,6 +384,11 @@ async function* answerPipeline(
           const errMsg = chunk.error instanceof Error ? chunk.error.message : String(chunk.error)
           throw new Error(`LLM stream error: ${errMsg}`)
         }
+        const usage = streamUsage(chunk)
+        if (usage && telemetry) {
+          telemetry.inputTokens = usage.inputTokens
+          telemetry.outputTokens = usage.outputTokens
+        }
       }
     } catch (err) {
       if (signal?.aborted) return
@@ -418,6 +440,7 @@ export async function* fastPipeline(
       ? loadMemoryContext(req.text.trim())
       : undefined
 
+  let usageEventId: string | undefined
   if (!req.skipReserve) {
     const reservation = await reserveInteraction("chat")
     if (!reservation.ok) {
@@ -430,6 +453,7 @@ export async function* fastPipeline(
       }
       return
     }
+    usageEventId = reservation.usageEventId
   }
 
   let text: string | null
@@ -456,6 +480,8 @@ export async function* fastPipeline(
 
   try {
     let output = ""
+    const startedAt = Date.now()
+    const telemetry: StreamUsageStats = { inputTokens: 0, outputTokens: 0 }
     for await (const event of answerPipeline(
       text,
       req.screenshot_b64,
@@ -465,6 +491,7 @@ export async function* fastPipeline(
       signal,
       req.history,
       earlyMemory,
+      telemetry,
     )) {
       if (signal?.aborted) break
       if (event.type === "llm_chunk") output += event.text
@@ -477,8 +504,29 @@ export async function* fastPipeline(
         console.warn("[yomi/fast] memory capture failed:", err),
       )
     }
+    finalizeInteractionUsage({
+      usageEventId,
+      model: MODEL,
+      inputTokens: telemetry.inputTokens,
+      outputTokens: telemetry.outputTokens,
+      status: signal?.aborted ? "cancelled" : "done",
+      metadata: {
+        endpoint: "sidecar.fast",
+        route: "fast",
+        latencyMs: Date.now() - startedAt,
+        outputChars: output.length,
+        hasScreen: Boolean(req.screenshot_b64 || req.screenshots?.length),
+        tts: req.tts !== false,
+      },
+    })
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown pipeline error"
+    finalizeInteractionUsage({
+      usageEventId,
+      model: MODEL,
+      status: "error",
+      metadata: { endpoint: "sidecar.fast", route: "fast", error: message },
+    })
     yield { type: "error", message }
   }
 }

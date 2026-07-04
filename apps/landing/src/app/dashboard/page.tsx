@@ -19,21 +19,18 @@ import {
   ReceiptText,
   Plug,
   MessageSquare,
-  Mic,
-  ScanLine,
-  Bot,
   Plus,
   ExternalLink,
   Zap,
   Brain,
   Clock,
   Activity,
-  type LucideIcon,
 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
 import { TelegramIcon } from "@/components/TelegramIcon"
 import { MemoryManager } from "@/components/dashboard/MemoryManager"
+import { PrivacyManager } from "@/components/dashboard/PrivacyManager"
 import { SchedulesManager } from "@/components/dashboard/SchedulesManager"
 import { ConversationManager } from "@/components/dashboard/ConversationManager"
 import { StatusManager } from "@/components/dashboard/StatusManager"
@@ -94,7 +91,6 @@ type Sub = {
     expiringSoon: number
     expiringSoonAt: string | null
   }
-  creditConsumption?: Record<string, number>
   creditsUsed?: number
   totalCredits?: number
   creditPacks?: Array<{
@@ -105,44 +101,35 @@ type Sub = {
     priceDisplay: string
     currency: string
   }>
-  creditTransactions?: Array<{
+}
+
+type UsageSummary = {
+  plan: { key: string; name: string; status: string; isOwner: boolean }
+  credits: {
+    remaining: number
+    included: number
+    used: number
+    totalAvailableThisPeriod: number
+    resetAt: string | null
+    expiringSoon: number
+    expiringSoonAt: string | null
+  }
+  monthlyUsage: { days: Array<{ date: string; credits: number }> }
+  recentActivity: Array<{
     id: string
-    type: string
-    amount: number
-    balanceAfter: number
-    reason: string | null
-    usageEventId: string | null
-    usageKind: string | null
-    usageCreditsCharged: number | null
-    usageCreatedAt: string | null
+    label: string
+    category: string
+    credits: number
     createdAt: string
   }>
+  actions: { canBuyCredits: boolean; canUpgrade: boolean; upgradeUrl: string }
 }
 
-const CREDIT_USAGE_LABELS: Record<string, string> = {
-  request_chat: "AI chat",
-  request_voice: "Voice",
-  analyze: "Image/screen analyze",
-  bot_message: "Bot message",
-}
-
-function creditActivityTitle(tx: NonNullable<Sub["creditTransactions"]>[number]) {
-  if (tx.type === "grant") return "Credits added"
-  if (tx.type === "consume") return tx.usageKind ? `Used on ${CREDIT_USAGE_LABELS[tx.usageKind] ?? tx.usageKind}` : "Credits used"
-  return tx.type
-}
-
-function creditActivityDetail(tx: NonNullable<Sub["creditTransactions"]>[number]) {
-  const happenedAt = new Date(tx.usageCreatedAt ?? tx.createdAt).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  })
-  const parts = [happenedAt]
-  if (tx.reason) parts.push(tx.reason)
-  if (tx.usageEventId) parts.push(`request ${tx.usageEventId.slice(0, 8)}`)
-  return parts.join(" · ")
+function resetLabel(value?: string | null) {
+  if (!value) return "Reset date unavailable"
+  const date = new Date(value)
+  const days = Math.max(0, Math.ceil((date.getTime() - Date.now()) / 86_400_000))
+  return days > 0 ? `Resets in ${days} day${days === 1 ? "" : "s"}` : "Resets today"
 }
 
 const PLANS = [
@@ -213,6 +200,7 @@ function DashboardContent() {
   const router = useRouter()
 
   const [sub, setSub] = useState<Sub | null>(null)
+  const [usageSummary, setUsageSummary] = useState<UsageSummary | null>(null)
   const [subPending, setSubPending] = useState(true)
   const [subLoadError, setSubLoadError] = useState("")
   const [billingLoading, setBillingLoading] = useState<string | null>(null)
@@ -221,7 +209,7 @@ function DashboardContent() {
   const [desiredPlan, setDesiredPlan] = useState<string | null>(null)
   const [cancelling, setCancelling] = useState(false)
 
-  const [activeTab, setActiveTab] = useState<"account" | "integrations" | "memory" | "schedules" | "conversation" | "status">("account")
+  const [activeTab, setActiveTab] = useState<"account" | "integrations" | "memory" | "schedules" | "conversation" | "status" | "privacy">("account")
   const [connectedProviders, setConnectedProviders] = useState<string[]>([])
   const [integrationHealth, setIntegrationHealth] = useState<IntegrationHealth[]>([])
   const [integrationLoadingId, setIntegrationLoadingId] = useState<string | null>(null)
@@ -271,6 +259,13 @@ function DashboardContent() {
         setSubLoadError("Couldn't load billing and usage data. Please retry in a moment.")
       })
       .finally(() => setSubPending(false))
+
+    fetch("/api/billing/usage-summary", {
+      headers: { Authorization: `Bearer ${session.session.token}` },
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: UsageSummary | null) => setUsageSummary(d))
+      .catch(() => setUsageSummary(null))
   }, [session])
 
   // Poll billing data every 30s to keep usage meters current
@@ -285,6 +280,10 @@ function DashboardContent() {
           const d: Sub = await r.json()
           setSub(d)
         }
+        const summaryRes = await fetch("/api/billing/usage-summary", {
+          headers: { Authorization: `Bearer ${session.session.token}` },
+        })
+        if (summaryRes.ok) setUsageSummary(await summaryRes.json() as UsageSummary)
       } catch { /* ignore polling errors */ }
     }, 30_000)
     return () => clearInterval(interval)
@@ -539,6 +538,14 @@ function DashboardContent() {
   const isOwner = sub?.role === "owner"
   const currentPlanKey = sub?.plan ?? "explore"
   const currentPlanIdx = PLANS.findIndex((p) => p.key === currentPlanKey)
+  const creditRemaining = usageSummary?.credits.remaining ?? sub?.credits?.balance ?? 0
+  const creditUsed = usageSummary?.credits.used ?? sub?.creditsUsed ?? 0
+  const creditTotal = usageSummary?.credits.totalAvailableThisPeriod ?? sub?.totalCredits ?? creditRemaining
+  const creditIncluded = usageSummary?.credits.included ?? Number(PLANS.find((p) => p.key === currentPlanKey)?.features[0]?.match(/[\d,]+/)?.[0]?.replace(/,/g, "") ?? 0)
+  const resetAt = usageSummary?.credits.resetAt ?? sub?.resetAt
+  const trendDays = usageSummary?.monthlyUsage.days.slice(-14) ?? []
+  const trendMax = Math.max(...trendDays.map((d) => d.credits), 1)
+  const recentActivity = usageSummary?.recentActivity ?? []
 
   return (
     <div className="site-texture-bg min-h-dvh text-foreground">
@@ -586,7 +593,7 @@ function DashboardContent() {
         {/* Tab switcher — horizontally scrollable on small screens */}
         <div className="-mx-4 sm:mx-0 overflow-x-auto no-scrollbar border-b border-border">
           <div className="flex gap-1 px-4 sm:px-0 min-w-max">
-            {(["account", "integrations", "memory", "schedules", "conversation", "status"] as const).map((tab) => (
+            {(["account", "integrations", "memory", "schedules", "conversation", "status", "privacy"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -602,6 +609,7 @@ function DashboardContent() {
                 {tab === "schedules" && <Clock size={13} />}
                 {tab === "conversation" && <MessageSquare size={13} />}
                 {tab === "status" && <Activity size={13} />}
+                {tab === "privacy" && <Shield size={13} />}
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
                 {tab === "integrations" && connectedProviders.length > 0 && (
                   <span className="ml-1 bg-primary/20 text-primary text-xs px-1.5 py-0.5 rounded-full leading-none">
@@ -651,20 +659,15 @@ function DashboardContent() {
                       Chat with Yomi from any device, right inside Telegram.
                     </p>
                     <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                      {[
-                        { label: "Text", cost: "1 credit" },
-                        { label: "Voice", cost: "+2/min" },
-                        { label: "Image", cost: "+1" },
-                      ].map((c) => (
+                      {["Text chat", "Voice notes", "Image analysis"].map((label) => (
                         <span
-                          key={c.label}
-                          className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-1.5 py-0.5"
+                          key={label}
+                          className="inline-flex items-center rounded-md bg-muted/60 px-1.5 py-0.5"
                         >
-                          <span className="text-muted-foreground/70">{c.label}</span>
-                          <span className="font-medium text-foreground/80 tabular-nums">{c.cost}</span>
+                          {label}
                         </span>
                       ))}
-                      <span className="text-muted-foreground/60">· charged only when used</span>
+                      <span className="text-muted-foreground/60">· usage draws from your credit balance</span>
                     </div>
                   </div>
                 </div>
@@ -854,6 +857,17 @@ function DashboardContent() {
           </motion.div>
         )}
 
+        {/* Privacy tab */}
+        {activeTab === "privacy" && session && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <PrivacyManager token={session.session.token} />
+          </motion.div>
+        )}
+
         {/* Account tab content — only shown when account tab active */}
         {activeTab === "account" && <>
 
@@ -990,31 +1004,39 @@ function DashboardContent() {
           </div>
         </motion.div>
 
-        {/* Usage section — single credit meter */}
+        {/* Usage section — public credit abstraction */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.12 }}
         >
-          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-            <div className="flex items-start justify-between gap-6 mb-6">
+          <div className="overflow-hidden rounded-2xl border border-border bg-card">
+            <div className="p-5 sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-6 mb-6">
               <div>
                 <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
-                  Credits meter
+                  Credits remaining
                 </p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-light text-foreground tabular-nums">
-                    {sub?.creditsUsed ?? 0}
+                  <span className="text-4xl font-light text-foreground tabular-nums">
+                    {creditRemaining}
                   </span>
                   <span className="text-sm text-muted-foreground">
-                    of {sub?.totalCredits ?? sub?.credits?.balance ?? 0} credits used
+                    / {creditTotal || creditIncluded} available
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {sub?.credits?.balance ?? 0} credits available
-                  {sub?.plan === "explore" ? ". Extra credit packs unlock on Pro and Max." : ". Add credits any time on Pro or Max."}
+                  {creditIncluded.toLocaleString()} included monthly credits. {resetLabel(resetAt)}.
                 </p>
               </div>
+              <button
+                onClick={() => sub?.plan === "explore" ? handleUpgrade("pro") : sub?.creditPacks?.[0] && handleBuyCredits(sub.creditPacks[0].key)}
+                disabled={billingLoading !== null || creditLoading !== null}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+              >
+                {sub?.plan === "explore" ? <Crown size={13} /> : <Zap size={13} />}
+                {sub?.plan === "explore" ? "Upgrade" : "Add credits"}
+              </button>
             </div>
 
             {sub && (
@@ -1023,52 +1045,43 @@ function DashboardContent() {
                   <div className="h-3 rounded-full bg-muted overflow-hidden">
                     <div
                       className="h-full rounded-full bg-primary transition-all"
-                      style={{ width: `${Math.min(100, ((sub.creditsUsed ?? 0) / Math.max(sub.totalCredits ?? 1, 1)) * 100)}%` }}
+                      style={{ width: `${Math.min(100, (creditUsed / Math.max(creditTotal, 1)) * 100)}%` }}
                     />
                   </div>
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{sub.creditsUsed ?? 0} used</span>
-                    <span>{sub.credits?.balance ?? 0} remaining</span>
+                    <span>{creditUsed} used this period</span>
+                    <span>{creditRemaining} remaining</span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {([
-                    { label: "AI chat", cost: "1 credit", Icon: MessageSquare as LucideIcon },
-                    { label: "Telegram text", cost: "1 base credit", Icon: Bot as LucideIcon },
-                    { label: "Image/screen", cost: "+1 credit", Icon: ScanLine as LucideIcon },
-                    { label: "Voice input/output", cost: "+2 credits/min", Icon: Mic as LucideIcon },
-                  ]).map(({ label, cost, Icon }) => (
-                    <div key={label} className="rounded-xl border border-border bg-background/50 p-3">
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                        <Icon size={13} />
-                        {label}
-                      </div>
-                      <p className="text-sm font-medium text-foreground">{cost}</p>
+                <div className="grid gap-3 sm:grid-cols-[1fr_1.2fr]">
+                  <div className="rounded-xl border border-border bg-background/45 p-4">
+                    <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Monthly usage</p>
+                    <p className="mt-2 text-2xl font-light tabular-nums text-foreground">{creditUsed}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Credits used since the current period began.</p>
+                  </div>
+                  <div className="rounded-xl border border-border bg-background/45 p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Daily trend</p>
+                      <span className="text-xs text-muted-foreground">Last {trendDays.length || 0} days</span>
                     </div>
-                  ))}
-                </div>
-
-                {sub.creditConsumption && Object.keys(sub.creditConsumption).length > 0 && (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {([
-                      { key: "request_chat", label: "AI chat", Icon: MessageSquare as LucideIcon },
-                      { key: "request_voice", label: "Voice", Icon: Mic as LucideIcon },
-                      { key: "analyze", label: "Image/screen", Icon: ScanLine as LucideIcon },
-                      { key: "bot_message", label: "Telegram text", Icon: Bot as LucideIcon },
-                    ]).map(({ key, label, Icon }) => {
-                      const amount = sub.creditConsumption?.[key] ?? 0
-                      if (amount === 0) return null
-                      return (
-                        <div key={key} className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2">
-                          <Icon size={13} className="text-muted-foreground shrink-0" />
-                          <span className="text-xs text-muted-foreground truncate">{label}</span>
-                          <span className="text-sm font-medium text-foreground tabular-nums ml-auto">{amount}</span>
-                        </div>
-                      )
-                    })}
+                    {trendDays.length > 0 ? (
+                      <div className="flex h-16 items-end gap-1.5">
+                        {trendDays.map((day) => (
+                          <div key={day.date} className="flex min-w-0 flex-1 flex-col items-center gap-1">
+                            <div
+                              className="w-full rounded-t bg-primary/80"
+                              style={{ height: `${Math.max(4, (day.credits / trendMax) * 56)}px` }}
+                              title={`${day.date}: ${day.credits} credits`}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No usage yet this period.</p>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             )}
 
@@ -1125,6 +1138,7 @@ function DashboardContent() {
                 </span>
               </div>
             )}
+            </div>
           </div>
         </motion.div>
 
@@ -1138,7 +1152,7 @@ function DashboardContent() {
             <div className="flex flex-wrap items-start justify-between gap-6 mb-6">
               <div>
                 <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
-                  Credit packs and activity
+                  Credits and activity
                 </p>
                 <div className="flex items-center gap-3">
                   <WalletCards size={24} className="text-primary" />
@@ -1200,7 +1214,7 @@ function DashboardContent() {
               )}
             </div>
 
-            {(sub?.creditTransactions?.length ?? 0) > 0 && (
+            {recentActivity.length > 0 && (
               <div className="border-t border-border pt-4">
                 <div className="flex items-center gap-2 mb-3">
                   <ReceiptText size={14} className="text-muted-foreground" />
@@ -1209,21 +1223,20 @@ function DashboardContent() {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  {sub!.creditTransactions!.slice(0, 10).map((tx) => (
-                    <div key={tx.id} className="flex items-center justify-between gap-4 text-sm">
+                  {recentActivity.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between gap-4 text-sm">
                       <div className="min-w-0">
-                        <p className="text-foreground capitalize">{creditActivityTitle(tx)}</p>
+                        <p className="text-foreground">{item.label}</p>
                         <p className="text-xs text-muted-foreground">
-                          {creditActivityDetail(tx)}
+                          {new Date(item.createdAt).toLocaleString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}
                         </p>
                       </div>
-                      <div className="text-right">
-                        <p className={cn("tabular-nums", tx.amount >= 0 ? "text-emerald-400" : "text-muted-foreground")}>
-                          {tx.amount >= 0 ? "+" : ""}
-                          {tx.amount}
-                        </p>
-                        <p className="text-xs text-muted-foreground">{tx.balanceAfter} left</p>
-                      </div>
+                      <p className="shrink-0 tabular-nums text-muted-foreground">{item.credits} credits</p>
                     </div>
                   ))}
                 </div>

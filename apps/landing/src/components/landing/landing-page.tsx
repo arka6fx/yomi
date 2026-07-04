@@ -620,7 +620,7 @@ export function LandingPage() {
             Three ways to <span className="italic">interact</span>.
           </h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
-            Voice, type, or just press enter. Every interaction counts the same.
+            Voice, type, or just press enter. Yomi routes each request through the right context and model.
           </p>
         </div>
 
@@ -914,7 +914,7 @@ export function LandingPage() {
           viewport={{ once: true }}
           className="mt-8 text-center text-xs text-muted-foreground"
         >
-          * Credits: 1 per AI chat, +1 per image/screen, 2 per voice minute, 1 per Telegram message. Explore is a 30-day free trial; Pro and Max can buy extra credit packs.
+          * Credits are a simple usage balance. Explore is a 30-day free trial; Pro and Max can buy extra credit packs.
         </motion.p>
       </section>
 

@@ -271,9 +271,9 @@ export default function DocsPage() {
 
           <Section id="plans" eyebrow="Billing" title="Plans & credits">
             <p>
-              Every interaction draws from a single credit balance: 1 credit per AI chat, +1 per image/screen,
-              2 per voice minute, 1 per Telegram message. Each plan includes a monthly credit allowance. When you
-              run out, Explore upgrades to a paid plan and Pro/Max can top up with credit packs.
+              Every interaction draws from a single credit balance. Each plan includes a monthly credit allowance,
+              and your dashboard shows remaining credits, recent activity, and the next reset date. When you run
+              out, Explore upgrades to a paid plan and Pro/Max can top up with credit packs.
             </p>
             <div className="grid gap-4 sm:grid-cols-3">
               {[
@@ -299,8 +299,7 @@ export default function DocsPage() {
               ))}
             </div>
             <p className="text-sm">
-              Roughly: AI chats and Telegram messages cost 1 credit, image/screen analysis adds 1, and voice adds about
-              2 per minute. See <Link href="/pricing" className="text-primary hover:underline">pricing</Link> for the full breakdown.
+              Credits abstract away the underlying model, voice, vision, memory, and connector costs so Yomi can improve routing without changing the dashboard experience.
             </p>
           </Section>
 

@@ -1,7 +1,7 @@
 import { tool, type ToolSet } from "ai"
 import { z } from "zod"
 import type { ConnectorDef, ConnectorContext } from "./connector-def.js"
-import { connectorError } from "./connector-def.js"
+import { connectorError, gateWrite } from "./connector-def.js"
 import { GoogleGmailConnector } from "./google-gmail.js"
 
 function notConnectedError(): { error: string; hint: string } {
@@ -186,14 +186,29 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
       parameters: z.object({
         messageId: z.string().describe("The Gmail message ID to mark as read"),
       }),
-      execute: async ({ messageId }) => {
+      execute: async (args) => {
+        const { messageId } = args
         if (!gmail.isConnected()) return notConnectedError()
-        try {
-          await gmail.markAsRead(messageId)
-          return { ok: true, message: `Message ${messageId} marked as read.` }
-        } catch (err) {
-          return connectorError(err)
-        }
+        return gateWrite(
+          ctx,
+          {
+            connector: "google",
+            action: "gmail-markAsRead",
+            risk: "write",
+            title: `Mark email as read`,
+            preview: `Mark message ${messageId} as read`,
+            confirmText: "Mark as read",
+          },
+          args,
+          async () => {
+            try {
+              await gmail.markAsRead(messageId)
+              return { ok: true, message: `Message ${messageId} marked as read.` }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
       },
     }),
 
@@ -202,65 +217,125 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
       parameters: z.object({
         messageId: z.string().describe("The Gmail message ID to mark as unread"),
       }),
-      execute: async ({ messageId }) => {
+      execute: async (args) => {
+        const { messageId } = args
         if (!gmail.isConnected()) return notConnectedError()
-        try {
-          await gmail.markAsUnread(messageId)
-          return { ok: true, message: `Message ${messageId} marked as unread.` }
-        } catch (err) {
-          return connectorError(err)
-        }
+        return gateWrite(
+          ctx,
+          {
+            connector: "google",
+            action: "gmail-markAsUnread",
+            risk: "write",
+            title: `Mark email as unread`,
+            preview: `Mark message ${messageId} as unread`,
+            confirmText: "Mark as unread",
+          },
+          args,
+          async () => {
+            try {
+              await gmail.markAsUnread(messageId)
+              return { ok: true, message: `Message ${messageId} marked as unread.` }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
       },
     }),
 
     "gmail-archiveEmail": tool({
       description:
-        "Archive a Gmail message by removing it from the inbox (removes the INBOX label). IMPORTANT: Confirm with the user before archiving.",
+        "Archive a Gmail message by removing it from the inbox (removes the INBOX label).",
       parameters: z.object({
         messageId: z.string().describe("The Gmail message ID to archive"),
       }),
-      execute: async ({ messageId }) => {
+      execute: async (args) => {
+        const { messageId } = args
         if (!gmail.isConnected()) return notConnectedError()
-        try {
-          await gmail.archiveEmail(messageId)
-          return { ok: true, message: `Message ${messageId} archived.` }
-        } catch (err) {
-          return connectorError(err)
-        }
+        return gateWrite(
+          ctx,
+          {
+            connector: "google",
+            action: "gmail-archiveEmail",
+            risk: "write",
+            title: `Archive email`,
+            preview: `Archive message ${messageId} (removes from inbox)`,
+            confirmText: "Archive",
+          },
+          args,
+          async () => {
+            try {
+              await gmail.archiveEmail(messageId)
+              return { ok: true, message: `Message ${messageId} archived.` }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
       },
     }),
 
     "gmail-trashEmail": tool({
       description:
-        "Move a Gmail message to the trash. IMPORTANT: Always confirm with the user before calling this tool.",
+        "Move a Gmail message to the trash.",
       parameters: z.object({
         messageId: z.string().describe("The Gmail message ID to move to trash"),
       }),
-      execute: async ({ messageId }) => {
+      execute: async (args) => {
+        const { messageId } = args
         if (!gmail.isConnected()) return notConnectedError()
-        try {
-          await gmail.trashEmail(messageId)
-          return { ok: true, message: `Message ${messageId} moved to trash.` }
-        } catch (err) {
-          return connectorError(err)
-        }
+        return gateWrite(
+          ctx,
+          {
+            connector: "google",
+            action: "gmail-trashEmail",
+            risk: "write",
+            title: `Trash email`,
+            preview: `Move message ${messageId} to trash`,
+            confirmText: "Move to trash",
+          },
+          args,
+          async () => {
+            try {
+              await gmail.trashEmail(messageId)
+              return { ok: true, message: `Message ${messageId} moved to trash.` }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
       },
     }),
 
     "gmail-deletePermanently": tool({
       description:
-        "Permanently delete a Gmail message — this bypasses Trash and CANNOT be recovered. IMPORTANT: Always confirm with the user first, and prefer gmail-trashEmail unless they explicitly want permanent deletion.",
+        "Permanently delete a Gmail message — this bypasses Trash and CANNOT be recovered. Prefer gmail-trashEmail unless the user explicitly requests permanent deletion.",
       parameters: z.object({
         messageId: z.string().describe("The Gmail message ID to permanently delete"),
       }),
-      execute: async ({ messageId }) => {
+      execute: async (args) => {
+        const { messageId } = args
         if (!gmail.isConnected()) return notConnectedError()
-        try {
-          await gmail.deleteEmailPermanently(messageId)
-          return { ok: true, message: `Message ${messageId} permanently deleted.` }
-        } catch (err) {
-          return connectorError(err)
-        }
+        return gateWrite(
+          ctx,
+          {
+            connector: "google",
+            action: "gmail-deletePermanently",
+            risk: "irreversible",
+            title: `Permanently delete email`,
+            preview: `Permanently delete message ${messageId}. This CANNOT be undone.`,
+            confirmText: "Delete permanently",
+          },
+          args,
+          async () => {
+            try {
+              await gmail.deleteEmailPermanently(messageId)
+              return { ok: true, message: `Message ${messageId} permanently deleted.` }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
       },
     }),
 
@@ -291,6 +366,207 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
         } catch (err) {
           return connectorError(err)
         }
+      },
+    }),
+
+    "gmail-listLabels": tool({
+      description: "List all Gmail labels (both system and user-defined) with their ID, name, and type.",
+      parameters: z.object({}),
+      execute: async () => {
+        if (!gmail.isConnected()) return notConnectedError()
+        try {
+          const labels = await gmail.listLabels()
+          return {
+            count: labels.length,
+            labels: labels.map((l) => ({ id: l.id, name: l.name, type: l.type })),
+          }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "gmail-applyLabels": tool({
+      description: "Add or remove labels on a Gmail message. Use gmail-listLabels first to get available label IDs.",
+      parameters: z.object({
+        messageId: z.string().describe("The Gmail message ID to modify"),
+        addLabelIds: z.array(z.string()).optional().describe("Label IDs to add"),
+        removeLabelIds: z.array(z.string()).optional().describe("Label IDs to remove"),
+      }),
+      execute: async (args) => {
+        const { messageId, addLabelIds, removeLabelIds } = args
+        if (!gmail.isConnected()) return notConnectedError()
+        return gateWrite(
+          ctx,
+          {
+            connector: "google",
+            action: "gmail-applyLabels",
+            risk: "write",
+            title: `Apply labels to message`,
+            preview: [
+              `Message: ${messageId}`,
+              addLabelIds?.length ? `Add labels: ${addLabelIds.join(", ")}` : null,
+              removeLabelIds?.length ? `Remove labels: ${removeLabelIds.join(", ")}` : null,
+            ].filter(Boolean).join("\n"),
+            confirmText: "Apply labels",
+          },
+          args,
+          async () => {
+            try {
+              await gmail.applyLabels(messageId, addLabelIds ?? [], removeLabelIds ?? [])
+              return { ok: true, message: `Labels updated on message ${messageId}.` }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
+
+    "gmail-getAttachment": tool({
+      description:
+        "Download an attachment from a Gmail message by message ID and attachment ID. Returns the base64-encoded data, filename, and MIME type. First use gmail-readEmail to discover attachment IDs from the message body.",
+      parameters: z.object({
+        messageId: z.string().describe("The Gmail message ID"),
+        attachmentId: z.string().describe("The attachment ID (found in the message body parts)"),
+      }),
+      execute: async ({ messageId, attachmentId }) => {
+        if (!gmail.isConnected()) return notConnectedError()
+        try {
+          const att = await gmail.getAttachment(messageId, attachmentId)
+          return {
+            filename: att.filename,
+            mimeType: att.mimeType,
+            size: att.size,
+            data: att.data.slice(0, 500000),
+            truncated: att.data.length > 500000,
+          }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "gmail-listDrafts": tool({
+      description:
+        "List all email drafts in Gmail. Returns draft IDs with subject, sender, and date.",
+      parameters: z.object({}),
+      execute: async () => {
+        if (!gmail.isConnected()) return notConnectedError()
+        try {
+          const drafts = await gmail.listDrafts()
+          if (drafts.length === 0) return { drafts: [], message: "No drafts found." }
+          return { count: drafts.length, drafts }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "gmail-sendDraft": tool({
+      description:
+        "Send an existing Gmail draft by its draft ID. Use gmail-listDrafts first to find available drafts, then confirm with the user before sending.",
+      parameters: z.object({
+        draftId: z.string().describe("The draft ID from gmail-listDrafts"),
+      }),
+      execute: async (args) => {
+        const { draftId } = args
+        if (!gmail.isConnected()) return notConnectedError()
+        return gateWrite(
+          ctx,
+          {
+            connector: "google",
+            action: "gmail-sendDraft",
+            risk: "send",
+            title: "Send email draft",
+            preview: `Send draft ${draftId}`,
+            confirmText: "Send draft",
+          },
+          args,
+          async () => {
+            try {
+              const result = await gmail.sendDraft(draftId)
+              return { ok: true, messageId: result.messageId, threadId: result.threadId, message: "Draft sent." }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
+
+    "gmail-createLabel": tool({
+      description:
+        "Create a new Gmail label. The label will appear in the user's Gmail sidebar. Use gmail-listLabels to see existing labels.",
+      parameters: z.object({
+        name: z.string().describe("Name of the new label"),
+      }),
+      execute: async (args) => {
+        const { name } = args
+        if (!gmail.isConnected()) return notConnectedError()
+        return gateWrite(
+          ctx,
+          {
+            connector: "google",
+            action: "gmail-createLabel",
+            risk: "write",
+            title: `Create Gmail label: ${name}`,
+            preview: `Create label "${name}"`,
+            confirmText: "Create label",
+          },
+          args,
+          async () => {
+            try {
+              const result = await gmail.createLabel(name)
+              return { ok: true, id: result.id, name: result.name }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
+
+    "gmail-createDraft": tool({
+      description: "Create a draft email in Gmail without sending. Use this to prepare an email for user review before sending.",
+      parameters: z.object({
+        to: z.array(z.string()).describe("Recipient email addresses"),
+        subject: z.string().describe("Email subject line"),
+        body: z.string().describe("Plain-text email body"),
+        cc: z.array(z.string()).optional().describe("CC recipients"),
+        bcc: z.array(z.string()).optional().describe("BCC recipients"),
+        replyToMessageId: z.string().optional().describe("Gmail message ID to reply to (for threading)"),
+      }),
+      execute: async (args) => {
+        const { to, subject, body, cc, bcc, replyToMessageId } = args
+        if (!gmail.isConnected()) return notConnectedError()
+        return gateWrite(
+          ctx,
+          {
+            connector: "google",
+            action: "gmail-createDraft",
+            risk: "write",
+            title: `Create email draft`,
+            preview: [
+              `To: ${to.join(", ")}`,
+              cc?.length ? `Cc: ${cc.join(", ")}` : null,
+              bcc?.length ? `Bcc: ${bcc.join(", ")}` : null,
+              `Subject: ${subject}`,
+              "",
+              body.slice(0, 800),
+            ].filter(Boolean).join("\n"),
+            confirmText: "Create draft",
+          },
+          args,
+          async () => {
+            try {
+              const result = await gmail.createDraft({ to, subject, body, cc, bcc, replyToMessageId })
+              return { ok: true, draftId: result.id, messageId: result.messageId }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
       },
     }),
   }

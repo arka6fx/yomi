@@ -58,6 +58,9 @@ mock.module("@yomi/db", () => ({
   memorySources: {},
   memoryRelations: {},
   memoryEmbeddings: {},
+  privacyConsents: {},
+  privacyPreferences: {},
+  privacyAuditEvents: {},
   paymentRecords: {},
 }))
 
@@ -101,6 +104,10 @@ mock.module("../services/credit-ledger.js", () => ({
 }))
 
 mock.module("../auth-schema.js", () => ({ user: {} }))
+
+mock.module("../services/privacy/checks.js", () => ({
+  checkConsent: async () => ({ allowed: true, reason: null }),
+}))
 
 function makeUser(overrides: Record<string, unknown> = {}) {
   return {
