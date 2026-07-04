@@ -141,6 +141,8 @@ class FakeAdapter implements PlatformAdapter {
     this.messages.push({ chatId, text })
     return { ok: true }
   }
+  async sendDocument() { return { ok: true } }
+  async deleteMessage() { return { ok: true } }
   async sendTyping() {}
 }
 
