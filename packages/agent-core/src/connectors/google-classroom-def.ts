@@ -1,7 +1,7 @@
 import { tool, type ToolSet } from "ai"
 import { z } from "zod"
 import type { ConnectorDef, ConnectorContext } from "./connector-def.js"
-import { connectorError } from "./connector-def.js"
+import { connectorError, gateWrite } from "./connector-def.js"
 
 function formatDue(
   dueDate?: { year: number; month: number; day: number },
@@ -13,7 +13,6 @@ function formatDue(
   if (!dueTime || dueTime.hours === undefined) return `${dueDate.year}-${mm}-${dd}`
   const hh = String(dueTime.hours).padStart(2, "0")
   const min = String(dueTime.minutes ?? 0).padStart(2, "0")
-  // Classroom due times are UTC.
   return `${dueDate.year}-${mm}-${dd} ${hh}:${min} UTC`
 }
 
@@ -33,7 +32,20 @@ export function createClassroomTools(ctx: ConnectorContext): ToolSet {
       const body = await res.text()
       throw new Error(`Classroom API ${path} → ${res.status}: ${body.slice(0, 200)}`)
     }
-    return res.json() as Promise<T>
+    if (res.status === 204) return undefined as T
+    const text = await res.text()
+    return (text ? JSON.parse(text) : undefined) as T
+  }
+
+  async function getMySubmissionId(courseId: string, courseWorkId: string): Promise<string> {
+    const data = await classroom<{
+      studentSubmissions?: { id: string }[]
+    }>(
+      `/courses/${encodeURIComponent(courseId)}/courseWork/${encodeURIComponent(courseWorkId)}/studentSubmissions?userId=me`,
+    )
+    const sub = data.studentSubmissions?.[0]
+    if (!sub) throw new Error("No submission record found for this assignment. Are you enrolled?")
+    return sub.id
   }
 
   return {
@@ -132,7 +144,7 @@ export function createClassroomTools(ctx: ConnectorContext): ToolSet {
 
     "classroom-getSubmissionStatus": tool({
       description:
-        "Check the user's own submission state and grade for a specific assignment. Get courseId and courseWorkId from classroom-listAssignments. NOTE: Yomi can read status but cannot attach files or turn in assignments — Google's API blocks third-party apps from submitting on a student's behalf.",
+        "Check the user's own submission state and grade for a specific assignment. Also returns the submission ID needed for classroom-modifyAttachments and classroom-turnIn. Get courseId and courseWorkId from classroom-listAssignments first.",
       parameters: z.object({
         courseId: z.string().describe("Classroom course ID"),
         courseWorkId: z.string().describe("Assignment (courseWork) ID"),
@@ -140,13 +152,21 @@ export function createClassroomTools(ctx: ConnectorContext): ToolSet {
       execute: async ({ courseId, courseWorkId }) => {
         try {
           const data = await classroom<{
-            studentSubmissions?: { id: string; state?: string; late?: boolean; assignedGrade?: number; alternateLink?: string }[]
+            studentSubmissions?: {
+              id: string
+              state?: string
+              late?: boolean
+              assignedGrade?: number
+              alternateLink?: string
+              attachmentDetails?: { driveFile?: { id?: string; title?: string } }[]
+            }[]
           }>(
             `/courses/${encodeURIComponent(courseId)}/courseWork/${encodeURIComponent(courseWorkId)}/studentSubmissions?userId=me`,
           )
           const sub = data.studentSubmissions?.[0]
           if (!sub) return { message: "No submission record found for this assignment." }
           return {
+            id: sub.id,
             state: sub.state,
             late: sub.late ?? false,
             grade: sub.assignedGrade ?? null,
@@ -157,6 +177,95 @@ export function createClassroomTools(ctx: ConnectorContext): ToolSet {
         }
       },
     }),
+
+    "classroom-modifyAttachments": tool({
+      description:
+        "Attach a Google Drive file to an assignment submission. Use this AFTER creating the file with drive-createFile. Requires courseId and courseWorkId from classroom-listAssignments, and a Drive fileId from drive-createFile.",
+      parameters: z.object({
+        courseId: z.string().describe("Classroom course ID"),
+        courseWorkId: z.string().describe("Assignment (courseWork) ID"),
+        fileId: z.string().describe("Google Drive file ID to attach (from drive-createFile)"),
+        fileName: z.string().optional().describe("Display name for the attachment (defaults to the Drive file's name)"),
+      }),
+      execute: async (args) => {
+        const { courseId, courseWorkId, fileId, fileName } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "google-classroom",
+            action: "classroom-modifyAttachments",
+            risk: "write",
+            title: `Attach file to Classroom assignment`,
+            preview: `Attach Drive file ${fileId}${fileName ? ` as "${fileName}"` : ""} to assignment ${courseWorkId} in course ${courseId}`,
+            confirmText: "Attach file",
+          },
+          args,
+          async () => {
+            try {
+              const submissionId = await getMySubmissionId(courseId, courseWorkId)
+              const data = await classroom<{
+                id?: string
+                state?: string
+              }>(
+                `/courses/${encodeURIComponent(courseId)}/courseWork/${encodeURIComponent(courseWorkId)}/studentSubmissions/${encodeURIComponent(submissionId)}:modifyAttachments`,
+                {
+                  method: "POST",
+                  body: JSON.stringify({
+                    addAttachments: [
+                      {
+                        driveFile: {
+                          id: fileId,
+                          title: fileName ?? undefined,
+                        },
+                      },
+                    ],
+                  }),
+                },
+              )
+              return { ok: true, submissionState: data.state, message: "File attached to submission." }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
+
+    "classroom-turnIn": tool({
+      description:
+        "Turn in (submit) an assignment. Call this AFTER attaching files with classroom-modifyAttachments. Requires courseId and courseWorkId from classroom-listAssignments. Turning in transfers ownership of attached Drive files to the teacher and prevents further edits.",
+      parameters: z.object({
+        courseId: z.string().describe("Classroom course ID"),
+        courseWorkId: z.string().describe("Assignment (courseWork) ID"),
+      }),
+      execute: async (args) => {
+        const { courseId, courseWorkId } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "google-classroom",
+            action: "classroom-turnIn",
+            risk: "write",
+            title: `Turn in Classroom assignment`,
+            preview: `Turn in assignment ${courseWorkId} in course ${courseId}`,
+            confirmText: "Turn in",
+          },
+          args,
+          async () => {
+            try {
+              const submissionId = await getMySubmissionId(courseId, courseWorkId)
+              await classroom(
+                `/courses/${encodeURIComponent(courseId)}/courseWork/${encodeURIComponent(courseWorkId)}/studentSubmissions/${encodeURIComponent(submissionId)}:turnIn`,
+                { method: "POST" },
+              )
+              return { ok: true, message: "Assignment turned in successfully." }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
   }
 }
 
@@ -165,19 +274,15 @@ export const googleClassroomDef: ConnectorDef = {
   name: "Google Classroom",
   category: "productivity",
   icon: "google-classroom",
-  description: "Read your Google Classroom classes, assignments, due dates, announcements, and grades.",
-  readOnlyByDefault: true,
+  description: "Read your Google Classroom classes, assignments, due dates, announcements, grades, and submit work.",
+  readOnlyByDefault: false,
   auth: {
     kind: "oauth2",
     authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
     tokenUrl: "https://oauth2.googleapis.com/token",
     scopes: [
-      // Read-only student scopes. These are "restricted" — require Google CASA
-      // verification for public release, or test-user allowlisting for personal use.
-      // (Turning in assignments is intentionally not possible via the API for
-      // third-party apps, so no write scopes are requested.)
       "https://www.googleapis.com/auth/classroom.courses.readonly",
-      "https://www.googleapis.com/auth/classroom.coursework.me.readonly",
+      "https://www.googleapis.com/auth/classroom.coursework.me",
       "https://www.googleapis.com/auth/classroom.announcements.readonly",
       "https://www.googleapis.com/auth/userinfo.email",
     ],

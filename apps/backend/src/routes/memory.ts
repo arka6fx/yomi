@@ -521,6 +521,75 @@ memoryRouter.post("/forget", async (c) => {
   return c.json({ forgotten: forgotten.length, ids: forgotten.map((row) => row.id) })
 })
 
+memoryRouter.post("/graph-walk", requireConsent("memory"), async (c) => {
+  const user = c.get("user")
+  const body = (await c.req.json().catch(() => ({}))) as { rootId?: string; maxDepth?: number; maxNodes?: number }
+  const rootId = clean(body.rootId, 80)
+  if (!rootId) return c.json({ error: "rootId is required" }, 400)
+  const maxDepth = Math.min(Math.max(body.maxDepth ?? 3, 1), 6)
+  const maxNodes = Math.min(Math.max(body.maxNodes ?? 16, 1), 48)
+
+  const visited = new Set<string>()
+  const chain: unknown[] = []
+  const branched: unknown[] = []
+
+  async function walk(id: string, depth: number): Promise<void> {
+    if (visited.has(id) || depth > maxDepth || visited.size >= maxNodes) return
+    visited.add(id)
+
+    const relations = await db
+      .select({
+        targetId: memoryRelations.toMemoryId,
+        relationType: memoryRelations.relationType,
+      })
+      .from(memoryRelations)
+      .where(
+        and(
+          eq(memoryRelations.userId, user.id),
+          eq(memoryRelations.fromMemoryId, id),
+        ),
+      )
+      .limit(10)
+
+    const [entry] = await db
+      .select()
+      .from(memoryEntries)
+      .where(and(eq(memoryEntries.id, id), eq(memoryEntries.userId, user.id)))
+      .limit(1)
+
+    if (!entry) return
+
+    const node = {
+      id: entry.id,
+      kind: entry.kind,
+      scope: entry.scope,
+      topic: entry.topic,
+      content: entry.content,
+      confidence: entry.confidence,
+      isStatic: entry.isStatic,
+      updatedAt: entry.updatedAt.toISOString(),
+      relations: relations.map((r) => ({
+        targetId: r.targetId,
+        relationType: r.relationType,
+      })),
+    }
+
+    if (depth === 0) {
+      chain.push(node)
+    } else {
+      branched.push(node)
+    }
+
+    for (const rel of relations) {
+      await walk(rel.targetId, depth + 1)
+    }
+  }
+
+  await walk(rootId, 0)
+
+  return c.json({ root: chain[0] ?? null, chain, branched })
+})
+
 memoryRouter.delete("/:id", async (c) => {
   const user = c.get("user")
   const id = clean(c.req.param("id"), 80)

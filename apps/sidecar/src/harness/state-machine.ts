@@ -1,4 +1,5 @@
 import type { Hooks } from "./hooks.js"
+import { runPromotionCycle, getMemoryStats } from "../memory/promotion.js"
 
 export enum SessionState {
   IDLE = "IDLE",
@@ -79,11 +80,47 @@ export class SessionMachine {
     if (prev === SessionState.IDLE && next === SessionState.LISTENING) {
       await this.hooks.onSessionStart()
     }
+
+    // COMPACTING: run lightweight memory promotion before returning to IDLE.
+    if (next === SessionState.COMPACTING) {
+      this.runCompaction().catch((err) =>
+        console.warn("[yomi/sm] compaction failed:", err instanceof Error ? err.message : err)
+      )
+    }
+
     // Return to IDLE after compaction or a fast-path error.
     if (next === SessionState.IDLE) {
       await this.hooks.onSessionEnd()
     }
 
     return this.state
+  }
+
+  private async runCompaction(): Promise<void> {
+    try {
+      const [promoResult, statsBefore] = await Promise.all([
+        runPromotionCycle({ minScore: 0.8, minRecalls: 2 }),
+        getMemoryStats().catch(() => ({ promoted: 0, totalCandidates: 0, promotedSize: 0 })),
+      ])
+
+      if (promoResult.promoted > 0 || promoResult.pruned > 0) {
+        console.warn(
+          `[yomi/sm] compaction: ${promoResult.promoted} promoted, ${promoResult.pruned} pruned, ${promoResult.droppedDates.length} sections dropped`,
+        )
+      }
+
+      const statsAfter = await getMemoryStats().catch(() => ({ promoted: 0, totalCandidates: 0, promotedSize: 0 }))
+      if (statsAfter.promotedSize !== statsBefore.promotedSize) {
+        console.warn(`[yomi/sm] MEMORY.md: ${statsBefore.promotedSize} → ${statsAfter.promotedSize} chars`)
+      }
+
+      // Emit memory_written to complete the COMPACTING → IDLE transition
+      this.state = SessionState.IDLE
+      await this.hooks.onSessionEnd()
+    } catch {
+      // If compaction fails, still transition to IDLE
+      this.state = SessionState.IDLE
+      await this.hooks.onSessionEnd()
+    }
   }
 }

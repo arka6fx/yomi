@@ -10,3 +10,9 @@ export {
   type CompressionOptions,
   type CompressionResult,
 } from "./compressor.js"
+
+export {
+  IterationBudget,
+  type IterationBudgetConfig,
+  DEFAULT_ITERATION_BUDGET,
+} from "./iteration-budget.js"

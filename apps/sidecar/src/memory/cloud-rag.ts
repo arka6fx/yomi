@@ -24,6 +24,8 @@ type CloudMemoryEntry = {
   confidence: number
   sourcePath?: string | null
   matchedBy?: string[]
+  score?: number
+  updatedAt?: string
 }
 
 type CloudMemoryProfile = {
@@ -155,29 +157,53 @@ Assistant: ${output}`,
 
 export async function retrieveCloudMemoryContext(query: string, maxChars = 3000): Promise<string> {
   if (!sessionToken()) return ""
-  const data = await fetchJson<{ memories?: CloudMemoryEntry[] }>("/api/memory/search", {
-    method: "POST",
-    body: JSON.stringify({ query, limit: SEARCH_LIMIT, maxChars }),
-  })
-  const memories = data?.memories ?? []
-  const out: string[] = []
-  let used = 0
-  for (const row of memories) {
-    const matched = row.matchedBy?.length ? ` (${row.matchedBy.join("+")})` : ""
-    const snippet = `- [${row.kind}${matched}, confidence ${row.confidence}] ${row.topic}: ${row.content}${row.sourcePath ? ` (source: ${row.sourcePath})` : ""}`
-    if (used + snippet.length > maxChars) break
-    out.push(snippet)
-    used += snippet.length
+  try {
+    const data = await fetchJson<{ memories?: CloudMemoryEntry[] }>("/api/memory/search", {
+      method: "POST",
+      body: JSON.stringify({ query, limit: SEARCH_LIMIT, maxChars }),
+    })
+    const memories = data?.memories ?? []
+    // Temporal decay: score = baseScore * e^(-λ * ageDays), λ = ln(2)/30 (30-day half-life)
+    const now = Date.now()
+    const halfLifeDays = 30
+    const lambda = Math.LN2 / halfLifeDays
+    const scored = memories.map((row) => {
+      const ageDays = row.updatedAt
+        ? (now - new Date(row.updatedAt).getTime()) / 86400000
+        : 0
+      const decay = Math.exp(-lambda * Math.max(0, ageDays))
+      return { ...row, _decayedScore: (row.score ?? 50) * decay }
+    })
+    scored.sort((a, b) => b._decayedScore - a._decayedScore)
+
+    const out: string[] = []
+    let used = 0
+    for (const row of scored) {
+      const matched = row.matchedBy?.length ? ` (${row.matchedBy.join("+")})` : ""
+      const snippet = `- [${row.kind}${matched}, confidence ${row.confidence}] ${row.topic}: ${row.content}${row.sourcePath ? ` (source: ${row.sourcePath})` : ""}`
+      if (used + snippet.length > maxChars) break
+      out.push(snippet)
+      used += snippet.length
+    }
+    return out.join("\n")
+  } catch (err) {
+    console.warn("[yomi/cloud-rag] memory context retrieval failed:", err instanceof Error ? err.message : err)
+    return ""
   }
-  return out.join("\n")
 }
 
 export async function retrieveCloudMemoryProfile(query: string, maxChars = 2500): Promise<{ staticProfile: string; dynamicProfile: string }> {
   if (!sessionToken()) return { staticProfile: "", dynamicProfile: "" }
-  const data = await fetchJson<CloudMemoryProfile>("/api/memory/profile", {
-    method: "POST",
-    body: JSON.stringify({ query, limit: 32 }),
-  })
+  let data: CloudMemoryProfile | null = null
+  try {
+    data = await fetchJson<CloudMemoryProfile>("/api/memory/profile", {
+      method: "POST",
+      body: JSON.stringify({ query, limit: 32 }),
+    })
+  } catch (err) {
+    console.warn("[yomi/cloud-rag] memory profile retrieval failed:", err instanceof Error ? err.message : err)
+    return { staticProfile: "", dynamicProfile: "" }
+  }
   const staticFacts = data?.profile?.static ?? []
   const dynamicFacts = data?.profile?.dynamic ?? []
   const format = (title: string, facts: string[]) => {

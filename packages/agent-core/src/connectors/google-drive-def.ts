@@ -24,6 +24,30 @@ const EXPORT_MIME: Record<string, string> = {
   "application/vnd.google-apps.presentation": "text/plain",
 }
 
+const EXPORT_TARGETS: Record<string, Record<string, string>> = {
+  "application/vnd.google-apps.document": {
+    pdf: "application/pdf",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    txt: "text/plain",
+    html: "text/html",
+    epub: "application/epub+zip",
+    odt: "application/vnd.oasis.opendocument.text",
+    rtf: "application/rtf",
+  },
+  "application/vnd.google-apps.spreadsheet": {
+    pdf: "application/pdf",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    csv: "text/csv",
+    ods: "application/vnd.oasis.opendocument.spreadsheet",
+    tsv: "text/tab-separated-values",
+  },
+  "application/vnd.google-apps.presentation": {
+    pdf: "application/pdf",
+    pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    txt: "text/plain",
+  },
+}
+
 function fileTypeLabel(mimeType: string): string {
   return GOOGLE_MIME_LABELS[mimeType] ?? mimeType.split("/").pop() ?? "File"
 }
@@ -315,7 +339,7 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
 
     "drive-createFile": tool({
       description:
-        "Create a new Google Doc with text content. Returns the new file ID and direct link.",
+        "Create a new Google Doc with text content. Returns the new file ID and direct link. Use drive-convertFile to convert it to PDF, DOCX, or other formats.",
       parameters: z.object({
         name: z.string().describe("Name of the new document"),
         content: z.string().describe("Plain text content for the document"),
@@ -576,6 +600,108 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
+    "drive-convertFile": tool({
+      description:
+        "Convert a Google Workspace file (Doc, Sheet, Slide) to another format like PDF, DOCX, XLSX, PPTX, TXT, CSV, HTML, EPUB, ODS, ODT, RTF, TSV. " +
+        "Creates a new Drive file with the converted content. Use this when the user asks to convert a file to a different format.",
+      parameters: z.object({
+        fileId: z.string().describe("Drive file ID of the Google Doc/Sheet/Slide to convert"),
+        targetFormat: z
+          .enum(["pdf", "docx", "xlsx", "pptx", "txt", "csv", "html", "epub", "ods", "odt", "rtf", "tsv"])
+          .describe("Target format"),
+        name: z.string().optional().describe("Name for the converted file (defaults to original name + extension)"),
+        folderId: z.string().optional().describe("Optional folder ID to place the converted file in"),
+      }),
+      execute: async (args) => {
+        const { fileId, targetFormat, name, folderId } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "google-drive",
+            action: "drive-convertFile",
+            risk: "write",
+            title: `Convert Drive file to ${targetFormat.toUpperCase()}`,
+            preview: `Convert file ${fileId} to .${targetFormat}`,
+            confirmText: "Convert",
+          },
+          args,
+          async () => {
+            try {
+              const token = await ctx.getAccessToken(ctx.userId, "google-drive")
+
+              const meta = await driveJson<{ id: string; name: string; mimeType: string }>(
+                `/files/${encodeURIComponent(fileId)}?fields=id,name,mimeType`,
+              )
+
+              const targets = EXPORT_TARGETS[meta.mimeType]
+              if (!targets) {
+                return {
+                  error: `File "${meta.name}" (${fileTypeLabel(meta.mimeType)}) cannot be converted. Only Google Docs, Sheets, and Slides are supported.`,
+                }
+              }
+
+              const targetMime = targets[targetFormat]
+              if (!targetMime) {
+                const supported = Object.keys(targets).join(", ")
+                return {
+                  error: `Format .${targetFormat} is not supported for ${fileTypeLabel(meta.mimeType)}. Supported formats: ${supported}`,
+                }
+              }
+
+              const exportRes = await fetch(
+                `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}/export?mimeType=${encodeURIComponent(targetMime)}`,
+                { headers: { Authorization: `Bearer ${token}` } },
+              )
+              if (!exportRes.ok) {
+                const body = await exportRes.text()
+                throw new Error(`Export failed: ${exportRes.status}: ${body.slice(0, 200)}`)
+              }
+
+              const buffer = await exportRes.arrayBuffer()
+              const ext = targetFormat
+              const newName = name ?? `${meta.name}.${ext}`
+              const metadata: Record<string, unknown> = { name: newName, mimeType: targetMime }
+              if (folderId) metadata.parents = [folderId]
+
+              const encoder = new TextEncoder()
+              const boundary = "yomi_convert_boundary"
+              const metaJson = JSON.stringify(metadata)
+              const head = encoder.encode(
+                `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metaJson}\r\n--${boundary}\r\nContent-Type: ${targetMime}\r\n\r\n`,
+              )
+              const tail = encoder.encode(`\r\n--${boundary}--`)
+              const body = new Blob([head, new Uint8Array(buffer), tail])
+
+              const uploadRes = await fetch(
+                "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,mimeType,size",
+                {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": `multipart/related; boundary=${boundary}`,
+                  },
+                  body,
+                },
+              )
+              if (!uploadRes.ok) throw new Error(`Upload failed: ${uploadRes.status}: ${await uploadRes.text()}`)
+              const file = (await uploadRes.json()) as { id: string; name: string; webViewLink: string; mimeType: string; size?: string }
+              return {
+                ok: true,
+                id: file.id,
+                name: file.name,
+                format: targetFormat,
+                type: fileTypeLabel(targetMime),
+                link: file.webViewLink,
+                message: `Converted to ${targetFormat.toUpperCase()}: ${file.name}`,
+              }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
+
     "drive-listPermissions": tool({
       description: "List all users and groups who have access to a Google Drive file, along with their role (reader, commenter, writer, owner).",
       parameters: z.object({
@@ -664,7 +790,7 @@ export const googleDriveDef: ConnectorDef = {
   name: "Google Drive",
   category: "file-storage",
   icon: "google-drive",
-  description: "Search, read, and create files in Google Drive. Reads Google Docs, Sheets, and Slides content.",
+  description: "Search, read, create, convert, and manage files in Google Drive. Creates Google Docs; converts between formats (PDF, DOCX, XLSX, PPTX, TXT, CSV, HTML, EPUB, ODS, ODT, RTF, TSV).",
   readOnlyByDefault: false,
   auth: {
     kind: "oauth2",

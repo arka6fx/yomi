@@ -34,6 +34,9 @@ const DEFAULT_PROTECT_FIRST_N = 3
 // for the current turn.
 const TAIL_RATIO = 0.3
 const MIN_TAIL_TOKENS = 2000
+// Reserved output budget: compact when context exceeds contextWindow - reserve,
+// so the model always has room to generate its response (Pi pattern, 16K).
+const RESERVE_TOKENS = 16_384
 // Floor under which we never compress — the conversation is too small to bother.
 const MIN_MESSAGES_TO_COMPRESS = 6
 // Min pre-compression token count. Hermes' default is 2000.
@@ -84,7 +87,9 @@ export interface CompressionResult {
 
 export function thresholdForPlan(plan: Plan | undefined, contextWindow: number): number {
   const ratio = PLAN_THRESHOLD_RATIO[plan ?? "default"]
-  return Math.max(MIN_PRE_TOKENS, Math.floor(contextWindow * ratio))
+  const planThreshold = Math.floor(contextWindow * ratio)
+  const reserveThreshold = contextWindow - RESERVE_TOKENS
+  return Math.max(MIN_PRE_TOKENS, Math.min(planThreshold, reserveThreshold))
 }
 
 // Extract the char-length of a message's content for token budgeting. Plain
@@ -539,7 +544,7 @@ export async function compressContext(
   }
 
   const headEnd = protectHeadSize(messages)
-  const tailBudget = Math.max(MIN_TAIL_TOKENS, Math.floor(opts.contextWindow * TAIL_RATIO))
+  const tailBudget = Math.max(MIN_TAIL_TOKENS, RESERVE_TOKENS, Math.floor(opts.contextWindow * TAIL_RATIO))
   let tailCut = findTailCut(messages, headEnd, tailBudget)
   tailCut = alignForward(messages, tailCut)
   tailCut = alignBackward(messages, tailCut)

@@ -4,7 +4,8 @@ import {
   ToolCallGuardrailController,
   scanForThreats,
 } from "../tools/guardrails/index.js"
-import { flushSessionWriteQueue } from "../memory/subsystem.js"
+import { flushSessionWriteQueue, onAgentTurnComplete } from "../memory/subsystem.js"
+import { recordRecall } from "../memory/recall-store.js"
 
 export interface Hooks {
   onSessionStart(): Promise<void>
@@ -147,7 +148,28 @@ function buildHooks(): Hooks {
     },
 
     async onStop(summary) {
-      void summary
+      // Fire-and-forget memory capture on stop: record the turn summary
+      // as a recall signal to feed the promotion pipeline.
+      if (summary && summary.length > 5) {
+        onAgentTurnComplete({
+          input: summary,
+          output: summary,
+          summary,
+        }).catch(() => {})
+      }
+    },
+
+    async onMemoryWrite(content, metadata) {
+      if (!content?.trim()) return { ok: false, reason: "empty content" }
+      try {
+        // Record the write as a recall signal to feed the promotion pipeline
+        const kind = metadata?.kind ?? "fact"
+        const topic = content.slice(0, 80)
+        await recordRecall(kind, topic, content.slice(0, 500), `memory_write:${kind}`, 0.8)
+        return { ok: true }
+      } catch (err) {
+        return { ok: false, reason: err instanceof Error ? err.message : "unknown error" }
+      }
     },
 
     async onSessionEnd() {

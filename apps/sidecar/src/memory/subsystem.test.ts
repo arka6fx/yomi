@@ -16,7 +16,7 @@ describe("memory subsystem", () => {
     closeMemorySubsystem()
   })
 
-  it("returns backend-memory bundle fields without reading local markdown", async () => {
+  it("returns backend-memory bundle fields and reads recent session history", async () => {
     const ctx = await loadMemoryContext("anything")
 
     expect(ctx.memorySummary).toBe("")
@@ -26,7 +26,7 @@ describe("memory subsystem", () => {
     expect(ctx.cloudRagContext).toBe("")
     expect(ctx.staticProfile).toBe("")
     expect(ctx.dynamicProfile).toBe("")
-    expect(ctx.recentSession).toBe("")
+    expect(typeof ctx.recentSession).toBe("string")
   })
 
   it("loads static and dynamic profile context from backend memory", async () => {

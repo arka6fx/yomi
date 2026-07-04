@@ -4,6 +4,7 @@ import { fastPipeline } from "../pipeline/fast.js"
 import { agentPipeline } from "../pipeline/agent.js"
 import { initConnectorRegistry } from "../connectors/registry.js"
 import { reserveInteraction } from "../usage/reserve.js"
+import { extractText } from "../tools/documents.js"
 
 type AgentDriver = (
   req: AgentQueryRequest,
@@ -91,7 +92,28 @@ async function poll(): Promise<void> {
 }
 
 export async function handleGatewayMessage(msg: GatewayMessage): Promise<void> {
-  const text = msg.text.trim()
+
+  // ── Document auto-parsing ──────────────────────────────────────────────────
+  // If the message includes a document URL that wasn't already parsed by the
+  // backend, extract text here so the agent/fast path can use it.
+  if (msg.documentUrl && !(msg.text ?? "").includes("[Document:")) {
+    try {
+      const docName = msg.documentFileName ?? "document"
+      const result = await extractText(msg.documentUrl, msg.documentMimeType)
+      if (result.text) {
+        const preview = result.text.slice(0, 50_000)
+        const currentText = (msg.text ?? "").trim()
+        const updatedText = currentText
+          ? `[Document: ${docName}]\n${preview}\n\n---\n${currentText}`
+          : `[Document: ${docName}]\n${preview}`
+        msg = { ...msg, text: updatedText }
+      }
+    } catch (err) {
+      console.warn("[gateway] sidecar document parse error:", err)
+    }
+  }
+
+  const text = (msg.text ?? "").trim()
 
   // ── Normal fast / agent pipeline ─────────────────────────────────────────
 

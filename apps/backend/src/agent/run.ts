@@ -1,8 +1,9 @@
-import { eq, and, sql, desc, ilike, or } from "drizzle-orm"
+import { eq, and, sql } from "drizzle-orm"
 import { generateText } from "ai"
-import { db, ragSources, memoryEntries, usageEvents } from "@yomi/db"
+import { db, ragSources, usageEvents } from "@yomi/db"
 import { ConnectorRegistry, createModel, runAgentLoop, type AgentMessage, type UsageInfo } from "@yomi/agent-core"
 import { formatAgentSoul } from "@yomi/shared"
+import { compressContext, shouldCompress, estimateTokens } from "./compressor.js"
 import {
   getAccessToken,
   listConnectedProviders,
@@ -84,34 +85,96 @@ async function fetchMemoryContext(userId: string, query: string, maxChars = 2000
   try {
     const safe = query.trim().slice(0, 400)
     if (!safe) return ""
-    const rows = await db
-      .select({
-        kind: memoryEntries.kind,
-        topic: memoryEntries.topic,
-        content: memoryEntries.content,
-        confidence: memoryEntries.confidence,
-        sourcePath: memoryEntries.sourcePath,
-      })
-      .from(memoryEntries)
-      .where(
-        and(
-          eq(memoryEntries.userId, userId),
-          eq(memoryEntries.status, "active"),
-          or(
-            ilike(memoryEntries.topic, `%${safe}%`),
-            ilike(memoryEntries.content, `%${safe}%`),
-            ilike(memoryEntries.kind, `%${safe}%`),
-            ilike(memoryEntries.scope, `%${safe}%`),
-          ),
-        ),
+
+    const MEMORY_CANDIDATES = 30
+    const MEMORY_RRF_K = 60
+
+    const queryEmbedding = await embedTextLocal(safe).catch(() => [])
+    const vecSql = queryEmbedding.length
+      ? sql`
+        vec as (
+          select me.memory_id, row_number() over (order by me.embedding <=> ${vectorLiteralLocal(queryEmbedding)}::vector) as rnk
+          from memory_embeddings me
+          where me.user_id = ${userId}
+          order by me.embedding <=> ${vectorLiteralLocal(queryEmbedding)}::vector
+          limit ${MEMORY_CANDIDATES}
+        ),`
+      : sql`
+        vec as (
+          select null::uuid as memory_id, null::bigint as rnk
+          where false
+        ),`
+
+    const result = await db.execute(sql`
+      with ${vecSql}
+      fts as (
+        select e.id as memory_id,
+               row_number() over (order by ts_rank_cd(e.content_tsv, websearch_to_tsquery('english', ${safe})) desc) as rnk
+        from memory_entries e
+        where e.user_id = ${userId}
+          and e.status = 'active'
+          and e.is_latest = true
+          and e.content_tsv @@ websearch_to_tsquery('english', ${safe})
+        limit ${MEMORY_CANDIDATES}
+      ),
+      meta as (
+        select e.id as memory_id,
+               row_number() over (order by e.is_static desc, e.confidence desc, e.updated_at desc) as rnk
+        from memory_entries e
+        where e.user_id = ${userId}
+          and e.status = 'active'
+          and e.is_latest = true
+          and (
+            e.topic ilike ${`%${safe}%`} or
+            e.content ilike ${`%${safe}%`} or
+            e.kind ilike ${`%${safe}%`} or
+            e.scope ilike ${`%${safe}%`}
+          )
+        limit ${MEMORY_CANDIDATES}
+      ),
+      fused as (
+        select memory_id,
+               sum(1.0 / (${MEMORY_RRF_K} + rnk)) as score,
+               array_agg(source) as matched_by
+        from (
+          select memory_id, rnk, 'vector'::text as source from vec where memory_id is not null
+          union all
+          select memory_id, rnk, 'full_text'::text as source from fts
+          union all
+          select memory_id, rnk, 'metadata'::text as source from meta
+        ) u
+        group by memory_id
+        order by score desc
+        limit 8
       )
-      .orderBy(desc(memoryEntries.confidence), desc(memoryEntries.updatedAt))
-      .limit(8)
+      select
+        e.kind as "kind",
+        e.topic as "topic",
+        e.content as "content",
+        e.confidence as "confidence",
+        e.source_path as "sourcePath",
+        e.is_static as "isStatic",
+        e.updated_at as "updatedAt",
+        f.score as "score",
+        f.matched_by as "matchedBy"
+      from fused f
+      join memory_entries e on e.id = f.memory_id
+      order by e.is_static desc, f.score desc, e.confidence desc, e.updated_at desc
+      limit 8
+    `)
+    type Row = {
+      kind: string; topic: string; content: string; confidence: number
+      sourcePath: string | null; isStatic: boolean; updatedAt: string
+      score: number; matchedBy: string[]
+    }
+    const rows = ((result as unknown as { rows?: Row[] }).rows ?? []) as Row[]
+    if (!rows.length) return ""
 
     const out: string[] = []
     let used = 0
     for (const row of rows) {
-      const snippet = `- [${row.kind}, confidence ${row.confidence}] ${row.topic}: ${row.content}${row.sourcePath ? ` (source: ${row.sourcePath})` : ""}`
+      const matched = row.matchedBy?.length ? ` (${row.matchedBy.join("+")})` : ""
+      const snippet = `- [${row.kind}${matched}, confidence ${row.confidence}] ${row.topic}: ${row.content}${row.sourcePath ? ` (source: ${row.sourcePath})` : ""}`
       if (used + snippet.length > maxChars) break
       out.push(snippet)
       used += snippet.length
@@ -120,6 +183,26 @@ async function fetchMemoryContext(userId: string, query: string, maxChars = 2000
   } catch {
     return ""
   }
+}
+
+function embedTextLocal(input: string): Promise<number[]> {
+  const apiKey = process.env["AI_CREDITS_API_KEY"]
+  if (!apiKey || !input.trim()) return Promise.resolve([])
+  const baseUrl = (process.env["AI_CREDITS_BASE_URL"] ?? "https://api.aicredits.in/v1").replace(/\/+$/, "")
+  const model = process.env["AI_CREDITS_EMBEDDING_MODEL"] ?? "text-embedding-3-small"
+  return fetch(`${baseUrl}/embeddings`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model, input: input.trim() }),
+  }).then((r) => r.json() as Promise<{ data?: { embedding?: number[] }[] }>)
+    .then((body) => {
+      const emb = body.data?.[0]?.embedding
+      return Array.isArray(emb) && emb.length === 1536 ? emb : []
+    })
+}
+
+function vectorLiteralLocal(values: number[]): string {
+  return `[${values.map((v) => (Number.isFinite(v) ? v.toFixed(8) : "0")).join(",")}]`
 }
 
 async function fetchMemoryProfile(userId: string, maxChars = 2500): Promise<{ staticProfile: string; dynamicProfile: string }> {
@@ -150,6 +233,29 @@ async function fetchMemoryProfile(userId: string, maxChars = 2500): Promise<{ st
     return { staticProfile: format("## Static Profile", true), dynamicProfile: format("## Dynamic Context", false) }
   } catch {
     return { staticProfile: "", dynamicProfile: "" }
+  }
+}
+
+async function fetchRecentChat(userId: string, maxTurns = 20): Promise<string> {
+  try {
+    type Row = { role: string; content: string }
+    const result = await db.execute(sql`
+      select role, content
+      from agent_messages
+      where user_id = ${userId}
+        and (role = 'user' or role = 'assistant')
+        and length(trim(content)) > 0
+      order by created_at desc
+      limit ${maxTurns * 2}
+    `)
+    const rows = (Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? [])) as Row[]
+    if (!rows.length) return ""
+    return rows
+      .reverse()
+      .map((row) => (row.role === "user" ? `User: ${row.content}` : `Assistant: ${row.content}`))
+      .join("\n")
+  } catch {
+    return ""
   }
 }
 
@@ -214,7 +320,7 @@ Assistant: ${cleanOutput}`,
   }
 }
 
-function buildSystemWithContext(memoryContext: string, ragContext: string, profile?: { staticProfile: string; dynamicProfile: string }, desktopOnlyConnected: string[] = [], userSoul?: string | null): string {
+function buildSystemWithContext(memoryContext: string, ragContext: string, profile?: { staticProfile: string; dynamicProfile: string }, desktopOnlyConnected: string[] = [], userSoul?: string | null, recentChat?: string): string {
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -238,13 +344,14 @@ function buildSystemWithContext(memoryContext: string, ragContext: string, profi
         `If they ask you to use one (e.g. running a database query), explain you can't access it from this chat and ask them to use the Yomi desktop app.\n`
       : "") +
     `\n` +
-    (memoryContext || ragContext || profile?.staticProfile || profile?.dynamicProfile
+    (memoryContext || ragContext || profile?.staticProfile || profile?.dynamicProfile || recentChat
       ? `<memory>\n` +
         `[System note: Background context retrieved from your notes. Treat as reference only, respond to the current user message.]\n\n` +
         (profile?.staticProfile ? `<static_profile>\n${profile.staticProfile}\n</static_profile>\n` : "") +
         (profile?.dynamicProfile ? `<dynamic_profile>\n${profile.dynamicProfile}\n</dynamic_profile>\n` : "") +
         (memoryContext ? `<durable_memories>\n${memoryContext}\n</durable_memories>\n` : "") +
         (ragContext ? `<cloud_rag_context>\n${ragContext}\n</cloud_rag_context>\n` : "") +
+        (recentChat ? `<recent_chat>\n${recentChat}\n</recent_chat>\n` : "") +
         `<citation_rule>When you use a fact from a numbered retrieved block above, cite its number inline as [1]. Only cite sources you actually used.</citation_rule>\n` +
         `</memory>`
       : "")
@@ -322,19 +429,33 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     checkConsent(opts.userId, "cloud_memory"),
   ])
 
-  const [memoryContext, ragContext, profile] = await Promise.all([
+  const [memoryContext, ragContext, profile, recentChat] = await Promise.all([
     memoryConsent.allowed ? fetchMemoryContext(opts.userId, opts.text) : "",
     cloudMemoryConsent.allowed ? fetchRagContext(opts.userId, opts.text) : "",
     memoryConsent.allowed ? fetchMemoryProfile(opts.userId) : { staticProfile: "", dynamicProfile: "" },
+    memoryConsent.allowed ? fetchRecentChat(opts.userId) : "",
   ])
+
+  // Context compression: if the conversation history is large, summarise the
+  // middle portion to stay within the model's context window.
+  let history = opts.history
+  const contextWindow = Number(process.env["YOMI_CONTEXT_WINDOW"] ?? 128_000)
+  if (history && shouldCompress(history, contextWindow)) {
+    console.warn(`[runAgent] compressing history (${history.length} messages, ~${estimateTokens(history)} tokens)`)
+    const compressed = await compressContext(history, contextWindow, { signal: opts.signal }).catch<{ messages: AgentMessage[]; compressed: boolean }>(() => ({ messages: history!, compressed: false }))
+    if (compressed.compressed) {
+      console.warn(`[runAgent] compressed to ${compressed.messages.length} messages`)
+      history = compressed.messages
+    }
+  }
 
   let text: string
   try {
     text = await runAgentLoop({
       registry,
       text: opts.text,
-      history: opts.history,
-      system: buildSystemWithContext(memoryContext, ragContext, profile, registry.getDesktopOnlyConnected(), user.agentSoul),
+      history,
+      system: buildSystemWithContext(memoryContext, ragContext, profile, registry.getDesktopOnlyConnected(), user.agentSoul, recentChat),
       maxTokens: maxOutputTokensFor(opts.text),
       signal: opts.signal,
       onUsage: usageEventId

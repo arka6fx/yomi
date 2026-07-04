@@ -361,6 +361,35 @@ export class GatewayRunner {
     return result.text.trim() || "I couldn't produce an image analysis. Please try again."
   }
 
+  /**
+   * Extract text from a document using server-side parsing (pure JS, no native deps).
+   * Returns null for unsupported formats or parse failures.
+   */
+  private async parseDocument(bytes: ArrayBuffer, contentType: string, ext: string | undefined): Promise<string | null> {
+    // Will use pdf-parse and mammoth from the sidecar as fallback.
+    // For now, try basic text extraction from common formats.
+    const mime = contentType.toLowerCase()
+    const e = ext?.toLowerCase()
+
+    // Plain text
+    if (mime.includes("text/") || e === "txt" || e === "csv" || e === "md" || e === "json" || e === "xml") {
+      return new TextDecoder().decode(bytes).slice(0, 50_000)
+    }
+
+    // HTML
+    if (mime.includes("html") || e === "html" || e === "htm") {
+      const raw = new TextDecoder().decode(bytes)
+      const stripped = raw.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+      return stripped.slice(0, 50_000)
+    }
+
+    return null
+  }
+
   private async sendVoiceReplyIfRequested(msg: GatewayMessage, text: string, yomiUserId: string): Promise<boolean> {
     if (msg.platform !== "telegram" || !this.wantsVoiceReply(msg.text)) return false
     const adapter = this.adapters.get("telegram")
@@ -831,7 +860,6 @@ export class GatewayRunner {
           metadata: { direction: "input", durationSeconds: msg.audioDurationSeconds ?? null },
         })
         console.warn(`[gateway] voice transcript: "${transcript.slice(0, 100)}"`)
-        // Show transcript so user can see what was heard
         await this.sendMessage(msg.platform, msg.chatId, `🎙️ _Heard:_ ${transcript}`).catch(() => {})
         msg = { ...msg, text: transcript }
       } catch (err) {
@@ -844,6 +872,48 @@ export class GatewayRunner {
         }
         return
       }
+    }
+
+    // ── Document download context ──────────────────────────────────────────
+    if (msg.documentUrl) {
+      const docName = msg.documentFileName ?? msg.documentMimeType ?? "document"
+      const size = msg.documentSize ? ` (${(msg.documentSize / 1024).toFixed(0)} KB)` : ""
+      console.warn(`[gateway] document received: ${docName}${size}`)
+      // Download and attempt text extraction — libs (pdf-parse, mammoth) will be
+      // added to the sidecar. The backend tries a basic fetch + LLM fallback.
+      try {
+        const docRes = await fetch(msg.documentUrl, { signal: AbortSignal.timeout(30_000) })
+        if (docRes.ok) {
+          const bytes = await docRes.arrayBuffer()
+          const contentType = msg.documentMimeType ?? docRes.headers.get("content-type") ?? ""
+          const ext = docName.split(".").pop()?.toLowerCase()
+          // For common text-based formats, try server-side extraction
+          const contentPreview = await this.parseDocument(bytes, contentType, ext)
+          if (contentPreview) {
+            if (msg.text.trim()) {
+              msg = { ...msg, text: `[Document: ${docName}]\n${contentPreview}\n\n---\n${msg.text}` }
+            } else {
+              msg = { ...msg, text: `[Document: ${docName}]\n${contentPreview}` }
+            }
+          } else {
+            // Fallback: attach URL so the agent's fetch_url or read_document tool can grab it
+            const note = docName ? `📄 _File:_ ${docName}` : "📄 _File received_"
+            msg = { ...msg, text: msg.text.trim() ? `${note}\n${msg.text}` : note }
+          }
+        }
+      } catch (err) {
+        console.warn("[gateway] document download error:", err)
+      }
+    }
+
+    // ── Video context ──────────────────────────────────────────────────────
+    if (msg.videoUrl) {
+      const dur = msg.videoDurationSeconds
+        ? ` (${Math.floor(msg.videoDurationSeconds / 60)}:${(msg.videoDurationSeconds % 60).toString().padStart(2, "0")})`
+        : ""
+      console.warn(`[gateway] video received${dur}`)
+      const note = `🎬 _Video received_\nTranscription available via the sidecar agent tools.`
+      msg = { ...msg, text: msg.text.trim() ? `${note}\n${msg.text}` : note }
     }
 
     // ── Backend-first routing ─────────────────────────────────────────────────

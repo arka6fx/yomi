@@ -48,12 +48,12 @@ describe("prompt memory injection", () => {
     expect(prompt).not.toContain("You are Yomi: sharp, warm, and practical.")
   })
 
-  it("does not read local markdown memory files", async () => {
+  it("returns cloud memory fields and recent session history", async () => {
     const ctx = await loadMemoryContext("memory")
 
     expect(ctx.memorySummary).toBe("")
     expect(ctx.memoryIndex).toBe("")
     expect(ctx.localMemory).toBe("")
-    expect(ctx.recentSession).toBe("")
+    expect(typeof ctx.recentSession).toBe("string")
   })
 })

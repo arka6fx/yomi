@@ -1,3 +1,6 @@
+import { readFile } from "node:fs/promises"
+import { homedir } from "node:os"
+import { join } from "node:path"
 import { ALL_CONNECTOR_DEFS } from "@yomi/agent-core"
 import { formatAgentSoul } from "@yomi/shared"
 
@@ -21,7 +24,13 @@ export interface PromptContext {
 }
 
 export async function loadYomiMd(): Promise<string> {
-  return ""
+  try {
+    const home = process.env.HOME ?? process.env.USERPROFILE ?? homedir()
+    const data = await readFile(join(home, ".yomi", "yomi.md"), "utf-8")
+    return data.trim()
+  } catch {
+    return ""
+  }
 }
 
 export async function loadSoulMd(): Promise<string> {
