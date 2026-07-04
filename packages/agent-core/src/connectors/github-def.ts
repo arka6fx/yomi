@@ -661,8 +661,10 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
                   auto_init: autoInit,
                 }),
               })
+              const msg = `Created repository "${repo.full_name}" at ${repo.html_url}`
               return {
                 ok: true,
+                message: msg,
                 name: repo.name,
                 fullName: repo.full_name,
                 private: repo.private,

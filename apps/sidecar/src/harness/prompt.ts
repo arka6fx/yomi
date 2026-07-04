@@ -281,5 +281,6 @@ ${AGENT_EXAMPLES}
 - When done, summarise what changed and what's still open.
 - If the user asks about an app from the available connectors list that is NOT connected: you MUST say they need to connect it at ${appUrl}/dashboard. Do NOT try to use a tool for an app that isn't connected, it will fail.
 - If the user asks about an app NOT in the available connectors list: say it isn't available as a Yomi connector yet but work is in progress.
+- After creating a repo, file, event, or any write action through a connector tool, call add_memory to record the result — this lets you reference it on subsequent turns without losing context.
 </rules>`
 }

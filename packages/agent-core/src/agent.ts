@@ -76,7 +76,7 @@ function formatToolItem(item: unknown): string | null {
 
 function formatToolResultValue(value: unknown): string | null {
   if (!isRecord(value)) return null
-  if (typeof value["message"] === "string") return value["message"]
+  if (typeof value["message"] === "string" && value["message"]) return value["message"]
 
   for (const key of ["files", "emails", "events", "courses", "assignments", "announcements"] as const) {
     const items = value[key]
@@ -84,6 +84,15 @@ function formatToolResultValue(value: unknown): string | null {
     if (items.length === 0) return `No ${key} found.`
     const lines = items.map(formatToolItem).filter((line): line is string => Boolean(line)).slice(0, 10)
     if (lines.length > 0) return lines.join("\n")
+  }
+
+  if (value["ok"] === true) {
+    const parts: string[] = []
+    for (const k of ["fullName", "name", "title", "url", "path", "id"] as const) {
+      const v = value[k]
+      if (typeof v === "string" && v) parts.push(v)
+    }
+    if (parts.length > 0) return `Completed: ${parts.join(" · ")}`
   }
 
   const preview = JSON.stringify(value, null, 2)

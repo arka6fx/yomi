@@ -36,8 +36,6 @@ import { ConversationManager } from "@/components/dashboard/ConversationManager"
 import { StatusManager } from "@/components/dashboard/StatusManager"
 import { ConnectorMarketplace, buildCatalog, DARK_THEME } from "@yomi/ui-connectors"
 
-type FeatureUsage = { used: number; limit: number | null }
-
 type IntegrationHealth = {
   provider: string
   displayName: string
@@ -52,38 +50,12 @@ type Sub = {
   role: string
   plan: string
   status: string
-  trialStartDate: string | null
-  trialEndDate: string | null
-  trialDaysUsed: number
-  trialDaysRemaining: number
-  trialDaysTotal: number
   trialExpired: boolean
   currentPeriodEnd: string | null
   dodoSubscriptionId: string | null
-  requestsUsed: number
-  requestsLimit: number | null
-  requestsRemaining: number | null
   resetAt: string | null
   billingWarning: string | null
-  features: {
-    chat: FeatureUsage
-    voice: FeatureUsage
-    analyze: FeatureUsage
-    connectors: FeatureUsage
-    botMessages: FeatureUsage
-  }
-  planLimits?: {
-    chat: number
-    voiceMinutes: number
-    analyze: number
-    connectors: number | null
-    botMessages: number
-  }
-  dailyChatUsed: number
-  dailyVoiceUsed: number
-  dailyImageUsed: number
-  tokensUsedThisPeriod: number
-  credits?: {
+  credits: {
     balance: number
     lifetimeGranted: number
     lifetimeConsumed: number
@@ -91,9 +63,9 @@ type Sub = {
     expiringSoon: number
     expiringSoonAt: string | null
   }
-  creditsUsed?: number
-  totalCredits?: number
-  creditPacks?: Array<{
+  creditsUsed: number
+  totalCredits: number
+  creditPacks: Array<{
     key: string
     name: string
     credits: number
@@ -1085,16 +1057,13 @@ function DashboardContent() {
               </div>
             )}
 
-            {/* Explore users out of credits (trial expired OR balance spent) must subscribe — no free top-ups. */}
-            {sub?.plan === "explore" && (sub?.trialExpired || sub?.credits?.balance === 0) && (
+            {sub?.plan === "explore" && sub?.credits?.balance === 0 && (
               <div className="mt-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20">
-                <p className="text-sm text-destructive font-medium mb-1">
-                  {sub.trialExpired ? "Free trial has ended" : "You're out of trial credits"}
-                </p>
+                <p className="text-sm text-destructive font-medium mb-1">Free trial has ended</p>
                 <p className="text-xs text-destructive/80 mb-3">
                   {sub.trialExpired
                     ? "Your 30-day Explore trial has ended. Subscribe to Pro or Max to continue using Yomi."
-                    : "You've used all your trial credits. Subscribe to Pro or Max to keep using Yomi. You can buy extra credit packs once subscribed."}
+                    : "You've used all your trial credits. Subscribe to Pro or Max to keep using Yomi."}
                 </p>
                 <button
                   onClick={() => handleUpgrade("pro")}
@@ -1107,7 +1076,6 @@ function DashboardContent() {
               </div>
             )}
 
-            {/* Subscribed users out of credits buy a pack (packs section is just below). */}
             {sub?.plan !== "explore" && sub?.credits?.balance === 0 && (
               <div className="mt-6 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
                 <p className="text-sm text-yellow-400 font-medium mb-1">No credits remaining</p>
@@ -1125,17 +1093,13 @@ function DashboardContent() {
               </div>
             )}
 
-            {sub?.features?.connectors && (
+            {connectedProviders.length > 0 && (
               <div className="mt-5 flex items-center justify-between rounded-xl border border-border bg-background/40 px-4 py-3 text-sm">
                 <span className="flex items-center gap-2 text-muted-foreground">
                   <Plug size={15} />
                   App connectors
                 </span>
-                <span className="text-foreground tabular-nums">
-                  {sub.features.connectors.limit === null
-                    ? `${sub.features.connectors.used} connected`
-                    : `${sub.features.connectors.used} / ${sub.features.connectors.limit}`}
-                </span>
+                <span className="text-foreground tabular-nums">{connectedProviders.length} connected</span>
               </div>
             )}
             </div>

@@ -650,7 +650,7 @@ describe("Dodo billing — subscription summary", () => {
     }
   })
 
-  it("returns plan limits, credit balance, packs, and sanitized credit totals", async () => {
+  it("returns credit balance, packs, and sanitized credit totals", async () => {
     const usageAt = new Date("2026-06-16T10:30:00Z")
     mockState.connectedProviders = ["github", "slack"]
     mockState.creditSummary = {
@@ -727,11 +727,6 @@ describe("Dodo billing — subscription summary", () => {
     expect(res.status).toBe(200)
     expect(body.plan).toBe("pro")
     expect(body.status).toBe("active")
-    expect(body.requestsUsed).toBe(3)
-    expect(body.requestsLimit).toBe(2000)
-    expect(body.features.connectors).toEqual({ used: 2, limit: null })
-    expect(body.features.analyze).toEqual({ used: 1, limit: 400 })
-    expect(body.tokensUsedThisPeriod).toBe(150)
     expect(body.credits.balance).toBe(497)
     expect(body.creditConsumption).toBeUndefined()
     expect(body.creditPacks.map((pack: any) => pack.key)).toEqual(["credits_500", "credits_2000", "credits_6000"])
