@@ -35,6 +35,7 @@ async function getFastPrompt(
   text: string,
   hasScreen: boolean,
   plan: Plan | undefined,
+  tts: boolean,
   preloaded?: Promise<MemoryContextBundle>,
 ): Promise<string> {
   if (cachedYomiMd === null) cachedYomiMd = await loadYomiMd()
@@ -53,7 +54,7 @@ async function getFastPrompt(
       recentSession: "",
     }
   const connectedProviders = getConnectorRegistry().getConnected()
-  return buildFastPrompt({ yomiMd: cachedYomiMd, soulMd: cachedSoulMd, ...localCtx, hasScreen, connectedProviders })
+  return buildFastPrompt({ text, tts, yomiMd: cachedYomiMd, soulMd: cachedSoulMd, ...localCtx, hasScreen, connectedProviders })
 }
 
 // Tiny single-consumer queue so multiple async producers (LLM text + N concurrent
@@ -275,7 +276,7 @@ async function* answerPipeline(
     }
   }
 
-  const systemPrompt = await getFastPrompt(text, hasScreen, plan, preloadedMemory)
+  const systemPrompt = await getFastPrompt(text, hasScreen, plan, tts, preloadedMemory)
 
   const result = streamText({
     model: createModel(MODEL),
