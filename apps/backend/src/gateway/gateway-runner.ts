@@ -323,7 +323,7 @@ export class GatewayRunner {
           })),
           { role: "user", content: text },
         ],
-        maxTokens: 300,
+        maxTokens: Math.min(400, Math.max(100, text.length * 1.5)),
         abortSignal: AbortSignal.timeout(5_000),
       })
       const reply = result.text.trim()
@@ -356,7 +356,7 @@ export class GatewayRunner {
           ],
         },
       ],
-      maxTokens: 420,
+      maxTokens: Math.min(600, Math.max(200, (prompt.length + bytes.byteLength / 1024) * 1.2)),
     })
     return result.text.trim() || "I couldn't produce an image analysis. Please try again."
   }
