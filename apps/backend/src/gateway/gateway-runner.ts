@@ -906,16 +906,6 @@ export class GatewayRunner {
       }
     }
 
-    // ── Video context ──────────────────────────────────────────────────────
-    if (msg.videoUrl) {
-      const dur = msg.videoDurationSeconds
-        ? ` (${Math.floor(msg.videoDurationSeconds / 60)}:${(msg.videoDurationSeconds % 60).toString().padStart(2, "0")})`
-        : ""
-      console.warn(`[gateway] video received${dur}`)
-      const note = `🎬 _Video received_\nTranscription available via the sidecar agent tools.`
-      msg = { ...msg, text: msg.text.trim() ? `${note}\n${msg.text}` : note }
-    }
-
     // ── Backend-first routing ─────────────────────────────────────────────────
     // Production messaging runs in the backend so Telegram is not coupled to a
     // user's localhost sidecar. Direct sidecar forwarding is only for explicit

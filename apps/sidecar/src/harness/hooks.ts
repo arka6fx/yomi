@@ -6,6 +6,7 @@ import {
 } from "../tools/guardrails/index.js"
 import { flushSessionWriteQueue, onAgentTurnComplete } from "../memory/subsystem.js"
 import { recordRecall } from "../memory/recall-store.js"
+import { registerEntityForToolResult } from "../pipeline/conversation-bridge.js"
 
 export interface Hooks {
   onSessionStart(): Promise<void>
@@ -128,6 +129,15 @@ function buildHooks(): Hooks {
         const findings = scanForThreats(resultText, "context")
         if (findings.length > 0) {
           console.warn(`[yomi/hooks] threat pattern(s) in ${toolName} output: ${findings.join(", ")}`)
+        }
+      }
+
+      // Register entity for successful tool results
+      if (out && typeof out === "object" && !("error" in (out as Record<string, unknown>))) {
+        try {
+          registerEntityForToolResult(toolName, (args ?? {}) as Record<string, unknown>, out)
+        } catch {
+          // best-effort
         }
       }
 
