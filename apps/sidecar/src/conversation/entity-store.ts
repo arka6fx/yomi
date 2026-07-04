@@ -35,7 +35,9 @@ export class EntityStore {
   getLatestByType(type: EntityType): TrackedEntity | undefined {
     const ids = this.entityIndex.get(type)
     if (!ids || ids.length === 0) return undefined
-    return this.entities.get(ids[0])
+    const id = ids[0]
+    if (!id) return undefined
+    return this.entities.get(id)
   }
 
   getRecentByType(type: EntityType, limit = 3): TrackedEntity[] {

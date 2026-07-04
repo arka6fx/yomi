@@ -44,7 +44,7 @@ export class PendingActionManager {
     this.pruneExpired()
     for (let i = this.actions.length - 1; i >= 0; i--) {
       const a = this.actions[i]
-      if (a.status === "pending" || a.status === "approved") return a
+      if (a && (a.status === "pending" || a.status === "approved")) return a
     }
     return undefined
   }

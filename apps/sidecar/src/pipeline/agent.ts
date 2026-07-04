@@ -87,7 +87,7 @@ type ExecutableTool = { execute?: (args: unknown, opts: unknown) => PromiseLike<
 type AgentStreamEvent =
   | { type: "text-delta"; textDelta: string }
   | { type: "tool-call"; toolName: string; args: unknown }
-  | { type: "tool-result"; toolName: string; result: unknown }
+  | { type: "tool-result"; toolName: string; args: unknown; result: unknown }
   | { type: "step-finish" }
   | { type: "error"; error: unknown }
   | { type: "finish"; usage?: { promptTokens?: number; completionTokens?: number } }
@@ -360,13 +360,13 @@ export async function* agentPipeline(
         }
         case "tool-result": {
           const toolName = event.toolName
-          const args = event.args as Record<string, unknown> | undefined
+          const args = event.args as Record<string, unknown>
           const resultData = event.result
-          lastToolResult = { tool: toolName, args: args ?? {}, result: resultData }
+          lastToolResult = { tool: toolName, args, result: resultData }
 
           // Register entity for successful tool results
           if (resultData && typeof resultData === "object" && !("error" in (resultData as Record<string, unknown>))) {
-            registerEntityForToolResult(toolName, args ?? {}, resultData)
+            registerEntityForToolResult(toolName, args, resultData)
           }
 
           yield { type: "agent_tool_result", tool: toolName, result: resultData }
