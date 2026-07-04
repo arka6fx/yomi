@@ -8,6 +8,14 @@ export interface AgentMessage {
   content: string
 }
 
+export interface UsageInfo {
+  model: string
+  inputTokens: number
+  outputTokens: number
+  toolCallCount: number
+  finishReason: string
+}
+
 export interface RunAgentLoopOptions {
   // Per-user connector registry (already init()'d with the user's providers).
   registry: ConnectorRegistry
@@ -26,6 +34,8 @@ export interface RunAgentLoopOptions {
   // Extra tools to merge in (beyond the connector tools).
   extraTools?: ToolSet
   signal?: AbortSignal
+  // Called after each generateText with usage telemetry.
+  onUsage?: (usage: UsageInfo) => void
 }
 
 function defaultSystem(): string {
@@ -112,6 +122,14 @@ export async function runAgentLoop(opts: RunAgentLoopOptions): Promise<string> {
     maxSteps: maxSteps(opts.maxSteps),
     maxTokens: opts.maxTokens,
     abortSignal: opts.signal,
+  })
+
+  opts.onUsage?.({
+    model: agentModel(opts.model),
+    inputTokens: result.usage.promptTokens,
+    outputTokens: result.usage.completionTokens,
+    toolCallCount: result.toolCalls.length,
+    finishReason: result.finishReason,
   })
 
   if (result.text.trim()) return result.text

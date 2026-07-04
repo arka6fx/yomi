@@ -1,7 +1,7 @@
 import { eq, and, sql, desc, ilike, or } from "drizzle-orm"
 import { generateText } from "ai"
-import { db, ragSources, memoryEntries } from "@yomi/db"
-import { ConnectorRegistry, createModel, runAgentLoop, type AgentMessage } from "@yomi/agent-core"
+import { db, ragSources, memoryEntries, usageEvents } from "@yomi/db"
+import { ConnectorRegistry, createModel, runAgentLoop, type AgentMessage, type UsageInfo } from "@yomi/agent-core"
 import { formatAgentSoul } from "@yomi/shared"
 import {
   getAccessToken,
@@ -291,6 +291,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   if (!charge.ok) {
     return { text: charge.message, quotaError: true }
   }
+  const usageEventId = charge.usageEventId
 
   const registry = new ConnectorRegistry({
     excludeNodeOnly: true,
@@ -332,6 +333,23 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       system: buildSystemWithContext(memoryContext, ragContext, profile, registry.getDesktopOnlyConnected(), user.agentSoul),
       maxTokens: maxOutputTokensFor(opts.text),
       signal: opts.signal,
+      onUsage: usageEventId
+        ? (usage: UsageInfo) => {
+            db
+              .update(usageEvents)
+              .set({
+                model: usage.model,
+                inputTokens: usage.inputTokens,
+                outputTokens: usage.outputTokens,
+                metadata: {
+                  toolCallCount: usage.toolCallCount,
+                  finishReason: usage.finishReason,
+                },
+              })
+              .where(eq(usageEvents.id, usageEventId))
+              .catch(() => {})
+          }
+        : undefined,
     })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)

@@ -41,5 +41,6 @@ export { createConnectorTools } from "./tools.js"
 export {
   runAgentLoop,
   type AgentMessage,
+  type UsageInfo,
   type RunAgentLoopOptions,
 } from "./agent.js"
