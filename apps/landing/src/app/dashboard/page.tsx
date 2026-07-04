@@ -438,24 +438,8 @@ function DashboardContent() {
       return
     }
 
-    // OAuth2: fetch with Bearer token to get the redirect URL, then navigate
-    try {
-      setIntegrationLoadingId(id)
-      const res = await fetch(`${apiBase}/api/integrations/connect/${id}`, {
-        headers: { Authorization: `Bearer ${session!.session.token}`, Accept: "application/json" },
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error ?? `HTTP ${res.status}`)
-      }
-      const data = await res.json() as { redirectUrl?: string }
-      if (!data.redirectUrl) throw new Error("Missing OAuth redirect URL")
-      window.location.href = data.redirectUrl
-    } catch (err) {
-      setIntegrationConnectError(err instanceof Error ? err.message : "Connection failed")
-    } finally {
-      setIntegrationLoadingId(null)
-    }
+    // OAuth2: navigate directly — backend authenticates via token query param
+    window.location.href = `${apiBase}/api/integrations/connect/${id}?session=${encodeURIComponent(session!.session.token)}`
   }
 
   async function handleSubmitApiKey() {

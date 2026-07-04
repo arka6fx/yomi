@@ -325,9 +325,16 @@ integrationsRouter.get("/callback/google", async (c) => {
 // For OAuth2 connectors: redirects to provider consent page.
 // For api_key / connection_string: returns field config for the frontend modal.
 
-integrationsRouter.get("/connect/:id", authenticate, async (c) => {
+integrationsRouter.get("/connect/:id", async (c) => {
   const id = c.req.param("id") ?? ""
-  const user = c.get("user")
+
+  // Auth: try session query param first, fall back to cookie/Bearer
+  const sessionToken = c.req.query("session")
+  const session = sessionToken
+    ? await getAuth().api.getSession({ headers: new Headers({ Authorization: `Bearer ${sessionToken}` }) })
+    : await getAuth().api.getSession({ headers: c.req.raw.headers })
+  if (!session?.user) return c.json({ error: "Unauthorized" }, 401)
+  const user = session.user as import("../auth.js").SessionUser
 
   if (!checkOAuthRateLimit(user.id)) {
     return c.json({ error: "Too many connect attempts — please wait a minute" }, 429)
@@ -347,7 +354,7 @@ integrationsRouter.get("/connect/:id", authenticate, async (c) => {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "OAuth setup failed"
       console.error(`[integrations/connect/${id}]`, msg)
-      return c.json({ error: msg }, 500)
+      return c.redirect(`${process.env.BETTER_AUTH_URL ?? "http://localhost:3000"}/dashboard?integration_error=${encodeURIComponent(msg)}`)
     }
   }
 
