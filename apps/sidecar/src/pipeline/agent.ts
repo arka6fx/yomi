@@ -4,10 +4,10 @@ import { createModel } from "./model.js"
 import { synthesize, resolveTts } from "./tts.js"
 import { createAgentTools } from "../tools/index.js"
 import { hooks, toolGuardrail, type Hooks } from "../harness/hooks.js"
-import { buildAgentPrompt, loadSoulMd, loadYomiMd } from "../harness/prompt.js"
+import { buildAgentPrompt, loadSoulMd, loadYomiMd, setConversationStateBlock } from "../harness/prompt.js"
 import { getConnectorRegistry } from "../connectors/registry.js"
 import { LoopGuards } from "../harness/guards.js"
-import { compressContext, IterationBudget, DEFAULT_ITERATION_BUDGET } from "../agent/index.js"
+import { compressContext, IterationBudget } from "../agent/index.js"
 import { loadMemoryContext, writeSessionTurn } from "../memory/subsystem.js"
 import { finalizeInteractionUsage, reserveInteraction } from "../usage/reserve.js"
 import {
@@ -30,14 +30,12 @@ import {
   whatsAppMessageRequest,
 } from "./shortcuts.js"
 import { maybeHandleSoulOnboarding } from "./soul-onboarding.js"
+import { getConversationState, registerEntityForToolResult, resolveUserInput } from "./conversation-bridge.js"
 
 const AGENT_MODEL = process.env.AI_CREDITS_AGENT_MODEL || "gpt-5.5"
 const AGENT_MAX_STEPS = parseInt(process.env.AGENT_MAX_STEPS || "25", 10)
-// 1M tokens for GPT-5.4-mini. Used by the turn-level compressor when no
-// model-aware context length is available.
 const DEFAULT_MODEL_CONTEXT_WINDOW = 1_000_000
 
-// Combine multiple AbortSignals into one. Triggers when any input signal aborts.
 function anySignal(...signals: AbortSignal[]): AbortSignal {
   const controller = new AbortController()
   for (const s of signals) {
@@ -51,15 +49,11 @@ function anySignal(...signals: AbortSignal[]): AbortSignal {
 }
 
 let pendingWhatsAppDraft: { kind: "reminder"; message: string } | null = null
-// let pendingWindowsNotepadDraft = false
-// let pendingWhatsAppDraft: { kind: "reminder"; message: string } | null = null
 
 export function __resetAgentShortcutStateForTest(): void {
   pendingWhatsAppDraft = null
-  // pendingWindowsNotepadDraft = false
 }
 
-// yomi.md is stable per-session; memory files change after compaction so load fresh each turn.
 let cachedYomiMd: string | null = null
 let cachedSoulMd: string | null = null
 function memoryEnabled(plan: Plan | undefined): boolean {
@@ -83,17 +77,11 @@ async function getAgentPrompt(text: string, plan: Plan | undefined): Promise<str
         recentSession: "",
       }
   const connectedProviders = getConnectorRegistry().getConnected()
+  const convState = getConversationState()
+  setConversationStateBlock(convState.toSystemPromptBlock())
   return buildAgentPrompt({ yomiMd: cachedYomiMd, soulMd: cachedSoulMd, ...memoryCtx, connectedProviders })
 }
 
-// Detached-mode phrasing is stripped so it does not pollute command parsing.
-
-// function isWindowsNotepadSaveFollowup(text: string): boolean { ... }
-// function notepadSavePath(text: string): string | null { ... }
-// function stripNotepadTarget(text: string): string { ... }
-// export function windowsNotepadRequest(...): ... { ... }
-
-// Re-export for test imports (canonical definition in shortcuts.ts).
 type WriteSessionTurn = typeof writeSessionTurn
 type ExecutableTool = { execute?: (args: unknown, opts: unknown) => PromiseLike<unknown> }
 type AgentStreamEvent =
@@ -125,7 +113,6 @@ function shortcutFailed(result: unknown): boolean {
   )
 }
 
-// Wrap all tool execute functions with PreToolUse / PostToolUse hook calls.
 function applyHooks(tools: ToolSet, activeHooks: Hooks): ToolSet {
   return Object.fromEntries(
     Object.entries(tools).map(([name, t]) => [
@@ -162,6 +149,20 @@ export async function* agentPipeline(
     return
   }
 
+  const convState = getConversationState()
+  const cleanText = stripDetachedPhrases(req.text)
+
+  // ── Resolve user input through conversation state ────────────────
+  const resolved = resolveUserInput(cleanText)
+  if (resolved.shortCircuited) {
+    for (const event of resolved.events) yield event
+    return
+  }
+  const effectiveText = resolved.text
+
+  // ── Track the turn ───────────────────────────────────────────────
+  convState.addTurn({ role: "user", text: effectiveText, timestamp: new Date() })
+
   let usageEventId: string | undefined
   if (!req.skipReserve) {
     const reservation = await reserveInteraction("chat")
@@ -178,21 +179,18 @@ export async function* agentPipeline(
     usageEventId = reservation.usageEventId
   }
 
-  const system = await getAgentPrompt(req.text, req.plan)
+  const system = await getAgentPrompt(effectiveText, req.plan)
   const guards = new LoopGuards()
   const activeHooks = opts?.hooks ?? hooks
   const signal = opts?.signal
   const writeTurn = opts?.writeSessionTurn ?? writeSessionTurn
 
-  // Cost-aware iteration budget with step + output token limits.
-  // When exhausted, switches to a tool-less summary call instead of hard-stop.
   const budget = new IterationBudget({
     maxSteps: AGENT_MAX_STEPS,
   })
   let budgetExhausted = false
   let budgetAbort: AbortController | null = null
 
-  // Track pending message drafts for follow-up resolution
   let pendingMessageDraft: { recipient: string; message: string } | null = null
 
   const ttsEnabled = req.tts !== false && resolveTts() !== "none"
@@ -208,10 +206,8 @@ export async function* agentPipeline(
       return
     }
 
-    const cleanText = stripDetachedPhrases(req.text)
-
     // ── Messaging shortcuts ────────────────────────────────────────────────
-    const draftRecipient = pendingDraftRecipientRequest(cleanText, pendingMessageDraft !== null)
+    const draftRecipient = pendingDraftRecipientRequest(effectiveText, pendingMessageDraft !== null)
     if (draftRecipient) {
       const pd: { recipient: string; message: string } = pendingMessageDraft!
       yield { type: "agent_tool_call", tool: "send_message", args: { recipient: pd.recipient, message: pd.message, chatId: draftRecipient } }
@@ -223,7 +219,7 @@ export async function* agentPipeline(
       return
     }
 
-    const whatsAppMessage = whatsAppMessageRequest(cleanText)
+    const whatsAppMessage = whatsAppMessageRequest(effectiveText)
     if (whatsAppMessage) {
       pendingMessageDraft = whatsAppMessage
       yield { type: "agent_text", text: `I'll send "${whatsAppMessage.message}" to ${whatsAppMessage.recipient}. Who should I send it to?` }
@@ -232,7 +228,7 @@ export async function* agentPipeline(
       return
     }
 
-    const reminderDraft = reminderDraftRequest(cleanText)
+    const reminderDraft = reminderDraftRequest(effectiveText)
     if (reminderDraft) {
       pendingMessageDraft = { recipient: "reminder", message: reminderDraft.message }
       yield { type: "agent_text", text: `I'll remind you to "${reminderDraft.message}". When should I remind you?` }
@@ -249,16 +245,11 @@ export async function* agentPipeline(
       activeHooks,
     )
 
-    // Reset the per-turn guardrail controller — each streamText burst is a fresh
-    // observation window. LoopGuards reads the halt decision in onStep().
     toolGuardrail.resetForTurn()
 
-    // Pre-burst compression: when the caller's prior history pushes the message
-    // list past the plan's threshold, summarise the middle before streamText so
-    // the burst is cheaper and finishes inside the model's window.
     const baseMessages: { role: "user" | "assistant" | "system"; content: string }[] = [
       ...(req.history ?? []).map((h) => ({ role: h.role, content: h.text })),
-      { role: "user" as const, content: req.text },
+      { role: "user" as const, content: effectiveText },
     ]
     let preCompressedMessages: { role: "user" | "assistant" | "system"; content: string }[] =
       baseMessages
@@ -278,14 +269,11 @@ export async function* agentPipeline(
       preCompressedMessages = compression.messages as typeof baseMessages
     }
 
-    // When budget is exhausted during the streamText loop, we abort and
-    // do a final tool-less summary call. This AbortController drives that.
     budgetAbort = new AbortController()
     const combinedSignal = signal
       ? anySignal(signal, budgetAbort.signal)
       : budgetAbort.signal
 
-    // ── Cross-session circuit breaker for LLM rate limits ─────────
     if (!(await canProceed("ai-credits"))) {
       const seconds = await cooldownRemaining("ai-credits")
       yield {
@@ -342,7 +330,8 @@ export async function* agentPipeline(
     let stepCount = 0
     let textTail = ""
     let stepOutputChars = 0
-    let maxStepsReached = false
+    let lastToolResult: { tool: string; args: unknown; result: unknown } | null = null
+    let assistantText = ""
 
     if (!result) throw new Error("streamText returned null after retries")
     for await (const event of result.fullStream as AsyncIterable<AgentStreamEvent>) {
@@ -351,6 +340,7 @@ export async function* agentPipeline(
           stepOutputChars += event.textDelta.length
           textTail = (textTail + event.textDelta).slice(-200)
           if (ttsEnabled) fullText += event.textDelta
+          assistantText += event.textDelta
           yield { type: "agent_text", text: event.textDelta }
           break
         case "tool-call": {
@@ -368,9 +358,20 @@ export async function* agentPipeline(
           }
           break
         }
-        case "tool-result":
-          yield { type: "agent_tool_result", tool: event.toolName, result: event.result }
+        case "tool-result": {
+          const toolName = event.toolName
+          const args = event.args as Record<string, unknown> | undefined
+          const resultData = event.result
+          lastToolResult = { tool: toolName, args: args ?? {}, result: resultData }
+
+          // Register entity for successful tool results
+          if (resultData && typeof resultData === "object" && !("error" in (resultData as Record<string, unknown>))) {
+            registerEntityForToolResult(toolName, args ?? {}, resultData)
+          }
+
+          yield { type: "agent_tool_result", tool: toolName, result: resultData }
           break
+        }
         case "step-finish": {
           const stepTokenEstimate = Math.ceil(stepOutputChars / 4)
           stepOutputChars = 0
@@ -449,7 +450,6 @@ export async function* agentPipeline(
       }
     }
 
-    // ── Budget exhaustion: final tool-less summary call ──────────────
     if (budgetExhausted) {
       const exhaustedReason = budget.exhaustedReason
       const budgetDetails = budget.details
@@ -465,11 +465,12 @@ export async function* agentPipeline(
             "Provide a final response summarizing what you've done so far, " +
             "without calling any more tools.",
           ].join("\n\n"),
-          prompt: `The user asked: "${req.text}"\n\nSummarize what was accomplished during this session. Be concise.`,
+          prompt: `The user asked: "${effectiveText}"\n\nSummarize what was accomplished during this session. Be concise.`,
           abortSignal: signal,
         })
         if (summaryText?.trim()) {
           fullText += "\n" + summaryText
+          assistantText += "\n" + summaryText
           yield { type: "agent_text", text: summaryText }
         }
       } catch (err) {
@@ -497,9 +498,13 @@ export async function* agentPipeline(
     })
 
     const summary = textTail.replace(/\n/g, " ").trim() || "agent task complete"
+
+    // Track assistant turn
+    convState.addTurn({ role: "assistant", text: assistantText || summary, timestamp: new Date() })
+
     await activeHooks.onStop(summary)
     if (memoryEnabled(req.plan)) {
-      await writeTurn({ kind: "agent", input: req.text, output: summary, summary })
+      await writeTurn({ kind: "agent", input: effectiveText, output: summary, summary })
     }
     if (ttsEnabled && fullText.trim()) {
       try {
