@@ -7,7 +7,7 @@ import { createCronJobTool } from "./cron/cronjob-tool.js"
 import { createMessagingTools } from "./messaging.js"
 import { createIntegrationTools } from "./integrations.js"
 import { createDocumentTools } from "./documents.js"
-import { createVideoTools } from "./video.js"
+
 import { getConnectorRegistry } from "../connectors/registry.js"
 
 export interface AgentToolsContext {
@@ -25,7 +25,6 @@ export function createAgentTools(ctx: AgentToolsContext = {}) {
     ...createMessagingTools(),
     ...createIntegrationTools(),
     ...createDocumentTools(),
-    ...createVideoTools(),
     ...getConnectorRegistry().getAllDefTools(),
   }
 }

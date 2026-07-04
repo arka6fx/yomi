@@ -254,6 +254,54 @@ ${capLine}
 ${connInfo}${memCtx}`
 }
 
+let _conversationStateBlock = ""
+
+export function setConversationStateBlock(block: string): void {
+  _conversationStateBlock = block
+}
+
+export function getConversationStateBlock(): string {
+  return _conversationStateBlock
+}
+
+const CONVERSATION_RULES = `\
+<conversation_rules>
+When the user says "yes", "approve", "do it", "/approve", "okay", or any affirmative:
+  - Check the `<pending_action>` block first.
+  - If a pending action exists, execute it immediately. Do NOT ask "what are we approving?"
+  - Do NOT ask what the user is agreeing to — the pending action block tells you.
+  - After executing, return a rich result with links, hashes, timestamps, and previews.
+  - If no pending action exists, ask "What would you like to approve?"
+
+Reference resolution:
+  - "it", "this", "that", "the" → look in `<active_context>` for the most recent matching entity.
+  - "there" → look for current repository, folder, or location.
+  - "show me", "open it", "view" → refer to the active entity from the context.
+  - "rename it", "update it", "commit it" → apply to the active entity.
+  - When creating: "create one" → use the same type as the last created entity.
+  - "use that repo", "put it there" → resolve from active context.
+
+Workspace inference:
+  - "slide", "presentation", "ppt", "deck" → Google Slides
+  - "document", "doc" → Google Docs
+  - "spreadsheet", "sheet", "excel" → Google Sheets
+  - "folder" → Google Drive Folder
+
+Never ask for information already in `<active_context>` or `<pending_action>`.
+If you find the info there, use it directly.
+
+After any write/create tool execution, return a rich response:
+  - GitHub: commit hash, branch, file path, GitHub link, preview
+  - Calendar: event time, attendees, event link
+  - Drive/Docs: document link, title
+  - Slides: presentation link
+  - Slack: channel, message permalink
+  - Linear: issue URL, title, status
+  - Never just say "Done."
+
+After creating something, it becomes the active entity. The user can then refer to it with "it", "this", "show me", "rename it", etc.
+</conversation_rules>`
+
 export function buildAgentPrompt(ctx: PromptContext): string {
   const { userName, os, today, yomiMd, soulMd, connectedProviders, ...memoryCtx } = resolveCtx(ctx)
   const userCtx = yomiMd ? `<user_context>\n${yomiMd}\n</user_context>\n\n` : ""
@@ -261,6 +309,8 @@ export function buildAgentPrompt(ctx: PromptContext): string {
   const memCtx = buildMemoryBlock(memoryCtx)
   const appUrl = process.env["YOMI_APP_URL"] ?? "https://yomi.arka6fx.com"
   const connInfo = buildConnectorInfo(connectedProviders)
+
+  const convState = _conversationStateBlock || ""
 
   return `\
 <identity>
@@ -302,5 +352,8 @@ ${AGENT_EXAMPLES}
 - If the user asks about an app from the available connectors list that is NOT connected: you MUST say they need to connect it at ${appUrl}/dashboard. Do NOT try to use a tool for an app that isn't connected, it will fail.
 - If the user asks about an app NOT in the available connectors list: say it isn't available as a Yomi connector yet but work is in progress.
 - After creating a repo, file, event, or any write action through a connector tool, call add_memory to record the result — this lets you reference it on subsequent turns without losing context.
-</rules>`
+</rules>
+
+${convState ? `<conversation_state>\n${convState}\n</conversation_state>\n\n` : ""}
+${CONVERSATION_RULES}`
 }
