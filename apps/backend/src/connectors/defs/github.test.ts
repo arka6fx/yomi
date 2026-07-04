@@ -411,10 +411,25 @@ describe("GitHub advanced ops", () => {
       if (init?.method === "POST" && path === "/repos/owner/repo/git/refs") {
         return new Response(JSON.stringify({ ref: "refs/heads/feature", object: { sha: "basesha" } }))
       }
+      if (init?.method === "POST" && path === "/user/repos") {
+        return new Response(JSON.stringify({
+          name: "golang-practice",
+          full_name: "owner/golang-practice",
+          private: false,
+          html_url: "https://github.com/owner/golang-practice",
+          default_branch: "main",
+        }))
+      }
       if (path === "/user/repos") {
         return new Response(JSON.stringify([
           { full_name: "owner/repo", private: false, html_url: "https://github.com/owner/repo", description: "d", default_branch: "main", updated_at: "2024-01-01T00:00:00Z" },
         ]))
+      }
+      if (init?.method === "PUT" && path === "/repos/owner/golang-practice/contents/main.go") {
+        return new Response(JSON.stringify({
+          content: { path: "main.go", sha: "filesha", html_url: "https://github.com/owner/golang-practice/blob/main/main.go" },
+          commit: { sha: "commitsha", html_url: "https://github.com/owner/golang-practice/commit/commitsha" },
+        }))
       }
       if (path === "/repos/owner/repo/branches") {
         return new Response(JSON.stringify([{ name: "main", protected: true }, { name: "dev", protected: false }]))
@@ -466,6 +481,31 @@ describe("GitHub advanced ops", () => {
     expect(result.count).toBe(2)
     expect(result.branches[0].name).toBe("main")
   })
+
+  it("28. github-createRepo creates a repository", async () => {
+    const result = await ghTools["github-createRepo"].execute!({ name: "golang-practice", description: "Go practice", private: false, autoInit: false })
+    expect(result.ok).toBeTrue()
+    expect(result.fullName).toBe("owner/golang-practice")
+    expect(lastRequest.method).toBe("POST")
+    expect(lastRequest.body.name).toBe("golang-practice")
+    expect(lastRequest.body.auto_init).toBeFalse()
+  })
+
+  it("29. github-createOrUpdateFile writes file contents", async () => {
+    const content = "package main\n\nfunc Sum(a, b int) int { return a + b }\n"
+    const result = await ghTools["github-createOrUpdateFile"].execute!({
+      owner: "owner",
+      repo: "golang-practice",
+      path: "main.go",
+      content,
+      message: "add sum practice",
+    })
+    expect(result.ok).toBeTrue()
+    expect(result.path).toBe("main.go")
+    expect(lastRequest.method).toBe("PUT")
+    expect(atob(lastRequest.body.content)).toBe(content)
+    expect(lastRequest.body.message).toBe("add sum practice")
+  })
 })
 
 // ── Section 7: approval-gating ────────────────────────────────────────────────
@@ -500,7 +540,7 @@ describe("GitHub approval-gating", () => {
 
   afterEach(() => mock.restore())
 
-  it("28. github-createIssue queues a pending action instead of calling the API", async () => {
+  it("30. github-createIssue queues a pending action instead of calling the API", async () => {
     const result = await ghTools["github-createIssue"].execute!({ owner: "owner", repo: "repo", title: "Gated issue", body: "b" })
     expect(result.status).toBe("pending")
     expect(result.message).toInclude("Approval required")
@@ -510,14 +550,36 @@ describe("GitHub approval-gating", () => {
     expect(pendingInput.payload.title).toBe("Gated issue")
   })
 
-  it("29. github-mergePR gates as irreversible", async () => {
+  it("31. github-mergePR gates as irreversible", async () => {
     const result = await ghTools["github-mergePR"].execute!({ owner: "owner", repo: "repo", prNumber: 5, method: "merge" })
     expect(result.status).toBe("pending")
     expect(pendingInput.risk).toBe("irreversible")
     expect(fetchCalled).toBeFalse()
   })
 
-  it("30. read tools are NOT gated", async () => {
+  it("32. github-createRepo is approval-gated", async () => {
+    const result = await ghTools["github-createRepo"].execute!({ name: "golang-practice", private: false, autoInit: false })
+    expect(result.status).toBe("pending")
+    expect(fetchCalled).toBeFalse()
+    expect(pendingInput.action).toBe("github-createRepo")
+    expect(pendingInput.payload.name).toBe("golang-practice")
+  })
+
+  it("33. github-createOrUpdateFile is approval-gated", async () => {
+    const result = await ghTools["github-createOrUpdateFile"].execute!({
+      owner: "owner",
+      repo: "golang-practice",
+      path: "main.go",
+      content: "package main\n",
+      message: "add file",
+    })
+    expect(result.status).toBe("pending")
+    expect(fetchCalled).toBeFalse()
+    expect(pendingInput.action).toBe("github-createOrUpdateFile")
+    expect(pendingInput.payload.path).toBe("main.go")
+  })
+
+  it("34. read tools are NOT gated", async () => {
     global.fetch = mock(async () => new Response(JSON.stringify([])))
     const result = await ghTools["github-listPRs"].execute!({ owner: "o", repo: "r", state: "open", limit: 5 })
     expect(pendingInput).toBeUndefined()
