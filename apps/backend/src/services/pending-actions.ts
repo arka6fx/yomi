@@ -205,6 +205,9 @@ export async function approvePendingAction(userId: string, id: string) {
       connector: pendingActions.connector,
       action: pendingActions.action,
       payload: pendingActions.payload,
+      sourcePlatform: pendingActions.sourcePlatform,
+      sourceChatId: pendingActions.sourceChatId,
+      title: pendingActions.title,
     })
   if (!approved) return null
 
@@ -215,6 +218,20 @@ export async function approvePendingAction(userId: string, id: string) {
       .set({ status: "executed", result, executedAt: new Date(), updatedAt: new Date() })
       .where(and(eq(pendingActions.id, id), eq(pendingActions.userId, userId)))
       .returning({ id: pendingActions.id, status: pendingActions.status, result: pendingActions.result })
+
+    // Notify the user on their messaging platform after a write action completes
+    if (approved.sourcePlatform && approved.sourceChatId) {
+      const resultText =
+        typeof result === "object" && result !== null && "message" in result && typeof (result as Record<string, unknown>).message === "string"
+          ? (result as Record<string, unknown>).message as string
+          : `Done: ${approved.title}`
+      import("../gateway/index.js").then(({ getDefaultGateway }) => {
+        const gateway = getDefaultGateway()
+        const platform = approved.sourcePlatform as "telegram"
+        gateway.sendMessage(platform, approved.sourceChatId!, resultText).catch(() => {})
+      }).catch(() => {})
+    }
+
     return executed ?? { id, status: "executed", result }
   } catch (err) {
     const result = { ok: false, error: err instanceof Error ? err.message : String(err) }

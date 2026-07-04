@@ -1,15 +1,10 @@
 import { Hono } from "hono"
 import { createHmac, timingSafeEqual } from "node:crypto"
 import { db, paymentRecords, usageEvents } from "@yomi/db"
-import { and, eq, gte, inArray, sql } from "drizzle-orm"
+import { and, eq, gte, sql } from "drizzle-orm"
 import { authenticate } from "../auth.js"
 import * as authSchema from "../auth-schema.js"
-import {
-  effectivePlanForUser,
-  effectiveRoleForUser,
-  featureLimitForUser,
-  requestLimitForUser,
-} from "../entitlements.js"
+import { effectivePlanForUser, effectiveRoleForUser } from "../entitlements.js"
 import {
   CREDIT_PACKS,
   PLANS as SHARED_PLANS,
@@ -24,7 +19,6 @@ import {
   grantCredits,
   recentCreditTransactions,
 } from "../services/credit-ledger.js"
-import { listConnectedProviders } from "../services/integration-tokens.js"
 import { payloadHash, recordPaymentEvent, upsertPaymentRecord } from "../services/payment-events.js"
 
 type DodoMode = "test" | "live"
@@ -563,11 +557,6 @@ billingRouter.get("/subscription", authenticate, async (c) => {
       trialEndDate: authSchema.user.trialEndDate,
       currentPeriodEnd: authSchema.user.currentPeriodEnd,
       dodoSubscriptionId: authSchema.user.dodoSubscriptionId,
-      trialInteractionUsed: authSchema.user.trialInteractionUsed,
-      trialInteractionLimit: authSchema.user.trialInteractionLimit,
-      dailyChatCount: authSchema.user.dailyChatCount,
-      dailyVoiceCount: authSchema.user.dailyVoiceCount,
-      dailyImageCount: authSchema.user.dailyImageCount,
     })
     .from(authSchema.user)
     .where(eq(authSchema.user.id, sessionUser.id))
@@ -575,50 +564,8 @@ billingRouter.get("/subscription", authenticate, async (c) => {
 
   if (!user) return c.json({ error: "User not found" }, 404)
 
-  const periodStart = user.currentPeriodEnd
-    ? new Date(user.currentPeriodEnd.getTime() - 30 * 24 * 60 * 60 * 1000)
-    : new Date(0)
-
-  const usageRows = await db
-    .select({ inputTokens: usageEvents.inputTokens, outputTokens: usageEvents.outputTokens })
-    .from(usageEvents)
-    .where(and(eq(usageEvents.userId, user.id), gte(usageEvents.createdAt, periodStart)))
-
-  const tokensUsedThisPeriod = usageRows.reduce(
-    (sum, r) => sum + (r.inputTokens ?? 0) + (r.outputTokens ?? 0),
-    0,
-  )
-
+  const effectivePlan = effectivePlanForUser(user)
   const requestPeriodStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1))
-  const kindCounts = await db
-    .select({ kind: usageEvents.kind, count: sql<number>`count(*)` })
-    .from(usageEvents)
-    .where(
-      and(
-        eq(usageEvents.userId, user.id),
-        gte(usageEvents.createdAt, requestPeriodStart),
-        inArray(usageEvents.kind, [
-          "request_chat",
-          "request_voice",
-          "stt",
-          "agent_run",
-          "analyze",
-          "bot_message",
-        ]),
-      ),
-    )
-    .groupBy(usageEvents.kind)
-
-  const countMap: Record<string, number> = {}
-  for (const row of kindCounts) countMap[row.kind] = Number(row.count)
-
-  const chatUsed = countMap["request_chat"] ?? 0
-  const voiceUsed = countMap["request_voice"] ?? 0
-  const agentUsed = (countMap["agent_run"] ?? 0) + (countMap["bot_message"] ?? 0)
-  const analyzeUsed = countMap["analyze"] ?? 0
-  const requestsUsed = chatUsed + voiceUsed
-  const requestsLimit = requestLimitForUser(user)
-  const requestsRemaining = requestsLimit === null ? null : Math.max(requestsLimit - requestsUsed, 0)
   const resetAt = new Date(Date.UTC(requestPeriodStart.getUTCFullYear(), requestPeriodStart.getUTCMonth() + 1, 1))
 
   const creditConsumptionRows = await db
@@ -638,31 +585,13 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     creditConsumption[row.kind] = Number(row.creditsCharged)
   }
 
-  const effectivePlan = effectivePlanForUser(user)
-  const planConfig = getPlan(effectivePlan)
-
   const totalCreditsUsed = Object.values(creditConsumption).reduce((sum, v) => sum + v, 0)
-  // Single honest meter: remaining balance + what's already been consumed this period.
-  // Stable within a billing period (only grows when a credit pack is purchased), so the
-  // progress bar reads "used / total" correctly — unlike the old includedCredits + used.
   const creditSummary = await getCreditSummary(user.id)
   const totalCredits = creditSummary.balance + totalCreditsUsed
 
-  const connectedProviders = await listConnectedProviders(user.id)
-  const connectorLimit = featureLimitForUser(user, "connectors")
-
-  const trialDaysTotal = 30
-  let trialDaysUsed = 0
-  let trialDaysRemaining = 0
   let trialExpired = false
-  let trialStart = user.trialStartDate
-  let trialEnd = user.trialEndDate
   if (effectivePlan === "explore") {
-    trialStart ??= user.createdAt
-    trialEnd ??= new Date(trialStart.getTime() + trialDaysTotal * 24 * 60 * 60 * 1000)
-    const usedMs = Date.now() - trialStart.getTime()
-    trialDaysUsed = Math.max(0, Math.min(trialDaysTotal, Math.floor((usedMs / (1000 * 60 * 60 * 24)))))
-    trialDaysRemaining = Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    const trialEnd = user.trialEndDate ?? new Date(user.createdAt.getTime() + 30 * 24 * 60 * 60 * 1000)
     trialExpired = Date.now() >= trialEnd.getTime()
   }
 
@@ -672,36 +601,10 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     role: effectiveRoleForUser(user),
     plan: effectivePlan,
     status: user.subscriptionStatus,
-    trialStartDate: trialStart,
-    trialEndDate: trialEnd,
-    trialDaysUsed,
-    trialDaysRemaining,
-    trialDaysTotal,
     trialExpired,
     currentPeriodEnd: user.currentPeriodEnd,
     dodoSubscriptionId: user.dodoSubscriptionId,
-    requestsUsed,
-    requestsLimit,
-    requestsRemaining,
     resetAt,
-    features: {
-      chat: { used: chatUsed, limit: requestsLimit },
-      voice: { used: voiceUsed, limit: featureLimitForUser(user, "voiceMinutes") },
-      analyze: { used: analyzeUsed, limit: featureLimitForUser(user, "analyze") },
-      connectors: { used: connectedProviders.length, limit: connectorLimit },
-      botMessages: { used: agentUsed, limit: featureLimitForUser(user, "botMessages") },
-    },
-    planLimits: {
-      chat: planConfig.limits.chat,
-      voiceMinutes: planConfig.limits.voiceMinutes,
-      analyze: planConfig.limits.analyze,
-      connectors: planConfig.limits.connectors,
-      botMessages: planConfig.limits.botMessages,
-    },
-    dailyChatUsed: user.dailyChatCount,
-    dailyVoiceUsed: user.dailyVoiceCount,
-    dailyImageUsed: user.dailyImageCount,
-    tokensUsedThisPeriod,
     credits: creditSummary,
     creditsUsed: totalCreditsUsed,
     totalCredits,
