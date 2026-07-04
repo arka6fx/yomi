@@ -333,4 +333,42 @@ describe("GatewayRunner production routing", () => {
     expect(approvedActions).toEqual(["11111111-1111-1111-1111-111111111111"])
     expect(adapter.messages.at(-1)?.text).toBe("Approved and executed.")
   })
+
+  it("lets bare yes continue to the agent when no approval is pending", async () => {
+    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "yes",
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(agentCalls.at(-1)?.text).toBe("yes")
+    expect(adapter.messages.at(-1)?.text).toBe("backend reply")
+  })
+
+  it("approves pending action with natural affirmative text", async () => {
+    pendingActions = [
+      { id: "11111111-1111-1111-1111-111111111111", title: "Create repo", preview: "golang-practice" },
+    ]
+    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "yes create it",
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(agentCalls).toHaveLength(0)
+    expect(approvedActions).toEqual(["11111111-1111-1111-1111-111111111111"])
+    expect(adapter.messages.at(-1)?.text).toBe("Approved and executed.")
+  })
 })
