@@ -216,11 +216,14 @@ export class GatewayRunner {
   private async handleApprovalCommand(userId: string, text: string): Promise<string | null> {
     const trimmed = text.trim()
     const command = trimmed.replace(/^\//, "")
+    const isExplicitApprovalCommand = /^\/(approve|yes|deny|no)$/i.test(trimmed)
+    const wantsApprove = /^(approve|yes|yep|yeah|confirm|send|do it|create it|yes[,\s].*|.*\byes[,\s]+(create|approve|confirm|send|do)\b.*)$/i.test(command)
+    const wantsDeny = /^(deny|no|nope|reject|cancel|don't|do not|stop)$/i.test(command)
     if (/^(pending|approvals|pending approvals)$/i.test(command)) {
       return this.formatPendingActions(userId)
     }
 
-    if (/^(approve|yes|deny|no)$/i.test(command)) {
+    if (wantsApprove || wantsDeny) {
       let actions: Awaited<ReturnType<typeof import("../services/pending-actions.js")["listPendingActions"]>>
       let approvePendingAction: typeof import("../services/pending-actions.js")["approvePendingAction"]
       let denyPendingAction: typeof import("../services/pending-actions.js")["denyPendingAction"]
@@ -233,9 +236,9 @@ export class GatewayRunner {
         console.warn("[gateway] pending approval command unavailable:", err)
         return "Pending approvals are temporarily unavailable. Please try again in a moment."
       }
-      if (actions.length === 0) return "No pending approvals."
+      if (actions.length === 0) return isExplicitApprovalCommand ? "No pending approvals." : null
       const id = actions[0]!.id
-      if (/^(approve|yes)$/i.test(command)) {
+      if (wantsApprove) {
         try {
           const result = await approvePendingAction(userId, id)
           if (!result) return "I couldn't find that pending action. It may have expired or already been handled."
