@@ -4,6 +4,12 @@ import type { ConnectorDef, ConnectorContext } from "./connector-def.js"
 import { connectorError, gateWrite } from "./connector-def.js"
 
 export function createGitHubTools(ctx: ConnectorContext): ToolSet {
+  function base64Encode(input: string): string {
+    let binary = ""
+    for (const byte of new TextEncoder().encode(input)) binary += String.fromCharCode(byte)
+    return btoa(binary)
+  }
+
   async function gh<T>(path: string, init?: RequestInit): Promise<T> {
     const token = await ctx.getAccessToken(ctx.userId, "github")
     const base = "https://api.github.com"
@@ -552,6 +558,109 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
+    "github-createRepo": tool({
+      description:
+        "Create a new GitHub repository for the authenticated user. IMPORTANT: confirm the repository name and visibility before calling this tool.",
+      parameters: z.object({
+        name: z.string().min(1).describe("Repository name"),
+        description: z.string().optional().describe("Repository description"),
+        private: z.boolean().default(false).describe("Whether the repository should be private"),
+        autoInit: z.boolean().default(false).describe("Whether to initialize with a README commit"),
+      }),
+      execute: async (args) => {
+        const { name, description, private: isPrivate, autoInit } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "github",
+            action: "github-createRepo",
+            risk: "write",
+            title: `Create GitHub repository ${name}`,
+            preview: `${isPrivate ? "Private" : "Public"} repository${description ? `: ${description}` : ""}`,
+            confirmText: "Create repository",
+          },
+          args,
+          async () => {
+            try {
+              const repo = await gh<{
+                name: string
+                full_name: string
+                private: boolean
+                html_url: string
+                default_branch: string
+              }>("/user/repos", {
+                method: "POST",
+                body: JSON.stringify({ name, description, private: isPrivate, auto_init: autoInit }),
+              })
+              return {
+                ok: true,
+                name: repo.name,
+                fullName: repo.full_name,
+                private: repo.private,
+                defaultBranch: repo.default_branch,
+                url: repo.html_url,
+              }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
+
+    "github-createOrUpdateFile": tool({
+      description:
+        "Create or update a single file in a GitHub repository. Provide sha when updating an existing file. IMPORTANT: confirm the path and commit message before calling this tool.",
+      parameters: z.object({
+        owner: z.string().describe("Repository owner"),
+        repo: z.string().describe("Repository name"),
+        path: z.string().min(1).describe("File path within the repository"),
+        content: z.string().describe("File contents"),
+        message: z.string().min(1).describe("Commit message"),
+        branch: z.string().optional().describe("Branch to write to. Defaults to the repository default branch"),
+        sha: z.string().optional().describe("Existing file SHA, required by GitHub when updating a file"),
+      }),
+      execute: async (args) => {
+        const { owner, repo, path, content, message, branch, sha } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "github",
+            action: "github-createOrUpdateFile",
+            risk: "write",
+            title: `Write ${path} in ${owner}/${repo}`,
+            preview: `${message}\n\n${content.slice(0, 800)}`,
+            confirmText: "Commit file",
+          },
+          args,
+          async () => {
+            try {
+              const params = new URLSearchParams()
+              if (branch) params.set("ref", branch)
+              const encodedPath = path.split("/").map(encodeURIComponent).join("/")
+              const result = await gh<{
+                content: { path: string; sha: string; html_url: string }
+                commit: { sha: string; html_url: string }
+              }>(`/repos/${owner}/${repo}/contents/${encodedPath}${params.size ? `?${params}` : ""}`, {
+                method: "PUT",
+                body: JSON.stringify({ message, content: base64Encode(content), branch, sha }),
+              })
+              return {
+                ok: true,
+                path: result.content.path,
+                sha: result.content.sha,
+                url: result.content.html_url,
+                commitSha: result.commit.sha,
+                commitUrl: result.commit.html_url,
+              }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
+
     "github-listBranches": tool({
       description: "List branches in a GitHub repository.",
       parameters: z.object({
@@ -583,7 +692,7 @@ export const githubDef: ConnectorDef = {
   category: "engineering",
   icon: "github",
   description:
-    "View and manage pull requests and issues: list, read, create, comment, update/close, and open PRs.",
+    "View and manage repositories, files, pull requests, and issues.",
   readOnlyByDefault: false,
   auth: {
     kind: "oauth2",
