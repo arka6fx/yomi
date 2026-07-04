@@ -294,6 +294,46 @@ export class GatewayRunner {
     return /\b(voice reply|reply in voice|send (me )?(a )?(voice|voicemail|voice note|audio)|say it aloud|read it out)\b/i.test(text)
   }
 
+  // Cheap gpt-5.5-mini path for simple Q&A, greetings, knowledge questions.
+  // Returns the reply text, or null when the query needs the full agent loop.
+  private async fastTelegramRespond(
+    text: string,
+    history: AgentMessage[],
+  ): Promise<string | null> {
+    const modelId =
+      process.env["AI_CREDITS_FAST_MODEL"] ||
+      process.env["AI_CREDITS_AGENT_MODEL"] ||
+      "gpt-5.5-mini"
+    try {
+      const result = await generateText({
+        model: createModel(modelId),
+        system:
+          "You are Yomi, a helpful AI assistant on Telegram. Answer concisely in 1-3 sentences.\n\n" +
+          "Rules:\n" +
+          "- Answer directly, no preamble or markdown.\n" +
+          "- If the user asks about their email, calendar, files, GitHub, Slack, or any connected service, respond with exactly: NEED_AGENT\n" +
+          "- If the user asks you to do something (send, create, draft, schedule, open, deploy), respond with exactly: NEED_AGENT\n" +
+          "- If you need to look something up or use a tool, respond with exactly: NEED_AGENT\n" +
+          "- If unsure, respond with exactly: NEED_AGENT\n" +
+          "- Never use em dashes \u2014 use commas or periods.",
+        messages: [
+          ...history.slice(-4).map((h) => ({
+            role: h.role as "user" | "assistant",
+            content: h.content,
+          })),
+          { role: "user", content: text },
+        ],
+        maxTokens: 300,
+        abortSignal: AbortSignal.timeout(5_000),
+      })
+      const reply = result.text.trim()
+      if (!reply || reply === "NEED_AGENT") return null
+      return reply
+    } catch {
+      return null
+    }
+  }
+
   private async analyzeImage(msg: GatewayMessage, history: AgentMessage[]): Promise<string> {
     if (!msg.imageUrl) return "I couldn't access the image. Please send it again."
     const imageRes = await fetch(msg.imageUrl, { signal: AbortSignal.timeout(10_000) })
@@ -902,6 +942,28 @@ export class GatewayRunner {
         console.warn("[gateway] image analysis error:", err)
         await this.sendMessageAndLog(msg.platform, msg.chatId, "Sorry, I couldn't analyze that image. Please try again.", "telegram-image-error", { replyTo: msg.messageId })
       }
+      return
+    }
+
+    // ── Fast path: cheap model call for simple Q&A ──────────────────────────
+    // Before committing to the full gpt-5.5 agent loop, try gpt-5.5-mini.
+    // If the fast path handles it, we save credits and latency.
+    const fastReply = await this.fastTelegramRespond(msg.text, history)
+    if (fastReply !== null) {
+      if (conversationConsent.allowed && persistentSession) {
+        await appendAgentTurn({
+          sessionId: persistentSession.id,
+          userId: yomiUserId,
+          userText: msg.text,
+          assistantText: fastReply,
+        }).catch(() => {
+          this.appendHistory(msg.platform, msg.chatId, msg.text, fastReply)
+        })
+      } else {
+        this.appendHistory(msg.platform, msg.chatId, msg.text, fastReply)
+      }
+      clearInterval(typingInterval)
+      await this.sendMessageAndLog(msg.platform, msg.chatId, fastReply, "telegram-fast-reply", { replyTo: msg.messageId })
       return
     }
 
