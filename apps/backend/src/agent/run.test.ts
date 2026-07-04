@@ -49,6 +49,8 @@ const fakeDbWithCount = {
 mock.module("@yomi/db", () => ({
   db: fakeDbWithCount,
   usageEvents: {},
+  agentMessages: {},
+  agentSessions: {},
   ragChunks: {},
   ragDocuments: {},
   ragSources: {},

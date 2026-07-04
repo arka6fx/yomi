@@ -157,5 +157,45 @@ export function createMemoryTools() {
         return result ? { ok: true, ...result } : { error: "Memory store unavailable. Sign in to manage durable memories." }
       },
     }),
+
+    walk_memory_graph: tool({
+      description:
+        "Walk the memory knowledge graph from a root memory to discover related memories via updates/extends/derives relations. Use when you need to understand how memories are connected or find the version history of a fact.",
+      parameters: jsonSchema<{ rootId: string; maxDepth?: number }>({
+        type: "object",
+        properties: {
+          rootId: { type: "string", description: "Root memory id to start the walk from" },
+          maxDepth: { type: "number", description: "Maximum depth to walk (default 3, max 6)", default: 3 },
+        },
+        required: ["rootId"],
+      }),
+      execute: async ({ rootId, maxDepth = 3 }) => {
+        const result = await memoryRequest<{
+          root?: MemoryEntry; chain?: MemoryEntry[]; branched?: MemoryEntry[]
+        }>("/api/memory/graph-walk", { rootId, maxDepth })
+        if (!result) return { error: "Memory store unavailable." }
+        const all = [result.root, ...(result.chain ?? []), ...(result.branched ?? [])].filter(Boolean)
+        return { memories: all }
+      },
+    }),
+
+    memory_stats: tool({
+      description:
+        "Get memory system statistics: number of promoted memories, candidate entries, and MEMORY.md size.",
+      parameters: jsonSchema<Record<string, never>>({
+        type: "object",
+        properties: {},
+        required: [],
+      }),
+      execute: async () => {
+        try {
+          const { getMemoryStats } = await import("../memory/promotion.js")
+          const stats = await getMemoryStats()
+          return stats
+        } catch {
+          return { error: "Local memory unavailable." }
+        }
+      },
+    }),
   }
 }

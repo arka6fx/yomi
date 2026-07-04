@@ -6,6 +6,73 @@ import type {
   LanguageModelV1Message,
   LanguageModelV1StreamPart,
 } from "@ai-sdk/provider"
+import { resolveMaxTokens } from "./model-caps.js"
+
+// ── Structured API errors ─────────────────────────────────────────────
+
+export class RateLimitError extends Error {
+  readonly status: number
+  readonly retryAfterSeconds: number | undefined
+  readonly body: string
+
+  constructor(message: string, status: number, body: string, retryAfterSeconds?: number) {
+    super(message)
+    this.name = "RateLimitError"
+    this.status = status
+    this.body = body
+    this.retryAfterSeconds = retryAfterSeconds
+  }
+}
+
+export class BillingError extends Error {
+  readonly status: number
+  readonly body: string
+
+  constructor(message: string, status: number, body: string) {
+    super(message)
+    this.name = "BillingError"
+    this.status = status
+    this.body = body
+  }
+}
+
+export class ApiError extends Error {
+  readonly status: number
+  readonly body: string
+
+  constructor(message: string, status: number, body: string) {
+    super(message)
+    this.name = "ApiError"
+    this.status = status
+    this.body = body
+  }
+}
+
+function parseRetryAfter(value: string | null | undefined): number | undefined {
+  if (!value) return undefined
+  const seconds = parseInt(value, 10)
+  if (!isNaN(seconds) && seconds >= 0) return seconds
+  const ts = Date.parse(value)
+  if (!isNaN(ts)) return Math.max(1, Math.ceil((ts - Date.now()) / 1000))
+  return undefined
+}
+
+function classifyAndThrow(status: number, bodyText: string, headers: Headers): never {
+  const lower = bodyText.toLowerCase()
+  const isRateLimit = status === 429
+  const isBilling = status === 402 || status === 403 ||
+    lower.includes("insufficient") || lower.includes("billing") ||
+    lower.includes("quota") || lower.includes("credits")
+
+  if (isRateLimit) {
+    const retryAfter = parseRetryAfter(headers.get("retry-after") ?? headers.get("Retry-After") ?? headers.get("x-ratelimit-reset"))
+    throw new RateLimitError(bodyText || `Rate limited (${status})`, status, bodyText, retryAfter)
+  }
+  if (isBilling) {
+    throw new BillingError(bodyText || `Billing error (${status})`, status, bodyText)
+  }
+  throw new ApiError(bodyText || `AI Credits request failed (${status})`, status, bodyText)
+}
 
 const DEFAULT_MODEL = "gpt-5.5"
 const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
@@ -211,10 +278,12 @@ function requestBody(modelId: string, options: LanguageModelV1CallOptions, strea
           : "auto"
       : undefined
 
+  const clampedMaxTokens = resolveMaxTokens(modelId, options.maxTokens)
+
   return {
     model: modelId,
     messages: chatMessages(options),
-    max_tokens: options.maxTokens,
+    ...(clampedMaxTokens !== undefined ? { max_tokens: clampedMaxTokens } : {}),
     temperature: options.temperature,
     top_p: options.topP,
     stop: options.stopSequences,
@@ -259,7 +328,7 @@ async function chatCompletion(body: unknown, signal?: AbortSignal): Promise<Resp
   })
   if (!response.ok) {
     const text = await response.text().catch(() => "")
-    throw new Error(`AI Credits request failed (${response.status}): ${text || response.statusText}`)
+    classifyAndThrow(response.status, text || response.statusText, response.headers)
   }
   return response
 }

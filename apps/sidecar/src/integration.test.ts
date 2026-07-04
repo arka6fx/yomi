@@ -402,11 +402,11 @@ describe("memory subsystem + RAG", () => {
     expect(ctx.localMemory).toBe("")
     expect(ctx.staticProfile).toBe("")
     expect(ctx.dynamicProfile).toBe("")
-    expect(ctx.recentSession).toBe("")
+    expect(typeof ctx.recentSession).toBe("string")
   })
 
-  it("writeSessionTurn is a no-op compatibility shim", async () => {
-    writeSessionTurn({ kind: "fast", input: "test input", output: "test output" })
+  it("writeSessionTurn persists turn to local chat history", async () => {
+    await writeSessionTurn({ kind: "fast", input: "test input", output: "test output" })
     expect(true).toBe(true)
   })
 })

@@ -191,6 +191,7 @@ export type SseEvent =
   | { type: "done" }
   | { type: "error"; message: string }
   | { type: "usage_limit"; code: string; feature: string; message: string; upgradeUrl?: string }
+  | { type: "rate_limit"; message: string; seconds: number }
   // Gateway events (Spec 19 — Messaging Gateway)
   | { type: "gateway_connected"; platform: PlatformType }
   | { type: "gateway_disconnected"; platform: PlatformType }
@@ -226,6 +227,20 @@ export interface GatewayMessage {
   imageUrl?: string
   /** MIME type of the image file, defaults to image/jpeg */
   imageMimeType?: string
+  /** URL of a document file (PDF, DOCX, XLSX, PPTX, etc.) to parse before processing */
+  documentUrl?: string
+  /** MIME type of the document file */
+  documentMimeType?: string
+  /** Original filename of the document */
+  documentFileName?: string
+  /** File size in bytes */
+  documentSize?: number
+  /** URL of a video file to process */
+  videoUrl?: string
+  /** MIME type of the video file */
+  videoMimeType?: string
+  /** Video duration in seconds when supplied by the platform */
+  videoDurationSeconds?: number
 }
 
 export interface GatewaySessionInfo {

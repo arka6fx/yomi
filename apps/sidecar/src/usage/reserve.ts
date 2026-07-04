@@ -18,7 +18,7 @@ export type FinalizeUsageInput = {
   inputTokens?: number
   outputTokens?: number
   costCents?: number
-  status?: "done" | "error" | "cancelled"
+  status?: "done" | "error" | "cancelled" | "budget_exhausted"
   metadata?: Record<string, unknown>
 }
 

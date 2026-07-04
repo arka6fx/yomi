@@ -19,6 +19,19 @@ mid-turn — loses prompt cache and causes tool-vocab mismatch.
 
 ---
 
+## Footprint Ladder (capability decisions)
+
+Choose the highest (least-footprint) rung that solves the problem:
+
+1. **Extend existing code** — capability is a variation of something that already exists
+2. **CLI command + skill** — config/state expressible as shell commands
+3. **Service-gated tool** — structured params/returns, only appears when prerequisite configured
+4. **Plugin** — third-party/niche/user-specific capability
+5. **MCP server** — if capability needs structured I/O but isn't core-fundamental
+6. **New core tool** — only when fundamental, broadly useful, and unreachable via other means
+
+---
+
 ## Monorepo
 
 ```

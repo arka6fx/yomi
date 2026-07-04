@@ -21,6 +21,10 @@
     "ai": "^4.0.0",
     "cron-parser": "^5.5.0",
     "hono": "^4.5.0",
+    "mammoth": "^1.12.0",
+    "node-pptx-parser": "^1.0.1",
+    "pdf-parse": "^2.4.5",
+    "xlsx": "^0.18.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {
