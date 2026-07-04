@@ -69,11 +69,6 @@ export const PLANS: Record<string, PlanConfig> = {
 
 export type PlanKey = keyof typeof PLANS
 export type FeatureKey = keyof (typeof PLANS)["explore"]["limits"]
-export type UsageCreditKind =
-  | "chat"
-  | "voice"
-  | "analyze"
-  | "bot_message"
 
 export interface CreditPackConfig {
   key: "credits_500" | "credits_2000" | "credits_6000"
@@ -111,13 +106,6 @@ export const CREDIT_PACKS: Record<string, CreditPackConfig> = {
   },
 }
 
-export const CREDIT_COSTS: Record<UsageCreditKind, number> = {
-  chat: 1,
-  voice: 2,
-  analyze: 1,
-  bot_message: 1,
-}
-
 export function getPlan(key: string): PlanConfig {
   return (PLANS[key] ?? PLANS["explore"]) as PlanConfig
 }
@@ -132,8 +120,4 @@ export function isPlanKey(key: string): key is PlanKey {
 
 export function getCreditPack(key: string): CreditPackConfig | null {
   return (CREDIT_PACKS[key] ?? null) as CreditPackConfig | null
-}
-
-export function creditCost(kind: UsageCreditKind, units = 1): number {
-  return CREDIT_COSTS[kind] * Math.max(Math.ceil(units), 1)
 }
