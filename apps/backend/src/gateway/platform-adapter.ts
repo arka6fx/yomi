@@ -9,6 +9,11 @@ export interface PlatformAdapter {
     text: string,
     options?: { replyTo?: string },
   ): Promise<{ ok: boolean; messageId?: string; error?: string }>
+  sendDocument(
+    chatId: string,
+    documentUrl: string,
+    options?: { replyTo?: string; caption?: string },
+  ): Promise<{ ok: boolean; messageId?: string; error?: string }>
   sendTyping(chatId: string): Promise<void>
   deleteMessage(
     chatId: string,

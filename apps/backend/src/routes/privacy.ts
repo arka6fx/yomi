@@ -89,7 +89,7 @@ privacyRouter.get("/consents", async (c) => {
       termsVersion: TERMS_VERSION,
     },
     purposes: PRIVACY_CONSENT_PURPOSES,
-    current,
+    consents: current,
     history,
   })
 })
