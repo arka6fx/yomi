@@ -1,5 +1,6 @@
 import { app, startGateway } from "./index.js"
 import { runDueSchedules } from "./services/schedule-runner.js"
+import { runPrivacyRetention } from "./services/privacy/retention.js"
 
 interface ExecutionContext {
   waitUntil(promise: Promise<unknown>): void
@@ -48,11 +49,19 @@ export default {
   async scheduled(_event: ScheduledEvent, env: Record<string, unknown>, ctx: ExecutionContext) {
     propagateEnv(env)
     ctx.waitUntil(
-      runDueSchedules()
-        .then(({ ran }) => {
-          if (ran > 0) console.warn(`[schedules] ran ${ran} due schedule(s)`)
-        })
-        .catch((err) => console.error("[schedules] sweep error:", err)),
+      Promise.all([
+        runDueSchedules()
+          .then(({ ran }) => {
+            if (ran > 0) console.warn(`[schedules] ran ${ran} due schedule(s)`)
+          })
+          .catch((err) => console.error("[schedules] sweep error:", err)),
+        runPrivacyRetention()
+          .then((r) => {
+            const total = r.expiredExports + r.oldDeletionJobs + r.hardDeletedUsers + r.oldAuditEvents
+            if (total > 0) console.warn(`[retention] cleaned ${total} items (exports:${r.expiredExports} jobs:${r.oldDeletionJobs} users:${r.hardDeletedUsers} audit:${r.oldAuditEvents})`)
+          })
+          .catch((err) => console.error("[retention] sweep error:", err)),
+      ]),
     )
   },
 }

@@ -9,7 +9,7 @@ import { getConnectorRegistry } from "../connectors/registry.js"
 import { LoopGuards } from "../harness/guards.js"
 import { compressContext } from "../agent/index.js"
 import { loadMemoryContext, writeSessionTurn } from "../memory/subsystem.js"
-import { reserveInteraction } from "../usage/reserve.js"
+import { finalizeInteractionUsage, reserveInteraction } from "../usage/reserve.js"
 import {
   normalizeSpokenRecipient,
   pendingDraftRecipientRequest,
@@ -77,6 +77,7 @@ type AgentStreamEvent =
   | { type: "tool-result"; toolName: string; result: unknown }
   | { type: "step-finish" }
   | { type: "error"; error: unknown }
+  | { type: "finish"; usage?: { promptTokens?: number; completionTokens?: number } }
   | {
       type:
         | "reasoning"
@@ -87,7 +88,6 @@ type AgentStreamEvent =
         | "tool-call-streaming-start"
         | "tool-call-delta"
         | "step-start"
-        | "finish"
     }
 
 function shortcutFailed(result: unknown): boolean {
@@ -135,6 +135,7 @@ export async function* agentPipeline(
     return
   }
 
+  let usageEventId: string | undefined
   if (!req.skipReserve) {
     const reservation = await reserveInteraction("chat")
     if (!reservation.ok) {
@@ -147,6 +148,7 @@ export async function* agentPipeline(
       }
       return
     }
+    usageEventId = reservation.usageEventId
   }
 
   const system = await getAgentPrompt(req.text, req.plan)
@@ -160,6 +162,10 @@ export async function* agentPipeline(
 
   const ttsEnabled = req.tts !== false && resolveTts() !== "none"
   let fullText = ""
+  const startedAt = Date.now()
+  let inputTokens = 0
+  let outputTokens = 0
+  let toolCalls = 0
 
   try {
     if (signal?.aborted) {
@@ -257,6 +263,7 @@ export async function* agentPipeline(
           yield { type: "agent_text", text: event.textDelta }
           break
         case "tool-call": {
+          toolCalls++
           const guard = guards.onToolCall(event.toolName, event.args as Record<string, unknown>)
           yield {
             type: "agent_tool_call",
@@ -284,7 +291,25 @@ export async function* agentPipeline(
           }
           break
         }
+        case "finish":
+          inputTokens = event.usage?.promptTokens ?? inputTokens
+          outputTokens = event.usage?.completionTokens ?? outputTokens
+          break
         case "error":
+          finalizeInteractionUsage({
+            usageEventId,
+            model: AGENT_MODEL,
+            inputTokens,
+            outputTokens,
+            status: "error",
+            metadata: {
+              endpoint: "sidecar.agent",
+              route: "agent",
+              latencyMs: Date.now() - startedAt,
+              toolCalls,
+              error: event.error instanceof Error ? event.error.message : String(event.error),
+            },
+          })
           yield {
             type: "error",
             message: event.error instanceof Error ? event.error.message : String(event.error),
@@ -292,6 +317,24 @@ export async function* agentPipeline(
           return
       }
     }
+
+    finalizeInteractionUsage({
+      usageEventId,
+      model: AGENT_MODEL,
+      inputTokens,
+      outputTokens,
+      status: signal?.aborted ? "cancelled" : "done",
+      metadata: {
+        endpoint: "sidecar.agent",
+        route: "agent",
+        latencyMs: Date.now() - startedAt,
+        toolCalls,
+        steps: stepCount,
+        outputChars: fullText.length,
+        hasScreen: Boolean(req.screenshot_b64),
+        tts: ttsEnabled,
+      },
+    })
 
     const summary = textTail.replace(/\n/g, " ").trim() || "agent task complete"
     await activeHooks.onStop(summary)

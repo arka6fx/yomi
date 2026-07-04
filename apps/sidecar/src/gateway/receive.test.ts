@@ -23,6 +23,7 @@ mock.module("../usage/reserve.js", () => ({
     reserveCalls.push({ kind })
     return reserveResult
   },
+  finalizeInteractionUsage: () => {},
   reportUsage: (_kind: string) => {},
 }))
 

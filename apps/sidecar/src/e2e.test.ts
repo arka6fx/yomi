@@ -88,6 +88,7 @@ mock.module("./insights/usage-store.js", () => ({
 
 mock.module("./usage/reserve.js", () => ({
   reserveInteraction: async (_kind: string) => reserveResult,
+  finalizeInteractionUsage: () => {},
   reportUsage: (_kind: string) => {},
 }))
 

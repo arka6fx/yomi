@@ -31,6 +31,14 @@ export const users = pgTable("user", {
   image: text("image"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"),
+  privacyPreferences: jsonb("privacy_preferences").notNull().default({}),
+  consentVersion: text("consent_version"),
+  consentTimestamp: timestamp("consent_timestamp"),
+  privacyPolicyVersion: text("privacy_policy_version"),
+  termsVersion: text("terms_version"),
+  lastExportAt: timestamp("last_export_at"),
+  exportCount: integer("export_count").notNull().default(0),
 })
 
 // --- App tables ---
@@ -549,5 +557,99 @@ export const deviceCodes = pgTable(
   (t) => ({
     userCodeIdx: index("device_codes_user_code_idx").on(t.userCode),
     expiresAtIdx: index("device_codes_expires_at_idx").on(t.expiresAt),
+  }),
+)
+
+export const privacyConsents = pgTable(
+  "privacy_consents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    purpose: text("purpose").notNull(),
+    status: text("status").notNull(),
+    consentVersion: text("consent_version").notNull(),
+    privacyPolicyVersion: text("privacy_policy_version").notNull(),
+    termsVersion: text("terms_version").notNull(),
+    appVersion: text("app_version"),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    userPurposeIdx: index("privacy_consents_user_purpose_idx").on(t.userId, t.purpose, t.createdAt),
+    userStatusIdx: index("privacy_consents_user_status_idx").on(t.userId, t.status),
+  }),
+)
+
+export const privacyPreferences = pgTable("privacy_preferences", {
+  userId: text("user_id").primaryKey().notNull(),
+  conversationHistoryEnabled: boolean("conversation_history_enabled").notNull().default(false),
+  memoryEnabled: boolean("memory_enabled").notNull().default(false),
+  cloudMemoryEnabled: boolean("cloud_memory_enabled").notNull().default(false),
+  connectorsEnabled: boolean("connectors_enabled").notNull().default(false),
+  analyticsEnabled: boolean("analytics_enabled").notNull().default(false),
+  voiceProcessingEnabled: boolean("voice_processing_enabled").notNull().default(false),
+  screenProcessingEnabled: boolean("screen_processing_enabled").notNull().default(false),
+  aiImprovementEnabled: boolean("ai_improvement_enabled").notNull().default(false),
+  retentionOverrides: jsonb("retention_overrides"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+})
+
+export const privacyExports = pgTable(
+  "privacy_exports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    status: text("status").notNull().default("queued"),
+    format: text("format").notNull().default("json"),
+    manifest: jsonb("manifest"),
+    archiveUrl: text("archive_url"),
+    archiveSha256: text("archive_sha256"),
+    error: text("error"),
+    requestedAt: timestamp("requested_at").notNull().defaultNow(),
+    completedAt: timestamp("completed_at"),
+    expiresAt: timestamp("expires_at"),
+  },
+  (t) => ({
+    userStatusIdx: index("privacy_exports_user_status_idx").on(t.userId, t.status, t.requestedAt),
+  }),
+)
+
+export const privacyDeletionJobs = pgTable(
+  "privacy_deletion_jobs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    kind: text("kind").notNull(),
+    status: text("status").notNull().default("queued"),
+    steps: jsonb("steps").notNull().default([]),
+    error: text("error"),
+    requestedAt: timestamp("requested_at").notNull().defaultNow(),
+    completedAt: timestamp("completed_at"),
+  },
+  (t) => ({
+    userStatusIdx: index("privacy_deletion_jobs_user_status_idx").on(t.userId, t.status, t.requestedAt),
+  }),
+)
+
+export const privacyAuditEvents = pgTable(
+  "privacy_audit_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    actorUserId: text("actor_user_id"),
+    targetUserId: text("target_user_id"),
+    eventType: text("event_type").notNull(),
+    resourceType: text("resource_type"),
+    resourceId: text("resource_id"),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    targetCreatedIdx: index("privacy_audit_events_target_created_idx").on(t.targetUserId, t.createdAt),
+    actorCreatedIdx: index("privacy_audit_events_actor_created_idx").on(t.actorUserId, t.createdAt),
+    eventTypeIdx: index("privacy_audit_events_type_idx").on(t.eventType, t.createdAt),
   }),
 )

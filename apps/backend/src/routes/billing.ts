@@ -82,16 +82,14 @@ type DodoEntity = Record<string, unknown>
 function planFeatures(key: string): string[] {
   const plan = SHARED_PLANS[key]
   if (!plan) return []
-  const l = plan.limits
   return [
-    key === "explore" ? `${l.chat.toLocaleString()} AI chats during trial` : `${l.chat.toLocaleString()} AI chats / month`,
-    key === "explore" ? `${l.voiceMinutes} min voice during trial` : `${l.voiceMinutes} min voice`,
     key === "explore"
       ? `${plan.includedCredits.toLocaleString()} trial credits`
       : `${plan.includedCredits.toLocaleString()} credits / month`,
-    l.analyze > 0 ? `${l.analyze} image/screen analyze` : "",
-    "App connectors",
-    l.botMessages > 0 ? `${l.botMessages.toLocaleString()} bot messages / month` : "",
+    "Screen-aware AI and voice",
+    "Unlimited app connectors",
+    "Telegram assistant",
+    key === "explore" ? "30-day free trial" : "Credit packs available",
   ].filter(Boolean)
 }
 
@@ -330,6 +328,23 @@ function dateField(entity: DodoEntity, keys: string[]): Date | null {
 function subscriptionCreditExpiry(periodEnd: Date | null): Date {
   if (periodEnd) return new Date(periodEnd.getTime() + 5 * 24 * 60 * 60 * 1000)
   return new Date(Date.now() + 35 * 24 * 60 * 60 * 1000)
+}
+
+function activityLabel(kind: string | null, reason: string | null): string {
+  const text = `${kind ?? ""} ${reason ?? ""}`.toLowerCase()
+  if (text.includes("voice")) return "Voice assistant"
+  if (text.includes("image") || text.includes("analyze") || text.includes("screen")) return "Screen context"
+  if (text.includes("telegram") || text.includes("bot_message")) return "Telegram assistant"
+  if (text.includes("github")) return "GitHub task"
+  if (text.includes("notion")) return "Notion search"
+  if (text.includes("schedule")) return "Scheduled task"
+  if (text.includes("memory")) return "Memory update"
+  if (text.includes("request_chat") || text.includes("chat")) return "Desktop assistant"
+  return "Yomi Activity"
+}
+
+function categoryForActivity(kind: string | null, reason: string | null): string {
+  return activityLabel(kind, reason).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "")
 }
 
 function logDodoConfig(): void {
@@ -690,12 +705,77 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     credits: creditSummary,
     creditsUsed: totalCreditsUsed,
     totalCredits,
-    creditConsumption,
     creditPacks: effectivePlan !== "explore" ? Object.values(CREDIT_PACKS) : [],
-    creditTransactions: await recentCreditTransactions(user.id, 10),
     billingWarning: user.subscriptionStatus === "past_due"
       ? "Your payment is past due. Please update your payment method."
       : null,
+  })
+})
+
+billingRouter.get("/usage-summary", authenticate, async (c) => {
+  const user = c.get("user")
+  const effectivePlan = effectivePlanForUser(user)
+  const planConfig = getPlan(effectivePlan)
+  const requestPeriodStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1))
+  const resetAt = new Date(Date.UTC(requestPeriodStart.getUTCFullYear(), requestPeriodStart.getUTCMonth() + 1, 1))
+
+  const [creditConsumptionRows, dailyRows, transactions] = await Promise.all([
+    db
+      .select({ creditsCharged: sql<number>`sum(${usageEvents.creditsCharged})` })
+      .from(usageEvents)
+      .where(
+        and(
+          eq(usageEvents.userId, user.id),
+          gte(usageEvents.createdAt, requestPeriodStart),
+          sql`${usageEvents.creditsCharged} > 0`,
+        ),
+      ),
+    db
+      .select({
+        date: sql<string>`to_char(${usageEvents.createdAt}, 'YYYY-MM-DD')`,
+        credits: sql<number>`coalesce(sum(${usageEvents.creditsCharged}), 0)`,
+      })
+      .from(usageEvents)
+      .where(and(eq(usageEvents.userId, user.id), gte(usageEvents.createdAt, requestPeriodStart)))
+      .groupBy(sql`to_char(${usageEvents.createdAt}, 'YYYY-MM-DD')`),
+    recentCreditTransactions(user.id, 10),
+  ])
+
+  const creditSummary = await getCreditSummary(user.id)
+  const creditsUsed = Number(creditConsumptionRows[0]?.creditsCharged ?? 0)
+  const totalAvailableThisPeriod = creditSummary.balance + creditsUsed
+
+  return c.json({
+    plan: {
+      key: effectivePlan,
+      name: planConfig.name,
+      status: user.subscriptionStatus ?? "inactive",
+      isOwner: effectiveRoleForUser(user) === "owner",
+    },
+    credits: {
+      remaining: creditSummary.balance,
+      included: planConfig.includedCredits,
+      used: creditsUsed,
+      totalAvailableThisPeriod,
+      resetAt,
+      expiringSoon: creditSummary.expiringSoon,
+      expiringSoonAt: creditSummary.expiringSoonAt,
+    },
+    monthlyUsage: {
+      days: dailyRows.map((row) => ({ date: row.date, credits: Number(row.credits ?? 0) })),
+    },
+    recentActivity: transactions.map((tx, index) => ({
+      id: `activity-${index}-${new Date(tx.createdAt).getTime()}`,
+      label: tx.type === "grant" ? "Credits Added" : activityLabel(tx.usageKind, tx.reason),
+      category: tx.type === "grant" ? "credits_added" : categoryForActivity(tx.usageKind, tx.reason),
+      credits: Math.abs(tx.amount),
+      createdAt: tx.usageCreatedAt ?? tx.createdAt,
+    })),
+    actions: {
+      canBuyCredits: effectivePlan !== "explore",
+      canUpgrade: effectivePlan !== "max",
+      upgradeUrl: "/dashboard?upgrade=true",
+    },
   })
 })
 

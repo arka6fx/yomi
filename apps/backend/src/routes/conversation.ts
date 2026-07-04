@@ -1,5 +1,6 @@
 import { Hono } from "hono"
 import { authenticate } from "../auth.js"
+import { requireConsent } from "../middleware/consent.js"
 import {
   appendAgentTurn,
   closeAgentSession,
@@ -13,7 +14,7 @@ const SHARED_SESSION_PLATFORM = "yomi"
 const SHARED_SESSION_CHAT_ID = "global"
 const MAX_APPEND_CHARS = 8_000
 
-conversationRouter.get("/shared", authenticate, async (c) => {
+conversationRouter.get("/shared", authenticate, requireConsent("conversation_history"), async (c) => {
   const user = c.get("user")
   const session = await getOrCreateAgentSession({
     userId: user.id,
@@ -24,7 +25,7 @@ conversationRouter.get("/shared", authenticate, async (c) => {
   return c.json({ history })
 })
 
-conversationRouter.post("/shared/turn", authenticate, async (c) => {
+conversationRouter.post("/shared/turn", authenticate, requireConsent("conversation_history"), async (c) => {
   const user = c.get("user")
   const body = await c.req.json().catch(() => null) as { userText?: unknown; assistantText?: unknown } | null
   const userText = typeof body?.userText === "string" ? body.userText.trim().slice(0, MAX_APPEND_CHARS) : ""

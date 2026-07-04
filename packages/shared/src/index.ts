@@ -1,5 +1,14 @@
 export { EnergyVad, detectSpeechEnd } from "./vad.js"
 export type { VadResult, VadOptions } from "./vad.js"
+export {
+  CONSENT_VERSION,
+  PRIVACY_CONSENT_PURPOSE_LABELS,
+  PRIVACY_CONSENT_PURPOSES,
+  PRIVACY_POLICY_VERSION,
+  TERMS_VERSION,
+  isPrivacyConsentPurpose,
+} from "./privacy.js"
+export type { PrivacyConsentPurpose, PrivacyConsentStatus } from "./privacy.js"
 
 export type UserRole = "user" | "owner"
 export type Plan = "explore" | "pro" | "max"

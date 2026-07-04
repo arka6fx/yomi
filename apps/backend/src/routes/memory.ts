@@ -3,6 +3,7 @@ import { Hono } from "hono"
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
 import { db, memoryEmbeddings, memoryEntries, memoryRelations, memorySources } from "@yomi/db"
 import { authenticate } from "../auth.js"
+import { requireConsent } from "../middleware/consent.js"
 
 type MemoryInput = {
   id?: string
@@ -235,7 +236,7 @@ export async function upsertMemory(userId: string, input: MemoryInput) {
 
 memoryRouter.use("*", authenticate)
 
-memoryRouter.post("/add", async (c) => {
+memoryRouter.post("/add", requireConsent("memory"), async (c) => {
   const user = c.get("user")
   const body = (await c.req.json().catch(() => ({}))) as MemoryInput
   const memory = await upsertMemory(user.id, body)
@@ -243,7 +244,7 @@ memoryRouter.post("/add", async (c) => {
   return c.json({ memory })
 })
 
-memoryRouter.get("/entries", async (c) => {
+memoryRouter.get("/entries", requireConsent("memory"), async (c) => {
   const user = c.get("user")
   await pruneExpired(user.id)
   const limit = clampLimit(c.req.query("limit"), 50, 200)
@@ -256,7 +257,7 @@ memoryRouter.get("/entries", async (c) => {
   return c.json({ memories: rows })
 })
 
-memoryRouter.post("/search", async (c) => {
+memoryRouter.post("/search", requireConsent("memory"), async (c) => {
   const user = c.get("user")
   const body = (await c.req.json().catch(() => ({}))) as SearchMemoryBody
   const query = clean(body.query, 400)
@@ -378,7 +379,7 @@ memoryRouter.post("/search", async (c) => {
   return c.json({ memories })
 })
 
-memoryRouter.post("/profile", async (c) => {
+memoryRouter.post("/profile", requireConsent("memory"), async (c) => {
   const user = c.get("user")
   const body = (await c.req.json().catch(() => ({}))) as SearchMemoryBody
   const query = clean(body.query, 400)
@@ -427,7 +428,7 @@ memoryRouter.post("/profile", async (c) => {
   })
 })
 
-memoryRouter.patch("/:id", async (c) => {
+memoryRouter.patch("/:id", requireConsent("memory"), async (c) => {
   const user = c.get("user")
   const id = clean(c.req.param("id"), 80)
   const body = (await c.req.json().catch(() => ({}))) as MemoryInput
@@ -456,7 +457,7 @@ memoryRouter.patch("/:id", async (c) => {
   return c.json({ memory })
 })
 
-memoryRouter.post("/sync", async (c) => {
+memoryRouter.post("/sync", requireConsent("memory"), async (c) => {
   const user = c.get("user")
   const body = (await c.req.json().catch(() => ({}))) as SyncMemoryBody
   const synced = []

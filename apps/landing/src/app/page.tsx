@@ -124,7 +124,7 @@ const jsonLd = {
           name: "Is Yomi free?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yes. Yomi has a free 30-day Explore trial with 100 credits and unlimited app connectors. Paid plans start at $14.99/month (Pro: 2,500 credits/mo). Credits are spent per action: 1 per AI chat, 2 per voice minute.",
+            text: "Yes. Yomi has a free 30-day Explore trial with 100 credits and unlimited app connectors. Paid plans start at $14.99/month (Pro: 2,500 credits/mo). Credits are a simple usage balance; the dashboard shows remaining credits, monthly usage, and reset date.",
           },
         },
         {

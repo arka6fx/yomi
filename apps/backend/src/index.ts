@@ -1,4 +1,6 @@
 import { Hono } from "hono"
+// PII redaction — must be first so it wraps console before any other module logs
+import "./services/privacy/logging.js"
 import { getAuth } from "./auth.js"
 import { errorHandler } from "./middleware/error-handler.js"
 import { llmRouter } from "./routes/llm.js"
@@ -18,6 +20,7 @@ import { integrationsRouter } from "./routes/integrations.js"
 import { adminRouter } from "./routes/admin.js"
 import { conversationRouter } from "./routes/conversation.js"
 import { statusRouter } from "./routes/status.js"
+import { privacyRouter } from "./routes/privacy.js"
 import "./connectors/defs/index.js" // registers all ConnectorDefs at startup
 import { getDefaultGateway } from "./gateway/gateway-runner.js"
 import type { SidecarResolver } from "./gateway/gateway-runner.js"
@@ -116,6 +119,7 @@ app.route("/api/integrations", integrationsRouter)
 app.route("/api/admin", adminRouter)
 app.route("/api/conversation", conversationRouter)
 app.route("/api/status", statusRouter)
+app.route("/api/privacy", privacyRouter)
 
 // Register sidecar URL resolver from platform connections
 const sidecarResolver: SidecarResolver = async (userId, platform) => {

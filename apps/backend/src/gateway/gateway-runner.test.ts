@@ -43,6 +43,10 @@ mock.module("@yomi/db", () => ({
   usageEvents: { id: "id" },
 }))
 
+mock.module("../services/privacy/checks.js", () => ({
+  checkConsent: async () => ({ allowed: true, reason: null }),
+}))
+
 mock.module("../agent/run.js", () => ({
   runAgent: async ({
     userId,

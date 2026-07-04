@@ -9,8 +9,18 @@ function sessionToken(): string {
 export type ReserveKind = "chat" | "voice" | "analyze" | "bot_message"
 
 type ReserveResult =
-  | { ok: true }
+  | { ok: true; usageEventId?: string }
   | { ok: false; error: string; code: string; feature?: string; upgradeUrl?: string }
+
+export type FinalizeUsageInput = {
+  usageEventId?: string
+  model?: string
+  inputTokens?: number
+  outputTokens?: number
+  costCents?: number
+  status?: "done" | "error" | "cancelled"
+  metadata?: Record<string, unknown>
+}
 
 export async function reserveInteraction(kind: ReserveKind): Promise<ReserveResult> {
   const token = sessionToken()
@@ -26,7 +36,13 @@ export async function reserveInteraction(kind: ReserveKind): Promise<ReserveResu
       body: JSON.stringify({ kind }),
     })
 
-    if (res.ok) return { ok: true }
+    if (res.ok) {
+      const data = (await res.json().catch(() => ({}))) as Record<string, unknown>
+      return {
+        ok: true,
+        ...(typeof data["usageEventId"] === "string" ? { usageEventId: data["usageEventId"] } : {}),
+      }
+    }
 
     const data = (await res.json().catch(() => ({}))) as Record<string, unknown>
     return {
@@ -39,6 +55,20 @@ export async function reserveInteraction(kind: ReserveKind): Promise<ReserveResu
   } catch {
     return { ok: true }
   }
+}
+
+export function finalizeInteractionUsage(input: FinalizeUsageInput): void {
+  const token = sessionToken()
+  if (!token || !input.usageEventId) return
+
+  fetch(`${backendBaseUrl()}/api/usage/interactions/finalize`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(input),
+  }).catch(() => {})
 }
 
 export function reportUsage(kind: string): void {

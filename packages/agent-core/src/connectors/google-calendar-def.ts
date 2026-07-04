@@ -1,7 +1,7 @@
 import { tool, type ToolSet } from "ai"
 import { z } from "zod"
 import type { ConnectorDef, ConnectorContext } from "./connector-def.js"
-import { connectorError } from "./connector-def.js"
+import { connectorError, gateWrite } from "./connector-def.js"
 
 export function createCalendarTools(ctx: ConnectorContext): ToolSet {
   async function calendar<T>(path: string, init?: RequestInit): Promise<T> {
@@ -172,23 +172,38 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
         location: z.string().optional().describe("Event location"),
         attendees: z.array(z.string()).optional().describe("Attendee email addresses to invite"),
       }),
-      execute: async ({ title, start, end, description, location, attendees }) => {
-        try {
-          const event = await calendar<{ id: string; htmlLink?: string }>("/calendars/primary/events", {
-            method: "POST",
-            body: JSON.stringify({
-              summary: title,
-              start: { dateTime: start },
-              end: { dateTime: end },
-              description,
-              location,
-              attendees: attendees?.map((email) => ({ email })),
-            }),
-          })
-          return { ok: true, eventId: event.id, link: event.htmlLink, message: `Event "${title}" created.` }
-        } catch (err) {
-          return connectorError(err)
-        }
+      execute: async (args) => {
+        const { title, start, end, description, location, attendees } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "google-calendar",
+            action: "calendar-createEvent",
+            risk: "write",
+            title: `Create calendar event: ${title}`,
+            preview: `${title}\n${start} – ${end}${attendees?.length ? `\nAttendees: ${attendees.join(", ")}` : ""}${location ? `\nLocation: ${location}` : ""}`,
+            confirmText: "Create event",
+          },
+          args,
+          async () => {
+            try {
+              const event = await calendar<{ id: string; htmlLink?: string }>("/calendars/primary/events", {
+                method: "POST",
+                body: JSON.stringify({
+                  summary: title,
+                  start: { dateTime: start },
+                  end: { dateTime: end },
+                  description,
+                  location,
+                  attendees: attendees?.map((email) => ({ email })),
+                }),
+              })
+              return { ok: true, eventId: event.id, link: event.htmlLink, message: `Event "${title}" created.` }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
       },
     }),
 
@@ -203,22 +218,42 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
         description: z.string().optional().describe("New description"),
         location: z.string().optional().describe("New location"),
       }),
-      execute: async ({ eventId, title, start, end, description, location }) => {
-        try {
-          const patch: Record<string, unknown> = {}
-          if (title !== undefined) patch["summary"] = title
-          if (start !== undefined) patch["start"] = { dateTime: start }
-          if (end !== undefined) patch["end"] = { dateTime: end }
-          if (description !== undefined) patch["description"] = description
-          if (location !== undefined) patch["location"] = location
-          const event = await calendar<{ id: string; htmlLink?: string }>(
-            `/calendars/primary/events/${encodeURIComponent(eventId)}`,
-            { method: "PATCH", body: JSON.stringify(patch) },
-          )
-          return { ok: true, eventId: event.id, link: event.htmlLink, message: "Event updated." }
-        } catch (err) {
-          return connectorError(err)
-        }
+      execute: async (args) => {
+        const { eventId, title, start, end, description, location } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "google-calendar",
+            action: "calendar-updateEvent",
+            risk: "write",
+            title: `Update calendar event ${eventId}`,
+            preview: [
+              title ? `Title: ${title}` : null,
+              start ? `Start: ${start}` : null,
+              end ? `End: ${end}` : null,
+              location ? `Location: ${location}` : null,
+            ].filter(Boolean).join("\n"),
+            confirmText: "Update event",
+          },
+          args,
+          async () => {
+            try {
+              const patch: Record<string, unknown> = {}
+              if (title !== undefined) patch["summary"] = title
+              if (start !== undefined) patch["start"] = { dateTime: start }
+              if (end !== undefined) patch["end"] = { dateTime: end }
+              if (description !== undefined) patch["description"] = description
+              if (location !== undefined) patch["location"] = location
+              const event = await calendar<{ id: string; htmlLink?: string }>(
+                `/calendars/primary/events/${encodeURIComponent(eventId)}`,
+                { method: "PATCH", body: JSON.stringify(patch) },
+              )
+              return { ok: true, eventId: event.id, link: event.htmlLink, message: "Event updated." }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
       },
     }),
 
@@ -228,13 +263,190 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
       parameters: z.object({
         eventId: z.string().describe("Google Calendar event ID to delete"),
       }),
-      execute: async ({ eventId }) => {
+      execute: async (args) => {
+        const { eventId } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "google-calendar",
+            action: "calendar-deleteEvent",
+            risk: "irreversible",
+            title: `Delete calendar event ${eventId}`,
+            preview: `Delete event ${eventId}`,
+            confirmText: "Delete event",
+          },
+          args,
+          async () => {
+            try {
+              await calendar(`/calendars/primary/events/${encodeURIComponent(eventId)}`, { method: "DELETE" })
+              return { ok: true, message: `Event ${eventId} deleted.` }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
+
+    "calendar-listCalendars": tool({
+      description: "List all calendars the user has access to, including the primary calendar and any secondary calendars they've created or subscribed to.",
+      parameters: z.object({}),
+      execute: async () => {
         try {
-          await calendar(`/calendars/primary/events/${encodeURIComponent(eventId)}`, { method: "DELETE" })
-          return { ok: true, message: `Event ${eventId} deleted.` }
+          const data = await calendar<{
+            items?: {
+              id: string
+              summary?: string
+              description?: string
+              primary?: boolean
+              backgroundColor?: string
+            }[]
+          }>(`/users/me/calendarList`)
+          const cals = (data.items ?? []).map((c) => ({
+            id: c.id,
+            name: c.summary ?? "(No title)",
+            description: c.description,
+            primary: c.primary ?? false,
+          }))
+          if (cals.length === 0) return { calendars: [], message: "No calendars found." }
+          return { count: cals.length, calendars: cals }
         } catch (err) {
           return connectorError(err)
         }
+      },
+    }),
+
+    "calendar-quickAdd": tool({
+      description:
+        "Quickly create a calendar event using natural language text. Google Calendar parses the text to extract title, date, time, and duration. Example: 'Lunch with Sarah tomorrow at 1pm for 1 hour'.",
+      parameters: z.object({
+        text: z.string().describe("Natural language event description, e.g. 'Meeting with John next Tuesday at 2pm'"),
+        calendarId: z.string().optional().describe("Calendar ID (defaults to primary)"),
+      }),
+      execute: async (args) => {
+        return gateWrite(
+          ctx,
+          {
+            connector: "google-calendar",
+            action: "calendar-quickAdd",
+            risk: "write",
+            title: "Quick add calendar event",
+            preview: args.text,
+            confirmText: "Quick add",
+          },
+          args,
+          async () => {
+            try {
+              const cal = args.calendarId ?? "primary"
+              const event = await calendar<{ id: string; htmlLink?: string; summary?: string }>(
+                `/calendars/${encodeURIComponent(cal)}/events/quickAdd?sendNotifications=true`,
+                {
+                  method: "POST",
+                  body: JSON.stringify({ text: args.text }),
+                },
+              )
+              return { ok: true, eventId: event.id, title: event.summary, link: event.htmlLink, message: `Event "${event.summary}" created.` }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
+
+    "calendar-getCalendar": tool({
+      description: "Get metadata for a specific Google Calendar by ID, including its name, description, timezone, and access role.",
+      parameters: z.object({
+        calendarId: z.string().optional().describe("Calendar ID (defaults to primary)"),
+      }),
+      execute: async ({ calendarId }) => {
+        try {
+          const cal = calendarId ?? "primary"
+          const data = await calendar<{
+            id: string
+            summary: string
+            description?: string
+            timeZone?: string
+            accessRole?: string
+            backgroundColor?: string
+            primary?: boolean
+          }>(`/calendars/${encodeURIComponent(cal)}`)
+          return {
+            id: data.id,
+            name: data.summary,
+            description: data.description ?? null,
+            timezone: data.timeZone ?? null,
+            accessRole: data.accessRole ?? null,
+            backgroundColor: data.backgroundColor ?? null,
+            primary: data.primary ?? false,
+          }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "calendar-createEventWithMeet": tool({
+      description:
+        "Create a new event on a Google Calendar with a Google Meet video conferencing link attached. Provide ISO 8601 start/end datetimes with timezone offset (e.g. 2026-07-01T14:00:00-04:00). Confirm the details with the user before creating.",
+      parameters: z.object({
+        calendarId: z.string().optional().describe("Calendar ID to create the event in (defaults to primary)"),
+        title: z.string().describe("Event title / summary"),
+        start: z.string().describe("Start datetime, ISO 8601 with offset, e.g. 2026-07-01T14:00:00-04:00"),
+        end: z.string().describe("End datetime, ISO 8601 with offset"),
+        description: z.string().optional().describe("Event description / notes"),
+        location: z.string().optional().describe("Event location"),
+        attendees: z.array(z.string()).optional().describe("Attendee email addresses to invite"),
+      }),
+      execute: async (args) => {
+        const { calendarId, title, start, end, description, location, attendees } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "google-calendar",
+            action: "calendar-createEventWithMeet",
+            risk: "write",
+            title: `Create calendar event with Meet: ${title}`,
+            preview: `${title}\n${start} – ${end}\nGoogle Meet video conferencing${attendees?.length ? `\nAttendees: ${attendees.join(", ")}` : ""}${location ? `\nLocation: ${location}` : ""}`,
+            confirmText: "Create event with Meet",
+          },
+          args,
+          async () => {
+            try {
+              const cal = calendarId ?? "primary"
+              const event = await calendar<{ id: string; htmlLink?: string; conferenceData?: { entryPoints?: { uri?: string }[] } }>(
+                `/calendars/${encodeURIComponent(cal)}/events?conferenceDataVersion=1`,
+                {
+                  method: "POST",
+                  body: JSON.stringify({
+                    summary: title,
+                    start: { dateTime: start },
+                    end: { dateTime: end },
+                    description,
+                    location,
+                    attendees: attendees?.map((email) => ({ email })),
+                    conferenceData: {
+                      createRequest: {
+                        requestId: `yomi-${Date.now()}`,
+                        conferenceSolutionKey: { type: "hangoutsMeet" },
+                      },
+                    },
+                  }),
+                },
+              )
+              const meetLink = event.conferenceData?.entryPoints?.find((e) => e.uri)?.uri ?? null
+              return {
+                ok: true,
+                eventId: event.id,
+                link: event.htmlLink,
+                meetLink,
+                message: `Event "${title}" created with Google Meet.`,
+              }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
       },
     }),
   }

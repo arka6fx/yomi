@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./plans": "./src/plans.ts"
+    "./plans": "./src/plans.ts",
+    "./privacy": "./src/privacy.ts"
   },
   "scripts": {
     "test": "bun test --pass-with-no-tests",

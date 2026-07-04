@@ -1,7 +1,7 @@
 import { tool, type ToolSet } from "ai"
 import { z } from "zod"
 import type { ConnectorDef, ConnectorContext } from "./connector-def.js"
-import { connectorError } from "./connector-def.js"
+import { connectorError, gateWrite } from "./connector-def.js"
 
 export function createSlackTools(ctx: ConnectorContext): ToolSet {
   async function slack<T>(path: string, init?: RequestInit): Promise<T> {
@@ -136,16 +136,245 @@ export function createSlackTools(ctx: ConnectorContext): ToolSet {
         channel: z.string().describe("Channel ID or name (e.g. #general or C01234567)"),
         text: z.string().max(3000).describe("Message text (supports Slack mrkdwn formatting)"),
       }),
-      execute: async ({ channel, text }) => {
+      execute: async (args) => {
+        const { channel, text } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "slack",
+            action: "slack-sendMessage",
+            risk: "write",
+            title: `Send Slack message to ${channel}`,
+            preview: `To: ${channel}\n\n${text.slice(0, 500)}`,
+            confirmText: "Send message",
+          },
+          args,
+          async () => {
+            try {
+              const data = await slack<{ channel?: string; ts?: string }>(`/chat.postMessage`, {
+                method: "POST",
+                body: JSON.stringify({ channel, text }),
+              })
+              return { ok: true, channel: data.channel, ts: data.ts }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
+
+    "slack-getChannelHistory": tool({
+      description: "Fetch recent messages from a Slack channel. Returns message text, author, and timestamps.",
+      parameters: z.object({
+        channel: z.string().describe("Channel ID (e.g. C01234567)"),
+        limit: z.number().int().min(1).max(50).default(20).describe("Max messages to return"),
+      }),
+      execute: async ({ channel, limit }) => {
         try {
-          const data = await slack<{ channel?: string; ts?: string }>(`/chat.postMessage`, {
-            method: "POST",
-            body: JSON.stringify({ channel, text }),
-          })
-          return { ok: true, channel: data.channel, ts: data.ts }
+          const params = new URLSearchParams({ channel, limit: String(limit) })
+          const data = await slack<{
+            messages?: {
+              ts: string
+              text: string
+              user?: string
+              username?: string
+              bot_id?: string
+              thread_ts?: string
+              reply_count?: number
+            }[]
+            has_more?: boolean
+          }>(`/conversations.history?${params}`)
+          const messages = (data.messages ?? []).map((m) => ({
+            ts: m.ts,
+            text: m.text,
+            userId: m.user ?? m.bot_id ?? null,
+            username: m.username ?? null,
+            threadTs: m.thread_ts ?? null,
+            replyCount: m.reply_count ?? 0,
+          }))
+          if (messages.length === 0) return { messages: [], message: "No messages found in this channel." }
+          return { count: messages.length, messages, hasMore: data.has_more ?? false }
         } catch (err) {
           return connectorError(err)
         }
+      },
+    }),
+
+    "slack-getThread": tool({
+      description: "Fetch all replies in a Slack thread by providing the channel ID and thread timestamp.",
+      parameters: z.object({
+        channel: z.string().describe("Channel ID (e.g. C01234567)"),
+        threadTs: z.string().describe("Thread timestamp (ts of the parent message)"),
+        limit: z.number().int().min(1).max(50).default(20).describe("Max replies to return"),
+      }),
+      execute: async ({ channel, threadTs, limit }) => {
+        try {
+          const params = new URLSearchParams({ channel, ts: threadTs, limit: String(limit) })
+          const data = await slack<{
+            messages?: {
+              ts: string
+              text: string
+              user?: string
+              username?: string
+              bot_id?: string
+            }[]
+          }>(`/conversations.replies?${params}`)
+          const messages = (data.messages ?? []).map((m) => ({
+            ts: m.ts,
+            text: m.text,
+            userId: m.user ?? m.bot_id ?? null,
+            username: m.username ?? null,
+          }))
+          if (messages.length === 0) return { messages: [], message: "No replies found in this thread." }
+          return { count: messages.length, messages }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "slack-getUserInfo": tool({
+      description: "Get detailed information about a Slack user by their user ID. Returns name, email, display name, timezone, and profile photo.",
+      parameters: z.object({
+        userId: z.string().describe("Slack user ID (e.g. U01234567)"),
+      }),
+      execute: async ({ userId }) => {
+        try {
+          const data = await slack<{
+            user?: {
+              id: string
+              name: string
+              real_name?: string
+              profile?: {
+                display_name?: string
+                email?: string
+                image_72?: string
+                image_192?: string
+                status_text?: string
+                status_emoji?: string
+                phone?: string
+                title?: string
+              }
+              tz?: string
+              tz_label?: string
+              deleted?: boolean
+              is_bot?: boolean
+              updated?: number
+            }
+          }>(`/users.info?user=${encodeURIComponent(userId)}`)
+          const u = data.user
+          if (!u) return { error: "User not found" }
+          return {
+            id: u.id,
+            name: u.name,
+            realName: u.real_name ?? null,
+            displayName: u.profile?.display_name ?? null,
+            email: u.profile?.email ?? null,
+            avatar: u.profile?.image_192 ?? u.profile?.image_72 ?? null,
+            status: u.profile?.status_text ?? null,
+            statusEmoji: u.profile?.status_emoji ?? null,
+            title: u.profile?.title ?? null,
+            timezone: u.tz ?? null,
+            deleted: u.deleted ?? false,
+            isBot: u.is_bot ?? false,
+          }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "slack-uploadFile": tool({
+      description:
+        "Upload a file to a Slack channel. Provide the file content as text and a filename. The file will appear as a posted file in the channel.",
+      parameters: z.object({
+        channel: z.string().describe("Channel ID (e.g. C01234567) to upload the file to"),
+        content: z.string().describe("Text content of the file"),
+        filename: z.string().describe("Filename including extension (e.g. 'report.txt')"),
+        title: z.string().optional().describe("Title for the file (defaults to filename)"),
+        filetype: z.string().optional().describe("File type (e.g. 'text', 'json', 'csv', 'markdown'). Auto-detected from extension if omitted."),
+        initialComment: z.string().optional().describe("Optional message to post with the file"),
+      }),
+      execute: async (args) => {
+        const { channel, content, filename, title, filetype, initialComment } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "slack",
+            action: "slack-uploadFile",
+            risk: "write",
+            title: `Upload file ${filename} to Slack`,
+            preview: `Upload "${filename}" to channel ${channel}${initialComment ? ` with comment: ${initialComment.slice(0, 200)}` : ""}`,
+            confirmText: "Upload file",
+          },
+          args,
+          async () => {
+            try {
+              const token = await ctx.getAccessToken(ctx.userId, "slack")
+              const boundary = `yomi_slack_${Date.now()}`
+              const parts = [
+                `--${boundary}\r\nContent-Disposition: form-data; name="content"\r\n\r\n${content}`,
+                `--${boundary}\r\nContent-Disposition: form-data; name="filename"\r\n\r\n${filename}`,
+                `--${boundary}\r\nContent-Disposition: form-data; name="channels"\r\n\r\n${channel}`,
+              ]
+              if (title) parts.push(`--${boundary}\r\nContent-Disposition: form-data; name="title"\r\n\r\n${title}`)
+              if (filetype) parts.push(`--${boundary}\r\nContent-Disposition: form-data; name="filetype"\r\n\r\n${filetype}`)
+              if (initialComment) parts.push(`--${boundary}\r\nContent-Disposition: form-data; name="initial_comment"\r\n\r\n${initialComment}`)
+              parts.push(`--${boundary}--`)
+
+              const res = await fetch("https://slack.com/api/files.upload", {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": `multipart/form-data; boundary=${boundary}`,
+                },
+                body: parts.join("\r\n"),
+              })
+              if (!res.ok) throw new Error(`Slack upload HTTP ${res.status}`)
+              const data = (await res.json()) as { ok: boolean; error?: string; file?: { id: string; permalink?: string; name?: string } }
+              if (!data.ok) throw new Error(`Slack upload error: ${data.error ?? "unknown"}`)
+              return { ok: true, fileId: data.file?.id, permalink: data.file?.permalink, name: data.file?.name ?? filename }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
+
+    "slack-replyInThread": tool({
+      description: "Reply to a message thread in Slack. Provide the channel ID and the parent message's thread timestamp.",
+      parameters: z.object({
+        channel: z.string().describe("Channel ID (e.g. C01234567)"),
+        threadTs: z.string().describe("Thread timestamp of the parent message (ts)"),
+        text: z.string().max(3000).describe("Reply text (supports Slack mrkdwn formatting)"),
+      }),
+      execute: async (args) => {
+        const { channel, threadTs, text } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "slack",
+            action: "slack-replyInThread",
+            risk: "write",
+            title: `Reply in Slack thread`,
+            preview: `Channel: ${channel}\nThread: ${threadTs}\n\n${text.slice(0, 500)}`,
+            confirmText: "Post reply",
+          },
+          args,
+          async () => {
+            try {
+              const data = await slack<{ channel?: string; ts?: string }>(`/chat.postMessage`, {
+                method: "POST",
+                body: JSON.stringify({ channel, text, thread_ts: threadTs }),
+              })
+              return { ok: true, channel: data.channel, ts: data.ts, message: "Reply posted." }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
       },
     }),
   }

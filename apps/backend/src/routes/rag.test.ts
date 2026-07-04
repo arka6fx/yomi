@@ -87,6 +87,12 @@ mock.module("@yomi/db", () => ({
   ragSources: mockRagSources,
 }))
 
+mock.module("../middleware/consent.js", () => ({
+  requireConsent: () => async (_c: any, next: () => Promise<void>) => {
+    await next()
+  },
+}))
+
 mock.module("../auth.js", () => ({
   authenticate: async (c: any, next: () => Promise<void>) => {
     c.set("user", currentUser)

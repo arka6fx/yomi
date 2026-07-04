@@ -162,6 +162,13 @@
       "when": 1782500640265,
       "tag": "0022_dodo_cleanup_memory",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1783123200000,
+      "tag": "0023_privacy_foundation",
+      "breakpoints": true
     }
   ]
 }
