@@ -102,6 +102,10 @@ function buildMemoryBlock(
   return `<memory>\n${note}\n\n${parts.join("\n")}\n</memory>\n\n`
 }
 
+// Keywords that suggest the user wants to interact with a connected service.
+const CONNECTOR_KEYWORDS =
+  /\b(gmail|email|inbox|calendar|schedule|drive|file|files|doc|docs|sheet|slides|slide|document|github|slack|notion|linear|classroom|send|create|draft|compose|message|open|deploy|repo|repository)\b/i
+
 const FAST_EXAMPLES = `\
 1. Screen Q&A: "what does this error mean?" → look_at_screen, answer in 2 sentences
 2. How-to: "how do I do X?" → explain step by step with what you see on screen`
@@ -164,13 +168,24 @@ Currently connected: ${connectedStr}.
 </connector_info>`
 }
 
-export function buildFastPrompt(ctx: PromptContext): string {
-  const { userName, os, today, yomiMd, soulMd, hasScreen, connectedProviders, ...memoryCtx } = resolveCtx(ctx)
+export interface FastPromptOptions extends PromptContext {
+  text: string
+  tts: boolean
+}
+
+export function buildFastPrompt(opts: FastPromptOptions): string {
+  const resolved = resolveCtx(opts)
+  const { userName, os, today, yomiMd, soulMd, hasScreen, connectedProviders, ...memoryCtx } = resolved
+  const tts = opts.tts
+  const text = opts.text
   const userCtx = yomiMd ? `<user_context>\n${yomiMd}\n</user_context>\n\n` : ""
   const soulCtx = `${formatAgentSoul(soulMd)}\n\n`
   const memCtx = buildMemoryBlock(memoryCtx)
   const appUrl = process.env["YOMI_APP_URL"] ?? "https://yomi.arka6fx.com"
-  const connInfo = buildConnectorInfo(connectedProviders)
+
+  // Only inject connector info when the query mentions a connector or app keyword
+  const wantsConnector = CONNECTOR_KEYWORDS.test(text) || connectedProviders.some((p) => text.toLowerCase().includes(p))
+  const connInfo = wantsConnector ? `${buildConnectorInfo(connectedProviders)}\n` : ""
 
   const screenLine = hasScreen
     ? "A screenshot of their current screen is attached, use it to answer."
@@ -180,11 +195,9 @@ export function buildFastPrompt(ctx: PromptContext): string {
     ? "You answer questions, explain what's on screen, and guide the user step by step."
     : "You answer questions and help the user step by step. Do not reference any image or screen."
 
-  // Prompt order keeps the long, turn-invariant block first.
-  // (identity → user_context → answer_format → voice_rules → examples → rules)
-  // The per-turn dynamic
-  // tail (screen_context, screen-dependent capabilities, memory, skills) comes
-  // last so it never invalidates that cached prefix.
+  // Prompt order keeps the long, turn-invariant block first. The per-turn dynamic
+  // tail (screen_context, capabilities, memory, connector_info) comes last so it
+  // never invalidates the cached prefix.
   return `\
 <identity>
 You are Yomi, ${userName}'s sharp, friendly AI companion on their ${os} desktop.
@@ -195,8 +208,7 @@ Talk like a real person: do not use em dashes or en dashes; use commas, periods,
 </identity>
 
 ${soulCtx}${userCtx}${ANSWER_FORMAT_RULES}
-
-<voice_rules>
+${tts ? `<voice_rules>
 CRITICAL, your response is converted to speech:
 - Keep explanation in plain spoken English outside fenced blocks.
 - Use fenced answer/code blocks exactly when the answer format rules require them.
@@ -206,7 +218,7 @@ CRITICAL, your response is converted to speech:
 - If you must list steps, say "First... then... finally...", not numbered lists.
 - Never start with "Certainly!", "Sure!", "Of course!", just answer.
 </voice_rules>
-
+` : ""}
 <examples>
 ${FAST_EXAMPLES}
 </examples>
@@ -214,8 +226,8 @@ ${FAST_EXAMPLES}
 <rules>
 - Keep it to 1 to 3 sentences unless the user asks for code, an application, a biography, a draft, or a walkthrough.
 - Never fabricate file contents or URLs. Use look_at_screen to verify.
-- If the user asks about an app from the available connectors list that is NOT connected: you MUST say they need to connect it at ${appUrl}/dashboard. Do NOT guess or make up information about their account.
-- If the user asks about an app NOT in the available connectors list: say it isn't available as a Yomi connector yet but work is in progress.
+${wantsConnector ? `- If the user asks about an app from the available connectors list that is NOT connected: you MUST say they need to connect it at ${appUrl}/dashboard. Do NOT guess or make up information about their account.
+- If the user asks about an app NOT in the available connectors list: say it isn't available as a Yomi connector yet but work is in progress.` : ""}
 </rules>
 
 <screen_context>
@@ -230,8 +242,7 @@ When a screenshot is attached, analyze it to understand what the user is asking 
 ${capLine}
 </capabilities>
 
-${connInfo}
-${memCtx}`
+${connInfo}${memCtx}`
 }
 
 export function buildAgentPrompt(ctx: PromptContext): string {

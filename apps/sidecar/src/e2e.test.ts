@@ -253,15 +253,17 @@ describe("buildConnectorInfo", () => {
 })
 
 describe("buildFastPrompt — connector awareness", () => {
-  it("includes <connector_info> in the prompt", () => {
-    const prompt = buildFastPrompt({ connectedProviders: [] })
+  const connectorText = "check my gmail inbox"
+
+  it("includes <connector_info> when query mentions a connector", () => {
+    const prompt = buildFastPrompt({ text: connectorText, tts: false, connectedProviders: [] })
     expect(prompt).toContain("<connector_info>")
     expect(prompt).toContain("Currently connected: none")
     expect(prompt).toContain("Google Drive")
   })
 
-  it("includes hard rules about unconnected connectors in <rules>", () => {
-    const prompt = buildFastPrompt({ connectedProviders: [] })
+  it("includes hard rules about unconnected connectors when query mentions a connector", () => {
+    const prompt = buildFastPrompt({ text: connectorText, tts: false, connectedProviders: [] })
     expect(prompt).toContain("<rules>")
     expect(prompt).toContain("MUST say they need to connect it")
     expect(prompt).toContain("Do NOT guess or make up information")
@@ -269,8 +271,14 @@ describe("buildFastPrompt — connector awareness", () => {
     expect(prompt).toContain("/dashboard")
   })
 
+  it("omits connector blocks when query does not mention any connector", () => {
+    const prompt = buildFastPrompt({ text: "what is the weather", tts: false, connectedProviders: [] })
+    expect(prompt).not.toContain("<connector_info>")
+    expect(prompt).not.toContain("MUST say they need to connect it")
+  })
+
   it("shows connected providers when some are connected", () => {
-    const prompt = buildFastPrompt({ connectedProviders: ["google-drive"] })
+    const prompt = buildFastPrompt({ text: connectorText, tts: false, connectedProviders: ["google-drive"] })
     expect(prompt).toContain("Currently connected: Google Drive")
   })
 })
@@ -490,7 +498,7 @@ describe("end-to-end scenario: 'can u tell if i have cat images in drive'", () =
   })
 
   it("fast prompt has Drive in available list and connection rule", () => {
-    const prompt = buildFastPrompt({ connectedProviders: [] })
+    const prompt = buildFastPrompt({ text: "use google drive", tts: false, connectedProviders: [] })
     expect(prompt).toContain("Available connectors:")
     expect(prompt).toContain("Google Drive")
     expect(prompt).toContain("MUST say they need to connect it")

@@ -1,10 +1,13 @@
 import { describe, expect, it } from "bun:test"
-import { buildAgentPrompt, buildFastPrompt } from "./prompt.js"
+import { buildAgentPrompt, buildFastPrompt, type FastPromptOptions } from "./prompt.js"
 import { loadMemoryContext } from "../memory/subsystem.js"
+
+const defaultOpts: FastPromptOptions = { text: "hello", tts: false }
 
 describe("prompt memory injection", () => {
   it("includes memory summary and index when provided", () => {
     const prompt = buildFastPrompt({
+      ...defaultOpts,
       yomiMd: "User likes direct answers.",
       memorySummary: "- Arkady is building Yomi.",
       memoryIndex: "sessions/2026-05-25-dev.md - memory work",
@@ -19,7 +22,7 @@ describe("prompt memory injection", () => {
   })
 
   it("instructs responses to render final answers in blocks", () => {
-    const prompt = buildFastPrompt({})
+    const prompt = buildFastPrompt(defaultOpts)
 
     expect(prompt).toContain("<answer_format>")
     expect(prompt).toContain("```answer")
@@ -29,7 +32,7 @@ describe("prompt memory injection", () => {
   })
 
   it("includes the default agent soul in fast and agent prompts", () => {
-    const fastPrompt = buildFastPrompt({})
+    const fastPrompt = buildFastPrompt(defaultOpts)
     const agentPrompt = buildAgentPrompt({})
 
     expect(fastPrompt).toContain("<agent_soul>")
@@ -39,7 +42,7 @@ describe("prompt memory injection", () => {
   })
 
   it("uses a provided soul override", () => {
-    const prompt = buildFastPrompt({ soulMd: "Use terse answers and dry humor." })
+    const prompt = buildFastPrompt({ ...defaultOpts, soulMd: "Use terse answers and dry humor." })
 
     expect(prompt).toContain("<agent_soul>\nUse terse answers and dry humor.\n</agent_soul>")
     expect(prompt).not.toContain("You are Yomi: sharp, warm, and practical.")
