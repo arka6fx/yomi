@@ -1,49 +1,5 @@
-import type { SseEvent } from "@yomi/shared"
 import { getConversationState } from "../conversation/conversation-state.js"
-import { isApprovalOrRejection } from "../conversation/types.js"
 import type { EntityType } from "../conversation/types.js"
-
-export interface ResolvedInput {
-  text: string
-  shortCircuited: boolean
-  events: SseEvent[]
-}
-
-export function resolveUserInput(text: string): ResolvedInput {
-  const convState = getConversationState()
-  const pending = convState.pendingActions.getLatest()
-  const decision = isApprovalOrRejection(text)
-
-  if (decision === "reject") {
-    if (pending && pending.status === "pending") {
-      const rejected = convState.pendingActions.reject()
-      if (rejected) {
-        console.warn(`[yomi/conversation] rejection: ${rejected.id} — ${rejected.title}`)
-        return {
-          text: `/cancel ${rejected.title}`,
-          shortCircuited: true,
-          events: [{ type: "agent_text", text: `Cancelled: ${rejected.title}.` }, { type: "done" }],
-        }
-      }
-    }
-  }
-
-  if (decision === "approve") {
-    if (pending && pending.status === "pending") {
-      const approved = convState.pendingActions.approve()
-      if (approved) {
-        console.warn(`[yomi/conversation] approval: ${approved.id} — ${approved.title}`)
-        return {
-          text: `/approve ${approved.id}`,
-          shortCircuited: false,
-          events: [],
-        }
-      }
-    }
-  }
-
-  return { text, shortCircuited: false, events: [] }
-}
 
 export function registerEntityForToolResult(
   toolName: string,
