@@ -2,7 +2,7 @@ import type { SseEvent } from "@yomi/shared"
 import { ALL_CONNECTOR_DEFS } from "@yomi/agent-core"
 import { getConversationState } from "./conversation-state.js"
 import { isApprovalOrRejection } from "./types.js"
-import { hooks } from "../harness/hooks.js"
+import { hooks, toolGuardrail } from "../harness/hooks.js"
 import { getConnectorRegistry } from "../connectors/registry.js"
 import { setActiveConversation } from "./active-conversation.js"
 
@@ -107,6 +107,11 @@ export async function handleApprovalTurn(
     { type: "agent_tool_call", tool: pending.toolName, args: pending.toolArguments },
   ]
   try {
+    // A replay is a standalone action, not part of a ReAct loop-detection window —
+    // reset the shared guardrail so a soft-failure from an earlier, unrelated turn
+    // doesn't get counted toward this replay's threshold (mirrors pipeline/agent.ts's
+    // per-burst reset) and stringify this result via appendGuidance's warn path.
+    toolGuardrail.resetForTurn()
     const pre = await hooks.onPreToolUse(pending.toolName, pending.toolArguments)
     if (!pre.ok) throw new Error(pre.reason ?? "blocked by guardrail")
     const raw = await replay(pending.toolName, pending.toolArguments)
