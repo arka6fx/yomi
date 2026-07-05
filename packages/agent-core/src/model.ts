@@ -60,12 +60,18 @@ function parseRetryAfter(value: string | null | undefined): number | undefined {
 function classifyAndThrow(status: number, bodyText: string, headers: Headers): never {
   const lower = bodyText.toLowerCase()
   const isRateLimit = status === 429
-  const isBilling = status === 402 || status === 403 ||
-    lower.includes("insufficient") || lower.includes("billing") ||
-    lower.includes("quota") || lower.includes("credits")
+  const isBilling =
+    status === 402 ||
+    status === 403 ||
+    lower.includes("insufficient") ||
+    lower.includes("billing") ||
+    lower.includes("quota") ||
+    lower.includes("credits")
 
   if (isRateLimit) {
-    const retryAfter = parseRetryAfter(headers.get("retry-after") ?? headers.get("Retry-After") ?? headers.get("x-ratelimit-reset"))
+    const retryAfter = parseRetryAfter(
+      headers.get("retry-after") ?? headers.get("Retry-After") ?? headers.get("x-ratelimit-reset"),
+    )
     throw new RateLimitError(bodyText || `Rate limited (${status})`, status, bodyText, retryAfter)
   }
   if (isBilling) {
@@ -87,7 +93,9 @@ type ToolCallObject = {
 type ChatMessage =
   | {
       role: "system" | "user"
-      content: string | Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }>
+      content:
+        | string
+        | Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }>
     }
   | {
       role: "assistant"
@@ -160,8 +168,10 @@ function messageText(message: LanguageModelV1Message): string {
     .map((part) => {
       if (part.type === "text") return part.text
       if (part.type === "reasoning") return part.text
-      if (part.type === "tool-call") return `Tool call ${part.toolName}: ${JSON.stringify(part.args)}`
-      if (part.type === "tool-result") return `Tool result ${part.toolName}: ${JSON.stringify(part.result)}`
+      if (part.type === "tool-call")
+        return `Tool call ${part.toolName}: ${JSON.stringify(part.args)}`
+      if (part.type === "tool-result")
+        return `Tool result ${part.toolName}: ${JSON.stringify(part.result)}`
       if (part.type === "file") return `[file: ${part.mimeType}]`
       if (part.type === "image") return "[image]"
       if (part.type === "redacted-reasoning") return "[redacted reasoning]"
@@ -171,12 +181,13 @@ function messageText(message: LanguageModelV1Message): string {
     .join("\n")
 }
 
-type UserContent = string | Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }>
+type UserContent =
+  | string
+  | Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }>
 
 function userContent(message: Exclude<LanguageModelV1Message, { role: "system" }>): UserContent {
   const parts: Array<
-    | { type: "text"; text: string }
-    | { type: "image_url"; image_url: { url: string } }
+    { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }
   > = []
 
   for (const part of message.content) {
@@ -296,7 +307,9 @@ function requestBody(modelId: string, options: LanguageModelV1CallOptions, strea
   }
 }
 
-function finishReason(reason?: string | null): "stop" | "length" | "content-filter" | "tool-calls" | "error" | "other" {
+function finishReason(
+  reason?: string | null,
+): "stop" | "length" | "content-filter" | "tool-calls" | "error" | "other" {
   if (reason === "length") return "length"
   if (reason === "stop") return "stop"
   if (reason === "tool_calls" || reason === "function_call") return "tool-calls"
@@ -368,7 +381,9 @@ export async function embedText(text: string): Promise<number[]> {
 
   if (!response.ok) {
     const text = await response.text().catch(() => "")
-    console.warn(`[yomi/embed] embedding request failed (${response.status}): ${text || response.statusText}`)
+    console.warn(
+      `[yomi/embed] embedding request failed (${response.status}): ${text || response.statusText}`,
+    )
     return []
   }
 
@@ -455,7 +470,11 @@ export function createModel(modelId = DEFAULT_MODEL): LanguageModelV1 {
                 for (const tc of choice.delta?.tool_calls ?? []) {
                   const idx = tc.index ?? 0
                   if (!toolCallAccum[idx]) {
-                    toolCallAccum[idx] = { id: tc.id ?? "", name: tc.function?.name ?? "", args: "" }
+                    toolCallAccum[idx] = {
+                      id: tc.id ?? "",
+                      name: tc.function?.name ?? "",
+                      args: "",
+                    }
                     controller.enqueue({
                       type: "tool-call-delta",
                       toolCallType: "function",

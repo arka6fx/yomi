@@ -75,13 +75,16 @@ function DeviceContent() {
 
   // Desktop Google sign-in must not reuse a stale web session from another account.
   useEffect(() => {
-    if (isPending || !session || !urlCode || provider !== "google" || !fresh || switchingAccount) return
+    if (isPending || !session || !urlCode || provider !== "google" || !fresh || switchingAccount)
+      return
     setSwitchingAccount(true)
     authClient
       .signOut()
       .catch(() => undefined)
       .finally(() => {
-        router.replace(`/signin?redirect=${encodeURIComponent(buildDeviceRedirect(urlCode, provider))}&provider=google`)
+        router.replace(
+          `/signin?redirect=${encodeURIComponent(buildDeviceRedirect(urlCode, provider))}&provider=google`,
+        )
       })
   }, [isPending, session, urlCode, provider, fresh, switchingAccount, router])
 
@@ -99,7 +102,9 @@ function DeviceContent() {
   useEffect(() => {
     if (isPending || session || !urlCode) return
     const providerSuffix = provider ? `&provider=${encodeURIComponent(provider)}` : ""
-    router.replace(`/signin?redirect=${encodeURIComponent(buildDeviceRedirect(urlCode, provider))}${providerSuffix}`)
+    router.replace(
+      `/signin?redirect=${encodeURIComponent(buildDeviceRedirect(urlCode, provider))}${providerSuffix}`,
+    )
   }, [isPending, session, urlCode, provider, router])
 
   async function handleConfirm(e: React.FormEvent) {

@@ -1,7 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test"
 import { Hono } from "hono"
 
-let mockAuthSession: { user: { id: string }; session: { id: string } } | null = { user: { id: "test-user" }, session: { id: "test-session" } }
+let mockAuthSession: { user: { id: string }; session: { id: string } } | null = {
+  user: { id: "test-user" },
+  session: { id: "test-session" },
+}
 
 mock.module("../auth.js", () => ({
   getAuth: () => ({
@@ -70,7 +73,7 @@ describe("POST /api/stt (STT proxy)", () => {
       headers: { "x-sidecar-secret": "test-sidecar-secret" },
     })
     expect(res.status).toBe(500)
-    const body = await res.json() as Record<string, unknown>
+    const body = (await res.json()) as Record<string, unknown>
     expect(body.error).toContain("ELEVENLABS_API_KEY")
   })
 
@@ -101,7 +104,7 @@ describe("POST /api/stt (STT proxy)", () => {
     })
 
     expect(res.status).toBe(200)
-    const json = await res.json() as Record<string, unknown>
+    const json = (await res.json()) as Record<string, unknown>
     expect(json.text).toBe("hello world")
 
     // Verify ElevenLabs was called with the API key
@@ -126,7 +129,7 @@ describe("POST /api/stt (STT proxy)", () => {
     })
 
     expect(res.status).toBe(401)
-    const json = await res.json() as Record<string, unknown>
+    const json = (await res.json()) as Record<string, unknown>
     expect(json.error).toContain("ElevenLabs STT failed")
   })
 
@@ -175,7 +178,7 @@ describe("POST /api/tts (TTS proxy)", () => {
       body: JSON.stringify({ text: "hello", voice_id: "voice-1" }),
     })
     expect(res.status).toBe(500)
-    const body = await res.json() as Record<string, unknown>
+    const body = (await res.json()) as Record<string, unknown>
     expect(body.error).toContain("ELEVENLABS_API_KEY")
   })
 
@@ -232,7 +235,9 @@ describe("POST /api/tts (TTS proxy)", () => {
 
     // Verify ElevenLabs was called correctly
     expect(elevenlabsCalls.length).toBe(1)
-    expect(elevenlabsCalls[0]!.url).toContain("api.elevenlabs.io/v1/text-to-speech/voice-123/stream")
+    expect(elevenlabsCalls[0]!.url).toContain(
+      "api.elevenlabs.io/v1/text-to-speech/voice-123/stream",
+    )
     expect(elevenlabsCalls[0]!.headers["xi-api-key"]).toBe("test-elevenlabs-key")
 
     const reqBody = JSON.parse(elevenlabsCalls[0]!.body as string) as Record<string, unknown>
@@ -279,7 +284,7 @@ describe("POST /api/tts (TTS proxy)", () => {
     })
 
     expect(res.status).toBe(400)
-    const json = await res.json() as Record<string, unknown>
+    const json = (await res.json()) as Record<string, unknown>
     expect(json.error).toContain("ElevenLabs TTS failed")
   })
 

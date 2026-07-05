@@ -3,11 +3,7 @@ import { eq, and } from "drizzle-orm"
 import { db, mcpConnections } from "@yomi/db"
 import { authenticate, getAuth } from "../auth.js"
 import { requireConsent } from "../middleware/consent.js"
-import {
-  encryptTokens,
-  decryptTokens,
-  type OAuthTokens,
-} from "../services/token-encryption.js"
+import { encryptTokens, decryptTokens, type OAuthTokens } from "../services/token-encryption.js"
 import { getAccessToken as getAccessTokenService } from "../services/integration-tokens.js"
 import { getConnectorDef } from "../connectors/registry.js"
 import {
@@ -17,7 +13,10 @@ import {
   storeConnectionString,
 } from "../connectors/executors/oauth2-executor.js"
 
-async function checkProviderHealth(userId: string, provider: string): Promise<{ ok: boolean; message?: string }> {
+async function checkProviderHealth(
+  userId: string,
+  provider: string,
+): Promise<{ ok: boolean; message?: string }> {
   try {
     const token = await getAccessTokenService(userId, provider)
     if (provider === "notion") {
@@ -32,7 +31,11 @@ async function checkProviderHealth(userId: string, provider: string): Promise<{ 
         headers: { Authorization: `Bearer ${token}` },
         signal: AbortSignal.timeout(5_000),
       })
-      if (!res.ok) return { ok: false, message: `Google returned ${res.status}. Reconnect this Google integration.` }
+      if (!res.ok)
+        return {
+          ok: false,
+          message: `Google returned ${res.status}. Reconnect this Google integration.`,
+        }
     }
     if (provider === "github") {
       const res = await fetch("https://api.github.com/user", {
@@ -46,7 +49,10 @@ async function checkProviderHealth(userId: string, provider: string): Promise<{ 
       })
       if (!res.ok) {
         const body = await res.text().catch(() => "")
-        return { ok: false, message: `GitHub returned ${res.status}${body ? `: ${body.slice(0, 160)}` : ""}. Reconnect GitHub.` }
+        return {
+          ok: false,
+          message: `GitHub returned ${res.status}${body ? `: ${body.slice(0, 160)}` : ""}. Reconnect GitHub.`,
+        }
       }
     }
     return { ok: true }
@@ -56,7 +62,13 @@ async function checkProviderHealth(userId: string, provider: string): Promise<{ 
   }
 }
 
-async function resolveInternalUser(c: { req: { raw: Request; header: (name: string) => string | undefined; query: (name: string) => string | undefined } }): Promise<{ userId: string } | { error: string; status: 401 | 403 | 503 }> {
+async function resolveInternalUser(c: {
+  req: {
+    raw: Request
+    header: (name: string) => string | undefined
+    query: (name: string) => string | undefined
+  }
+}): Promise<{ userId: string } | { error: string; status: 401 | 403 | 503 }> {
   const queryUserId = c.req.query("userId")
   const session = await getAuth().api.getSession({ headers: c.req.raw.headers })
   if (session?.user) {
@@ -160,24 +172,30 @@ integrationsRouter.get("/status", async (c) => {
   const userId = resolved.userId
 
   const rows = await db
-    .select({ provider: mcpConnections.provider, displayName: mcpConnections.displayName, updatedAt: mcpConnections.updatedAt })
+    .select({
+      provider: mcpConnections.provider,
+      displayName: mcpConnections.displayName,
+      updatedAt: mcpConnections.updatedAt,
+    })
     .from(mcpConnections)
     .where(eq(mcpConnections.userId, userId))
 
   if (c.req.query("health") !== "1") return c.json({ connected: rows.map((r) => r.provider) })
 
-  const integrations = await Promise.all(rows.map(async (row) => {
-    const health = await checkProviderHealth(userId, row.provider)
-    return {
-      provider: row.provider,
-      displayName: row.displayName ?? row.provider,
-      connected: true,
-      healthy: health.ok,
-      status: health.ok ? "connected" : "needs_reconnect",
-      message: health.message ?? null,
-      updatedAt: row.updatedAt.toISOString(),
-    }
-  }))
+  const integrations = await Promise.all(
+    rows.map(async (row) => {
+      const health = await checkProviderHealth(userId, row.provider)
+      return {
+        provider: row.provider,
+        displayName: row.displayName ?? row.provider,
+        connected: true,
+        healthy: health.ok,
+        status: health.ok ? "connected" : "needs_reconnect",
+        message: health.message ?? null,
+        updatedAt: row.updatedAt.toISOString(),
+      }
+    }),
+  )
 
   return c.json({ connected: rows.map((r) => r.provider), integrations })
 })
@@ -190,9 +208,9 @@ integrationsRouter.get("/connect/google", authenticate, async (c) => {
     return c.json({ error: "Too many connect attempts — please wait a minute" }, 429)
   }
 
-  const state = Buffer.from(
-    JSON.stringify({ userId: user.id, ts: Date.now() }),
-  ).toString("base64url")
+  const state = Buffer.from(JSON.stringify({ userId: user.id, ts: Date.now() })).toString(
+    "base64url",
+  )
 
   const url = new URL("https://accounts.google.com/o/oauth2/v2/auth")
   url.searchParams.set("client_id", googleClientId())
@@ -216,7 +234,9 @@ integrationsRouter.get("/callback/google", async (c) => {
   const appUrl = process.env.BETTER_AUTH_URL ?? "http://localhost:3000"
 
   if (error || !code) {
-    return c.redirect(`${appUrl}/dashboard?integration_error=${encodeURIComponent(error ?? "cancelled")}`)
+    return c.redirect(
+      `${appUrl}/dashboard?integration_error=${encodeURIComponent(error ?? "cancelled")}`,
+    )
   }
 
   // Decode state to get userId
@@ -276,7 +296,9 @@ integrationsRouter.get("/callback/google", async (c) => {
       const data = (await info.json()) as { email?: string }
       if (data.email) displayName = data.email
     }
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
 
   // Persist encrypted tokens
   let encrypted: string
@@ -316,7 +338,9 @@ integrationsRouter.get("/callback/google", async (c) => {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "database error"
     console.error("[yomi/integrations] google db upsert error:", msg)
-    return c.redirect(`${appUrl}/dashboard?integration_error=${encodeURIComponent("Failed to save connection. Try reconnecting.")}`)
+    return c.redirect(
+      `${appUrl}/dashboard?integration_error=${encodeURIComponent("Failed to save connection. Try reconnecting.")}`,
+    )
   }
 
   return c.redirect(`${appUrl}/dashboard?integration_success=google`)
@@ -332,7 +356,9 @@ integrationsRouter.get("/connect/:id", async (c) => {
   // Auth: try session query param first, fall back to cookie/Bearer
   const sessionToken = c.req.query("session")
   const session = sessionToken
-    ? await getAuth().api.getSession({ headers: new Headers({ Authorization: `Bearer ${sessionToken}` }) })
+    ? await getAuth().api.getSession({
+        headers: new Headers({ Authorization: `Bearer ${sessionToken}` }),
+      })
     : await getAuth().api.getSession({ headers: c.req.raw.headers })
   if (!session?.user) return c.json({ error: "Unauthorized" }, 401)
   const user = session.user as import("../auth.js").SessionUser
@@ -355,7 +381,9 @@ integrationsRouter.get("/connect/:id", async (c) => {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "OAuth setup failed"
       console.error(`[integrations/connect/${id}]`, msg)
-      return c.redirect(`${process.env.BETTER_AUTH_URL ?? "http://localhost:3000"}/dashboard?integration_error=${encodeURIComponent(msg)}`)
+      return c.redirect(
+        `${process.env.BETTER_AUTH_URL ?? "http://localhost:3000"}/dashboard?integration_error=${encodeURIComponent(msg)}`,
+      )
     }
   }
 
@@ -410,57 +438,68 @@ integrationsRouter.get("/callback/:id", async (c) => {
 
 // ── Connect: API key (POST) ──────────────────────────────────────────────────
 
-integrationsRouter.post("/connect/api-key/:id", authenticate, requireConsent("connector_data"), async (c) => {
-  const id = c.req.param("id") ?? ""
-  const userId = c.get("user").id
-  const def = getConnectorDef(id)
-  if (!def) return c.json({ error: `Unknown connector: ${id}` }, 404)
-  if (def.auth.kind !== "api_key") return c.json({ error: "Not an api_key connector" }, 400)
+integrationsRouter.post(
+  "/connect/api-key/:id",
+  authenticate,
+  requireConsent("connector_data"),
+  async (c) => {
+    const id = c.req.param("id") ?? ""
+    const userId = c.get("user").id
+    const def = getConnectorDef(id)
+    if (!def) return c.json({ error: `Unknown connector: ${id}` }, 404)
+    if (def.auth.kind !== "api_key") return c.json({ error: "Not an api_key connector" }, 400)
 
-  let fields: Record<string, string>
-  try {
-    const body = await c.req.json()
-    fields = body.fields as Record<string, string>
-    if (!fields) throw new Error("fields required")
-  } catch {
-    return c.json({ error: "Invalid body" }, 400)
-  }
-
-  // Optional live verification
-  if (def.auth.verify) {
+    let fields: Record<string, string>
     try {
-      const ok = await def.auth.verify(fields)
-      if (!ok) return c.json({ error: "API key verification failed" }, 422)
-    } catch (err) {
-      return c.json({ error: err instanceof Error ? err.message : "Verification failed" }, 422)
+      const body = await c.req.json()
+      fields = body.fields as Record<string, string>
+      if (!fields) throw new Error("fields required")
+    } catch {
+      return c.json({ error: "Invalid body" }, 400)
     }
-  }
 
-  await storeApiKeyCredential(def, userId, fields)
-  return c.json({ ok: true })
-})
+    // Optional live verification
+    if (def.auth.verify) {
+      try {
+        const ok = await def.auth.verify(fields)
+        if (!ok) return c.json({ error: "API key verification failed" }, 422)
+      } catch (err) {
+        return c.json({ error: err instanceof Error ? err.message : "Verification failed" }, 422)
+      }
+    }
+
+    await storeApiKeyCredential(def, userId, fields)
+    return c.json({ ok: true })
+  },
+)
 
 // ── Connect: Connection string / DSN (POST) ──────────────────────────────────
 
-integrationsRouter.post("/connect/dsn/:id", authenticate, requireConsent("connector_data"), async (c) => {
-  const id = c.req.param("id") ?? ""
-  const userId = c.get("user").id
-  const def = getConnectorDef(id)
-  if (!def) return c.json({ error: `Unknown connector: ${id}` }, 404)
-  if (def.auth.kind !== "connection_string") return c.json({ error: "Not a connection_string connector" }, 400)
+integrationsRouter.post(
+  "/connect/dsn/:id",
+  authenticate,
+  requireConsent("connector_data"),
+  async (c) => {
+    const id = c.req.param("id") ?? ""
+    const userId = c.get("user").id
+    const def = getConnectorDef(id)
+    if (!def) return c.json({ error: `Unknown connector: ${id}` }, 404)
+    if (def.auth.kind !== "connection_string")
+      return c.json({ error: "Not a connection_string connector" }, 400)
 
-  let dsn: string
-  try {
-    const body = await c.req.json()
-    dsn = body.dsn as string
-    if (!dsn) throw new Error("dsn required")
-  } catch {
-    return c.json({ error: "Invalid body — expected { dsn: string }" }, 400)
-  }
+    let dsn: string
+    try {
+      const body = await c.req.json()
+      dsn = body.dsn as string
+      if (!dsn) throw new Error("dsn required")
+    } catch {
+      return c.json({ error: "Invalid body — expected { dsn: string }" }, 400)
+    }
 
-  await storeConnectionString(def, userId, dsn)
-  return c.json({ ok: true })
-})
+    await storeConnectionString(def, userId, dsn)
+    return c.json({ ok: true })
+  },
+)
 
 // ── Disconnect integration ───────────────────────────────────────────────────
 
@@ -484,7 +523,9 @@ integrationsRouter.delete("/:provider", authenticate, async (c) => {
       await fetch(`${GOOGLE_REVOKE_URL}?token=${encodeURIComponent(tok.accessToken)}`, {
         method: "POST",
       })
-    } catch { /* best-effort revoke */ }
+    } catch {
+      /* best-effort revoke */
+    }
   }
 
   await db

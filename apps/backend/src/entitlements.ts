@@ -1,4 +1,10 @@
-import { PLANS, type FeatureKey, type PlanKey, featureLimit as planFeatureLimit, getPlan } from "@yomi/shared/plans"
+import {
+  PLANS,
+  type FeatureKey,
+  type PlanKey,
+  featureLimit as planFeatureLimit,
+  getPlan,
+} from "@yomi/shared/plans"
 
 const DEFAULT_OWNER_EMAILS = ["owner@example.com"]
 
@@ -67,12 +73,20 @@ export function getPlanConfig(user: EntitlementUser) {
   return getPlan(plan)
 }
 
-export function hasBillablePlanAccess(user: EntitlementUser & { subscriptionStatus?: string | null; currentPeriodEnd?: Date | null; trialEndDate?: Date | null }): boolean {
+export function hasBillablePlanAccess(
+  user: EntitlementUser & {
+    subscriptionStatus?: string | null
+    currentPeriodEnd?: Date | null
+    trialEndDate?: Date | null
+  },
+): boolean {
   if (isOwnerUser(user)) return true
   const plan = effectivePlanForUser(user)
 
   if (plan === "explore") {
-    console.warn(`[hasBillablePlanAccess] explore trial check: trialEndDate=${user.trialEndDate} now=${new Date()} result=${!user.trialEndDate ? 'false(no trialEndDate)' : new Date() < user.trialEndDate}`)
+    console.warn(
+      `[hasBillablePlanAccess] explore trial check: trialEndDate=${user.trialEndDate} now=${new Date()} result=${!user.trialEndDate ? "false(no trialEndDate)" : new Date() < user.trialEndDate}`,
+    )
     if (!user.trialEndDate) return false
     return new Date() < user.trialEndDate
   }

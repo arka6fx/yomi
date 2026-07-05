@@ -49,7 +49,10 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
   const kind = body.kind
 
   if (!VALID_KINDS.includes(kind)) {
-    return c.json({ error: `kind must be one of: ${VALID_KINDS.join(", ")}`, code: "invalid_usage_kind" }, 400)
+    return c.json(
+      { error: `kind must be one of: ${VALID_KINDS.join(", ")}`, code: "invalid_usage_kind" },
+      400,
+    )
   }
 
   // Credits are the single gate: owner bypass, active plan required, balance >= cost.
@@ -61,9 +64,10 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
         error: result.message,
         code: result.code,
         plan: result.plan,
-        upgradeUrl: result.code === "subscription_required" || result.code === "subscription_inactive"
-          ? "/dashboard?upgrade=true"
-          : "/dashboard?credits=true",
+        upgradeUrl:
+          result.code === "subscription_required" || result.code === "subscription_inactive"
+            ? "/dashboard?upgrade=true"
+            : "/dashboard?credits=true",
         resetAt: nextMonthReset(),
       },
       result.status,

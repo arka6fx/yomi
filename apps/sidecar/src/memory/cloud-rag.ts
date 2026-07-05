@@ -112,7 +112,8 @@ export async function captureCloudMemory(turn: {
   const output = cleanTurnText(turn.output)
   if (!input || !output) return
 
-  const model = process.env["MEMORY_EXTRACTION_MODEL"] || process.env["AI_CREDITS_FAST_MODEL"] || "gpt-5.5-mini"
+  const model =
+    process.env["MEMORY_EXTRACTION_MODEL"] || process.env["AI_CREDITS_FAST_MODEL"] || "gpt-5.5-mini"
   const { text } = await generateText({
     model: createModel(model),
     messages: [
@@ -168,9 +169,7 @@ export async function retrieveCloudMemoryContext(query: string, maxChars = 3000)
     const halfLifeDays = 30
     const lambda = Math.LN2 / halfLifeDays
     const scored = memories.map((row) => {
-      const ageDays = row.updatedAt
-        ? (now - new Date(row.updatedAt).getTime()) / 86400000
-        : 0
+      const ageDays = row.updatedAt ? (now - new Date(row.updatedAt).getTime()) / 86400000 : 0
       const decay = Math.exp(-lambda * Math.max(0, ageDays))
       return { ...row, _decayedScore: (row.score ?? 50) * decay }
     })
@@ -187,12 +186,18 @@ export async function retrieveCloudMemoryContext(query: string, maxChars = 3000)
     }
     return out.join("\n")
   } catch (err) {
-    console.warn("[yomi/cloud-rag] memory context retrieval failed:", err instanceof Error ? err.message : err)
+    console.warn(
+      "[yomi/cloud-rag] memory context retrieval failed:",
+      err instanceof Error ? err.message : err,
+    )
     return ""
   }
 }
 
-export async function retrieveCloudMemoryProfile(query: string, maxChars = 2500): Promise<{ staticProfile: string; dynamicProfile: string }> {
+export async function retrieveCloudMemoryProfile(
+  query: string,
+  maxChars = 2500,
+): Promise<{ staticProfile: string; dynamicProfile: string }> {
   if (!sessionToken()) return { staticProfile: "", dynamicProfile: "" }
   let data: CloudMemoryProfile | null = null
   try {
@@ -201,7 +206,10 @@ export async function retrieveCloudMemoryProfile(query: string, maxChars = 2500)
       body: JSON.stringify({ query, limit: 32 }),
     })
   } catch (err) {
-    console.warn("[yomi/cloud-rag] memory profile retrieval failed:", err instanceof Error ? err.message : err)
+    console.warn(
+      "[yomi/cloud-rag] memory profile retrieval failed:",
+      err instanceof Error ? err.message : err,
+    )
     return { staticProfile: "", dynamicProfile: "" }
   }
   const staticFacts = data?.profile?.static ?? []

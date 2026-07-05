@@ -4,12 +4,7 @@ import type { SseEvent } from "@yomi/shared"
 import { captureScreen } from "./capture"
 import type { ScreenCapture } from "./capture"
 import type { SidecarManager } from "./sidecar"
-import {
-  getHotkeyState,
-  resetToIdle,
-  activateProcessing,
-  endVoiceTurn,
-} from "./hotkey"
+import { getHotkeyState, resetToIdle, activateProcessing, endVoiceTurn } from "./hotkey"
 import { BACKEND_URL, loadToken } from "./auth"
 
 // The mic only ever opens on the Voice button / Ctrl+Space — nothing here re-arms listening.
@@ -88,7 +83,9 @@ async function refreshCloudConversationHistory(signal?: AbortSignal): Promise<vo
   if (!headers) return
   const res = await fetch(`${BACKEND_URL}/api/conversation/shared`, { headers, signal })
   if (!res.ok) return
-  const data = await res.json() as { history?: Array<{ role: "user" | "assistant" | "system"; content: string }> }
+  const data = (await res.json()) as {
+    history?: Array<{ role: "user" | "assistant" | "system"; content: string }>
+  }
   const history = (data.history ?? [])
     .filter((m) => m.role === "user" || m.role === "assistant")
     .map((m) => ({ role: m.role as "user" | "assistant", text: m.content }))
@@ -108,7 +105,9 @@ async function appendCloudConversationTurn(userText: string, assistantText: stri
 async function resetCloudConversation(): Promise<void> {
   const headers = await cloudConversationHeaders()
   if (!headers) return
-  await fetch(`${BACKEND_URL}/api/conversation/shared/reset`, { method: "POST", headers }).catch(() => {})
+  await fetch(`${BACKEND_URL}/api/conversation/shared/reset`, { method: "POST", headers }).catch(
+    () => {},
+  )
 }
 
 // Registers sidecar-dependent IPC handlers. Called once after first auth.
@@ -140,7 +139,10 @@ export function initSidecarIpc(
     if (trimmed === "/new") {
       conversationHistory = []
       await resetCloudConversation()
-      send(overlayWin, { type: "llm_chunk", text: "Started a new conversation. How can I help you?" })
+      send(overlayWin, {
+        type: "llm_chunk",
+        text: "Started a new conversation. How can I help you?",
+      })
       send(overlayWin, { type: "done" })
       resetToIdle()
       return
@@ -235,9 +237,10 @@ export function initSidecarIpc(
 
       try {
         // Charge voice per actual recorded length (2 credits/min) instead of a flat rate.
-        const recordedSeconds = capturedSampleRate > 0
-          ? chunks.reduce((s, c) => s + c.length, 0) / capturedSampleRate
-          : undefined
+        const recordedSeconds =
+          capturedSampleRate > 0
+            ? chunks.reduce((s, c) => s + c.length, 0) / capturedSampleRate
+            : undefined
         const plan = await reserveInteraction(overlayWin, "voice", ctrl.signal, recordedSeconds)
         if (ctrl.signal.aborted) return
         await refreshCloudConversationHistory(ctrl.signal).catch(() => {})

@@ -27,7 +27,9 @@ beforeEach(() => {
     })
 
     if (url.includes("/databases/db_1") && !url.includes("/query")) {
-      return Response.json({ properties: { Task: { type: "title" }, Notes: { type: "rich_text" } } })
+      return Response.json({
+        properties: { Task: { type: "title" }, Notes: { type: "rich_text" } },
+      })
     }
     if (url.includes("/databases/db_1/query")) {
       return Response.json({ results: [] })
@@ -48,10 +50,10 @@ afterEach(() => {
 
 describe("Notion connector", () => {
   it("blocks write tools until the user confirms", async () => {
-    const result = await executeTool("notion-appendContent", {
+    const result = (await executeTool("notion-appendContent", {
       pageId: "page_1",
       content: "hello",
-    }) as { needsConfirmation?: boolean; error?: string }
+    })) as { needsConfirmation?: boolean; error?: string }
 
     expect(result.needsConfirmation).toBe(true)
     expect(result.error).toInclude("confirmed=true")

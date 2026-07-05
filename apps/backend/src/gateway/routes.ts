@@ -64,10 +64,7 @@ gatewayRouter.delete("/connections/:platform", authenticate, async (c) => {
     const result = await db
       .delete(platformConnections)
       .where(
-        and(
-          eq(platformConnections.userId, user.id),
-          eq(platformConnections.platform, platform),
-        ),
+        and(eq(platformConnections.userId, user.id), eq(platformConnections.platform, platform)),
       )
       .returning({ id: platformConnections.id })
 
@@ -85,7 +82,7 @@ gatewayRouter.delete("/connections/:platform", authenticate, async (c) => {
 // Link a platform account to the authenticated Yomi user
 gatewayRouter.post("/link", authenticate, async (c) => {
   const user = c.get("user")
-  const body = await c.req.json().catch(() => ({})) as { code?: string }
+  const body = (await c.req.json().catch(() => ({}))) as { code?: string }
 
   if (!body.code || typeof body.code !== "string") {
     return c.json({ ok: false, error: "Missing code" }, 400)
@@ -111,8 +108,12 @@ gatewayRouter.post("/link", authenticate, async (c) => {
 
   // Confirm to the user on the platform (only if we have a chatId)
   if (entry.chatId) {
-    await gateway.sendMessage(entry.platform, entry.chatId,
-      "✅ Your account is now linked! You can start using Yomi.")
+    await gateway
+      .sendMessage(
+        entry.platform,
+        entry.chatId,
+        "✅ Your account is now linked! You can start using Yomi.",
+      )
       .catch(() => {})
   }
 
@@ -121,7 +122,7 @@ gatewayRouter.post("/link", authenticate, async (c) => {
 
 // Sidecar calls this to send a reply back through the platform
 gatewayRouter.post("/send", authenticate, async (c) => {
-  const body = await c.req.json().catch(() => ({})) as {
+  const body = (await c.req.json().catch(() => ({}))) as {
     platform?: PlatformType
     chatId?: string
     text?: string
@@ -168,7 +169,9 @@ gatewayRouter.post("/telegram/webhook/:token", async (c) => {
   const update = await c.req.json<TelegramUpdate>().catch(() => null)
   if (!update) return c.text("Bad Request", 400)
 
-  console.warn(`[gateway/telegram] webhook update=${update.update_id} hasMessage=${update.message ? "yes" : "no"}`)
+  console.warn(
+    `[gateway/telegram] webhook update=${update.update_id} hasMessage=${update.message ? "yes" : "no"}`,
+  )
 
   const gateway = getDefaultGateway()
   const adapter = gateway.getAdapter("telegram")
@@ -185,8 +188,11 @@ gatewayRouter.post("/telegram/webhook/:token", async (c) => {
   // the next one, so awaiting the full agent run here would stall delivery and
   // pile up pending updates (the bot appears to stop replying). On a stateless
   // Worker a slow run also risks hitting CPU/time limits and webhook retries.
-  runInBackground(c, readyAdapter.processUpdate(update).catch((err) => {
-    console.warn("[gateway/telegram] background processUpdate error:", err)
-  }))
+  runInBackground(
+    c,
+    readyAdapter.processUpdate(update).catch((err) => {
+      console.warn("[gateway/telegram] background processUpdate error:", err)
+    }),
+  )
   return c.json({ ok: true })
 })

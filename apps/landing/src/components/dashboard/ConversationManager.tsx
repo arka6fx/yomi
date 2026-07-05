@@ -100,7 +100,10 @@ export function ConversationManager({ token }: { token: string }) {
       ) : (
         <ul className="space-y-3">
           {history.map((turn, i) => (
-            <li key={i} className={turn.role === "user" ? "flex justify-end" : "flex justify-start"}>
+            <li
+              key={i}
+              className={turn.role === "user" ? "flex justify-end" : "flex justify-start"}
+            >
               <div
                 className={
                   turn.role === "user"

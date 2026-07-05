@@ -4,8 +4,12 @@ import type { ToolSet } from "ai"
 // Adds a reconnect hint when the underlying API returned 401 or 403.
 export function connectorError(err: unknown): { error: string; hint?: string } {
   const msg = err instanceof Error ? err.message : String(err)
-  const appUrl = (typeof process !== "undefined" && process.env["YOMI_APP_URL"]) || "https://yomi.arka6fx.com"
-  const isAuth = /(?:→|status)\s*(401|403)\b|unauthorized|forbidden|invalid.*token|token.*invalid|revoked/i.test(msg)
+  const appUrl =
+    (typeof process !== "undefined" && process.env["YOMI_APP_URL"]) || "https://yomi.arka6fx.com"
+  const isAuth =
+    /(?:→|status)\s*(401|403)\b|unauthorized|forbidden|invalid.*token|token.*invalid|revoked/i.test(
+      msg,
+    )
   const isNotionPermission = /restricted_resource|object_not_found/i.test(msg)
   if (isNotionPermission) {
     return {

@@ -100,11 +100,7 @@ export function compactMemoryForBudget(
     droppedDates.push(promo.date)
   }
 
-  const compacted = [
-    baseContent,
-    ...remainingPromotions.map((p) => p.match),
-    newSection,
-  ]
+  const compacted = [baseContent, ...remainingPromotions.map((p) => p.match), newSection]
     .filter(Boolean)
     .join("\n\n")
 

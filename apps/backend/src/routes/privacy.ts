@@ -21,11 +21,29 @@ import {
   usageEvents,
 } from "@yomi/db"
 import { authenticate } from "../auth.js"
-import { clientIp, listPrivacyActivity, recordPrivacyAuditEvent, userAgent } from "../services/privacy/audit.js"
-import { getConsentSnapshot, listConsentHistory, recordConsentDecision } from "../services/privacy/consent.js"
-import { getPrivacyPreferences, updatePrivacyPreferences, type PrivacyPreferencePatch } from "../services/privacy/preferences.js"
+import {
+  clientIp,
+  listPrivacyActivity,
+  recordPrivacyAuditEvent,
+  userAgent,
+} from "../services/privacy/audit.js"
+import {
+  getConsentSnapshot,
+  listConsentHistory,
+  recordConsentDecision,
+} from "../services/privacy/consent.js"
+import {
+  getPrivacyPreferences,
+  updatePrivacyPreferences,
+  type PrivacyPreferencePatch,
+} from "../services/privacy/preferences.js"
 import { getExport, listExports, requestExport } from "../services/privacy/export.js"
-import { deleteMyData, deleteAccount, getDeletionJob, listDeletionJobs } from "../services/privacy/deletion.js"
+import {
+  deleteMyData,
+  deleteAccount,
+  getDeletionJob,
+  listDeletionJobs,
+} from "../services/privacy/deletion.js"
 
 type ConsentBody = {
   purposes?: unknown
@@ -64,7 +82,11 @@ function boolPatch(body: PreferencesBody): PrivacyPreferencePatch {
   for (const key of booleanKeys) {
     if (typeof body[key] === "boolean") patch[key] = body[key]
   }
-  if (body.retentionOverrides && typeof body.retentionOverrides === "object" && !Array.isArray(body.retentionOverrides)) {
+  if (
+    body.retentionOverrides &&
+    typeof body.retentionOverrides === "object" &&
+    !Array.isArray(body.retentionOverrides)
+  ) {
     patch.retentionOverrides = body.retentionOverrides as Record<string, unknown>
   }
   if (body.retentionOverrides === null) patch.retentionOverrides = null
@@ -98,7 +120,8 @@ privacyRouter.post("/consents", async (c) => {
   const user = c.get("user")
   const body = (await c.req.json().catch(() => ({}))) as ConsentBody
   const purposes = normalizePurposes(body.purposes)
-  if (!purposes.length) return c.json({ error: "At least one valid consent purpose is required" }, 400)
+  if (!purposes.length)
+    return c.json({ error: "At least one valid consent purpose is required" }, 400)
   const current = await recordConsentDecision({
     userId: user.id,
     purposes,
@@ -125,7 +148,8 @@ privacyRouter.post("/consents/revoke", async (c) => {
   const user = c.get("user")
   const body = (await c.req.json().catch(() => ({}))) as ConsentBody
   const purposes = normalizePurposes(body.purposes)
-  if (!purposes.length) return c.json({ error: "At least one valid consent purpose is required" }, 400)
+  if (!purposes.length)
+    return c.json({ error: "At least one valid consent purpose is required" }, 400)
   const current = await recordConsentDecision({
     userId: user.id,
     purposes,
@@ -157,7 +181,8 @@ privacyRouter.patch("/preferences", async (c) => {
   const user = c.get("user")
   const body = (await c.req.json().catch(() => ({}))) as PreferencesBody
   const patch = boolPatch(body)
-  if (!Object.keys(patch).length) return c.json({ error: "No valid privacy preferences provided" }, 400)
+  if (!Object.keys(patch).length)
+    return c.json({ error: "No valid privacy preferences provided" }, 400)
   const preferences = await updatePrivacyPreferences(user.id, patch)
   await recordPrivacyAuditEvent({
     actorUserId: user.id,
@@ -177,18 +202,55 @@ privacyRouter.get("/overview", async (c) => {
     getConsentSnapshot(user.id),
     listPrivacyActivity(user.id, 8),
     Promise.all([
-      db.select({ count: sql<number>`count(*)` }).from(agentSessions).where(eq(agentSessions.userId, user.id)),
-      db.select({ count: sql<number>`count(*)` }).from(agentMessages).where(eq(agentMessages.userId, user.id)),
-      db.select({ count: sql<number>`count(*)` }).from(memoryEntries).where(eq(memoryEntries.userId, user.id)),
-      db.select({ count: sql<number>`count(*)` }).from(ragSources).where(eq(ragSources.userId, user.id)),
-      db.select({ count: sql<number>`count(*)` }).from(ragChunks).where(eq(ragChunks.userId, user.id)),
-      db.select({ count: sql<number>`count(*)` }).from(mcpConnections).where(eq(mcpConnections.userId, user.id)),
-      db.select({ count: sql<number>`count(*)` }).from(platformConnections).where(eq(platformConnections.userId, user.id)),
-      db.select({ count: sql<number>`count(*)` }).from(schedules).where(eq(schedules.userId, user.id)),
-      db.select({ count: sql<number>`count(*)` }).from(usageEvents).where(eq(usageEvents.userId, user.id)),
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(agentSessions)
+        .where(eq(agentSessions.userId, user.id)),
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(agentMessages)
+        .where(eq(agentMessages.userId, user.id)),
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(memoryEntries)
+        .where(eq(memoryEntries.userId, user.id)),
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(ragSources)
+        .where(eq(ragSources.userId, user.id)),
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(ragChunks)
+        .where(eq(ragChunks.userId, user.id)),
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(mcpConnections)
+        .where(eq(mcpConnections.userId, user.id)),
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(platformConnections)
+        .where(eq(platformConnections.userId, user.id)),
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(schedules)
+        .where(eq(schedules.userId, user.id)),
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(usageEvents)
+        .where(eq(usageEvents.userId, user.id)),
     ]).then((rows) => rows.map((row) => Number(row[0]?.count ?? 0))),
   ])
-  const [sessions, messages, memories, ragSourcesCount, ragChunksCount, connectors, platforms, schedulesCount, usage] = counts
+  const [
+    sessions,
+    messages,
+    memories,
+    ragSourcesCount,
+    ragChunksCount,
+    connectors,
+    platforms,
+    schedulesCount,
+    usage,
+  ] = counts
   return c.json({
     preferences,
     consents: currentConsents,

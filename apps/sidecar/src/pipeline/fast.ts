@@ -44,17 +44,25 @@ async function getFastPrompt(
   const localCtx = memory
     ? await (preloaded ?? loadMemoryContext(text))
     : {
-      memorySummary: "",
-      memoryIndex: "",
-      durableMemory: "",
-      localMemory: "",
-      cloudRagContext: "",
-      staticProfile: "",
-      dynamicProfile: "",
-      recentSession: "",
-    }
+        memorySummary: "",
+        memoryIndex: "",
+        durableMemory: "",
+        localMemory: "",
+        cloudRagContext: "",
+        staticProfile: "",
+        dynamicProfile: "",
+        recentSession: "",
+      }
   const connectedProviders = getConnectorRegistry().getConnected()
-  return buildFastPrompt({ text, tts, yomiMd: cachedYomiMd, soulMd: cachedSoulMd, ...localCtx, hasScreen, connectedProviders })
+  return buildFastPrompt({
+    text,
+    tts,
+    yomiMd: cachedYomiMd,
+    soulMd: cachedSoulMd,
+    ...localCtx,
+    hasScreen,
+    connectedProviders,
+  })
 }
 
 // Tiny single-consumer queue so multiple async producers (LLM text + N concurrent
@@ -210,7 +218,9 @@ function maxOutputTokensFor(text: string): number {
     base = 1400
   } else if (/\b(code|program|function|algorithm|leetcode|solution|complexity|debug)\b/.test(q)) {
     base = 1200
-  } else if (/\b(explain in detail|walkthrough|step by step|detailed|briefly but complete)\b/.test(q)) {
+  } else if (
+    /\b(explain in detail|walkthrough|step by step|detailed|briefly but complete)\b/.test(q)
+  ) {
     base = 1100
   } else {
     base = 800
@@ -439,9 +449,7 @@ export async function* fastPipeline(
   // kick off memory loading in parallel with the quota check so it overlaps network
   // I/O rather than running sequentially after STT.
   const earlyMemory: Promise<MemoryContextBundle> | undefined =
-    memoryEnabled(req.plan) && req.text?.trim()
-      ? loadMemoryContext(req.text.trim())
-      : undefined
+    memoryEnabled(req.plan) && req.text?.trim() ? loadMemoryContext(req.text.trim()) : undefined
 
   let usageEventId: string | undefined
   if (!req.skipReserve) {

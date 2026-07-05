@@ -15,7 +15,8 @@ export function validateScheduleInput(schedule: string): {
   const trimmed = schedule.trim().toLowerCase()
 
   if (/^\d+[mhd]$/.test(trimmed)) {
-    if (trimmed.endsWith("m") && parseInt(trimmed, 10) < 1) return { ok: false, error: "minimum duration is 1m" }
+    if (trimmed.endsWith("m") && parseInt(trimmed, 10) < 1)
+      return { ok: false, error: "minimum duration is 1m" }
     return { ok: true, scheduleType: "duration" }
   }
   if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(schedule)) {
@@ -31,7 +32,10 @@ export function validateScheduleInput(schedule: string): {
 }
 
 export function parseDurationMs(schedule: string): number | null {
-  const m = schedule.trim().toLowerCase().match(/^(\d+)([mhd])$/)
+  const m = schedule
+    .trim()
+    .toLowerCase()
+    .match(/^(\d+)([mhd])$/)
   if (!m) return null
   const n = parseInt(m[1]!, 10)
   return m[2] === "m" ? n * 60_000 : m[2] === "h" ? n * 3_600_000 : n * 86_400_000
@@ -39,9 +43,19 @@ export function parseDurationMs(schedule: string): number | null {
 
 export function phraseToCron(phrase: string): string | null {
   const p = phrase.toLowerCase().trim()
-  const dayMap: Record<string, number> = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 }
+  const dayMap: Record<string, number> = {
+    sunday: 0,
+    monday: 1,
+    tuesday: 2,
+    wednesday: 3,
+    thursday: 4,
+    friday: 5,
+    saturday: 6,
+  }
 
-  const dayMatch = p.match(/^every\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i)
+  const dayMatch = p.match(
+    /^every\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i,
+  )
   if (dayMatch) {
     const day = dayMap[dayMatch[1]!]
     const { hour, minute } = to24h(dayMatch[2]!, dayMatch[3], dayMatch[4])
@@ -66,7 +80,11 @@ export function phraseToCron(phrase: string): string | null {
   return null
 }
 
-function to24h(hourStr: string, minStr: string | undefined, ampm: string | undefined): { hour: number | null; minute: number } {
+function to24h(
+  hourStr: string,
+  minStr: string | undefined,
+  ampm: string | undefined,
+): { hour: number | null; minute: number } {
   let hour = parseInt(hourStr, 10)
   const minute = minStr ? parseInt(minStr, 10) : 0
   if (ampm) {
@@ -155,7 +173,10 @@ export function computeNextRun(input: {
       return new Date(target)
     }
     case "cron":
-      return nextCronRun(input.schedule, input.lastRunAt && input.lastRunAt > now ? input.lastRunAt : now)
+      return nextCronRun(
+        input.schedule,
+        input.lastRunAt && input.lastRunAt > now ? input.lastRunAt : now,
+      )
     case "phrase": {
       const expr = phraseToCron(input.schedule)
       if (!expr) return null

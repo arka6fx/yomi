@@ -13,7 +13,13 @@ type ProfileBody = {
 // Lightweight session check — returns 200 with basic user info if token is valid, 401 otherwise
 profileRouter.get("/me", authenticate, (c) => {
   const user = c.get("user")
-  return c.json({ id: user.id, email: user.email, name: user.name, plan: user.plan, role: user.role })
+  return c.json({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    plan: user.plan,
+    role: user.role,
+  })
 })
 
 profileRouter.patch("/profile", authenticate, async (c) => {

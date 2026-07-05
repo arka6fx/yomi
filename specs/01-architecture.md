@@ -16,7 +16,9 @@ Landing (Next.js)
   marketing, dashboard, billing, downloads, integrations, bot linking
 ```
 
-The backend is canonical for durable user state. The sidecar is optimized for low-latency local context and private working state. Telegram never depends on the desktop being online.
+The backend is canonical for durable user state. The sidecar is optimized for
+low-latency local context and private working state. Telegram never depends on
+the desktop being online.
 
 Key backend APIs:
 

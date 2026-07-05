@@ -426,7 +426,11 @@ export const memoryRelations = pgTable(
   },
   (t) => ({
     userFromIdx: index("memory_relations_user_from_idx").on(t.userId, t.fromMemoryId),
-    relationUnique: unique("memory_relations_unique").on(t.fromMemoryId, t.toMemoryId, t.relationType),
+    relationUnique: unique("memory_relations_unique").on(
+      t.fromMemoryId,
+      t.toMemoryId,
+      t.relationType,
+    ),
   }),
 )
 
@@ -629,7 +633,11 @@ export const privacyDeletionJobs = pgTable(
     completedAt: timestamp("completed_at"),
   },
   (t) => ({
-    userStatusIdx: index("privacy_deletion_jobs_user_status_idx").on(t.userId, t.status, t.requestedAt),
+    userStatusIdx: index("privacy_deletion_jobs_user_status_idx").on(
+      t.userId,
+      t.status,
+      t.requestedAt,
+    ),
   }),
 )
 
@@ -648,7 +656,10 @@ export const privacyAuditEvents = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => ({
-    targetCreatedIdx: index("privacy_audit_events_target_created_idx").on(t.targetUserId, t.createdAt),
+    targetCreatedIdx: index("privacy_audit_events_target_created_idx").on(
+      t.targetUserId,
+      t.createdAt,
+    ),
     actorCreatedIdx: index("privacy_audit_events_actor_created_idx").on(t.actorUserId, t.createdAt),
     eventTypeIdx: index("privacy_audit_events_type_idx").on(t.eventType, t.createdAt),
   }),

@@ -54,81 +54,92 @@ export async function buildManifest(userId: string): Promise<DataInventory> {
     scheduleRows,
     usageRows,
   ] = await Promise.all([
-    db.select({ id: authSchema.session.id, createdAt: authSchema.session.createdAt })
+    db
+      .select({ id: authSchema.session.id, createdAt: authSchema.session.createdAt })
       .from(authSchema.session)
       .where(eq(authSchema.session.userId, userId)),
-    db.select({
-      id: authSchema.account.id,
-      providerId: authSchema.account.providerId,
-      scope: authSchema.account.scope,
-    }).from(authSchema.account).where(eq(authSchema.account.userId, userId)),
-    db.select({
-      id: agentMessages.id,
-      sessionId: agentMessages.sessionId,
-      role: agentMessages.role,
-      content: agentMessages.content,
-      createdAt: agentMessages.createdAt,
-    })
+    db
+      .select({
+        id: authSchema.account.id,
+        providerId: authSchema.account.providerId,
+        scope: authSchema.account.scope,
+      })
+      .from(authSchema.account)
+      .where(eq(authSchema.account.userId, userId)),
+    db
+      .select({
+        id: agentMessages.id,
+        sessionId: agentMessages.sessionId,
+        role: agentMessages.role,
+        content: agentMessages.content,
+        createdAt: agentMessages.createdAt,
+      })
       .from(agentMessages)
       .where(eq(agentMessages.userId, userId))
       .orderBy(desc(agentMessages.createdAt))
       .limit(500),
-    db.select({
-      id: memoryEntries.id,
-      kind: memoryEntries.kind,
-      topic: memoryEntries.topic,
-      summary: memoryEntries.summary,
-      content: memoryEntries.content,
-      status: memoryEntries.status,
-      confidence: memoryEntries.confidence,
-      createdAt: memoryEntries.createdAt,
-    })
+    db
+      .select({
+        id: memoryEntries.id,
+        kind: memoryEntries.kind,
+        topic: memoryEntries.topic,
+        summary: memoryEntries.summary,
+        content: memoryEntries.content,
+        status: memoryEntries.status,
+        confidence: memoryEntries.confidence,
+        createdAt: memoryEntries.createdAt,
+      })
       .from(memoryEntries)
       .where(eq(memoryEntries.userId, userId))
       .orderBy(desc(memoryEntries.createdAt))
       .limit(1000),
-    db.select({
-      id: ragSources.id,
-      name: ragSources.name,
-      sourceType: ragSources.sourceType,
-      status: ragSources.status,
-      createdAt: ragSources.createdAt,
-    })
+    db
+      .select({
+        id: ragSources.id,
+        name: ragSources.name,
+        sourceType: ragSources.sourceType,
+        status: ragSources.status,
+        createdAt: ragSources.createdAt,
+      })
       .from(ragSources)
       .where(eq(ragSources.userId, userId))
       .limit(500),
-    db.select({
-      id: mcpConnections.id,
-      provider: mcpConnections.provider,
-      scopes: mcpConnections.scopes,
-      displayName: mcpConnections.displayName,
-      createdAt: mcpConnections.createdAt,
-    })
+    db
+      .select({
+        id: mcpConnections.id,
+        provider: mcpConnections.provider,
+        scopes: mcpConnections.scopes,
+        displayName: mcpConnections.displayName,
+        createdAt: mcpConnections.createdAt,
+      })
       .from(mcpConnections)
       .where(eq(mcpConnections.userId, userId)),
-    db.select({
-      platform: platformConnections.platform,
-      connectedAt: platformConnections.connectedAt,
-    })
+    db
+      .select({
+        platform: platformConnections.platform,
+        connectedAt: platformConnections.connectedAt,
+      })
       .from(platformConnections)
       .where(eq(platformConnections.userId, userId)),
-    db.select({
-      id: schedules.id,
-      schedule: schedules.schedule,
-      scheduleType: schedules.scheduleType,
-      prompt: schedules.prompt,
-      enabled: schedules.enabled,
-      createdAt: schedules.createdAt,
-    })
+    db
+      .select({
+        id: schedules.id,
+        schedule: schedules.schedule,
+        scheduleType: schedules.scheduleType,
+        prompt: schedules.prompt,
+        enabled: schedules.enabled,
+        createdAt: schedules.createdAt,
+      })
       .from(schedules)
       .where(eq(schedules.userId, userId)),
-    db.select({
-      id: usageEvents.id,
-      kind: usageEvents.kind,
-      costCents: usageEvents.costCents,
-      creditsCharged: usageEvents.creditsCharged,
-      createdAt: usageEvents.createdAt,
-    })
+    db
+      .select({
+        id: usageEvents.id,
+        kind: usageEvents.kind,
+        costCents: usageEvents.costCents,
+        creditsCharged: usageEvents.creditsCharged,
+        createdAt: usageEvents.createdAt,
+      })
       .from(usageEvents)
       .where(eq(usageEvents.userId, userId))
       .orderBy(desc(usageEvents.createdAt))

@@ -48,7 +48,8 @@ async function getAgentDriver(): Promise<AgentDriver> {
   return runGraph as AgentDriver
 }
 
-const BACKEND_URL = process.env.YOMI_BACKEND_URL ?? process.env.BACKEND_URL ?? "http://localhost:3001"
+const BACKEND_URL =
+  process.env.YOMI_BACKEND_URL ?? process.env.BACKEND_URL ?? "http://localhost:3001"
 
 let polling = false
 let pollTimer: ReturnType<typeof setInterval> | null = null
@@ -71,7 +72,10 @@ export function startGatewayPoll(): void {
 
 export function stopGatewayPoll(): void {
   polling = false
-  if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
   console.warn("[gateway/poll] stopped")
 }
 
@@ -92,7 +96,6 @@ async function poll(): Promise<void> {
 }
 
 export async function handleGatewayMessage(msg: GatewayMessage): Promise<void> {
-
   // ── Document auto-parsing ──────────────────────────────────────────────────
   // If the message includes a document URL that wasn't already parsed by the
   // backend, extract text here so the agent/fast path can use it.
@@ -143,7 +146,13 @@ export async function handleGatewayMessage(msg: GatewayMessage): Promise<void> {
   let reply: string | null = null
   if (intent.path === "fast") {
     const chunks: string[] = []
-    for await (const event of fastPipeline({ text, tts: false, plan: "max", history, skipReserve: true })) {
+    for await (const event of fastPipeline({
+      text,
+      tts: false,
+      plan: "max",
+      history,
+      skipReserve: true,
+    })) {
       if (event.type === "llm_chunk") chunks.push(event.text)
       if (event.type === "error") chunks.push(event.message)
       if (event.type === "usage_limit") chunks.push(event.message)

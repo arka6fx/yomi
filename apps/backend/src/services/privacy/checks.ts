@@ -22,7 +22,10 @@ export type ConsentCheckResult = {
   reason: string | null
 }
 
-export async function checkConsent(userId: string, purpose: PrivacyConsentPurpose): Promise<ConsentCheckResult> {
+export async function checkConsent(
+  userId: string,
+  purpose: PrivacyConsentPurpose,
+): Promise<ConsentCheckResult> {
   const [preferences, consents] = await Promise.all([
     getPrivacyPreferences(userId),
     getConsentSnapshot(userId),

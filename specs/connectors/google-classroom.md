@@ -9,14 +9,14 @@ student submission read/write, and user email scopes.
 
 ## Tools
 
-| Tool                            | Type   | Purpose                                                   |
-| ------------------------------- | ------ | --------------------------------------------------------- |
-| `classroom-listCourses`         | Read   | List active Classroom courses.                            |
-| `classroom-listAssignments`     | Read   | List coursework for a course.                             |
-| `classroom-listAnnouncements`   | Read   | List course announcements.                                |
-| `classroom-getSubmissionStatus` | Read   | Check the connected student's submission state and grade. |
-| `classroom-modifyAttachments`   | Write  | Attach a Drive file to an assignment submission.          |
-| `classroom-turnIn`              | Write  | Turn in (submit) an assignment.                           |
+| Tool                            | Type  | Purpose                                                   |
+| ------------------------------- | ----- | --------------------------------------------------------- |
+| `classroom-listCourses`         | Read  | List active Classroom courses.                            |
+| `classroom-listAssignments`     | Read  | List coursework for a course.                             |
+| `classroom-listAnnouncements`   | Read  | List course announcements.                                |
+| `classroom-getSubmissionStatus` | Read  | Check the connected student's submission state and grade. |
+| `classroom-modifyAttachments`   | Write | Attach a Drive file to an assignment submission.          |
+| `classroom-turnIn`              | Write | Turn in (submit) an assignment.                           |
 
 ## Write flow
 

@@ -80,9 +80,16 @@ export async function closeAgentSession(input: {
     )
 }
 
-export async function loadAgentHistory(sessionId: string, maxTurns = DEFAULT_HISTORY_TURNS): Promise<AgentMessage[]> {
+export async function loadAgentHistory(
+  sessionId: string,
+  maxTurns = DEFAULT_HISTORY_TURNS,
+): Promise<AgentMessage[]> {
   const rows = await db
-    .select({ role: agentMessages.role, content: agentMessages.content, createdAt: agentMessages.createdAt })
+    .select({
+      role: agentMessages.role,
+      content: agentMessages.content,
+      createdAt: agentMessages.createdAt,
+    })
     .from(agentMessages)
     .where(eq(agentMessages.sessionId, sessionId))
     .orderBy(desc(agentMessages.createdAt))
@@ -90,8 +97,10 @@ export async function loadAgentHistory(sessionId: string, maxTurns = DEFAULT_HIS
 
   return rows
     .reverse()
-    .filter((row): row is { role: AgentMessage["role"]; content: string; createdAt: Date } =>
-      (row.role === "user" || row.role === "assistant" || row.role === "system") && row.content.trim().length > 0,
+    .filter(
+      (row): row is { role: AgentMessage["role"]; content: string; createdAt: Date } =>
+        (row.role === "user" || row.role === "assistant" || row.role === "system") &&
+        row.content.trim().length > 0,
     )
     .map((row) => ({ role: row.role, content: row.content }))
 }
@@ -104,8 +113,20 @@ export async function appendAgentTurn(input: {
 }): Promise<void> {
   const now = new Date()
   await db.insert(agentMessages).values([
-    { sessionId: input.sessionId, userId: input.userId, role: "user", content: input.userText, createdAt: now },
-    { sessionId: input.sessionId, userId: input.userId, role: "assistant", content: input.assistantText, createdAt: now },
+    {
+      sessionId: input.sessionId,
+      userId: input.userId,
+      role: "user",
+      content: input.userText,
+      createdAt: now,
+    },
+    {
+      sessionId: input.sessionId,
+      userId: input.userId,
+      role: "assistant",
+      content: input.assistantText,
+      createdAt: now,
+    },
   ])
   await db
     .update(agentSessions)

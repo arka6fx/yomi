@@ -25,13 +25,20 @@ type MemoryInput = {
 
 type SearchMemoryBody = { query?: string; limit?: number; maxChars?: number }
 type ForgetMemoryBody = { id?: string; customId?: string; query?: string; hard?: boolean }
-type SyncMemoryBody = { memories?: MemoryInput[]; removedIds?: string[]; removedCustomIds?: string[] }
+type SyncMemoryBody = {
+  memories?: MemoryInput[]
+  removedIds?: string[]
+  removedCustomIds?: string[]
+}
 type MemoryRelation = "updates" | "extends" | "derives"
 
 const MAX_MEMORY_CHARS = 8_000
 const EMBEDDING_DIMENSIONS = 1536
 const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
-const MEMORY_CANDIDATES = Math.max(5, Number.parseInt(process.env["MEMORY_CANDIDATES"] ?? "30", 10) || 30)
+const MEMORY_CANDIDATES = Math.max(
+  5,
+  Number.parseInt(process.env["MEMORY_CANDIDATES"] ?? "30", 10) || 30,
+)
 const MEMORY_RRF_K = Math.max(1, Number.parseInt(process.env["MEMORY_RRF_K"] ?? "60", 10) || 60)
 
 export const memoryRouter = new Hono()
@@ -54,7 +61,10 @@ async function embedText(input: string): Promise<number[]> {
   if (!input.trim()) return []
   const apiKey = process.env["AI_CREDITS_API_KEY"]
   if (!apiKey) return []
-  const baseUrl = (process.env["AI_CREDITS_BASE_URL"] ?? "https://api.aicredits.in/v1").replace(/\/+$/, "")
+  const baseUrl = (process.env["AI_CREDITS_BASE_URL"] ?? "https://api.aicredits.in/v1").replace(
+    /\/+$/,
+    "",
+  )
   const model = process.env["AI_CREDITS_EMBEDDING_MODEL"] ?? DEFAULT_EMBEDDING_MODEL
   const res = await fetch(`${baseUrl}/embeddings`, {
     method: "POST",
@@ -102,22 +112,41 @@ function forgetAfterDate(value: unknown): Date | null {
 }
 
 function normalizeTopic(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
 }
 
-function relationForMemory(input: MemoryInput, candidate: typeof memoryEntries.$inferSelect): MemoryRelation | null {
+function relationForMemory(
+  input: MemoryInput,
+  candidate: typeof memoryEntries.$inferSelect,
+): MemoryRelation | null {
   const topic = normalizeTopic(input.topic || input.summary || "")
   const replacesTopic = normalizeTopic(input.replacesTopic ?? input.replaces_topic ?? "")
   const candidateTopic = normalizeTopic(candidate.topic)
-  if (replacesTopic && (candidateTopic.includes(replacesTopic) || replacesTopic.includes(candidateTopic))) return "updates"
+  if (
+    replacesTopic &&
+    (candidateTopic.includes(replacesTopic) || replacesTopic.includes(candidateTopic))
+  )
+    return "updates"
   if (topic && candidateTopic === topic) return "updates"
-  if ((input.kind ?? "fact") === candidate.kind && (input.scope ?? "global") === candidate.scope) return "extends"
+  if ((input.kind ?? "fact") === candidate.kind && (input.scope ?? "global") === candidate.scope)
+    return "extends"
   return null
 }
 
-async function linkMemoryRelation(userId: string, fromMemoryId: string, toMemoryId: string, relationType: MemoryRelation) {
+async function linkMemoryRelation(
+  userId: string,
+  fromMemoryId: string,
+  toMemoryId: string,
+  relationType: MemoryRelation,
+) {
   if (fromMemoryId === toMemoryId) return
-  await db.insert(memoryRelations).values({ userId, fromMemoryId, toMemoryId, relationType }).catch(() => undefined)
+  await db
+    .insert(memoryRelations)
+    .values({ userId, fromMemoryId, toMemoryId, relationType })
+    .catch(() => undefined)
 }
 
 async function pruneExpired(userId: string): Promise<void> {
@@ -137,7 +166,9 @@ export async function upsertMemory(userId: string, input: MemoryInput) {
   if (!content) return null
 
   const customId = input.customId ? clean(input.customId, 200) : null
-  const contentHash = hash(`${input.kind ?? "fact"}\0${input.scope ?? "global"}\0${topic}\0${content}`)
+  const contentHash = hash(
+    `${input.kind ?? "fact"}\0${input.scope ?? "global"}\0${topic}\0${content}`,
+  )
   const existing = input.id
     ? await db
         .select()
@@ -149,7 +180,13 @@ export async function upsertMemory(userId: string, input: MemoryInput) {
       ? await db
           .select()
           .from(memoryEntries)
-          .where(and(eq(memoryEntries.userId, userId), eq(memoryEntries.customId, customId), eq(memoryEntries.isLatest, true)))
+          .where(
+            and(
+              eq(memoryEntries.userId, userId),
+              eq(memoryEntries.customId, customId),
+              eq(memoryEntries.isLatest, true),
+            ),
+          )
           .limit(1)
           .then((rows) => rows[0] ?? null)
       : null
@@ -198,25 +235,33 @@ export async function upsertMemory(userId: string, input: MemoryInput) {
       .where(eq(memoryEntries.id, existing.id))
   }
 
-  const [entry] = await db.insert(memoryEntries).values({
-    ...values,
-    version: existing ? existing.version + 1 : 1,
-    rootMemoryId: existing?.rootMemoryId ?? existing?.id ?? null,
-    parentMemoryId: existing?.id ?? null,
-    isLatest: true,
-  }).returning()
+  const [entry] = await db
+    .insert(memoryEntries)
+    .values({
+      ...values,
+      version: existing ? existing.version + 1 : 1,
+      rootMemoryId: existing?.rootMemoryId ?? existing?.id ?? null,
+      parentMemoryId: existing?.id ?? null,
+      isLatest: true,
+    })
+    .returning()
 
   if (entry && input.sourcePath) {
-    await db.insert(memorySources).values({
-      memoryId: entry.id,
-      sourcePath: clean(input.sourcePath, 500),
-      relevance: 100,
-    }).catch(() => undefined)
+    await db
+      .insert(memorySources)
+      .values({
+        memoryId: entry.id,
+        sourcePath: clean(input.sourcePath, 500),
+        relevance: 100,
+      })
+      .catch(() => undefined)
   }
   if (entry) {
-    await storeMemoryEmbedding(userId, entry.id, `${entry.kind}: ${entry.topic}\n${entry.summary ?? ""}\n${entry.content}`).catch(
-      () => undefined,
-    )
+    await storeMemoryEmbedding(
+      userId,
+      entry.id,
+      `${entry.kind}: ${entry.topic}\n${entry.summary ?? ""}\n${entry.content}`,
+    ).catch(() => undefined)
     if (existing) await linkMemoryRelation(userId, entry.id, existing.id, "updates")
     for (const candidate of candidates) {
       if (candidate.id === entry.id || candidate.id === existing?.id) continue
@@ -251,7 +296,13 @@ memoryRouter.get("/entries", requireConsent("memory"), async (c) => {
   const rows = await db
     .select()
     .from(memoryEntries)
-    .where(and(eq(memoryEntries.userId, user.id), eq(memoryEntries.status, "active"), eq(memoryEntries.isLatest, true)))
+    .where(
+      and(
+        eq(memoryEntries.userId, user.id),
+        eq(memoryEntries.status, "active"),
+        eq(memoryEntries.isLatest, true),
+      ),
+    )
     .orderBy(desc(memoryEntries.isStatic), desc(memoryEntries.updatedAt))
     .limit(limit)
   return c.json({ memories: rows })
@@ -265,14 +316,27 @@ memoryRouter.post("/search", requireConsent("memory"), async (c) => {
   const maxChars = clampLimit(body.maxChars, 4000, 20_000)
   await pruneExpired(user.id)
 
-  type MemorySearchRow = typeof memoryEntries.$inferSelect & { score?: number; matchedBy?: string[] }
+  type MemorySearchRow = typeof memoryEntries.$inferSelect & {
+    score?: number
+    matchedBy?: string[]
+  }
   let rows: MemorySearchRow[] = []
   if (!query) {
     rows = await db
       .select()
       .from(memoryEntries)
-      .where(and(eq(memoryEntries.userId, user.id), eq(memoryEntries.status, "active"), eq(memoryEntries.isLatest, true)))
-      .orderBy(desc(memoryEntries.isStatic), desc(memoryEntries.confidence), desc(memoryEntries.updatedAt))
+      .where(
+        and(
+          eq(memoryEntries.userId, user.id),
+          eq(memoryEntries.status, "active"),
+          eq(memoryEntries.isLatest, true),
+        ),
+      )
+      .orderBy(
+        desc(memoryEntries.isStatic),
+        desc(memoryEntries.confidence),
+        desc(memoryEntries.updatedAt),
+      )
       .limit(limit)
   } else {
     const queryEmbedding = await embedText(query).catch(() => [])
@@ -365,7 +429,9 @@ memoryRouter.post("/search", requireConsent("memory"), async (c) => {
       order by e.is_static desc, f.score desc, e.confidence desc, e.updated_at desc
       limit ${limit}
     `)
-    rows = (Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? [])) as MemorySearchRow[]
+    rows = (
+      Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? [])
+    ) as MemorySearchRow[]
   }
 
   const memories = []
@@ -386,7 +452,11 @@ memoryRouter.post("/profile", requireConsent("memory"), async (c) => {
   const limit = clampLimit(body.limit, 24, 80)
   await pruneExpired(user.id)
 
-  const baseWhere = and(eq(memoryEntries.userId, user.id), eq(memoryEntries.status, "active"), eq(memoryEntries.isLatest, true))
+  const baseWhere = and(
+    eq(memoryEntries.userId, user.id),
+    eq(memoryEntries.status, "active"),
+    eq(memoryEntries.isLatest, true),
+  )
   const staticRows = await db
     .select()
     .from(memoryEntries)
@@ -415,7 +485,11 @@ memoryRouter.post("/profile", requireConsent("memory"), async (c) => {
             ),
           ),
         )
-        .orderBy(desc(memoryEntries.isStatic), desc(memoryEntries.confidence), desc(memoryEntries.updatedAt))
+        .orderBy(
+          desc(memoryEntries.isStatic),
+          desc(memoryEntries.confidence),
+          desc(memoryEntries.updatedAt),
+        )
         .limit(Math.min(limit, 12))
     : []
 
@@ -473,7 +547,13 @@ memoryRouter.post("/sync", requireConsent("memory"), async (c) => {
     const rows = await db
       .update(memoryEntries)
       .set({ status: "forgotten", updatedAt: new Date() })
-      .where(and(eq(memoryEntries.userId, user.id), eq(memoryEntries.id, id), eq(memoryEntries.status, "active")))
+      .where(
+        and(
+          eq(memoryEntries.userId, user.id),
+          eq(memoryEntries.id, id),
+          eq(memoryEntries.status, "active"),
+        ),
+      )
       .returning({ id: memoryEntries.id })
     removed += rows.length
   }
@@ -481,7 +561,13 @@ memoryRouter.post("/sync", requireConsent("memory"), async (c) => {
     const rows = await db
       .update(memoryEntries)
       .set({ status: "forgotten", updatedAt: new Date() })
-      .where(and(eq(memoryEntries.userId, user.id), eq(memoryEntries.customId, customId), eq(memoryEntries.status, "active")))
+      .where(
+        and(
+          eq(memoryEntries.userId, user.id),
+          eq(memoryEntries.customId, customId),
+          eq(memoryEntries.status, "active"),
+        ),
+      )
       .returning({ id: memoryEntries.id })
     removed += rows.length
   }
@@ -523,7 +609,11 @@ memoryRouter.post("/forget", async (c) => {
 
 memoryRouter.post("/graph-walk", requireConsent("memory"), async (c) => {
   const user = c.get("user")
-  const body = (await c.req.json().catch(() => ({}))) as { rootId?: string; maxDepth?: number; maxNodes?: number }
+  const body = (await c.req.json().catch(() => ({}))) as {
+    rootId?: string
+    maxDepth?: number
+    maxNodes?: number
+  }
   const rootId = clean(body.rootId, 80)
   if (!rootId) return c.json({ error: "rootId is required" }, 400)
   const maxDepth = Math.min(Math.max(body.maxDepth ?? 3, 1), 6)
@@ -543,12 +633,7 @@ memoryRouter.post("/graph-walk", requireConsent("memory"), async (c) => {
         relationType: memoryRelations.relationType,
       })
       .from(memoryRelations)
-      .where(
-        and(
-          eq(memoryRelations.userId, user.id),
-          eq(memoryRelations.fromMemoryId, id),
-        ),
-      )
+      .where(and(eq(memoryRelations.userId, user.id), eq(memoryRelations.fromMemoryId, id)))
       .limit(10)
 
     const [entry] = await db
@@ -604,7 +689,13 @@ memoryRouter.delete("/:id", async (c) => {
   const forgotten = await db
     .update(memoryEntries)
     .set({ status: "forgotten", updatedAt: new Date() })
-    .where(and(eq(memoryEntries.userId, user.id), eq(memoryEntries.id, id), eq(memoryEntries.status, "active")))
+    .where(
+      and(
+        eq(memoryEntries.userId, user.id),
+        eq(memoryEntries.id, id),
+        eq(memoryEntries.status, "active"),
+      ),
+    )
     .returning({ id: memoryEntries.id })
   return c.json({ forgotten: forgotten.length, ids: forgotten.map((row) => row.id) })
 })

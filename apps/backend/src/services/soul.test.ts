@@ -12,7 +12,10 @@ describe("decideSoulOnboarding", () => {
 
   it("stores a custom soul when the awaited reply is long enough", () => {
     const d = decideSoulOnboarding("awaiting", "Be playful, concise, and a little sarcastic.")
-    expect(d).toMatchObject({ next: "done", agentSoul: "Be playful, concise, and a little sarcastic." })
+    expect(d).toMatchObject({
+      next: "done",
+      agentSoul: "Be playful, concise, and a little sarcastic.",
+    })
     expect(d.reply).toContain("working style")
   })
 

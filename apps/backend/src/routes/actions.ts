@@ -55,7 +55,10 @@ actionsRouter.post("/:id/approve", authenticate, async (c) => {
     if (!result) return c.json({ error: "Pending action not found", code: "not_found" }, 404)
     return c.json(result)
   } catch (err) {
-    return c.json({ error: err instanceof Error ? err.message : String(err), code: "execution_failed" }, 500)
+    return c.json(
+      { error: err instanceof Error ? err.message : String(err), code: "execution_failed" },
+      500,
+    )
   }
 })
 

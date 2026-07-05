@@ -28,7 +28,9 @@ function LinkPageContent() {
 
   useEffect(() => {
     if (!session) return
-    void checkTelegramLinked().then(setConnected).catch(() => {})
+    void checkTelegramLinked()
+      .then(setConnected)
+      .catch(() => {})
   }, [session])
 
   async function checkTelegramLinked() {
@@ -129,11 +131,15 @@ function LinkPageContent() {
                 <Check size={28} className="text-emerald-400" />
               </div>
               <div className="space-y-2">
-                <h1 className="text-2xl font-light text-foreground" style={{ letterSpacing: "-0.03em" }}>
+                <h1
+                  className="text-2xl font-light text-foreground"
+                  style={{ letterSpacing: "-0.03em" }}
+                >
                   Telegram linked
                 </h1>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  You can message Yomi from Telegram now. Try <strong className="text-foreground">/help</strong> or ask a question.
+                  You can message Yomi from Telegram now. Try{" "}
+                  <strong className="text-foreground">/help</strong> or ask a question.
                 </p>
               </div>
               <div className="flex flex-col items-center gap-3">
@@ -158,17 +164,22 @@ function LinkPageContent() {
                 <Loader2 size={28} className="text-sky-400 animate-spin" />
               </div>
               <div className="space-y-2">
-                <h1 className="text-2xl font-light text-foreground" style={{ letterSpacing: "-0.03em" }}>
+                <h1
+                  className="text-2xl font-light text-foreground"
+                  style={{ letterSpacing: "-0.03em" }}
+                >
                   Waiting for Start
                 </h1>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Telegram is open. Press <strong className="text-foreground">Start</strong> in the Yomi bot chat and this page will confirm automatically.
+                  Telegram is open. Press <strong className="text-foreground">Start</strong> in the
+                  Yomi bot chat and this page will confirm automatically.
                 </p>
               </div>
               <div className="rounded-2xl border border-sky-500/20 bg-sky-500/[0.04] p-4 text-left">
                 <p className="text-xs uppercase tracking-widest text-sky-300 mb-2">Secure link</p>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  This link expires soon and only connects this Telegram account to <span className="text-foreground">{session.user.email}</span>.
+                  This link expires soon and only connects this Telegram account to{" "}
+                  <span className="text-foreground">{session.user.email}</span>.
                 </p>
               </div>
               <div className="flex flex-col items-center gap-3">
@@ -184,10 +195,12 @@ function LinkPageContent() {
                   </a>
                 )}
                 <button
-                  onClick={() => void checkTelegramLinked().then((ok) => {
-                    if (ok) setConnected(true)
-                    else setError("Not linked yet. Press Start in Telegram first.")
-                  })}
+                  onClick={() =>
+                    void checkTelegramLinked().then((ok) => {
+                      if (ok) setConnected(true)
+                      else setError("Not linked yet. Press Start in Telegram first.")
+                    })
+                  }
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   I pressed Start
@@ -201,7 +214,10 @@ function LinkPageContent() {
                 <MessageCircle size={28} className="text-sky-400" />
               </div>
               <div className="space-y-2">
-                <h1 className="text-2xl font-light text-foreground" style={{ letterSpacing: "-0.03em" }}>
+                <h1
+                  className="text-2xl font-light text-foreground"
+                  style={{ letterSpacing: "-0.03em" }}
+                >
                   Connect Telegram
                 </h1>
                 <p className="text-sm text-muted-foreground leading-relaxed">
@@ -210,18 +226,28 @@ function LinkPageContent() {
               </div>
 
               <div className="rounded-2xl border border-border bg-card/70 p-4 text-left shadow-sm">
-                <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">How it works</p>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">
+                  How it works
+                </p>
                 <div className="space-y-3 text-sm text-muted-foreground">
                   <div className="flex gap-3">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500/10 text-xs text-sky-300">1</span>
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500/10 text-xs text-sky-300">
+                      1
+                    </span>
                     <span>Open Telegram from this page.</span>
                   </div>
                   <div className="flex gap-3">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500/10 text-xs text-sky-300">2</span>
-                    <span>Press <strong className="text-foreground">Start</strong> in the bot chat.</span>
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500/10 text-xs text-sky-300">
+                      2
+                    </span>
+                    <span>
+                      Press <strong className="text-foreground">Start</strong> in the bot chat.
+                    </span>
                   </div>
                   <div className="flex gap-3">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500/10 text-xs text-sky-300">3</span>
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500/10 text-xs text-sky-300">
+                      3
+                    </span>
                     <span>This page confirms when the account is linked.</span>
                   </div>
                 </div>
@@ -240,12 +266,11 @@ function LinkPageContent() {
                 {connecting ? "Opening Telegram…" : "Connect Telegram"}
               </button>
 
-              {error && (
-                <p className="text-xs text-destructive">{error}</p>
-              )}
+              {error && <p className="text-xs text-destructive">{error}</p>}
 
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Use this button instead of searching for the bot manually. It includes a private one-time link token.
+                Use this button instead of searching for the bot manually. It includes a private
+                one-time link token.
               </p>
             </>
           )}

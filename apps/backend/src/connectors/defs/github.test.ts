@@ -75,8 +75,8 @@ describe.skip("GitHub backend wrapper", () => {
     expect(def?.getDisplayName).toBeFunction()
 
     mock.restore()
-    global.fetch = mock(async () =>
-      new Response(JSON.stringify({ login: "octocat", name: "Octo Cat" })),
+    global.fetch = mock(
+      async () => new Response(JSON.stringify({ login: "octocat", name: "Octo Cat" })),
     )
     const name = await def?.getDisplayName?.("gho_fake_token")
     expect(name).toBe("Octo Cat")
@@ -86,9 +86,7 @@ describe.skip("GitHub backend wrapper", () => {
   it("7. getDisplayName falls back to login if name is missing", async () => {
     const { getConnectorDef } = await import("../registry.js")
     const def = getConnectorDef("github")
-    global.fetch = mock(async () =>
-      new Response(JSON.stringify({ login: "octocat" })),
-    )
+    global.fetch = mock(async () => new Response(JSON.stringify({ login: "octocat" })))
     const name = await def?.getDisplayName?.("gho_fake_token")
     expect(name).toBe("octocat")
     mock.restore()
@@ -129,57 +127,84 @@ describe.skip("GitHub tools", () => {
       const path = new URL(url).pathname
 
       if (path === "/repos/owner/repo/pulls") {
-        return new Response(JSON.stringify([
-          {
-            number: 1, title: "Fix bug", user: { login: "user1" },
-            head: { ref: "fix-bug" }, base: { ref: "main" },
-            html_url: "https://github.com/owner/repo/pull/1",
-            created_at: "2024-01-01T00:00:00Z", draft: false,
-          },
-          {
-            number: 2, title: "Add feature", user: { login: "user2" },
-            head: { ref: "feat-x" }, base: { ref: "main" },
-            html_url: "https://github.com/owner/repo/pull/2",
-            created_at: "2024-01-02T00:00:00Z", draft: false,
-          },
-        ]))
+        return new Response(
+          JSON.stringify([
+            {
+              number: 1,
+              title: "Fix bug",
+              user: { login: "user1" },
+              head: { ref: "fix-bug" },
+              base: { ref: "main" },
+              html_url: "https://github.com/owner/repo/pull/1",
+              created_at: "2024-01-01T00:00:00Z",
+              draft: false,
+            },
+            {
+              number: 2,
+              title: "Add feature",
+              user: { login: "user2" },
+              head: { ref: "feat-x" },
+              base: { ref: "main" },
+              html_url: "https://github.com/owner/repo/pull/2",
+              created_at: "2024-01-02T00:00:00Z",
+              draft: false,
+            },
+          ]),
+        )
       }
 
       if (path === "/repos/owner/repo/pulls/1") {
-        return new Response(JSON.stringify({
-          number: 1, title: "Fix bug", body: "Fixes the critical bug #42",
-          user: { login: "user1" },
-          head: { ref: "fix-bug" }, base: { ref: "main" },
-          html_url: "https://github.com/owner/repo/pull/1",
-          state: "open", draft: false,
-          created_at: "2024-01-01T00:00:00Z",
-          merged_at: null, merge_commit_sha: null,
-          additions: 10, deletions: 2, changed_files: 3,
-        }))
+        return new Response(
+          JSON.stringify({
+            number: 1,
+            title: "Fix bug",
+            body: "Fixes the critical bug #42",
+            user: { login: "user1" },
+            head: { ref: "fix-bug" },
+            base: { ref: "main" },
+            html_url: "https://github.com/owner/repo/pull/1",
+            state: "open",
+            draft: false,
+            created_at: "2024-01-01T00:00:00Z",
+            merged_at: null,
+            merge_commit_sha: null,
+            additions: 10,
+            deletions: 2,
+            changed_files: 3,
+          }),
+        )
       }
 
       if (path === "/repos/owner/repo/issues" && !url.includes("/issues/")) {
-        return new Response(JSON.stringify([
-          {
-            number: 42, title: "Important bug", user: { login: "user1" },
-            html_url: "https://github.com/owner/repo/issues/42",
-            created_at: "2024-01-01T00:00:00Z",
-            labels: [{ name: "bug" }],
-          },
-        ]))
+        return new Response(
+          JSON.stringify([
+            {
+              number: 42,
+              title: "Important bug",
+              user: { login: "user1" },
+              html_url: "https://github.com/owner/repo/issues/42",
+              created_at: "2024-01-01T00:00:00Z",
+              labels: [{ name: "bug" }],
+            },
+          ]),
+        )
       }
 
       if (path === "/repos/owner/repo/issues/42") {
-        return new Response(JSON.stringify({
-          number: 42, title: "Important bug",
-          body: "Steps to reproduce: 1. Click X 2. See error",
-          user: { login: "user1" },
-          html_url: "https://github.com/owner/repo/issues/42",
-          state: "open", created_at: "2024-01-01T00:00:00Z",
-          updated_at: "2024-01-02T00:00:00Z",
-          comments: 3,
-          labels: [{ name: "bug" }, { name: "high-priority" }],
-        }))
+        return new Response(
+          JSON.stringify({
+            number: 42,
+            title: "Important bug",
+            body: "Steps to reproduce: 1. Click X 2. See error",
+            user: { login: "user1" },
+            html_url: "https://github.com/owner/repo/issues/42",
+            state: "open",
+            created_at: "2024-01-01T00:00:00Z",
+            updated_at: "2024-01-02T00:00:00Z",
+            comments: 3,
+            labels: [{ name: "bug" }, { name: "high-priority" }],
+          }),
+        )
       }
 
       return new Response("Not Found", { status: 404 })
@@ -192,7 +217,10 @@ describe.skip("GitHub tools", () => {
 
   it("9. github.listPRs returns PRs with correct fields", async () => {
     const result = await ghTools["github.listPRs"].execute!({
-      owner: "owner", repo: "repo", state: "open", limit: 10,
+      owner: "owner",
+      repo: "repo",
+      state: "open",
+      limit: 10,
     })
     expect(result.count).toBe(2)
     expect(result.prs[0].title).toBe("Fix bug")
@@ -204,13 +232,20 @@ describe.skip("GitHub tools", () => {
 
   it("10. github.listPRs uses correct API path", async () => {
     await ghTools["github.listPRs"].execute!({
-      owner: "owner", repo: "repo", state: "open", limit: 10,
+      owner: "owner",
+      repo: "repo",
+      state: "open",
+      limit: 10,
     })
     expect(lastRequestUrl).toInclude("/repos/owner/repo/pulls")
   })
 
   it("11. github.getPR returns PR details", async () => {
-    const result = await ghTools["github.getPR"].execute!({ owner: "owner", repo: "repo", prNumber: 1 })
+    const result = await ghTools["github.getPR"].execute!({
+      owner: "owner",
+      repo: "repo",
+      prNumber: 1,
+    })
     expect(result.title).toBe("Fix bug")
     expect(result.description).toInclude("critical bug")
     expect(result.stats.additions).toBe(10)
@@ -220,7 +255,12 @@ describe.skip("GitHub tools", () => {
   })
 
   it("12. github.listIssues returns issues without PRs", async () => {
-    const result = await ghTools["github.listIssues"].execute!({ owner: "owner", repo: "repo", state: "open", limit: 10 })
+    const result = await ghTools["github.listIssues"].execute!({
+      owner: "owner",
+      repo: "repo",
+      state: "open",
+      limit: 10,
+    })
     expect(result.count).toBe(1)
     expect(result.issues[0].title).toBe("Important bug")
     expect(result.issues[0].labels).toContain("bug")
@@ -228,7 +268,11 @@ describe.skip("GitHub tools", () => {
   })
 
   it("13. github.getIssue returns full issue details", async () => {
-    const result = await ghTools["github.getIssue"].execute!({ owner: "owner", repo: "repo", issueNumber: 42 })
+    const result = await ghTools["github.getIssue"].execute!({
+      owner: "owner",
+      repo: "repo",
+      issueNumber: 42,
+    })
     expect(result.title).toBe("Important bug")
     expect(result.body).toInclude("Steps to reproduce")
     expect(result.comments).toBe(3)
@@ -239,7 +283,12 @@ describe.skip("GitHub tools", () => {
 
   it("14. github.listPRs returns empty message when no results", async () => {
     global.fetch = mock(async () => new Response(JSON.stringify([])))
-    const result = await ghTools["github.listPRs"].execute!({ owner: "o", repo: "r", state: "closed", limit: 10 })
+    const result = await ghTools["github.listPRs"].execute!({
+      owner: "o",
+      repo: "r",
+      state: "closed",
+      limit: 10,
+    })
     expect(result.message).toInclude("No closed PRs found")
     expect(result.prs).toBeEmpty()
   })
@@ -290,27 +339,45 @@ describe("GitHub write tools", () => {
         body: init?.body ? JSON.parse(init.body as string) : undefined,
       }
       if (init?.method === "POST" && path === "/repos/owner/repo/issues") {
-        return new Response(JSON.stringify({
-          number: 7, title: lastRequest.body.title,
-          html_url: "https://github.com/owner/repo/issues/7", state: "open",
-        }), { status: 201 })
+        return new Response(
+          JSON.stringify({
+            number: 7,
+            title: lastRequest.body.title,
+            html_url: "https://github.com/owner/repo/issues/7",
+            state: "open",
+          }),
+          { status: 201 },
+        )
       }
       if (init?.method === "PATCH" && path === "/repos/owner/repo/issues/7") {
-        return new Response(JSON.stringify({
-          number: 7, title: "Important bug", state: lastRequest.body.state ?? "open",
-          html_url: "https://github.com/owner/repo/issues/7",
-        }))
+        return new Response(
+          JSON.stringify({
+            number: 7,
+            title: "Important bug",
+            state: lastRequest.body.state ?? "open",
+            html_url: "https://github.com/owner/repo/issues/7",
+          }),
+        )
       }
       if (init?.method === "POST" && path === "/repos/owner/repo/issues/7/comments") {
-        return new Response(JSON.stringify({
-          id: 999, html_url: "https://github.com/owner/repo/issues/7#issuecomment-999",
-        }), { status: 201 })
+        return new Response(
+          JSON.stringify({
+            id: 999,
+            html_url: "https://github.com/owner/repo/issues/7#issuecomment-999",
+          }),
+          { status: 201 },
+        )
       }
       if (init?.method === "POST" && path === "/repos/owner/repo/pulls") {
-        return new Response(JSON.stringify({
-          number: 12, title: lastRequest.body.title,
-          html_url: "https://github.com/owner/repo/pull/12", draft: false,
-        }), { status: 201 })
+        return new Response(
+          JSON.stringify({
+            number: 12,
+            title: lastRequest.body.title,
+            html_url: "https://github.com/owner/repo/pull/12",
+            draft: false,
+          }),
+          { status: 201 },
+        )
       }
       return new Response("Not Found", { status: 404 })
     })
@@ -322,7 +389,11 @@ describe("GitHub write tools", () => {
 
   it("17. github-createIssue posts and returns issue number + url", async () => {
     const result = await ghTools["github-createIssue"].execute!({
-      owner: "owner", repo: "repo", title: "New bug", body: "details", labels: ["bug"],
+      owner: "owner",
+      repo: "repo",
+      title: "New bug",
+      body: "details",
+      labels: ["bug"],
     })
     expect(result.ok).toBeTrue()
     expect(result.number).toBe(7)
@@ -334,7 +405,10 @@ describe("GitHub write tools", () => {
 
   it("18. github-updateIssue closes an issue", async () => {
     const result = await ghTools["github-updateIssue"].execute!({
-      owner: "owner", repo: "repo", issueNumber: 7, state: "closed",
+      owner: "owner",
+      repo: "repo",
+      issueNumber: 7,
+      state: "closed",
     })
     expect(result.ok).toBeTrue()
     expect(result.state).toBe("closed")
@@ -344,7 +418,10 @@ describe("GitHub write tools", () => {
 
   it("19. github-commentOnIssue posts a comment (works for PRs too)", async () => {
     const result = await ghTools["github-commentOnIssue"].execute!({
-      owner: "owner", repo: "repo", issueNumber: 7, body: "Thanks for the report",
+      owner: "owner",
+      repo: "repo",
+      issueNumber: 7,
+      body: "Thanks for the report",
     })
     expect(result.ok).toBeTrue()
     expect(result.url).toInclude("issuecomment")
@@ -354,7 +431,12 @@ describe("GitHub write tools", () => {
 
   it("20. github-createPR opens a pull request", async () => {
     const result = await ghTools["github-createPR"].execute!({
-      owner: "owner", repo: "repo", title: "My PR", head: "feature", base: "main", body: "desc",
+      owner: "owner",
+      repo: "repo",
+      title: "My PR",
+      head: "feature",
+      base: "main",
+      body: "desc",
     })
     expect(result.ok).toBeTrue()
     expect(result.number).toBe(12)
@@ -366,7 +448,9 @@ describe("GitHub write tools", () => {
   it("21. write tools surface auth errors via connectorError", async () => {
     global.fetch = mock(async () => new Response("Forbidden", { status: 403 }))
     const result = await ghTools["github-createIssue"].execute!({
-      owner: "owner", repo: "repo", title: "x",
+      owner: "owner",
+      repo: "repo",
+      title: "x",
     })
     expect(result.error).toBeDefined()
     expect(result.hint).toInclude("reconnect")
@@ -397,10 +481,22 @@ describe("GitHub advanced ops", () => {
         body: init?.body ? JSON.parse(init.body as string) : undefined,
       }
       if (init?.method === "PUT" && path === "/repos/owner/repo/pulls/5/merge") {
-        return new Response(JSON.stringify({ sha: "abc123", merged: true, message: "Pull Request successfully merged" }))
+        return new Response(
+          JSON.stringify({
+            sha: "abc123",
+            merged: true,
+            message: "Pull Request successfully merged",
+          }),
+        )
       }
       if (init?.method === "POST" && path === "/repos/owner/repo/pulls/5/reviews") {
-        return new Response(JSON.stringify({ id: 88, state: "APPROVED", html_url: "https://github.com/owner/repo/pull/5#pullrequestreview-88" }))
+        return new Response(
+          JSON.stringify({
+            id: 88,
+            state: "APPROVED",
+            html_url: "https://github.com/owner/repo/pull/5#pullrequestreview-88",
+          }),
+        )
       }
       if (init?.method === "POST" && path === "/repos/owner/repo/issues/7/labels") {
         return new Response(JSON.stringify([{ name: "bug" }, { name: "urgent" }]))
@@ -409,30 +505,57 @@ describe("GitHub advanced ops", () => {
         return new Response(JSON.stringify({ object: { sha: "basesha" } }))
       }
       if (init?.method === "POST" && path === "/repos/owner/repo/git/refs") {
-        return new Response(JSON.stringify({ ref: "refs/heads/feature", object: { sha: "basesha" } }))
+        return new Response(
+          JSON.stringify({ ref: "refs/heads/feature", object: { sha: "basesha" } }),
+        )
       }
       if (init?.method === "POST" && path === "/user/repos") {
-        return new Response(JSON.stringify({
-          name: "golang-practice",
-          full_name: "owner/golang-practice",
-          private: false,
-          html_url: "https://github.com/owner/golang-practice",
-          default_branch: "main",
-        }))
+        return new Response(
+          JSON.stringify({
+            name: "golang-practice",
+            full_name: "owner/golang-practice",
+            private: false,
+            html_url: "https://github.com/owner/golang-practice",
+            default_branch: "main",
+          }),
+        )
       }
       if (path === "/user/repos") {
-        return new Response(JSON.stringify([
-          { full_name: "owner/repo", private: false, html_url: "https://github.com/owner/repo", description: "d", default_branch: "main", updated_at: "2024-01-01T00:00:00Z" },
-        ]))
+        return new Response(
+          JSON.stringify([
+            {
+              full_name: "owner/repo",
+              private: false,
+              html_url: "https://github.com/owner/repo",
+              description: "d",
+              default_branch: "main",
+              updated_at: "2024-01-01T00:00:00Z",
+            },
+          ]),
+        )
       }
       if (init?.method === "PUT" && path === "/repos/owner/golang-practice/contents/main.go") {
-        return new Response(JSON.stringify({
-          content: { path: "main.go", sha: "filesha", html_url: "https://github.com/owner/golang-practice/blob/main/main.go" },
-          commit: { sha: "commitsha", html_url: "https://github.com/owner/golang-practice/commit/commitsha" },
-        }))
+        return new Response(
+          JSON.stringify({
+            content: {
+              path: "main.go",
+              sha: "filesha",
+              html_url: "https://github.com/owner/golang-practice/blob/main/main.go",
+            },
+            commit: {
+              sha: "commitsha",
+              html_url: "https://github.com/owner/golang-practice/commit/commitsha",
+            },
+          }),
+        )
       }
       if (path === "/repos/owner/repo/branches") {
-        return new Response(JSON.stringify([{ name: "main", protected: true }, { name: "dev", protected: false }]))
+        return new Response(
+          JSON.stringify([
+            { name: "main", protected: true },
+            { name: "dev", protected: false },
+          ]),
+        )
       }
       return new Response("Not Found", { status: 404 })
     })
@@ -443,7 +566,12 @@ describe("GitHub advanced ops", () => {
   })
 
   it("22. github-mergePR merges via PUT", async () => {
-    const result = await ghTools["github-mergePR"].execute!({ owner: "owner", repo: "repo", prNumber: 5, method: "squash" })
+    const result = await ghTools["github-mergePR"].execute!({
+      owner: "owner",
+      repo: "repo",
+      prNumber: 5,
+      method: "squash",
+    })
     expect(result.ok).toBeTrue()
     expect(result.sha).toBe("abc123")
     expect(lastRequest.method).toBe("PUT")
@@ -451,20 +579,35 @@ describe("GitHub advanced ops", () => {
   })
 
   it("23. github-reviewPR submits an approval", async () => {
-    const result = await ghTools["github-reviewPR"].execute!({ owner: "owner", repo: "repo", prNumber: 5, event: "APPROVE" })
+    const result = await ghTools["github-reviewPR"].execute!({
+      owner: "owner",
+      repo: "repo",
+      prNumber: 5,
+      event: "APPROVE",
+    })
     expect(result.ok).toBeTrue()
     expect(result.state).toBe("APPROVED")
     expect(lastRequest.body.event).toBe("APPROVE")
   })
 
   it("24. github-addLabels adds labels", async () => {
-    const result = await ghTools["github-addLabels"].execute!({ owner: "owner", repo: "repo", issueNumber: 7, labels: ["bug", "urgent"] })
+    const result = await ghTools["github-addLabels"].execute!({
+      owner: "owner",
+      repo: "repo",
+      issueNumber: 7,
+      labels: ["bug", "urgent"],
+    })
     expect(result.ok).toBeTrue()
     expect(result.labels).toContain("urgent")
   })
 
   it("25. github-createBranch resolves base sha then creates the ref", async () => {
-    const result = await ghTools["github-createBranch"].execute!({ owner: "owner", repo: "repo", branch: "feature", fromBranch: "main" })
+    const result = await ghTools["github-createBranch"].execute!({
+      owner: "owner",
+      repo: "repo",
+      branch: "feature",
+      fromBranch: "main",
+    })
     expect(result.ok).toBeTrue()
     expect(result.ref).toBe("refs/heads/feature")
     expect(lastRequest.body.sha).toBe("basesha")
@@ -477,13 +620,22 @@ describe("GitHub advanced ops", () => {
   })
 
   it("27. github-listBranches returns branches", async () => {
-    const result = await ghTools["github-listBranches"].execute!({ owner: "owner", repo: "repo", limit: 20 })
+    const result = await ghTools["github-listBranches"].execute!({
+      owner: "owner",
+      repo: "repo",
+      limit: 20,
+    })
     expect(result.count).toBe(2)
     expect(result.branches[0].name).toBe("main")
   })
 
   it("28. github-createRepo creates a repository", async () => {
-    const result = await ghTools["github-createRepo"].execute!({ name: "golang-practice", description: "Go practice", private: false, autoInit: false })
+    const result = await ghTools["github-createRepo"].execute!({
+      name: "golang-practice",
+      description: "Go practice",
+      private: false,
+      autoInit: false,
+    })
     expect(result.ok).toBeTrue()
     expect(result.fullName).toBe("owner/golang-practice")
     expect(lastRequest.method).toBe("POST")
@@ -523,14 +675,19 @@ describe("GitHub approval-gating", () => {
     const { getConnectorDef } = await import("../registry.js")
     const def = getConnectorDef("github")
     pendingInput = undefined
-    ghTools = def?.tools({
-      userId: "u",
-      getAccessToken: async () => "gho_fake_token",
-      createPendingAction: async (input: any) => {
-        pendingInput = input
-        return { id: "pa-1", status: "pending", message: `Approval required: ${input.title}. Action ID: pa-1` }
-      },
-    }) ?? {}
+    ghTools =
+      def?.tools({
+        userId: "u",
+        getAccessToken: async () => "gho_fake_token",
+        createPendingAction: async (input: any) => {
+          pendingInput = input
+          return {
+            id: "pa-1",
+            status: "pending",
+            message: `Approval required: ${input.title}. Action ID: pa-1`,
+          }
+        },
+      }) ?? {}
     fetchCalled = false
     global.fetch = mock(async () => {
       fetchCalled = true
@@ -541,7 +698,12 @@ describe("GitHub approval-gating", () => {
   afterEach(() => mock.restore())
 
   it("30. github-createIssue queues a pending action instead of calling the API", async () => {
-    const result = await ghTools["github-createIssue"].execute!({ owner: "owner", repo: "repo", title: "Gated issue", body: "b" })
+    const result = await ghTools["github-createIssue"].execute!({
+      owner: "owner",
+      repo: "repo",
+      title: "Gated issue",
+      body: "b",
+    })
     expect(result.status).toBe("pending")
     expect(result.message).toInclude("Approval required")
     expect(fetchCalled).toBeFalse()
@@ -551,14 +713,23 @@ describe("GitHub approval-gating", () => {
   })
 
   it("31. github-mergePR gates as irreversible", async () => {
-    const result = await ghTools["github-mergePR"].execute!({ owner: "owner", repo: "repo", prNumber: 5, method: "merge" })
+    const result = await ghTools["github-mergePR"].execute!({
+      owner: "owner",
+      repo: "repo",
+      prNumber: 5,
+      method: "merge",
+    })
     expect(result.status).toBe("pending")
     expect(pendingInput.risk).toBe("irreversible")
     expect(fetchCalled).toBeFalse()
   })
 
   it("32. github-createRepo is approval-gated", async () => {
-    const result = await ghTools["github-createRepo"].execute!({ name: "golang-practice", private: false, autoInit: false })
+    const result = await ghTools["github-createRepo"].execute!({
+      name: "golang-practice",
+      private: false,
+      autoInit: false,
+    })
     expect(result.status).toBe("pending")
     expect(fetchCalled).toBeFalse()
     expect(pendingInput.action).toBe("github-createRepo")
@@ -581,7 +752,12 @@ describe("GitHub approval-gating", () => {
 
   it("34. read tools are NOT gated", async () => {
     global.fetch = mock(async () => new Response(JSON.stringify([])))
-    const result = await ghTools["github-listPRs"].execute!({ owner: "o", repo: "r", state: "open", limit: 5 })
+    const result = await ghTools["github-listPRs"].execute!({
+      owner: "o",
+      repo: "r",
+      state: "open",
+      limit: 5,
+    })
     expect(pendingInput).toBeUndefined()
     expect(result.prs).toBeDefined()
   })

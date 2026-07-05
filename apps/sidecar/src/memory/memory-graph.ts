@@ -38,7 +38,8 @@ export async function walkMemoryGraph(
   const token = process.env["YOMI_SESSION_TOKEN"]
   if (!token) return null
 
-  const baseUrl = process.env["YOMI_BACKEND_URL"] ?? process.env["BACKEND_URL"] ?? "http://localhost:3001"
+  const baseUrl =
+    process.env["YOMI_BACKEND_URL"] ?? process.env["BACKEND_URL"] ?? "http://localhost:3001"
 
   try {
     const res = await fetch(`${baseUrl}/api/memory/graph-walk`, {
@@ -57,11 +58,7 @@ export async function walkMemoryGraph(
 }
 
 // Build a context trail from a set of memories by chaining their relations.
-export function buildContextTrail(
-  nodes: MemoryNode[],
-  query: string,
-  maxChars: number,
-): string {
+export function buildContextTrail(nodes: MemoryNode[], query: string, maxChars: number): string {
   if (!nodes.length) return ""
 
   const lines: string[] = []
@@ -88,9 +85,7 @@ export function buildContextTrail(
 }
 
 // Score a memory node by its graph connectivity (PageRank-like).
-export function scoreByConnectivity(
-  nodes: MemoryNode[],
-): Map<string, number> {
+export function scoreByConnectivity(nodes: MemoryNode[]): Map<string, number> {
   const scores = new Map<string, number>()
   const outgoing = new Map<string, number>()
   const incoming = new Map<string, number>()
@@ -114,10 +109,7 @@ export function scoreByConnectivity(
 }
 
 // Find version chain for a memory (root -> updates chain).
-export function buildVersionChain(
-  nodes: MemoryNode[],
-  startId: string,
-): MemoryNode[] {
+export function buildVersionChain(nodes: MemoryNode[], startId: string): MemoryNode[] {
   const nodeMap = new Map(nodes.map((n) => [n.id, n]))
   const chain: MemoryNode[] = []
   let current = nodeMap.get(startId)

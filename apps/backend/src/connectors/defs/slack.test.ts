@@ -32,7 +32,9 @@ describe.skip("Slack connector def", () => {
     expect(def?.auth.clientIdEnv).toBe("SLACK_CLIENT_ID")
     expect(def?.auth.redirectPath).toBe("/api/integrations/callback/slack")
     expect(def?.auth.scopes).toEqual([])
-    expect(def?.auth.extraAuthParams).toEqual({ "user_scope": "search:read channels:read users:read chat:write" })
+    expect(def?.auth.extraAuthParams).toEqual({
+      user_scope: "search:read channels:read users:read chat:write",
+    })
   })
 
   it("3. tools function is defined", async () => {
@@ -50,8 +52,8 @@ describe.skip("Slack backend wrapper", () => {
   it("4. getDisplayName fetches team name", async () => {
     const { getConnectorDef } = await import("../registry.js")
     const def = getConnectorDef("slack")
-    global.fetch = mock(async () =>
-      new Response(JSON.stringify({ ok: true, team: "Acme Corp", user: "alice" })),
+    global.fetch = mock(
+      async () => new Response(JSON.stringify({ ok: true, team: "Acme Corp", user: "alice" })),
     )
     const name = await def?.getDisplayName?.("xoxp_fake")
     expect(name).toBe("alice (Acme Corp)")
@@ -90,14 +92,29 @@ describe.skip("Slack tools", () => {
   })
 
   it("6. slack.listChannels returns channels", async () => {
-    global.fetch = mock(async () =>
-      new Response(JSON.stringify({
-        ok: true,
-        channels: [
-          { id: "C001", name: "general", is_member: true, num_members: 42, topic: { value: "General chat" } },
-          { id: "C002", name: "random", is_member: false, num_members: 15, topic: { value: "" } },
-        ],
-      })),
+    global.fetch = mock(
+      async () =>
+        new Response(
+          JSON.stringify({
+            ok: true,
+            channels: [
+              {
+                id: "C001",
+                name: "general",
+                is_member: true,
+                num_members: 42,
+                topic: { value: "General chat" },
+              },
+              {
+                id: "C002",
+                name: "random",
+                is_member: false,
+                num_members: 15,
+                topic: { value: "" },
+              },
+            ],
+          }),
+        ),
     )
     const result = await slackTools["slack.listChannels"].execute!({ limit: 20 })
     expect(result.count).toBe(2)
@@ -107,29 +124,30 @@ describe.skip("Slack tools", () => {
   })
 
   it("7. slack.listChannels handles empty result", async () => {
-    global.fetch = mock(async () =>
-      new Response(JSON.stringify({ ok: true, channels: [] })),
-    )
+    global.fetch = mock(async () => new Response(JSON.stringify({ ok: true, channels: [] })))
     const result = await slackTools["slack.listChannels"].execute!({ limit: 20 })
     expect(result.count).toBe(0)
   })
 
   it("8. slack.searchMessages returns results", async () => {
-    global.fetch = mock(async () =>
-      new Response(JSON.stringify({
-        ok: true,
-        messages: {
-          matches: [
-            {
-              ts: "1234567890.123456",
-              text: "Hello world",
-              username: "alice",
-              channel: { id: "C001", name: "general" },
-              permalink: "https://slack.com/archives/C001/p123456",
+    global.fetch = mock(
+      async () =>
+        new Response(
+          JSON.stringify({
+            ok: true,
+            messages: {
+              matches: [
+                {
+                  ts: "1234567890.123456",
+                  text: "Hello world",
+                  username: "alice",
+                  channel: { id: "C001", name: "general" },
+                  permalink: "https://slack.com/archives/C001/p123456",
+                },
+              ],
             },
-          ],
-        },
-      })),
+          }),
+        ),
     )
     const result = await slackTools["slack.searchMessages"].execute!({ query: "hello", limit: 10 })
     expect(result.count).toBe(1)
@@ -138,23 +156,47 @@ describe.skip("Slack tools", () => {
   })
 
   it("9. slack.searchMessages returns empty message when no results", async () => {
-    global.fetch = mock(async () =>
-      new Response(JSON.stringify({ ok: true, messages: { matches: [] } })),
+    global.fetch = mock(
+      async () => new Response(JSON.stringify({ ok: true, messages: { matches: [] } })),
     )
     const result = await slackTools["slack.searchMessages"].execute!({ query: "zzz", limit: 10 })
     expect(result.message).toInclude("No results found")
   })
 
   it("10. slack.listUsers returns workspace members", async () => {
-    global.fetch = mock(async () =>
-      new Response(JSON.stringify({
-        ok: true,
-        members: [
-          { id: "U001", name: "alice", real_name: "Alice Smith", profile: { display_name: "alice", image_72: "https://..." }, deleted: false, is_bot: false },
-          { id: "U002", name: "bob", real_name: "Bob Jones", profile: { display_name: "", image_72: null }, deleted: false, is_bot: false },
-          { id: "U003", name: "slackbot", real_name: "", profile: {}, deleted: false, is_bot: true },
-        ],
-      })),
+    global.fetch = mock(
+      async () =>
+        new Response(
+          JSON.stringify({
+            ok: true,
+            members: [
+              {
+                id: "U001",
+                name: "alice",
+                real_name: "Alice Smith",
+                profile: { display_name: "alice", image_72: "https://..." },
+                deleted: false,
+                is_bot: false,
+              },
+              {
+                id: "U002",
+                name: "bob",
+                real_name: "Bob Jones",
+                profile: { display_name: "", image_72: null },
+                deleted: false,
+                is_bot: false,
+              },
+              {
+                id: "U003",
+                name: "slackbot",
+                real_name: "",
+                profile: {},
+                deleted: false,
+                is_bot: true,
+              },
+            ],
+          }),
+        ),
     )
     const result = await slackTools["slack.listUsers"].execute!({ limit: 20 })
     expect(result.count).toBe(2)
@@ -167,24 +209,45 @@ describe.skip("Slack tools", () => {
   })
 
   it("11. slack.listUsers excludes deleted users", async () => {
-    global.fetch = mock(async () =>
-      new Response(JSON.stringify({
-        ok: true,
-        members: [
-          { id: "U001", name: "alice", real_name: "Alice", profile: {}, deleted: false, is_bot: false },
-          { id: "U002", name: "former", real_name: "Former", profile: {}, deleted: true, is_bot: false },
-        ],
-      })),
+    global.fetch = mock(
+      async () =>
+        new Response(
+          JSON.stringify({
+            ok: true,
+            members: [
+              {
+                id: "U001",
+                name: "alice",
+                real_name: "Alice",
+                profile: {},
+                deleted: false,
+                is_bot: false,
+              },
+              {
+                id: "U002",
+                name: "former",
+                real_name: "Former",
+                profile: {},
+                deleted: true,
+                is_bot: false,
+              },
+            ],
+          }),
+        ),
     )
     const result = await slackTools["slack.listUsers"].execute!({ limit: 20 })
     expect(result.count).toBe(1)
   })
 
   it("12. slack.sendMessage sends to channel", async () => {
-    global.fetch = mock(async () =>
-      new Response(JSON.stringify({ ok: true, channel: "C001", ts: "1700000000.000001" })),
+    global.fetch = mock(
+      async () =>
+        new Response(JSON.stringify({ ok: true, channel: "C001", ts: "1700000000.000001" })),
     )
-    const result = await slackTools["slack.sendMessage"].execute!({ channel: "#general", text: "Hello!" })
+    const result = await slackTools["slack.sendMessage"].execute!({
+      channel: "#general",
+      text: "Hello!",
+    })
     expect(result.ok).toBeTrue()
     expect(result.channel).toBe("C001")
     expect(result.ts).toBeTruthy()
@@ -201,8 +264,8 @@ describe.skip("Slack tools", () => {
   })
 
   it("14. Slack API error returns structured error", async () => {
-    global.fetch = mock(async () =>
-      new Response(JSON.stringify({ ok: false, error: "not_authorized" })),
+    global.fetch = mock(
+      async () => new Response(JSON.stringify({ ok: false, error: "not_authorized" })),
     )
     const result = await slackTools["slack.listChannels"].execute!({ limit: 20 })
     expect(result.error).toInclude("not_authorized")

@@ -11,4 +11,5 @@ Responsibilities:
 - Launch and supervise the local sidecar binary.
 - Forward authenticated requests to the sidecar.
 
-The desktop does not execute remote Telegram requests. Telegram is handled by the backend agent.
+The desktop does not execute remote Telegram requests. Telegram is handled by
+the backend agent.

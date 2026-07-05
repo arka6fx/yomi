@@ -57,7 +57,12 @@ export class IterationBudget {
     return null
   }
 
-  get details(): { usedSteps: number; maxSteps: number; usedOutputTokens: number; maxOutputTokens: number } {
+  get details(): {
+    usedSteps: number
+    maxSteps: number
+    usedOutputTokens: number
+    maxOutputTokens: number
+  } {
     return {
       usedSteps: this.usedSteps,
       maxSteps: this.maxSteps,

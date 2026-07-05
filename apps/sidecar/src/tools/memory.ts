@@ -72,15 +72,33 @@ export function createMemoryTools() {
           topic: { type: "string", description: "Short title for the memory" },
           summary: { type: "string", description: "Optional short summary" },
           kind: { type: "string", description: "Memory category" },
-          scope: { type: "string", description: "Project, person, app, or global scope", default: "global" },
+          scope: {
+            type: "string",
+            description: "Project, person, app, or global scope",
+            default: "global",
+          },
           confidence: { type: "number", description: "Confidence from 0 to 100", default: 80 },
           sourcePath: { type: "string", description: "Optional source identifier" },
           isStatic: { type: "boolean", description: "Whether this is stable profile memory" },
-          forgetAfter: { type: "string", description: "Optional ISO timestamp after which to forget" },
+          forgetAfter: {
+            type: "string",
+            description: "Optional ISO timestamp after which to forget",
+          },
         },
         required: ["content"],
       }),
-      execute: async ({ content, customId, topic, summary, kind = "fact", scope = "global", confidence = 80, sourcePath, isStatic, forgetAfter }) => {
+      execute: async ({
+        content,
+        customId,
+        topic,
+        summary,
+        kind = "fact",
+        scope = "global",
+        confidence = 80,
+        sourcePath,
+        isStatic,
+        forgetAfter,
+      }) => {
         const result = await memoryRequest<{ memory?: MemoryEntry }>("/api/memory/add", {
           content,
           customId,
@@ -94,20 +112,26 @@ export function createMemoryTools() {
           isStatic,
           forgetAfter,
         })
-        if (!result?.memory) return { error: "Memory store unavailable. Sign in to sync durable memories." }
+        if (!result?.memory)
+          return { error: "Memory store unavailable. Sign in to sync durable memories." }
         return { ok: true, memory: result.memory }
       },
     }),
 
     list_memories: tool({
-      description: "List recent active durable memories from Yomi's canonical backend memory store.",
+      description:
+        "List recent active durable memories from Yomi's canonical backend memory store.",
       parameters: jsonSchema<{ limit?: number }>({
         type: "object",
-        properties: { limit: { type: "number", description: "Maximum entries to return", default: 50 } },
+        properties: {
+          limit: { type: "number", description: "Maximum entries to return", default: 50 },
+        },
         required: [],
       }),
       execute: async ({ limit = 50 }) => {
-        const data = await memoryGet<{ memories?: MemoryEntry[] }>(`/api/memory/entries?limit=${encodeURIComponent(String(limit))}`)
+        const data = await memoryGet<{ memories?: MemoryEntry[] }>(
+          `/api/memory/entries?limit=${encodeURIComponent(String(limit))}`,
+        )
         return data?.memories?.length ? data.memories : { message: "No cloud memories found." }
       },
     }),
@@ -148,13 +172,19 @@ export function createMemoryTools() {
       }),
       execute: async ({ id, customId, query, hard }) => {
         if (!id && !customId && !query) return { error: "Provide id, customId, or query." }
-        const result = await memoryRequest<{ forgotten?: number; deleted?: number; ids?: string[] }>("/api/memory/forget", {
+        const result = await memoryRequest<{
+          forgotten?: number
+          deleted?: number
+          ids?: string[]
+        }>("/api/memory/forget", {
           id,
           customId,
           query,
           hard,
         })
-        return result ? { ok: true, ...result } : { error: "Memory store unavailable. Sign in to manage durable memories." }
+        return result
+          ? { ok: true, ...result }
+          : { error: "Memory store unavailable. Sign in to manage durable memories." }
       },
     }),
 
@@ -165,16 +195,24 @@ export function createMemoryTools() {
         type: "object",
         properties: {
           rootId: { type: "string", description: "Root memory id to start the walk from" },
-          maxDepth: { type: "number", description: "Maximum depth to walk (default 3, max 6)", default: 3 },
+          maxDepth: {
+            type: "number",
+            description: "Maximum depth to walk (default 3, max 6)",
+            default: 3,
+          },
         },
         required: ["rootId"],
       }),
       execute: async ({ rootId, maxDepth = 3 }) => {
         const result = await memoryRequest<{
-          root?: MemoryEntry; chain?: MemoryEntry[]; branched?: MemoryEntry[]
+          root?: MemoryEntry
+          chain?: MemoryEntry[]
+          branched?: MemoryEntry[]
         }>("/api/memory/graph-walk", { rootId, maxDepth })
         if (!result) return { error: "Memory store unavailable." }
-        const all = [result.root, ...(result.chain ?? []), ...(result.branched ?? [])].filter(Boolean)
+        const all = [result.root, ...(result.chain ?? []), ...(result.branched ?? [])].filter(
+          Boolean,
+        )
         return { memories: all }
       },
     }),

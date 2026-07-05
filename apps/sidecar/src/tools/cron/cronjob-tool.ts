@@ -7,14 +7,7 @@ import type { CronJob } from "./cron-types.js"
 import { checkCronAccess, validateScheduleInput, cronLimitForPlan } from "./cron-types.js"
 import { loadJobs, saveJobs, loadJob, deleteJob } from "./cron-store.js"
 
-type CronAction =
-  | "create"
-  | "list"
-  | "view"
-  | "update"
-  | "delete"
-  | "pause"
-  | "resume"
+type CronAction = "create" | "list" | "view" | "update" | "delete" | "pause" | "resume"
 
 export interface CronJobToolArgs {
   action: CronAction
@@ -76,11 +69,13 @@ export function createCronJobTool(ctx: { plan?: Plan }): ToolSet {
           },
           id: {
             type: "string",
-            description: "Job ID (required for view, update, delete, pause, resume; optional for create).",
+            description:
+              "Job ID (required for view, update, delete, pause, resume; optional for create).",
           },
           schedule: {
             type: "string",
-            description: 'Schedule string: "30m", "2h", "1d", "0 9 * * *", "every monday 9am", or ISO timestamp.',
+            description:
+              'Schedule string: "30m", "2h", "1d", "0 9 * * *", "every monday 9am", or ISO timestamp.',
           },
           prompt: {
             type: "string",
@@ -156,14 +151,21 @@ export function createCronJobTool(ctx: { plan?: Plan }): ToolSet {
             const currentCount = Object.keys(jobs).length
             const access = checkCronAccess(plan, "create", currentCount)
             if (!access.ok) {
-              return { ok: false, error: access.reason, upgrade_url: "https://yomi.example.com/upgrade" }
+              return {
+                ok: false,
+                error: access.reason,
+                upgrade_url: "https://yomi.example.com/upgrade",
+              }
             }
 
             const now = new Date().toISOString()
             const id = args.id || generateJobId()
 
             if (jobs[id]) {
-              return { ok: false, error: `job "${id}" already exists. Use update to modify or specify a different id.` }
+              return {
+                ok: false,
+                error: `job "${id}" already exists. Use update to modify or specify a different id.`,
+              }
             }
 
             const job: CronJob = {

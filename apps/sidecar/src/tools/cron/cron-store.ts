@@ -91,10 +91,7 @@ export async function releaseTickLock(): Promise<void> {
   }
 }
 
-export async function saveCronOutput(
-  jobId: string,
-  content: string,
-): Promise<string> {
+export async function saveCronOutput(jobId: string, content: string): Promise<string> {
   const dir = outputDir(jobId)
   await mkdir(dir, { recursive: true })
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-")

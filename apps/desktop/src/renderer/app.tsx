@@ -22,7 +22,6 @@ type UpdateNotice =
   | { status: "downloaded"; version: string }
   | null
 
-
 // Barge-in tuning — a mic-only VAD tap runs while Yomi processes/speaks so the
 // user can talk over it. Thresholds are deliberately stricter than the listening
 // ── Theme System ───────────────────────────────────────────────────────────────
@@ -1510,11 +1509,14 @@ function TextInputPanel({ surfaceBg }: { surfaceBg: string }) {
   }, [])
 
   useEffect(() => {
-    window.yomi.getIntegrations?.().then(integrations => {
-      if (integrations) {
-        setConnectedProviders(integrations.filter(i => i.connected).map(i => i.provider))
-      }
-    }).catch(() => {})
+    window.yomi
+      .getIntegrations?.()
+      .then((integrations) => {
+        if (integrations) {
+          setConnectedProviders(integrations.filter((i) => i.connected).map((i) => i.provider))
+        }
+      })
+      .catch(() => {})
   }, [])
 
   const submit = React.useCallback(() => {
@@ -1555,7 +1557,10 @@ function TextInputPanel({ surfaceBg }: { surfaceBg: string }) {
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") { e.preventDefault(); submit() }
+            if (e.key === "Enter") {
+              e.preventDefault()
+              submit()
+            }
           }}
           placeholder="Type your question…"
           className="no-drag"
@@ -1608,11 +1613,18 @@ function TextInputPanel({ surfaceBg }: { surfaceBg: string }) {
           fontFamily: UI_FONT,
         }}
       >
-        <span style={{ fontSize: 10.5, color: "var(--dim)", flexShrink: 0, whiteSpace: "nowrap" as const }}>
+        <span
+          style={{
+            fontSize: 10.5,
+            color: "var(--dim)",
+            flexShrink: 0,
+            whiteSpace: "nowrap" as const,
+          }}
+        >
           Connect your apps
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: 4, flex: 1, overflow: "hidden" }}>
-          {connectedProviders.slice(0, 8).map(p => (
+          {connectedProviders.slice(0, 8).map((p) => (
             <button
               key={p}
               title={p}
@@ -1630,8 +1642,12 @@ function TextInputPanel({ surfaceBg }: { surfaceBg: string }) {
                 opacity: 1,
                 transition: "opacity .15s",
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.7" }}
-              onMouseLeave={(e) => { e.currentTarget.style.opacity = "1" }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = "0.7"
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = "1"
+              }}
             >
               <ConnectorIcon id={p} size={20} />
             </button>
@@ -1979,10 +1995,9 @@ const HamburgerIcon = () => (
 
 const IntegrationsSVG = () => (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-    <path d="M17 7H7a5 5 0 0 0 0 10h10a5 5 0 0 0 0-10zm0 8H7a3 3 0 0 1 0-6h10a3 3 0 0 1 0 6zm0-4a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+    <path d="M17 7H7a5 5 0 0 0 0 10h10a5 5 0 0 0 0-10zm0 8H7a3 3 0 0 1 0-6h10a3 3 0 0 1 0 6zm0-4a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
   </svg>
 )
-
 
 const MicSVG = () => (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -2857,7 +2872,14 @@ function Toolbar({
             className="no-drag"
           >
             <IntegrationsSVG />
-            <span style={{ fontSize: 11, fontFamily: UI_FONT, letterSpacing: "0.03em", fontWeight: 500 }}>
+            <span
+              style={{
+                fontSize: 11,
+                fontFamily: UI_FONT,
+                letterSpacing: "0.03em",
+                fontWeight: 500,
+              }}
+            >
               Integrations
             </span>
           </button>
@@ -3257,9 +3279,7 @@ function SignInPanel({
       </div>
 
       {isWaiting ? (
-        <div
-          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}
-        >
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
           <div
             style={{
               width: 26,
@@ -3571,7 +3591,12 @@ const App: React.FC = () => {
         return
       }
       if (updateNotice.status === "available") {
-        setUpdateNotice({ status: "downloading", version: updateNotice.version, percent: 0, bytesPerSecond: 0 })
+        setUpdateNotice({
+          status: "downloading",
+          version: updateNotice.version,
+          percent: 0,
+          bytesPerSecond: 0,
+        })
         window.yomi.downloadUpdate()
       }
     },
@@ -3591,18 +3616,15 @@ const App: React.FC = () => {
         return
       }
 
-      const minHeight = authState === "unauthenticated" || authState === "waiting" ? 460 : compactHeight
+      const minHeight =
+        authState === "unauthenticated" || authState === "waiting" ? 460 : compactHeight
       const root = rootRef.current
       // position:absolute children don't affect scrollHeight. Use offsetTop+offsetHeight
       // (layout dimensions, unaffected by framer-motion transforms) to get the true bottom.
       const menuBottom = menuCardRef.current
         ? menuCardRef.current.offsetTop + menuCardRef.current.offsetHeight
         : 0
-      const nextHeight = Math.ceil(Math.max(
-        minHeight,
-        (root?.scrollHeight ?? 0),
-        menuBottom,
-      ))
+      const nextHeight = Math.ceil(Math.max(minHeight, root?.scrollHeight ?? 0, menuBottom))
       if (Math.abs(nextHeight - lastHeight) < 2) return
       lastHeight = nextHeight
       window.yomi.resize(880, nextHeight)
@@ -4036,11 +4058,20 @@ const App: React.FC = () => {
             {updateNotice.status === "downloading" ? (
               <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "baseline",
+                    }}
+                  >
                     <span>{`Downloading Yomi ${updateNotice.version}`}</span>
-                    <span style={{ fontSize: 10, color: t.dim, fontVariantNumeric: "tabular-nums" }}>
+                    <span
+                      style={{ fontSize: 10, color: t.dim, fontVariantNumeric: "tabular-nums" }}
+                    >
                       {`${Math.round(updateNotice.percent)}%`}
-                      {updateNotice.bytesPerSecond > 0 && ` · ${(updateNotice.bytesPerSecond / 1024 / 1024).toFixed(1)} MB/s`}
+                      {updateNotice.bytesPerSecond > 0 &&
+                        ` · ${(updateNotice.bytesPerSecond / 1024 / 1024).toFixed(1)} MB/s`}
                     </span>
                   </div>
                   <div
@@ -4123,7 +4154,6 @@ const App: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
-
 
       {/* Notch — state display that hangs from the bottom of the toolbar */}
       <Notch state={hotkeyState} />

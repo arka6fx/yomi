@@ -17,7 +17,7 @@ export const ttsRouter = new Hono()
 ttsRouter.post("/", async (c) => {
   if (!isAuthorized(c)) return c.json({ error: "Unauthorized" }, 401)
 
-  const { text, voice_id, model_id, voice_settings } = await c.req.json() as {
+  const { text, voice_id, model_id, voice_settings } = (await c.req.json()) as {
     text: string
     voice_id: string
     model_id?: string
@@ -42,7 +42,7 @@ ttsRouter.post("/", async (c) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : "TTS failed"
     const status = /ElevenLabs TTS failed \((\d{3})\)/.exec(message)?.[1]
-    return c.json({ error: message }, status ? Number(status) as 400 | 500 : 500)
+    return c.json({ error: message }, status ? (Number(status) as 400 | 500) : 500)
   }
 
   c.header("Content-Type", result.contentType)

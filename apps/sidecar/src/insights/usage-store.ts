@@ -250,10 +250,7 @@ export function queryDailySessions(days: number): {
   const d = openDb()
   const since = new Date(Date.now() - days * 86_400_000).toISOString()
   return d
-    .query<
-      { date: string; kind: string; count: number; totalTokens: number },
-      [string]
-    >(
+    .query<{ date: string; kind: string; count: number; totalTokens: number }, [string]>(
       `select date(started_at) as date, kind, count(*) as count,
               sum(input_tokens + output_tokens) as total_tokens
        from sessions
@@ -291,10 +288,7 @@ export function queryModelDistribution(days: number): {
   const d = openDb()
   const since = new Date(Date.now() - days * 86_400_000).toISOString()
   return d
-    .query<
-      { model: string | null; count: number; avgTokens: number },
-      [string]
-    >(
+    .query<{ model: string | null; count: number; avgTokens: number }, [string]>(
       `select model, count(*) as count,
               cast(avg(input_tokens + output_tokens) as integer) as "avgTokens"
        from sessions

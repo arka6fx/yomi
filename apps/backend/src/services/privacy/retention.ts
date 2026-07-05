@@ -21,12 +21,7 @@ export async function runPrivacyRetention(): Promise<RetentionReport> {
   report.expiredExports = (
     await db
       .delete(privacyExports)
-      .where(
-        and(
-          lt(privacyExports.expiresAt, new Date()),
-          eq(privacyExports.status, "completed"),
-        ),
-      )
+      .where(and(lt(privacyExports.expiresAt, new Date()), eq(privacyExports.status, "completed")))
       .returning({ id: privacyExports.id })
   ).length
 

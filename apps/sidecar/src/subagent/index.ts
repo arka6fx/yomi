@@ -30,13 +30,21 @@ export interface SubagentResult {
 }
 
 const LEAF_TOOLS = new Set([
-  "add_memory", "retrieve_memory", "list_memories", "delete_memory",
-  "web_search", "fetch_url",
+  "add_memory",
+  "retrieve_memory",
+  "list_memories",
+  "delete_memory",
+  "web_search",
+  "fetch_url",
 ])
 
 const ORCHESTRATOR_TOOLS = new Set([
-  "add_memory", "retrieve_memory", "list_memories", "delete_memory",
-  "web_search", "fetch_url",
+  "add_memory",
+  "retrieve_memory",
+  "list_memories",
+  "delete_memory",
+  "web_search",
+  "fetch_url",
   "bash",
   "look_at_screen",
 ])
@@ -112,7 +120,12 @@ export async function runSubagent(opts: SubagentRunOptions): Promise<SubagentRes
     const finalMessages = response.messages
     const toolCalls = finalMessages.reduce((count: number, m: CoreMessage) => {
       if (m.role === "assistant" && Array.isArray(m.content)) {
-        return count + (m.content as Array<{ type: string }>).filter((c: { type: string }) => c.type === "tool-call").length
+        return (
+          count +
+          (m.content as Array<{ type: string }>).filter(
+            (c: { type: string }) => c.type === "tool-call",
+          ).length
+        )
       }
       return count
     }, 0)
@@ -155,4 +168,3 @@ export async function runSubagentBatch(opts: {
 
   return results
 }
-

@@ -97,14 +97,11 @@ describe("createDelegateTaskTool — parallel batch", () => {
   it("dispatches tasks to runSubagentBatch", async () => {
     const tools = createDelegateTaskTool({ plan: "pro" })
     const result = (await callTool(tools, "delegate_task", {
-      tasks: [
-        { goal: "task a" },
-        { goal: "task b" },
-      ],
+      tasks: [{ goal: "task a" }, { goal: "task b" }],
     })) as Record<string, unknown>
 
     expect(result.ok).toBe(true)
-    expect((result.results as Record<string, unknown>[])).toHaveLength(2)
+    expect(result.results as Record<string, unknown>[]).toHaveLength(2)
     expect(mockRunSubagentBatch).toHaveBeenCalled()
   })
 
@@ -155,4 +152,3 @@ describe("createDelegateTaskTool — validation", () => {
     expect(result.error).toMatch(/either goal/)
   })
 })
-

@@ -14,7 +14,11 @@ export async function* runGraph(
   req: AgentQueryRequest,
   opts?: RunGraphOptions,
 ): AsyncGenerator<SseEvent> {
-  for await (const event of agentPipeline(req, { emit: opts?.emit, hooks: opts?.hooks, signal: opts?.signal })) {
+  for await (const event of agentPipeline(req, {
+    emit: opts?.emit,
+    hooks: opts?.hooks,
+    signal: opts?.signal,
+  })) {
     yield event
   }
 }

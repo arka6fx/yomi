@@ -256,10 +256,7 @@ describe("Cloud RAG routes", () => {
     })
 
     expect(res.status).toBe(200)
-    expect(conflictTargets[0]).toEqual([
-      mockRagDocuments.sourceId,
-      mockRagDocuments.contentHash,
-    ])
+    expect(conflictTargets[0]).toEqual([mockRagDocuments.sourceId, mockRagDocuments.contentHash])
   })
 
   it("requires a search query", async () => {

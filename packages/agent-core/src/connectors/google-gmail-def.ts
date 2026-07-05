@@ -83,7 +83,8 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
         if (!gmail.isConnected()) return notConnectedError()
         try {
           const emails = await gmail.getUnreadEmails(limit)
-          if (emails.length === 0) return { emails: [], message: "Inbox is clear — no unread emails." }
+          if (emails.length === 0)
+            return { emails: [], message: "Inbox is clear — no unread emails." }
           return { count: emails.length, emails, formatted: emails.map(formatEmail).join("\n\n") }
         } catch (err) {
           return connectorError(err)
@@ -157,7 +158,9 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
               `Subject: ${subject}`,
               "",
               body.slice(0, 1200),
-            ].filter(Boolean).join("\n")
+            ]
+              .filter(Boolean)
+              .join("\n")
             return await ctx.createPendingAction({
               connector: "google",
               action: "gmail.sendEmail",
@@ -276,8 +279,7 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
     }),
 
     "gmail-trashEmail": tool({
-      description:
-        "Move a Gmail message to the trash.",
+      description: "Move a Gmail message to the trash.",
       parameters: z.object({
         messageId: z.string().describe("The Gmail message ID to move to trash"),
       }),
@@ -343,7 +345,9 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
       description:
         "Fetch all messages in a Gmail thread by threadId. Returns messages in order, each with full body and headers.",
       parameters: z.object({
-        threadId: z.string().describe("The Gmail thread ID (returned by search or read operations)"),
+        threadId: z
+          .string()
+          .describe("The Gmail thread ID (returned by search or read operations)"),
       }),
       execute: async ({ threadId }) => {
         if (!gmail.isConnected()) return notConnectedError()
@@ -370,7 +374,8 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
     }),
 
     "gmail-listLabels": tool({
-      description: "List all Gmail labels (both system and user-defined) with their ID, name, and type.",
+      description:
+        "List all Gmail labels (both system and user-defined) with their ID, name, and type.",
       parameters: z.object({}),
       execute: async () => {
         if (!gmail.isConnected()) return notConnectedError()
@@ -387,7 +392,8 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
     }),
 
     "gmail-applyLabels": tool({
-      description: "Add or remove labels on a Gmail message. Use gmail-listLabels first to get available label IDs.",
+      description:
+        "Add or remove labels on a Gmail message. Use gmail-listLabels first to get available label IDs.",
       parameters: z.object({
         messageId: z.string().describe("The Gmail message ID to modify"),
         addLabelIds: z.array(z.string()).optional().describe("Label IDs to add"),
@@ -407,7 +413,9 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
               `Message: ${messageId}`,
               addLabelIds?.length ? `Add labels: ${addLabelIds.join(", ")}` : null,
               removeLabelIds?.length ? `Remove labels: ${removeLabelIds.join(", ")}` : null,
-            ].filter(Boolean).join("\n"),
+            ]
+              .filter(Boolean)
+              .join("\n"),
             confirmText: "Apply labels",
           },
           args,
@@ -486,7 +494,12 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
           async () => {
             try {
               const result = await gmail.sendDraft(draftId)
-              return { ok: true, messageId: result.messageId, threadId: result.threadId, message: "Draft sent." }
+              return {
+                ok: true,
+                messageId: result.messageId,
+                threadId: result.threadId,
+                message: "Draft sent.",
+              }
             } catch (err) {
               return connectorError(err)
             }
@@ -528,14 +541,18 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
     }),
 
     "gmail-createDraft": tool({
-      description: "Create a draft email in Gmail without sending. Use this to prepare an email for user review before sending.",
+      description:
+        "Create a draft email in Gmail without sending. Use this to prepare an email for user review before sending.",
       parameters: z.object({
         to: z.array(z.string()).describe("Recipient email addresses"),
         subject: z.string().describe("Email subject line"),
         body: z.string().describe("Plain-text email body"),
         cc: z.array(z.string()).optional().describe("CC recipients"),
         bcc: z.array(z.string()).optional().describe("BCC recipients"),
-        replyToMessageId: z.string().optional().describe("Gmail message ID to reply to (for threading)"),
+        replyToMessageId: z
+          .string()
+          .optional()
+          .describe("Gmail message ID to reply to (for threading)"),
       }),
       execute: async (args) => {
         const { to, subject, body, cc, bcc, replyToMessageId } = args
@@ -554,13 +571,22 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
               `Subject: ${subject}`,
               "",
               body.slice(0, 800),
-            ].filter(Boolean).join("\n"),
+            ]
+              .filter(Boolean)
+              .join("\n"),
             confirmText: "Create draft",
           },
           args,
           async () => {
             try {
-              const result = await gmail.createDraft({ to, subject, body, cc, bcc, replyToMessageId })
+              const result = await gmail.createDraft({
+                to,
+                subject,
+                body,
+                cc,
+                bcc,
+                replyToMessageId,
+              })
               return { ok: true, draftId: result.id, messageId: result.messageId }
             } catch (err) {
               return connectorError(err)
@@ -573,7 +599,7 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
 }
 
 export const googleGmailDef: ConnectorDef = {
-  id: "google",  // matches provider key in mcp_connections for existing connections
+  id: "google", // matches provider key in mcp_connections for existing connections
   name: "Google Gmail",
   category: "email",
   icon: "gmail",

@@ -34,7 +34,13 @@ export function createSlackTools(ctx: ConnectorContext): ToolSet {
           const params = new URLSearchParams({ limit: String(limit), exclude_archived: "true" })
           if (cursor) params.set("cursor", cursor)
           const data = await slack<{
-            channels?: { id: string; name: string; is_member: boolean; num_members?: number; topic?: { value: string } }[]
+            channels?: {
+              id: string
+              name: string
+              is_member: boolean
+              num_members?: number
+              topic?: { value: string }
+            }[]
             response_metadata?: { next_cursor?: string }
           }>(`/conversations.list?${params}`)
           const channels = (data.channels ?? []).map((ch) => ({
@@ -58,12 +64,19 @@ export function createSlackTools(ctx: ConnectorContext): ToolSet {
     "slack-searchMessages": tool({
       description: "Search Slack messages across all accessible channels.",
       parameters: z.object({
-        query: z.string().describe("Search query (supports Slack search modifiers like in:#channel from:@user)"),
+        query: z
+          .string()
+          .describe("Search query (supports Slack search modifiers like in:#channel from:@user)"),
         limit: z.number().int().min(1).max(20).default(10).describe("Max results"),
       }),
       execute: async ({ query, limit }) => {
         try {
-          const params = new URLSearchParams({ query, count: String(limit), sort: "timestamp", sort_dir: "desc" })
+          const params = new URLSearchParams({
+            query,
+            count: String(limit),
+            sort: "timestamp",
+            sort_dir: "desc",
+          })
           const data = await slack<{
             messages?: {
               matches?: {
@@ -91,7 +104,8 @@ export function createSlackTools(ctx: ConnectorContext): ToolSet {
     }),
 
     "slack-listUsers": tool({
-      description: "List members in the Slack workspace. Returns user ID, display name, and online status.",
+      description:
+        "List members in the Slack workspace. Returns user ID, display name, and online status.",
       parameters: z.object({
         limit: z.number().int().min(1).max(100).default(20).describe("Max users to return"),
         cursor: z.string().optional().describe("Pagination cursor from previous call"),
@@ -131,7 +145,8 @@ export function createSlackTools(ctx: ConnectorContext): ToolSet {
     }),
 
     "slack-sendMessage": tool({
-      description: "Send a message to a Slack channel or DM. Only available when write access is granted.",
+      description:
+        "Send a message to a Slack channel or DM. Only available when write access is granted.",
       parameters: z.object({
         channel: z.string().describe("Channel ID or name (e.g. #general or C01234567)"),
         text: z.string().max(3000).describe("Message text (supports Slack mrkdwn formatting)"),
@@ -165,7 +180,8 @@ export function createSlackTools(ctx: ConnectorContext): ToolSet {
     }),
 
     "slack-getChannelHistory": tool({
-      description: "Fetch recent messages from a Slack channel. Returns message text, author, and timestamps.",
+      description:
+        "Fetch recent messages from a Slack channel. Returns message text, author, and timestamps.",
       parameters: z.object({
         channel: z.string().describe("Channel ID (e.g. C01234567)"),
         limit: z.number().int().min(1).max(50).default(20).describe("Max messages to return"),
@@ -193,7 +209,8 @@ export function createSlackTools(ctx: ConnectorContext): ToolSet {
             threadTs: m.thread_ts ?? null,
             replyCount: m.reply_count ?? 0,
           }))
-          if (messages.length === 0) return { messages: [], message: "No messages found in this channel." }
+          if (messages.length === 0)
+            return { messages: [], message: "No messages found in this channel." }
           return { count: messages.length, messages, hasMore: data.has_more ?? false }
         } catch (err) {
           return connectorError(err)
@@ -202,7 +219,8 @@ export function createSlackTools(ctx: ConnectorContext): ToolSet {
     }),
 
     "slack-getThread": tool({
-      description: "Fetch all replies in a Slack thread by providing the channel ID and thread timestamp.",
+      description:
+        "Fetch all replies in a Slack thread by providing the channel ID and thread timestamp.",
       parameters: z.object({
         channel: z.string().describe("Channel ID (e.g. C01234567)"),
         threadTs: z.string().describe("Thread timestamp (ts of the parent message)"),
@@ -226,7 +244,8 @@ export function createSlackTools(ctx: ConnectorContext): ToolSet {
             userId: m.user ?? m.bot_id ?? null,
             username: m.username ?? null,
           }))
-          if (messages.length === 0) return { messages: [], message: "No replies found in this thread." }
+          if (messages.length === 0)
+            return { messages: [], message: "No replies found in this thread." }
           return { count: messages.length, messages }
         } catch (err) {
           return connectorError(err)
@@ -235,7 +254,8 @@ export function createSlackTools(ctx: ConnectorContext): ToolSet {
     }),
 
     "slack-getUserInfo": tool({
-      description: "Get detailed information about a Slack user by their user ID. Returns name, email, display name, timezone, and profile photo.",
+      description:
+        "Get detailed information about a Slack user by their user ID. Returns name, email, display name, timezone, and profile photo.",
       parameters: z.object({
         userId: z.string().describe("Slack user ID (e.g. U01234567)"),
       }),
@@ -293,7 +313,12 @@ export function createSlackTools(ctx: ConnectorContext): ToolSet {
         content: z.string().describe("Text content of the file"),
         filename: z.string().describe("Filename including extension (e.g. 'report.txt')"),
         title: z.string().optional().describe("Title for the file (defaults to filename)"),
-        filetype: z.string().optional().describe("File type (e.g. 'text', 'json', 'csv', 'markdown'). Auto-detected from extension if omitted."),
+        filetype: z
+          .string()
+          .optional()
+          .describe(
+            "File type (e.g. 'text', 'json', 'csv', 'markdown'). Auto-detected from extension if omitted.",
+          ),
         initialComment: z.string().optional().describe("Optional message to post with the file"),
       }),
       execute: async (args) => {
@@ -318,9 +343,18 @@ export function createSlackTools(ctx: ConnectorContext): ToolSet {
                 `--${boundary}\r\nContent-Disposition: form-data; name="filename"\r\n\r\n${filename}`,
                 `--${boundary}\r\nContent-Disposition: form-data; name="channels"\r\n\r\n${channel}`,
               ]
-              if (title) parts.push(`--${boundary}\r\nContent-Disposition: form-data; name="title"\r\n\r\n${title}`)
-              if (filetype) parts.push(`--${boundary}\r\nContent-Disposition: form-data; name="filetype"\r\n\r\n${filetype}`)
-              if (initialComment) parts.push(`--${boundary}\r\nContent-Disposition: form-data; name="initial_comment"\r\n\r\n${initialComment}`)
+              if (title)
+                parts.push(
+                  `--${boundary}\r\nContent-Disposition: form-data; name="title"\r\n\r\n${title}`,
+                )
+              if (filetype)
+                parts.push(
+                  `--${boundary}\r\nContent-Disposition: form-data; name="filetype"\r\n\r\n${filetype}`,
+                )
+              if (initialComment)
+                parts.push(
+                  `--${boundary}\r\nContent-Disposition: form-data; name="initial_comment"\r\n\r\n${initialComment}`,
+                )
               parts.push(`--${boundary}--`)
 
               const res = await fetch("https://slack.com/api/files.upload", {
@@ -332,9 +366,18 @@ export function createSlackTools(ctx: ConnectorContext): ToolSet {
                 body: parts.join("\r\n"),
               })
               if (!res.ok) throw new Error(`Slack upload HTTP ${res.status}`)
-              const data = (await res.json()) as { ok: boolean; error?: string; file?: { id: string; permalink?: string; name?: string } }
+              const data = (await res.json()) as {
+                ok: boolean
+                error?: string
+                file?: { id: string; permalink?: string; name?: string }
+              }
               if (!data.ok) throw new Error(`Slack upload error: ${data.error ?? "unknown"}`)
-              return { ok: true, fileId: data.file?.id, permalink: data.file?.permalink, name: data.file?.name ?? filename }
+              return {
+                ok: true,
+                fileId: data.file?.id,
+                permalink: data.file?.permalink,
+                name: data.file?.name ?? filename,
+              }
             } catch (err) {
               return connectorError(err)
             }
@@ -344,7 +387,8 @@ export function createSlackTools(ctx: ConnectorContext): ToolSet {
     }),
 
     "slack-replyInThread": tool({
-      description: "Reply to a message thread in Slack. Provide the channel ID and the parent message's thread timestamp.",
+      description:
+        "Reply to a message thread in Slack. Provide the channel ID and the parent message's thread timestamp.",
       parameters: z.object({
         channel: z.string().describe("Channel ID (e.g. C01234567)"),
         threadTs: z.string().describe("Thread timestamp of the parent message (ts)"),
@@ -397,7 +441,7 @@ export const slackDef: ConnectorDef = {
     clientIdEnv: "SLACK_CLIENT_ID",
     clientSecretEnv: "SLACK_CLIENT_SECRET",
     redirectPath: "/api/integrations/callback/slack",
-    extraAuthParams: { "user_scope": "search:read channels:read users:read chat:write" },
+    extraAuthParams: { user_scope: "search:read channels:read users:read chat:write" },
   },
   setup: {
     providerConsoleUrl: "https://api.slack.com/apps",

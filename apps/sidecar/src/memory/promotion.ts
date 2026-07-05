@@ -5,7 +5,13 @@
 import { readFile, writeFile, mkdir, appendFile } from "node:fs/promises"
 import { join, dirname } from "node:path"
 import { notepadDir } from "./loader.js"
-import { getPromotionCandidates, markPromoted, pruneStaleRecalls, getRecallStats, resetRecallCache } from "./recall-store.js"
+import {
+  getPromotionCandidates,
+  markPromoted,
+  pruneStaleRecalls,
+  getRecallStats,
+  resetRecallCache,
+} from "./recall-store.js"
 import { compactMemoryForBudget, rankMemoriesForContext, DEFAULT_BUDGET } from "./budget.js"
 
 const PROMOTIONS_FILE = "MEMORY.md"
@@ -74,7 +80,11 @@ export async function runPromotionCycle(opts?: {
       "",
     ].join("\n")
 
-    const { compacted, droppedDates: dropped } = compactMemoryForBudget(memoryContent, section, budget)
+    const { compacted, droppedDates: dropped } = compactMemoryForBudget(
+      memoryContent,
+      section,
+      budget,
+    )
     memoryContent = compacted
     droppedDates.push(...dropped)
     await markPromoted(candidate.key)
@@ -92,9 +102,11 @@ export async function getPromotedContent(maxChars = 5000): Promise<string> {
   try {
     const content = await readMemoryFile()
     if (content.length <= maxChars) return content
-    return content.slice(0, Math.floor(maxChars * 0.5)) +
+    return (
+      content.slice(0, Math.floor(maxChars * 0.5)) +
       `\n\n[...trimmed ${content.length - maxChars} chars...]\n\n` +
       content.slice(-Math.floor(maxChars * 0.3))
+    )
   } catch {
     return ""
   }

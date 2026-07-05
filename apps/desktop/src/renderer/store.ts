@@ -141,7 +141,11 @@ export const useYomiStore = create<YomiState>((set) => ({
         }))
         break
       case "usage_limit": {
-        const warning: LimitWarning = { feature: event.feature, message: event.message, upgradeUrl: event.upgradeUrl }
+        const warning: LimitWarning = {
+          feature: event.feature,
+          message: event.message,
+          upgradeUrl: event.upgradeUrl,
+        }
         set((s) => {
           if (s.activeId !== null) {
             return {
@@ -190,7 +194,10 @@ export const useYomiStore = create<YomiState>((set) => ({
             hotkeyState: "idle",
             entries: [
               ...s.entries,
-              createEntry({ error: soft ? null : event.message, notice: soft ? event.message : null }),
+              createEntry({
+                error: soft ? null : event.message,
+                notice: soft ? event.message : null,
+              }),
             ],
             activeId: null,
           }
@@ -227,7 +234,9 @@ export const useYomiStore = create<YomiState>((set) => ({
             ...next,
             requestsRemaining:
               clean.requestsRemaining ??
-              (next.requestsLimit === null ? null : Math.max(next.requestsLimit - next.requestsUsed, 0)),
+              (next.requestsLimit === null
+                ? null
+                : Math.max(next.requestsLimit - next.requestsUsed, 0)),
           },
         }
       }

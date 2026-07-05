@@ -2,8 +2,9 @@
 
 ## Purpose
 
-Define the text-to-speech pipeline using ElevenLabs `eleven_flash_v2_5`. TTS starts on
-sentence boundaries so audio begins before the full LLM response is generated.
+Define the text-to-speech pipeline using ElevenLabs `eleven_flash_v2_5`. TTS
+starts on sentence boundaries so audio begins before the full LLM response is
+generated.
 
 ## Invariants
 

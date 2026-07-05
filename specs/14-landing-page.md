@@ -1,6 +1,7 @@
 # Spec 14 - Landing Page
 
-The landing app handles marketing, auth pages, dashboard, integrations, billing, bot linking, and downloads.
+The landing app handles marketing, auth pages, dashboard, integrations, billing,
+bot linking, and downloads.
 
 Dashboard requirements:
 

@@ -29,11 +29,17 @@ export function requireAccess(kind: AccessKind) {
 
     if (!hasBillablePlanAccess(user)) {
       const status = user.subscriptionStatus ?? "inactive"
-      const msg = status === "past_due"
-        ? "Your payment is past due. Update your payment method to restore full access."
-        : "Your subscription needs attention before Yomi can process more requests."
+      const msg =
+        status === "past_due"
+          ? "Your payment is past due. Update your payment method to restore full access."
+          : "Your subscription needs attention before Yomi can process more requests."
       return c.json(
-        { error: msg, code: "subscription_inactive", plan, subscriptionStatus: user.subscriptionStatus },
+        {
+          error: msg,
+          code: "subscription_inactive",
+          plan,
+          subscriptionStatus: user.subscriptionStatus,
+        },
         402,
       )
     }

@@ -39,9 +39,12 @@ export function initAutoUpdater(win: BrowserWindow): void {
 
   checkAndNotify(win)
 
-  setInterval(() => {
-    checkAndNotify(win)
-  }, 4 * 60 * 60 * 1000)
+  setInterval(
+    () => {
+      checkAndNotify(win)
+    },
+    4 * 60 * 60 * 1000,
+  )
 }
 
 export function downloadUpdate(): void {
