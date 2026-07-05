@@ -207,6 +207,7 @@ app.post("/query", async (c) => {
         plan: body.plan,
         history: body.history,
         tts: body.tts,
+        conversationId: body.conversationId,
       }
       const emit = (e: SseEvent) => {
         stream.writeSSE({ data: JSON.stringify(e) }).catch(() => {})
