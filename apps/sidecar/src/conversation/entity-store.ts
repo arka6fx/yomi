@@ -139,8 +139,7 @@ export class EntityStore {
     }
 
     const exactMatch = all.find(
-      (e) =>
-        e.title.toLowerCase().includes(q) || e.summary.toLowerCase().includes(q),
+      (e) => e.title.toLowerCase().includes(q) || e.summary.toLowerCase().includes(q),
     )
     if (exactMatch) return exactMatch
 

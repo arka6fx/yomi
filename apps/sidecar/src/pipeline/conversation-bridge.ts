@@ -22,10 +22,7 @@ export function resolveUserInput(text: string): ResolvedInput {
         return {
           text: `/cancel ${rejected.title}`,
           shortCircuited: true,
-          events: [
-            { type: "agent_text", text: `Cancelled: ${rejected.title}.` },
-            { type: "done" },
-          ],
+          events: [{ type: "agent_text", text: `Cancelled: ${rejected.title}.` }, { type: "done" }],
         }
       }
     }
@@ -72,7 +69,13 @@ function entityForToolResult(
   toolName: string,
   args: Record<string, unknown>,
   result: Record<string, unknown>,
-): { type: string; title: string; summary: string; metadata: Record<string, unknown>; toolResult: unknown } | null {
+): {
+  type: string
+  title: string
+  summary: string
+  metadata: Record<string, unknown>
+  toolResult: unknown
+} | null {
   switch (toolName) {
     case "github-createOrUpdateFile": {
       const path = (result.path as string) || (args.path as string) || ""
@@ -118,7 +121,7 @@ function entityForToolResult(
     case "github-createIssue":
     case "github-updateIssue": {
       const number = result.number as number
-      const title = result.title as string || args.title as string
+      const title = (result.title as string) || (args.title as string)
       const owner = args.owner as string
       const repo = args.repo as string
       return {
@@ -132,14 +135,20 @@ function entityForToolResult(
 
     case "github-createPR": {
       const prNumber = result.number as number
-      const prTitle = result.title as string || args.title as string
+      const prTitle = (result.title as string) || (args.title as string)
       const prOwner = args.owner as string
       const prRepo = args.repo as string
       return {
         type: "github_pr",
         title: `#${prNumber}: ${prTitle}`,
         summary: `PR ${prOwner}/${prRepo}#${prNumber}`,
-        metadata: { owner: prOwner, repo: prRepo, number: prNumber, title: prTitle, url: result.url },
+        metadata: {
+          owner: prOwner,
+          repo: prRepo,
+          number: prNumber,
+          title: prTitle,
+          url: result.url,
+        },
         toolResult: result,
       }
     }
@@ -152,7 +161,13 @@ function entityForToolResult(
         type: "github_repo",
         title: `${branchOwner}/${branchRepo} (${branch})`,
         summary: `Branch ${branch} in ${branchOwner}/${branchRepo}`,
-        metadata: { owner: branchOwner, repo: branchRepo, branch, ref: result.ref, sha: result.sha },
+        metadata: {
+          owner: branchOwner,
+          repo: branchRepo,
+          branch,
+          ref: result.ref,
+          sha: result.sha,
+        },
         toolResult: result,
       }
     }
@@ -165,7 +180,13 @@ function entityForToolResult(
         type: "github_file",
         title: filePath,
         summary: `File ${filePath} in ${fileOwner}/${fileRepo}`,
-        metadata: { owner: fileOwner, repo: fileRepo, path: filePath, sha: result.sha, url: result.url },
+        metadata: {
+          owner: fileOwner,
+          repo: fileRepo,
+          path: filePath,
+          sha: result.sha,
+          url: result.url,
+        },
         toolResult: result,
       }
     }
@@ -228,7 +249,10 @@ function entityForToolResult(
     case "slack-sendMessage": {
       return {
         type: "slack_message",
-        title: (result.text as string)?.slice(0, 80) || (args.text as string)?.slice(0, 80) || "Slack message",
+        title:
+          (result.text as string)?.slice(0, 80) ||
+          (args.text as string)?.slice(0, 80) ||
+          "Slack message",
         summary: result.permalink ? `[Permalink](${result.permalink as string})` : "",
         metadata: { ...args, ...result },
         toolResult: result,
@@ -258,7 +282,13 @@ function entityForToolResult(
     }
 
     default: {
-      if (toolName.startsWith("github-") || toolName.startsWith("google-") || toolName.startsWith("slack-") || toolName.startsWith("linear-") || toolName.startsWith("notion-")) {
+      if (
+        toolName.startsWith("github-") ||
+        toolName.startsWith("google-") ||
+        toolName.startsWith("slack-") ||
+        toolName.startsWith("linear-") ||
+        toolName.startsWith("notion-")
+      ) {
         const ok = (result as Record<string, unknown>).ok
         if (ok === true || ok === undefined) {
           return {

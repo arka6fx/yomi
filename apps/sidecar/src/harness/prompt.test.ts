@@ -53,7 +53,7 @@ describe("prompt memory injection", () => {
 
     expect(ctx.memorySummary).toBe("")
     expect(ctx.memoryIndex).toBe("")
-    expect(ctx.localMemory).toBe("")
+    expect(ctx.localMemory).toBe("# Long-Term Memory\n\n")
     expect(typeof ctx.recentSession).toBe("string")
   })
 })

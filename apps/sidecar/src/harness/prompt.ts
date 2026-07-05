@@ -278,17 +278,21 @@ export function getConversationStateBlock(): string {
   return _conversationStateBlock
 }
 
-const CONVERSATION_RULES = `\
-<conversation_rules>
+const PA = `<pending_action>`
+const AC = `<active_context>`
+const CR = `<conversation_rules>`
+const CR_END = `</conversation_rules>`
+
+const CONVERSATION_RULES = `${CR}
 When the user says "yes", "approve", "do it", "/approve", "okay", or any affirmative:
-  - Check the `<pending_action>` block first.
+  - Check the ${PA} block first.
   - If a pending action exists, execute it immediately. Do NOT ask "what are we approving?"
   - Do NOT ask what the user is agreeing to — the pending action block tells you.
   - After executing, return a rich result with links, hashes, timestamps, and previews.
   - If no pending action exists, ask "What would you like to approve?"
 
 Reference resolution:
-  - "it", "this", "that", "the" → look in `<active_context>` for the most recent matching entity.
+  - "it", "this", "that", "the" → look in ${AC} for the most recent matching entity.
   - "there" → look for current repository, folder, or location.
   - "show me", "open it", "view" → refer to the active entity from the context.
   - "rename it", "update it", "commit it" → apply to the active entity.
@@ -301,7 +305,7 @@ Workspace inference:
   - "spreadsheet", "sheet", "excel" → Google Sheets
   - "folder" → Google Drive Folder
 
-Never ask for information already in `<active_context>` or `<pending_action>`.
+Never ask for information already in ${AC} or ${PA}.
 If you find the info there, use it directly.
 
 After any write/create tool execution, return a rich response:
@@ -314,7 +318,7 @@ After any write/create tool execution, return a rich response:
   - Never just say "Done."
 
 After creating something, it becomes the active entity. The user can then refer to it with "it", "this", "show me", "rename it", etc.
-</conversation_rules>`
+${CR_END}`
 
 export function buildAgentPrompt(ctx: PromptContext): string {
   const { userName, os, today, yomiMd, soulMd, connectedProviders, ...memoryCtx } = resolveCtx(ctx)

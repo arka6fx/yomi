@@ -22,7 +22,7 @@ describe("memory subsystem", () => {
     expect(ctx.memorySummary).toBe("")
     expect(ctx.memoryIndex).toBe("")
     expect(ctx.durableMemory).toBe("")
-    expect(ctx.localMemory).toBe("")
+    expect(ctx.localMemory).toBe("# Long-Term Memory\n\n")
     expect(ctx.cloudRagContext).toBe("")
     expect(ctx.staticProfile).toBe("")
     expect(ctx.dynamicProfile).toBe("")

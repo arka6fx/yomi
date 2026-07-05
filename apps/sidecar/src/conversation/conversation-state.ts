@@ -63,7 +63,9 @@ export class ConversationState {
       `Title: ${pending.title}`,
       `Description: ${pending.description}`,
       pending.expiresAt ? `Expires: ${pending.expiresAt.toISOString()}` : "",
-    ].filter(Boolean).join("\n")
+    ]
+      .filter(Boolean)
+      .join("\n")
   }
 
   resolveReference(text: string): ReferenceResolution {
@@ -102,9 +104,10 @@ export class ConversationState {
   toSystemPromptBlock(): string {
     const ctx = this.getActiveContext()
     const pendingSummary = this.getPendingActionSummary()
-    const recentTurns = this.turns.slice(-5).map((t) =>
-      `[${t.role === "user" ? "User" : "Assistant"}] ${t.text.slice(0, 200)}`
-    ).join("\n")
+    const recentTurns = this.turns
+      .slice(-5)
+      .map((t) => `[${t.role === "user" ? "User" : "Assistant"}] ${t.text.slice(0, 200)}`)
+      .join("\n")
 
     const parts: string[] = []
     if (ctx !== "(none)") parts.push(`<active_context>\n${ctx}\n</active_context>`)
