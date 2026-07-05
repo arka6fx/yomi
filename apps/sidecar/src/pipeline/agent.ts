@@ -6,6 +6,8 @@ import { createAgentTools } from "../tools/index.js"
 import { hooks, toolGuardrail, type Hooks } from "../harness/hooks.js"
 import { buildAgentPrompt, loadSoulMd, loadYomiMd } from "../harness/prompt.js"
 import { getConnectorRegistry } from "../connectors/registry.js"
+import { getConversationState } from "../conversation/conversation-state.js"
+import { setActiveConversation } from "../conversation/active-conversation.js"
 import { LoopGuards } from "../harness/guards.js"
 import { compressContext, IterationBudget, DEFAULT_ITERATION_BUDGET } from "../agent/index.js"
 import { loadMemoryContext, writeSessionTurn } from "../memory/subsystem.js"
@@ -66,7 +68,11 @@ function memoryEnabled(plan: Plan | undefined): boolean {
   return plan === "pro" || plan === "max"
 }
 
-async function getAgentPrompt(text: string, plan: Plan | undefined): Promise<string> {
+async function getAgentPrompt(
+  text: string,
+  plan: Plan | undefined,
+  conversationKey: string,
+): Promise<string> {
   if (cachedYomiMd === null) cachedYomiMd = await loadYomiMd()
   if (cachedSoulMd === null) cachedSoulMd = await loadSoulMd()
   const memory = memoryEnabled(plan)
@@ -83,11 +89,13 @@ async function getAgentPrompt(text: string, plan: Plan | undefined): Promise<str
         recentSession: "",
       }
   const connectedProviders = getConnectorRegistry().getConnected()
+  const conversationState = getConversationState(conversationKey).toSystemPromptBlock()
   return buildAgentPrompt({
     yomiMd: cachedYomiMd,
     soulMd: cachedSoulMd,
     ...memoryCtx,
     connectedProviders,
+    conversationState,
   })
 }
 
@@ -167,6 +175,9 @@ export async function* agentPipeline(
     return
   }
 
+  const conversationKey = req.conversationId ?? "desktop"
+  setActiveConversation(conversationKey)
+
   let usageEventId: string | undefined
   if (!req.skipReserve) {
     const reservation = await reserveInteraction("chat")
@@ -183,7 +194,7 @@ export async function* agentPipeline(
     usageEventId = reservation.usageEventId
   }
 
-  const system = await getAgentPrompt(req.text, req.plan)
+  const system = await getAgentPrompt(req.text, req.plan, conversationKey)
   const guards = new LoopGuards()
   const activeHooks = opts?.hooks ?? hooks
   const signal = opts?.signal
@@ -362,7 +373,7 @@ export async function* agentPipeline(
         case "text-delta":
           stepOutputChars += event.textDelta.length
           textTail = (textTail + event.textDelta).slice(-200)
-          if (ttsEnabled) fullText += event.textDelta
+          fullText += event.textDelta
           yield { type: "agent_text", text: event.textDelta }
           break
         case "tool-call": {
@@ -513,6 +524,11 @@ export async function* agentPipeline(
 
     const summary = textTail.replace(/\n/g, " ").trim() || "agent task complete"
     await activeHooks.onStop(summary)
+    const convState = getConversationState(conversationKey)
+    convState.addTurn({ role: "user", text: req.text, timestamp: new Date() })
+    if (fullText.trim()) {
+      convState.addTurn({ role: "assistant", text: fullText.trim(), timestamp: new Date() })
+    }
     if (memoryEnabled(req.plan)) {
       await writeTurn({ kind: "agent", input: req.text, output: summary, summary })
     }
