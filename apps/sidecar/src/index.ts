@@ -17,6 +17,7 @@ import { initMemorySubsystem } from "./memory/subsystem.js"
 import { getDefaultScheduler } from "./tools/cron/cron-scheduler.js"
 import { handleGatewayMessage, startGatewayPoll, stopGatewayPoll } from "./gateway/receive.js"
 import { initConnectorRegistryFromSession } from "./connectors/registry.js"
+import { flushAllConversationStates } from "./conversation/conversation-state.js"
 import type { GatewayMessage, Plan } from "@yomi/shared"
 import { initUsageStore, logUsageEvent } from "./insights/usage-store.js"
 import { generateReport, getMaxLookback, formatTerminal } from "./insights/insights-engine.js"
@@ -509,6 +510,7 @@ for (const sig of ["SIGINT", "SIGTERM", "beforeExit"] as const) {
   process.on(sig, () => {
     stopGatewayPoll()
     getDefaultScheduler().stop()
+    flushAllConversationStates()
     process.exit(0)
   })
 }
