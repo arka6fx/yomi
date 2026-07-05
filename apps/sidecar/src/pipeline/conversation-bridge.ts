@@ -1,4 +1,5 @@
 import { getConversationState } from "../conversation/conversation-state.js"
+import { getActiveConversation } from "../conversation/active-conversation.js"
 import type { EntityType } from "../conversation/types.js"
 
 export function registerEntityForToolResult(
@@ -6,9 +7,11 @@ export function registerEntityForToolResult(
   args: Record<string, unknown>,
   result: unknown,
 ): void {
-  const convState = getConversationState()
+  const convState = getConversationState(getActiveConversation())
   const r = normalizeToolResult(result)
   if (r.error) return
+  // Gated writes return { id, status: "pending", message } — not a real result.
+  if (r.status === "pending" && typeof r.id === "string") return
 
   const entity = entityForToolResult(toolName, args, r)
   if (entity) {
@@ -191,7 +194,8 @@ function entityForToolResult(
       }
     }
 
-    case "gmail-send":
+    case "gmail-sendEmail":
+    case "gmail-sendDraft":
     case "gmail-createDraft": {
       return {
         type: "gmail_message",
