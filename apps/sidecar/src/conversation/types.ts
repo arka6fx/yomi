@@ -111,15 +111,42 @@ export interface ConversationStateData {
 }
 
 export const APPROVAL_SYNONYMS = new Set([
-  "yes", "yup", "yep", "sure", "do it", "go ahead", "proceed",
-  "confirm", "approved", "approve", "/approve", "okay", "ok",
-  "sounds good", "yeah", "y", "aye", "go for it",
+  "yes",
+  "yup",
+  "yep",
+  "sure",
+  "do it",
+  "go ahead",
+  "proceed",
+  "confirm",
+  "approved",
+  "approve",
+  "/approve",
+  "okay",
+  "ok",
+  "sounds good",
+  "yeah",
+  "y",
+  "aye",
+  "go for it",
 ])
 
 export const REJECTION_SYNONYMS = new Set([
-  "cancel", "no", "stop", "never mind", "don't", "reject",
-  "deny", "nope", "nah", "forget it", "skip", "dismiss", "/deny",
-  "not now", "later",
+  "cancel",
+  "no",
+  "stop",
+  "never mind",
+  "don't",
+  "reject",
+  "deny",
+  "nope",
+  "nah",
+  "forget it",
+  "skip",
+  "dismiss",
+  "/deny",
+  "not now",
+  "later",
 ])
 
 export function isApproval(text: string): boolean {

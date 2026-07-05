@@ -1,8 +1,4 @@
-import type {
-  PendingAction,
-  PendingActionType,
-  PendingActionStatus,
-} from "./types.js"
+import type { PendingAction, PendingActionType, PendingActionStatus } from "./types.js"
 
 let _nextId = 0
 function nextId(): string {

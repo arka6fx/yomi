@@ -8,10 +8,27 @@ const LOCATION_REFERENCE_WORDS = new Set(["there"])
 const DEMONSTRATIVE_REFERENCE = new Set(["this", "that"])
 const SHOW_VERBS = new Set(["show", "display", "open", "view", "read", "get", "see"])
 const ACTION_VERBS = new Set([
-  "rename", "update", "edit", "modify", "change",
-  "commit", "push", "delete", "remove", "move", "copy",
-  "translate", "summarize", "extract", "convert", "create",
-  "make", "generate", "send", "share", "export",
+  "rename",
+  "update",
+  "edit",
+  "modify",
+  "change",
+  "commit",
+  "push",
+  "delete",
+  "remove",
+  "move",
+  "copy",
+  "translate",
+  "summarize",
+  "extract",
+  "convert",
+  "create",
+  "make",
+  "generate",
+  "send",
+  "share",
+  "export",
 ])
 
 const TOOL_TYPE_MAP: Record<string, EntityType> = {
@@ -38,11 +55,13 @@ const TOOL_TYPE_MAP: Record<string, EntityType> = {
 }
 
 export interface ReferenceResolution {
-  type: "pending_action_approval" | "pending_action_rejection"
-  | "entity_reference"
-  | "active_context"
-  | "search_result"
-  | "unresolved"
+  type:
+    | "pending_action_approval"
+    | "pending_action_rejection"
+    | "entity_reference"
+    | "active_context"
+    | "search_result"
+    | "unresolved"
   target?: TrackedEntity
   pendingActionId?: string
   reason: string
@@ -62,9 +81,7 @@ export class ReferenceResolver {
       const pending = this.pendingActions.getLatest()
       if (pending) {
         return {
-          type: approval === "approve"
-            ? "pending_action_approval"
-            : "pending_action_rejection",
+          type: approval === "approve" ? "pending_action_approval" : "pending_action_rejection",
           pendingActionId: pending.id,
           reason: `${approval === "approve" ? "Approving" : "Rejecting"}: ${pending.title}`,
         }
@@ -103,10 +120,17 @@ export class ReferenceResolver {
 
     if (hasPrimaryRef || hasShowVerb) {
       const allTypes: EntityType[] = [
-        "github_file", "uploaded_file", "drive_doc", "slides_presentation",
-        "github_repo", "github_pr", "github_issue",
-        "gmail_draft", "gmail_message",
-        "slack_message", "linear_ticket",
+        "github_file",
+        "uploaded_file",
+        "drive_doc",
+        "slides_presentation",
+        "github_repo",
+        "github_pr",
+        "github_issue",
+        "gmail_draft",
+        "gmail_message",
+        "slack_message",
+        "linear_ticket",
       ]
       for (const t of allTypes) {
         const entity = this.entityStore.getLatestByType(t)
@@ -114,7 +138,7 @@ export class ReferenceResolver {
           return {
             type: "entity_reference",
             target: entity,
-            reason: `Reference "${hasPrimaryRef ? words.find(w => PRIMARY_REFERENCE_WORDS.has(w)) : "it"}" resolved to ${t}: ${entity.title}`,
+            reason: `Reference "${hasPrimaryRef ? words.find((w) => PRIMARY_REFERENCE_WORDS.has(w)) : "it"}" resolved to ${t}: ${entity.title}`,
           }
         }
       }
