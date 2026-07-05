@@ -1,16 +1,16 @@
 import { describe, expect, it, beforeEach } from "bun:test"
-import { setActiveConversation, getActiveConversation, makeSidecarPendingActionDep } from "./active-conversation.js"
+import {
+  setActiveConversation,
+  getActiveConversation,
+  resetActiveConversation,
+  makeSidecarPendingActionDep,
+} from "./active-conversation.js"
 import { getConversationState, resetConversationState } from "./conversation-state.js"
 
 describe("sidecar pending-action dep", () => {
-  beforeEach(() => resetConversationState())
-
-  // Runs first: active-conversation's _activeKey is module-level state that
-  // resetConversationState() (conversation-state.ts) does not touch, so this
-  // must execute before any test calls setActiveConversation().
-  it("defaults active conversation to desktop", () => {
+  beforeEach(() => {
     resetConversationState()
-    expect(getActiveConversation()).toBe("desktop")
+    resetActiveConversation()
   })
 
   it("queues a pending action in the active conversation and returns approval message", async () => {
@@ -26,5 +26,9 @@ describe("sidecar pending-action dep", () => {
     const pending = getConversationState("telegram:42").pendingActions.getLatest()
     expect(pending?.toolName).toBe("github-createOrUpdateFile")
     expect(pending?.toolArguments).toEqual({ owner: "u", repo: "golang-practice", path: "recursion.go", content: "x" })
+  })
+
+  it("defaults active conversation to desktop", () => {
+    expect(getActiveConversation()).toBe("desktop")
   })
 })
