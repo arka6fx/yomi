@@ -241,6 +241,12 @@ export interface GatewayMessage {
   documentFileName?: string
   /** File size in bytes */
   documentSize?: number
+  /** URL of a video file to process */
+  videoUrl?: string
+  /** MIME type of the video file */
+  videoMimeType?: string
+  /** Video duration in seconds when supplied by the platform */
+  videoDurationSeconds?: number
 }
 
 export interface GatewaySessionInfo {

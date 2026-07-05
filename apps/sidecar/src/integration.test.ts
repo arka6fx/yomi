@@ -416,7 +416,7 @@ describe("memory subsystem + RAG", () => {
     expect(ctx.memorySummary).toBe("")
     expect(ctx.memoryIndex).toBe("")
     expect(ctx.durableMemory).toBeDefined()
-    expect(ctx.localMemory).toBe("")
+    expect(ctx.localMemory).toBe("# Long-Term Memory\n\n")
     expect(ctx.staticProfile).toBe("")
     expect(ctx.dynamicProfile).toBe("")
     expect(typeof ctx.recentSession).toBe("string")

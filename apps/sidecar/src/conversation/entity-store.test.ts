@@ -84,7 +84,12 @@ describe("EntityStore", () => {
   })
 
   it("clears all entities and context", () => {
-    store.register({ type: "github_repo", title: "r", summary: "R", metadata: { owner: "o", repo: "r", fullName: "o/r" } })
+    store.register({
+      type: "github_repo",
+      title: "r",
+      summary: "R",
+      metadata: { owner: "o", repo: "r", fullName: "o/r" },
+    })
     store.clear()
     expect(store.getLatestByType("github_repo")).toBeUndefined()
     expect(store.getActiveContext().currentRepo).toBeUndefined()
