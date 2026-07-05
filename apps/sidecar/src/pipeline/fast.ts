@@ -489,6 +489,8 @@ export async function* fastPipeline(
     return
   }
 
+  const requestId = crypto.randomUUID()
+  let firstTokenAt: number | null = null
   try {
     let output = ""
     const startedAt = Date.now()
@@ -505,7 +507,10 @@ export async function* fastPipeline(
       telemetry,
     )) {
       if (signal?.aborted) break
-      if (event.type === "llm_chunk") output += event.text
+      if (event.type === "llm_chunk") {
+        if (firstTokenAt === null) firstTokenAt = Date.now()
+        output += event.text
+      }
       yield event
     }
     // Skip the memory write for a barged-in (partial) turn.
@@ -529,6 +534,15 @@ export async function* fastPipeline(
         hasScreen: Boolean(req.screenshot_b64 || req.screenshots?.length),
         tts: req.tts !== false,
       },
+      telemetry: {
+        requestId,
+        endpoint: "sidecar.fast",
+        surface: "desktop",
+        route: "fast",
+        latencyMs: Date.now() - startedAt,
+        firstTokenLatencyMs: firstTokenAt === null ? undefined : firstTokenAt - startedAt,
+        visionImages: (req.screenshots?.length ?? 0) + (req.screenshot_b64 ? 1 : 0),
+      },
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown pipeline error"
@@ -537,6 +551,12 @@ export async function* fastPipeline(
       model: MODEL,
       status: "error",
       metadata: { endpoint: "sidecar.fast", route: "fast", error: message },
+      telemetry: {
+        requestId,
+        endpoint: "sidecar.fast",
+        surface: "desktop",
+        route: "fast",
+      },
     })
     yield { type: "error", message }
   }
