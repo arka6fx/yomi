@@ -1,8 +1,7 @@
 import type { TrackedEntity, EntityType, ActiveContext } from "./types.js"
 
-let _nextId = 0
 function nextId(): string {
-  return `ent_${++_nextId}`
+  return `ent_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
 }
 
 export class EntityStore {
@@ -164,5 +163,22 @@ export class EntityStore {
     this.entities.clear()
     this.entityIndex.clear()
     this.activeContext = {}
+  }
+
+  snapshot(): TrackedEntity[] {
+    const out: TrackedEntity[] = []
+    for (const e of this.entities.values()) out.push(e)
+    return out.slice(-40)
+  }
+
+  restore(entities: TrackedEntity[]): void {
+    this.clear()
+    for (const e of entities) {
+      this.entities.set(e.id, e)
+      const existing = this.entityIndex.get(e.type) ?? []
+      existing.unshift(e.id)
+      this.entityIndex.set(e.type, existing)
+      this.updateActiveContext(e)
+    }
   }
 }

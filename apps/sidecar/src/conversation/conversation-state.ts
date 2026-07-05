@@ -5,12 +5,14 @@ import { ReferenceResolver, type ReferenceResolution } from "./reference-resolve
 import type { WorkspaceMapping } from "./workspace-mapper.js"
 import { inferWorkspace, isDocumentRequest } from "./workspace-mapper.js"
 import { isApprovalOrRejection } from "./types.js"
+import { loadStateFromDisk, saveStateToDisk } from "./persistence.js"
 
 export class ConversationState {
   entityStore: EntityStore
   pendingActions: PendingActionManager
   referenceResolver: ReferenceResolver
   turns: ConversationTurn[] = []
+  persistKey: string | null = null
   private maxTurns = 50
 
   constructor() {
@@ -19,15 +21,22 @@ export class ConversationState {
     this.referenceResolver = new ReferenceResolver(this.entityStore, this.pendingActions)
   }
 
+  persist(): void {
+    if (this.persistKey) saveStateToDisk(this.persistKey, this)
+  }
+
   addTurn(turn: ConversationTurn): void {
     this.turns.push(turn)
     if (this.turns.length > this.maxTurns) {
       this.turns.shift()
     }
+    this.persist()
   }
 
   registerEntity(entity: Omit<TrackedEntity, "id" | "createdAt">): TrackedEntity {
-    return this.entityStore.register(entity)
+    const tracked = this.entityStore.register(entity)
+    this.persist()
+    return tracked
   }
 
   getActiveContext(): string {
@@ -90,11 +99,13 @@ export class ConversationState {
 
     if (decision === "approve") {
       const approved = this.pendingActions.approve()
+      if (approved) this.persist()
       return approved ? "approved" : "noop"
     }
 
     if (decision === "reject") {
       const rejected = this.pendingActions.reject()
+      if (rejected) this.persist()
       return rejected ? "rejected" : "noop"
     }
 
@@ -118,15 +129,20 @@ export class ConversationState {
   }
 }
 
-let _instance: ConversationState | null = null
+const _instances = new Map<string, ConversationState>()
 
-export function getConversationState(): ConversationState {
-  if (!_instance) {
-    _instance = new ConversationState()
+export function getConversationState(key = "desktop"): ConversationState {
+  let s = _instances.get(key)
+  if (!s) {
+    s = new ConversationState()
+    loadStateFromDisk(key, s)
+    s.persistKey = key
+    _instances.set(key, s)
   }
-  return _instance
+  return s
 }
 
-export function resetConversationState(): void {
-  _instance = null
+export function resetConversationState(key?: string): void {
+  if (key) _instances.delete(key)
+  else _instances.clear()
 }

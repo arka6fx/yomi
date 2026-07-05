@@ -1,25 +1,5 @@
-export type PendingActionType =
-  | "github.create_file"
-  | "github.create_repo"
-  | "github.create_issue"
-  | "github.create_pr"
-  | "github.merge_pr"
-  | "github.review_pr"
-  | "github.comment"
-  | "github.create_branch"
-  | "github.update_issue"
-  | "calendar.create_event"
-  | "drive.create_doc"
-  | "drive.create_folder"
-  | "slides.create"
-  | "gmail.send"
-  | "gmail.draft"
-  | "slack.send_message"
-  | "linear.create_issue"
-  | "notion.create_page"
-  | "bash.command"
-  | "memory.add"
-  | "generic.write"
+// Tool key of the gated call, e.g. "github-createOrUpdateFile", "gmail-sendEmail".
+export type PendingActionType = string
 
 export type PendingActionStatus =
   | "pending"
