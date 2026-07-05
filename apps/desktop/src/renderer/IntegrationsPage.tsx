@@ -101,9 +101,7 @@ export default function IntegrationsPage() {
   const connectedBots = new Set(botConnections.map((b) => b.platform))
 
   const connectedProviders = integrations.map((i) => i.provider)
-  const connectedMap = Object.fromEntries(
-    integrations.map((i) => [i.provider, i.displayName]),
-  )
+  const connectedMap = Object.fromEntries(integrations.map((i) => [i.provider, i.displayName]))
   const catalog = buildCatalog(connectedProviders).map((c) => ({
     ...c,
     displayName: connectedMap[c.id],
@@ -153,7 +151,8 @@ export default function IntegrationsPage() {
       >
         <h2 style={{ fontSize: 16, fontWeight: 700, color: t.text, margin: 0 }}>Integrations</h2>
         <p style={{ fontSize: 11.5, color: t.dim, margin: "4px 0 0 0", lineHeight: 1.45 }}>
-          Connect Yomi to your tools. Query them from the desktop or Telegram with your desktop closed.
+          Connect Yomi to your tools. Query them from the desktop or Telegram with your desktop
+          closed.
         </p>
       </motion.div>
 
@@ -233,7 +232,11 @@ export default function IntegrationsPage() {
                     <div>
                       <div style={{ fontSize: 12.5, fontWeight: 600, color: t.text }}>Telegram</div>
                       <div style={{ fontSize: 10.5, color: connectorTheme.successText }}>
-                        Connected {new Date(conn.connectedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        Connected{" "}
+                        {new Date(conn.connectedAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}
                       </div>
                     </div>
                   </div>
@@ -265,7 +268,9 @@ export default function IntegrationsPage() {
                     lineHeight: 1.5,
                   }}
                 >
-                  Try sending <span style={{ fontFamily: "monospace", color: t.text }}>analyze my screen</span> while the app is open, or ask about your files and tasks anytime.
+                  Try sending{" "}
+                  <span style={{ fontFamily: "monospace", color: t.text }}>analyze my screen</span>{" "}
+                  while the app is open, or ask about your files and tasks anytime.
                 </div>
               </div>
             )
@@ -281,9 +286,24 @@ export default function IntegrationsPage() {
               }}
             >
               <div style={{ padding: "14px 14px 12px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: 14,
+                  }}
+                >
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: t.dim as string, flexShrink: 0 }} />
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        background: t.dim as string,
+                        flexShrink: 0,
+                      }}
+                    />
                     <div style={{ fontSize: 12.5, fontWeight: 600, color: t.text }}>Telegram</div>
                   </div>
                   <button

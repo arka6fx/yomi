@@ -196,7 +196,13 @@ export type SseEvent =
   | { type: "gateway_connected"; platform: PlatformType }
   | { type: "gateway_disconnected"; platform: PlatformType }
   | { type: "gateway_error"; platform: PlatformType; message: string }
-  | { type: "gateway_message"; platform: PlatformType; chatId: string; userId: string; text: string }
+  | {
+      type: "gateway_message"
+      platform: PlatformType
+      chatId: string
+      userId: string
+      text: string
+    }
   | { type: "gateway_session"; platform: PlatformType; chatId: string; active: boolean }
 
 export type PlatformType = "telegram"

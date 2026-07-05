@@ -117,7 +117,9 @@ export async function chargeUsage(input: {
     return { ok: false, status: 402, code: "subscription_inactive", message, plan }
   }
 
-  const creditsRequired = creditsForUsage(CREDIT_KIND[kind], { durationSeconds: input.durationSeconds })
+  const creditsRequired = creditsForUsage(CREDIT_KIND[kind], {
+    durationSeconds: input.durationSeconds,
+  })
   const summary = await getCreditSummary(user.id)
 
   // Out of credits — credits are the only gate, so block here.

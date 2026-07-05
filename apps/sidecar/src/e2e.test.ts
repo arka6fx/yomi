@@ -19,10 +19,19 @@ import type { LanguageModelV1, LanguageModelV1StreamPart } from "ai"
 // Shared mock state
 // =============================================================================
 
-let streamChunks: string[] = ["To use Google Drive, you need to connect it first at https://yomi.arka6fx.com/dashboard. I don't have access to your Drive files yet."]
+let streamChunks: string[] = [
+  "To use Google Drive, you need to connect it first at https://yomi.arka6fx.com/dashboard. I don't have access to your Drive files yet.",
+]
 let lastStmOptions: Record<string, unknown> = {}
-let classifyResult = { path: "fast" as const, confidence: 0.9, reason: "mocked", source: "heuristic" as const }
-let reserveResult: { ok: boolean; error?: string; code?: string; upgradeUrl?: string } = { ok: true }
+let classifyResult = {
+  path: "fast" as const,
+  confidence: 0.9,
+  reason: "mocked",
+  source: "heuristic" as const,
+}
+let reserveResult: { ok: boolean; error?: string; code?: string; upgradeUrl?: string } = {
+  ok: true,
+}
 let fetchCalls: { url: string; method: string; body?: string }[] = []
 let fastCallArgs: unknown[] = []
 let agentCallArgs: unknown[] = []
@@ -44,7 +53,9 @@ mock.module("ai", () => {
       lastStmOptions = opts
       const chunks = [...streamChunks]
       return {
-        textStream: (async function* () { for (const c of chunks) yield c })(),
+        textStream: (async function* () {
+          for (const c of chunks) yield c
+        })(),
         fullStream: (async function* () {
           for (const c of chunks) yield { type: "text-delta" as const, textDelta: c }
         })(),
@@ -123,7 +134,10 @@ mock.module("./router/intent.js", () => ({
 
 mock.module("./graph/run.js", () => ({
   runGraph: async function* (req: unknown) {
-    yield { type: "agent_text" as const, text: "To use Google Drive, please connect it at https://yomi.arka6fx.com/dashboard. I don't have access to your Drive files yet." }
+    yield {
+      type: "agent_text" as const,
+      text: "To use Google Drive, please connect it at https://yomi.arka6fx.com/dashboard. I don't have access to your Drive files yet.",
+    }
     yield { type: "done" as const }
   },
 }))
@@ -132,15 +146,15 @@ mock.module("./graph/run.js", () => ({
 // Dynamic imports (after mocks are registered)
 // =============================================================================
 
-let fastPipeline: typeof import("./pipeline/fast.js")["fastPipeline"]
-let resolveText: typeof import("./pipeline/fast.js")["resolveText"]
+let fastPipeline: (typeof import("./pipeline/fast.js"))["fastPipeline"]
+let resolveText: (typeof import("./pipeline/fast.js"))["resolveText"]
 let app: { fetch: typeof globalThis.fetch }
-let handleGatewayMessage: typeof import("./gateway/receive.js")["handleGatewayMessage"]
-let buildFastPrompt: typeof import("./harness/prompt.js")["buildFastPrompt"]
-let buildAgentPrompt: typeof import("./harness/prompt.js")["buildAgentPrompt"]
-let buildConnectorInfo: typeof import("./harness/prompt.js")["buildConnectorInfo"]
-let scoreHeuristic: typeof import("./router/heuristic.js")["scoreHeuristic"]
-let ALL_CONNECTOR_DEFS: typeof import("@yomi/agent-core")["ALL_CONNECTOR_DEFS"]
+let handleGatewayMessage: (typeof import("./gateway/receive.js"))["handleGatewayMessage"]
+let buildFastPrompt: (typeof import("./harness/prompt.js"))["buildFastPrompt"]
+let buildAgentPrompt: (typeof import("./harness/prompt.js"))["buildAgentPrompt"]
+let buildConnectorInfo: (typeof import("./harness/prompt.js"))["buildConnectorInfo"]
+let scoreHeuristic: (typeof import("./router/heuristic.js"))["scoreHeuristic"]
+let ALL_CONNECTOR_DEFS: (typeof import("@yomi/agent-core"))["ALL_CONNECTOR_DEFS"]
 let shouldUseAgent: (text: string) => boolean
 
 beforeAll(async () => {
@@ -162,12 +176,16 @@ beforeAll(async () => {
 
   // Inline shouldUseAgent from desktop IPC — pure regex function
   shouldUseAgent = (text: string): boolean => {
-    return /\b(open|click|press|type|enter|fill|select|choose|check|uncheck|toggle|close|switch|go to|navigate|delete|send|save|copy|paste|rename|create|run|play|pause|resume|spotify|volume|sound|audio|louder|quieter|mute|unmute|increase|decrease|lower|raise|inc|dec|text|message|msg|whats\s*app|whatsapp|tell|ping)\b/i.test(text)
+    return /\b(open|click|press|type|enter|fill|select|choose|check|uncheck|toggle|close|switch|go to|navigate|delete|send|save|copy|paste|rename|create|run|play|pause|resume|spotify|volume|sound|audio|louder|quieter|mute|unmute|increase|decrease|lower|raise|inc|dec|text|message|msg|whats\s*app|whatsapp|tell|ping)\b/i.test(
+      text,
+    )
   }
 })
 
 beforeEach(() => {
-  streamChunks = ["To use Google Drive, you need to connect it first at https://yomi.arka6fx.com/dashboard. I don't have access to your Drive files yet."]
+  streamChunks = [
+    "To use Google Drive, you need to connect it first at https://yomi.arka6fx.com/dashboard. I don't have access to your Drive files yet.",
+  ]
   lastStmOptions = {}
   classifyResult = { path: "fast", confidence: 0.9, reason: "mocked", source: "heuristic" }
   reserveResult = { ok: true }
@@ -175,7 +193,11 @@ beforeEach(() => {
   fastCallArgs = []
   agentCallArgs = []
   globalThis.fetch = async (url: string | URL | Request, opts?: RequestInit) => {
-    fetchCalls.push({ url: String(url), method: opts?.method ?? "GET", body: opts?.body as string | undefined })
+    fetchCalls.push({
+      url: String(url),
+      method: opts?.method ?? "GET",
+      body: opts?.body as string | undefined,
+    })
     return new Response(JSON.stringify({ ok: true }), { status: 200 })
   }
 })
@@ -272,13 +294,21 @@ describe("buildFastPrompt — connector awareness", () => {
   })
 
   it("omits connector blocks when query does not mention any connector", () => {
-    const prompt = buildFastPrompt({ text: "what is the weather", tts: false, connectedProviders: [] })
+    const prompt = buildFastPrompt({
+      text: "what is the weather",
+      tts: false,
+      connectedProviders: [],
+    })
     expect(prompt).not.toContain("<connector_info>")
     expect(prompt).not.toContain("MUST say they need to connect it")
   })
 
   it("shows connected providers when some are connected", () => {
-    const prompt = buildFastPrompt({ text: connectorText, tts: false, connectedProviders: ["google-drive"] })
+    const prompt = buildFastPrompt({
+      text: connectorText,
+      tts: false,
+      connectedProviders: ["google-drive"],
+    })
     expect(prompt).toContain("Currently connected: Google Drive")
   })
 })
@@ -376,20 +406,27 @@ describe("desktop shouldUseAgent", () => {
 
 describe("fast pipeline — connector awareness scenario", () => {
   it("emits transcript + llm_chunks + done for connector query", async () => {
-    const events = await collect(fastPipeline({
-      text: "can u tell if i have cat images in drive",
-    }))
+    const events = await collect(
+      fastPipeline({
+        text: "can u tell if i have cat images in drive",
+      }),
+    )
 
-    expect(events[0]).toMatchObject({ type: "transcript", text: "can u tell if i have cat images in drive" })
+    expect(events[0]).toMatchObject({
+      type: "transcript",
+      text: "can u tell if i have cat images in drive",
+    })
     const llmChunks = events.filter((e: any) => e.type === "llm_chunk")
     expect(llmChunks.length).toBeGreaterThanOrEqual(1)
     expect(events[events.length - 1]).toMatchObject({ type: "done" })
   })
 
   it("includes connector_info in system prompt", async () => {
-    await collect(fastPipeline({
-      text: "can u tell if i have cat images in drive",
-    }))
+    await collect(
+      fastPipeline({
+        text: "can u tell if i have cat images in drive",
+      }),
+    )
 
     const messages = lastStmOptions.messages as any[]
     const systemMsg = messages?.find((m: any) => m.role === "system")
@@ -400,9 +437,11 @@ describe("fast pipeline — connector awareness scenario", () => {
   })
 
   it("includes connector rules in system prompt", async () => {
-    await collect(fastPipeline({
-      text: "can u tell if i have cat images in drive",
-    }))
+    await collect(
+      fastPipeline({
+        text: "can u tell if i have cat images in drive",
+      }),
+    )
 
     const messages = lastStmOptions.messages as any[]
     const systemMsg = messages?.find((m: any) => m.role === "system")
@@ -412,10 +451,14 @@ describe("fast pipeline — connector awareness scenario", () => {
   })
 
   it("LLM response mentions connecting Drive when not connected", async () => {
-    streamChunks = ["To check your Google Drive, you'd need to connect it at https://yomi.arka6fx.com/dashboard. I don't have access to your Drive files yet."]
-    const events = await collect(fastPipeline({
-      text: "can u tell if i have cat images in drive",
-    }))
+    streamChunks = [
+      "To check your Google Drive, you'd need to connect it at https://yomi.arka6fx.com/dashboard. I don't have access to your Drive files yet.",
+    ]
+    const events = await collect(
+      fastPipeline({
+        text: "can u tell if i have cat images in drive",
+      }),
+    )
 
     const fullText = events
       .filter((e: any) => e.type === "llm_chunk")
@@ -441,7 +484,10 @@ describe("voice trigger — STT + connector awareness", () => {
   it("fastPipeline with audio emits transcript + connector-aware response", async () => {
     const dummyWav = Buffer.alloc(48).toString("base64")
     const events = await collect(fastPipeline({ audio_b64: dummyWav }))
-    expect(events[0]).toMatchObject({ type: "transcript", text: "can u tell if i have cat images in drive" })
+    expect(events[0]).toMatchObject({
+      type: "transcript",
+      text: "can u tell if i have cat images in drive",
+    })
     expect(events.some((e: any) => e.type === "llm_chunk")).toBe(true)
     expect(events[events.length - 1]).toMatchObject({ type: "done" })
   })

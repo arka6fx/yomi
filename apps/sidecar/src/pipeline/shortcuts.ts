@@ -21,11 +21,18 @@ export function stripDetachedPhrases(text: string): string {
 // ── Messaging shortcuts ─────────────────────────────────────────────────────
 
 export function normalizeSpokenRecipient(raw: string): string {
-  return raw.trim().replace(/^(my|to)\s+/i, "").replace(/^["']|["']$/g, "").trim()
+  return raw
+    .trim()
+    .replace(/^(my|to)\s+/i, "")
+    .replace(/^["']|["']$/g, "")
+    .trim()
 }
 
 export function reminderDraftRequest(text: string): { message: string } | null {
-  const t = text.toLowerCase().replace(/[.!?]+$/g, "").trim()
+  const t = text
+    .toLowerCase()
+    .replace(/[.!?]+$/g, "")
+    .trim()
   const remindMatch = t.match(
     /\b(?:remind|reminder|remind me|set a reminder|create a reminder|make a reminder)\s+(?:to\s+)?(.+)$/i,
   )
@@ -45,19 +52,18 @@ export function whatsAppMessageRequest(
     /^(?:(?:a\s+)?message\s+)?(?:to|for)\s+(.+?)\s+(?:saying|that|to say)\s+(.+)$/i,
   )
   if (toMatch) return { recipient: toMatch[1]!.trim(), message: toMatch[2]!.trim() }
-  const directMatch = t.match(
-    /^(?:(?:a\s+)?message\s+)?(.+?)\s+(?:saying|that|to say)\s+(.+)$/i,
-  )
+  const directMatch = t.match(/^(?:(?:a\s+)?message\s+)?(.+?)\s+(?:saying|that|to say)\s+(.+)$/i)
   if (directMatch) return { recipient: directMatch[1]!.trim(), message: directMatch[2]!.trim() }
   return null
 }
 
 export function pendingDraftRecipientRequest(text: string, hasDraft: boolean): string | null {
   if (!hasDraft) return null
-  const t = text.toLowerCase().replace(/[.!?]+$/g, "").trim()
-  const match = t.match(
-    /^(?:send|text|message)\s+(?:it|that|this)\s+(?:to|for)\s+(.+)$/i,
-  )
+  const t = text
+    .toLowerCase()
+    .replace(/[.!?]+$/g, "")
+    .trim()
+  const match = t.match(/^(?:send|text|message)\s+(?:it|that|this)\s+(?:to|for)\s+(.+)$/i)
   if (match) return match[1]!.trim()
   const nameMatch = t.match(/^(?:send|text|message)\s+(.+)$/i)
   if (nameMatch && nameMatch[1]!.trim().length < 40) return nameMatch[1]!.trim()

@@ -11,27 +11,27 @@
     "binding": "ASSETS",
     "html_handling": "drop-trailing-slash",
     "not_found_handling": "none",
-    "run_worker_first": true
+    "run_worker_first": true,
   },
   "observability": {
     "enabled": true,
-    "head_sampling_rate": 1
+    "head_sampling_rate": 1,
   },
   "vars": {
-    "ENVIRONMENT": "development"
+    "ENVIRONMENT": "development",
   },
   "env": {
     "staging": {
       "name": "yomi-landing-staging",
       "vars": {
-        "ENVIRONMENT": "staging"
-      }
+        "ENVIRONMENT": "staging",
+      },
     },
     "production": {
       "name": "yomi-landing",
       "vars": {
-        "ENVIRONMENT": "production"
-      }
-    }
-  }
+        "ENVIRONMENT": "production",
+      },
+    },
+  },
 }

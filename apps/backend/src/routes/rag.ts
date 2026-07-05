@@ -82,7 +82,10 @@ async function embedText(input: string): Promise<number[]> {
   const apiKey = process.env["AI_CREDITS_API_KEY"]
   if (!apiKey) throw new Error("AI_CREDITS_API_KEY is required for Cloud RAG embeddings")
 
-  const baseUrl = (process.env["AI_CREDITS_BASE_URL"] ?? "https://api.aicredits.in/v1").replace(/\/+$/, "")
+  const baseUrl = (process.env["AI_CREDITS_BASE_URL"] ?? "https://api.aicredits.in/v1").replace(
+    /\/+$/,
+    "",
+  )
   const model = process.env["AI_CREDITS_EMBEDDING_MODEL"] ?? DEFAULT_EMBEDDING_MODEL
   const res = await fetch(`${baseUrl}/embeddings`, {
     method: "POST",

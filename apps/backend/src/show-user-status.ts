@@ -3,13 +3,22 @@ import { user } from "./auth-schema.js"
 import { eq } from "drizzle-orm"
 
 async function run() {
-  const [userRecord] = await db.select().from(user).where(eq(user.email, "arkagarai292@gmail.com")).limit(1)
+  const [userRecord] = await db
+    .select()
+    .from(user)
+    .where(eq(user.email, "arkagarai292@gmail.com"))
+    .limit(1)
   console.log("=== Current User DB Record ===")
   console.log(JSON.stringify(userRecord, null, 2))
 
   console.log("\n=== Current User Credits ===")
-  const [userCredits] = await db.select().from(creditAccounts).where(eq(creditAccounts.userId, userRecord!.id))
+  const [userCredits] = await db
+    .select()
+    .from(creditAccounts)
+    .where(eq(creditAccounts.userId, userRecord!.id))
   console.log(JSON.stringify(userCredits ?? null, null, 2))
 }
 
-run().catch(console.error).then(() => process.exit(0))
+run()
+  .catch(console.error)
+  .then(() => process.exit(0))

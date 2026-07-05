@@ -45,12 +45,10 @@ export default function SupportPage() {
             Contact
           </p>
           <div className="max-w-3xl">
-            <h1 className="font-accent text-5xl text-[#eaf4ff] sm:text-6xl">
-              Support for Yomi.
-            </h1>
+            <h1 className="font-accent text-5xl text-[#eaf4ff] sm:text-6xl">Support for Yomi.</h1>
             <p className="mt-5 max-w-2xl text-base leading-8 text-white/55">
-              Send a note with the email on your account, what you expected to happen, what
-              happened instead, and any screenshots or logs that do not contain secrets.
+              Send a note with the email on your account, what you expected to happen, what happened
+              instead, and any screenshots or logs that do not contain secrets.
             </p>
           </div>
 
@@ -66,9 +64,7 @@ export default function SupportPage() {
                   rel={channel.href.startsWith("http") ? "noopener noreferrer" : undefined}
                 >
                   <Icon className="mb-8 h-5 w-5 text-sky-100/70" aria-hidden="true" />
-                  <h2 className="font-accent text-2xl text-[#eaf4ff]">
-                    {channel.title}
-                  </h2>
+                  <h2 className="font-accent text-2xl text-[#eaf4ff]">{channel.title}</h2>
                   <p className="mt-3 min-h-24 text-sm leading-7 text-white/50">
                     {channel.description}
                   </p>

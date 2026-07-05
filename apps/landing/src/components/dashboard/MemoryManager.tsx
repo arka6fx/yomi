@@ -95,7 +95,10 @@ export function MemoryManager({ token }: { token: string }) {
     setForgetting(id)
     setError("")
     try {
-      const res = await fetch(`/api/memory/${encodeURIComponent(id)}`, { method: "DELETE", headers: auth })
+      const res = await fetch(`/api/memory/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: auth,
+      })
       if (!res.ok) throw new Error("Couldn't forget that memory")
       setMemories((prev) => prev.filter((m) => m.id !== id))
     } catch (err) {
@@ -117,7 +120,8 @@ export function MemoryManager({ token }: { token: string }) {
               What Yomi <span className="italic">remembers</span>
             </h2>
             <p className="mt-1 max-w-md text-sm text-muted-foreground">
-              Durable facts Yomi keeps across your desktop and Telegram. Add, search, or forget them here.
+              Durable facts Yomi keeps across your desktop and Telegram. Add, search, or forget them
+              here.
             </p>
           </div>
         </div>
@@ -152,7 +156,9 @@ export function MemoryManager({ token }: { token: string }) {
               className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground outline-none focus:border-primary/50"
             >
               {KINDS.map((k) => (
-                <option key={k} value={k}>{k.replace("_", " ")}</option>
+                <option key={k} value={k}>
+                  {k.replace("_", " ")}
+                </option>
               ))}
             </select>
             <select
@@ -161,7 +167,9 @@ export function MemoryManager({ token }: { token: string }) {
               className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground outline-none focus:border-primary/50"
             >
               {SCOPES.map((s) => (
-                <option key={s} value={s}>{s}</option>
+                <option key={s} value={s}>
+                  {s}
+                </option>
               ))}
             </select>
             <button
@@ -177,7 +185,10 @@ export function MemoryManager({ token }: { token: string }) {
       )}
 
       <div className="relative mb-4">
-        <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <Search
+          size={14}
+          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+        />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -228,7 +239,9 @@ export function MemoryManager({ token }: { token: string }) {
                     </span>
                   )}
                 </div>
-                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{m.summary || m.content}</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  {m.summary || m.content}
+                </p>
               </div>
               <button
                 onClick={() => handleForget(m.id)}
@@ -236,7 +249,11 @@ export function MemoryManager({ token }: { token: string }) {
                 aria-label="Forget memory"
                 className="shrink-0 rounded-lg p-1.5 text-muted-foreground/60 opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 disabled:opacity-50"
               >
-                {forgetting === m.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                {forgetting === m.id ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Trash2 size={14} />
+                )}
               </button>
             </li>
           ))}

@@ -61,7 +61,9 @@ function resetMockState() {
 }
 
 function nextSelectRows() {
-  return mockState.dbSelectQueue.length > 0 ? mockState.dbSelectQueue.shift()! : mockState.dbSelectResult
+  return mockState.dbSelectQueue.length > 0
+    ? mockState.dbSelectQueue.shift()!
+    : mockState.dbSelectResult
 }
 
 const fakeDb = {
@@ -183,15 +185,31 @@ function setDodoEnv(mode: "test" | "live") {
 
 function clearDodoEnv() {
   const keys = [
-    "DODO_ENV", "DODO_TEST_API_KEY", "DODO_TEST_WEBHOOK_SECRET", "DODO_TEST_API_BASE",
-    "DODO_TEST_PRODUCT_PRO", "DODO_TEST_PRODUCT_MAX", "DODO_TEST_PRODUCT_CREDITS_500",
-    "DODO_TEST_PRODUCT_CREDITS_2000", "DODO_TEST_PRODUCT_CREDITS_6000",
-    "DODO_LIVE_API_KEY", "DODO_LIVE_WEBHOOK_SECRET", "DODO_LIVE_API_BASE",
-    "DODO_LIVE_PRODUCT_PRO", "DODO_LIVE_PRODUCT_MAX", "DODO_LIVE_PRODUCT_CREDITS_500",
-    "DODO_LIVE_PRODUCT_CREDITS_2000", "DODO_LIVE_PRODUCT_CREDITS_6000",
-    "DODO_API_KEY", "DODO_WEBHOOK_SECRET", "DODO_API_BASE",
-    "DODO_PRODUCT_PRO", "DODO_PRODUCT_MAX",
-    "DODO_PRODUCT_CREDITS_500", "DODO_PRODUCT_CREDITS_2000", "DODO_PRODUCT_CREDITS_6000",
+    "DODO_ENV",
+    "DODO_TEST_API_KEY",
+    "DODO_TEST_WEBHOOK_SECRET",
+    "DODO_TEST_API_BASE",
+    "DODO_TEST_PRODUCT_PRO",
+    "DODO_TEST_PRODUCT_MAX",
+    "DODO_TEST_PRODUCT_CREDITS_500",
+    "DODO_TEST_PRODUCT_CREDITS_2000",
+    "DODO_TEST_PRODUCT_CREDITS_6000",
+    "DODO_LIVE_API_KEY",
+    "DODO_LIVE_WEBHOOK_SECRET",
+    "DODO_LIVE_API_BASE",
+    "DODO_LIVE_PRODUCT_PRO",
+    "DODO_LIVE_PRODUCT_MAX",
+    "DODO_LIVE_PRODUCT_CREDITS_500",
+    "DODO_LIVE_PRODUCT_CREDITS_2000",
+    "DODO_LIVE_PRODUCT_CREDITS_6000",
+    "DODO_API_KEY",
+    "DODO_WEBHOOK_SECRET",
+    "DODO_API_BASE",
+    "DODO_PRODUCT_PRO",
+    "DODO_PRODUCT_MAX",
+    "DODO_PRODUCT_CREDITS_500",
+    "DODO_PRODUCT_CREDITS_2000",
+    "DODO_PRODUCT_CREDITS_6000",
   ]
   for (const k of keys) delete process.env[k]
 }
@@ -252,8 +270,12 @@ function sendWebhook(body: Record<string, unknown>, headers?: Record<string, str
 describe("Dodo billing — configuration", () => {
   beforeEach(() => {
     currentUser = {
-      id: "user_1", name: "Arka", email: "arka@example.com",
-      plan: "explore", subscriptionStatus: "inactive", dodoSubscriptionId: null,
+      id: "user_1",
+      name: "Arka",
+      email: "arka@example.com",
+      plan: "explore",
+      subscriptionStatus: "inactive",
+      dodoSubscriptionId: null,
     }
   })
 
@@ -348,14 +370,18 @@ describe("Dodo billing — plan catalog", () => {
   beforeEach(() => {
     resetMockState()
     currentUser = {
-      id: "user_1", name: "Arka", email: "arka@example.com",
-      plan: "explore", subscriptionStatus: "inactive", dodoSubscriptionId: null,
+      id: "user_1",
+      name: "Arka",
+      email: "arka@example.com",
+      plan: "explore",
+      subscriptionStatus: "inactive",
+      dodoSubscriptionId: null,
     }
   })
 
   it("lists all subscription plans with credit-oriented feature copy", async () => {
     const res = await app().request("/api/billing/plans")
-    const body = await res.json() as any
+    const body = (await res.json()) as any
 
     expect(res.status).toBe(200)
     expect(body.plans.map((plan: any) => plan.key)).toEqual(["explore", "pro", "max"])
@@ -387,8 +413,12 @@ describe("Dodo billing — webhook verification", () => {
   beforeEach(() => {
     resetMockState()
     currentUser = {
-      id: "user_1", name: "Arka", email: "arka@example.com",
-      plan: "explore", subscriptionStatus: "inactive", dodoSubscriptionId: null,
+      id: "user_1",
+      name: "Arka",
+      email: "arka@example.com",
+      plan: "explore",
+      subscriptionStatus: "inactive",
+      dodoSubscriptionId: null,
     }
     setDodoEnv("test")
   })
@@ -449,14 +479,21 @@ describe("Dodo billing — subscription checkout", () => {
     fetchCalls = []
     globalThis.fetch = (async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
       fetchCalls.push({ url: String(input), init })
-      return new Response(JSON.stringify({ id: "checkout_1", checkout_url: "https://checkout.example/pro" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      })
+      return new Response(
+        JSON.stringify({ id: "checkout_1", checkout_url: "https://checkout.example/pro" }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      )
     }) as typeof fetch
     currentUser = {
-      id: "user_1", name: "Arka", email: "arka@example.com",
-      plan: "explore", subscriptionStatus: "inactive", dodoSubscriptionId: null,
+      id: "user_1",
+      name: "Arka",
+      email: "arka@example.com",
+      plan: "explore",
+      subscriptionStatus: "inactive",
+      dodoSubscriptionId: null,
     }
     setDodoEnv("test")
   })
@@ -468,7 +505,7 @@ describe("Dodo billing — subscription checkout", () => {
 
   it("creates a subscription checkout successfully", async () => {
     const res = await createSubscription("pro")
-    const body = await res.json() as any
+    const body = (await res.json()) as any
     expect(res.status).toBe(200)
     expect(body.short_url).toBe("https://checkout.example/pro")
     expect(body.id).toBe("checkout_1")
@@ -481,18 +518,30 @@ describe("Dodo billing — subscription checkout", () => {
     const payload = JSON.parse(String(fetchCalls[0]?.init?.body ?? "{}"))
     expect(payload.product_cart?.[0]?.product_id).toBe("test_pro")
     expect(payload.metadata).toEqual({
-      userId: "user_1", kind: "subscription", plan: "pro",
+      userId: "user_1",
+      kind: "subscription",
+      plan: "pro",
     })
   })
 
   it("rejects same-plan active subscription as conflict", async () => {
-    currentUser = { ...currentUser, plan: "pro", subscriptionStatus: "active", dodoSubscriptionId: "sub_1" }
+    currentUser = {
+      ...currentUser,
+      plan: "pro",
+      subscriptionStatus: "active",
+      dodoSubscriptionId: "sub_1",
+    }
     const res = await createSubscription("pro")
     expect(res.status).toBe(409)
   })
 
   it("allows upgrading to a different plan", async () => {
-    currentUser = { ...currentUser, plan: "pro", subscriptionStatus: "active", dodoSubscriptionId: "sub_pro" }
+    currentUser = {
+      ...currentUser,
+      plan: "pro",
+      subscriptionStatus: "active",
+      dodoSubscriptionId: "sub_pro",
+    }
     const res = await createSubscription("max")
     expect(res.status).toBe(200)
     const payload = JSON.parse(String(fetchCalls[0]?.init?.body ?? "{}"))
@@ -516,7 +565,8 @@ describe("Dodo billing — subscription checkout", () => {
   })
 
   it("returns 502 when the Dodo API fails", async () => {
-    globalThis.fetch = (async () => new Response("Server Error", { status: 500 })) as unknown as typeof fetch
+    globalThis.fetch = (async () =>
+      new Response("Server Error", { status: 500 })) as unknown as typeof fetch
     const res = await createSubscription("pro")
     expect(res.status).toBe(502)
   })
@@ -531,14 +581,21 @@ describe("Dodo billing — credit pack checkout", () => {
     fetchCalls = []
     globalThis.fetch = (async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
       fetchCalls.push({ url: String(input), init })
-      return new Response(JSON.stringify({ id: "pack_checkout_1", checkout_url: "https://checkout.example/pack" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      })
+      return new Response(
+        JSON.stringify({ id: "pack_checkout_1", checkout_url: "https://checkout.example/pack" }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      )
     }) as typeof fetch
     currentUser = {
-      id: "user_1", name: "Arka", email: "arka@example.com",
-      plan: "pro", subscriptionStatus: "active", dodoSubscriptionId: "sub_1",
+      id: "user_1",
+      name: "Arka",
+      email: "arka@example.com",
+      plan: "pro",
+      subscriptionStatus: "active",
+      dodoSubscriptionId: "sub_1",
     }
     setDodoEnv("test")
   })
@@ -550,7 +607,7 @@ describe("Dodo billing — credit pack checkout", () => {
 
   it("creates a credit pack checkout successfully", async () => {
     const res = await createCreditPack("credits_500")
-    const body = await res.json() as any
+    const body = (await res.json()) as any
     expect(res.status).toBe(200)
     expect(body.short_url).toBe("https://checkout.example/pack")
   })
@@ -589,7 +646,12 @@ describe("Dodo billing — credit pack checkout", () => {
   })
 
   it("blocks Explore plan users from purchasing credit packs", async () => {
-    currentUser = { ...currentUser, plan: "explore", subscriptionStatus: "inactive", dodoSubscriptionId: null }
+    currentUser = {
+      ...currentUser,
+      plan: "explore",
+      subscriptionStatus: "inactive",
+      dodoSubscriptionId: null,
+    }
     const res = await createCreditPack("credits_500")
     expect(res.status).toBe(403)
   })
@@ -607,8 +669,12 @@ describe("Dodo billing — cancel subscription", () => {
       return new Response(JSON.stringify({ ok: true }), { status: 200 })
     }) as typeof fetch
     currentUser = {
-      id: "user_1", name: "Arka", email: "arka@example.com",
-      plan: "pro", subscriptionStatus: "active", dodoSubscriptionId: "sub_1",
+      id: "user_1",
+      name: "Arka",
+      email: "arka@example.com",
+      plan: "pro",
+      subscriptionStatus: "active",
+      dodoSubscriptionId: "sub_1",
     }
     setDodoEnv("test")
   })
@@ -633,7 +699,8 @@ describe("Dodo billing — cancel subscription", () => {
   })
 
   it("returns 502 when the Dodo cancel API fails", async () => {
-    globalThis.fetch = (async () => new Response("Error", { status: 500 })) as unknown as typeof fetch
+    globalThis.fetch = (async () =>
+      new Response("Error", { status: 500 })) as unknown as typeof fetch
     const res = await cancelSubscription()
     expect(res.status).toBe(502)
   })
@@ -645,8 +712,12 @@ describe("Dodo billing — subscription summary", () => {
   beforeEach(() => {
     resetMockState()
     currentUser = {
-      id: "user_1", name: "Arka", email: "arka@example.com",
-      plan: "pro", subscriptionStatus: "active", dodoSubscriptionId: "sub_1",
+      id: "user_1",
+      name: "Arka",
+      email: "arka@example.com",
+      plan: "pro",
+      subscriptionStatus: "active",
+      dodoSubscriptionId: "sub_1",
     }
   })
 
@@ -722,14 +793,18 @@ describe("Dodo billing — subscription summary", () => {
     ]
 
     const res = await getSubscription()
-    const body = await res.json() as any
+    const body = (await res.json()) as any
 
     expect(res.status).toBe(200)
     expect(body.plan).toBe("pro")
     expect(body.status).toBe("active")
     expect(body.credits.balance).toBe(497)
     expect(body.creditConsumption).toBeUndefined()
-    expect(body.creditPacks.map((pack: any) => pack.key)).toEqual(["credits_500", "credits_2000", "credits_6000"])
+    expect(body.creditPacks.map((pack: any) => pack.key)).toEqual([
+      "credits_500",
+      "credits_2000",
+      "credits_6000",
+    ])
     expect(body.creditTransactions).toBeUndefined()
   })
 
@@ -769,13 +844,10 @@ describe("Dodo billing — subscription summary", () => {
         createdAt: new Date("2026-06-16T10:00:00Z"),
       },
     ]
-    mockState.dbSelectQueue = [
-      [{ creditsCharged: 3 }],
-      [{ date: "2026-06-16", credits: 3 }],
-    ]
+    mockState.dbSelectQueue = [[{ creditsCharged: 3 }], [{ date: "2026-06-16", credits: 3 }]]
 
     const res = await getUsageSummary()
-    const body = await res.json() as any
+    const body = (await res.json()) as any
 
     expect(res.status).toBe(200)
     expect(body.credits).toMatchObject({
@@ -807,8 +879,12 @@ describe("Dodo billing — webhook processing", () => {
   beforeEach(() => {
     resetMockState()
     currentUser = {
-      id: "user_1", name: "Arka", email: "arka@example.com",
-      plan: "explore", subscriptionStatus: "inactive", dodoSubscriptionId: null,
+      id: "user_1",
+      name: "Arka",
+      email: "arka@example.com",
+      plan: "explore",
+      subscriptionStatus: "inactive",
+      dodoSubscriptionId: null,
     }
     setDodoEnv("test")
   })
@@ -829,7 +905,9 @@ describe("Dodo billing — webhook processing", () => {
     const ts = Math.floor(Date.now() / 1000).toString()
     const badBody = "not-json"
     const signedPayload = `${id}.${ts}.${badBody}`
-    const sig = createHmac("sha256", Buffer.from("test_secret")).update(signedPayload).digest("base64")
+    const sig = createHmac("sha256", Buffer.from("test_secret"))
+      .update(signedPayload)
+      .digest("base64")
     const res = await app().request("/api/billing/webhook", {
       method: "POST",
       headers: {
@@ -1046,9 +1124,12 @@ describe("Dodo billing — webhook processing", () => {
   it("deduplicates identical webhook events", async () => {
     mockState.recordPaymentEvent = async () => ({ duplicate: true })
 
-    const body = { type: "subscription.active", data: { metadata: { userId: "user_1", plan: "pro" } } }
+    const body = {
+      type: "subscription.active",
+      data: { metadata: { userId: "user_1", plan: "pro" } },
+    }
     const res = await sendWebhook(body)
-    const result = await res.json() as any
+    const result = (await res.json()) as any
     expect(result.deduplicated).toBe(true)
   })
 

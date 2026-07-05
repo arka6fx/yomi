@@ -10,7 +10,10 @@ async function downloadFile(url: string, maxBytes = 30 * 1024 * 1024): Promise<A
   const res = await fetch(url, { signal: AbortSignal.timeout(30_000) })
   if (!res.ok) throw new Error(`Download failed: ${res.status} ${res.statusText}`)
   const bytes = await res.arrayBuffer()
-  if (bytes.byteLength > maxBytes) throw new Error(`File too large (${(bytes.byteLength / 1024 / 1024).toFixed(0)} MB, max ${maxBytes / 1024 / 1024} MB)`)
+  if (bytes.byteLength > maxBytes)
+    throw new Error(
+      `File too large (${(bytes.byteLength / 1024 / 1024).toFixed(0)} MB, max ${maxBytes / 1024 / 1024} MB)`,
+    )
   return bytes
 }
 
@@ -127,7 +130,11 @@ async function extractText(url: string, mimeOverride?: string): Promise<DocResul
       const text = await parsePdf(bytes)
       return text ? { text } : { error: "PDF parsing returned no text" }
     }
-    if (mime.includes("wordprocessingml") || mime.includes("docx") || mime === "application/msword") {
+    if (
+      mime.includes("wordprocessingml") ||
+      mime.includes("docx") ||
+      mime === "application/msword"
+    ) {
       const text = await parseDocx(bytes)
       return text ? { text } : { error: "DOCX parsing returned no text" }
     }

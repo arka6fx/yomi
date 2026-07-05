@@ -37,13 +37,7 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
           .max(30)
           .default(7)
           .describe("Number of days ahead to look (default: 7)"),
-        maxResults: z
-          .number()
-          .int()
-          .min(1)
-          .max(50)
-          .default(20)
-          .describe("Max events to return"),
+        maxResults: z.number().int().min(1).max(50).default(20).describe("Max events to return"),
       }),
       execute: async ({ days, maxResults }) => {
         try {
@@ -75,7 +69,8 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
             location: e.location,
             description: e.description?.slice(0, 500),
           }))
-          if (events.length === 0) return { events: [], message: "No events found in this time range." }
+          if (events.length === 0)
+            return { events: [], message: "No events found in this time range." }
           return { count: events.length, events }
         } catch (err) {
           return connectorError(err)
@@ -124,9 +119,7 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
       description:
         "Find free time slots in the user's calendar. Useful for scheduling. Returns busy periods and implied free windows.",
       parameters: z.object({
-        date: z
-          .string()
-          .describe("Date to check in YYYY-MM-DD format (checks 6am–10pm that day)"),
+        date: z.string().describe("Date to check in YYYY-MM-DD format (checks 6am–10pm that day)"),
       }),
       execute: async ({ date }) => {
         try {
@@ -166,7 +159,9 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
         "Create a new event on the user's primary Google Calendar. Provide ISO 8601 start/end datetimes including a timezone offset (e.g. 2026-07-01T14:00:00-04:00). Confirm the details with the user before creating.",
       parameters: z.object({
         title: z.string().describe("Event title / summary"),
-        start: z.string().describe("Start datetime, ISO 8601 with offset, e.g. 2026-07-01T14:00:00-04:00"),
+        start: z
+          .string()
+          .describe("Start datetime, ISO 8601 with offset, e.g. 2026-07-01T14:00:00-04:00"),
         end: z.string().describe("End datetime, ISO 8601 with offset"),
         description: z.string().optional().describe("Event description / notes"),
         location: z.string().optional().describe("Event location"),
@@ -187,18 +182,26 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
           args,
           async () => {
             try {
-              const event = await calendar<{ id: string; htmlLink?: string }>("/calendars/primary/events", {
-                method: "POST",
-                body: JSON.stringify({
-                  summary: title,
-                  start: { dateTime: start },
-                  end: { dateTime: end },
-                  description,
-                  location,
-                  attendees: attendees?.map((email) => ({ email })),
-                }),
-              })
-              return { ok: true, eventId: event.id, link: event.htmlLink, message: `Event "${title}" created.` }
+              const event = await calendar<{ id: string; htmlLink?: string }>(
+                "/calendars/primary/events",
+                {
+                  method: "POST",
+                  body: JSON.stringify({
+                    summary: title,
+                    start: { dateTime: start },
+                    end: { dateTime: end },
+                    description,
+                    location,
+                    attendees: attendees?.map((email) => ({ email })),
+                  }),
+                },
+              )
+              return {
+                ok: true,
+                eventId: event.id,
+                link: event.htmlLink,
+                message: `Event "${title}" created.`,
+              }
             } catch (err) {
               return connectorError(err)
             }
@@ -232,7 +235,9 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
               start ? `Start: ${start}` : null,
               end ? `End: ${end}` : null,
               location ? `Location: ${location}` : null,
-            ].filter(Boolean).join("\n"),
+            ]
+              .filter(Boolean)
+              .join("\n"),
             confirmText: "Update event",
           },
           args,
@@ -248,7 +253,12 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
                 `/calendars/primary/events/${encodeURIComponent(eventId)}`,
                 { method: "PATCH", body: JSON.stringify(patch) },
               )
-              return { ok: true, eventId: event.id, link: event.htmlLink, message: "Event updated." }
+              return {
+                ok: true,
+                eventId: event.id,
+                link: event.htmlLink,
+                message: "Event updated.",
+              }
             } catch (err) {
               return connectorError(err)
             }
@@ -278,7 +288,9 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
           args,
           async () => {
             try {
-              await calendar(`/calendars/primary/events/${encodeURIComponent(eventId)}`, { method: "DELETE" })
+              await calendar(`/calendars/primary/events/${encodeURIComponent(eventId)}`, {
+                method: "DELETE",
+              })
               return { ok: true, message: `Event ${eventId} deleted.` }
             } catch (err) {
               return connectorError(err)
@@ -289,7 +301,8 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
     }),
 
     "calendar-listCalendars": tool({
-      description: "List all calendars the user has access to, including the primary calendar and any secondary calendars they've created or subscribed to.",
+      description:
+        "List all calendars the user has access to, including the primary calendar and any secondary calendars they've created or subscribed to.",
       parameters: z.object({}),
       execute: async () => {
         try {
@@ -320,7 +333,11 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
       description:
         "Quickly create a calendar event using natural language text. Google Calendar parses the text to extract title, date, time, and duration. Example: 'Lunch with Sarah tomorrow at 1pm for 1 hour'.",
       parameters: z.object({
-        text: z.string().describe("Natural language event description, e.g. 'Meeting with John next Tuesday at 2pm'"),
+        text: z
+          .string()
+          .describe(
+            "Natural language event description, e.g. 'Meeting with John next Tuesday at 2pm'",
+          ),
         calendarId: z.string().optional().describe("Calendar ID (defaults to primary)"),
       }),
       execute: async (args) => {
@@ -345,7 +362,13 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
                   body: JSON.stringify({ text: args.text }),
                 },
               )
-              return { ok: true, eventId: event.id, title: event.summary, link: event.htmlLink, message: `Event "${event.summary}" created.` }
+              return {
+                ok: true,
+                eventId: event.id,
+                title: event.summary,
+                link: event.htmlLink,
+                message: `Event "${event.summary}" created.`,
+              }
             } catch (err) {
               return connectorError(err)
             }
@@ -355,7 +378,8 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
     }),
 
     "calendar-getCalendar": tool({
-      description: "Get metadata for a specific Google Calendar by ID, including its name, description, timezone, and access role.",
+      description:
+        "Get metadata for a specific Google Calendar by ID, including its name, description, timezone, and access role.",
       parameters: z.object({
         calendarId: z.string().optional().describe("Calendar ID (defaults to primary)"),
       }),
@@ -390,9 +414,14 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
       description:
         "Create a new event on a Google Calendar with a Google Meet video conferencing link attached. Provide ISO 8601 start/end datetimes with timezone offset (e.g. 2026-07-01T14:00:00-04:00). Confirm the details with the user before creating.",
       parameters: z.object({
-        calendarId: z.string().optional().describe("Calendar ID to create the event in (defaults to primary)"),
+        calendarId: z
+          .string()
+          .optional()
+          .describe("Calendar ID to create the event in (defaults to primary)"),
         title: z.string().describe("Event title / summary"),
-        start: z.string().describe("Start datetime, ISO 8601 with offset, e.g. 2026-07-01T14:00:00-04:00"),
+        start: z
+          .string()
+          .describe("Start datetime, ISO 8601 with offset, e.g. 2026-07-01T14:00:00-04:00"),
         end: z.string().describe("End datetime, ISO 8601 with offset"),
         description: z.string().optional().describe("Event description / notes"),
         location: z.string().optional().describe("Event location"),
@@ -414,26 +443,27 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
           async () => {
             try {
               const cal = calendarId ?? "primary"
-              const event = await calendar<{ id: string; htmlLink?: string; conferenceData?: { entryPoints?: { uri?: string }[] } }>(
-                `/calendars/${encodeURIComponent(cal)}/events?conferenceDataVersion=1`,
-                {
-                  method: "POST",
-                  body: JSON.stringify({
-                    summary: title,
-                    start: { dateTime: start },
-                    end: { dateTime: end },
-                    description,
-                    location,
-                    attendees: attendees?.map((email) => ({ email })),
-                    conferenceData: {
-                      createRequest: {
-                        requestId: `yomi-${Date.now()}`,
-                        conferenceSolutionKey: { type: "hangoutsMeet" },
-                      },
+              const event = await calendar<{
+                id: string
+                htmlLink?: string
+                conferenceData?: { entryPoints?: { uri?: string }[] }
+              }>(`/calendars/${encodeURIComponent(cal)}/events?conferenceDataVersion=1`, {
+                method: "POST",
+                body: JSON.stringify({
+                  summary: title,
+                  start: { dateTime: start },
+                  end: { dateTime: end },
+                  description,
+                  location,
+                  attendees: attendees?.map((email) => ({ email })),
+                  conferenceData: {
+                    createRequest: {
+                      requestId: `yomi-${Date.now()}`,
+                      conferenceSolutionKey: { type: "hangoutsMeet" },
                     },
-                  }),
-                },
-              )
+                  },
+                }),
+              })
               const meetLink = event.conferenceData?.entryPoints?.find((e) => e.uri)?.uri ?? null
               return {
                 ok: true,
@@ -457,7 +487,8 @@ export const googleCalendarDef: ConnectorDef = {
   name: "Google Calendar",
   category: "productivity",
   icon: "google-calendar",
-  description: "View events, check availability, and create, edit, or delete events on your Google Calendar.",
+  description:
+    "View events, check availability, and create, edit, or delete events on your Google Calendar.",
   readOnlyByDefault: false,
   auth: {
     kind: "oauth2",
@@ -483,7 +514,11 @@ export const googleCalendarDef: ConnectorDef = {
       "NOTE: the full calendar scope is a sensitive scope — requires Google OAuth verification before non-owner users can connect",
     ],
     collect: [
-      { env: "GOOGLE_INTEGRATIONS_CLIENT_ID", label: "Google Client ID (same as Gmail)", secret: false },
+      {
+        env: "GOOGLE_INTEGRATIONS_CLIENT_ID",
+        label: "Google Client ID (same as Gmail)",
+        secret: false,
+      },
       { env: "GOOGLE_INTEGRATIONS_CLIENT_SECRET", label: "Google Client Secret", secret: true },
     ],
     docsUrl: "https://developers.google.com/calendar/api/quickstart",

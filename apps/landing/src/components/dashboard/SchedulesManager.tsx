@@ -20,7 +20,12 @@ const EXAMPLES = ["every day 9am", "every monday 9am", "every weekday 8am", "eve
 
 function when(value?: string | null) {
   if (!value) return null
-  return new Date(value).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+  return new Date(value).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })
 }
 
 // Cloud schedules. Created here and run by the backend cron trigger, so they fire even
@@ -119,7 +124,8 @@ export function SchedulesManager({ token }: { token: string }) {
               Scheduled <span className="italic">tasks</span>
             </h2>
             <p className="mt-1 max-w-md text-sm text-muted-foreground">
-              Yomi runs these on a schedule, even when your desktop is closed, and sends the result to your Telegram.
+              Yomi runs these on a schedule, even when your desktop is closed, and sends the result
+              to your Telegram.
             </p>
           </div>
         </div>
@@ -169,7 +175,9 @@ export function SchedulesManager({ token }: { token: string }) {
               </button>
             ))}
           </div>
-          <label className="mb-1 mt-3 block text-xs font-medium text-muted-foreground">What should Yomi do?</label>
+          <label className="mb-1 mt-3 block text-xs font-medium text-muted-foreground">
+            What should Yomi do?
+          </label>
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
@@ -211,14 +219,20 @@ export function SchedulesManager({ token }: { token: string }) {
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium text-foreground">{row.schedule}</span>
-                  {!row.enabled && <span className="text-[11px] text-muted-foreground">paused</span>}
+                  <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium text-foreground">
+                    {row.schedule}
+                  </span>
+                  {!row.enabled && (
+                    <span className="text-[11px] text-muted-foreground">paused</span>
+                  )}
                 </div>
                 <p className="mt-1.5 text-sm leading-relaxed text-foreground">{row.prompt}</p>
                 <p className="mt-1 text-[11px] text-muted-foreground">
                   {row.enabled && row.nextRunAt ? `Next ${when(row.nextRunAt)}` : "Paused"}
                   {row.runCount ? ` · ${row.runCount} run${row.runCount === 1 ? "" : "s"}` : ""}
-                  {row.lastRunStatus === "error" && row.lastRunError ? ` · last run failed: ${row.lastRunError}` : ""}
+                  {row.lastRunStatus === "error" && row.lastRunError
+                    ? ` · last run failed: ${row.lastRunError}`
+                    : ""}
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-1">
@@ -228,7 +242,13 @@ export function SchedulesManager({ token }: { token: string }) {
                   aria-label={row.enabled ? "Pause" : "Resume"}
                   className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground disabled:opacity-50"
                 >
-                  {busy === row.id ? <Loader2 size={14} className="animate-spin" /> : row.enabled ? <Pause size={14} /> : <Play size={14} />}
+                  {busy === row.id ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : row.enabled ? (
+                    <Pause size={14} />
+                  ) : (
+                    <Play size={14} />
+                  )}
                 </button>
                 <button
                   onClick={() => remove(row.id)}

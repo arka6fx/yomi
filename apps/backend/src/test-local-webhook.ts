@@ -13,7 +13,10 @@ function requiredEnv(name: string): string {
   return val
 }
 
-async function sendWebhook(body: Record<string, any>, secret: string): Promise<{ status: number; text: string }> {
+async function sendWebhook(
+  body: Record<string, any>,
+  secret: string,
+): Promise<{ status: number; text: string }> {
   const rawBody = JSON.stringify(body)
   const webhookId = `wh_test_${Math.random().toString(36).substring(2, 11)}`
   const timestamp = Math.floor(Date.now() / 1000).toString()
@@ -26,7 +29,7 @@ async function sendWebhook(body: Record<string, any>, secret: string): Promise<{
   const key = cleanSecret.startsWith("whsec_")
     ? Buffer.from(normalizedSecret, "base64")
     : Buffer.from(normalizedSecret)
-  
+
   const signature = createHmac("sha256", key).update(signedPayload).digest("base64")
 
   const response = await fetch(TARGET_URL, {
@@ -53,7 +56,9 @@ async function run() {
   const dodoEnv = requiredEnv("DODO_ENV")
   console.log(`DODO_ENV: ${dodoEnv}`)
   if (dodoEnv !== "test") {
-    console.warn("WARNING: DODO_ENV is not set to 'test'. Local webhook tests should be run in test mode.")
+    console.warn(
+      "WARNING: DODO_ENV is not set to 'test'. Local webhook tests should be run in test mode.",
+    )
   }
 
   const webhookSecret = requiredEnv("DODO_TEST_WEBHOOK_SECRET")
@@ -61,8 +66,12 @@ async function run() {
 
   // 2. Fetch or create a test user
   console.log("Connecting to database...")
-  
-  let [testUser] = await db.select().from(user).where(eq(user.email, "arkagarai292@gmail.com")).limit(1)
+
+  let [testUser] = await db
+    .select()
+    .from(user)
+    .where(eq(user.email, "arkagarai292@gmail.com"))
+    .limit(1)
 
   if (!testUser) {
     const usersList = await db.select().from(user).limit(1)
@@ -71,13 +80,16 @@ async function run() {
 
   if (!testUser) {
     console.log("No users found in database. Creating a test user...")
-    const result = await db.insert(user).values({
-      id: `usr_test_${Math.random().toString(36).substring(2, 11)}`,
-      email: "test_user_webhook@example.com",
-      name: "Webhook Test User",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }).returning()
+    const result = await db
+      .insert(user)
+      .values({
+        id: `usr_test_${Math.random().toString(36).substring(2, 11)}`,
+        email: "test_user_webhook@example.com",
+        name: "Webhook Test User",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning()
     testUser = result[0]
   }
 
@@ -86,7 +98,9 @@ async function run() {
   }
 
   console.log(`Using test user: ID=${testUser.id}, Email=${testUser.email}, Name=${testUser.name}`)
-  console.log(`Initial User Status: plan=${testUser.plan}, subscriptionStatus=${testUser.subscriptionStatus}`)
+  console.log(
+    `Initial User Status: plan=${testUser.plan}, subscriptionStatus=${testUser.subscriptionStatus}`,
+  )
 
   // 3. Test subscription.active event
   console.log("\nSending 'subscription.active' webhook event for 'pro' plan...")
@@ -110,12 +124,14 @@ async function run() {
 
   // Verify updates in database
   const [updatedUserRecord] = await db.select().from(user).where(eq(user.id, testUser.id)).limit(1)
-  console.log(`Post-Webhook User Status: plan=${updatedUserRecord?.plan}, subscriptionStatus=${updatedUserRecord?.subscriptionStatus}, dodoSubscriptionId=${updatedUserRecord?.dodoSubscriptionId}`)
+  console.log(
+    `Post-Webhook User Status: plan=${updatedUserRecord?.plan}, subscriptionStatus=${updatedUserRecord?.subscriptionStatus}, dodoSubscriptionId=${updatedUserRecord?.dodoSubscriptionId}`,
+  )
 
   if (updatedUserRecord?.plan === "pro" && updatedUserRecord?.subscriptionStatus === "active") {
-    console.log("✅ subscription.active webhook test PASSED!");
+    console.log("✅ subscription.active webhook test PASSED!")
   } else {
-    console.log("❌ subscription.active webhook test FAILED!");
+    console.log("❌ subscription.active webhook test FAILED!")
   }
 
   // 4. Test payment.succeeded event (credit packs)
@@ -144,13 +160,16 @@ async function run() {
   // Since user tables and credits tables exist, let's verify if payment_records or credit_grants was created
   // Wait, let's query credit account if any
   console.log("Checking if credits were updated/granted...")
-  const [userCredits] = await db.select().from(creditAccounts).where(eq(creditAccounts.userId, testUser!.id))
+  const [userCredits] = await db
+    .select()
+    .from(creditAccounts)
+    .where(eq(creditAccounts.userId, testUser!.id))
   console.log(`User Credits: ${JSON.stringify(userCredits ?? "No credit account found")}`)
-  
+
   if (creditRes.status === 200) {
-    console.log("✅ payment.succeeded webhook test PASSED!");
+    console.log("✅ payment.succeeded webhook test PASSED!")
   } else {
-    console.log("❌ payment.succeeded webhook test FAILED!");
+    console.log("❌ payment.succeeded webhook test FAILED!")
   }
 
   // 5. Test subscription.cancelled event
@@ -169,19 +188,30 @@ async function run() {
   console.log(`Response Status: ${cancelRes.status}`)
   console.log(`Response Body: ${cancelRes.text}`)
 
-  const [cancelledUserRecord] = await db.select().from(user).where(eq(user.id, testUser.id)).limit(1)
-  console.log(`Post-Cancel User Status: plan=${cancelledUserRecord?.plan}, subscriptionStatus=${cancelledUserRecord?.subscriptionStatus}`)
+  const [cancelledUserRecord] = await db
+    .select()
+    .from(user)
+    .where(eq(user.id, testUser.id))
+    .limit(1)
+  console.log(
+    `Post-Cancel User Status: plan=${cancelledUserRecord?.plan}, subscriptionStatus=${cancelledUserRecord?.subscriptionStatus}`,
+  )
 
-  if (cancelledUserRecord?.plan === "explore" && cancelledUserRecord?.subscriptionStatus === "inactive") {
-    console.log("✅ subscription.cancelled webhook test PASSED!");
+  if (
+    cancelledUserRecord?.plan === "explore" &&
+    cancelledUserRecord?.subscriptionStatus === "inactive"
+  ) {
+    console.log("✅ subscription.cancelled webhook test PASSED!")
   } else {
-    console.log("❌ subscription.cancelled webhook test FAILED!");
+    console.log("❌ subscription.cancelled webhook test FAILED!")
   }
 }
 
-run().catch((err) => {
-  console.error("Test execution failed:", err)
-  process.exit(1)
-}).then(() => {
-  process.exit(0)
-})
+run()
+  .catch((err) => {
+    console.error("Test execution failed:", err)
+    process.exit(1)
+  })
+  .then(() => {
+    process.exit(0)
+  })

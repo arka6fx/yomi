@@ -4,8 +4,8 @@
   "references": {
     "specs": {
       "path": "./specs",
-      "description": "Product specifications and design documents"
-    }
+      "description": "Product specifications and design documents",
+    },
   },
   "mcp": {
     "github": {
@@ -42,7 +42,7 @@
     "better-auth": {
       "type": "local",
       "command": ["npx", "-y", "@better-auth/mcp@latest"],
-      "enabled": true
-    }
-  }
+      "enabled": true,
+    },
+  },
 }

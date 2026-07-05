@@ -57,7 +57,9 @@ async function backendJson<T>(path: string, init?: RequestInit): Promise<T> {
   return data
 }
 
-export async function listSessions(opts: { limit?: number; query?: string } = {}): Promise<ChatTurn[]> {
+export async function listSessions(
+  opts: { limit?: number; query?: string } = {},
+): Promise<ChatTurn[]> {
   return listHistoryTurns(opts.limit ?? 100, opts.query)
 }
 
@@ -66,7 +68,9 @@ export async function removeSessionTurn(id: number): Promise<boolean> {
 }
 
 export async function listMemories(limit = 100): Promise<MemoryEntry[]> {
-  const data = await backendJson<{ memories?: MemoryEntry[] }>(`/api/memory/entries?limit=${encodeURIComponent(String(limit))}`)
+  const data = await backendJson<{ memories?: MemoryEntry[] }>(
+    `/api/memory/entries?limit=${encodeURIComponent(String(limit))}`,
+  )
   return data.memories ?? []
 }
 
@@ -78,7 +82,9 @@ export async function searchMemories(query: string, limit = 50): Promise<MemoryE
   return data.memories ?? []
 }
 
-export async function addMemory(input: Partial<MemoryEntry> & { content: string }): Promise<MemoryEntry> {
+export async function addMemory(
+  input: Partial<MemoryEntry> & { content: string },
+): Promise<MemoryEntry> {
   const data = await backendJson<{ memory?: MemoryEntry }>("/api/memory/add", {
     method: "POST",
     body: JSON.stringify({ kind: "fact", scope: "global", confidence: 80, ...input }),
@@ -87,7 +93,10 @@ export async function addMemory(input: Partial<MemoryEntry> & { content: string 
   return data.memory
 }
 
-export async function forgetMemory(id: string, hard = false): Promise<{ forgotten?: number; deleted?: number; ids?: string[] }> {
+export async function forgetMemory(
+  id: string,
+  hard = false,
+): Promise<{ forgotten?: number; deleted?: number; ids?: string[] }> {
   return backendJson("/api/memory/forget", { method: "POST", body: JSON.stringify({ id, hard }) })
 }
 
@@ -104,7 +113,8 @@ export async function upsertSchedule(input: {
   enabled?: boolean
 }): Promise<CronJob> {
   const scheduleCheck = validateScheduleInput(input.schedule)
-  if (!scheduleCheck.ok || !scheduleCheck.scheduleType) throw new Error(scheduleCheck.error ?? "Invalid schedule")
+  if (!scheduleCheck.ok || !scheduleCheck.scheduleType)
+    throw new Error(scheduleCheck.error ?? "Invalid schedule")
   const jobs = await loadJobs()
   const now = new Date().toISOString()
   const id = input.id ?? `cron-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
@@ -147,7 +157,9 @@ export async function getDiagnostics(): Promise<Diagnostics> {
   const [turns, jobs] = await Promise.all([listHistoryTurns(10000), loadJobs()])
   let sessionFiles = 0
   try {
-    sessionFiles = (await readdir(join(dir, "sessions"))).filter((file) => file.endsWith(".jsonl")).length
+    sessionFiles = (await readdir(join(dir, "sessions"))).filter((file) =>
+      file.endsWith(".jsonl"),
+    ).length
   } catch {
     sessionFiles = 0
   }

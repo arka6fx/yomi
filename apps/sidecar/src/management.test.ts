@@ -32,10 +32,30 @@ beforeEach(async () => {
     const path = String(url)
     if (path.endsWith("/api/memory/search")) {
       expect(init?.method).toBe("POST")
-      return Response.json({ memories: [{ id: "m1", content: "likes concise updates", kind: "preference", scope: "global", topic: "Style", confidence: 90 }] })
+      return Response.json({
+        memories: [
+          {
+            id: "m1",
+            content: "likes concise updates",
+            kind: "preference",
+            scope: "global",
+            topic: "Style",
+            confidence: 90,
+          },
+        ],
+      })
     }
     if (path.endsWith("/api/memory/add")) {
-      return Response.json({ memory: { id: "m2", content: "new memory", kind: "fact", scope: "global", topic: "Fact", confidence: 80 } })
+      return Response.json({
+        memory: {
+          id: "m2",
+          content: "new memory",
+          kind: "fact",
+          scope: "global",
+          topic: "Fact",
+          confidence: 80,
+        },
+      })
     }
     if (path.endsWith("/api/memory/forget")) {
       return Response.json({ forgotten: 1, ids: ["m1"] })
@@ -66,8 +86,18 @@ async function removeTempDir(path: string): Promise<void> {
 
 describe("management sessions", () => {
   it("lists, searches, and deletes local chat turns", async () => {
-    await appendTurn({ id: 1, transcript: "find invoice", text: "Invoice summary", timestamp: "2026-01-01T00:00:00.000Z" })
-    await appendTurn({ id: 2, transcript: "calendar", text: "Calendar summary", timestamp: "2026-01-01T00:01:00.000Z" })
+    await appendTurn({
+      id: 1,
+      transcript: "find invoice",
+      text: "Invoice summary",
+      timestamp: "2026-01-01T00:00:00.000Z",
+    })
+    await appendTurn({
+      id: 2,
+      transcript: "calendar",
+      text: "Calendar summary",
+      timestamp: "2026-01-01T00:01:00.000Z",
+    })
 
     expect(await listSessions({ query: "invoice" })).toHaveLength(1)
     expect(await removeSessionTurn(1)).toBe(true)
@@ -104,7 +134,12 @@ describe("management memories", () => {
 
 describe("management diagnostics", () => {
   it("summarizes local runtime state", async () => {
-    await appendTurn({ id: 1, transcript: "hello", text: "hi", timestamp: "2026-01-01T00:00:00.000Z" })
+    await appendTurn({
+      id: 1,
+      transcript: "hello",
+      text: "hi",
+      timestamp: "2026-01-01T00:00:00.000Z",
+    })
     await upsertSchedule({ schedule: "30m", prompt: "check status" })
 
     const diagnostics = await getDiagnostics()
@@ -119,18 +154,25 @@ describe("management routes", () => {
   it("serves schedules through the sidecar HTTP boundary", async () => {
     const app = (await import("./index.js")).default
 
-    const create = await app.fetch(new Request("http://sidecar.test/management/schedules", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-sidecar-secret": process.env["SIDECAR_SECRET"] ?? "" },
-      body: JSON.stringify({ schedule: "30m", prompt: "check inbox" }),
-    }))
+    const create = await app.fetch(
+      new Request("http://sidecar.test/management/schedules", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-sidecar-secret": process.env["SIDECAR_SECRET"] ?? "",
+        },
+        body: JSON.stringify({ schedule: "30m", prompt: "check inbox" }),
+      }),
+    )
     expect(create.status).toBe(200)
     const created = (await create.json()) as { schedule?: { id: string } }
     expect(created.schedule?.id).toStartWith("cron-")
 
-    const list = await app.fetch(new Request("http://sidecar.test/management/schedules", {
-      headers: { "x-sidecar-secret": process.env["SIDECAR_SECRET"] ?? "" },
-    }))
+    const list = await app.fetch(
+      new Request("http://sidecar.test/management/schedules", {
+        headers: { "x-sidecar-secret": process.env["SIDECAR_SECRET"] ?? "" },
+      }),
+    )
     expect(list.status).toBe(200)
     const data = (await list.json()) as { schedules?: unknown[] }
     expect(data.schedules).toHaveLength(1)

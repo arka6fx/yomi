@@ -44,7 +44,11 @@ statusRouter.get("/", async (c) => {
   const checks: Check[] = []
 
   // Gateway
-  let gateway: { running: boolean; activeSessions: number; adapters: { platform: string; connected: boolean }[] }
+  let gateway: {
+    running: boolean
+    activeSessions: number
+    adapters: { platform: string; connected: boolean }[]
+  }
   try {
     gateway = getDefaultGateway().getStatus()
   } catch {
@@ -95,15 +99,23 @@ statusRouter.get("/", async (c) => {
   })
 
   // Telegram link
-  let telegram: { connected: boolean; linkedAt: string | null } = { connected: false, linkedAt: null }
+  let telegram: { connected: boolean; linkedAt: string | null } = {
+    connected: false,
+    linkedAt: null,
+  }
   try {
     const [link] = await db
       .select({ connectedAt: platformConnections.connectedAt })
       .from(platformConnections)
-      .where(and(eq(platformConnections.userId, user.id), eq(platformConnections.platform, "telegram")))
+      .where(
+        and(eq(platformConnections.userId, user.id), eq(platformConnections.platform, "telegram")),
+      )
       .orderBy(desc(platformConnections.connectedAt))
       .limit(1)
-    telegram = { connected: !!link, linkedAt: link?.connectedAt ? new Date(link.connectedAt).toISOString() : null }
+    telegram = {
+      connected: !!link,
+      linkedAt: link?.connectedAt ? new Date(link.connectedAt).toISOString() : null,
+    }
   } catch {
     // ignore
   }
@@ -188,7 +200,13 @@ statusRouter.get("/", async (c) => {
   return c.json({
     overall: worstLevel,
     generatedAt: new Date().toISOString(),
-    plan: { plan, name: planName, status: user.subscriptionStatus ?? "inactive", isOwner: owner, billingAccess },
+    plan: {
+      plan,
+      name: planName,
+      status: user.subscriptionStatus ?? "inactive",
+      isOwner: owner,
+      billingAccess,
+    },
     credits: { balance },
     gateway,
     telegram,

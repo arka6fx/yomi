@@ -19,7 +19,9 @@ async function getLinearDisplayName(accessToken: string): Promise<string> {
     const viewer = data.data?.viewer
     if (!viewer) return "Linear"
     const org = viewer.organization?.name
-    return org ? `${viewer.name ?? viewer.email ?? "Linear"} (${org})` : (viewer.name ?? viewer.email ?? "Linear")
+    return org
+      ? `${viewer.name ?? viewer.email ?? "Linear"} (${org})`
+      : (viewer.name ?? viewer.email ?? "Linear")
   } catch {
     return "Linear"
   }

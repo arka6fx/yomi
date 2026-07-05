@@ -50,10 +50,15 @@ describe.skip("Linear backend wrapper", () => {
   it("4. getDisplayName fetches viewer info", async () => {
     const { getConnectorDef } = await import("../registry.js")
     const def = getConnectorDef("linear")
-    global.fetch = mock(async () =>
-      new Response(JSON.stringify({
-        data: { viewer: { name: "Alice", email: "alice@co.com", organization: { name: "Acme" } } },
-      })),
+    global.fetch = mock(
+      async () =>
+        new Response(
+          JSON.stringify({
+            data: {
+              viewer: { name: "Alice", email: "alice@co.com", organization: { name: "Acme" } },
+            },
+          }),
+        ),
     )
     const name = await def?.getDisplayName?.("lin_fake")
     expect(name).toBe("Alice (Acme)")
@@ -92,16 +97,29 @@ describe.skip("Linear tools", () => {
   })
 
   it("6. linear.listIssues returns issues", async () => {
-    global.fetch = mock(async () =>
-      new Response(JSON.stringify({
-        data: {
-          issues: {
-            nodes: [
-              { id: "iss-1", identifier: "ENG-1", title: "Fix bug", state: { name: "Todo" }, assignee: { name: "Alice" }, team: { name: "Engineering" }, priority: 2, url: "https://linear.app/issue/ENG-1", updatedAt: "2024-01-01T00:00:00Z" },
-            ],
-          },
-        },
-      })),
+    global.fetch = mock(
+      async () =>
+        new Response(
+          JSON.stringify({
+            data: {
+              issues: {
+                nodes: [
+                  {
+                    id: "iss-1",
+                    identifier: "ENG-1",
+                    title: "Fix bug",
+                    state: { name: "Todo" },
+                    assignee: { name: "Alice" },
+                    team: { name: "Engineering" },
+                    priority: 2,
+                    url: "https://linear.app/issue/ENG-1",
+                    updatedAt: "2024-01-01T00:00:00Z",
+                  },
+                ],
+              },
+            },
+          }),
+        ),
     )
     const result = await linearTools["linear.listIssues"].execute!({ limit: 15 })
     expect(result.count).toBe(1)
@@ -111,26 +129,44 @@ describe.skip("Linear tools", () => {
   })
 
   it("7. linear.listIssues handles empty result", async () => {
-    global.fetch = mock(async () =>
-      new Response(JSON.stringify({ data: { issues: { nodes: [] } } })),
+    global.fetch = mock(
+      async () => new Response(JSON.stringify({ data: { issues: { nodes: [] } } })),
     )
     const result = await linearTools["linear.listIssues"].execute!({ limit: 15 })
     expect(result.message).toInclude("No issues found")
   })
 
   it("8. linear.getIssue returns details", async () => {
-    global.fetch = mock(async () =>
-      new Response(JSON.stringify({
-        data: {
-          issue: {
-            id: "iss-1", identifier: "ENG-1", title: "Fix bug", description: "Critical bug fix needed",
-            state: { name: "In Progress" }, assignee: { name: "Alice", email: "alice@co.com" },
-            team: { name: "Engineering" }, priority: 1, url: "https://linear.app/issue/ENG-1",
-            createdAt: "2024-01-01T00:00:00Z", updatedAt: "2024-01-02T00:00:00Z",
-            comments: { nodes: [{ body: "Working on it", author: { name: "Bob" }, createdAt: "2024-01-01T12:00:00Z" }] },
-          },
-        },
-      })),
+    global.fetch = mock(
+      async () =>
+        new Response(
+          JSON.stringify({
+            data: {
+              issue: {
+                id: "iss-1",
+                identifier: "ENG-1",
+                title: "Fix bug",
+                description: "Critical bug fix needed",
+                state: { name: "In Progress" },
+                assignee: { name: "Alice", email: "alice@co.com" },
+                team: { name: "Engineering" },
+                priority: 1,
+                url: "https://linear.app/issue/ENG-1",
+                createdAt: "2024-01-01T00:00:00Z",
+                updatedAt: "2024-01-02T00:00:00Z",
+                comments: {
+                  nodes: [
+                    {
+                      body: "Working on it",
+                      author: { name: "Bob" },
+                      createdAt: "2024-01-01T12:00:00Z",
+                    },
+                  ],
+                },
+              },
+            },
+          }),
+        ),
     )
     const result = await linearTools["linear.getIssue"].execute!({ identifier: "ENG-1" })
     expect(result.title).toBe("Fix bug")
@@ -145,13 +181,30 @@ describe.skip("Linear tools", () => {
       const body = JSON.parse((init?.body as string) ?? "{}")
       callCount++
       if (body.query?.includes("teams")) {
-        return new Response(JSON.stringify({ data: { teams: { nodes: [{ id: "team-1", name: "Engineering" }] } } }))
+        return new Response(
+          JSON.stringify({ data: { teams: { nodes: [{ id: "team-1", name: "Engineering" }] } } }),
+        )
       }
-      return new Response(JSON.stringify({
-        data: { issueCreate: { success: true, issue: { id: "iss-new", identifier: "ENG-42", url: "https://linear.app/issue/ENG-42" } } },
-      }))
+      return new Response(
+        JSON.stringify({
+          data: {
+            issueCreate: {
+              success: true,
+              issue: {
+                id: "iss-new",
+                identifier: "ENG-42",
+                url: "https://linear.app/issue/ENG-42",
+              },
+            },
+          },
+        }),
+      )
     })
-    const result = await linearTools["linear.createIssue"].execute!({ title: "New bug", teamName: "Engineering", priority: "high" })
+    const result = await linearTools["linear.createIssue"].execute!({
+      title: "New bug",
+      teamName: "Engineering",
+      priority: "high",
+    })
     expect(result.ok).toBeTrue()
     expect(result.identifier).toBe("ENG-42")
     expect(callCount).toBe(2)
@@ -163,15 +216,36 @@ describe.skip("Linear tools", () => {
       const body = JSON.parse((init?.body as string) ?? "{}")
       callCount++
       if (body.query?.includes("GetIssueId")) {
-        return new Response(JSON.stringify({
-          data: { issue: { id: "iss-1", team: { states: { nodes: [{ id: "st-done", name: "Done" }] } } } },
-        }))
+        return new Response(
+          JSON.stringify({
+            data: {
+              issue: {
+                id: "iss-1",
+                team: { states: { nodes: [{ id: "st-done", name: "Done" }] } },
+              },
+            },
+          }),
+        )
       }
-      return new Response(JSON.stringify({
-        data: { issueUpdate: { success: true, issue: { identifier: "ENG-1", url: "https://linear.app/issue/ENG-1", state: { name: "Done" } } } },
-      }))
+      return new Response(
+        JSON.stringify({
+          data: {
+            issueUpdate: {
+              success: true,
+              issue: {
+                identifier: "ENG-1",
+                url: "https://linear.app/issue/ENG-1",
+                state: { name: "Done" },
+              },
+            },
+          },
+        }),
+      )
     })
-    const result = await linearTools["linear.updateIssue"].execute!({ identifier: "ENG-1", state: "Done" })
+    const result = await linearTools["linear.updateIssue"].execute!({
+      identifier: "ENG-1",
+      state: "Done",
+    })
     expect(result.ok).toBeTrue()
     expect(callCount).toBe(2)
   })
@@ -213,19 +287,35 @@ describe("Linear write tools", () => {
       const body = JSON.parse((init?.body as string) ?? "{}")
       queries.push(body.query ?? "")
       if (body.query?.includes("GetIssueId")) {
-        return new Response(JSON.stringify({
-          data: { issue: { id: "iss-1", team: { states: { nodes: [] } } } },
-        }))
+        return new Response(
+          JSON.stringify({
+            data: { issue: { id: "iss-1", team: { states: { nodes: [] } } } },
+          }),
+        )
       }
       if (body.query?.includes("viewer")) {
         return new Response(JSON.stringify({ data: { viewer: { id: "user-me" } } }))
       }
       updateInput = body.variables?.input
-      return new Response(JSON.stringify({
-        data: { issueUpdate: { success: true, issue: { identifier: "ENG-1", url: "https://linear.app/issue/ENG-1", state: { name: "Todo" } } } },
-      }))
+      return new Response(
+        JSON.stringify({
+          data: {
+            issueUpdate: {
+              success: true,
+              issue: {
+                identifier: "ENG-1",
+                url: "https://linear.app/issue/ENG-1",
+                state: { name: "Todo" },
+              },
+            },
+          },
+        }),
+      )
     })
-    const result = await linearTools["linear-updateIssue"].execute!({ identifier: "ENG-1", assignee: "me" })
+    const result = await linearTools["linear-updateIssue"].execute!({
+      identifier: "ENG-1",
+      assignee: "me",
+    })
     expect(result.ok).toBeTrue()
     expect(updateInput.assigneeId).toBe("user-me")
   })
@@ -235,21 +325,37 @@ describe("Linear write tools", () => {
     global.fetch = mock(async (_url: string, init?: RequestInit) => {
       const body = JSON.parse((init?.body as string) ?? "{}")
       if (body.query?.includes("GetIssueId")) {
-        return new Response(JSON.stringify({
-          data: { issue: { id: "iss-1", team: { states: { nodes: [] } } } },
-        }))
+        return new Response(
+          JSON.stringify({
+            data: { issue: { id: "iss-1", team: { states: { nodes: [] } } } },
+          }),
+        )
       }
       if (body.query?.includes("users")) {
-        return new Response(JSON.stringify({
-          data: { users: { nodes: [{ id: "user-alice", name: "Alice", email: "alice@co.com" }] } },
-        }))
+        return new Response(
+          JSON.stringify({
+            data: {
+              users: { nodes: [{ id: "user-alice", name: "Alice", email: "alice@co.com" }] },
+            },
+          }),
+        )
       }
       updateInput = body.variables?.input
-      return new Response(JSON.stringify({
-        data: { issueUpdate: { success: true, issue: { identifier: "ENG-1", url: "u", state: { name: "Todo" } } } },
-      }))
+      return new Response(
+        JSON.stringify({
+          data: {
+            issueUpdate: {
+              success: true,
+              issue: { identifier: "ENG-1", url: "u", state: { name: "Todo" } },
+            },
+          },
+        }),
+      )
     })
-    const result = await linearTools["linear-updateIssue"].execute!({ identifier: "ENG-1", assignee: "Alice" })
+    const result = await linearTools["linear-updateIssue"].execute!({
+      identifier: "ENG-1",
+      assignee: "Alice",
+    })
     expect(result.ok).toBeTrue()
     expect(updateInput.assigneeId).toBe("user-alice")
   })
@@ -262,19 +368,34 @@ describe("Linear write tools", () => {
         return new Response(JSON.stringify({ data: { issue: { id: "iss-1" } } }))
       }
       commentInput = body.variables
-      return new Response(JSON.stringify({
-        data: { commentCreate: { success: true, comment: { id: "c-1", url: "https://linear.app/issue/ENG-1#comment-c-1" } } },
-      }))
+      return new Response(
+        JSON.stringify({
+          data: {
+            commentCreate: {
+              success: true,
+              comment: { id: "c-1", url: "https://linear.app/issue/ENG-1#comment-c-1" },
+            },
+          },
+        }),
+      )
     })
-    const result = await linearTools["linear-addComment"].execute!({ identifier: "ENG-1", body: "Looks good" })
+    const result = await linearTools["linear-addComment"].execute!({
+      identifier: "ENG-1",
+      body: "Looks good",
+    })
     expect(result.ok).toBeTrue()
     expect(result.url).toInclude("comment")
     expect(commentInput.body).toBe("Looks good")
   })
 
   it("15. linear-listTeams returns teams", async () => {
-    global.fetch = mock(async () =>
-      new Response(JSON.stringify({ data: { teams: { nodes: [{ id: "t1", name: "Engineering", key: "ENG" }] } } })),
+    global.fetch = mock(
+      async () =>
+        new Response(
+          JSON.stringify({
+            data: { teams: { nodes: [{ id: "t1", name: "Engineering", key: "ENG" }] } },
+          }),
+        ),
     )
     const result = await linearTools["linear-listTeams"].execute!({})
     expect(result.count).toBe(1)
@@ -282,8 +403,24 @@ describe("Linear write tools", () => {
   })
 
   it("16. linear-listProjects returns projects", async () => {
-    global.fetch = mock(async () =>
-      new Response(JSON.stringify({ data: { projects: { nodes: [{ id: "p1", name: "Q3 Launch", state: "started", url: "https://linear.app/project/p1" }] } } })),
+    global.fetch = mock(
+      async () =>
+        new Response(
+          JSON.stringify({
+            data: {
+              projects: {
+                nodes: [
+                  {
+                    id: "p1",
+                    name: "Q3 Launch",
+                    state: "started",
+                    url: "https://linear.app/project/p1",
+                  },
+                ],
+              },
+            },
+          }),
+        ),
     )
     const result = await linearTools["linear-listProjects"].execute!({})
     expect(result.count).toBe(1)
@@ -291,8 +428,20 @@ describe("Linear write tools", () => {
   })
 
   it("17. linear-listLabels returns labels", async () => {
-    global.fetch = mock(async () =>
-      new Response(JSON.stringify({ data: { issueLabels: { nodes: [{ id: "l1", name: "bug" }, { id: "l2", name: "feature" }] } } })),
+    global.fetch = mock(
+      async () =>
+        new Response(
+          JSON.stringify({
+            data: {
+              issueLabels: {
+                nodes: [
+                  { id: "l1", name: "bug" },
+                  { id: "l2", name: "feature" },
+                ],
+              },
+            },
+          }),
+        ),
     )
     const result = await linearTools["linear-listLabels"].execute!({})
     expect(result.labels).toContain("bug")
@@ -304,15 +453,31 @@ describe("Linear write tools", () => {
     global.fetch = mock(async (_url: string, init?: RequestInit) => {
       const body = JSON.parse((init?.body as string) ?? "{}")
       if (body.query?.includes("GetIssueId")) {
-        return new Response(JSON.stringify({ data: { issue: { id: "iss-1", team: { states: { nodes: [] } } } } }))
+        return new Response(
+          JSON.stringify({ data: { issue: { id: "iss-1", team: { states: { nodes: [] } } } } }),
+        )
       }
       if (body.query?.includes("FindProject")) {
-        return new Response(JSON.stringify({ data: { projects: { nodes: [{ id: "proj-1", name: "Q3 Launch" }] } } }))
+        return new Response(
+          JSON.stringify({ data: { projects: { nodes: [{ id: "proj-1", name: "Q3 Launch" }] } } }),
+        )
       }
       updateInput = body.variables?.input
-      return new Response(JSON.stringify({ data: { issueUpdate: { success: true, issue: { identifier: "ENG-1", url: "u", state: { name: "Todo" } } } } }))
+      return new Response(
+        JSON.stringify({
+          data: {
+            issueUpdate: {
+              success: true,
+              issue: { identifier: "ENG-1", url: "u", state: { name: "Todo" } },
+            },
+          },
+        }),
+      )
     })
-    const result = await linearTools["linear-updateIssue"].execute!({ identifier: "ENG-1", project: "Q3" })
+    const result = await linearTools["linear-updateIssue"].execute!({
+      identifier: "ENG-1",
+      project: "Q3",
+    })
     expect(result.ok).toBeTrue()
     expect(updateInput.projectId).toBe("proj-1")
   })
@@ -333,14 +498,19 @@ describe("Linear approval-gating", () => {
     const { getConnectorDef } = await import("../registry.js")
     const def = getConnectorDef("linear")
     pendingInput = undefined
-    linearTools = def?.tools({
-      userId: "u",
-      getAccessToken: async () => "lin_fake_token",
-      createPendingAction: async (input: any) => {
-        pendingInput = input
-        return { id: "pa-1", status: "pending", message: `Approval required: ${input.title}. Action ID: pa-1` }
-      },
-    }) ?? {}
+    linearTools =
+      def?.tools({
+        userId: "u",
+        getAccessToken: async () => "lin_fake_token",
+        createPendingAction: async (input: any) => {
+          pendingInput = input
+          return {
+            id: "pa-1",
+            status: "pending",
+            message: `Approval required: ${input.title}. Action ID: pa-1`,
+          }
+        },
+      }) ?? {}
     fetchCalled = false
     global.fetch = mock(async () => {
       fetchCalled = true
@@ -351,7 +521,11 @@ describe("Linear approval-gating", () => {
   afterEach(() => mock.restore())
 
   it("19. linear-createIssue queues a pending action", async () => {
-    const result = await linearTools["linear-createIssue"].execute!({ title: "Gated", teamName: "Engineering", priority: "high" })
+    const result = await linearTools["linear-createIssue"].execute!({
+      title: "Gated",
+      teamName: "Engineering",
+      priority: "high",
+    })
     expect(result.status).toBe("pending")
     expect(fetchCalled).toBeFalse()
     expect(pendingInput.action).toBe("linear-createIssue")
@@ -359,7 +533,10 @@ describe("Linear approval-gating", () => {
   })
 
   it("20. linear-addComment queues a pending action", async () => {
-    const result = await linearTools["linear-addComment"].execute!({ identifier: "ENG-1", body: "gated comment" })
+    const result = await linearTools["linear-addComment"].execute!({
+      identifier: "ENG-1",
+      body: "gated comment",
+    })
     expect(result.status).toBe("pending")
     expect(fetchCalled).toBeFalse()
     expect(pendingInput.action).toBe("linear-addComment")
@@ -369,11 +546,29 @@ describe("Linear approval-gating", () => {
     global.fetch = mock(async (_url: string, init?: RequestInit) => {
       const body = JSON.parse((init?.body as string) ?? "{}")
       if (body.query?.includes("GetIssueId")) {
-        return new Response(JSON.stringify({ data: { issue: { id: "iss-1", team: { states: { nodes: [{ id: "st", name: "Done" }] } } } } }))
+        return new Response(
+          JSON.stringify({
+            data: {
+              issue: { id: "iss-1", team: { states: { nodes: [{ id: "st", name: "Done" }] } } },
+            },
+          }),
+        )
       }
-      return new Response(JSON.stringify({ data: { issueUpdate: { success: true, issue: { identifier: "ENG-1", url: "u", state: { name: "Done" } } } } }))
+      return new Response(
+        JSON.stringify({
+          data: {
+            issueUpdate: {
+              success: true,
+              issue: { identifier: "ENG-1", url: "u", state: { name: "Done" } },
+            },
+          },
+        }),
+      )
     })
-    const result = await linearTools["linear-updateIssue"].execute!({ identifier: "ENG-1", state: "Done" })
+    const result = await linearTools["linear-updateIssue"].execute!({
+      identifier: "ENG-1",
+      state: "Done",
+    })
     expect(pendingInput).toBeUndefined()
     expect(result.ok).toBeTrue()
   })

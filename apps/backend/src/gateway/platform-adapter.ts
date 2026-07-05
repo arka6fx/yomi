@@ -15,10 +15,7 @@ export interface PlatformAdapter {
     options?: { replyTo?: string; caption?: string },
   ): Promise<{ ok: boolean; messageId?: string; error?: string }>
   sendTyping(chatId: string): Promise<void>
-  deleteMessage(
-    chatId: string,
-    messageId: string,
-  ): Promise<{ ok: boolean; error?: string }>
+  deleteMessage(chatId: string, messageId: string): Promise<{ ok: boolean; error?: string }>
   setMessageHandler(handler: (msg: GatewayMessage) => void | Promise<void>): void
 }
 

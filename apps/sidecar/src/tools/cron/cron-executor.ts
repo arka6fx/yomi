@@ -30,9 +30,7 @@ function buildCronToolSet() {
     ...createWebTools(),
     ...createSystemTools({}),
   }
-  return Object.fromEntries(
-    Object.entries(all).filter(([name]) => !CRON_BLOCKED_TOOLS.has(name)),
-  )
+  return Object.fromEntries(Object.entries(all).filter(([name]) => !CRON_BLOCKED_TOOLS.has(name)))
 }
 
 async function loadJobSkills(skills: string[]): Promise<string> {
@@ -62,9 +60,7 @@ async function runScript(script: string): Promise<string> {
   })
 }
 
-async function loadContextFromJob(
-  contextFrom: string,
-): Promise<string> {
+async function loadContextFromJob(contextFrom: string): Promise<string> {
   const outputDir = join(notepadDir(), "cron", "output", contextFrom)
   try {
     const { readdir } = await import("node:fs/promises")
@@ -113,9 +109,7 @@ export async function executeCronJob(
 
   // Build timeout signal
   const timeoutSignal = AbortSignal.timeout(CRON_TIMEOUT_MS)
-  const combinedSignal = parentSignal
-    ? anySignal([timeoutSignal, parentSignal])
-    : timeoutSignal
+  const combinedSignal = parentSignal ? anySignal([timeoutSignal, parentSignal]) : timeoutSignal
 
   try {
     // --- Assemble context ---
@@ -153,7 +147,12 @@ export async function executeCronJob(
     // --- Script-only mode ---
     if (job.noAgent) {
       if (!job.script) {
-        return { ok: false, jobId: job.id, error: "noAgent set but no script provided", durationMs: Date.now() - start }
+        return {
+          ok: false,
+          jobId: job.id,
+          error: "noAgent set but no script provided",
+          durationMs: Date.now() - start,
+        }
       }
       const output = await runScript(job.script)
       const outputPath = await saveCronOutput(job.id, output)
@@ -177,7 +176,12 @@ export async function executeCronJob(
 
     const messages = [
       ...(scriptOutput
-        ? [{ role: "user" as const, content: `Script output:\n${scriptOutput}\n\nJob: ${job.prompt}` }]
+        ? [
+            {
+              role: "user" as const,
+              content: `Script output:\n${scriptOutput}\n\nJob: ${job.prompt}`,
+            },
+          ]
         : [{ role: "user" as const, content: job.prompt }]),
     ]
 

@@ -16,7 +16,9 @@ const MAX_SOUL_LENGTH = 2000
 const MIN_SOUL_LENGTH = 10
 
 function wantsDefault(text: string): boolean {
-  return /^(default|skip|no|nope|use default|use the default|built ?in|built-in)$/i.test(text.trim())
+  return /^(default|skip|no|nope|use default|use the default|built ?in|built-in)$/i.test(
+    text.trim(),
+  )
 }
 
 // Pure state machine. Given the current state and the incoming message text, decide the
@@ -39,7 +41,8 @@ export function decideSoulOnboarding(state: SoulOnboardingState, text: string): 
 
   if (wantsDefault(trimmed)) {
     return {
-      reply: "Got it, I'll use my default style: sharp, warm, and practical. What can I help you with?",
+      reply:
+        "Got it, I'll use my default style: sharp, warm, and practical. What can I help you with?",
       next: "done",
       agentSoul: null,
     }

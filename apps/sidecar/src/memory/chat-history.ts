@@ -79,14 +79,18 @@ export async function listHistoryTurns(limit = 100, query?: string): Promise<Cha
           needle &&
           !turn.transcript.toLowerCase().includes(needle) &&
           !turn.text.toLowerCase().includes(needle)
-        ) continue
+        )
+          continue
         turns.push(turn)
       }
     } catch {
       // Skip corrupt history files; one bad line should not break the UI.
     }
   }
-  return turns.sort((a, b) => a.timestamp.localeCompare(b.timestamp)).slice(-limit).reverse()
+  return turns
+    .sort((a, b) => a.timestamp.localeCompare(b.timestamp))
+    .slice(-limit)
+    .reverse()
 }
 
 export async function deleteHistoryTurn(id: number): Promise<boolean> {
@@ -94,7 +98,9 @@ export async function deleteHistoryTurn(id: number): Promise<boolean> {
   const dir = join(notepadDir(), "sessions")
   let files: string[] = []
   try {
-    files = (await readdir(dir)).filter((file) => /^chat-history-\d{4}-\d{2}-\d{2}\.jsonl$/.test(file))
+    files = (await readdir(dir)).filter((file) =>
+      /^chat-history-\d{4}-\d{2}-\d{2}\.jsonl$/.test(file),
+    )
   } catch {
     return false
   }
@@ -105,7 +111,10 @@ export async function deleteHistoryTurn(id: number): Promise<boolean> {
     let turns: ChatTurn[] = []
     try {
       const data = await readFile(path, "utf-8")
-      turns = data.split("\n").filter(Boolean).map((line) => JSON.parse(line) as ChatTurn)
+      turns = data
+        .split("\n")
+        .filter(Boolean)
+        .map((line) => JSON.parse(line) as ChatTurn)
     } catch {
       continue
     }

@@ -38,7 +38,10 @@ sttRouter.post("/", async (c) => {
 
   if (!res.ok) {
     const text = await res.text().catch(() => "")
-    return c.json({ error: `ElevenLabs STT failed (${res.status})`, detail: text }, res.status as 400 | 500)
+    return c.json(
+      { error: `ElevenLabs STT failed (${res.status})`, detail: text },
+      res.status as 400 | 500,
+    )
   }
 
   const json = (await res.json()) as { text?: string }

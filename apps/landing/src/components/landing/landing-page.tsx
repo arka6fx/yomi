@@ -73,9 +73,7 @@ const platforms: Record<
   windows: {
     title: "Windows",
     icon: "⊞",
-    options: [
-      { label: "Installer", arch: ".exe", href: "/api/download" },
-    ],
+    options: [{ label: "Installer", arch: ".exe", href: "/api/download" }],
     instructions: [
       "Run the installer and follow the prompts",
       "Yomi will start automatically after install",
@@ -117,13 +115,16 @@ const CONNECTORS: { id: string; name: string; description: string }[] = [
   { id: "google", name: "Gmail", description: "Read, send, and organize email" },
   { id: "google-calendar", name: "Google Calendar", description: "Create and manage events" },
   { id: "google-drive", name: "Google Drive", description: "Find, read, and edit files" },
-  { id: "google-classroom", name: "Google Classroom", description: "Assignments, due dates, grades" },
+  {
+    id: "google-classroom",
+    name: "Google Classroom",
+    description: "Assignments, due dates, grades",
+  },
   { id: "github", name: "GitHub", description: "Repos, issues, and pull requests" },
   { id: "notion", name: "Notion", description: "Search pages and databases" },
   { id: "slack", name: "Slack", description: "Read context, send approved messages" },
   { id: "linear", name: "Linear", description: "Issues and project tracking" },
 ]
-
 
 const PLANS = [
   {
@@ -323,38 +324,38 @@ export function LandingPage() {
         <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-black/65 to-transparent" />
 
         <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 flex-col justify-between px-5 pb-8 pt-28 sm:px-8 sm:pb-10 lg:px-10">
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="mb-6 flex flex-wrap items-center gap-3 text-xs font-medium text-white/70"
-            >
-              <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 backdrop-blur-md">
-                Early access
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Zap size={14} className="fill-sky-200 text-sky-200" />
-                &lt; 2s fast path
-              </span>
-              <span className="hidden h-1 w-1 rounded-full bg-white/30 sm:block" />
-              <span>Windows now · macOS coming soon</span>
-            </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="mb-6 flex flex-wrap items-center gap-3 text-xs font-medium text-white/70"
+          >
+            <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 backdrop-blur-md">
+              Early access
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Zap size={14} className="fill-sky-200 text-sky-200" />
+              &lt; 2s fast path
+            </span>
+            <span className="hidden h-1 w-1 rounded-full bg-white/30 sm:block" />
+            <span>Windows now · macOS coming soon</span>
+          </motion.div>
 
-            {/* big centered tagline — the heart of the hero */}
-            <motion.div
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.85, delay: 0.25 }}
-              className="mx-auto flex max-w-5xl flex-col items-center px-2 text-center"
-            >
-              <p className="font-serif text-5xl leading-[1.04] tracking-tight text-white drop-shadow-[0_2px_24px_rgba(8,31,66,0.55)] sm:text-6xl lg:text-7xl xl:text-[5.5rem]">
-                Sees your <span className="italic text-sky-300">screen</span>, hears your{" "}
-                <span className="italic text-cyan-200">voice</span>, and works across{" "}
-                <span className="italic text-blue-200">your everyday apps</span>.
-              </p>
-            </motion.div>
+          {/* big centered tagline — the heart of the hero */}
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.85, delay: 0.25 }}
+            className="mx-auto flex max-w-5xl flex-col items-center px-2 text-center"
+          >
+            <p className="font-serif text-5xl leading-[1.04] tracking-tight text-white drop-shadow-[0_2px_24px_rgba(8,31,66,0.55)] sm:text-6xl lg:text-7xl xl:text-[5.5rem]">
+              Sees your <span className="italic text-sky-300">screen</span>, hears your{" "}
+              <span className="italic text-cyan-200">voice</span>, and works across{" "}
+              <span className="italic text-blue-200">your everyday apps</span>.
+            </p>
+          </motion.div>
 
-            <div>
+          <div>
             <div className="grid items-end gap-8 lg:grid-cols-[1fr_360px]">
               <motion.h1
                 initial={{ opacity: 0, y: 28 }}
@@ -446,8 +447,8 @@ export function LandingPage() {
                 Visible capture states
               </span>
             </motion.div>
-            </div>
           </div>
+        </div>
       </section>
 
       {/* ── What is Yomi?────────────────────────────────────────────────── */}
@@ -462,14 +463,14 @@ export function LandingPage() {
         </div>
         <div className="space-y-4 text-center text-sm leading-relaxed text-muted-foreground">
           <p>
-            Yomi is an AI productivity assistant that connects to the apps you already use so
-            you can query, analyze, and act on your work using natural language, without switching
-            apps or copy-pasting context.
+            Yomi is an AI productivity assistant that connects to the apps you already use so you
+            can query, analyze, and act on your work using natural language, without switching apps
+            or copy-pasting context.
           </p>
           <p>
             Ask Yomi to find a file, summarize a document, or pull context from your workspace, all
-            from a single interface on your desktop or via Telegram. Yomi only accesses your data when
-            you ask a question, and for no other purpose.
+            from a single interface on your desktop or via Telegram. Yomi only accesses your data
+            when you ask a question, and for no other purpose.
           </p>
         </div>
       </section>
@@ -485,8 +486,8 @@ export function LandingPage() {
           </h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
             Yomi uses Google Sign-In to authenticate your identity and to request permission to
-            access your Drive data. Below you will find exactly why sign-in is required and how
-            your data is handled.
+            access your Drive data. Below you will find exactly why sign-in is required and how your
+            data is handled.
           </p>
         </div>
         <div className="space-y-4">
@@ -495,9 +496,9 @@ export function LandingPage() {
             <p className="mb-1 font-medium text-foreground">App purpose</p>
             <p>
               Yomi is a personal AI assistant. It accesses your Google Drive, with your explicit
-              permission, to answer questions you ask in natural language. For example:
-              &ldquo;Find the Q3 report in my Drive.&rdquo; or &ldquo;What does the product spec
-              say about pricing?&rdquo; Yomi reads data on-demand per request and never stores it.
+              permission, to answer questions you ask in natural language. For example: &ldquo;Find
+              the Q3 report in my Drive.&rdquo; or &ldquo;What does the product spec say about
+              pricing?&rdquo; Yomi reads data on-demand per request and never stores it.
             </p>
             <p className="mt-2 text-xs text-muted-foreground/70">
               Yomi&apos;s use of Google API data complies with the{" "}
@@ -526,9 +527,8 @@ export function LandingPage() {
                   <p className="mt-0.5">
                     Yomi uses Google&apos;s authentication system to confirm who you are, so it can
                     securely associate your connected apps, settings, and preferences with your
-                    account. Anonymous access is not possible because Yomi operates on your
-                    personal file data, so it cannot function without knowing
-                    which Google account to query.
+                    account. Anonymous access is not possible because Yomi operates on your personal
+                    file data, so it cannot function without knowing which Google account to query.
                   </p>
                 </div>
               </div>
@@ -542,9 +542,9 @@ export function LandingPage() {
                   </p>
                   <p className="mt-0.5">
                     Google&apos;s OAuth consent screen lets you choose exactly which services Yomi
-                    may access. Yomi cannot retrieve your Drive files without your
-                    explicit authorization. Each permission is granted individually and can be
-                    revoked at any time from your Yomi dashboard or from{" "}
+                    may access. Yomi cannot retrieve your Drive files without your explicit
+                    authorization. Each permission is granted individually and can be revoked at any
+                    time from your Yomi dashboard or from{" "}
                     <a
                       href="https://myaccount.google.com/permissions"
                       target="_blank"
@@ -568,10 +568,9 @@ export function LandingPage() {
                   <p className="mt-0.5">
                     When you ask a question, Yomi fetches only the data needed to answer it and
                     discards it immediately after responding. No Drive files are retained on
-                    Yomi&apos;s servers between requests. Your Google
-                    data is never sold, never used to train AI models, and is not shared with any
-                    third party except the AI inference provider used to generate your response,
-                    and solely for that purpose.
+                    Yomi&apos;s servers between requests. Your Google data is never sold, never used
+                    to train AI models, and is not shared with any third party except the AI
+                    inference provider used to generate your response, and solely for that purpose.
                   </p>
                 </div>
               </div>
@@ -620,7 +619,8 @@ export function LandingPage() {
             Three ways to <span className="italic">interact</span>.
           </h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
-            Voice, type, or just press enter. Yomi routes each request through the right context and model.
+            Voice, type, or just press enter. Yomi routes each request through the right context and
+            model.
           </p>
         </div>
 
@@ -695,7 +695,8 @@ export function LandingPage() {
             Your tools, one <span className="italic">conversation</span> away.
           </h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
-            Connect your apps once. Ask Yomi from the desktop or from Telegram, even with your laptop closed.
+            Connect your apps once. Ask Yomi from the desktop or from Telegram, even with your
+            laptop closed.
           </p>
         </div>
 
@@ -719,7 +720,6 @@ export function LandingPage() {
             </motion.div>
           ))}
         </div>
-
       </section>
 
       {/* ── Data & Integrations transparency ─────────────────────────────── */}
@@ -732,8 +732,8 @@ export function LandingPage() {
             What Yomi accesses, and <span className="italic">why</span>.
           </h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
-            Yomi only reads data when you ask a question. Nothing is stored between queries.
-            You can revoke any integration at any time.
+            Yomi only reads data when you ask a question. Nothing is stored between queries. You can
+            revoke any integration at any time.
           </p>
         </div>
 
@@ -776,16 +776,23 @@ export function LandingPage() {
           <ul className="space-y-2">
             <li className="flex items-start gap-2">
               <Check size={14} className="mt-0.5 shrink-0 text-primary" />
-              Data from integrations is used only to answer your current query and is never stored after the request completes.
+              Data from integrations is used only to answer your current query and is never stored
+              after the request completes.
             </li>
             <li className="flex items-start gap-2">
               <Check size={14} className="mt-0.5 shrink-0 text-primary" />
-              OAuth tokens are encrypted at rest using AES-256-GCM and are never shared with third parties.
+              OAuth tokens are encrypted at rest using AES-256-GCM and are never shared with third
+              parties.
             </li>
             <li className="flex items-start gap-2">
               <Check size={14} className="mt-0.5 shrink-0 text-primary" />
               Yomi&apos;s use of Google API data complies with the{" "}
-              <Link href="https://developers.google.com/terms/api-services-user-data-policy" className="text-primary underline underline-offset-2" target="_blank" rel="noopener noreferrer">
+              <Link
+                href="https://developers.google.com/terms/api-services-user-data-policy"
+                className="text-primary underline underline-offset-2"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 Google API Services User Data Policy
               </Link>
               , including the Limited Use requirements.
@@ -793,7 +800,12 @@ export function LandingPage() {
             <li className="flex items-start gap-2">
               <Check size={14} className="mt-0.5 shrink-0 text-primary" />
               You can disconnect any integration instantly from your dashboard or from{" "}
-              <Link href="https://myaccount.google.com/permissions" className="text-primary underline underline-offset-2" target="_blank" rel="noopener noreferrer">
+              <Link
+                href="https://myaccount.google.com/permissions"
+                className="text-primary underline underline-offset-2"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 Google Account settings
               </Link>
               .
@@ -874,9 +886,7 @@ export function LandingPage() {
                     )}
                   </div>
                   <div className="mb-2 flex items-baseline gap-1">
-                    <span className="font-accent text-4xl text-foreground">
-                      {plan.price}
-                    </span>
+                    <span className="font-accent text-4xl text-foreground">{plan.price}</span>
                     <span className="text-sm text-muted-foreground">{plan.period}</span>
                   </div>
                   <p className="text-sm text-muted-foreground">{plan.description}</p>
@@ -914,7 +924,8 @@ export function LandingPage() {
           viewport={{ once: true }}
           className="mt-8 text-center text-xs text-muted-foreground"
         >
-          * Credits are a simple usage balance. Explore is a 30-day free trial; Pro and Max can buy extra credit packs.
+          * Credits are a simple usage balance. Explore is a 30-day free trial; Pro and Max can buy
+          extra credit packs.
         </motion.p>
       </section>
 
@@ -985,9 +996,7 @@ export function LandingPage() {
               transition={{ duration: 0.25 }}
               className="space-y-3"
             >
-              <h2 className="font-accent text-2xl text-foreground">
-                {current.title} downloads
-              </h2>
+              <h2 className="font-accent text-2xl text-foreground">{current.title} downloads</h2>
               <div className="grid gap-3 sm:grid-cols-2">
                 {current.options.map((opt) => {
                   const className = `group flex items-center justify-between rounded-xl glass-card p-4 transition-colors ${
@@ -1031,9 +1040,7 @@ export function LandingPage() {
               </div>
 
               <div className="space-y-3 pt-4">
-                <h2 className="font-accent text-2xl text-foreground">
-                  Install instructions
-                </h2>
+                <h2 className="font-accent text-2xl text-foreground">Install instructions</h2>
                 <ol className="space-y-3">
                   {current.instructions.map((step, i) => (
                     <motion.li

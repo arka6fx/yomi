@@ -29,8 +29,12 @@ export class CronScheduler {
 
     this.running = true
     // Fire first tick after 30s (gives the sidecar time to fully initialise)
-    setTimeout(() => { void this.tick() }, 30_000)
-    this.intervalId = setInterval(() => { void this.tick() }, TICK_INTERVAL_MS)
+    setTimeout(() => {
+      void this.tick()
+    }, 30_000)
+    this.intervalId = setInterval(() => {
+      void this.tick()
+    }, TICK_INTERVAL_MS)
   }
 
   stop(): void {

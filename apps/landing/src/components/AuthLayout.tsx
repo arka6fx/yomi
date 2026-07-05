@@ -52,8 +52,8 @@ export default function AuthLayout({
             one <span className="italic">conversation.</span>
           </h2>
           <p className="mt-5 max-w-sm text-sm leading-relaxed text-white/70">
-            Connect your tools once, then ask Yomi anything. From your desktop, or
-            right inside Telegram.
+            Connect your tools once, then ask Yomi anything. From your desktop, or right inside
+            Telegram.
           </p>
 
           {/* Editorial stepper: serif italic figures carry the real sequence */}

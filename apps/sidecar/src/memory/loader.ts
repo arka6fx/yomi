@@ -2,9 +2,10 @@ import { mkdir } from "node:fs/promises"
 import { homedir } from "node:os"
 import { join } from "node:path"
 
-export const SIDECAR_DATA_DIR = process.platform === "win32"
-  ? join(process.env["LOCALAPPDATA"] ?? homedir(), "Yomi", "sidecar")
-  : join(process.env["XDG_DATA_HOME"] ?? join(homedir(), ".local", "share"), "yomi", "sidecar")
+export const SIDECAR_DATA_DIR =
+  process.platform === "win32"
+    ? join(process.env["LOCALAPPDATA"] ?? homedir(), "Yomi", "sidecar")
+    : join(process.env["XDG_DATA_HOME"] ?? join(homedir(), ".local", "share"), "yomi", "sidecar")
 
 export function sidecarDataDir(): string {
   return process.env["YOMI_SIDECAR_DATA_DIR"] ?? process.env["YOMI_NOTEPAD_DIR"] ?? SIDECAR_DATA_DIR

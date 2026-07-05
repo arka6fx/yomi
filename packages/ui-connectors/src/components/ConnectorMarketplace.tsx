@@ -33,12 +33,28 @@ function ConnectedBadge({ t, displayName }: ConnectedBadgeProps) {
             boxShadow: `0 0 6px ${t.successText}`,
           }}
         />
-        <span style={{ fontSize: 9, fontWeight: 600, color: t.successText, textTransform: "uppercase" as const }}>
+        <span
+          style={{
+            fontSize: 9,
+            fontWeight: 600,
+            color: t.successText,
+            textTransform: "uppercase" as const,
+          }}
+        >
           Connected
         </span>
       </span>
       {displayName && (
-        <span style={{ fontSize: 10, color: t.dim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const, maxWidth: 120 }}>
+        <span
+          style={{
+            fontSize: 10,
+            color: t.dim,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap" as const,
+            maxWidth: 120,
+          }}
+        >
           {displayName}
         </span>
       )}
@@ -55,7 +71,14 @@ interface ConnectorTileProps {
   limitReached?: boolean
 }
 
-export function ConnectorTile({ info, t, onConnect, onDisconnect, loading, limitReached }: ConnectorTileProps) {
+export function ConnectorTile({
+  info,
+  t,
+  onConnect,
+  onDisconnect,
+  loading,
+  limitReached,
+}: ConnectorTileProps) {
   const [confirmDisconnect, setConfirmDisconnect] = useState(false)
 
   function handleDisconnectClick() {
@@ -110,7 +133,15 @@ export function ConnectorTile({ info, t, onConnect, onDisconnect, loading, limit
         </div>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const }}>
-            <span style={{ fontSize: 14, fontWeight: 600, letterSpacing: "-0.01em", color: t.text, fontFamily: t.font }}>
+            <span
+              style={{
+                fontSize: 14,
+                fontWeight: 600,
+                letterSpacing: "-0.01em",
+                color: t.text,
+                fontFamily: t.font,
+              }}
+            >
               {info.name}
             </span>
             {!info.available && (
@@ -131,7 +162,15 @@ export function ConnectorTile({ info, t, onConnect, onDisconnect, loading, limit
             )}
             {info.connected && <ConnectedBadge t={t} displayName={info.displayName} />}
           </div>
-          <p style={{ fontSize: 12, color: t.dim, lineHeight: 1.5, margin: "5px 0 0 0", fontFamily: t.font }}>
+          <p
+            style={{
+              fontSize: 12,
+              color: t.dim,
+              lineHeight: 1.5,
+              margin: "5px 0 0 0",
+              fontFamily: t.font,
+            }}
+          >
             {info.description}
           </p>
         </div>
@@ -167,7 +206,11 @@ export function ConnectorTile({ info, t, onConnect, onDisconnect, loading, limit
                 transition: "all 0.15s ease",
               }}
             >
-              {loading ? "Disconnecting..." : confirmDisconnect ? "Confirm disconnect?" : "Disconnect"}
+              {loading
+                ? "Disconnecting..."
+                : confirmDisconnect
+                  ? "Confirm disconnect?"
+                  : "Disconnect"}
             </button>
           ) : limitReached ? (
             <div
@@ -264,9 +307,7 @@ export function ConnectorMarketplace({
   loadingId,
   limitReached,
 }: ConnectorMarketplaceProps) {
-  const categories = Array.from(
-    new Set(connectors.map((c) => c.category)),
-  )
+  const categories = Array.from(new Set(connectors.map((c) => c.category)))
 
   return (
     <div style={{ display: "flex", flexDirection: "column" as const, gap: 32 }}>
@@ -298,7 +339,14 @@ export function ConnectorMarketplace({
                 {label}
               </span>
               {connectedCount > 0 && (
-                <span style={{ fontSize: 10, fontWeight: 600, color: t.successText, fontFamily: t.font }}>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: t.successText,
+                    fontFamily: t.font,
+                  }}
+                >
                   {connectedCount} connected
                 </span>
               )}

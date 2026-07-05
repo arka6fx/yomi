@@ -2,7 +2,13 @@ import { and, desc, eq, lte } from "drizzle-orm"
 import { db, pendingActions } from "@yomi/db"
 
 export type PendingActionRisk = "write" | "send" | "paid" | "irreversible"
-export type PendingActionStatus = "pending" | "approved" | "denied" | "executed" | "failed" | "expired"
+export type PendingActionStatus =
+  | "pending"
+  | "approved"
+  | "denied"
+  | "executed"
+  | "failed"
+  | "expired"
 
 export interface CreatePendingActionInput {
   userId: string
@@ -67,7 +73,11 @@ export async function createPendingAction(input: CreatePendingActionInput) {
     )
     .limit(1)
   if (existing) {
-    return { id: existing.id, status: existing.status, message: `Approval required: ${input.title}. Action ID: ${existing.id}` }
+    return {
+      id: existing.id,
+      status: existing.status,
+      message: `Approval required: ${input.title}. Action ID: ${existing.id}`,
+    }
   }
 
   const now = Date.now()
@@ -100,7 +110,11 @@ export async function createPendingAction(input: CreatePendingActionInput) {
 
 export async function expirePendingActions(userId?: string) {
   const where = userId
-    ? and(eq(pendingActions.userId, userId), eq(pendingActions.status, "pending"), lte(pendingActions.expiresAt, new Date()))
+    ? and(
+        eq(pendingActions.userId, userId),
+        eq(pendingActions.status, "pending"),
+        lte(pendingActions.expiresAt, new Date()),
+      )
     : and(eq(pendingActions.status, "pending"), lte(pendingActions.expiresAt, new Date()))
   await db.update(pendingActions).set({ status: "expired", updatedAt: new Date() }).where(where)
 }
@@ -188,7 +202,13 @@ export async function denyPendingAction(userId: string, id: string) {
   const [row] = await db
     .update(pendingActions)
     .set({ status: "denied", decidedAt: new Date(), updatedAt: new Date() })
-    .where(and(eq(pendingActions.id, id), eq(pendingActions.userId, userId), eq(pendingActions.status, "pending")))
+    .where(
+      and(
+        eq(pendingActions.id, id),
+        eq(pendingActions.userId, userId),
+        eq(pendingActions.status, "pending"),
+      ),
+    )
     .returning({ id: pendingActions.id, status: pendingActions.status })
   return row ?? null
 }
@@ -198,7 +218,13 @@ export async function approvePendingAction(userId: string, id: string) {
   const [approved] = await db
     .update(pendingActions)
     .set({ status: "approved", decidedAt: new Date(), updatedAt: new Date() })
-    .where(and(eq(pendingActions.id, id), eq(pendingActions.userId, userId), eq(pendingActions.status, "pending")))
+    .where(
+      and(
+        eq(pendingActions.id, id),
+        eq(pendingActions.userId, userId),
+        eq(pendingActions.status, "pending"),
+      ),
+    )
     .returning({
       id: pendingActions.id,
       userId: pendingActions.userId,
@@ -217,19 +243,28 @@ export async function approvePendingAction(userId: string, id: string) {
       .update(pendingActions)
       .set({ status: "executed", result, executedAt: new Date(), updatedAt: new Date() })
       .where(and(eq(pendingActions.id, id), eq(pendingActions.userId, userId)))
-      .returning({ id: pendingActions.id, status: pendingActions.status, result: pendingActions.result })
+      .returning({
+        id: pendingActions.id,
+        status: pendingActions.status,
+        result: pendingActions.result,
+      })
 
     // Notify the user on their messaging platform after a write action completes
     if (approved.sourcePlatform && approved.sourceChatId) {
       const resultText =
-        typeof result === "object" && result !== null && "message" in result && typeof (result as Record<string, unknown>).message === "string"
-          ? (result as Record<string, unknown>).message as string
+        typeof result === "object" &&
+        result !== null &&
+        "message" in result &&
+        typeof (result as Record<string, unknown>).message === "string"
+          ? ((result as Record<string, unknown>).message as string)
           : `Done: ${approved.title}`
-      import("../gateway/index.js").then(({ getDefaultGateway }) => {
-        const gateway = getDefaultGateway()
-        const platform = approved.sourcePlatform as "telegram"
-        gateway.sendMessage(platform, approved.sourceChatId!, resultText).catch(() => {})
-      }).catch(() => {})
+      import("../gateway/index.js")
+        .then(({ getDefaultGateway }) => {
+          const gateway = getDefaultGateway()
+          const platform = approved.sourcePlatform as "telegram"
+          gateway.sendMessage(platform, approved.sourceChatId!, resultText).catch(() => {})
+        })
+        .catch(() => {})
     }
 
     return executed ?? { id, status: "executed", result }

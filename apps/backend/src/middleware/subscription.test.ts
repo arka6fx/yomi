@@ -60,7 +60,7 @@ describe("requireAccess", () => {
 
     for (const kind of ["chat", "voice", "agent", "analyze", "bot_message"] as const) {
       const res = await app(kind).request("/")
-      const body = await res.json() as { code?: string }
+      const body = (await res.json()) as { code?: string }
 
       expect(res.status).toBe(402)
       expect(body.code).toBe("subscription_inactive")
@@ -68,30 +68,42 @@ describe("requireAccess", () => {
   })
 
   it("blocks Pro past_due on voice", async () => {
-    currentUser = user({ plan: "pro", subscriptionStatus: "past_due", currentPeriodEnd: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000) })
+    currentUser = user({
+      plan: "pro",
+      subscriptionStatus: "past_due",
+      currentPeriodEnd: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+    })
 
     const res = await app("voice").request("/")
-    const body = await res.json() as { code?: string }
+    const body = (await res.json()) as { code?: string }
 
     expect(res.status).toBe(402)
     expect(body.code).toBe("subscription_inactive")
   })
 
   it("blocks Pro past_due on chat", async () => {
-    currentUser = user({ plan: "pro", subscriptionStatus: "past_due", currentPeriodEnd: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000) })
+    currentUser = user({
+      plan: "pro",
+      subscriptionStatus: "past_due",
+      currentPeriodEnd: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+    })
 
     const res = await app("chat").request("/")
-    const body = await res.json() as { code?: string }
+    const body = (await res.json()) as { code?: string }
 
     expect(res.status).toBe(402)
     expect(body.code).toBe("subscription_inactive")
   })
 
   it("blocks Pro past_due on agent", async () => {
-    currentUser = user({ plan: "pro", subscriptionStatus: "past_due", currentPeriodEnd: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000) })
+    currentUser = user({
+      plan: "pro",
+      subscriptionStatus: "past_due",
+      currentPeriodEnd: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+    })
 
     const res = await app("agent").request("/")
-    const body = await res.json() as { code?: string }
+    const body = (await res.json()) as { code?: string }
 
     expect(res.status).toBe(402)
     expect(body.code).toBe("subscription_inactive")

@@ -84,7 +84,7 @@ export class SessionMachine {
     // COMPACTING: run lightweight memory promotion before returning to IDLE.
     if (next === SessionState.COMPACTING) {
       this.runCompaction().catch((err) =>
-        console.warn("[yomi/sm] compaction failed:", err instanceof Error ? err.message : err)
+        console.warn("[yomi/sm] compaction failed:", err instanceof Error ? err.message : err),
       )
     }
 
@@ -109,9 +109,15 @@ export class SessionMachine {
         )
       }
 
-      const statsAfter = await getMemoryStats().catch(() => ({ promoted: 0, totalCandidates: 0, promotedSize: 0 }))
+      const statsAfter = await getMemoryStats().catch(() => ({
+        promoted: 0,
+        totalCandidates: 0,
+        promotedSize: 0,
+      }))
       if (statsAfter.promotedSize !== statsBefore.promotedSize) {
-        console.warn(`[yomi/sm] MEMORY.md: ${statsBefore.promotedSize} → ${statsAfter.promotedSize} chars`)
+        console.warn(
+          `[yomi/sm] MEMORY.md: ${statsBefore.promotedSize} → ${statsAfter.promotedSize} chars`,
+        )
       }
 
       // Emit memory_written to complete the COMPACTING → IDLE transition

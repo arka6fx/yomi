@@ -17,7 +17,9 @@ async function getAssetUrl(): Promise<string | null> {
       },
     })
     if (!res.ok) return null
-    const release = (await res.json()) as { assets?: Array<{ name: string; browser_download_url: string }> }
+    const release = (await res.json()) as {
+      assets?: Array<{ name: string; browser_download_url: string }>
+    }
     const exeAsset = release.assets?.find((asset) => asset.name.endsWith(".exe"))
     return exeAsset?.browser_download_url ?? null
   } catch {

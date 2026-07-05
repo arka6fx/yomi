@@ -16,7 +16,8 @@ type AuthInstance = ReturnType<typeof createAuth>
 let authInstance: AuthInstance | null = null
 
 function getRuntimeAuthConfig() {
-  const webOrigin = process.env["CORS_ORIGIN"] ?? process.env["BETTER_AUTH_URL"] ?? "http://localhost:3000"
+  const webOrigin =
+    process.env["CORS_ORIGIN"] ?? process.env["BETTER_AUTH_URL"] ?? "http://localhost:3000"
   const authBaseUrl = process.env["BETTER_AUTH_BASE_URL"] ?? webOrigin
 
   const authBaseHost = new URL(authBaseUrl).hostname
@@ -30,7 +31,14 @@ function getRuntimeAuthConfig() {
   const googleRedirectUri = `${callbackBase}/api/auth/callback/google`
   const githubRedirectUri = `${callbackBase}/api/auth/callback/github`
 
-  return { webOrigin, authBaseUrl, isSplitDomain, cookieDomain, googleRedirectUri, githubRedirectUri }
+  return {
+    webOrigin,
+    authBaseUrl,
+    isSplitDomain,
+    cookieDomain,
+    googleRedirectUri,
+    githubRedirectUri,
+  }
 }
 
 async function getUserFields(userId: string) {
@@ -70,7 +78,9 @@ function createAuth() {
   return betterAuth({
     database: drizzleAdapter(db, { provider: "pg", schema: authSchema }),
     baseURL: webOrigin,
-    trustedOrigins: [webOrigin, authBaseUrl].filter((origin, index, self) => self.indexOf(origin) === index),
+    trustedOrigins: [webOrigin, authBaseUrl].filter(
+      (origin, index, self) => self.indexOf(origin) === index,
+    ),
     advanced,
     databaseHooks: {
       user: {
@@ -120,7 +130,9 @@ function createAuth() {
       customSession(async (session) => {
         const fields = await getUserFields(session.user.id)
         const mergedUser = { ...session.user, ...(fields ?? {}) }
-        console.warn(`[auth/customSession] userId=${session.user.id} trialEndDate=${fields?.trialEndDate} subscriptionStatus=${fields?.subscriptionStatus}`)
+        console.warn(
+          `[auth/customSession] userId=${session.user.id} trialEndDate=${fields?.trialEndDate} subscriptionStatus=${fields?.subscriptionStatus}`,
+        )
         return {
           ...session,
           user: {
@@ -161,7 +173,7 @@ function createAuth() {
 }
 
 export function getAuth() {
-  return authInstance ??= createAuth()
+  return (authInstance ??= createAuth())
 }
 
 export type SessionUser = AuthInstance["$Infer"]["Session"]["user"] & {

@@ -34,11 +34,18 @@ function clampDays(raw: string | undefined): number {
   return Math.min(days, 365)
 }
 
-function estimateCostMicros(model: string | null, inputTokens: number, outputTokens: number, costCents: number): number {
+function estimateCostMicros(
+  model: string | null,
+  inputTokens: number,
+  outputTokens: number,
+  costCents: number,
+): number {
   if (costCents > 0) return costCents * 10_000
   if (inputTokens <= 0 && outputTokens <= 0) return 0
   const pricing = MODEL_PRICING_CENTS_PER_1K[model ?? ""] ?? DEFAULT_PRICING_CENTS_PER_1K
-  return Math.round(((inputTokens / 1000) * pricing.input + (outputTokens / 1000) * pricing.output) * 10_000)
+  return Math.round(
+    ((inputTokens / 1000) * pricing.input + (outputTokens / 1000) * pricing.output) * 10_000,
+  )
 }
 
 function money(micros: number): number {
@@ -46,7 +53,9 @@ function money(micros: number): number {
 }
 
 function metadataObject(value: unknown): UsageMetadata {
-  return typeof value === "object" && value !== null && !Array.isArray(value) ? value as UsageMetadata : {}
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as UsageMetadata)
+    : {}
 }
 
 function metadataString(meta: UsageMetadata, keys: string[], fallback: string): string {
@@ -61,20 +70,36 @@ function metadataNumber(meta: UsageMetadata, keys: string[]): number {
   for (const key of keys) {
     const value = meta[key]
     if (typeof value === "number" && Number.isFinite(value)) return value
-    if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value)
+    if (typeof value === "string" && value.trim() && Number.isFinite(Number(value)))
+      return Number(value)
   }
   return 0
 }
 
 function connectorIds(meta: UsageMetadata): string[] {
   const raw = meta["connectorIds"] ?? meta["connectors"] ?? meta["connector"] ?? meta["provider"]
-  if (Array.isArray(raw)) return raw.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+  if (Array.isArray(raw))
+    return raw.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
   if (typeof raw === "string" && raw.trim()) return [raw.trim()]
   return []
 }
 
-function addBucket(map: Map<string, CostBucket>, key: string, inputTokens: number, outputTokens: number, latencyMs: number, costMicros: number): void {
-  const bucket = map.get(key) ?? { key, requests: 0, inputTokens: 0, outputTokens: 0, latencyMs: 0, costMicros: 0 }
+function addBucket(
+  map: Map<string, CostBucket>,
+  key: string,
+  inputTokens: number,
+  outputTokens: number,
+  latencyMs: number,
+  costMicros: number,
+): void {
+  const bucket = map.get(key) ?? {
+    key,
+    requests: 0,
+    inputTokens: 0,
+    outputTokens: 0,
+    latencyMs: 0,
+    costMicros: 0,
+  }
   bucket.requests += 1
   bucket.inputTokens += inputTokens
   bucket.outputTokens += outputTokens
@@ -125,8 +150,12 @@ adminRouter.post("/reset-all-usage", authenticate, async (c) => {
   await db.delete(usageEvents).where(gte(usageEvents.createdAt, monthStart))
 
   // 2. Load all users + their current credit balances
-  const allUsers = await db.select({ id: user.id, plan: user.plan, role: user.role, email: user.email }).from(user)
-  const accounts = await db.select({ userId: creditAccounts.userId, balance: creditAccounts.availableCredits }).from(creditAccounts)
+  const allUsers = await db
+    .select({ id: user.id, plan: user.plan, role: user.role, email: user.email })
+    .from(user)
+  const accounts = await db
+    .select({ userId: creditAccounts.userId, balance: creditAccounts.availableCredits })
+    .from(creditAccounts)
   const balanceByUser = new Map(accounts.map((a) => [a.userId, a.balance]))
 
   // 3. Top up each non-owner user's credits to their plan's monthly included amount
@@ -199,9 +228,18 @@ adminRouter.get("/cost-analytics", authenticate, async (c) => {
     const inputTokens = Number(row.inputTokens ?? 0)
     const outputTokens = Number(row.outputTokens ?? 0)
     const latencyMs = metadataNumber(meta, ["latencyMs", "latency_ms", "durationMs", "duration_ms"])
-    const costMicros = estimateCostMicros(row.model, inputTokens, outputTokens, Number(row.costCents ?? 0))
+    const costMicros = estimateCostMicros(
+      row.model,
+      inputTokens,
+      outputTokens,
+      Number(row.costCents ?? 0),
+    )
     const endpoint = metadataString(meta, ["endpoint", "route", "source"], row.kind)
-    const taskType = metadataString(meta, ["taskType", "task_type", "intent", "reserveKind"], row.kind)
+    const taskType = metadataString(
+      meta,
+      ["taskType", "task_type", "intent", "reserveKind"],
+      row.kind,
+    )
     const model = row.model ?? "unknown"
 
     totalInputTokens += inputTokens
@@ -220,7 +258,8 @@ adminRouter.get("/cost-analytics", authenticate, async (c) => {
     if (connectors.length === 0) {
       addBucket(byConnector, "none", inputTokens, outputTokens, latencyMs, costMicros)
     } else {
-      for (const connector of connectors) addBucket(byConnector, connector, inputTokens, outputTokens, latencyMs, costMicros)
+      for (const connector of connectors)
+        addBucket(byConnector, connector, inputTokens, outputTokens, latencyMs, costMicros)
     }
   }
 
@@ -258,8 +297,12 @@ adminRouter.get("/cost-analytics", authenticate, async (c) => {
     costPerModel: serializeSorted(byModel),
     costPerConnector: serializeSorted(byConnector),
     tokenDistributionByTaskType: serializeSorted(byTaskType),
-    dailySpend: Array.from(daily.values()).sort((a, b) => a.key.localeCompare(b.key)).map(serializeBucket),
-    monthlySpend: Array.from(monthly.values()).sort((a, b) => a.key.localeCompare(b.key)).map(serializeBucket),
+    dailySpend: Array.from(daily.values())
+      .sort((a, b) => a.key.localeCompare(b.key))
+      .map(serializeBucket),
+    monthlySpend: Array.from(monthly.values())
+      .sort((a, b) => a.key.localeCompare(b.key))
+      .map(serializeBucket),
     topUsers,
   })
 })

@@ -57,7 +57,7 @@ export type ActivitySection = {
 // Model pricing in cents per 1K tokens (approximate)
 const MODEL_PRICING: Record<string, { inputCentsPer1K: number; outputCentsPer1K: number }> = {
   "gpt-5.5-mini": { inputCentsPer1K: 0.04, outputCentsPer1K: 0.16 },
-  "gpt-5.5": { inputCentsPer1K: 0.15, outputCentsPer1K: 0.60 },
+  "gpt-5.5": { inputCentsPer1K: 0.15, outputCentsPer1K: 0.6 },
 }
 
 const DEFAULT_PRICING = { inputCentsPer1K: 1.0, outputCentsPer1K: 4.0 }
@@ -172,9 +172,7 @@ export function generateReport(days: number, plan: Plan): InsightsReport {
 
   // Hourly activity
   const hourlyData = queryHourlyActivity(actualDays)
-  const peakHour = hourlyData.length > 0
-    ? hourlyData.sort((a, b) => b.count - a.count)[0]!.hour
-    : 0
+  const peakHour = hourlyData.length > 0 ? hourlyData.sort((a, b) => b.count - a.count)[0]!.hour : 0
 
   // Most active day
   const dayCounts = groupBy(sessions, (r) => r.startedAt.slice(0, 10))
@@ -184,7 +182,8 @@ export function generateReport(days: number, plan: Plan): InsightsReport {
   // Session lengths
   const lengthRows = querySessionLengths(actualDays)
   const lengths = lengthRows.map((r) => r.seconds)
-  const avgSeconds = lengths.length > 0 ? Math.round(lengths.reduce((s, v) => s + v, 0) / lengths.length) : 0
+  const avgSeconds =
+    lengths.length > 0 ? Math.round(lengths.reduce((s, v) => s + v, 0) / lengths.length) : 0
   const sorted = [...lengths].sort((a, b) => a - b)
   const medianSeconds: number =
     sorted.length > 0
@@ -248,7 +247,9 @@ export function formatTerminal(report: InsightsReport): string {
   lines.push(`  Fast / Agent:        ${overview.fastSessions} / ${overview.agentSessions}`)
   lines.push(`  Total tokens:        ${overview.totalTokens.toLocaleString()}`)
   lines.push(`  Estimated cost:      $${(overview.estimatedCostCents / 100).toFixed(2)}`)
-  lines.push(`  Period:              ${overview.periodStart.slice(0, 10)} – ${overview.periodEnd.slice(0, 10)}`)
+  lines.push(
+    `  Period:              ${overview.periodStart.slice(0, 10)} – ${overview.periodEnd.slice(0, 10)}`,
+  )
   lines.push("")
 
   // Token consumption
@@ -256,7 +257,9 @@ export function formatTerminal(report: InsightsReport): string {
     lines.push("── Token Consumption ".padEnd(60, "─"))
     for (const day of tokenConsumption.dailyTrend.slice(-7)) {
       const total = day.input + day.output
-      lines.push(`  ${day.date}:  ${total.toLocaleString().padStart(8)} tokens  (${day.input.toLocaleString()} in / ${day.output.toLocaleString()} out)`)
+      lines.push(
+        `  ${day.date}:  ${total.toLocaleString().padStart(8)} tokens  (${day.input.toLocaleString()} in / ${day.output.toLocaleString()} out)`,
+      )
     }
     lines.push("")
   }
@@ -265,9 +268,13 @@ export function formatTerminal(report: InsightsReport): string {
   if (costBreakdown.byKind.length > 0) {
     lines.push("── Cost Breakdown ".padEnd(60, "─"))
     for (const entry of costBreakdown.byKind) {
-      lines.push(`  ${entry.kind.padEnd(15)} ${entry.sessions.toString().padStart(4)} sessions  $${(entry.costCents / 100).toFixed(2).padStart(7)}  ${entry.tokens.toLocaleString().padStart(10)} tokens`)
+      lines.push(
+        `  ${entry.kind.padEnd(15)} ${entry.sessions.toString().padStart(4)} sessions  $${(entry.costCents / 100).toFixed(2).padStart(7)}  ${entry.tokens.toLocaleString().padStart(10)} tokens`,
+      )
     }
-    lines.push(`  ${"Total".padEnd(15)} ${"".padStart(4)} $${(costBreakdown.totalCostCents / 100).toFixed(2).padStart(7)}`)
+    lines.push(
+      `  ${"Total".padEnd(15)} ${"".padStart(4)} $${(costBreakdown.totalCostCents / 100).toFixed(2).padStart(7)}`,
+    )
     lines.push("")
   }
 
@@ -275,14 +282,18 @@ export function formatTerminal(report: InsightsReport): string {
   if (modelDistribution.models.length > 0) {
     lines.push("── Model Distribution ".padEnd(60, "─"))
     for (const m of modelDistribution.models) {
-      lines.push(`  ${m.model.padEnd(20)} ${m.count.toString().padStart(4)} calls  ${m.pct.toString().padStart(3)}%  avg ${m.avgTokens.toLocaleString().padStart(7)} tokens`)
+      lines.push(
+        `  ${m.model.padEnd(20)} ${m.count.toString().padStart(4)} calls  ${m.pct.toString().padStart(3)}%  avg ${m.avgTokens.toLocaleString().padStart(7)} tokens`,
+      )
     }
     lines.push("")
   }
 
   // Activity
   lines.push("── Activity ".padEnd(60, "─"))
-  lines.push(`  Peak hour:           ${activity.peakHour}:00 (${activity.hourlyBreakdown.find((h) => h.hour === activity.peakHour)?.count ?? 0} sessions)`)
+  lines.push(
+    `  Peak hour:           ${activity.peakHour}:00 (${activity.hourlyBreakdown.find((h) => h.hour === activity.peakHour)?.count ?? 0} sessions)`,
+  )
   lines.push(`  Most active day:     ${activity.mostActiveDay}`)
   lines.push(`  Avg session length:  ${formatDuration(activity.sessionLengths.avgSeconds)}`)
   lines.push(`  Median session:      ${formatDuration(activity.sessionLengths.medianSeconds)}`)

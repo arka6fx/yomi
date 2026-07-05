@@ -56,7 +56,13 @@ export function createClassroomTools(ctx: ConnectorContext): ToolSet {
       execute: async () => {
         try {
           const data = await classroom<{
-            courses?: { id: string; name?: string; section?: string; descriptionHeading?: string; alternateLink?: string }[]
+            courses?: {
+              id: string
+              name?: string
+              section?: string
+              descriptionHeading?: string
+              alternateLink?: string
+            }[]
           }>("/courses?courseStates=ACTIVE&pageSize=50")
           const courses = (data.courses ?? []).map((c) => ({
             id: c.id,
@@ -109,7 +115,8 @@ export function createClassroomTools(ctx: ConnectorContext): ToolSet {
             link: w.alternateLink,
             description: w.description?.slice(0, 400),
           }))
-          if (assignments.length === 0) return { assignments: [], message: "No assignments found for this course." }
+          if (assignments.length === 0)
+            return { assignments: [], message: "No assignments found for this course." }
           return { count: assignments.length, assignments }
         } catch (err) {
           return connectorError(err)
@@ -118,7 +125,8 @@ export function createClassroomTools(ctx: ConnectorContext): ToolSet {
     }),
 
     "classroom-listAnnouncements": tool({
-      description: "List recent announcements posted in a Classroom course. Get the courseId from classroom-listCourses.",
+      description:
+        "List recent announcements posted in a Classroom course. Get the courseId from classroom-listCourses.",
       parameters: z.object({
         courseId: z.string().describe("Classroom course ID"),
         limit: z.number().int().min(1).max(30).default(15).describe("Max announcements to return"),
@@ -126,7 +134,12 @@ export function createClassroomTools(ctx: ConnectorContext): ToolSet {
       execute: async ({ courseId, limit }) => {
         try {
           const data = await classroom<{
-            announcements?: { id: string; text?: string; creationTime?: string; alternateLink?: string }[]
+            announcements?: {
+              id: string
+              text?: string
+              creationTime?: string
+              alternateLink?: string
+            }[]
           }>(`/courses/${encodeURIComponent(courseId)}/announcements?pageSize=${limit}`)
           const announcements = (data.announcements ?? []).map((a) => ({
             id: a.id,
@@ -134,7 +147,8 @@ export function createClassroomTools(ctx: ConnectorContext): ToolSet {
             posted: a.creationTime,
             link: a.alternateLink,
           }))
-          if (announcements.length === 0) return { announcements: [], message: "No announcements found for this course." }
+          if (announcements.length === 0)
+            return { announcements: [], message: "No announcements found for this course." }
           return { count: announcements.length, announcements }
         } catch (err) {
           return connectorError(err)
@@ -185,7 +199,10 @@ export function createClassroomTools(ctx: ConnectorContext): ToolSet {
         courseId: z.string().describe("Classroom course ID"),
         courseWorkId: z.string().describe("Assignment (courseWork) ID"),
         fileId: z.string().describe("Google Drive file ID to attach (from drive-createFile)"),
-        fileName: z.string().optional().describe("Display name for the attachment (defaults to the Drive file's name)"),
+        fileName: z
+          .string()
+          .optional()
+          .describe("Display name for the attachment (defaults to the Drive file's name)"),
       }),
       execute: async (args) => {
         const { courseId, courseWorkId, fileId, fileName } = args
@@ -222,7 +239,11 @@ export function createClassroomTools(ctx: ConnectorContext): ToolSet {
                   }),
                 },
               )
-              return { ok: true, submissionState: data.state, message: "File attached to submission." }
+              return {
+                ok: true,
+                submissionState: data.state,
+                message: "File attached to submission.",
+              }
             } catch (err) {
               return connectorError(err)
             }
@@ -274,7 +295,8 @@ export const googleClassroomDef: ConnectorDef = {
   name: "Google Classroom",
   category: "productivity",
   icon: "google-classroom",
-  description: "Read your Google Classroom classes, assignments, due dates, announcements, grades, and submit work.",
+  description:
+    "Read your Google Classroom classes, assignments, due dates, announcements, grades, and submit work.",
   readOnlyByDefault: false,
   auth: {
     kind: "oauth2",
@@ -301,7 +323,11 @@ export const googleClassroomDef: ConnectorDef = {
       "NOTE: Classroom API is limited on personal Gmail accounts — full access needs a Google Workspace for Education account",
     ],
     collect: [
-      { env: "GOOGLE_INTEGRATIONS_CLIENT_ID", label: "Google Client ID (same as Gmail)", secret: false },
+      {
+        env: "GOOGLE_INTEGRATIONS_CLIENT_ID",
+        label: "Google Client ID (same as Gmail)",
+        secret: false,
+      },
       { env: "GOOGLE_INTEGRATIONS_CLIENT_SECRET", label: "Google Client Secret", secret: true },
     ],
     docsUrl: "https://developers.google.com/classroom/reference/rest",

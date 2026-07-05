@@ -24,8 +24,15 @@ import type { LanguageModelV1 } from "ai"
 
 let streamChunks: string[] = ["Hello", " world!"]
 let lastStmOptions: Record<string, unknown> = {}
-let classifyResult = { path: "fast" as const, confidence: 0.9, reason: "mocked", source: "heuristic" as const }
-let reserveResult: { ok: boolean; error?: string; code?: string; upgradeUrl?: string } = { ok: true }
+let classifyResult = {
+  path: "fast" as const,
+  confidence: 0.9,
+  reason: "mocked",
+  source: "heuristic" as const,
+}
+let reserveResult: { ok: boolean; error?: string; code?: string; upgradeUrl?: string } = {
+  ok: true,
+}
 let enqueueTriggerCalls: { action: string; opts?: unknown }[] = []
 let enqueueTriggerResult: unknown = ""
 let fetchCalls: { url: string; method: string; body?: string }[] = []
@@ -52,7 +59,9 @@ mock.module("ai", () => {
       lastStmOptions = opts
       const chunks = [...streamChunks]
       return {
-        textStream: (async function* () { for (const c of chunks) yield c })(),
+        textStream: (async function* () {
+          for (const c of chunks) yield c
+        })(),
         fullStream: (async function* () {
           for (const c of chunks) yield { type: "text-delta" as const, textDelta: c }
         })(),
@@ -144,18 +153,18 @@ mock.module("./graph/run.js", () => ({
 // Dynamic imports (after mocks are registered)
 // =============================================================================
 
-let fastPipeline: typeof import("./pipeline/fast.js")["fastPipeline"]
-let resolveText: typeof import("./pipeline/fast.js")["resolveText"]
+let fastPipeline: (typeof import("./pipeline/fast.js"))["fastPipeline"]
+let resolveText: (typeof import("./pipeline/fast.js"))["resolveText"]
 let app: { fetch: typeof globalThis.fetch }
-let handleGatewayMessage: typeof import("./gateway/receive.js")["handleGatewayMessage"]
-let createAgentTools: typeof import("./tools/index.js")["createAgentTools"]
-let hooks: typeof import("./harness/hooks.js")["hooks"]
-let toolGuardrail: typeof import("./harness/hooks.js")["toolGuardrail"]
-let LoopGuards: typeof import("./harness/guards.js")["LoopGuards"]
-let initMemorySubsystem: typeof import("./memory/subsystem.js")["initMemorySubsystem"]
-let closeMemorySubsystem: typeof import("./memory/subsystem.js")["closeMemorySubsystem"]
-let loadMemoryContext: typeof import("./memory/subsystem.js")["loadMemoryContext"]
-let writeSessionTurn: typeof import("./memory/subsystem.js")["writeSessionTurn"]
+let handleGatewayMessage: (typeof import("./gateway/receive.js"))["handleGatewayMessage"]
+let createAgentTools: (typeof import("./tools/index.js"))["createAgentTools"]
+let hooks: (typeof import("./harness/hooks.js"))["hooks"]
+let toolGuardrail: (typeof import("./harness/hooks.js"))["toolGuardrail"]
+let LoopGuards: (typeof import("./harness/guards.js"))["LoopGuards"]
+let initMemorySubsystem: (typeof import("./memory/subsystem.js"))["initMemorySubsystem"]
+let closeMemorySubsystem: (typeof import("./memory/subsystem.js"))["closeMemorySubsystem"]
+let loadMemoryContext: (typeof import("./memory/subsystem.js"))["loadMemoryContext"]
+let writeSessionTurn: (typeof import("./memory/subsystem.js"))["writeSessionTurn"]
 
 beforeAll(async () => {
   const fastMod = await import("./pipeline/fast.js")
@@ -190,7 +199,11 @@ beforeEach(() => {
   fastCallArgs = []
   agentCallArgs = []
   globalThis.fetch = async (url: string | URL | Request, opts?: RequestInit) => {
-    fetchCalls.push({ url: String(url), method: opts?.method ?? "GET", body: opts?.body as string | undefined })
+    fetchCalls.push({
+      url: String(url),
+      method: opts?.method ?? "GET",
+      body: opts?.body as string | undefined,
+    })
     return new Response(JSON.stringify({ ok: true }), { status: 200 })
   }
 })
@@ -234,10 +247,12 @@ describe("text trigger -- fast pipeline", () => {
 
   it("includes user message with screenshot reference when screen content is queried", async () => {
     streamChunks = ["That is the search bar."]
-    await collect(fastPipeline({
-      text: "what is this button on my screen",
-      screenshots: [{ screen: 1, screenshot_b64: "abc123", width: 1920, height: 1080 }],
-    }))
+    await collect(
+      fastPipeline({
+        text: "what is this button on my screen",
+        screenshots: [{ screen: 1, screenshot_b64: "abc123", width: 1920, height: 1080 }],
+      }),
+    )
     const messages = lastStmOptions.messages as any[]
     const userMsg = messages?.find((m: any) => m.role === "user")
     expect(JSON.stringify(userMsg?.content)).toContain("screen1: 1920x1080 pixels")
@@ -249,7 +264,9 @@ describe("text trigger -- fast pipeline", () => {
     expect(messages?.length).toBeGreaterThanOrEqual(2)
     expect(messages?.[0]?.role).toBe("system")
     const userContent = messages?.[messages.length - 1]?.content
-    expect(typeof userContent === "string" ? userContent : JSON.stringify(userContent)).toContain("hello")
+    expect(typeof userContent === "string" ? userContent : JSON.stringify(userContent)).toContain(
+      "hello",
+    )
   })
 })
 
@@ -496,7 +513,10 @@ describe("tool calling -- agent tools, hooks, and guardrails", () => {
     // Second call: allow
     expect(guards.onToolCall("noop", "{}")).toMatchObject({ break: false })
     // Third call with same tool+args: break (DUP_CALL_THRESHOLD = 3)
-    expect(guards.onToolCall("noop", "{}")).toMatchObject({ break: true, reason: expect.stringContaining("duplicate") })
+    expect(guards.onToolCall("noop", "{}")).toMatchObject({
+      break: true,
+      reason: expect.stringContaining("duplicate"),
+    })
   })
 
   it("LoopGuards detects stall when consecutive onStep calls have no tool calls in window", async () => {
@@ -542,7 +562,7 @@ describe("HTTP endpoints", () => {
   it("GET /health returns 200 with status ok", async () => {
     const res = await app.fetch(new Request("http://localhost/health"))
     expect(res.status).toBe(200)
-    const body = await res.json() as any
+    const body = (await res.json()) as any
     expect(body.status).toBe("ok")
   })
 

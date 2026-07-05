@@ -3,7 +3,12 @@ import { join } from "node:path"
 import { Hono } from "hono"
 import type { MiddlewareHandler } from "hono"
 import { streamSSE } from "hono/streaming"
-import type { AgentQueryRequest, FastQueryRequest, IntentClassification, SseEvent } from "@yomi/shared"
+import type {
+  AgentQueryRequest,
+  FastQueryRequest,
+  IntentClassification,
+  SseEvent,
+} from "@yomi/shared"
 import { fastPipeline, resolveText } from "./pipeline/fast.js"
 import { agentPipeline } from "./pipeline/agent.js"
 import { transcribe } from "./stt.js"
@@ -74,8 +79,6 @@ initConnectorRegistryFromSession().catch(() => {})
 // The scheduler checks plan entitlement internally — if the plan doesn't support
 // cron, the tick loop simply won't start.
 getDefaultScheduler().start(process.env["YOMI_PLAN"])
-
-
 
 const app = new Hono()
 
@@ -153,7 +156,12 @@ app.post("/query", async (c) => {
       })
     } catch (err) {
       console.warn(`[yomi/query] classifyIntent failed, defaulting to fast:`, err)
-      decision = { path: "fast", confidence: 0.5, reason: "classifier error fallback", source: "heuristic" }
+      decision = {
+        path: "fast",
+        confidence: 0.5,
+        reason: "classifier error fallback",
+        source: "heuristic",
+      }
     }
     try {
       await stream.writeSSE({
@@ -195,7 +203,13 @@ app.post("/query", async (c) => {
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : "Internal error"
-        try { await stream.writeSSE({ data: JSON.stringify({ type: "error", message } satisfies SseEvent) }) } catch { /* stream closed */ }
+        try {
+          await stream.writeSSE({
+            data: JSON.stringify({ type: "error", message } satisfies SseEvent),
+          })
+        } catch {
+          /* stream closed */
+        }
       }
     } else {
       const normalised: FastQueryRequest = { ...body, text }
@@ -205,7 +219,13 @@ app.post("/query", async (c) => {
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : "Internal error"
-        try { await stream.writeSSE({ data: JSON.stringify({ type: "error", message } satisfies SseEvent) }) } catch { /* stream closed */ }
+        try {
+          await stream.writeSSE({
+            data: JSON.stringify({ type: "error", message } satisfies SseEvent),
+          })
+        } catch {
+          /* stream closed */
+        }
       }
     }
   })
@@ -235,7 +255,13 @@ app.post("/query/fast", async (c) => {
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Internal error"
-      try { await stream.writeSSE({ data: JSON.stringify({ type: "error", message } satisfies SseEvent) }) } catch { /* stream closed */ }
+      try {
+        await stream.writeSSE({
+          data: JSON.stringify({ type: "error", message } satisfies SseEvent),
+        })
+      } catch {
+        /* stream closed */
+      }
     }
   })
 })
@@ -266,7 +292,13 @@ app.post("/query/agent", async (c) => {
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Internal error"
-      try { await stream.writeSSE({ data: JSON.stringify({ type: "error", message } satisfies SseEvent) }) } catch { /* stream closed */ }
+      try {
+        await stream.writeSSE({
+          data: JSON.stringify({ type: "error", message } satisfies SseEvent),
+        })
+      } catch {
+        /* stream closed */
+      }
     }
   })
 })
@@ -348,7 +380,12 @@ app.get("/management/memories", async (c) => {
 
 app.post("/management/memories", async (c) => {
   try {
-    const body = (await c.req.json()) as { content?: string; topic?: string; kind?: string; scope?: string }
+    const body = (await c.req.json()) as {
+      content?: string
+      topic?: string
+      kind?: string
+      scope?: string
+    }
     if (!body.content?.trim()) return c.json({ error: "content is required" }, 400)
     const memory = await addMemory({ ...body, content: body.content.trim() })
     return c.json({ memory })
@@ -373,7 +410,13 @@ app.get("/management/schedules", async (c) => {
 
 app.post("/management/schedules", async (c) => {
   try {
-    const body = (await c.req.json()) as { id?: string; schedule?: string; prompt?: string; deliverTo?: string[]; enabled?: boolean }
+    const body = (await c.req.json()) as {
+      id?: string
+      schedule?: string
+      prompt?: string
+      deliverTo?: string[]
+      enabled?: boolean
+    }
     if (!body.schedule?.trim()) return c.json({ error: "schedule is required" }, 400)
     if (!body.prompt?.trim()) return c.json({ error: "prompt is required" }, 400)
     const schedule = await upsertSchedule({
@@ -391,7 +434,8 @@ app.post("/management/schedules", async (c) => {
 
 app.patch("/management/schedules/:id", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as { enabled?: boolean }
-  if (typeof body.enabled !== "boolean") return c.json({ error: "enabled boolean is required" }, 400)
+  if (typeof body.enabled !== "boolean")
+    return c.json({ error: "enabled boolean is required" }, 400)
   const schedule = await setScheduleEnabled(c.req.param("id"), body.enabled)
   if (!schedule) return c.json({ error: "schedule not found" }, 404)
   return c.json({ schedule })
@@ -423,9 +467,12 @@ app.onError((err, c) => {
   const path = c.req.path
   const method = c.req.method
   console.error(`[yomi] unhandled ${method} ${path}:`, err)
-  const message = process.env["YOMI_DEV"] === "true"
-    ? err instanceof Error ? err.message : String(err)
-    : "Internal server error"
+  const message =
+    process.env["YOMI_DEV"] === "true"
+      ? err instanceof Error
+        ? err.message
+        : String(err)
+      : "Internal server error"
   return c.json({ error: message }, 500)
 })
 

@@ -42,7 +42,14 @@ function resolveCtx(ctx: PromptContext): Required<PromptContext> {
   return {
     userName: ctx.userName ?? process.env.USER ?? "user",
     os: ctx.os ?? process.platform,
-    today: ctx.today ?? new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
+    today:
+      ctx.today ??
+      new Date().toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
     yomiMd: ctx.yomiMd ?? "",
     soulMd: ctx.soulMd ?? "",
     memorySummary: ctx.memorySummary ?? "",
@@ -164,13 +171,10 @@ export async function refreshSkillIndexBlock(): Promise<void> {
 
 export function buildConnectorInfo(connectedProviders: string[]): string {
   const availableNames = ALL_CONNECTOR_DEFS.map((d) => d.name).sort()
-  const connectedNames = ALL_CONNECTOR_DEFS.filter((d) =>
-    connectedProviders.includes(d.id),
-  ).map((d) => d.name)
-  const connectedStr =
-    connectedNames.length > 0
-      ? connectedNames.join(", ")
-      : "none"
+  const connectedNames = ALL_CONNECTOR_DEFS.filter((d) => connectedProviders.includes(d.id)).map(
+    (d) => d.name,
+  )
+  const connectedStr = connectedNames.length > 0 ? connectedNames.join(", ") : "none"
   return `<connector_info>
 Available connectors: ${availableNames.join(", ")}.
 Currently connected: ${connectedStr}.
@@ -184,7 +188,8 @@ export interface FastPromptOptions extends PromptContext {
 
 export function buildFastPrompt(opts: FastPromptOptions): string {
   const resolved = resolveCtx(opts)
-  const { userName, os, today, yomiMd, soulMd, hasScreen, connectedProviders, ...memoryCtx } = resolved
+  const { userName, os, today, yomiMd, soulMd, hasScreen, connectedProviders, ...memoryCtx } =
+    resolved
   const tts = opts.tts
   const text = opts.text
   const userCtx = yomiMd ? `<user_context>\n${yomiMd}\n</user_context>\n\n` : ""
@@ -193,7 +198,8 @@ export function buildFastPrompt(opts: FastPromptOptions): string {
   const appUrl = process.env["YOMI_APP_URL"] ?? "https://yomi.arka6fx.com"
 
   // Only inject connector info when the query mentions a connector or app keyword
-  const wantsConnector = CONNECTOR_KEYWORDS.test(text) || connectedProviders.some((p) => text.toLowerCase().includes(p))
+  const wantsConnector =
+    CONNECTOR_KEYWORDS.test(text) || connectedProviders.some((p) => text.toLowerCase().includes(p))
   const connInfo = wantsConnector ? `${buildConnectorInfo(connectedProviders)}\n` : ""
 
   const screenLine = hasScreen
@@ -217,7 +223,9 @@ Talk like a real person: do not use em dashes or en dashes; use commas, periods,
 </identity>
 
 ${soulCtx}${userCtx}${ANSWER_FORMAT_RULES}
-${tts ? `<voice_rules>
+${
+  tts
+    ? `<voice_rules>
 CRITICAL, your response is converted to speech:
 - Keep explanation in plain spoken English outside fenced blocks.
 - Use fenced answer/code blocks exactly when the answer format rules require them.
@@ -227,7 +235,9 @@ CRITICAL, your response is converted to speech:
 - If you must list steps, say "First... then... finally...", not numbered lists.
 - Never start with "Certainly!", "Sure!", "Of course!", just answer.
 </voice_rules>
-` : ""}
+`
+    : ""
+}
 <examples>
 ${FAST_EXAMPLES}
 </examples>
@@ -235,8 +245,12 @@ ${FAST_EXAMPLES}
 <rules>
 - Keep it to 1 to 3 sentences unless the user asks for code, an application, a biography, a draft, or a walkthrough.
 - Never fabricate file contents or URLs. Use look_at_screen to verify.
-${wantsConnector ? `- If the user asks about an app from the available connectors list that is NOT connected: you MUST say they need to connect it at ${appUrl}/dashboard. Do NOT guess or make up information about their account.
-- If the user asks about an app NOT in the available connectors list: say it isn't available as a Yomi connector yet but work is in progress.` : ""}
+${
+  wantsConnector
+    ? `- If the user asks about an app from the available connectors list that is NOT connected: you MUST say they need to connect it at ${appUrl}/dashboard. Do NOT guess or make up information about their account.
+- If the user asks about an app NOT in the available connectors list: say it isn't available as a Yomi connector yet but work is in progress.`
+    : ""
+}
 </rules>
 
 <screen_context>

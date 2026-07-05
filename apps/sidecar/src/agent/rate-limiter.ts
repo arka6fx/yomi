@@ -14,9 +14,9 @@ const MAX_RETRY_AFTER_MS = 600_000 // 10 min cap on Retry-After
 const MAX_BACKOFF_MS = 120_000 // 2 min cap on exponential backoff
 
 interface ProviderState {
-  cooldownUntil: number | null       // timestamp (ms) when circuit re-closes
-  lastRateLimitAt: number | null     // timestamp of most recent 429
-  retryAfterUsed: number | null      // seconds from Retry-After header
+  cooldownUntil: number | null // timestamp (ms) when circuit re-closes
+  lastRateLimitAt: number | null // timestamp of most recent 429
+  retryAfterUsed: number | null // seconds from Retry-After header
 }
 
 interface RateLimitData {
@@ -118,8 +118,10 @@ export function isRateLimitError(error: unknown): boolean {
 
   const msg = (err.message ?? "").toLowerCase()
   if (status === 429) return true
-  if (msg.includes("rate limit") || msg.includes("rate_limit") || msg.includes("too many requests")) return true
-  if (msg.includes("retry after") || msg.includes("retry-after") || msg.includes("try again later")) return true
+  if (msg.includes("rate limit") || msg.includes("rate_limit") || msg.includes("too many requests"))
+    return true
+  if (msg.includes("retry after") || msg.includes("retry-after") || msg.includes("try again later"))
+    return true
 
   return false
 }
@@ -131,7 +133,13 @@ export function isBillingError(error: unknown): boolean {
   const status = err.status
   if (status === 402 || status === 403) return true
   const msg = (err.message ?? "").toLowerCase()
-  if (msg.includes("insufficient") || msg.includes("billing") || msg.includes("quota") || msg.includes("credits")) return true
+  if (
+    msg.includes("insufficient") ||
+    msg.includes("billing") ||
+    msg.includes("quota") ||
+    msg.includes("credits")
+  )
+    return true
   return false
 }
 
@@ -166,11 +174,14 @@ export function parseRetryAfter(value: string | null | undefined): number | unde
 }
 
 /** Check if response headers indicate a rate limit. Returns retry-after seconds. */
-export function getRetryAfterFromHeaders(headers: Headers | Record<string, string> | null | undefined): number | undefined {
+export function getRetryAfterFromHeaders(
+  headers: Headers | Record<string, string> | null | undefined,
+): number | undefined {
   if (!headers) return undefined
-  const get = typeof (headers as Headers).get === "function"
-    ? (k: string) => (headers as Headers).get(k)
-    : (k: string) => (headers as Record<string, string>)[k]
+  const get =
+    typeof (headers as Headers).get === "function"
+      ? (k: string) => (headers as Headers).get(k)
+      : (k: string) => (headers as Record<string, string>)[k]
 
   return parseRetryAfter(get("retry-after") ?? get("Retry-After") ?? get("x-ratelimit-reset"))
 }
@@ -195,7 +206,9 @@ export const DEFAULT_RETRY_CONFIG: RetryConfig = {
 export async function* withRateLimitRetry<T>(
   streamFactory: () => AsyncGenerator<T>,
   config: Partial<RetryConfig> = {},
-): AsyncGenerator<T | { type: "rate_limit_wait"; seconds: number } | { type: "rate_limit_exhausted" }> {
+): AsyncGenerator<
+  T | { type: "rate_limit_wait"; seconds: number } | { type: "rate_limit_exhausted" }
+> {
   const { maxRetries, provider } = { ...DEFAULT_RETRY_CONFIG, ...config }
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {

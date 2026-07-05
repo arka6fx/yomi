@@ -29,7 +29,10 @@ function getDecryptKeys(): Buffer[] {
   const keys: Buffer[] = [getKey()]
   const fallbacks = process.env.ENCRYPTION_KEY_FALLBACKS
   if (fallbacks) {
-    for (const hex of fallbacks.split(",").map((s) => s.trim()).filter(Boolean)) {
+    for (const hex of fallbacks
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)) {
       try {
         keys.push(parseKey(hex, "ENCRYPTION_KEY_FALLBACKS entry"))
       } catch {
@@ -75,9 +78,7 @@ export function decryptTokens(ciphertext: string): OAuthTokens {
 
 // Refresh a Google access token using the stored refresh token.
 // Re-encrypts and persists the result, then returns the updated tokens.
-export async function refreshGoogleAccessToken(
-  refreshToken: string,
-): Promise<OAuthTokens> {
+export async function refreshGoogleAccessToken(refreshToken: string): Promise<OAuthTokens> {
   const clientId = process.env.GOOGLE_INTEGRATIONS_CLIENT_ID
   const clientSecret = process.env.GOOGLE_INTEGRATIONS_CLIENT_SECRET
   if (!clientId || !clientSecret) throw new Error("Google OAuth credentials not configured")

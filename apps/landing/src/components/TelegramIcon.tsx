@@ -2,13 +2,7 @@ import * as React from "react"
 
 // Official Telegram logo (gradient circle + paper plane). The gradient id is made
 // unique per instance via useId so multiple copies on one page don't collide.
-export function TelegramIcon({
-  size = 24,
-  className,
-}: {
-  size?: number
-  className?: string
-}) {
+export function TelegramIcon({ size = 24, className }: { size?: number; className?: string }) {
   const gradientId = React.useId()
   return (
     <svg

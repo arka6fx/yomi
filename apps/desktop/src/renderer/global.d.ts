@@ -48,21 +48,30 @@ declare global {
       // Auto-update
       onUpdateAvailable(cb: (info: { version: string; releaseDate: string }) => void): () => void
       onUpdateDownloaded(cb: (info: { version: string }) => void): () => void
-      onUpdateProgress(cb: (info: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => void): () => void
+      onUpdateProgress(
+        cb: (info: {
+          percent: number
+          bytesPerSecond: number
+          transferred: number
+          total: number
+        }) => void,
+      ): () => void
       onUpdateError(cb: (info: { message: string }) => void): () => void
       downloadUpdate(): void
       installUpdate(): void
       // Integrations
-      getIntegrations(): Promise<{
-        id: string
-        provider: string
-        displayName: string
-        scopes: string[]
-        connected: boolean
-        lastSyncAt: string | null
-        expiresAt: string | null
-        createdAt: string
-      }[]>
+      getIntegrations(): Promise<
+        {
+          id: string
+          provider: string
+          displayName: string
+          scopes: string[]
+          connected: boolean
+          lastSyncAt: string | null
+          expiresAt: string | null
+          createdAt: string
+        }[]
+      >
       connectIntegration(id: string): Promise<{ ok?: boolean; error?: string; kind?: string }>
       disconnectIntegration(provider: string): Promise<{ ok?: boolean; error?: string }>
       // Bot channels (Telegram)
@@ -73,11 +82,25 @@ declare global {
       getSessions(query?: string): Promise<unknown[]>
       deleteSession(id: number): Promise<{ ok?: boolean; deleted?: boolean; error?: string }>
       getMemories(query?: string): Promise<unknown[]>
-      addMemory(input: { content: string; topic?: string; kind?: string; scope?: string }): Promise<{ memory?: unknown; error?: string }>
+      addMemory(input: {
+        content: string
+        topic?: string
+        kind?: string
+        scope?: string
+      }): Promise<{ memory?: unknown; error?: string }>
       deleteMemory(id: string): Promise<{ ok?: boolean; error?: string }>
       getSchedules(): Promise<unknown[]>
-      saveSchedule(input: { id?: string; schedule: string; prompt: string; deliverTo?: string[]; enabled?: boolean }): Promise<{ schedule?: unknown; error?: string }>
-      setScheduleEnabled(id: string, enabled: boolean): Promise<{ schedule?: unknown; error?: string }>
+      saveSchedule(input: {
+        id?: string
+        schedule: string
+        prompt: string
+        deliverTo?: string[]
+        enabled?: boolean
+      }): Promise<{ schedule?: unknown; error?: string }>
+      setScheduleEnabled(
+        id: string,
+        enabled: boolean,
+      ): Promise<{ schedule?: unknown; error?: string }>
       deleteSchedule(id: string): Promise<{ ok?: boolean; deleted?: boolean; error?: string }>
       getDiagnostics(): Promise<{ diagnostics?: unknown; logs?: string[]; error?: string }>
     }

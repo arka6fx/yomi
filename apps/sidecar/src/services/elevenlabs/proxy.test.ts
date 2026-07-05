@@ -25,7 +25,10 @@ beforeEach(() => {
       return new Response(JSON.stringify({ text: "hello from stt proxy" }), { status: 200 })
     }
     if (url.includes("/api/tts")) {
-      return new Response(new Blob(["fake-mp3"]), { status: 200, headers: { "content-type": "audio/mpeg" } })
+      return new Response(new Blob(["fake-mp3"]), {
+        status: 200,
+        headers: { "content-type": "audio/mpeg" },
+      })
     }
     return new Response("not found", { status: 404 })
   }

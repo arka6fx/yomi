@@ -13,7 +13,10 @@ export interface Hooks {
   onUserPromptSubmit(prompt: string): Promise<void>
   onPreToolUse(toolName: string, args: unknown): Promise<{ ok: boolean; reason?: string }>
   onPostToolUse(toolName: string, result: unknown, args?: unknown): Promise<unknown>
-  onMemoryWrite?(content: string, metadata?: { source?: string; path?: string; kind?: string }): Promise<{ ok: boolean; reason?: string }>
+  onMemoryWrite?(
+    content: string,
+    metadata?: { source?: string; path?: string; kind?: string },
+  ): Promise<{ ok: boolean; reason?: string }>
   onStop(summary: string): Promise<void>
   onSessionEnd(): Promise<void>
 }
@@ -118,7 +121,11 @@ function buildHooks(): Hooks {
     },
 
     async onPostToolUse(toolName, result, args) {
-      const decision = guardrail.afterCall(toolName, (args ?? {}) as Record<string, unknown>, result)
+      const decision = guardrail.afterCall(
+        toolName,
+        (args ?? {}) as Record<string, unknown>,
+        result,
+      )
       let out: unknown = decision.isWarn ? appendGuidance(result, decision) : result
       if (decision.action === "halt") {
         out = appendGuidance(result, decision)
@@ -128,7 +135,9 @@ function buildHooks(): Hooks {
       if (resultText) {
         const findings = scanForThreats(resultText, "context")
         if (findings.length > 0) {
-          console.warn(`[yomi/hooks] threat pattern(s) in ${toolName} output: ${findings.join(", ")}`)
+          console.warn(
+            `[yomi/hooks] threat pattern(s) in ${toolName} output: ${findings.join(", ")}`,
+          )
         }
       }
 

@@ -62,7 +62,8 @@ export default function TermsPage() {
             <Section title="Subscriptions, credits, and billing">
               <ul>
                 <li>
-                  Paid plans are billed monthly via Dodo Payments. Prices are listed at yomi.arka6fx.com/pricing.
+                  Paid plans are billed monthly via Dodo Payments. Prices are listed at
+                  yomi.arka6fx.com/pricing.
                 </li>
                 <li>
                   Usage is metered in credits. Each plan includes a monthly credit allowance that
@@ -73,8 +74,8 @@ export default function TermsPage() {
                   are non-refundable.
                 </li>
                 <li>
-                  Monthly plans can be cancelled at any time from your Yomi dashboard.
-                  Access continues until the end of the current billing cycle.
+                  Monthly plans can be cancelled at any time from your Yomi dashboard. Access
+                  continues until the end of the current billing cycle.
                 </li>
                 <li>
                   We reserve the right to change pricing with 30 days notice. Existing subscriptions

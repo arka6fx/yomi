@@ -46,7 +46,10 @@ const MIN_OVERLAY_H = 96
 
 function compactOverlayBounds(height = MIN_OVERLAY_H): Rectangle {
   const { x, y, width, height: workHeight } = screen.getPrimaryDisplay().workArea
-  const nextHeight = Math.min(Math.max(height, MIN_OVERLAY_H), Math.max(MIN_OVERLAY_H, workHeight - 16))
+  const nextHeight = Math.min(
+    Math.max(height, MIN_OVERLAY_H),
+    Math.max(MIN_OVERLAY_H, workHeight - 16),
+  )
   return {
     x: x + Math.round((width - COMPACT_OVERLAY_W) / 2),
     y: y + 8,
@@ -199,7 +202,12 @@ app.whenReady().then(async () => {
   let dragStart = { winX: 0, winY: 0, mouseX: 0, mouseY: 0 }
   ipcMain.on("yomi:drag-start", (_e, mouseX: number, mouseY: number) => {
     const b = overlayWin?.getBounds()
-    dragStart = { winX: b?.x ?? overlayLogicalPos.x, winY: b?.y ?? overlayLogicalPos.y, mouseX, mouseY }
+    dragStart = {
+      winX: b?.x ?? overlayLogicalPos.x,
+      winY: b?.y ?? overlayLogicalPos.y,
+      mouseX,
+      mouseY,
+    }
   })
   ipcMain.on("yomi:drag-move", (_e, mouseX: number, mouseY: number) => {
     const dx = mouseX - dragStart.mouseX
@@ -415,8 +423,6 @@ app.whenReady().then(async () => {
     }
   })
 
-
-
   ipcMain.handle("yomi:gateway-unlink", async (_e, platform: string) => {
     const token = loadToken()
     if (!token) return { error: "Not signed in" }
@@ -460,7 +466,9 @@ app.whenReady().then(async () => {
 
   ipcMain.handle("yomi:delete-session", async (_e, id: number) => {
     try {
-      return await sidecarJson<{ ok?: boolean; deleted?: boolean }>(`/management/sessions/${id}`, { method: "DELETE" })
+      return await sidecarJson<{ ok?: boolean; deleted?: boolean }>(`/management/sessions/${id}`, {
+        method: "DELETE",
+      })
     } catch (err) {
       return { error: err instanceof Error ? err.message : "Delete failed" }
     }
@@ -476,20 +484,25 @@ app.whenReady().then(async () => {
     }
   })
 
-  ipcMain.handle("yomi:add-memory", async (_e, input: { content: string; topic?: string; kind?: string; scope?: string }) => {
-    try {
-      return await sidecarJson<{ memory?: unknown }>("/management/memories", {
-        method: "POST",
-        body: JSON.stringify(input),
-      })
-    } catch (err) {
-      return { error: err instanceof Error ? err.message : "Memory add failed" }
-    }
-  })
+  ipcMain.handle(
+    "yomi:add-memory",
+    async (_e, input: { content: string; topic?: string; kind?: string; scope?: string }) => {
+      try {
+        return await sidecarJson<{ memory?: unknown }>("/management/memories", {
+          method: "POST",
+          body: JSON.stringify(input),
+        })
+      } catch (err) {
+        return { error: err instanceof Error ? err.message : "Memory add failed" }
+      }
+    },
+  )
 
   ipcMain.handle("yomi:delete-memory", async (_e, id: string) => {
     try {
-      return await sidecarJson<{ ok?: boolean }>(`/management/memories/${encodeURIComponent(id)}`, { method: "DELETE" })
+      return await sidecarJson<{ ok?: boolean }>(`/management/memories/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      })
     } catch (err) {
       return { error: err instanceof Error ? err.message : "Memory delete failed" }
     }
@@ -504,23 +517,38 @@ app.whenReady().then(async () => {
     }
   })
 
-  ipcMain.handle("yomi:save-schedule", async (_e, input: { id?: string; schedule: string; prompt: string; deliverTo?: string[]; enabled?: boolean }) => {
-    try {
-      return await sidecarJson<{ schedule?: unknown }>("/management/schedules", {
-        method: "POST",
-        body: JSON.stringify(input),
-      })
-    } catch (err) {
-      return { error: err instanceof Error ? err.message : "Schedule save failed" }
-    }
-  })
+  ipcMain.handle(
+    "yomi:save-schedule",
+    async (
+      _e,
+      input: {
+        id?: string
+        schedule: string
+        prompt: string
+        deliverTo?: string[]
+        enabled?: boolean
+      },
+    ) => {
+      try {
+        return await sidecarJson<{ schedule?: unknown }>("/management/schedules", {
+          method: "POST",
+          body: JSON.stringify(input),
+        })
+      } catch (err) {
+        return { error: err instanceof Error ? err.message : "Schedule save failed" }
+      }
+    },
+  )
 
   ipcMain.handle("yomi:set-schedule-enabled", async (_e, id: string, enabled: boolean) => {
     try {
-      return await sidecarJson<{ schedule?: unknown }>(`/management/schedules/${encodeURIComponent(id)}`, {
-        method: "PATCH",
-        body: JSON.stringify({ enabled }),
-      })
+      return await sidecarJson<{ schedule?: unknown }>(
+        `/management/schedules/${encodeURIComponent(id)}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ enabled }),
+        },
+      )
     } catch (err) {
       return { error: err instanceof Error ? err.message : "Schedule update failed" }
     }
@@ -528,7 +556,10 @@ app.whenReady().then(async () => {
 
   ipcMain.handle("yomi:delete-schedule", async (_e, id: string) => {
     try {
-      return await sidecarJson<{ ok?: boolean; deleted?: boolean }>(`/management/schedules/${encodeURIComponent(id)}`, { method: "DELETE" })
+      return await sidecarJson<{ ok?: boolean; deleted?: boolean }>(
+        `/management/schedules/${encodeURIComponent(id)}`,
+        { method: "DELETE" },
+      )
     } catch (err) {
       return { error: err instanceof Error ? err.message : "Schedule delete failed" }
     }
@@ -536,7 +567,9 @@ app.whenReady().then(async () => {
 
   ipcMain.handle("yomi:get-diagnostics", async () => {
     try {
-      return await sidecarJson<{ diagnostics?: unknown; logs?: string[] }>("/management/diagnostics")
+      return await sidecarJson<{ diagnostics?: unknown; logs?: string[] }>(
+        "/management/diagnostics",
+      )
     } catch (err) {
       return { error: err instanceof Error ? err.message : "Diagnostics unavailable" }
     }

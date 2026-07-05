@@ -5,10 +5,7 @@ export { createModel, embedText } from "./model.js"
 export { resolveModelCap, resolveMaxTokens, type ModelCap } from "./model-caps.js"
 export { RateLimitError, BillingError, ApiError } from "./model.js"
 
-export {
-  ConnectorRegistry,
-  type ConnectorRegistryDeps,
-} from "./connectors/registry.js"
+export { ConnectorRegistry, type ConnectorRegistryDeps } from "./connectors/registry.js"
 export { GoogleGmailConnector } from "./connectors/google-gmail.js"
 export { googleGmailDef, createGmailTools } from "./connectors/google-gmail-def.js"
 export { googleCalendarDef, createCalendarTools } from "./connectors/google-calendar-def.js"
@@ -17,7 +14,12 @@ export { googleClassroomDef, createClassroomTools } from "./connectors/google-cl
 export { githubDef, createGitHubTools } from "./connectors/github-def.js"
 export { notionDef, createNotionTools } from "./connectors/notion-def.js"
 export { slackDef, createSlackTools } from "./connectors/slack-def.js"
-export { linearDef, linearApiKeyDef, createLinearTools, createLinearApiKeyTools } from "./connectors/linear-def.js"
+export {
+  linearDef,
+  linearApiKeyDef,
+  createLinearTools,
+  createLinearApiKeyTools,
+} from "./connectors/linear-def.js"
 export { ALL_CONNECTOR_DEFS } from "./connectors/all-defs.js"
 export type {
   Connector,

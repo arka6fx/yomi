@@ -39,7 +39,7 @@ export function createDelegateTaskTool(ctx: { plan?: Plan }) {
         "Delegate a subtask to a subagent. Provide either a single goal (single delegation) " +
         "or an array of tasks (parallel batch). Leaf subagents can only read files and search; " +
         "orchestrator subagents (Max-only) can run bash and create skills. " +
-        "Example: { goal: \"Audit package.json\" } or { tasks: [{ goal: \"...\" }, { goal: \"...\" }] }.",
+        'Example: { goal: "Audit package.json" } or { tasks: [{ goal: "..." }, { goal: "..." }] }.',
       parameters: jsonSchema<DelegateTaskArgs>({
         type: "object",
         properties: {
@@ -136,7 +136,7 @@ export function createDelegateTaskTool(ctx: { plan?: Plan }) {
               ok: r.ok,
               summary: r.summary,
               tool_calls: r.toolCalls,
-              role: r.messages.length > 0 ? "leaf" as SubagentRole : undefined,
+              role: r.messages.length > 0 ? ("leaf" as SubagentRole) : undefined,
               error: r.error,
             })),
           }

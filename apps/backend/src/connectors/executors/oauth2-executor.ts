@@ -34,7 +34,8 @@ function decodeState(state: string): { userId: string; ts: number } {
   const expected = signState(payload)
   const sig = Buffer.from(signature)
   const exp = Buffer.from(expected)
-  if (sig.length !== exp.length || !timingSafeEqual(sig, exp)) throw new Error("invalid state signature")
+  if (sig.length !== exp.length || !timingSafeEqual(sig, exp))
+    throw new Error("invalid state signature")
   const decoded = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"))
   if (!decoded.userId) throw new Error("missing userId in state")
   return decoded as { userId: string; ts: number }
@@ -90,7 +91,9 @@ export async function handleOAuth2Callback(
   if (!clientId || !clientSecret) {
     const missing = !clientId ? auth.clientIdEnv : auth.clientSecretEnv
     console.error(`[integrations/${def.id}] env var not set: ${missing}`)
-    return { redirectTo: `${appUrl()}/dashboard?integration_error=${encodeURIComponent(`${missing} not configured`)}` }
+    return {
+      redirectTo: `${appUrl()}/dashboard?integration_error=${encodeURIComponent(`${missing} not configured`)}`,
+    }
   }
 
   // Decode and validate state (10-minute TTL)
@@ -174,7 +177,9 @@ export async function handleOAuth2Callback(
     if (def.getDisplayName) {
       displayName = await def.getDisplayName(tokens.accessToken)
     }
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
 
   // Persist encrypted tokens (upsert on userId + provider)
   let encrypted: string

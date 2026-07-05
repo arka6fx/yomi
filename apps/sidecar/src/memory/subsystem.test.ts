@@ -34,7 +34,12 @@ describe("memory subsystem", () => {
     globalThis.fetch = (async (input: RequestInfo | URL) => {
       const url = String(input)
       if (url.endsWith("/api/memory/profile")) {
-        return new Response(JSON.stringify({ profile: { static: ["Prefers TypeScript"], dynamic: ["Working on Yomi memory"] } }), { status: 200 })
+        return new Response(
+          JSON.stringify({
+            profile: { static: ["Prefers TypeScript"], dynamic: ["Working on Yomi memory"] },
+          }),
+          { status: 200 },
+        )
       }
       return new Response(JSON.stringify({ memories: [], snippets: [] }), { status: 200 })
     }) as typeof fetch

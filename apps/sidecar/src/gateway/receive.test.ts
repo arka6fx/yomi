@@ -1,7 +1,9 @@
 import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test"
 
 let reserveCalls: { kind: string }[] = []
-let reserveResult: { ok: boolean; error?: string; code?: string; upgradeUrl?: string } = { ok: true }
+let reserveResult: { ok: boolean; error?: string; code?: string; upgradeUrl?: string } = {
+  ok: true,
+}
 
 let classifyResult = { path: "fast", confidence: 0.9, reason: "mocked", source: "heuristic" }
 let classifyCallCount = 0
@@ -113,7 +115,11 @@ beforeEach(() => {
   connectorInitCalls = []
   fetchCalls = []
   globalThis.fetch = async (url: string, opts?: RequestInit) => {
-    fetchCalls.push({ url: url as string, method: opts?.method ?? "GET", body: opts?.body as string | undefined })
+    fetchCalls.push({
+      url: url as string,
+      method: opts?.method ?? "GET",
+      body: opts?.body as string | undefined,
+    })
     return new Response(JSON.stringify({ ok: true }), { status: 200 })
   }
 })
@@ -235,7 +241,11 @@ describe("handleGatewayMessage", () => {
   it("passes conversation history from prior turns", async () => {
     const historyChatId = "chat-history-test"
     // First turn
-    await handleGatewayMessage({ ...sampleMsg, text: "what's in my Notion?", chatId: historyChatId })
+    await handleGatewayMessage({
+      ...sampleMsg,
+      text: "what's in my Notion?",
+      chatId: historyChatId,
+    })
     expect(fastCallArgs.length).toBe(1)
     expect((fastCallArgs[0] as Record<string, unknown>).history?.length ?? 0).toBe(0)
 
@@ -247,7 +257,10 @@ describe("handleGatewayMessage", () => {
     // Second turn — history should include the prior exchange
     await handleGatewayMessage({ ...sampleMsg, text: "tell me more", chatId: historyChatId })
     expect(fastCallArgs.length).toBe(1)
-    const history = (fastCallArgs[0] as Record<string, unknown>).history as Array<{ role: string; text: string }>
+    const history = (fastCallArgs[0] as Record<string, unknown>).history as Array<{
+      role: string
+      text: string
+    }>
     expect(history).toBeDefined()
     expect(history.length).toBeGreaterThanOrEqual(2)
     expect(history[0]!.role).toBe("user")
@@ -267,7 +280,10 @@ describe("handleGatewayMessage", () => {
 
     // Chat A asks a follow-up
     await handleGatewayMessage({ ...sampleMsg, text: "remember me?", chatId: "chat-a" })
-    const historyA = (fastCallArgs[0] as Record<string, unknown>).history as Array<{ role: string; text: string }>
+    const historyA = (fastCallArgs[0] as Record<string, unknown>).history as Array<{
+      role: string
+      text: string
+    }>
     expect(historyA[0]!.text).toBe("hi")
     expect(historyA[1]!.text).toBe("Hello! How can I help?")
 
@@ -276,7 +292,10 @@ describe("handleGatewayMessage", () => {
 
     // Chat B asks a follow-up
     await handleGatewayMessage({ ...sampleMsg, text: "tu me souviens?", chatId: "chat-b" })
-    const historyB = (fastCallArgs[0] as Record<string, unknown>).history as Array<{ role: string; text: string }>
+    const historyB = (fastCallArgs[0] as Record<string, unknown>).history as Array<{
+      role: string
+      text: string
+    }>
     expect(historyB[0]!.text).toBe("bonjour")
   })
 
@@ -321,7 +340,14 @@ describe("handleGatewayMessage", () => {
 
   it("sends usage_limit events as reply in fast path", async () => {
     fastChunks = []
-    fastExtraEvents = [{ type: "usage_limit", message: "Daily limit reached", code: "quota_exceeded", feature: "analyze" }]
+    fastExtraEvents = [
+      {
+        type: "usage_limit",
+        message: "Daily limit reached",
+        code: "quota_exceeded",
+        feature: "analyze",
+      },
+    ]
     await handleGatewayMessage(sampleMsg)
     const sendCall = fetchCalls.find((c) => c.url.includes("/api/gateway/send"))
     expect(sendCall).toBeDefined()
@@ -332,7 +358,14 @@ describe("handleGatewayMessage", () => {
   it("sends usage_limit events as reply in agent path", async () => {
     classifyResult = { path: "agent", confidence: 0.9, reason: "complex", source: "llm" }
     agentChunks = []
-    agentExtraEvents = [{ type: "usage_limit", message: "Bot message limit exceeded", code: "quota_exceeded", feature: "botMessages" }]
+    agentExtraEvents = [
+      {
+        type: "usage_limit",
+        message: "Bot message limit exceeded",
+        code: "quota_exceeded",
+        feature: "botMessages",
+      },
+    ]
     await handleGatewayMessage(sampleMsg)
     const sendCall = fetchCalls.find((c) => c.url.includes("/api/gateway/send"))
     expect(sendCall).toBeDefined()

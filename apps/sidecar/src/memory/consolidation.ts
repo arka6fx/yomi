@@ -19,7 +19,8 @@ type ConsolidationResult = {
   diaryEntry?: string
 }
 
-const MEMORY_EXTRACTION_MODEL = process.env["MEMORY_EXTRACTION_MODEL"] || process.env["AI_CREDITS_FAST_MODEL"] || "gpt-5.5-mini"
+const MEMORY_EXTRACTION_MODEL =
+  process.env["MEMORY_EXTRACTION_MODEL"] || process.env["AI_CREDITS_FAST_MODEL"] || "gpt-5.5-mini"
 
 let _lastLightRun: string | null = null
 let _lastRemRun: string | null = null
@@ -97,7 +98,11 @@ async function readSessionTranscripts(lookbackDays = 3): Promise<string[]> {
   return results
 }
 
-async function writeDiaryEntry(date: string, phase: ConsolidationPhase, content: string): Promise<void> {
+async function writeDiaryEntry(
+  date: string,
+  phase: ConsolidationPhase,
+  content: string,
+): Promise<void> {
   const path = datePath(date)
   await mkdir(dirname(path), { recursive: true })
   const header = `## ${phase === "light" ? "Light Sleep" : "REM Sleep"} — ${new Date().toISOString()}\n\n`
@@ -112,9 +117,10 @@ async function extractPatterns(entries: string[]): Promise<{
 
   const { text } = await generateText({
     model: createModel(MEMORY_EXTRACTION_MODEL),
-    messages: [{
-      role: "user",
-      content: `Analyze these memory entries for patterns and duplicates.
+    messages: [
+      {
+        role: "user",
+        content: `Analyze these memory entries for patterns and duplicates.
 
 Return strict JSON only:
 {"patterns":["pattern1","pattern2"],"duplicates":[{"topic":"topic","count":2}]}
@@ -126,7 +132,8 @@ Rules:
 
 Entries:
 ${entries.join("\n---\n")}`,
-    }],
+      },
+    ],
   })
 
   try {
@@ -145,9 +152,10 @@ async function generateDiaryNarrative(
 
   const { text } = await generateText({
     model: createModel(MEMORY_EXTRACTION_MODEL),
-    messages: [{
-      role: "user",
-      content: `You are a gentle, observant mind reflecting on the day's interactions. Write a brief ${phase === "light" ? "light" : "deep"} reflection weaving together these memory fragments.
+    messages: [
+      {
+        role: "user",
+        content: `You are a gentle, observant mind reflecting on the day's interactions. Write a brief ${phase === "light" ? "light" : "deep"} reflection weaving together these memory fragments.
 
 Rules:
 - First person, flowing prose, 60-120 words.
@@ -159,7 +167,8 @@ Rules:
 Memory fragments:
 ${memorySnippets.map((s, i) => `[${i + 1}] ${s}`).join("\n")}
 ${patterns.length ? `\nEmerging patterns:\n${patterns.map((p) => `- ${p}`).join("\n")}` : ""}`,
-    }],
+      },
+    ],
   })
 
   return text.trim()
@@ -186,11 +195,19 @@ export async function runLightSleep(lookbackDays = 3): Promise<ConsolidationResu
   const diaryEntry = await generateDiaryNarrative("light", combinedSnippets, patterns)
 
   if (diaryEntry) {
-    await writeDiaryEntry(todayStr, "light", [
-      diaryEntry ? `**Narrative:** ${diaryEntry}` : "",
-      patterns.length ? `**Patterns observed:** ${patterns.join(", ")}` : "",
-      duplicates.length ? `**Duplicates found:** ${duplicates.map((d) => `${d.topic} (×${d.count})`).join(", ")}` : "",
-    ].filter(Boolean).join("\n\n"))
+    await writeDiaryEntry(
+      todayStr,
+      "light",
+      [
+        diaryEntry ? `**Narrative:** ${diaryEntry}` : "",
+        patterns.length ? `**Patterns observed:** ${patterns.join(", ")}` : "",
+        duplicates.length
+          ? `**Duplicates found:** ${duplicates.map((d) => `${d.topic} (×${d.count})`).join(", ")}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
+    )
   }
 
   _lastLightRun = todayStr
@@ -212,9 +229,7 @@ export async function runRemSleep(): Promise<ConsolidationResult> {
     return { phase: "rem", entriesProcessed: 0, duplicatesMerged: 0, patternsFound: 0 }
   }
 
-  const sections = memoryContent
-    .split("\n## ")
-    .filter((s) => s.trim().length > 0)
+  const sections = memoryContent.split("\n## ").filter((s) => s.trim().length > 0)
 
   const { patterns, duplicates } = await extractPatterns(sections)
 

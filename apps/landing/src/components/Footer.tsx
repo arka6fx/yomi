@@ -37,10 +37,7 @@ export default function Footer() {
           </div>
           <div>
             <p className="mb-1 font-medium text-white/60">Website</p>
-            <a
-              href="https://yomi.arka6fx.com"
-              className="transition-colors hover:text-white/70"
-            >
+            <a href="https://yomi.arka6fx.com" className="transition-colors hover:text-white/70">
               yomi.arka6fx.com
             </a>
           </div>

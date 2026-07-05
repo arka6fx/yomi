@@ -53,7 +53,10 @@ function header(headers: GmailHeader[], name: string): string {
 function headerList(headers: GmailHeader[], name: string): string[] {
   const val = header(headers, name)
   if (!val) return []
-  return val.split(",").map((s) => s.trim()).filter(Boolean)
+  return val
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
 }
 
 interface GmailHeader {
@@ -180,7 +183,11 @@ export class GoogleGmailConnector implements Connector {
     return Promise.all(messageIds.map((id) => this.readEmail(id)))
   }
 
-  private async modifyMessage(messageId: string, addLabelIds: string[] = [], removeLabelIds: string[] = []): Promise<void> {
+  private async modifyMessage(
+    messageId: string,
+    addLabelIds: string[] = [],
+    removeLabelIds: string[] = [],
+  ): Promise<void> {
     await this.gmail<GmailMessage>(`/messages/${messageId}/modify`, {
       method: "POST",
       body: JSON.stringify({ addLabelIds, removeLabelIds }),
@@ -207,13 +214,18 @@ export class GoogleGmailConnector implements Connector {
     // DELETE returns 204 No Content, so call fetch directly rather than the
     // JSON helper (which would fail trying to parse an empty body).
     const token = await this.getAccessToken(this.userId, "google")
-    const res = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    const res = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}`,
+      {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    )
     if (!res.ok) {
       const body = await res.text()
-      throw new Error(`Gmail API DELETE /messages/${messageId} → ${res.status}: ${body.slice(0, 200)}`)
+      throw new Error(
+        `Gmail API DELETE /messages/${messageId} → ${res.status}: ${body.slice(0, 200)}`,
+      )
     }
   }
 
@@ -250,7 +262,11 @@ export class GoogleGmailConnector implements Connector {
     return data.labels ?? []
   }
 
-  async applyLabels(messageId: string, addLabelIds: string[], removeLabelIds: string[]): Promise<void> {
+  async applyLabels(
+    messageId: string,
+    addLabelIds: string[],
+    removeLabelIds: string[],
+  ): Promise<void> {
     await this.modifyMessage(messageId, addLabelIds, removeLabelIds)
   }
 
@@ -275,9 +291,13 @@ export class GoogleGmailConnector implements Connector {
     const body: Record<string, unknown> = { message: { raw: encoded } }
     if (draft.replyToMessageId) {
       try {
-        const orig = await this.gmail<GmailMessage>(`/messages/${draft.replyToMessageId}?format=metadata`)
+        const orig = await this.gmail<GmailMessage>(
+          `/messages/${draft.replyToMessageId}?format=metadata`,
+        )
         ;(body.message as Record<string, string>).threadId = orig.threadId
-      } catch { /* best-effort */ }
+      } catch {
+        /* best-effort */
+      }
     }
 
     const result = await this.gmail<{ id: string; message: { id: string } }>("/drafts", {
@@ -287,7 +307,10 @@ export class GoogleGmailConnector implements Connector {
     return { id: result.id, messageId: result.message.id }
   }
 
-  async getAttachment(messageId: string, attachmentId: string): Promise<{ filename: string; mimeType: string; data: string; size: number }> {
+  async getAttachment(
+    messageId: string,
+    attachmentId: string,
+  ): Promise<{ filename: string; mimeType: string; data: string; size: number }> {
     const msg = await this.gmail<GmailMessage>(`/messages/${messageId}?format=full`)
     const findAttachment = (payload: GmailPayload): GmailPayload | null => {
       if (payload.body?.attachmentId) {
@@ -306,13 +329,21 @@ export class GoogleGmailConnector implements Connector {
     const att = await this.gmail<{ attachmentId: string; data: string; size: number }>(
       `/messages/${messageId}/attachments/${attachmentId}`,
     )
-    return { filename: part?.filename ?? "attachment", mimeType: part?.mimeType ?? "application/octet-stream", data: att.data, size: att.size }
+    return {
+      filename: part?.filename ?? "attachment",
+      mimeType: part?.mimeType ?? "application/octet-stream",
+      data: att.data,
+      size: att.size,
+    }
   }
 
-  async listDrafts(): Promise<{ id: string; messageId: string; subject: string; from: string; date: string }[]> {
-    const data = await this.gmail<{ drafts?: { id: string; message: { id: string } }[]; resultSizeEstimate?: number }>(
-      "/drafts",
-    )
+  async listDrafts(): Promise<
+    { id: string; messageId: string; subject: string; from: string; date: string }[]
+  > {
+    const data = await this.gmail<{
+      drafts?: { id: string; message: { id: string } }[]
+      resultSizeEstimate?: number
+    }>("/drafts")
     const draftIds = data.drafts ?? []
     return Promise.all(
       draftIds.map(async (d) => {
@@ -341,7 +372,11 @@ export class GoogleGmailConnector implements Connector {
     return { messageId: result.message.id, threadId: result.message.threadId }
   }
 
-  async createLabel(name: string, labelVisibility?: string, messageVisibility?: string): Promise<{ id: string; name: string; type: string }> {
+  async createLabel(
+    name: string,
+    labelVisibility?: string,
+    messageVisibility?: string,
+  ): Promise<{ id: string; name: string; type: string }> {
     const label = await this.gmail<{ id: string; name: string; type: string }>("/labels", {
       method: "POST",
       body: JSON.stringify({
@@ -376,9 +411,13 @@ export class GoogleGmailConnector implements Connector {
     if (draft.replyToMessageId) {
       // fetch threadId for reply threading
       try {
-        const orig = await this.gmail<GmailMessage>(`/messages/${draft.replyToMessageId}?format=metadata`)
+        const orig = await this.gmail<GmailMessage>(
+          `/messages/${draft.replyToMessageId}?format=metadata`,
+        )
         body.threadId = orig.threadId
-      } catch { /* best-effort */ }
+      } catch {
+        /* best-effort */
+      }
     }
 
     const sent = await this.gmail<GmailMessage>("/messages/send", {

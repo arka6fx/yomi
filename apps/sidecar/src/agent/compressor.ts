@@ -544,7 +544,11 @@ export async function compressContext(
   }
 
   const headEnd = protectHeadSize(messages)
-  const tailBudget = Math.max(MIN_TAIL_TOKENS, RESERVE_TOKENS, Math.floor(opts.contextWindow * TAIL_RATIO))
+  const tailBudget = Math.max(
+    MIN_TAIL_TOKENS,
+    RESERVE_TOKENS,
+    Math.floor(opts.contextWindow * TAIL_RATIO),
+  )
   let tailCut = findTailCut(messages, headEnd, tailBudget)
   tailCut = alignForward(messages, tailCut)
   tailCut = alignBackward(messages, tailCut)

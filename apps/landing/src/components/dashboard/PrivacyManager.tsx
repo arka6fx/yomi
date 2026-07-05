@@ -253,9 +253,7 @@ export function PrivacyManager({ token }: TokenProp) {
                 >
                   {row.status}
                 </span>
-                {row.error && (
-                  <span className="ml-2 text-[10px] text-red-400">{row.error}</span>
-                )}
+                {row.error && <span className="ml-2 text-[10px] text-red-400">{row.error}</span>}
               </div>
               <div className="flex items-center gap-2">
                 {row.status === "completed" && (
@@ -282,8 +280,9 @@ export function PrivacyManager({ token }: TokenProp) {
       </div>
 
       <p className="text-xs text-muted-foreground mb-4">
-        Remove all optional product data while keeping your account, subscription, and billing records.
-        This deletes conversations, memories, RAG sources, connected services, schedules, and usage history.
+        Remove all optional product data while keeping your account, subscription, and billing
+        records. This deletes conversations, memories, RAG sources, connected services, schedules,
+        and usage history.
       </p>
 
       {!confirmDelete ? (
@@ -362,9 +361,7 @@ export function PrivacyManager({ token }: TokenProp) {
                 >
                   {job.status === "completed_with_errors" ? "completed (with errors)" : job.status}
                 </span>
-                {job.error && (
-                  <span className="ml-2 text-[10px] text-red-400">{job.error}</span>
-                )}
+                {job.error && <span className="ml-2 text-[10px] text-red-400">{job.error}</span>}
               </div>
             </div>
           ))}
@@ -381,8 +378,9 @@ export function PrivacyManager({ token }: TokenProp) {
       </div>
 
       <p className="text-xs text-muted-foreground mb-4">
-        Permanently delete your account and all associated data. Your subscription will be cancelled,
-        all sessions will be revoked, and you will be immediately logged out. This action cannot be undone.
+        Permanently delete your account and all associated data. Your subscription will be
+        cancelled, all sessions will be revoked, and you will be immediately logged out. This action
+        cannot be undone.
       </p>
 
       {!confirmDeleteAccount ? (
@@ -396,8 +394,9 @@ export function PrivacyManager({ token }: TokenProp) {
       ) : (
         <div className="rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3 space-y-3">
           <p className="text-xs text-red-300">
-            This will permanently delete your account and all data. Your subscription will be cancelled,
-            you will be logged out of all devices, and you will not be able to log back in.
+            This will permanently delete your account and all data. Your subscription will be
+            cancelled, you will be logged out of all devices, and you will not be able to log back
+            in.
           </p>
           <p className="text-xs text-muted-foreground">
             Type <span className="font-mono text-red-400">DELETE</span> to confirm:
@@ -430,7 +429,11 @@ export function PrivacyManager({ token }: TokenProp) {
               disabled={deletingAccount || deleteAccountText !== "DELETE"}
               className="flex items-center gap-1.5 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
             >
-              {deletingAccount ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+              {deletingAccount ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : (
+                <Trash2 size={12} />
+              )}
               {deletingAccount ? "Deleting..." : "Confirm — Delete Account"}
             </button>
             <button
@@ -447,8 +450,9 @@ export function PrivacyManager({ token }: TokenProp) {
       )}
 
       <p className="mt-4 text-xs text-muted-foreground">
-        Your data is processed in accordance with the DPDP Act 2023. You can withdraw consent at any time.
-        Revoking consent will stop future processing; historical data is retained per our retention policy.
+        Your data is processed in accordance with the DPDP Act 2023. You can withdraw consent at any
+        time. Revoking consent will stop future processing; historical data is retained per our
+        retention policy.
       </p>
     </div>
   )

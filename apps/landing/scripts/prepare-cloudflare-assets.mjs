@@ -34,7 +34,9 @@ async function main() {
   await mkdir(assetsDir, { recursive: true })
 
   await copySelectedFiles(nextAppDir, assetsDir, (sourcePath) => {
-    return sourcePath.endsWith(".html") || sourcePath.endsWith(".rsc") || sourcePath.endsWith(".meta")
+    return (
+      sourcePath.endsWith(".html") || sourcePath.endsWith(".rsc") || sourcePath.endsWith(".meta")
+    )
   })
 
   await cp(staticDir, join(assetsDir, "_next", "static"), { recursive: true })

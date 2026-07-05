@@ -7,7 +7,12 @@ import {
 import { appendTurn, loadRecentTurns } from "./chat-history.js"
 import { runFullConsolidation, getConsolidationStatus } from "./consolidation.js"
 import { runPromotionCycle, ensureMemoryFile, getPromotedContent } from "./promotion.js"
-import { recordRecall, getRecallStats, pruneStaleRecalls, resetRecallCache } from "./recall-store.js"
+import {
+  recordRecall,
+  getRecallStats,
+  pruneStaleRecalls,
+  resetRecallCache,
+} from "./recall-store.js"
 import { clearMemoryCache } from "./middleware.js"
 
 export type SessionTurn = {
@@ -46,7 +51,10 @@ export async function initMemorySubsystem(): Promise<void> {
       if (!status.isRunning) {
         console.warn("[yomi/memory] running periodic consolidation")
         await runFullConsolidation().catch((err) =>
-          console.warn("[yomi/memory] consolidation failed:", err instanceof Error ? err.message : err)
+          console.warn(
+            "[yomi/memory] consolidation failed:",
+            err instanceof Error ? err.message : err,
+          ),
         )
       }
     }, CONSOLIDATION_INTERVAL_MS)
@@ -73,10 +81,7 @@ export async function loadMemoryContext(query: string): Promise<MemoryContextBun
     const recent = await loadRecentTurns(10)
     if (recent.length) {
       recentSession = recent
-        .map(
-          (t) =>
-            `[${new Date(t.timestamp).toLocaleTimeString()}] you: ${t.text}`,
-        )
+        .map((t) => `[${new Date(t.timestamp).toLocaleTimeString()}] you: ${t.text}`)
         .join("\n")
     }
   } catch {
@@ -153,7 +158,10 @@ export async function writeSessionTurn(turn: SessionTurn): Promise<void> {
       timestamp: new Date().toISOString(),
     })
   } catch (err) {
-    console.warn("[yomi/subsystem] failed to write session turn:", err instanceof Error ? err.message : err)
+    console.warn(
+      "[yomi/subsystem] failed to write session turn:",
+      err instanceof Error ? err.message : err,
+    )
   }
 }
 
@@ -192,17 +200,23 @@ export async function onAgentTurnComplete(turn: {
 }): Promise<void> {
   // Record recall for extracted memories — this feeds the promotion pipeline
   try {
-    await recordRecall("session", turn.summary ?? turn.output.slice(0, 100), turn.output.slice(0, 500), turn.input, 0.5)
+    await recordRecall(
+      "session",
+      turn.summary ?? turn.output.slice(0, 100),
+      turn.output.slice(0, 500),
+      turn.input,
+      0.5,
+    )
   } catch {
     // best-effort
   }
-  
+
   // Extract and store structured memories automatically (best-effort)
   try {
-    await captureCloudMemory({ 
-      input: turn.input, 
-      output: turn.output, 
-      sourcePath: undefined 
+    await captureCloudMemory({
+      input: turn.input,
+      output: turn.output,
+      sourcePath: undefined,
     })
   } catch {
     // best-effort memory extraction - don't let failures affect main flow
