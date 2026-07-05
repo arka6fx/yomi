@@ -169,6 +169,13 @@
       "when": 1783123200000,
       "tag": "0023_privacy_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1783209600000,
+      "tag": "0024_ai_usage_events",
+      "breakpoints": true
     }
   ]
 }
