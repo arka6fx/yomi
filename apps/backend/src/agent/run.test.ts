@@ -69,9 +69,26 @@ mock.module("@yomi/agent-core", () => ({
       return mockDesktopOnlyConnected
     }
   },
-  runAgentLoop: async (opts: { system?: string }) => {
+  runAgentLoop: async (opts: {
+    system?: string
+    onUsage?: (usage: Record<string, unknown>) => void
+  }) => {
     lastAgentSystem = opts.system
+    opts.onUsage?.({
+      model: "gpt-5.5",
+      inputTokens: 100,
+      outputTokens: 50,
+      toolCallCount: 0,
+      finishReason: "stop",
+    })
     return "The answer is 42."
+  },
+}))
+
+const recordedTelemetry: Array<Record<string, unknown>> = []
+mock.module("../services/ai-telemetry.js", () => ({
+  recordAiUsage: async (input: Record<string, unknown>) => {
+    recordedTelemetry.push(input)
   },
 }))
 
@@ -130,6 +147,7 @@ describe("runAgent metering", () => {
     lastAgentSystem = undefined
     mockExecuteRows = []
     mockDesktopOnlyConnected = []
+    recordedTelemetry.length = 0
     delete process.env["YOMI_AGENT_SOUL"]
   })
 
@@ -199,6 +217,15 @@ describe("runAgent metering", () => {
     const { runAgent } = await import("./run.js")
     await runAgent({ userId: "user_1", text: "hi" })
     expect(consumeCreditsCalled).toBe(true)
+  })
+
+  it("records ai telemetry for the agent turn", async () => {
+    mockUser = makeUser()
+    const { runAgent } = await import("./run.js")
+    await runAgent({ userId: "user_1", text: "hi" })
+    expect(recordedTelemetry.length).toBe(1)
+    expect(recordedTelemetry[0]!["endpoint"]).toBe("backend.agent")
+    expect(recordedTelemetry[0]!["surface"]).toBe("telegram")
   })
 
   it("writes creditsCharged back to the bot_message usage event so the meter reflects it", async () => {
