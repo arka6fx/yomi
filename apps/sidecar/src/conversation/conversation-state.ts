@@ -163,6 +163,12 @@ export function getConversationState(key = "desktop"): ConversationState {
   return s
 }
 
+// Graceful-shutdown hook: flush every live instance's debounced save so a
+// SIGINT/SIGTERM/beforeExit doesn't drop a pending action created <400ms prior.
+export function flushAllConversationStates(): void {
+  for (const state of _instances.values()) state.flushPendingSave()
+}
+
 export function resetConversationState(key?: string): void {
   if (key) {
     _instances.delete(key)

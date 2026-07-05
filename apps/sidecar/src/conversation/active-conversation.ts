@@ -38,7 +38,11 @@ export function makeSidecarPendingActionDep(): PendingActionDep {
       toolArguments: (input.payload ?? {}) as Record<string, unknown>,
       conversationSummary: input.title,
     })
+    // Highest-value, lowest-frequency write in the flow — flush immediately
+    // instead of relying on the debounce so a crash right after gating can't
+    // lose the pending action (debounced addTurn/registerEntity are unaffected).
     state.persist()
+    state.flushPendingSave()
     return {
       id: action.id,
       status: action.status,
