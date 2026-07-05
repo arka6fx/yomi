@@ -5,6 +5,7 @@ import {
   type TokenProvider,
   type ConnectedProvidersLister,
 } from "@yomi/agent-core"
+import { makeSidecarPendingActionDep } from "../conversation/active-conversation.js"
 
 export { ConnectorRegistry }
 export type { ConnectorRegistryDeps } from "@yomi/agent-core"
@@ -68,6 +69,7 @@ export function getConnectorRegistry(): ConnectorRegistry {
     _registry = new ConnectorRegistry({
       getAccessToken: makeTokenProvider(),
       listConnectedProviders: makeConnectedProvidersLister(),
+      createPendingAction: makeSidecarPendingActionDep(),
     })
   }
   return _registry

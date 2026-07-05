@@ -45,6 +45,11 @@ export class ConnectorRegistry {
     await this.refresh()
   }
 
+  // Task 3's replay executor needs the current user to rebuild ungated tools.
+  getUserId(): string | null {
+    return this.userId
+  }
+
   // Fetch current integration status and rebuild the connector map.
   async refresh(): Promise<void> {
     if (!this.userId) return
