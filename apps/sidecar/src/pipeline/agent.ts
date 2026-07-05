@@ -203,6 +203,7 @@ export async function* agentPipeline(
   const ttsEnabled = req.tts !== false && resolveTts() !== "none"
   let fullText = ""
   const startedAt = Date.now()
+  const requestId = crypto.randomUUID()
   let inputTokens = 0
   let outputTokens = 0
   let toolCalls = 0
@@ -425,6 +426,15 @@ export async function* agentPipeline(
                 toolCalls,
                 error: err instanceof Error ? err.message : String(err),
               },
+              telemetry: {
+                requestId,
+                endpoint: "sidecar.agent",
+                surface: "desktop",
+                route: "agent",
+                latencyMs: Date.now() - startedAt,
+                toolCalls,
+                visionImages: req.screenshot_b64 ? 1 : 0,
+              },
             })
             yield {
               type: "error",
@@ -450,6 +460,15 @@ export async function* agentPipeline(
               latencyMs: Date.now() - startedAt,
               toolCalls,
               error: err instanceof Error ? err.message : String(err),
+            },
+            telemetry: {
+              requestId,
+              endpoint: "sidecar.agent",
+              surface: "desktop",
+              route: "agent",
+              latencyMs: Date.now() - startedAt,
+              toolCalls,
+              visionImages: req.screenshot_b64 ? 1 : 0,
             },
           })
           yield {
@@ -508,6 +527,15 @@ export async function* agentPipeline(
         hasScreen: Boolean(req.screenshot_b64),
         tts: ttsEnabled,
         budgetExhausted: budgetExhausted ? budget.exhaustedReason : undefined,
+      },
+      telemetry: {
+        requestId,
+        endpoint: "sidecar.agent",
+        surface: "desktop",
+        route: "agent",
+        latencyMs: Date.now() - startedAt,
+        toolCalls,
+        visionImages: req.screenshot_b64 ? 1 : 0,
       },
     })
 
