@@ -33,7 +33,7 @@ describe("PendingActionManager", () => {
       type: "github.create_file",
       title: "First",
       description: "",
-      toolName: "t",
+      toolName: "t1",
       toolArguments: {},
       conversationSummary: "",
     })
@@ -41,7 +41,7 @@ describe("PendingActionManager", () => {
       type: "github.create_file",
       title: "Second",
       description: "",
-      toolName: "t",
+      toolName: "t2",
       toolArguments: {},
       conversationSummary: "",
     })
@@ -86,7 +86,7 @@ describe("PendingActionManager", () => {
       type: "github.create_file",
       title: "A",
       description: "",
-      toolName: "t",
+      toolName: "t1",
       toolArguments: {},
       conversationSummary: "",
     })
@@ -94,7 +94,7 @@ describe("PendingActionManager", () => {
       type: "github.create_file",
       title: "B",
       description: "",
-      toolName: "t",
+      toolName: "t2",
       toolArguments: {},
       conversationSummary: "",
     })
@@ -154,7 +154,7 @@ describe("PendingActionManager", () => {
       type: "github.create_file",
       title: "A",
       description: "",
-      toolName: "t",
+      toolName: "t1",
       toolArguments: {},
       conversationSummary: "",
     })
@@ -162,7 +162,7 @@ describe("PendingActionManager", () => {
       type: "github.create_file",
       title: "B",
       description: "",
-      toolName: "t",
+      toolName: "t2",
       toolArguments: {},
       conversationSummary: "",
     })
@@ -184,5 +184,26 @@ describe("PendingActionManager", () => {
     const info = manager.getLatestPendingToolCall()
     expect(info?.toolName).toBe("github-createOrUpdateFile")
     expect(info?.args).toEqual({ path: "test.go" })
+  })
+
+  it("dedupes a second pending action with the same toolName", () => {
+    const a = manager.create({
+      type: "github-createOrUpdateFile",
+      title: "Create recursion.go",
+      description: "d",
+      toolName: "github-createOrUpdateFile",
+      toolArguments: { path: "recursion.go" },
+      conversationSummary: "s",
+    })
+    const b = manager.create({
+      type: "github-createOrUpdateFile",
+      title: "Create recursion.go again",
+      description: "d",
+      toolName: "github-createOrUpdateFile",
+      toolArguments: { path: "recursion.go" },
+      conversationSummary: "s",
+    })
+    expect(b.id).toBe(a.id)
+    expect(manager.listPending()).toHaveLength(1)
   })
 })
