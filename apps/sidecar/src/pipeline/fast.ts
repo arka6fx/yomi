@@ -5,6 +5,7 @@ import { synthesize, resolveTts } from "./tts.js"
 import { createModel } from "./model.js"
 import { buildFastPrompt, loadSoulMd, loadYomiMd } from "../harness/prompt.js"
 import { getConnectorRegistry } from "../connectors/registry.js"
+import { getConversationState } from "../conversation/conversation-state.js"
 import { maybeHandleSoulOnboarding } from "./soul-onboarding.js"
 import {
   captureStructuredMemory,
@@ -37,6 +38,7 @@ async function getFastPrompt(
   plan: Plan | undefined,
   tts: boolean,
   preloaded?: Promise<MemoryContextBundle>,
+  conversationKey = "desktop",
 ): Promise<string> {
   if (cachedYomiMd === null) cachedYomiMd = await loadYomiMd()
   if (cachedSoulMd === null) cachedSoulMd = await loadSoulMd()
@@ -54,6 +56,7 @@ async function getFastPrompt(
         recentSession: "",
       }
   const connectedProviders = getConnectorRegistry().getConnected()
+  const conversationState = getConversationState(conversationKey).toSystemPromptBlock()
   return buildFastPrompt({
     text,
     tts,
@@ -62,6 +65,7 @@ async function getFastPrompt(
     ...localCtx,
     hasScreen,
     connectedProviders,
+    conversationState,
   })
 }
 
@@ -255,6 +259,7 @@ async function* answerPipeline(
   history?: { role: "user" | "assistant"; text: string }[],
   preloadedMemory?: Promise<MemoryContextBundle>,
   telemetry?: StreamUsageStats,
+  conversationKey = "desktop",
 ): AsyncGenerator<SseEvent> {
   const content: Array<{ type: "text"; text: string } | { type: "image"; image: string }> = [
     { type: "text", text },
@@ -286,7 +291,14 @@ async function* answerPipeline(
     }
   }
 
-  const systemPrompt = await getFastPrompt(text, hasScreen, plan, tts, preloadedMemory)
+  const systemPrompt = await getFastPrompt(
+    text,
+    hasScreen,
+    plan,
+    tts,
+    preloadedMemory,
+    conversationKey,
+  )
 
   const result = streamText({
     model: createModel(MODEL),
@@ -503,6 +515,7 @@ export async function* fastPipeline(
       req.history,
       earlyMemory,
       telemetry,
+      req.conversationId ?? "desktop",
     )) {
       if (signal?.aborted) break
       if (event.type === "llm_chunk") output += event.text

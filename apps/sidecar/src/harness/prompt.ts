@@ -20,6 +20,7 @@ export interface PromptContext {
   recentSession?: string
   connectedProviders?: string[]
   hasScreen?: boolean // whether a screenshot is attached to this turn
+  conversationState?: string // rendered <active_context>/<pending_action>/<recent_turns> block
   // desktopFocusChange?: string // will provide later
 }
 
@@ -62,6 +63,7 @@ function resolveCtx(ctx: PromptContext): Required<PromptContext> {
     recentSession: ctx.recentSession ?? "",
     connectedProviders: ctx.connectedProviders ?? [],
     hasScreen: ctx.hasScreen ?? false,
+    conversationState: ctx.conversationState ?? "",
     // desktopFocusChange: ctx.desktopFocusChange ?? "", // will provide later
   }
 }
@@ -188,8 +190,17 @@ export interface FastPromptOptions extends PromptContext {
 
 export function buildFastPrompt(opts: FastPromptOptions): string {
   const resolved = resolveCtx(opts)
-  const { userName, os, today, yomiMd, soulMd, hasScreen, connectedProviders, ...memoryCtx } =
-    resolved
+  const {
+    userName,
+    os,
+    today,
+    yomiMd,
+    soulMd,
+    hasScreen,
+    connectedProviders,
+    conversationState,
+    ...memoryCtx
+  } = resolved
   const tts = opts.tts
   const text = opts.text
   const userCtx = yomiMd ? `<user_context>\n${yomiMd}\n</user_context>\n\n` : ""
@@ -201,6 +212,9 @@ export function buildFastPrompt(opts: FastPromptOptions): string {
   const wantsConnector =
     CONNECTOR_KEYWORDS.test(text) || connectedProviders.some((p) => text.toLowerCase().includes(p))
   const connInfo = wantsConnector ? `${buildConnectorInfo(connectedProviders)}\n` : ""
+  const convCtx = conversationState
+    ? `<conversation_state>\n${conversationState}\n</conversation_state>\n`
+    : ""
 
   const screenLine = hasScreen
     ? "A screenshot of their current screen is attached, use it to answer."
@@ -265,17 +279,7 @@ When a screenshot is attached, analyze it to understand what the user is asking 
 ${capLine}
 </capabilities>
 
-${connInfo}${memCtx}`
-}
-
-let _conversationStateBlock = ""
-
-export function setConversationStateBlock(block: string): void {
-  _conversationStateBlock = block
-}
-
-export function getConversationStateBlock(): string {
-  return _conversationStateBlock
+${connInfo}${convCtx}${memCtx}`
 }
 
 const PA = `<pending_action>`
@@ -321,14 +325,23 @@ After creating something, it becomes the active entity. The user can then refer 
 ${CR_END}`
 
 export function buildAgentPrompt(ctx: PromptContext): string {
-  const { userName, os, today, yomiMd, soulMd, connectedProviders, ...memoryCtx } = resolveCtx(ctx)
+  const {
+    userName,
+    os,
+    today,
+    yomiMd,
+    soulMd,
+    connectedProviders,
+    conversationState,
+    ...memoryCtx
+  } = resolveCtx(ctx)
   const userCtx = yomiMd ? `<user_context>\n${yomiMd}\n</user_context>\n\n` : ""
   const soulCtx = `${formatAgentSoul(soulMd)}\n\n`
   const memCtx = buildMemoryBlock(memoryCtx)
   const appUrl = process.env["YOMI_APP_URL"] ?? "https://yomi.arka6fx.com"
   const connInfo = buildConnectorInfo(connectedProviders)
 
-  const convState = _conversationStateBlock || ""
+  const convState = conversationState
 
   return `\
 <identity>

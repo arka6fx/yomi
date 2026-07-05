@@ -56,4 +56,12 @@ describe("prompt memory injection", () => {
     expect(ctx.localMemory).toBe("# Long-Term Memory\n\n")
     expect(typeof ctx.recentSession).toBe("string")
   })
+
+  it("injects the conversation state block into agent and fast prompts", () => {
+    const block = "<active_context>\nRepo: u/golang-practice\n</active_context>"
+    const agent = buildAgentPrompt({ conversationState: block })
+    expect(agent).toContain("Repo: u/golang-practice")
+    const fast = buildFastPrompt({ text: "hi", tts: false, conversationState: block })
+    expect(fast).toContain("Repo: u/golang-practice")
+  })
 })
