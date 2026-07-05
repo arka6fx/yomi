@@ -74,6 +74,13 @@ mock.module("../auth.js", () => ({
   },
 }))
 
+const recordedTelemetry: Array<Record<string, unknown>> = []
+mock.module("../services/ai-telemetry.js", () => ({
+  recordAiUsage: async (input: Record<string, unknown>) => {
+    recordedTelemetry.push(input)
+  },
+}))
+
 let usageRouter: import("hono").Hono
 
 beforeAll(async () => {
@@ -91,6 +98,14 @@ function reserve(kind: "chat" | "voice" | "analyze" | "bot_message" = "chat", du
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(duration !== undefined ? { kind, duration } : { kind }),
+  })
+}
+
+function finalize(body: Record<string, unknown>) {
+  return app().request("/api/usage/interactions/finalize", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
   })
 }
 
@@ -209,5 +224,41 @@ describe("POST /api/usage/interactions/reserve", () => {
     const body = (await res.json()) as ReserveBody
     expect(res.status).toBe(400)
     expect(body.code).toBe("invalid_usage_kind")
+  })
+})
+
+describe("POST /interactions/finalize telemetry", () => {
+  beforeEach(() => {
+    currentUser = user()
+    recordedTelemetry.length = 0
+  })
+
+  it("records ai usage when a telemetry block is present", async () => {
+    const res = await finalize({
+      usageEventId: "usage_1",
+      model: "gpt-5.5-mini",
+      inputTokens: 100,
+      outputTokens: 50,
+      status: "done",
+      metadata: { endpoint: "sidecar.fast", route: "fast", latencyMs: 900 },
+      telemetry: {
+        requestId: "req-abc",
+        endpoint: "sidecar.fast",
+        surface: "desktop",
+        firstTokenLatencyMs: 220,
+        toolCalls: 0,
+      },
+    })
+    expect(res.status).toBe(200)
+    expect(recordedTelemetry.length).toBe(1)
+    expect(recordedTelemetry[0]!["requestId"]).toBe("req-abc")
+    expect(recordedTelemetry[0]!["usageEventId"]).toBe("usage_1")
+    expect(recordedTelemetry[0]!["inputTokens"]).toBe(100)
+  })
+
+  it("still succeeds with no telemetry block (backward compat)", async () => {
+    const res = await finalize({ usageEventId: "usage_1", inputTokens: 10 })
+    expect(res.status).toBe(200)
+    expect(recordedTelemetry.length).toBe(0)
   })
 })
