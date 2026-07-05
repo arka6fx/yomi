@@ -24,10 +24,6 @@ function seedPending(key: string) {
 describe("handleApprovalTurn", () => {
   beforeEach(() => {
     resetConversationState()
-    // Guardrail is a module-level singleton — reset its per-turn counters so
-    // repeated identical (toolName, args) failures across test cases don't
-    // trip the loop-warning path and mutate the result shape.
-    toolGuardrail.resetForTurn()
   })
 
   it("returns null for a normal message", async () => {
@@ -127,6 +123,33 @@ describe("handleApprovalTurn", () => {
     expect(getConversationState("desktop").pendingActions.getById(pending!.id)?.status).toBe(
       "failed",
     )
+  })
+
+  it("reports failure both times when the identical replay soft-fails twice in a row (guardrail regression)", async () => {
+    // Reproduces the reviewer's live-repro: the shared toolGuardrail singleton counts
+    // repeated failures of the same (toolName, canonicalArgs) signature across the
+    // whole process, not just one turn. Without handleApprovalTurn resetting it before
+    // replay, the 2nd identical failure hits exactFailureWarnAfter (2) and afterCall's
+    // "warn" decision makes onPostToolUse JSON-stringify the result — isSoftError() then
+    // sees a string, not an object, returns null, and the turn wrongly reports "Done".
+    // Deliberately no toolGuardrail.resetForTurn() call here — proving production code
+    // (not test scaffolding) is what prevents the regression.
+    for (let i = 0; i < 2; i++) {
+      seedPending("desktop")
+      const pending = getConversationState("desktop").pendingActions.getLatest()
+      const events = await handleApprovalTurn("yes", "desktop", {
+        replayTool: async () => ({ error: "expired token" }),
+      })
+      const text = (events ?? [])
+        .filter((e) => e.type === "agent_text")
+        .map((e) => (e as { text: string }).text)
+        .join("\n")
+      expect(text).not.toContain("Done:")
+      expect(events?.some((e) => e.type === "error")).toBe(true)
+      expect(getConversationState("desktop").pendingActions.getById(pending!.id)?.status).toBe(
+        "failed",
+      )
+    }
   })
 
   it("scopes replay entity registration to the key argument, not the stale active-conversation global", async () => {
