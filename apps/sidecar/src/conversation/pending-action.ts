@@ -4,6 +4,9 @@ function nextId(): string {
   return `pa_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
 }
 
+const TERMINAL_STATUSES = new Set<PendingActionStatus>(["completed", "failed", "cancelled", "expired"])
+const TERMINAL_RETENTION_MS = 60 * 60 * 1000
+
 export class PendingActionManager {
   private actions: PendingAction[] = []
   private readonly EXPIRY_MS = 30 * 60 * 1000
@@ -131,5 +134,9 @@ export class PendingActionManager {
         action.status = "expired"
       }
     }
+    // Drop old terminal actions so the array doesn't grow forever for long-lived keys.
+    this.actions = this.actions.filter(
+      (a) => !(TERMINAL_STATUSES.has(a.status) && now - a.createdAt.getTime() > TERMINAL_RETENTION_MS),
+    )
   }
 }
