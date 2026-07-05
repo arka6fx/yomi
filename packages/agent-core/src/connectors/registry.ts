@@ -50,6 +50,11 @@ export class ConnectorRegistry {
     return this.userId
   }
 
+  // Task 3's replay executor needs the token provider to rebuild ungated tools.
+  getTokenProvider(): TokenProvider {
+    return this.deps.getAccessToken
+  }
+
   // Fetch current integration status and rebuild the connector map.
   async refresh(): Promise<void> {
     if (!this.userId) return

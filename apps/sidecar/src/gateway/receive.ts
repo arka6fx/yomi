@@ -140,6 +140,22 @@ export async function handleGatewayMessage(msg: GatewayMessage): Promise<void> {
     await initConnectorRegistry(msg.yomiUserId).catch(() => {})
   }
 
+  const { handleApprovalTurn } = await import("../conversation/approval-executor.js")
+  const { setActiveConversation } = await import("../conversation/active-conversation.js")
+  setActiveConversation(chatKey(msg))
+  const approvalEvents = await handleApprovalTurn(text, chatKey(msg))
+  if (approvalEvents) {
+    const replyText = approvalEvents
+      .filter((e): e is Extract<SseEvent, { type: "agent_text" }> => e.type === "agent_text")
+      .map((e) => e.text)
+      .join("")
+    if (replyText) {
+      pushHistory(msg, text, replyText)
+      await sendReply(msg.platform, msg.chatId, replyText)
+    }
+    return
+  }
+
   const intent = await classifyIntent({ text })
   const history = getHistory(msg)
 
