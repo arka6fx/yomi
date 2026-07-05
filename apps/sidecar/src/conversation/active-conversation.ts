@@ -12,6 +12,11 @@ export function getActiveConversation(): string {
   return _activeKey
 }
 
+// Test helper: reset _activeKey to its default, mirroring resetConversationState().
+export function resetActiveConversation(): void {
+  _activeKey = "desktop"
+}
+
 export type PendingActionDep = (input: {
   connector: string
   action: string
