@@ -10,11 +10,7 @@
 
 // Tools whose arguments are typically unique (queries, paths) but the output
 // is the same — repeated identical results mean the agent is in a loop.
-const IDEMPOTENT_TOOL_NAMES: ReadonlySet<string> = new Set([
-  "read_file",
-  "list_files",
-  "search",
-])
+const IDEMPOTENT_TOOL_NAMES: ReadonlySet<string> = new Set(["read_file", "list_files", "search"])
 
 // Tools that mutate state. Listed explicitly so we can default-classify new
 // tools as neither idempotent nor mutating (treated as non-idempotent = not

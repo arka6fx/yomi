@@ -3,7 +3,11 @@ import { and, desc, eq, sql } from "drizzle-orm"
 import { db, schedules } from "@yomi/db"
 import { authenticate } from "../auth.js"
 import { effectivePlanForUser, getPlanConfig, isOwnerUser } from "../entitlements.js"
-import { computeNextRun, scheduleLimitForPlan, validateScheduleInput } from "../services/schedule-parser.js"
+import {
+  computeNextRun,
+  scheduleLimitForPlan,
+  validateScheduleInput,
+} from "../services/schedule-parser.js"
 
 export const schedulesRouter = new Hono()
 
@@ -24,7 +28,10 @@ schedulesRouter.get("/", async (c) => {
     .where(eq(schedules.userId, user.id))
     .orderBy(desc(schedules.createdAt))
     .limit(100)
-  return c.json({ schedules: rows, limit: isOwnerUser(user) ? null : scheduleLimitForPlan(effectivePlanForUser(user)) })
+  return c.json({
+    schedules: rows,
+    limit: isOwnerUser(user) ? null : scheduleLimitForPlan(effectivePlanForUser(user)),
+  })
 })
 
 schedulesRouter.post("/", async (c) => {
@@ -51,7 +58,11 @@ schedulesRouter.post("/", async (c) => {
     const count = Number(countRows[0]?.count ?? 0)
     if (count >= limit) {
       return c.json(
-        { error: `You've hit your schedule limit (${count}/${limit}). Upgrade for more.`, code: "schedule_limit", upgradeUrl: "/dashboard?upgrade=true" },
+        {
+          error: `You've hit your schedule limit (${count}/${limit}). Upgrade for more.`,
+          code: "schedule_limit",
+          upgradeUrl: "/dashboard?upgrade=true",
+        },
         402,
       )
     }
@@ -63,10 +74,12 @@ schedulesRouter.post("/", async (c) => {
   if (!prompt) return c.json({ error: "prompt is required", code: "invalid_prompt" }, 400)
 
   const valid = validateScheduleInput(schedule)
-  if (!valid.ok || !valid.scheduleType) return c.json({ error: valid.error ?? "invalid schedule", code: "invalid_schedule" }, 400)
+  if (!valid.ok || !valid.scheduleType)
+    return c.json({ error: valid.error ?? "invalid schedule", code: "invalid_schedule" }, 400)
 
   const nextRunAt = computeNextRun({ scheduleType: valid.scheduleType, schedule })
-  const deliverTo = Array.isArray(body.deliverTo) && body.deliverTo.length ? body.deliverTo : ["telegram"]
+  const deliverTo =
+    Array.isArray(body.deliverTo) && body.deliverTo.length ? body.deliverTo : ["telegram"]
 
   const [row] = await db
     .insert(schedules)
@@ -97,12 +110,19 @@ schedulesRouter.patch("/:id", async (c) => {
   if (!existing) return c.json({ error: "schedule not found", code: "not_found" }, 404)
 
   const update: Partial<typeof schedules.$inferInsert> = { updatedAt: new Date() }
-  let scheduleType = existing.scheduleType as ReturnType<typeof validateScheduleInput>["scheduleType"]
+  let scheduleType = existing.scheduleType as ReturnType<
+    typeof validateScheduleInput
+  >["scheduleType"]
   let scheduleStr = existing.schedule
 
-  if (typeof body.schedule === "string" && body.schedule.trim() && body.schedule.trim() !== existing.schedule) {
+  if (
+    typeof body.schedule === "string" &&
+    body.schedule.trim() &&
+    body.schedule.trim() !== existing.schedule
+  ) {
     const valid = validateScheduleInput(body.schedule.trim())
-    if (!valid.ok || !valid.scheduleType) return c.json({ error: valid.error ?? "invalid schedule", code: "invalid_schedule" }, 400)
+    if (!valid.ok || !valid.scheduleType)
+      return c.json({ error: valid.error ?? "invalid schedule", code: "invalid_schedule" }, 400)
     scheduleStr = body.schedule.trim()
     scheduleType = valid.scheduleType
     update.schedule = scheduleStr
@@ -116,7 +136,10 @@ schedulesRouter.patch("/:id", async (c) => {
   // Recompute next run when the schedule changed or the job was (re)enabled.
   const enabledNow = update.enabled ?? existing.enabled
   if (update.schedule || (update.enabled === true && !existing.enabled)) {
-    update.nextRunAt = enabledNow && scheduleType ? computeNextRun({ scheduleType, schedule: scheduleStr, lastRunAt: existing.lastRunAt }) : null
+    update.nextRunAt =
+      enabledNow && scheduleType
+        ? computeNextRun({ scheduleType, schedule: scheduleStr, lastRunAt: existing.lastRunAt })
+        : null
   } else if (update.enabled === false) {
     update.nextRunAt = null
   }

@@ -17,7 +17,13 @@ export interface TelegramUpdate {
     audio?: { file_id: string; mime_type?: string }
     photo?: Array<{ file_id: string; width: number; height: number; file_size?: number }>
     document?: { file_id: string; mime_type?: string; file_name?: string; file_size?: number }
-    video?: { file_id: string; mime_type?: string; duration: number; file_size?: number; file_name?: string }
+    video?: {
+      file_id: string
+      mime_type?: string
+      duration: number
+      file_size?: number
+      file_name?: string
+    }
   }
 }
 
@@ -83,7 +89,9 @@ export class TelegramAdapter implements PlatformAdapter {
     // Remove webhook so stale updates don't accumulate
     try {
       await fetch(`${this.apiUrl}/deleteWebhook`, { method: "POST" })
-    } catch { /* best-effort */ }
+    } catch {
+      /* best-effort */
+    }
     console.warn("[gateway/telegram] disconnected")
   }
 
@@ -103,13 +111,14 @@ export class TelegramAdapter implements PlatformAdapter {
     const hasText = !!text
     const voiceFile = msg.voice ?? msg.audio
     const imageFile = msg.photo?.length
-      ? [...msg.photo].sort((a, b) => (b.file_size ?? b.width * b.height) - (a.file_size ?? a.width * a.height))[0]
+      ? [...msg.photo].sort(
+          (a, b) => (b.file_size ?? b.width * b.height) - (a.file_size ?? a.width * a.height),
+        )[0]
       : msg.document?.mime_type?.startsWith("image/")
         ? msg.document
         : undefined
-    const documentFile = msg.document && !msg.document.mime_type?.startsWith("image/")
-      ? msg.document
-      : undefined
+    const documentFile =
+      msg.document && !msg.document.mime_type?.startsWith("image/") ? msg.document : undefined
     if (!hasText && !voiceFile && !imageFile && !documentFile && !msg.video) return
 
     let audioUrl: string | undefined
@@ -122,7 +131,9 @@ export class TelegramAdapter implements PlatformAdapter {
           audioUrl = `https://api.telegram.org/file/bot${this.botToken}/${fileData.result.file_path}`
           audioMimeType = voiceFile.mime_type ?? "audio/ogg"
         }
-      } catch { /* best-effort */ }
+      } catch {
+        /* best-effort */
+      }
     }
 
     let imageUrl: string | undefined
@@ -135,7 +146,9 @@ export class TelegramAdapter implements PlatformAdapter {
           imageUrl = `https://api.telegram.org/file/bot${this.botToken}/${fileData.result.file_path}`
           imageMimeType = "mime_type" in imageFile ? imageFile.mime_type : "image/jpeg"
         }
-      } catch { /* best-effort */ }
+      } catch {
+        /* best-effort */
+      }
     }
 
     let documentUrl: string | undefined
@@ -152,12 +165,32 @@ export class TelegramAdapter implements PlatformAdapter {
           documentFileName = "file_name" in documentFile ? documentFile.file_name : undefined
           documentSize = "file_size" in documentFile ? documentFile.file_size : undefined
         }
-      } catch { /* best-effort */ }
+      } catch {
+        /* best-effort */
+      }
     }
 
-    const audioDurationSeconds = voiceFile && "duration" in voiceFile && typeof voiceFile.duration === "number"
-      ? voiceFile.duration
-      : undefined
+    let videoUrl: string | undefined
+    let videoMimeType: string | undefined
+    let videoDurationSeconds: number | undefined
+    if (msg.video) {
+      try {
+        const fileRes = await fetch(`${this.apiUrl}/getFile?file_id=${msg.video.file_id}`)
+        const fileData = (await fileRes.json()) as { ok: boolean; result?: { file_path?: string } }
+        if (fileData.ok && fileData.result?.file_path) {
+          videoUrl = `https://api.telegram.org/file/bot${this.botToken}/${fileData.result.file_path}`
+          videoMimeType = msg.video.mime_type
+          videoDurationSeconds = msg.video.duration
+        }
+      } catch {
+        /* best-effort */
+      }
+    }
+
+    const audioDurationSeconds =
+      voiceFile && "duration" in voiceFile && typeof voiceFile.duration === "number"
+        ? voiceFile.duration
+        : undefined
 
     const gatewayMsg: GatewayMessage = {
       platform: "telegram",
@@ -175,6 +208,9 @@ export class TelegramAdapter implements PlatformAdapter {
       documentMimeType,
       documentFileName,
       documentSize,
+      videoUrl,
+      videoMimeType,
+      videoDurationSeconds,
     }
     await this.messageHandler(gatewayMsg)
   }
@@ -215,7 +251,8 @@ export class TelegramAdapter implements PlatformAdapter {
       const form = new FormData()
       form.set("chat_id", chatId)
       form.set("voice", new Blob([audio], { type: "audio/mpeg" }), "yomi.mp3")
-      if (options?.caption) form.set("caption", truncateMessage(removeMarkdown(options.caption), 900))
+      if (options?.caption)
+        form.set("caption", truncateMessage(removeMarkdown(options.caption), 900))
       if (options?.replyTo) form.set("reply_to_message_id", options.replyTo)
 
       const res = await fetch(`${this.apiUrl}/sendVoice`, { method: "POST", body: form })
@@ -265,10 +302,7 @@ export class TelegramAdapter implements PlatformAdapter {
     }
   }
 
-  async deleteMessage(
-    chatId: string,
-    messageId: string,
-  ): Promise<{ ok: boolean; error?: string }> {
+  async deleteMessage(chatId: string, messageId: string): Promise<{ ok: boolean; error?: string }> {
     try {
       const res = await fetch(`${this.apiUrl}/deleteMessage`, {
         method: "POST",

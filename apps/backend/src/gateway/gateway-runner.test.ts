@@ -3,10 +3,16 @@ import type { GatewayMessage, PlatformType } from "@yomi/shared"
 import type { AgentMessage } from "@yomi/agent-core"
 import type { PlatformAdapter } from "./platform-adapter.js"
 
-let agentCalls: { userId: string; text: string; history?: AgentMessage[]; signal?: AbortSignal }[] = []
+let agentCalls: { userId: string; text: string; history?: AgentMessage[]; signal?: AbortSignal }[] =
+  []
 let agentHangs = false
 let loadedHistory: AgentMessage[] = []
-let appendedTurns: { sessionId: string; userId: string; userText: string; assistantText: string }[] = []
+let appendedTurns: {
+  sessionId: string
+  userId: string
+  userText: string
+  assistantText: string
+}[] = []
 let closedSessions: { userId: string; platform: string; chatId: string }[] = []
 let pendingActions: { id: string; title: string; preview: string }[] = []
 let approvedActions: string[] = []
@@ -37,7 +43,13 @@ mock.module("@yomi/db", () => ({
   creditGrants: {},
   creditTransactions: {},
   paymentRecords: {},
-  platformConnections: { id: "id", userId: "userId", platform: "platform", platformUserId: "platformUserId", platformChatId: "platformChatId" },
+  platformConnections: {
+    id: "id",
+    userId: "userId",
+    platform: "platform",
+    platformUserId: "platformUserId",
+    platformChatId: "platformChatId",
+  },
   linkingCodes: {},
   telegramLinkTokens: {},
   usageEvents: { id: "id" },
@@ -136,18 +148,26 @@ class FakeAdapter implements PlatformAdapter {
   handler: ((msg: GatewayMessage) => void | Promise<void>) | null = null
   async connect() {}
   async disconnect() {}
-  setMessageHandler(handler: (msg: GatewayMessage) => void | Promise<void>): void { this.handler = handler }
+  setMessageHandler(handler: (msg: GatewayMessage) => void | Promise<void>): void {
+    this.handler = handler
+  }
   async sendMessage(chatId: string, text: string) {
     this.messages.push({ chatId, text })
     return { ok: true }
   }
-  async sendDocument() { return { ok: true } }
-  async deleteMessage() { return { ok: true } }
+  async sendDocument() {
+    return { ok: true }
+  }
+  async deleteMessage() {
+    return { ok: true }
+  }
   async sendTyping() {}
 }
 
 function incoming(runner: GatewayRunner, msg: GatewayMessage) {
-  return (runner as unknown as { onIncoming: (msg: GatewayMessage) => Promise<void> }).onIncoming(msg)
+  return (runner as unknown as { onIncoming: (msg: GatewayMessage) => Promise<void> }).onIncoming(
+    msg,
+  )
 }
 
 const originalFetch = globalThis.fetch
@@ -190,11 +210,21 @@ describe("GatewayRunner production routing", () => {
     })
 
     expect(agentCalls).toEqual([
-      { userId: "user_1", text: "search my notion notes", history: [], signal: agentCalls[0]?.signal },
+      {
+        userId: "user_1",
+        text: "search my notion notes",
+        history: [],
+        signal: agentCalls[0]?.signal,
+      },
     ])
     expect(adapter.messages.at(-1)?.text).toBe("backend reply")
     expect(appendedTurns).toEqual([
-      { sessionId: "session_1", userId: "user_1", userText: "search my notion notes", assistantText: "backend reply" },
+      {
+        sessionId: "session_1",
+        userId: "user_1",
+        userText: "search my notion notes",
+        assistantText: "backend reply",
+      },
     ])
   })
 
@@ -300,7 +330,11 @@ describe("GatewayRunner production routing", () => {
 
   it("approves the most recent pending action with /approve", async () => {
     pendingActions = [
-      { id: "11111111-1111-1111-1111-111111111111", title: "Send email", preview: "To: a@example.com" },
+      {
+        id: "11111111-1111-1111-1111-111111111111",
+        title: "Send email",
+        preview: "To: a@example.com",
+      },
       { id: "22222222-2222-2222-2222-222222222222", title: "Create event", preview: "Tomorrow" },
     ]
     const runner = new GatewayRunner("http://sidecar.invalid", "secret")
@@ -322,7 +356,11 @@ describe("GatewayRunner production routing", () => {
 
   it("approves the only pending action with /approve", async () => {
     pendingActions = [
-      { id: "11111111-1111-1111-1111-111111111111", title: "Send email", preview: "To: a@example.com" },
+      {
+        id: "11111111-1111-1111-1111-111111111111",
+        title: "Send email",
+        preview: "To: a@example.com",
+      },
     ]
     const runner = new GatewayRunner("http://sidecar.invalid", "secret")
     const adapter = new FakeAdapter()
@@ -359,7 +397,11 @@ describe("GatewayRunner production routing", () => {
 
   it("approves pending action with natural affirmative text", async () => {
     pendingActions = [
-      { id: "11111111-1111-1111-1111-111111111111", title: "Create repo", preview: "golang-practice" },
+      {
+        id: "11111111-1111-1111-1111-111111111111",
+        title: "Create repo",
+        preview: "golang-practice",
+      },
     ]
     const runner = new GatewayRunner("http://sidecar.invalid", "secret")
     const adapter = new FakeAdapter()

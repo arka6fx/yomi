@@ -30,10 +30,7 @@ export type CreditSummary = {
 }
 
 async function ensureCreditAccount(userId: string): Promise<void> {
-  await db
-    .insert(creditAccounts)
-    .values({ userId })
-    .onConflictDoNothing()
+  await db.insert(creditAccounts).values({ userId }).onConflictDoNothing()
 }
 
 async function transactionByKey(idempotencyKey: string) {
@@ -229,7 +226,8 @@ async function debitCredits(input: {
   if (input.amount <= 0) throw new Error("credit debit amount must be positive")
 
   const existing = await transactionByKey(input.idempotencyKey)
-  if (existing) return { ok: true, charged: Math.abs(existing.amount), balance: existing.balanceAfter }
+  if (existing)
+    return { ok: true, charged: Math.abs(existing.amount), balance: existing.balanceAfter }
 
   await ensureCreditAccount(input.userId)
 
@@ -301,7 +299,12 @@ async function debitCredits(input: {
   const [updated] = await db
     .update(creditAccounts)
     .set(accountUpdate)
-    .where(and(eq(creditAccounts.userId, input.userId), sql`${creditAccounts.availableCredits} >= ${input.amount}`))
+    .where(
+      and(
+        eq(creditAccounts.userId, input.userId),
+        sql`${creditAccounts.availableCredits} >= ${input.amount}`,
+      ),
+    )
     .returning({ availableCredits: creditAccounts.availableCredits })
 
   // If the atomic update returned no rows, balance changed under us
@@ -382,7 +385,10 @@ export async function expireUserCredits(
     })
     if (result.ok) {
       totalExpired += result.charged
-      await db.update(creditGrants).set({ status: "expired", creditsRemaining: 0 }).where(eq(creditGrants.id, grant.id))
+      await db
+        .update(creditGrants)
+        .set({ status: "expired", creditsRemaining: 0 })
+        .where(eq(creditGrants.id, grant.id))
     }
   }
 
@@ -418,7 +424,10 @@ export async function expireCredits(now = new Date()): Promise<number> {
     })
     if (result.ok) {
       totalExpired += result.charged
-      await db.update(creditGrants).set({ status: "expired", creditsRemaining: 0 }).where(eq(creditGrants.id, grant.id))
+      await db
+        .update(creditGrants)
+        .set({ status: "expired", creditsRemaining: 0 })
+        .where(eq(creditGrants.id, grant.id))
     }
   }
 

@@ -284,10 +284,9 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
             action: "github-updateIssue",
             risk: "write",
             title: `Update ${owner}/${repo}#${issueNumber}`,
-            preview: [
-              state ? `State: ${state}` : null,
-              title ? `Title: ${title}` : null,
-            ].filter(Boolean).join("\n"),
+            preview: [state ? `State: ${state}` : null, title ? `Title: ${title}` : null]
+              .filter(Boolean)
+              .join("\n"),
             confirmText: "Update issue",
           },
           args,
@@ -300,7 +299,8 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
               if (labels !== undefined) patch.labels = labels
               if (Object.keys(patch).length === 0) {
                 return {
-                  error: "Nothing to update — provide at least one of state, title, body, or labels.",
+                  error:
+                    "Nothing to update — provide at least one of state, title, body, or labels.",
                 }
               }
               const issue = await gh<{
@@ -905,8 +905,14 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
       parameters: z.object({
         owner: z.string().describe("Repository owner"),
         repo: z.string().describe("Repository name"),
-        path: z.string().min(1).describe("File path within the repository (e.g. 'README.md' or 'src/index.ts')"),
-        branch: z.string().optional().describe("Branch name (defaults to the repository default branch)"),
+        path: z
+          .string()
+          .min(1)
+          .describe("File path within the repository (e.g. 'README.md' or 'src/index.ts')"),
+        branch: z
+          .string()
+          .optional()
+          .describe("Branch name (defaults to the repository default branch)"),
       }),
       execute: async ({ owner, repo, path, branch }) => {
         try {
@@ -949,11 +955,15 @@ export function createGitHubTools(ctx: ConnectorContext): ToolSet {
     }),
 
     "github-listCommits": tool({
-      description: "List commits in a GitHub repository. Returns commit SHA, author, date, and message.",
+      description:
+        "List commits in a GitHub repository. Returns commit SHA, author, date, and message.",
       parameters: z.object({
         owner: z.string().describe("Repository owner"),
         repo: z.string().describe("Repository name"),
-        branch: z.string().optional().describe("Branch name to list commits from (defaults to default branch)"),
+        branch: z
+          .string()
+          .optional()
+          .describe("Branch name to list commits from (defaults to default branch)"),
         limit: z.number().int().min(1).max(30).default(10).describe("Max commits to return"),
       }),
       execute: async ({ owner, repo, branch, limit }) => {

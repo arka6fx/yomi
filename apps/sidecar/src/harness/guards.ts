@@ -18,13 +18,7 @@ const DUP_CALL_THRESHOLD = 3 // identical consecutive tool calls before break
 
 // Bookkeeping-only tools that don't consume the agent's step budget.
 // A step whose every tool call is in this set is refunded (stepCount not incremented).
-const CHEAP_TOOLS = new Set([
-  "memory_write",
-  "remember",
-  "forget",
-  "look_at_screen",
-  "transcribe",
-])
+const CHEAP_TOOLS = new Set(["memory_write", "remember", "forget", "look_at_screen", "transcribe"])
 
 // Plan-based context-compression threshold. Callers feed in the current
 // messages + model context window; the function returns true when the

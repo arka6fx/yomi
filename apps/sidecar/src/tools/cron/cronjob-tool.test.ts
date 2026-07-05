@@ -110,7 +110,11 @@ describe("cronjob tool — view", () => {
 describe("cronjob tool — update", () => {
   it("updates a job's prompt and schedule", async () => {
     const created = await execute("create", { schedule: "30m", prompt: "original" })
-    const result = await execute("update", { id: created.id, prompt: "updated prompt", schedule: "1h" })
+    const result = await execute("update", {
+      id: created.id,
+      prompt: "updated prompt",
+      schedule: "1h",
+    })
     expect(result.ok).toBe(true)
     expect(result.updated.prompt).toBe("updated prompt")
     expect(result.updated.schedule).toBe("1h")

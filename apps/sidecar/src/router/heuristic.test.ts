@@ -64,7 +64,12 @@ const cases: Case[] = [
   // Connector queries (Notion, Drive, Gmail, GitHub, etc.) — always agent path
   { text: "what's in my Notion?", path: "agent", minConf: 0.85, label: "notion question" },
   { text: "find my notion tasks", path: "agent", minConf: 0.85, label: "notion task search" },
-  { text: "search my google drive for the report", path: "agent", minConf: 0.85, label: "drive search" },
+  {
+    text: "search my google drive for the report",
+    path: "agent",
+    minConf: 0.85,
+    label: "drive search",
+  },
   { text: "show me files from drive", path: "agent", minConf: 0.85, label: "drive list files" },
   { text: "check my gmail for invoices", path: "agent", minConf: 0.85, label: "gmail search" },
   { text: "any new email from amazon?", path: "agent", minConf: 0.85, label: "email check" },

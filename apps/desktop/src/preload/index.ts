@@ -184,7 +184,8 @@ contextBridge.exposeInMainWorld("yomi", {
   // ── Auto-update ──────────────────────────────────────────────────────────
 
   onUpdateAvailable(cb: (info: { version: string; releaseDate: string }) => void): () => void {
-    const h = (_: Electron.IpcRendererEvent, info: { version: string; releaseDate: string }) => cb(info)
+    const h = (_: Electron.IpcRendererEvent, info: { version: string; releaseDate: string }) =>
+      cb(info)
     ipcRenderer.on("yomi:update-available", h)
     return () => ipcRenderer.off("yomi:update-available", h)
   },
@@ -195,8 +196,18 @@ contextBridge.exposeInMainWorld("yomi", {
     return () => ipcRenderer.off("yomi:update-downloaded", h)
   },
 
-  onUpdateProgress(cb: (info: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => void): () => void {
-    const h = (_: Electron.IpcRendererEvent, info: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => cb(info)
+  onUpdateProgress(
+    cb: (info: {
+      percent: number
+      bytesPerSecond: number
+      transferred: number
+      total: number
+    }) => void,
+  ): () => void {
+    const h = (
+      _: Electron.IpcRendererEvent,
+      info: { percent: number; bytesPerSecond: number; transferred: number; total: number },
+    ) => cb(info)
     ipcRenderer.on("yomi:update-progress", h)
     return () => ipcRenderer.off("yomi:update-progress", h)
   },
@@ -211,16 +222,18 @@ contextBridge.exposeInMainWorld("yomi", {
 
   // ── Integrations ──────────────────────────────────────────────────────────
 
-  getIntegrations(): Promise<{
-    id: string
-    provider: string
-    displayName: string
-    scopes: string[]
-    connected: boolean
-    lastSyncAt: string | null
-    expiresAt: string | null
-    createdAt: string
-  }[]> {
+  getIntegrations(): Promise<
+    {
+      id: string
+      provider: string
+      displayName: string
+      scopes: string[]
+      connected: boolean
+      lastSyncAt: string | null
+      expiresAt: string | null
+      createdAt: string
+    }[]
+  > {
     return ipcRenderer.invoke("yomi:get-integrations")
   },
 
@@ -260,7 +273,12 @@ contextBridge.exposeInMainWorld("yomi", {
     return ipcRenderer.invoke("yomi:get-memories", query ?? "")
   },
 
-  addMemory(input: { content: string; topic?: string; kind?: string; scope?: string }): Promise<{ memory?: unknown; error?: string }> {
+  addMemory(input: {
+    content: string
+    topic?: string
+    kind?: string
+    scope?: string
+  }): Promise<{ memory?: unknown; error?: string }> {
     return ipcRenderer.invoke("yomi:add-memory", input)
   },
 
@@ -272,11 +290,20 @@ contextBridge.exposeInMainWorld("yomi", {
     return ipcRenderer.invoke("yomi:get-schedules")
   },
 
-  saveSchedule(input: { id?: string; schedule: string; prompt: string; deliverTo?: string[]; enabled?: boolean }): Promise<{ schedule?: unknown; error?: string }> {
+  saveSchedule(input: {
+    id?: string
+    schedule: string
+    prompt: string
+    deliverTo?: string[]
+    enabled?: boolean
+  }): Promise<{ schedule?: unknown; error?: string }> {
     return ipcRenderer.invoke("yomi:save-schedule", input)
   },
 
-  setScheduleEnabled(id: string, enabled: boolean): Promise<{ schedule?: unknown; error?: string }> {
+  setScheduleEnabled(
+    id: string,
+    enabled: boolean,
+  ): Promise<{ schedule?: unknown; error?: string }> {
     return ipcRenderer.invoke("yomi:set-schedule-enabled", id, enabled)
   },
 

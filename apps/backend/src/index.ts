@@ -31,37 +31,39 @@ const app = new Hono()
 
 app.onError(errorHandler)
 
-app.use(
-  "*",
-  async (c, next) => {
-    const origin = c.req.header("Origin")
-    const webOrigin = process.env["CORS_ORIGIN"] ?? process.env["BETTER_AUTH_URL"] ?? "http://localhost:3000"
-    const allowedOrigins = new Set([webOrigin].filter(Boolean))
-    if (origin && allowedOrigins.has(origin)) {
-      c.header("Access-Control-Allow-Origin", origin)
-      c.header("Access-Control-Allow-Credentials", "true")
-      c.header("Access-Control-Allow-Methods", "GET,HEAD,PUT,POST,DELETE,PATCH,OPTIONS")
-      c.header("Access-Control-Allow-Headers", c.req.header("Access-Control-Request-Headers") ?? "Authorization,Content-Type")
-      c.header("Vary", "Origin")
-      if (c.req.method === "OPTIONS") {
-        return c.body(null, 204)
-      }
+app.use("*", async (c, next) => {
+  const origin = c.req.header("Origin")
+  const webOrigin =
+    process.env["CORS_ORIGIN"] ?? process.env["BETTER_AUTH_URL"] ?? "http://localhost:3000"
+  const allowedOrigins = new Set([webOrigin].filter(Boolean))
+  if (origin && allowedOrigins.has(origin)) {
+    c.header("Access-Control-Allow-Origin", origin)
+    c.header("Access-Control-Allow-Credentials", "true")
+    c.header("Access-Control-Allow-Methods", "GET,HEAD,PUT,POST,DELETE,PATCH,OPTIONS")
+    c.header(
+      "Access-Control-Allow-Headers",
+      c.req.header("Access-Control-Request-Headers") ?? "Authorization,Content-Type",
+    )
+    c.header("Vary", "Origin")
+    if (c.req.method === "OPTIONS") {
+      return c.body(null, 204)
     }
+  }
 
-    await next()
-  },
-)
+  await next()
+})
 
 app.get("/health", (c) => c.json({ status: "ok", version: "0.1.0" }))
 
 async function getLatestExeUrl(): Promise<string | null> {
   try {
-    const res = await fetch(
-      "https://api.github.com/repos/arka6fx/yomi-releases/releases/latest",
-      { headers: { Accept: "application/vnd.github+json", "User-Agent": "yomi-backend" } },
-    )
+    const res = await fetch("https://api.github.com/repos/arka6fx/yomi-releases/releases/latest", {
+      headers: { Accept: "application/vnd.github+json", "User-Agent": "yomi-backend" },
+    })
     if (!res.ok) return null
-    const release = await res.json() as { assets: { name: string; browser_download_url: string }[] }
+    const release = (await res.json()) as {
+      assets: { name: string; browser_download_url: string }[]
+    }
     const exe = release.assets.find((a) => a.name.endsWith(".exe"))
     return exe?.browser_download_url ?? null
   } catch {
@@ -129,10 +131,7 @@ const sidecarResolver: SidecarResolver = async (userId, platform) => {
       .from(platformConnections)
       .innerJoin(devices, eq(devices.userId, platformConnections.userId))
       .where(
-        and(
-          eq(platformConnections.userId, userId),
-          eq(platformConnections.platform, platform),
-        ),
+        and(eq(platformConnections.userId, userId), eq(platformConnections.platform, platform)),
       )
       .limit(1)
       .then((r) => r[0])

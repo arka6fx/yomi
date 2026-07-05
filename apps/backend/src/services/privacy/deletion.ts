@@ -42,8 +42,12 @@ async function revokeGoogleTokens(userId: string): Promise<void> {
 
   try {
     const tok = decryptTokens(rows[0]!.oauthTokens)
-    await fetch(`${GOOGLE_REVOKE_URL}?token=${encodeURIComponent(tok.accessToken)}`, { method: "POST" })
-  } catch { /* best-effort revoke */ }
+    await fetch(`${GOOGLE_REVOKE_URL}?token=${encodeURIComponent(tok.accessToken)}`, {
+      method: "POST",
+    })
+  } catch {
+    /* best-effort revoke */
+  }
 }
 
 async function runDeletionStep(
@@ -119,22 +123,134 @@ export async function deleteMyData(userId: string) {
 
   // Steps 2-17: Delete data tables
   const deletions: { name: string; fn: () => Promise<number> }[] = [
-    { name: "memory_embeddings", fn: () => db.delete(memoryEmbeddings).where(eq(memoryEmbeddings.userId, userId)).then((r) => r.rowCount ?? 0) },
-    { name: "memory_relations", fn: () => db.delete(memoryRelations).where(eq(memoryRelations.userId, userId)).then((r) => r.rowCount ?? 0) },
-    { name: "memory_entries", fn: () => db.delete(memoryEntries).where(eq(memoryEntries.userId, userId)).then((r) => r.rowCount ?? 0) },
-    { name: "rag_retrieval_logs", fn: () => db.delete(ragRetrievalLogs).where(eq(ragRetrievalLogs.userId, userId)).then((r) => r.rowCount ?? 0) },
-    { name: "rag_embeddings", fn: () => db.delete(ragEmbeddings).where(eq(ragEmbeddings.userId, userId)).then((r) => r.rowCount ?? 0) },
-    { name: "rag_chunks", fn: () => db.delete(ragChunks).where(eq(ragChunks.userId, userId)).then((r) => r.rowCount ?? 0) },
-    { name: "rag_documents", fn: () => db.delete(ragDocuments).where(eq(ragDocuments.userId, userId)).then((r) => r.rowCount ?? 0) },
-    { name: "rag_sources", fn: () => db.delete(ragSources).where(eq(ragSources.userId, userId)).then((r) => r.rowCount ?? 0) },
-    { name: "mcp_connections", fn: () => db.delete(mcpConnections).where(eq(mcpConnections.userId, userId)).then((r) => r.rowCount ?? 0) },
-    { name: "platform_connections", fn: () => db.delete(platformConnections).where(eq(platformConnections.userId, userId)).then((r) => r.rowCount ?? 0) },
-    { name: "pending_actions", fn: () => db.delete(pendingActions).where(eq(pendingActions.userId, userId)).then((r) => r.rowCount ?? 0) },
-    { name: "schedules", fn: () => db.delete(schedules).where(eq(schedules.userId, userId)).then((r) => r.rowCount ?? 0) },
-    { name: "usage_events", fn: () => db.delete(usageEvents).where(eq(usageEvents.userId, userId)).then((r) => r.rowCount ?? 0) },
-    { name: "linking_codes", fn: () => db.delete(linkingCodes).where(eq(linkingCodes.userId, userId)).then((r) => r.rowCount ?? 0) },
-    { name: "agent_messages", fn: () => db.delete(agentMessages).where(eq(agentMessages.userId, userId)).then((r) => r.rowCount ?? 0) },
-    { name: "agent_sessions", fn: () => db.delete(agentSessions).where(eq(agentSessions.userId, userId)).then((r) => r.rowCount ?? 0) },
+    {
+      name: "memory_embeddings",
+      fn: () =>
+        db
+          .delete(memoryEmbeddings)
+          .where(eq(memoryEmbeddings.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+    },
+    {
+      name: "memory_relations",
+      fn: () =>
+        db
+          .delete(memoryRelations)
+          .where(eq(memoryRelations.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+    },
+    {
+      name: "memory_entries",
+      fn: () =>
+        db
+          .delete(memoryEntries)
+          .where(eq(memoryEntries.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+    },
+    {
+      name: "rag_retrieval_logs",
+      fn: () =>
+        db
+          .delete(ragRetrievalLogs)
+          .where(eq(ragRetrievalLogs.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+    },
+    {
+      name: "rag_embeddings",
+      fn: () =>
+        db
+          .delete(ragEmbeddings)
+          .where(eq(ragEmbeddings.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+    },
+    {
+      name: "rag_chunks",
+      fn: () =>
+        db
+          .delete(ragChunks)
+          .where(eq(ragChunks.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+    },
+    {
+      name: "rag_documents",
+      fn: () =>
+        db
+          .delete(ragDocuments)
+          .where(eq(ragDocuments.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+    },
+    {
+      name: "rag_sources",
+      fn: () =>
+        db
+          .delete(ragSources)
+          .where(eq(ragSources.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+    },
+    {
+      name: "mcp_connections",
+      fn: () =>
+        db
+          .delete(mcpConnections)
+          .where(eq(mcpConnections.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+    },
+    {
+      name: "platform_connections",
+      fn: () =>
+        db
+          .delete(platformConnections)
+          .where(eq(platformConnections.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+    },
+    {
+      name: "pending_actions",
+      fn: () =>
+        db
+          .delete(pendingActions)
+          .where(eq(pendingActions.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+    },
+    {
+      name: "schedules",
+      fn: () =>
+        db
+          .delete(schedules)
+          .where(eq(schedules.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+    },
+    {
+      name: "usage_events",
+      fn: () =>
+        db
+          .delete(usageEvents)
+          .where(eq(usageEvents.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+    },
+    {
+      name: "linking_codes",
+      fn: () =>
+        db
+          .delete(linkingCodes)
+          .where(eq(linkingCodes.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+    },
+    {
+      name: "agent_messages",
+      fn: () =>
+        db
+          .delete(agentMessages)
+          .where(eq(agentMessages.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+    },
+    {
+      name: "agent_sessions",
+      fn: () =>
+        db
+          .delete(agentSessions)
+          .where(eq(agentSessions.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+    },
   ]
 
   let allOk = true
@@ -192,7 +308,9 @@ export async function deleteAccount(userId: string) {
   const [existing] = await db
     .select()
     .from(privacyDeletionJobs)
-    .where(and(eq(privacyDeletionJobs.userId, userId), eq(privacyDeletionJobs.kind, "delete_account")))
+    .where(
+      and(eq(privacyDeletionJobs.userId, userId), eq(privacyDeletionJobs.kind, "delete_account")),
+    )
     .orderBy(privacyDeletionJobs.requestedAt)
     .limit(1)
 
@@ -249,26 +367,94 @@ export async function deleteAccount(userId: string) {
   {
     const step = steps[1]!
     const deletions = [
-      () => db.delete(memoryEmbeddings).where(eq(memoryEmbeddings.userId, userId)).then((r) => r.rowCount ?? 0),
-      () => db.delete(memoryRelations).where(eq(memoryRelations.userId, userId)).then((r) => r.rowCount ?? 0),
-      () => db.delete(memoryEntries).where(eq(memoryEntries.userId, userId)).then((r) => r.rowCount ?? 0),
-      () => db.delete(ragRetrievalLogs).where(eq(ragRetrievalLogs.userId, userId)).then((r) => r.rowCount ?? 0),
-      () => db.delete(ragEmbeddings).where(eq(ragEmbeddings.userId, userId)).then((r) => r.rowCount ?? 0),
-      () => db.delete(ragChunks).where(eq(ragChunks.userId, userId)).then((r) => r.rowCount ?? 0),
-      () => db.delete(ragDocuments).where(eq(ragDocuments.userId, userId)).then((r) => r.rowCount ?? 0),
-      () => db.delete(ragSources).where(eq(ragSources.userId, userId)).then((r) => r.rowCount ?? 0),
-      () => db.delete(mcpConnections).where(eq(mcpConnections.userId, userId)).then((r) => r.rowCount ?? 0),
-      () => db.delete(platformConnections).where(eq(platformConnections.userId, userId)).then((r) => r.rowCount ?? 0),
-      () => db.delete(pendingActions).where(eq(pendingActions.userId, userId)).then((r) => r.rowCount ?? 0),
-      () => db.delete(schedules).where(eq(schedules.userId, userId)).then((r) => r.rowCount ?? 0),
-      () => db.delete(usageEvents).where(eq(usageEvents.userId, userId)).then((r) => r.rowCount ?? 0),
-      () => db.delete(linkingCodes).where(eq(linkingCodes.userId, userId)).then((r) => r.rowCount ?? 0),
-      () => db.delete(agentMessages).where(eq(agentMessages.userId, userId)).then((r) => r.rowCount ?? 0),
-      () => db.delete(agentSessions).where(eq(agentSessions.userId, userId)).then((r) => r.rowCount ?? 0),
+      () =>
+        db
+          .delete(memoryEmbeddings)
+          .where(eq(memoryEmbeddings.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+      () =>
+        db
+          .delete(memoryRelations)
+          .where(eq(memoryRelations.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+      () =>
+        db
+          .delete(memoryEntries)
+          .where(eq(memoryEntries.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+      () =>
+        db
+          .delete(ragRetrievalLogs)
+          .where(eq(ragRetrievalLogs.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+      () =>
+        db
+          .delete(ragEmbeddings)
+          .where(eq(ragEmbeddings.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+      () =>
+        db
+          .delete(ragChunks)
+          .where(eq(ragChunks.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+      () =>
+        db
+          .delete(ragDocuments)
+          .where(eq(ragDocuments.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+      () =>
+        db
+          .delete(ragSources)
+          .where(eq(ragSources.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+      () =>
+        db
+          .delete(mcpConnections)
+          .where(eq(mcpConnections.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+      () =>
+        db
+          .delete(platformConnections)
+          .where(eq(platformConnections.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+      () =>
+        db
+          .delete(pendingActions)
+          .where(eq(pendingActions.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+      () =>
+        db
+          .delete(schedules)
+          .where(eq(schedules.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+      () =>
+        db
+          .delete(usageEvents)
+          .where(eq(usageEvents.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+      () =>
+        db
+          .delete(linkingCodes)
+          .where(eq(linkingCodes.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+      () =>
+        db
+          .delete(agentMessages)
+          .where(eq(agentMessages.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+      () =>
+        db
+          .delete(agentSessions)
+          .where(eq(agentSessions.userId, userId))
+          .then((r) => r.rowCount ?? 0),
     ]
     let ok = true
     for (const fn of deletions) {
-      try { await fn() } catch { ok = false }
+      try {
+        await fn()
+      } catch {
+        ok = false
+      }
     }
     step.status = ok ? "done" : "done"
     step.deletedCount = 0
@@ -286,10 +472,13 @@ export async function deleteAccount(userId: string) {
       if (!userRow?.dodoSubscriptionId) return 0
       const { apiBase, apiKey } = getDodoConfig()
       if (!apiKey) return 0
-      await fetch(`${apiBase.replace(/\/+$/, "")}/subscriptions/${userRow.dodoSubscriptionId}/cancel`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      })
+      await fetch(
+        `${apiBase.replace(/\/+$/, "")}/subscriptions/${userRow.dodoSubscriptionId}/cancel`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        },
+      )
       return 1
     })
     if (!result.ok) {
@@ -302,7 +491,10 @@ export async function deleteAccount(userId: string) {
   {
     const step = steps[3]!
     const result = await runDeletionStep(step, () =>
-      db.delete(authSchema.session).where(eq(authSchema.session.userId, userId)).then((r) => r.rowCount ?? 0),
+      db
+        .delete(authSchema.session)
+        .where(eq(authSchema.session.userId, userId))
+        .then((r) => r.rowCount ?? 0),
     )
     if (!result.ok) {
       step.status = "skipped"

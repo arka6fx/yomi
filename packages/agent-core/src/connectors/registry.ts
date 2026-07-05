@@ -68,10 +68,7 @@ export class ConnectorRegistry {
     // Legacy Gmail path: stored as "google" in mcp_connections for existing rows.
     // Kept so registry.get("google") still works for sidecar backward compat.
     if (this.connectedProviders.has("google")) {
-      this.connectors.set(
-        "google",
-        new GoogleGmailConnector(this.userId, this.deps.getAccessToken),
-      )
+      this.connectors.set("google", new GoogleGmailConnector(this.userId, this.deps.getAccessToken))
     }
 
     // Def-based path: iterate all registered ConnectorDefs and load tools for

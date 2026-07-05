@@ -36,7 +36,10 @@ export function defaultVoiceSettings() {
   }
 }
 
-export async function synthesizeSpeech(text: string, options?: Partial<TtsOptions>): Promise<TtsResult> {
+export async function synthesizeSpeech(
+  text: string,
+  options?: Partial<TtsOptions>,
+): Promise<TtsResult> {
   const cleanText = text.replace(/\s+/g, " ").trim()
   if (!cleanText) throw new Error("text field required")
 
@@ -62,7 +65,9 @@ export async function synthesizeSpeech(text: string, options?: Partial<TtsOption
 
   if (!res.ok) {
     const body = await res.text().catch(() => "")
-    throw new Error(`ElevenLabs TTS failed (${res.status}): ${body.slice(0, 300) || res.statusText}`)
+    throw new Error(
+      `ElevenLabs TTS failed (${res.status}): ${body.slice(0, 300) || res.statusText}`,
+    )
   }
 
   return {

@@ -35,7 +35,10 @@ llmRouter.all("/proxy/*", async (c) => {
 
   if (!res.ok) {
     const text = await res.text().catch(() => "")
-    return c.json({ error: `AI Credits upstream failed (${res.status})`, detail: text }, res.status as 400 | 500 | 502)
+    return c.json(
+      { error: `AI Credits upstream failed (${res.status})`, detail: text },
+      res.status as 400 | 500 | 502,
+    )
   }
 
   // Forward streaming SSE responses as-is

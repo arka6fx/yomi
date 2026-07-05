@@ -1,4 +1,13 @@
-﻿import { afterEach, beforeAll, beforeEach, describe, expect, it, mock, setSystemTime } from "bun:test"
+﻿import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  setSystemTime,
+} from "bun:test"
 import { Hono } from "hono"
 import { createHmac } from "node:crypto"
 
@@ -140,9 +149,7 @@ const fakeDb = {
           result = [{ ...flow.user }]
         } else if (isUsage) {
           const month = monthStart()
-          const count = flow.usageEvents.filter(
-            (e) => e.createdAt >= month,
-          ).length
+          const count = flow.usageEvents.filter((e) => e.createdAt >= month).length
           result = [{ count }]
         } else if (isPayments) {
           result = []
@@ -392,9 +399,14 @@ function setDodoEnv() {
 
 function clearDodoEnv() {
   const keys = [
-    "DODO_ENV", "DODO_TEST_API_KEY", "DODO_TEST_WEBHOOK_SECRET", "DODO_TEST_API_BASE",
-    "DODO_TEST_PRODUCT_PRO", "DODO_TEST_PRODUCT_MAX",
-    "DODO_TEST_PRODUCT_CREDITS_500", "DODO_TEST_PRODUCT_CREDITS_2000",
+    "DODO_ENV",
+    "DODO_TEST_API_KEY",
+    "DODO_TEST_WEBHOOK_SECRET",
+    "DODO_TEST_API_BASE",
+    "DODO_TEST_PRODUCT_PRO",
+    "DODO_TEST_PRODUCT_MAX",
+    "DODO_TEST_PRODUCT_CREDITS_500",
+    "DODO_TEST_PRODUCT_CREDITS_2000",
     "DODO_TEST_PRODUCT_CREDITS_6000",
   ]
   for (const k of keys) delete process.env[k]
@@ -484,7 +496,7 @@ describe("E2E: explore -> pro -> consume -> buy credits -> consume -> edge cases
 
     // Can reserve chat (trial active, credits available)
     const res = await reserveChat()
-    const body = await res.json() as any
+    const body = (await res.json()) as any
     expect(res.status).toBe(200)
     expect(body.ok).toBe(true)
     expect(body.plan).toBe("explore")
@@ -494,14 +506,16 @@ describe("E2E: explore -> pro -> consume -> buy credits -> consume -> edge cases
 
   it("2: creates Pro subscription checkout", async () => {
     const res = await createSubscription("pro")
-    const body = await res.json() as any
+    const body = (await res.json()) as any
     expect(res.status).toBe(200)
     expect(body.short_url).toBe("https://checkout.example/pro")
     expect(fetchCalls).toHaveLength(1)
     const payload = JSON.parse(String(fetchCalls[0]?.init?.body ?? "{}"))
     expect(payload.product_cart?.[0]?.product_id).toBe("test_pro")
     expect(payload.metadata).toEqual({
-      userId: "user_lily", kind: "subscription", plan: "pro",
+      userId: "user_lily",
+      kind: "subscription",
+      plan: "pro",
     })
   })
 
@@ -548,7 +562,7 @@ describe("E2E: explore -> pro -> consume -> buy credits -> consume -> edge cases
     for (let i = 0; i < TOTAL_CREDITS; i++) {
       const res = await reserveChat()
       expect(res.status).toBe(200)
-      lastBody = await res.json() as any
+      lastBody = (await res.json()) as any
       expect(lastBody.ok).toBe(true)
     }
 
@@ -557,7 +571,7 @@ describe("E2E: explore -> pro -> consume -> buy credits -> consume -> edge cases
 
     // No credits remain -> next request is blocked (buy a pack on Pro).
     const failRes = await reserveChat()
-    const failBody = await failRes.json() as any
+    const failBody = (await failRes.json()) as any
     expect(failRes.status).toBe(402)
     expect(failBody.code).toBe("credits_exhausted")
   }, 60_000)
@@ -566,13 +580,15 @@ describe("E2E: explore -> pro -> consume -> buy credits -> consume -> edge cases
     expect(flow.user.plan).toBe("pro")
 
     const checkoutRes = await createCreditPack("credits_500")
-    const checkoutBody = await checkoutRes.json() as any
+    const checkoutBody = (await checkoutRes.json()) as any
     expect(checkoutRes.status).toBe(200)
     expect(checkoutBody.short_url).toBe("https://checkout.example/pro")
 
     const payload = JSON.parse(String(fetchCalls[fetchCalls.length - 1]?.init?.body ?? "{}"))
     expect(payload.metadata).toEqual({
-      userId: "user_lily", kind: "credit_pack", productKey: "credits_500",
+      userId: "user_lily",
+      kind: "credit_pack",
+      productKey: "credits_500",
     })
 
     // payment.succeeded webhook
@@ -613,7 +629,7 @@ describe("E2E: explore -> pro -> consume -> buy credits -> consume -> edge cases
     for (let i = 0; i < 500; i++) {
       const res = await reserveChat()
       expect(res.status).toBe(200)
-      const body = await res.json() as any
+      const body = (await res.json()) as any
       expect(body.ok).toBe(true)
       expect(body.paidBy).toBe("credits")
     }
@@ -626,7 +642,7 @@ describe("E2E: explore -> pro -> consume -> buy credits -> consume -> edge cases
 
     // Next request fails
     const failRes = await reserveChat()
-    const failBody = await failRes.json() as any
+    const failBody = (await failRes.json()) as any
     expect(failRes.status).toBe(402)
     expect(failBody.code).toBe("credits_exhausted")
   })
@@ -652,7 +668,8 @@ describe("E2E: explore -> pro -> consume -> buy credits -> consume -> edge cases
     })
 
     expect(
-      flow.creditGrants.filter((g) => g.status === "active")
+      flow.creditGrants
+        .filter((g) => g.status === "active")
         .reduce((s, g) => s + g.creditsRemaining, 0),
     ).toBe(100)
 
@@ -685,5 +702,3 @@ describe("E2E: explore -> pro -> consume -> buy credits -> consume -> edge cases
     expect(trialGrant!.creditsRemaining).toBe(0)
   })
 })
-
-

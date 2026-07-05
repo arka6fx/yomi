@@ -6,14 +6,21 @@ import { CronExpressionParser } from "cron-parser"
 import type { CronJob } from "./cron-types.js"
 
 export function parseDurationMs(schedule: string): number | null {
-  const match = schedule.trim().toLowerCase().match(/^(\d+)([mhd])$/)
+  const match = schedule
+    .trim()
+    .toLowerCase()
+    .match(/^(\d+)([mhd])$/)
   if (!match) return null
   const num = parseInt(match[1]!, 10)
   switch (match[2]) {
-    case "m": return num * 60_000
-    case "h": return num * 3600_000
-    case "d": return num * 86_400_000
-    default: return null
+    case "m":
+      return num * 60_000
+    case "h":
+      return num * 3600_000
+    case "d":
+      return num * 86_400_000
+    default:
+      return null
   }
 }
 
@@ -21,8 +28,13 @@ export function phraseToCron(phrase: string): string | null {
   const p = phrase.toLowerCase().trim()
 
   const dayMap: Record<string, number> = {
-    sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
-    thursday: 4, friday: 5, saturday: 6,
+    sunday: 0,
+    monday: 1,
+    tuesday: 2,
+    wednesday: 3,
+    thursday: 4,
+    friday: 5,
+    saturday: 6,
   }
 
   // "every monday 9am" → "0 9 * * 1"
@@ -57,9 +69,7 @@ export function phraseToCron(phrase: string): string | null {
   }
 
   // "every weekday 9am" → "0 9 * * 1-5"
-  const weekday = p.match(
-    /^every\s+weekday\s+(\d{1,2})(?::(\d{2}))?\s*(?:am|pm)?$/i,
-  )
+  const weekday = p.match(/^every\s+weekday\s+(\d{1,2})(?::(\d{2}))?\s*(?:am|pm)?$/i)
   if (weekday) {
     const hour = parseInt(weekday[1]!, 10)
     if (hour >= 0 && hour <= 23) return `0 ${hour} * * 1-5`
@@ -124,9 +134,6 @@ export function isJobDue(job: CronJob, now: Date = new Date()): boolean {
   return next.getTime() <= now.getTime()
 }
 
-export function getDueJobs(
-  jobs: Record<string, CronJob>,
-  now: Date = new Date(),
-): CronJob[] {
+export function getDueJobs(jobs: Record<string, CronJob>, now: Date = new Date()): CronJob[] {
   return Object.values(jobs).filter((j) => isJobDue(j, now))
 }

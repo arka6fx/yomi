@@ -22,9 +22,14 @@ async function sendTelegram(chatId: string, text: string): Promise<boolean> {
 
 async function telegramChatFor(userId: string): Promise<string | null> {
   const [row] = await db
-    .select({ chatId: platformConnections.platformChatId, userId: platformConnections.platformUserId })
+    .select({
+      chatId: platformConnections.platformChatId,
+      userId: platformConnections.platformUserId,
+    })
     .from(platformConnections)
-    .where(and(eq(platformConnections.userId, userId), eq(platformConnections.platform, "telegram")))
+    .where(
+      and(eq(platformConnections.userId, userId), eq(platformConnections.platform, "telegram")),
+    )
     .limit(1)
   return row?.chatId ?? row?.userId ?? null
 }
@@ -36,7 +41,13 @@ export async function runDueSchedules(now = new Date()): Promise<{ ran: number }
   const due = await db
     .select()
     .from(schedules)
-    .where(and(eq(schedules.enabled, true), isNotNull(schedules.nextRunAt), lte(schedules.nextRunAt, now)))
+    .where(
+      and(
+        eq(schedules.enabled, true),
+        isNotNull(schedules.nextRunAt),
+        lte(schedules.nextRunAt, now),
+      ),
+    )
     .orderBy(asc(schedules.nextRunAt))
     .limit(MAX_PER_SWEEP)
 
@@ -72,7 +83,12 @@ export async function runDueSchedules(now = new Date()): Promise<{ ran: number }
     const ranAt = new Date()
     const next = job.oneShot
       ? null
-      : computeNextRun({ scheduleType: job.scheduleType as ScheduleType, schedule: job.schedule, lastRunAt: ranAt, now: ranAt })
+      : computeNextRun({
+          scheduleType: job.scheduleType as ScheduleType,
+          schedule: job.schedule,
+          lastRunAt: ranAt,
+          now: ranAt,
+        })
 
     await db
       .update(schedules)

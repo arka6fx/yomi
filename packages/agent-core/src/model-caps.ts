@@ -9,8 +9,8 @@ export interface ModelCap {
 
 const MODEL_CAPS: Record<string, ModelCap> = {
   // GPT-5.5 series
-  "gpt-5.5":        { contextWindow: 128_000, maxOutput: 16_384 },
-  "gpt-5.5-mini":   { contextWindow: 128_000, maxOutput: 16_384 },
+  "gpt-5.5": { contextWindow: 128_000, maxOutput: 16_384 },
+  "gpt-5.5-mini": { contextWindow: 128_000, maxOutput: 16_384 },
 
   // Text models
   "text-embedding-3-small": { contextWindow: 8_191, maxOutput: 0 },
@@ -31,10 +31,7 @@ export function resolveModelCap(modelId: string): ModelCap {
 
 // Resolve the effective max_tokens for a model call.
 // Priority: caller-supplied value → env var → model default → global fallback.
-export function resolveMaxTokens(
-  modelId: string,
-  callerMaxTokens?: number,
-): number | undefined {
+export function resolveMaxTokens(modelId: string, callerMaxTokens?: number): number | undefined {
   const cap = resolveModelCap(modelId)
   if (cap.maxOutput === 0) return undefined
 

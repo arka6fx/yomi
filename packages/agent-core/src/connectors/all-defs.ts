@@ -21,5 +21,4 @@ export const ALL_CONNECTOR_DEFS: ConnectorDef[] = [
   slackDef,
   linearDef,
   linearApiKeyDef,
-
 ]

@@ -57,7 +57,9 @@ export function getDodoConfig(): DodoConfig {
 
   return {
     mode,
-    apiBase: read("API_BASE") ?? (mode === "test" ? "https://test.dodopayments.com" : "https://live.dodopayments.com"),
+    apiBase:
+      read("API_BASE") ??
+      (mode === "test" ? "https://test.dodopayments.com" : "https://live.dodopayments.com"),
     apiKey: read("API_KEY"),
     webhookSecret: read("WEBHOOK_SECRET"),
     productIds: {
@@ -133,7 +135,10 @@ function detectCurrency(cfCountry: string | null): CurrencyDisplay {
   return CURRENCIES[key] ?? CURRENCIES["usd"]!
 }
 
-function estimateLocal(amountCents: number, display: CurrencyDisplay): {
+function estimateLocal(
+  amountCents: number,
+  display: CurrencyDisplay,
+): {
   amount: number
   formatted: string
 } {
@@ -249,7 +254,7 @@ export function verifyDodoWebhook(body: string, headers: Headers): boolean {
 
   const timestamp = Number(timestampStr)
   if (!Number.isFinite(timestamp)) return false
-  const age = Math.abs((Date.now() / 1000) - timestamp)
+  const age = Math.abs(Date.now() / 1000 - timestamp)
   if (age > WEBHOOK_TOLERANCE_SECONDS) return false
 
   const signedPayload = `${webhookId}.${timestampStr}.${body}`
@@ -280,13 +285,15 @@ function eventData(event: Record<string, unknown>): DodoEntity {
   const data = event["data"]
   if (data && typeof data === "object" && !Array.isArray(data)) return data as DodoEntity
   const payload = event["payload"]
-  if (payload && typeof payload === "object" && !Array.isArray(payload)) return payload as DodoEntity
+  if (payload && typeof payload === "object" && !Array.isArray(payload))
+    return payload as DodoEntity
   return event
 }
 
 function metadata(entity: DodoEntity): Record<string, string> {
   const meta = entity["metadata"]
-  if (meta && typeof meta === "object" && !Array.isArray(meta)) return meta as Record<string, string>
+  if (meta && typeof meta === "object" && !Array.isArray(meta))
+    return meta as Record<string, string>
   return {}
 }
 
@@ -327,7 +334,8 @@ function subscriptionCreditExpiry(periodEnd: Date | null): Date {
 function activityLabel(kind: string | null, reason: string | null): string {
   const text = `${kind ?? ""} ${reason ?? ""}`.toLowerCase()
   if (text.includes("voice")) return "Voice assistant"
-  if (text.includes("image") || text.includes("analyze") || text.includes("screen")) return "Screen context"
+  if (text.includes("image") || text.includes("analyze") || text.includes("screen"))
+    return "Screen context"
   if (text.includes("telegram") || text.includes("bot_message")) return "Telegram assistant"
   if (text.includes("github")) return "GitHub task"
   if (text.includes("notion")) return "Notion search"
@@ -338,7 +346,10 @@ function activityLabel(kind: string | null, reason: string | null): string {
 }
 
 function categoryForActivity(kind: string | null, reason: string | null): string {
-  return activityLabel(kind, reason).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "")
+  return activityLabel(kind, reason)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "")
 }
 
 function logDodoConfig(): void {
@@ -349,10 +360,13 @@ function logDodoConfig(): void {
   const mode = env === "live" ? "live" : "test"
   const prefix = mode === "live" ? "DODO_LIVE" : "DODO_TEST"
   const apiKey = process.env[`${prefix}_API_KEY`] ?? process.env["DODO_API_KEY"] ?? ""
-  const baseUrl = mode === "live" ? "https://live.dodopayments.com" : "https://test.dodopayments.com"
+  const baseUrl =
+    mode === "live" ? "https://live.dodopayments.com" : "https://test.dodopayments.com"
 
   if (!apiKey) {
-    console.warn("[yomi/dodo] WARNING: " + prefix + "_API_KEY is not set — Dodo Payments will fail at runtime")
+    console.warn(
+      "[yomi/dodo] WARNING: " + prefix + "_API_KEY is not set — Dodo Payments will fail at runtime",
+    )
   }
   console.log("[yomi/dodo] config:", JSON.stringify({ mode, baseUrl, hasApiKey: !!apiKey }))
 }
@@ -409,7 +423,9 @@ billingRouter.post("/create-subscription", authenticate, async (c) => {
         ...(isUpgrade ? { isUpgrade: "true", previousPlan: user.plan } : {}),
       },
     })
-    const checkoutId = String(checkout["session_id"] ?? checkout["id"] ?? checkout["checkout_id"] ?? "")
+    const checkoutId = String(
+      checkout["session_id"] ?? checkout["id"] ?? checkout["checkout_id"] ?? "",
+    )
     const url = checkoutUrl(checkout)
     if (!url) throw new Error("Dodo checkout response did not include a checkout URL")
 
@@ -430,12 +446,15 @@ billingRouter.post("/create-subscription", authenticate, async (c) => {
     console.error("[yomi/billing] create-subscription failed:", err)
     const msg = err instanceof Error ? err.message : "Unknown error"
     const config = getDodoConfig()
-    return c.json({
-      error: "Dodo checkout creation failed",
-      cause: msg.includes("Dodo ") ? msg : `internal: ${msg}`,
-      environment: config.mode,
-      targetBase: config.apiBase,
-    }, 502)
+    return c.json(
+      {
+        error: "Dodo checkout creation failed",
+        cause: msg.includes("Dodo ") ? msg : `internal: ${msg}`,
+        environment: config.mode,
+        targetBase: config.apiBase,
+      },
+      502,
+    )
   }
 })
 
@@ -443,7 +462,8 @@ billingRouter.post("/create-credit-pack", authenticate, async (c) => {
   const { pack } = (await c.req.json()) as { pack: string }
   const user = c.get("user")
   const plan = effectivePlanForUser(user)
-  if (plan === "explore") return c.json({ error: "Credit packs are only available on Pro and Max plans" }, 403)
+  if (plan === "explore")
+    return c.json({ error: "Credit packs are only available on Pro and Max plans" }, 403)
   const config = getCreditPack(pack)
   if (!config) return c.json({ error: "Invalid credit pack" }, 400)
 
@@ -468,7 +488,8 @@ billingRouter.post("/create-credit-pack", authenticate, async (c) => {
       provider: "dodo",
       kind: "credit_pack",
       productKey: config.key,
-      providerOrderId: String(checkout["session_id"] ?? checkout["id"] ?? checkout["checkout_id"] ?? "") || null,
+      providerOrderId:
+        String(checkout["session_id"] ?? checkout["id"] ?? checkout["checkout_id"] ?? "") || null,
       amountCents: config.priceCents,
       currency: config.currency,
       status: "created",
@@ -480,12 +501,15 @@ billingRouter.post("/create-credit-pack", authenticate, async (c) => {
     console.error("[yomi/billing] create-credit-pack failed:", err)
     const msg = err instanceof Error ? err.message : "Unknown error"
     const config = getDodoConfig()
-    return c.json({
-      error: "Dodo checkout creation failed",
-      cause: msg.includes("Dodo ") ? msg : `internal: ${msg}`,
-      environment: config.mode,
-      targetBase: config.apiBase,
-    }, 502)
+    return c.json(
+      {
+        error: "Dodo checkout creation failed",
+        cause: msg.includes("Dodo ") ? msg : `internal: ${msg}`,
+        environment: config.mode,
+        targetBase: config.apiBase,
+      },
+      502,
+    )
   }
 })
 
@@ -496,23 +520,30 @@ billingRouter.post("/cancel-subscription", authenticate, async (c) => {
   try {
     await dodo(`/subscriptions/${user.dodoSubscriptionId}/cancel`, undefined, "POST")
 
-    return c.json({ ok: true, message: "Your subscription will cancel at the end of the billing period." })
+    return c.json({
+      ok: true,
+      message: "Your subscription will cancel at the end of the billing period.",
+    })
   } catch (err) {
     console.error("[yomi/billing] cancel-subscription failed:", err)
     const msg = err instanceof Error ? err.message : "Unknown error"
     const config = getDodoConfig()
-    return c.json({
-      error: "Failed to cancel subscription",
-      cause: msg.includes("Dodo ") ? msg : `internal: ${msg}`,
-      environment: config.mode,
-      targetBase: config.apiBase,
-    }, 502)
+    return c.json(
+      {
+        error: "Failed to cancel subscription",
+        cause: msg.includes("Dodo ") ? msg : `internal: ${msg}`,
+        environment: config.mode,
+        targetBase: config.apiBase,
+      },
+      502,
+    )
   }
 })
 
 billingRouter.post("/webhook", async (c) => {
   const body = await c.req.text()
-  if (!verifyDodoWebhook(body, c.req.raw.headers)) return c.json({ error: "Invalid signature" }, 400)
+  if (!verifyDodoWebhook(body, c.req.raw.headers))
+    return c.json({ error: "Invalid signature" }, 400)
 
   let event: Record<string, unknown>
   try {
@@ -522,7 +553,10 @@ billingRouter.post("/webhook", async (c) => {
   }
 
   const type = eventType(event)
-  const id = c.req.header("webhook-id") ?? stringField(event, ["id", "event_id"]) ?? `${type}:${payloadHash(body)}`
+  const id =
+    c.req.header("webhook-id") ??
+    stringField(event, ["id", "event_id"]) ??
+    `${type}:${payloadHash(body)}`
   const recorded = await recordPaymentEvent({
     provider: "dodo",
     eventId: id,
@@ -565,11 +599,18 @@ billingRouter.get("/subscription", authenticate, async (c) => {
   if (!user) return c.json({ error: "User not found" }, 404)
 
   const effectivePlan = effectivePlanForUser(user)
-  const requestPeriodStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1))
-  const resetAt = new Date(Date.UTC(requestPeriodStart.getUTCFullYear(), requestPeriodStart.getUTCMonth() + 1, 1))
+  const requestPeriodStart = new Date(
+    Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1),
+  )
+  const resetAt = new Date(
+    Date.UTC(requestPeriodStart.getUTCFullYear(), requestPeriodStart.getUTCMonth() + 1, 1),
+  )
 
   const creditConsumptionRows = await db
-    .select({ kind: usageEvents.kind, creditsCharged: sql<number>`sum(${usageEvents.creditsCharged})` })
+    .select({
+      kind: usageEvents.kind,
+      creditsCharged: sql<number>`sum(${usageEvents.creditsCharged})`,
+    })
     .from(usageEvents)
     .where(
       and(
@@ -591,7 +632,8 @@ billingRouter.get("/subscription", authenticate, async (c) => {
 
   let trialExpired = false
   if (effectivePlan === "explore") {
-    const trialEnd = user.trialEndDate ?? new Date(user.createdAt.getTime() + 30 * 24 * 60 * 60 * 1000)
+    const trialEnd =
+      user.trialEndDate ?? new Date(user.createdAt.getTime() + 30 * 24 * 60 * 60 * 1000)
     trialExpired = Date.now() >= trialEnd.getTime()
   }
 
@@ -609,9 +651,10 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     creditsUsed: totalCreditsUsed,
     totalCredits,
     creditPacks: effectivePlan !== "explore" ? Object.values(CREDIT_PACKS) : [],
-    billingWarning: user.subscriptionStatus === "past_due"
-      ? "Your payment is past due. Please update your payment method."
-      : null,
+    billingWarning:
+      user.subscriptionStatus === "past_due"
+        ? "Your payment is past due. Please update your payment method."
+        : null,
   })
 })
 
@@ -619,8 +662,12 @@ billingRouter.get("/usage-summary", authenticate, async (c) => {
   const user = c.get("user")
   const effectivePlan = effectivePlanForUser(user)
   const planConfig = getPlan(effectivePlan)
-  const requestPeriodStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1))
-  const resetAt = new Date(Date.UTC(requestPeriodStart.getUTCFullYear(), requestPeriodStart.getUTCMonth() + 1, 1))
+  const requestPeriodStart = new Date(
+    Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1),
+  )
+  const resetAt = new Date(
+    Date.UTC(requestPeriodStart.getUTCFullYear(), requestPeriodStart.getUTCMonth() + 1, 1),
+  )
 
   const [creditConsumptionRows, dailyRows, transactions] = await Promise.all([
     db
@@ -670,7 +717,8 @@ billingRouter.get("/usage-summary", authenticate, async (c) => {
     recentActivity: transactions.map((tx, index) => ({
       id: `activity-${index}-${new Date(tx.createdAt).getTime()}`,
       label: tx.type === "grant" ? "Credits Added" : activityLabel(tx.usageKind, tx.reason),
-      category: tx.type === "grant" ? "credits_added" : categoryForActivity(tx.usageKind, tx.reason),
+      category:
+        tx.type === "grant" ? "credits_added" : categoryForActivity(tx.usageKind, tx.reason),
       credits: Math.abs(tx.amount),
       createdAt: tx.usageCreatedAt ?? tx.createdAt,
     })),
@@ -723,7 +771,11 @@ async function handleSubscriptionActive(entity: DodoEntity, eventId: string) {
   if (!config) return
 
   const customerId = stringField(entity, ["customer_id", "customerId"])
-  const periodEnd = dateField(entity, ["current_period_end", "currentPeriodEnd", "next_billing_date"])
+  const periodEnd = dateField(entity, [
+    "current_period_end",
+    "currentPeriodEnd",
+    "next_billing_date",
+  ])
 
   // Detect plan change — cancel old Dodo subscription if user switched plans
   const [existing] = await db
@@ -733,12 +785,19 @@ async function handleSubscriptionActive(entity: DodoEntity, eventId: string) {
     .limit(1)
 
   const isRenewal = existing?.plan === plan
-  const isUpgrade = existing?.plan !== "explore" && existing?.plan !== plan && existing?.plan !== undefined
+  const isUpgrade =
+    existing?.plan !== "explore" && existing?.plan !== plan && existing?.plan !== undefined
 
   if (isUpgrade && existing?.dodoSubscriptionId && existing.dodoSubscriptionId !== subId) {
     try {
-      console.warn(`[yomi/billing] cancelling old subscription ${existing.dodoSubscriptionId} for upgrade to ${plan}`)
-      await dodo(`/subscriptions/${existing.dodoSubscriptionId}`, { cancel_at_next_billing_date: true }, "PATCH")
+      console.warn(
+        `[yomi/billing] cancelling old subscription ${existing.dodoSubscriptionId} for upgrade to ${plan}`,
+      )
+      await dodo(
+        `/subscriptions/${existing.dodoSubscriptionId}`,
+        { cancel_at_next_billing_date: true },
+        "PATCH",
+      )
     } catch (err) {
       console.warn("[yomi/billing] failed to cancel old subscription on upgrade:", err)
     }
@@ -777,12 +836,9 @@ async function handleSubscriptionActive(entity: DodoEntity, eventId: string) {
 
   if (existing?.plan === "explore" && plan !== "explore") {
     const monthStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1))
-    await db.delete(usageEvents).where(
-      and(
-        eq(usageEvents.userId, userId),
-        gte(usageEvents.createdAt, monthStart),
-      ),
-    )
+    await db
+      .delete(usageEvents)
+      .where(and(eq(usageEvents.userId, userId), gte(usageEvents.createdAt, monthStart)))
 
     try {
       const expired = await expireUserCredits(userId, {
@@ -829,18 +885,17 @@ async function handleSubscriptionEnd(entity: DodoEntity) {
     const [rec] = await db
       .select({ id: paymentRecords.id })
       .from(paymentRecords)
-      .where(
-        and(
-          eq(paymentRecords.provider, "dodo"),
-          eq(paymentRecords.providerOrderId, subId),
-        ),
-      )
+      .where(and(eq(paymentRecords.provider, "dodo"), eq(paymentRecords.providerOrderId, subId)))
       .limit(1)
 
     if (rec) {
       await db
         .update(paymentRecords)
-        .set({ status: "cancelled", updatedAt: new Date(), metadata: { cancelledAt: new Date().toISOString() } })
+        .set({
+          status: "cancelled",
+          updatedAt: new Date(),
+          metadata: { cancelledAt: new Date().toISOString() },
+        })
         .where(eq(paymentRecords.id, rec.id))
     }
   }

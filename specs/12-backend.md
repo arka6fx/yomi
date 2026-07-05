@@ -11,7 +11,8 @@ and cloud archive mirroring/search.
 - LLM and speech provider keys live only in backend/server environments.
 - Dodo Payments is the payment processor.
 - Usage is gated by a single credit balance (pure-credit model) at backend API
-  boundaries; `services/metering.ts` `chargeUsage()` is the only charging chokepoint.
+  boundaries; `services/metering.ts` `chargeUsage()` is the only charging
+  chokepoint.
 - Structured memory stays in the sidecar; the backend hosts the mirrored archive
   index for Cloud RAG search.
 
@@ -22,8 +23,8 @@ app.route("/api/billing", billingRoutes)
 app.route("/api/usage", usageRoutes)
 app.route("/api/llm", llmRoutes)
 app.route("/api/rag", ragRoutes)
-app.post("/api/stt", sttHandler)   // machine-to-machine (sidecar secret) only
-app.post("/api/tts", ttsHandler)   // machine-to-machine (sidecar secret) only
+app.post("/api/stt", sttHandler) // machine-to-machine (sidecar secret) only
+app.post("/api/tts", ttsHandler) // machine-to-machine (sidecar secret) only
 app.on(["GET", "POST"], "/api/auth/*", auth.handler)
 ```
 
@@ -52,20 +53,21 @@ Current self-serve launch plans:
 
 ## Usage Metering
 
-`usage_events` is append-only. Usage is gated purely by the credit balance — there are
-no per-feature monthly caps. Every billable action goes through
+`usage_events` is append-only. Usage is gated purely by the credit balance —
+there are no per-feature monthly caps. Every billable action goes through
 `services/metering.ts` `chargeUsage({ user, kind, durationSeconds? })`:
 
 1. Owner email → record event, no charge, bypass.
-2. `hasBillablePlanAccess` (Explore trial active / paid sub active / past_due grace).
-3. `balance >= creditsForUsage(kind)` else block — Explore → `subscription_required`,
-   Pro/Max → `credits_exhausted`.
+2. `hasBillablePlanAccess` (Explore trial active / paid sub active / past_due
+   grace).
+3. `balance >= creditsForUsage(kind)` else block — Explore →
+   `subscription_required`, Pro/Max → `credits_exhausted`.
 4. Insert `usage_events` row, `consumeCredits`, write back `creditsCharged`.
 
-Credit costs: chat 1 · image/screen analyze 1 · voice 2/min · Telegram message 1.
-Monthly allotments: Explore 100, Pro 2,500, Max 10,000. See spec 13. Callers:
-`routes/usage.ts` (`POST /interactions/reserve`), `agent/run.ts` (Telegram
-bot_message), `gateway/gateway-runner.ts` (telegram voice/image).
+Credit costs: chat 1 · image/screen analyze 1 · voice 2/min · Telegram
+message 1. Monthly allotments: Explore 100, Pro 2,500, Max 10,000. See spec 13.
+Callers: `routes/usage.ts` (`POST /interactions/reserve`), `agent/run.ts`
+(Telegram bot_message), `gateway/gateway-runner.ts` (telegram voice/image).
 
 ## LLM Proxy
 
@@ -82,11 +84,11 @@ The desktop never receives provider keys.
 
 `POST /api/stt` and `POST /api/tts`
 
-- accept payloads from the sidecar only — **machine-to-machine, sidecar-secret auth
-  only** (no user-session access), so the credit meter can't be bypassed
+- accept payloads from the sidecar only — **machine-to-machine, sidecar-secret
+  auth only** (no user-session access), so the credit meter can't be bypassed
 - STT calls ElevenLabs `scribe_v2`; TTS calls `eleven_flash_v2_5`
-- not the metering point: voice is charged once at `/api/usage/interactions/reserve`
-  (kind `voice`, per actual minute)
+- not the metering point: voice is charged once at
+  `/api/usage/interactions/reserve` (kind `voice`, per actual minute)
 
 ## Cloud RAG API
 
@@ -118,15 +120,15 @@ local archive fallback but treats cloud results as primary when available.
 
 Routes in `apps/backend/src/routes/memory.ts`:
 
-| Route | Purpose |
-| --- | --- |
-| `POST /api/memory/add` | Add or upsert a durable memory fact |
-| `GET /api/memory/entries` | List active durable memories |
+| Route                     | Purpose                                  |
+| ------------------------- | ---------------------------------------- |
+| `POST /api/memory/add`    | Add or upsert a durable memory fact      |
+| `GET /api/memory/entries` | List active durable memories             |
 | `POST /api/memory/search` | Retrieve memories by topic/content/scope |
-| `PATCH /api/memory/:id` | Update and version a memory |
-| `POST /api/memory/sync` | Bulk sidecar-to-cloud memory sync |
-| `POST /api/memory/forget` | Soft-forget or hard-delete memories |
-| `DELETE /api/memory/:id` | Forget or hard-delete one memory |
+| `PATCH /api/memory/:id`   | Update and version a memory              |
+| `POST /api/memory/sync`   | Bulk sidecar-to-cloud memory sync        |
+| `POST /api/memory/forget` | Soft-forget or hard-delete memories      |
+| `DELETE /api/memory/:id`  | Forget or hard-delete one memory         |
 
 ## Implemented Files
 
@@ -138,6 +140,7 @@ Routes in `apps/backend/src/routes/memory.ts`:
 - `apps/backend/src/routes/rag.ts`
 - `apps/backend/src/routes/memory.ts`
 - `apps/backend/src/services/metering.ts` (`chargeUsage` chokepoint)
-- `apps/backend/src/services/credit-ledger.ts`, `apps/backend/src/services/credit-pricing.ts`
+- `apps/backend/src/services/credit-ledger.ts`,
+  `apps/backend/src/services/credit-pricing.ts`
 - `apps/backend/src/gateway/gateway-runner.ts`, `apps/backend/src/agent/run.ts`
 - `apps/backend/src/auth.ts`

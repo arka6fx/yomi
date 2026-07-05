@@ -21,7 +21,11 @@ const BLOCKED_METADATA_KEYS = [
 ]
 
 export function clientIp(c: Context): string | null {
-  return c.req.header("CF-Connecting-IP") ?? c.req.header("X-Forwarded-For")?.split(",")[0]?.trim() ?? null
+  return (
+    c.req.header("CF-Connecting-IP") ??
+    c.req.header("X-Forwarded-For")?.split(",")[0]?.trim() ??
+    null
+  )
 }
 
 export function userAgent(c: Context): string | null {

@@ -10,7 +10,10 @@ import { getConnectorDef } from "../connectors/registry.js"
 import type { BackendConnectorDef } from "../connectors/types.js"
 
 // Generic OAuth2 token refresh — supports both "basic" and "body" tokenRequestAuth.
-async function refreshOAuth2Token(def: BackendConnectorDef, refreshToken: string): Promise<OAuthTokens> {
+async function refreshOAuth2Token(
+  def: BackendConnectorDef,
+  refreshToken: string,
+): Promise<OAuthTokens> {
   if (def.auth.kind !== "oauth2") throw new Error(`${def.id} is not oauth2`)
   const auth = def.auth
   const clientId = process.env[auth.clientIdEnv]
@@ -74,16 +77,19 @@ export async function getAccessToken(userId: string, provider: string): Promise<
   try {
     tokens = decryptTokens(row.oauthTokens)
   } catch (err) {
-    console.warn(`[integration-tokens] decrypt failed for ${provider}:`, err instanceof Error ? err.message : err)
-    throw new Error(`${provider} credentials could not be decrypted. Please reconnect this integration.`)
+    console.warn(
+      `[integration-tokens] decrypt failed for ${provider}:`,
+      err instanceof Error ? err.message : err,
+    )
+    throw new Error(
+      `${provider} credentials could not be decrypted. Please reconnect this integration.`,
+    )
   }
 
   // Skip refresh for non-expiring credentials (api_key, connection_string, GitHub OAuth)
   const expiresAt = tokens.expiresAt ?? null
   const needsRefresh =
-    expiresAt !== null &&
-    tokens.refreshToken !== null &&
-    expiresAt - Date.now() < 5 * 60 * 1000
+    expiresAt !== null && tokens.refreshToken !== null && expiresAt - Date.now() < 5 * 60 * 1000
 
   if (needsRefresh && tokens.refreshToken) {
     let refreshed = false
@@ -100,7 +106,10 @@ export async function getAccessToken(userId: string, provider: string): Promise<
       }
     } catch (err) {
       // Non-fatal: return existing token and let the 401 surface as a reconnect hint
-      console.warn(`[integration-tokens] refresh failed for ${provider}:`, err instanceof Error ? err.message : err)
+      console.warn(
+        `[integration-tokens] refresh failed for ${provider}:`,
+        err instanceof Error ? err.message : err,
+      )
     }
     if (refreshed) {
       const encrypted = encryptTokens(tokens)

@@ -26,7 +26,11 @@ export function shouldCompress(messages: AgentMessage[], contextWindow: number):
   return estimateTokens(messages) >= threshold
 }
 
-function pruneOldToolResults(messages: AgentMessage[], boundary: number, pattern: RegExp): AgentMessage[] {
+function pruneOldToolResults(
+  messages: AgentMessage[],
+  boundary: number,
+  pattern: RegExp,
+): AgentMessage[] {
   return messages.map((m, i) => {
     if (i < boundary && pattern.test(m.content)) {
       const charCount = m.content.length
@@ -74,9 +78,7 @@ export async function compressContext(
 
   const modelId = options?.auxModelId ?? process.env["AI_CREDITS_FAST_MODEL"] ?? "gpt-5.5-mini"
 
-  const turns = compressible
-    .map((m) => `[${m.role}] ${m.content}`)
-    .join("\n\n")
+  const turns = compressible.map((m) => `[${m.role}] ${m.content}`).join("\n\n")
 
   const summaryBudget = Math.min(Math.floor(contextWindow * 0.05), SUMMARY_TOKENS_CEILING)
 

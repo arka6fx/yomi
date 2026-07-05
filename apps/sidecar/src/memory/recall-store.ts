@@ -66,7 +66,10 @@ async function save(): Promise<void> {
 }
 
 export function makeKey(kind: string, topic: string): string {
-  return `${kind}::${topic.toLowerCase().replace(/[^a-z0-9]+/g, "_").slice(0, 80)}`
+  return `${kind}::${topic
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .slice(0, 80)}`
 }
 
 export async function recordRecall(
@@ -121,7 +124,10 @@ export async function recordRecall(
   await save()
 }
 
-export async function getPromotionCandidates(minScore = 0.75, minRecalls = 3): Promise<RecallEntry[]> {
+export async function getPromotionCandidates(
+  minScore = 0.75,
+  minRecalls = 3,
+): Promise<RecallEntry[]> {
   const store = await load()
   const now = Date.now()
   const candidates: { entry: RecallEntry; score: number }[] = []
@@ -145,9 +151,7 @@ export async function getPromotionCandidates(minScore = 0.75, minRecalls = 3): P
     }
   }
 
-  return candidates
-    .sort((a, b) => b.score - a.score)
-    .map((c) => c.entry)
+  return candidates.sort((a, b) => b.score - a.score).map((c) => c.entry)
 }
 
 export async function markPromoted(key: string): Promise<void> {
@@ -171,7 +175,11 @@ export async function pruneStaleRecalls(maxAgeDays = 60): Promise<number> {
   return before - Object.keys(store.entries).length
 }
 
-export async function getRecallStats(): Promise<{ total: number; promoted: number; stalePruned: number }> {
+export async function getRecallStats(): Promise<{
+  total: number
+  promoted: number
+  stalePruned: number
+}> {
   const store = await load()
   const entries = Object.values(store.entries)
   return {

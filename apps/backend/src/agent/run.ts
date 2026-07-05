@@ -1,13 +1,16 @@
 import { eq, and, sql } from "drizzle-orm"
 import { generateText } from "ai"
 import { db, ragSources, usageEvents } from "@yomi/db"
-import { ConnectorRegistry, createModel, runAgentLoop, type AgentMessage, type UsageInfo } from "@yomi/agent-core"
+import {
+  ConnectorRegistry,
+  createModel,
+  runAgentLoop,
+  type AgentMessage,
+  type UsageInfo,
+} from "@yomi/agent-core"
 import { formatAgentSoul } from "@yomi/shared"
 import { compressContext, shouldCompress, estimateTokens } from "./compressor.js"
-import {
-  getAccessToken,
-  listConnectedProviders,
-} from "../services/integration-tokens.js"
+import { getAccessToken, listConnectedProviders } from "../services/integration-tokens.js"
 import { hasBillablePlanAccess } from "../entitlements.js"
 import { chargeUsage } from "../services/metering.js"
 import { checkConsent } from "../services/privacy/checks.js"
@@ -64,7 +67,9 @@ async function fetchRagContext(userId: string, query: string, maxChars = 3000): 
       order by ts_rank_cd(c.content_tsv, websearch_to_tsquery('english', ${safe})) desc
       limit 5
     `)
-    const rows = (Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? [])) as Row[]
+    const rows = (
+      Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? [])
+    ) as Row[]
     if (!rows.length) return ""
     const blocks: string[] = []
     let used = 0
@@ -163,9 +168,15 @@ async function fetchMemoryContext(userId: string, query: string, maxChars = 2000
       limit 8
     `)
     type Row = {
-      kind: string; topic: string; content: string; confidence: number
-      sourcePath: string | null; isStatic: boolean; updatedAt: string
-      score: number; matchedBy: string[]
+      kind: string
+      topic: string
+      content: string
+      confidence: number
+      sourcePath: string | null
+      isStatic: boolean
+      updatedAt: string
+      score: number
+      matchedBy: string[]
     }
     const rows = ((result as unknown as { rows?: Row[] }).rows ?? []) as Row[]
     if (!rows.length) return ""
@@ -188,13 +199,17 @@ async function fetchMemoryContext(userId: string, query: string, maxChars = 2000
 function embedTextLocal(input: string): Promise<number[]> {
   const apiKey = process.env["AI_CREDITS_API_KEY"]
   if (!apiKey || !input.trim()) return Promise.resolve([])
-  const baseUrl = (process.env["AI_CREDITS_BASE_URL"] ?? "https://api.aicredits.in/v1").replace(/\/+$/, "")
+  const baseUrl = (process.env["AI_CREDITS_BASE_URL"] ?? "https://api.aicredits.in/v1").replace(
+    /\/+$/,
+    "",
+  )
   const model = process.env["AI_CREDITS_EMBEDDING_MODEL"] ?? "text-embedding-3-small"
   return fetch(`${baseUrl}/embeddings`, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({ model, input: input.trim() }),
-  }).then((r) => r.json() as Promise<{ data?: { embedding?: number[] }[] }>)
+  })
+    .then((r) => r.json() as Promise<{ data?: { embedding?: number[] }[] }>)
     .then((body) => {
       const emb = body.data?.[0]?.embedding
       return Array.isArray(emb) && emb.length === 1536 ? emb : []
@@ -205,7 +220,10 @@ function vectorLiteralLocal(values: number[]): string {
   return `[${values.map((v) => (Number.isFinite(v) ? v.toFixed(8) : "0")).join(",")}]`
 }
 
-async function fetchMemoryProfile(userId: string, maxChars = 2500): Promise<{ staticProfile: string; dynamicProfile: string }> {
+async function fetchMemoryProfile(
+  userId: string,
+  maxChars = 2500,
+): Promise<{ staticProfile: string; dynamicProfile: string }> {
   try {
     type Row = { content: string; summary: string | null; isStatic: boolean }
     const result = await db.execute(sql`
@@ -217,7 +235,9 @@ async function fetchMemoryProfile(userId: string, maxChars = 2500): Promise<{ st
       order by is_static desc, confidence desc, updated_at desc
       limit 48
     `)
-    const rows = (Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? [])) as Row[]
+    const rows = (
+      Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? [])
+    ) as Row[]
     const format = (title: string, isStatic: boolean) => {
       const out: string[] = []
       let used = 0
@@ -230,7 +250,10 @@ async function fetchMemoryProfile(userId: string, maxChars = 2500): Promise<{ st
       }
       return out.length ? `${title}\n${out.join("\n")}` : ""
     }
-    return { staticProfile: format("## Static Profile", true), dynamicProfile: format("## Dynamic Context", false) }
+    return {
+      staticProfile: format("## Static Profile", true),
+      dynamicProfile: format("## Dynamic Context", false),
+    }
   } catch {
     return { staticProfile: "", dynamicProfile: "" }
   }
@@ -248,7 +271,9 @@ async function fetchRecentChat(userId: string, maxTurns = 20): Promise<string> {
       order by created_at desc
       limit ${maxTurns * 2}
     `)
-    const rows = (Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? [])) as Row[]
+    const rows = (
+      Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? [])
+    ) as Row[]
     if (!rows.length) return ""
     return rows
       .reverse()
@@ -278,13 +303,18 @@ function parseExtractedMemories(text: string): ExtractedMemory[] {
 }
 
 async function captureBackendMemory(userId: string, input: string, output: string): Promise<void> {
-  if (!process.env["AI_CREDITS_API_KEY"] || process.env["YOMI_DISABLE_MEMORY_CAPTURE"] === "1") return
+  if (!process.env["AI_CREDITS_API_KEY"] || process.env["YOMI_DISABLE_MEMORY_CAPTURE"] === "1")
+    return
   const cleanInput = input.replace(/\r/g, "").slice(0, 1800).trim()
   const cleanOutput = output.replace(/\r/g, "").slice(0, 1800).trim()
   if (!cleanInput || !cleanOutput) return
 
   const { text } = await generateText({
-    model: createModel(process.env["MEMORY_EXTRACTION_MODEL"] || process.env["AI_CREDITS_FAST_MODEL"] || "gpt-5.5-mini"),
+    model: createModel(
+      process.env["MEMORY_EXTRACTION_MODEL"] ||
+        process.env["AI_CREDITS_FAST_MODEL"] ||
+        "gpt-5.5-mini",
+    ),
     messages: [
       {
         role: "user",
@@ -320,7 +350,14 @@ Assistant: ${cleanOutput}`,
   }
 }
 
-function buildSystemWithContext(memoryContext: string, ragContext: string, profile?: { staticProfile: string; dynamicProfile: string }, desktopOnlyConnected: string[] = [], userSoul?: string | null, recentChat?: string): string {
+function buildSystemWithContext(
+  memoryContext: string,
+  ragContext: string,
+  profile?: { staticProfile: string; dynamicProfile: string },
+  desktopOnlyConnected: string[] = [],
+  userSoul?: string | null,
+  recentChat?: string,
+): string {
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -347,8 +384,12 @@ function buildSystemWithContext(memoryContext: string, ragContext: string, profi
     (memoryContext || ragContext || profile?.staticProfile || profile?.dynamicProfile || recentChat
       ? `<memory>\n` +
         `[System note: Background context retrieved from your notes. Treat as reference only, respond to the current user message.]\n\n` +
-        (profile?.staticProfile ? `<static_profile>\n${profile.staticProfile}\n</static_profile>\n` : "") +
-        (profile?.dynamicProfile ? `<dynamic_profile>\n${profile.dynamicProfile}\n</dynamic_profile>\n` : "") +
+        (profile?.staticProfile
+          ? `<static_profile>\n${profile.staticProfile}\n</static_profile>\n`
+          : "") +
+        (profile?.dynamicProfile
+          ? `<dynamic_profile>\n${profile.dynamicProfile}\n</dynamic_profile>\n`
+          : "") +
         (memoryContext ? `<durable_memories>\n${memoryContext}\n</durable_memories>\n` : "") +
         (ragContext ? `<cloud_rag_context>\n${ragContext}\n</cloud_rag_context>\n` : "") +
         (recentChat ? `<recent_chat>\n${recentChat}\n</recent_chat>\n` : "") +
@@ -361,9 +402,17 @@ function buildSystemWithContext(memoryContext: string, ragContext: string, profi
 function maxOutputTokensFor(text: string): number {
   const q = text.toLowerCase()
   let base: number
-  if (/\b(gmail|email|inbox|calendar|schedule|drive|file|files|doc|docs|sheet|sheets|slide|slides|document|spreadsheet|classroom|github|slack|notion|linear)\b/.test(q)) {
+  if (
+    /\b(gmail|email|inbox|calendar|schedule|drive|file|files|doc|docs|sheet|sheets|slide|slides|document|spreadsheet|classroom|github|slack|notion|linear)\b/.test(
+      q,
+    )
+  ) {
     base = 900
-  } else if (/\b(write|draft|compose|essay|article|report|code|program|function|debug|detailed|step by step)\b/.test(q)) {
+  } else if (
+    /\b(write|draft|compose|essay|article|report|code|program|function|debug|detailed|step by step)\b/.test(
+      q,
+    )
+  ) {
     base = 750
   } else if (/\b(summary|summarize|explain|compare|plan)\b/.test(q)) {
     base = 450
@@ -432,7 +481,9 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   const [memoryContext, ragContext, profile, recentChat] = await Promise.all([
     memoryConsent.allowed ? fetchMemoryContext(opts.userId, opts.text) : "",
     cloudMemoryConsent.allowed ? fetchRagContext(opts.userId, opts.text) : "",
-    memoryConsent.allowed ? fetchMemoryProfile(opts.userId) : { staticProfile: "", dynamicProfile: "" },
+    memoryConsent.allowed
+      ? fetchMemoryProfile(opts.userId)
+      : { staticProfile: "", dynamicProfile: "" },
     memoryConsent.allowed ? fetchRecentChat(opts.userId) : "",
   ])
 
@@ -441,8 +492,15 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   let history = opts.history
   const contextWindow = Number(process.env["YOMI_CONTEXT_WINDOW"] ?? 128_000)
   if (history && shouldCompress(history, contextWindow)) {
-    console.warn(`[runAgent] compressing history (${history.length} messages, ~${estimateTokens(history)} tokens)`)
-    const compressed = await compressContext(history, contextWindow, { signal: opts.signal }).catch<{ messages: AgentMessage[]; compressed: boolean }>(() => ({ messages: history!, compressed: false }))
+    console.warn(
+      `[runAgent] compressing history (${history.length} messages, ~${estimateTokens(history)} tokens)`,
+    )
+    const compressed = await compressContext(history, contextWindow, {
+      signal: opts.signal,
+    }).catch<{ messages: AgentMessage[]; compressed: boolean }>(() => ({
+      messages: history!,
+      compressed: false,
+    }))
     if (compressed.compressed) {
       console.warn(`[runAgent] compressed to ${compressed.messages.length} messages`)
       history = compressed.messages
@@ -455,13 +513,19 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       registry,
       text: opts.text,
       history,
-      system: buildSystemWithContext(memoryContext, ragContext, profile, registry.getDesktopOnlyConnected(), user.agentSoul, recentChat),
+      system: buildSystemWithContext(
+        memoryContext,
+        ragContext,
+        profile,
+        registry.getDesktopOnlyConnected(),
+        user.agentSoul,
+        recentChat,
+      ),
       maxTokens: maxOutputTokensFor(opts.text),
       signal: opts.signal,
       onUsage: usageEventId
         ? (usage: UsageInfo) => {
-            db
-              .update(usageEvents)
+            db.update(usageEvents)
               .set({
                 model: usage.model,
                 inputTokens: usage.inputTokens,

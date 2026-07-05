@@ -39,7 +39,12 @@ export interface RunAgentLoopOptions {
 }
 
 function defaultSystem(): string {
-  const today = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
+  const today = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
   const appUrl = process.env["YOMI_APP_URL"] ?? "https://yomi.arka6fx.com"
   return (
     `You are Yomi, a helpful AI assistant. Today is ${today}. Answer the user concisely. ` +
@@ -67,7 +72,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function formatToolItem(item: unknown): string | null {
   if (!isRecord(item)) return null
-  const name = typeof item["name"] === "string" ? item["name"] : typeof item["title"] === "string" ? item["title"] : null
+  const name =
+    typeof item["name"] === "string"
+      ? item["name"]
+      : typeof item["title"] === "string"
+        ? item["title"]
+        : null
   if (!name) return null
   const type = typeof item["type"] === "string" ? ` (${item["type"]})` : ""
   const link = typeof item["link"] === "string" ? `, ${item["link"]}` : ""
@@ -78,11 +88,21 @@ function formatToolResultValue(value: unknown): string | null {
   if (!isRecord(value)) return null
   if (typeof value["message"] === "string" && value["message"]) return value["message"]
 
-  for (const key of ["files", "emails", "events", "courses", "assignments", "announcements"] as const) {
+  for (const key of [
+    "files",
+    "emails",
+    "events",
+    "courses",
+    "assignments",
+    "announcements",
+  ] as const) {
     const items = value[key]
     if (!Array.isArray(items)) continue
     if (items.length === 0) return `No ${key} found.`
-    const lines = items.map(formatToolItem).filter((line): line is string => Boolean(line)).slice(0, 10)
+    const lines = items
+      .map(formatToolItem)
+      .filter((line): line is string => Boolean(line))
+      .slice(0, 10)
     if (lines.length > 0) return lines.join("\n")
   }
 
@@ -118,10 +138,7 @@ export async function runAgentLoop(opts: RunAgentLoopOptions): Promise<string> {
     ...(opts.extraTools ?? {}),
   }
 
-  const messages: AgentMessage[] = [
-    ...(opts.history ?? []),
-    { role: "user", content: opts.text },
-  ]
+  const messages: AgentMessage[] = [...(opts.history ?? []), { role: "user", content: opts.text }]
 
   const result = await generateText({
     model: createModel(agentModel(opts.model)),

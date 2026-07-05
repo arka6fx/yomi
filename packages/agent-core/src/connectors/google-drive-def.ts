@@ -122,7 +122,10 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
             used: fmt(usage),
             total: limit === null ? "unlimited" : fmt(limit),
             free: limit === null ? "unlimited" : fmt(free),
-            percentUsed: limit !== null && usage !== null && limit > 0 ? Math.round((usage / limit) * 100) : null,
+            percentUsed:
+              limit !== null && usage !== null && limit > 0
+                ? Math.round((usage / limit) * 100)
+                : null,
             usedBytes: usage,
             limitBytes: limit,
           }
@@ -257,7 +260,9 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
             createdTime: string
             webViewLink?: string
             description?: string
-          }>(`/files/${encodeURIComponent(fileId)}?fields=id,name,mimeType,size,modifiedTime,createdTime,webViewLink,description`)
+          }>(
+            `/files/${encodeURIComponent(fileId)}?fields=id,name,mimeType,size,modifiedTime,createdTime,webViewLink,description`,
+          )
           return {
             id: file.id,
             name: file.name,
@@ -303,10 +308,7 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
               `/files/${encodeURIComponent(fileId)}/export?mimeType=${encodeURIComponent(exportMime)}`,
             )
             content = await res.text()
-          } else if (
-            meta.mimeType.startsWith("text/") ||
-            meta.mimeType === "application/json"
-          ) {
+          } else if (meta.mimeType.startsWith("text/") || meta.mimeType === "application/json") {
             // Plain text / JSON — download directly
             const res = await driveRaw(`/files/${encodeURIComponent(fileId)}?alt=media`)
             content = await res.text()
@@ -410,7 +412,10 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
         fileId: z.string().describe("Google Drive file ID"),
         name: z.string().optional().describe("New file name"),
         addToFolderId: z.string().optional().describe("Folder ID to move the file into"),
-        removeFromFolderId: z.string().optional().describe("Folder ID to remove the file from (e.g. its current parent)"),
+        removeFromFolderId: z
+          .string()
+          .optional()
+          .describe("Folder ID to remove the file from (e.g. its current parent)"),
       }),
       execute: async (args) => {
         const { fileId, name, addToFolderId, removeFromFolderId } = args
@@ -424,7 +429,9 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
             preview: [
               name ? `New name: ${name}` : null,
               addToFolderId ? `Move to folder: ${addToFolderId}` : null,
-            ].filter(Boolean).join("\n"),
+            ]
+              .filter(Boolean)
+              .join("\n"),
             confirmText: "Update file",
           },
           args,
@@ -439,7 +446,13 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
                 `/files/${fileId}?${params}`,
                 { method: "PATCH", body: JSON.stringify(body) },
               )
-              return { ok: true, id: file.id, name: file.name, link: file.webViewLink, message: "File updated." }
+              return {
+                ok: true,
+                id: file.id,
+                name: file.name,
+                link: file.webViewLink,
+                message: "File updated.",
+              }
             } catch (err) {
               return connectorError(err)
             }
@@ -466,7 +479,9 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
             connector: "google-drive",
             action: "drive-deleteFile",
             risk: permanent ? "irreversible" : "write",
-            title: permanent ? `Permanently delete Drive file ${fileId}` : `Trash Drive file ${fileId}`,
+            title: permanent
+              ? `Permanently delete Drive file ${fileId}`
+              : `Trash Drive file ${fileId}`,
             preview: `${permanent ? "Permanently delete" : "Move to Trash"} file ${fileId}.${permanent ? " This CANNOT be undone." : ""}`,
             confirmText: permanent ? "Delete permanently" : "Move to trash",
           },
@@ -477,7 +492,10 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
                 await driveJson(`/files/${fileId}`, { method: "DELETE" })
                 return { ok: true, message: `File ${fileId} permanently deleted.` }
               }
-              await driveJson(`/files/${fileId}`, { method: "PATCH", body: JSON.stringify({ trashed: true }) })
+              await driveJson(`/files/${fileId}`, {
+                method: "PATCH",
+                body: JSON.stringify({ trashed: true }),
+              })
               return { ok: true, message: `File ${fileId} moved to Trash (recoverable).` }
             } catch (err) {
               return connectorError(err)
@@ -488,12 +506,22 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
     }),
 
     "drive-shareFile": tool({
-      description: "Share a Google Drive file with specific users or make it accessible via a link. Set role to 'reader', 'commenter', or 'writer'.",
+      description:
+        "Share a Google Drive file with specific users or make it accessible via a link. Set role to 'reader', 'commenter', or 'writer'.",
       parameters: z.object({
         fileId: z.string().describe("Google Drive file ID to share"),
-        emailAddress: z.string().optional().describe("Email of the user to share with. Omit to create a shareable link."),
-        role: z.enum(["reader", "commenter", "writer"]).default("reader").describe("Permission level"),
-        sendNotificationEmail: z.boolean().default(true).describe("Whether to send a notification email"),
+        emailAddress: z
+          .string()
+          .optional()
+          .describe("Email of the user to share with. Omit to create a shareable link."),
+        role: z
+          .enum(["reader", "commenter", "writer"])
+          .default("reader")
+          .describe("Permission level"),
+        sendNotificationEmail: z
+          .boolean()
+          .default(true)
+          .describe("Whether to send a notification email"),
       }),
       execute: async (args) => {
         const { fileId, emailAddress, role, sendNotificationEmail } = args
@@ -506,8 +534,12 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
             title: `Share Drive file ${fileId}`,
             preview: [
               `File ID: ${fileId}`,
-              emailAddress ? `Invite: ${emailAddress} (${role})` : `Create shareable link (${role})`,
-            ].filter(Boolean).join("\n"),
+              emailAddress
+                ? `Invite: ${emailAddress} (${role})`
+                : `Create shareable link (${role})`,
+            ]
+              .filter(Boolean)
+              .join("\n"),
             confirmText: "Share file",
           },
           args,
@@ -533,7 +565,11 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
                 )
                 if (!res.ok) throw new Error(`Share failed: ${res.status}: ${await res.text()}`)
                 const perm = (await res.json()) as { id: string }
-                return { ok: true, permissionId: perm.id, message: `Shared with ${emailAddress} as ${role}.` }
+                return {
+                  ok: true,
+                  permissionId: perm.id,
+                  message: `Shared with ${emailAddress} as ${role}.`,
+                }
               }
 
               const res = await fetch(
@@ -552,7 +588,11 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
               )
               if (!res.ok) throw new Error(`Share failed: ${res.status}: ${await res.text()}`)
               const perm = (await res.json()) as { id: string }
-              return { ok: true, permissionId: perm.id, message: `Anyone with the link can ${role}.` }
+              return {
+                ok: true,
+                permissionId: perm.id,
+                message: `Anyone with the link can ${role}.`,
+              }
             } catch (err) {
               return connectorError(err)
             }
@@ -566,7 +606,10 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
         "Copy (duplicate) a Google Drive file. Optionally specify a new name and target folder. Returns the new file's ID and link.",
       parameters: z.object({
         fileId: z.string().describe("Google Drive file ID to copy"),
-        name: z.string().optional().describe("New name for the copy. Defaults to 'Copy of <original>'"),
+        name: z
+          .string()
+          .optional()
+          .describe("New name for the copy. Defaults to 'Copy of <original>'"),
         parentFolderId: z.string().optional().describe("Folder ID to place the copy in"),
       }),
       execute: async (args) => {
@@ -607,10 +650,29 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
       parameters: z.object({
         fileId: z.string().describe("Drive file ID of the Google Doc/Sheet/Slide to convert"),
         targetFormat: z
-          .enum(["pdf", "docx", "xlsx", "pptx", "txt", "csv", "html", "epub", "ods", "odt", "rtf", "tsv"])
+          .enum([
+            "pdf",
+            "docx",
+            "xlsx",
+            "pptx",
+            "txt",
+            "csv",
+            "html",
+            "epub",
+            "ods",
+            "odt",
+            "rtf",
+            "tsv",
+          ])
           .describe("Target format"),
-        name: z.string().optional().describe("Name for the converted file (defaults to original name + extension)"),
-        folderId: z.string().optional().describe("Optional folder ID to place the converted file in"),
+        name: z
+          .string()
+          .optional()
+          .describe("Name for the converted file (defaults to original name + extension)"),
+        folderId: z
+          .string()
+          .optional()
+          .describe("Optional folder ID to place the converted file in"),
       }),
       execute: async (args) => {
         const { fileId, targetFormat, name, folderId } = args
@@ -683,8 +745,15 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
                   body,
                 },
               )
-              if (!uploadRes.ok) throw new Error(`Upload failed: ${uploadRes.status}: ${await uploadRes.text()}`)
-              const file = (await uploadRes.json()) as { id: string; name: string; webViewLink: string; mimeType: string; size?: string }
+              if (!uploadRes.ok)
+                throw new Error(`Upload failed: ${uploadRes.status}: ${await uploadRes.text()}`)
+              const file = (await uploadRes.json()) as {
+                id: string
+                name: string
+                webViewLink: string
+                mimeType: string
+                size?: string
+              }
               return {
                 ok: true,
                 id: file.id,
@@ -703,7 +772,8 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
     }),
 
     "drive-listPermissions": tool({
-      description: "List all users and groups who have access to a Google Drive file, along with their role (reader, commenter, writer, owner).",
+      description:
+        "List all users and groups who have access to a Google Drive file, along with their role (reader, commenter, writer, owner).",
       parameters: z.object({
         fileId: z.string().describe("Google Drive file ID"),
       }),
@@ -719,7 +789,9 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
               domain?: string
               deleted?: boolean
             }[]
-          }>(`/files/${encodeURIComponent(fileId)}/permissions?fields=permissions(id,type,role,emailAddress,displayName,domain,deleted)&pageSize=100`)
+          }>(
+            `/files/${encodeURIComponent(fileId)}/permissions?fields=permissions(id,type,role,emailAddress,displayName,domain,deleted)&pageSize=100`,
+          )
           const perms = (data.permissions ?? []).map((p) => ({
             id: p.id,
             type: p.type, // "user", "group", "domain", "anyone"
@@ -738,10 +810,14 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
     }),
 
     "drive-createFolder": tool({
-      description: "Create a new folder in Google Drive. Optionally specify a parent folder to nest it inside.",
+      description:
+        "Create a new folder in Google Drive. Optionally specify a parent folder to nest it inside.",
       parameters: z.object({
         name: z.string().describe("Name of the new folder"),
-        parentFolderId: z.string().optional().describe("ID of the parent folder to create this folder in"),
+        parentFolderId: z
+          .string()
+          .optional()
+          .describe("ID of the parent folder to create this folder in"),
       }),
       execute: async (args) => {
         const { name, parentFolderId } = args
@@ -764,10 +840,13 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
               }
               if (parentFolderId) metadata.parents = [parentFolderId]
 
-              const file = await driveJson<{ id: string; name: string; webViewLink?: string }>("/files", {
-                method: "POST",
-                body: JSON.stringify(metadata),
-              })
+              const file = await driveJson<{ id: string; name: string; webViewLink?: string }>(
+                "/files",
+                {
+                  method: "POST",
+                  body: JSON.stringify(metadata),
+                },
+              )
               return {
                 ok: true,
                 id: file.id,
@@ -790,7 +869,8 @@ export const googleDriveDef: ConnectorDef = {
   name: "Google Drive",
   category: "file-storage",
   icon: "google-drive",
-  description: "Search, read, create, convert, and manage files in Google Drive. Creates Google Docs; converts between formats (PDF, DOCX, XLSX, PPTX, TXT, CSV, HTML, EPUB, ODS, ODT, RTF, TSV).",
+  description:
+    "Search, read, create, convert, and manage files in Google Drive. Creates Google Docs; converts between formats (PDF, DOCX, XLSX, PPTX, TXT, CSV, HTML, EPUB, ODS, ODT, RTF, TSV).",
   readOnlyByDefault: false,
   auth: {
     kind: "oauth2",

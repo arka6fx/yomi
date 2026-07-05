@@ -15,14 +15,9 @@ const fakeDbWithCount = {
   select: () => ({
     from: () => ({
       where: () => {
-        const p = Promise.resolve(
-          mockUser ? [{ count: mockBotMessageCount }] : [{ count: 0 }],
-        )
+        const p = Promise.resolve(mockUser ? [{ count: mockBotMessageCount }] : [{ count: 0 }])
         return {
-          limit: () =>
-            mockUser
-              ? Promise.resolve([mockUser])
-              : Promise.resolve([]),
+          limit: () => (mockUser ? Promise.resolve([mockUser]) : Promise.resolve([])),
           then: p.then.bind(p),
           catch: p.catch.bind(p),
         }
@@ -181,7 +176,11 @@ describe("runAgent metering", () => {
   })
 
   it("blocks explore user with expired trial", async () => {
-    mockUser = makeUser({ plan: "explore", subscriptionStatus: "active", trialEndDate: new Date(Date.now() - 1000) })
+    mockUser = makeUser({
+      plan: "explore",
+      subscriptionStatus: "active",
+      trialEndDate: new Date(Date.now() - 1000),
+    })
     const { runAgent } = await import("./run.js")
     const result = await runAgent({ userId: "user_1", text: "hi" })
     expect(result.quotaError).toBe(true)

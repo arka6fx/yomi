@@ -3,7 +3,11 @@ import { z } from "zod"
 import type { ConnectorDef, ConnectorContext } from "./connector-def.js"
 import { connectorError, gateWrite } from "./connector-def.js"
 
-async function gqlLinear<T>(token: string, query: string, variables?: Record<string, unknown>): Promise<T> {
+async function gqlLinear<T>(
+  token: string,
+  query: string,
+  variables?: Record<string, unknown>,
+): Promise<T> {
   const res = await fetch("https://api.linear.app/graphql", {
     method: "POST",
     headers: {
@@ -29,7 +33,10 @@ function createLinearToolsFrom(provider: string) {
         description:
           "List issues from Linear. Optionally filter by team, assignee, or state. Returns up to 25 issues.",
         parameters: z.object({
-          teamName: z.string().optional().describe("Filter by team name (case-insensitive partial match)"),
+          teamName: z
+            .string()
+            .optional()
+            .describe("Filter by team name (case-insensitive partial match)"),
           assigneeMe: z.boolean().optional().describe("If true, only return issues assigned to me"),
           states: z
             .array(z.enum(["backlog", "todo", "in_progress", "in_review", "done", "cancelled"]))
@@ -109,7 +116,8 @@ function createLinearToolsFrom(provider: string) {
       }),
 
       "linear-getIssue": tool({
-        description: "Get full details for a specific Linear issue by its identifier (e.g. ENG-123).",
+        description:
+          "Get full details for a specific Linear issue by its identifier (e.g. ENG-123).",
         parameters: z.object({
           identifier: z.string().describe("Issue identifier like ENG-123"),
         }),
@@ -202,24 +210,30 @@ function createLinearToolsFrom(provider: string) {
             },
             args,
             async () => {
-          try {
-            const token = await getToken()
-            // First resolve team ID
-            const teamQuery = `
+              try {
+                const token = await getToken()
+                // First resolve team ID
+                const teamQuery = `
               query GetTeam($name: String!) {
                 teams(filter: { name: { containsIgnoreCase: $name } }) {
                   nodes { id name }
                 }
               }
             `
-            const teamData = await gqlLinear<{
-              teams: { nodes: { id: string; name: string }[] }
-            }>(token, teamQuery, { name: teamName })
-            const team = teamData.teams.nodes[0]
-            if (!team) return { error: `Team not found: ${teamName}` }
+                const teamData = await gqlLinear<{
+                  teams: { nodes: { id: string; name: string }[] }
+                }>(token, teamQuery, { name: teamName })
+                const team = teamData.teams.nodes[0]
+                if (!team) return { error: `Team not found: ${teamName}` }
 
-            const priorityMap: Record<string, number> = { urgent: 1, high: 2, medium: 3, low: 4, none: 0 }
-            const mutation = `
+                const priorityMap: Record<string, number> = {
+                  urgent: 1,
+                  high: 2,
+                  medium: 3,
+                  low: 4,
+                  none: 0,
+                }
+                const mutation = `
               mutation CreateIssue($title: String!, $teamId: String!, $description: String, $priority: Int) {
                 issueCreate(input: { title: $title, teamId: $teamId, description: $description, priority: $priority }) {
                   success
@@ -227,20 +241,23 @@ function createLinearToolsFrom(provider: string) {
                 }
               }
             `
-            const result = await gqlLinear<{
-              issueCreate: { success: boolean; issue: { id: string; identifier: string; url: string } }
-            }>(token, mutation, {
-              title,
-              teamId: team.id,
-              description: description ?? null,
-              priority: priorityMap[priority ?? "none"] ?? 0,
-            })
+                const result = await gqlLinear<{
+                  issueCreate: {
+                    success: boolean
+                    issue: { id: string; identifier: string; url: string }
+                  }
+                }>(token, mutation, {
+                  title,
+                  teamId: team.id,
+                  description: description ?? null,
+                  priority: priorityMap[priority ?? "none"] ?? 0,
+                })
 
-            if (!result.issueCreate.success) return { error: "Issue creation failed" }
-            return { ok: true, ...result.issueCreate.issue }
-          } catch (err) {
-            return connectorError(err)
-          }
+                if (!result.issueCreate.success) return { error: "Issue creation failed" }
+                return { ok: true, ...result.issueCreate.issue }
+              } catch (err) {
+                return connectorError(err)
+              }
             },
           )
         },
@@ -285,7 +302,13 @@ function createLinearToolsFrom(provider: string) {
               input.stateId = stateObj.id
             }
             if (priority) {
-              const priorityMap: Record<string, number> = { urgent: 1, high: 2, medium: 3, low: 4, none: 0 }
+              const priorityMap: Record<string, number> = {
+                urgent: 1,
+                high: 2,
+                medium: 3,
+                low: 4,
+                none: 0,
+              }
               input.priority = priorityMap[priority]
             }
             if (assignee) {
@@ -340,7 +363,9 @@ function createLinearToolsFrom(provider: string) {
             }
 
             if (Object.keys(input).length === 0) {
-              return { error: "Nothing to update — provide state, priority, assignee, project, or labels." }
+              return {
+                error: "Nothing to update — provide state, priority, assignee, project, or labels.",
+              }
             }
 
             const mutation = `
@@ -352,7 +377,10 @@ function createLinearToolsFrom(provider: string) {
               }
             `
             const result = await gqlLinear<{
-              issueUpdate: { success: boolean; issue: { identifier: string; url: string; state: { name: string } } }
+              issueUpdate: {
+                success: boolean
+                issue: { identifier: string; url: string; state: { name: string } }
+              }
             }>(token, mutation, { id: issue.id, input })
 
             if (!result.issueUpdate.success) return { error: "Update failed" }
@@ -384,16 +412,18 @@ function createLinearToolsFrom(provider: string) {
             },
             args,
             async () => {
-          try {
-            const token = await getToken()
-            const getQuery = `
+              try {
+                const token = await getToken()
+                const getQuery = `
               query GetIssueId($id: String!) {
                 issue(id: $id) { id }
               }
             `
-            const issueData = await gqlLinear<{ issue: { id: string } }>(token, getQuery, { id: identifier })
+                const issueData = await gqlLinear<{ issue: { id: string } }>(token, getQuery, {
+                  id: identifier,
+                })
 
-            const mutation = `
+                const mutation = `
               mutation AddComment($issueId: String!, $body: String!) {
                 commentCreate(input: { issueId: $issueId, body: $body }) {
                   success
@@ -401,15 +431,15 @@ function createLinearToolsFrom(provider: string) {
                 }
               }
             `
-            const result = await gqlLinear<{
-              commentCreate: { success: boolean; comment: { id: string; url: string } }
-            }>(token, mutation, { issueId: issueData.issue.id, body })
+                const result = await gqlLinear<{
+                  commentCreate: { success: boolean; comment: { id: string; url: string } }
+                }>(token, mutation, { issueId: issueData.issue.id, body })
 
-            if (!result.commentCreate.success) return { error: "Comment failed" }
-            return { ok: true, ...result.commentCreate.comment }
-          } catch (err) {
-            return connectorError(err)
-          }
+                if (!result.commentCreate.success) return { error: "Comment failed" }
+                return { ok: true, ...result.commentCreate.comment }
+              } catch (err) {
+                return connectorError(err)
+              }
             },
           )
         },
@@ -452,7 +482,11 @@ function createLinearToolsFrom(provider: string) {
             const data = await gqlLinear<{
               projects: { nodes: { id: string; name: string; state: string; url: string }[] }
             }>(token, gql, { filter })
-            const projects = data.projects.nodes.map((p) => ({ name: p.name, state: p.state, url: p.url }))
+            const projects = data.projects.nodes.map((p) => ({
+              name: p.name,
+              state: p.state,
+              url: p.url,
+            }))
             if (projects.length === 0) return { projects: [], message: "No projects found." }
             return { count: projects.length, projects }
           } catch (err) {
@@ -480,7 +514,8 @@ function createLinearToolsFrom(provider: string) {
       }),
 
       "linear-listStates": tool({
-        description: "List all workflow states (e.g. Todo, In Progress, Done) for a team. Use this before updating an issue's state to find valid state names.",
+        description:
+          "List all workflow states (e.g. Todo, In Progress, Done) for a team. Use this before updating an issue's state to find valid state names.",
         parameters: z.object({
           teamName: z.string().describe("Team name to list states for"),
         }),
@@ -499,7 +534,21 @@ function createLinearToolsFrom(provider: string) {
               }
             `
             const data = await gqlLinear<{
-              teams: { nodes: { id: string; name: string; states: { nodes: { id: string; name: string; type: string; position: number; color?: string }[] } }[] }
+              teams: {
+                nodes: {
+                  id: string
+                  name: string
+                  states: {
+                    nodes: {
+                      id: string
+                      name: string
+                      type: string
+                      position: number
+                      color?: string
+                    }[]
+                  }
+                }[]
+              }
             }>(token, query, { name: teamName })
             const team = data.teams.nodes[0]
             if (!team) return { error: `Team not found: ${teamName}` }
@@ -564,10 +613,19 @@ function createLinearToolsFrom(provider: string) {
                 `
                 const result = await gqlLinear<{
                   issueLabelCreate: { success: boolean; label: { id: string; name: string } }
-                }>(token, mutation, { name, teamId: team.id, color: color ?? null, description: description ?? null })
+                }>(token, mutation, {
+                  name,
+                  teamId: team.id,
+                  color: color ?? null,
+                  description: description ?? null,
+                })
 
                 if (!result.issueLabelCreate.success) return { error: "Label creation failed" }
-                return { ok: true, id: result.issueLabelCreate.label.id, name: result.issueLabelCreate.label.name }
+                return {
+                  ok: true,
+                  id: result.issueLabelCreate.label.id,
+                  name: result.issueLabelCreate.label.name,
+                }
               } catch (err) {
                 return connectorError(err)
               }
@@ -604,7 +662,9 @@ function createLinearToolsFrom(provider: string) {
                   }
                 `
                 const issueData = await gqlLinear<{ issue: { id: string; identifier: string } }>(
-                  token, getQuery, { id: identifier }
+                  token,
+                  getQuery,
+                  { id: identifier },
                 )
 
                 const mutation = `
@@ -613,11 +673,17 @@ function createLinearToolsFrom(provider: string) {
                   }
                 `
                 const result = await gqlLinear<{ issueDelete: { success: boolean } }>(
-                  token, mutation, { id: issueData.issue.id },
+                  token,
+                  mutation,
+                  { id: issueData.issue.id },
                 )
 
                 if (!result.issueDelete.success) return { error: "Delete failed" }
-                return { ok: true, identifier: issueData.issue.identifier, message: `Issue ${identifier} deleted.` }
+                return {
+                  ok: true,
+                  identifier: issueData.issue.identifier,
+                  message: `Issue ${identifier} deleted.`,
+                }
               } catch (err) {
                 return connectorError(err)
               }
@@ -627,7 +693,8 @@ function createLinearToolsFrom(provider: string) {
       }),
 
       "linear-listCycles": tool({
-        description: "List active and upcoming cycles for a team. Returns cycle name, start/end dates, and completion status.",
+        description:
+          "List active and upcoming cycles for a team. Returns cycle name, start/end dates, and completion status.",
         parameters: z.object({
           teamName: z.string().describe("Team name to list cycles for"),
         }),
@@ -655,7 +722,22 @@ function createLinearToolsFrom(provider: string) {
               }
             `
             const data = await gqlLinear<{
-              teams: { nodes: { id: string; name: string; cycles: { nodes: { id: string; name: string; startsAt: string; endsAt: string; completedAt?: string; progress?: number }[] } }[] }
+              teams: {
+                nodes: {
+                  id: string
+                  name: string
+                  cycles: {
+                    nodes: {
+                      id: string
+                      name: string
+                      startsAt: string
+                      endsAt: string
+                      completedAt?: string
+                      progress?: number
+                    }[]
+                  }
+                }[]
+              }
             }>(token, query, { name: teamName })
             const team = data.teams.nodes[0]
             if (!team) return { error: `Team not found: ${teamName}` }
@@ -667,7 +749,8 @@ function createLinearToolsFrom(provider: string) {
               completed: c.completedAt !== null && c.completedAt !== undefined,
               progress: c.progress ?? 0,
             }))
-            if (cycles.length === 0) return { cycles: [], message: "No cycles found for this team." }
+            if (cycles.length === 0)
+              return { cycles: [], message: "No cycles found for this team." }
             return { team: team.name, count: cycles.length, cycles }
           } catch (err) {
             return connectorError(err)
@@ -747,10 +830,7 @@ export const linearApiKeyDef: ConnectorDef = {
   },
   setup: {
     providerConsoleUrl: "https://linear.app/settings/api",
-    steps: [
-      "Go to linear.app/settings/api → Personal API Keys",
-      "Create a new key and copy it",
-    ],
+    steps: ["Go to linear.app/settings/api → Personal API Keys", "Create a new key and copy it"],
     collect: [{ env: "LINEAR_API_KEY", label: "Linear Personal API Key", secret: true }],
     docsUrl: "https://developers.linear.app/docs/graphql/working-with-the-graphql-api",
   },

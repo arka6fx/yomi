@@ -28,8 +28,15 @@ const ttsMock = {
 let streamChunks: string[] = ["Hello", " world!"]
 let lastStreamTextOptions: Record<string, unknown> = {}
 let lastModelId: string = ""
-let classifyResult = { path: "fast" as const, confidence: 0.9, reason: "mocked", source: "heuristic" as const }
-let reserveResult: { ok: boolean; error?: string; code?: string; upgradeUrl?: string } = { ok: true }
+let classifyResult = {
+  path: "fast" as const,
+  confidence: 0.9,
+  reason: "mocked",
+  source: "heuristic" as const,
+}
+let reserveResult: { ok: boolean; error?: string; code?: string; upgradeUrl?: string } = {
+  ok: true,
+}
 let enqueueTriggerCalls: { action: string; opts?: unknown }[] = []
 let enqueueTriggerResult: unknown = ""
 let fetchCalls: { url: string; method: string; body?: string }[] = []
@@ -149,10 +156,10 @@ mock.module("./graph/run.js", () => ({
 // Dynamic imports (after mocks are registered)
 // =============================================================================
 
-let fastPipeline: typeof import("./pipeline/fast.js")["fastPipeline"]
-let resolveText: typeof import("./pipeline/fast.js")["resolveText"]
+let fastPipeline: (typeof import("./pipeline/fast.js"))["fastPipeline"]
+let resolveText: (typeof import("./pipeline/fast.js"))["resolveText"]
 let app: { fetch: typeof globalThis.fetch }
-let handleGatewayMessage: typeof import("./gateway/receive.js")["handleGatewayMessage"]
+let handleGatewayMessage: (typeof import("./gateway/receive.js"))["handleGatewayMessage"]
 
 beforeAll(async () => {
   const fastMod = await import("./pipeline/fast.js")
@@ -173,7 +180,11 @@ beforeEach(() => {
   fetchCalls = []
   ttsMock.reset()
   globalThis.fetch = async (url: string | URL | Request, opts?: RequestInit) => {
-    fetchCalls.push({ url: String(url), method: opts?.method ?? "GET", body: opts?.body as string | undefined })
+    fetchCalls.push({
+      url: String(url),
+      method: opts?.method ?? "GET",
+      body: opts?.body as string | undefined,
+    })
     return new Response(JSON.stringify({ ok: true }), { status: 200 })
   }
 })
@@ -381,7 +392,8 @@ describe("/query unified endpoint", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           audio_b64: dummyWav,
-          screenshot_b64: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+          screenshot_b64:
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
         }),
       }),
     )
@@ -511,7 +523,7 @@ describe("POST /stt standalone endpoint", () => {
       }),
     )
     expect(res.status).toBe(200)
-    const body = await res.json() as any
+    const body = (await res.json()) as any
     expect(body.text).toBe("transcribed voice input")
   })
 
@@ -533,7 +545,9 @@ describe("POST /stt standalone endpoint", () => {
 
 describe("desktop trigger patterns — shouldUseAgent", () => {
   const shouldUseAgent = (text: string): boolean => {
-    return /\b(open|click|press|type|enter|fill|select|choose|check|uncheck|toggle|close|switch|go to|navigate|delete|send|save|copy|paste|rename|create|run|play|pause|resume|spotify|volume|sound|audio|louder|quieter|mute|unmute|increase|decrease|lower|raise|inc|dec|text|message|msg|whats\s*app|whatsapp|tell|ping)\b/i.test(text)
+    return /\b(open|click|press|type|enter|fill|select|choose|check|uncheck|toggle|close|switch|go to|navigate|delete|send|save|copy|paste|rename|create|run|play|pause|resume|spotify|volume|sound|audio|louder|quieter|mute|unmute|increase|decrease|lower|raise|inc|dec|text|message|msg|whats\s*app|whatsapp|tell|ping)\b/i.test(
+      text,
+    )
   }
 
   it("routes voice trigger to agent (contains 'tell')", () => {
@@ -707,7 +721,7 @@ describe("error handling across all paths", () => {
   it("GET /health returns 200 without auth", async () => {
     const res = await app.fetch(new Request("http://localhost/health"))
     expect(res.status).toBe(200)
-    const body = await res.json() as any
+    const body = (await res.json()) as any
     expect(body.status).toBe("ok")
   })
 })

@@ -8,17 +8,17 @@ All registered connectors in `packages/agent-core/src/connectors/all-defs.ts`
 have concrete tool factories and execute handlers. No registered connector is
 only a placeholder.
 
-| Connector        | Implemented tool count | Runtime notes                                                                 |
-| ---------------- | ---------------------: | ----------------------------------------------------------------------------- |
-| Google Gmail     |                     14 | Real Gmail API-backed tools through `GoogleGmailConnector`.                   |
-| Google Calendar  |                      8 | Real Calendar API-backed tools, including Google Meet creation.               |
-| Google Drive     |                     10 | Real Drive API-backed tools, including file export/read and folder creation.  |
-| Google Classroom |                      4 | Real Classroom API-backed read-only tools.                                    |
-| GitHub           |                     20 | Real GitHub REST API-backed tools, including account notifications.           |
-| Notion           |                     10 | Real Notion API-backed tools with database schema discovery.                  |
-| Slack            |                      7 | Real Slack API-backed tools including channel history threads.                |
-| Linear OAuth     |                     10 | Real Linear GraphQL API-backed tools with states and cycles.                  |
-| Linear API Key   |                     10 | Same tool surface as Linear OAuth.                                            |
+| Connector        | Implemented tool count | Runtime notes                                                                |
+| ---------------- | ---------------------: | ---------------------------------------------------------------------------- |
+| Google Gmail     |                     14 | Real Gmail API-backed tools through `GoogleGmailConnector`.                  |
+| Google Calendar  |                      8 | Real Calendar API-backed tools, including Google Meet creation.              |
+| Google Drive     |                     10 | Real Drive API-backed tools, including file export/read and folder creation. |
+| Google Classroom |                      4 | Real Classroom API-backed read-only tools.                                   |
+| GitHub           |                     20 | Real GitHub REST API-backed tools, including account notifications.          |
+| Notion           |                     10 | Real Notion API-backed tools with database schema discovery.                 |
+| Slack            |                      7 | Real Slack API-backed tools including channel history threads.               |
+| Linear OAuth     |                     10 | Real Linear GraphQL API-backed tools with states and cycles.                 |
+| Linear API Key   |                     10 | Same tool surface as Linear OAuth.                                           |
 
 ## Safety — all write/irreversible tools gated
 
@@ -39,30 +39,30 @@ confirms the action. The following were fixed in this update:
 
 ### P0 (completed)
 
-| Tool                                      | Connector | Type  | Notes                                                               |
-| ----------------------------------------- | --------- | ----- | ------------------------------------------------------------------- |
-| `gmail-createDraft`                       | Gmail     | Write | Create a draft with recipients, subject, body, optional thread ID.  |
-| `gmail-listLabels`                        | Gmail     | Read  | Return user labels and system labels.                               |
-| `gmail-applyLabels`                       | Gmail     | Write | Add/remove labels on a message.                                     |
-| `calendar-listCalendars`                  | Calendar  | Read  | Returns calendar IDs, names, descriptions, and primary status.      |
-| `calendar-createEventWithMeet`            | Calendar  | Write | Creates event with Google Meet link via conferenceData.             |
-| `github-getNotificationSubject`           | GitHub    | Read  | Resolves notification subject API URLs to readable details.         |
-| `github-markNotificationRead`             | GitHub    | Write | Mark one notification thread as read.                               |
-| `github-markAllNotificationsRead`         | GitHub    | Write | Mark all notifications read.                                        |
+| Tool                              | Connector | Type  | Notes                                                              |
+| --------------------------------- | --------- | ----- | ------------------------------------------------------------------ |
+| `gmail-createDraft`               | Gmail     | Write | Create a draft with recipients, subject, body, optional thread ID. |
+| `gmail-listLabels`                | Gmail     | Read  | Return user labels and system labels.                              |
+| `gmail-applyLabels`               | Gmail     | Write | Add/remove labels on a message.                                    |
+| `calendar-listCalendars`          | Calendar  | Read  | Returns calendar IDs, names, descriptions, and primary status.     |
+| `calendar-createEventWithMeet`    | Calendar  | Write | Creates event with Google Meet link via conferenceData.            |
+| `github-getNotificationSubject`   | GitHub    | Read  | Resolves notification subject API URLs to readable details.        |
+| `github-markNotificationRead`     | GitHub    | Write | Mark one notification thread as read.                              |
+| `github-markAllNotificationsRead` | GitHub    | Write | Mark all notifications read.                                       |
 
 ### P1 (completed)
 
-| Tool                                 | Connector | Type  | Notes                                                     |
-| ------------------------------------ | --------- | ----- | --------------------------------------------------------- |
-| `drive-shareFile`                    | Drive     | Write | Share with user/group or create link with role.            |
-| `drive-createFolder`                 | Drive     | Write | Create folder with optional parent.                       |
-| `slack-getChannelHistory`            | Slack     | Read  | Fetch recent messages from a channel.                     |
-| `slack-getThread`                    | Slack     | Read  | Fetch replies in a thread by timestamp.                   |
-| `slack-replyInThread`                | Slack     | Write | Send a threaded reply.                                    |
-| `notion-listDatabases`               | Notion    | Read  | Return databases shared with integration.                 |
-| `notion-getDatabaseSchema`           | Notion    | Read  | Return property names and types for a database.           |
-| `linear-listStates`                  | Linear    | Read  | Return valid workflow states per team.                    |
-| `linear-listCycles`                  | Linear    | Read  | Return cycles with start/end dates and progress.          |
+| Tool                       | Connector | Type  | Notes                                            |
+| -------------------------- | --------- | ----- | ------------------------------------------------ |
+| `drive-shareFile`          | Drive     | Write | Share with user/group or create link with role.  |
+| `drive-createFolder`       | Drive     | Write | Create folder with optional parent.              |
+| `slack-getChannelHistory`  | Slack     | Read  | Fetch recent messages from a channel.            |
+| `slack-getThread`          | Slack     | Read  | Fetch replies in a thread by timestamp.          |
+| `slack-replyInThread`      | Slack     | Write | Send a threaded reply.                           |
+| `notion-listDatabases`     | Notion    | Read  | Return databases shared with integration.        |
+| `notion-getDatabaseSchema` | Notion    | Read  | Return property names and types for a database.  |
+| `linear-listStates`        | Linear    | Read  | Return valid workflow states per team.           |
+| `linear-listCycles`        | Linear    | Read  | Return cycles with start/end dates and progress. |
 
 ## Future opportunities
 
@@ -71,29 +71,29 @@ lower-urgency or require additional scopes.
 
 ### Gmail
 
-| Tool                          | Type  | Notes                                                                        |
-| ----------------------------- | ----- | ---------------------------------------------------------------------------- |
-| `gmail-searchThreads`         | Read  | Search threads and return thread-level summaries.                            |
-| `gmail-getAttachments`        | Read  | List attachments for a message with metadata.                                |
-| `gmail-saveAttachmentToDrive` | Write | Save an attachment into Drive when both Gmail and Drive are connected.       |
+| Tool                          | Type  | Notes                                                                  |
+| ----------------------------- | ----- | ---------------------------------------------------------------------- |
+| `gmail-searchThreads`         | Read  | Search threads and return thread-level summaries.                      |
+| `gmail-getAttachments`        | Read  | List attachments for a message with metadata.                          |
+| `gmail-saveAttachmentToDrive` | Write | Save an attachment into Drive when both Gmail and Drive are connected. |
 
 ### Google Calendar
 
-| Tool                                 | Type  | Notes                                                             |
-| ------------------------------------ | ----- | ----------------------------------------------------------------- |
-| `calendar-listEventsByCalendar`      | Read  | Same as list events, but accepts a calendar ID.                   |
-| `calendar-findFreeTimeWithAttendees` | Read  | Use FreeBusy for user and attendee calendars where available.     |
-| `calendar-respondToEvent`            | Write | Accept, decline, or tentative RSVP.                               |
-| `calendar-searchEvents`              | Read  | Use Calendar `q` search across a range.                           |
+| Tool                                 | Type  | Notes                                                         |
+| ------------------------------------ | ----- | ------------------------------------------------------------- |
+| `calendar-listEventsByCalendar`      | Read  | Same as list events, but accepts a calendar ID.               |
+| `calendar-findFreeTimeWithAttendees` | Read  | Use FreeBusy for user and attendee calendars where available. |
+| `calendar-respondToEvent`            | Write | Accept, decline, or tentative RSVP.                           |
+| `calendar-searchEvents`              | Read  | Use Calendar `q` search across a range.                       |
 
 ### Google Drive
 
-| Tool                      | Type         | Notes                                                               |
-| ------------------------- | ------------ | ------------------------------------------------------------------- |
-| `drive-copyFile`          | Write        | Duplicate files into optional folder.                               |
-| `drive-updateFileContent` | Write        | Replace/upload content for non-Google binary/text files.            |
-| `drive-emptyTrash`        | Irreversible | Only with explicit confirmation.                                    |
-| `drive-listPermissions`   | Read         | Show who has access before changing sharing.                        |
+| Tool                      | Type         | Notes                                                    |
+| ------------------------- | ------------ | -------------------------------------------------------- |
+| `drive-copyFile`          | Write        | Duplicate files into optional folder.                    |
+| `drive-updateFileContent` | Write        | Replace/upload content for non-Google binary/text files. |
+| `drive-emptyTrash`        | Irreversible | Only with explicit confirmation.                         |
+| `drive-listPermissions`   | Read         | Show who has access before changing sharing.             |
 
 ### Google Classroom
 
@@ -110,31 +110,31 @@ scopes clearly allow the action for the target account type.
 
 ### GitHub
 
-| Tool                      | Type  | Notes                                                                    |
-| ------------------------- | ----- | ------------------------------------------------------------------------ |
-| `github-listPRFiles`      | Read  | Needed for review/summarization workflows.                               |
-| `github-getFileContent`   | Read  | Read repository file content before editing.                             |
-| `github-listIssueComments`| Read  | Current issue detail only returns comment count, not content.            |
-| `github-listPRReviews`    | Read  | Show review state and reviewer feedback.                                 |
-| `github-listWorkflowRuns` | Read  | Answer "did CI pass?" without browsing GitHub.                           |
+| Tool                       | Type | Notes                                                         |
+| -------------------------- | ---- | ------------------------------------------------------------- |
+| `github-listPRFiles`       | Read | Needed for review/summarization workflows.                    |
+| `github-getFileContent`    | Read | Read repository file content before editing.                  |
+| `github-listIssueComments` | Read | Current issue detail only returns comment count, not content. |
+| `github-listPRReviews`     | Read | Show review state and reviewer feedback.                      |
+| `github-listWorkflowRuns`  | Read | Answer "did CI pass?" without browsing GitHub.                |
 
 ### Notion
 
-| Tool                            | Type  | Notes                                                    |
-| ------------------------------- | ----- | -------------------------------------------------------- |
-| `notion-updateDatabaseEntry`    | Write | Safer entry-specific update wrapper.                     |
-| `notion-addTodo`                | Write | Common page append operation with checkbox blocks.       |
-| `notion-createPageFromMarkdown` | Write | Better structured document creation than one paragraph.  |
+| Tool                            | Type  | Notes                                                   |
+| ------------------------------- | ----- | ------------------------------------------------------- |
+| `notion-updateDatabaseEntry`    | Write | Safer entry-specific update wrapper.                    |
+| `notion-addTodo`                | Write | Common page append operation with checkbox blocks.      |
+| `notion-createPageFromMarkdown` | Write | Better structured document creation than one paragraph. |
 
 ### Slack
 
 Add:
 
-| Tool                      | Type  | Notes                                           |
-| ------------------------- | ----- | ----------------------------------------------- |
-| `slack-listDMs`           | Read  | Let users pick a DM target without knowing IDs. |
-| `slack-setStatus`         | Write | Common personal productivity action.            |
-| `slack-addReaction`       | Write | Lightweight acknowledgement workflow.           |
+| Tool                | Type  | Notes                                           |
+| ------------------- | ----- | ----------------------------------------------- |
+| `slack-listDMs`     | Read  | Let users pick a DM target without knowing IDs. |
+| `slack-setStatus`   | Write | Common personal productivity action.            |
+| `slack-addReaction` | Write | Lightweight acknowledgement workflow.           |
 
 ### Linear
 

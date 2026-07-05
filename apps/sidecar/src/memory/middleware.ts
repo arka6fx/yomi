@@ -106,10 +106,7 @@ function formatMemoriesForPrompt(
 }
 
 // Fetch and cache memories for a given query.
-async function fetchMemories(
-  query: string,
-  config: MemoryMiddlewareConfig,
-): Promise<string> {
+async function fetchMemories(query: string, config: MemoryMiddlewareConfig): Promise<string> {
   const cacheKey = makeCacheKey("default", "current", config.mode, query)
   const cached = turnCache.get<string>(cacheKey)
   if (cached) return cached
@@ -120,7 +117,9 @@ async function fetchMemories(
   try {
     const [durableMemory, profile, promotedMemory] = await Promise.race([
       Promise.all([
-        config.mode === "profile" ? Promise.resolve("") : retrieveCloudMemoryContext(query, config.contextMaxChars),
+        config.mode === "profile"
+          ? Promise.resolve("")
+          : retrieveCloudMemoryContext(query, config.contextMaxChars),
         retrieveCloudMemoryProfile(query, config.profileMaxChars),
         config.mode === "query" ? Promise.resolve("") : getPromotedContent(2000),
       ]),

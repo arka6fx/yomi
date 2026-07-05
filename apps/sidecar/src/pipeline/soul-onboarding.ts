@@ -5,7 +5,10 @@ const ASK_SOUL_MESSAGE =
   "Before we continue, do you want to define my personality and working style? Reply with a short style guide, or say \"default\" and I'll use Yomi's built-in style."
 
 function disabled(): boolean {
-  return process.env["YOMI_DISABLE_SOUL_ONBOARDING"] === "1" || process.argv.some((arg) => arg === "test" || /\.test\.[cm]?tsx?$/.test(arg))
+  return (
+    process.env["YOMI_DISABLE_SOUL_ONBOARDING"] === "1" ||
+    process.argv.some((arg) => arg === "test" || /\.test\.[cm]?tsx?$/.test(arg))
+  )
 }
 
 function wantsDefault(text: string): boolean {

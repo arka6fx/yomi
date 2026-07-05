@@ -370,9 +370,7 @@ describe("fastPipeline — generator", () => {
 
   it("voice (audio_b64) with pro plan loads memory using transcribed text", async () => {
     const dummyWav = Buffer.alloc(44).toString("base64")
-    const events = (await collect(
-      fastPipeline({ audio_b64: dummyWav, plan: "pro" }),
-    )) as any[]
+    const events = (await collect(fastPipeline({ audio_b64: dummyWav, plan: "pro" }))) as any[]
 
     expect(events[0]).toMatchObject({ type: "transcript", text: "transcribed from audio" })
     expect(events.some((e) => e.type === "llm_chunk")).toBe(true)

@@ -29,19 +29,24 @@ export default {
       const url = new URL(request.url)
       if (!url.pathname.startsWith("/api/auth/") && !gatewayStarted) {
         gatewayStarted = true
-        ctx.waitUntil(startGateway().catch((err) => {
-          console.error("[gateway] start error:", err)
-          gatewayStarted = false
-        }))
+        ctx.waitUntil(
+          startGateway().catch((err) => {
+            console.error("[gateway] start error:", err)
+            gatewayStarted = false
+          }),
+        )
       }
 
       return await app.fetch(request, env, ctx as never)
     } catch (err) {
       console.error("[worker] error:", err)
-      return new Response(JSON.stringify({ error: "internal_server_error", message: String(err) }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      })
+      return new Response(
+        JSON.stringify({ error: "internal_server_error", message: String(err) }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        },
+      )
     }
   },
 
@@ -57,8 +62,12 @@ export default {
           .catch((err) => console.error("[schedules] sweep error:", err)),
         runPrivacyRetention()
           .then((r) => {
-            const total = r.expiredExports + r.oldDeletionJobs + r.hardDeletedUsers + r.oldAuditEvents
-            if (total > 0) console.warn(`[retention] cleaned ${total} items (exports:${r.expiredExports} jobs:${r.oldDeletionJobs} users:${r.hardDeletedUsers} audit:${r.oldAuditEvents})`)
+            const total =
+              r.expiredExports + r.oldDeletionJobs + r.hardDeletedUsers + r.oldAuditEvents
+            if (total > 0)
+              console.warn(
+                `[retention] cleaned ${total} items (exports:${r.expiredExports} jobs:${r.oldDeletionJobs} users:${r.hardDeletedUsers} audit:${r.oldAuditEvents})`,
+              )
           })
           .catch((err) => console.error("[retention] sweep error:", err)),
       ]),

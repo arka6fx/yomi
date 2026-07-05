@@ -95,7 +95,8 @@ export function createIntegrationTools() {
         if (!gmail) return notConnectedError()
         try {
           const emails = await gmail.getUnreadEmails(limit)
-          if (emails.length === 0) return { emails: [], message: "Inbox is clear — no unread emails." }
+          if (emails.length === 0)
+            return { emails: [], message: "Inbox is clear — no unread emails." }
           return {
             count: emails.length,
             emails,
@@ -261,7 +262,9 @@ export function createIntegrationTools() {
       description:
         "Fetch all messages in a Gmail thread by threadId. Returns messages in order, each with full body and headers.",
       parameters: z.object({
-        threadId: z.string().describe("The Gmail thread ID (returned by search or read operations)"),
+        threadId: z
+          .string()
+          .describe("The Gmail thread ID (returned by search or read operations)"),
       }),
       execute: async ({ threadId }) => {
         const gmail = getGmail()

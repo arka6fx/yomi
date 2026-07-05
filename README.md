@@ -22,19 +22,20 @@ packages/*config Shared TypeScript and ESLint config
 ```
 
 The backend is canonical for account auth, billing, Telegram, connectors, and
-durable memory. The sidecar is local-first for voice/screen context, local notes,
-and private memory sync. The desktop app stays thin: capture, UI, and hotkeys.
+durable memory. The sidecar is local-first for voice/screen context, local
+notes, and private memory sync. The desktop app stays thin: capture, UI, and
+hotkeys.
 
 ## Request Paths
 
-| Request | Path | Target |
-| --- | --- | --- |
-| Quick ask / screen Q&A | STT or text → optional screenshot → one LLM call → optional TTS | under 2–3 s |
-| Connector query | router → agent loop → connector tools → response | seconds |
-| Telegram query | backend gateway → backend agent → connector/memory tools → reply | seconds |
+| Request                | Path                                                             | Target      |
+| ---------------------- | ---------------------------------------------------------------- | ----------- |
+| Quick ask / screen Q&A | STT or text → optional screenshot → one LLM call → optional TTS  | under 2–3 s |
+| Connector query        | router → agent loop → connector tools → response                 | seconds     |
+| Telegram query         | backend gateway → backend agent → connector/memory tools → reply | seconds     |
 
-Do not switch models mid-turn. The router decides fast path vs agent path at
-the start of a turn.
+Do not switch models mid-turn. The router decides fast path vs agent path at the
+start of a turn.
 
 ## Local Development
 
@@ -56,12 +57,12 @@ bun run dev
 
 Common dev targets:
 
-| App | Command | URL |
-| --- | --- | --- |
+| App     | Command                          | URL                     |
+| ------- | -------------------------------- | ----------------------- |
 | Landing | `cd apps/landing && bun run dev` | `http://localhost:3000` |
 | Backend | `cd apps/backend && bun run dev` | `http://localhost:3001` |
 | Sidecar | `cd apps/sidecar && bun run dev` | `http://localhost:3002` |
-| Desktop | `cd apps/desktop && bun run dev` | Electron |
+| Desktop | `cd apps/desktop && bun run dev` | Electron                |
 
 For desktop development, start the sidecar before the desktop app.
 
@@ -111,9 +112,9 @@ CORS_ORIGIN=https://yomi.arka6fx.com
 
 ## Billing (Dodo Payments)
 
-Plans are configured in `apps/backend/src/routes/billing.ts` with canonical
-USD pricing. Dodo products must be **pre-created in the dashboard** — the
-backend references them by ID for subscription and credit-pack checkouts.
+Plans are configured in `apps/backend/src/routes/billing.ts` with canonical USD
+pricing. Dodo products must be **pre-created in the dashboard** — the backend
+references them by ID for subscription and credit-pack checkouts.
 
 ```bash
 # Required for billing
@@ -145,8 +146,9 @@ Set `DODO_ENV=test` for local development and `DODO_ENV=live` for production.
 Only the selected mode needs values.
 
 **Key design decisions:**
-- USD is the canonical billing currency. Local equivalents are estimated
-  using the `GET /api/billing/plans` endpoint (with `CF-IPCountry` header)
+
+- USD is the canonical billing currency. Local equivalents are estimated using
+  the `GET /api/billing/plans` endpoint (with `CF-IPCountry` header)
 - Subscriptions and credit packs use Dodo Checkout Sessions
 - 7-day grace period after payment failure before access is cut off
 - Webhooks are idempotent (deduplicated by event ID)
@@ -185,9 +187,9 @@ packages/shared/src/chunk.test.ts
 ```
 
 Why: Turborepo schedules and caches work by package. Keeping tests inside the
-owning workspace lets `turbo run test --filter ...` and `--affected` run only the
-packages that changed. Root-level tests should be reserved for rare repo-wide
-checks that cannot belong to a single package.
+owning workspace lets `turbo run test --filter ...` and `--affected` run only
+the packages that changed. Root-level tests should be reserved for rare
+repo-wide checks that cannot belong to a single package.
 
 ## Production
 
@@ -219,12 +221,12 @@ http://localhost:3001/api/auth/callback/google
 
 ## Speech And Models
 
-| Capability | Provider / default |
-| --- | --- |
-| Fast LLM | AI Credits/OpenAI-compatible endpoint, `gpt-5.5-mini` |
-| Agent LLM | AI Credits/OpenAI-compatible endpoint, `gpt-5.5` |
-| STT | ElevenLabs `scribe_v2` |
-| TTS | ElevenLabs `eleven_flash_v2_5` |
+| Capability | Provider / default                                    |
+| ---------- | ----------------------------------------------------- |
+| Fast LLM   | AI Credits/OpenAI-compatible endpoint, `gpt-5.5-mini` |
+| Agent LLM  | AI Credits/OpenAI-compatible endpoint, `gpt-5.5`      |
+| STT        | ElevenLabs `scribe_v2`                                |
+| TTS        | ElevenLabs `eleven_flash_v2_5`                        |
 
 Set `TTS_ENGINE=none` to disable voice output. Use a premade ElevenLabs voice;
 community library voices can fail on free-tier API keys.
@@ -234,23 +236,23 @@ community library voices can fail on free-tier API keys.
 The numbered docs in `specs/` are implementation references, not product copy.
 Current order:
 
-| # | Spec |
-| --- | --- |
-| 00 | [Overview](specs/00-overview.md) |
-| 01 | [Architecture](specs/01-architecture.md) |
-| 02 | [Sidecar fast pipeline](specs/02-sidecar-fast-pipeline.md) |
-| 03 | [Desktop shell](specs/03-desktop-shell.md) |
-| 04 | [Desktop UI](specs/04-desktop-ui.md) |
-| 05 | [Speech STT](specs/05-speech-stt.md) |
-| 06 | [Speech TTS](specs/06-speech-tts.md) |
-| 07 | [Sidecar router](specs/07-sidecar-router.md) |
-| 08 | [Sidecar agent](specs/08-sidecar-agent.md) |
-| 09 | [Harness](specs/09-harness.md) |
-| 10 | [Memory](specs/10-memory.md) |
-| 11 | [Database](specs/11-database.md) |
-| 12 | [Backend](specs/12-backend.md) |
-| 13 | [Pricing](specs/13-pricing.md) |
-| 14 | [Landing page](specs/14-landing-page.md) |
+| #   | Spec                                                       |
+| --- | ---------------------------------------------------------- |
+| 00  | [Overview](specs/00-overview.md)                           |
+| 01  | [Architecture](specs/01-architecture.md)                   |
+| 02  | [Sidecar fast pipeline](specs/02-sidecar-fast-pipeline.md) |
+| 03  | [Desktop shell](specs/03-desktop-shell.md)                 |
+| 04  | [Desktop UI](specs/04-desktop-ui.md)                       |
+| 05  | [Speech STT](specs/05-speech-stt.md)                       |
+| 06  | [Speech TTS](specs/06-speech-tts.md)                       |
+| 07  | [Sidecar router](specs/07-sidecar-router.md)               |
+| 08  | [Sidecar agent](specs/08-sidecar-agent.md)                 |
+| 09  | [Harness](specs/09-harness.md)                             |
+| 10  | [Memory](specs/10-memory.md)                               |
+| 11  | [Database](specs/11-database.md)                           |
+| 12  | [Backend](specs/12-backend.md)                             |
+| 13  | [Pricing](specs/13-pricing.md)                             |
+| 14  | [Landing page](specs/14-landing-page.md)                   |
 
 ## Privacy
 

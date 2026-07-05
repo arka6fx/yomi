@@ -22,22 +22,44 @@ type StatusData = {
   generatedAt: string
   plan: { plan: string; name: string; status: string; isOwner: boolean; billingAccess: boolean }
   credits: { balance: number }
-  gateway: { running: boolean; activeSessions: number; adapters: { platform: string; connected: boolean }[] }
+  gateway: {
+    running: boolean
+    activeSessions: number
+    adapters: { platform: string; connected: boolean }[]
+  }
   telegram: { connected: boolean; linkedAt: string | null }
   connectors: { total: number; needsReconnect: { provider: string; displayName: string }[] }
   schedules: { total: number; enabled: number; nextRunAt: string | null }
   checks: Check[]
 }
 
-const LEVEL_META: Record<CheckLevel, { label: string; dot: string; text: string; Icon: typeof CheckCircle2 }> = {
-  ok: { label: "All systems healthy", dot: "bg-emerald-400", text: "text-emerald-400", Icon: CheckCircle2 },
-  warn: { label: "Needs attention", dot: "bg-yellow-400", text: "text-yellow-400", Icon: AlertTriangle },
+const LEVEL_META: Record<
+  CheckLevel,
+  { label: string; dot: string; text: string; Icon: typeof CheckCircle2 }
+> = {
+  ok: {
+    label: "All systems healthy",
+    dot: "bg-emerald-400",
+    text: "text-emerald-400",
+    Icon: CheckCircle2,
+  },
+  warn: {
+    label: "Needs attention",
+    dot: "bg-yellow-400",
+    text: "text-yellow-400",
+    Icon: AlertTriangle,
+  },
   down: { label: "Action required", dot: "bg-red-400", text: "text-red-400", Icon: XCircle },
 }
 
 function when(value?: string | null) {
   if (!value) return null
-  return new Date(value).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+  return new Date(value).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })
 }
 
 // Cloud "Status" panel — replaces the old local desktop diagnostics. Shows live health
@@ -107,9 +129,17 @@ export function StatusManager({ token }: { token: string }) {
         <div className="space-y-5">
           {/* Quick stat tiles */}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <StatTile Icon={WalletCards} label="Credits" value={data.plan.isOwner ? "∞" : String(data.credits.balance)} />
+            <StatTile
+              Icon={WalletCards}
+              label="Credits"
+              value={data.plan.isOwner ? "∞" : String(data.credits.balance)}
+            />
             <StatTile Icon={Plug} label="Connectors" value={String(data.connectors.total)} />
-            <StatTile Icon={Clock} label="Schedules" value={`${data.schedules.enabled}/${data.schedules.total}`} />
+            <StatTile
+              Icon={Clock}
+              label="Schedules"
+              value={`${data.schedules.enabled}/${data.schedules.total}`}
+            />
             <StatTile Icon={Activity} label="Plan" value={data.plan.name} />
           </div>
 
@@ -119,12 +149,17 @@ export function StatusManager({ token }: { token: string }) {
               const meta = LEVEL_META[ch.level]
               const Icon = meta.Icon
               return (
-                <li key={ch.id} className="flex items-center justify-between gap-3 bg-background/40 px-4 py-3">
+                <li
+                  key={ch.id}
+                  className="flex items-center justify-between gap-3 bg-background/40 px-4 py-3"
+                >
                   <div className="flex min-w-0 items-center gap-3">
                     <Icon size={16} className={cn("shrink-0", meta.text)} />
                     <span className="truncate text-sm text-foreground">{ch.label}</span>
                   </div>
-                  <span className="shrink-0 text-right text-xs text-muted-foreground">{ch.detail}</span>
+                  <span className="shrink-0 text-right text-xs text-muted-foreground">
+                    {ch.detail}
+                  </span>
                 </li>
               )
             })}
@@ -132,9 +167,12 @@ export function StatusManager({ token }: { token: string }) {
 
           {data.connectors.needsReconnect.length > 0 && (
             <div className="rounded-xl border border-yellow-500/25 bg-yellow-500/10 p-4">
-              <p className="text-sm font-medium text-yellow-300">Some connectors need reconnecting</p>
+              <p className="text-sm font-medium text-yellow-300">
+                Some connectors need reconnecting
+              </p>
               <p className="mt-1 text-xs text-yellow-200/75">
-                {data.connectors.needsReconnect.map((c) => c.displayName).join(", ")} — reconnect on the Integrations tab.
+                {data.connectors.needsReconnect.map((c) => c.displayName).join(", ")} — reconnect on
+                the Integrations tab.
               </p>
             </div>
           )}

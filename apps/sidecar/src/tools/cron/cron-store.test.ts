@@ -62,8 +62,8 @@ describe("loadJobs / saveJobs", () => {
   })
 
   it("overwrites existing jobs on save", async () => {
-    await saveJobs({ "a": makeJob("a", { prompt: "first" }) })
-    await saveJobs({ "a": makeJob("a", { prompt: "second" }) })
+    await saveJobs({ a: makeJob("a", { prompt: "first" }) })
+    await saveJobs({ a: makeJob("a", { prompt: "second" }) })
 
     const loaded = await loadJobs()
     expect(loaded["a"]!.prompt).toBe("second")

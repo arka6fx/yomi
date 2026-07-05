@@ -102,7 +102,11 @@ describe("nextFireTime — duration", () => {
   })
 
   it("returns null for invalid duration", () => {
-    const job = makeJob({ schedule: "30x", scheduleType: "duration", lastRunAt: new Date().toISOString() })
+    const job = makeJob({
+      schedule: "30x",
+      scheduleType: "duration",
+      lastRunAt: new Date().toISOString(),
+    })
     expect(nextFireTime(job)).toBeNull()
   })
 })

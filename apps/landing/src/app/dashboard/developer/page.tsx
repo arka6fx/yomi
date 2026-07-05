@@ -59,7 +59,11 @@ type AnalyticsResponse = {
 }
 
 function dollars(value: number) {
-  return value.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 4 })
+  return value.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 4,
+  })
 }
 
 function number(value: number) {
@@ -67,7 +71,12 @@ function number(value: number) {
 }
 
 function when(value: string) {
-  return new Date(value).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+  return new Date(value).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })
 }
 
 function maxCost(rows: AnalyticsBucket[]) {
@@ -94,8 +103,11 @@ export default function DeveloperDashboardPage() {
       const res = await fetch(`/api/admin/cost-analytics?days=${days}`, {
         headers: { Authorization: `Bearer ${session.session.token}` },
       })
-      const body = await res.json() as AnalyticsResponse | { error?: string }
-      if (!res.ok) throw new Error("error" in body && body.error ? body.error : `Analytics failed (${res.status})`)
+      const body = (await res.json()) as AnalyticsResponse | { error?: string }
+      if (!res.ok)
+        throw new Error(
+          "error" in body && body.error ? body.error : `Analytics failed (${res.status})`,
+        )
       setData(body as AnalyticsResponse)
     } catch (err) {
       setData(null)
@@ -116,7 +128,10 @@ export default function DeveloperDashboardPage() {
       <div className="mx-auto max-w-7xl space-y-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <Link href="/dashboard" className="mb-4 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground">
+            <Link
+              href="/dashboard"
+              className="mb-4 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
               <ArrowLeft size={15} />
               Back to dashboard
             </Link>
@@ -125,14 +140,17 @@ export default function DeveloperDashboardPage() {
                 <BarChart3 size={22} />
               </div>
               <div>
-                <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">Admin only</p>
+                <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                  Admin only
+                </p>
                 <h1 className="font-serif text-3xl leading-tight text-foreground sm:text-4xl">
                   AI cost <span className="italic">analytics</span>
                 </h1>
               </div>
             </div>
             <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-              Internal cost baseline before optimization. This uses usage telemetry only and never displays raw prompts or connector payloads.
+              Internal cost baseline before optimization. This uses usage telemetry only and never
+              displays raw prompts or connector payloads.
             </p>
           </div>
 
@@ -143,7 +161,9 @@ export default function DeveloperDashboardPage() {
                 onClick={() => setDays(option)}
                 className={cn(
                   "rounded-xl px-3 py-2 text-xs font-medium transition-colors",
-                  days === option ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  days === option
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
               >
                 {option}d
@@ -174,24 +194,48 @@ export default function DeveloperDashboardPage() {
         ) : data ? (
           <>
             <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <MetricCard icon={WalletCards} label="Estimated spend" value={dollars(data.totals.estimatedCostUsd)} />
+              <MetricCard
+                icon={WalletCards}
+                label="Estimated spend"
+                value={dollars(data.totals.estimatedCostUsd)}
+              />
               <MetricCard icon={Activity} label="Requests" value={number(data.totals.requests)} />
-              <MetricCard icon={Database} label="Avg tokens" value={`${number(data.totals.avgInputTokens)} in / ${number(data.totals.avgOutputTokens)} out`} />
-              <MetricCard icon={Clock} label="Avg latency" value={`${number(data.totals.avgLatencyMs)} ms`} />
+              <MetricCard
+                icon={Database}
+                label="Avg tokens"
+                value={`${number(data.totals.avgInputTokens)} in / ${number(data.totals.avgOutputTokens)} out`}
+              />
+              <MetricCard
+                icon={Clock}
+                label="Avg latency"
+                value={`${number(data.totals.avgLatencyMs)} ms`}
+              />
             </section>
 
             <section className="grid gap-4 lg:grid-cols-2">
-              <AnalyticsTable title="Cost per endpoint" icon={Activity} rows={data.costPerEndpoint} />
+              <AnalyticsTable
+                title="Cost per endpoint"
+                icon={Activity}
+                rows={data.costPerEndpoint}
+              />
               <AnalyticsTable title="Cost per model" icon={Cpu} rows={data.costPerModel} />
               <AnalyticsTable title="Cost per connector" icon={Plug} rows={data.costPerConnector} />
-              <AnalyticsTable title="Token distribution by task" icon={Database} rows={data.tokenDistributionByTaskType} />
+              <AnalyticsTable
+                title="Token distribution by task"
+                icon={Database}
+                rows={data.tokenDistributionByTaskType}
+              />
             </section>
 
             <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
               <div className="mb-5 flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Daily AI spend</p>
-                  <p className="mt-1 text-sm text-muted-foreground">Generated {when(data.generatedAt)}</p>
+                  <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                    Daily AI spend
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Generated {when(data.generatedAt)}
+                  </p>
                 </div>
                 <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
                   {when(data.period.since)} to {when(data.period.until)}
@@ -200,22 +244,36 @@ export default function DeveloperDashboardPage() {
               <div className="space-y-2">
                 {data.dailySpend.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No usage in this period.</p>
-                ) : data.dailySpend.map((row) => (
-                  <div key={row.key} className="grid grid-cols-[5rem_1fr_5rem] items-center gap-3 text-sm">
-                    <span className="text-muted-foreground">{row.key.slice(5)}</span>
-                    <div className="h-2 overflow-hidden rounded-full bg-muted">
-                      <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max(2, (row.estimatedCostUsd / dayMax) * 100)}%` }} />
+                ) : (
+                  data.dailySpend.map((row) => (
+                    <div
+                      key={row.key}
+                      className="grid grid-cols-[5rem_1fr_5rem] items-center gap-3 text-sm"
+                    >
+                      <span className="text-muted-foreground">{row.key.slice(5)}</span>
+                      <div className="h-2 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-primary"
+                          style={{
+                            width: `${Math.max(2, (row.estimatedCostUsd / dayMax) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                      <span className="text-right tabular-nums text-foreground">
+                        {dollars(row.estimatedCostUsd)}
+                      </span>
                     </div>
-                    <span className="text-right tabular-nums text-foreground">{dollars(row.estimatedCostUsd)}</span>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </section>
 
             <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
               <div className="mb-4 flex items-center gap-2">
                 <Users size={16} className="text-muted-foreground" />
-                <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Top 10 most expensive users</p>
+                <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                  Top 10 most expensive users
+                </p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[760px] text-left text-sm">
@@ -233,7 +291,9 @@ export default function DeveloperDashboardPage() {
                     {data.topUsers.map((row) => (
                       <tr key={row.userId}>
                         <td className="py-3 pr-4">
-                          <p className="font-medium text-foreground">{row.email ?? row.name ?? row.userId}</p>
+                          <p className="font-medium text-foreground">
+                            {row.email ?? row.name ?? row.userId}
+                          </p>
                           <p className="text-xs text-muted-foreground">{row.userId}</p>
                         </td>
                         <td className="py-3 pr-4 tabular-nums">{number(row.requests)}</td>
@@ -254,7 +314,15 @@ export default function DeveloperDashboardPage() {
   )
 }
 
-function MetricCard({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
+function MetricCard({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: LucideIcon
+  label: string
+  value: string
+}) {
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
       <div className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-muted-foreground">
@@ -266,12 +334,22 @@ function MetricCard({ icon: Icon, label, value }: { icon: LucideIcon; label: str
   )
 }
 
-function AnalyticsTable({ title, icon: Icon, rows }: { title: string; icon: LucideIcon; rows: AnalyticsBucket[] }) {
+function AnalyticsTable({
+  title,
+  icon: Icon,
+  rows,
+}: {
+  title: string
+  icon: LucideIcon
+  rows: AnalyticsBucket[]
+}) {
   return (
     <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
       <div className="mb-4 flex items-center gap-2">
         <Icon size={16} className="text-muted-foreground" />
-        <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{title}</p>
+        <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+          {title}
+        </p>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[520px] text-left text-sm">
@@ -290,7 +368,9 @@ function AnalyticsTable({ title, icon: Icon, rows }: { title: string; icon: Luci
                 <td className="py-3 pr-4 font-medium text-foreground">{row.key}</td>
                 <td className="py-3 pr-4 tabular-nums">{number(row.requests)}</td>
                 <td className="py-3 pr-4 tabular-nums">{dollars(row.estimatedCostUsd)}</td>
-                <td className="py-3 pr-4 tabular-nums">{number(row.avgInputTokens)} / {number(row.avgOutputTokens)}</td>
+                <td className="py-3 pr-4 tabular-nums">
+                  {number(row.avgInputTokens)} / {number(row.avgOutputTokens)}
+                </td>
                 <td className="py-3 pr-4 tabular-nums">{number(row.avgLatencyMs)} ms</td>
               </tr>
             ))}

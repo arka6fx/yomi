@@ -123,8 +123,8 @@ bunx wrangler secret put DODO_LIVE_PRODUCT_CREDITS_2000 --env production
 bunx wrangler secret put DODO_LIVE_PRODUCT_CREDITS_6000 --env production
 ```
 
-Set `DODO_ENV` in `apps/backend/wrangler.jsonc` vars instead of a secret.
-Only set `DODO_LIVE_API_BASE` in vars if Dodo gives you a non-default base URL.
+Set `DODO_ENV` in `apps/backend/wrangler.jsonc` vars instead of a secret. Only
+set `DODO_LIVE_API_BASE` in vars if Dodo gives you a non-default base URL.
 
 Landing is deployed as a static-assets Worker. The auth client uses same-origin
 requests by default — the landing Worker proxies `/api/*` to the backend. For

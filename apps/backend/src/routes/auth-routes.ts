@@ -24,7 +24,10 @@ authRoutesRouter.post("/device-code", async (c) => {
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000)
 
   // Prune expired codes opportunistically to keep the table small
-  await db.delete(deviceCodes).where(lt(deviceCodes.expiresAt, new Date())).catch(() => {})
+  await db
+    .delete(deviceCodes)
+    .where(lt(deviceCodes.expiresAt, new Date()))
+    .catch(() => {})
 
   await db.insert(deviceCodes).values({ deviceCode, userCode, clientId, expiresAt })
 
@@ -51,13 +54,19 @@ authRoutesRouter.post("/device-code/token", async (c) => {
   if (!entry) return c.json({ error: "invalid_grant" }, 400)
 
   if (Date.now() > entry.expiresAt.getTime()) {
-    await db.delete(deviceCodes).where(eq(deviceCodes.deviceCode, device_code)).catch(() => {})
+    await db
+      .delete(deviceCodes)
+      .where(eq(deviceCodes.deviceCode, device_code))
+      .catch(() => {})
     return c.json({ error: "expired_token" }, 400)
   }
 
   if (!entry.token) return c.json({ error: "authorization_pending" }, 400)
 
-  await db.delete(deviceCodes).where(eq(deviceCodes.deviceCode, device_code)).catch(() => {})
+  await db
+    .delete(deviceCodes)
+    .where(eq(deviceCodes.deviceCode, device_code))
+    .catch(() => {})
   return c.json({ access_token: entry.token })
 })
 
@@ -80,7 +89,10 @@ authRoutesRouter.post("/device-code/confirm", async (c) => {
   if (!entry) return c.json({ error: "invalid_user_code" }, 400)
 
   if (Date.now() >= entry.expiresAt.getTime()) {
-    await db.delete(deviceCodes).where(eq(deviceCodes.userCode, normalizedCode)).catch(() => {})
+    await db
+      .delete(deviceCodes)
+      .where(eq(deviceCodes.userCode, normalizedCode))
+      .catch(() => {})
     return c.json({ error: "expired_user_code" }, 400)
   }
 

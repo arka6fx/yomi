@@ -38,9 +38,21 @@ const NAV = [
 
 const CONNECTORS: { id: string; name: string; access: string }[] = [
   { id: "google", name: "Gmail", access: "Read, search, send, organize, and delete email" },
-  { id: "google-calendar", name: "Google Calendar", access: "Read availability and create, edit, or delete events" },
-  { id: "google-drive", name: "Google Drive", access: "Browse, read, create, rename, and delete files" },
-  { id: "google-classroom", name: "Google Classroom", access: "Read classes, assignments, due dates, and grades" },
+  {
+    id: "google-calendar",
+    name: "Google Calendar",
+    access: "Read availability and create, edit, or delete events",
+  },
+  {
+    id: "google-drive",
+    name: "Google Drive",
+    access: "Browse, read, create, rename, and delete files",
+  },
+  {
+    id: "google-classroom",
+    name: "Google Classroom",
+    access: "Read classes, assignments, due dates, and grades",
+  },
   { id: "github", name: "GitHub", access: "Repositories, issues, and pull requests" },
   { id: "notion", name: "Notion", access: "Search and read your shared pages and databases" },
   { id: "slack", name: "Slack", access: "Read channel context and send approved messages" },
@@ -76,18 +88,35 @@ function Section({
   children: React.ReactNode
 }) {
   return (
-    <section id={id} className="scroll-mt-28 border-t border-border/60 py-12 first:border-t-0 first:pt-0">
+    <section
+      id={id}
+      className="scroll-mt-28 border-t border-border/60 py-12 first:border-t-0 first:pt-0"
+    >
       <Eyebrow>{eyebrow}</Eyebrow>
-      <h2 className="mt-4 font-serif text-3xl tracking-tight text-foreground sm:text-4xl">{title}</h2>
-      <div className="mt-5 space-y-4 text-[15px] leading-relaxed text-muted-foreground">{children}</div>
+      <h2 className="mt-4 font-serif text-3xl tracking-tight text-foreground sm:text-4xl">
+        {title}
+      </h2>
+      <div className="mt-5 space-y-4 text-[15px] leading-relaxed text-muted-foreground">
+        {children}
+      </div>
     </section>
   )
 }
 
-function Feature({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
+function Feature({
+  icon,
+  title,
+  children,
+}: {
+  icon: React.ReactNode
+  title: string
+  children: React.ReactNode
+}) {
   return (
     <div className="rounded-2xl border border-border bg-card/60 p-5">
-      <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">{icon}</div>
+      <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        {icon}
+      </div>
       <h3 className="mt-3 text-sm font-semibold text-foreground">{title}</h3>
       <p className="mt-1.5 text-sm text-muted-foreground">{children}</p>
     </div>
@@ -117,8 +146,8 @@ export default function DocsPage() {
             Everything Yomi does, <span className="font-serif italic text-primary">today</span>.
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
-            A complete, honest map of what&apos;s shipped: the desktop assistant, the Telegram bot, every app
-            connector, memory, voice, and how plans and credits work.
+            A complete, honest map of what&apos;s shipped: the desktop assistant, the Telegram bot,
+            every app connector, memory, voice, and how plans and credits work.
           </p>
         </div>
       </header>
@@ -143,24 +172,42 @@ export default function DocsPage() {
         <main className="min-w-0">
           <Section id="overview" eyebrow="Overview" title="What Yomi is">
             <p>
-              Yomi is an AI assistant that runs in your Windows system tray. It can <strong className="text-foreground">see your screen</strong>,{" "}
-              <strong className="text-foreground">hear your voice</strong>, and <strong className="text-foreground">act across your apps</strong>,
-              so you can ask questions about your work in plain language instead of switching windows and copy-pasting.
+              Yomi is an AI assistant that runs in your Windows system tray. It can{" "}
+              <strong className="text-foreground">see your screen</strong>,{" "}
+              <strong className="text-foreground">hear your voice</strong>, and{" "}
+              <strong className="text-foreground">act across your apps</strong>, so you can ask
+              questions about your work in plain language instead of switching windows and
+              copy-pasting.
             </p>
             <p>
-              You reach Yomi two ways: the <a className="text-primary hover:underline" href="#desktop">desktop overlay</a> on your
-              PC, and the <a className="text-primary hover:underline" href="#telegram">Telegram bot</a> when you&apos;re away from it. Both share
-              the same memory and connected apps.
+              You reach Yomi two ways: the{" "}
+              <a className="text-primary hover:underline" href="#desktop">
+                desktop overlay
+              </a>{" "}
+              on your PC, and the{" "}
+              <a className="text-primary hover:underline" href="#telegram">
+                Telegram bot
+              </a>{" "}
+              when you&apos;re away from it. Both share the same memory and connected apps.
             </p>
           </Section>
 
           <Section id="getting-started" eyebrow="Setup" title="Getting started">
             <ol className="space-y-3">
               {[
-                ["Download for Windows", "Grab the installer and launch Yomi. It lives in your system tray."],
+                [
+                  "Download for Windows",
+                  "Grab the installer and launch Yomi. It lives in your system tray.",
+                ],
                 ["Sign in", "Continue with Google or GitHub. No password to manage."],
-                ["Connect your apps", "Link Gmail, Calendar, Drive and others from the dashboard with one click each."],
-                ["Link Telegram (optional)", "Use the dashboard's secure link flow to chat with Yomi from your phone."],
+                [
+                  "Connect your apps",
+                  "Link Gmail, Calendar, Drive and others from the dashboard with one click each.",
+                ],
+                [
+                  "Link Telegram (optional)",
+                  "Use the dashboard's secure link flow to chat with Yomi from your phone.",
+                ],
               ].map(([t, d], i) => (
                 <li key={t} className="flex gap-3">
                   <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
@@ -172,36 +219,39 @@ export default function DocsPage() {
                 </li>
               ))}
             </ol>
-            <p className="text-sm">
-              macOS is planned; Windows is available today.
-            </p>
+            <p className="text-sm">macOS is planned; Windows is available today.</p>
           </Section>
 
           <Section id="desktop" eyebrow="Desktop" title="The desktop assistant">
             <p>
-              Yomi sits quietly in your tray and appears as a floating overlay when you call it. It reads the
-              screen you point it at, so answers are grounded in what you&apos;re actually looking at.
+              Yomi sits quietly in your tray and appears as a floating overlay when you call it. It
+              reads the screen you point it at, so answers are grounded in what you&apos;re actually
+              looking at.
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               <Feature icon={<Monitor size={17} />} title="Screen-aware answers">
-                Ask about whatever&apos;s on screen, like a doc, an error, or a dashboard, and get a grounded answer.
+                Ask about whatever&apos;s on screen, like a doc, an error, or a dashboard, and get a
+                grounded answer.
               </Feature>
               <Feature icon={<Keyboard size={17} />} title="Voice & text hotkeys">
-                Trigger Yomi by hotkey, then type or speak. A fast path replies in about two seconds.
+                Trigger Yomi by hotkey, then type or speak. A fast path replies in about two
+                seconds.
               </Feature>
               <Feature icon={<ShieldCheck size={17} />} title="Visible capture states">
                 You always see when Yomi is capturing the screen, so nothing happens silently.
               </Feature>
               <Feature icon={<Sparkles size={17} />} title="Two routing paths">
-                Simple questions take the quick path; anything needing your apps runs the full agent.
+                Simple questions take the quick path; anything needing your apps runs the full
+                agent.
               </Feature>
             </div>
           </Section>
 
           <Section id="telegram" eyebrow="Messaging" title="Telegram bot">
             <p>
-              Connect Telegram from the dashboard&apos;s secure link flow, then message Yomi like any chat. It handles
-              text, <strong className="text-foreground">voice notes</strong> (transcribed automatically), and{" "}
+              Connect Telegram from the dashboard&apos;s secure link flow, then message Yomi like
+              any chat. It handles text, <strong className="text-foreground">voice notes</strong>{" "}
+              (transcribed automatically), and{" "}
               <strong className="text-foreground">images/screenshots</strong> for analysis.
             </p>
             <div className="overflow-hidden rounded-2xl border border-border">
@@ -220,12 +270,15 @@ export default function DocsPage() {
 
           <Section id="connectors" eyebrow="Integrations" title="App connectors">
             <p>
-              Connect the tools you already use. Yomi requests OAuth access (or an API key) and only acts
-              when you ask. Connect and manage them from your dashboard.
+              Connect the tools you already use. Yomi requests OAuth access (or an API key) and only
+              acts when you ask. Connect and manage them from your dashboard.
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               {CONNECTORS.map((c) => (
-                <div key={c.id} className="flex items-start gap-3 rounded-xl border border-border bg-card/60 p-4">
+                <div
+                  key={c.id}
+                  className="flex items-start gap-3 rounded-xl border border-border bg-card/60 p-4"
+                >
                   <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/60">
                     <ConnectorIcon id={c.id} size={20} />
                   </span>
@@ -241,11 +294,12 @@ export default function DocsPage() {
           <Section id="memory" eyebrow="Context" title="Memory & knowledge">
             <div className="grid gap-3 sm:grid-cols-2">
               <Feature icon={<Brain size={17} />} title="Long-term memory">
-                Yomi remembers durable facts about you and your projects, so it doesn&apos;t ask the same thing twice.
-                Starting a new chat clears the conversation, never your memory.
+                Yomi remembers durable facts about you and your projects, so it doesn&apos;t ask the
+                same thing twice. Starting a new chat clears the conversation, never your memory.
               </Feature>
               <Feature icon={<CircleDot size={17} />} title="Your documents (RAG)">
-                Synced documents become searchable context, so answers can draw on your own material.
+                Synced documents become searchable context, so answers can draw on your own
+                material.
               </Feature>
             </div>
           </Section>
@@ -253,33 +307,54 @@ export default function DocsPage() {
           <Section id="voice-vision" eyebrow="Multimodal" title="Voice & vision">
             <div className="grid gap-3 sm:grid-cols-2">
               <Feature icon={<Mic size={17} />} title="Speak and listen">
-                Voice notes are transcribed, and Yomi can reply with a spoken voice message when you ask.
+                Voice notes are transcribed, and Yomi can reply with a spoken voice message when you
+                ask.
               </Feature>
               <Feature icon={<ImageIcon size={17} />} title="Image & screen analysis">
-                Send a screenshot or photo and Yomi describes, reads, or reasons about what&apos;s in it.
+                Send a screenshot or photo and Yomi describes, reads, or reasons about what&apos;s
+                in it.
               </Feature>
             </div>
           </Section>
 
           <Section id="approvals" eyebrow="Control" title="Approvals & safety">
             <p>
-              Actions that send or change things, like sending an email, pause for your approval first. Review the
-              preview, then approve or deny (on Telegram, use <span className="font-mono text-primary">/approve</span> and{" "}
-              <span className="font-mono text-primary">/deny</span>). Yomi never sends on your behalf without a confirmation.
+              Actions that send or change things, like sending an email, pause for your approval
+              first. Review the preview, then approve or deny (on Telegram, use{" "}
+              <span className="font-mono text-primary">/approve</span> and{" "}
+              <span className="font-mono text-primary">/deny</span>). Yomi never sends on your
+              behalf without a confirmation.
             </p>
           </Section>
 
           <Section id="plans" eyebrow="Billing" title="Plans & credits">
             <p>
-              Every interaction draws from a single credit balance. Each plan includes a monthly credit allowance,
-              and your dashboard shows remaining credits, recent activity, and the next reset date. When you run
-              out, Explore upgrades to a paid plan and Pro/Max can top up with credit packs.
+              Every interaction draws from a single credit balance. Each plan includes a monthly
+              credit allowance, and your dashboard shows remaining credits, recent activity, and the
+              next reset date. When you run out, Explore upgrades to a paid plan and Pro/Max can top
+              up with credit packs.
             </p>
             <div className="grid gap-4 sm:grid-cols-3">
               {[
-                { name: "Explore", price: "Free", credits: "100 credits", note: "30-day trial to try everything." },
-                { name: "Pro", price: "$14.99/mo", credits: "2,500 credits", note: "Higher limits + credit packs.", featured: true },
-                { name: "Max", price: "$39.99/mo", credits: "10,000 credits", note: "Highest limits for heavy use." },
+                {
+                  name: "Explore",
+                  price: "Free",
+                  credits: "100 credits",
+                  note: "30-day trial to try everything.",
+                },
+                {
+                  name: "Pro",
+                  price: "$14.99/mo",
+                  credits: "2,500 credits",
+                  note: "Higher limits + credit packs.",
+                  featured: true,
+                },
+                {
+                  name: "Max",
+                  price: "$39.99/mo",
+                  credits: "10,000 credits",
+                  note: "Highest limits for heavy use.",
+                },
               ].map((p) => (
                 <div
                   key={p.name}
@@ -299,7 +374,8 @@ export default function DocsPage() {
               ))}
             </div>
             <p className="text-sm">
-              Credits abstract away the underlying model, voice, vision, memory, and connector costs so Yomi can improve routing without changing the dashboard experience.
+              Credits abstract away the underlying model, voice, vision, memory, and connector costs
+              so Yomi can improve routing without changing the dashboard experience.
             </p>
           </Section>
 
@@ -323,8 +399,14 @@ export default function DocsPage() {
             <Send size={18} className="text-primary" />
             <p className="text-sm text-muted-foreground">
               Ready to try it?{" "}
-              <Link href="/signup" className="font-medium text-primary hover:underline">Create your account</Link> or{" "}
-              <Link href="/download" className="font-medium text-primary hover:underline">download for Windows</Link>.
+              <Link href="/signup" className="font-medium text-primary hover:underline">
+                Create your account
+              </Link>{" "}
+              or{" "}
+              <Link href="/download" className="font-medium text-primary hover:underline">
+                download for Windows
+              </Link>
+              .
             </p>
           </div>
         </main>

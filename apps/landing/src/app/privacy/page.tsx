@@ -23,10 +23,10 @@ export default function PrivacyPage() {
             <Section title="Overview">
               <p>
                 Yomi is an AI assistant that sees your screen, hears your voice, and connects to
-                your apps: Gmail, Google Calendar, Google Drive, GitHub, Notion, Slack, Linear,
-                and others. It is designed to be private by default: data from your connected apps
-                is used only to answer your direct queries and is not stored, shared, or used to
-                train AI models.
+                your apps: Gmail, Google Calendar, Google Drive, GitHub, Notion, Slack, Linear, and
+                others. It is designed to be private by default: data from your connected apps is
+                used only to answer your direct queries and is not stored, shared, or used to train
+                AI models.
               </p>
             </Section>
 
@@ -48,18 +48,18 @@ export default function PrivacyPage() {
                   <strong className="text-label">Gmail</strong> (
                   <code className="text-sky-100/70">gmail.readonly</code>,{" "}
                   <code className="text-sky-100/70">gmail.modify</code>,{" "}
-                  <code className="text-sky-100/70">gmail.send</code>) to read, search, and
-                  send emails when you ask Yomi a question about your inbox.
+                  <code className="text-sky-100/70">gmail.send</code>) to read, search, and send
+                  emails when you ask Yomi a question about your inbox.
                 </li>
                 <li>
                   <strong className="text-label">Google Calendar</strong> (
-                  <code className="text-sky-100/70">calendar.readonly</code>) to answer
-                  schedule queries such as &ldquo;What&apos;s on my calendar today?&rdquo;
+                  <code className="text-sky-100/70">calendar.readonly</code>) to answer schedule
+                  queries such as &ldquo;What&apos;s on my calendar today?&rdquo;
                 </li>
                 <li>
                   <strong className="text-label">Google Drive</strong> (
-                  <code className="text-sky-100/70">drive.file</code>) to list and read files
-                  you have chosen to share with Yomi.
+                  <code className="text-sky-100/70">drive.file</code>) to list and read files you
+                  have chosen to share with Yomi.
                 </li>
               </ul>
               <p>
@@ -141,8 +141,8 @@ export default function PrivacyPage() {
                 </li>
                 <li>
                   <strong className="text-label">AI Credits / OpenAI-compatible API</strong>: LLM
-                  inference via our proxy. Query content (including excerpts from connected apps)
-                  is sent to the LLM provider only to generate a response and is subject to their
+                  inference via our proxy. Query content (including excerpts from connected apps) is
+                  sent to the LLM provider only to generate a response and is subject to their
                   privacy policy. We do not enable training data use.
                 </li>
                 <li>
