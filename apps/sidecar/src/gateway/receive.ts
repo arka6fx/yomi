@@ -5,6 +5,7 @@ import { agentPipeline } from "../pipeline/agent.js"
 import { initConnectorRegistry } from "../connectors/registry.js"
 import { reserveInteraction } from "../usage/reserve.js"
 import { extractText } from "../tools/documents.js"
+import { getConversationState } from "../conversation/conversation-state.js"
 
 type AgentDriver = (
   req: AgentQueryRequest,
@@ -110,6 +111,17 @@ export async function handleGatewayMessage(msg: GatewayMessage): Promise<void> {
           ? `[Document: ${docName}]\n${preview}\n\n---\n${currentText}`
           : `[Document: ${docName}]\n${preview}`
         msg = { ...msg, text: updatedText }
+        getConversationState(chatKey(msg)).registerEntity({
+          type: "uploaded_file",
+          title: docName,
+          summary: `Uploaded document (${result.text.length} chars extracted)`,
+          metadata: {
+            url: msg.documentUrl,
+            mimeType: msg.documentMimeType,
+            filename: docName,
+            extractedText: preview,
+          },
+        })
       }
     } catch (err) {
       console.warn("[gateway] sidecar document parse error:", err)
@@ -168,6 +180,7 @@ export async function handleGatewayMessage(msg: GatewayMessage): Promise<void> {
       plan: "max",
       history,
       skipReserve: true,
+      conversationId: chatKey(msg),
     })) {
       if (event.type === "llm_chunk") chunks.push(event.text)
       if (event.type === "error") chunks.push(event.message)
@@ -177,7 +190,13 @@ export async function handleGatewayMessage(msg: GatewayMessage): Promise<void> {
   } else {
     const driver = await getAgentDriver()
     const chunks: string[] = []
-    for await (const event of driver({ text, plan: "max", history, skipReserve: true })) {
+    for await (const event of driver({
+      text,
+      plan: "max",
+      history,
+      skipReserve: true,
+      conversationId: chatKey(msg),
+    })) {
       if (event.type === "agent_text") chunks.push(event.text)
       if (event.type === "error") chunks.push(event.message)
       if (event.type === "usage_limit") chunks.push(event.message)
