@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from "bun:test"
+import { describe, expect, it, beforeEach, afterAll } from "bun:test"
 import { rmSync } from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
@@ -28,6 +28,16 @@ describe("success-criteria conversation flow", () => {
       // ignore — file may not exist yet
     }
     setActiveConversation(KEY)
+  })
+
+  // This suite writes to the real ~/.yomi/state/ dir (production's own path) —
+  // don't leave the test's state file behind after the suite finishes.
+  afterAll(() => {
+    try {
+      rmSync(stateFile)
+    } catch {
+      // ignore — file may not exist yet
+    }
   })
 
   it("create -> approve -> active entity -> survives restart", async () => {
