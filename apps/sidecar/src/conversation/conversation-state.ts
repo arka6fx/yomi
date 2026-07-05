@@ -7,6 +7,10 @@ import { inferWorkspace, isDocumentRequest } from "./workspace-mapper.js"
 import { isApprovalOrRejection } from "./types.js"
 import { loadStateFromDisk, saveStateToDisk } from "./persistence.js"
 
+const PERSIST_DEBOUNCE_MS = 400
+// Keyed by persistKey — coalesces rapid persist() calls into a single disk write.
+const _pendingSaves = new Map<string, ReturnType<typeof setTimeout>>()
+
 export class ConversationState {
   entityStore: EntityStore
   pendingActions: PendingActionManager
@@ -22,7 +26,24 @@ export class ConversationState {
   }
 
   persist(): void {
-    if (this.persistKey) saveStateToDisk(this.persistKey, this)
+    if (!this.persistKey) return
+    const key = this.persistKey
+    clearPendingSave(key)
+    _pendingSaves.set(
+      key,
+      setTimeout(() => {
+        _pendingSaves.delete(key)
+        saveStateToDisk(key, this)
+      }, PERSIST_DEBOUNCE_MS),
+    )
+  }
+
+  // Test/shutdown helper: flush a pending debounced save immediately, synchronously.
+  flushPendingSave(): void {
+    if (!this.persistKey) return
+    if (!_pendingSaves.has(this.persistKey)) return
+    clearPendingSave(this.persistKey)
+    saveStateToDisk(this.persistKey, this)
   }
 
   addTurn(turn: ConversationTurn): void {
@@ -143,6 +164,17 @@ export function getConversationState(key = "desktop"): ConversationState {
 }
 
 export function resetConversationState(key?: string): void {
-  if (key) _instances.delete(key)
-  else _instances.clear()
+  if (key) {
+    _instances.delete(key)
+    clearPendingSave(key)
+  } else {
+    _instances.clear()
+    for (const key of [..._pendingSaves.keys()]) clearPendingSave(key)
+  }
+}
+
+function clearPendingSave(key: string): void {
+  const existing = _pendingSaves.get(key)
+  if (existing) clearTimeout(existing)
+  _pendingSaves.delete(key)
 }

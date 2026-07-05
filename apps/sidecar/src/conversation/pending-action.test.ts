@@ -206,4 +206,52 @@ describe("PendingActionManager", () => {
     expect(b.id).toBe(a.id)
     expect(manager.listPending()).toHaveLength(1)
   })
+
+  it("prunes terminal actions older than the retention window", () => {
+    const action = manager.create({
+      type: "github.create_file",
+      title: "Old completed action",
+      description: "",
+      toolName: "t1",
+      toolArguments: {},
+      conversationSummary: "",
+    })
+    manager.complete(action.id, { ok: true })
+    // Backdate createdAt past the 1h terminal retention window.
+    action.createdAt = new Date(Date.now() - 61 * 60 * 1000)
+
+    manager.create({
+      type: "github.create_file",
+      title: "Fresh action",
+      description: "",
+      toolName: "t2",
+      toolArguments: {},
+      conversationSummary: "",
+    })
+
+    expect(manager.listAll().find((a) => a.id === action.id)).toBeUndefined()
+  })
+
+  it("keeps terminal actions within the retention window", () => {
+    const action = manager.create({
+      type: "github.create_file",
+      title: "Recently completed action",
+      description: "",
+      toolName: "t1",
+      toolArguments: {},
+      conversationSummary: "",
+    })
+    manager.complete(action.id, { ok: true })
+
+    manager.create({
+      type: "github.create_file",
+      title: "Fresh action",
+      description: "",
+      toolName: "t2",
+      toolArguments: {},
+      conversationSummary: "",
+    })
+
+    expect(manager.listAll().find((a) => a.id === action.id)).toBeDefined()
+  })
 })
