@@ -1,8 +1,7 @@
 import type { PendingAction, PendingActionType, PendingActionStatus } from "./types.js"
 
-let _nextId = 0
 function nextId(): string {
-  return `pa_${++_nextId}`
+  return `pa_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
 }
 
 export class PendingActionManager {
@@ -18,6 +17,12 @@ export class PendingActionManager {
     conversationSummary: string
     approvalRequired?: boolean
   }): PendingAction {
+    this.pruneExpired()
+    const existing = this.actions.find(
+      (a) => a.status === "pending" && a.toolName === input.toolName,
+    )
+    if (existing) return existing
+
     const action: PendingAction = {
       id: nextId(),
       createdAt: new Date(),
@@ -105,6 +110,14 @@ export class PendingActionManager {
     const latest = this.getLatest()
     if (!latest) return undefined
     return { toolName: latest.toolName, args: latest.toolArguments }
+  }
+
+  snapshot(): PendingAction[] {
+    return [...this.actions]
+  }
+
+  restore(actions: PendingAction[]): void {
+    this.actions = actions
   }
 
   private pruneExpired(): void {
