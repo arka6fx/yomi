@@ -4,6 +4,7 @@ import { getConversationState } from "./conversation-state.js"
 import { isApprovalOrRejection } from "./types.js"
 import { hooks } from "../harness/hooks.js"
 import { getConnectorRegistry } from "../connectors/registry.js"
+import { setActiveConversation } from "./active-conversation.js"
 
 export interface ApprovalDeps {
   replayTool?: (toolName: string, args: Record<string, unknown>) => Promise<unknown>
@@ -48,6 +49,18 @@ async function replayConnectorTool(
   throw new Error(`No executor for tool ${toolName}`)
 }
 
+// Connector tools mostly don't throw — they return soft errors as either
+// { error: "..." } or { ok: false, ... } (confirmed across github/gmail/slack/
+// linear/notion defs). Treat both as failure so we don't report "Done" for
+// something that didn't happen.
+function isSoftError(result: unknown): string | null {
+  if (!result || typeof result !== "object") return null
+  const r = result as Record<string, unknown>
+  if (typeof r.error === "string" && r.error) return r.error
+  if (r.ok === false) return (r.message as string) || "the connector reported failure"
+  return null
+}
+
 function formatResult(toolName: string, title: string, result: unknown): string {
   const r = (result && typeof result === "object" ? result : {}) as Record<string, unknown>
   const lines: string[] = [`Done: ${title}`]
@@ -70,6 +83,10 @@ export async function handleApprovalTurn(
   key: string,
   deps?: ApprovalDeps,
 ): Promise<SseEvent[] | null> {
+  // Correct the process-global active-conversation here (not at each call
+  // site) so replay's entity registration always lands in this turn's
+  // conversation, even if another turn (e.g. Telegram) raced it in between.
+  setActiveConversation(key)
   const decision = isApprovalOrRejection(text)
   if (!decision) return null
 
@@ -94,10 +111,22 @@ export async function handleApprovalTurn(
     if (!pre.ok) throw new Error(pre.reason ?? "blocked by guardrail")
     const raw = await replay(pending.toolName, pending.toolArguments)
     const result = await hooks.onPostToolUse(pending.toolName, raw, pending.toolArguments)
-    state.pendingActions.complete(pending.id, result)
-    state.persist()
-    events.push({ type: "agent_tool_result", tool: pending.toolName, result })
-    events.push({ type: "agent_text", text: formatResult(pending.toolName, pending.title, result) })
+    const softError = isSoftError(result)
+    if (softError) {
+      state.pendingActions.fail(pending.id, softError)
+      state.persist()
+      events.push({ type: "agent_tool_result", tool: pending.toolName, result })
+      events.push({ type: "agent_text", text: `Approved, but execution failed: ${softError}` })
+      events.push({ type: "error", message: softError })
+    } else {
+      state.pendingActions.complete(pending.id, result)
+      state.persist()
+      events.push({ type: "agent_tool_result", tool: pending.toolName, result })
+      events.push({
+        type: "agent_text",
+        text: formatResult(pending.toolName, pending.title, result),
+      })
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     state.pendingActions.fail(pending.id, message)
