@@ -147,6 +147,20 @@ app.post("/query", async (c) => {
       return
     }
 
+    const { handleApprovalTurn } = await import("./conversation/approval-executor.js")
+    const approvalEvents = await handleApprovalTurn(text, body.conversationId ?? "desktop")
+    if (approvalEvents) {
+      try {
+        logUsageEvent({ kind: "agent_run" })
+      } catch {
+        // best-effort
+      }
+      for (const e of approvalEvents) {
+        await stream.writeSSE({ data: JSON.stringify(e) })
+      }
+      return
+    }
+
     let decision: IntentClassification
     try {
       decision = await classifyIntent({
@@ -277,6 +291,20 @@ app.post("/query/agent", async (c) => {
   if (!body.text?.trim()) return c.json({ error: "text field is required" }, 400)
 
   return streamSSE(c, async (stream) => {
+    const { handleApprovalTurn } = await import("./conversation/approval-executor.js")
+    const approvalEvents = await handleApprovalTurn(body.text, body.conversationId ?? "desktop")
+    if (approvalEvents) {
+      try {
+        logUsageEvent({ kind: "agent_run" })
+      } catch {
+        // best-effort
+      }
+      for (const e of approvalEvents) {
+        await stream.writeSSE({ data: JSON.stringify(e) })
+      }
+      return
+    }
+
     try {
       logUsageEvent({ kind: "agent_run" })
     } catch (err) {

@@ -122,6 +122,7 @@ export interface FastQueryRequest {
   plan?: Plan // controls local-only memory injection/writes
   history?: { role: "user" | "assistant"; text: string }[]
   skipReserve?: boolean // when true, the pipeline skips its own reserveInteraction("chat") call
+  conversationId?: string // scopes conversation state; defaults to "desktop"
 }
 
 export interface AgentQueryRequest {
@@ -132,6 +133,7 @@ export interface AgentQueryRequest {
   plan?: Plan // controls local-only memory injection/writes
   history?: { role: "user" | "assistant"; text: string }[] // prior turns for the conversational act loop
   skipReserve?: boolean // when true, the pipeline skips its own reserveInteraction("chat") call
+  conversationId?: string // scopes conversation state; defaults to "desktop"
 }
 
 export interface CloudRagSnippet {
