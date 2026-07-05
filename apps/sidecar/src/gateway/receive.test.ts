@@ -1,4 +1,5 @@
 import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test"
+import { getConversationState, resetConversationState } from "../conversation/conversation-state.js"
 
 let reserveCalls: { kind: string }[] = []
 let reserveResult: { ok: boolean; error?: string; code?: string; upgradeUrl?: string } = {
@@ -16,6 +17,16 @@ let agentChunks: string[] = []
 let agentExtraEvents: { type: string; message?: string }[] = []
 
 let connectorInitCalls: string[] = []
+
+let extractTextResult: { text?: string; error?: string } = { text: "" }
+let extractTextCalls: { url: string; mime?: string }[] = []
+
+mock.module("../tools/documents.js", () => ({
+  extractText: async (url: string, mime?: string) => {
+    extractTextCalls.push({ url, mime })
+    return extractTextResult
+  },
+}))
 
 const originalFetch = globalThis.fetch
 let fetchCalls: { url: string; method: string; body?: string }[] = []
@@ -113,6 +124,9 @@ beforeEach(() => {
   agentChunks = ["Here's what I found in Notion..."]
   agentExtraEvents = []
   connectorInitCalls = []
+  extractTextResult = { text: "" }
+  extractTextCalls = []
+  resetConversationState()
   fetchCalls = []
   globalThis.fetch = async (url: string, opts?: RequestInit) => {
     fetchCalls.push({
@@ -402,5 +416,48 @@ describe("handleGatewayMessage", () => {
     await handleGatewayMessage(sampleMsg)
     const sendCalls = fetchCalls.filter((c) => c.url.includes("/api/gateway/send"))
     expect(sendCalls.length).toBe(0)
+  })
+
+  // ── Conversation identity + uploaded documents ────────────────────────────
+
+  it("passes conversationId scoped to platform:chatId to fast pipeline", async () => {
+    await handleGatewayMessage(sampleMsg)
+    const arg = fastCallArgs[0] as Record<string, unknown>
+    expect(arg.conversationId).toBe("telegram:-100123456")
+  })
+
+  it("passes conversationId scoped to platform:chatId to agent pipeline", async () => {
+    classifyResult = { path: "agent", confidence: 0.9, reason: "complex", source: "llm" }
+    await handleGatewayMessage(sampleMsg)
+    const arg = agentCallArgs[0] as Record<string, unknown>
+    expect(arg.conversationId).toBe("telegram:-100123456")
+  })
+
+  it("registers an uploaded_file entity when a document arrives", async () => {
+    extractTextResult = { text: "PDF CONTENT" }
+    await handleGatewayMessage({
+      ...sampleMsg,
+      chatId: "99",
+      text: "",
+      documentUrl: "https://example.com/obc.pdf",
+      documentFileName: "obc.pdf",
+      documentMimeType: "application/pdf",
+    })
+    const state = getConversationState("telegram:99")
+    expect(state.entityStore.getActiveContext().currentUploadedFile?.filename).toBe("obc.pdf")
+  })
+
+  it("does not register an entity when the document has no extractable text", async () => {
+    extractTextResult = { error: "PDF parsing returned no text" }
+    await handleGatewayMessage({
+      ...sampleMsg,
+      chatId: "100",
+      text: "",
+      documentUrl: "https://example.com/empty.pdf",
+      documentFileName: "empty.pdf",
+      documentMimeType: "application/pdf",
+    })
+    const state = getConversationState("telegram:100")
+    expect(state.entityStore.getActiveContext().currentUploadedFile).toBeUndefined()
   })
 })
