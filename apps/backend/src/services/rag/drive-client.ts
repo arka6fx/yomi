@@ -18,6 +18,7 @@ export interface DriveClient {
     userId: string,
     folderId: string,
     pageToken?: string,
+    pageSize?: number,
   ): Promise<{ files: DriveFile[]; nextPageToken?: string }>
   fetchContent(
     userId: string,
@@ -59,10 +60,10 @@ export function makeDriveClient(fetchImpl: FetchFn = fetch): DriveClient {
   }
 
   return {
-    async listFolderChildren(userId, folderId, pageToken) {
+    async listFolderChildren(userId, folderId, pageToken, pageSize) {
       const params = new URLSearchParams({
         q: `'${folderId}' in parents and trashed = false`,
-        pageSize: "100",
+        pageSize: String(pageSize ?? 100),
         fields: `nextPageToken, files(${FILE_FIELDS})`,
       })
       if (pageToken) params.set("pageToken", pageToken)
