@@ -537,11 +537,7 @@ function DashboardContent() {
     usageSummary?.credits.totalAvailableThisPeriod ?? sub?.totalCredits ?? creditRemaining
   const creditIncluded =
     usageSummary?.credits.included ??
-    Number(
-      PLANS.find((p) => p.key === currentPlanKey)
-        ?.features[0]?.match(/[\d,]+/)?.[0]
-        ?.replace(/,/g, "") ?? 0,
-    )
+    ({ explore: 100, pro: 2500, max: 10000 } as Record<string, number>)[currentPlanKey] ?? 0
   const resetAt = usageSummary?.credits.resetAt ?? sub?.resetAt
   const trendDays = usageSummary?.monthlyUsage.days.slice(-14) ?? []
   const trendMax = Math.max(...trendDays.map((d) => d.credits), 1)
