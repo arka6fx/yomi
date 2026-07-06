@@ -74,7 +74,6 @@ export function ConversationManager({ token }: { token: string }) {
           <button
             onClick={handleReset}
             disabled={resetting}
-            onMouseLeave={() => setConfirmReset(false)}
             className="flex shrink-0 items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-destructive/40 hover:text-destructive disabled:opacity-50"
           >
             {resetting ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
