@@ -1,10 +1,17 @@
 import { describe, expect, it, mock, beforeEach } from "bun:test"
 
-const state: { sources: any[]; indexed: string[]; deleted: string[]; deletedDocSourceIds: string[] } = {
+const state: {
+  sources: any[]
+  indexed: string[]
+  deleted: string[]
+  deletedDocSourceIds: string[]
+  knownDocs: any[]
+} = {
   sources: [],
   indexed: [],
   deleted: [],
   deletedDocSourceIds: [],
+  knownDocs: [],
 }
 
 mock.module("@yomi/db", () => {
@@ -28,9 +35,10 @@ mock.module("@yomi/db", () => {
         where: () => {
           // Awaitable directly (loadKnownExternalIds does `.where()` with no `.limit()`),
           // but also chainable via `.limit()` for callers that do (unused here since
-          // index-document.js is mocked out in this test).
-          const p: any = Promise.resolve([])
-          p.limit = () => Promise.resolve([])
+          // index-document.js is mocked out in this test). Resolves state.knownDocs so
+          // tests can seed already-indexed externalIds.
+          const p: any = Promise.resolve(state.knownDocs)
+          p.limit = () => Promise.resolve(state.knownDocs)
           return p
         },
       }),
@@ -67,7 +75,7 @@ function client(overrides: any = {}) {
   }
 }
 
-beforeEach(() => { state.sources = []; state.indexed = []; state.deleted = []; state.deletedDocSourceIds = [] })
+beforeEach(() => { state.sources = []; state.indexed = []; state.deleted = []; state.deletedDocSourceIds = []; state.knownDocs = [] })
 
 describe("drive-sync", () => {
   it("captures a start page token when creating a source", async () => {
@@ -249,6 +257,32 @@ describe("drive-sync", () => {
       expect(state.sources[0].status).toBe("active")
       expect(state.sources[0].syncState.capped).toBe(true)
       expect(state.sources[0].syncState.backfillCursor).toBeNull()
+    } finally {
+      if (realCap === undefined) delete process.env["DRIVE_MAX_FILES_PER_SOURCE"]
+      else process.env["DRIVE_MAX_FILES_PER_SOURCE"] = realCap
+    }
+  })
+
+  it("caps newly indexed files in incremental sync but still updates known files", async () => {
+    const realCap = process.env["DRIVE_MAX_FILES_PER_SOURCE"]
+    process.env["DRIVE_MAX_FILES_PER_SOURCE"] = "1"
+    try {
+      state.knownDocs = [{ externalId: "known-file" }]
+      const src = { id: "src-1", userId: "u1", path: "folder-1", status: "active", syncState: { folderId: "folder-1", drivePageToken: "ptok-0", filesIndexed: 1, filesSkipped: 0 } }
+      state.sources.push(src)
+      const c = client({
+        listChanges: async () => ({
+          changes: [
+            { fileId: "new-file", removed: false, file: { id: "new-file", name: "N", mimeType: "text/plain", parents: ["folder-1"] } },
+            { fileId: "known-file", removed: false, file: { id: "known-file", name: "K", mimeType: "text/plain", parents: ["folder-1"] } },
+          ],
+          newStartPageToken: "ptok-2",
+        }),
+      })
+      await syncSource(src as any, c as any)
+      expect(state.indexed).not.toContain("new-file")
+      expect(state.indexed).toContain("known-file")
+      expect(state.sources[0].syncState.filesSkipped).toBe(1)
     } finally {
       if (realCap === undefined) delete process.env["DRIVE_MAX_FILES_PER_SOURCE"]
       else process.env["DRIVE_MAX_FILES_PER_SOURCE"] = realCap

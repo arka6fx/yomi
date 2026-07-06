@@ -24,6 +24,9 @@ export interface DriveSyncState {
   filesIndexed: number
   filesSkipped: number
   capped?: boolean
+  // Sweep lease: set when a tick claims this source, cleared by the sync's
+  // completion write. An overlapping cron tick skips sources leased recently.
+  syncingAt?: string
 }
 export interface SourceRow {
   id: string
@@ -177,6 +180,7 @@ async function incrementalStep(
   st: DriveSyncState,
   client: DriveClient,
 ): Promise<{ status: string; indexed: number; removed: number }> {
+  const cap = maxFilesPerSource()
   const knownIds = await loadKnownExternalIds(source.id)
   let token = st.drivePageToken ?? (await client.getStartPageToken(source.userId))
   let indexed = 0
@@ -199,10 +203,19 @@ async function incrementalStep(
         (change.file?.parents?.includes(st.folderId) ?? false)
       if (!inScope) continue
       if (change.file) {
+        // Cost guardrail extends to incremental sync: past the per-source cap,
+        // brand-new files are skipped; already-indexed files still re-index.
+        const isNew = !knownIds.has(change.fileId)
+        if (isNew && st.filesIndexed >= cap) {
+          st.filesSkipped++
+          st.capped = true
+          continue
+        }
         try {
           const ok = await extractAndIndex(client, source.userId, source.id, change.file)
           if (ok) {
             indexed++
+            if (isNew) st.filesIndexed++
             knownIds.add(change.fileId)
           }
         } catch (err) {
@@ -234,6 +247,9 @@ async function loadKnownExternalIds(sourceId: string): Promise<Set<string>> {
 }
 
 export const MAX_SOURCES_PER_SWEEP = 10
+// How long a sweep's claim on a source excludes it from later ticks. Bounds
+// double-processing when a tick runs long; a crashed tick self-heals after this.
+const SYNC_LEASE_MS = 5 * 60 * 1000
 
 // Sweeps due google-drive sources on the cron tick. `backfilling` sources are
 // always due (so an initial backfill completes promptly at one batch per
@@ -261,13 +277,24 @@ export async function runDriveSyncSweep(
       ),
     )
     .limit(MAX_SOURCES_PER_SWEEP)
+  const now = Date.now()
   let ran = 0
   for (const row of rows) {
+    const source = row as unknown as SourceRow
+    // Skip sources another (still-running) tick has leased recently — a
+    // backfill batch can outlive the 60s cron cadence.
+    const leasedAt = source.syncState?.syncingAt ? Date.parse(source.syncState.syncingAt) : NaN
+    if (Number.isFinite(leasedAt) && now - leasedAt < SYNC_LEASE_MS) continue
     try {
-      await run(row as unknown as SourceRow)
+      // Claim the lease before running; syncSource's completion write rebuilds
+      // syncState without syncingAt, which clears it.
+      await setSource(source.id, {
+        syncState: { ...(source.syncState ?? {}), syncingAt: new Date(now).toISOString() },
+      })
+      await run(source)
       ran++
     } catch (err) {
-      console.error(`[drive-sync] source ${(row as { id: string }).id} failed:`, err)
+      console.error(`[drive-sync] source ${source.id} failed:`, err)
     }
   }
   return { ran }
