@@ -74,6 +74,23 @@ declare global {
       >
       connectIntegration(id: string): Promise<{ ok?: boolean; error?: string; kind?: string }>
       disconnectIntegration(provider: string): Promise<{ ok?: boolean; error?: string }>
+      // RAG: Drive sources
+      getDriveSources(): Promise<{
+        sources?: {
+          id: string
+          name: string
+          folderId: string
+          status: string
+          syncState: { filesIndexed: number; filesSkipped: number; lastSyncedAt: string | null }
+        }[]
+        error?: string
+        code?: string
+      }>
+      createDriveSource(input: {
+        folderId: string
+        name?: string
+      }): Promise<{ id?: string; error?: string; code?: string }>
+      deleteDriveSource(id: string): Promise<{ ok?: boolean; error?: string; code?: string }>
       // Bot channels (Telegram)
       getBotConnections(): Promise<{ platform: string; connectedAt: string }[]>
       connectTelegramBot(): Promise<{ ok?: boolean; error?: string }>
