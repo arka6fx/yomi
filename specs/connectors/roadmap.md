@@ -1,6 +1,6 @@
 # Connector Tool Audit And Roadmap
 
-Last updated: 2026-07-04
+Last updated: 2026-07-07
 
 ## Implementation status
 
@@ -10,15 +10,15 @@ only a placeholder.
 
 | Connector        | Implemented tool count | Runtime notes                                                                |
 | ---------------- | ---------------------: | ---------------------------------------------------------------------------- |
-| Google Gmail     |                     14 | Real Gmail API-backed tools through `GoogleGmailConnector`.                  |
-| Google Calendar  |                      8 | Real Calendar API-backed tools, including Google Meet creation.              |
-| Google Drive     |                     10 | Real Drive API-backed tools, including file export/read and folder creation. |
-| Google Classroom |                      4 | Real Classroom API-backed read-only tools.                                   |
-| GitHub           |                     20 | Real GitHub REST API-backed tools, including account notifications.          |
-| Notion           |                     10 | Real Notion API-backed tools with database schema discovery.                 |
-| Slack            |                      7 | Real Slack API-backed tools including channel history threads.               |
-| Linear OAuth     |                     10 | Real Linear GraphQL API-backed tools with states and cycles.                 |
-| Linear API Key   |                     10 | Same tool surface as Linear OAuth.                                           |
+| Google Gmail     |                     18 | Real Gmail API-backed tools through `GoogleGmailConnector`.                  |
+| Google Calendar  |                     10 | Real Calendar API-backed tools, including Google Meet creation.              |
+| Google Drive     |                     13 | Real Drive API-backed tools, including file export/read/convert and folders. |
+| Google Classroom |                      6 | Real Classroom API-backed tools; gated writes for attach + turn-in.          |
+| GitHub           |                     23 | Real GitHub REST API-backed tools, including account notifications.          |
+| Notion           |                     12 | Real Notion API-backed tools with database schema discovery.                 |
+| Slack            |                      9 | Real Slack API-backed tools including channel history threads.               |
+| Linear OAuth     |                     12 | Real Linear GraphQL API-backed tools with states and cycles.                 |
+| Linear API Key   |                     12 | Same tool surface as Linear OAuth.                                           |
 
 ## Safety — all write/irreversible tools gated
 
@@ -90,10 +90,11 @@ lower-urgency or require additional scopes.
 
 | Tool                      | Type         | Notes                                                    |
 | ------------------------- | ------------ | -------------------------------------------------------- |
-| `drive-copyFile`          | Write        | Duplicate files into optional folder.                    |
 | `drive-updateFileContent` | Write        | Replace/upload content for non-Google binary/text files. |
 | `drive-emptyTrash`        | Irreversible | Only with explicit confirmation.                         |
-| `drive-listPermissions`   | Read         | Show who has access before changing sharing.             |
+
+(`drive-copyFile` and `drive-listPermissions` shipped and moved to the
+implemented set above.)
 
 ### Google Classroom
 
@@ -105,8 +106,11 @@ lower-urgency or require additional scopes.
 | `classroom-listClassmates`            | Read | Only if scopes and school policy allow it.  |
 | `classroom-listSubmissionAttachments` | Read | Helps users inspect what submitted.         |
 
-Do not add turn-in or attach-submission tools unless Google API policy and
-scopes clearly allow the action for the target account type.
+Turn-in and attach-submission tools shipped as `classroom-turnIn` and
+`classroom-modifyAttachments` (both `gateWrite`-gated, using the
+`classroom.coursework.me` scope, which permits these actions for the student's
+own submissions). Note the Classroom API remains limited on personal Gmail
+accounts — full access needs a Workspace for Education account.
 
 ### GitHub
 

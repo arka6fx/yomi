@@ -14,7 +14,7 @@ are registered through `packages/agent-core/src/connectors/all-defs.ts`.
 | Google Gmail     | `google`           | `google-gmail.md`     | Implemented                             |
 | Google Calendar  | `google-calendar`  | `google-calendar.md`  | Implemented                             |
 | Google Drive     | `google-drive`     | `google-drive.md`     | Implemented                             |
-| Google Classroom | `google-classroom` | `google-classroom.md` | Implemented, read-only                  |
+| Google Classroom | `google-classroom` | `google-classroom.md` | Implemented, read-write (gated writes)  |
 | GitHub           | `github`           | `github.md`           | Implemented                             |
 | Notion           | `notion`           | `notion.md`           | Implemented                             |
 | Slack            | `slack`            | `slack.md`            | Implemented                             |
