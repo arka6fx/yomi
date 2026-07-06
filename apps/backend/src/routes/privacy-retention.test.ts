@@ -117,6 +117,30 @@ describe("retention routes", () => {
     expect(tooLong.status).toBe(400)
   })
 
+  it("PATCH /retention rejects a missing overrides object", async () => {
+    const res = await req("/retention", {
+      method: "PATCH",
+      body: JSON.stringify({}),
+    })
+    expect(res.status).toBe(400)
+  })
+
+  it("PATCH /retention rejects a non-overridable domain", async () => {
+    const res = await req("/retention", {
+      method: "PATCH",
+      body: JSON.stringify({ overrides: { usage_events: 10 } }),
+    })
+    expect(res.status).toBe(400)
+  })
+
+  it("PATCH /retention rejects a value below the minimum of 1", async () => {
+    const res = await req("/retention", {
+      method: "PATCH",
+      body: JSON.stringify({ overrides: { conversations: 0 } }),
+    })
+    expect(res.status).toBe(400)
+  })
+
   it("PATCH /retention stores a valid tightening override", async () => {
     const res = await req("/retention", {
       method: "PATCH",
