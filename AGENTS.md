@@ -96,7 +96,7 @@ CLOUD BACKEND  (Hono/Bun)
 - Core: filesystem r/w, bash (sandboxed), web search/fetch, cron, messaging,
   memory
 - Connectors: Gmail, Google Calendar, Google Drive, GitHub, Notion, Slack,
-  Linear, Postgres, MySQL, Discord — loaded from `ConnectorRegistry`
+  Linear — loaded from `ConnectorRegistry`
 
 **Hooks:** `PreToolUse` (block dangerous) · `PostToolUse` (log, trim tokens) ·
 `Stop` (flush scratchpad) · `SessionEnd` (compact memory.md)

@@ -341,23 +341,49 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
 
     "drive-createFile": tool({
       description:
-        "Create a new Google Doc with text content. Returns the new file ID and direct link. Use drive-convertFile to convert it to PDF, DOCX, or other formats.",
+        "Create a new Google Workspace file with text content. Returns the new file ID and direct link. Defaults to document if kind is not specified.",
       parameters: z.object({
-        name: z.string().describe("Name of the new document"),
-        content: z.string().describe("Plain text content for the document"),
+        name: z.string().describe("Name of the new file"),
+        content: z.string().describe("Plain text content. For docs it becomes the body; for sheets it goes into cell A1; for slides it appears as a text box on the first slide; for drawings it renders as SVG text; for appsScript it becomes the .gs source."),
+        kind: z
+          .enum(["document", "spreadsheet", "presentation", "drawing", "appsScript", "form", "sites", "jamboard"])
+          .optional()
+          .default("document")
+          .describe("Type of file to create: document (Google Doc), spreadsheet (Google Sheet), presentation (Google Slides), drawing (Google Drawing), appsScript (Google Apps Script), form (Google Form — limited use with plain text), sites (Google Site — needs structured data for full layout), jamboard (Google Jamboard — being deprecated by Google)"),
         folderId: z.string().optional().describe("Optional folder ID to create the file in"),
       }),
       execute: async (args) => {
-        const { name, content, folderId } = args
+        const { name, content, kind = "document", folderId } = args
+        const mimeMap: Record<string, string> = {
+          document: "application/vnd.google-apps.document",
+          spreadsheet: "application/vnd.google-apps.spreadsheet",
+          presentation: "application/vnd.google-apps.presentation",
+          drawing: "application/vnd.google-apps.drawing",
+          appsScript: "application/vnd.google-apps.script",
+          form: "application/vnd.google-apps.form",
+          sites: "application/vnd.google-apps.site",
+          jamboard: "application/vnd.google-apps.jam",
+        }
+        const mimeType = mimeMap[kind]
+        const kindLabel = {
+          document: "Google Doc",
+          spreadsheet: "Google Sheet",
+          presentation: "Google Slides",
+          drawing: "Google Drawing",
+          appsScript: "Google Apps Script",
+          form: "Google Form",
+          sites: "Google Site",
+          jamboard: "Google Jamboard",
+        }[kind]
         return gateWrite(
           ctx,
           {
             connector: "google-drive",
             action: "drive-createFile",
             risk: "write",
-            title: `Create Google Doc: ${name}`,
+            title: `Create ${kindLabel}: ${name}`,
             preview: `${name}\n\n${content.slice(0, 500)}`,
-            confirmText: "Create document",
+            confirmText: `Create ${kindLabel}`,
           },
           args,
           async () => {
@@ -366,7 +392,7 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
 
               const metadata: Record<string, unknown> = {
                 name,
-                mimeType: "application/vnd.google-apps.document",
+                mimeType,
               }
               if (folderId) metadata.parents = [folderId]
 
@@ -396,7 +422,7 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
               )
               if (!res.ok) throw new Error(`Create failed: ${res.status}: ${await res.text()}`)
               const file = (await res.json()) as { id: string; name: string; webViewLink: string }
-              return { id: file.id, name: file.name, link: file.webViewLink }
+              return { id: file.id, name: file.name, link: file.webViewLink, kind }
             } catch (err) {
               return connectorError(err)
             }

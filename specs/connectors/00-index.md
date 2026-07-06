@@ -9,17 +9,17 @@ are registered through `packages/agent-core/src/connectors/all-defs.ts`.
 
 ## Registered connectors
 
-| Connector        | Runtime id         | Spec                  | Status                                  |
-| ---------------- | ------------------ | --------------------- | --------------------------------------- |
-| Google Gmail     | `google`           | `google-gmail.md`     | Implemented                             |
-| Google Calendar  | `google-calendar`  | `google-calendar.md`  | Implemented                             |
-| Google Drive     | `google-drive`     | `google-drive.md`     | Implemented                             |
-| Google Classroom | `google-classroom` | `google-classroom.md` | Implemented, read-write (gated writes)  |
-| GitHub           | `github`           | `github.md`           | Implemented                             |
-| Notion           | `notion`           | `notion.md`           | Implemented                             |
-| Slack            | `slack`            | `slack.md`            | Implemented                             |
-| Linear OAuth     | `linear`           | `linear.md`           | Implemented                             |
-| Linear API Key   | `linear-api-key`   | `linear.md`           | Implemented, same tools as Linear OAuth |
+| Connector        | Runtime id         | Spec                  | Tools | Status                                  |
+| ---------------- | ------------------ | --------------------- | ----: | --------------------------------------- |
+| Google Gmail     | `google`           | `google-gmail.md`     |    18 | Implemented                             |
+| Google Calendar  | `google-calendar`  | `google-calendar.md`  |    10 | Implemented                             |
+| Google Drive     | `google-drive`     | `google-drive.md`     |    13 | Implemented                             |
+| Google Classroom | `google-classroom` | `google-classroom.md` |     6 | Implemented, read-write (gated writes)  |
+| GitHub           | `github`           | `github.md`           |    23 | Implemented                             |
+| Notion           | `notion`           | `notion.md`           |    12 | Implemented                             |
+| Slack            | `slack`            | `slack.md`            |     9 | Implemented                             |
+| Linear OAuth     | `linear`           | `linear.md`           |    12 | Implemented                             |
+| Linear API Key   | `linear-api-key`   | `linear.md`           |    12 | Implemented, same tools as Linear OAuth |
 
 ## Confirmation rule
 
