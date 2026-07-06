@@ -2,7 +2,6 @@ import { createHash } from "node:crypto"
 import { Hono } from "hono"
 import { and, eq, sql } from "drizzle-orm"
 import { db, ragChunks, ragDocuments, ragEmbeddings, ragRetrievalLogs, ragSources } from "@yomi/db"
-import { chunkMarkdown } from "@yomi/shared"
 import type {
   CloudArchiveSource,
   CloudRagSnippet,
@@ -13,12 +12,14 @@ import { authenticate } from "../auth.js"
 import { requireConsent } from "../middleware/consent.js"
 import { effectivePlanForUser, isOwnerUser } from "../entitlements.js"
 import { llmRerank, mmrRerank, parseVector, type RerankCandidate } from "../lib/rerank.js"
+import {
+  embedText,
+  chunkText,
+  DEFAULT_EMBEDDING_MODEL,
+} from "../services/rag/embeddings.js"
+import { indexDocument } from "../services/rag/index-document.js"
 
-const EMBEDDING_DIMENSIONS = 1536
-const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
 const MAX_DOCUMENT_CHARS = 120_000
-const CHUNK_CHARS = 1800
-const CHUNK_OVERLAP = 220
 const MIRROR_SOURCE_TYPE = "mirror"
 
 // Hybrid retrieval knobs (safe defaults so unset env never breaks search).
@@ -71,38 +72,6 @@ function clean(value: string, max: number): string {
     .replace(/\n{3,}/g, "\n\n")
     .slice(0, max)
     .trim()
-}
-
-function chunkText(content: string): string[] {
-  return chunkMarkdown(content, { targetChars: CHUNK_CHARS, overlap: CHUNK_OVERLAP })
-}
-
-async function embedText(input: string): Promise<number[]> {
-  if (!input.trim()) return []
-  const apiKey = process.env["AI_CREDITS_API_KEY"]
-  if (!apiKey) throw new Error("AI_CREDITS_API_KEY is required for Cloud RAG embeddings")
-
-  const baseUrl = (process.env["AI_CREDITS_BASE_URL"] ?? "https://api.aicredits.in/v1").replace(
-    /\/+$/,
-    "",
-  )
-  const model = process.env["AI_CREDITS_EMBEDDING_MODEL"] ?? DEFAULT_EMBEDDING_MODEL
-  const res = await fetch(`${baseUrl}/embeddings`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ model, input }),
-  })
-
-  if (!res.ok) throw new Error(`AI Credits embeddings failed: ${res.status}`)
-  const body = (await res.json()) as { data?: { embedding?: number[] }[] }
-  const embedding = body.data?.[0]?.embedding
-  if (!Array.isArray(embedding) || embedding.length !== EMBEDDING_DIMENSIONS) {
-    throw new Error(`AI Credits embedding dimensions must be ${EMBEDDING_DIMENSIONS}`)
-  }
-  return embedding
 }
 
 function vectorLiteral(values: number[]): string {
@@ -163,58 +132,15 @@ async function upsertMirrorSource(userId: string, source: CloudArchiveSource) {
 
   if (!mirroredSource) return false
 
-  const latestDoc = await db
-    .select({ contentHash: ragDocuments.contentHash })
-    .from(ragDocuments)
-    .where(eq(ragDocuments.sourceId, mirroredSource.id))
-    .limit(1)
-  if (latestDoc[0]?.contentHash === contentHash) {
-    await db
-      .update(ragSources)
-      .set({ updatedAt: new Date() })
-      .where(eq(ragSources.id, mirroredSource.id))
-    return true
-  }
-
-  await db.delete(ragDocuments).where(eq(ragDocuments.sourceId, mirroredSource.id))
-
-  const [document] = await db
-    .insert(ragDocuments)
-    .values({
-      userId,
-      sourceId: mirroredSource.id,
-      title,
-      mimeType: "text/markdown",
-      contentHash,
-      metadata: { path: source.path, updatedAt: source.updatedAt, origin: "cloud_archive" },
-    })
-    .returning()
-
-  if (!document) return false
-
-  const chunks = chunkText(content)
-  for (const [chunkIndex, chunk] of chunks.entries()) {
-    const [createdChunk] = await db
-      .insert(ragChunks)
-      .values({
-        userId,
-        documentId: document.id,
-        chunkIndex,
-        content: chunk,
-        tokenCount: Math.ceil(chunk.length / 4),
-        metadata: { path: source.path, updatedAt: source.updatedAt },
-      })
-      .returning({ id: ragChunks.id })
-    if (!createdChunk) continue
-    const embedding = await embedText(chunk)
-    await db.insert(ragEmbeddings).values({
-      userId,
-      chunkId: createdChunk.id,
-      model: process.env["AI_CREDITS_EMBEDDING_MODEL"] ?? DEFAULT_EMBEDDING_MODEL,
-      embedding,
-    })
-  }
-
+  await indexDocument({
+    userId,
+    sourceId: mirroredSource.id,
+    externalId: source.path,
+    title,
+    mimeType: "text/markdown",
+    text: content,
+    metadata: { path: source.path, updatedAt: source.updatedAt, origin: "cloud_archive" },
+  })
   return true
 }
 
@@ -432,7 +358,7 @@ ragRouter.post("/search", requireConsent("cloud_memory"), async (c) => {
     join rag_documents d on d.id = c.document_id
     join rag_sources s on s.id = d.source_id
     join rag_embeddings e on e.chunk_id = c.id
-    where s.status = 'ready'
+    where s.status in ('ready', 'active', 'backfilling')
     order by f.score desc
   `)
   const rows = (Array.isArray(result)

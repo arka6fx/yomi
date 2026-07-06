@@ -63,7 +63,7 @@ async function fetchRagContext(userId: string, query: string, maxChars = 3000): 
       join rag_documents d on d.id = c.document_id
       join ${ragSources} s on s.id = d.source_id
       where c.user_id = ${userId}
-        and s.status = 'ready'
+        and s.status in ('ready', 'active', 'backfilling')
         and c.content_tsv @@ websearch_to_tsquery('english', ${safe})
       order by ts_rank_cd(c.content_tsv, websearch_to_tsquery('english', ${safe})) desc
       limit 5
