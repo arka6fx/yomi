@@ -26,13 +26,27 @@ const fakeDb = {
     from: () => ({
       where: () => ({
         limit: () => ({
-          then: (resolve: (rows: { id: string; userId: string }[]) => unknown) =>
-            Promise.resolve(resolve([{ id: "conn_1", userId: "user_1" }])),
+          then: (resolve: (rows: { id: string; userId: string; role: string }[]) => unknown) =>
+            // role: "owner" makes isOwnerUser()/hasBillablePlanAccess() short-circuit true for
+            // featureQuotaBlock's user lookup — no test here exercises billing gate logic.
+            Promise.resolve(resolve([{ id: "conn_1", userId: "user_1", role: "owner" }])),
         }),
       }),
     }),
   }),
-  insert: () => ({ values: () => Promise.resolve() }),
+  insert: () => ({
+    values: () => {
+      // Mimic drizzle's chainable insert builder: awaitable directly, and also
+      // supports .returning()/.onConflictDoUpdate() for callers that chain further.
+      const chain = Promise.resolve(undefined) as Promise<undefined> & {
+        returning: () => Promise<{ id: string }[]>
+        onConflictDoUpdate: () => Promise<undefined>
+      }
+      chain.returning = () => Promise.resolve([{ id: "evt_1" }])
+      chain.onConflictDoUpdate = () => Promise.resolve(undefined)
+      return chain
+    },
+  }),
   update: () => ({ set: () => ({ where: () => Promise.resolve() }) }),
   delete: () => ({ where: () => Promise.resolve() }),
 }
@@ -124,6 +138,43 @@ mock.module("../services/soul.js", () => ({
   },
 }))
 
+const recordedTelemetry: Record<string, unknown>[] = []
+mock.module("../services/ai-telemetry.js", () => ({
+  recordAiUsage: async (input: Record<string, unknown>) => {
+    recordedTelemetry.push(input)
+  },
+}))
+
+// gateway-runner.ts's only runtime import from @yomi/agent-core is createModel
+// (AgentMessage is type-only); no other file in this test's import graph reaches
+// the real package, so it's safe to replace wholesale. The real generateText()
+// (from "ai", left un-mocked) calls this fake model's doGenerate, so it completes
+// without touching the network. Image messages (content is an array with an
+// "image" part) get a canned vision reply + usage; anything else mimics
+// NEED_AGENT so the existing fast-path-falls-through-to-agent tests still work.
+mock.module("@yomi/agent-core", () => ({
+  createModel: () => ({
+    specificationVersion: "v1",
+    provider: "ai-credits",
+    modelId: "test-model",
+    defaultObjectGenerationMode: "json",
+    async doGenerate(options: { prompt: Array<{ content: unknown }> }) {
+      const last = options.prompt[options.prompt.length - 1]
+      const isImage =
+        Array.isArray(last?.content) &&
+        (last.content as Array<{ type?: string }>).some((c) => c.type === "image")
+      return {
+        text: isImage ? "It looks like a cat." : "NEED_AGENT",
+        finishReason: "stop",
+        usage: isImage
+          ? { promptTokens: 120, completionTokens: 40 }
+          : { promptTokens: 10, completionTokens: 2 },
+        rawCall: { rawPrompt: options.prompt, rawSettings: {} },
+      }
+    },
+  }),
+}))
+
 mock.module("../services/credit-ledger.js", () => ({
   consumeCredits: async () => ({ ok: true, charged: 1, balance: 99 }),
   createPaymentRecord: async () => "payment_1",
@@ -184,6 +235,7 @@ beforeEach(() => {
   deniedActions = []
   soulCalls = []
   soulOnboardingReply = null
+  recordedTelemetry.length = 0
   delete process.env.YOMI_GATEWAY_DIRECT_SIDECAR
   globalThis.fetch = (async () => {
     throw new Error("sidecar fetch should not run")
@@ -418,5 +470,40 @@ describe("GatewayRunner production routing", () => {
     expect(agentCalls).toHaveLength(0)
     expect(approvedActions).toEqual(["11111111-1111-1111-1111-111111111111"])
     expect(adapter.messages.at(-1)?.text).toBe("Approved and executed.")
+  })
+
+  it("records ai telemetry with vision usage for the image analysis path", async () => {
+    globalThis.fetch = (async (url: RequestInfo | URL) => {
+      if (String(url) === "https://img.example.com/pic.jpg") {
+        return new Response(new Uint8Array([1, 2, 3]).buffer, {
+          status: 200,
+          headers: { "content-type": "image/jpeg" },
+        })
+      }
+      throw new Error(`unexpected fetch: ${String(url)}`)
+    }) as typeof fetch
+
+    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "what is this?",
+      imageUrl: "https://img.example.com/pic.jpg",
+      imageMimeType: "image/jpeg",
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(adapter.messages.at(-1)?.text).toBe("It looks like a cat.")
+    expect(recordedTelemetry.length).toBe(1)
+    expect(recordedTelemetry[0]!["endpoint"]).toBe("gateway.image")
+    expect(recordedTelemetry[0]!["surface"]).toBe("telegram")
+    expect(recordedTelemetry[0]!["visionImages"]).toBe(1)
+    expect(recordedTelemetry[0]!["inputTokens"]).toBe(120)
+    expect(recordedTelemetry[0]!["outputTokens"]).toBe(40)
+    expect(recordedTelemetry[0]!["userId"]).toBe("user_1")
   })
 })

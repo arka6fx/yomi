@@ -3,8 +3,10 @@ import { desc, eq, sql } from "drizzle-orm"
 import {
   PRIVACY_CONSENT_PURPOSES,
   PRIVACY_POLICY_VERSION,
+  RETENTION_DEFAULTS,
   TERMS_VERSION,
   isPrivacyConsentPurpose,
+  isRetentionDomainKey,
   type PrivacyConsentPurpose,
 } from "@yomi/shared/privacy"
 import {
@@ -12,7 +14,9 @@ import {
   agentSessions,
   db,
   mcpConnections,
+  memoryEmbeddings,
   memoryEntries,
+  memoryRelations,
   platformConnections,
   privacyAuditEvents,
   ragChunks,
@@ -21,6 +25,7 @@ import {
   usageEvents,
 } from "@yomi/db"
 import { authenticate } from "../auth.js"
+import { isOwnerUser } from "../entitlements.js"
 import {
   clientIp,
   listPrivacyActivity,
@@ -44,6 +49,7 @@ import {
   getDeletionJob,
   listDeletionJobs,
 } from "../services/privacy/deletion.js"
+import { runPrivacyRetention } from "../services/privacy/retention.js"
 
 type ConsentBody = {
   purposes?: unknown
@@ -312,6 +318,56 @@ privacyRouter.get("/activity", async (c) => {
   return c.json({ activity: rows })
 })
 
+privacyRouter.get("/retention", async (c) => {
+  const user = c.get("user")
+  const prefs = await getPrivacyPreferences(user.id)
+  return c.json({ defaults: RETENTION_DEFAULTS, overrides: prefs.retentionOverrides ?? {} })
+})
+
+privacyRouter.patch("/retention", async (c) => {
+  const user = c.get("user")
+  const body = (await c.req.json().catch(() => ({}))) as { overrides?: unknown }
+  if (!body.overrides || typeof body.overrides !== "object" || Array.isArray(body.overrides)) {
+    return c.json({ error: "overrides object is required" }, 400)
+  }
+  const overrides: Record<string, number> = {}
+  for (const [key, value] of Object.entries(body.overrides as Record<string, unknown>)) {
+    if (!isRetentionDomainKey(key)) return c.json({ error: `Unknown domain: ${key}` }, 400)
+    const policy = RETENTION_DEFAULTS[key]
+    if (!policy.userOverridable) return c.json({ error: `${key} is not overridable` }, 400)
+    const days = typeof value === "number" ? Math.floor(value) : NaN
+    // Overrides may only tighten retention, never extend past the default.
+    if (!Number.isFinite(days) || days < 1 || days > policy.days) {
+      return c.json({ error: `${key} must be between 1 and ${policy.days} days` }, 400)
+    }
+    overrides[key] = days
+  }
+  const preferences = await updatePrivacyPreferences(user.id, { retentionOverrides: overrides })
+  await recordPrivacyAuditEvent({
+    actorUserId: user.id,
+    targetUserId: user.id,
+    eventType: "privacy.retention.updated",
+    ipAddress: clientIp(c),
+    userAgent: userAgent(c),
+    metadata: { domains: Object.keys(overrides) },
+  })
+  return c.json({ preferences })
+})
+
+privacyRouter.post("/admin/run-retention", async (c) => {
+  const user = c.get("user")
+  if (!isOwnerUser(user)) return c.json({ error: "Owner access required" }, 403)
+  const report = await runPrivacyRetention()
+  await recordPrivacyAuditEvent({
+    actorUserId: user.id,
+    eventType: "privacy.retention.manual_run",
+    ipAddress: clientIp(c),
+    userAgent: userAgent(c),
+    metadata: { ...report.domains },
+  })
+  return c.json({ report })
+})
+
 privacyRouter.post("/delete-data", async (c) => {
   const user = c.get("user")
   const job = await deleteMyData(user.id)
@@ -351,4 +407,48 @@ privacyRouter.post("/delete-account", async (c) => {
   const job = await deleteAccount(user.id)
   if (!job) return c.json({ error: "Failed to create deletion job" }, 500)
   return c.json({ job })
+})
+
+privacyRouter.delete("/memories", async (c) => {
+  const user = c.get("user")
+  // memory_sources has no user_id column — it cascades from memory_entries.id
+  // (onDelete: "cascade"), same as deletion.ts relies on for that table.
+  await db.delete(memoryEmbeddings).where(eq(memoryEmbeddings.userId, user.id))
+  await db.delete(memoryRelations).where(eq(memoryRelations.userId, user.id))
+  const deleted = await db
+    .delete(memoryEntries)
+    .where(eq(memoryEntries.userId, user.id))
+    .returning({ id: memoryEntries.id })
+  await recordPrivacyAuditEvent({
+    actorUserId: user.id,
+    targetUserId: user.id,
+    eventType: "privacy.memories.deleted_all",
+    ipAddress: clientIp(c),
+    userAgent: userAgent(c),
+    metadata: { count: deleted.length },
+  })
+  return c.json({ deleted: deleted.length })
+})
+
+privacyRouter.get("/memories/export", async (c) => {
+  const user = c.get("user")
+  const memories = await db
+    .select({
+      id: memoryEntries.id,
+      topic: memoryEntries.topic,
+      content: memoryEntries.content,
+      createdAt: memoryEntries.createdAt,
+    })
+    .from(memoryEntries)
+    .where(eq(memoryEntries.userId, user.id))
+    .orderBy(desc(memoryEntries.createdAt))
+  await recordPrivacyAuditEvent({
+    actorUserId: user.id,
+    targetUserId: user.id,
+    eventType: "privacy.memories.exported",
+    ipAddress: clientIp(c),
+    userAgent: userAgent(c),
+    metadata: { count: memories.length },
+  })
+  return c.json({ memories })
 })

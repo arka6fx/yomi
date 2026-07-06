@@ -13,6 +13,7 @@ import { compressContext, shouldCompress, estimateTokens } from "./compressor.js
 import { getAccessToken, listConnectedProviders } from "../services/integration-tokens.js"
 import { hasBillablePlanAccess } from "../entitlements.js"
 import { chargeUsage } from "../services/metering.js"
+import { recordAiUsage } from "../services/ai-telemetry.js"
 import { checkConsent } from "../services/privacy/checks.js"
 import * as authSchema from "../auth-schema.js"
 import { upsertMemory } from "../routes/memory.js"
@@ -508,6 +509,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   }
 
   let text: string
+  const startedAt = Date.now()
   try {
     text = await runAgentLoop({
       registry,
@@ -523,22 +525,36 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       ),
       maxTokens: maxOutputTokensFor(opts.text),
       signal: opts.signal,
-      onUsage: usageEventId
-        ? (usage: UsageInfo) => {
-            db.update(usageEvents)
-              .set({
-                model: usage.model,
-                inputTokens: usage.inputTokens,
-                outputTokens: usage.outputTokens,
-                metadata: {
-                  toolCallCount: usage.toolCallCount,
-                  finishReason: usage.finishReason,
-                },
-              })
-              .where(eq(usageEvents.id, usageEventId))
-              .catch(() => {})
-          }
-        : undefined,
+      onUsage: (usage: UsageInfo) => {
+        if (usageEventId) {
+          db.update(usageEvents)
+            .set({
+              model: usage.model,
+              inputTokens: usage.inputTokens,
+              outputTokens: usage.outputTokens,
+              metadata: {
+                toolCallCount: usage.toolCallCount,
+                finishReason: usage.finishReason,
+              },
+            })
+            .where(eq(usageEvents.id, usageEventId))
+            .catch(() => {})
+        }
+
+        recordAiUsage({
+          userId: opts.userId,
+          requestId: crypto.randomUUID(),
+          usageEventId: usageEventId ?? null,
+          endpoint: "backend.agent",
+          surface: "telegram",
+          route: "agent",
+          model: usage.model,
+          inputTokens: usage.inputTokens,
+          outputTokens: usage.outputTokens,
+          latencyMs: Date.now() - startedAt,
+          status: "done",
+        }).catch(() => {})
+      },
     })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
