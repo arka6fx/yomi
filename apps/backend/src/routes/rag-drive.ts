@@ -53,11 +53,16 @@ ragDriveRouter.get("/sources", requireConsent("cloud_memory"), async (c) => {
 
 ragDriveRouter.delete("/sources/:id", async (c) => {
   const user = c.get("user")
+  if (!ragAllowed(user)) return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
+
   const id = c.req.param("id")
-  await db
+  const [source] = await db
     .update(ragSources)
     .set({ status: "deleted", updatedAt: new Date() })
     .where(and(eq(ragSources.id, id), eq(ragSources.userId, user.id)))
+    .returning({ id: ragSources.id })
+
+  if (!source) return c.json({ error: "Source not found", code: "source_not_found" }, 404)
   return c.json({ ok: true })
 })
 
