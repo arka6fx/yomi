@@ -61,7 +61,7 @@ export const usageEvents = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id),
-    deviceId: uuid("device_id").references(() => devices.id),
+    deviceId: uuid("device_id").references(() => devices.id, { onDelete: "set null" }),
     kind: text("kind").notNull(), // "stt" | "fast_query" | "agent_run" | "tts" | "llm_stream"
     model: text("model"),
     inputTokens: integer("input_tokens").notNull().default(0),
@@ -154,7 +154,7 @@ export const creditTransactions = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     grantId: uuid("grant_id").references(() => creditGrants.id),
-    usageEventId: uuid("usage_event_id").references(() => usageEvents.id),
+    usageEventId: uuid("usage_event_id").references(() => usageEvents.id, { onDelete: "set null" }),
     paymentId: uuid("payment_id").references(() => paymentRecords.id),
     type: text("type").notNull(), // "grant" | "reserve" | "consume" | "release" | "refund" | "adjustment" | "expire"
     amount: integer("amount").notNull(),
