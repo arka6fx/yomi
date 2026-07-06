@@ -16,6 +16,7 @@ import {
 } from "../services/agent-sessions.js"
 import { transcribeAudioUrl } from "../services/transcription.js"
 import { synthesizeSpeech } from "../services/tts.js"
+import { recordAiUsage } from "../services/ai-telemetry.js"
 import { consumeCredits, getCreditSummary } from "../services/credit-ledger.js"
 import { advanceSoulOnboarding } from "../services/soul.js"
 import { creditsForUsage, type BillableUsageKind } from "../services/credit-pricing.js"
@@ -350,7 +351,11 @@ export class GatewayRunner {
     }
   }
 
-  private async analyzeImage(msg: GatewayMessage, history: AgentMessage[]): Promise<string> {
+  private async analyzeImage(
+    msg: GatewayMessage,
+    history: AgentMessage[],
+    yomiUserId: string,
+  ): Promise<string> {
     if (!msg.imageUrl) return "I couldn't access the image. Please send it again."
     const imageRes = await fetch(msg.imageUrl, { signal: AbortSignal.timeout(10_000) })
     if (!imageRes.ok) throw new Error(`Failed to download image: ${imageRes.status}`)
@@ -360,8 +365,10 @@ export class GatewayRunner {
       return "That image is too large for me to analyze. Please send a smaller image."
     const image = `data:${contentType};base64,${Buffer.from(bytes).toString("base64")}`
     const prompt = msg.text.trim() || "Analyze this image. Keep the answer concise and useful."
+    const model = process.env["AI_CREDITS_AGENT_MODEL"] || "gpt-5.5"
+    const startedAt = Date.now()
     const result = await generateText({
-      model: createModel(process.env["AI_CREDITS_AGENT_MODEL"] || "gpt-5.5"),
+      model: createModel(model),
       system:
         "You are Yomi. Analyze the image and answer concisely. If the user asks for details, include only the useful details.",
       messages: [
@@ -378,6 +385,19 @@ export class GatewayRunner {
       ],
       maxTokens: Math.min(600, Math.max(200, (prompt.length + bytes.byteLength / 1024) * 1.2)),
     })
+    recordAiUsage({
+      userId: yomiUserId,
+      requestId: crypto.randomUUID(),
+      endpoint: "gateway.image",
+      surface: "telegram",
+      route: "gateway",
+      model,
+      inputTokens: result.usage?.promptTokens,
+      outputTokens: result.usage?.completionTokens,
+      visionImages: 1,
+      latencyMs: Date.now() - startedAt,
+      status: "done",
+    }).catch(() => {})
     return result.text.trim() || "I couldn't produce an image analysis. Please try again."
   }
 
@@ -452,6 +472,15 @@ export class GatewayRunner {
           reason: "telegram voice reply",
           metadata: { direction: "output", estimatedMinutes },
         })
+        recordAiUsage({
+          userId: yomiUserId,
+          requestId: crypto.randomUUID(),
+          endpoint: "gateway.voice",
+          surface: "telegram",
+          route: "gateway",
+          ttsChars: spokenText.length,
+          status: "done",
+        }).catch(() => {})
       }
       return result.ok
     } catch (err) {
@@ -957,6 +986,15 @@ export class GatewayRunner {
             reason: "telegram voice input",
             metadata: { direction: "input", durationSeconds: msg.audioDurationSeconds ?? null },
           })
+          recordAiUsage({
+            userId: yomiUserId,
+            requestId: crypto.randomUUID(),
+            endpoint: "gateway.voice",
+            surface: "telegram",
+            route: "gateway",
+            sttAudioSeconds: msg.audioDurationSeconds ?? 0,
+            status: "done",
+          }).catch(() => {})
           console.warn(`[gateway] voice transcript: "${transcript.slice(0, 100)}"`)
           await this.sendMessage(msg.platform, msg.chatId, `🎙️ _Heard:_ ${transcript}`).catch(
             () => {},
@@ -1095,7 +1133,7 @@ export class GatewayRunner {
           return
         }
         try {
-          const imageReply = await this.analyzeImage(msg, history)
+          const imageReply = await this.analyzeImage(msg, history, yomiUserId)
           await this.recordGatewayCreditAddon({
             userId: yomiUserId,
             kind: "analyze",
