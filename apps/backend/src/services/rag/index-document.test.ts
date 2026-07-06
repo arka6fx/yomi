@@ -72,6 +72,21 @@ describe("indexDocument", () => {
     expect(a).not.toBe(c)
   })
 
+  it("redacts base64/image payloads before hashing and chunking", async () => {
+    const blob = "data:image/png;base64," + "A".repeat(600)
+    const res = await indexDocument({
+      userId: "u1",
+      sourceId: "s1",
+      externalId: "file-1",
+      title: "Doc",
+      mimeType: "text/plain",
+      text: `before ${blob} after`,
+    })
+    expect(res.status).toBe("indexed")
+    expect(rows.chunks[0].content).toContain("[redacted image]")
+    expect(rows.chunks[0].content).not.toContain("AAAAAAAA")
+  })
+
   it("returns unchanged when document content hash matches existing", async () => {
     const content = "hello world"
     const hash = contentHashFor("file-1", content)

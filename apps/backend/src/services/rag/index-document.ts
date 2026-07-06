@@ -17,11 +17,26 @@ export function contentHashFor(externalId: string, text: string): string {
   return createHash("sha256").update(`${externalId}\0${text}`).digest("hex")
 }
 
+const MAX_TEXT_CHARS = 120_000
+
+// Mirrors the sanitation the manual push path applies in routes/rag.ts: strips
+// CRs, redacts inline images and long base64 runs, collapses blank lines, and
+// caps size so a huge Drive export can't produce unbounded chunks/embeddings.
+// Applied before hashing so the unchanged-check sees the stored text.
+function sanitizeText(value: string): string {
+  return value
+    .replace(/\r/g, "")
+    .replace(/data:image\/[a-zA-Z]+;base64,[A-Za-z0-9+/=]+/g, "[redacted image]")
+    .replace(/[A-Za-z0-9+/=]{400,}/g, "[redacted base64]")
+    .replace(/\n{3,}/g, "\n\n")
+    .slice(0, MAX_TEXT_CHARS)
+    .trim()
+}
+
 export async function indexDocument(
   input: IndexDocumentInput,
 ): Promise<{ status: "indexed" | "unchanged"; documentId: string | null }> {
-  // Cap so a huge Drive export (e.g. a giant CSV) can't produce unbounded chunks/embeddings.
-  const text = input.text.slice(0, 120_000)
+  const text = sanitizeText(input.text)
   const contentHash = contentHashFor(input.externalId, text)
 
   const existing = await db
