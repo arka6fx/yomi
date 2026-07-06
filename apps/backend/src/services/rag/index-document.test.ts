@@ -6,6 +6,8 @@ const rows: { documents: any[]; chunks: any[]; embeddings: any[] } = {
   embeddings: [],
 }
 
+let existingDocRows: any[] = []
+
 mock.module("@yomi/db", () => {
   const makeChain = (bucket: string) => ({
     values: (v: any) => ({
@@ -17,7 +19,7 @@ mock.module("@yomi/db", () => {
     }),
   })
   const db = {
-    select: () => ({ from: () => ({ where: () => ({ limit: () => Promise.resolve([]) }) }) }),
+    select: () => ({ from: () => ({ where: () => ({ limit: () => Promise.resolve(existingDocRows) }) }) }),
     insert: (table: any) => makeChain(table.__name),
     delete: () => ({ where: () => Promise.resolve() }),
   }
@@ -42,6 +44,7 @@ beforeEach(() => {
   rows.documents = []
   rows.chunks = []
   rows.embeddings = []
+  existingDocRows = []
 })
 
 describe("indexDocument", () => {
@@ -67,5 +70,26 @@ describe("indexDocument", () => {
     const c = contentHashFor("file-1", "hello!")
     expect(a).toBe(b)
     expect(a).not.toBe(c)
+  })
+
+  it("returns unchanged when document content hash matches existing", async () => {
+    const content = "hello world"
+    const hash = contentHashFor("file-1", content)
+    existingDocRows = [{ id: "doc-existing", contentHash: hash }]
+
+    const res = await indexDocument({
+      userId: "u1",
+      sourceId: "s1",
+      externalId: "file-1",
+      title: "Notes",
+      mimeType: "text/plain",
+      text: content,
+    })
+
+    expect(res.status).toBe("unchanged")
+    expect(res.documentId).toBe("doc-existing")
+    expect(rows.documents.length).toBe(0)
+    expect(rows.chunks.length).toBe(0)
+    expect(rows.embeddings.length).toBe(0)
   })
 })
