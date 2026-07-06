@@ -14,6 +14,7 @@ import { ragRouter } from "./routes/rag.js"
 import { ragDriveRouter } from "./routes/rag-drive.js"
 import { memoryRouter } from "./routes/memory.js"
 import { schedulesRouter } from "./routes/schedules.js"
+import { suggestionsRouter } from "./routes/suggestions.js"
 import { actionsRouter } from "./routes/actions.js"
 import { proxyRouter } from "./routes/proxy.js"
 import { gatewayRouter } from "./gateway/routes.js"
@@ -116,6 +117,7 @@ app.route("/api/rag", ragRouter)
 app.route("/api/rag/drive", ragDriveRouter)
 app.route("/api/memory", memoryRouter)
 app.route("/api/schedules", schedulesRouter)
+app.route("/api/suggestions", suggestionsRouter)
 app.route("/api/actions", actionsRouter)
 app.route("/api/v1", proxyRouter)
 app.route("/api/gateway", gatewayRouter)

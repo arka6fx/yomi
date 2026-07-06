@@ -1,13 +1,14 @@
 import { Hono } from "hono"
-import { and, desc, eq, sql } from "drizzle-orm"
+import { and, desc, eq } from "drizzle-orm"
 import { db, schedules } from "@yomi/db"
 import { authenticate } from "../auth.js"
-import { effectivePlanForUser, getPlanConfig, isOwnerUser } from "../entitlements.js"
+import { effectivePlanForUser, isOwnerUser } from "../entitlements.js"
 import {
   computeNextRun,
   scheduleLimitForPlan,
   validateScheduleInput,
 } from "../services/schedule-parser.js"
+import { ensureScheduleCapacity } from "../services/schedule-quota.js"
 
 export const schedulesRouter = new Hono()
 
@@ -38,35 +39,8 @@ schedulesRouter.post("/", async (c) => {
   const user = c.get("user")
   const body = (await c.req.json().catch(() => ({}))) as ScheduleBody
 
-  if (!isOwnerUser(user)) {
-    const plan = effectivePlanForUser(user)
-    const limit = scheduleLimitForPlan(plan)
-    if (limit <= 0) {
-      return c.json(
-        {
-          error: `Scheduling isn't on your ${getPlanConfig(user).name} plan. Upgrade to Pro or Max to schedule tasks.`,
-          code: "feature_not_available",
-          upgradeUrl: "/dashboard?upgrade=true",
-        },
-        403,
-      )
-    }
-    const countRows = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(schedules)
-      .where(eq(schedules.userId, user.id))
-    const count = Number(countRows[0]?.count ?? 0)
-    if (count >= limit) {
-      return c.json(
-        {
-          error: `You've hit your schedule limit (${count}/${limit}). Upgrade for more.`,
-          code: "schedule_limit",
-          upgradeUrl: "/dashboard?upgrade=true",
-        },
-        402,
-      )
-    }
-  }
+  const capacity = await ensureScheduleCapacity(user)
+  if (!capacity.ok) return c.json(capacity.body, capacity.status)
 
   const schedule = body.schedule?.trim()
   const prompt = body.prompt?.trim()
