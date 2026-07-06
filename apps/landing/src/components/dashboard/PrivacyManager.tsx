@@ -13,6 +13,21 @@ const CONSENT_LABELS: Record<string, string> = {
   voice_processing: "Voice Processing",
   screen_processing: "Screen Processing",
   ai_improvement: "AI Improvement",
+  telegram_processing: "Telegram Processing",
+  rag_processing: "Document Search (RAG)",
+}
+
+const PURPOSE_TO_PREFKEY: Record<string, string> = {
+  conversation_history: "conversationHistoryEnabled",
+  memory: "memoryEnabled",
+  cloud_memory: "cloudMemoryEnabled",
+  connector_data: "connectorsEnabled",
+  analytics: "analyticsEnabled",
+  voice_processing: "voiceProcessingEnabled",
+  screen_processing: "screenProcessingEnabled",
+  ai_improvement: "aiImprovementEnabled",
+  telegram_processing: "telegramProcessingEnabled",
+  rag_processing: "ragProcessingEnabled",
 }
 
 type ConsentStatus = {
@@ -92,11 +107,11 @@ export function PrivacyManager({ token }: TokenProp) {
   }
 
   function toggled(purpose: string): boolean {
-    return preferences[`${purpose}Enabled`] ?? false
+    return preferences[PURPOSE_TO_PREFKEY[purpose] ?? `${purpose}Enabled`] ?? false
   }
 
   async function togglePreference(purpose: string) {
-    const prefKey = `${purpose}Enabled`
+    const prefKey = PURPOSE_TO_PREFKEY[purpose] ?? `${purpose}Enabled`
     const newValue = !toggled(purpose)
     setSaving(purpose)
     try {
