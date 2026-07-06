@@ -6,6 +6,7 @@ import { requireConsent } from "../middleware/consent.js"
 import { encryptTokens, decryptTokens, type OAuthTokens } from "../services/token-encryption.js"
 import { getAccessToken as getAccessTokenService } from "../services/integration-tokens.js"
 import { getConnectorDef } from "../connectors/registry.js"
+import { purgeDriveSources } from "../services/rag/drive-sync.js"
 import {
   buildAuthUrl,
   handleOAuth2Callback,
@@ -531,6 +532,14 @@ integrationsRouter.delete("/:provider", authenticate, async (c) => {
   await db
     .delete(mcpConnections)
     .where(and(eq(mcpConnections.userId, user.id), eq(mcpConnections.provider, provider)))
+
+  if (provider === "google-drive") {
+    try {
+      await purgeDriveSources(user.id)
+    } catch (err) {
+      console.error("[integrations] failed to purge drive sources:", err)
+    }
+  }
 
   return c.json({ ok: true })
 })

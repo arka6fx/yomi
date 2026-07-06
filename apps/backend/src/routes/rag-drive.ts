@@ -1,6 +1,6 @@
 import { Hono } from "hono"
 import { and, eq } from "drizzle-orm"
-import { db, ragSources } from "@yomi/db"
+import { db, ragSources, ragDocuments } from "@yomi/db"
 import { authenticate } from "../auth.js"
 import { requireConsent } from "../middleware/consent.js"
 import { effectivePlanForUser, isOwnerUser } from "../entitlements.js"
@@ -28,6 +28,8 @@ ragDriveRouter.post("/sources", requireConsent("cloud_memory"), async (c) => {
   const folderId = (body.folderId ?? "").trim()
   const name = (body.name ?? "Drive folder").trim().slice(0, 120)
   if (!folderId) return c.json({ error: "folderId is required", code: "invalid_folder" }, 400)
+  if (!/^[A-Za-z0-9_-]+$/.test(folderId))
+    return c.json({ error: "folderId is invalid", code: "invalid_folder" }, 400)
   const created = await createDriveSource(user.id, folderId, name)
   return c.json(created)
 })
@@ -63,6 +65,7 @@ ragDriveRouter.delete("/sources/:id", async (c) => {
     .returning({ id: ragSources.id })
 
   if (!source) return c.json({ error: "Source not found", code: "source_not_found" }, 404)
+  await db.delete(ragDocuments).where(eq(ragDocuments.sourceId, source.id))
   return c.json({ ok: true })
 })
 
