@@ -221,6 +221,10 @@ mock.module("@yomi/db", () => ({
   // Table refs that the mock DB uses for identity checks
   usageEvents: { _table: "usage_events" },
   paymentRecords: { _table: "payment_records" },
+  // Statically imported by services/ai-telemetry.js, which this route's
+  // import graph pulls in transitively — must be present or the mock
+  // fails ESM named-export binding at module load time.
+  aiUsageEvents: { requestId: "request_id" },
 }))
 
 mock.module("../auth.js", () => ({

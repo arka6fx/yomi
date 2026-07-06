@@ -61,7 +61,7 @@ export const usageEvents = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id),
-    deviceId: uuid("device_id").references(() => devices.id),
+    deviceId: uuid("device_id").references(() => devices.id, { onDelete: "set null" }),
     kind: text("kind").notNull(), // "stt" | "fast_query" | "agent_run" | "tts" | "llm_stream"
     model: text("model"),
     inputTokens: integer("input_tokens").notNull().default(0),
@@ -154,7 +154,7 @@ export const creditTransactions = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     grantId: uuid("grant_id").references(() => creditGrants.id),
-    usageEventId: uuid("usage_event_id").references(() => usageEvents.id),
+    usageEventId: uuid("usage_event_id").references(() => usageEvents.id, { onDelete: "set null" }),
     paymentId: uuid("payment_id").references(() => paymentRecords.id),
     type: text("type").notNull(), // "grant" | "reserve" | "consume" | "release" | "refund" | "adjustment" | "expire"
     amount: integer("amount").notNull(),
@@ -662,5 +662,60 @@ export const privacyAuditEvents = pgTable(
     ),
     actorCreatedIdx: index("privacy_audit_events_actor_created_idx").on(t.actorUserId, t.createdAt),
     eventTypeIdx: index("privacy_audit_events_type_idx").on(t.eventType, t.createdAt),
+  }),
+)
+
+// Rich per-request AI telemetry. Additive companion to usage_events — never
+// billing-critical. request_id gives idempotency for retried finalizations.
+export const aiUsageEvents = pgTable(
+  "ai_usage_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    usageEventId: uuid("usage_event_id").references(() => usageEvents.id, {
+      onDelete: "set null",
+    }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    requestId: text("request_id").notNull(),
+    endpoint: text("endpoint").notNull(), // "sidecar.fast" | "sidecar.agent" | "backend.agent" | "gateway.image" | "gateway.voice"
+    surface: text("surface").notNull(), // "desktop" | "telegram" | "dashboard" | "cron" | "backend"
+    route: text("route"), // "fast" | "agent" | "gateway"
+    intent: text("intent"),
+    complexity: text("complexity"),
+    model: text("model"),
+    provider: text("provider"),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    reasoningTokens: integer("reasoning_tokens").notNull().default(0),
+    cachedInputTokens: integer("cached_input_tokens").notNull().default(0),
+    embeddingTokens: integer("embedding_tokens").notNull().default(0),
+    maxOutputTokens: integer("max_output_tokens").notNull().default(0),
+    toolCalls: integer("tool_calls").notNull().default(0),
+    connectorCount: integer("connector_count").notNull().default(0),
+    connectorIds: text("connector_ids").array().notNull().default([]),
+    visionImages: integer("vision_images").notNull().default(0),
+    voiceDurationSeconds: integer("voice_duration_seconds").notNull().default(0),
+    ttsChars: integer("tts_chars").notNull().default(0),
+    sttAudioSeconds: integer("stt_audio_seconds").notNull().default(0),
+    latencyMs: integer("latency_ms").notNull().default(0),
+    firstTokenLatencyMs: integer("first_token_latency_ms"),
+    totalApiCostMicros: integer("total_api_cost_micros").notNull().default(0),
+    creditPolicyVersion: text("credit_policy_version").notNull().default("static-v1"),
+    creditsEstimated: integer("credits_estimated").notNull().default(0),
+    creditsCharged: integer("credits_charged").notNull().default(0),
+    status: text("status").notNull().default("started"), // "started" | "done" | "error" | "cancelled"
+    errorCode: text("error_code"),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    completedAt: timestamp("completed_at"),
+  },
+  (t) => ({
+    requestIdUq: unique("ai_usage_events_request_id_uq").on(t.requestId),
+    userCreatedIdx: index("ai_usage_events_user_created_idx").on(t.userId, t.createdAt),
+    endpointIdx: index("ai_usage_events_endpoint_idx").on(t.endpoint, t.createdAt),
+    modelIdx: index("ai_usage_events_model_idx").on(t.model, t.createdAt),
+    statusIdx: index("ai_usage_events_status_idx").on(t.status),
+    usageEventIdx: index("ai_usage_events_usage_event_idx").on(t.usageEventId),
   }),
 )
