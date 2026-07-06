@@ -33,7 +33,7 @@ mock.module("./index-document.js", () => ({
   deleteDocumentByExternalId: async (_u: string, _s: string, e: string) => { state.deleted.push(e); return true },
 }))
 
-const { createDriveSource, syncSource } = await import("./drive-sync.js")
+const { createDriveSource, syncSource, MAX_BACKFILL_FILES_PER_TICK } = await import("./drive-sync.js")
 
 function client(overrides: any = {}) {
   return {
@@ -77,5 +77,83 @@ describe("drive-sync", () => {
     const c = client({ listChanges: async () => { throw new DriveApiError("unauthorized", 401) } })
     const res = await syncSource(src as any, c as any)
     expect(res.status).toBe("needs_reconnect")
+  })
+
+  it("backfill batches across ticks without dropping files", async () => {
+    const src = { id: "src-1", userId: "u1", path: "folder-1", status: "backfilling", syncState: { folderId: "folder-1", drivePageToken: "ptok-0", backfillCursor: null, filesIndexed: 0, filesSkipped: 0 } }
+    state.sources.push(src)
+    let call = 0
+    const c = client({
+      listFolderChildren: async (_u: string, _f: string, cursor?: string, pageSize?: number) => {
+        call++
+        if (call === 1) {
+          expect(cursor).toBeUndefined()
+          expect(pageSize).toBe(MAX_BACKFILL_FILES_PER_TICK)
+          return {
+            files: [
+              { id: "f1", name: "A", mimeType: "text/plain" },
+              { id: "f2", name: "B", mimeType: "text/plain" },
+            ],
+            nextPageToken: "cursor-2",
+          }
+        }
+        expect(cursor).toBe("cursor-2")
+        expect(pageSize).toBe(MAX_BACKFILL_FILES_PER_TICK)
+        return { files: [{ id: "f3", name: "C", mimeType: "text/plain" }] }
+      },
+    })
+
+    const res1 = await syncSource(src as any, c as any)
+    expect(res1.status).toBe("backfilling")
+    expect(state.sources[0].status).toBe("backfilling")
+    expect(state.sources[0].syncState.backfillCursor).toBe("cursor-2")
+
+    const res2 = await syncSource(state.sources[0] as any, c as any)
+    expect(res2.status).toBe("active")
+    expect(state.sources[0].status).toBe("active")
+
+    expect(state.indexed).toEqual(["f1", "f2", "f3"])
+  })
+
+  it("incremental indexes changed files in scope and skips out-of-scope ones", async () => {
+    const src = { id: "src-1", userId: "u1", path: "folder-1", status: "active", syncState: { folderId: "folder-1", drivePageToken: "ptok-0", filesIndexed: 0, filesSkipped: 0 } }
+    state.sources.push(src)
+    const c = client({
+      listChanges: async () => ({
+        changes: [
+          {
+            fileId: "in-scope",
+            removed: false,
+            file: { id: "in-scope", name: "InScope", mimeType: "text/plain", parents: ["folder-1"] },
+          },
+          {
+            fileId: "out-of-scope",
+            removed: false,
+            file: { id: "out-of-scope", name: "OutOfScope", mimeType: "text/plain", parents: ["other-folder"] },
+          },
+        ],
+        newStartPageToken: "ptok-2",
+      }),
+    })
+    await syncSource(src as any, c as any)
+    expect(state.indexed).toContain("in-scope")
+    expect(state.indexed).not.toContain("out-of-scope")
+  })
+
+  it("re-captures a fresh start page token and backfills on 410", async () => {
+    const { DriveApiError } = await import("./drive-client.js")
+    const src = { id: "src-1", userId: "u1", path: "folder-1", status: "active", syncState: { folderId: "folder-1", drivePageToken: "ptok-0", filesIndexed: 0, filesSkipped: 0 } }
+    state.sources.push(src)
+    let startTokenCalls = 0
+    const c = client({
+      getStartPageToken: async () => { startTokenCalls++; return "ptok-fresh" },
+      listChanges: async () => { throw new DriveApiError("gone", 410) },
+    })
+    const res = await syncSource(src as any, c as any)
+    expect(res.status).toBe("backfilling")
+    expect(startTokenCalls).toBe(1)
+    expect(state.sources[0].status).toBe("backfilling")
+    expect(state.sources[0].syncState.drivePageToken).toBe("ptok-fresh")
+    expect(state.sources[0].syncState.backfillCursor).toBeNull()
   })
 })
