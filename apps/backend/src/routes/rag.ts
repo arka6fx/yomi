@@ -358,7 +358,7 @@ ragRouter.post("/search", requireConsent("cloud_memory"), async (c) => {
     join rag_documents d on d.id = c.document_id
     join rag_sources s on s.id = d.source_id
     join rag_embeddings e on e.chunk_id = c.id
-    where s.status = 'ready'
+    where s.status in ('ready', 'active', 'backfilling')
     order by f.score desc
   `)
   const rows = (Array.isArray(result)

@@ -6,6 +6,15 @@ import { realDriveClient, DriveApiError, type DriveClient, type DriveFile } from
 
 export const MAX_BACKFILL_FILES_PER_TICK = 20
 export const DRIVE_SOURCE_TYPE = "google-drive"
+const DEFAULT_MAX_FILES_PER_SOURCE = 2000
+
+// Cost guardrail: cap total indexed files per Drive source. Read lazily (not
+// memoized at module scope) so a Worker's propagateEnv is visible per-call.
+function maxFilesPerSource(): number {
+  const raw = process.env["DRIVE_MAX_FILES_PER_SOURCE"]
+  const parsed = raw ? Number.parseInt(raw, 10) : NaN
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_MAX_FILES_PER_SOURCE
+}
 
 export interface DriveSyncState {
   folderId: string
@@ -14,6 +23,7 @@ export interface DriveSyncState {
   lastSyncedAt?: string
   filesIndexed: number
   filesSkipped: number
+  capped?: boolean
 }
 export interface SourceRow {
   id: string
@@ -103,7 +113,13 @@ export async function syncSource(
       const startToken = await client.getStartPageToken(source.userId)
       await setSource(source.id, {
         status: "backfilling",
-        syncState: { ...st, drivePageToken: startToken, backfillCursor: null },
+        syncState: {
+          ...st,
+          drivePageToken: startToken,
+          backfillCursor: null,
+          filesIndexed: 0,
+          filesSkipped: 0,
+        },
       })
       return { status: "backfilling", indexed: 0, removed: 0 }
     }
@@ -116,6 +132,7 @@ async function backfillStep(
   st: DriveSyncState,
   client: DriveClient,
 ): Promise<{ status: string; indexed: number; removed: number }> {
+  const cap = maxFilesPerSource()
   const page = await client.listFolderChildren(
     source.userId,
     st.folderId,
@@ -124,17 +141,30 @@ async function backfillStep(
   )
   let indexed = 0
   for (const file of page.files) {
-    const ok = await extractAndIndex(client, source.userId, source.id, file)
-    if (ok) {
-      indexed++
-      st.filesIndexed++
-    } else {
+    try {
+      const ok = await extractAndIndex(client, source.userId, source.id, file)
+      if (ok) {
+        indexed++
+        st.filesIndexed++
+      } else {
+        st.filesSkipped++
+      }
+    } catch (err) {
+      if (err instanceof DriveApiError && (err.status === 401 || err.status === 403)) throw err
+      console.error(`[drive-sync] file ${file.id} failed:`, err)
       st.filesSkipped++
     }
+    if (st.filesIndexed >= cap) break
+  }
+  st.lastSyncedAt = new Date().toISOString()
+  if (st.filesIndexed >= cap) {
+    st.backfillCursor = null
+    st.capped = true
+    await setSource(source.id, { status: "active", syncState: st })
+    return { status: "active", indexed, removed: 0 }
   }
   const done = !page.nextPageToken
   st.backfillCursor = page.nextPageToken ?? null
-  st.lastSyncedAt = new Date().toISOString()
   await setSource(source.id, {
     status: done ? "active" : "backfilling",
     syncState: st,
@@ -169,10 +199,16 @@ async function incrementalStep(
         (change.file?.parents?.includes(st.folderId) ?? false)
       if (!inScope) continue
       if (change.file) {
-        const ok = await extractAndIndex(client, source.userId, source.id, change.file)
-        if (ok) {
-          indexed++
-          knownIds.add(change.fileId)
+        try {
+          const ok = await extractAndIndex(client, source.userId, source.id, change.file)
+          if (ok) {
+            indexed++
+            knownIds.add(change.fileId)
+          }
+        } catch (err) {
+          if (err instanceof DriveApiError && (err.status === 401 || err.status === 403)) throw err
+          console.error(`[drive-sync] file ${change.fileId} failed:`, err)
+          st.filesSkipped++
         }
       }
     }
@@ -235,4 +271,20 @@ export async function runDriveSyncSweep(
     }
   }
   return { ran }
+}
+
+// Purges a user's Drive-backed rag sources: soft-deletes the source rows and
+// hard-deletes their documents (chunks/embeddings cascade via FK). Called when
+// the user disconnects the google-drive integration so indexed content doesn't
+// outlive the connection.
+export async function purgeDriveSources(userId: string): Promise<number> {
+  const rows = await db
+    .update(ragSources)
+    .set({ status: "deleted", updatedAt: new Date() })
+    .where(and(eq(ragSources.userId, userId), eq(ragSources.sourceType, DRIVE_SOURCE_TYPE)))
+    .returning({ id: ragSources.id })
+  for (const row of rows) {
+    await db.delete(ragDocuments).where(eq(ragDocuments.sourceId, row.id))
+  }
+  return rows.length
 }
