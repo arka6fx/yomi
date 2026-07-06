@@ -1,7 +1,7 @@
 # Yomi
 
 AI productivity assistant. Connects to Google Workspace (Gmail, Calendar,
-Drive), GitHub, Slack, Notion, Linear, Discord, and more so you can query,
+Drive), GitHub, Slack, Notion, Linear, and more so you can query,
 draft, summarize, and schedule in natural language. It accepts desktop voice,
 desktop text, screen Q&A, and Telegram messages without copy-pasting context.
 

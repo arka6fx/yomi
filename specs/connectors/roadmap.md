@@ -20,49 +20,13 @@ only a placeholder.
 | Linear OAuth     |                     12 | Real Linear GraphQL API-backed tools with states and cycles.                 |
 | Linear API Key   |                     12 | Same tool surface as Linear OAuth.                                           |
 
+**Total: 103 unique tools across 9 connector defs.**
+
 ## Safety — all write/irreversible tools gated
 
-Every mutable tool across all connectors now uses `gateWrite` (or Notion's
+Every mutable tool across all connectors uses `gateWrite` (or Notion's
 equivalent `requireConfirmed` pattern) to block execution until the user
-confirms the action. The following were fixed in this update:
-
-| Connector       | Tools gated                                                                                                   |
-| --------------- | ------------------------------------------------------------------------------------------------------------- |
-| Google Gmail    | `gmail-markAsRead`, `gmail-markAsUnread`, `gmail-archiveEmail`, `gmail-trashEmail`, `gmail-deletePermanently` |
-| Google Calendar | `calendar-createEvent`, `calendar-updateEvent`, `calendar-deleteEvent`                                        |
-| Google Drive    | `drive-createFile`, `drive-updateFile`, `drive-deleteFile`                                                    |
-| GitHub          | `github-updateIssue`, `github-addLabels`, `github-createBranch`                                               |
-| Slack           | `slack-sendMessage`                                                                                           |
-| Linear          | `linear-updateIssue`                                                                                          |
-
-## New tools added
-
-### P0 (completed)
-
-| Tool                              | Connector | Type  | Notes                                                              |
-| --------------------------------- | --------- | ----- | ------------------------------------------------------------------ |
-| `gmail-createDraft`               | Gmail     | Write | Create a draft with recipients, subject, body, optional thread ID. |
-| `gmail-listLabels`                | Gmail     | Read  | Return user labels and system labels.                              |
-| `gmail-applyLabels`               | Gmail     | Write | Add/remove labels on a message.                                    |
-| `calendar-listCalendars`          | Calendar  | Read  | Returns calendar IDs, names, descriptions, and primary status.     |
-| `calendar-createEventWithMeet`    | Calendar  | Write | Creates event with Google Meet link via conferenceData.            |
-| `github-getNotificationSubject`   | GitHub    | Read  | Resolves notification subject API URLs to readable details.        |
-| `github-markNotificationRead`     | GitHub    | Write | Mark one notification thread as read.                              |
-| `github-markAllNotificationsRead` | GitHub    | Write | Mark all notifications read.                                       |
-
-### P1 (completed)
-
-| Tool                       | Connector | Type  | Notes                                            |
-| -------------------------- | --------- | ----- | ------------------------------------------------ |
-| `drive-shareFile`          | Drive     | Write | Share with user/group or create link with role.  |
-| `drive-createFolder`       | Drive     | Write | Create folder with optional parent.              |
-| `slack-getChannelHistory`  | Slack     | Read  | Fetch recent messages from a channel.            |
-| `slack-getThread`          | Slack     | Read  | Fetch replies in a thread by timestamp.          |
-| `slack-replyInThread`      | Slack     | Write | Send a threaded reply.                           |
-| `notion-listDatabases`     | Notion    | Read  | Return databases shared with integration.        |
-| `notion-getDatabaseSchema` | Notion    | Read  | Return property names and types for a database.  |
-| `linear-listStates`        | Linear    | Read  | Return valid workflow states per team.           |
-| `linear-listCycles`        | Linear    | Read  | Return cycles with start/end dates and progress. |
+confirms the action.
 
 ## Future opportunities
 
@@ -93,9 +57,6 @@ lower-urgency or require additional scopes.
 | `drive-updateFileContent` | Write        | Replace/upload content for non-Google binary/text files. |
 | `drive-emptyTrash`        | Irreversible | Only with explicit confirmation.                         |
 
-(`drive-copyFile` and `drive-listPermissions` shipped and moved to the
-implemented set above.)
-
 ### Google Classroom
 
 | Tool                                  | Type | Notes                                       |
@@ -106,18 +67,11 @@ implemented set above.)
 | `classroom-listClassmates`            | Read | Only if scopes and school policy allow it.  |
 | `classroom-listSubmissionAttachments` | Read | Helps users inspect what submitted.         |
 
-Turn-in and attach-submission tools shipped as `classroom-turnIn` and
-`classroom-modifyAttachments` (both `gateWrite`-gated, using the
-`classroom.coursework.me` scope, which permits these actions for the student's
-own submissions). Note the Classroom API remains limited on personal Gmail
-accounts — full access needs a Workspace for Education account.
-
 ### GitHub
 
 | Tool                       | Type | Notes                                                         |
 | -------------------------- | ---- | ------------------------------------------------------------- |
 | `github-listPRFiles`       | Read | Needed for review/summarization workflows.                    |
-| `github-getFileContent`    | Read | Read repository file content before editing.                  |
 | `github-listIssueComments` | Read | Current issue detail only returns comment count, not content. |
 | `github-listPRReviews`     | Read | Show review state and reviewer feedback.                      |
 | `github-listWorkflowRuns`  | Read | Answer "did CI pass?" without browsing GitHub.                |
@@ -131,8 +85,6 @@ accounts — full access needs a Workspace for Education account.
 | `notion-createPageFromMarkdown` | Write | Better structured document creation than one paragraph. |
 
 ### Slack
-
-Add:
 
 | Tool                | Type  | Notes                                           |
 | ------------------- | ----- | ----------------------------------------------- |

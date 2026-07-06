@@ -26,3 +26,5 @@ student submission read/write, and user email scopes.
 4. `drive-shareFile` → share with teacher so they can see it
 5. `classroom-modifyAttachments` → attach the Drive file
 6. `classroom-turnIn` → submit
+
+Write tools use `gateWrite` and require user confirmation.
