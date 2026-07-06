@@ -91,69 +91,95 @@ export async function runPrivacyRetention(): Promise<RetentionReport> {
   ).length
 
   // ── Domain retention sweeps (spec 23 §13.1) ─────────────────────────
-  const conversationCutoff = cutoff(RETENTION_DEFAULTS.conversations.days)
-  report.domains.conversations = (
-    await db
-      .delete(agentMessages)
-      .where(lt(agentMessages.createdAt, conversationCutoff))
-      .returning({ id: agentMessages.id })
-  ).length
-  // Sessions with no activity past the window (messages above are already gone).
-  await db
-    .delete(agentSessions)
-    .where(lt(agentSessions.lastMessageAt, conversationCutoff))
-    .returning({ id: agentSessions.id })
-
-  report.domains.rag_retrieval_logs = (
-    await db
-      .delete(ragRetrievalLogs)
-      .where(lt(ragRetrievalLogs.createdAt, cutoff(RETENTION_DEFAULTS.rag_retrieval_logs.days)))
-      .returning({ id: ragRetrievalLogs.id })
-  ).length
-
-  report.domains.usage_events = (
-    await db
-      .delete(usageEvents)
-      .where(lt(usageEvents.createdAt, cutoff(RETENTION_DEFAULTS.usage_events.days)))
-      .returning({ id: usageEvents.id })
-  ).length
-
-  // Pending actions: expired + grace window (spec: expiry plus 7 days).
-  report.domains.pending_actions = (
-    await db
-      .delete(pendingActions)
-      .where(lt(pendingActions.expiresAt, cutoff(RETENTION_DEFAULTS.pending_actions.days)))
-      .returning({ id: pendingActions.id })
-  ).length
-
-  report.domains.devices = (
-    await db
-      .delete(devices)
-      .where(lt(devices.lastSeen, cutoff(RETENTION_DEFAULTS.devices.days)))
-      .returning({ id: devices.id })
-  ).length
-
-  const now = cutoff(RETENTION_DEFAULTS.expired_codes.days)
-  const expiredCodes =
-    (
+  // Each sweep is isolated: a failure in one domain (e.g. a FK violation)
+  // must not prevent the remaining sweeps or the audit insert from running.
+  try {
+    const conversationCutoff = cutoff(RETENTION_DEFAULTS.conversations.days)
+    report.domains.conversations = (
       await db
-        .delete(linkingCodes)
-        .where(lt(linkingCodes.expiresAt, now))
-        .returning({ code: linkingCodes.code })
-    ).length +
-    (
-      await db
-        .delete(telegramLinkTokens)
-        .where(lt(telegramLinkTokens.expiresAt, now))
-        .returning({ token: telegramLinkTokens.token })
-    ).length +
-    (
-      await db
-        .delete(deviceCodes)
-        .where(lt(deviceCodes.expiresAt, now))
-        .returning({ deviceCode: deviceCodes.deviceCode })
+        .delete(agentMessages)
+        .where(lt(agentMessages.createdAt, conversationCutoff))
+        .returning({ id: agentMessages.id })
     ).length
-  report.domains.expired_codes = expiredCodes
+    // Sessions with no activity past the window (messages above are already gone).
+    await db
+      .delete(agentSessions)
+      .where(lt(agentSessions.lastMessageAt, conversationCutoff))
+      .returning({ id: agentSessions.id })
+  } catch (err) {
+    console.warn(`[retention] conversations sweep failed: ${err instanceof Error ? err.message : String(err)}`)
+  }
+
+  try {
+    report.domains.rag_retrieval_logs = (
+      await db
+        .delete(ragRetrievalLogs)
+        .where(lt(ragRetrievalLogs.createdAt, cutoff(RETENTION_DEFAULTS.rag_retrieval_logs.days)))
+        .returning({ id: ragRetrievalLogs.id })
+    ).length
+  } catch (err) {
+    console.warn(`[retention] rag_retrieval_logs sweep failed: ${err instanceof Error ? err.message : String(err)}`)
+  }
+
+  try {
+    report.domains.usage_events = (
+      await db
+        .delete(usageEvents)
+        .where(lt(usageEvents.createdAt, cutoff(RETENTION_DEFAULTS.usage_events.days)))
+        .returning({ id: usageEvents.id })
+    ).length
+  } catch (err) {
+    console.warn(`[retention] usage_events sweep failed: ${err instanceof Error ? err.message : String(err)}`)
+  }
+
+  try {
+    // Pending actions: expired + grace window (spec: expiry plus 7 days).
+    report.domains.pending_actions = (
+      await db
+        .delete(pendingActions)
+        .where(lt(pendingActions.expiresAt, cutoff(RETENTION_DEFAULTS.pending_actions.days)))
+        .returning({ id: pendingActions.id })
+    ).length
+  } catch (err) {
+    console.warn(`[retention] pending_actions sweep failed: ${err instanceof Error ? err.message : String(err)}`)
+  }
+
+  try {
+    report.domains.devices = (
+      await db
+        .delete(devices)
+        .where(lt(devices.lastSeen, cutoff(RETENTION_DEFAULTS.devices.days)))
+        .returning({ id: devices.id })
+    ).length
+  } catch (err) {
+    console.warn(`[retention] devices sweep failed: ${err instanceof Error ? err.message : String(err)}`)
+  }
+
+  try {
+    const now = cutoff(RETENTION_DEFAULTS.expired_codes.days)
+    const expiredCodes =
+      (
+        await db
+          .delete(linkingCodes)
+          .where(lt(linkingCodes.expiresAt, now))
+          .returning({ code: linkingCodes.code })
+      ).length +
+      (
+        await db
+          .delete(telegramLinkTokens)
+          .where(lt(telegramLinkTokens.expiresAt, now))
+          .returning({ token: telegramLinkTokens.token })
+      ).length +
+      (
+        await db
+          .delete(deviceCodes)
+          .where(lt(deviceCodes.expiresAt, now))
+          .returning({ deviceCode: deviceCodes.deviceCode })
+      ).length
+    report.domains.expired_codes = expiredCodes
+  } catch (err) {
+    console.warn(`[retention] expired_codes sweep failed: ${err instanceof Error ? err.message : String(err)}`)
+  }
 
   // Counts-only audit trail entry — never persist row content.
   try {
