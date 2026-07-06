@@ -273,6 +273,7 @@ export const ragSources = pgTable(
     sourceType: text("source_type").notNull(), // "upload" | "url" | "folder" | "manual"
     privacyScope: text("privacy_scope").notNull().default("cloud_rag"),
     status: text("status").notNull().default("indexing"),
+    syncState: jsonb("sync_state"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -294,6 +295,7 @@ export const ragDocuments = pgTable(
     mimeType: text("mime_type").notNull().default("text/plain"),
     contentHash: text("content_hash").notNull(),
     metadata: jsonb("metadata"),
+    externalId: text("external_id"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -301,6 +303,7 @@ export const ragDocuments = pgTable(
     userIdx: index("rag_documents_user_idx").on(t.userId),
     sourceIdx: index("rag_documents_source_idx").on(t.sourceId),
     sourceHashUnique: unique("rag_documents_source_hash_unique").on(t.sourceId, t.contentHash),
+    sourceExternalIdx: index("rag_documents_source_external_idx").on(t.sourceId, t.externalId),
   }),
 )
 

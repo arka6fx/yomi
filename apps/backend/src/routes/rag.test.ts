@@ -26,6 +26,19 @@ let executeRows: unknown[] = []
 let sourceRows: unknown[] = [{ id: "source_1" }]
 let documentRows: unknown[] = []
 let conflictTargets: unknown[][] = []
+let executedQueries: unknown[] = []
+
+// Drizzle's sql`` tagged template returns an SQL object whose queryChunks are
+// StringChunk instances (literal text between interpolations) interleaved with
+// param nodes. Concatenating the StringChunk values reconstructs the literal
+// SQL text (interpolated values are opaque, but the query text around them —
+// e.g. a raw `where s.status in (...)` clause — survives intact).
+function sqlToString(query: unknown): string {
+  const chunks = (query as { queryChunks?: unknown[] })?.queryChunks ?? []
+  return chunks
+    .map((c) => ((c as { value?: string[] })?.value ? (c as { value: string[] }).value.join("") : ""))
+    .join("")
+}
 const realFetch = globalThis.fetch
 const realAiCreditsApiKey = process.env["AI_CREDITS_API_KEY"]
 const realAiCreditsBaseUrl = process.env["AI_CREDITS_BASE_URL"]
@@ -75,7 +88,10 @@ const fakeDb = {
   delete: () => ({
     where: () => Promise.resolve(),
   }),
-  execute: () => Promise.resolve({ rows: executeRows }),
+  execute: (query: unknown) => {
+    executedQueries.push(query)
+    return Promise.resolve({ rows: executeRows })
+  },
 }
 
 mock.module("@yomi/db", () => ({
@@ -144,6 +160,7 @@ describe("Cloud RAG routes", () => {
     sourceRows = [{ id: "source_1" }]
     documentRows = []
     conflictTargets = []
+    executedQueries = []
   })
 
   afterEach(() => {
@@ -313,6 +330,15 @@ describe("Cloud RAG routes", () => {
       | { matchedChunkIds: string[] }
       | undefined
     expect(log?.matchedChunkIds).toContain("c1")
+
+    // Drive sources are only ever backfilling/active — never 'ready' — so the
+    // search query must include them, or indexed Drive docs are invisible to
+    // retrieval. This must FAIL if someone reverts the filter to `= 'ready'`.
+    const searchQuery = executedQueries.find((q) =>
+      /status in \(.*ready.*active.*backfilling.*\)/i.test(sqlToString(q)),
+    )
+    expect(searchQuery).toBeDefined()
+    expect(sqlToString(searchQuery)).toMatch(/status in \('ready', 'active', 'backfilling'\)/)
   })
 
   it("soft-deletes a source owned by the current user", async () => {
