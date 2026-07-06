@@ -31,12 +31,18 @@ describe("driveClient", () => {
     })
     const res = await client.listFolderChildren("u1", "folder-1")
     expect(res.files[0].id).toBe("f1")
-    expect(seenUrl).toContain("folder-1")
+    expect(decodeURIComponent(seenUrl).replace(/\+/g, " ")).toContain("'folder-1' in parents and trashed = false")
     expect(seenAuth).toBe("Bearer tok-123")
   })
 
   it("throws DriveApiError with status on non-ok", async () => {
     const client = makeDriveClient(fakeFetch({ "/changes": { status: 410, body: { error: "gone" } } }) as any)
-    await expect(client.listChanges("u1", "ptok")).rejects.toBeInstanceOf(DriveApiError)
+    await client.listChanges("u1", "ptok").then(
+      () => { throw new Error("expected DriveApiError") },
+      (e) => {
+        expect(e).toBeInstanceOf(DriveApiError)
+        expect(e.status).toBe(410)
+      },
+    )
   })
 })
