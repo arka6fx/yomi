@@ -2,6 +2,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, mock } from "bu
 import { Hono } from "hono"
 
 const mockRagSources = {}
+const mockRagDocuments = { sourceId: {} }
 
 type TestUser = {
   id: string
@@ -14,6 +15,7 @@ type TestUser = {
 let currentUser: TestUser
 let updateRows: unknown[] = []
 let sourceRows: unknown[] = [{ id: "src-1", userId: "user_1", path: "folder-1", status: "active", syncState: null }]
+let deletedFrom: unknown[] = []
 
 const fakeDb = {
   insert: () => ({
@@ -35,14 +37,18 @@ const fakeDb = {
       }),
     }),
   }),
-  delete: () => ({
-    where: () => Promise.resolve(),
+  delete: (table: unknown) => ({
+    where: () => {
+      deletedFrom.push(table)
+      return Promise.resolve()
+    },
   }),
 }
 
 mock.module("@yomi/db", () => ({
   db: fakeDb,
   ragSources: mockRagSources,
+  ragDocuments: mockRagDocuments,
 }))
 
 mock.module("../middleware/consent.js", () => ({
@@ -94,6 +100,7 @@ describe("Drive-sync source routes", () => {
     sourceRows = [
       { id: "src-1", userId: "user_1", path: "folder-1", status: "active", syncState: null },
     ]
+    deletedFrom = []
   })
 
   afterEach(() => {
@@ -124,6 +131,18 @@ describe("Drive-sync source routes", () => {
     expect(body.code).toBe("invalid_folder")
   })
 
+  it("rejects a folderId with characters outside the Drive ID charset", async () => {
+    const res = await app().request("/api/rag/drive/sources", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ folderId: "not valid'; drop table", name: "My Folder" }),
+    })
+    const body = (await res.json()) as { code?: string }
+
+    expect(res.status).toBe(400)
+    expect(body.code).toBe("invalid_folder")
+  })
+
   it("syncs a source and returns the sync result", async () => {
     const res = await app().request("/api/rag/drive/sources/src-1/sync", {
       method: "POST",
@@ -145,6 +164,16 @@ describe("Drive-sync source routes", () => {
     expect(body.ok).toBe(true)
   })
 
+  it("purges the source's documents on delete so nothing is orphaned", async () => {
+    updateRows = [{ id: "src-1" }]
+    const res = await app().request("/api/rag/drive/sources/src-1", {
+      method: "DELETE",
+    })
+
+    expect(res.status).toBe(200)
+    expect(deletedFrom).toContain(mockRagDocuments)
+  })
+
   it("returns 404 when deleting a non-existent source", async () => {
     updateRows = []
     const res = await app().request("/api/rag/drive/sources/nonexistent", {
@@ -154,5 +183,6 @@ describe("Drive-sync source routes", () => {
 
     expect(res.status).toBe(404)
     expect(body.code).toBe("source_not_found")
+    expect(deletedFrom).not.toContain(mockRagDocuments)
   })
 })

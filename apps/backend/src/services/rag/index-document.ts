@@ -20,7 +20,9 @@ export function contentHashFor(externalId: string, text: string): string {
 export async function indexDocument(
   input: IndexDocumentInput,
 ): Promise<{ status: "indexed" | "unchanged"; documentId: string | null }> {
-  const contentHash = contentHashFor(input.externalId, input.text)
+  // Cap so a huge Drive export (e.g. a giant CSV) can't produce unbounded chunks/embeddings.
+  const text = input.text.slice(0, 120_000)
+  const contentHash = contentHashFor(input.externalId, text)
 
   const existing = await db
     .select({ id: ragDocuments.id, contentHash: ragDocuments.contentHash })
@@ -53,7 +55,7 @@ export async function indexDocument(
 
   if (!document) return { status: "indexed", documentId: null }
 
-  const chunks = chunkText(input.text)
+  const chunks = chunkText(text)
   for (const [chunkIndex, chunk] of chunks.entries()) {
     const [createdChunk] = await db
       .insert(ragChunks)
