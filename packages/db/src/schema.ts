@@ -262,6 +262,27 @@ export const schedules = pgTable(
   }),
 )
 
+// Latches for the suggested-automations surface: a suggestion "exists" only as
+// catalog × connected integrations minus these rows, so accepted/dismissed
+// dedup keys are never re-offered.
+export const suggestionDecisions = pgTable(
+  "suggestion_decisions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    dedupKey: text("dedup_key").notNull(),
+    decision: text("decision").notNull(), // 'accepted' | 'dismissed'
+    scheduleId: uuid("schedule_id").references(() => schedules.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    userIdx: index("suggestion_decisions_user_idx").on(t.userId),
+    userKeyUnique: unique("suggestion_decisions_user_key_unique").on(t.userId, t.dedupKey),
+  }),
+)
+
 export const ragSources = pgTable(
   "rag_sources",
   {
@@ -599,6 +620,8 @@ export const privacyPreferences = pgTable("privacy_preferences", {
   voiceProcessingEnabled: boolean("voice_processing_enabled").notNull().default(false),
   screenProcessingEnabled: boolean("screen_processing_enabled").notNull().default(false),
   aiImprovementEnabled: boolean("ai_improvement_enabled").notNull().default(false),
+  telegramProcessingEnabled: boolean("telegram_processing_enabled").notNull().default(false),
+  ragProcessingEnabled: boolean("rag_processing_enabled").notNull().default(false),
   retentionOverrides: jsonb("retention_overrides"),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })

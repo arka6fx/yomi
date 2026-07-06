@@ -4,6 +4,7 @@ import { eq, and, lt } from "drizzle-orm"
 import { db, platformConnections, linkingCodes, telegramLinkTokens, usageEvents } from "@yomi/db"
 import type { PlatformType, GatewayMessage, GatewaySessionInfo } from "@yomi/shared"
 import { checkConsent } from "../services/privacy/checks.js"
+import { recordConsentDecision } from "../services/privacy/consent.js"
 import { createModel, type AgentMessage } from "@yomi/agent-core"
 import type { PlatformAdapter } from "./platform-adapter.js"
 import { TelegramAdapter } from "./platforms/telegram.js"
@@ -707,6 +708,22 @@ export class GatewayRunner {
           set: { userId: row.userId, platformChatId: chatId, updatedAt: new Date() },
         })
 
+      // Auto-grant conversation_history and telegram_processing consent so the
+      // bot can remember context across messages without a separate dashboard visit.
+      await recordConsentDecision({
+        userId: row.userId,
+        purposes: ["conversation_history", "telegram_processing"],
+        status: "granted",
+        context: {
+          appVersion: null,
+          ipAddress: null,
+          userAgent: null,
+          metadata: { source: "telegram_linking" },
+        },
+      }).catch((err: unknown) => {
+        console.warn("[telegram-deeplink] failed to grant consent:", err)
+      })
+
       console.warn(
         `[telegram-deeplink] link success: yomiUser=${row.userId} telegramUser=${platformUserId} token=${token}`,
       )
@@ -924,8 +941,20 @@ export class GatewayRunner {
       )
 
       const session = this.getOrCreateSession(msg)
+      const isFirstMessage = session.messageCount === 0
       session.messageCount++
       session.lastActivityAt = Date.now()
+
+      // Inform the user once when conversation history is disabled so they know
+      // why the bot seems amnesiac instead of failing silently.
+      if (!conversationConsent.allowed && isFirstMessage) {
+        await this.sendMessageAndLog(
+          msg.platform,
+          msg.chatId,
+          "ℹ️ Conversation history is currently disabled. I'll respond to each message fresh — I won't remember context between messages. To enable it, visit your dashboard privacy settings.",
+          "consent-denied-notice",
+        )
+      }
 
       const approvalReply = await this.handleApprovalCommand(yomiUserId, msg.text)
       if (approvalReply) {
@@ -1114,15 +1143,21 @@ export class GatewayRunner {
       let persistentSession: { id: string } | null = null
       let history = this.getHistory(msg.platform, msg.chatId)
 
-      try {
-        persistentSession = await getOrCreateAgentSession({
-          userId: yomiUserId,
-          platform: SHARED_SESSION_PLATFORM,
-          chatId: SHARED_SESSION_CHAT_ID,
-        })
-        history = await loadAgentHistory(persistentSession.id)
-      } catch (err) {
-        console.warn("[gateway] persistent session unavailable, using in-memory history:", err)
+      // Gate the DB read to match the write path: when conversation_history
+      // consent is denied, don't load history from the DB so that the read
+      // and write paths are consistent — neither reads nor writes persistent
+      // history when consent is absent.
+      if (conversationConsent.allowed) {
+        try {
+          persistentSession = await getOrCreateAgentSession({
+            userId: yomiUserId,
+            platform: SHARED_SESSION_PLATFORM,
+            chatId: SHARED_SESSION_CHAT_ID,
+          })
+          history = await loadAgentHistory(persistentSession.id)
+        } catch (err) {
+          console.warn("[gateway] persistent session unavailable, using in-memory history:", err)
+        }
       }
 
       if (msg.imageUrl) {
