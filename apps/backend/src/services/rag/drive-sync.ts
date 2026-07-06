@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm"
+import { and, eq, isNull, lt, or } from "drizzle-orm"
 import { db, ragSources, ragDocuments } from "@yomi/db"
 import { driveExtract } from "./drive-extract.js"
 import { indexDocument, deleteDocumentByExternalId } from "./index-document.js"
@@ -195,4 +195,44 @@ async function loadKnownExternalIds(sourceId: string): Promise<Set<string>> {
     .from(ragDocuments)
     .where(eq(ragDocuments.sourceId, sourceId))
   return new Set(rows.map((r) => r.externalId).filter((x): x is string => !!x))
+}
+
+export const MAX_SOURCES_PER_SWEEP = 10
+const DRIVE_SYNC_INTERVAL_MS = Number(process.env["DRIVE_SYNC_INTERVAL_MS"] ?? 6 * 60 * 60 * 1000)
+
+// Sweeps due google-drive sources on the cron tick. `backfilling` sources are
+// always due (so an initial backfill completes promptly at one batch per
+// tick); `active` sources are due only once `updatedAt` is stale past
+// DRIVE_SYNC_INTERVAL_MS. Per-source failures are caught so one bad source
+// never blocks the rest of the sweep or the worker's scheduled() handler.
+export async function runDriveSyncSweep(
+  run: (s: SourceRow, c?: DriveClient) => Promise<unknown> = syncSource,
+): Promise<{ ran: number }> {
+  const cutoff = new Date(Date.now() - DRIVE_SYNC_INTERVAL_MS)
+  const rows = await db
+    .select()
+    .from(ragSources)
+    .where(
+      and(
+        eq(ragSources.sourceType, DRIVE_SOURCE_TYPE),
+        or(
+          eq(ragSources.status, "backfilling"),
+          and(
+            eq(ragSources.status, "active"),
+            or(isNull(ragSources.updatedAt), lt(ragSources.updatedAt, cutoff)),
+          ),
+        ),
+      ),
+    )
+    .limit(MAX_SOURCES_PER_SWEEP)
+  let ran = 0
+  for (const row of rows) {
+    try {
+      await run(row as unknown as SourceRow)
+      ran++
+    } catch (err) {
+      console.error(`[drive-sync] source ${(row as { id: string }).id} failed:`, err)
+    }
+  }
+  return { ran }
 }
