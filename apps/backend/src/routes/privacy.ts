@@ -14,7 +14,9 @@ import {
   agentSessions,
   db,
   mcpConnections,
+  memoryEmbeddings,
   memoryEntries,
+  memoryRelations,
   platformConnections,
   privacyAuditEvents,
   ragChunks,
@@ -405,4 +407,48 @@ privacyRouter.post("/delete-account", async (c) => {
   const job = await deleteAccount(user.id)
   if (!job) return c.json({ error: "Failed to create deletion job" }, 500)
   return c.json({ job })
+})
+
+privacyRouter.delete("/memories", async (c) => {
+  const user = c.get("user")
+  // memory_sources has no user_id column — it cascades from memory_entries.id
+  // (onDelete: "cascade"), same as deletion.ts relies on for that table.
+  await db.delete(memoryEmbeddings).where(eq(memoryEmbeddings.userId, user.id))
+  await db.delete(memoryRelations).where(eq(memoryRelations.userId, user.id))
+  const deleted = await db
+    .delete(memoryEntries)
+    .where(eq(memoryEntries.userId, user.id))
+    .returning({ id: memoryEntries.id })
+  await recordPrivacyAuditEvent({
+    actorUserId: user.id,
+    targetUserId: user.id,
+    eventType: "privacy.memories.deleted_all",
+    ipAddress: clientIp(c),
+    userAgent: userAgent(c),
+    metadata: { count: deleted.length },
+  })
+  return c.json({ deleted: deleted.length })
+})
+
+privacyRouter.get("/memories/export", async (c) => {
+  const user = c.get("user")
+  const memories = await db
+    .select({
+      id: memoryEntries.id,
+      topic: memoryEntries.topic,
+      content: memoryEntries.content,
+      createdAt: memoryEntries.createdAt,
+    })
+    .from(memoryEntries)
+    .where(eq(memoryEntries.userId, user.id))
+    .orderBy(desc(memoryEntries.createdAt))
+  await recordPrivacyAuditEvent({
+    actorUserId: user.id,
+    targetUserId: user.id,
+    eventType: "privacy.memories.exported",
+    ipAddress: clientIp(c),
+    userAgent: userAgent(c),
+    metadata: { count: memories.length },
+  })
+  return c.json({ memories })
 })
