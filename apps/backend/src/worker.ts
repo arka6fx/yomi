@@ -62,11 +62,16 @@ export default {
           .catch((err) => console.error("[schedules] sweep error:", err)),
         runPrivacyRetention()
           .then((r) => {
+            const domainTotal = Object.values(r.domains).reduce((sum, n) => sum + n, 0)
             const total =
-              r.expiredExports + r.oldDeletionJobs + r.hardDeletedUsers + r.oldAuditEvents
+              r.expiredExports +
+              r.oldDeletionJobs +
+              r.hardDeletedUsers +
+              r.oldAuditEvents +
+              domainTotal
             if (total > 0)
               console.warn(
-                `[retention] cleaned ${total} items (exports:${r.expiredExports} jobs:${r.oldDeletionJobs} users:${r.hardDeletedUsers} audit:${r.oldAuditEvents})`,
+                `[retention] cleaned ${total} items (exports:${r.expiredExports} jobs:${r.oldDeletionJobs} users:${r.hardDeletedUsers} audit:${r.oldAuditEvents} convo:${r.domains.conversations} raglogs:${r.domains.rag_retrieval_logs} usage:${r.domains.usage_events} pending:${r.domains.pending_actions} devices:${r.domains.devices} codes:${r.domains.expired_codes})`,
               )
           })
           .catch((err) => console.error("[retention] sweep error:", err)),
