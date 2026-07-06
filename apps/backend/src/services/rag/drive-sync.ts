@@ -120,9 +120,10 @@ async function backfillStep(
     source.userId,
     st.folderId,
     st.backfillCursor ?? undefined,
+    MAX_BACKFILL_FILES_PER_TICK,
   )
   let indexed = 0
-  for (const file of page.files.slice(0, MAX_BACKFILL_FILES_PER_TICK)) {
+  for (const file of page.files) {
     const ok = await extractAndIndex(client, source.userId, source.id, file)
     if (ok) {
       indexed++
