@@ -67,6 +67,8 @@ mock.module("@yomi/db", () => ({
   linkingCodes: {},
   telegramLinkTokens: {},
   usageEvents: { id: "id" },
+  privacyPreferences: {},
+  privacyConsents: {},
 }))
 
 mock.module("../services/privacy/checks.js", () => ({
