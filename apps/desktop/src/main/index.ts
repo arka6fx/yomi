@@ -388,6 +388,67 @@ app.whenReady().then(async () => {
     }
   })
 
+  // ── RAG: Drive sources ──────────────────────────────────────────────────────
+
+  ipcMain.handle("yomi:get-drive-sources", async () => {
+    const token = loadToken()
+    if (!token) return { error: "Not signed in" }
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/rag/drive/sources`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = (await res.json().catch(() => ({}))) as { sources?: unknown[]; error?: string }
+      if (!res.ok)
+        return {
+          error: data.error ?? `Failed: ${res.status}`,
+          code: res.status === 403 ? "upgrade_required" : undefined,
+        }
+      return { sources: data.sources ?? [] }
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Failed to load folders" }
+    }
+  })
+
+  ipcMain.handle(
+    "yomi:create-drive-source",
+    async (_e, input: { folderId: string; name?: string }) => {
+      const token = loadToken()
+      if (!token) return { error: "Not signed in" }
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/rag/drive/sources`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify(input),
+        })
+        const data = (await res.json().catch(() => ({}))) as {
+          id?: string
+          error?: string
+          code?: string
+        }
+        if (!res.ok) return { error: data.error ?? `Failed: ${res.status}`, code: data.code }
+        return { id: data.id }
+      } catch (err) {
+        return { error: err instanceof Error ? err.message : "Failed to add folder" }
+      }
+    },
+  )
+
+  ipcMain.handle("yomi:delete-drive-source", async (_e, id: string) => {
+    const token = loadToken()
+    if (!token) return { error: "Not signed in" }
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/rag/drive/sources/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) return { ok: true }
+      const data = (await res.json().catch(() => ({}))) as { error?: string; code?: string }
+      return { error: data.error ?? `Delete failed: ${res.status}`, code: data.code }
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Delete failed" }
+    }
+  })
+
   // ── Bot channels (Telegram messaging gateway) ───────────────────────────────
 
   ipcMain.handle("yomi:gateway-connections", async () => {

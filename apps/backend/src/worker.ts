@@ -1,6 +1,7 @@
 import { app, startGateway } from "./index.js"
 import { runDueSchedules } from "./services/schedule-runner.js"
 import { runPrivacyRetention } from "./services/privacy/retention.js"
+import { runDriveSyncSweep } from "./services/rag/drive-sync.js"
 
 interface ExecutionContext {
   waitUntil(promise: Promise<unknown>): void
@@ -75,6 +76,11 @@ export default {
               )
           })
           .catch((err) => console.error("[retention] sweep error:", err)),
+        runDriveSyncSweep()
+          .then(({ ran }) => {
+            if (ran > 0) console.warn(`[drive-sync] swept ${ran} source(s)`)
+          })
+          .catch((err) => console.error("[drive-sync] sweep error:", err)),
       ]),
     )
   },

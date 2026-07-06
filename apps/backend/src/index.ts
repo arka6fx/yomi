@@ -11,6 +11,7 @@ import { billingRouter } from "./routes/billing.js"
 import { authRoutesRouter } from "./routes/auth-routes.js"
 import { profileRouter } from "./routes/profile.js"
 import { ragRouter } from "./routes/rag.js"
+import { ragDriveRouter } from "./routes/rag-drive.js"
 import { memoryRouter } from "./routes/memory.js"
 import { schedulesRouter } from "./routes/schedules.js"
 import { actionsRouter } from "./routes/actions.js"
@@ -112,6 +113,7 @@ app.route("/api/usage", usageRouter)
 app.route("/api/billing", billingRouter)
 app.route("/api/user", profileRouter)
 app.route("/api/rag", ragRouter)
+app.route("/api/rag/drive", ragDriveRouter)
 app.route("/api/memory", memoryRouter)
 app.route("/api/schedules", schedulesRouter)
 app.route("/api/actions", actionsRouter)

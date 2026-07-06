@@ -245,6 +245,33 @@ contextBridge.exposeInMainWorld("yomi", {
     return ipcRenderer.invoke("yomi:disconnect-integration", provider)
   },
 
+  // ── RAG: Drive sources ──────────────────────────────────────────────────────
+
+  getDriveSources(): Promise<{
+    sources?: {
+      id: string
+      name: string
+      folderId: string
+      status: string
+      syncState: { filesIndexed: number; filesSkipped: number; lastSyncedAt: string | null }
+    }[]
+    error?: string
+    code?: string
+  }> {
+    return ipcRenderer.invoke("yomi:get-drive-sources")
+  },
+
+  createDriveSource(input: {
+    folderId: string
+    name?: string
+  }): Promise<{ id?: string; error?: string; code?: string }> {
+    return ipcRenderer.invoke("yomi:create-drive-source", input)
+  },
+
+  deleteDriveSource(id: string): Promise<{ ok?: boolean; error?: string; code?: string }> {
+    return ipcRenderer.invoke("yomi:delete-drive-source", id)
+  },
+
   // ── Bot channels (Telegram) ─────────────────────────────────────────────────
 
   getBotConnections(): Promise<{ platform: string; connectedAt: string }[]> {

@@ -36,6 +36,14 @@ type Integration = {
 
 type BotConnection = { platform: string; connectedAt: string }
 
+type DriveSource = {
+  id: string
+  name: string
+  folderId: string
+  status: string
+  syncState: { filesIndexed: number; filesSkipped: number; lastSyncedAt: string | null }
+}
+
 const TELEGRAM_COLOR = "#3aa9e0"
 
 export default function IntegrationsPage() {
@@ -48,6 +56,14 @@ export default function IntegrationsPage() {
 
   const [botConnections, setBotConnections] = useState<BotConnection[]>([])
   const [botBusy, setBotBusy] = useState<string | null>(null)
+
+  const [driveSources, setDriveSources] = useState<DriveSource[]>([])
+  const [driveLoading, setDriveLoading] = useState(false)
+  const [driveError, setDriveError] = useState<string | null>(null)
+  const [driveFolderId, setDriveFolderId] = useState("")
+  const [driveName, setDriveName] = useState("")
+  const [driveAdding, setDriveAdding] = useState(false)
+  const [driveRemovingId, setDriveRemovingId] = useState<string | null>(null)
 
   async function loadIntegrations() {
     setLoading(true)
@@ -70,10 +86,80 @@ export default function IntegrationsPage() {
     }
   }
 
+  async function loadDriveSources() {
+    setDriveLoading(true)
+    try {
+      const result = await window.yomi.getDriveSources()
+      if (result.error) {
+        setDriveError(
+          result.code === "upgrade_required" ? "Indexing folders requires Pro" : result.error,
+        )
+        return
+      }
+      setDriveSources(result.sources ?? [])
+      setDriveError(null)
+    } catch {
+      // best-effort
+    } finally {
+      setDriveLoading(false)
+    }
+  }
+
   useEffect(() => {
     void loadIntegrations()
     void loadBotConnections()
   }, [])
+
+  const driveConnected = integrations.some((i) => i.provider === "google-drive" && i.connected)
+
+  useEffect(() => {
+    if (driveConnected) void loadDriveSources()
+  }, [driveConnected])
+
+  async function handleAddDriveSource() {
+    const folderId = driveFolderId.trim()
+    if (!folderId) {
+      setDriveError("Enter a folder ID")
+      return
+    }
+    setDriveAdding(true)
+    setDriveError(null)
+    try {
+      const result = await window.yomi.createDriveSource({
+        folderId,
+        name: driveName.trim() || undefined,
+      })
+      if (result.error) {
+        setDriveError(
+          result.code === "upgrade_required"
+            ? "Indexing folders requires Pro"
+            : result.code === "invalid_folder"
+              ? "Enter a folder ID"
+              : result.error,
+        )
+        return
+      }
+      setDriveFolderId("")
+      setDriveName("")
+      await loadDriveSources()
+    } finally {
+      setDriveAdding(false)
+    }
+  }
+
+  async function handleRemoveDriveSource(id: string) {
+    setDriveRemovingId(id)
+    try {
+      const result = await window.yomi.deleteDriveSource(id)
+      if (result.error) {
+        setDriveError(result.error)
+        return
+      }
+      await loadDriveSources()
+    } finally {
+      setDriveRemovingId(null)
+    }
+  }
 
   async function handleBotConnect(platform: "telegram") {
     setBotBusy(platform)
@@ -178,6 +264,144 @@ export default function IntegrationsPage() {
           onDisconnect={handleDisconnect}
           loadingId={loadingId}
         />
+      )}
+
+      {/* Indexed folders — Drive folders synced into RAG */}
+      {driveConnected && (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.05 }}
+          style={{ marginTop: 24 }}
+        >
+          <h3 style={{ fontSize: 13, fontWeight: 700, color: t.text, margin: "0 0 2px 0" }}>
+            Indexed folders
+          </h3>
+          <p style={{ fontSize: 11, color: t.dim, margin: "0 0 12px 0", lineHeight: 1.45 }}>
+            Drive folders Yomi keeps searchable in your knowledge base.
+          </p>
+
+          <div
+            style={{
+              borderRadius: 12,
+              border: `1px solid ${t.border}`,
+              background: t.surface,
+              overflow: "hidden",
+            }}
+          >
+            <div style={{ padding: "12px 14px", display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <input
+                value={driveFolderId}
+                onChange={(e) => setDriveFolderId(e.target.value)}
+                placeholder="Drive folder ID"
+                style={{
+                  flex: "1 1 160px",
+                  fontSize: 11.5,
+                  padding: "6px 10px",
+                  borderRadius: 8,
+                  border: `1px solid ${t.border}`,
+                  background: t.bg,
+                  color: t.text,
+                  fontFamily: UI_FONT,
+                }}
+              />
+              <input
+                value={driveName}
+                onChange={(e) => setDriveName(e.target.value)}
+                placeholder="Name (optional)"
+                style={{
+                  flex: "1 1 120px",
+                  fontSize: 11.5,
+                  padding: "6px 10px",
+                  borderRadius: 8,
+                  border: `1px solid ${t.border}`,
+                  background: t.bg,
+                  color: t.text,
+                  fontFamily: UI_FONT,
+                }}
+              />
+              <button
+                onClick={() => void handleAddDriveSource()}
+                disabled={driveAdding}
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: connectorTheme.accentText,
+                  background: connectorTheme.accent,
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "6px 14px",
+                  cursor: driveAdding ? "default" : "pointer",
+                  opacity: driveAdding ? 0.5 : 1,
+                  fontFamily: UI_FONT,
+                }}
+              >
+                {driveAdding ? "Adding…" : "Index this folder"}
+              </button>
+            </div>
+
+            {driveError && (
+              <div
+                style={{
+                  padding: "0 14px 10px",
+                  fontSize: 10.5,
+                  color: connectorTheme.error,
+                }}
+              >
+                {driveError}
+              </div>
+            )}
+
+            {driveSources.length > 0 && (
+              <div style={{ borderTop: `1px solid ${t.border}` }}>
+                {driveSources.map((s) => (
+                  <div
+                    key={s.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "10px 14px",
+                      borderBottom: `1px solid ${t.border}`,
+                      gap: 12,
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: t.text }}>{s.name}</div>
+                      <div style={{ fontSize: 10.5, color: t.dim }}>
+                        {s.status} · {s.syncState?.filesIndexed ?? 0} files indexed
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => void handleRemoveDriveSource(s.id)}
+                      disabled={driveRemovingId === s.id}
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: connectorTheme.error,
+                        background: "transparent",
+                        border: `1px solid ${t.border}`,
+                        borderRadius: 8,
+                        padding: "5px 12px",
+                        cursor: driveRemovingId === s.id ? "default" : "pointer",
+                        opacity: driveRemovingId === s.id ? 0.5 : 1,
+                        fontFamily: UI_FONT,
+                      }}
+                    >
+                      {driveRemovingId === s.id ? "…" : "Remove"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!driveLoading && driveSources.length === 0 && !driveError && (
+              <div style={{ padding: "0 14px 12px", fontSize: 10.5, color: t.dim }}>
+                No folders indexed yet.
+              </div>
+            )}
+          </div>
+        </motion.div>
       )}
 
       {/* Telegram — chat with Yomi from anywhere */}
