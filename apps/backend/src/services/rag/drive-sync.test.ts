@@ -1,0 +1,81 @@
+import { describe, expect, it, mock, beforeEach } from "bun:test"
+
+const state: { sources: any[]; indexed: string[]; deleted: string[] } = {
+  sources: [],
+  indexed: [],
+  deleted: [],
+}
+
+mock.module("@yomi/db", () => {
+  const db = {
+    update: () => ({ set: (v: any) => ({ where: () => { Object.assign(state.sources[0], v); return Promise.resolve() } }) }),
+    select: () => ({
+      from: () => ({
+        where: () => {
+          // Awaitable directly (loadKnownExternalIds does `.where()` with no `.limit()`),
+          // but also chainable via `.limit()` for callers that do (unused here since
+          // index-document.js is mocked out in this test).
+          const p: any = Promise.resolve([])
+          p.limit = () => Promise.resolve([])
+          return p
+        },
+      }),
+    }),
+    insert: () => ({ values: (v: any) => ({ returning: () => { const row = { id: "src-1", ...v }; state.sources.push(row); return Promise.resolve([row]) } }) }),
+  }
+  // mcpConnections is unused by drive-sync itself, but drive-client.js's realDriveClient
+  // default parameter transitively imports integration-tokens.js, which imports mcpConnections
+  // from @yomi/db — the mock must still provide the named export so that import resolves.
+  return { db, ragSources: {}, ragDocuments: {}, mcpConnections: {} }
+})
+mock.module("./index-document.js", () => ({
+  indexDocument: async (i: any) => { state.indexed.push(i.externalId); return { status: "indexed", documentId: "d" } },
+  deleteDocumentByExternalId: async (_u: string, _s: string, e: string) => { state.deleted.push(e); return true },
+}))
+
+const { createDriveSource, syncSource } = await import("./drive-sync.js")
+
+function client(overrides: any = {}) {
+  return {
+    getStartPageToken: async () => "ptok-0",
+    listFolderChildren: async () => ({ files: [{ id: "f1", name: "A", mimeType: "text/plain" }] }),
+    fetchContent: async () => "body",
+    listChanges: async () => ({ changes: [], newStartPageToken: "ptok-1" }),
+    ...overrides,
+  }
+}
+
+beforeEach(() => { state.sources = []; state.indexed = []; state.deleted = [] })
+
+describe("drive-sync", () => {
+  it("captures a start page token when creating a source", async () => {
+    await createDriveSource("u1", "folder-1", "My Folder", client() as any)
+    expect(state.sources[0].syncState.drivePageToken).toBe("ptok-0")
+    expect(state.sources[0].status).toBe("backfilling")
+  })
+
+  it("backfill indexes children then flips to active", async () => {
+    const src = { id: "src-1", userId: "u1", path: "folder-1", status: "backfilling", syncState: { folderId: "folder-1", drivePageToken: "ptok-0", filesIndexed: 0, filesSkipped: 0 } }
+    state.sources.push(src)
+    const res = await syncSource(src as any, client() as any)
+    expect(state.indexed).toContain("f1")
+    expect(res.status).toBe("active")
+  })
+
+  it("incremental deletes trashed files in scope", async () => {
+    const src = { id: "src-1", userId: "u1", path: "folder-1", status: "active", syncState: { folderId: "folder-1", drivePageToken: "ptok-0", filesIndexed: 1, filesSkipped: 0 } }
+    state.sources.push(src)
+    const c = client({ listChanges: async () => ({ changes: [{ fileId: "f1", removed: true }], newStartPageToken: "ptok-2" }) })
+    await syncSource(src as any, c as any)
+    expect(state.deleted).toContain("f1")
+  })
+
+  it("marks needs_reconnect on 401", async () => {
+    const { DriveApiError } = await import("./drive-client.js")
+    const src = { id: "src-1", userId: "u1", path: "folder-1", status: "active", syncState: { folderId: "folder-1", drivePageToken: "ptok-0", filesIndexed: 0, filesSkipped: 0 } }
+    state.sources.push(src)
+    const c = client({ listChanges: async () => { throw new DriveApiError("unauthorized", 401) } })
+    const res = await syncSource(src as any, c as any)
+    expect(res.status).toBe("needs_reconnect")
+  })
+})
