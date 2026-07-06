@@ -130,9 +130,6 @@ function createAuth() {
       customSession(async (session) => {
         const fields = await getUserFields(session.user.id)
         const mergedUser = { ...session.user, ...(fields ?? {}) }
-        console.warn(
-          `[auth/customSession] userId=${session.user.id} trialEndDate=${fields?.trialEndDate} subscriptionStatus=${fields?.subscriptionStatus}`,
-        )
         return {
           ...session,
           user: {

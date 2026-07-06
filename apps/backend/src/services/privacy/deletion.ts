@@ -30,24 +30,89 @@ type DeletionStep = {
   error?: string
 }
 
+type ConnectorRevocationSummary = {
+  attempted: number
+  revoked: string[]
+  failed: string[]
+  skipped: string[]
+}
+
 const GOOGLE_REVOKE_URL = "https://oauth2.googleapis.com/revoke"
 
-async function revokeGoogleTokens(userId: string): Promise<void> {
-  const rows = await db
-    .select({ oauthTokens: mcpConnections.oauthTokens })
-    .from(mcpConnections)
-    .where(and(eq(mcpConnections.userId, userId), eq(mcpConnections.provider, "google")))
-    .limit(1)
-  if (!rows.length) return
-
-  try {
-    const tok = decryptTokens(rows[0]!.oauthTokens)
-    await fetch(`${GOOGLE_REVOKE_URL}?token=${encodeURIComponent(tok.accessToken)}`, {
+// Note: GitHub has two separate OAuth apps — GITHUB_CLIENT_ID/SECRET are the
+// Better Auth login app, while the connector (whose tokens live in
+// mcp_connections) is registered under GITHUB_INTEGRATIONS_CLIENT_ID/SECRET
+// (see packages/agent-core/src/connectors/github-def.ts). Revocation must use
+// the integrations app credentials, not the login app's.
+async function revokeProviderToken(provider: string, accessToken: string): Promise<boolean> {
+  if (provider === "google") {
+    const res = await fetch(`${GOOGLE_REVOKE_URL}?token=${encodeURIComponent(accessToken)}`, {
       method: "POST",
     })
-  } catch {
-    /* best-effort revoke */
+    return res.ok
   }
+  if (provider === "github") {
+    const clientId = process.env["GITHUB_INTEGRATIONS_CLIENT_ID"]
+    const clientSecret = process.env["GITHUB_INTEGRATIONS_CLIENT_SECRET"]
+    if (!clientId || !clientSecret) return false
+    const res = await fetch(`https://api.github.com/applications/${clientId}/token`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ access_token: accessToken }),
+    })
+    return res.status === 204
+  }
+  if (provider === "slack") {
+    const res = await fetch("https://slack.com/api/auth.revoke", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!res.ok) return false
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean }
+    return json.ok === true
+  }
+  if (provider === "linear") {
+    const res = await fetch("https://api.linear.app/oauth/revoke", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    return res.ok
+  }
+  // notion and API-key/DSN connectors: no public revocation API — the encrypted
+  // credential row is deleted by the mcp_connections step; report as skipped.
+  return false
+}
+
+const REVOCABLE_PROVIDERS = new Set(["google", "github", "slack", "linear"])
+
+async function revokeConnectorTokens(userId: string): Promise<ConnectorRevocationSummary> {
+  const summary: ConnectorRevocationSummary = { attempted: 0, revoked: [], failed: [], skipped: [] }
+  const rows = await db
+    .select({ provider: mcpConnections.provider, oauthTokens: mcpConnections.oauthTokens })
+    .from(mcpConnections)
+    .where(eq(mcpConnections.userId, userId))
+
+  for (const row of rows) {
+    if (!REVOCABLE_PROVIDERS.has(row.provider)) {
+      summary.skipped.push(row.provider)
+      continue
+    }
+    summary.attempted++
+    try {
+      const tok = decryptTokens(row.oauthTokens)
+      const ok = await revokeProviderToken(row.provider, tok.accessToken)
+      if (ok) summary.revoked.push(row.provider)
+      else summary.failed.push(row.provider)
+    } catch {
+      // best-effort revoke
+      summary.failed.push(row.provider)
+    }
+  }
+  return summary
 }
 
 async function runDeletionStep(
@@ -111,10 +176,14 @@ export async function deleteMyData(userId: string) {
 
   if (!job) return null
 
-  // Step 1: Revoke Google OAuth tokens before deleting connections
+  // Step 1: Revoke connector OAuth tokens before deleting connections
   {
     const step = steps[0]!
-    const result = await runDeletionStep(step, () => revokeGoogleTokens(userId).then(() => 0))
+    const result = await runDeletionStep(step, async () => {
+      const summary = await revokeConnectorTokens(userId)
+      step.error = summary.failed.length ? `failed: ${summary.failed.join(",")}` : undefined
+      return summary.revoked.length
+    })
     if (!result.ok) {
       step.status = "skipped"
       step.error = result.error
@@ -353,10 +422,14 @@ export async function deleteAccount(userId: string) {
     return updated
   }
 
-  // Step 1: Revoke Google OAuth tokens
+  // Step 1: Revoke connector OAuth tokens
   {
     const step = steps[0]!
-    const result = await runDeletionStep(step, () => revokeGoogleTokens(userId).then(() => 0))
+    const result = await runDeletionStep(step, async () => {
+      const summary = await revokeConnectorTokens(userId)
+      step.error = summary.failed.length ? `failed: ${summary.failed.join(",")}` : undefined
+      return summary.revoked.length
+    })
     if (!result.ok) {
       step.status = "skipped"
       step.error = result.error

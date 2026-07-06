@@ -12,6 +12,19 @@ type ReserveResult =
   | { ok: true; usageEventId?: string }
   | { ok: false; error: string; code: string; feature?: string; upgradeUrl?: string }
 
+export type FinalizeTelemetry = {
+  requestId: string
+  endpoint: string
+  surface: string
+  route?: string
+  latencyMs?: number
+  firstTokenLatencyMs?: number
+  toolCalls?: number
+  connectorIds?: string[]
+  visionImages?: number
+  maxOutputTokens?: number
+}
+
 export type FinalizeUsageInput = {
   usageEventId?: string
   model?: string
@@ -20,6 +33,7 @@ export type FinalizeUsageInput = {
   costCents?: number
   status?: "done" | "error" | "cancelled" | "budget_exhausted"
   metadata?: Record<string, unknown>
+  telemetry?: FinalizeTelemetry
 }
 
 export async function reserveInteraction(kind: ReserveKind): Promise<ReserveResult> {

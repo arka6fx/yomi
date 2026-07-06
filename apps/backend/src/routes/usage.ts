@@ -2,6 +2,7 @@ import { Hono } from "hono"
 import { db, usageEvents } from "@yomi/db"
 import { and, eq } from "drizzle-orm"
 import { authenticate } from "../auth.js"
+import { recordAiUsage } from "../services/ai-telemetry.js"
 import { expireCredits } from "../services/credit-ledger.js"
 import { chargeUsage, lowCreditWarning, type ChargeKind } from "../services/metering.js"
 
@@ -22,6 +23,22 @@ type ReserveBody = {
   duration?: number // voice duration in seconds
 }
 
+type FinalizeTelemetryBody = {
+  requestId?: string
+  endpoint?: string
+  surface?: string
+  route?: string
+  intent?: string
+  firstTokenLatencyMs?: number
+  latencyMs?: number
+  toolCalls?: number
+  connectorIds?: string[]
+  visionImages?: number
+  ttsChars?: number
+  sttAudioSeconds?: number
+  maxOutputTokens?: number
+}
+
 type FinalizeBody = {
   usageEventId?: string
   model?: string
@@ -30,6 +47,7 @@ type FinalizeBody = {
   costCents?: number
   status?: "done" | "error" | "cancelled"
   metadata?: Record<string, unknown>
+  telemetry?: FinalizeTelemetryBody
 }
 
 const VALID_KINDS: ChargeKind[] = ["chat", "voice", "analyze", "bot_message"]
@@ -119,6 +137,33 @@ usageRouter.post("/interactions/finalize", authenticate, async (c) => {
       metadata: body.metadata ?? null,
     })
     .where(and(eq(usageEvents.id, usageEventId), eq(usageEvents.userId, user.id)))
+
+  const t = body.telemetry
+  if (t?.requestId && t.endpoint && t.surface) {
+    await recordAiUsage({
+      userId: user.id,
+      requestId: t.requestId,
+      usageEventId,
+      endpoint: t.endpoint,
+      surface: t.surface,
+      route: t.route ?? null,
+      intent: t.intent ?? null,
+      model: body.model ?? null,
+      inputTokens,
+      outputTokens,
+      totalApiCostMicros: costCents * 10_000,
+      toolCalls: t.toolCalls,
+      connectorIds: t.connectorIds,
+      visionImages: t.visionImages,
+      ttsChars: t.ttsChars,
+      sttAudioSeconds: t.sttAudioSeconds,
+      maxOutputTokens: t.maxOutputTokens,
+      latencyMs: t.latencyMs,
+      firstTokenLatencyMs: t.firstTokenLatencyMs ?? null,
+      status: body.status === "error" ? "error" : body.status === "cancelled" ? "cancelled" : "done",
+      metadata: body.metadata,
+    })
+  }
 
   return c.json({ ok: true })
 })
