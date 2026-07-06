@@ -133,7 +133,7 @@ export async function runPrivacyRetention(): Promise<RetentionReport> {
       .returning({ id: devices.id })
   ).length
 
-  const now = new Date()
+  const now = cutoff(RETENTION_DEFAULTS.expired_codes.days)
   const expiredCodes =
     (
       await db
