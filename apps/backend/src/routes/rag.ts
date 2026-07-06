@@ -15,7 +15,6 @@ import { llmRerank, mmrRerank, parseVector, type RerankCandidate } from "../lib/
 import {
   embedText,
   chunkText,
-  EMBEDDING_DIMENSIONS,
   DEFAULT_EMBEDDING_MODEL,
 } from "../services/rag/embeddings.js"
 import { indexDocument } from "../services/rag/index-document.js"
