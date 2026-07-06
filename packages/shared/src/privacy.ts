@@ -34,3 +34,33 @@ export const PRIVACY_CONSENT_PURPOSE_LABELS: Record<PrivacyConsentPurpose, strin
 export function isPrivacyConsentPurpose(value: string): value is PrivacyConsentPurpose {
   return (PRIVACY_CONSENT_PURPOSES as readonly string[]).includes(value)
 }
+
+// Default retention windows (spec 23 §13.1). days: null = keep until user
+// deletes. userOverridable domains may be tightened (never extended) via
+// privacy_preferences.retention_overrides = { [domain]: days }.
+export type RetentionDomainKey =
+  | "conversations"
+  | "rag_retrieval_logs"
+  | "usage_events"
+  | "pending_actions"
+  | "devices"
+  | "expired_codes"
+
+export type RetentionPolicy = {
+  label: string
+  days: number
+  userOverridable: boolean
+}
+
+export const RETENTION_DEFAULTS: Record<RetentionDomainKey, RetentionPolicy> = {
+  conversations: { label: "Conversation history", days: 180, userOverridable: true },
+  rag_retrieval_logs: { label: "Search activity logs", days: 30, userOverridable: false },
+  usage_events: { label: "Detailed usage events", days: 90, userOverridable: false },
+  pending_actions: { label: "Pending action requests", days: 7, userOverridable: false },
+  devices: { label: "Inactive device records", days: 180, userOverridable: false },
+  expired_codes: { label: "Expired link/device codes", days: 0, userOverridable: false },
+}
+
+export function isRetentionDomainKey(value: string): value is RetentionDomainKey {
+  return Object.prototype.hasOwnProperty.call(RETENTION_DEFAULTS, value)
+}
