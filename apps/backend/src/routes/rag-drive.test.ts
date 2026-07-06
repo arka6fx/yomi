@@ -30,7 +30,9 @@ const fakeDb = {
   }),
   update: () => ({
     set: () => ({
-      where: () => Promise.resolve(updateRows),
+      where: () => ({
+        returning: () => Promise.resolve(updateRows),
+      }),
     }),
   }),
   delete: () => ({
@@ -130,5 +132,27 @@ describe("Drive-sync source routes", () => {
 
     expect(res.status).toBe(200)
     expect(body).toEqual({ status: "active", indexed: 2, removed: 0 })
+  })
+
+  it("deletes a source and returns ok when source exists", async () => {
+    updateRows = [{ id: "src-1" }]
+    const res = await app().request("/api/rag/drive/sources/src-1", {
+      method: "DELETE",
+    })
+    const body = (await res.json()) as { ok?: boolean }
+
+    expect(res.status).toBe(200)
+    expect(body.ok).toBe(true)
+  })
+
+  it("returns 404 when deleting a non-existent source", async () => {
+    updateRows = []
+    const res = await app().request("/api/rag/drive/sources/nonexistent", {
+      method: "DELETE",
+    })
+    const body = (await res.json()) as { error?: string; code?: string }
+
+    expect(res.status).toBe(404)
+    expect(body.code).toBe("source_not_found")
   })
 })
