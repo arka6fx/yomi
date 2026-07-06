@@ -198,7 +198,6 @@ async function loadKnownExternalIds(sourceId: string): Promise<Set<string>> {
 }
 
 export const MAX_SOURCES_PER_SWEEP = 10
-const DRIVE_SYNC_INTERVAL_MS = Number(process.env["DRIVE_SYNC_INTERVAL_MS"] ?? 6 * 60 * 60 * 1000)
 
 // Sweeps due google-drive sources on the cron tick. `backfilling` sources are
 // always due (so an initial backfill completes promptly at one batch per
@@ -208,7 +207,8 @@ const DRIVE_SYNC_INTERVAL_MS = Number(process.env["DRIVE_SYNC_INTERVAL_MS"] ?? 6
 export async function runDriveSyncSweep(
   run: (s: SourceRow, c?: DriveClient) => Promise<unknown> = syncSource,
 ): Promise<{ ran: number }> {
-  const cutoff = new Date(Date.now() - DRIVE_SYNC_INTERVAL_MS)
+  const intervalMs = Number(process.env["DRIVE_SYNC_INTERVAL_MS"] ?? 6 * 60 * 60 * 1000)
+  const cutoff = new Date(Date.now() - intervalMs)
   const rows = await db
     .select()
     .from(ragSources)
