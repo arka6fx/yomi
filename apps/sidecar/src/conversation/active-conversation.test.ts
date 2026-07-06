@@ -14,10 +14,12 @@ import {
   flushAllConversationStates,
 } from "./conversation-state.js"
 
-// Mirrors persistence.ts's stateFile() — used only to read/clean up between runs.
+// Mirrors persistence.ts's stateDir()/stateFile() — used only to read/clean up between runs.
 function stateFilePath(key: string): string {
-  const home = process.env.HOME ?? process.env.USERPROFILE ?? homedir()
-  return join(home, ".yomi", "state", `conversation-${key.replace(/[^a-zA-Z0-9_-]/g, "_")}.json`)
+  const dir =
+    process.env.YOMI_STATE_DIR ??
+    join(process.env.HOME ?? process.env.USERPROFILE ?? homedir(), ".yomi", "state")
+  return join(dir, `conversation-${key.replace(/[^a-zA-Z0-9_-]/g, "_")}.json`)
 }
 
 describe("sidecar pending-action dep", () => {

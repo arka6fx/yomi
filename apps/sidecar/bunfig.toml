@@ -1,4 +1,5 @@
 [test]
+preload = ["./test-setup.ts"]
 
 [test.env]
 SIDECAR_SECRET = "test-secret"

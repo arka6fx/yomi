@@ -31,6 +31,7 @@ export function hydrateState(state: ConversationState, json: string): void {
 }
 
 function stateDir(): string {
+  if (process.env.YOMI_STATE_DIR) return process.env.YOMI_STATE_DIR // test-only override, keeps tests off the real dir
   const home = process.env.HOME ?? process.env.USERPROFILE ?? homedir()
   return join(home, ".yomi", "state")
 }
