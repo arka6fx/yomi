@@ -26,7 +26,7 @@ export const PLANS: Record<string, PlanConfig> = {
     priceCents: 0,
     priceDisplay: "$0",
     interval: "month",
-    includedCredits: 100,
+    includedCredits: 25,
     limits: {
       chat: 100,
       voiceMinutes: 20,

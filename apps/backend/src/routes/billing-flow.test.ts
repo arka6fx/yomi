@@ -496,7 +496,7 @@ describe("E2E: explore -> pro -> consume -> buy credits -> consume -> edge cases
     expect(flow.user.plan).toBe("explore")
     expect(flow.user.subscriptionStatus).toBe("inactive")
     expect(flow.user.trialEndDate).toEqual(activeTrialEnd1)
-    expect(flow.creditGrants.length).toBe(1) // 100 trial credits from signup
+    expect(flow.creditGrants.length).toBe(1) // trial credits from signup
 
     // Can reserve chat (trial active, credits available)
     const res = await reserveChat()
@@ -658,7 +658,7 @@ describe("E2E: explore -> pro -> consume -> buy credits -> consume -> edge cases
     flow.creditGrants = []
     flow.grantIdCounter = 0
 
-    // Grant 100 trial credits (simulating auth.ts signup hook)
+    // Grant trial credits (simulating auth.ts signup hook)
     flow.grantIdCounter++
     flow.creditGrants.push({
       id: `grant_trial_1`,
