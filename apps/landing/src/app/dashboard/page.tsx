@@ -519,11 +519,8 @@ function DashboardContent() {
   }
 
   async function handleSignOut() {
-    try {
-      await fetch("/api/auth/sign-out-all", { method: "POST" })
-    } catch {
-      // best-effort
-    }
+    // Revoke all sessions server-side (multi-device), then clear this one.
+    await authClient.revokeSessions().catch(() => {})
     await authClient.signOut()
     router.push("/")
   }

@@ -115,32 +115,34 @@ export function PrivacyManager({ token }: TokenProp) {
     const prefKey = PURPOSE_TO_PREFKEY[purpose] ?? `${purpose}Enabled`
     const newValue = !toggled(purpose)
     setSaving(purpose)
+    // Optimistic flip — the round trip (proxy → backend → DB) takes ~1s and the
+    // knob shouldn't sit frozen for it. Reverted on failure below.
+    setPreferences((prev) => ({ ...prev, [prefKey]: newValue }))
     try {
-      const res = await fetch("/api/privacy/preferences", {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ [prefKey]: newValue }),
-      })
-      if (!res.ok) throw new Error("Failed to update preference")
-      setPreferences((prev) => ({ ...prev, [prefKey]: newValue }))
-      // Auto-grant or revoke consent to match
-      if (newValue && !isGranted(purpose)) {
-        await fetch("/api/privacy/consents", {
-          method: "POST",
+      const needsConsentSync = newValue ? !isGranted(purpose) : isGranted(purpose)
+      const requests: Promise<Response>[] = [
+        fetch("/api/privacy/preferences", {
+          method: "PATCH",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ purposes: [purpose] }),
-        })
-        await fetchOverview()
-      } else if (!newValue && isGranted(purpose)) {
-        await fetch("/api/privacy/consents/revoke", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ purposes: [purpose] }),
-        })
-        await fetchOverview()
+          body: JSON.stringify({ [prefKey]: newValue }),
+        }),
+      ]
+      if (needsConsentSync) {
+        requests.push(
+          fetch(newValue ? "/api/privacy/consents" : "/api/privacy/consents/revoke", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ purposes: [purpose] }),
+          }),
+        )
       }
+      const responses = await Promise.all(requests)
+      if (responses.some((r) => !r.ok)) throw new Error("Failed to update preference")
+      // Refresh consent rows in the background — don't block the toggle on it.
+      void fetchOverview()
     } catch {
-      await fetchOverview()
+      setPreferences((prev) => ({ ...prev, [prefKey]: !newValue }))
+      void fetchOverview()
     } finally {
       setSaving(null)
     }
