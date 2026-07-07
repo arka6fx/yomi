@@ -44,6 +44,13 @@ type DriveSource = {
   syncState: { filesIndexed: number; filesSkipped: number; lastSyncedAt: string | null }
 }
 
+type Suggestion = {
+  dedupKey: string
+  title: string
+  description: string
+  schedulePreview: string
+}
+
 const TELEGRAM_COLOR = "#3aa9e0"
 
 export default function IntegrationsPage() {
@@ -64,6 +71,11 @@ export default function IntegrationsPage() {
   const [driveName, setDriveName] = useState("")
   const [driveAdding, setDriveAdding] = useState(false)
   const [driveRemovingId, setDriveRemovingId] = useState<string | null>(null)
+
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [suggestionError, setSuggestionError] = useState<string | null>(null)
+  const [suggestionBusyKey, setSuggestionBusyKey] = useState<string | null>(null)
+  const [suggestionEnabledKey, setSuggestionEnabledKey] = useState<string | null>(null)
 
   async function loadIntegrations() {
     setLoading(true)
@@ -105,9 +117,20 @@ export default function IntegrationsPage() {
     }
   }
 
+  async function loadSuggestions() {
+    try {
+      const result = await window.yomi.getSuggestions()
+      if (result.error) return
+      setSuggestions(result.suggestions ?? [])
+    } catch {
+      // best-effort
+    }
+  }
+
   useEffect(() => {
     void loadIntegrations()
     void loadBotConnections()
+    void loadSuggestions()
   }, [])
 
   const driveConnected = integrations.some((i) => i.provider === "google-drive" && i.connected)
@@ -115,6 +138,17 @@ export default function IntegrationsPage() {
   useEffect(() => {
     if (driveConnected) void loadDriveSources()
   }, [driveConnected])
+
+  // Refresh offers when the set of connected providers changes
+  const connectedKey = integrations
+    .filter((i) => i.connected)
+    .map((i) => i.provider)
+    .sort()
+    .join(",")
+
+  useEffect(() => {
+    void loadSuggestions()
+  }, [connectedKey])
 
   async function handleAddDriveSource() {
     const folderId = driveFolderId.trim()
@@ -158,6 +192,43 @@ export default function IntegrationsPage() {
       await loadDriveSources()
     } finally {
       setDriveRemovingId(null)
+    }
+  }
+
+  async function handleAcceptSuggestion(dedupKey: string) {
+    setSuggestionBusyKey(dedupKey)
+    setSuggestionError(null)
+    try {
+      const result = await window.yomi.acceptSuggestion(dedupKey)
+      if (result.error) {
+        if (result.code === "schedule_limit" || result.code === "feature_not_available") {
+          setSuggestionError("Schedule limit reached for your plan")
+        } else if (result.code === "not_offerable" || result.code === "already_decided") {
+          await loadSuggestions()
+        } else {
+          setSuggestionError(result.error)
+        }
+        return
+      }
+      setSuggestionEnabledKey(dedupKey)
+      setTimeout(() => {
+        setSuggestionEnabledKey(null)
+        void loadSuggestions()
+      }, 1200)
+    } finally {
+      setSuggestionBusyKey(null)
+    }
+  }
+
+  async function handleDismissSuggestion(dedupKey: string) {
+    setSuggestionBusyKey(dedupKey)
+    try {
+      await window.yomi.dismissSuggestion(dedupKey)
+      await loadSuggestions()
+    } catch {
+      // best-effort
+    } finally {
+      setSuggestionBusyKey(null)
     }
   }
 
@@ -400,6 +471,102 @@ export default function IntegrationsPage() {
                 No folders indexed yet.
               </div>
             )}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Suggested automations — one-tap schedules for connected tools */}
+      {suggestions.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.05 }}
+          style={{ marginTop: 24 }}
+        >
+          <h3 style={{ fontSize: 13, fontWeight: 700, color: t.text, margin: "0 0 2px 0" }}>
+            Suggested automations
+          </h3>
+          <p style={{ fontSize: 11, color: t.dim, margin: "0 0 12px 0", lineHeight: 1.45 }}>
+            One-tap schedules for your connected tools, delivered on Telegram.
+          </p>
+
+          <div
+            style={{
+              borderRadius: 12,
+              border: `1px solid ${t.border}`,
+              background: t.surface,
+              overflow: "hidden",
+            }}
+          >
+            {suggestionError && (
+              <div style={{ padding: "10px 14px 0", fontSize: 10.5, color: connectorTheme.error }}>
+                {suggestionError}
+              </div>
+            )}
+
+            {suggestions.map((s, i) => {
+              const busy = suggestionBusyKey === s.dedupKey
+              const enabled = suggestionEnabledKey === s.dedupKey
+              return (
+                <div
+                  key={s.dedupKey}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "10px 14px",
+                    borderBottom:
+                      i < suggestions.length - 1 ? `1px solid ${t.border}` : undefined,
+                    gap: 12,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: t.text }}>{s.title}</div>
+                    <div style={{ fontSize: 10.5, color: t.dim, lineHeight: 1.4 }}>
+                      {s.description} · {s.schedulePreview}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                    <button
+                      onClick={() => void handleAcceptSuggestion(s.dedupKey)}
+                      disabled={busy || enabled}
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: enabled ? connectorTheme.successText : connectorTheme.accentText,
+                        background: enabled ? connectorTheme.successBg : connectorTheme.accent,
+                        border: "none",
+                        borderRadius: 8,
+                        padding: "5px 12px",
+                        cursor: busy || enabled ? "default" : "pointer",
+                        opacity: busy ? 0.5 : 1,
+                        fontFamily: UI_FONT,
+                      }}
+                    >
+                      {enabled ? "Scheduled ✓" : busy ? "…" : "Enable"}
+                    </button>
+                    <button
+                      onClick={() => void handleDismissSuggestion(s.dedupKey)}
+                      disabled={busy || enabled}
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: connectorTheme.error,
+                        background: "transparent",
+                        border: `1px solid ${t.border}`,
+                        borderRadius: 8,
+                        padding: "5px 12px",
+                        cursor: busy || enabled ? "default" : "pointer",
+                        opacity: busy ? 0.5 : 1,
+                        fontFamily: UI_FONT,
+                      }}
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </motion.div>
       )}
