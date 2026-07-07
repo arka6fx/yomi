@@ -35,7 +35,11 @@ export * from "./schema.js"
 // automatically but migrations are applied manually, so runtime health checks
 // compare this against drizzle.__drizzle_migrations to detect schema drift —
 // the failure mode that has repeatedly broken production.
+// Drizzle's migrator applies an entry only when its `when` exceeds the max
+// recorded created_at, so drift must be detected by timestamp, not row count —
+// historical journal renumbering left some entries non-monotonic and skipped.
 export const EXPECTED_MIGRATIONS = {
   count: journal.entries.length,
+  latestWhen: journal.entries.reduce((max, e) => Math.max(max, e.when), 0),
   latestTag: journal.entries[journal.entries.length - 1]?.tag ?? null,
 }
