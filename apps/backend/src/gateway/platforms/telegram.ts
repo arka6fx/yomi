@@ -65,33 +65,37 @@ export class TelegramAdapter implements PlatformAdapter {
 
     // Register webhook — Telegram will POST updates here instead of relying
     // on long-polling (which doesn't work reliably on Cloudflare Workers).
-    const whRes = await fetch(`${this.apiUrl}/setWebhook`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        url: this.webhookUrl,
-        allowed_updates: ["message"],
-        drop_pending_updates: true,
-        secret_token: this.botToken.replace(/[^A-Za-z0-9_-]/g, ""),
-      }),
-    })
-    const whData = (await whRes.json()) as TelegramResponse
-    if (!whData.ok) {
-      throw new Error(`Telegram setWebhook error: ${whData.description ?? "unknown"}`)
+    // connect() runs on every isolate boot (stateless Workers), so only
+    // re-register when the webhook actually points elsewhere: re-registering
+    // constantly churned Telegram delivery, and drop_pending_updates deleted
+    // users' queued messages every time an isolate started.
+    const infoRes = await fetch(`${this.apiUrl}/getWebhookInfo`)
+    const info = (await infoRes.json()) as TelegramResponse & { result?: { url?: string } }
+    if (info.result?.url !== this.webhookUrl) {
+      const whRes = await fetch(`${this.apiUrl}/setWebhook`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: this.webhookUrl,
+          allowed_updates: ["message"],
+          secret_token: this.botToken.replace(/[^A-Za-z0-9_-]/g, ""),
+        }),
+      })
+      const whData = (await whRes.json()) as TelegramResponse
+      if (!whData.ok) {
+        throw new Error(`Telegram setWebhook error: ${whData.description ?? "unknown"}`)
+      }
+      console.warn(`[gateway/telegram] webhook set to ${this.webhookUrl}`)
     }
-    console.warn(`[gateway/telegram] webhook set to ${this.webhookUrl}`)
 
     this.connected = true
   }
 
   async disconnect(): Promise<void> {
     this.connected = false
-    // Remove webhook so stale updates don't accumulate
-    try {
-      await fetch(`${this.apiUrl}/deleteWebhook`, { method: "POST" })
-    } catch {
-      /* best-effort */
-    }
+    // Deliberately leave the webhook registered: this adapter is per-isolate
+    // on stateless Workers, and deleting the webhook here would stop ALL
+    // message delivery until some future isolate re-registers it.
     console.warn("[gateway/telegram] disconnected")
   }
 
