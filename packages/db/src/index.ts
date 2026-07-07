@@ -1,6 +1,7 @@
 import { neon } from "@neondatabase/serverless"
 import { drizzle } from "drizzle-orm/neon-http"
 import * as schema from "./schema.js"
+import journal from "../drizzle/meta/_journal.json" with { type: "json" }
 
 type Db = ReturnType<typeof drizzle>
 
@@ -29,3 +30,12 @@ export const db = new Proxy({} as Db, {
 }) as Db
 
 export * from "./schema.js"
+
+// Snapshot of the migration journal at build time. Deploys ship code
+// automatically but migrations are applied manually, so runtime health checks
+// compare this against drizzle.__drizzle_migrations to detect schema drift —
+// the failure mode that has repeatedly broken production.
+export const EXPECTED_MIGRATIONS = {
+  count: journal.entries.length,
+  latestTag: journal.entries[journal.entries.length - 1]?.tag ?? null,
+}

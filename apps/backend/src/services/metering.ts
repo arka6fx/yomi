@@ -159,6 +159,7 @@ export async function chargeUsage(input: {
 
   if (!event) {
     // Could not record the event — fail closed rather than do unmetered work.
+    console.error(`[metering] usage event insert returned no row user=${user.id} kind=${kind}`)
     return {
       ok: false,
       status: 402,
