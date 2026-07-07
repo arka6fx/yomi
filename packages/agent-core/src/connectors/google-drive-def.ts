@@ -52,6 +52,91 @@ function fileTypeLabel(mimeType: string): string {
   return GOOGLE_MIME_LABELS[mimeType] ?? mimeType.split("/").pop() ?? "File"
 }
 
+function escapeXml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+}
+
+// Insert text into a freshly created presentation as a text box on its first
+// slide. The Slides API accepts the full drive scope. Returns a user-facing
+// note on failure — the file exists either way, so never throw.
+async function insertSlidesText(
+  token: string,
+  presentationId: string,
+  content: string,
+): Promise<string | undefined> {
+  try {
+    const auth = { Authorization: `Bearer ${token}` }
+    const presRes = await fetch(
+      `https://slides.googleapis.com/v1/presentations/${presentationId}?fields=slides.objectId`,
+      { headers: auth },
+    )
+    if (!presRes.ok) throw new Error(`${presRes.status}: ${await presRes.text()}`)
+    const pres = (await presRes.json()) as { slides?: { objectId: string }[] }
+    const slideId = pres.slides?.[0]?.objectId
+    if (!slideId) throw new Error("presentation has no slides")
+    const boxId = `yomi_text_${Date.now()}`
+    const res = await fetch(
+      `https://slides.googleapis.com/v1/presentations/${presentationId}:batchUpdate`,
+      {
+        method: "POST",
+        headers: { ...auth, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requests: [
+            {
+              createShape: {
+                objectId: boxId,
+                shapeType: "TEXT_BOX",
+                elementProperties: {
+                  pageObjectId: slideId,
+                  size: {
+                    width: { magnitude: 600, unit: "PT" },
+                    height: { magnitude: 350, unit: "PT" },
+                  },
+                  transform: { scaleX: 1, scaleY: 1, translateX: 60, translateY: 60, unit: "PT" },
+                },
+              },
+            },
+            { insertText: { objectId: boxId, text: content } },
+          ],
+        }),
+      },
+    )
+    if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`)
+    return undefined
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return `Created the presentation, but couldn't insert the text content (${msg.slice(0, 200)}).`
+  }
+}
+
+// Put text into cell A1 of a freshly created spreadsheet. The Sheets API
+// accepts the full drive scope. Returns a note on failure — never throws.
+async function insertSheetText(
+  token: string,
+  spreadsheetId: string,
+  content: string,
+): Promise<string | undefined> {
+  try {
+    const res = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1?valueInputOption=RAW`,
+      {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ values: [[content]] }),
+      },
+    )
+    if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`)
+    return undefined
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return `Created the spreadsheet, but couldn't insert the text content (${msg.slice(0, 200)}).`
+  }
+}
+
 export function createDriveTools(ctx: ConnectorContext): ToolSet {
   async function driveJson<T>(path: string, init?: RequestInit): Promise<T> {
     const token = await ctx.getAccessToken(ctx.userId, "google-drive")
@@ -396,33 +481,84 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
               }
               if (folderId) metadata.parents = [folderId]
 
-              const boundary = "yomi_boundary_xyz"
-              const body = [
-                `--${boundary}`,
-                "Content-Type: application/json; charset=UTF-8",
-                "",
-                JSON.stringify(metadata),
-                `--${boundary}`,
-                "Content-Type: text/plain; charset=UTF-8",
-                "",
-                content,
-                `--${boundary}--`,
-              ].join("\r\n")
+              // Drive's multipart import can only CONVERT certain media types:
+              // text/plain -> Doc and image/svg+xml -> Drawing. For any other
+              // target (Slides, Sheets, ...) it silently ignores the requested
+              // mimeType and creates a Doc — so those go through a metadata-only
+              // create, then content is inserted via the type's own API.
+              const importMedia =
+                kind === "document"
+                  ? { type: "text/plain; charset=UTF-8", body: content }
+                  : kind === "drawing"
+                    ? {
+                        type: "image/svg+xml",
+                        body: `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600"><text x="20" y="40" font-size="20">${escapeXml(content)}</text></svg>`,
+                      }
+                    : null
 
-              const res = await fetch(
-                "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink",
-                {
-                  method: "POST",
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": `multipart/related; boundary=${boundary}`,
+              let file: { id: string; name: string; webViewLink: string }
+              let note: string | undefined
+
+              if (importMedia) {
+                const boundary = "yomi_boundary_xyz"
+                const body = [
+                  `--${boundary}`,
+                  "Content-Type: application/json; charset=UTF-8",
+                  "",
+                  JSON.stringify(metadata),
+                  `--${boundary}`,
+                  `Content-Type: ${importMedia.type}`,
+                  "",
+                  importMedia.body,
+                  `--${boundary}--`,
+                ].join("\r\n")
+
+                const res = await fetch(
+                  "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink",
+                  {
+                    method: "POST",
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                      "Content-Type": `multipart/related; boundary=${boundary}`,
+                    },
+                    body,
                   },
-                  body,
-                },
-              )
-              if (!res.ok) throw new Error(`Create failed: ${res.status}: ${await res.text()}`)
-              const file = (await res.json()) as { id: string; name: string; webViewLink: string }
-              return { id: file.id, name: file.name, link: file.webViewLink, kind }
+                )
+                if (!res.ok) throw new Error(`Create failed: ${res.status}: ${await res.text()}`)
+                file = (await res.json()) as { id: string; name: string; webViewLink: string }
+              } else {
+                const res = await fetch(
+                  "https://www.googleapis.com/drive/v3/files?fields=id,name,webViewLink",
+                  {
+                    method: "POST",
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(metadata),
+                  },
+                )
+                if (!res.ok) throw new Error(`Create failed: ${res.status}: ${await res.text()}`)
+                file = (await res.json()) as { id: string; name: string; webViewLink: string }
+
+                if (content.trim()) {
+                  if (kind === "presentation") {
+                    note = await insertSlidesText(token, file.id, content)
+                  } else if (kind === "spreadsheet") {
+                    note = await insertSheetText(token, file.id, content)
+                  } else {
+                    note = `Created an empty ${kindLabel}; inserting text content isn't supported for this type.`
+                  }
+                }
+              }
+
+              return {
+                id: file.id,
+                name: file.name,
+                link: file.webViewLink,
+                kind,
+                ...(note ? { note } : {}),
+              }
             } catch (err) {
               return connectorError(err)
             }
@@ -896,7 +1032,7 @@ export const googleDriveDef: ConnectorDef = {
   category: "file-storage",
   icon: "google-drive",
   description:
-    "Search, read, create, convert, and manage files in Google Drive. Creates Google Docs; converts between formats (PDF, DOCX, XLSX, PPTX, TXT, CSV, HTML, EPUB, ODS, ODT, RTF, TSV).",
+    "Search, read, create, convert, and manage files in Google Drive. Creates Google Docs, Sheets, Slides, and Drawings; converts between formats (PDF, DOCX, XLSX, PPTX, TXT, CSV, HTML, EPUB, ODS, ODT, RTF, TSV).",
   readOnlyByDefault: false,
   auth: {
     kind: "oauth2",
