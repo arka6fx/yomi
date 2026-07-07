@@ -1,4 +1,4 @@
-import { eq, and, sql } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { generateText } from "ai"
 import { db, ragSources, usageEvents } from "@yomi/db"
 import {
