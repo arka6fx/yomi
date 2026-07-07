@@ -62,19 +62,29 @@ app.get("/health", (c) => c.json({ status: "ok", version: "0.1.0" }))
 // drift observable: curl it after every deploy and alert on non-200.
 app.get("/health/db", async (c) => {
   try {
-    const rows = (await db.execute(
-      sql`select count(*)::int as count from drizzle.__drizzle_migrations`,
-    )) as unknown as { rows?: { count: number }[] }
-    const applied = Number(rows.rows?.[0]?.count ?? 0)
-    const expected = EXPECTED_MIGRATIONS.count
-    const behind = expected - applied
-    if (behind > 0) {
-      console.error(
-        `[health/db] schema drift: ${applied}/${expected} migrations applied (latest expected: ${EXPECTED_MIGRATIONS.latestTag})`,
-      )
-      return c.json({ status: "behind", applied, expected, latestTag: EXPECTED_MIGRATIONS.latestTag }, 503)
+    // Mirror drizzle's migrator: it applies an entry only when its journal
+    // `when` exceeds the max recorded created_at, so drift is a timestamp
+    // comparison — row count diverges permanently from journal length
+    // (historical renumbering left some entries non-monotonic, never recorded).
+    const result = (await db.execute(
+      sql`select coalesce(max(created_at), 0)::bigint as latest, count(*)::int as count from drizzle.__drizzle_migrations`,
+    )) as unknown as { rows?: { latest: string; count: number }[] } | { latest: string; count: number }[]
+    const row = Array.isArray(result) ? result[0] : result.rows?.[0]
+    const latestApplied = Number(row?.latest ?? 0)
+    const applied = Number(row?.count ?? 0)
+    const body = {
+      applied,
+      latestApplied,
+      latestExpected: EXPECTED_MIGRATIONS.latestWhen,
+      latestTag: EXPECTED_MIGRATIONS.latestTag,
     }
-    return c.json({ status: "ok", applied, expected, latestTag: EXPECTED_MIGRATIONS.latestTag })
+    if (latestApplied < EXPECTED_MIGRATIONS.latestWhen) {
+      console.error(
+        `[health/db] schema drift: latest applied ${latestApplied} < expected ${EXPECTED_MIGRATIONS.latestWhen} (${EXPECTED_MIGRATIONS.latestTag})`,
+      )
+      return c.json({ status: "behind", ...body }, 503)
+    }
+    return c.json({ status: "ok", ...body })
   } catch (err) {
     console.error("[health/db] check failed:", err instanceof Error ? err.message : err)
     return c.json({ status: "error", error: "db check failed" }, 503)
