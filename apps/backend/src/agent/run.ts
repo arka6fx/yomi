@@ -402,25 +402,25 @@ function buildSystemWithContext(
 
 function maxOutputTokensFor(text: string): number {
   const q = text.toLowerCase()
+  // The agent model reasons before answering and its thinking tokens count
+  // against this budget, and a short reply like "yes" inherits the pending
+  // task's complexity — so the floor must stay high and never scale down.
+  // Budgets below ~1k made the model finish with reason=length and zero
+  // visible text ("I couldn't produce a reply") on every confirmation.
   let base: number
   if (
     /\b(gmail|email|inbox|calendar|schedule|drive|file|files|doc|docs|sheet|sheets|slide|slides|document|spreadsheet|classroom|github|slack|notion|linear)\b/.test(
       q,
-    )
-  ) {
-    base = 900
-  } else if (
+    ) ||
     /\b(write|draft|compose|essay|article|report|code|program|function|debug|detailed|step by step)\b/.test(
       q,
     )
   ) {
-    base = 750
-  } else if (/\b(summary|summarize|explain|compare|plan)\b/.test(q)) {
-    base = 450
+    base = 4000
   } else {
-    base = 450
+    base = 2500
   }
-  const scale = Math.min(1.5, Math.max(0.8, text.length / 500))
+  const scale = Math.min(1.5, Math.max(1, text.length / 500))
   return Math.round(base * scale)
 }
 
