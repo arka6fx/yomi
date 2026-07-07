@@ -936,9 +936,38 @@ export class GatewayRunner {
       )
       if (!yomiUserId) return
 
-      const conversationConsent = await checkConsent(yomiUserId, "conversation_history").catch(
-        () => ({ allowed: true, reason: null }),
+      let conversationConsent = await checkConsent(yomiUserId, "conversation_history").catch(
+        () => ({ allowed: true, reason: null, decided: true }),
       )
+
+      // Users who linked Telegram before consent auto-grant existed have no
+      // decision rows at all, which made the bot permanently amnesiac for them.
+      // Linking already implied consent, so backfill the grant once — but only
+      // for purposes the user has never explicitly decided; revocations stand.
+      if (!conversationConsent.allowed && !conversationConsent.decided) {
+        try {
+          const telegramConsent = await checkConsent(yomiUserId, "telegram_processing")
+          const purposes: ("conversation_history" | "telegram_processing")[] = [
+            "conversation_history",
+          ]
+          if (!telegramConsent.decided) purposes.push("telegram_processing")
+          await recordConsentDecision({
+            userId: yomiUserId,
+            purposes,
+            status: "granted",
+            context: {
+              appVersion: null,
+              ipAddress: null,
+              userAgent: null,
+              metadata: { source: "telegram_backfill" },
+            },
+          })
+          conversationConsent = { allowed: true, reason: null, decided: true }
+          console.warn(`[gateway] backfilled linked-user consent user=${yomiUserId}`)
+        } catch (err) {
+          console.error("[gateway] consent backfill failed:", err)
+        }
+      }
 
       const session = this.getOrCreateSession(msg)
       const isFirstMessage = session.messageCount === 0
@@ -1312,7 +1341,10 @@ export class GatewayRunner {
           return
         }
         if (runController?.signal.aborted) return
-        console.warn("[gateway] runAgent error:", err)
+        console.error(
+          `[gateway] runAgent error user=${yomiUserId} chat=${msg.chatId}:`,
+          err instanceof Error ? (err.stack ?? err.message) : err,
+        )
         await this.sendMessageAndLog(
           msg.platform,
           msg.chatId,
@@ -1322,7 +1354,10 @@ export class GatewayRunner {
       }
     } catch (err) {
       clearInterval(typingInterval)
-      console.warn("[gateway] onIncoming uncaught error:", err)
+      console.error(
+        `[gateway] onIncoming uncaught error platform=${msg.platform} chat=${msg.chatId}:`,
+        err instanceof Error ? (err.stack ?? err.message) : err,
+      )
       try {
         await this.sendMessage(
           msg.platform,

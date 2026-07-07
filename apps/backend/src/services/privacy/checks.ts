@@ -22,6 +22,10 @@ const PURPOSE_TO_PREFERENCE_KEY: Partial<Record<PrivacyConsentPurpose, BooleanPr
 export type ConsentCheckResult = {
   allowed: boolean
   reason: string | null
+  // Whether the user has ever made an explicit decision (grant or revoke) for
+  // this purpose. False means "never asked" — callers may auto-grant where the
+  // surrounding action already implies consent (e.g. linking Telegram).
+  decided: boolean
 }
 
 export async function checkConsent(
@@ -33,15 +37,17 @@ export async function checkConsent(
     getConsentSnapshot(userId),
   ])
 
+  const consent = consents.find((c) => c.purpose === purpose)
+  const decided = consent !== undefined
+
   const prefKey = PURPOSE_TO_PREFERENCE_KEY[purpose]
   if (prefKey && !preferences[prefKey]) {
-    return { allowed: false, reason: `${purpose} preference is disabled` }
+    return { allowed: false, reason: `${purpose} preference is disabled`, decided }
   }
 
-  const consent = consents.find((c) => c.purpose === purpose)
   if (!consent || consent.status !== "granted") {
-    return { allowed: false, reason: `${purpose} consent has not been granted` }
+    return { allowed: false, reason: `${purpose} consent has not been granted`, decided }
   }
 
-  return { allowed: true, reason: null }
+  return { allowed: true, reason: null, decided }
 }

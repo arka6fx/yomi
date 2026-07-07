@@ -474,10 +474,19 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
 
   const appUrl = process.env["YOMI_APP_URL"] ?? "https://yomi.arka6fx.com"
 
+  // A consent-store hiccup must degrade to "no memory context", not abort the
+  // whole run — the reply is still useful without memory.
+  const denied = { allowed: false, reason: "consent check failed", decided: false }
   const [memoryConsent, cloudMemoryConsent] = await Promise.all([
     checkConsent(opts.userId, "memory"),
     checkConsent(opts.userId, "cloud_memory"),
-  ])
+  ]).catch((err) => {
+    console.error(
+      "[runAgent] consent check failed:",
+      err instanceof Error ? (err.stack ?? err.message) : err,
+    )
+    return [denied, denied]
+  })
 
   const [memoryContext, ragContext, profile, recentChat] = await Promise.all([
     memoryConsent.allowed ? fetchMemoryContext(opts.userId, opts.text) : "",
