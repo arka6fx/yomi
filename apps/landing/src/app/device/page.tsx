@@ -91,12 +91,12 @@ function DeviceContent() {
   // Auto-confirm when user arrives with code in URL and is already logged in
   useEffect(() => {
     if (!session || !urlCode || done || confirmedRef.current) return
-    // Skip auto-confirm for Google — let the user pick which account to connect
-    if (provider === "google") return
+    // fresh=1 means a stale session may still be signing out — wait for the round trip
+    if (fresh || switchingAccount) return
     confirmedRef.current = true
     setCode(urlCode)
     confirmCode(urlCode, session.session.token)
-  }, [session, urlCode, done, provider])
+  }, [session, urlCode, done, fresh, switchingAccount])
 
   // Not logged in + code in URL → send to sign-in, preserving the code and provider in redirect
   useEffect(() => {
