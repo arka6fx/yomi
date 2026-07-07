@@ -1129,12 +1129,18 @@ export class GatewayRunner {
       // dev/tunnel setups.
 
       // Keep the typing indicator alive for ANY processing path —
-      // Telegram clears it after ~5 s so refresh every 4 s.
+      // Telegram clears it after ~5 s so refresh every 4 s. Capped: each ping
+      // is a subrequest sharing the invocation budget with the agent's
+      // model/tool/DB calls, and losing the indicator beats losing the reply.
       void this.sendTyping(msg.platform, msg.chatId).catch(() => {})
-      typingInterval = setInterval(
-        () => void this.sendTyping(msg.platform, msg.chatId).catch(() => {}),
-        4_000,
-      )
+      let typingRefreshes = 0
+      typingInterval = setInterval(() => {
+        if (++typingRefreshes > 6) {
+          clearInterval(typingInterval)
+          return
+        }
+        void this.sendTyping(msg.platform, msg.chatId).catch(() => {})
+      }, 4_000)
 
       let sidecarUrl: string | undefined
       if (directSidecarEnabled() && this.sidecarResolver) {
@@ -1305,6 +1311,16 @@ export class GatewayRunner {
           }
           return
         }
+        console.warn(
+          `[gateway] backend agent done user=${yomiUserId} platform=${msg.platform} chat=${msg.chatId} chars=${result.text.length}`,
+        )
+        // Deliver the reply BEFORE persisting history: both compete for the
+        // invocation's subrequest budget, and losing the user-visible reply
+        // is worse than losing a history write (which has an in-memory fallback).
+        const reply = result.text || "I couldn't produce a reply. Please try again."
+        if (!(await this.sendVoiceReplyIfRequested(msg, reply, yomiUserId))) {
+          await this.sendMessageAndLog(msg.platform, msg.chatId, reply, "backend-agent-reply")
+        }
         if (result.text) {
           if (conversationConsent.allowed && persistentSession) {
             await appendAgentTurn({
@@ -1319,13 +1335,6 @@ export class GatewayRunner {
           } else {
             this.appendHistory(msg.platform, msg.chatId, msg.text, result.text)
           }
-        }
-        console.warn(
-          `[gateway] backend agent done user=${yomiUserId} platform=${msg.platform} chat=${msg.chatId} chars=${result.text.length}`,
-        )
-        const reply = result.text || "I couldn't produce a reply. Please try again."
-        if (!(await this.sendVoiceReplyIfRequested(msg, reply, yomiUserId))) {
-          await this.sendMessageAndLog(msg.platform, msg.chatId, reply, "backend-agent-reply")
         }
       } catch (err) {
         if (runTimeout) clearTimeout(runTimeout)
