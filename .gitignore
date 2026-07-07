@@ -44,6 +44,7 @@ Thumbs.db
 
 # Claude Code local overrides (may contain secrets)
 .claude/settings.local.json
+.claude/worktrees/
 
 # Logs
 *.log
@@ -54,6 +55,7 @@ npm-debug.log*
 
 # Scratch / generated artifacts
 tmp/
+test-output.txt
 debug/
 **/.playwright-mcp/
 .superpowers/
