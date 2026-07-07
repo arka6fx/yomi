@@ -11,14 +11,16 @@ Yomi is split into a desktop shell, a local sidecar, a cloud backend, and a
 landing site.
 
 ```text
-apps/backend/   Hono Worker    auth, billing, LLM proxy, usage metering
-apps/desktop/   Electron       tray/notch UI, hotkeys, screen and mic capture
-apps/landing/   Next.js 16     landing, auth pages, dashboard, downloads
-apps/sidecar/   Bun service    router, fast path, agent loop, memory
+apps/backend/           Hono Worker    auth, billing, LLM proxy, usage metering
+apps/desktop/           Electron       tray/notch UI, hotkeys, screen and mic capture
+apps/landing/           Next.js 16     landing, auth pages, dashboard, downloads
+apps/sidecar/           Bun service    router, fast path, agent loop, memory
 
-packages/db/    Drizzle schema and Neon client
-packages/shared Desktop, sidecar, backend contracts
-packages/*config Shared TypeScript and ESLint config
+packages/agent-core/    Connector definitions, registry, agent tools
+packages/db/            Drizzle schema and Neon client
+packages/shared/        Desktop, sidecar, backend contracts
+packages/ui-connectors/ Connector UI components
+packages/*-config/      Shared TypeScript and ESLint config
 ```
 
 The backend is canonical for account auth, billing, Telegram, connectors, and
@@ -34,8 +36,7 @@ hotkeys.
 | Connector query        | router → agent loop → connector tools → response                 | seconds     |
 | Telegram query         | backend gateway → backend agent → connector/memory tools → reply | seconds     |
 
-Do not switch models mid-turn. The router decides fast path vs agent path at the
-start of a turn.
+The router decides fast path vs agent path at the start of each turn.
 
 ## Local Development
 
@@ -51,7 +52,7 @@ Prerequisites:
 git clone https://github.com/arka6fx/yomi.git
 cd yomi
 bun install
-cp .env.example .env
+cp .env.example .env   # then fill in values — the file documents every variable
 bun run dev
 ```
 
@@ -68,35 +69,9 @@ For desktop development, start the sidecar before the desktop app.
 
 ## Environment
 
-Minimum local `.env` values:
-
-```bash
-DATABASE_URL=postgresql://...
-
-BETTER_AUTH_SECRET=...
-BETTER_AUTH_URL=http://localhost:3000
-BETTER_AUTH_BASE_URL=http://localhost:3001
-BACKEND_URL=http://localhost:3001
-NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-GITHUB_CLIENT_ID=...
-GITHUB_CLIENT_SECRET=...
-
-AI_CREDITS_API_KEY=...
-AI_CREDITS_BASE_URL=...
-AI_CREDITS_FAST_MODEL=gpt-5.5-mini
-AI_CREDITS_AGENT_MODEL=gpt-5.5
-
-ELEVENLABS_API_KEY=...
-ELEVENLABS_VOICE_ID=EXAVITQu4vr4xnSDxMaL
-
-ENCRYPTION_KEY=...
-SIDECAR_SECRET=...
-
-```
+[`.env.example`](./.env.example) is the source of truth for every variable:
+database, Better Auth, Google/GitHub OAuth, AI Credits LLM endpoint,
+ElevenLabs, encryption keys, and Dodo Payments.
 
 Production uses split Cloudflare hostnames:
 
@@ -114,38 +89,10 @@ CORS_ORIGIN=https://yomi.arka6fx.com
 
 Plans are configured in `apps/backend/src/routes/billing.ts` with canonical USD
 pricing. Dodo products must be **pre-created in the dashboard** — the backend
-references them by ID for subscription and credit-pack checkouts.
+references them by ID (the `DODO_*_PRODUCT_*` variables). Set `DODO_ENV=test`
+locally and `DODO_ENV=live` in production; only the selected mode needs values.
 
-```bash
-# Required for billing
-DODO_ENV=test
-
-# Test mode
-DODO_TEST_API_KEY=
-DODO_TEST_WEBHOOK_SECRET=
-# Defaults to https://test.dodopayments.com (test) / https://live.dodopayments.com (live)
-DODO_TEST_API_BASE=
-DODO_TEST_PRODUCT_PRO=
-DODO_TEST_PRODUCT_MAX=
-DODO_TEST_PRODUCT_CREDITS_500=
-DODO_TEST_PRODUCT_CREDITS_2000=
-DODO_TEST_PRODUCT_CREDITS_6000=
-
-# Live mode
-DODO_LIVE_API_KEY=
-DODO_LIVE_WEBHOOK_SECRET=
-DODO_LIVE_API_BASE=
-DODO_LIVE_PRODUCT_PRO=
-DODO_LIVE_PRODUCT_MAX=
-DODO_LIVE_PRODUCT_CREDITS_500=
-DODO_LIVE_PRODUCT_CREDITS_2000=
-DODO_LIVE_PRODUCT_CREDITS_6000=
-```
-
-Set `DODO_ENV=test` for local development and `DODO_ENV=live` for production.
-Only the selected mode needs values.
-
-**Key design decisions:**
+Key design decisions:
 
 - USD is the canonical billing currency. Local equivalents are estimated using
   the `GET /api/billing/plans` endpoint (with `CF-IPCountry` header)
@@ -174,29 +121,18 @@ bun run db:studio
 
 ## Test Layout
 
-Tests are package-local. Do not create one root `tests/` folder for normal unit
-or integration tests.
-
-Use colocated files next to the code they exercise:
-
-```text
-apps/backend/src/routes/usage.test.ts
-apps/sidecar/src/router/intent.test.ts
-apps/desktop/src/renderer/store.test.ts
-packages/shared/src/chunk.test.ts
-```
-
-Why: Turborepo schedules and caches work by package. Keeping tests inside the
-owning workspace lets `turbo run test --filter ...` and `--affected` run only
-the packages that changed. Root-level tests should be reserved for rare
-repo-wide checks that cannot belong to a single package.
+Tests are package-local and colocated next to the code they exercise
+(`apps/backend/src/routes/usage.test.ts`, not a root `tests/` folder).
+Turborepo schedules and caches by package, so colocated tests let
+`turbo run test --filter ...` and `--affected` run only the packages that
+changed.
 
 ## Production
 
 Production targets Cloudflare:
 
 - backend: Cloudflare Worker from `apps/backend`
-- public site/dashboard: Cloudflare Pages from `apps/landing`
+- public site/dashboard: Cloudflare Worker (OpenNext) from `apps/landing`
 - database: Neon Postgres
 - billing: Dodo Payments
 - desktop installers: published as GitHub releases on `arka6fx/yomi-releases`
@@ -210,11 +146,7 @@ Configure OAuth callbacks:
 ```text
 https://api.yomi.arka6fx.com/api/auth/callback/github
 https://api.yomi.arka6fx.com/api/auth/callback/google
-```
 
-Local callbacks:
-
-```text
 http://localhost:3001/api/auth/callback/github
 http://localhost:3001/api/auth/callback/google
 ```
@@ -233,26 +165,10 @@ community library voices can fail on free-tier API keys.
 
 ## Specs
 
-The numbered docs in `specs/` are implementation references, not product copy.
-Current order:
-
-| #   | Spec                                                       |
-| --- | ---------------------------------------------------------- |
-| 00  | [Overview](specs/00-overview.md)                           |
-| 01  | [Architecture](specs/01-architecture.md)                   |
-| 02  | [Sidecar fast pipeline](specs/02-sidecar-fast-pipeline.md) |
-| 03  | [Desktop shell](specs/03-desktop-shell.md)                 |
-| 04  | [Desktop UI](specs/04-desktop-ui.md)                       |
-| 05  | [Speech STT](specs/05-speech-stt.md)                       |
-| 06  | [Speech TTS](specs/06-speech-tts.md)                       |
-| 07  | [Sidecar router](specs/07-sidecar-router.md)               |
-| 08  | [Sidecar agent](specs/08-sidecar-agent.md)                 |
-| 09  | [Harness](specs/09-harness.md)                             |
-| 10  | [Memory](specs/10-memory.md)                               |
-| 11  | [Database](specs/11-database.md)                           |
-| 12  | [Backend](specs/12-backend.md)                             |
-| 13  | [Pricing](specs/13-pricing.md)                             |
-| 14  | [Landing page](specs/14-landing-page.md)                   |
+Implementation references live in [`specs/`](specs/README.md) — system specs,
+per-connector docs, and runbooks. Start with the
+[index](specs/README.md), then [00-overview](specs/00-overview.md). The terse
+operational summary agents load is [`AGENTS.md`](./AGENTS.md).
 
 ## Privacy
 
