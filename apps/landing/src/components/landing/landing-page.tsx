@@ -18,6 +18,7 @@ import {
   Zap,
 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
+import { useLocalPrice } from "@/lib/local-price"
 
 import Footer from "@/components/Footer"
 import Nav from "@/components/Nav"
@@ -130,12 +131,12 @@ const PLANS = [
   {
     key: "explore",
     name: "Explore",
-    price: "$0",
+    priceUsd: 0,
     period: "/ month",
     badge: "Free",
     description: "Try screen-aware AI, voice, and memory for 30 days. No card needed.",
     features: [
-      "100 credits (30-day trial)",
+      "25 credits (30-day trial)",
       "Screen-aware AI & voice",
       "Image/screen analyze",
       "Local memory notepad",
@@ -149,7 +150,7 @@ const PLANS = [
   {
     key: "pro",
     name: "Pro",
-    price: "$14.99",
+    priceUsd: 14.99,
     period: "/ month",
     badge: "Most Popular",
     description: "Screen, voice, memory, and images for everyday work.",
@@ -167,7 +168,7 @@ const PLANS = [
   {
     key: "max",
     name: "Max",
-    price: "$39.99",
+    priceUsd: 39.99,
     period: "/ month",
     badge: "Power users",
     description: "High-volume credits for power users.",
@@ -246,6 +247,7 @@ export function LandingPage() {
   const [billingLoading, setBillingLoading] = useState<string | null>(null)
   const { data: session } = authClient.useSession()
   const router = useRouter()
+  const localPrice = useLocalPrice()
   const [detected, setDetected] = useState<Platform>("unknown")
   const [active, setActive] = useState<Exclude<Platform, "unknown">>("windows")
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
@@ -886,9 +888,16 @@ export function LandingPage() {
                     )}
                   </div>
                   <div className="mb-2 flex items-baseline gap-1">
-                    <span className="font-accent text-4xl text-foreground">{plan.price}</span>
+                    <span className="font-accent text-4xl text-foreground">
+                      {localPrice.format(plan.priceUsd)}
+                    </span>
                     <span className="text-sm text-muted-foreground">{plan.period}</span>
                   </div>
+                  {localPrice.localized && plan.priceUsd > 0 && (
+                    <p className="mb-1 text-xs text-muted-foreground">
+                      approx. — billed as ${plan.priceUsd} USD
+                    </p>
+                  )}
                   <p className="text-sm text-muted-foreground">{plan.description}</p>
                 </div>
 

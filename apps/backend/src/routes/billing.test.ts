@@ -396,8 +396,8 @@ describe("Dodo billing — plan catalog", () => {
 
     const explore = body.plans.find((plan: any) => plan.key === "explore")
     expect(explore.amountCents).toBe(0)
-    expect(explore.includedCredits).toBe(100)
-    expect(explore.features).toContain("100 trial credits")
+    expect(explore.includedCredits).toBe(25)
+    expect(explore.features).toContain("25 trial credits")
     expect(explore.features).toContain("Screen-aware AI and voice")
     expect(explore.features).toContain("Unlimited app connectors")
     expect(explore.features).toContain("30-day free trial")

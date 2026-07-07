@@ -166,7 +166,7 @@ Per-feature monthly caps were removed; connectors are unlimited on every plan.
 
 | Plan    | Price     | Monthly credits         |
 | ------- | --------- | ----------------------- |
-| Explore | $0/mo     | 100 (30-day free trial) |
+| Explore | $0/mo     | 25 (30-day free trial)  |
 | Pro     | $14.99/mo | 2 500                   |
 | Max     | $39.99/mo | 10 000                  |
 

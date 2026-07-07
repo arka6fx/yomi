@@ -339,7 +339,7 @@ export default function DocsPage() {
                 {
                   name: "Explore",
                   price: "Free",
-                  credits: "100 credits",
+                  credits: "25 credits",
                   note: "30-day trial to try everything.",
                 },
                 {
