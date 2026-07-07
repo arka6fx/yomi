@@ -410,9 +410,9 @@ export class GatewayRunner {
     bytes: ArrayBuffer,
     contentType: string,
     ext: string | undefined,
+    userId: string,
+    docName: string,
   ): Promise<string | null> {
-    // Will use pdf-parse and mammoth from the sidecar as fallback.
-    // For now, try basic text extraction from common formats.
     const mime = contentType.toLowerCase()
     const e = ext?.toLowerCase()
 
@@ -438,6 +438,24 @@ export class GatewayRunner {
         .replace(/\s+/g, " ")
         .trim()
       return stripped.slice(0, 50_000)
+    }
+
+    // PDF and Word docs: convert through the user's Drive (OCR included for
+    // PDFs) — no PDF parser fits in the Worker bundle budget.
+    const isPdf = mime.includes("pdf") || e === "pdf"
+    const isWord =
+      mime.includes("wordprocessingml") || mime.includes("msword") || e === "docx" || e === "doc"
+    if (isPdf || isWord) {
+      try {
+        const { extractTextViaDrive } = await import("../services/document-extract.js")
+        const sourceMime = isPdf
+          ? "application/pdf"
+          : "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        return await extractTextViaDrive(userId, bytes, sourceMime, docName)
+      } catch (err) {
+        console.warn("[gateway] drive document extraction failed:", err)
+        return null
+      }
     }
 
     return null
@@ -1092,7 +1110,13 @@ export class GatewayRunner {
             const contentType = msg.documentMimeType ?? docRes.headers.get("content-type") ?? ""
             const ext = docName.split(".").pop()?.toLowerCase()
             // For common text-based formats, try server-side extraction
-            const contentPreview = await this.parseDocument(bytes, contentType, ext)
+            const contentPreview = await this.parseDocument(
+              bytes,
+              contentType,
+              ext,
+              yomiUserId,
+              docName,
+            )
             if (contentPreview) {
               if (msg.text.trim()) {
                 msg = {
