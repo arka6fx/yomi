@@ -449,6 +449,63 @@ app.whenReady().then(async () => {
     }
   })
 
+  // ── Suggested automations ───────────────────────────────────────────────────
+
+  ipcMain.handle("yomi:get-suggestions", async () => {
+    const token = loadToken()
+    if (!token) return { error: "Not signed in" }
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/suggestions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = (await res.json().catch(() => ({}))) as {
+        suggestions?: unknown[]
+        error?: string
+        code?: string
+      }
+      if (!res.ok) return { error: data.error ?? `Failed: ${res.status}`, code: data.code }
+      return { suggestions: data.suggestions ?? [] }
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Failed to load suggestions" }
+    }
+  })
+
+  ipcMain.handle("yomi:accept-suggestion", async (_e, dedupKey: string) => {
+    const token = loadToken()
+    if (!token) return { error: "Not signed in" }
+    try {
+      const res = await fetch(
+        `${BACKEND_URL}/api/suggestions/${encodeURIComponent(dedupKey)}/accept`,
+        { method: "POST", headers: { Authorization: `Bearer ${token}` } },
+      )
+      const data = (await res.json().catch(() => ({}))) as {
+        scheduleId?: string
+        error?: string
+        code?: string
+      }
+      if (!res.ok) return { error: data.error ?? `Failed: ${res.status}`, code: data.code }
+      return { scheduleId: data.scheduleId }
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Failed to enable suggestion" }
+    }
+  })
+
+  ipcMain.handle("yomi:dismiss-suggestion", async (_e, dedupKey: string) => {
+    const token = loadToken()
+    if (!token) return { error: "Not signed in" }
+    try {
+      const res = await fetch(
+        `${BACKEND_URL}/api/suggestions/${encodeURIComponent(dedupKey)}/dismiss`,
+        { method: "POST", headers: { Authorization: `Bearer ${token}` } },
+      )
+      const data = (await res.json().catch(() => ({}))) as { error?: string; code?: string }
+      if (!res.ok) return { error: data.error ?? `Failed: ${res.status}`, code: data.code }
+      return { ok: true }
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Failed to dismiss suggestion" }
+    }
+  })
+
   // ── Bot channels (Telegram messaging gateway) ───────────────────────────────
 
   ipcMain.handle("yomi:gateway-connections", async () => {

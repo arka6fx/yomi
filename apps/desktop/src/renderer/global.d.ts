@@ -91,6 +91,21 @@ declare global {
         name?: string
       }): Promise<{ id?: string; error?: string; code?: string }>
       deleteDriveSource(id: string): Promise<{ ok?: boolean; error?: string; code?: string }>
+      // Suggested automations
+      getSuggestions(): Promise<{
+        suggestions?: {
+          dedupKey: string
+          title: string
+          description: string
+          schedulePreview: string
+        }[]
+        error?: string
+        code?: string
+      }>
+      acceptSuggestion(
+        dedupKey: string,
+      ): Promise<{ scheduleId?: string; error?: string; code?: string }>
+      dismissSuggestion(dedupKey: string): Promise<{ ok?: boolean; error?: string; code?: string }>
       // Bot channels (Telegram)
       getBotConnections(): Promise<{ platform: string; connectedAt: string }[]>
       connectTelegramBot(): Promise<{ ok?: boolean; error?: string }>
