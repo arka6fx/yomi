@@ -3,9 +3,6 @@ node_modules/
 .pnp
 .pnp.js
 
-# Bun
-bun.lock
-
 # TypeScript incremental build info
 *.tsbuildinfo
 
@@ -59,7 +56,16 @@ test-output.txt
 debug/
 **/.playwright-mcp/
 .superpowers/
-**/__mocks__/
+
+# Test artifacts
+coverage/
+playwright-report/
+test-results/
+.eslintcache
+
+# Electron build output and electron-vite temp configs
+apps/desktop/release/
+apps/desktop/electron.vite.config.*.mjs
 
 # Auto-generated Next.js type reference
 apps/landing/next-env.d.ts
