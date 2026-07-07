@@ -272,6 +272,26 @@ contextBridge.exposeInMainWorld("yomi", {
     return ipcRenderer.invoke("yomi:delete-drive-source", id)
   },
 
+  // ── Suggested automations ───────────────────────────────────────────────────
+
+  getSuggestions(): Promise<{
+    suggestions?: { dedupKey: string; title: string; description: string; schedulePreview: string }[]
+    error?: string
+    code?: string
+  }> {
+    return ipcRenderer.invoke("yomi:get-suggestions")
+  },
+
+  acceptSuggestion(
+    dedupKey: string,
+  ): Promise<{ scheduleId?: string; error?: string; code?: string }> {
+    return ipcRenderer.invoke("yomi:accept-suggestion", dedupKey)
+  },
+
+  dismissSuggestion(dedupKey: string): Promise<{ ok?: boolean; error?: string; code?: string }> {
+    return ipcRenderer.invoke("yomi:dismiss-suggestion", dedupKey)
+  },
+
   // ── Bot channels (Telegram) ─────────────────────────────────────────────────
 
   getBotConnections(): Promise<{ platform: string; connectedAt: string }[]> {
