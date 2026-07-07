@@ -23,6 +23,14 @@ let currentUser: TestUser
 let originalFetch: typeof fetch
 let fetchCalls: FetchCall[] = []
 
+// Fail fast on any fetch a test forgot to mock. The Dodo env vars set below use
+// the real test-API hostname, so an unmocked path would otherwise make live
+// network calls and flake the suite on connectivity.
+globalThis.fetch = (async (input: Parameters<typeof fetch>[0]) => {
+  const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url
+  throw new Error(`unmocked fetch in billing.test.ts: ${url}`)
+}) as typeof fetch
+
 let mockState: {
   dbSelectResult: any[]
   dbSelectQueue: any[][]
