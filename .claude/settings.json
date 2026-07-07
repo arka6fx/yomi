@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Bash",
+      "Edit",
+      "Write",
+      "WebFetch",
+      "WebSearch",
+      "Agent",
+      "mcp__github",
+      "mcp__playwright",
+      "mcp__context7",
+      "mcp__dodo-payments",
+      "mcp__better-auth"
+    ]
+  },
+  "enableAllProjectMcpServers": true
+}
