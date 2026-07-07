@@ -17,6 +17,8 @@ import {
   ragRetrievalLogs,
   ragSources,
   schedules,
+  suggestionDecisions,
+  telegramLinkTokens,
   usageEvents,
 } from "@yomi/db"
 import { decryptTokens } from "../token-encryption.js"
@@ -158,6 +160,7 @@ export async function deleteMyData(userId: string) {
     { name: "platform_connections", status: "pending" },
     { name: "pending_actions", status: "pending" },
     { name: "schedules", status: "pending" },
+    { name: "suggestion_decisions", status: "pending" },
     { name: "usage_events", status: "pending" },
     { name: "linking_codes", status: "pending" },
     { name: "agent_messages", status: "pending" },
@@ -286,6 +289,16 @@ export async function deleteMyData(userId: string) {
         db
           .delete(schedules)
           .where(eq(schedules.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+    },
+    {
+      // Clear suggestion latches with the schedules they created, otherwise
+      // dismissed/accepted starter automations can never be offered again.
+      name: "suggestion_decisions",
+      fn: () =>
+        db
+          .delete(suggestionDecisions)
+          .where(eq(suggestionDecisions.userId, userId))
           .then((r) => r.rowCount ?? 0),
     },
     {
@@ -520,17 +533,31 @@ export async function deleteAccount(userId: string) {
           .delete(agentSessions)
           .where(eq(agentSessions.userId, userId))
           .then((r) => r.rowCount ?? 0),
+      () =>
+        db
+          .delete(suggestionDecisions)
+          .where(eq(suggestionDecisions.userId, userId))
+          .then((r) => r.rowCount ?? 0),
+      () =>
+        db
+          .delete(telegramLinkTokens)
+          .where(eq(telegramLinkTokens.userId, userId))
+          .then((r) => r.rowCount ?? 0),
     ]
     let ok = true
+    let deleted = 0
+    let firstError: string | undefined
     for (const fn of deletions) {
       try {
-        await fn()
-      } catch {
+        deleted += await fn()
+      } catch (err) {
         ok = false
+        firstError ??= err instanceof Error ? err.message : String(err)
       }
     }
-    step.status = ok ? "done" : "done"
-    step.deletedCount = 0
+    step.status = ok ? "done" : "failed"
+    step.deletedCount = deleted
+    if (firstError) step.error = firstError
   }
 
   // Step 3: Cancel Dodo subscription (best-effort)

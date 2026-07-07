@@ -65,6 +65,7 @@ export function PrivacyManager({ token }: TokenProp) {
   const [deletingAccount, setDeletingAccount] = useState(false)
   const [confirmDeleteAccount, setConfirmDeleteAccount] = useState(false)
   const [deleteAccountText, setDeleteAccountText] = useState("")
+  const [actionError, setActionError] = useState<string | null>(null)
 
   async function fetchOverview() {
     setLoading(true)
@@ -157,6 +158,13 @@ export function PrivacyManager({ token }: TokenProp) {
     return (
       <div className="rounded-xl border border-border bg-card p-6 text-center">
         <p className="text-sm text-muted-foreground">Could not load privacy settings.</p>
+        <p className="mt-1 text-xs text-muted-foreground">{error}</p>
+        <button
+          onClick={() => void fetchOverview()}
+          className="mt-4 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
+        >
+          Retry
+        </button>
       </div>
     )
   }
@@ -210,6 +218,12 @@ export function PrivacyManager({ token }: TokenProp) {
 
       <hr className="my-6 border-border" />
 
+      {actionError && (
+        <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-2">
+          <p className="text-xs text-red-400">{actionError}</p>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Download size={16} className="text-primary" />
@@ -218,6 +232,7 @@ export function PrivacyManager({ token }: TokenProp) {
         <button
           onClick={async () => {
             setExporting(true)
+            setActionError(null)
             try {
               const res = await fetch("/api/privacy/exports", {
                 method: "POST",
@@ -226,7 +241,11 @@ export function PrivacyManager({ token }: TokenProp) {
               if (res.ok) {
                 const data = await res.json()
                 setExports((prev) => [data.export, ...prev])
+              } else {
+                setActionError("Export request failed. Please try again.")
               }
+            } catch {
+              setActionError("Export request failed. Please try again.")
             } finally {
               setExporting(false)
             }
@@ -319,6 +338,7 @@ export function PrivacyManager({ token }: TokenProp) {
             <button
               onClick={async () => {
                 setDeleting(true)
+                setActionError(null)
                 try {
                   const res = await fetch("/api/privacy/delete-data", {
                     method: "POST",
@@ -327,7 +347,11 @@ export function PrivacyManager({ token }: TokenProp) {
                   if (res.ok) {
                     const data = await res.json()
                     setDeleteJobs((prev) => [data.job, ...prev])
+                  } else {
+                    setActionError("Data deletion failed to start. Please try again.")
                   }
+                } catch {
+                  setActionError("Data deletion failed to start. Please try again.")
                 } finally {
                   setDeleting(false)
                   setConfirmDelete(false)
@@ -427,6 +451,7 @@ export function PrivacyManager({ token }: TokenProp) {
             <button
               onClick={async () => {
                 setDeletingAccount(true)
+                setActionError(null)
                 try {
                   const res = await fetch("/api/privacy/delete-account", {
                     method: "POST",
@@ -434,7 +459,11 @@ export function PrivacyManager({ token }: TokenProp) {
                   })
                   if (res.ok) {
                     window.location.href = "/"
+                    return
                   }
+                  setActionError("Account deletion failed. Please try again or contact support.")
+                } catch {
+                  setActionError("Account deletion failed. Please try again or contact support.")
                 } finally {
                   setDeletingAccount(false)
                   setConfirmDeleteAccount(false)
