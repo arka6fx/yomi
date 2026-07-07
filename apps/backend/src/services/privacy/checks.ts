@@ -1,5 +1,5 @@
 import { type PrivacyConsentPurpose } from "@yomi/shared/privacy"
-import { getConsentSnapshot } from "./consent.js"
+import { getConsentSnapshot, recordConsentDecision } from "./consent.js"
 import { getPrivacyPreferences, type PrivacyPreferencesShape } from "./preferences.js"
 
 type BooleanPrefKey = {
@@ -50,4 +50,32 @@ export async function checkConsent(
   }
 
   return { allowed: true, reason: null, decided }
+}
+
+// Contextual consent: grant purposes the user has never explicitly decided,
+// tied to a clear user action that already implies them (completing a
+// connector OAuth flow, linking Telegram). Explicit revocations are never
+// overridden — only truly undecided purposes are granted.
+export async function grantConsentIfUndecided(
+  userId: string,
+  purposes: PrivacyConsentPurpose[],
+  source: string,
+): Promise<void> {
+  const undecided: PrivacyConsentPurpose[] = []
+  for (const purpose of purposes) {
+    const result = await checkConsent(userId, purpose)
+    if (!result.decided) undecided.push(purpose)
+  }
+  if (undecided.length === 0) return
+  await recordConsentDecision({
+    userId,
+    purposes: undecided,
+    status: "granted",
+    context: {
+      appVersion: null,
+      ipAddress: null,
+      userAgent: null,
+      metadata: { source },
+    },
+  })
 }

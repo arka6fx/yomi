@@ -2,7 +2,7 @@ import { Hono } from "hono"
 import { eq, and } from "drizzle-orm"
 import { db, mcpConnections } from "@yomi/db"
 import { authenticate, getAuth } from "../auth.js"
-import { requireConsent } from "../middleware/consent.js"
+import { checkConsent, grantConsentIfUndecided } from "../services/privacy/checks.js"
 import { encryptTokens, decryptTokens, type OAuthTokens } from "../services/token-encryption.js"
 import { getAccessToken as getAccessTokenService } from "../services/integration-tokens.js"
 import { getConnectorDef } from "../connectors/registry.js"
@@ -344,6 +344,12 @@ integrationsRouter.get("/callback/google", async (c) => {
     )
   }
 
+  // Completing the provider's OAuth screen IS consent to access this data —
+  // grant connector_data unless the user explicitly revoked it before.
+  await grantConsentIfUndecided(userId, ["connector_data"], "connector_oauth").catch((err) =>
+    console.warn("[yomi/integrations] connector consent grant failed:", err),
+  )
+
   return c.redirect(`${appUrl}/dashboard?integration_success=google`)
 })
 
@@ -442,10 +448,15 @@ integrationsRouter.get("/callback/:id", async (c) => {
 integrationsRouter.post(
   "/connect/api-key/:id",
   authenticate,
-  requireConsent("connector_data"),
   async (c) => {
     const id = c.req.param("id") ?? ""
     const userId = c.get("user").id
+    // Submitting credentials IS consent — only an explicit prior revocation
+    // blocks connecting; undecided users get connector_data granted on success.
+    const consent = await checkConsent(userId, "connector_data")
+    if (consent.decided && !consent.allowed) {
+      return c.json({ error: "Connector data access is disabled in your privacy settings" }, 403)
+    }
     const def = getConnectorDef(id)
     if (!def) return c.json({ error: `Unknown connector: ${id}` }, 404)
     if (def.auth.kind !== "api_key") return c.json({ error: "Not an api_key connector" }, 400)
@@ -470,6 +481,9 @@ integrationsRouter.post(
     }
 
     await storeApiKeyCredential(def, userId, fields)
+    await grantConsentIfUndecided(userId, ["connector_data"], "connector_api_key").catch((err) =>
+      console.warn("[yomi/integrations] connector consent grant failed:", err),
+    )
     return c.json({ ok: true })
   },
 )
@@ -479,10 +493,15 @@ integrationsRouter.post(
 integrationsRouter.post(
   "/connect/dsn/:id",
   authenticate,
-  requireConsent("connector_data"),
   async (c) => {
     const id = c.req.param("id") ?? ""
     const userId = c.get("user").id
+    // Submitting credentials IS consent — only an explicit prior revocation
+    // blocks connecting; undecided users get connector_data granted on success.
+    const consent = await checkConsent(userId, "connector_data")
+    if (consent.decided && !consent.allowed) {
+      return c.json({ error: "Connector data access is disabled in your privacy settings" }, 403)
+    }
     const def = getConnectorDef(id)
     if (!def) return c.json({ error: `Unknown connector: ${id}` }, 404)
     if (def.auth.kind !== "connection_string")
@@ -498,6 +517,9 @@ integrationsRouter.post(
     }
 
     await storeConnectionString(def, userId, dsn)
+    await grantConsentIfUndecided(userId, ["connector_data"], "connector_dsn").catch((err) =>
+      console.warn("[yomi/integrations] connector consent grant failed:", err),
+    )
     return c.json({ ok: true })
   },
 )

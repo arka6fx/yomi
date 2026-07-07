@@ -226,6 +226,13 @@ export async function handleOAuth2Callback(
     }
   }
 
+  // Completing the provider's OAuth screen IS consent to access this data —
+  // grant connector_data unless the user explicitly revoked it before.
+  const { grantConsentIfUndecided } = await import("../../services/privacy/checks.js")
+  await grantConsentIfUndecided(userId, ["connector_data"], "connector_oauth").catch((err) =>
+    console.warn(`[integrations/${def.id}] connector consent grant failed:`, err),
+  )
+
   return { redirectTo: `${appUrl()}/dashboard?integration_success=${def.id}` }
 }
 
