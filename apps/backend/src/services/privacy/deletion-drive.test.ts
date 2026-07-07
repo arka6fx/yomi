@@ -19,6 +19,8 @@ const mockTables = {
   ragRetrievalLogs: { __name: "ragRetrievalLogs" },
   ragSources: { __name: "ragSources" },
   schedules: { __name: "schedules" },
+  suggestionDecisions: { __name: "suggestionDecisions" },
+  telegramLinkTokens: { __name: "telegramLinkTokens" },
   usageEvents: { __name: "usageEvents" },
 }
 

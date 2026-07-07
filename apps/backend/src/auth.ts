@@ -59,6 +59,7 @@ async function getUserFields(userId: string) {
       dailyImageCount: authSchema.user.dailyImageCount,
       agentUsageCount: authSchema.user.agentUsageCount,
       dailyResetDate: authSchema.user.dailyResetDate,
+      deletedAt: authSchema.user.deletedAt,
     })
     .from(authSchema.user)
     .where(eq(authSchema.user.id, userId))
@@ -149,6 +150,7 @@ function createAuth() {
             dailyImageCount: fields?.dailyImageCount ?? 0,
             agentUsageCount: fields?.agentUsageCount ?? 0,
             dailyResetDate: fields?.dailyResetDate ?? null,
+            deletedAt: fields?.deletedAt ?? null,
           },
         }
       }),
@@ -188,6 +190,7 @@ export type SessionUser = AuthInstance["$Infer"]["Session"]["user"] & {
   dailyImageCount: number
   agentUsageCount: number
   dailyResetDate: string | null
+  deletedAt: Date | null
 }
 
 // Hono middleware — validates Better Auth session (cookie or Bearer token)
@@ -196,7 +199,13 @@ export async function authenticate(c: Context, next: Next) {
   if (!session?.user) {
     return c.json({ error: "Unauthorized" }, 401)
   }
-  c.set("user", session.user as SessionUser)
+  const user = session.user as SessionUser
+  // Soft-deleted accounts must stay locked out even if the OAuth provider
+  // mints a fresh session — deletion is one-way until retention hard-deletes.
+  if (user.deletedAt) {
+    return c.json({ error: "Account deleted", code: "account_deleted" }, 401)
+  }
+  c.set("user", user)
   await next()
 }
 
