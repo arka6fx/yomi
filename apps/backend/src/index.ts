@@ -26,8 +26,8 @@ import { privacyRouter } from "./routes/privacy.js"
 import "./connectors/defs/index.js" // registers all ConnectorDefs at startup
 import { getDefaultGateway } from "./gateway/gateway-runner.js"
 import type { SidecarResolver } from "./gateway/gateway-runner.js"
-import { eq, and } from "drizzle-orm"
-import { db, platformConnections, devices } from "@yomi/db"
+import { eq, and, sql } from "drizzle-orm"
+import { db, platformConnections, devices, EXPECTED_MIGRATIONS } from "@yomi/db"
 
 const app = new Hono()
 
@@ -56,6 +56,30 @@ app.use("*", async (c, next) => {
 })
 
 app.get("/health", (c) => c.json({ status: "ok", version: "0.1.0" }))
+
+// Deploys ship code automatically but migrations run manually, so the two can
+// drift — the recurring cause of production 42703 errors. This endpoint makes
+// drift observable: curl it after every deploy and alert on non-200.
+app.get("/health/db", async (c) => {
+  try {
+    const rows = (await db.execute(
+      sql`select count(*)::int as count from drizzle.__drizzle_migrations`,
+    )) as unknown as { rows?: { count: number }[] }
+    const applied = Number(rows.rows?.[0]?.count ?? 0)
+    const expected = EXPECTED_MIGRATIONS.count
+    const behind = expected - applied
+    if (behind > 0) {
+      console.error(
+        `[health/db] schema drift: ${applied}/${expected} migrations applied (latest expected: ${EXPECTED_MIGRATIONS.latestTag})`,
+      )
+      return c.json({ status: "behind", applied, expected, latestTag: EXPECTED_MIGRATIONS.latestTag }, 503)
+    }
+    return c.json({ status: "ok", applied, expected, latestTag: EXPECTED_MIGRATIONS.latestTag })
+  } catch (err) {
+    console.error("[health/db] check failed:", err instanceof Error ? err.message : err)
+    return c.json({ status: "error", error: "db check failed" }, 503)
+  }
+})
 
 async function getLatestExeUrl(): Promise<string | null> {
   try {
