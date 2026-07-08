@@ -1,0 +1,15 @@
+# Exclude heavy app workspaces the backend doesn't need — keeps the image small
+# and avoids pulling Electron/Next toolchains onto the server.
+apps/desktop
+apps/landing
+apps/sidecar
+
+# Never copy installed deps, build output, or local env/secrets into the image.
+**/node_modules
+**/dist
+**/.turbo
+**/*.log
+.git
+.env
+.env.*
+!.env.production.example
