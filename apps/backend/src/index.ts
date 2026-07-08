@@ -188,6 +188,35 @@ export function startGateway(): Promise<void> {
 
 const PORT = Number(process.env["PORT"] ?? 3001)
 
+// In-process replacement for the Workers cron trigger (see worker.ts scheduled()).
+// Only runs in the standalone Bun server (EC2/Docker); the Worker path never
+// enters this block since typeof Bun === "undefined" there.
+async function runCronSweeps(): Promise<void> {
+  const { runDueSchedules } = await import("./services/schedule-runner.js")
+  const { runPrivacyRetention } = await import("./services/privacy/retention.js")
+  const { runDriveSyncSweep } = await import("./services/rag/drive-sync.js")
+  await Promise.all([
+    runDueSchedules()
+      .then(({ ran }) => {
+        if (ran > 0) console.warn(`[schedules] ran ${ran} due schedule(s)`)
+      })
+      .catch((err) => console.error("[schedules] sweep error:", err)),
+    runPrivacyRetention()
+      .then((r) => {
+        const domainTotal = Object.values(r.domains).reduce((sum, n) => sum + n, 0)
+        const total =
+          r.expiredExports + r.oldDeletionJobs + r.hardDeletedUsers + r.oldAuditEvents + domainTotal
+        if (total > 0) console.warn(`[retention] cleaned ${total} items`)
+      })
+      .catch((err) => console.error("[retention] sweep error:", err)),
+    runDriveSyncSweep()
+      .then(({ ran }) => {
+        if (ran > 0) console.warn(`[drive-sync] swept ${ran} source(s)`)
+      })
+      .catch((err) => console.error("[drive-sync] sweep error:", err)),
+  ])
+}
+
 if (typeof Bun !== "undefined") {
   const server = Bun.serve({
     port: PORT,
@@ -196,6 +225,17 @@ if (typeof Bun !== "undefined") {
 
   console.warn(`Backend listening on :${server.port}`)
   startGateway().catch((err) => console.error("[gateway] startup error:", err))
+
+  // Fire every minute, matching the wrangler cron ("* * * * *"). A run is skipped
+  // if the previous one is still in flight to avoid overlap.
+  let cronRunning = false
+  setInterval(() => {
+    if (cronRunning) return
+    cronRunning = true
+    runCronSweeps().finally(() => {
+      cronRunning = false
+    })
+  }, 60_000)
 }
 
 export { app }
