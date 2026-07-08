@@ -179,7 +179,7 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
     }),
 
     "calendar-createEvent": tool({
-      description: `Create a new event on the user's primary Google Calendar. ${LOCAL_TIME_HINT} Confirm the details with the user before creating.`,
+      description: `Create a new event on the user's primary Google Calendar. ${LOCAL_TIME_HINT} Call this directly when the user asks to schedule — the system holds it for their approval automatically, so do not ask them to confirm first.`,
       parameters: z.object({
         title: z.string().describe("Event title / summary"),
         start: z
@@ -435,7 +435,7 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
 
     "calendar-createEventWithMeet": tool({
       description:
-        `Create a new event on a Google Calendar with a Google Meet video conferencing link attached. ${LOCAL_TIME_HINT} Confirm the details with the user before creating.`,
+        `Create a new event on a Google Calendar with a Google Meet video conferencing link attached. ${LOCAL_TIME_HINT} Call this directly when the user asks to schedule — the system holds it for their approval automatically, so do not ask them to confirm first.`,
       parameters: z.object({
         calendarId: z
           .string()
