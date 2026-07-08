@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next"
 
-const BASE = "https://yomi.arka6fx.com"
+const BASE = "https://getyomi.in"
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date()

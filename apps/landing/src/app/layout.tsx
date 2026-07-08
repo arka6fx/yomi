@@ -29,7 +29,7 @@ const META_DESC =
   "Yomi is an AI assistant that sees your screen, hears your voice, and connects to Gmail, Calendar, Drive, GitHub, Notion, Slack, and more, so you can get answers without switching windows."
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://yomi.arka6fx.com"),
+  metadataBase: new URL("https://getyomi.in"),
   title: {
     template: "%s | Yomi",
     default: "Yomi: AI assistant for your screen, voice, and apps",
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     "natural language productivity",
     "Yomi",
   ],
-  authors: [{ name: "Arka Garai", url: "https://yomi.arka6fx.com" }],
+  authors: [{ name: "Arka Garai", url: "https://getyomi.in" }],
   creator: "Arka Garai",
   publisher: "Yomi",
   manifest: "/site.webmanifest",
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://yomi.arka6fx.com",
+    url: "https://getyomi.in",
     siteName: "Yomi",
     title: "Yomi: AI assistant for your screen, voice, and apps",
     description: META_DESC,

@@ -36,7 +36,7 @@ describe("resolveTts", () => {
   })
 
   it("returns elevenlabs when backend proxy URL is set", () => {
-    process.env.YOMI_BACKEND_URL = "https://api.yomi.arka6fx.com"
+    process.env.YOMI_BACKEND_URL = "https://api.getyomi.in"
     expect(resolveTts()).toBe("elevenlabs")
   })
 })

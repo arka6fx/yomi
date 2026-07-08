@@ -49,7 +49,7 @@ export class TelegramAdapter implements PlatformAdapter {
   }
 
   private get webhookUrl(): string {
-    const base = process.env["BETTER_AUTH_BASE_URL"] ?? "https://api.yomi.arka6fx.com"
+    const base = process.env["BETTER_AUTH_BASE_URL"] ?? "https://api.getyomi.in"
     return `${base}/api/gateway/telegram/webhook/${this.botToken}`
   }
 

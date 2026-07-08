@@ -34,7 +34,7 @@ authRoutesRouter.post("/device-code", async (c) => {
   return c.json({
     device_code: deviceCode,
     user_code: userCode,
-    verification_uri: `${process.env["NEXT_PUBLIC_APP_URL"] ?? "https://yomi.arka6fx.com"}/device`,
+    verification_uri: `${process.env["NEXT_PUBLIC_APP_URL"] ?? "https://getyomi.in"}/device`,
     expires_in: 300,
     interval: 5,
   })

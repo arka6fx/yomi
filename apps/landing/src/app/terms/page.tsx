@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "Terms of Service",
   description:
     "Yomi Terms of Service: the agreement between you and Yomi governing your use of the desktop app, API integrations, and subscription plans.",
-  alternates: { canonical: "https://yomi.arka6fx.com/terms" },
+  alternates: { canonical: "https://getyomi.in/terms" },
 }
 
 export default function TermsPage() {
@@ -63,7 +63,7 @@ export default function TermsPage() {
               <ul>
                 <li>
                   Paid plans are billed monthly via Dodo Payments. Prices are listed at
-                  yomi.arka6fx.com/pricing.
+                  getyomi.in/pricing.
                 </li>
                 <li>
                   Usage is metered in credits. Each plan includes a monthly credit allowance that

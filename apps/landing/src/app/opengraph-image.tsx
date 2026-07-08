@@ -90,7 +90,7 @@ export default function Image() {
           letterSpacing: "0.04em",
         }}
       >
-        yomi.arka6fx.com
+        getyomi.in
       </div>
     </div>,
     size,

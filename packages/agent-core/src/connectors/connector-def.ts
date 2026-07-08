@@ -5,7 +5,7 @@ import type { ToolSet } from "ai"
 export function connectorError(err: unknown): { error: string; hint?: string } {
   const msg = err instanceof Error ? err.message : String(err)
   const appUrl =
-    (typeof process !== "undefined" && process.env["YOMI_APP_URL"]) || "https://yomi.arka6fx.com"
+    (typeof process !== "undefined" && process.env["YOMI_APP_URL"]) || "https://getyomi.in"
   const isAuth =
     /(?:→|status)\s*(401|403)\b|unauthorized|forbidden|invalid.*token|token.*invalid|revoked/i.test(
       msg,

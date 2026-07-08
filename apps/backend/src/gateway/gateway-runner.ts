@@ -143,7 +143,7 @@ export class GatewayRunner {
       process.env["YOMI_APP_URL"] ??
       process.env["NEXT_PUBLIC_APP_URL"] ??
       process.env["BETTER_AUTH_URL"] ??
-      "https://yomi.arka6fx.com"
+      "https://getyomi.in"
     return (
       "Welcome to Yomi! Your account isn't linked yet.\n\n" +
       `Your code: *${code}*\n\n` +

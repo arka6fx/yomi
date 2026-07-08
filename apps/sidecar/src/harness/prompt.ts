@@ -206,7 +206,7 @@ export function buildFastPrompt(opts: FastPromptOptions): string {
   const userCtx = yomiMd ? `<user_context>\n${yomiMd}\n</user_context>\n\n` : ""
   const soulCtx = `${formatAgentSoul(soulMd)}\n\n`
   const memCtx = buildMemoryBlock(memoryCtx)
-  const appUrl = process.env["YOMI_APP_URL"] ?? "https://yomi.arka6fx.com"
+  const appUrl = process.env["YOMI_APP_URL"] ?? "https://getyomi.in"
 
   // Only inject connector info when the query mentions a connector or app keyword
   const wantsConnector =
@@ -338,7 +338,7 @@ export function buildAgentPrompt(ctx: PromptContext): string {
   const userCtx = yomiMd ? `<user_context>\n${yomiMd}\n</user_context>\n\n` : ""
   const soulCtx = `${formatAgentSoul(soulMd)}\n\n`
   const memCtx = buildMemoryBlock(memoryCtx)
-  const appUrl = process.env["YOMI_APP_URL"] ?? "https://yomi.arka6fx.com"
+  const appUrl = process.env["YOMI_APP_URL"] ?? "https://getyomi.in"
   const connInfo = buildConnectorInfo(connectedProviders)
 
   const convState = conversationState

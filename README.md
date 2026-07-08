@@ -76,13 +76,13 @@ ElevenLabs, encryption keys, and Dodo Payments.
 Production uses split Cloudflare hostnames:
 
 ```bash
-BETTER_AUTH_URL=https://yomi.arka6fx.com
-BETTER_AUTH_BASE_URL=https://api.yomi.arka6fx.com
-BACKEND_URL=https://api.yomi.arka6fx.com
+BETTER_AUTH_URL=https://getyomi.in
+BETTER_AUTH_BASE_URL=https://api.getyomi.in
+BACKEND_URL=https://api.getyomi.in
 # NEXT_PUBLIC_BACKEND_URL — NOT SET in production (auth client uses same-origin proxy)
-NEXT_PUBLIC_APP_URL=https://yomi.arka6fx.com
-YOMI_BACKEND_URL=https://api.yomi.arka6fx.com
-CORS_ORIGIN=https://yomi.arka6fx.com
+NEXT_PUBLIC_APP_URL=https://getyomi.in
+YOMI_BACKEND_URL=https://api.getyomi.in
+CORS_ORIGIN=https://getyomi.in
 ```
 
 ## Billing (Dodo Payments)
@@ -144,8 +144,8 @@ See [SETUP_GUIDE.md](./SETUP_GUIDE.md) for the current runbook.
 Configure OAuth callbacks:
 
 ```text
-https://api.yomi.arka6fx.com/api/auth/callback/github
-https://api.yomi.arka6fx.com/api/auth/callback/google
+https://api.getyomi.in/api/auth/callback/github
+https://api.getyomi.in/api/auth/callback/google
 
 http://localhost:3001/api/auth/callback/github
 http://localhost:3001/api/auth/callback/google

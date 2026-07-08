@@ -11,4 +11,4 @@ Dashboard requirements:
 - Provide account/session management.
 - Link to the latest desktop installer via backend download endpoint.
 
-Auth uses Better Auth with backend callbacks on `api.yomi.arka6fx.com`.
+Auth uses Better Auth with backend callbacks on `api.getyomi.in`.
