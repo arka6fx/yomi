@@ -1,0 +1,30 @@
+# Yomi backend on EC2: Bun/Hono server behind Caddy (auto HTTPS via Let's Encrypt).
+# Run from the repo root on the server:  docker compose up -d --build
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    env_file: .env.production
+    environment:
+      PORT: "3001"
+    expose:
+      - "3001"
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

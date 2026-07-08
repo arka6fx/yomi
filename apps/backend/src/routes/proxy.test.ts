@@ -36,6 +36,11 @@ beforeEach(() => {
   elevenlabsCalls = []
   process.env.ELEVENLABS_API_KEY = "test-elevenlabs-key"
   process.env.SIDECAR_SECRET = "test-sidecar-secret"
+  // TTS is OpenAI-primary with an ElevenLabs fallback. Clear the OpenAI key by
+  // default so the ElevenLabs-specific tests exercise the fallback path; the
+  // OpenAI-primary tests opt back in explicitly.
+  delete process.env.AI_CREDITS_API_KEY
+  delete process.env.OPENAI_API_KEY
   mockAuthSession = null
 })
 
@@ -266,6 +271,54 @@ describe("POST /api/tts (TTS proxy)", () => {
     expect((reqBody.voice_settings as Record<string, unknown>).stability).toBe(0.45)
     expect((reqBody.voice_settings as Record<string, unknown>).similarity_boost).toBe(0.85)
     expect((reqBody.voice_settings as Record<string, unknown>).use_speaker_boost).toBe(true)
+  })
+
+  it("uses OpenAI TTS when an OpenAI key is set", async () => {
+    process.env.AI_CREDITS_API_KEY = "test-openai-key"
+    process.env.AI_CREDITS_BASE_URL = "https://api.openai.com/v1"
+    mockElevenLabs(200, "fake-mp3", "audio/mpeg")
+
+    const { ttsRouter } = await import("./tts.js")
+    const app = new Hono().route("/api/tts", ttsRouter)
+
+    const res = await app.request("/api/tts", {
+      method: "POST",
+      headers: { "x-sidecar-secret": "test-sidecar-secret", "Content-Type": "application/json" },
+      body: JSON.stringify({ text: "hello", voice_id: "voice-1" }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(elevenlabsCalls.length).toBe(1)
+    expect(elevenlabsCalls[0]!.url).toContain("api.openai.com/v1/audio/speech")
+    expect(elevenlabsCalls[0]!.headers["Authorization"]).toBe("Bearer test-openai-key")
+  })
+
+  it("falls back to ElevenLabs when OpenAI TTS fails", async () => {
+    process.env.AI_CREDITS_API_KEY = "test-openai-key"
+    process.env.AI_CREDITS_BASE_URL = "https://api.openai.com/v1"
+    globalThis.fetch = async (url: string, opts?: RequestInit) => {
+      const headers: Record<string, string> = {}
+      if (opts?.headers) {
+        const h = opts.headers as Record<string, string>
+        for (const k of Object.keys(h)) headers[k] = h[k]
+      }
+      elevenlabsCalls.push({ url, headers, body: opts?.body })
+      if (String(url).includes("openai")) return new Response("upstream boom", { status: 500 })
+      return new Response("fake-mp3", { status: 200, headers: { "content-type": "audio/mpeg" } })
+    }
+
+    const { ttsRouter } = await import("./tts.js")
+    const app = new Hono().route("/api/tts", ttsRouter)
+
+    const res = await app.request("/api/tts", {
+      method: "POST",
+      headers: { "x-sidecar-secret": "test-sidecar-secret", "Content-Type": "application/json" },
+      body: JSON.stringify({ text: "hello", voice_id: "voice-1" }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(elevenlabsCalls.some((c) => c.url.includes("api.openai.com"))).toBe(true)
+    expect(elevenlabsCalls.some((c) => c.url.includes("api.elevenlabs.io"))).toBe(true)
   })
 
   it("forwards upstream TTS errors", async () => {
