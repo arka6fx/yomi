@@ -48,6 +48,13 @@ export default {
     if (url.pathname === "/api/download-url") {
       return handleDownloadUrl()
     }
+    // IP-based country for localized price display. Served here (not proxied):
+    // Cloudflare stamps request.cf.country from the visitor's IP, which is far
+    // more reliable than browser language (commonly en-US worldwide).
+    if (url.pathname === "/api/geo") {
+      const country = (request as { cf?: { country?: string } }).cf?.country ?? null
+      return Response.json({ country }, { headers: { "cache-control": "no-store" } })
+    }
 
     if (url.pathname.startsWith("/api/")) {
       return proxyToBackend(request, url.pathname + url.search)

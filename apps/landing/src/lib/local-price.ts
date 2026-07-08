@@ -68,21 +68,57 @@ const TIMEZONE_TO_COUNTRY: Record<string, string> = {
   "America/Vancouver": "CA",
 }
 
-function detectCountry(): string | null {
+// Detection order matters: IP geolocation (authoritative) → timezone → browser
+// language. Language comes last because browsers worldwide commonly default to
+// en-US regardless of where the user actually is.
+async function detectCountry(): Promise<string | null> {
   try {
-    for (const lang of navigator.languages ?? [navigator.language]) {
-      const region = new Intl.Locale(lang).region
-      if (region) return region.toUpperCase()
-    }
+    const cached = sessionStorage.getItem("yomi-geo-country")
+    if (cached) return cached === "none" ? null : cached
   } catch {
     // best-effort
   }
+
+  let country: string | null = null
   try {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
-    return TIMEZONE_TO_COUNTRY[tz] ?? null
+    const res = await fetch("/api/geo", { signal: AbortSignal.timeout(3_000) })
+    if (res.ok) {
+      const data = (await res.json()) as { country?: string | null }
+      if (data.country) country = data.country.toUpperCase()
+    }
   } catch {
-    return null
+    // geo endpoint unavailable (e.g. next dev) — fall through
   }
+
+  if (!country) {
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+      country = TIMEZONE_TO_COUNTRY[tz] ?? null
+    } catch {
+      // best-effort
+    }
+  }
+
+  if (!country) {
+    try {
+      for (const lang of navigator.languages ?? [navigator.language]) {
+        const region = new Intl.Locale(lang).region
+        if (region) {
+          country = region.toUpperCase()
+          break
+        }
+      }
+    } catch {
+      // best-effort
+    }
+  }
+
+  try {
+    sessionStorage.setItem("yomi-geo-country", country ?? "none")
+  } catch {
+    // best-effort
+  }
+  return country
 }
 
 export type LocalPriceFormatter = {
@@ -108,19 +144,25 @@ export function useLocalPrice(): LocalPriceFormatter {
   const [formatter, setFormatter] = useState<LocalPriceFormatter>(USD_FORMATTER)
 
   useEffect(() => {
-    const country = detectCountry()
-    const def = country ? CURRENCIES[COUNTRY_TO_CURRENCY[country] ?? ""] : undefined
-    if (!def) return
-    setFormatter({
-      format: (usd) =>
-        new Intl.NumberFormat(undefined, {
-          style: "currency",
-          currency: def.currency,
-          maximumFractionDigits: def.wholeUnits ? 0 : 2,
-          minimumFractionDigits: usd === 0 || def.wholeUnits ? 0 : 2,
-        }).format(usd * def.rate),
-      localized: true,
+    let cancelled = false
+    void detectCountry().then((country) => {
+      if (cancelled) return
+      const def = country ? CURRENCIES[COUNTRY_TO_CURRENCY[country] ?? ""] : undefined
+      if (!def) return
+      setFormatter({
+        format: (usd) =>
+          new Intl.NumberFormat(undefined, {
+            style: "currency",
+            currency: def.currency,
+            maximumFractionDigits: def.wholeUnits ? 0 : 2,
+            minimumFractionDigits: usd === 0 || def.wholeUnits ? 0 : 2,
+          }).format(usd * def.rate),
+        localized: true,
+      })
     })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   return formatter
