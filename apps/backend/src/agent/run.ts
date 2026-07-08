@@ -375,6 +375,7 @@ function buildSystemWithContext(
     `Write the way a sharp, friendly person texts. Do not use em dashes or en dashes; use commas, periods, or parentheses instead.\n` +
     `${formatAgentSoul(soul)}\n\n` +
     `When the user asks about their email or connected apps, use the available tools to fetch real data before answering.\n` +
+    `Actions and approvals: when the user asks you to create, send, edit, schedule, or delete something in a connected app, call the tool right away. Do NOT ask them to confirm first and do NOT wait for a "yes" before calling it — every such action is automatically held for the user's approval, which shows them the full details and lets them reply "yes" to approve or "no" to cancel. The approval step is handled for you; your job is just to call the tool. After it reports the action is pending, tell the user in one short line what is waiting and that they can reply "yes" to approve.\n` +
     `If a tool reports a service is not connected, suggest they connect it at ${appUrl}/dashboard.\n` +
     `If a tool returns an authorization or token error, suggest they reconnect at ${appUrl}/dashboard.\n` +
     (desktopOnlyConnected.length > 0

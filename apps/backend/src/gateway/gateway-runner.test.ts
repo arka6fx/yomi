@@ -475,6 +475,44 @@ describe("GatewayRunner production routing", () => {
     expect(adapter.messages.at(-1)?.text).toBe("Approved and executed.\nDone: Test action")
   })
 
+  for (const phrase of ["yes", "Yes schedule it", "sure", "ok", "go ahead", "yes please", "do it"]) {
+    it(`approves a pending action with "${phrase}"`, async () => {
+      pendingActions = [{ id: "11111111-1111-1111-1111-111111111111", title: "T", preview: "p" }]
+      const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+      const adapter = new FakeAdapter()
+      runner.registerAdapter(adapter)
+
+      await incoming(runner, {
+        platform: "telegram",
+        chatId: "chat_1",
+        userId: "tg_1",
+        text: phrase,
+        timestamp: new Date().toISOString(),
+      })
+
+      expect(approvedActions).toEqual(["11111111-1111-1111-1111-111111111111"])
+      expect(agentCalls).toHaveLength(0)
+    })
+  }
+
+  it("sends an amendment like 'yes but change the time' to the agent, not approval", async () => {
+    pendingActions = [{ id: "11111111-1111-1111-1111-111111111111", title: "T", preview: "p" }]
+    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "yes but change the time to 7pm",
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(approvedActions).toHaveLength(0)
+    expect(agentCalls.at(-1)?.text).toBe("yes but change the time to 7pm")
+  })
+
   it("records ai telemetry with vision usage for the image analysis path", async () => {
     globalThis.fetch = (async (url: RequestInfo | URL) => {
       if (String(url) === "https://img.example.com/pic.jpg") {

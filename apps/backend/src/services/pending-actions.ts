@@ -76,7 +76,7 @@ export async function createPendingAction(input: CreatePendingActionInput) {
     return {
       id: existing.id,
       status: existing.status,
-      message: `Approval required: ${input.title}. Action ID: ${existing.id}`,
+      message: pendingApprovalMessage(input.title, input.preview),
     }
   }
 
@@ -104,8 +104,16 @@ export async function createPendingAction(input: CreatePendingActionInput) {
   return {
     id: row.id,
     status: row.status,
-    message: `Approval required: ${input.title}. Action ID: ${row.id}`,
+    message: pendingApprovalMessage(input.title, input.preview),
   }
+}
+
+// Tool-result text the agent relays to the user when an action is queued. Feeds
+// the model the full details (time, recipients, ...) and the exact approval
+// phrasing so the user can approve conversationally, no slash command needed.
+function pendingApprovalMessage(title: string, preview?: string): string {
+  const details = preview?.trim() ? `\n${preview.trim()}` : ""
+  return `This action needs the user's approval before it runs: ${title}${details}\n\nAsk the user to reply "yes" to approve or "no" to cancel.`
 }
 
 export async function expirePendingActions(userId?: string) {

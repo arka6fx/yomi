@@ -220,13 +220,26 @@ export class GatewayRunner {
 
   private async handleApprovalCommand(userId: string, text: string): Promise<string | null> {
     const trimmed = text.trim()
-    const command = trimmed.replace(/^\//, "")
+    const command = trimmed.replace(/^\//, "").trim()
     const isExplicitApprovalCommand = /^\/(approve|yes|deny|no)$/i.test(trimmed)
-    const wantsApprove =
-      /^(approve|yes|yep|yeah|confirm|send|do it|create it|yes[,\s].*|.*\byes[,\s]+(create|approve|confirm|send|do)\b.*)$/i.test(
+    // A trailing modifier means the user is amending, not approving
+    // ("yes but change the time to 7") — those must reach the agent, not approve.
+    const hasModifier =
+      /\b(but|instead|change|wait|actually|except|hold on|don'?t|do not|no,|rather|make it)\b/i.test(
         command,
       )
-    const wantsDeny = /^(deny|no|nope|reject|cancel|don't|do not|stop)$/i.test(command)
+    // Standalone affirmatives, or an affirmative followed by the action itself
+    // ("yes schedule it", "sure, do that", "ok create it").
+    const isAffirmative =
+      /^(y|ok(ay)?|kk|yes( please| sir| pls)?|yep|yup|ya|yeah|yah|sure|approve[d]?|confirm(ed)?|accept|send it|do it|go( ahead| for it)?|please do|sounds good|looks good|perfect|correct|right)$/i.test(
+        command,
+      ) || /^(yes|yeah|yep|yup|sure|ok(ay)?|please|go ahead and|confirm)[,\s]+\S/i.test(command)
+    const wantsApprove = !hasModifier && isAffirmative
+    const isNegative =
+      /^(n|no|nope|nah|deny|denied|reject(ed)?|cancel|stop|don'?t|do not|abort|never mind|nevermind)$/i.test(
+        command,
+      ) || /^(no|nope|cancel|don'?t|do not)[,\s]+\S/i.test(command)
+    const wantsDeny = !wantsApprove && isNegative
     if (/^(pending|approvals|pending approvals)$/i.test(command)) {
       return this.formatPendingActions(userId)
     }
