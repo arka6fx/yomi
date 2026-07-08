@@ -29,6 +29,10 @@
     },
     "production": {
       "name": "yomi-landing",
+      "routes": [
+        { "pattern": "getyomi.in", "custom_domain": true },
+        { "pattern": "www.getyomi.in", "custom_domain": true },
+      ],
       "vars": {
         "ENVIRONMENT": "production",
       },
