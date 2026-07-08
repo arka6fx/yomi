@@ -11,7 +11,7 @@ Yomi is split into a desktop shell, a local sidecar, a cloud backend, and a
 landing site.
 
 ```text
-apps/backend/           Hono Worker    auth, billing, LLM proxy, usage metering
+apps/backend/           Hono on Bun    auth, billing, LLM proxy, usage metering (EC2 + Docker)
 apps/desktop/           Electron       tray/notch UI, hotkeys, screen and mic capture
 apps/landing/           Next.js 16     landing, auth pages, dashboard, downloads
 apps/sidecar/           Bun service    router, fast path, agent loop, memory
@@ -45,8 +45,8 @@ Prerequisites:
 - Bun 1.3.x
 - Node 20+
 - A Neon Postgres database
-- AI Credits/OpenAI-compatible LLM credentials
-- ElevenLabs API key for STT/TTS
+- An OpenAI API key (LLM + STT/TTS)
+- An ElevenLabs API key (STT/TTS fallback; optional)
 
 ```bash
 git clone https://github.com/arka6fx/yomi.git
@@ -70,10 +70,11 @@ For desktop development, start the sidecar before the desktop app.
 ## Environment
 
 [`.env.example`](./.env.example) is the source of truth for every variable:
-database, Better Auth, Google/GitHub OAuth, AI Credits LLM endpoint,
-ElevenLabs, encryption keys, and Dodo Payments.
+database, Better Auth, Google/GitHub OAuth, the OpenAI (LLM/speech) endpoint,
+ElevenLabs, encryption keys, and Dodo Payments. The LLM/speech env vars are named
+`AI_CREDITS_*` for historical reasons but point at OpenAI.
 
-Production uses split Cloudflare hostnames:
+Production uses split hostnames (frontend on Cloudflare, backend on EC2):
 
 ```bash
 BETTER_AUTH_URL=https://getyomi.in
@@ -129,13 +130,17 @@ changed.
 
 ## Production
 
-Production targets Cloudflare:
-
-- backend: Cloudflare Worker from `apps/backend`
-- public site/dashboard: Cloudflare Worker (OpenNext) from `apps/landing`
+- backend: AWS EC2 + Docker + Caddy (auto HTTPS) from `apps/backend`, at
+  `api.getyomi.in`. Deploy with `scripts/deploy-backend.sh` (no GitHub CD — the
+  security group locks SSH to the owner IP). `worker.ts`/`wrangler.jsonc` are a
+  kept-but-unused Cloudflare fallback.
+- frontend/dashboard: Cloudflare Worker (`yomi-landing`) from `apps/landing`, at
+  `getyomi.in` + `www.getyomi.in`. Deploy with `wrangler deploy --env production`.
 - database: Neon Postgres
+- LLM + speech: OpenAI (STT/TTS fall back to ElevenLabs)
 - billing: Dodo Payments
-- desktop installers: published as GitHub releases on `arka6fx/yomi-releases`
+- desktop installers: published as GitHub releases on `arka6fx/yomi-releases` via
+  the `release.yml` workflow
 
 See [SETUP_GUIDE.md](./SETUP_GUIDE.md) for the current runbook.
 
@@ -153,15 +158,17 @@ http://localhost:3001/api/auth/callback/google
 
 ## Speech And Models
 
-| Capability | Provider / default                                    |
-| ---------- | ----------------------------------------------------- |
-| Fast LLM   | AI Credits/OpenAI-compatible endpoint, `gpt-5.5-mini` |
-| Agent LLM  | AI Credits/OpenAI-compatible endpoint, `gpt-5.5`      |
-| STT        | ElevenLabs `scribe_v2`                                |
-| TTS        | ElevenLabs `eleven_flash_v2_5`                        |
+| Capability | Provider / default                                        |
+| ---------- | --------------------------------------------------------- |
+| Fast LLM   | OpenAI `gpt-5.4-mini`                                      |
+| Agent LLM  | OpenAI `gpt-5.5`                                           |
+| Embeddings | OpenAI `text-embedding-3-small`                           |
+| STT        | OpenAI `gpt-4o-mini-transcribe` → ElevenLabs `scribe_v2`  |
+| TTS        | OpenAI `gpt-4o-mini-tts` → ElevenLabs `eleven_flash_v2_5` |
 
-Set `TTS_ENGINE=none` to disable voice output. Use a premade ElevenLabs voice;
-community library voices can fail on free-tier API keys.
+STT/TTS use OpenAI first and fall back to ElevenLabs on error. The provider env
+vars are named `AI_CREDITS_*` (historical) but point at OpenAI. Set
+`TTS_ENGINE=none` to disable voice output.
 
 ## Specs
 

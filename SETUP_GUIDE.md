@@ -1,201 +1,179 @@
 # Yomi Production Runbook
 
-Production targets:
+Production topology (two providers):
 
 ```text
-Landing / dashboard: https://getyomi.in
-Backend API:         https://api.getyomi.in
-Staging API:         https://api-staging.getyomi.in
+Frontend / dashboard  https://getyomi.in        Cloudflare Worker (apps/landing)
+Backend API           https://api.getyomi.in    AWS EC2 + Docker + Caddy (apps/backend)
+Database              Neon Postgres
+LLM + speech          OpenAI (STT/TTS fall back to ElevenLabs)
+Billing               Dodo Payments
+Desktop installers    GitHub releases on arka6fx/yomi-releases
 ```
 
-Production runs on Cloudflare Workers.
+- **Domain** `getyomi.in` is registered at Hostinger; DNS is managed by Cloudflare
+  (nameservers point at Cloudflare). `api.getyomi.in` is an **A record → the EC2
+  Elastic IP, DNS-only (grey cloud)** so Caddy can obtain a Let's Encrypt cert.
+- **Backend is NOT on Cloudflare Workers.** It runs as a container on EC2.
+  `apps/backend/src/worker.ts` + `wrangler.jsonc` are kept only as a fallback and
+  are not deployed.
 
-## Required Secrets
+---
 
-Cloudflare secrets are set with Wrangler per app/environment. Do not commit
-secret values to `wrangler.jsonc`.
+## Backend — EC2 + Docker
 
-Required production values:
+The backend is a Bun/Hono server (`apps/backend/src/index.ts`, port 3001) behind
+Caddy, which terminates TLS for `api.getyomi.in`. Compose file: `docker-compose.yml`
+(services `backend` + `caddy`), Dockerfile: `apps/backend/Dockerfile`, TLS config:
+`Caddyfile`.
+
+### One-time box setup
+
+- EC2 Ubuntu 24.04 LTS, Elastic IP associated, security group `yomi-backend-sg`:
+  SSH 22 from your IP only, HTTP 80 + HTTPS 443 from anywhere.
+- `curl -fsSL https://get.docker.com | sudo sh && sudo usermod -aG docker ubuntu`
+- Code lives in `~/yomi` on the box; secrets live in `~/yomi/.env.production`
+  (chmod 600, never committed).
+
+### Secrets — `~/yomi/.env.production` on the box
 
 ```bash
-DATABASE_URL=postgresql://...
-
+ENVIRONMENT=production
+PORT=3001
+DATABASE_URL=postgresql://...            # Neon
+ENCRYPTION_KEY=<hex32>                    # MUST match the value tokens were encrypted with
+ENCRYPTION_KEY_FALLBACKS=                 # old key(s) if rotating, comma-separated
 BETTER_AUTH_SECRET=...
+OAUTH_STATE_SECRET=...
+
 BETTER_AUTH_URL=https://getyomi.in
 BETTER_AUTH_BASE_URL=https://api.getyomi.in
-BACKEND_URL=https://api.getyomi.in
-# NEXT_PUBLIC_BACKEND_URL — DO NOT SET in production. Auth client must use same-origin
-# so OAuth cookies land on the correct domain. Worker proxies /api/* to backend.
-NEXT_PUBLIC_APP_URL=https://getyomi.in
-YOMI_BACKEND_URL=https://api.getyomi.in
-YOMI_APP_URL=https://getyomi.in
 CORS_ORIGIN=https://getyomi.in
+NEXT_PUBLIC_APP_URL=https://getyomi.in
+YOMI_APP_URL=https://getyomi.in
 
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-GITHUB_CLIENT_ID=...
-GITHUB_CLIENT_SECRET=...
+GOOGLE_CLIENT_ID=...            GOOGLE_CLIENT_SECRET=...
+GITHUB_CLIENT_ID=...            GITHUB_CLIENT_SECRET=...
+GITHUB_INTEGRATIONS_CLIENT_ID=...  GITHUB_INTEGRATIONS_CLIENT_SECRET=...
 
-AI_CREDITS_API_KEY=...
-AI_CREDITS_BASE_URL=...
-AI_CREDITS_FAST_MODEL=gpt-5.5-mini
+# LLM + speech via OpenAI. Env names are AI_CREDITS_* for historical reasons but
+# point at OpenAI; the backend proxies desktop/sidecar LLM calls and injects the key.
+AI_CREDITS_API_KEY=sk-proj-...
+AI_CREDITS_BASE_URL=https://api.openai.com/v1
+AI_CREDITS_FAST_MODEL=gpt-5.4-mini
 AI_CREDITS_AGENT_MODEL=gpt-5.5
 AI_CREDITS_EMBEDDING_MODEL=text-embedding-3-small
-
+# STT/TTS: OpenAI primary (gpt-4o-mini-transcribe / gpt-4o-mini-tts),
+# ElevenLabs fallback.
 ELEVENLABS_API_KEY=...
-ELEVENLABS_VOICE_ID=EXAVITQu4vr4xnSDxMaL
-ELEVENLABS_STT_MODEL=scribe_v2
-ELEVENLABS_TTS_MODEL=eleven_flash_v2_5
-TTS_ENGINE=elevenlabs
+ELEVENLABS_VOICE_ID=...
 
-ENCRYPTION_KEY=<openssl rand -hex 32>
-SIDECAR_SECRET=...
+TELEGRAM_BOT_TOKEN=...          TELEGRAM_BOT_USERNAME=yomi_assistant_bot
+
+DODO_ENV=live
+DODO_API_KEY=... or DODO_LIVE_API_KEY=...
+DODO_LIVE_WEBHOOK_SECRET=whsec_...
+DODO_LIVE_PRODUCT_PRO=pdt_...   DODO_LIVE_PRODUCT_MAX=pdt_...
+DODO_LIVE_PRODUCT_CREDITS_500=pdt_...  DODO_LIVE_PRODUCT_CREDITS_2000=pdt_...  DODO_LIVE_PRODUCT_CREDITS_6000=pdt_...
+
+OWNER_EMAIL=you@example.com    # bypasses all credit checks
 ```
 
-Optional until billing is enabled:
+### Deploy
+
+From a machine whose IP is allowed in the SSH rule:
 
 ```bash
-DODO_ENV=test
-
-DODO_TEST_API_KEY=
-DODO_TEST_WEBHOOK_SECRET=
-# Defaults to https://test.dodopayments.com (test) / https://live.dodopayments.com (live)
-DODO_TEST_API_BASE=
-DODO_TEST_PRODUCT_PRO=
-DODO_TEST_PRODUCT_MAX=
-DODO_TEST_PRODUCT_CREDITS_500=
-DODO_TEST_PRODUCT_CREDITS_2000=
-DODO_TEST_PRODUCT_CREDITS_6000=
-
-DODO_LIVE_API_KEY=
-DODO_LIVE_WEBHOOK_SECRET=
-DODO_LIVE_API_BASE=
-DODO_LIVE_PRODUCT_PRO=
-DODO_LIVE_PRODUCT_MAX=
-DODO_LIVE_PRODUCT_CREDITS_500=
-DODO_LIVE_PRODUCT_CREDITS_2000=
-DODO_LIVE_PRODUCT_CREDITS_6000=
+KEY=path/to/yomi-key.pem HOST=ubuntu@<elastic-ip> scripts/deploy-backend.sh
 ```
 
-## OAuth Callback URLs
+This ships the committed tree (`git archive`), rebuilds the image, restarts, and
+curls `/health`. `.env.production` on the box is preserved. **There is no GitHub
+CD for the backend** — the SG locks SSH to the owner IP, so hosted runners can't
+reach the box. To automate later, install a self-hosted runner on the EC2 box or
+use AWS SSM Run Command.
 
-Configure these in the OAuth provider dashboards:
+Migrations are **not** run by deploy. After a migration lands, run `bun run
+db:migrate` from `packages/db` against `DATABASE_URL`.
 
-```text
-https://api.getyomi.in/api/auth/callback/github
-https://api.getyomi.in/api/auth/callback/google
-```
+---
 
-## Cloudflare Setup
+## Frontend — Cloudflare Worker
 
-Install dependencies and authenticate Wrangler:
+`apps/landing` (Next.js 16) deploys as a static-assets Worker named `yomi-landing`,
+with `getyomi.in` and `www.getyomi.in` as custom domains (declared in
+`apps/landing/wrangler.jsonc`).
 
 ```bash
-bun install
-bunx wrangler login
-```
-
-Set backend Worker secrets:
-
-```bash
-cd apps/backend
-bunx wrangler secret put DATABASE_URL --env production
-bunx wrangler secret put BETTER_AUTH_SECRET --env production
-bunx wrangler secret put GOOGLE_CLIENT_ID --env production
-bunx wrangler secret put GOOGLE_CLIENT_SECRET --env production
-bunx wrangler secret put GITHUB_CLIENT_ID --env production
-bunx wrangler secret put GITHUB_CLIENT_SECRET --env production
-bunx wrangler secret put ENCRYPTION_KEY --env production
-bunx wrangler secret put AI_CREDITS_API_KEY --env production
-bunx wrangler secret put ELEVENLABS_API_KEY --env production
-bunx wrangler secret put ELEVENLABS_VOICE_ID --env production
-```
-
-When billing is ready, also set:
-
-```bash
-bunx wrangler secret put DODO_LIVE_API_KEY --env production
-bunx wrangler secret put DODO_LIVE_WEBHOOK_SECRET --env production
-bunx wrangler secret put DODO_LIVE_PRODUCT_PRO --env production
-bunx wrangler secret put DODO_LIVE_PRODUCT_MAX --env production
-bunx wrangler secret put DODO_LIVE_PRODUCT_CREDITS_500 --env production
-bunx wrangler secret put DODO_LIVE_PRODUCT_CREDITS_2000 --env production
-bunx wrangler secret put DODO_LIVE_PRODUCT_CREDITS_6000 --env production
-```
-
-Set `DODO_ENV` in `apps/backend/wrangler.jsonc` vars instead of a secret. Only
-set `DODO_LIVE_API_BASE` in vars if Dodo gives you a non-default base URL.
-
-Landing is deployed as a static-assets Worker. The auth client uses same-origin
-requests by default — the landing Worker proxies `/api/*` to the backend. For
-local dev you may set `NEXT_PUBLIC_BACKEND_URL` to skip the proxy, but DO NOT
-set it in production (OAuth cookies would be set for the wrong domain):
-
-```text
-# NEXT_PUBLIC_BACKEND_URL=https://api.getyomi.in — local dev only, never in prod
-NEXT_PUBLIC_APP_URL=https://getyomi.in
-BACKEND_URL=https://api.getyomi.in
-BETTER_AUTH_URL=https://getyomi.in
-BETTER_AUTH_BASE_URL=https://api.getyomi.in
-```
-
-Custom domains are configured once in the Cloudflare dashboard. They are not
-managed by `wrangler.jsonc`, so deploy tokens only need Worker edit access:
-
-```text
-production: api.getyomi.in
-staging:    api-staging.getyomi.in
-```
-
-## Deploy
-
-Backend:
-
-```bash
-cd apps/backend
-bun run cf:check
-bun run deploy:production
-```
-
-Landing:
-
-```bash
+bunx wrangler login   # needs Workers Scripts + Routes write
 cd apps/landing
-bun run build:cloudflare
-bun run deploy:production
+NEXT_PUBLIC_BACKEND_URL=https://api.getyomi.in \
+NEXT_PUBLIC_API_URL=https://api.getyomi.in \
+NEXT_PUBLIC_APP_URL=https://getyomi.in \
+  bun run build:cloudflare
+bunx wrangler deploy --env production
 ```
+
+`NEXT_PUBLIC_*` are baked at build time — rebuild + redeploy after changing any
+public URL or SEO metadata.
+
+---
+
+## OAuth callback URLs
+
+Add these (alongside `http://localhost:3001/...` for dev) in the Google Cloud and
+GitHub OAuth apps — both sign-in and the connector app:
+
+```text
+https://api.getyomi.in/api/auth/callback/google
+https://api.getyomi.in/api/auth/callback/github
+https://api.getyomi.in/api/integrations/callback/google
+https://api.getyomi.in/api/integrations/callback/{github,slack,notion,linear}
+```
+
+---
+
+## Desktop releases
+
+Never tag or release from this repo. Build + publish via the workflow, which
+ships installers to `arka6fx/yomi-releases`:
+
+```bash
+gh workflow run release.yml --ref main -f version=<ver> -f notes="<desc>"
+```
+
+The desktop app's LLM model names come from the GitHub secrets
+`AI_CREDITS_FAST_MODEL` / `AI_CREDITS_AGENT_MODEL` (must be valid OpenAI models),
+baked at release build; it routes LLM calls through `api.getyomi.in/api/llm/proxy`.
+
+---
 
 ## Verify
 
 ```bash
-curl -I https://getyomi.in/
-curl https://api.getyomi.in/health
+curl -I https://getyomi.in/                 # -> 200
+curl https://api.getyomi.in/health          # -> {"status":"ok"}
+curl https://api.getyomi.in/health/db       # -> {"status":"ok"} (schema in sync)
 ```
 
-Expected public behavior:
-
-```text
-https://getyomi.in/       -> 200
-https://api.getyomi.in/health -> 200
-```
+---
 
 ## Dodo Payments
 
-Leave Dodo values blank until billing is ready. When enabling billing:
+1. Generate a live API key; create Pro/Max subscription products and the three
+   credit-pack one-time products.
+2. Add a webhook `https://api.getyomi.in/api/billing/webhook`; copy its signing
+   secret.
+3. Put `DODO_ENV=live`, the API key, webhook secret, and product IDs in
+   `~/yomi/.env.production`, then redeploy the backend.
 
-1. Generate an API key in the Dodo dashboard.
-2. Create subscription products for Pro and Max.
-3. Create one-time products for the credit packs.
-4. Set `DODO_ENV=test` for sandbox or `DODO_ENV=live` for production.
-5. Set the matching `DODO_TEST_*` or `DODO_LIVE_*` product IDs.
-6. Add a webhook for `https://api.getyomi.in/api/billing/webhook`.
-7. Set the matching webhook signing secret.
-8. Add the Dodo secrets to the backend Worker.
-9. Redeploy the backend Worker.
+---
 
-## Security Notes
+## Security notes
 
-- Keep `.env` and `.env.production` out of git.
-- Do not commit OAuth client secrets, Dodo secrets, AI Credits keys, ElevenLabs
-  keys, or database URLs.
-- Rotate old AWS keys because the AWS deployment path has been removed.
+- Keep every `.env*` (except `*.example`) out of git.
+- `ENCRYPTION_KEY` must match what connector tokens were encrypted with — a
+  mismatch makes every stored token undecryptable. Use `ENCRYPTION_KEY_FALLBACKS`
+  to rotate safely.
+- The Elastic IP incurs a small hourly charge; release it if you tear the box
+  down. Set an AWS Budget alert.
