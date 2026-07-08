@@ -1,0 +1,48 @@
+name: Deploy Backend
+
+# Backend runs on EC2 (Docker + Caddy), reachable only from the owner IP, so this
+# runs on a self-hosted runner installed ON the box — no inbound SSH, no SG change.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/backend/**"
+      - "packages/**"
+      - "docker-compose.yml"
+      - "Caddyfile"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, yomi-ec2]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync code into ~/yomi (preserve .env.production)
+        run: |
+          if ! command -v rsync >/dev/null; then sudo apt-get update -qq && sudo apt-get install -y -qq rsync; fi
+          rsync -a --delete \
+            --exclude '.git' --exclude 'node_modules' --exclude '.env.production*' \
+            "$GITHUB_WORKSPACE"/ /home/ubuntu/yomi/
+
+      - name: Rebuild and restart backend
+        run: |
+          cd /home/ubuntu/yomi
+          docker compose up -d --build backend
+          sleep 6
+          docker compose logs backend --tail 10 | grep -iE 'listening|error' || true
+
+      - name: Health check
+        run: |
+          for i in 1 2 3 4 5; do
+            curl -fsS -m 15 https://api.getyomi.in/health && exit 0
+            sleep 5
+          done
+          echo "health check failed"; exit 1
