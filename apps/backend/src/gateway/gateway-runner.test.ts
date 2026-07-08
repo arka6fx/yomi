@@ -121,12 +121,13 @@ mock.module("../services/pending-actions.js", () => ({
   listPendingActions: async () => pendingActions,
   approvePendingAction: async (_userId: string, id: string) => {
     approvedActions.push(id)
-    return { id, status: "executed" }
+    return { id, status: "executed", result: { ok: true }, title: "Test action" }
   },
   denyPendingAction: async (_userId: string, id: string) => {
     deniedActions.push(id)
     return { id, status: "denied" }
   },
+  formatActionResult: (_result: unknown, fallback: string) => fallback,
 }))
 
 mock.module("../services/transcription.js", () => ({
@@ -429,7 +430,7 @@ describe("GatewayRunner production routing", () => {
     })
 
     expect(approvedActions).toEqual(["11111111-1111-1111-1111-111111111111"])
-    expect(adapter.messages.at(-1)?.text).toBe("Approved and executed.")
+    expect(adapter.messages.at(-1)?.text).toBe("Approved and executed.\nDone: Test action")
   })
 
   it("lets bare yes continue to the agent when no approval is pending", async () => {
@@ -471,7 +472,7 @@ describe("GatewayRunner production routing", () => {
 
     expect(agentCalls).toHaveLength(0)
     expect(approvedActions).toEqual(["11111111-1111-1111-1111-111111111111"])
-    expect(adapter.messages.at(-1)?.text).toBe("Approved and executed.")
+    expect(adapter.messages.at(-1)?.text).toBe("Approved and executed.\nDone: Test action")
   })
 
   it("records ai telemetry with vision usage for the image analysis path", async () => {

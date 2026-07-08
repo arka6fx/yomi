@@ -25,6 +25,30 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
     return (text ? JSON.parse(text) : undefined) as T
   }
 
+  const HAS_OFFSET = /(Z|[+-]\d{2}:?\d{2})$/
+
+  async function userTimeZone(): Promise<string | null> {
+    try {
+      const data = await calendar<{ value?: string }>("/users/me/settings/timezone")
+      return data.value ?? null
+    } catch {
+      return null
+    }
+  }
+
+  // Google interprets an offset-less dateTime via the accompanying timeZone
+  // field. The model rarely knows the user's UTC offset (it used to guess UTC
+  // and put 9 PM meetings at 2:30 AM local), so offset-less times are anchored
+  // to the user's own calendar timezone here.
+  async function eventTime(dateTime: string): Promise<{ dateTime: string; timeZone?: string }> {
+    if (HAS_OFFSET.test(dateTime)) return { dateTime }
+    const tz = await userTimeZone()
+    return tz ? { dateTime, timeZone: tz } : { dateTime }
+  }
+
+  const LOCAL_TIME_HINT =
+    "Pass the user's local wall-clock time WITHOUT a UTC offset (e.g. 2026-07-01T14:00:00) — it is interpreted in the user's own calendar timezone automatically. Never convert to UTC or assume a timezone; only include an explicit offset if the user names one."
+
   return {
     "calendar-listEvents": tool({
       description:
@@ -155,14 +179,13 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
     }),
 
     "calendar-createEvent": tool({
-      description:
-        "Create a new event on the user's primary Google Calendar. Provide ISO 8601 start/end datetimes including a timezone offset (e.g. 2026-07-01T14:00:00-04:00). Confirm the details with the user before creating.",
+      description: `Create a new event on the user's primary Google Calendar. ${LOCAL_TIME_HINT} Confirm the details with the user before creating.`,
       parameters: z.object({
         title: z.string().describe("Event title / summary"),
         start: z
           .string()
-          .describe("Start datetime, ISO 8601 with offset, e.g. 2026-07-01T14:00:00-04:00"),
-        end: z.string().describe("End datetime, ISO 8601 with offset"),
+          .describe("Start datetime in the user's local time, e.g. 2026-07-01T14:00:00 (no offset)"),
+        end: z.string().describe("End datetime in the user's local time (no offset)"),
         description: z.string().optional().describe("Event description / notes"),
         location: z.string().optional().describe("Event location"),
         attendees: z.array(z.string()).optional().describe("Attendee email addresses to invite"),
@@ -188,8 +211,8 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
                   method: "POST",
                   body: JSON.stringify({
                     summary: title,
-                    start: { dateTime: start },
-                    end: { dateTime: end },
+                    start: await eventTime(start),
+                    end: await eventTime(end),
                     description,
                     location,
                     attendees: attendees?.map((email) => ({ email })),
@@ -216,8 +239,8 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
       parameters: z.object({
         eventId: z.string().describe("Google Calendar event ID to update"),
         title: z.string().optional().describe("New title / summary"),
-        start: z.string().optional().describe("New start datetime, ISO 8601 with offset"),
-        end: z.string().optional().describe("New end datetime, ISO 8601 with offset"),
+        start: z.string().optional().describe("New start datetime in the user's local time (no offset)"),
+        end: z.string().optional().describe("New end datetime in the user's local time (no offset)"),
         description: z.string().optional().describe("New description"),
         location: z.string().optional().describe("New location"),
       }),
@@ -245,8 +268,8 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
             try {
               const patch: Record<string, unknown> = {}
               if (title !== undefined) patch["summary"] = title
-              if (start !== undefined) patch["start"] = { dateTime: start }
-              if (end !== undefined) patch["end"] = { dateTime: end }
+              if (start !== undefined) patch["start"] = await eventTime(start)
+              if (end !== undefined) patch["end"] = await eventTime(end)
               if (description !== undefined) patch["description"] = description
               if (location !== undefined) patch["location"] = location
               const event = await calendar<{ id: string; htmlLink?: string }>(
@@ -412,7 +435,7 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
 
     "calendar-createEventWithMeet": tool({
       description:
-        "Create a new event on a Google Calendar with a Google Meet video conferencing link attached. Provide ISO 8601 start/end datetimes with timezone offset (e.g. 2026-07-01T14:00:00-04:00). Confirm the details with the user before creating.",
+        `Create a new event on a Google Calendar with a Google Meet video conferencing link attached. ${LOCAL_TIME_HINT} Confirm the details with the user before creating.`,
       parameters: z.object({
         calendarId: z
           .string()
@@ -421,8 +444,8 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
         title: z.string().describe("Event title / summary"),
         start: z
           .string()
-          .describe("Start datetime, ISO 8601 with offset, e.g. 2026-07-01T14:00:00-04:00"),
-        end: z.string().describe("End datetime, ISO 8601 with offset"),
+          .describe("Start datetime in the user's local time, e.g. 2026-07-01T14:00:00 (no offset)"),
+        end: z.string().describe("End datetime in the user's local time (no offset)"),
         description: z.string().optional().describe("Event description / notes"),
         location: z.string().optional().describe("Event location"),
         attendees: z.array(z.string()).optional().describe("Attendee email addresses to invite"),

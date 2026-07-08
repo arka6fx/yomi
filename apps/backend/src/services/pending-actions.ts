@@ -213,7 +213,31 @@ export async function denyPendingAction(userId: string, id: string) {
   return row ?? null
 }
 
-export async function approvePendingAction(userId: string, id: string) {
+// Human-readable outcome of an executed action: the tool's message plus any
+// link it returned (calendar event URL, created doc, GitHub issue, ...).
+export function formatActionResult(result: unknown, fallback: string): string {
+  const record = (typeof result === "object" && result !== null ? result : {}) as Record<
+    string,
+    unknown
+  >
+  const message = typeof record["message"] === "string" ? record["message"] : fallback
+  const link =
+    typeof record["link"] === "string"
+      ? record["link"]
+      : typeof record["url"] === "string"
+        ? record["url"]
+        : typeof record["htmlLink"] === "string"
+          ? record["htmlLink"]
+          : null
+  const meetLink = typeof record["meetLink"] === "string" ? record["meetLink"] : null
+  return [message, link, meetLink].filter(Boolean).join("\n")
+}
+
+export async function approvePendingAction(
+  userId: string,
+  id: string,
+  opts?: { skipNotify?: boolean },
+) {
   await expirePendingActions(userId)
   const [approved] = await db
     .update(pendingActions)
@@ -247,17 +271,14 @@ export async function approvePendingAction(userId: string, id: string) {
         id: pendingActions.id,
         status: pendingActions.status,
         result: pendingActions.result,
+        title: pendingActions.title,
       })
 
-    // Notify the user on their messaging platform after a write action completes
-    if (approved.sourcePlatform && approved.sourceChatId) {
-      const resultText =
-        typeof result === "object" &&
-        result !== null &&
-        "message" in result &&
-        typeof (result as Record<string, unknown>).message === "string"
-          ? ((result as Record<string, unknown>).message as string)
-          : `Done: ${approved.title}`
+    // Notify the user on their messaging platform after a write action
+    // completes — skipped when the approval came from that same chat and the
+    // caller sends its own result reply.
+    if (approved.sourcePlatform && approved.sourceChatId && !opts?.skipNotify) {
+      const resultText = formatActionResult(result, `Done: ${approved.title}`)
       import("../gateway/index.js")
         .then(({ getDefaultGateway }) => {
           const gateway = getDefaultGateway()
@@ -267,7 +288,7 @@ export async function approvePendingAction(userId: string, id: string) {
         .catch(() => {})
     }
 
-    return executed ?? { id, status: "executed", result }
+    return executed ?? { id, status: "executed", result, title: approved.title }
   } catch (err) {
     const result = { ok: false, error: err instanceof Error ? err.message : String(err) }
     await db
