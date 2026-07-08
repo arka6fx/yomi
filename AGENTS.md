@@ -58,10 +58,10 @@ bun install && bun run dev        # install + run all in watch mode
 
 ## Stack
 
-- **LLM:** Vercel AI SDK (`ai`) with AI Credits / OpenAI-compatible inference
-- **STT/TTS:** ElevenLabs (`scribe_v2`, `eleven_flash_v2_5`)
+- **LLM:** Vercel AI SDK (`ai`) → OpenAI (env vars named `AI_CREDITS_*`, historical)
+- **STT/TTS:** OpenAI (`gpt-4o-mini-transcribe`, `gpt-4o-mini-tts`) → ElevenLabs fallback
 - **Desktop:** Electron (Tauri-ready). Device-code flow only for auth
-- **Backend:** Hono on Bun, Better Auth (Google + GitHub OAuth), Drizzle + Neon
+- **Backend:** Hono on Bun (EC2 + Docker + Caddy), Better Auth (Google + GitHub OAuth), Drizzle + Neon
 - **Billing:** Dodo Payments
 - **Agent orchestration:** AI SDK agent loop with connector tools; backend agent
   for Telegram
@@ -121,18 +121,19 @@ memory is local/private working memory and syncs durable facts to
 
 ---
 
-## Cloudflare Workers — I/O rules
+## Cloudflare Workers — I/O rules (landing only)
 
-CF Workers bind native I/O to the originating request context.
+The **backend runs on EC2 (Bun), not Workers** — these rules apply to the landing
+Worker (`apps/landing`). The backend still uses `neon()` HTTP mode (fine on a
+server; a `Pool` would also work now but isn't used). CF Workers bind native I/O
+to the originating request context:
 
 - **Use `neon()` HTTP mode, never `Pool`.** `Pool` opens a WebSocket and cannot
   be reused across requests. Import `neon` from `@neondatabase/serverless` and
-  `drizzle` from `drizzle-orm/neon-http`. `Pool` is banned in the backend
-  Worker.
+  `drizzle` from `drizzle-orm/neon-http`.
 - **Never pass a cached promise to `ctx.waitUntil()` from a different request.**
 - **Never store Request, Response, ReadableStream, or body references in
-  module-level variables.** Only plain data (strings, plain objects, numbers)
-  may live at module scope.
+  module-level variables.** Only plain data may live at module scope.
 - **Singleton auth instance is safe** — `betterAuth()` makes `fetch()` calls per
   request.
 
@@ -198,17 +199,22 @@ truth: `packages/shared/src/plans.ts`. Billing/webhooks:
 ## Models
 
 ```
-Fast path:  gpt-5.5-mini (AI Credits / OpenAI-compatible)
-Agent path: gpt-5.5 (AI Credits / OpenAI-compatible)
-Speech:     ElevenLabs scribe_v2 + eleven_flash_v2_5
+Fast path:  gpt-5.4-mini (OpenAI)
+Agent path: gpt-5.5 (OpenAI)
+Embeddings: text-embedding-3-small (OpenAI)
+Speech:     OpenAI gpt-4o-mini-transcribe / gpt-4o-mini-tts → ElevenLabs fallback
 ```
+
+Env vars are named `AI_CREDITS_*` (historical) but resolve to OpenAI. The backend
+proxies desktop/sidecar LLM calls via `/api/llm/proxy` and injects the key.
 
 ---
 
 ## Desktop releases
 
 **CRITICAL: All releases go to `arka6fx/yomi-releases` only.** Never create tags
-or releases in the main yomi repo. Production web/backend deploy from `main`.
+or releases in the main yomi repo. Frontend (Cloudflare Worker) and backend (EC2)
+deploy separately and manually — see SETUP_GUIDE.md; there is no push-to-`main` CD.
 
 ### Release process (follow every time):
 
