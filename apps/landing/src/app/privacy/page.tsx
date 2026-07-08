@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
     "Read Yomi's Privacy Policy: how we handle your data, what Google API scopes we request, and your rights to access, export, or delete your information.",
-  alternates: { canonical: "https://yomi.arka6fx.com/privacy" },
+  alternates: { canonical: "https://getyomi.in/privacy" },
 }
 
 export default function PrivacyPage() {
@@ -196,7 +196,7 @@ export default function PrivacyPage() {
             <Section title="Changes to this policy">
               <p>
                 We will notify users of material changes via email at least 14 days before they take
-                effect. The latest version is always at yomi.arka6fx.com/privacy.
+                effect. The latest version is always at getyomi.in/privacy.
               </p>
             </Section>
 

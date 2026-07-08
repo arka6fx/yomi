@@ -1,4 +1,4 @@
-const BACKEND_URL = "https://api.yomi.arka6fx.com"
+const BACKEND_URL = "https://api.getyomi.in"
 const GITHUB_RELEASES_URL = "https://api.github.com/repos/arka6fx/yomi-releases/releases/latest"
 const GITHUB_RELEASES_FALLBACK = "https://github.com/arka6fx/yomi-releases/releases/latest"
 

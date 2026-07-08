@@ -20,7 +20,7 @@ import type { LanguageModelV1, LanguageModelV1StreamPart } from "ai"
 // =============================================================================
 
 let streamChunks: string[] = [
-  "To use Google Drive, you need to connect it first at https://yomi.arka6fx.com/dashboard. I don't have access to your Drive files yet.",
+  "To use Google Drive, you need to connect it first at https://getyomi.in/dashboard. I don't have access to your Drive files yet.",
 ]
 let lastStmOptions: Record<string, unknown> = {}
 let classifyResult = {
@@ -136,7 +136,7 @@ mock.module("./graph/run.js", () => ({
   runGraph: async function* (req: unknown) {
     yield {
       type: "agent_text" as const,
-      text: "To use Google Drive, please connect it at https://yomi.arka6fx.com/dashboard. I don't have access to your Drive files yet.",
+      text: "To use Google Drive, please connect it at https://getyomi.in/dashboard. I don't have access to your Drive files yet.",
     }
     yield { type: "done" as const }
   },
@@ -184,7 +184,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   streamChunks = [
-    "To use Google Drive, you need to connect it first at https://yomi.arka6fx.com/dashboard. I don't have access to your Drive files yet.",
+    "To use Google Drive, you need to connect it first at https://getyomi.in/dashboard. I don't have access to your Drive files yet.",
   ]
   lastStmOptions = {}
   classifyResult = { path: "fast", confidence: 0.9, reason: "mocked", source: "heuristic" }
@@ -452,7 +452,7 @@ describe("fast pipeline — connector awareness scenario", () => {
 
   it("LLM response mentions connecting Drive when not connected", async () => {
     streamChunks = [
-      "To check your Google Drive, you'd need to connect it at https://yomi.arka6fx.com/dashboard. I don't have access to your Drive files yet.",
+      "To check your Google Drive, you'd need to connect it at https://getyomi.in/dashboard. I don't have access to your Drive files yet.",
     ]
     const events = await collect(
       fastPipeline({

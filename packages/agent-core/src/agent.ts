@@ -45,7 +45,7 @@ function defaultSystem(): string {
     month: "long",
     day: "numeric",
   })
-  const appUrl = process.env["YOMI_APP_URL"] ?? "https://yomi.arka6fx.com"
+  const appUrl = process.env["YOMI_APP_URL"] ?? "https://getyomi.in"
   return (
     `You are Yomi, a helpful AI assistant. Today is ${today}. Answer the user concisely. ` +
     "When the user asks about their email or connected apps, use the available " +

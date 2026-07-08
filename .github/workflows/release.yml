@@ -48,7 +48,7 @@ jobs:
       - name: Write packaged sidecar env
         run: |
           $lines = @(
-            "AI_CREDITS_BASE_URL=https://api.yomi.arka6fx.com/api/llm/proxy"
+            "AI_CREDITS_BASE_URL=https://api.getyomi.in/api/llm/proxy"
             "AI_CREDITS_FAST_MODEL=${{ secrets.AI_CREDITS_FAST_MODEL }}"
             "AI_CREDITS_AGENT_MODEL=${{ secrets.AI_CREDITS_AGENT_MODEL }}"
             "AI_CREDITS_EMBEDDING_MODEL=text-embedding-3-small"
@@ -56,8 +56,8 @@ jobs:
             "ELEVENLABS_STT_MODEL=scribe_v2"
             "ELEVENLABS_TTS_MODEL=eleven_flash_v2_5"
             "TTS_ENGINE=elevenlabs"
-            "YOMI_BACKEND_URL=https://api.yomi.arka6fx.com"
-            "BACKEND_URL=https://api.yomi.arka6fx.com"
+            "YOMI_BACKEND_URL=https://api.getyomi.in"
+            "BACKEND_URL=https://api.getyomi.in"
           )
           $lines -join "`n" | Set-Content .env -NoNewline
 

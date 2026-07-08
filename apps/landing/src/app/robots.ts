@@ -14,7 +14,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: "/",
       },
     ],
-    sitemap: "https://yomi.arka6fx.com/sitemap.xml",
-    host: "https://yomi.arka6fx.com",
+    sitemap: "https://getyomi.in/sitemap.xml",
+    host: "https://getyomi.in",
   }
 }

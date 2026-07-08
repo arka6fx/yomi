@@ -11,11 +11,11 @@ const DESC =
 export const metadata: Metadata = {
   title: { absolute: TITLE },
   description: DESC,
-  alternates: { canonical: "https://yomi.arka6fx.com" },
+  alternates: { canonical: "https://getyomi.in" },
   openGraph: {
     title: TITLE,
     description: DESC,
-    url: "https://yomi.arka6fx.com",
+    url: "https://getyomi.in",
     type: "website",
   },
   twitter: {
@@ -29,20 +29,20 @@ const jsonLd = {
   "@graph": [
     {
       "@type": "WebSite",
-      "@id": "https://yomi.arka6fx.com/#website",
-      url: "https://yomi.arka6fx.com",
+      "@id": "https://getyomi.in/#website",
+      url: "https://getyomi.in",
       name: "Yomi",
       description: DESC,
-      publisher: { "@id": "https://yomi.arka6fx.com/#organization" },
+      publisher: { "@id": "https://getyomi.in/#organization" },
     },
     {
       "@type": "Organization",
-      "@id": "https://yomi.arka6fx.com/#organization",
+      "@id": "https://getyomi.in/#organization",
       name: "Yomi",
-      url: "https://yomi.arka6fx.com",
+      url: "https://getyomi.in",
       logo: {
         "@type": "ImageObject",
-        url: "https://yomi.arka6fx.com/android-chrome-512x512.png",
+        url: "https://getyomi.in/android-chrome-512x512.png",
         width: 512,
         height: 512,
       },
@@ -55,11 +55,11 @@ const jsonLd = {
     },
     {
       "@type": "SoftwareApplication",
-      "@id": "https://yomi.arka6fx.com/#app",
+      "@id": "https://getyomi.in/#app",
       name: "Yomi",
       description: DESC,
-      url: "https://yomi.arka6fx.com",
-      downloadUrl: "https://yomi.arka6fx.com/download",
+      url: "https://getyomi.in",
+      downloadUrl: "https://getyomi.in/download",
       applicationCategory: "ProductivityApplication",
       operatingSystem: "Windows 10, Windows 11",
       softwareVersion: "1.0",
@@ -92,7 +92,7 @@ const jsonLd = {
         "@type": "Person",
         name: "Arka Garai",
       },
-      publisher: { "@id": "https://yomi.arka6fx.com/#organization" },
+      publisher: { "@id": "https://getyomi.in/#organization" },
       featureList: [
         "Screen-aware AI responses",
         "Voice push-to-talk",

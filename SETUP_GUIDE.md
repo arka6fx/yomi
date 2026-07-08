@@ -3,9 +3,9 @@
 Production targets:
 
 ```text
-Landing / dashboard: https://yomi.arka6fx.com
-Backend API:         https://api.yomi.arka6fx.com
-Staging API:         https://api-staging.yomi.arka6fx.com
+Landing / dashboard: https://getyomi.in
+Backend API:         https://api.getyomi.in
+Staging API:         https://api-staging.getyomi.in
 ```
 
 Production runs on Cloudflare Workers.
@@ -21,15 +21,15 @@ Required production values:
 DATABASE_URL=postgresql://...
 
 BETTER_AUTH_SECRET=...
-BETTER_AUTH_URL=https://yomi.arka6fx.com
-BETTER_AUTH_BASE_URL=https://api.yomi.arka6fx.com
-BACKEND_URL=https://api.yomi.arka6fx.com
+BETTER_AUTH_URL=https://getyomi.in
+BETTER_AUTH_BASE_URL=https://api.getyomi.in
+BACKEND_URL=https://api.getyomi.in
 # NEXT_PUBLIC_BACKEND_URL — DO NOT SET in production. Auth client must use same-origin
 # so OAuth cookies land on the correct domain. Worker proxies /api/* to backend.
-NEXT_PUBLIC_APP_URL=https://yomi.arka6fx.com
-YOMI_BACKEND_URL=https://api.yomi.arka6fx.com
-YOMI_APP_URL=https://yomi.arka6fx.com
-CORS_ORIGIN=https://yomi.arka6fx.com
+NEXT_PUBLIC_APP_URL=https://getyomi.in
+YOMI_BACKEND_URL=https://api.getyomi.in
+YOMI_APP_URL=https://getyomi.in
+CORS_ORIGIN=https://getyomi.in
 
 GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
@@ -82,8 +82,8 @@ DODO_LIVE_PRODUCT_CREDITS_6000=
 Configure these in the OAuth provider dashboards:
 
 ```text
-https://api.yomi.arka6fx.com/api/auth/callback/github
-https://api.yomi.arka6fx.com/api/auth/callback/google
+https://api.getyomi.in/api/auth/callback/github
+https://api.getyomi.in/api/auth/callback/google
 ```
 
 ## Cloudflare Setup
@@ -132,19 +132,19 @@ local dev you may set `NEXT_PUBLIC_BACKEND_URL` to skip the proxy, but DO NOT
 set it in production (OAuth cookies would be set for the wrong domain):
 
 ```text
-# NEXT_PUBLIC_BACKEND_URL=https://api.yomi.arka6fx.com — local dev only, never in prod
-NEXT_PUBLIC_APP_URL=https://yomi.arka6fx.com
-BACKEND_URL=https://api.yomi.arka6fx.com
-BETTER_AUTH_URL=https://yomi.arka6fx.com
-BETTER_AUTH_BASE_URL=https://api.yomi.arka6fx.com
+# NEXT_PUBLIC_BACKEND_URL=https://api.getyomi.in — local dev only, never in prod
+NEXT_PUBLIC_APP_URL=https://getyomi.in
+BACKEND_URL=https://api.getyomi.in
+BETTER_AUTH_URL=https://getyomi.in
+BETTER_AUTH_BASE_URL=https://api.getyomi.in
 ```
 
 Custom domains are configured once in the Cloudflare dashboard. They are not
 managed by `wrangler.jsonc`, so deploy tokens only need Worker edit access:
 
 ```text
-production: api.yomi.arka6fx.com
-staging:    api-staging.yomi.arka6fx.com
+production: api.getyomi.in
+staging:    api-staging.getyomi.in
 ```
 
 ## Deploy
@@ -168,15 +168,15 @@ bun run deploy:production
 ## Verify
 
 ```bash
-curl -I https://yomi.arka6fx.com/
-curl https://api.yomi.arka6fx.com/health
+curl -I https://getyomi.in/
+curl https://api.getyomi.in/health
 ```
 
 Expected public behavior:
 
 ```text
-https://yomi.arka6fx.com/       -> 200
-https://api.yomi.arka6fx.com/health -> 200
+https://getyomi.in/       -> 200
+https://api.getyomi.in/health -> 200
 ```
 
 ## Dodo Payments
@@ -188,7 +188,7 @@ Leave Dodo values blank until billing is ready. When enabling billing:
 3. Create one-time products for the credit packs.
 4. Set `DODO_ENV=test` for sandbox or `DODO_ENV=live` for production.
 5. Set the matching `DODO_TEST_*` or `DODO_LIVE_*` product IDs.
-6. Add a webhook for `https://api.yomi.arka6fx.com/api/billing/webhook`.
+6. Add a webhook for `https://api.getyomi.in/api/billing/webhook`.
 7. Set the matching webhook signing secret.
 8. Add the Dodo secrets to the backend Worker.
 9. Redeploy the backend Worker.

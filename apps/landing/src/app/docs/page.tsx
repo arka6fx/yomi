@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   title: "Docs",
   description:
     "Everything Yomi can do today: the desktop assistant, Telegram bot, app connectors, memory, voice, and how plans and credits work.",
-  alternates: { canonical: "https://yomi.arka6fx.com/docs" },
+  alternates: { canonical: "https://getyomi.in/docs" },
 }
 
 const NAV = [

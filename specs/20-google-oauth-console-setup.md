@@ -26,8 +26,8 @@ scopes at connect time.
 | Google Drive     | `google-drive`     | `/api/integrations/callback/google-drive`     |
 | Google Classroom | `google-classroom` | `/api/integrations/callback/google-classroom` |
 
-**Prod backend base URL:** `https://api.yomi.arka6fx.com`  
-**Prod app / landing URL:** `https://yomi.arka6fx.com`  
+**Prod backend base URL:** `https://api.getyomi.in`  
+**Prod app / landing URL:** `https://getyomi.in`  
 **Local backend (dev):** `http://localhost:3001`
 
 **Env vars (Cloudflare Workers / backend):**
@@ -87,11 +87,11 @@ immediately — no CASA yet. Refresh tokens for sensitive/restricted scopes
 ## Step 0 — Before you open the console
 
 - [ ] Decide which environment you will OAuth-connect in first. **Recommended:
-      prod** (`https://api.yomi.arka6fx.com`) so encrypted tokens match the same
+      prod** (`https://api.getyomi.in`) so encrypted tokens match the same
       `ENCRYPTION_KEY` as your deployed backend.
 - [ ] If you connect in prod, do not expect those tokens to decrypt in local dev
       (or vice versa) unless both use the **same** `ENCRYPTION_KEY`.
-- [ ] Have access to DNS / Search Console for `yomi.arka6fx.com` (needed later
+- [ ] Have access to DNS / Search Console for `getyomi.in` (needed later
       for verification, not for personal testing).
 
 ---
@@ -149,8 +149,8 @@ Go to **APIs & Services → OAuth consent screen**.
 | App name                           | `Yomi` (or your public product name)                                 |
 | User support email                 | Your support address                                                 |
 | App logo                           | Optional for Testing; **required** for brand verification            |
-| App domain → Application home page | `https://yomi.arka6fx.com`                                           |
-| Authorized domains                 | `yomi.arka6fx.com` (and `arka6fx.com` if privacy policy lives there) |
+| App domain → Application home page | `https://getyomi.in`                                           |
+| Authorized domains                 | `getyomi.in` (and `arka6fx.com` if privacy policy lives there) |
 | Developer contact email            | Your email                                                           |
 
 **Publishing status for now:** leave as **Testing** until verification is
@@ -160,8 +160,8 @@ complete.
 
 - [ ] Consent screen created (External)
 - [ ] App name + support email filled
-- [ ] Home page URL set to `https://yomi.arka6fx.com`
-- [ ] `yomi.arka6fx.com` added under Authorized domains
+- [ ] Home page URL set to `https://getyomi.in`
+- [ ] `getyomi.in` added under Authorized domains
 
 ---
 
@@ -212,10 +212,10 @@ Add **all** of these (prod + local if you dev locally):
 **Production**
 
 ```
-https://api.yomi.arka6fx.com/api/integrations/callback/google
-https://api.yomi.arka6fx.com/api/integrations/callback/google-calendar
-https://api.yomi.arka6fx.com/api/integrations/callback/google-drive
-https://api.yomi.arka6fx.com/api/integrations/callback/google-classroom
+https://api.getyomi.in/api/integrations/callback/google
+https://api.getyomi.in/api/integrations/callback/google-calendar
+https://api.getyomi.in/api/integrations/callback/google-drive
+https://api.getyomi.in/api/integrations/callback/google-classroom
 ```
 
 **Local dev (optional)**
@@ -244,7 +244,7 @@ Set on your Cloudflare Worker (or local `.env`):
 ```bash
 GOOGLE_INTEGRATIONS_CLIENT_ID=<from Step 1>
 GOOGLE_INTEGRATIONS_CLIENT_SECRET=<from Step 1>
-BETTER_AUTH_BASE_URL=https://api.yomi.arka6fx.com   # prod
+BETTER_AUTH_BASE_URL=https://api.getyomi.in   # prod
 ```
 
 Local only:
@@ -288,7 +288,7 @@ Do these when you’re ready for **external users**, not for solo testing.
 
 ### Phase A — Prerequisites
 
-- [ ] Privacy policy URL on `yomi.arka6fx.com` (must mention Google data +
+- [ ] Privacy policy URL on `getyomi.in` (must mention Google data +
       [Limited Use](https://developers.google.com/terms/api-services-user-data-policy))
 - [ ] Terms of service URL (same domain)
 - [ ] Domain ownership verified in
@@ -341,9 +341,9 @@ Also enable in **Library**:
 Add redirect URIs:
 
 ```
-https://api.yomi.arka6fx.com/api/integrations/callback/google-docs
-https://api.yomi.arka6fx.com/api/integrations/callback/google-sheets
-https://api.yomi.arka6fx.com/api/integrations/callback/google-slides
+https://api.getyomi.in/api/integrations/callback/google-docs
+https://api.getyomi.in/api/integrations/callback/google-sheets
+https://api.getyomi.in/api/integrations/callback/google-slides
 ```
 
 These are **sensitive, not restricted** — they do **not** add CASA burden beyond

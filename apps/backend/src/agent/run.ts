@@ -365,7 +365,7 @@ function buildSystemWithContext(
     month: "long",
     day: "numeric",
   })
-  const appUrl = process.env["YOMI_APP_URL"] ?? "https://yomi.arka6fx.com"
+  const appUrl = process.env["YOMI_APP_URL"] ?? "https://getyomi.in"
   // Prefer the user's onboarded personality; fall back to the global env soul, then
   // to the built-in default (handled by formatAgentSoul when undefined).
   const soul = userSoul?.trim() || process.env["YOMI_AGENT_SOUL"]
@@ -473,7 +473,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   })
   await registry.init(opts.userId)
 
-  const appUrl = process.env["YOMI_APP_URL"] ?? "https://yomi.arka6fx.com"
+  const appUrl = process.env["YOMI_APP_URL"] ?? "https://getyomi.in"
 
   // A consent-store hiccup must degrade to "no memory context", not abort the
   // whole run — the reply is still useful without memory.
