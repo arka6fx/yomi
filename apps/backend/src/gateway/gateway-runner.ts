@@ -237,10 +237,12 @@ export class GatewayRunner {
       >
       let approvePendingAction: (typeof import("../services/pending-actions.js"))["approvePendingAction"]
       let denyPendingAction: (typeof import("../services/pending-actions.js"))["denyPendingAction"]
+      let formatActionResult: (typeof import("../services/pending-actions.js"))["formatActionResult"]
       try {
         const pending = await import("../services/pending-actions.js")
         approvePendingAction = pending.approvePendingAction
         denyPendingAction = pending.denyPendingAction
+        formatActionResult = pending.formatActionResult
         actions = await pending.listPendingActions(userId)
       } catch (err) {
         console.warn("[gateway] pending approval command unavailable:", err)
@@ -250,11 +252,11 @@ export class GatewayRunner {
       const id = actions[0]!.id
       if (wantsApprove) {
         try {
-          const result = await approvePendingAction(userId, id)
+          const result = await approvePendingAction(userId, id, { skipNotify: true })
           if (!result)
             return "I couldn't find that pending action. It may have expired or already been handled."
           return result.status === "executed"
-            ? "Approved and executed."
+            ? `Approved and executed.\n${formatActionResult(result.result, `Done: ${result.title ?? "action"}`)}`
             : `Approved: ${result.status}`
         } catch (err) {
           return `Approval failed: ${err instanceof Error ? err.message : String(err)}`
@@ -281,12 +283,14 @@ export class GatewayRunner {
 
     if (actionCommand === "approve" || actionCommand === "confirm" || actionCommand === "send") {
       try {
-        const { approvePendingAction } = await import("../services/pending-actions.js")
-        const result = await approvePendingAction(userId, id)
+        const { approvePendingAction, formatActionResult } = await import(
+          "../services/pending-actions.js"
+        )
+        const result = await approvePendingAction(userId, id, { skipNotify: true })
         if (!result)
           return "I couldn't find that pending action. It may have expired or already been handled."
         return result.status === "executed"
-          ? "Approved and executed."
+          ? `Approved and executed.\n${formatActionResult(result.result, `Done: ${result.title ?? "action"}`)}`
           : `Approved: ${result.status}`
       } catch (err) {
         return `Approval failed: ${err instanceof Error ? err.message : String(err)}`
@@ -1006,6 +1010,28 @@ export class GatewayRunner {
       const approvalReply = await this.handleApprovalCommand(yomiUserId, msg.text)
       if (approvalReply) {
         await this.sendMessage(msg.platform, msg.chatId, approvalReply).catch(() => {})
+        // Record the exchange so follow-ups ("send me the link") have the
+        // executed result in context — approvals used to be invisible to the agent.
+        if (conversationConsent.allowed) {
+          try {
+            const approvalSession = await getOrCreateAgentSession({
+              userId: yomiUserId,
+              platform: msg.platform,
+              chatId: msg.chatId,
+            })
+            await appendAgentTurn({
+              sessionId: approvalSession.id,
+              userId: yomiUserId,
+              userText: msg.text,
+              assistantText: approvalReply,
+            })
+          } catch (err) {
+            console.warn("[gateway] append approval turn failed:", err)
+            this.appendHistory(msg.platform, msg.chatId, msg.text, approvalReply)
+          }
+        } else {
+          this.appendHistory(msg.platform, msg.chatId, msg.text, approvalReply)
+        }
         return
       }
 
