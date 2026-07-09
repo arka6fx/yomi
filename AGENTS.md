@@ -242,6 +242,7 @@ binary contains `eleven_flash_v2_5` and `scribe_v2` and does not contain
 One-liners on non-obvious logic only. Never multi-line docstrings. Conventional
 commits (`feat:`, `fix:`, `refactor:`, `perf:`, `style:`, `test:`, `chore:`,
 `docs:`) are lowercase, no full stops, max 72 chars, no em-dashes; before
-pushing, ensure `bun run ci` passes or `gh run list` is green, no unused
+pushing, ensure `bun run test` + `bun run typecheck` pass or `gh run list` is
+green, no unused
 imports, no `as any` in non-test files, no noisy production debug logs, and
 empty catches use `// ignore` or `// best-effort`.
