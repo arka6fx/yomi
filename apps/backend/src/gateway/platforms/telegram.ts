@@ -70,8 +70,18 @@ export class TelegramAdapter implements PlatformAdapter {
     // constantly churned Telegram delivery, and drop_pending_updates deleted
     // users' queued messages every time an isolate started.
     const infoRes = await fetch(`${this.apiUrl}/getWebhookInfo`)
-    const info = (await infoRes.json()) as TelegramResponse & { result?: { url?: string } }
-    if (info.result?.url !== this.webhookUrl) {
+    const info = (await infoRes.json()) as TelegramResponse & {
+      result?: { url?: string; last_error_message?: string }
+    }
+    // Re-register when the URL is wrong OR when Telegram reports a delivery
+    // error. getWebhookInfo never returns the stored secret_token, so a webhook
+    // registered without our secret (e.g. a manual cutover curl) would 403 every
+    // update forever, since the URL matches so the equality check alone never heals it.
+    // Re-registering refreshes secret_token; gating on an error keeps steady-state
+    // boots from churning delivery. We never drop_pending_updates so queued
+    // messages survive.
+    const hasDeliveryError = !!info.result?.last_error_message
+    if (info.result?.url !== this.webhookUrl || hasDeliveryError) {
       const whRes = await fetch(`${this.apiUrl}/setWebhook`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -85,7 +95,9 @@ export class TelegramAdapter implements PlatformAdapter {
       if (!whData.ok) {
         throw new Error(`Telegram setWebhook error: ${whData.description ?? "unknown"}`)
       }
-      console.warn(`[gateway/telegram] webhook set to ${this.webhookUrl}`)
+      console.warn(
+        `[gateway/telegram] webhook set to ${this.webhookUrl}${hasDeliveryError ? ` (recovering from: ${info.result?.last_error_message})` : ""}`,
+      )
     }
 
     this.connected = true
