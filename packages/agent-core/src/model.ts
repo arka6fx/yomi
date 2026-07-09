@@ -294,7 +294,9 @@ function requestBody(modelId: string, options: LanguageModelV1CallOptions, strea
   return {
     model: modelId,
     messages: chatMessages(options),
-    ...(clampedMaxTokens !== undefined ? { max_tokens: clampedMaxTokens } : {}),
+    // gpt-5.x reject the legacy max_tokens param and require max_completion_tokens;
+    // gpt-4o-class models accept it too, so always send the new field.
+    ...(clampedMaxTokens !== undefined ? { max_completion_tokens: clampedMaxTokens } : {}),
     temperature: options.temperature,
     top_p: options.topP,
     stop: options.stopSequences,
