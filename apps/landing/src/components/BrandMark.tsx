@@ -9,9 +9,9 @@ type BrandMarkProps = {
 }
 
 const sizes = {
-  sm: "size-7",
-  md: "size-9",
-  lg: "size-12",
+  sm: "size-8",
+  md: "size-11",
+  lg: "size-14",
 }
 
 export function BrandMark({ withText = true, size = "md", className = "" }: BrandMarkProps) {
@@ -24,7 +24,7 @@ export function BrandMark({ withText = true, size = "md", className = "" }: Bran
       <img
         src="/android-chrome-192x192.png"
         alt=""
-        className={`${sizes[size]} rounded-[22%] shadow-[0_0_18px_rgba(96,165,250,0.30)]`}
+        className={`${sizes[size]} rounded-[22%]`}
         width={48}
         height={48}
       />
