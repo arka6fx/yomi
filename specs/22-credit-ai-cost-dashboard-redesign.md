@@ -51,7 +51,7 @@ and friendly recent activity. Developer diagnostics move to a separate page.
 - `apps/backend`: Hono/Bun Cloudflare Worker backend for auth, billing,
   canonical credits, Telegram gateway, memory, RAG, integrations, and LLM proxy.
 - `apps/landing`: Next.js marketing, dashboard, account linking, billing UI.
-- `packages/agent-core`: OpenAI-compatible AI Credits model adapter, connector
+- `packages/agent-core`: OpenAI-compatible model adapter, connector
   tool loop, connector definitions.
 - `packages/db`: Drizzle schema for Better Auth, credits, usage events, agent
   sessions, memory, RAG, integrations, and pending actions.
@@ -60,7 +60,7 @@ and friendly recent activity. Developer diagnostics move to a separate page.
 ### AI Runtime
 
 - `packages/agent-core/src/model.ts` implements the OpenAI-compatible provider.
-- Default chat base URL is `AI_CREDITS_BASE_URL` or OpenAI-compatible fallback.
+- Default chat base URL is `OPENAI_BASE_URL` or OpenAI-compatible fallback.
 - Default full model is `gpt-5.5`.
 - Default embedding model is `text-embedding-3-small`.
 - Streaming requests include `stream_options: { include_usage: true }`.
@@ -103,7 +103,7 @@ and friendly recent activity. Developer diagnostics move to a separate page.
    STT is not paid twice when audio is present.
 5. `/query` calls `classifyIntent()` from `apps/sidecar/src/router/intent.ts`.
 6. The LLM fallback classifier is `apps/sidecar/src/router/llm.ts`, using
-   `generateObject`, `gpt-5.5-mini`, `maxTokens: 80`, and a 250 ms timeout.
+   `generateObject`, `gpt-5.4-mini`, `maxTokens: 80`, and a 250 ms timeout.
 7. Sidecar emits `router_decision` over SSE.
 8. Sidecar writes a local usage event via `logUsageEvent({ kind })`, but without
    model, tokens, latency, or cost.
@@ -129,7 +129,7 @@ and friendly recent activity. Developer diagnostics move to a separate page.
     `apps/sidecar/src/memory/subsystem.ts`.
 20. `loadMemoryContext()` calls cloud memory, cloud RAG, and profile retrieval
     in parallel, with fixed character budgets of 3500, 3000, and 2500.
-21. Fast path calls `streamText()` with `gpt-5.5-mini` and heuristic max tokens
+21. Fast path calls `streamText()` with `gpt-5.4-mini` and heuristic max tokens
     of 800, 1100, 1200, or 1400.
 22. Agent path builds prompt via `buildAgentPrompt()` and always includes
     connector info plus memory context for Pro/Max.
@@ -165,7 +165,7 @@ and friendly recent activity. Developer diagnostics move to a separate page.
 11. `runAgentLoop()` calls `generateText()` with default `gpt-5.5`, connector
     tools, `maxSteps`, and adaptive `maxTokens` from backend heuristics.
 12. Backend captures memory using `captureBackendMemory()` with a second
-    `generateText()` call on `gpt-5.5-mini`.
+    `generateText()` call on `gpt-5.4-mini`.
 13. Backend appends the turn to `agent_messages`.
 14. Backend sends the reply to Telegram.
 15. Actual token usage and tool count are not persisted onto the original
@@ -200,13 +200,13 @@ and friendly recent activity. Developer diagnostics move to a separate page.
 
 | Area                        | File                                           | API                           | Model                                             | Budget                  | Notes                                                                          |
 | --------------------------- | ---------------------------------------------- | ----------------------------- | ------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------ |
-| Sidecar fast answer         | `apps/sidecar/src/pipeline/fast.ts`            | `streamText`                  | `AI_CREDITS_FAST_MODEL` or `gpt-5.5-mini`         | 800-1400                | Good model choice, context often too broad for Pro/Max.                        |
-| Sidecar agent               | `apps/sidecar/src/pipeline/agent.ts`           | `streamText`                  | `AI_CREDITS_AGENT_MODEL` or `gpt-5.5`             | none explicit           | Highest risk: full tools, memory/RAG, up to 20 steps.                          |
-| Sidecar router LLM fallback | `apps/sidecar/src/router/llm.ts`               | `generateObject`              | `gpt-5.5-mini`                                    | 80                      | Good, but should be avoided when heuristics are confident.                     |
-| Sidecar compressor          | `apps/sidecar/src/agent/compressor.ts`         | `generateText`                | `COMPRESSOR_MODEL`, fast model, or `gpt-5.5-mini` | none explicit           | Should add explicit budget.                                                    |
+| Sidecar fast answer         | `apps/sidecar/src/pipeline/fast.ts`            | `streamText`                  | `OPENAI_FAST_MODEL` or `gpt-5.4-mini`         | 800-1400                | Good model choice, context often too broad for Pro/Max.                        |
+| Sidecar agent               | `apps/sidecar/src/pipeline/agent.ts`           | `streamText`                  | `OPENAI_AGENT_MODEL` or `gpt-5.5`             | none explicit           | Highest risk: full tools, memory/RAG, up to 20 steps.                          |
+| Sidecar router LLM fallback | `apps/sidecar/src/router/llm.ts`               | `generateObject`              | `gpt-5.4-mini`                                    | 80                      | Good, but should be avoided when heuristics are confident.                     |
+| Sidecar compressor          | `apps/sidecar/src/agent/compressor.ts`         | `generateText`                | `COMPRESSOR_MODEL`, fast model, or `gpt-5.4-mini` | none explicit           | Should add explicit budget.                                                    |
 | Sidecar cron agent          | `apps/sidecar/src/tools/cron/cron-executor.ts` | `generateText`                | job model or cron model                           | none explicit           | Needs max output and telemetry.                                                |
 | Backend Telegram agent      | `apps/backend/src/agent/run.ts`                | `runAgentLoop`/`generateText` | default `gpt-5.5`                                 | 450-900                 | Good cap, but always fetches memory/RAG/profile.                               |
-| Backend memory extraction   | `apps/backend/src/agent/run.ts`                | `generateText`                | `gpt-5.5-mini`                                    | none explicit           | Should be capped and skip for low-value turns.                                 |
+| Backend memory extraction   | `apps/backend/src/agent/run.ts`                | `generateText`                | `gpt-5.4-mini`                                    | none explicit           | Should be capped and skip for low-value turns.                                 |
 | Backend image analysis      | `apps/backend/src/gateway/gateway-runner.ts`   | `generateText`                | `gpt-5.5`                                         | 420                     | Consider mini for simple image Q&A.                                            |
 | Agent core loop             | `packages/agent-core/src/agent.ts`             | `generateText`                | `gpt-5.5` default                                 | caller-supplied         | Shared path, must emit telemetry.                                              |
 | Embeddings: sidecar/shared  | `packages/agent-core/src/model.ts`             | `/embeddings`                 | `text-embedding-3-small`                          | input sliced 8000 chars | Needs telemetry for embedding tokens/cost.                                     |
@@ -328,7 +328,7 @@ type RequestPlan = {
     screen: boolean
     historyTurns: number
   }
-  model: "gpt-5.5-mini" | "gpt-5.5"
+  model: "gpt-5.4-mini" | "gpt-5.5"
   maxOutputTokens: number
   reasoning: "none" | "low" | "medium" | "high"
   telemetryEndpoint: string
@@ -415,7 +415,7 @@ No production model call may omit `maxTokens` or equivalent.
 
 ## Model Routing Policy
 
-### Use `gpt-5.5-mini` By Default For
+### Use `gpt-5.4-mini` By Default For
 
 - Fast chat and simple Q&A.
 - Intent classification.
@@ -664,7 +664,7 @@ Frontend must not receive:
 
 - Ensure every `generateText`, `streamText`, `generateObject`, rerank,
   compressor, and memory extraction call sets `maxTokens`.
-- Route simple Telegram text and simple image analysis to `gpt-5.5-mini`.
+- Route simple Telegram text and simple image analysis to `gpt-5.4-mini`.
 - Keep full `gpt-5.5` for complex agents and high-risk tasks.
 - Add telemetry comparison dashboards before and after rollout.
 

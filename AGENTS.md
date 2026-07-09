@@ -1,7 +1,7 @@
 # Yomi — AGENTS.md
 
-AI productivity assistant. Connects to Google Workspace (Gmail, Calendar, Drive)
-and GitHub, Slack, Notion, Linear, Discord, and more. Accepts desktop voice,
+AI productivity assistant. Connects to Google Workspace (Gmail, Calendar, Drive,
+Classroom) and GitHub, Slack, Notion, Linear, and more. Accepts desktop voice,
 desktop text, screen Q&A, and Telegram messages. Backend-first for Telegram and
 durable memory.
 
@@ -60,7 +60,7 @@ bun install && bun run dev        # install + run all in watch mode
 
 - **LLM:** Vercel AI SDK (`ai`) → OpenAI (standard `OPENAI_*` env vars)
 - **STT/TTS:** OpenAI (`gpt-4o-mini-transcribe`, `gpt-4o-mini-tts`) → ElevenLabs fallback
-- **Desktop:** Electron (Tauri-ready). Device-code flow only for auth
+- **Desktop:** Electron. Device-code flow only for auth
 - **Backend:** Hono on Bun (EC2 + Docker + Caddy), Better Auth (Google + GitHub OAuth), Drizzle + Neon
 - **Billing:** Dodo Payments
 - **Agent orchestration:** AI SDK agent loop with connector tools; backend agent
@@ -95,8 +95,8 @@ CLOUD BACKEND  (Hono/Bun)
 
 - Core: filesystem r/w, bash (sandboxed), web search/fetch, cron, messaging,
   memory
-- Connectors: Gmail, Google Calendar, Google Drive, GitHub, Notion, Slack,
-  Linear — loaded from `ConnectorRegistry`
+- Connectors: Gmail, Google Calendar, Google Drive, Google Classroom, GitHub,
+  Notion, Slack, Linear — loaded from `ConnectorRegistry`
 
 **Hooks:** `PreToolUse` (block dangerous) · `PostToolUse` (log, trim tokens) ·
 `Stop` (flush scratchpad) · `SessionEnd` (compact memory.md)

@@ -18,7 +18,7 @@ backend so they work even when the desktop app is closed.
 
 `apps/backend/src/routes/rag.ts`. Hybrid pipeline:
 
-- Embed the query with AI Credits `text-embedding-3-small`.
+- Embed the query with OpenAI `text-embedding-3-small`.
 - Vector similarity + keyword candidates fused by Reciprocal Rank Fusion
   (`RAG_RRF_K`, default 60).
 - Rerank: MMR by default (`RAG_MMR_LAMBDA` for diversity); optional LLM listwise

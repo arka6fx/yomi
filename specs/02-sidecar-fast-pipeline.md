@@ -28,8 +28,8 @@ text input or ElevenLabs STT
        recent session tail
        local RAG snippets from Yomi memory files
   -> Vercel AI SDK streamText
-       model: FAST_PATH_MODEL || gpt-5.5-mini
-       provider: @ai-sdk/openai via AI Credits/OpenAI-compatible endpoint
+       model: OPENAI_FAST_MODEL || gpt-5.4-mini
+       provider: @ai-sdk/openai via OpenAI-compatible endpoint
   -> optional ElevenLabs TTS
   -> SSE events to desktop
 ```

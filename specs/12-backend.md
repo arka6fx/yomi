@@ -74,7 +74,7 @@ Callers: `routes/usage.ts` (`POST /interactions/reserve`), `agent/run.ts`
 `POST /api/llm/stream`
 
 - accepts Vercel AI SDK compatible chat payloads
-- injects the OpenAI-compatible AI Credits credentials from environment
+- injects the OpenAI-compatible credentials from environment
 - streams model output back to the sidecar
 - records usage events when token data is available
 

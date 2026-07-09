@@ -53,7 +53,7 @@
 ## Phase 4: Telegram Media
 
 - Accept Telegram photos and image documents.
-- Download the Telegram file and analyze it with the vision-capable AI Credits
+- Download the Telegram file and analyze it with the vision-capable OpenAI
   model.
 - If the user asks for voice, synthesize the reply and send `sendVoice`.
 - Acceptance: Sending a photo with “what is this?” returns a concise visual
