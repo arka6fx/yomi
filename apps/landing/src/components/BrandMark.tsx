@@ -9,9 +9,9 @@ type BrandMarkProps = {
 }
 
 const sizes = {
-  sm: "size-8",
-  md: "size-11",
-  lg: "size-14",
+  sm: "size-10",
+  md: "size-12",
+  lg: "size-16",
 }
 
 export function BrandMark({ withText = true, size = "md", className = "" }: BrandMarkProps) {
