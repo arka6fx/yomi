@@ -59,13 +59,13 @@ function hash(value: string): string {
 
 async function embedText(input: string): Promise<number[]> {
   if (!input.trim()) return []
-  const apiKey = process.env["AI_CREDITS_API_KEY"]
+  const apiKey = process.env["OPENAI_API_KEY"]
   if (!apiKey) return []
-  const baseUrl = (process.env["AI_CREDITS_BASE_URL"] ?? "https://api.aicredits.in/v1").replace(
+  const baseUrl = (process.env["OPENAI_BASE_URL"] ?? "https://api.openai.com/v1").replace(
     /\/+$/,
     "",
   )
-  const model = process.env["AI_CREDITS_EMBEDDING_MODEL"] ?? DEFAULT_EMBEDDING_MODEL
+  const model = process.env["OPENAI_EMBEDDING_MODEL"] ?? DEFAULT_EMBEDDING_MODEL
   const res = await fetch(`${baseUrl}/embeddings`, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -88,7 +88,7 @@ async function storeMemoryEmbedding(userId: string, memoryId: string, text: stri
   await db.insert(memoryEmbeddings).values({
     userId,
     memoryId,
-    model: process.env["AI_CREDITS_EMBEDDING_MODEL"] ?? DEFAULT_EMBEDDING_MODEL,
+    model: process.env["OPENAI_EMBEDDING_MODEL"] ?? DEFAULT_EMBEDDING_MODEL,
     embedding,
   })
 }

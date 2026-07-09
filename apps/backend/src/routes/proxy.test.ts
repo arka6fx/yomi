@@ -39,7 +39,7 @@ beforeEach(() => {
   // TTS is OpenAI-primary with an ElevenLabs fallback. Clear the OpenAI key by
   // default so the ElevenLabs-specific tests exercise the fallback path; the
   // OpenAI-primary tests opt back in explicitly.
-  delete process.env.AI_CREDITS_API_KEY
+  delete process.env.OPENAI_API_KEY
   delete process.env.OPENAI_API_KEY
   mockAuthSession = null
 })
@@ -70,8 +70,8 @@ describe("POST /api/stt (STT proxy)", () => {
   })
 
   it("uses OpenAI STT when an OpenAI key is set", async () => {
-    process.env.AI_CREDITS_API_KEY = "test-openai-key"
-    process.env.AI_CREDITS_BASE_URL = "https://api.openai.com/v1"
+    process.env.OPENAI_API_KEY = "test-openai-key"
+    process.env.OPENAI_BASE_URL = "https://api.openai.com/v1"
     mockElevenLabs(200, { text: "hello from openai" })
 
     const { sttRouter } = await import("./stt.js")
@@ -94,8 +94,8 @@ describe("POST /api/stt (STT proxy)", () => {
   })
 
   it("falls back to ElevenLabs when OpenAI STT fails", async () => {
-    process.env.AI_CREDITS_API_KEY = "test-openai-key"
-    process.env.AI_CREDITS_BASE_URL = "https://api.openai.com/v1"
+    process.env.OPENAI_API_KEY = "test-openai-key"
+    process.env.OPENAI_BASE_URL = "https://api.openai.com/v1"
     globalThis.fetch = async (url: string, opts?: RequestInit) => {
       elevenlabsCalls.push({ url, headers: {}, body: opts?.body })
       if (String(url).includes("openai")) return new Response("boom", { status: 500 })
@@ -316,8 +316,8 @@ describe("POST /api/tts (TTS proxy)", () => {
   })
 
   it("uses OpenAI TTS when an OpenAI key is set", async () => {
-    process.env.AI_CREDITS_API_KEY = "test-openai-key"
-    process.env.AI_CREDITS_BASE_URL = "https://api.openai.com/v1"
+    process.env.OPENAI_API_KEY = "test-openai-key"
+    process.env.OPENAI_BASE_URL = "https://api.openai.com/v1"
     mockElevenLabs(200, "fake-mp3", "audio/mpeg")
 
     const { ttsRouter } = await import("./tts.js")
@@ -336,8 +336,8 @@ describe("POST /api/tts (TTS proxy)", () => {
   })
 
   it("falls back to ElevenLabs when OpenAI TTS fails", async () => {
-    process.env.AI_CREDITS_API_KEY = "test-openai-key"
-    process.env.AI_CREDITS_BASE_URL = "https://api.openai.com/v1"
+    process.env.OPENAI_API_KEY = "test-openai-key"
+    process.env.OPENAI_BASE_URL = "https://api.openai.com/v1"
     globalThis.fetch = async (url: string, opts?: RequestInit) => {
       const headers: Record<string, string> = {}
       if (opts?.headers) {

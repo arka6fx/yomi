@@ -332,13 +332,13 @@ export class GatewayRunner {
     )
   }
 
-  // Cheap gpt-5.5-mini path for simple Q&A, greetings, knowledge questions.
+  // Cheap gpt-5.4-mini path for simple Q&A, greetings, knowledge questions.
   // Returns the reply text, or null when the query needs the full agent loop.
   private async fastTelegramRespond(text: string, history: AgentMessage[]): Promise<string | null> {
     const modelId =
-      process.env["AI_CREDITS_FAST_MODEL"] ||
-      process.env["AI_CREDITS_AGENT_MODEL"] ||
-      "gpt-5.5-mini"
+      process.env["OPENAI_FAST_MODEL"] ||
+      process.env["OPENAI_AGENT_MODEL"] ||
+      "gpt-5.4-mini"
     try {
       const result = await generateText({
         model: createModel(modelId),
@@ -383,7 +383,7 @@ export class GatewayRunner {
       return "That image is too large for me to analyze. Please send a smaller image."
     const image = `data:${contentType};base64,${Buffer.from(bytes).toString("base64")}`
     const prompt = msg.text.trim() || "Analyze this image. Keep the answer concise and useful."
-    const model = process.env["AI_CREDITS_AGENT_MODEL"] || "gpt-5.5"
+    const model = process.env["OPENAI_AGENT_MODEL"] || "gpt-5.5"
     const startedAt = Date.now()
     const result = await generateText({
       model: createModel(model),
@@ -540,7 +540,7 @@ export class GatewayRunner {
         kind: input.kind,
         model:
           input.kind === "analyze"
-            ? (process.env["AI_CREDITS_AGENT_MODEL"] ?? "gpt-5.5")
+            ? (process.env["OPENAI_AGENT_MODEL"] ?? "gpt-5.5")
             : "eleven_flash_v2_5",
         inputTokens: 0,
         outputTokens: 0,
@@ -1312,7 +1312,7 @@ export class GatewayRunner {
       }
 
       // ── Fast path: cheap model call for simple Q&A ──────────────────────────
-      // Before committing to the full gpt-5.5 agent loop, try gpt-5.5-mini.
+      // Before committing to the full gpt-5.5 agent loop, try gpt-5.4-mini.
       // If the fast path handles it, we save credits and latency.
       const fastReply = await this.fastTelegramRespond(msg.text, history)
       if (fastReply !== null) {

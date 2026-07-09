@@ -158,7 +158,7 @@ mock.module("../services/ai-telemetry.js", () => ({
 mock.module("@yomi/agent-core", () => ({
   createModel: () => ({
     specificationVersion: "v1",
-    provider: "ai-credits",
+    provider: "openai",
     modelId: "test-model",
     defaultObjectGenerationMode: "json",
     async doGenerate(options: { prompt: Array<{ content: unknown }> }) {

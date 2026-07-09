@@ -140,7 +140,7 @@ export default function PrivacyPage() {
                   including Limited Use requirements.
                 </li>
                 <li>
-                  <strong className="text-label">AI Credits / OpenAI-compatible API</strong>: LLM
+                  <strong className="text-label">OpenAI API</strong>: LLM
                   inference via our proxy. Query content (including excerpts from connected apps) is
                   sent to the LLM provider only to generate a response and is subject to their
                   privacy policy. We do not enable training data use.
