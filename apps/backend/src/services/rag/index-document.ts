@@ -90,7 +90,7 @@ export async function indexDocument(
       .values({
         userId: input.userId,
         chunkId: createdChunk.id,
-        model: process.env["AI_CREDITS_EMBEDDING_MODEL"] ?? DEFAULT_EMBEDDING_MODEL,
+        model: process.env["OPENAI_EMBEDDING_MODEL"] ?? DEFAULT_EMBEDDING_MODEL,
         embedding,
       })
       .returning({ id: ragEmbeddings.id })

@@ -76,7 +76,7 @@ export async function compressContext(
   const compressible = pruned.slice(headEnd, tailCut)
   if (compressible.length === 0) return { messages, compressed: false }
 
-  const modelId = options?.auxModelId ?? process.env["AI_CREDITS_FAST_MODEL"] ?? "gpt-5.5-mini"
+  const modelId = options?.auxModelId ?? process.env["OPENAI_FAST_MODEL"] ?? "gpt-4.1-mini"
 
   const turns = compressible.map((m) => `[${m.role}] ${m.content}`).join("\n\n")
 

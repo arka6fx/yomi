@@ -25,7 +25,7 @@ export interface RunAgentLoopOptions {
   history?: AgentMessage[]
   // System prompt. A minimal default is used when omitted.
   system?: string
-  // Model id; defaults to AI_CREDITS_AGENT_MODEL.
+  // Model id; defaults to OPENAI_AGENT_MODEL.
   model?: string
   // Max ReAct steps. Defaults to AGENT_MAX_STEPS or 12.
   maxSteps?: number
@@ -58,7 +58,7 @@ function defaultSystem(): string {
 }
 
 function agentModel(override?: string): string {
-  return override || process.env["AI_CREDITS_AGENT_MODEL"] || "gpt-5.5"
+  return override || process.env["OPENAI_AGENT_MODEL"] || "gpt-4.1"
 }
 
 function maxSteps(override?: number): number {
@@ -130,7 +130,7 @@ function fallbackFromToolResults(toolResults: readonly unknown[]): string {
   return blocks.join("\n\n")
 }
 
-// Lean, text-only tool-calling loop over the AI Credits model provider and
+// Lean, text-only tool-calling loop over the OpenAI model provider and
 // connector tools. Runs in both the sidecar and backend; returns final text.
 export async function runAgentLoop(opts: RunAgentLoopOptions): Promise<string> {
   const tools: ToolSet = {

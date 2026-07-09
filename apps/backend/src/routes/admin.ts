@@ -10,8 +10,8 @@ import { getPlan } from "@yomi/shared/plans"
 export const adminRouter = new Hono()
 
 const MODEL_PRICING_CENTS_PER_1K: Record<string, { input: number; output: number }> = {
-  "gpt-5.5-mini": { input: 0.04, output: 0.16 },
-  "gpt-5.5": { input: 0.15, output: 0.6 },
+  "gpt-4.1-mini": { input: 0.04, output: 0.16 },
+  "gpt-4.1": { input: 0.15, output: 0.6 },
   "text-embedding-3-small": { input: 0.002, output: 0 },
 }
 

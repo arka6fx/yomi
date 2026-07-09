@@ -198,13 +198,13 @@ async function fetchMemoryContext(userId: string, query: string, maxChars = 2000
 }
 
 function embedTextLocal(input: string): Promise<number[]> {
-  const apiKey = process.env["AI_CREDITS_API_KEY"]
+  const apiKey = process.env["OPENAI_API_KEY"]
   if (!apiKey || !input.trim()) return Promise.resolve([])
-  const baseUrl = (process.env["AI_CREDITS_BASE_URL"] ?? "https://api.aicredits.in/v1").replace(
+  const baseUrl = (process.env["OPENAI_BASE_URL"] ?? "https://api.aicredits.in/v1").replace(
     /\/+$/,
     "",
   )
-  const model = process.env["AI_CREDITS_EMBEDDING_MODEL"] ?? "text-embedding-3-small"
+  const model = process.env["OPENAI_EMBEDDING_MODEL"] ?? "text-embedding-3-small"
   return fetch(`${baseUrl}/embeddings`, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -304,7 +304,7 @@ function parseExtractedMemories(text: string): ExtractedMemory[] {
 }
 
 async function captureBackendMemory(userId: string, input: string, output: string): Promise<void> {
-  if (!process.env["AI_CREDITS_API_KEY"] || process.env["YOMI_DISABLE_MEMORY_CAPTURE"] === "1")
+  if (!process.env["OPENAI_API_KEY"] || process.env["YOMI_DISABLE_MEMORY_CAPTURE"] === "1")
     return
   const cleanInput = input.replace(/\r/g, "").slice(0, 1800).trim()
   const cleanOutput = output.replace(/\r/g, "").slice(0, 1800).trim()
@@ -313,8 +313,8 @@ async function captureBackendMemory(userId: string, input: string, output: strin
   const { text } = await generateText({
     model: createModel(
       process.env["MEMORY_EXTRACTION_MODEL"] ||
-        process.env["AI_CREDITS_FAST_MODEL"] ||
-        "gpt-5.5-mini",
+        process.env["OPENAI_FAST_MODEL"] ||
+        "gpt-4.1-mini",
     ),
     messages: [
       {

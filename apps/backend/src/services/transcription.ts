@@ -5,11 +5,11 @@ const ELEVENLABS_URL = "https://api.elevenlabs.io/v1/speech-to-text"
 const ELEVENLABS_MODEL = "scribe_v2"
 
 function openaiKey(): string | null {
-  return process.env["AI_CREDITS_API_KEY"] || process.env["OPENAI_API_KEY"] || null
+  return process.env["OPENAI_API_KEY"] || process.env["OPENAI_API_KEY"] || null
 }
 
 function openaiBase(): string {
-  return (process.env["AI_CREDITS_BASE_URL"] || "https://api.openai.com/v1").replace(/\/+$/, "")
+  return (process.env["OPENAI_BASE_URL"] || "https://api.openai.com/v1").replace(/\/+$/, "")
 }
 
 async function transcribeOpenAI(buf: ArrayBuffer, mimeType: string): Promise<string> {
