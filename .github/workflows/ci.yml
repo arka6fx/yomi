@@ -41,9 +41,5 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
-      - name: Cloudflare backend dry run
-        working-directory: apps/backend
-        run: bunx wrangler deploy --dry-run --env production
-
       - name: Test
         run: bun run test

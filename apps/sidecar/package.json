@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun run --env-file ../../.env --watch src/index.ts",
-    "build:win32-x64": "bun build src/index.ts --compile --target bun-windows-x64   --outfile dist/sidecar-win32-x64.exe",
+    "build:win32-x64": "bun build src/index.ts --compile --target bun-windows-x64 --external @aws-sdk/client-s3 --outfile dist/sidecar-win32-x64.exe",
     "build": "bun run build:win32-x64",
     "build:ci": "bun build src/index.ts --outdir dist --target bun --external @aws-sdk/client-s3",
     "test": "bun test --pass-with-no-tests --isolate",
