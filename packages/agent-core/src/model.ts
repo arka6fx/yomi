@@ -291,14 +291,17 @@ function requestBody(modelId: string, options: LanguageModelV1CallOptions, strea
 
   const clampedMaxTokens = resolveMaxTokens(modelId, options.maxTokens)
 
+  // gpt-5.x reasoning models only support the default temperature/top_p (1) and
+  // reject explicit values (AI SDK v4 defaults temperature to 0), so omit both.
+  const supportsSampling = !modelId.startsWith("gpt-5")
+
   return {
     model: modelId,
     messages: chatMessages(options),
     // gpt-5.x reject the legacy max_tokens param and require max_completion_tokens;
     // gpt-4o-class models accept it too, so always send the new field.
     ...(clampedMaxTokens !== undefined ? { max_completion_tokens: clampedMaxTokens } : {}),
-    temperature: options.temperature,
-    top_p: options.topP,
+    ...(supportsSampling ? { temperature: options.temperature, top_p: options.topP } : {}),
     stop: options.stopSequences,
     stream,
     ...(fnTools.length ? { tools: fnTools, tool_choice: toolChoice ?? "auto" } : {}),
