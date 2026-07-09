@@ -58,7 +58,7 @@ bun install && bun run dev        # install + run all in watch mode
 
 ## Stack
 
-- **LLM:** Vercel AI SDK (`ai`) → OpenAI (env vars named `AI_CREDITS_*`, historical)
+- **LLM:** Vercel AI SDK (`ai`) → OpenAI (standard `OPENAI_*` env vars)
 - **STT/TTS:** OpenAI (`gpt-4o-mini-transcribe`, `gpt-4o-mini-tts`) → ElevenLabs fallback
 - **Desktop:** Electron (Tauri-ready). Device-code flow only for auth
 - **Backend:** Hono on Bun (EC2 + Docker + Caddy), Better Auth (Google + GitHub OAuth), Drizzle + Neon
@@ -205,8 +205,9 @@ Embeddings: text-embedding-3-small (OpenAI)
 Speech:     OpenAI gpt-4o-mini-transcribe / gpt-4o-mini-tts → ElevenLabs fallback
 ```
 
-Env vars are named `AI_CREDITS_*` (historical) but resolve to OpenAI. The backend
-proxies desktop/sidecar LLM calls via `/api/llm/proxy` and injects the key.
+LLM calls go direct to OpenAI (`api.openai.com`) using the standard `OPENAI_*`
+env vars. The backend proxies desktop/sidecar LLM calls via `/api/llm/proxy` and
+injects the key.
 
 ---
 

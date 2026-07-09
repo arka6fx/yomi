@@ -236,7 +236,7 @@ describe("POST /interactions/finalize telemetry", () => {
   it("records ai usage when a telemetry block is present", async () => {
     const res = await finalize({
       usageEventId: "usage_1",
-      model: "gpt-5.5-mini",
+      model: "gpt-5.4-mini",
       inputTokens: 100,
       outputTokens: 50,
       status: "done",

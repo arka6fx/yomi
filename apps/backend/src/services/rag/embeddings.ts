@@ -11,23 +11,23 @@ export function chunkText(content: string): string[] {
 
 export async function embedText(input: string): Promise<number[]> {
   if (!input.trim()) return []
-  const apiKey = process.env["AI_CREDITS_API_KEY"]
-  if (!apiKey) throw new Error("AI_CREDITS_API_KEY is required for Cloud RAG embeddings")
-  const baseUrl = (process.env["AI_CREDITS_BASE_URL"] ?? "https://api.aicredits.in/v1").replace(
+  const apiKey = process.env["OPENAI_API_KEY"]
+  if (!apiKey) throw new Error("OPENAI_API_KEY is required for Cloud RAG embeddings")
+  const baseUrl = (process.env["OPENAI_BASE_URL"] ?? "https://api.openai.com/v1").replace(
     /\/+$/,
     "",
   )
-  const model = process.env["AI_CREDITS_EMBEDDING_MODEL"] ?? DEFAULT_EMBEDDING_MODEL
+  const model = process.env["OPENAI_EMBEDDING_MODEL"] ?? DEFAULT_EMBEDDING_MODEL
   const res = await fetch(`${baseUrl}/embeddings`, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({ model, input }),
   })
-  if (!res.ok) throw new Error(`AI Credits embeddings failed: ${res.status}`)
+  if (!res.ok) throw new Error(`OpenAI embeddings failed: ${res.status}`)
   const body = (await res.json()) as { data?: { embedding?: number[] }[] }
   const embedding = body.data?.[0]?.embedding
   if (!Array.isArray(embedding) || embedding.length !== EMBEDDING_DIMENSIONS) {
-    throw new Error(`AI Credits embedding dimensions must be ${EMBEDDING_DIMENSIONS}`)
+    throw new Error(`OpenAI embedding dimensions must be ${EMBEDDING_DIMENSIONS}`)
   }
   return embedding
 }

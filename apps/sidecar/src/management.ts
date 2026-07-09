@@ -178,7 +178,7 @@ export async function getDiagnostics(): Promise<Diagnostics> {
       backendConfigured: Boolean(process.env["YOMI_BACKEND_URL"] || process.env["BACKEND_URL"]),
       sessionTokenPresent: Boolean(sessionToken()),
       elevenLabsConfigured: Boolean(process.env["ELEVENLABS_API_KEY"]),
-      aiCreditsConfigured: Boolean(process.env["AI_CREDITS_API_KEY"]),
+      aiCreditsConfigured: Boolean(process.env["OPENAI_API_KEY"]),
     },
   }
 }

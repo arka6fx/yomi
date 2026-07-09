@@ -69,7 +69,7 @@ mock.module("ai", () => {
 })
 
 mock.module("./pipeline/model.js", () => ({
-  createModel: (id: string) => ({ provider: "ai-credits", modelId: id }),
+  createModel: (id: string) => ({ provider: "openai", modelId: id }),
 }))
 
 mock.module("./services/elevenlabs/stt.js", () => ({

@@ -43,7 +43,7 @@ mock.module("ai", () => ({
 }))
 
 mock.module("./model.js", () => ({
-  createModel: (modelId: string) => ({ provider: "ai-credits", modelId }),
+  createModel: (modelId: string) => ({ provider: "openai", modelId }),
 }))
 
 mock.module("./tts.js", () => ({

@@ -20,7 +20,7 @@ type ConsolidationResult = {
 }
 
 const MEMORY_EXTRACTION_MODEL =
-  process.env["MEMORY_EXTRACTION_MODEL"] || process.env["AI_CREDITS_FAST_MODEL"] || "gpt-5.5-mini"
+  process.env["MEMORY_EXTRACTION_MODEL"] || process.env["OPENAI_FAST_MODEL"] || "gpt-5.4-mini"
 
 let _lastLightRun: string | null = null
 let _lastRemRun: string | null = null

@@ -63,7 +63,7 @@ describe("usage-store", () => {
   it("logs events with custom fields", async () => {
     logUsageEvent({
       kind: "agent_run",
-      model: "gpt-5.5-mini",
+      model: "gpt-5.4-mini",
       inputTokens: 500,
       outputTokens: 200,
       costCents: 3,
@@ -71,14 +71,14 @@ describe("usage-store", () => {
 
     const events = queryUsageEvents(7)
     expect(events).toHaveLength(1)
-    expect(events[0]!.model).toBe("gpt-5.5-mini")
+    expect(events[0]!.model).toBe("gpt-5.4-mini")
     expect(events[0]!.inputTokens).toBe(500)
     expect(events[0]!.outputTokens).toBe(200)
     expect(events[0]!.costCents).toBe(3)
   })
 
   it("manages session lifecycle", async () => {
-    const id = startSession({ kind: "agent", model: "gpt-5.5-mini" })
+    const id = startSession({ kind: "agent", model: "gpt-5.4-mini" })
     expect(id).toBeTruthy()
 
     const sessions = querySessions(7)
@@ -122,13 +122,13 @@ describe("usage-store", () => {
   })
 
   it("provides model distribution", async () => {
-    startSession({ kind: "fast", model: "gpt-5.5-mini" })
-    startSession({ kind: "agent", model: "gpt-5.5-mini" })
-    startSession({ kind: "agent", model: "gpt-5.5-mini" })
+    startSession({ kind: "fast", model: "gpt-5.4-mini" })
+    startSession({ kind: "agent", model: "gpt-5.4-mini" })
+    startSession({ kind: "agent", model: "gpt-5.4-mini" })
 
     const dist = queryModelDistribution(7)
     expect(dist).toHaveLength(1)
-    const mini = dist.find((d) => d.model === "gpt-5.5-mini")
+    const mini = dist.find((d) => d.model === "gpt-5.4-mini")
     expect(mini).toBeDefined()
     expect(mini!.count).toBe(3)
   })
@@ -148,7 +148,7 @@ describe("insights-engine", () => {
   it("generates a report with overview section", async () => {
     logUsageEvent({ kind: "fast_query" })
     logUsageEvent({ kind: "agent_run" })
-    const sid = startSession({ kind: "fast", model: "gpt-5.5-mini" })
+    const sid = startSession({ kind: "fast", model: "gpt-5.4-mini" })
     completeSession(sid, { inputTokens: 100, outputTokens: 50 })
 
     const report = generateReport(7, "pro")
@@ -174,9 +174,9 @@ describe("insights-engine", () => {
   })
 
   it("reports cost breakdown by kind", async () => {
-    const sid1 = startSession({ kind: "fast", model: "gpt-5.5-mini" })
+    const sid1 = startSession({ kind: "fast", model: "gpt-5.4-mini" })
     completeSession(sid1, { inputTokens: 10000, outputTokens: 5000 })
-    const sid2 = startSession({ kind: "agent", model: "gpt-5.5-mini" })
+    const sid2 = startSession({ kind: "agent", model: "gpt-5.4-mini" })
     completeSession(sid2, { inputTokens: 20000, outputTokens: 10000 })
 
     const report = generateReport(7, "pro")
@@ -185,8 +185,8 @@ describe("insights-engine", () => {
   })
 
   it("includes model distribution section", async () => {
-    startSession({ kind: "fast", model: "gpt-5.5-mini" })
-    startSession({ kind: "agent", model: "gpt-5.5-mini" })
+    startSession({ kind: "fast", model: "gpt-5.4-mini" })
+    startSession({ kind: "agent", model: "gpt-5.4-mini" })
 
     const report = generateReport(7, "pro")
     expect(report.modelDistribution.models.length).toBe(1)
@@ -202,7 +202,7 @@ describe("insights-engine", () => {
 
   it("formats report as terminal string", async () => {
     logUsageEvent({ kind: "fast_query" })
-    const sid = startSession({ kind: "fast", model: "gpt-5.5-mini" })
+    const sid = startSession({ kind: "fast", model: "gpt-5.4-mini" })
     completeSession(sid, { inputTokens: 100, outputTokens: 50 })
 
     const report = generateReport(7, "pro")
@@ -223,9 +223,9 @@ describe("insights-engine", () => {
   })
 
   it("estimates cost for known models", async () => {
-    const sid = startSession({ kind: "agent", model: "gpt-5.5-mini" })
+    const sid = startSession({ kind: "agent", model: "gpt-5.4-mini" })
     completeSession(sid, { inputTokens: 10000, outputTokens: 5000 })
-    const sid2 = startSession({ kind: "fast", model: "gpt-5.5-mini" })
+    const sid2 = startSession({ kind: "fast", model: "gpt-5.4-mini" })
     completeSession(sid2, { inputTokens: 20000, outputTokens: 10000 })
 
     const report = generateReport(7, "max")
@@ -254,9 +254,9 @@ describe("insights-engine", () => {
   })
 
   it("terminal output contains all report sections", async () => {
-    const sid = startSession({ kind: "agent", model: "gpt-5.5-mini" })
+    const sid = startSession({ kind: "agent", model: "gpt-5.4-mini" })
     completeSession(sid, { inputTokens: 500, outputTokens: 250 })
-    startSession({ kind: "fast", model: "gpt-5.5-mini" })
+    startSession({ kind: "fast", model: "gpt-5.4-mini" })
 
     const report = generateReport(7, "pro")
     const output = formatTerminal(report)
@@ -265,7 +265,7 @@ describe("insights-engine", () => {
     expect(output).toContain("Cost Breakdown")
     expect(output).toContain("Model Distribution")
     expect(output).toContain("Activity")
-    expect(output).toContain("gpt-5.5-mini")
-    expect(output).toContain("gpt-5.5-mini")
+    expect(output).toContain("gpt-5.4-mini")
+    expect(output).toContain("gpt-5.4-mini")
   })
 })

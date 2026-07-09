@@ -71,8 +71,8 @@ For desktop development, start the sidecar before the desktop app.
 
 [`.env.example`](./.env.example) is the source of truth for every variable:
 database, Better Auth, Google/GitHub OAuth, the OpenAI (LLM/speech) endpoint,
-ElevenLabs, encryption keys, and Dodo Payments. The LLM/speech env vars are named
-`AI_CREDITS_*` for historical reasons but point at OpenAI.
+ElevenLabs, encryption keys, and Dodo Payments. The LLM/speech env vars use the
+standard `OPENAI_*` names and point at OpenAI (`api.openai.com`).
 
 Production uses split hostnames (frontend on Cloudflare, backend on EC2):
 
@@ -166,9 +166,9 @@ http://localhost:3001/api/auth/callback/google
 | STT        | OpenAI `gpt-4o-mini-transcribe` → ElevenLabs `scribe_v2`  |
 | TTS        | OpenAI `gpt-4o-mini-tts` → ElevenLabs `eleven_flash_v2_5` |
 
-STT/TTS use OpenAI first and fall back to ElevenLabs on error. The provider env
-vars are named `AI_CREDITS_*` (historical) but point at OpenAI. Set
-`TTS_ENGINE=none` to disable voice output.
+STT/TTS use OpenAI first and fall back to ElevenLabs on error. The provider uses
+the standard `OPENAI_*` env vars (`api.openai.com`). Set `TTS_ENGINE=none` to
+disable voice output.
 
 ## Specs
 
