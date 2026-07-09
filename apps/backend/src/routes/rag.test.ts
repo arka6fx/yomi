@@ -142,7 +142,7 @@ function user(overrides: Partial<TestUser> = {}): TestUser {
 describe("Cloud RAG routes", () => {
   beforeEach(() => {
     process.env["OPENAI_API_KEY"] = "test-key"
-    process.env["OPENAI_BASE_URL"] = "https://aicredits.test/v1"
+    process.env["OPENAI_BASE_URL"] = "https://openai.test/v1"
     process.env["OPENAI_EMBEDDING_MODEL"] = "text-embedding-3-small"
     globalThis.fetch = (async (...args: Parameters<typeof fetch>) => {
       const [input] = args

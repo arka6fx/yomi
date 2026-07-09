@@ -200,7 +200,7 @@ async function fetchMemoryContext(userId: string, query: string, maxChars = 2000
 function embedTextLocal(input: string): Promise<number[]> {
   const apiKey = process.env["OPENAI_API_KEY"]
   if (!apiKey || !input.trim()) return Promise.resolve([])
-  const baseUrl = (process.env["OPENAI_BASE_URL"] ?? "https://api.aicredits.in/v1").replace(
+  const baseUrl = (process.env["OPENAI_BASE_URL"] ?? "https://api.openai.com/v1").replace(
     /\/+$/,
     "",
   )
