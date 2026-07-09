@@ -160,8 +160,8 @@ http://localhost:3001/api/auth/callback/google
 
 | Capability | Provider / default                                        |
 | ---------- | --------------------------------------------------------- |
-| Fast LLM   | OpenAI `gpt-4.1-mini`                                      |
-| Agent LLM  | OpenAI `gpt-4.1`                                           |
+| Fast LLM   | OpenAI `gpt-5.4-mini`                                      |
+| Agent LLM  | OpenAI `gpt-5.5`                                           |
 | Embeddings | OpenAI `text-embedding-3-small`                           |
 | STT        | OpenAI `gpt-4o-mini-transcribe` → ElevenLabs `scribe_v2`  |
 | TTS        | OpenAI `gpt-4o-mini-tts` → ElevenLabs `eleven_flash_v2_5` |

@@ -218,13 +218,13 @@ async function collect(gen: AsyncGenerator<unknown>): Promise<unknown[]> {
 }
 
 // =============================================================================
-// 1. LLM MODEL VERIFICATION — gpt-4.1-mini is used everywhere
+// 1. LLM MODEL VERIFICATION — gpt-5.4-mini is used everywhere
 // =============================================================================
 
-describe("LLM model — gpt-4.1-mini default", () => {
-  it("fast pipeline uses gpt-4.1-mini model", async () => {
+describe("LLM model — gpt-5.4-mini default", () => {
+  it("fast pipeline uses gpt-5.4-mini model", async () => {
     await collect(fastPipeline({ text: "hello" }))
-    expect(lastModelId).toBe("gpt-4.1-mini")
+    expect(lastModelId).toBe("gpt-5.4-mini")
   })
 
   it("fast pipeline sends model in streamText options", async () => {

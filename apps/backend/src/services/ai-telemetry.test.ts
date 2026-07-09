@@ -59,7 +59,7 @@ describe("recordAiUsage", () => {
       endpoint: "sidecar.fast",
       surface: "desktop",
       route: "fast",
-      model: "gpt-4.1-mini",
+      model: "gpt-5.4-mini",
       inputTokens: 120.9,
       outputTokens: -5,
       latencyMs: 900,

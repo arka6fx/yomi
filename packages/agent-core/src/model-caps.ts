@@ -8,9 +8,9 @@ export interface ModelCap {
 }
 
 const MODEL_CAPS: Record<string, ModelCap> = {
-  // GPT-4.1 series
-  "gpt-4.1": { contextWindow: 1_047_576, maxOutput: 32_768 },
-  "gpt-4.1-mini": { contextWindow: 1_047_576, maxOutput: 32_768 },
+  // GPT-5 series
+  "gpt-5.5": { contextWindow: 272_000, maxOutput: 32_768 },
+  "gpt-5.4-mini": { contextWindow: 272_000, maxOutput: 32_768 },
 
   // Text models
   "text-embedding-3-small": { contextWindow: 8_191, maxOutput: 0 },

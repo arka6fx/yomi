@@ -403,7 +403,7 @@ describe("fastPipeline — generator", () => {
   // Model selection
   // -------------------------------------------------------------------------
 
-  it("default model is gpt-4.1-mini when OPENAI_FAST_MODEL is unset", async () => {
+  it("default model is gpt-5.4-mini when OPENAI_FAST_MODEL is unset", async () => {
     delete process.env.OPENAI_FAST_MODEL
     const events = (await collect(fastPipeline({ text: "Hello" }))) as any[]
     expect(events.some((e) => e.type === "llm_chunk")).toBe(true)

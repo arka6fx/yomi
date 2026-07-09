@@ -15,7 +15,7 @@ import {
 } from "../memory/subsystem.js"
 import { finalizeInteractionUsage, reserveInteraction } from "../usage/reserve.js"
 
-const MODEL = process.env.OPENAI_FAST_MODEL || "gpt-4.1-mini"
+const MODEL = process.env.OPENAI_FAST_MODEL || "gpt-5.4-mini"
 
 // yomi.md is stable per-session; memory files change after compaction so load fresh each turn.
 let cachedYomiMd: string | null = null
