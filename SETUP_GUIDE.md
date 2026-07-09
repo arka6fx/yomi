@@ -56,13 +56,13 @@ GOOGLE_CLIENT_ID=...            GOOGLE_CLIENT_SECRET=...
 GITHUB_CLIENT_ID=...            GITHUB_CLIENT_SECRET=...
 GITHUB_INTEGRATIONS_CLIENT_ID=...  GITHUB_INTEGRATIONS_CLIENT_SECRET=...
 
-# LLM + speech via OpenAI. Env names are AI_CREDITS_* for historical reasons but
-# point at OpenAI; the backend proxies desktop/sidecar LLM calls and injects the key.
-AI_CREDITS_API_KEY=sk-proj-...
-AI_CREDITS_BASE_URL=https://api.openai.com/v1
-AI_CREDITS_FAST_MODEL=gpt-5.4-mini
-AI_CREDITS_AGENT_MODEL=gpt-5.5
-AI_CREDITS_EMBEDDING_MODEL=text-embedding-3-small
+# LLM + speech via OpenAI (standard OPENAI_* env vars, api.openai.com);
+# the backend proxies desktop/sidecar LLM calls and injects the key.
+OPENAI_API_KEY=sk-proj-...
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_FAST_MODEL=gpt-4.1-mini
+OPENAI_AGENT_MODEL=gpt-4.1
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 # STT/TTS: OpenAI primary (gpt-4o-mini-transcribe / gpt-4o-mini-tts),
 # ElevenLabs fallback.
 ELEVENLABS_API_KEY=...
@@ -143,7 +143,7 @@ gh workflow run release.yml --ref main -f version=<ver> -f notes="<desc>"
 ```
 
 The desktop app's LLM model names come from the GitHub secrets
-`AI_CREDITS_FAST_MODEL` / `AI_CREDITS_AGENT_MODEL` (must be valid OpenAI models),
+`OPENAI_FAST_MODEL` / `OPENAI_AGENT_MODEL` (must be valid OpenAI models),
 baked at release build; it routes LLM calls through `api.getyomi.in/api/llm/proxy`.
 
 ---

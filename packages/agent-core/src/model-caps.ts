@@ -8,9 +8,9 @@ export interface ModelCap {
 }
 
 const MODEL_CAPS: Record<string, ModelCap> = {
-  // GPT-5.5 series
-  "gpt-5.5": { contextWindow: 128_000, maxOutput: 16_384 },
-  "gpt-5.5-mini": { contextWindow: 128_000, maxOutput: 16_384 },
+  // GPT-4.1 series
+  "gpt-4.1": { contextWindow: 1_047_576, maxOutput: 32_768 },
+  "gpt-4.1-mini": { contextWindow: 1_047_576, maxOutput: 32_768 },
 
   // Text models
   "text-embedding-3-small": { contextWindow: 8_191, maxOutput: 0 },
@@ -35,8 +35,8 @@ export function resolveMaxTokens(modelId: string, callerMaxTokens?: number): num
   const cap = resolveModelCap(modelId)
   if (cap.maxOutput === 0) return undefined
 
-  const envMax = process.env["AI_CREDITS_MAX_TOKENS"]
-    ? parseInt(process.env["AI_CREDITS_MAX_TOKENS"], 10)
+  const envMax = process.env["OPENAI_MAX_TOKENS"]
+    ? parseInt(process.env["OPENAI_MAX_TOKENS"], 10)
     : undefined
 
   const desired = callerMaxTokens ?? envMax ?? Math.floor(cap.maxOutput * 0.5)

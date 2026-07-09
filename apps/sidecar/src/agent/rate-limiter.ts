@@ -56,7 +56,7 @@ async function writeState(data: RateLimitData): Promise<void> {
 }
 
 /** Check whether the circuit is closed for a provider. */
-export async function canProceed(provider = "ai-credits"): Promise<boolean> {
+export async function canProceed(provider = "openai"): Promise<boolean> {
   const data = await readState()
   const state = data.providers[provider]
   if (!state?.cooldownUntil) return true
@@ -65,7 +65,7 @@ export async function canProceed(provider = "ai-credits"): Promise<boolean> {
 }
 
 /** Return seconds remaining until cooldown expires, or 0. */
-export async function cooldownRemaining(provider = "ai-credits"): Promise<number> {
+export async function cooldownRemaining(provider = "openai"): Promise<number> {
   const data = await readState()
   const state = data.providers[provider]
   if (!state?.cooldownUntil) return 0
@@ -75,7 +75,7 @@ export async function cooldownRemaining(provider = "ai-credits"): Promise<number
 /** Record a rate limit event and open the circuit. */
 export async function recordRateLimit(
   retryAfterSeconds?: number,
-  provider = "ai-credits",
+  provider = "openai",
 ): Promise<void> {
   const data = await readState()
   const state = (data.providers[provider] ??= defaultState())
@@ -93,7 +93,7 @@ export async function recordRateLimit(
 }
 
 /** Record a successful API call (close the circuit). */
-export async function recordSuccess(provider = "ai-credits"): Promise<void> {
+export async function recordSuccess(provider = "openai"): Promise<void> {
   const data = await readState()
   const state = data.providers[provider]
   if (state) {
@@ -195,7 +195,7 @@ export interface RetryConfig {
 
 export const DEFAULT_RETRY_CONFIG: RetryConfig = {
   maxRetries: parseInt(process.env["AGENT_RATE_LIMIT_RETRIES"] || "3", 10),
-  provider: "ai-credits",
+  provider: "openai",
 }
 
 /**

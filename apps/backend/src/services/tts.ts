@@ -26,11 +26,11 @@ function apiKey(): string {
 }
 
 function openaiKey(): string | null {
-  return process.env["AI_CREDITS_API_KEY"] || process.env["OPENAI_API_KEY"] || null
+  return process.env["OPENAI_API_KEY"] || process.env["OPENAI_API_KEY"] || null
 }
 
 function openaiBase(): string {
-  return (process.env["AI_CREDITS_BASE_URL"] || "https://api.openai.com/v1").replace(/\/+$/, "")
+  return (process.env["OPENAI_BASE_URL"] || "https://api.openai.com/v1").replace(/\/+$/, "")
 }
 
 export function defaultVoiceId(): string {

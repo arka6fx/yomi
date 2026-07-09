@@ -33,7 +33,7 @@ import {
 } from "./shortcuts.js"
 import { maybeHandleSoulOnboarding } from "./soul-onboarding.js"
 
-const AGENT_MODEL = process.env.AI_CREDITS_AGENT_MODEL || "gpt-5.5"
+const AGENT_MODEL = process.env.OPENAI_AGENT_MODEL || "gpt-4.1"
 const AGENT_MAX_STEPS = parseInt(process.env.AGENT_MAX_STEPS || "25", 10)
 // 1M tokens for GPT-5.4-mini. Used by the turn-level compressor when no
 // model-aware context length is available.
@@ -311,8 +311,8 @@ export async function* agentPipeline(
     const combinedSignal = signal ? anySignal(signal, budgetAbort.signal) : budgetAbort.signal
 
     // ── Cross-session circuit breaker for LLM rate limits ─────────
-    if (!(await canProceed("ai-credits"))) {
-      const seconds = await cooldownRemaining("ai-credits")
+    if (!(await canProceed("openai"))) {
+      const seconds = await cooldownRemaining("openai")
       yield {
         type: "rate_limit",
         message: `Rate limited. Try again in ${seconds}s.`,
@@ -323,7 +323,7 @@ export async function* agentPipeline(
       return
     }
 
-    const agentMaxTokens = parseInt(process.env["AI_CREDITS_MAX_TOKENS"] || "4096", 10)
+    const agentMaxTokens = parseInt(process.env["OPENAI_MAX_TOKENS"] || "4096", 10)
 
     const MAX_RETRIES = parseInt(process.env["AGENT_RATE_LIMIT_RETRIES"] || "3", 10)
     let result: Awaited<ReturnType<typeof streamText>> | null = null
@@ -348,7 +348,7 @@ export async function* agentPipeline(
         if (!isRateLimitError(err)) throw err
 
         const rateErr = err as RateLimitError
-        await recordRateLimit(rateErr.retryAfterSeconds, "ai-credits")
+        await recordRateLimit(rateErr.retryAfterSeconds, "openai")
 
         if (retryAttempt < MAX_RETRIES) {
           const wait = jitteredBackoff(retryAttempt)
@@ -418,12 +418,12 @@ export async function* agentPipeline(
         case "finish":
           inputTokens = event.usage?.promptTokens ?? inputTokens
           outputTokens = event.usage?.completionTokens ?? outputTokens
-          await recordSuccess("ai-credits")
+          await recordSuccess("openai")
           break
         case "error": {
           const err: unknown = event.error
           if (isBillingError(err)) {
-            await recordRateLimit(undefined, "ai-credits")
+            await recordRateLimit(undefined, "openai")
             finalizeInteractionUsage({
               usageEventId,
               model: AGENT_MODEL,
@@ -456,7 +456,7 @@ export async function* agentPipeline(
 
           if (isRateLimitError(err)) {
             const retryAfter = err instanceof RateLimitError ? err.retryAfterSeconds : undefined
-            await recordRateLimit(retryAfter, "ai-credits")
+            await recordRateLimit(retryAfter, "openai")
           }
 
           finalizeInteractionUsage({

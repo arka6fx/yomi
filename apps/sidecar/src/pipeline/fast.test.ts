@@ -4,7 +4,7 @@
  * Mocking strategy:
  * - `mock.module("ai")` replaces `streamText` with a controllable fake that
  *   returns an async iterable of text chunks.
- * - `mock.module("../pipeline/model.js")` replaces the AI Credits model
+ * - `mock.module("../pipeline/model.js")` replaces the OpenAI model
  *   factory so tests do not call the network.
  *
  * The modules are mocked BEFORE the pipeline modules are imported so that the
@@ -90,7 +90,7 @@ mock.module("ai", () => ({
 }))
 
 mock.module("./model.js", () => ({
-  createModel: (modelId: string) => ({ provider: "ai-credits", modelId }),
+  createModel: (modelId: string) => ({ provider: "openai", modelId }),
 }))
 
 mock.module("../services/elevenlabs/stt.js", () => {
@@ -243,7 +243,7 @@ describe("fastPipeline — generator", () => {
     captureMemoryCalls = 0
     streamChunks = ["Hello", " world", "!"]
 
-    delete process.env.AI_CREDITS_FAST_MODEL
+    delete process.env.OPENAI_FAST_MODEL
     delete process.env.SIDECAR_SECRET
     delete process.env.ELEVENLABS_API_KEY
     ttsMock.reset()
@@ -403,8 +403,8 @@ describe("fastPipeline — generator", () => {
   // Model selection
   // -------------------------------------------------------------------------
 
-  it("default model is gpt-5.5-mini when AI_CREDITS_FAST_MODEL is unset", async () => {
-    delete process.env.AI_CREDITS_FAST_MODEL
+  it("default model is gpt-4.1-mini when OPENAI_FAST_MODEL is unset", async () => {
+    delete process.env.OPENAI_FAST_MODEL
     const events = (await collect(fastPipeline({ text: "Hello" }))) as any[]
     expect(events.some((e) => e.type === "llm_chunk")).toBe(true)
   })
@@ -581,7 +581,7 @@ describe("fastPipeline — generator", () => {
 
 describe("POST /query/fast — HTTP endpoint", () => {
   beforeEach(() => {
-    delete process.env.AI_CREDITS_FAST_MODEL
+    delete process.env.OPENAI_FAST_MODEL
     delete process.env.ELEVENLABS_API_KEY
     streamChunks = ["Hello", " world"]
     ttsMock.reset()

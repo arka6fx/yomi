@@ -77,10 +77,10 @@ function classifyAndThrow(status: number, bodyText: string, headers: Headers): n
   if (isBilling) {
     throw new BillingError(bodyText || `Billing error (${status})`, status, bodyText)
   }
-  throw new ApiError(bodyText || `AI Credits request failed (${status})`, status, bodyText)
+  throw new ApiError(bodyText || `OpenAI request failed (${status})`, status, bodyText)
 }
 
-const DEFAULT_MODEL = "gpt-5.5"
+const DEFAULT_MODEL = "gpt-4.1"
 const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
 const DEFAULT_BASE_URL = "https://api.openai.com/v1"
 
@@ -145,11 +145,11 @@ type ChatCompletionChunk = {
 }
 
 function baseUrl(): string {
-  return (process.env["AI_CREDITS_BASE_URL"] || DEFAULT_BASE_URL).replace(/\/+$/, "")
+  return (process.env["OPENAI_BASE_URL"] || DEFAULT_BASE_URL).replace(/\/+$/, "")
 }
 
 function apiKey(): string {
-  return process.env["AI_CREDITS_API_KEY"] ?? ""
+  return process.env["OPENAI_API_KEY"] ?? ""
 }
 
 function imageUrl(part: { image: unknown; mimeType?: string }): string {
@@ -369,7 +369,7 @@ export async function embedText(text: string): Promise<number[]> {
     .trim()
   if (!cleaned) return []
 
-  const modelId = process.env["AI_CREDITS_EMBEDDING_MODEL"] || DEFAULT_EMBEDDING_MODEL
+  const modelId = process.env["OPENAI_EMBEDDING_MODEL"] || DEFAULT_EMBEDDING_MODEL
   const key = apiKey()
 
   const response = await fetch(`${baseUrl()}/embeddings`, {
@@ -396,7 +396,7 @@ export async function embedText(text: string): Promise<number[]> {
 export function createModel(modelId = DEFAULT_MODEL): LanguageModelV1 {
   return {
     specificationVersion: "v1",
-    provider: "ai-credits",
+    provider: "openai",
     modelId,
     defaultObjectGenerationMode: "json",
     supportsImageUrls: true,
@@ -439,7 +439,7 @@ export function createModel(modelId = DEFAULT_MODEL): LanguageModelV1 {
         async start(controller) {
           const reader = response.body?.getReader()
           if (!reader) {
-            controller.enqueue({ type: "error", error: new Error("AI Credits stream had no body") })
+            controller.enqueue({ type: "error", error: new Error("OpenAI stream had no body") })
             controller.close()
             return
           }

@@ -2,18 +2,18 @@ import { Hono } from "hono"
 
 export const llmRouter = new Hono()
 
-// Proxy OpenAI-compatible chat completions to AI Credits.
-// The sidecar sends requests here when AI_CREDITS_API_KEY is unavailable in the
+// Proxy OpenAI-compatible chat completions to OpenAI.
+// The sidecar sends requests here when OPENAI_API_KEY is unavailable in the
 // packaged env. The backend injects the real key server-side.
-const DEFAULT_AI_CREDITS_BASE = "https://api.aicredits.in/v1"
+const DEFAULT_OPENAI_BASE = "https://api.openai.com/v1"
 
 function aiCreditsBase(): string {
-  return (process.env["AI_CREDITS_BASE_URL"] || DEFAULT_AI_CREDITS_BASE).replace(/\/+$/, "")
+  return (process.env["OPENAI_BASE_URL"] || DEFAULT_OPENAI_BASE).replace(/\/+$/, "")
 }
 
 llmRouter.all("/proxy/*", async (c) => {
-  const apiKey = process.env["AI_CREDITS_API_KEY"]
-  if (!apiKey) return c.json({ error: "AI_CREDITS_API_KEY not configured" }, 500)
+  const apiKey = process.env["OPENAI_API_KEY"]
+  if (!apiKey) return c.json({ error: "OPENAI_API_KEY not configured" }, 500)
 
   const upstreamPath = c.req.path.replace(/^\/api\/llm\/proxy/, "")
   const body = await c.req.text().catch(() => null)
@@ -36,7 +36,7 @@ llmRouter.all("/proxy/*", async (c) => {
   if (!res.ok) {
     const text = await res.text().catch(() => "")
     return c.json(
-      { error: `AI Credits upstream failed (${res.status})`, detail: text },
+      { error: `OpenAI upstream failed (${res.status})`, detail: text },
       res.status as 400 | 500 | 502,
     )
   }

@@ -40,9 +40,9 @@ function sqlToString(query: unknown): string {
     .join("")
 }
 const realFetch = globalThis.fetch
-const realAiCreditsApiKey = process.env["AI_CREDITS_API_KEY"]
-const realAiCreditsBaseUrl = process.env["AI_CREDITS_BASE_URL"]
-const realAiCreditsEmbeddingModel = process.env["AI_CREDITS_EMBEDDING_MODEL"]
+const realAiCreditsApiKey = process.env["OPENAI_API_KEY"]
+const realAiCreditsBaseUrl = process.env["OPENAI_BASE_URL"]
+const realAiCreditsEmbeddingModel = process.env["OPENAI_EMBEDDING_MODEL"]
 
 const fakeDb = {
   insert: (table?: unknown) => ({
@@ -141,9 +141,9 @@ function user(overrides: Partial<TestUser> = {}): TestUser {
 
 describe("Cloud RAG routes", () => {
   beforeEach(() => {
-    process.env["AI_CREDITS_API_KEY"] = "test-key"
-    process.env["AI_CREDITS_BASE_URL"] = "https://aicredits.test/v1"
-    process.env["AI_CREDITS_EMBEDDING_MODEL"] = "text-embedding-3-small"
+    process.env["OPENAI_API_KEY"] = "test-key"
+    process.env["OPENAI_BASE_URL"] = "https://aicredits.test/v1"
+    process.env["OPENAI_EMBEDDING_MODEL"] = "text-embedding-3-small"
     globalThis.fetch = (async (...args: Parameters<typeof fetch>) => {
       const [input] = args
       const url = typeof input === "string" ? input : input.toString()
@@ -165,12 +165,12 @@ describe("Cloud RAG routes", () => {
 
   afterEach(() => {
     globalThis.fetch = realFetch
-    if (realAiCreditsApiKey === undefined) delete process.env["AI_CREDITS_API_KEY"]
-    else process.env["AI_CREDITS_API_KEY"] = realAiCreditsApiKey
-    if (realAiCreditsBaseUrl === undefined) delete process.env["AI_CREDITS_BASE_URL"]
-    else process.env["AI_CREDITS_BASE_URL"] = realAiCreditsBaseUrl
-    if (realAiCreditsEmbeddingModel === undefined) delete process.env["AI_CREDITS_EMBEDDING_MODEL"]
-    else process.env["AI_CREDITS_EMBEDDING_MODEL"] = realAiCreditsEmbeddingModel
+    if (realAiCreditsApiKey === undefined) delete process.env["OPENAI_API_KEY"]
+    else process.env["OPENAI_API_KEY"] = realAiCreditsApiKey
+    if (realAiCreditsBaseUrl === undefined) delete process.env["OPENAI_BASE_URL"]
+    else process.env["OPENAI_BASE_URL"] = realAiCreditsBaseUrl
+    if (realAiCreditsEmbeddingModel === undefined) delete process.env["OPENAI_EMBEDDING_MODEL"]
+    else process.env["OPENAI_EMBEDDING_MODEL"] = realAiCreditsEmbeddingModel
   })
 
   it("blocks Explore users from creating sources", async () => {

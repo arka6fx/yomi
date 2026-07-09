@@ -15,7 +15,7 @@ import { saveCronOutput } from "./cron-store.js"
 import type { CronJob, CronJobResult } from "./cron-types.js"
 
 const CRON_AGENT_MODEL =
-  process.env["CRON_AGENT_MODEL"] || process.env["AI_CREDITS_AGENT_MODEL"] || "gpt-5.5"
+  process.env["CRON_AGENT_MODEL"] || process.env["OPENAI_AGENT_MODEL"] || "gpt-4.1"
 const CRON_TIMEOUT_MS = 180_000 // 3 minutes
 
 // Tools that cron sessions are NOT allowed to use.

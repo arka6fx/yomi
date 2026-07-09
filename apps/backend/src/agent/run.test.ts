@@ -75,7 +75,7 @@ mock.module("@yomi/agent-core", () => ({
   }) => {
     lastAgentSystem = opts.system
     opts.onUsage?.({
-      model: "gpt-5.5",
+      model: "gpt-4.1",
       inputTokens: 100,
       outputTokens: 50,
       toolCallCount: 0,

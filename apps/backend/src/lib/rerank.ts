@@ -1,6 +1,6 @@
 // Reranking for hybrid RAG retrieval.
 // - mmrRerank: cheap, embedding-based Maximal Marginal Relevance (no network). Always on.
-// - llmRerank: optional listwise rerank, disabled until an AI Credits rerank path is configured,
+// - llmRerank: optional listwise rerank, disabled until an OpenAI rerank path is configured,
 //   with a strict timeout; returns null on failure so the caller falls back to MMR order.
 
 export interface RerankCandidate {

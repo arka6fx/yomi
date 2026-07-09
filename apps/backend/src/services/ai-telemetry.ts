@@ -84,7 +84,7 @@ export async function recordAiUsage(input: AiUsageRecord): Promise<void> {
         intent: input.intent ?? null,
         complexity: input.complexity ?? null,
         model: input.model ?? null,
-        provider: input.provider ?? "ai-credits",
+        provider: input.provider ?? "openai",
         inputTokens: clamp(input.inputTokens),
         outputTokens: clamp(input.outputTokens),
         reasoningTokens: clamp(input.reasoningTokens),
