@@ -13,7 +13,7 @@ export async function embedText(input: string): Promise<number[]> {
   if (!input.trim()) return []
   const apiKey = process.env["OPENAI_API_KEY"]
   if (!apiKey) throw new Error("OPENAI_API_KEY is required for Cloud RAG embeddings")
-  const baseUrl = (process.env["OPENAI_BASE_URL"] ?? "https://api.aicredits.in/v1").replace(
+  const baseUrl = (process.env["OPENAI_BASE_URL"] ?? "https://api.openai.com/v1").replace(
     /\/+$/,
     "",
   )
