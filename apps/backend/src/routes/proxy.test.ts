@@ -69,17 +69,58 @@ describe("POST /api/stt (STT proxy)", () => {
     expect(res.status).toBe(401)
   })
 
-  it("rejects missing ELEVENLABS_API_KEY", async () => {
-    delete process.env.ELEVENLABS_API_KEY
+  it("uses OpenAI STT when an OpenAI key is set", async () => {
+    process.env.AI_CREDITS_API_KEY = "test-openai-key"
+    process.env.AI_CREDITS_BASE_URL = "https://api.openai.com/v1"
+    mockElevenLabs(200, { text: "hello from openai" })
+
     const { sttRouter } = await import("./stt.js")
     const app = new Hono().route("/api/stt", sttRouter)
+
+    const form = new FormData()
+    form.set("file", new Blob(["fake audio data"], { type: "audio/wav" }), "test.wav")
+
     const res = await app.request("/api/stt", {
       method: "POST",
       headers: { "x-sidecar-secret": "test-sidecar-secret" },
+      body: form,
     })
-    expect(res.status).toBe(500)
-    const body = (await res.json()) as Record<string, unknown>
-    expect(body.error).toContain("ELEVENLABS_API_KEY")
+
+    expect(res.status).toBe(200)
+    expect(((await res.json()) as Record<string, unknown>).text).toBe("hello from openai")
+    expect(elevenlabsCalls.length).toBe(1)
+    expect(elevenlabsCalls[0]!.url).toContain("api.openai.com/v1/audio/transcriptions")
+    expect(elevenlabsCalls[0]!.headers["Authorization"]).toBe("Bearer test-openai-key")
+  })
+
+  it("falls back to ElevenLabs when OpenAI STT fails", async () => {
+    process.env.AI_CREDITS_API_KEY = "test-openai-key"
+    process.env.AI_CREDITS_BASE_URL = "https://api.openai.com/v1"
+    globalThis.fetch = async (url: string, opts?: RequestInit) => {
+      elevenlabsCalls.push({ url, headers: {}, body: opts?.body })
+      if (String(url).includes("openai")) return new Response("boom", { status: 500 })
+      return new Response(JSON.stringify({ text: "hello from elevenlabs" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      })
+    }
+
+    const { sttRouter } = await import("./stt.js")
+    const app = new Hono().route("/api/stt", sttRouter)
+
+    const form = new FormData()
+    form.set("file", new Blob(["fake audio data"], { type: "audio/wav" }), "test.wav")
+
+    const res = await app.request("/api/stt", {
+      method: "POST",
+      headers: { "x-sidecar-secret": "test-sidecar-secret" },
+      body: form,
+    })
+
+    expect(res.status).toBe(200)
+    expect(((await res.json()) as Record<string, unknown>).text).toBe("hello from elevenlabs")
+    expect(elevenlabsCalls.some((c) => c.url.includes("api.openai.com"))).toBe(true)
+    expect(elevenlabsCalls.some((c) => c.url.includes("api.elevenlabs.io"))).toBe(true)
   })
 
   it("rejects missing file field", async () => {
@@ -92,7 +133,7 @@ describe("POST /api/stt (STT proxy)", () => {
     expect(res.status).toBe(400)
   })
 
-  it("forwards request to ElevenLabs and returns transcription", async () => {
+  it("falls back to ElevenLabs transcription when no OpenAI key is set", async () => {
     mockElevenLabs(200, { text: "hello world" })
 
     const { sttRouter } = await import("./stt.js")
@@ -118,7 +159,8 @@ describe("POST /api/stt (STT proxy)", () => {
     expect(elevenlabsCalls[0]!.headers["xi-api-key"]).toBe("test-elevenlabs-key")
   })
 
-  it("forwards upstream STT errors", async () => {
+  it("returns 500 when both providers fail", async () => {
+    // No OpenAI key (cleared in beforeEach) → OpenAI throws, ElevenLabs 401 too.
     mockElevenLabs(401, { detail: "Invalid API key" })
 
     const { sttRouter } = await import("./stt.js")
@@ -133,9 +175,9 @@ describe("POST /api/stt (STT proxy)", () => {
       body: form,
     })
 
-    expect(res.status).toBe(401)
+    expect(res.status).toBe(500)
     const json = (await res.json()) as Record<string, unknown>
-    expect(json.error).toContain("ElevenLabs STT failed")
+    expect(json.error).toContain("STT failed")
   })
 
   it("rejects a user Bearer token without the sidecar secret (no meter bypass)", async () => {
