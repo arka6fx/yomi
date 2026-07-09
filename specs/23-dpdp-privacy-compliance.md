@@ -44,7 +44,7 @@ privacy-relevant files:
 | Better Auth tables                    | User, sessions, OAuth accounts, verification, orgs                                              | Contains profile, sessions, provider tokens     |
 | Sidecar environment and local runtime | Session token, local pipeline, cloud memory calls                                               | Needs preference enforcement before cloud calls |
 | Desktop app runtime                   | Capture, auth, IPC, sidecar process                                                             | Needs consent and capture status integration    |
-| External providers                    | AI Credits/OpenAI-compatible, ElevenLabs, Dodo, Google, GitHub, Notion, Slack, Linear, Telegram | Requires disclosure and data flow tracking      |
+| External providers                    | OpenAI-compatible, ElevenLabs, Dodo, Google, GitHub, Notion, Slack, Linear, Telegram | Requires disclosure and data flow tracking      |
 
 ### 2.2 Existing Privacy Controls
 

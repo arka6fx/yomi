@@ -81,7 +81,7 @@ return `fast` (invariant).
 ### LLM classifier (Vercel AI SDK)
 
 Uses the same OpenAI provider as the fast pipeline (`@ai-sdk/openai`). Model
-defaults to `gpt-5.5-mini`.
+defaults to `gpt-5.4-mini`.
 
 ```ts
 import { generateObject } from "ai"
