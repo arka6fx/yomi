@@ -38,21 +38,32 @@ app.use("*", async (c, next) => {
   const webOrigin =
     process.env["CORS_ORIGIN"] ?? process.env["BETTER_AUTH_URL"] ?? "http://localhost:3000"
   const allowedOrigins = new Set([webOrigin].filter(Boolean))
-  if (origin && allowedOrigins.has(origin)) {
-    c.header("Access-Control-Allow-Origin", origin)
-    c.header("Access-Control-Allow-Credentials", "true")
-    c.header("Access-Control-Allow-Methods", "GET,HEAD,PUT,POST,DELETE,PATCH,OPTIONS")
-    c.header(
-      "Access-Control-Allow-Headers",
-      c.req.header("Access-Control-Request-Headers") ?? "Authorization,Content-Type",
-    )
-    c.header("Vary", "Origin")
-    if (c.req.method === "OPTIONS") {
-      return c.body(null, 204)
-    }
+  const allowed = !!origin && allowedOrigins.has(origin)
+
+  // Preflight: answer directly with the CORS headers.
+  if (allowed && c.req.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": origin,
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Methods": "GET,HEAD,PUT,POST,DELETE,PATCH,OPTIONS",
+        "Access-Control-Allow-Headers":
+          c.req.header("Access-Control-Request-Headers") ?? "Authorization,Content-Type",
+        Vary: "Origin",
+      },
+    })
   }
 
   await next()
+
+  // Set headers on the final response — handlers that return a fresh Response
+  // (e.g. Better Auth) drop headers stashed via c.header() before next().
+  if (allowed) {
+    c.res.headers.set("Access-Control-Allow-Origin", origin)
+    c.res.headers.set("Access-Control-Allow-Credentials", "true")
+    c.res.headers.set("Vary", "Origin")
+  }
 })
 
 app.get("/health", (c) => c.json({ status: "ok", version: "0.1.0" }))
