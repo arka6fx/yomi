@@ -60,8 +60,8 @@ GITHUB_INTEGRATIONS_CLIENT_ID=...  GITHUB_INTEGRATIONS_CLIENT_SECRET=...
 # the backend proxies desktop/sidecar LLM calls and injects the key.
 OPENAI_API_KEY=sk-proj-...
 OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_FAST_MODEL=gpt-4.1-mini
-OPENAI_AGENT_MODEL=gpt-4.1
+OPENAI_FAST_MODEL=gpt-5.4-mini
+OPENAI_AGENT_MODEL=gpt-5.5
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 # STT/TTS: OpenAI primary (gpt-4o-mini-transcribe / gpt-4o-mini-tts),
 # ElevenLabs fallback.

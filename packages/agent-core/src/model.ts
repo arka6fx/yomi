@@ -80,7 +80,7 @@ function classifyAndThrow(status: number, bodyText: string, headers: Headers): n
   throw new ApiError(bodyText || `OpenAI request failed (${status})`, status, bodyText)
 }
 
-const DEFAULT_MODEL = "gpt-4.1"
+const DEFAULT_MODEL = "gpt-5.5"
 const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
 const DEFAULT_BASE_URL = "https://api.openai.com/v1"
 

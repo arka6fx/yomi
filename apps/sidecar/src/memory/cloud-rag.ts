@@ -113,7 +113,7 @@ export async function captureCloudMemory(turn: {
   if (!input || !output) return
 
   const model =
-    process.env["MEMORY_EXTRACTION_MODEL"] || process.env["OPENAI_FAST_MODEL"] || "gpt-4.1-mini"
+    process.env["MEMORY_EXTRACTION_MODEL"] || process.env["OPENAI_FAST_MODEL"] || "gpt-5.4-mini"
   const { text } = await generateText({
     model: createModel(model),
     messages: [

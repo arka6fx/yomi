@@ -590,7 +590,7 @@ export async function compressContext(
     opts.auxModelId ??
     process.env["COMPRESSOR_MODEL"] ??
     process.env["OPENAI_FAST_MODEL"] ??
-    "gpt-4.1-mini"
+    "gpt-5.4-mini"
   const factory = opts.modelFactory ?? createModel
   const model = factory(auxModelId)
   if (!model) {

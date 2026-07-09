@@ -199,8 +199,8 @@ truth: `packages/shared/src/plans.ts`. Billing/webhooks:
 ## Models
 
 ```
-Fast path:  gpt-4.1-mini (OpenAI)
-Agent path: gpt-4.1 (OpenAI)
+Fast path:  gpt-5.4-mini (OpenAI)
+Agent path: gpt-5.5 (OpenAI)
 Embeddings: text-embedding-3-small (OpenAI)
 Speech:     OpenAI gpt-4o-mini-transcribe / gpt-4o-mini-tts → ElevenLabs fallback
 ```

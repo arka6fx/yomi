@@ -6,7 +6,7 @@ import { createSystemTools } from "../tools/system.js"
 import type { CoreMessage, ToolSet } from "ai"
 import type { Plan } from "@yomi/shared"
 
-const AGENT_MODEL = process.env["OPENAI_AGENT_MODEL"] || "gpt-4.1"
+const AGENT_MODEL = process.env["OPENAI_AGENT_MODEL"] || "gpt-5.5"
 
 export type SubagentRole = "leaf" | "orchestrator"
 

@@ -58,7 +58,7 @@ function defaultSystem(): string {
 }
 
 function agentModel(override?: string): string {
-  return override || process.env["OPENAI_AGENT_MODEL"] || "gpt-4.1"
+  return override || process.env["OPENAI_AGENT_MODEL"] || "gpt-5.5"
 }
 
 function maxSteps(override?: number): number {

@@ -33,7 +33,7 @@ import {
 } from "./shortcuts.js"
 import { maybeHandleSoulOnboarding } from "./soul-onboarding.js"
 
-const AGENT_MODEL = process.env.OPENAI_AGENT_MODEL || "gpt-4.1"
+const AGENT_MODEL = process.env.OPENAI_AGENT_MODEL || "gpt-5.5"
 const AGENT_MAX_STEPS = parseInt(process.env.AGENT_MAX_STEPS || "25", 10)
 // 1M tokens for GPT-5.4-mini. Used by the turn-level compressor when no
 // model-aware context length is available.

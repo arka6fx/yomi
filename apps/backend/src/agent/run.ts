@@ -314,7 +314,7 @@ async function captureBackendMemory(userId: string, input: string, output: strin
     model: createModel(
       process.env["MEMORY_EXTRACTION_MODEL"] ||
         process.env["OPENAI_FAST_MODEL"] ||
-        "gpt-4.1-mini",
+        "gpt-5.4-mini",
     ),
     messages: [
       {
