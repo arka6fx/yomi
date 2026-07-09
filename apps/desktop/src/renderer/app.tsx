@@ -9,6 +9,7 @@ import type { HotkeyState, ChatEntry, SubscriptionInfo } from "./store"
 import { EnergyVad } from "@yomi/shared"
 import { ThemeCtx, type Theme, type ThemeId } from "./theme"
 import { ConnectorIcon } from "@yomi/ui-connectors"
+import { yomiLogoDataUri } from "./logo"
 
 // Hands-free voice loop tuning (renderer-side end-of-speech auto-stop).
 const VAD_SILENCE_HANGOVER_MS = 800 // silence after speech before we auto-stop and process
@@ -1902,47 +1903,14 @@ function ResponsePanel({
 
 function YomiLogoMark({ size = 18 }: { size?: number }) {
   return (
-    <svg
+    <img
+      src={yomiLogoDataUri}
       width={size}
       height={size}
-      viewBox="-3 -3 30 30"
-      fill="none"
+      alt=""
       aria-hidden="true"
-      style={{ flexShrink: 0, display: "block" }}
-    >
-      <rect x="-3" y="-3" width="30" height="30" rx="7" fill="url(#ym-lg-bg)" />
-      <rect x="-3" y="-3" width="30" height="11" rx="7" fill="url(#ym-lg-shine)" />
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        fill="white"
-        d="M12 2c-.791 0-1.55.314-2.11.874l-.893.893a.985.985 0 0 1-.696.288H7.04A2.984 2.984 0 0 0 4.055 7.04v1.262a.986.986 0 0 1-.288.696l-.893.893a2.984 2.984 0 0 0 0 4.22l.893.893a.985.985 0 0 1 .288.696v1.262a2.984 2.984 0 0 0 2.984 2.984h1.262c.261 0 .512.104.696.288l.893.893a2.984 2.984 0 0 0 4.22 0l.893-.893a.985.985 0 0 1 .696-.288h1.262a2.984 2.984 0 0 0 2.984-2.984V15.7c0-.261.104-.512.288-.696l.893-.893a2.984 2.984 0 0 0 0-4.22l-.893-.893a.985.985 0 0 1-.288-.696V7.04a2.984 2.984 0 0 0-2.984-2.984h-1.262a.985.985 0 0 1-.696-.288l-.893-.893A2.984 2.984 0 0 0 12 2Zm3.683 7.73a1 1 0 1 0-1.414-1.413l-4.253 4.253-1.277-1.277a1 1 0 0 0-1.415 1.414l1.985 1.984a1 1 0 0 0 1.414 0l4.96-4.96Z"
-      />
-      <defs>
-        <linearGradient
-          id="ym-lg-bg"
-          x1="-3"
-          y1="-3"
-          x2="27"
-          y2="27"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop offset="0%" stopColor="#60A5FA" />
-          <stop offset="100%" stopColor="#3B5BDB" />
-        </linearGradient>
-        <linearGradient
-          id="ym-lg-shine"
-          x1="0"
-          y1="-3"
-          x2="0"
-          y2="8"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop offset="0%" stopColor="white" stopOpacity="0.22" />
-          <stop offset="100%" stopColor="white" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-    </svg>
+      style={{ flexShrink: 0, display: "block", borderRadius: size * 0.22 }}
+    />
   )
 }
 
@@ -2596,7 +2564,7 @@ function Toolbar({
 
           {/* Brand — always shown; live state lives on the notch below */}
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <YomiLogoMark size={20} />
+            <YomiLogoMark size={26} />
             <span
               style={{
                 fontSize: 20,
@@ -3252,7 +3220,7 @@ function SignInPanel({
       }}
     >
       <div style={{ marginBottom: 12 }}>
-        <YomiLogoMark size={40} />
+        <YomiLogoMark size={56} />
       </div>
       <div
         style={{
