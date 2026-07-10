@@ -57,6 +57,22 @@ describe("prompt memory injection", () => {
     expect(typeof ctx.recentSession).toBe("string")
   })
 
+  it("keeps volatile memory after static blocks for prefix caching", () => {
+    const prompt = buildAgentPrompt({
+      durableMemory: "[1] Arkady is building Yomi.",
+      conversationState: "<active_context>\nRepo: u/yomi\n</active_context>",
+    })
+    const memoryIdx = prompt.indexOf("<memory>")
+    const convIdx = prompt.indexOf("<conversation_state>")
+    // Static instruction blocks must precede the per-turn volatile tail so the
+    // long stable prefix stays byte-identical across turns (OpenAI prefix cache).
+    expect(prompt.indexOf("<answer_format>")).toBeLessThan(memoryIdx)
+    expect(prompt.indexOf("<capabilities>")).toBeLessThan(memoryIdx)
+    expect(prompt.indexOf("<conversation_rules>")).toBeLessThan(memoryIdx)
+    expect(memoryIdx).toBeLessThan(convIdx)
+    expect(prompt).toContain("Arkady is building Yomi")
+  })
+
   it("injects the conversation state block into agent and fast prompts", () => {
     const block = "<active_context>\nRepo: u/golang-practice\n</active_context>"
     const agent = buildAgentPrompt({ conversationState: block })
