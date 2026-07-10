@@ -173,8 +173,11 @@ Per-feature monthly caps were removed; connectors are unlimited on every plan.
 | Pro     | $14.99/mo | 2 500                   |
 | Max     | $39.99/mo | 10 000                  |
 
-Credit costs: chat 1 · image/screen analyze 1 · voice 2/min · Telegram
-message 1. Out of credits → Explore must subscribe, Pro/Max buy a credit pack.
+Credit costs (flat per interaction type, tiered by real cost): fast chat 1 ·
+image/screen analyze 1 · voice 2/min · agent run 3 (desktop agent loop) ·
+Telegram message 3. Tune from `ai_usage_events` telemetry (real API cost is
+recorded in `totalApiCostMicros` via `@yomi/shared/ai-pricing`). Out of credits
+→ Explore must subscribe, Pro/Max buy a credit pack.
 Owner email bypasses all checks. Dodo USD: Pro 1499¢, Max 3999¢. Credit packs:
 500/$4.99, 2 000/$14.99, 6 000/$39.99.
 
