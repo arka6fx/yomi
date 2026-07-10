@@ -60,10 +60,45 @@ function escapeXml(s: string): string {
     .replace(/"/g, "&quot;")
 }
 
-// Insert text into a freshly created presentation as a text box on its first
-// slide. The Slides API accepts the full drive scope. Returns a user-facing
-// note on failure — the file exists either way, so never throw.
-async function insertSlidesText(
+// Split Markdown into slides: "---" separators first, else top-level headings.
+// Within a slide the first heading is the title and the rest becomes body text
+// (list markers become bullets, inline emphasis is stripped — Slides
+// placeholders take plain text only).
+export function parseMarkdownSlides(content: string): { title: string; body: string }[] {
+  const sections = content.split(/\r?\n\s*---\s*\r?\n/)
+  const rawSlides = (
+    sections.length > 1 ? sections : content.split(/\r?\n(?=#{1,2} )/)
+  ).filter((s) => s.trim())
+  return rawSlides.map((raw) => {
+    let title = ""
+    const body: string[] = []
+    for (const line of raw.split(/\r?\n/)) {
+      const heading = line.match(/^#{1,6}\s+(.*)/)
+      if (!title && heading) {
+        title = heading[1]!.trim()
+        continue
+      }
+      body.push(
+        line
+          .replace(/^#{1,6}\s+/, "")
+          .replace(/^\s*[-*]\s+/, "• ")
+          .replace(/\*\*(.+?)\*\*/g, "$1")
+          .replace(/\*(.+?)\*/g, "$1"),
+      )
+    }
+    if (!title) {
+      const first = body.findIndex((l) => l.trim())
+      if (first >= 0) title = body.splice(first, 1)[0]!.trim().replace(/^• /, "")
+    }
+    return { title, body: body.join("\n").trim() }
+  })
+}
+
+// Build a multi-slide deck from Markdown in a freshly created presentation:
+// one TITLE_AND_BODY slide per section, then drop the empty default slide.
+// Returns a user-facing note on failure — the file exists either way, so
+// never throw.
+async function insertSlidesContent(
   token: string,
   presentationId: string,
   content: string,
@@ -76,65 +111,160 @@ async function insertSlidesText(
     )
     if (!presRes.ok) throw new Error(`${presRes.status}: ${await presRes.text()}`)
     const pres = (await presRes.json()) as { slides?: { objectId: string }[] }
-    const slideId = pres.slides?.[0]?.objectId
-    if (!slideId) throw new Error("presentation has no slides")
-    const boxId = `yomi_text_${Date.now()}`
+    const defaultSlideId = pres.slides?.[0]?.objectId
+
+    const slides = parseMarkdownSlides(content)
+    if (slides.length === 0) return undefined
+
+    const requests: Record<string, unknown>[] = []
+    slides.forEach((slide, i) => {
+      const titleId = `yomi_title_${i}`
+      const bodyId = `yomi_body_${i}`
+      requests.push({
+        createSlide: {
+          objectId: `yomi_slide_${i}`,
+          slideLayoutReference: { predefinedLayout: "TITLE_AND_BODY" },
+          placeholderIdMappings: [
+            { layoutPlaceholder: { type: "TITLE" }, objectId: titleId },
+            { layoutPlaceholder: { type: "BODY" }, objectId: bodyId },
+          ],
+        },
+      })
+      if (slide.title) requests.push({ insertText: { objectId: titleId, text: slide.title } })
+      if (slide.body) requests.push({ insertText: { objectId: bodyId, text: slide.body } })
+    })
+    if (defaultSlideId) requests.push({ deleteObject: { objectId: defaultSlideId } })
+
     const res = await fetch(
       `https://slides.googleapis.com/v1/presentations/${presentationId}:batchUpdate`,
       {
         method: "POST",
         headers: { ...auth, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          requests: [
-            {
-              createShape: {
-                objectId: boxId,
-                shapeType: "TEXT_BOX",
-                elementProperties: {
-                  pageObjectId: slideId,
-                  size: {
-                    width: { magnitude: 600, unit: "PT" },
-                    height: { magnitude: 350, unit: "PT" },
-                  },
-                  transform: { scaleX: 1, scaleY: 1, translateX: 60, translateY: 60, unit: "PT" },
-                },
-              },
-            },
-            { insertText: { objectId: boxId, text: content } },
-          ],
-        }),
+        body: JSON.stringify({ requests }),
       },
     )
     if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`)
     return undefined
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    return `Created the presentation, but couldn't insert the text content (${msg.slice(0, 200)}).`
+    return `Created the presentation, but couldn't insert the slide content (${msg.slice(0, 200)}).`
   }
 }
 
-// Put text into cell A1 of a freshly created spreadsheet. The Sheets API
-// accepts the full drive scope. Returns a note on failure — never throws.
-async function insertSheetText(
+// Split one CSV/TSV line honoring double-quoted fields ("" escapes a quote).
+function splitDelimited(line: string, delimiter: string): string[] {
+  const out: string[] = []
+  let cur = ""
+  let inQuotes = false
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]!
+    if (inQuotes) {
+      if (ch === '"') {
+        if (line[i + 1] === '"') {
+          cur += '"'
+          i++
+        } else inQuotes = false
+      } else cur += ch
+    } else if (ch === '"' && cur === "") inQuotes = true
+    else if (ch === delimiter) {
+      out.push(cur)
+      cur = ""
+    } else cur += ch
+  }
+  out.push(cur)
+  return out
+}
+
+export function parseTableContent(content: string): string[][] {
+  const lines = content.replace(/\r\n/g, "\n").split("\n")
+  while (lines.length && !lines[lines.length - 1]!.trim()) lines.pop()
+  const delimiter = content.includes("\t") ? "\t" : ","
+  return lines.map((line) => splitDelimited(line, delimiter))
+}
+
+// Fill a freshly created spreadsheet from CSV/TSV content starting at A1.
+// Returns a note on failure — never throws.
+async function insertSheetContent(
   token: string,
   spreadsheetId: string,
   content: string,
 ): Promise<string | undefined> {
   try {
+    const values = parseTableContent(content)
+    if (values.length === 0) return undefined
     const res = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1?valueInputOption=RAW`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1?valueInputOption=USER_ENTERED`,
       {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ values: [[content]] }),
+        body: JSON.stringify({ values }),
       },
     )
     if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`)
     return undefined
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    return `Created the spreadsheet, but couldn't insert the text content (${msg.slice(0, 200)}).`
+    return `Created the spreadsheet, but couldn't insert the table content (${msg.slice(0, 200)}).`
   }
+}
+
+// Minimal Markdown → HTML so Drive's HTML import produces a formatted Doc
+// (headings, bold/italic, links, bullet/numbered lists, code). Unsupported
+// syntax degrades to plain paragraphs.
+export function markdownToHtml(md: string): string {
+  const inline = (s: string): string =>
+    escapeXml(s)
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/(^|[^*])\*([^*]+)\*/g, "$1<em>$2</em>")
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2">$1</a>')
+
+  const out: string[] = []
+  const lines = md.replace(/\r\n/g, "\n").split("\n")
+  let list: "ul" | "ol" | null = null
+  let inCode = false
+  const closeList = () => {
+    if (list) {
+      out.push(`</${list}>`)
+      list = null
+    }
+  }
+  for (const line of lines) {
+    if (/^```/.test(line)) {
+      closeList()
+      out.push(inCode ? "</pre>" : "<pre>")
+      inCode = !inCode
+      continue
+    }
+    if (inCode) {
+      out.push(escapeXml(line))
+      continue
+    }
+    const heading = line.match(/^(#{1,6})\s+(.*)/)
+    if (heading) {
+      closeList()
+      const level = heading[1]!.length
+      out.push(`<h${level}>${inline(heading[2]!)}</h${level}>`)
+      continue
+    }
+    const bullet = line.match(/^\s*[-*]\s+(.*)/)
+    const ordered = line.match(/^\s*\d+[.)]\s+(.*)/)
+    if (bullet || ordered) {
+      const kind = bullet ? "ul" : "ol"
+      if (list !== kind) {
+        closeList()
+        out.push(`<${kind}>`)
+        list = kind
+      }
+      out.push(`<li>${inline((bullet ?? ordered)![1]!)}</li>`)
+      continue
+    }
+    closeList()
+    if (line.trim()) out.push(`<p>${inline(line)}</p>`)
+  }
+  if (inCode) out.push("</pre>")
+  closeList()
+  return `<html><body>${out.join("")}</body></html>`
 }
 
 export function createDriveTools(ctx: ConnectorContext): ToolSet {
@@ -426,10 +556,14 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
 
     "drive-createFile": tool({
       description:
-        "Create a new Google Workspace file with text content. Returns the new file ID and direct link. Defaults to document if kind is not specified.",
+        "Create a new Google Workspace file with content. Docs render Markdown with real formatting; presentations become multi-slide decks from Markdown sections; spreadsheets are filled from CSV/TSV. Returns the new file ID and direct link. Defaults to document if kind is not specified.",
       parameters: z.object({
         name: z.string().describe("Name of the new file"),
-        content: z.string().describe("Plain text content. For docs it becomes the body; for sheets it goes into cell A1; for slides it appears as a text box on the first slide; for drawings it renders as SVG text; for appsScript it becomes the .gs source."),
+        content: z
+          .string()
+          .describe(
+            "File content. Docs: Markdown (headings, bold, lists, links become real formatting). Slides: Markdown deck — '---' on its own line separates slides, the first heading of each section is the slide title, remaining lines the body. Sheets: CSV or TSV rows starting at A1. Drawings: rendered as SVG text. AppsScript: the .gs source.",
+          ),
         kind: z
           .enum(["document", "spreadsheet", "presentation", "drawing", "appsScript", "form", "sites", "jamboard"])
           .optional()
@@ -482,13 +616,14 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
               if (folderId) metadata.parents = [folderId]
 
               // Drive's multipart import can only CONVERT certain media types:
-              // text/plain -> Doc and image/svg+xml -> Drawing. For any other
+              // text/html -> Doc (Markdown is pre-rendered to HTML so headings
+              // and lists survive) and image/svg+xml -> Drawing. For any other
               // target (Slides, Sheets, ...) it silently ignores the requested
               // mimeType and creates a Doc — so those go through a metadata-only
               // create, then content is inserted via the type's own API.
               const importMedia =
                 kind === "document"
-                  ? { type: "text/plain; charset=UTF-8", body: content }
+                  ? { type: "text/html; charset=UTF-8", body: markdownToHtml(content) }
                   : kind === "drawing"
                     ? {
                         type: "image/svg+xml",
@@ -543,9 +678,9 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
 
                 if (content.trim()) {
                   if (kind === "presentation") {
-                    note = await insertSlidesText(token, file.id, content)
+                    note = await insertSlidesContent(token, file.id, content)
                   } else if (kind === "spreadsheet") {
-                    note = await insertSheetText(token, file.id, content)
+                    note = await insertSheetContent(token, file.id, content)
                   } else {
                     note = `Created an empty ${kindLabel}; inserting text content isn't supported for this type.`
                   }
