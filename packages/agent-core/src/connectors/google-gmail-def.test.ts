@@ -95,6 +95,27 @@ describe("gmail-replyToThread", () => {
     expect(raw).toContain("Sounds good, will do.")
   })
 
+  it("strips CRLF from attacker-controlled headers (no header injection)", async () => {
+    originalMessage.payload.headers[1] = {
+      name: "From",
+      value: "attacker@evil.com\r\nBcc: victim@example.com",
+    }
+    originalMessage.payload.headers[0] = {
+      name: "Subject",
+      value: "Hi\r\nX-Injected: 1",
+    }
+    await executeTool("gmail-replyToThread", { messageId: "msg_1", body: "ok" })
+    const send = requests.find((r) => r.url.includes("/messages/send"))
+    const raw = Buffer.from((send?.body as { raw: string }).raw, "base64url").toString("utf8")
+    const headerLines = raw.split("\r\n\r\n")[0]!.split("\r\n")
+    // No CRLF-injected header lines — the payload folds into the To value instead.
+    expect(headerLines.some((l) => /^Bcc:/i.test(l))).toBe(false)
+    expect(headerLines.some((l) => /^X-Injected:/i.test(l))).toBe(false)
+    expect(raw).toContain("To: attacker@evil.com Bcc: victim@example.com") // folded to one line
+    originalMessage.payload.headers[0] = { name: "Subject", value: "Quarterly report" }
+    originalMessage.payload.headers[1] = { name: "From", value: "Boss <boss@example.com>" }
+  })
+
   it("does not double-prefix an existing Re: subject", async () => {
     originalMessage.payload.headers[0] = { name: "Subject", value: "Re: Quarterly report" }
     await executeTool("gmail-replyToThread", { messageId: "msg_1", body: "ok" })

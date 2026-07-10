@@ -182,18 +182,30 @@ export function parseTableContent(content: string): string[][] {
   return lines.map((line) => splitDelimited(line, delimiter))
 }
 
+// Coerce a plain-number cell to a real number so numeric data stays usable,
+// while leaving everything else (including anything starting with = + - @, which
+// USER_ENTERED would evaluate as a formula) an inert string. The strict pattern
+// rejects leading-zero strings so IDs/zip codes/phone numbers keep their form.
+function coerceCell(s: string): string | number {
+  return /^-?(0|[1-9]\d*)(\.\d+)?$/.test(s) ? Number(s) : s
+}
+
 // Fill a freshly created spreadsheet from CSV/TSV content starting at A1.
-// Returns a note on failure — never throws.
+// Uses RAW (never USER_ENTERED): agent-supplied content can carry untrusted
+// text, and RAW stores every string literally so a cell like "=IMPORTXML(...)"
+// is never evaluated as a formula (CSV/formula-injection). Returns a note on
+// failure — never throws.
 async function insertSheetContent(
   token: string,
   spreadsheetId: string,
   content: string,
 ): Promise<string | undefined> {
   try {
-    const values = parseTableContent(content)
-    if (values.length === 0) return undefined
+    const rows = parseTableContent(content)
+    if (rows.length === 0) return undefined
+    const values = rows.map((row) => row.map(coerceCell))
     const res = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1?valueInputOption=USER_ENTERED`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1?valueInputOption=RAW`,
       {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },

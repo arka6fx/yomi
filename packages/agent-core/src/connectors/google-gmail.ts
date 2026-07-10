@@ -50,6 +50,14 @@ function header(headers: GmailHeader[], name: string): string {
   return headers.find((h) => h.name.toLowerCase() === name.toLowerCase())?.value ?? ""
 }
 
+// Strip CR/LF (and fold whitespace) from any value placed on a header line.
+// Reply headers reuse the ORIGINAL message's To/Subject/References, which are
+// attacker-controlled — without this, a crafted incoming email could inject
+// extra headers (e.g. a hidden Bcc) into Yomi's outgoing reply.
+function sanitizeHeaderValue(value: string): string {
+  return value.replace(/[\r\n]+/g, " ").trim()
+}
+
 function headerList(headers: GmailHeader[], name: string): string[] {
   const val = header(headers, name)
   if (!val) return []
@@ -220,17 +228,19 @@ export class GoogleGmailConnector implements Connector {
   }): Promise<SendResult & { to: string; subject: string }> {
     const orig = await this.gmail<GmailMessage>(`/messages/${reply.messageId}?format=metadata`)
     const hdrs = orig.payload?.headers ?? []
-    const origMessageId = header(hdrs, "Message-ID")
-    const origSubject = header(hdrs, "Subject")
+    const origMessageId = sanitizeHeaderValue(header(hdrs, "Message-ID"))
+    const origSubject = sanitizeHeaderValue(header(hdrs, "Subject"))
     const subject = /^re:/i.test(origSubject) ? origSubject : `Re: ${origSubject}`
-    const to = header(hdrs, "Reply-To") || header(hdrs, "From")
+    const to = sanitizeHeaderValue(header(hdrs, "Reply-To") || header(hdrs, "From"))
     if (!to) throw new Error("Original message has no sender to reply to")
-    const references = [header(hdrs, "References"), origMessageId].filter(Boolean).join(" ")
+    const references = [sanitizeHeaderValue(header(hdrs, "References")), origMessageId]
+      .filter(Boolean)
+      .join(" ")
 
     const lines = [
       `To: ${to}`,
-      reply.cc?.length ? `Cc: ${reply.cc.join(", ")}` : null,
-      reply.bcc?.length ? `Bcc: ${reply.bcc.join(", ")}` : null,
+      reply.cc?.length ? `Cc: ${reply.cc.map(sanitizeHeaderValue).join(", ")}` : null,
+      reply.bcc?.length ? `Bcc: ${reply.bcc.map(sanitizeHeaderValue).join(", ")}` : null,
       `Subject: ${subject}`,
       origMessageId ? `In-Reply-To: ${origMessageId}` : null,
       references ? `References: ${references}` : null,
@@ -290,14 +300,14 @@ export class GoogleGmailConnector implements Connector {
   }
 
   async createDraft(draft: EmailDraft): Promise<{ id: string; messageId: string }> {
-    const to = draft.to.join(", ")
-    const cc = draft.cc?.join(", ") ?? ""
-    const bcc = draft.bcc?.join(", ") ?? ""
+    const to = draft.to.map(sanitizeHeaderValue).join(", ")
+    const cc = draft.cc?.map(sanitizeHeaderValue).join(", ") ?? ""
+    const bcc = draft.bcc?.map(sanitizeHeaderValue).join(", ") ?? ""
     const lines = [
       `To: ${to}`,
       cc ? `Cc: ${cc}` : null,
       bcc ? `Bcc: ${bcc}` : null,
-      `Subject: ${draft.subject}`,
+      `Subject: ${sanitizeHeaderValue(draft.subject)}`,
       "MIME-Version: 1.0",
       "Content-Type: text/plain; charset=UTF-8",
       "",
@@ -409,14 +419,14 @@ export class GoogleGmailConnector implements Connector {
 
   async sendEmail(draft: EmailDraft): Promise<SendResult> {
     // Construct RFC 2822 message
-    const to = draft.to.join(", ")
-    const cc = draft.cc?.join(", ") ?? ""
-    const bcc = draft.bcc?.join(", ") ?? ""
+    const to = draft.to.map(sanitizeHeaderValue).join(", ")
+    const cc = draft.cc?.map(sanitizeHeaderValue).join(", ") ?? ""
+    const bcc = draft.bcc?.map(sanitizeHeaderValue).join(", ") ?? ""
     const lines = [
       `To: ${to}`,
       cc ? `Cc: ${cc}` : null,
       bcc ? `Bcc: ${bcc}` : null,
-      `Subject: ${draft.subject}`,
+      `Subject: ${sanitizeHeaderValue(draft.subject)}`,
       "MIME-Version: 1.0",
       "Content-Type: text/plain; charset=UTF-8",
       "",
