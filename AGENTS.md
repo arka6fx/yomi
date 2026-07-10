@@ -101,7 +101,9 @@ CLOUD BACKEND  (Hono/Bun)
 **Hooks:** `PreToolUse` (block dangerous) · `PostToolUse` (log, trim tokens) ·
 `Stop` (flush scratchpad) · `SessionEnd` (compact memory.md)
 
-**Loop guards:** `AGENT_MAX_STEPS` cap · `AGENT_MAX_RECOVERIES` (default 2)
+**Loop guards:** `AGENT_MAX_STEPS` cap · sidecar `IterationBudget` (output-token
+budget/turn) + `LoopGuards` (dup-call/stall) · backend grace-call wrap-up when the
+step cap is hit without a final answer
 
 ---
 
