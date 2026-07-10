@@ -160,6 +160,36 @@ export async function runAgentLoop(opts: RunAgentLoopOptions): Promise<string> {
 
   if (result.text.trim()) return result.text
 
+  // Grace call (hermes pattern): the loop stopped (step cap / length) after tool
+  // work but produced no final text. Re-run once over the accumulated transcript
+  // with toolChoice:"none" so the model must summarise what the tools returned
+  // instead of us dumping raw tool JSON. Tools stay declared so the transcript's
+  // tool calls still validate.
+  const priorMessages = result.response.messages
+  if (priorMessages.length > 0) {
+    try {
+      const grace = await generateText({
+        model: createModel(agentModel(opts.model)),
+        system: opts.system ?? defaultSystem(),
+        messages: [...messages, ...priorMessages] as typeof messages,
+        tools,
+        toolChoice: "none",
+        maxTokens: opts.maxTokens,
+        abortSignal: opts.signal,
+      })
+      opts.onUsage?.({
+        model: agentModel(opts.model),
+        inputTokens: grace.usage.promptTokens,
+        outputTokens: grace.usage.completionTokens,
+        toolCallCount: 0,
+        finishReason: `grace:${grace.finishReason}`,
+      })
+      if (grace.text.trim()) return grace.text
+    } catch (err) {
+      console.warn(`[agent] grace call failed: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
+
   const fallback = fallbackFromToolResults(result.toolResults)
   if (fallback) return fallback
 
