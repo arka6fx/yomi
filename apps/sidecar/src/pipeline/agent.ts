@@ -1,4 +1,5 @@
 import { generateText, streamText, type ToolSet } from "ai"
+import { resolveModelCap } from "@yomi/agent-core"
 import type { AgentQueryRequest, Plan, SseEvent } from "@yomi/shared"
 import { createModel } from "./model.js"
 import { synthesize, resolveTts } from "./tts.js"
@@ -35,9 +36,10 @@ import { maybeHandleSoulOnboarding } from "./soul-onboarding.js"
 
 const AGENT_MODEL = process.env.OPENAI_AGENT_MODEL || "gpt-5.5"
 const AGENT_MAX_STEPS = parseInt(process.env.AGENT_MAX_STEPS || "25", 10)
-// 1M tokens for GPT-5.4-mini. Used by the turn-level compressor when no
-// model-aware context length is available.
-const DEFAULT_MODEL_CONTEXT_WINDOW = 1_000_000
+// The turn-level compressor threshold is a fraction of this. Use the agent
+// model's real context window (gpt-5.5 = 272K) — a hardcoded 1M pushed the
+// threshold so high the compressor effectively never ran.
+const MODEL_CONTEXT_WINDOW = resolveModelCap(AGENT_MODEL).contextWindow
 
 // Combine multiple AbortSignals into one. Triggers when any input signal aborts.
 function anySignal(...signals: AbortSignal[]): AbortSignal {
@@ -292,7 +294,7 @@ export async function* agentPipeline(
     const compression = await compressContext(
       baseMessages as unknown as Parameters<typeof compressContext>[0],
       {
-        contextWindow: DEFAULT_MODEL_CONTEXT_WINDOW,
+        contextWindow: MODEL_CONTEXT_WINDOW,
         plan: req.plan,
         signal,
       },
