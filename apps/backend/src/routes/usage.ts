@@ -50,7 +50,7 @@ type FinalizeBody = {
   telemetry?: FinalizeTelemetryBody
 }
 
-const VALID_KINDS: ChargeKind[] = ["chat", "voice", "analyze", "bot_message"]
+const VALID_KINDS: ChargeKind[] = ["chat", "voice", "analyze", "bot_message", "agent"]
 
 function nextMonthReset(): Date {
   const now = new Date()

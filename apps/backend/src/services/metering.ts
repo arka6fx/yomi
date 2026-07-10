@@ -11,22 +11,24 @@ import { creditsForUsage, type BillableUsageKind } from "./credit-pricing.js"
 
 // The four billable surfaces. Each maps to a credit cost (BillableUsageKind) and to
 // the usageEvents.kind we persist for the dashboard breakdown.
-export type ChargeKind = "chat" | "voice" | "analyze" | "bot_message"
+export type ChargeKind = "chat" | "voice" | "analyze" | "bot_message" | "agent"
 
 const CREDIT_KIND: Record<ChargeKind, BillableUsageKind> = {
   chat: "chat",
   voice: "voice",
   analyze: "analyze",
   bot_message: "bot_message",
+  agent: "agent",
 }
 
-// What we store on usageEvents.kind — chat/voice become request_* to match the
-// existing dashboard and transaction queries; the others pass through.
+// What we store on usageEvents.kind — chat/voice/agent become request_* to match
+// the existing dashboard and transaction queries; the others pass through.
 const EVENT_KIND: Record<ChargeKind, string> = {
   chat: "request_chat",
   voice: "request_voice",
   analyze: "analyze",
   bot_message: "bot_message",
+  agent: "request_agent",
 }
 
 type MeteringUser = {

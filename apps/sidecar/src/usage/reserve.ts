@@ -6,7 +6,7 @@ function sessionToken(): string {
   return process.env["YOMI_SESSION_TOKEN"] ?? ""
 }
 
-export type ReserveKind = "chat" | "voice" | "analyze" | "bot_message"
+export type ReserveKind = "chat" | "voice" | "analyze" | "bot_message" | "agent"
 
 type ReserveResult =
   | { ok: true; usageEventId?: string }

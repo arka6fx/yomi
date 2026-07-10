@@ -1,4 +1,4 @@
-export type UsageCreditKind = "chat" | "voice" | "analyze" | "bot_message"
+export type UsageCreditKind = "chat" | "voice" | "analyze" | "bot_message" | "agent"
 
 export type BillableUsageKind = UsageCreditKind
 
@@ -9,11 +9,15 @@ export type UsagePricingInput = {
   outputTokens?: number
 }
 
+// Flat cost per interaction TYPE, tiered by real cost. A fast chat/screen answer
+// is one LLM call; an agent run (desktop agent loop or a Telegram message) does
+// multi-step tool work, so it costs more. Tune from ai_usage_events telemetry.
 const CREDIT_COSTS: Record<UsageCreditKind, number> = {
   chat: 1,
   voice: 2,
   analyze: 1,
-  bot_message: 1,
+  bot_message: 3,
+  agent: 3,
 }
 
 function creditCost(kind: UsageCreditKind, units = 1): number {

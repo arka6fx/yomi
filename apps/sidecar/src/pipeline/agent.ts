@@ -182,12 +182,12 @@ export async function* agentPipeline(
 
   let usageEventId: string | undefined
   if (!req.skipReserve) {
-    const reservation = await reserveInteraction("chat")
+    const reservation = await reserveInteraction("agent")
     if (!reservation.ok) {
       yield {
         type: "usage_limit",
         code: reservation.code,
-        feature: reservation.feature ?? "chat",
+        feature: reservation.feature ?? "agent",
         message: reservation.error,
         upgradeUrl: reservation.upgradeUrl,
       }
