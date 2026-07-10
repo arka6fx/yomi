@@ -92,6 +92,35 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
+    "gmail-getImportantEmails": tool({
+      description:
+        "Get the most important recent emails in the Gmail inbox, ranked by Gmail's importance markers with unread ones first. Use this when the user asks what emails matter, what needs attention, or wants an inbox briefing.",
+      parameters: z.object({
+        limit: z.number().int().min(1).max(20).default(10).describe("Max emails to return"),
+        unreadOnly: z
+          .boolean()
+          .default(false)
+          .describe("Only include unread important emails"),
+      }),
+      execute: async ({ limit, unreadOnly }) => {
+        if (!gmail.isConnected()) return notConnectedError()
+        try {
+          const query = unreadOnly ? "is:important is:unread in:inbox" : "is:important in:inbox"
+          const emails = await gmail.searchEmails(query, limit)
+          if (emails.length === 0)
+            return { emails: [], message: "No important emails found in the inbox." }
+          const ranked = [...emails].sort((a, b) => Number(a.isRead) - Number(b.isRead))
+          return {
+            count: ranked.length,
+            emails: ranked,
+            formatted: ranked.map(formatEmail).join("\n\n"),
+          }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
     "gmail-summarizeEmails": tool({
       description:
         "Fetch and return the raw content of emails to summarize. Pass specific message IDs, or leave empty to summarize the last 5 unread emails. Use the returned content to write a human-friendly summary.",
@@ -135,7 +164,7 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
 
     "gmail-sendEmail": tool({
       description:
-        "Send an email via Gmail. IMPORTANT: confirm the To, Subject, and first 200 chars of body with the user before calling this tool.",
+        "Send a NEW email via Gmail. To reply within an existing thread use gmail-replyToThread instead. IMPORTANT: confirm the To, Subject, and first 200 chars of body with the user before calling this tool.",
       parameters: z.object({
         to: z.array(z.string()).describe("Recipient email addresses"),
         subject: z.string().describe("Email subject line"),
@@ -309,30 +338,45 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
-    "gmail-deletePermanently": tool({
+    "gmail-replyToThread": tool({
       description:
-        "Permanently delete a Gmail message — this bypasses Trash and CANNOT be recovered. Prefer gmail-trashEmail unless the user explicitly requests permanent deletion.",
+        "Reply to an email inside its existing thread. Threading headers and the Re: subject are handled automatically — do NOT pass a subject. Pass the messageId of the message being replied to (usually the latest in the thread, from gmail-searchEmails, gmail-getThread, or gmail-readEmail). Confirm the reply body with the user before calling.",
       parameters: z.object({
-        messageId: z.string().describe("The Gmail message ID to permanently delete"),
+        messageId: z.string().describe("Gmail message ID of the message to reply to"),
+        body: z.string().describe("Plain-text reply body"),
+        cc: z.array(z.string()).optional().describe("Additional CC recipients"),
+        bcc: z.array(z.string()).optional().describe("BCC recipients"),
       }),
       execute: async (args) => {
-        const { messageId } = args
         if (!gmail.isConnected()) return notConnectedError()
+        // Best-effort sender/subject lookup so the approval preview is readable.
+        let replyTarget = `message ${args.messageId}`
+        try {
+          const orig = await gmail.readEmail(args.messageId)
+          replyTarget = `${orig.from} — "${orig.subject}"`
+        } catch {
+          // best-effort
+        }
         return gateWrite(
           ctx,
           {
             connector: "google",
-            action: "gmail-deletePermanently",
-            risk: "irreversible",
-            title: `Permanently delete email`,
-            preview: `Permanently delete message ${messageId}. This CANNOT be undone.`,
-            confirmText: "Delete permanently",
+            action: "gmail-replyToThread",
+            risk: "send",
+            title: `Send reply to ${replyTarget}`,
+            preview: `Reply to: ${replyTarget}\n\n${args.body.slice(0, 1200)}`,
+            confirmText: "Send reply",
           },
           args,
           async () => {
             try {
-              await gmail.deleteEmailPermanently(messageId)
-              return { ok: true, message: `Message ${messageId} permanently deleted.` }
+              const result = await gmail.replyToThread(args)
+              return {
+                ok: true,
+                messageId: result.messageId,
+                threadId: result.threadId,
+                message: `Reply sent to ${result.to} in thread "${result.subject}".`,
+              }
             } catch (err) {
               return connectorError(err)
             }
@@ -433,7 +477,7 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
 
     "gmail-getAttachment": tool({
       description:
-        "Download an attachment from a Gmail message by message ID and attachment ID. Returns the base64-encoded data, filename, and MIME type. First use gmail-readEmail to discover attachment IDs from the message body.",
+        "Download an attachment from a Gmail message by message ID and attachment ID. Returns the base64-encoded data, filename, and MIME type. First use gmail-readEmail to discover attachment IDs from the message body. To keep, share, or reuse the file, prefer gmail-saveAttachmentToDrive — it saves directly to Google Drive without downloading the data here.",
       parameters: z.object({
         messageId: z.string().describe("The Gmail message ID"),
         attachmentId: z.string().describe("The attachment ID (found in the message body parts)"),
@@ -452,6 +496,92 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
         } catch (err) {
           return connectorError(err)
         }
+      },
+    }),
+
+    "gmail-saveAttachmentToDrive": tool({
+      description:
+        "Save a Gmail attachment directly to the user's Google Drive and return the Drive file link — the file data never enters the conversation. Prefer this over gmail-getAttachment whenever the user wants to keep, organize, share, or reuse an attachment. Requires the Google Drive connector. Find messageId and attachmentId via gmail-readEmail.",
+      parameters: z.object({
+        messageId: z.string().describe("The Gmail message ID"),
+        attachmentId: z.string().describe("The attachment ID from the message body parts"),
+        name: z
+          .string()
+          .optional()
+          .describe("File name in Drive (defaults to the attachment's own filename)"),
+        folderId: z.string().optional().describe("Drive folder ID to save the file into"),
+      }),
+      execute: async (args) => {
+        const { messageId, attachmentId, name, folderId } = args
+        if (!gmail.isConnected()) return notConnectedError()
+        return gateWrite(
+          ctx,
+          {
+            connector: "google",
+            action: "gmail-saveAttachmentToDrive",
+            risk: "write",
+            title: "Save Gmail attachment to Drive",
+            preview: `Save attachment ${attachmentId} from message ${messageId} to Google Drive${name ? ` as "${name}"` : ""}${folderId ? ` in folder ${folderId}` : ""}`,
+            confirmText: "Save to Drive",
+          },
+          args,
+          async () => {
+            let driveToken: string
+            try {
+              driveToken = await ctx.getAccessToken(ctx.userId, "google-drive")
+            } catch {
+              return {
+                error: "Google Drive is not connected",
+                hint: "Ask the user to connect Google Drive via the Integrations tab, then retry.",
+              }
+            }
+            try {
+              const att = await gmail.getAttachment(messageId, attachmentId)
+              // Gmail returns base64url; Drive upload needs the raw bytes.
+              const bytes = Buffer.from(
+                att.data.replace(/-/g, "+").replace(/_/g, "/"),
+                "base64",
+              )
+              const metadata: Record<string, unknown> = {
+                name: name ?? att.filename,
+                ...(folderId ? { parents: [folderId] } : {}),
+              }
+              const boundary = "yomi_attachment_boundary"
+              const encoder = new TextEncoder()
+              const head = encoder.encode(
+                `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: ${att.mimeType}\r\n\r\n`,
+              )
+              const tail = encoder.encode(`\r\n--${boundary}--`)
+              const res = await fetch(
+                "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,size",
+                {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${driveToken}`,
+                    "Content-Type": `multipart/related; boundary=${boundary}`,
+                  },
+                  body: new Blob([head, new Uint8Array(bytes), tail]),
+                },
+              )
+              if (!res.ok) throw new Error(`Drive upload failed: ${res.status}: ${await res.text()}`)
+              const file = (await res.json()) as {
+                id: string
+                name: string
+                webViewLink?: string
+                size?: string
+              }
+              return {
+                ok: true,
+                id: file.id,
+                name: file.name,
+                link: file.webViewLink,
+                message: `Attachment saved to Drive as "${file.name}".`,
+              }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
       },
     }),
 
@@ -610,10 +740,12 @@ export const googleGmailDef: ConnectorDef = {
     authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
     tokenUrl: "https://oauth2.googleapis.com/token",
     scopes: [
-      // Full mailbox access (read, send, modify, permanent delete). This is the
-      // broadest Gmail scope and is "restricted" — requires Google CASA
-      // verification for public release, or test-user allowlisting for personal use.
-      "https://mail.google.com/",
+      // gmail.modify covers all read/write ops except permanent deletion
+      // (which we intentionally don't offer). Still "restricted" — requires
+      // Google CASA verification for public release, or test-user allowlisting
+      // — but avoids the full-mailbox mail.google.com scope.
+      "https://www.googleapis.com/auth/gmail.modify",
+      "https://www.googleapis.com/auth/gmail.send",
       "https://www.googleapis.com/auth/userinfo.email",
     ],
     clientIdEnv: "GOOGLE_INTEGRATIONS_CLIENT_ID",

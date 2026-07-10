@@ -210,23 +210,42 @@ export class GoogleGmailConnector implements Connector {
     await this.gmail<GmailMessage>(`/messages/${messageId}/trash`, { method: "POST" })
   }
 
-  async deleteEmailPermanently(messageId: string): Promise<void> {
-    // DELETE returns 204 No Content, so call fetch directly rather than the
-    // JSON helper (which would fail trying to parse an empty body).
-    const token = await this.getAccessToken(this.userId, "google")
-    const res = await fetch(
-      `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}`,
-      {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    )
-    if (!res.ok) {
-      const body = await res.text()
-      throw new Error(
-        `Gmail API DELETE /messages/${messageId} → ${res.status}: ${body.slice(0, 200)}`,
-      )
-    }
+  // Reply within the original thread: In-Reply-To/References headers plus the
+  // matching "Re:" subject are what make threading work outside Gmail too.
+  async replyToThread(reply: {
+    messageId: string
+    body: string
+    cc?: string[]
+    bcc?: string[]
+  }): Promise<SendResult & { to: string; subject: string }> {
+    const orig = await this.gmail<GmailMessage>(`/messages/${reply.messageId}?format=metadata`)
+    const hdrs = orig.payload?.headers ?? []
+    const origMessageId = header(hdrs, "Message-ID")
+    const origSubject = header(hdrs, "Subject")
+    const subject = /^re:/i.test(origSubject) ? origSubject : `Re: ${origSubject}`
+    const to = header(hdrs, "Reply-To") || header(hdrs, "From")
+    if (!to) throw new Error("Original message has no sender to reply to")
+    const references = [header(hdrs, "References"), origMessageId].filter(Boolean).join(" ")
+
+    const lines = [
+      `To: ${to}`,
+      reply.cc?.length ? `Cc: ${reply.cc.join(", ")}` : null,
+      reply.bcc?.length ? `Bcc: ${reply.bcc.join(", ")}` : null,
+      `Subject: ${subject}`,
+      origMessageId ? `In-Reply-To: ${origMessageId}` : null,
+      references ? `References: ${references}` : null,
+      "MIME-Version: 1.0",
+      "Content-Type: text/plain; charset=UTF-8",
+      "",
+      reply.body,
+    ].filter((l) => l !== null)
+
+    const encoded = Buffer.from(lines.join("\r\n")).toString("base64url")
+    const sent = await this.gmail<GmailMessage>("/messages/send", {
+      method: "POST",
+      body: JSON.stringify({ raw: encoded, threadId: orig.threadId }),
+    })
+    return { messageId: sent.id, threadId: sent.threadId, to, subject }
   }
 
   async getThread(threadId: string): Promise<{ id: string; messages: EmailDetail[] }> {
