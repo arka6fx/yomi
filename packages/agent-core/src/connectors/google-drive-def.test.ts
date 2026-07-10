@@ -125,13 +125,27 @@ describe("drive-createFile", () => {
     })
     const put = requests.find((r) => r.url.includes("sheets.googleapis.com"))
     expect(put?.method).toBe("PUT")
-    expect(put?.url).toContain("values/A1?valueInputOption=USER_ENTERED")
+    expect(put?.url).toContain("values/A1?valueInputOption=RAW")
     expect(JSON.parse(put!.body)).toEqual({
       values: [
         ["item", "cost"],
-        ["rent", "1200"],
+        ["rent", 1200],
       ],
     })
+  })
+
+  it("never sends spreadsheet cells with USER_ENTERED (formula-injection guard)", async () => {
+    await executeTool("drive-createFile", {
+      name: "Evil",
+      kind: "spreadsheet",
+      content: "label,value\nrent,=IMPORTXML(1)\ntotal,007",
+    })
+    const put = requests.find((r) => r.url.includes("sheets.googleapis.com"))
+    expect(put?.url).toContain("valueInputOption=RAW")
+    const { values } = JSON.parse(put!.body) as { values: (string | number)[][] }
+    // Formula stays an inert string; leading-zero id stays a string, not 7.
+    expect(values[1]).toEqual(["rent", "=IMPORTXML(1)"])
+    expect(values[2]).toEqual(["total", "007"])
   })
 
   it("imports documents as HTML so markdown formatting survives", async () => {
