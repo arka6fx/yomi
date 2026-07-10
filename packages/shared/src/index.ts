@@ -1,6 +1,14 @@
 export { EnergyVad, detectSpeechEnd } from "./vad.js"
 export type { VadResult, VadOptions } from "./vad.js"
 export {
+  costMicros,
+  resolveModelPrice,
+  microsToCents,
+  microsToUsd,
+  type ModelPrice,
+  type TokenCounts,
+} from "./ai-pricing.js"
+export {
   CONSENT_VERSION,
   PRIVACY_CONSENT_PURPOSE_LABELS,
   PRIVACY_CONSENT_PURPOSES,

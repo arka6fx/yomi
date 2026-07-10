@@ -6,16 +6,9 @@ import { authenticate } from "../auth.js"
 import { isOwnerUser } from "../entitlements.js"
 import { grantCredits } from "../services/credit-ledger.js"
 import { getPlan } from "@yomi/shared/plans"
+import { costMicros } from "@yomi/shared/ai-pricing"
 
 export const adminRouter = new Hono()
-
-const MODEL_PRICING_CENTS_PER_1K: Record<string, { input: number; output: number }> = {
-  "gpt-5.4-mini": { input: 0.04, output: 0.16 },
-  "gpt-5.5": { input: 0.15, output: 0.6 },
-  "text-embedding-3-small": { input: 0.002, output: 0 },
-}
-
-const DEFAULT_PRICING_CENTS_PER_1K = { input: 1, output: 4 }
 
 type UsageMetadata = Record<string, unknown>
 
@@ -41,11 +34,7 @@ function estimateCostMicros(
   costCents: number,
 ): number {
   if (costCents > 0) return costCents * 10_000
-  if (inputTokens <= 0 && outputTokens <= 0) return 0
-  const pricing = MODEL_PRICING_CENTS_PER_1K[model ?? ""] ?? DEFAULT_PRICING_CENTS_PER_1K
-  return Math.round(
-    ((inputTokens / 1000) * pricing.input + (outputTokens / 1000) * pricing.output) * 10_000,
-  )
+  return costMicros(model, { inputTokens, outputTokens })
 }
 
 function money(micros: number): number {

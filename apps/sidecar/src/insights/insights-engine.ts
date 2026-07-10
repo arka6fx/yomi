@@ -1,4 +1,5 @@
 import type { Plan } from "@yomi/shared"
+import { costMicros, microsToCents } from "@yomi/shared/ai-pricing"
 import {
   queryUsageEvents,
   querySessions,
@@ -54,14 +55,6 @@ export type ActivitySection = {
   hourlyBreakdown: { hour: number; count: number }[]
 }
 
-// Model pricing in cents per 1K tokens (approximate)
-const MODEL_PRICING: Record<string, { inputCentsPer1K: number; outputCentsPer1K: number }> = {
-  "gpt-5.4-mini": { inputCentsPer1K: 0.04, outputCentsPer1K: 0.16 },
-  "gpt-5.5": { inputCentsPer1K: 0.15, outputCentsPer1K: 0.6 },
-}
-
-const DEFAULT_PRICING = { inputCentsPer1K: 1.0, outputCentsPer1K: 4.0 }
-
 // Plan lookback limits in days
 export const INSIGHT_LOOKBACK: Record<Plan, number> = {
   explore: 7,
@@ -77,12 +70,10 @@ const KINDS: Record<string, string> = {
   compression: "Context compression",
 }
 
+// Returns the estimated cost in whole cents (rounded), derived from the shared
+// pricing table.
 function estimateCost(model: string | null, inputTokens: number, outputTokens: number): number {
-  if (inputTokens === 0 && outputTokens === 0) return 0
-  const pricing = MODEL_PRICING[model ?? ""] ?? DEFAULT_PRICING
-  const inputCost = (inputTokens / 1000) * pricing.inputCentsPer1K
-  const outputCost = (outputTokens / 1000) * pricing.outputCentsPer1K
-  return Math.round(inputCost + outputCost)
+  return Math.round(microsToCents(costMicros(model, { inputTokens, outputTokens })))
 }
 
 export function getMaxLookback(plan: Plan): number {

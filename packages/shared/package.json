@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./plans": "./src/plans.ts",
-    "./privacy": "./src/privacy.ts"
+    "./privacy": "./src/privacy.ts",
+    "./ai-pricing": "./src/ai-pricing.ts"
   },
   "scripts": {
     "test": "bun test --pass-with-no-tests",

@@ -1,4 +1,5 @@
 import { db, aiUsageEvents } from "@yomi/db"
+import { costMicros } from "@yomi/shared/ai-pricing"
 
 // Content-shaped keys that must never reach telemetry storage (spec 22
 // non-goal: no raw prompt content beyond existing message/session tables).
@@ -71,6 +72,16 @@ function clamp(value: number | undefined): number {
 // (unique index + onConflictDoNothing). Best-effort: telemetry must never
 // break a request path.
 export async function recordAiUsage(input: AiUsageRecord): Promise<void> {
+  // Derive the real API cost from tokens + model when the caller didn't supply
+  // it, so totalApiCostMicros is populated everywhere from one pricing source.
+  const totalApiCostMicros =
+    input.totalApiCostMicros && input.totalApiCostMicros > 0
+      ? input.totalApiCostMicros
+      : costMicros(input.model, {
+          inputTokens: input.inputTokens,
+          outputTokens: input.outputTokens,
+          cachedInputTokens: input.cachedInputTokens,
+        })
   try {
     await db
       .insert(aiUsageEvents)
@@ -103,7 +114,7 @@ export async function recordAiUsage(input: AiUsageRecord): Promise<void> {
           typeof input.firstTokenLatencyMs === "number"
             ? Math.max(0, Math.floor(input.firstTokenLatencyMs))
             : null,
-        totalApiCostMicros: clamp(input.totalApiCostMicros),
+        totalApiCostMicros: clamp(totalApiCostMicros),
         creditsEstimated: clamp(input.creditsEstimated),
         creditsCharged: clamp(input.creditsCharged),
         status: input.status,
