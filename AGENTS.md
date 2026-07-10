@@ -188,7 +188,7 @@ truth: `packages/shared/src/plans.ts`. Billing/webhooks:
 
 ## Privacy
 
-- Local-by-default: STT + screen on-device; only distilled prompt leaves
+- Capture (mic, screen) is local; transcription and analysis use cloud APIs
 - Visible status: tray/notch pill when listening or capturing
 - Per-app blocklist: password managers and banking apps never captured
 - Yomi window excluded from screen-shares
