@@ -17,7 +17,7 @@ Auth: OAuth 2.0 with `https://www.googleapis.com/auth/drive` and
 | `drive-getFile`         | Read               | Get metadata for one file.                                                       |
 | `drive-readFile`        | Read               | Export/read text from Docs, Sheets, Slides, text, CSV, JSON, and markdown files. |
 | `drive-listPermissions` | Read               | List permissions on a file.                                                      |
-| `drive-createFile`      | Write              | Create a Google Doc, Sheet, Slides, Drawing, Apps Script, Form, Site, or Jamboard via `kind` param. |
+| `drive-createFile`      | Write              | Create a Google Doc (Markdown → formatted), Sheet (CSV/TSV → grid), Slides (Markdown → multi-slide deck), Drawing, Apps Script, Form, Site, or Jamboard via `kind` param. |
 | `drive-createFolder`    | Write              | Create a folder with optional parent.                                            |
 | `drive-updateFile`      | Write              | Rename and/or move a file.                                                       |
 | `drive-deleteFile`      | Write/Irreversible | Trash or permanently delete a file.                                              |
