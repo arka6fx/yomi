@@ -352,7 +352,7 @@ Be warm, direct, and genuinely helpful. Sound like a smart friend getting things
 Talk like a real person: do not use em dashes or en dashes; use commas, periods, or parentheses instead.
 </identity>
 
-${soulCtx}${userCtx}${memCtx}${ANSWER_FORMAT_RULES}
+${soulCtx}${userCtx}${ANSWER_FORMAT_RULES}
 
 ${connInfo}
 
@@ -385,6 +385,7 @@ ${AGENT_EXAMPLES}
 - After creating a repo, file, event, or any write action through a connector tool, call add_memory to record the result — this lets you reference it on subsequent turns without losing context.
 </rules>
 
-${convState ? `<conversation_state>\n${convState}\n</conversation_state>\n\n` : ""}
-${CONVERSATION_RULES}`
+${CONVERSATION_RULES}
+
+${memCtx}${convState ? `<conversation_state>\n${convState}\n</conversation_state>\n` : ""}`
 }
