@@ -16,6 +16,42 @@ function formatDue(
   return `${dueDate.year}-${mm}-${dd} ${hh}:${min} UTC`
 }
 
+// Classroom material union → a flat shape the model can act on directly.
+type ClassroomMaterial = {
+  driveFile?: { driveFile?: { id?: string; title?: string; alternateLink?: string } }
+  link?: { url?: string; title?: string }
+  youtubeVideo?: { id?: string; title?: string; alternateLink?: string }
+  form?: { formUrl?: string; title?: string }
+}
+
+function formatMaterial(m: ClassroomMaterial) {
+  if (m.driveFile?.driveFile) {
+    const f = m.driveFile.driveFile
+    return { type: "driveFile" as const, driveFileId: f.id, title: f.title, link: f.alternateLink }
+  }
+  if (m.link) return { type: "link" as const, title: m.link.title, link: m.link.url }
+  if (m.youtubeVideo)
+    return { type: "youtube" as const, title: m.youtubeVideo.title, link: m.youtubeVideo.alternateLink }
+  if (m.form) return { type: "form" as const, title: m.form.title, link: m.form.formUrl }
+  return { type: "unknown" as const }
+}
+
+// Classroom only lets the developer project that CREATED a coursework item
+// modify or turn in its submissions — teacher-created assignments always 403.
+// Translate that into the workflow the agent should use instead.
+function classroomWriteError(err: unknown): { error: string; hint?: string } {
+  const msg = err instanceof Error ? err.message : String(err)
+  if (/403|PERMISSION_DENIED|ProjectPermissionDenied/i.test(msg)) {
+    return {
+      error:
+        "Google Classroom only allows the app that created an assignment to attach files or turn it in — teacher-created assignments cannot be submitted by Yomi (Google API restriction; no scope unlocks this).",
+      hint:
+        "Do this instead: create the solution file with drive-createFile, share the Drive link with the user, and give them the assignment's link (from classroom-getAssignment) so they can attach and turn it in themselves in one click.",
+    }
+  }
+  return connectorError(err)
+}
+
 export function createClassroomTools(ctx: ConnectorContext): ToolSet {
   async function classroom<T>(path: string, init?: RequestInit): Promise<T> {
     const token = await ctx.getAccessToken(ctx.userId, "google-classroom")
@@ -124,6 +160,46 @@ export function createClassroomTools(ctx: ConnectorContext): ToolSet {
       },
     }),
 
+    "classroom-getAssignment": tool({
+      description:
+        "Read one Classroom assignment in full: the complete question/description, attached materials, due date, points, and the assignment link. Materials of type driveFile can be read with drive-readFile using their driveFileId (e.g. a question PDF). To produce a solution, generate it with drive-createFile and give the user this assignment's link to attach and submit it. Get courseId and courseWorkId from classroom-listAssignments.",
+      parameters: z.object({
+        courseId: z.string().describe("Classroom course ID"),
+        courseWorkId: z.string().describe("Assignment (courseWork) ID"),
+      }),
+      execute: async ({ courseId, courseWorkId }) => {
+        try {
+          const w = await classroom<{
+            id: string
+            title?: string
+            description?: string
+            materials?: ClassroomMaterial[]
+            dueDate?: { year: number; month: number; day: number }
+            dueTime?: { hours?: number; minutes?: number }
+            maxPoints?: number
+            workType?: string
+            state?: string
+            alternateLink?: string
+          }>(
+            `/courses/${encodeURIComponent(courseId)}/courseWork/${encodeURIComponent(courseWorkId)}`,
+          )
+          return {
+            id: w.id,
+            title: w.title ?? "(untitled)",
+            description: w.description ?? "",
+            materials: (w.materials ?? []).map(formatMaterial),
+            due: formatDue(w.dueDate, w.dueTime) ?? "No due date",
+            points: w.maxPoints,
+            type: w.workType,
+            state: w.state,
+            link: w.alternateLink,
+          }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
     "classroom-listAnnouncements": tool({
       description:
         "List recent announcements posted in a Classroom course. Get the courseId from classroom-listCourses.",
@@ -194,7 +270,7 @@ export function createClassroomTools(ctx: ConnectorContext): ToolSet {
 
     "classroom-modifyAttachments": tool({
       description:
-        "Attach a Google Drive file to an assignment submission. Use this AFTER creating the file with drive-createFile. Requires courseId and courseWorkId from classroom-listAssignments, and a Drive fileId from drive-createFile.",
+        "Attach a Google Drive file to an assignment submission. ONLY works on coursework that was created through Yomi — teacher-created assignments return an error (Google API restriction); for those, share the Drive file link plus the assignment link from classroom-getAssignment instead. Requires courseId and courseWorkId from classroom-listAssignments, and a Drive fileId from drive-createFile.",
       parameters: z.object({
         courseId: z.string().describe("Classroom course ID"),
         courseWorkId: z.string().describe("Assignment (courseWork) ID"),
@@ -245,7 +321,7 @@ export function createClassroomTools(ctx: ConnectorContext): ToolSet {
                 message: "File attached to submission.",
               }
             } catch (err) {
-              return connectorError(err)
+              return classroomWriteError(err)
             }
           },
         )
@@ -254,7 +330,7 @@ export function createClassroomTools(ctx: ConnectorContext): ToolSet {
 
     "classroom-turnIn": tool({
       description:
-        "Turn in (submit) an assignment. Call this AFTER attaching files with classroom-modifyAttachments. Requires courseId and courseWorkId from classroom-listAssignments. Turning in transfers ownership of attached Drive files to the teacher and prevents further edits.",
+        "Turn in (submit) an assignment. Call this AFTER attaching files with classroom-modifyAttachments. ONLY works on coursework created through Yomi — teacher-created assignments return an error (Google API restriction); for those, give the user the assignment link from classroom-getAssignment to submit manually. Turning in transfers ownership of attached Drive files to the teacher and prevents further edits.",
       parameters: z.object({
         courseId: z.string().describe("Classroom course ID"),
         courseWorkId: z.string().describe("Assignment (courseWork) ID"),
@@ -281,7 +357,7 @@ export function createClassroomTools(ctx: ConnectorContext): ToolSet {
               )
               return { ok: true, message: "Assignment turned in successfully." }
             } catch (err) {
-              return connectorError(err)
+              return classroomWriteError(err)
             }
           },
         )
