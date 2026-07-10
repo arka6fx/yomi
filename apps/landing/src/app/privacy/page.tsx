@@ -46,20 +46,29 @@ export default function PrivacyPage() {
               <ul>
                 <li>
                   <strong className="text-label">Gmail</strong> (
-                  <code className="text-sky-100/70">gmail.readonly</code>,{" "}
                   <code className="text-sky-100/70">gmail.modify</code>,{" "}
-                  <code className="text-sky-100/70">gmail.send</code>) to read, search, and send
-                  emails when you ask Yomi a question about your inbox.
+                  <code className="text-sky-100/70">gmail.send</code>) to read, search, organize,
+                  and send emails when you ask Yomi a question about your inbox.
                 </li>
                 <li>
                   <strong className="text-label">Google Calendar</strong> (
-                  <code className="text-sky-100/70">calendar.readonly</code>) to answer schedule
-                  queries such as &ldquo;What&apos;s on my calendar today?&rdquo;
+                  <code className="text-sky-100/70">calendar</code>) to answer schedule queries
+                  such as &ldquo;What&apos;s on my calendar today?&rdquo; and to create, update, or
+                  delete events when you ask — every change requires your approval first.
                 </li>
                 <li>
                   <strong className="text-label">Google Drive</strong> (
-                  <code className="text-sky-100/70">drive.file</code>) to list and read files you
-                  have chosen to share with Yomi.
+                  <code className="text-sky-100/70">drive</code>) to search and read your Drive
+                  files when you ask about them, and to create or convert documents,
+                  spreadsheets, and presentations on your request.
+                </li>
+                <li>
+                  <strong className="text-label">Google Classroom</strong> (
+                  <code className="text-sky-100/70">classroom.courses.readonly</code>,{" "}
+                  <code className="text-sky-100/70">classroom.coursework.me</code>,{" "}
+                  <code className="text-sky-100/70">classroom.announcements.readonly</code>) to
+                  list your classes, assignments, and announcements and check your own submission
+                  status.
                 </li>
               </ul>
               <p>
