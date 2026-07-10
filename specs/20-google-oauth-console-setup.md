@@ -125,12 +125,18 @@ immediately — no CASA yet. Refresh tokens for sensitive/restricted scopes
 
 Go to **APIs & Services → Library** and enable each API:
 
-| API                  | Search name            | Required for        |
-| -------------------- | ---------------------- | ------------------- |
-| Gmail API            | `Gmail API`            | Gmail connector     |
-| Google Calendar API  | `Google Calendar API`  | Calendar connector  |
-| Google Drive API     | `Google Drive API`     | Drive connector     |
-| Google Classroom API | `Google Classroom API` | Classroom connector |
+| API                  | Search name            | Required for                                     |
+| -------------------- | ---------------------- | ------------------------------------------------ |
+| Gmail API            | `Gmail API`            | Gmail connector                                  |
+| Google Calendar API  | `Google Calendar API`  | Calendar connector                               |
+| Google Drive API     | `Google Drive API`     | Drive connector                                  |
+| Google Classroom API | `Google Classroom API` | Classroom connector                              |
+| Google Slides API    | `Google Slides API`    | `drive-createFile` building multi-slide decks    |
+| Google Sheets API    | `Google Sheets API`    | `drive-createFile` writing spreadsheet rows      |
+
+> Slides and Sheets creation runs through the **Drive scope** (no extra scope),
+> but the Slides API and Sheets API themselves must be enabled or those
+> `drive-createFile` calls 403 with “API not enabled”.
 
 **Checklist**
 
@@ -138,6 +144,8 @@ Go to **APIs & Services → Library** and enable each API:
 - [ ] Google Calendar API — Enabled
 - [ ] Google Drive API — Enabled
 - [ ] Google Classroom API — Enabled
+- [ ] Google Slides API — Enabled
+- [ ] Google Sheets API — Enabled
 
 ---
 
@@ -372,9 +380,9 @@ the Drive connector; Docs/Sheets/Slides connectors edit by file ID.
 
 ```
 [ ] Step 1  Project + OAuth Web client confirmed
-[ ] Step 2  4 APIs enabled (Gmail, Calendar, Drive, Classroom)
+[ ] Step 2  6 APIs enabled (Gmail, Calendar, Drive, Classroom, Slides, Sheets)
 [ ] Step 3  Consent screen basics + authorized domain
-[ ] Step 4  7 scopes registered on Data access
+[ ] Step 4  8 scopes registered on Data access
 [ ] Step 5  Test users added
 [ ] Step 6  4 prod redirect URIs (+ local if needed)
 [ ] Step 7  GOOGLE_* secrets + BETTER_AUTH_BASE_URL in Worker
