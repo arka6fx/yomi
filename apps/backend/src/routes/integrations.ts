@@ -1,5 +1,6 @@
 import { Hono } from "hono"
 import { eq, and } from "drizzle-orm"
+import { googleGmailDef } from "@yomi/agent-core"
 import { db, mcpConnections } from "@yomi/db"
 import { authenticate, getAuth } from "../auth.js"
 import { checkConsent, grantConsentIfUndecided } from "../services/privacy/checks.js"
@@ -89,12 +90,11 @@ async function resolveInternalUser(c: {
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 const GOOGLE_REVOKE_URL = "https://oauth2.googleapis.com/revoke"
-const GOOGLE_SCOPES = [
-  "https://www.googleapis.com/auth/gmail.readonly",
-  "https://www.googleapis.com/auth/gmail.modify",
-  "https://www.googleapis.com/auth/gmail.send",
-  "https://www.googleapis.com/auth/userinfo.email",
-].join(" ")
+// Scope source of truth is the Gmail ConnectorDef — this legacy /connect/google
+// route predates the generic /connect/:id path but must request identical scopes.
+const GOOGLE_SCOPES = (googleGmailDef.auth.kind === "oauth2" ? googleGmailDef.auth.scopes : []).join(
+  " ",
+)
 
 function googleClientId(): string {
   const v = process.env.GOOGLE_INTEGRATIONS_CLIENT_ID

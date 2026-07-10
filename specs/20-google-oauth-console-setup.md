@@ -49,22 +49,24 @@ added once.
 
 | Scope                                                              | Used by   | Google tier    | Notes                                                                |
 | ------------------------------------------------------------------ | --------- | -------------- | -------------------------------------------------------------------- |
-| `https://mail.google.com/`                                         | Gmail     | **Restricted** | Full mailbox read/send/modify. Requires CASA for public release.     |
+| `https://www.googleapis.com/auth/gmail.modify`                     | Gmail     | **Restricted** | Read/send/modify mail (no permanent delete). Requires CASA.          |
+| `https://www.googleapis.com/auth/gmail.send`                       | Gmail     | Sensitive      | Send mail.                                                            |
 | `https://www.googleapis.com/auth/drive`                            | Drive     | **Restricted** | Full Drive access. Requires CASA for public release.                 |
 | `https://www.googleapis.com/auth/calendar`                         | Calendar  | Sensitive      | Read + create/edit/delete events. Brand verification for public use. |
 | `https://www.googleapis.com/auth/classroom.courses.readonly`       | Classroom | **Restricted** | Read enrolled classes.                                               |
-| `https://www.googleapis.com/auth/classroom.coursework.me.readonly` | Classroom | **Restricted** | Read your assignments / due dates.                                   |
+| `https://www.googleapis.com/auth/classroom.coursework.me`          | Classroom | **Restricted** | Read + manage your own assignments / submissions.                    |
 | `https://www.googleapis.com/auth/classroom.announcements.readonly` | Classroom | **Restricted** | Read class announcements.                                            |
 | `https://www.googleapis.com/auth/userinfo.email`                   | All four  | Non-sensitive  | Shows connected account email in dashboard.                          |
 
-**Copy-paste list (7 scopes):**
+**Copy-paste list (8 scopes):**
 
 ```
-https://mail.google.com/
+https://www.googleapis.com/auth/gmail.modify
+https://www.googleapis.com/auth/gmail.send
 https://www.googleapis.com/auth/drive
 https://www.googleapis.com/auth/calendar
 https://www.googleapis.com/auth/classroom.courses.readonly
-https://www.googleapis.com/auth/classroom.coursework.me.readonly
+https://www.googleapis.com/auth/classroom.coursework.me
 https://www.googleapis.com/auth/classroom.announcements.readonly
 https://www.googleapis.com/auth/userinfo.email
 ```
@@ -74,8 +76,8 @@ https://www.googleapis.com/auth/userinfo.email
 | Tier          | Scopes in Yomi today               | Test with your account            | Launch to all users                                              |
 | ------------- | ---------------------------------- | --------------------------------- | ---------------------------------------------------------------- |
 | Non-sensitive | `userinfo.email`                   | Works in Testing mode             | Works after publish                                              |
-| Sensitive     | `calendar`                         | Works in Testing mode + test user | Brand verification (~2–3 business days)                          |
-| Restricted    | Gmail, Drive, all Classroom scopes | Works in Testing mode + test user | Brand verification **+ annual CASA security assessment** (weeks) |
+| Sensitive     | `calendar`, `gmail.send`                    | Works in Testing mode + test user | Brand verification (~2–3 business days)                          |
+| Restricted    | `gmail.modify`, Drive, all Classroom scopes | Works in Testing mode + test user | Brand verification **+ annual CASA security assessment** (weeks) |
 
 **Testing mode shortcut:** While the app is in **Testing** publishing status,
 add your Google account under **Test users**. You can use restricted scopes
@@ -169,18 +171,19 @@ complete.
 
 1. OAuth consent screen → **Data access** (or **Scopes** on older UI).
 2. Click **Add or remove scopes**.
-3. Add all **7 scopes** from the
+3. Add all **8 scopes** from the
    [Scope reference](#scope-reference-register-all-of-these) section.
    - Restricted scopes may show a warning — that’s expected.
 4. Save.
 
 **Checklist**
 
-- [ ] `https://mail.google.com/`
+- [ ] `https://www.googleapis.com/auth/gmail.modify`
+- [ ] `https://www.googleapis.com/auth/gmail.send`
 - [ ] `https://www.googleapis.com/auth/drive`
 - [ ] `https://www.googleapis.com/auth/calendar`
 - [ ] `https://www.googleapis.com/auth/classroom.courses.readonly`
-- [ ] `https://www.googleapis.com/auth/classroom.coursework.me.readonly`
+- [ ] `https://www.googleapis.com/auth/classroom.coursework.me`
 - [ ] `https://www.googleapis.com/auth/classroom.announcements.readonly`
 - [ ] `https://www.googleapis.com/auth/userinfo.email`
 
