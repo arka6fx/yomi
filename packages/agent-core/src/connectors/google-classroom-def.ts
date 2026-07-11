@@ -163,7 +163,8 @@ export function createClassroomTools(ctx: ConnectorContext): ToolSet {
     "classroom-getAssignment": tool({
       description:
         "Read one Classroom assignment in full: the complete question/description, attached materials, due date, points, and the assignment link. Materials of type driveFile can be read with drive-readFile using their driveFileId (e.g. a question PDF). Get courseId and courseWorkId from classroom-listAssignments. " +
-        "To produce a solution: (1) obey any submission format the teacher states in the description — required cover-page fields (name, roll number, section, university), file naming, and whether they want a written document or a slide deck; these vary per assignment, so read them from the description rather than assuming, and take the student's own details from memory instead of asking if they are already known; " +
+        "Returns courseName and courseSection alongside the assignment — use them to fill cover-page fields instead of asking the user. " +
+        "To produce a solution: (1) obey any submission format the teacher states in the description — required cover-page fields (name, roll number, section, university), file naming, and whether they want a written document or a slide deck; these vary per assignment, so read them from the description rather than assuming. Fill each field from what is already known (courseName/courseSection from this tool, the student's details from memory) and ask the user only for what is genuinely unavailable — a roll number exists in no Google API, so it must be asked once and then remembered; " +
         "(2) generate it with drive-createFile (kind=document for a write-up, kind=presentation for a deck); " +
         "(3) convert it with drive-convertFile to pdf — Classroom submissions are almost always expected as PDF; " +
         "(4) hand back the PDF link plus this assignment's link so the user can attach and turn it in. Yomi cannot turn in teacher-created assignments itself (Google restriction), so that last click is always the user's.",
@@ -173,24 +174,35 @@ export function createClassroomTools(ctx: ConnectorContext): ToolSet {
       }),
       execute: async ({ courseId, courseWorkId }) => {
         try {
-          const w = await classroom<{
-            id: string
-            title?: string
-            description?: string
-            materials?: ClassroomMaterial[]
-            dueDate?: { year: number; month: number; day: number }
-            dueTime?: { hours?: number; minutes?: number }
-            maxPoints?: number
-            workType?: string
-            state?: string
-            alternateLink?: string
-          }>(
-            `/courses/${encodeURIComponent(courseId)}/courseWork/${encodeURIComponent(courseWorkId)}`,
-          )
+          // Fetch the course too: cover pages routinely ask for the class name and
+          // section, and both live on the course, not the coursework. Without them the
+          // agent would have to stop and ask the user for something Google already
+          // knows. Best-effort — a missing course must not fail reading the assignment.
+          const [w, course] = await Promise.all([
+            classroom<{
+              id: string
+              title?: string
+              description?: string
+              materials?: ClassroomMaterial[]
+              dueDate?: { year: number; month: number; day: number }
+              dueTime?: { hours?: number; minutes?: number }
+              maxPoints?: number
+              workType?: string
+              state?: string
+              alternateLink?: string
+            }>(
+              `/courses/${encodeURIComponent(courseId)}/courseWork/${encodeURIComponent(courseWorkId)}`,
+            ),
+            classroom<{ name?: string; section?: string }>(
+              `/courses/${encodeURIComponent(courseId)}?fields=name,section`,
+            ).catch(() => ({}) as { name?: string; section?: string }),
+          ])
           return {
             id: w.id,
             title: w.title ?? "(untitled)",
             description: w.description ?? "",
+            courseName: course.name,
+            courseSection: course.section,
             materials: (w.materials ?? []).map(formatMaterial),
             due: formatDue(w.dueDate, w.dueTime) ?? "No due date",
             points: w.maxPoints,
