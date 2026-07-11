@@ -17,7 +17,7 @@ are registered through `packages/agent-core/src/connectors/all-defs.ts`.
 | Google Classroom | `google-classroom` | `google-classroom.md` |     6 | Implemented, read-write (gated writes)  |
 | Google Tasks     | `google-tasks`     | `google-tasks.md`     |     6 | Implemented                             |
 | Google Contacts  | `google-contacts`  | `google-contacts.md`  |     7 | Implemented                             |
-| Google Meet      | `google-meet`      | `google-meet.md`      |     6 | Implemented                             |
+| Google Meet      | `google-meet`      | `google-meet.md`      |     7 | Implemented                             |
 | GitHub           | `github`           | `github.md`           |    23 | Implemented                             |
 | Notion           | `notion`           | `notion.md`           |    12 | Implemented                             |
 | Slack            | `slack`            | `slack.md`            |     9 | Implemented                             |

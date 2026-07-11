@@ -21,6 +21,54 @@ afterEach(() => {
   globalThis.fetch = originalFetch
 })
 
+describe("meet-updateSpaceSettings", () => {
+  // "Make it open to anyone with the link" minted a BRAND NEW space, because no tool
+  // could edit an existing one — so the link the user had already shared kept its old
+  // access, and we were requesting meetings.space.settings ("Edit ... settings") with
+  // nothing that edits anything.
+  function patchFetch() {
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      requests.push({
+        url: String(input),
+        method: init?.method ?? "GET",
+        body: String(init?.body ?? ""),
+      })
+      return Response.json({
+        name: "spaces/abc123",
+        meetingUri: "https://meet.google.com/mex-ifym-mfn",
+        config: { accessType: "OPEN" },
+      })
+    }) as typeof fetch
+  }
+
+  it("patches the existing space instead of creating a new one", async () => {
+    patchFetch()
+    const result = (await executeTool("meet-updateSpaceSettings", {
+      spaceId: "spaces/abc123",
+      accessType: "OPEN",
+    })) as { accessType?: string; link?: string }
+
+    expect(requests).toHaveLength(1)
+    const req = requests[0]!
+    expect(req.method).toBe("PATCH")
+    expect(req.url).toContain("/spaces/abc123")
+    expect(req.url).toContain("updateMask=config.accessType")
+    expect(JSON.parse(req.body)).toEqual({ config: { accessType: "OPEN" } })
+    // The link the user already shared must survive the change.
+    expect(result.link).toBe("https://meet.google.com/mex-ifym-mfn")
+    expect(result.accessType).toBe("OPEN")
+  })
+
+  it("accepts a bare meeting code as well as a spaces/ id", async () => {
+    patchFetch()
+    await executeTool("meet-updateSpaceSettings", {
+      spaceId: "mex-ifym-mfn",
+      accessType: "RESTRICTED",
+    })
+    expect(requests[0]?.url).toContain("/spaces/mex-ifym-mfn")
+  })
+})
+
 describe("google meet connector", () => {
   it("requests both the created and readonly meeting scopes", () => {
     const scopes = googleMeetDef.auth.kind === "oauth2" ? googleMeetDef.auth.scopes : []
