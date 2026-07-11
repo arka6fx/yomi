@@ -355,10 +355,11 @@ Assistant: ${cleanOutput}`,
   }
 }
 
-// Google Calendar knows the user's zone and nothing else does — we store no
-// timezone. Cached because it changes about never, and re-fetching it on every turn
-// would add a Google round-trip to every single message.
-const TZ_CACHE_MS = 6 * 60 * 60 * 1000
+// Google Calendar knows the user's zone and nothing else does — we store no timezone.
+// Cached to keep a Google round-trip off every message, but only briefly: a user who
+// corrects a wrong calendar timezone (Google's default is UTC, so this happens) should
+// see Yomi agree within minutes, not hours.
+const TZ_CACHE_MS = 15 * 60 * 1000
 const timeZoneCache = new Map<string, { tz: string | null; at: number }>()
 
 async function resolveUserTimeZone(userId: string): Promise<string | null> {
