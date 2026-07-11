@@ -77,6 +77,12 @@ export class GatewayRunner {
   private sessions: Map<string, GatewaySession> = new Map()
   private conversationHistories: Map<string, ConversationEntry> = new Map()
   private activeRuns: Map<string, AbortController> = new Map()
+  // Uncharged resumes since the last charged turn, per chat. A resume can propose a
+  // further gated write, so approving repeatedly would otherwise fund an unbounded
+  // chain of free agent runs off one charged message. Past the cap, resumes are
+  // billed like any other turn; a legitimate multi-write task never gets near it.
+  private freeResumes: Map<string, number> = new Map()
+  private static readonly MAX_FREE_RESUMES = 8
   private running = false
   private defaultSidecarUrl: string
   private sidecarSecret: string
@@ -366,6 +372,11 @@ export class GatewayRunner {
     yomiUserId: string,
     approvalReply: string,
   ): Promise<void> {
+    const key = this.runKey(msg.platform, msg.chatId)
+    const used = this.freeResumes.get(key) ?? 0
+    const free = used < GatewayRunner.MAX_FREE_RESUMES
+    this.freeResumes.set(key, used + 1)
+
     const controller = new AbortController()
     const timeoutMs = Number(process.env["YOMI_AGENT_RUN_TIMEOUT_MS"] ?? 60_000)
     const timeout = setTimeout(() => controller.abort(), timeoutMs)
@@ -377,7 +388,7 @@ export class GatewayRunner {
         signal: controller.signal,
         sourcePlatform: msg.platform,
         sourceChatId: msg.chatId,
-        skipCharge: true,
+        skipCharge: free,
       })
       const reply = result.text.trim()
       if (!reply) return
@@ -1432,6 +1443,8 @@ export class GatewayRunner {
           runTimedOut = true
           runController?.abort()
         }, timeoutMs)
+        // A real user turn is charged, so the free-resume allowance starts over.
+        this.freeResumes.delete(this.runKey(msg.platform, msg.chatId))
         const result = await runAgent({
           userId: yomiUserId,
           text: msg.text,
