@@ -437,7 +437,7 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
 
     "gmail-applyLabels": tool({
       description:
-        "Add or remove labels on a Gmail message. Use gmail-listLabels first to get available label IDs.",
+        "Add or remove labels on a Gmail message — this is the tool that actually puts a message under a label. Get label IDs from gmail-listLabels; if the label does not exist yet, create it with gmail-createLabel first and pass the id it returns. Get the messageId from gmail-searchEmails or gmail-getImportantEmails.",
       parameters: z.object({
         messageId: z.string().describe("The Gmail message ID to modify"),
         addLabelIds: z.array(z.string()).optional().describe("Label IDs to add"),
@@ -640,7 +640,8 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
 
     "gmail-createLabel": tool({
       description:
-        "Create a new Gmail label. The label will appear in the user's Gmail sidebar. Use gmail-listLabels to see existing labels.",
+        "Create a new Gmail label and return its id. The label appears in the sidebar but starts EMPTY — creating it does not put any message in it. " +
+        "When the user asked to label a message (e.g. 'label the invoice as Finance'), this is only step one: check gmail-listLabels first, create the label here only if it does not already exist, then call gmail-applyLabels with the returned id to actually label the message. Creating the label alone does not complete that request.",
       parameters: z.object({
         name: z.string().describe("Name of the new label"),
       }),

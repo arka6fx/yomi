@@ -183,6 +183,25 @@ describe("gmail-saveAttachmentToDrive", () => {
   })
 })
 
+describe("label routing", () => {
+  // "Label the invoice as Finance" once stopped after gmail-createLabel: the label
+  // was created empty and the message never went into it, because the description
+  // did not say creating a label labels nothing. Both tools must point at each other.
+  function description(name: string): string {
+    return (tools()[name] as { description: string }).description
+  }
+
+  it("tells the agent that creating a label does not label the message", () => {
+    const d = description("gmail-createLabel")
+    expect(d).toContain("EMPTY")
+    expect(d).toContain("gmail-applyLabels")
+  })
+
+  it("points applyLabels back at createLabel for a label that does not exist", () => {
+    expect(description("gmail-applyLabels")).toContain("gmail-createLabel")
+  })
+})
+
 describe("gmail def surface", () => {
   it("no longer offers permanent deletion or the full-mailbox scope", () => {
     expect(Object.keys(tools())).not.toContain("gmail-deletePermanently")
