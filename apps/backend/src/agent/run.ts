@@ -355,26 +355,68 @@ Assistant: ${cleanOutput}`,
   }
 }
 
-function buildSystemWithContext(
+// Google Calendar knows the user's zone and nothing else does — we store no
+// timezone. Cached because it changes about never, and re-fetching it on every turn
+// would add a Google round-trip to every single message.
+const TZ_CACHE_MS = 6 * 60 * 60 * 1000
+const timeZoneCache = new Map<string, { tz: string | null; at: number }>()
+
+async function resolveUserTimeZone(userId: string): Promise<string | null> {
+  const hit = timeZoneCache.get(userId)
+  if (hit && Date.now() - hit.at < TZ_CACHE_MS) return hit.tz
+
+  let tz: string | null = null
+  try {
+    const token = await getAccessToken(userId, "google-calendar")
+    if (token) {
+      const res = await fetch(
+        "https://www.googleapis.com/calendar/v3/users/me/settings/timezone",
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      if (res.ok) {
+        const data = (await res.json()) as { value?: string }
+        tz = data.value ?? null
+      }
+    }
+  } catch {
+    // best-effort — a missing timezone just falls back to the server clock
+  }
+  timeZoneCache.set(userId, { tz, at: Date.now() })
+  return tz
+}
+
+export function buildSystemWithContext(
   memoryContext: string,
   ragContext: string,
   profile?: { staticProfile: string; dynamicProfile: string },
   desktopOnlyConnected: string[] = [],
   userSoul?: string | null,
   recentChat?: string,
+  timeZone?: string | null,
 ): string {
+  // The box runs UTC. Without the user's zone this said "today is the 11th" to
+  // someone whose phone said the 12th, so "tomorrow at 4pm" booked yesterday —
+  // wrong every evening after the UTC date rolls over.
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
+    ...(timeZone ? { timeZone } : {}),
   })
   const appUrl = process.env["YOMI_APP_URL"] ?? "https://getyomi.in"
   // Prefer the user's onboarded personality; fall back to the global env soul, then
   // to the built-in default (handled by formatAgentSoul when undefined).
   const soul = userSoul?.trim() || process.env["YOMI_AGENT_SOUL"]
   return (
-    `You are Yomi, a helpful AI assistant. Today is ${today}.\n` +
+    `You are Yomi, a helpful AI assistant. Today is ${today}${
+      timeZone
+        ? ` in the user's timezone (${timeZone}), where it is currently ${new Date().toLocaleTimeString(
+            "en-US",
+            { hour: "numeric", minute: "2-digit", timeZone },
+          )}. Resolve "today", "tomorrow" and any clock time against that, never against UTC`
+        : ""
+    }.\n` +
     `This is a chat/messaging interface, not a document. Keep replies as long as they need to be and no longer: answer directly, skip preamble, don't restate the question, and never pad to fill space. A sentence or two is usually plenty; use a few bullet points only when genuinely listing items, and expand only when the user asks for detail or the task truly needs it. Don't be curt either, just say what's useful.\n` +
     `Write the way a sharp, friendly person texts. Do not use em dashes or en dashes; use commas, periods, or parentheses instead.\n` +
     `${formatAgentSoul(soul)}\n\n` +
@@ -528,6 +570,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
 
   let text: string
   const startedAt = Date.now()
+  const userTimeZone = await resolveUserTimeZone(opts.userId)
   try {
     text = await runAgentLoop({
       registry,
@@ -540,6 +583,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
         registry.getDesktopOnlyConnected(),
         user.agentSoul,
         recentChat,
+        userTimeZone,
       ),
       maxTokens: maxOutputTokensFor(opts.text),
       signal: opts.signal,
