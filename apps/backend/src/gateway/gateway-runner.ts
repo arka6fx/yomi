@@ -288,8 +288,13 @@ export class GatewayRunner {
                 "I couldn't find that pending action. It may have expired or already been handled.",
               executed: false,
             }
+          // A failed action must not read as a success, and must not resume the plan:
+          // there is nothing to continue from.
           if (result.status !== "executed")
-            return { reply: `Approved: ${result.status}`, executed: false }
+            return {
+              reply: formatActionResult(result.result, `That didn't work: ${result.status}`),
+              executed: false,
+            }
           return {
             reply: `Approved and executed.\n${formatActionResult(result.result, `Done: ${result.title ?? "action"}`)}`,
             executed: true,

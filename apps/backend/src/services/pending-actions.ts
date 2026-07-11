@@ -223,11 +223,25 @@ export async function denyPendingAction(userId: string, id: string) {
 
 // Human-readable outcome of an executed action: the tool's message plus any
 // link it returned (calendar event URL, created doc, GitHub issue, ...).
+// Connector tools do not throw on failure — they RETURN { error }. Treating that as
+// success reported a calendar event that was never created as "Approved and executed."
+export function isErrorResult(result: unknown): boolean {
+  if (typeof result !== "object" || result === null) return false
+  const record = result as Record<string, unknown>
+  if (typeof record["error"] === "string") return true
+  return record["ok"] === false
+}
+
 export function formatActionResult(result: unknown, fallback: string): string {
   const record = (typeof result === "object" && result !== null ? result : {}) as Record<
     string,
     unknown
   >
+  if (isErrorResult(record)) {
+    const err = typeof record["error"] === "string" ? record["error"] : "the action failed"
+    const hint = typeof record["hint"] === "string" ? record["hint"] : null
+    return [`That didn't work: ${err}`, hint].filter(Boolean).join("\n")
+  }
   const message = typeof record["message"] === "string" ? record["message"] : fallback
   const link =
     typeof record["link"] === "string"
@@ -271,9 +285,12 @@ export async function approvePendingAction(
 
   try {
     const result = await executePendingAction(approved)
+    // A tool that returned { error } did not do the thing — recording that as
+    // "executed" is how a calendar event that was never created got reported as done.
+    const status = isErrorResult(result) ? "failed" : "executed"
     const [executed] = await db
       .update(pendingActions)
-      .set({ status: "executed", result, executedAt: new Date(), updatedAt: new Date() })
+      .set({ status, result, executedAt: new Date(), updatedAt: new Date() })
       .where(and(eq(pendingActions.id, id), eq(pendingActions.userId, userId)))
       .returning({
         id: pendingActions.id,
@@ -296,7 +313,7 @@ export async function approvePendingAction(
         .catch(() => {})
     }
 
-    return executed ?? { id, status: "executed", result, title: approved.title }
+    return executed ?? { id, status, result, title: approved.title }
   } catch (err) {
     const result = { ok: false, error: err instanceof Error ? err.message : String(err) }
     await db
