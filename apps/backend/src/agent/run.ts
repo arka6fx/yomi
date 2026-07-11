@@ -25,6 +25,10 @@ export interface RunAgentOptions {
   signal?: AbortSignal
   sourcePlatform?: string
   sourceChatId?: string
+  // Set when resuming a turn the user already paid for — approving a gated write
+  // re-enters the loop so the agent can finish its plan, and billing that "yes" as
+  // a fresh message would charge a multi-write task once per approval.
+  skipCharge?: boolean
 }
 
 export interface RunAgentResult {
@@ -449,11 +453,15 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   // Credits are the single gate: charge before doing any paid work. The helper
   // records the bot_message usage event and consumes the credit; if the balance
   // can't cover it (or the plan is inactive) we return the block message and bail.
-  const charge = await chargeUsage({ user, kind: "bot_message" })
-  if (!charge.ok) {
-    return { text: charge.message, quotaError: true }
+  // A resumed turn is already paid for — see skipCharge.
+  let usageEventId: string | null = null
+  if (!opts.skipCharge) {
+    const charge = await chargeUsage({ user, kind: "bot_message" })
+    if (!charge.ok) {
+      return { text: charge.message, quotaError: true }
+    }
+    usageEventId = charge.usageEventId ?? null
   }
-  const usageEventId = charge.usageEventId
 
   const registry = new ConnectorRegistry({
     excludeNodeOnly: true,
