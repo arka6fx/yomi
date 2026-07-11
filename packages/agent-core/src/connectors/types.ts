@@ -11,12 +11,20 @@ export interface EmailSummary {
   labels: string[]
 }
 
+export interface EmailAttachment {
+  attachmentId: string
+  filename: string
+  mimeType: string
+  size?: number
+}
+
 export interface EmailDetail extends EmailSummary {
   to: string[]
   cc: string[]
   bcc: string[]
   body: string // plain-text decoded body
   htmlBody?: string
+  attachments: EmailAttachment[]
 }
 
 export interface EmailDraft {

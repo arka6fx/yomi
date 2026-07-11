@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test"
 import { createGmailTools, googleGmailDef } from "./google-gmail-def.js"
+import { extractAttachments } from "./google-gmail.js"
 
 const originalFetch = globalThis.fetch
 let requests: { url: string; method: string; auth: string; body: unknown }[] = []
@@ -180,6 +181,49 @@ describe("gmail-saveAttachmentToDrive", () => {
     }
     expect(result.error).toContain("not connected")
     expect(result.hint).toContain("connect Google Drive")
+  })
+})
+
+describe("attachment discovery", () => {
+  // "Save the attachment from Alex's email" failed with "Gmail isn't showing any
+  // attachment metadata" — nothing ever walked the payload for attachments, so
+  // readEmail reported none and gmail-saveAttachmentToDrive was unreachable: the
+  // agent had no attachmentId to give it.
+  it("finds an attachment nested inside multipart parts", () => {
+    const payload = {
+      mimeType: "multipart/mixed",
+      parts: [
+        {
+          mimeType: "multipart/alternative",
+          parts: [
+            { mimeType: "text/plain", body: { data: "" } },
+            { mimeType: "text/html", body: { data: "" } },
+          ],
+        },
+        {
+          mimeType: "image/png",
+          filename: "pfp.png",
+          body: { attachmentId: "att_abc", size: 20481 },
+        },
+      ],
+    }
+
+    expect(extractAttachments(payload)).toEqual([
+      { attachmentId: "att_abc", filename: "pfp.png", mimeType: "image/png", size: 20481 },
+    ])
+  })
+
+  it("skips inline images that were never really attached", () => {
+    // Pasted inline images carry an attachmentId but no filename.
+    const payload = {
+      mimeType: "multipart/related",
+      parts: [{ mimeType: "image/png", body: { attachmentId: "inline_1" } }],
+    }
+    expect(extractAttachments(payload)).toEqual([])
+  })
+
+  it("returns an empty list for a message with no attachments", () => {
+    expect(extractAttachments({ mimeType: "text/plain", body: { data: "" } })).toEqual([])
   })
 })
 

@@ -48,7 +48,7 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
 
     "gmail-readEmail": tool({
       description:
-        "Read the full content of a single Gmail message by its ID. Returns the full body, headers (from, to, cc), and metadata.",
+        "Read the full content of a single Gmail message by its ID. Returns the full body, headers (from, to, cc), metadata, and an `attachments` list. Each attachment carries the attachmentId that gmail-saveAttachmentToDrive and gmail-getAttachment need — call this first when the user asks to save or open an attachment.",
       parameters: z.object({
         messageId: z.string().describe("The Gmail message ID from a search or list result"),
       }),
@@ -66,6 +66,7 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
             body: email.body.slice(0, 8000),
             isRead: email.isRead,
             labels: email.labels,
+            attachments: email.attachments,
           }
         } catch (err) {
           return connectorError(err)
