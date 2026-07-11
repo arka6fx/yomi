@@ -110,6 +110,60 @@ describe("contacts-resolveRecipient", () => {
   })
 })
 
+describe("search cache warmup and fallback", () => {
+  // Live failure: "Email Alex" replied "I couldn't find Alex's email" while Alex sat
+  // in Google Contacts with that address. The People API search endpoints are backed
+  // by a per-session cache that starts empty — Google requires a warmup request with
+  // an empty query first, and a contact saved minutes ago is otherwise invisible.
+  it("warms the search cache with an empty query before searching", async () => {
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input)
+      requests.push({ url, method: "GET", body: "" })
+      if (url.includes("searchContacts") && url.includes("query=Alex"))
+        return Response.json({ results: [person("Alex", "alex@example.com")] })
+      return Response.json({ results: [] })
+    }) as typeof fetch
+
+    await executeTool("contacts-resolveRecipient", { name: "Alex" })
+
+    const warmups = requests.filter((r) => /query=(&|$)/.test(r.url))
+    expect(warmups.length).toBeGreaterThan(0)
+    expect(warmups.some((r) => r.url.includes("searchContacts"))).toBe(true)
+    // The warmup must precede the real search, or it does nothing.
+    const firstReal = requests.findIndex((r) => r.url.includes("query=Alex"))
+    const firstWarm = requests.findIndex((r) => /query=(&|$)/.test(r.url))
+    expect(firstWarm).toBeLessThan(firstReal)
+  })
+
+  it("falls back to the connections list when search returns nothing", async () => {
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input)
+      requests.push({ url, method: "GET", body: "" })
+      // Every search endpoint comes back empty — the eventually-consistent index.
+      if (url.includes("/connections")) {
+        return Response.json({
+          connections: [
+            {
+              resourceName: "people/c1",
+              names: [{ displayName: "Alex" }],
+              emailAddresses: [{ value: "contact.arkagarai@gmail.com" }],
+            },
+          ],
+        })
+      }
+      return Response.json({ results: [] })
+    }) as typeof fetch
+
+    const result = (await executeTool("contacts-resolveRecipient", { name: "Alex" })) as {
+      resolved?: string
+      matches?: { name?: string; email?: string }[]
+    }
+
+    expect(result.resolved).toBe("contact.arkagarai@gmail.com")
+    expect(result.matches?.[0]?.name).toBe("Alex")
+  })
+})
+
 describe("contacts write", () => {
   it("sends the current etag on update — Google rejects a stale write", async () => {
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
