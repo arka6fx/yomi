@@ -175,6 +175,64 @@ function TelegramIcon({ size = 24 }: IconProps) {
     </svg>
   )
 }
+function GoogleTasksIcon({ size = 24 }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      role="img"
+      aria-label="Google Tasks"
+    >
+      <circle cx="12" cy="12" r="10" fill="#1A73E8" />
+      <path
+        d="M7.5 12.4l3 3 6-6.4"
+        stroke="#fff"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function GoogleContactsIcon({ size = 24 }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      role="img"
+      aria-label="Google Contacts"
+    >
+      <rect x="3" y="3" width="18" height="18" rx="3" fill="#1A73E8" />
+      <circle cx="12" cy="10" r="3" fill="#fff" />
+      <path d="M6.5 18c.7-2.6 2.9-4 5.5-4s4.8 1.4 5.5 4H6.5z" fill="#fff" />
+    </svg>
+  )
+}
+
+function GoogleMeetIcon({ size = 24 }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      role="img"
+      aria-label="Google Meet"
+    >
+      <path d="M2 8a2 2 0 0 1 2-2h9v12H4a2 2 0 0 1-2-2V8z" fill="#00AC47" />
+      <path d="M13 6h5v5l-5 3V6z" fill="#FFBA00" />
+      <path d="M13 14l5 3v-6l-5 3z" fill="#00832D" />
+      <path d="M18 9l4-2.5v11L18 15V9z" fill="#0066DA" />
+      <path d="M2 8a2 2 0 0 1 2-2h4v4H2V8z" fill="#E94235" />
+    </svg>
+  )
+}
+
 function FallbackIcon({ size = 24 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -191,6 +249,9 @@ const ICON_MAP: Record<string, React.FC<IconProps>> = {
   "google-calendar": GoogleCalendarIcon,
   "google-drive": GoogleDriveIcon,
   "google-classroom": GoogleClassroomIcon,
+  "google-tasks": GoogleTasksIcon,
+  "google-contacts": GoogleContactsIcon,
+  "google-meet": GoogleMeetIcon,
   github: GitHubIcon,
   notion: NotionIcon,
   slack: SlackIcon,
