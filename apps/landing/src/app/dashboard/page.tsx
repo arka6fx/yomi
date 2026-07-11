@@ -838,7 +838,10 @@ function DashboardContent() {
               </div>
             )}
             <ConnectorMarketplace
-              connectors={buildCatalog(connectedProviders)}
+              connectors={buildCatalog(
+                connectedProviders,
+                Object.fromEntries(integrationHealth.map((i) => [i.provider, i.displayName])),
+              )}
               theme={DARK_THEME}
               onConnect={handleConnectIntegration}
               onDisconnect={handleDisconnectIntegration}
