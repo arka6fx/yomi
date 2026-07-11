@@ -20,14 +20,27 @@ export interface PlatformAdapter {
 }
 
 export function removeMarkdown(text: string): string {
-  return text
+  // URLs are held out of the way first: Drive file IDs contain underscores, and an
+  // emphasis rule that ate them turned a working link into a dead "unable to open
+  // the file" page. Nothing inside a URL is markdown.
+  const urls: string[] = []
+  const withoutUrls = text.replace(/https?:\/\/\S+/g, (url) => {
+    urls.push(url)
+    return `\u0000URL${urls.length - 1}\u0000`
+  })
+
+  const stripped = withoutUrls
     .replace(/!\[([^\]]*)\]\([^)]+\)/g, "")
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    // Keep the target: "[the PDF](<link>)" must not throw the link away.
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1: $2")
     .replace(/```[a-z]*\n([\s\S]*?)\n```/g, "$1")
     .replace(/~~([^~]+)~~/g, "$1")
-    .replace(/\*{1,2}([^*]+)\*{1,2}/g, "$1")
-    .replace(/_{1,2}([^_]+)_{1,2}/g, "$1")
-    .replace(/`([^`\n]+)`/g, "")
+    .replace(/\*{1,2}([^*\n]+)\*{1,2}/g, "$1")
+    // Emphasis only at word boundaries. Markdown does not italicise mid-word
+    // underscores either, and filenames like Arka_Garai_29_PS2 depend on that.
+    .replace(/(^|\s)_{1,2}([^_\n]+)_{1,2}(?=$|\s|[.,!?;:])/gm, "$1$2")
+    // Unwrap inline code — the old rule deleted its contents outright.
+    .replace(/`([^`\n]+)`/g, "$1")
     .replace(/^>\s+/gm, "")
     .replace(/^[-*+]\s+/gm, "")
     .replace(/^\d+[.)]\s+/gm, "")
@@ -35,6 +48,8 @@ export function removeMarkdown(text: string): string {
     .replace(/^---+$/gm, "")
     .replace(/\n{3,}/g, "\n\n")
     .trim()
+
+  return stripped.replace(/\u0000URL(\d+)\u0000/g, (_m, i) => urls[Number(i)] ?? "")
 }
 
 export function truncateMessage(text: string, maxLen = 2000): string {
