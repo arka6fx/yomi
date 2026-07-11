@@ -66,12 +66,14 @@ step 2 (6 APIs). Scope ≠ API enablement; without enabling, `drive-createFile`
 **What "verified" requires per tier**
 
 - **Non-sensitive** (`userinfo.email`): nothing beyond publishing.
-- **Sensitive** (`gmail.send`, `calendar`): brand verification — consent screen
-  review + demo video. ~2–3 business days.
-- **Restricted** (`gmail.modify`, `drive`, all three Classroom scopes): brand
-  verification **plus** an annual **CASA** (Cloud Application Security
-  Assessment) tier-2 security review. Weeks, and it recurs yearly. This is the
-  real gate; budget for it.
+- **Sensitive** (`gmail.send`, `calendar`, `contacts`, `contacts.other.readonly`,
+  `directory.readonly`, `tasks`, `meetings.space.created`,
+  `meetings.space.readonly`): brand verification — consent screen review + demo
+  video. ~2–3 business days.
+- **Restricted** (`gmail.modify`, `drive` — only these two): brand verification
+  **plus** an annual **CASA** (Cloud Application Security Assessment) tier-2
+  security review. Weeks, and it recurs yearly. This is the real gate; budget
+  for it.
 
 > **`drive` is the scope reviewers scrutinize most.** See §4 before submitting —
 > you may want `drive.file` instead to dodge CASA, at a feature cost.
@@ -112,16 +114,16 @@ actual tools and to [Limited Use](https://developers.google.com/terms/api-servic
 > the user asks for. Create/edit/delete actions are shown to the user for
 > approval before they run.
 
-**`classroom.courses.readonly` (restricted)**
+**`classroom.courses.readonly` (non-sensitive)**
 > Read the list of the signed-in user's own classes so the user can ask about
 > their coursework. Read-only.
 
-**`classroom.coursework.me` (restricted)**
+**`classroom.coursework.me` (non-sensitive)**
 > Read the signed-in student's own assignments, due dates, and submission
 > status, and — only for coursework created through Yomi — attach a file or turn
 > it in on the user's request. Scoped to the user's own work (`.me`).
 
-**`classroom.announcements.readonly` (restricted)**
+**`classroom.announcements.readonly` (non-sensitive)**
 > Read announcements in the user's classes so Yomi can surface them on request.
 > Read-only.
 
@@ -179,6 +181,41 @@ unhurried, one scope-group per scene.
   Calendar events, a Doc named something memorable, one Classroom class).
 - Sign out of Yomi so you can show the full connect flow from scratch.
 - Screen-record at 1080p; no cuts within a scene; narrate what you click.
+
+### 3.0 Dry run first — do NOT record cold
+
+Run every prompt below once before recording. A scene that 403s mid-take costs a
+whole re-record, and a scope the reviewer watches **fail** is worse than one with
+no demo. Seed the data the scenes assume, then confirm each call actually returns.
+
+| # | Seed this first                                     | Then dry-run this ask                          | Scope proved                 |
+| - | --------------------------------------------------- | ---------------------------------------------- | ---------------------------- |
+| 1 | 2–3 unread mails, one labelled-able                 | "Show my most important unread emails"         | `gmail.modify` (read)        |
+| 2 | —                                                   | "Archive the newsletter"                       | `gmail.modify` (organise)    |
+| 3 | —                                                   | "Reply to X saying I'll review it tomorrow"    | `gmail.send`                 |
+| 4 | A Doc named e.g. **Budget 2026**                    | "Find my budget doc and summarise it"          | `drive` (read existing)      |
+| 5 | —                                                   | "Create a slide deck outlining Q3 goals"       | `drive` + Slides API         |
+| 6 | A sheet with a header row                           | "Add a ₹450 coffee expense to my budget sheet" | `drive` + Sheets API         |
+| 7 | 2 upcoming events                                   | "What's on my calendar this week?"             | `calendar`                   |
+| 8 | One Classroom class w/ an assignment                | "What's my next assignment and what does it ask?" | `classroom.coursework.me` |
+| 9 | A saved contact **with an email address**           | "Email <name> and tell him the deck is ready"  | `contacts` (+ `.other`)      |
+| 10| 2 tasks, one completable                            | "What's on my to-do list this week?"           | `tasks`                      |
+| 11| —                                                   | "Give me a Meet link"                          | `meetings.space.created`     |
+| 12| Join + leave that Meet once, so a record exists     | "Who was on my last call?"                     | `meetings.space.readonly`    |
+
+**Known limits to narrate rather than fight** (all three are expected, not bugs):
+
+- **Meet transcripts** need a paid Workspace plan. On personal Gmail, Yomi says so
+  instead of failing — show that. The participants read-back (#12) is what carries
+  `meetings.space.readonly`, so #12 is the one that must work.
+- **`directory.readonly`** has nothing to resolve on a personal Gmail — no
+  Workspace directory exists. Narrate that it resolves colleagues the same way
+  contacts does.
+- **Classroom turn-in / attach** only works on coursework *Yomi itself created* —
+  a Google restriction, not a Yomi bug. Demo reading the assignment; don't attempt
+  a turn-in on a teacher-created one, it will 403 on camera.
+
+If anything else errors during the dry run, stop and fix it — don't record around it.
 
 **Scene 0 — App identity (10s)**
 - Show `https://getyomi.in`, then the dashboard **Integrations** tab.
