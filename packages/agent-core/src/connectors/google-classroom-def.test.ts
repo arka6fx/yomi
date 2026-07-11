@@ -61,6 +61,61 @@ afterEach(() => {
   globalThis.fetch = originalFetch
 })
 
+describe("classroom-listAssignments", () => {
+  // Classroom returns coursework in creation order, so "what's my next assignment"
+  // once answered with an undated lab sheet from one class while a paper due in two
+  // days sat in another. Deadline order across every class is the whole point.
+  function multiCourseFetch() {
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes("/courses?courseStates=ACTIVE")) {
+        return Response.json({
+          courses: [
+            { id: "c_dbms", name: "DBMSLABSecA" },
+            { id: "c_phys", name: "Physics 101" },
+          ],
+        })
+      }
+      if (url.includes("/courses/c_dbms/courseWork")) {
+        return Response.json({
+          courseWork: [{ id: "w_lab", title: "Lab exam top sheet" }], // no due date
+        })
+      }
+      if (url.includes("/courses/c_phys/courseWork")) {
+        return Response.json({
+          courseWork: [
+            { id: "w_late", title: "Final essay", dueDate: { year: 2026, month: 9, day: 1 } },
+            { id: "w_soon", title: "Newton's Laws", dueDate: { year: 2026, month: 7, day: 15 } },
+          ],
+        })
+      }
+      return Response.json({})
+    }) as typeof fetch
+  }
+
+  it("sorts by deadline across every class and puts undated work last", async () => {
+    multiCourseFetch()
+    const result = (await executeTool("classroom-listAssignments", { limit: 20 })) as {
+      assignments: { id: string; courseName?: string }[]
+    }
+
+    expect(result.assignments.map((a) => a.id)).toEqual(["w_soon", "w_late", "w_lab"])
+    // Each row must carry its class, or the agent cannot say which class it belongs to.
+    expect(result.assignments[0]).toMatchObject({ courseName: "Physics 101" })
+    expect(result.assignments[2]).toMatchObject({ courseName: "DBMSLABSecA" })
+  })
+
+  it("narrows to one class when a courseId is given", async () => {
+    multiCourseFetch()
+    const result = (await executeTool("classroom-listAssignments", {
+      courseId: "c_dbms",
+      limit: 20,
+    })) as { assignments: { id: string }[] }
+
+    expect(result.assignments.map((a) => a.id)).toEqual(["w_lab"])
+  })
+})
+
 describe("classroom-getAssignment", () => {
   it("returns the full description, materials, and deep link", async () => {
     const result = (await executeTool("classroom-getAssignment", {

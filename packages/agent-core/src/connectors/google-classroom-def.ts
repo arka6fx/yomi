@@ -16,6 +16,23 @@ function formatDue(
   return `${dueDate.year}-${mm}-${dd} ${hh}:${min} UTC`
 }
 
+// Sortable deadline. Classroom returns coursework in creation order, so "what's my
+// next assignment" has to be answered by due date here — otherwise an undated item
+// created yesterday outranks one due tomorrow.
+function dueTimestamp(
+  dueDate?: { year: number; month: number; day: number },
+  dueTime?: { hours?: number; minutes?: number },
+): number | undefined {
+  if (!dueDate) return undefined
+  return Date.UTC(
+    dueDate.year,
+    dueDate.month - 1,
+    dueDate.day,
+    dueTime?.hours ?? 23,
+    dueTime?.minutes ?? 59,
+  )
+}
+
 // Classroom material union → a flat shape the model can act on directly.
 type ClassroomMaterial = {
   driveFile?: { driveFile?: { id?: string; title?: string; alternateLink?: string } }
@@ -122,37 +139,73 @@ export function createClassroomTools(ctx: ConnectorContext): ToolSet {
 
     "classroom-listAssignments": tool({
       description:
-        "List assignments (coursework) for a Classroom course, with due dates and links. Get the courseId from classroom-listCourses first.",
+        "List assignments (coursework) with due dates and links, sorted by deadline — soonest first, undated last. " +
+        "OMIT courseId to see upcoming work across ALL the user's classes: that is what answers 'what's my next assignment' or 'what's due this week', and it is the right call when the user does not name a class. " +
+        "Pass a courseId (from classroom-listCourses) only to narrow to one class. Each result carries its courseId and courseName, so pass both on to classroom-getAssignment.",
       parameters: z.object({
-        courseId: z.string().describe("Classroom course ID"),
+        courseId: z
+          .string()
+          .optional()
+          .describe(
+            "Classroom course ID. Omit to search every active class, sorted by due date across all of them.",
+          ),
         limit: z.number().int().min(1).max(40).default(20).describe("Max assignments to return"),
       }),
       execute: async ({ courseId, limit }) => {
         try {
-          const data = await classroom<{
-            courseWork?: {
-              id: string
-              title?: string
-              description?: string
-              dueDate?: { year: number; month: number; day: number }
-              dueTime?: { hours?: number; minutes?: number }
-              maxPoints?: number
-              workType?: string
-              state?: string
-              alternateLink?: string
-            }[]
-          }>(`/courses/${encodeURIComponent(courseId)}/courseWork?pageSize=${limit}`)
-          const assignments = (data.courseWork ?? []).map((w) => ({
-            id: w.id,
-            title: w.title ?? "(untitled)",
-            due: formatDue(w.dueDate, w.dueTime) ?? "No due date",
-            points: w.maxPoints,
-            type: w.workType,
-            link: w.alternateLink,
-            description: w.description?.slice(0, 400),
-          }))
+          type Work = {
+            id: string
+            title?: string
+            description?: string
+            dueDate?: { year: number; month: number; day: number }
+            dueTime?: { hours?: number; minutes?: number }
+            maxPoints?: number
+            workType?: string
+            state?: string
+            alternateLink?: string
+          }
+
+          let courses: { id: string; name: string }[]
+          if (courseId) {
+            courses = [{ id: courseId, name: "" }]
+          } else {
+            const list = await classroom<{ courses?: { id: string; name?: string }[] }>(
+              "/courses?courseStates=ACTIVE&pageSize=50",
+            )
+            courses = (list.courses ?? []).map((c) => ({ id: c.id, name: c.name ?? "(untitled)" }))
+            if (courses.length === 0)
+              return { assignments: [], message: "No active classes found." }
+          }
+
+          // One class failing (archived, no access) must not sink the whole answer.
+          const perCourse = await Promise.all(
+            courses.map(async (course) => {
+              const data = await classroom<{ courseWork?: Work[] }>(
+                `/courses/${encodeURIComponent(course.id)}/courseWork?pageSize=${limit}`,
+              ).catch(() => ({ courseWork: [] as Work[] }))
+              return (data.courseWork ?? []).map((w) => ({
+                id: w.id,
+                courseId: course.id,
+                courseName: course.name || undefined,
+                title: w.title ?? "(untitled)",
+                due: formatDue(w.dueDate, w.dueTime) ?? "No due date",
+                dueAt: dueTimestamp(w.dueDate, w.dueTime),
+                points: w.maxPoints,
+                type: w.workType,
+                link: w.alternateLink,
+                description: w.description?.slice(0, 400),
+              }))
+            }),
+          )
+
+          const assignments = perCourse
+            .flat()
+            .sort((a, b) => (a.dueAt ?? Infinity) - (b.dueAt ?? Infinity))
+            .slice(0, limit)
+            .map(({ dueAt: _dueAt, ...rest }) => rest)
+
           if (assignments.length === 0)
-            return { assignments: [], message: "No assignments found for this course." }
+            return { assignments: [], message: "No assignments found." }
           return { count: assignments.length, assignments }
         } catch (err) {
           return connectorError(err)
