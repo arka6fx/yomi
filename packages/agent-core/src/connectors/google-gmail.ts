@@ -1,5 +1,6 @@
 import type {
   Connector,
+  EmailAttachment,
   EmailSummary,
   EmailDetail,
   EmailDraft,
@@ -44,6 +45,30 @@ function extractHtml(payload: GmailPayload): string | undefined {
     }
   }
   return undefined
+}
+
+// Attachments hang off nested multipart/* parts, at any depth. Nothing used to walk
+// for them, so readEmail never reported any — which left gmail-saveAttachmentToDrive
+// unreachable, since the agent had no attachmentId to pass it.
+export function extractAttachments(payload: GmailPayload): EmailAttachment[] {
+  const out: EmailAttachment[] = []
+  const walk = (part: GmailPayload) => {
+    const id = part.body?.attachmentId
+    // A part with an attachmentId and a filename is a real attachment. Inline images
+    // pasted into the body carry an attachmentId too but usually no filename, so they
+    // are skipped — the user did not "attach" those.
+    if (id && part.filename) {
+      out.push({
+        attachmentId: id,
+        filename: part.filename,
+        mimeType: part.mimeType ?? "application/octet-stream",
+        size: part.body?.size,
+      })
+    }
+    for (const child of part.parts ?? []) walk(child)
+  }
+  walk(payload)
+  return out
 }
 
 function header(headers: GmailHeader[], name: string): string {
@@ -180,6 +205,7 @@ export class GoogleGmailConnector implements Connector {
       labels: (msg.labelIds ?? []).filter((l) => !["INBOX", "UNREAD"].includes(l)),
       body: msg.payload ? extractText(msg.payload) : "",
       htmlBody: msg.payload ? extractHtml(msg.payload) : undefined,
+      attachments: msg.payload ? extractAttachments(msg.payload) : [],
     }
   }
 
@@ -278,6 +304,7 @@ export class GoogleGmailConnector implements Connector {
           labels: (msg.labelIds ?? []).filter((l) => !["INBOX", "UNREAD"].includes(l)),
           body: msg.payload ? extractText(msg.payload) : "",
           htmlBody: msg.payload ? extractHtml(msg.payload) : undefined,
+          attachments: msg.payload ? extractAttachments(msg.payload) : [],
         } satisfies EmailDetail
       }),
     )
