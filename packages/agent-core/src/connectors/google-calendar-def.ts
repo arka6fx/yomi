@@ -474,8 +474,11 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
                 method: "POST",
                 body: JSON.stringify({
                   summary: title,
-                  start: { dateTime: start },
-                  end: { dateTime: end },
+                  // Must go through eventTime like calendar-createEvent does: an
+                  // offset-less dateTime with no timeZone is rejected outright with
+                  // "Missing time zone definition for start time".
+                  start: await eventTime(start),
+                  end: await eventTime(end),
                   description,
                   location,
                   attendees: attendees?.map((email) => ({ email })),
