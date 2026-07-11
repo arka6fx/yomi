@@ -46,7 +46,7 @@ function classroomWriteError(err: unknown): { error: string; hint?: string } {
       error:
         "Google Classroom only allows the app that created an assignment to attach files or turn it in — teacher-created assignments cannot be submitted by Yomi (Google API restriction; no scope unlocks this).",
       hint:
-        "Do this instead: create the solution file with drive-createFile, share the Drive link with the user, and give them the assignment's link (from classroom-getAssignment) so they can attach and turn it in themselves in one click.",
+        "Do this instead: create the solution with drive-createFile, convert it with drive-convertFile to pdf (schools almost always want a PDF), then give the user the PDF's link plus the assignment's link (from classroom-getAssignment) so they can attach and turn it in themselves in one click.",
     }
   }
   return connectorError(err)
@@ -162,7 +162,11 @@ export function createClassroomTools(ctx: ConnectorContext): ToolSet {
 
     "classroom-getAssignment": tool({
       description:
-        "Read one Classroom assignment in full: the complete question/description, attached materials, due date, points, and the assignment link. Materials of type driveFile can be read with drive-readFile using their driveFileId (e.g. a question PDF). To produce a solution, generate it with drive-createFile and give the user this assignment's link to attach and submit it. Get courseId and courseWorkId from classroom-listAssignments.",
+        "Read one Classroom assignment in full: the complete question/description, attached materials, due date, points, and the assignment link. Materials of type driveFile can be read with drive-readFile using their driveFileId (e.g. a question PDF). Get courseId and courseWorkId from classroom-listAssignments. " +
+        "To produce a solution: (1) obey any submission format the teacher states in the description — required cover-page fields (name, roll number, section, university), file naming, and whether they want a written document or a slide deck; these vary per assignment, so read them from the description rather than assuming, and take the student's own details from memory instead of asking if they are already known; " +
+        "(2) generate it with drive-createFile (kind=document for a write-up, kind=presentation for a deck); " +
+        "(3) convert it with drive-convertFile to pdf — Classroom submissions are almost always expected as PDF; " +
+        "(4) hand back the PDF link plus this assignment's link so the user can attach and turn it in. Yomi cannot turn in teacher-created assignments itself (Google restriction), so that last click is always the user's.",
       parameters: z.object({
         courseId: z.string().describe("Classroom course ID"),
         courseWorkId: z.string().describe("Assignment (courseWork) ID"),
