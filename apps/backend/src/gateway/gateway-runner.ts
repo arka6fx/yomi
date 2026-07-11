@@ -218,7 +218,13 @@ export class GatewayRunner {
     }
   }
 
-  private async handleApprovalCommand(userId: string, text: string): Promise<string | null> {
+  // `executed` drives the resume: a gated write is only one step of the agent's
+  // plan, so the loop has to be re-entered afterwards or everything the agent
+  // meant to do next is lost (the doc got made, the PDF never did).
+  private async handleApprovalCommand(
+    userId: string,
+    text: string,
+  ): Promise<{ reply: string; executed: boolean } | null> {
     const trimmed = text.trim()
     const command = trimmed.replace(/^\//, "").trim()
     const isExplicitApprovalCommand = /^\/(approve|yes|deny|no)$/i.test(trimmed)
@@ -241,7 +247,7 @@ export class GatewayRunner {
       ) || /^(no|nope|cancel|don'?t|do not)[,\s]+\S/i.test(command)
     const wantsDeny = !wantsApprove && isNegative
     if (/^(pending|approvals|pending approvals)$/i.test(command)) {
-      return this.formatPendingActions(userId)
+      return { reply: await this.formatPendingActions(userId), executed: false }
     }
 
     if (wantsApprove || wantsDeny) {
@@ -259,30 +265,48 @@ export class GatewayRunner {
         actions = await pending.listPendingActions(userId)
       } catch (err) {
         console.warn("[gateway] pending approval command unavailable:", err)
-        return "Pending approvals are temporarily unavailable. Please try again in a moment."
+        return {
+          reply: "Pending approvals are temporarily unavailable. Please try again in a moment.",
+          executed: false,
+        }
       }
-      if (actions.length === 0) return isExplicitApprovalCommand ? "No pending approvals." : null
+      if (actions.length === 0)
+        return isExplicitApprovalCommand ? { reply: "No pending approvals.", executed: false } : null
       const id = actions[0]!.id
       if (wantsApprove) {
         try {
           const result = await approvePendingAction(userId, id, { skipNotify: true })
           if (!result)
-            return "I couldn't find that pending action. It may have expired or already been handled."
-          return result.status === "executed"
-            ? `Approved and executed.\n${formatActionResult(result.result, `Done: ${result.title ?? "action"}`)}`
-            : `Approved: ${result.status}`
+            return {
+              reply:
+                "I couldn't find that pending action. It may have expired or already been handled.",
+              executed: false,
+            }
+          if (result.status !== "executed")
+            return { reply: `Approved: ${result.status}`, executed: false }
+          return {
+            reply: `Approved and executed.\n${formatActionResult(result.result, `Done: ${result.title ?? "action"}`)}`,
+            executed: true,
+          }
         } catch (err) {
-          return `Approval failed: ${err instanceof Error ? err.message : String(err)}`
+          return {
+            reply: `Approval failed: ${err instanceof Error ? err.message : String(err)}`,
+            executed: false,
+          }
         }
       }
       try {
         const denied = await denyPendingAction(userId, id)
         if (!denied)
-          return "I couldn't find that pending action. It may have expired or already been handled."
-        return "Denied."
+          return {
+            reply:
+              "I couldn't find that pending action. It may have expired or already been handled.",
+            executed: false,
+          }
+        return { reply: "Denied.", executed: false }
       } catch (err) {
         console.warn("[gateway] deny pending action failed:", err)
-        return "Deny failed. Please try again."
+        return { reply: "Deny failed. Please try again.", executed: false }
       }
     }
 
@@ -301,12 +325,22 @@ export class GatewayRunner {
         )
         const result = await approvePendingAction(userId, id, { skipNotify: true })
         if (!result)
-          return "I couldn't find that pending action. It may have expired or already been handled."
-        return result.status === "executed"
-          ? `Approved and executed.\n${formatActionResult(result.result, `Done: ${result.title ?? "action"}`)}`
-          : `Approved: ${result.status}`
+          return {
+            reply:
+              "I couldn't find that pending action. It may have expired or already been handled.",
+            executed: false,
+          }
+        if (result.status !== "executed")
+          return { reply: `Approved: ${result.status}`, executed: false }
+        return {
+          reply: `Approved and executed.\n${formatActionResult(result.result, `Done: ${result.title ?? "action"}`)}`,
+          executed: true,
+        }
       } catch (err) {
-        return `Approval failed: ${err instanceof Error ? err.message : String(err)}`
+        return {
+          reply: `Approval failed: ${err instanceof Error ? err.message : String(err)}`,
+          executed: false,
+        }
       }
     }
 
@@ -314,11 +348,50 @@ export class GatewayRunner {
       const { denyPendingAction } = await import("../services/pending-actions.js")
       const denied = await denyPendingAction(userId, id)
       if (!denied)
-        return "I couldn't find that pending action. It may have expired or already been handled."
-      return "Denied."
+        return {
+          reply: "I couldn't find that pending action. It may have expired or already been handled.",
+          executed: false,
+        }
+      return { reply: "Denied.", executed: false }
     } catch (err) {
       console.warn("[gateway] deny pending action failed:", err)
-      return "Deny failed. Please try again."
+      return { reply: "Deny failed. Please try again.", executed: false }
+    }
+  }
+
+  // Continue the plan an approved write was only one step of. The user already paid
+  // for the turn that proposed it, so this run is not charged again.
+  private async resumeAfterApproval(
+    msg: GatewayMessage,
+    yomiUserId: string,
+    approvalReply: string,
+  ): Promise<void> {
+    const controller = new AbortController()
+    const timeoutMs = Number(process.env["YOMI_AGENT_RUN_TIMEOUT_MS"] ?? 60_000)
+    const timeout = setTimeout(() => controller.abort(), timeoutMs)
+    try {
+      const result = await runAgent({
+        userId: yomiUserId,
+        text: `The approved action completed: ${approvalReply}\n\nContinue the request I originally made. If steps remain (for example converting a document to PDF, or applying a label you just created), do them now. If it is already complete, reply with the finished result and links — do not repeat work that is already done.`,
+        history: this.getHistory(msg.platform, msg.chatId),
+        signal: controller.signal,
+        sourcePlatform: msg.platform,
+        sourceChatId: msg.chatId,
+        skipCharge: true,
+      })
+      const reply = result.text.trim()
+      if (!reply) return
+      await this.sendMessage(msg.platform, msg.chatId, reply).catch(() => {})
+      this.appendHistory(msg.platform, msg.chatId, msg.text, reply)
+    } catch (err) {
+      // The write itself already succeeded and the user was told so — a failed
+      // continuation must not present as a failed action.
+      console.warn(
+        `[gateway] resume after approval failed user=${yomiUserId} chat=${msg.chatId}:`,
+        err instanceof Error ? err.message : String(err),
+      )
+    } finally {
+      clearTimeout(timeout)
     }
   }
 
@@ -1020,9 +1093,9 @@ export class GatewayRunner {
         )
       }
 
-      const approvalReply = await this.handleApprovalCommand(yomiUserId, msg.text)
-      if (approvalReply) {
-        await this.sendMessage(msg.platform, msg.chatId, approvalReply).catch(() => {})
+      const approval = await this.handleApprovalCommand(yomiUserId, msg.text)
+      if (approval) {
+        await this.sendMessage(msg.platform, msg.chatId, approval.reply).catch(() => {})
         // Record the exchange so follow-ups ("send me the link") have the
         // executed result in context — approvals used to be invisible to the agent.
         if (conversationConsent.allowed) {
@@ -1036,14 +1109,21 @@ export class GatewayRunner {
               sessionId: approvalSession.id,
               userId: yomiUserId,
               userText: msg.text,
-              assistantText: approvalReply,
+              assistantText: approval.reply,
             })
           } catch (err) {
             console.warn("[gateway] append approval turn failed:", err)
-            this.appendHistory(msg.platform, msg.chatId, msg.text, approvalReply)
+            this.appendHistory(msg.platform, msg.chatId, msg.text, approval.reply)
           }
         } else {
-          this.appendHistory(msg.platform, msg.chatId, msg.text, approvalReply)
+          this.appendHistory(msg.platform, msg.chatId, msg.text, approval.reply)
+        }
+        // An approved write is one step of a plan, not the end of it: "solve this and
+        // give me the PDF" creates the doc, gets approved, and the conversion is still
+        // owed. Re-enter the loop so the agent can finish. Nothing more to do if the
+        // approval didn't execute (deny, expired, nothing pending).
+        if (approval.executed) {
+          await this.resumeAfterApproval(msg, yomiUserId, approval.reply)
         }
         return
       }

@@ -3,8 +3,13 @@ import type { GatewayMessage, PlatformType } from "@yomi/shared"
 import type { AgentMessage } from "@yomi/agent-core"
 import type { PlatformAdapter } from "./platform-adapter.js"
 
-let agentCalls: { userId: string; text: string; history?: AgentMessage[]; signal?: AbortSignal }[] =
-  []
+let agentCalls: {
+  userId: string
+  text: string
+  history?: AgentMessage[]
+  signal?: AbortSignal
+  skipCharge?: boolean
+}[] = []
 let agentHangs = false
 let loadedHistory: AgentMessage[] = []
 let appendedTurns: {
@@ -81,13 +86,15 @@ mock.module("../agent/run.js", () => ({
     text,
     history,
     signal,
+    skipCharge,
   }: {
     userId: string
     text: string
     history?: AgentMessage[]
     signal?: AbortSignal
+    skipCharge?: boolean
   }) => {
-    agentCalls.push({ userId, text, history, signal })
+    agentCalls.push({ userId, text, history, signal, skipCharge })
     if (agentHangs) {
       // Mimic the real runAgent: when the abort signal fires it stops and
       // returns (it does not throw), yielding no usable text.
@@ -404,9 +411,11 @@ describe("GatewayRunner production routing", () => {
       timestamp: new Date().toISOString(),
     })
 
-    expect(agentCalls).toHaveLength(0)
     expect(approvedActions).toEqual(["11111111-1111-1111-1111-111111111111"])
-    expect(adapter.messages.at(-1)?.text).toContain("Approved")
+    expect(adapter.messages.some((m) => m.text?.includes("Approved"))).toBe(true)
+    // The write is one step of a plan; the loop must be re-entered to finish it.
+    expect(agentCalls).toHaveLength(1)
+    expect(agentCalls[0]?.skipCharge).toBe(true)
   })
 
   it("approves the only pending action with /approve", async () => {
@@ -430,7 +439,57 @@ describe("GatewayRunner production routing", () => {
     })
 
     expect(approvedActions).toEqual(["11111111-1111-1111-1111-111111111111"])
-    expect(adapter.messages.at(-1)?.text).toBe("Approved and executed.\nDone: Test action")
+    expect(
+      adapter.messages.some((m) => m.text === "Approved and executed.\nDone: Test action"),
+    ).toBe(true)
+  })
+
+  it("resumes the agent after an approved write so the rest of the plan runs", async () => {
+    // "Solve this and give me the PDF" created the doc, the write was approved, and
+    // the turn ended there — the conversion was never done, because approving used to
+    // execute the action and return without re-entering the loop. Any task needing
+    // more than one write could only ever complete its first write.
+    pendingActions = [
+      { id: "11111111-1111-1111-1111-111111111111", title: "Create Google Doc", preview: "PS2" },
+    ]
+    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "yes",
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(approvedActions).toEqual(["11111111-1111-1111-1111-111111111111"])
+    expect(agentCalls).toHaveLength(1)
+    // The resume must tell the agent what landed and that work may remain.
+    expect(agentCalls[0]?.text).toContain("Continue the request")
+    expect(agentCalls[0]?.text).toContain("Done: Test action")
+    // The user is told the write succeeded, and then gets the finished result.
+    expect(adapter.messages.some((m) => m.text?.startsWith("Approved and executed."))).toBe(true)
+    expect(adapter.messages.at(-1)?.text).toBe("backend reply")
+  })
+
+  it("does not resume the agent when an approval is denied", async () => {
+    pendingActions = [{ id: "11111111-1111-1111-1111-111111111111", title: "T", preview: "p" }]
+    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "no",
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(approvedActions).toEqual([])
+    expect(agentCalls).toHaveLength(0)
   })
 
   it("lets bare yes continue to the agent when no approval is pending", async () => {
@@ -470,9 +529,11 @@ describe("GatewayRunner production routing", () => {
       timestamp: new Date().toISOString(),
     })
 
-    expect(agentCalls).toHaveLength(0)
     expect(approvedActions).toEqual(["11111111-1111-1111-1111-111111111111"])
-    expect(adapter.messages.at(-1)?.text).toBe("Approved and executed.\nDone: Test action")
+    expect(
+      adapter.messages.some((m) => m.text === "Approved and executed.\nDone: Test action"),
+    ).toBe(true)
+    expect(agentCalls).toHaveLength(1)
   })
 
   for (const phrase of ["yes", "Yes schedule it", "sure", "ok", "go ahead", "yes please", "do it"]) {
@@ -491,7 +552,9 @@ describe("GatewayRunner production routing", () => {
       })
 
       expect(approvedActions).toEqual(["11111111-1111-1111-1111-111111111111"])
-      expect(agentCalls).toHaveLength(0)
+      // Resumed, not re-billed: the user paid for the turn that proposed the write.
+      expect(agentCalls).toHaveLength(1)
+      expect(agentCalls[0]?.skipCharge).toBe(true)
     })
   }
 
