@@ -383,7 +383,7 @@ export class GatewayRunner {
     try {
       const result = await runAgent({
         userId: yomiUserId,
-        text: `The approved action completed: ${approvalReply}\n\nContinue the request I originally made. If steps remain (for example converting a document to PDF, or applying a label you just created), do them now. If it is already complete, reply with the finished result and links — do not repeat work that is already done.`,
+        text: `The approved action completed: ${approvalReply}\n\nContinue the request I originally made. If steps remain (for example converting a document to PDF, or applying a label you just created), do them now. If it is already complete, confirm it briefly — do not repeat work that is already done, and do not volunteer links or files from earlier, unrelated requests.`,
         history: this.getHistory(msg.platform, msg.chatId),
         signal: controller.signal,
         sourcePlatform: msg.platform,
