@@ -15,6 +15,7 @@ Requires the **Google Meet API** enabled in the Cloud project.
 | Tool                          | Type  | Purpose                                                  |
 | ----------------------------- | ----- | -------------------------------------------------------- |
 | `meet-createSpace`            | Write | Create a shareable Meet link.                            |
+| `meet-updateSpaceSettings`    | Write | Change who can join an EXISTING space (OPEN/TRUSTED/RESTRICTED) — keeps the link the user already shared. |
 | `meet-getSpace`               | Read  | Link, code, access settings, whether a call is live.     |
 | `meet-endActiveConference`    | Write | End a live call (risk `irreversible`).                   |
 | `meet-listConferenceRecords`  | Read  | Past calls, newest first. Entry point for "my last meeting". |

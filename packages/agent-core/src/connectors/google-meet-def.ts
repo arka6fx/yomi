@@ -47,11 +47,72 @@ export function createMeetTools(ctx: ConnectorContext): ToolSet {
   }
 
   return {
+    "meet-updateSpaceSettings": tool({
+      description:
+        "Change who can join an EXISTING Meet space — 'make my meeting open to anyone', 'lock it down " +
+        "so only invited people get in'. Use this when the user wants to change an existing link; do " +
+        "NOT call meet-createSpace, which mints a different link and leaves the one they already " +
+        "shared untouched. Pass the spaceId or meeting code from meet-createSpace or meet-getSpace. " +
+        "Only works on spaces this app created (Google restriction).",
+      parameters: z.object({
+        spaceId: z
+          .string()
+          .describe(
+            "Space id from meet-createSpace (e.g. spaces/abc123) or the meeting code (e.g. mex-ifym-mfn)",
+          ),
+        accessType: z
+          .enum(["OPEN", "TRUSTED", "RESTRICTED"])
+          .describe(
+            "OPEN = anyone with the link joins directly; TRUSTED = signed-in users join, others knock; RESTRICTED = only invited people",
+          ),
+      }),
+      execute: async (args) => {
+        const { spaceId, accessType } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "google-meet",
+            action: "meet-updateSpaceSettings",
+            risk: "write",
+            title: `Change who can join the Meet space`,
+            preview: `Access for ${spaceId} becomes ${accessType}.`,
+            confirmText: "Change access",
+          },
+          args,
+          async () => {
+            try {
+              const id = spaceId.startsWith("spaces/") ? spaceId : `spaces/${spaceId}`
+              const space = await meetApi<{
+                name?: string
+                meetingUri?: string
+                config?: { accessType?: string }
+              }>(`/${id}?updateMask=config.accessType`, {
+                method: "PATCH",
+                body: JSON.stringify({ config: { accessType } }),
+              })
+              return {
+                ok: true,
+                spaceId: space.name,
+                link: space.meetingUri,
+                accessType: space.config?.accessType ?? accessType,
+                message: `Access changed to ${space.config?.accessType ?? accessType}. The existing link still works.`,
+              }
+            } catch (err) {
+              return meetWriteError(err)
+            }
+          },
+        )
+      },
+    }),
+
     "meet-createSpace": tool({
       description:
-        "Create a new Google Meet meeting link the user can share. Use this for an ad-hoc 'give me a " +
-        "Meet link'. If the meeting should also appear on the user's calendar with a time and guests, " +
-        "use calendar-createEventWithMeet instead — that both books the slot and creates the link.",
+        "Create a NEW Google Meet meeting link the user can share. Use this for an ad-hoc 'give me a " +
+        "Meet link'. To change who can join a link that already exists, use meet-updateSpaceSettings " +
+        "instead — creating a new space hands the user a different link and silently leaves the one " +
+        "they already shared unchanged. If the meeting should also appear on the user's calendar with " +
+        "a time and guests, use calendar-createEventWithMeet instead — that both books the slot and " +
+        "creates the link.",
       parameters: z.object({
         accessType: z
           .enum(["OPEN", "TRUSTED", "RESTRICTED"])
