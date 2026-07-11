@@ -15,17 +15,25 @@ const REGULAR_INTERACTION_LIMIT = 100
 type AuthInstance = ReturnType<typeof createAuth>
 let authInstance: AuthInstance | null = null
 
-function getRuntimeAuthConfig() {
+export function getRuntimeAuthConfig() {
   const webOrigin =
     process.env["CORS_ORIGIN"] ?? process.env["BETTER_AUTH_URL"] ?? "http://localhost:3000"
   const authBaseUrl = process.env["BETTER_AUTH_BASE_URL"] ?? webOrigin
 
   const authBaseHost = new URL(authBaseUrl).hostname
-  const isSplitDomain = new URL(webOrigin).hostname !== authBaseHost
+  const webOriginHost = new URL(webOrigin).hostname
+  const isSplitDomain = webOriginHost !== authBaseHost
 
-  const hostParts = authBaseHost.split(".")
+  // The cookie must be readable from BOTH the web origin and the auth origin, so
+  // it has to be scoped to the domain they share — for getyomi.in +
+  // api.getyomi.in that is `.getyomi.in`. Deriving it from the auth host's own
+  // labels yielded `.api.getyomi.in`, which the web origin can never read, so
+  // Better Auth's OAuth state cookie went missing and every sign-in died with
+  // `state_mismatch`. Only set a domain when the auth host really is a subdomain
+  // of the web origin; anything else (localhost, unrelated hosts) gets host-only
+  // cookies.
   const cookieDomain =
-    isSplitDomain && hostParts.length >= 3 ? `.${hostParts.slice(-3).join(".")}` : null
+    isSplitDomain && authBaseHost.endsWith(`.${webOriginHost}`) ? `.${webOriginHost}` : null
 
   const callbackBase = authBaseUrl.replace(/\/+$/, "")
   const googleRedirectUri = `${callbackBase}/api/auth/callback/google`
