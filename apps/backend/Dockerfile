@@ -7,11 +7,13 @@ WORKDIR /app
 # We run TypeScript directly with Bun — no build step, which keeps memory low
 # enough for a small EC2 instance.
 #
-# --frozen-lockfile: without it every rebuild re-resolves the caret ranges in
-# package.json, so prod silently runs whatever npm served that day rather than
-# the versions the test suite actually ran against.
+# NOT --frozen-lockfile: .dockerignore prunes apps/desktop|landing|sidecar from
+# the build context, so the workspace set here never matches the lockfile and bun
+# aborts. That means caret ranges get re-resolved on every rebuild, so anything
+# whose behaviour we depend on must be pinned exactly in package.json instead
+# (see better-auth — a minor bump there changed OAuth state handling).
 COPY . .
-RUN bun install --frozen-lockfile
+RUN bun install
 
 WORKDIR /app/apps/backend
 
