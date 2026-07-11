@@ -24,7 +24,7 @@
     "@yomi/db": "workspace:*",
     "@yomi/shared": "workspace:*",
     "ai": "^4.0.0",
-    "better-auth": "^1.0.0",
+    "better-auth": "1.6.11",
     "drizzle-orm": "^0.31.0",
     "hono": "^4.5.0"
   },
