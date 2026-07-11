@@ -194,8 +194,16 @@ injects the key.
 ## Desktop releases
 
 **CRITICAL: All releases go to `arka6fx/yomi-releases` only.** Never create tags
-or releases in the main yomi repo. Frontend (Cloudflare Worker) and backend (EC2)
-deploy separately and manually — see SETUP_GUIDE.md; there is no push-to-`main` CD.
+or releases in the main yomi repo.
+
+**The backend deploys itself on push to `main`** (`.github/workflows/deploy-backend.yml`,
+paths `apps/backend/**` / `packages/**`), via a self-hosted runner **on the EC2 box** —
+no inbound SSH, no security-group change. So just push. Do **not** also run
+`scripts/deploy-backend.sh` or `docker compose up` on the box for the same commit:
+the manual deploy races the workflow and both die on a container-name conflict.
+That script is the break-glass path for when the runner is down.
+
+The frontend (Cloudflare Worker) is still manual: `cd apps/landing && bun run deploy:production`.
 
 ### Release process (follow every time):
 
