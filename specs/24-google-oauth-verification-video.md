@@ -12,21 +12,56 @@
 
 ---
 
-## 1. Final scope list (8 scopes)
+## 1. Final scope list (15 scopes)
 
 Register exactly these on **OAuth consent screen → Data access**. Tier drives how
-much review each needs.
+much review each needs — and these tiers are what the console **actually
+reported**, not a prediction.
 
 | Scope                                                              | Connector | Tier           | CASA? |
 | ------------------------------------------------------------------ | --------- | -------------- | ----- |
 | `https://www.googleapis.com/auth/gmail.modify`                     | Gmail     | **Restricted** | Yes   |
-| `https://www.googleapis.com/auth/gmail.send`                       | Gmail     | Sensitive      | No    |
 | `https://www.googleapis.com/auth/drive`                            | Drive     | **Restricted** | Yes   |
+| `https://www.googleapis.com/auth/gmail.send`                       | Gmail     | Sensitive      | No    |
 | `https://www.googleapis.com/auth/calendar`                         | Calendar  | Sensitive      | No    |
-| `https://www.googleapis.com/auth/classroom.courses.readonly`       | Classroom | **Restricted** | Yes   |
-| `https://www.googleapis.com/auth/classroom.coursework.me`          | Classroom | **Restricted** | Yes   |
-| `https://www.googleapis.com/auth/classroom.announcements.readonly` | Classroom | **Restricted** | Yes   |
+| `https://www.googleapis.com/auth/contacts`                         | Contacts  | Sensitive      | No    |
+| `https://www.googleapis.com/auth/contacts.other.readonly`          | Contacts  | Sensitive      | No    |
+| `https://www.googleapis.com/auth/directory.readonly`               | Contacts  | Sensitive      | No    |
+| `https://www.googleapis.com/auth/tasks`                            | Tasks     | Sensitive      | No    |
+| `https://www.googleapis.com/auth/meetings.space.created`           | Meet      | Sensitive      | No    |
+| `https://www.googleapis.com/auth/meetings.space.readonly`          | Meet      | Sensitive      | No    |
+| `https://www.googleapis.com/auth/meetings.space.settings`          | Meet      | Non-sensitive  | No    |
+| `https://www.googleapis.com/auth/classroom.courses.readonly`       | Classroom | Non-sensitive  | No    |
+| `https://www.googleapis.com/auth/classroom.coursework.me`          | Classroom | Non-sensitive  | No    |
+| `https://www.googleapis.com/auth/classroom.announcements.readonly` | Classroom | Non-sensitive  | No    |
 | `https://www.googleapis.com/auth/userinfo.email`                   | All       | Non-sensitive  | No    |
+
+**Only two scopes are restricted** — `gmail.modify` and `drive`. Everything else
+is sensitive or free. Adding Tasks, Contacts, and Meet therefore costs brand-review
+justification text and video scenes, but **no additional CASA burden**.
+
+Scopes deliberately NOT requested: `https://mail.google.com/` (includes permanent
+delete — no Yomi tool needs it), `tasks.readonly` and `contacts.readonly` (Yomi
+writes to both), `classroom.student-submissions.me.readonly` (subsumed by
+`coursework.me`).
+
+### Deltas from a console that was set up before this pass
+
+If your **Data access** page currently shows `https://mail.google.com/` and
+`classroom.student-submissions.me.readonly`, it predates the connector rework:
+
+| Action     | Scope                                          | Why                                                                             |
+| ---------- | ---------------------------------------------- | ------------------------------------------------------------------------------- |
+| **Add**    | `classroom.coursework.me`                      | The def requests it; `student-submissions.me.readonly` cannot read coursework or attach/turn in |
+| **Add**    | `gmail.modify`, `gmail.send`                   | What the def now requests                                                        |
+| **Remove** | `https://mail.google.com/`                     | Superset incl. permanent delete — worst restricted scope, and no tool uses it now |
+| **Remove** | `classroom.student-submissions.me.readonly`    | Redundant once `coursework.me` is present                                        |
+
+**No scope changes are needed for Slides or Sheets.** The Slides and Sheets APIs
+both accept `auth/drive`, which is already requested. What they need is the API
+itself **enabled** in the Library — see [Spec 20](./20-google-oauth-console-setup.md)
+step 2 (6 APIs). Scope ≠ API enablement; without enabling, `drive-createFile`
+403s on deck/spreadsheet creation even with a valid `drive` token.
 
 **What "verified" requires per tier**
 
@@ -90,6 +125,43 @@ actual tools and to [Limited Use](https://developers.google.com/terms/api-servic
 > Read announcements in the user's classes so Yomi can surface them on request.
 > Read-only.
 
+**`contacts` (sensitive)**
+> Users refer to people by name ("email Alex about the invoice", "invite Priya to
+> the meeting"), so Yomi looks the person up in the user's own contacts to find
+> their email address before sending anything — it never guesses an address, and
+> when several people match it asks the user which one. On request it also saves
+> or updates a contact ("save Priya's number"). Contact data is used only to
+> fulfil the user's in-session request and is never sold, transferred, or used for
+> ads or model training.
+
+**`contacts.other.readonly` (sensitive)**
+> Read-only access to "other contacts" — people the user has emailed but never
+> saved. Without it, name lookup fails for most of the people a personal Gmail
+> user actually corresponds with, since `contacts` covers only explicitly saved
+> entries. Used solely to resolve a name the user typed into an email address.
+
+**`directory.readonly` (sensitive)**
+> Read-only access to the user's Google Workspace organisation directory, so name
+> lookup also resolves colleagues. Read-only; no directory data is stored.
+
+**`tasks` (sensitive)**
+> Yomi manages the user's own to-do list on request: listing what's due, creating
+> tasks, changing due dates, marking them done, and deleting them. Read and write
+> are both needed — a read-only scope would make the assistant unable to capture a
+> task the user asks it to remember.
+
+**`meetings.space.created` (sensitive)**
+> Create a Google Meet link when the user asks for one, and end a call Yomi itself
+> started. Scoped to spaces created by this app.
+
+**`meetings.space.readonly` (sensitive)**
+> Read the user's past meetings — participants and, where available, the
+> transcript — so Yomi can summarise a meeting or extract action items on request.
+> Read-only.
+
+**`meetings.space.settings` (non-sensitive)**
+> Read and set access settings (who can join) on a Meet space Yomi created.
+
 **`userinfo.email` (non-sensitive)**
 > Show which Google account is connected in the dashboard.
 
@@ -144,13 +216,46 @@ unhurried, one scope-group per scene.
 - (If on a personal Gmail with no Education account, narrate that Classroom data
   is limited but the scope/flow is identical — still show the calls being made.)
 
-**Scene 6 — Close (10s)**
-- Return to the dashboard showing all four Google integrations connected.
+**Scene 6 — Contacts `contacts` + `contacts.other.readonly` (30s)**
+- Ask: "Email Alex and tell him the deck is ready." → show Yomi looking the name
+  up and returning **Alex's address from contacts** before composing (this is the
+  shot that justifies the contacts scopes — the reviewer must see the lookup, not
+  just the send).
+- Ask: "Save Priya's number — 555 0134." → approval → contact created; open
+  Google Contacts to show it.
+- (Narrate that `directory.readonly` resolves Workspace colleagues the same way;
+  on a personal account there is no directory to show.)
+
+**Scene 7 — Tasks `tasks` (25s)**
+- Ask: "What's on my to-do list this week?" → list tasks with due dates.
+- Ask: "Add 'renew passport' due Friday." → approval → task created; open Google
+  Tasks to show it.
+- Ask: "Mark the laundry one done." → task completes.
+
+**Scene 8 — Meet `meetings.space.*` (25s)**
+- Ask: "Give me a Meet link." → approval → link created; open it.
+- Ask: "Who was on my last call?" → show participants from the conference record.
+- **If on a personal Gmail:** narrate that transcripts require a paid Workspace
+  plan, and show Yomi *saying so* rather than failing. Reviewers accept a clearly
+  explained limitation; they reject a scope with no visible use, so the
+  participants read-back is what carries `meetings.space.readonly`.
+
+**Scene 9 — Sheets + Docs editing (20s, no extra scope — runs on `drive`)**
+- Ask: "Add a ₹450 coffee expense to my budget sheet." → approval → open the sheet
+  and show the appended row.
+- Ask: "Append today's notes to my journal doc." → approval → show the Doc.
+
+**Scene 10 — Close (10s)**
+- Return to the dashboard showing all seven Google integrations connected.
 - Say: "All access is used only to fulfil the user's request and follows
   Google's Limited Use policy."
 
-**Length target:** 2.5–4 minutes. Upload **unlisted**, paste the link into the
-verification form.
+**Length target:** 4–6 minutes with all seven connectors. Upload **unlisted**,
+paste the link into the verification form.
+
+> **Every requested scope needs a visible use.** A scope the reviewer cannot see
+> exercised is the single most common rejection cause — that is why Tasks,
+> Contacts, and Meet could not be registered before the connectors existed.
 
 ---
 
@@ -175,15 +280,15 @@ the scopes you submit.
 
 ## 5. Submission checklist
 
-- [ ] Spec 20 fully done (8 scopes registered, 6 APIs enabled, redirect URIs)
+- [ ] Spec 20 fully done (15 scopes registered, 10 APIs enabled, 7 redirect URI pairs)
 - [ ] Privacy policy + ToS live on `getyomi.in`, both mention Google data + Limited Use
 - [ ] `getyomi.in` verified in Google Search Console; listed as Authorized domain
 - [ ] App logo uploaded on the consent screen
 - [ ] Justification text (§2) pasted for every scope
 - [ ] Demo video recorded per §3, consent screen + client ID clearly shown, uploaded unlisted
 - [ ] Video link + justifications submitted; consent screen pushed for verification
-- [ ] Brand review (~2–3 days) for the sensitive scopes
-- [ ] CASA engaged for the restricted scopes (Gmail/Drive/Classroom) — start early
+- [ ] Brand review (~2–3 days) for the eight sensitive scopes
+- [ ] CASA engaged for the two restricted scopes (`gmail.modify`, `drive`) — start early
 - [ ] After approval: publishing status **Testing → In production**
 
 **Until approved:** stay in **Testing** mode with your accounts under Test users.

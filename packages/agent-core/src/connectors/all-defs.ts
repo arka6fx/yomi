@@ -3,6 +3,9 @@ import { googleGmailDef } from "./google-gmail-def.js"
 import { googleCalendarDef } from "./google-calendar-def.js"
 import { googleDriveDef } from "./google-drive-def.js"
 import { googleClassroomDef } from "./google-classroom-def.js"
+import { googleTasksDef } from "./google-tasks-def.js"
+import { googleContactsDef } from "./google-contacts-def.js"
+import { googleMeetDef } from "./google-meet-def.js"
 import { githubDef } from "./github-def.js"
 import { notionDef } from "./notion-def.js"
 import { slackDef } from "./slack-def.js"
@@ -16,6 +19,9 @@ export const ALL_CONNECTOR_DEFS: ConnectorDef[] = [
   googleCalendarDef,
   googleDriveDef,
   googleClassroomDef,
+  googleTasksDef,
+  googleContactsDef,
+  googleMeetDef,
   githubDef,
   notionDef,
   slackDef,

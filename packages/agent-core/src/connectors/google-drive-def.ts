@@ -313,6 +313,35 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
     return res
   }
 
+  // Sheets and Docs are separate APIs but the `drive` scope authorizes both, so
+  // they reuse the Drive token — no extra consent. Each API must still be enabled
+  // in the Cloud project (Library) or every call 403s.
+  async function googleApi<T>(url: string, init?: RequestInit): Promise<T> {
+    const token = await ctx.getAccessToken(ctx.userId, "google-drive")
+    const res = await fetch(url, {
+      ...init,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        ...(init?.headers ?? {}),
+      },
+    })
+    if (!res.ok) {
+      const body = await res.text()
+      const api = url.includes("sheets.googleapis") ? "Sheets" : "Docs"
+      throw new Error(`${api} API → ${res.status}: ${body.slice(0, 200)}`)
+    }
+    const text = await res.text()
+    return (text ? JSON.parse(text) : undefined) as T
+  }
+
+  // A1 range qualified with a tab name when the caller names one. Tab names with
+  // spaces or quotes must be single-quoted, with '' escaping a literal quote.
+  function a1(range: string, sheetName?: string): string {
+    if (!sheetName) return range
+    return `'${sheetName.replace(/'/g, "''")}'!${range}`
+  }
+
   return {
     "drive-getStorageQuota": tool({
       description:
@@ -705,6 +734,289 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
                 link: file.webViewLink,
                 kind,
                 ...(note ? { note } : {}),
+              }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
+
+    "drive-listSheetTabs": tool({
+      description:
+        "List the tabs (sheets) inside a Google Sheet, with each tab's row and column count. " +
+        "Call this before drive-readSheet or drive-appendSheetRows when the spreadsheet may have " +
+        "more than one tab — never guess a tab name. Get the spreadsheetId from drive-searchFiles.",
+      parameters: z.object({
+        spreadsheetId: z.string().describe("Google Sheets file ID"),
+      }),
+      execute: async ({ spreadsheetId }) => {
+        try {
+          const data = await googleApi<{
+            properties?: { title?: string }
+            sheets?: {
+              properties?: {
+                title?: string
+                sheetId?: number
+                gridProperties?: { rowCount?: number; columnCount?: number }
+              }
+            }[]
+          }>(
+            `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=properties.title,sheets.properties`,
+          )
+          const tabs = (data.sheets ?? []).map((s) => ({
+            name: s.properties?.title ?? "",
+            rows: s.properties?.gridProperties?.rowCount ?? 0,
+            columns: s.properties?.gridProperties?.columnCount ?? 0,
+          }))
+          return { spreadsheet: data.properties?.title ?? "", count: tabs.length, tabs }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "drive-readSheet": tool({
+      description:
+        "Read cell values from a Google Sheet. Use this to answer questions about data already in a " +
+        "spreadsheet (a budget, a tracker, a log). Returns rows as arrays of cell strings, first row " +
+        "usually being the header. Get the spreadsheetId from drive-searchFiles, and the tab name from " +
+        "drive-listSheetTabs when the sheet has multiple tabs.",
+      parameters: z.object({
+        spreadsheetId: z.string().describe("Google Sheets file ID"),
+        range: z
+          .string()
+          .default("A1:Z200")
+          .describe("A1 range within the tab, e.g. A1:D50. Defaults to A1:Z200."),
+        sheetName: z
+          .string()
+          .optional()
+          .describe("Tab name. Omit to use the first tab. Get it from drive-listSheetTabs."),
+      }),
+      execute: async ({ spreadsheetId, range, sheetName }) => {
+        try {
+          const data = await googleApi<{ range?: string; values?: string[][] }>(
+            `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(
+              a1(range, sheetName),
+            )}`,
+          )
+          const rows = data.values ?? []
+          if (rows.length === 0) return { rows: [], message: "That range is empty." }
+          return { range: data.range, rowCount: rows.length, rows }
+        } catch (err) {
+          return connectorError(err)
+        }
+      },
+    }),
+
+    "drive-appendSheetRows": tool({
+      description:
+        "Append rows to the end of a Google Sheet's existing data — the right tool for 'add this " +
+        "expense to my budget sheet' or 'log this entry'. Never overwrites: Google finds the first " +
+        "empty row and writes below it. Pass rows as CSV or TSV (one line per row). To overwrite a " +
+        "specific range instead, use drive-updateSheetRange.",
+      parameters: z.object({
+        spreadsheetId: z.string().describe("Google Sheets file ID"),
+        content: z
+          .string()
+          .describe("Rows to append, as CSV or TSV — one line per row, columns in header order"),
+        sheetName: z.string().optional().describe("Tab name. Omit to use the first tab."),
+      }),
+      execute: async (args) => {
+        const { spreadsheetId, content, sheetName } = args
+        const rows = parseTableContent(content)
+        return gateWrite(
+          ctx,
+          {
+            connector: "google-drive",
+            action: "drive-appendSheetRows",
+            risk: "write",
+            title: `Append ${rows.length} row${rows.length === 1 ? "" : "s"} to a Google Sheet`,
+            preview: rows
+              .slice(0, 5)
+              .map((r) => r.join(" | "))
+              .join("\n"),
+            confirmText: "Append rows",
+          },
+          args,
+          async () => {
+            try {
+              if (rows.length === 0) return { error: "No rows to append." }
+              // RAW, never USER_ENTERED — agent content is untrusted, and RAW stores
+              // "=IMPORTXML(...)" as inert text instead of evaluating it (formula injection).
+              const data = await googleApi<{ updates?: { updatedRange?: string; updatedRows?: number } }>(
+                `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(
+                  a1("A1", sheetName),
+                )}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+                {
+                  method: "POST",
+                  body: JSON.stringify({ values: rows.map((r) => r.map(coerceCell)) }),
+                },
+              )
+              return {
+                ok: true,
+                appendedRows: data.updates?.updatedRows ?? rows.length,
+                range: data.updates?.updatedRange,
+                message: `Appended ${data.updates?.updatedRows ?? rows.length} row(s).`,
+              }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
+
+    "drive-updateSheetRange": tool({
+      description:
+        "Overwrite a specific range of cells in a Google Sheet. Destructive — it replaces whatever is " +
+        "in that range. To add data without overwriting anything, use drive-appendSheetRows instead.",
+      parameters: z.object({
+        spreadsheetId: z.string().describe("Google Sheets file ID"),
+        range: z.string().describe("A1 range to overwrite, e.g. B2:D10"),
+        content: z.string().describe("Replacement cells as CSV or TSV — one line per row"),
+        sheetName: z.string().optional().describe("Tab name. Omit to use the first tab."),
+      }),
+      execute: async (args) => {
+        const { spreadsheetId, range, content, sheetName } = args
+        const rows = parseTableContent(content)
+        return gateWrite(
+          ctx,
+          {
+            connector: "google-drive",
+            action: "drive-updateSheetRange",
+            risk: "write",
+            title: `Overwrite ${a1(range, sheetName)} in a Google Sheet`,
+            preview: rows
+              .slice(0, 5)
+              .map((r) => r.join(" | "))
+              .join("\n"),
+            confirmText: "Overwrite cells",
+          },
+          args,
+          async () => {
+            try {
+              if (rows.length === 0) return { error: "No content to write." }
+              const data = await googleApi<{ updatedCells?: number; updatedRange?: string }>(
+                `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(
+                  a1(range, sheetName),
+                )}?valueInputOption=RAW`,
+                {
+                  method: "PUT",
+                  body: JSON.stringify({ values: rows.map((r) => r.map(coerceCell)) }),
+                },
+              )
+              return {
+                ok: true,
+                updatedCells: data.updatedCells,
+                range: data.updatedRange,
+                message: `Updated ${data.updatedCells ?? 0} cell(s).`,
+              }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
+
+    "drive-appendToDoc": tool({
+      description:
+        "Append text to the end of an existing Google Doc — for adding a meeting note, a journal " +
+        "entry, or a new section to a document that already exists. Inserts plain text (no Markdown " +
+        "formatting); to create a NEW richly formatted Doc from Markdown, use drive-createFile. " +
+        "Get the documentId from drive-searchFiles.",
+      parameters: z.object({
+        documentId: z.string().describe("Google Docs file ID"),
+        text: z.string().describe("Text to append. Include a leading newline to start a new line."),
+      }),
+      execute: async (args) => {
+        const { documentId, text } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "google-drive",
+            action: "drive-appendToDoc",
+            risk: "write",
+            title: "Append to a Google Doc",
+            preview: text.slice(0, 500),
+            confirmText: "Append text",
+          },
+          args,
+          async () => {
+            try {
+              // Docs has no "append" — you insert at an index. The body's last element
+              // ends at endIndex, and that final position is the newline that closes the
+              // body, so text must go at endIndex - 1 or the API rejects it.
+              const doc = await googleApi<{ body?: { content?: { endIndex?: number }[] } }>(
+                `https://docs.googleapis.com/v1/documents/${documentId}?fields=body.content.endIndex`,
+              )
+              const content = doc.body?.content ?? []
+              const endIndex = content[content.length - 1]?.endIndex ?? 1
+              const index = Math.max(1, endIndex - 1)
+              await googleApi(`https://docs.googleapis.com/v1/documents/${documentId}:batchUpdate`, {
+                method: "POST",
+                body: JSON.stringify({ requests: [{ insertText: { location: { index }, text } }] }),
+              })
+              return {
+                ok: true,
+                link: `https://docs.google.com/document/d/${documentId}/edit`,
+                message: `Appended ${text.length} characters.`,
+              }
+            } catch (err) {
+              return connectorError(err)
+            }
+          },
+        )
+      },
+    }),
+
+    "drive-replaceInDoc": tool({
+      description:
+        "Find and replace text throughout an existing Google Doc. Replaces EVERY occurrence — read " +
+        "the document with drive-readFile first to check how many times the text appears. " +
+        "Returns the number of occurrences changed (0 means the text was not found).",
+      parameters: z.object({
+        documentId: z.string().describe("Google Docs file ID"),
+        find: z.string().describe("Exact text to find"),
+        replaceWith: z.string().describe("Replacement text"),
+        matchCase: z.boolean().default(true).describe("Whether the search is case-sensitive"),
+      }),
+      execute: async (args) => {
+        const { documentId, find, replaceWith, matchCase } = args
+        return gateWrite(
+          ctx,
+          {
+            connector: "google-drive",
+            action: "drive-replaceInDoc",
+            risk: "write",
+            title: "Find and replace in a Google Doc",
+            preview: `Replace every "${find}" with "${replaceWith}"`,
+            confirmText: "Replace text",
+          },
+          args,
+          async () => {
+            try {
+              const data = await googleApi<{
+                replies?: { replaceAllText?: { occurrencesChanged?: number } }[]
+              }>(`https://docs.googleapis.com/v1/documents/${documentId}:batchUpdate`, {
+                method: "POST",
+                body: JSON.stringify({
+                  requests: [
+                    { replaceAllText: { containsText: { text: find, matchCase }, replaceText: replaceWith } },
+                  ],
+                }),
+              })
+              const changed = data.replies?.[0]?.replaceAllText?.occurrencesChanged ?? 0
+              return {
+                ok: true,
+                occurrencesChanged: changed,
+                link: `https://docs.google.com/document/d/${documentId}/edit`,
+                message:
+                  changed === 0
+                    ? `"${find}" was not found in the document — nothing changed.`
+                    : `Replaced ${changed} occurrence(s).`,
               }
             } catch (err) {
               return connectorError(err)
@@ -1179,7 +1491,7 @@ export const googleDriveDef: ConnectorDef = {
   category: "file-storage",
   icon: "google-drive",
   description:
-    "Search, read, create, convert, and manage files in Google Drive. Creates Google Docs, Sheets, Slides, and Drawings; converts between formats (PDF, DOCX, XLSX, PPTX, TXT, CSV, HTML, EPUB, ODS, ODT, RTF, TSV).",
+    "Search, read, create, convert, and manage files in Google Drive. Creates and edits Google Docs, Sheets, and Slides — read and append spreadsheet rows, append to or find-and-replace inside existing Docs; converts between formats (PDF, DOCX, XLSX, PPTX, TXT, CSV, HTML, EPUB, ODS, ODT, RTF, TSV).",
   readOnlyByDefault: false,
   auth: {
     kind: "oauth2",
@@ -1201,6 +1513,7 @@ export const googleDriveDef: ConnectorDef = {
     providerConsoleUrl: "https://console.cloud.google.com/apis/credentials",
     steps: [
       "Enable Google Drive API under APIs & Services → Library",
+      "Also enable Google Slides API, Google Sheets API, and Google Docs API — the drive scope authorizes all three, but each API 403s until it is enabled",
       "Add Authorized Redirect URI: ${BACKEND_URL}/api/integrations/callback/google-drive",
       "Uses full drive scope (restricted): add your email under OAuth consent screen → Test users for personal use, or complete Google CASA verification to release to all users",
     ],

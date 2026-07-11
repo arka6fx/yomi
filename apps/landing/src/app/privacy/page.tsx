@@ -70,6 +70,29 @@ export default function PrivacyPage() {
                   list your classes, assignments, and announcements and check your own submission
                   status.
                 </li>
+                <li>
+                  <strong className="text-label">Google Tasks</strong> (
+                  <code className="text-sky-100/70">tasks</code>) to read your to-do lists and
+                  create, edit, complete, or delete tasks on your request.
+                </li>
+                <li>
+                  <strong className="text-label">Google Contacts</strong> (
+                  <code className="text-sky-100/70">contacts</code>,{" "}
+                  <code className="text-sky-100/70">contacts.other.readonly</code>,{" "}
+                  <code className="text-sky-100/70">directory.readonly</code>) to look a person up
+                  by name so we can find their email address before sending anything on your
+                  behalf, and to save or update a contact on your request. We never guess an email
+                  address — if several people match, we ask you first.
+                </li>
+                <li>
+                  <strong className="text-label">Google Meet</strong> (
+                  <code className="text-sky-100/70">meetings.space.created</code>,{" "}
+                  <code className="text-sky-100/70">meetings.space.readonly</code>,{" "}
+                  <code className="text-sky-100/70">meetings.space.settings</code>) to create
+                  meeting links on your request and read your past calls — who attended and, where
+                  your plan produces one, the transcript — so we can summarise a meeting you ask
+                  about.
+                </li>
               </ul>
               <p>
                 This data is used <strong className="text-label">only</strong> to fulfil your

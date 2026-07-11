@@ -13,8 +13,11 @@ are registered through `packages/agent-core/src/connectors/all-defs.ts`.
 | ---------------- | ------------------ | --------------------- | ----: | --------------------------------------- |
 | Google Gmail     | `google`           | `google-gmail.md`     |    18 | Implemented                             |
 | Google Calendar  | `google-calendar`  | `google-calendar.md`  |    10 | Implemented                             |
-| Google Drive     | `google-drive`     | `google-drive.md`     |    13 | Implemented                             |
+| Google Drive     | `google-drive`     | `google-drive.md`     |    19 | Implemented                             |
 | Google Classroom | `google-classroom` | `google-classroom.md` |     6 | Implemented, read-write (gated writes)  |
+| Google Tasks     | `google-tasks`     | `google-tasks.md`     |     6 | Implemented                             |
+| Google Contacts  | `google-contacts`  | `google-contacts.md`  |     7 | Implemented                             |
+| Google Meet      | `google-meet`      | `google-meet.md`      |     6 | Implemented                             |
 | GitHub           | `github`           | `github.md`           |    23 | Implemented                             |
 | Notion           | `notion`           | `notion.md`           |    12 | Implemented                             |
 | Slack            | `slack`            | `slack.md`            |     9 | Implemented                             |
