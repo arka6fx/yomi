@@ -141,7 +141,8 @@ export function createClassroomTools(ctx: ConnectorContext): ToolSet {
       description:
         "List assignments (coursework) with due dates and links, sorted by deadline — soonest first, undated last. " +
         "OMIT courseId to see upcoming work across ALL the user's classes: that is what answers 'what's my next assignment' or 'what's due this week', and it is the right call when the user does not name a class. " +
-        "Pass a courseId (from classroom-listCourses) only to narrow to one class. Each result carries its courseId and courseName, so pass both on to classroom-getAssignment.",
+        "Pass a courseId (from classroom-listCourses) only to narrow to one class. Each result carries its courseId and courseName, so pass both on to classroom-getAssignment. " +
+        "descriptionPreview is a 400-character PREVIEW, not the assignment. Never answer what an assignment asks, and never build a solution, from it — call classroom-getAssignment for the full text, always when descriptionTruncated is true. Submission rules (cover page, file name, PDF vs deck) usually sit at the END of a description and are exactly what the preview cuts off.",
       parameters: z.object({
         courseId: z
           .string()
@@ -193,7 +194,12 @@ export function createClassroomTools(ctx: ConnectorContext): ToolSet {
                 points: w.maxPoints,
                 type: w.workType,
                 link: w.alternateLink,
-                description: w.description?.slice(0, 400),
+                // A preview only. Truncating mid-way through a teacher's submission
+                // rules silently drops requirements (a filename rule at the end of a
+                // 430-char description vanished), so say so and send the agent to
+                // classroom-getAssignment for the real text.
+                descriptionPreview: w.description?.slice(0, 400),
+                descriptionTruncated: (w.description?.length ?? 0) > 400,
               }))
             }),
           )

@@ -105,6 +105,41 @@ describe("classroom-listAssignments", () => {
     expect(result.assignments[2]).toMatchObject({ courseName: "DBMSLABSecA" })
   })
 
+  it("flags a truncated description instead of passing it off as the assignment", async () => {
+    // Real failure: a 430-char description put "Name the file X_Y_PS2" last, the
+    // 400-char slice ate it, and Yomi reported the format with a blank file name.
+    const tail = "Name the file Name_RollNumber_PS2."
+    const long = `${"Answer all three questions. ".repeat(15)}${tail}`
+    expect(long.length).toBeGreaterThan(400)
+
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes("/courses?courseStates=ACTIVE"))
+        return Response.json({ courses: [{ id: "c_phys", name: "Physics 101" }] })
+      if (url.includes("/courseWork"))
+        return Response.json({
+          courseWork: [
+            {
+              id: "w_1",
+              title: "Problem Set 2",
+              description: long,
+              dueDate: { year: 2026, month: 7, day: 16 },
+            },
+          ],
+        })
+      return Response.json({})
+    }) as typeof fetch
+
+    const result = (await executeTool("classroom-listAssignments", { limit: 20 })) as {
+      assignments: { descriptionPreview?: string; descriptionTruncated?: boolean }[]
+    }
+    const row = result.assignments[0]
+
+    expect(row?.descriptionTruncated).toBe(true)
+    // The preview must not pretend to be the whole thing.
+    expect(row?.descriptionPreview).not.toContain(tail)
+  })
+
   it("narrows to one class when a courseId is given", async () => {
     multiCourseFetch()
     const result = (await executeTool("classroom-listAssignments", {
