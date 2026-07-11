@@ -132,7 +132,11 @@ Go to **APIs & Services → Library** and enable each API:
 | Google Drive API     | `Google Drive API`     | Drive connector                                  |
 | Google Classroom API | `Google Classroom API` | Classroom connector                              |
 | Google Slides API    | `Google Slides API`    | `drive-createFile` building multi-slide decks    |
-| Google Sheets API    | `Google Sheets API`    | `drive-createFile` writing spreadsheet rows      |
+| Google Sheets API    | `Google Sheets API`    | `drive-readSheet` / `drive-appendSheetRows`      |
+| Google Docs API      | `Google Docs API`      | `drive-appendToDoc` / `drive-replaceInDoc`       |
+| Google Tasks API     | `Google Tasks API`     | Tasks connector                                  |
+| People API           | `People API`           | Contacts connector — **not** the legacy "Contacts API", which is shut down |
+| Google Meet API      | `Google Meet API`      | Meet connector                                   |
 
 > Slides and Sheets creation runs through the **Drive scope** (no extra scope),
 > but the Slides API and Sheets API themselves must be enabled or those
@@ -380,11 +384,12 @@ the Drive connector; Docs/Sheets/Slides connectors edit by file ID.
 
 ```
 [ ] Step 1  Project + OAuth Web client confirmed
-[ ] Step 2  6 APIs enabled (Gmail, Calendar, Drive, Classroom, Slides, Sheets)
+[ ] Step 2  10 APIs enabled (Gmail, Calendar, Drive, Classroom, Slides, Sheets,
+            Docs, Tasks, People, Meet)
 [ ] Step 3  Consent screen basics + authorized domain
-[ ] Step 4  8 scopes registered on Data access
+[ ] Step 4  15 scopes registered on Data access
 [ ] Step 5  Test users added
-[ ] Step 6  4 prod redirect URIs (+ local if needed)
+[ ] Step 6  7 prod redirect URIs (+ local if needed)
 [ ] Step 7  GOOGLE_* secrets + BETTER_AUTH_BASE_URL in Worker
-[ ] Step 8  All 4 connectors smoke-tested
+[ ] Step 8  All 7 connectors smoke-tested
 ```

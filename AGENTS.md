@@ -1,9 +1,9 @@
 # Yomi — AGENTS.md
 
 AI productivity assistant. Connects to Google Workspace (Gmail, Calendar, Drive,
-Classroom) and GitHub, Slack, Notion, Linear, and more. Accepts desktop voice,
-desktop text, screen Q&A, and Telegram messages. Backend-first for Telegram and
-durable memory.
+Classroom, Tasks, Contacts, Meet) and GitHub, Slack, Notion, Linear, and more.
+Accepts desktop voice, desktop text, screen Q&A, and Telegram messages.
+Backend-first for Telegram and durable memory.
 
 ---
 
@@ -95,8 +95,9 @@ CLOUD BACKEND  (Hono/Bun)
 
 - Core: filesystem r/w, bash (sandboxed), web search/fetch, cron, messaging,
   memory
-- Connectors: Gmail, Google Calendar, Google Drive, Google Classroom, GitHub,
-  Notion, Slack, Linear — loaded from `ConnectorRegistry`
+- Connectors: Gmail, Google Calendar, Google Drive, Google Classroom, Google
+  Tasks, Google Contacts, Google Meet, GitHub, Notion, Slack, Linear — loaded
+  from `ConnectorRegistry`
 
 **Hooks:** `PreToolUse` (block dangerous) · `PostToolUse` (log, trim tokens) ·
 `Stop` (flush scratchpad) · `SessionEnd` (compact memory.md)
@@ -123,42 +124,16 @@ memory is local/private working memory and syncs durable facts to
 
 ---
 
-## Cloudflare Workers — I/O rules (landing only)
-
-The **backend runs on EC2 (Bun), not Workers** — these rules apply to the landing
-Worker (`apps/landing`). The backend still uses `neon()` HTTP mode (fine on a
-server; a `Pool` would also work now but isn't used). CF Workers bind native I/O
-to the originating request context:
-
-- **Use `neon()` HTTP mode, never `Pool`.** `Pool` opens a WebSocket and cannot
-  be reused across requests. Import `neon` from `@neondatabase/serverless` and
-  `drizzle` from `drizzle-orm/neon-http`.
-- **Never pass a cached promise to `ctx.waitUntil()` from a different request.**
-- **Never store Request, Response, ReadableStream, or body references in
-  module-level variables.** Only plain data may live at module scope.
-- **Singleton auth instance is safe** — `betterAuth()` makes `fetch()` calls per
-  request.
-
----
-
 ## Database
 
-Better Auth: `user / session / account / verification`. User table extended with
-`plan`, `subscription_status`, `trial_start_date`, `trial_end_date`,
-`current_period_end`, `dodo_subscription_id`.
+Schema: `packages/db/src/schema.ts`. Better Auth owns
+`user / session / account / verification`; the `user` table is extended in place
+with the plan/subscription/trial columns. `usage_events` is append-only.
+`mcp_connections.oauth_tokens` and `hook_logs` are encrypted / PII-redacted
+respectively.
 
-Billing/metering tables: `usage_events` (append-only), `credit_accounts`
-(balance + lifetime totals), `credit_grants` (per-batch with expiry),
-`credit_transactions` (audit log), `payment_records`,
-`processed_payment_events`, `subscriptions`.
-
-Other app tables: `devices`, `agent_runs`, `agent_sessions`, `agent_messages`,
-`memory_blobs`, `memory_entries`, `memory_sources`, `memory_relations`,
-`memory_embeddings`,
-`rag_sources / rag_documents / rag_chunks / rag_embeddings / rag_retrieval_logs`,
-`mcp_connections` (oauth_tokens encrypted), `platform_connections`,
-`pending_actions`, `hook_logs` (PII redacted), `linking_codes`,
-`telegram_link_tokens`, `device_codes`. Schema: `packages/db/src/schema.ts`.
+`apps/landing` deploys as a Cloudflare Worker and has its own I/O rules — see
+`apps/landing/CLAUDE.md`.
 
 ---
 

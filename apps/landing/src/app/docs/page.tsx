@@ -46,12 +46,27 @@ const CONNECTORS: { id: string; name: string; access: string }[] = [
   {
     id: "google-drive",
     name: "Google Drive",
-    access: "Browse, read, create, rename, and delete files",
+    access: "Browse, read, create, and edit files, Docs, Sheets, and Slides",
   },
   {
     id: "google-classroom",
     name: "Google Classroom",
     access: "Read classes, assignments, due dates, and grades",
+  },
+  {
+    id: "google-tasks",
+    name: "Google Tasks",
+    access: "Read your to-do lists and create, edit, or complete tasks",
+  },
+  {
+    id: "google-contacts",
+    name: "Google Contacts",
+    access: "Look people up by name, and create or update contacts",
+  },
+  {
+    id: "google-meet",
+    name: "Google Meet",
+    access: "Create meeting links and read past calls and transcripts",
   },
   { id: "github", name: "GitHub", access: "Repositories, issues, and pull requests" },
   { id: "notion", name: "Notion", access: "Search and read your shared pages and databases" },
