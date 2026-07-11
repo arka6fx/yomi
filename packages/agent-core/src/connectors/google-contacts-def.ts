@@ -89,15 +89,45 @@ export function createContactsTools(ctx: ConnectorContext): ToolSet {
     return (text ? JSON.parse(text) : undefined) as T
   }
 
+  // The People API search endpoints are backed by a per-session cache that starts
+  // EMPTY. Google's docs require a warmup request with an empty query before the
+  // first real search; skip it and a freshly saved contact simply is not found —
+  // "I couldn't find Alex's email" while Alex sits in the address book with it.
+  async function warmSearchCache(): Promise<void> {
+    await Promise.all([
+      peopleApi(`/people:searchContacts?query=&pageSize=1&readMask=names`).catch(() => {}),
+      peopleApi(`/otherContacts:search?query=&pageSize=1&readMask=names`).catch(() => {}),
+    ])
+  }
+
+  // Authoritative fallback: the search index is eventually consistent, connections
+  // are not. A contact the user can see in Google Contacts must be findable.
+  async function scanConnections(query: string): Promise<ShapedContact[]> {
+    const data = await peopleApi<{ connections?: Person[] }>(
+      `/people/me/connections?pageSize=1000&personFields=${PERSON_FIELDS}`,
+    ).catch(() => ({}) as { connections?: Person[] })
+    const needle = query.trim().toLowerCase()
+    return (data.connections ?? [])
+      .map((p) => shapePerson(p, "contacts"))
+      .filter((c) => {
+        const name = (c.name ?? "").toLowerCase()
+        const emails = (c.emails ?? []).join(" ").toLowerCase()
+        return name.includes(needle) || emails.includes(needle)
+      })
+  }
+
   // Search all three address books the user has. `otherContacts` holds people the
   // user has emailed but never saved — on a personal Gmail that is most of them —
   // and `directory` only returns anything on Workspace accounts, so both are
   // best-effort: a failure there must not sink a search that saved contacts answered.
   async function searchEverywhere(query: string, pageSize: number): Promise<ShapedContact[]> {
+    await warmSearchCache()
     const q = encodeURIComponent(query)
     const saved = peopleApi<{ results?: { person?: Person }[] }>(
       `/people:searchContacts?query=${q}&pageSize=${pageSize}&readMask=${PERSON_FIELDS}`,
-    ).then((d) => (d.results ?? []).map((r) => shapePerson(r.person ?? {}, "contacts")))
+    )
+      .then((d) => (d.results ?? []).map((r) => shapePerson(r.person ?? {}, "contacts")))
+      .catch(() => [] as ShapedContact[])
 
     const other = peopleApi<{ results?: { person?: Person }[] }>(
       `/otherContacts:search?query=${q}&pageSize=${pageSize}&readMask=names,emailAddresses`,
@@ -112,7 +142,9 @@ export function createContactsTools(ctx: ConnectorContext): ToolSet {
       .catch(() => [] as ShapedContact[])
 
     const [a, b, c] = await Promise.all([saved, other, directory])
-    return dedupe(rankCandidates([...a, ...b, ...c], query))
+    const hits = [...a, ...b, ...c]
+    if (hits.length === 0) hits.push(...(await scanConnections(query)))
+    return dedupe(rankCandidates(hits, query))
   }
 
   return {
