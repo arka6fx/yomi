@@ -474,6 +474,69 @@ describe("GatewayRunner production routing", () => {
     expect(adapter.messages.at(-1)?.text).toBe("backend reply")
   })
 
+  it("stops giving away free resumes once the cap is hit", async () => {
+    // A resume can propose a further gated write, so approving over and over would
+    // otherwise fund an unbounded chain of uncharged agent runs off one paid message.
+    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    for (let i = 0; i < 10; i++) {
+      pendingActions = [{ id: "11111111-1111-1111-1111-111111111111", title: "T", preview: "p" }]
+      await incoming(runner, {
+        platform: "telegram",
+        chatId: "chat_1",
+        userId: "tg_1",
+        text: "yes",
+        timestamp: new Date().toISOString(),
+      })
+    }
+
+    expect(agentCalls).toHaveLength(10)
+    expect(agentCalls.filter((c) => c.skipCharge).length).toBe(8)
+    // Past the allowance, the continuation is billed like any other turn.
+    expect(agentCalls.slice(8).every((c) => c.skipCharge === false)).toBe(true)
+  })
+
+  it("restores the free-resume allowance after a real user turn", async () => {
+    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    for (let i = 0; i < 9; i++) {
+      pendingActions = [{ id: "11111111-1111-1111-1111-111111111111", title: "T", preview: "p" }]
+      await incoming(runner, {
+        platform: "telegram",
+        chatId: "chat_1",
+        userId: "tg_1",
+        text: "yes",
+        timestamp: new Date().toISOString(),
+      })
+    }
+    expect(agentCalls.at(-1)?.skipCharge).toBe(false)
+
+    // A charged message starts a new task; its writes get the allowance again.
+    pendingActions = []
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "solve my assignment",
+      timestamp: new Date().toISOString(),
+    })
+
+    pendingActions = [{ id: "11111111-1111-1111-1111-111111111111", title: "T", preview: "p" }]
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "yes",
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(agentCalls.at(-1)?.skipCharge).toBe(true)
+  })
+
   it("does not resume the agent when an approval is denied", async () => {
     pendingActions = [{ id: "11111111-1111-1111-1111-111111111111", title: "T", preview: "p" }]
     const runner = new GatewayRunner("http://sidecar.invalid", "secret")
