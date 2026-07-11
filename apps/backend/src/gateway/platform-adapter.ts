@@ -26,7 +26,7 @@ export function removeMarkdown(text: string): string {
   const urls: string[] = []
   const withoutUrls = text.replace(/https?:\/\/\S+/g, (url) => {
     urls.push(url)
-    return `\u0000URL${urls.length - 1}\u0000`
+    return `\uE000URL${urls.length - 1}\uE000`
   })
 
   const stripped = withoutUrls
@@ -49,7 +49,7 @@ export function removeMarkdown(text: string): string {
     .replace(/\n{3,}/g, "\n\n")
     .trim()
 
-  return stripped.replace(/\u0000URL(\d+)\u0000/g, (_m, i) => urls[Number(i)] ?? "")
+  return stripped.replace(/\uE000URL(\d+)\uE000/g, (_m, i) => urls[Number(i)] ?? "")
 }
 
 export function truncateMessage(text: string, maxLen = 2000): string {
