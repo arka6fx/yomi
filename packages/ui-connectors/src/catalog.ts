@@ -121,7 +121,13 @@ const CATALOG_DEFS: Array<{
   },
 ]
 
-export function buildCatalog(connectedProviders: string[] = []): ConnectorInfo[] {
+// displayNames maps connector id → the account it is bound to (usually an email).
+// Each connector is its own OAuth grant, so they can legitimately sit on different
+// Google accounts — showing the account is the only way a user can tell.
+export function buildCatalog(
+  connectedProviders: string[] = [],
+  displayNames: Record<string, string> = {},
+): ConnectorInfo[] {
   const connectedSet = new Set(connectedProviders)
   return CATALOG_DEFS.map((def) => ({
     id: def.id,
@@ -132,5 +138,6 @@ export function buildCatalog(connectedProviders: string[] = []): ConnectorInfo[]
     icon: def.icon,
     available: def.available,
     connected: connectedSet.has(def.id),
+    displayName: displayNames[def.id],
   }))
 }
