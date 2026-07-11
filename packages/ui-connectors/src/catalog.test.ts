@@ -1,5 +1,24 @@
 import { describe, expect, it } from "bun:test"
 import { buildCatalog } from "./catalog.js"
+import { accountLabel } from "./components/ConnectorMarketplace.js"
+
+describe("accountLabel", () => {
+  // The card title already says "Google Calendar", so "Calendar (arka@gmail.com)"
+  // spent its width repeating that and ellipsised the only part that mattered.
+  it("keeps only the account from a name-wrapped display name", () => {
+    expect(accountLabel("Calendar (arkagarai292@gmail.com)")).toBe("arkagarai292@gmail.com")
+    expect(accountLabel("Classroom (arka.cse2023@nsec.ac.in)")).toBe("arka.cse2023@nsec.ac.in")
+  })
+
+  it("passes through a name that is already bare", () => {
+    expect(accountLabel("arkagarai292@gmail.com")).toBe("arkagarai292@gmail.com")
+    expect(accountLabel("Google Meet")).toBe("Google Meet")
+  })
+
+  it("renders nothing when there is no display name", () => {
+    expect(accountLabel(undefined)).toBeUndefined()
+  })
+})
 
 describe("buildCatalog", () => {
   // Each connector is a separate OAuth grant, so Gmail can sit on one Google account

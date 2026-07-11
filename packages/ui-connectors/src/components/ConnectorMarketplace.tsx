@@ -7,58 +7,70 @@ import type { ConnectorInfo, ConnectorTheme } from "../types"
 
 interface ConnectedBadgeProps {
   t: ConnectorTheme
-  displayName?: string
 }
 
-function ConnectedBadge({ t, displayName }: ConnectedBadgeProps) {
+function ConnectedBadge({ t }: ConnectedBadgeProps) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+    <span
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 5,
+        background: t.successBg,
+        border: `1px solid ${t.successBorder}`,
+        borderRadius: 99,
+        padding: "2px 8px",
+      }}
+    >
       <span
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 5,
-          background: t.successBg,
-          border: `1px solid ${t.successBorder}`,
-          borderRadius: 99,
-          padding: "2px 8px",
+          width: 5,
+          height: 5,
+          borderRadius: "50%",
+          background: t.successText,
+          boxShadow: `0 0 6px ${t.successText}`,
+        }}
+      />
+      <span
+        style={{
+          fontSize: 9,
+          fontWeight: 600,
+          color: t.successText,
+          textTransform: "uppercase" as const,
         }}
       >
-        <span
-          style={{
-            width: 5,
-            height: 5,
-            borderRadius: "50%",
-            background: t.successText,
-            boxShadow: `0 0 6px ${t.successText}`,
-          }}
-        />
-        <span
-          style={{
-            fontSize: 9,
-            fontWeight: 600,
-            color: t.successText,
-            textTransform: "uppercase" as const,
-          }}
-        >
-          Connected
-        </span>
+        Connected
       </span>
-      {displayName && (
-        <span
-          style={{
-            fontSize: 10,
-            color: t.dim,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap" as const,
-            maxWidth: 120,
-          }}
-        >
-          {displayName}
-        </span>
-      )}
-    </div>
+    </span>
+  )
+}
+
+// Display names arrive as "Calendar (someone@gmail.com)" — the connector name is
+// already the card title, so only the account is worth the width.
+export function accountLabel(displayName?: string): string | undefined {
+  if (!displayName) return undefined
+  const wrapped = displayName.match(/\(([^)]+@[^)]+)\)/)
+  return wrapped ? wrapped[1] : displayName
+}
+
+function AccountLine({ t, displayName }: { t: ConnectorTheme; displayName?: string }) {
+  const account = accountLabel(displayName)
+  if (!account) return null
+  return (
+    <p
+      title={account}
+      style={{
+        fontSize: 11,
+        color: t.dim,
+        margin: "3px 0 0 0",
+        fontFamily: t.font,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap" as const,
+      }}
+    >
+      {account}
+    </p>
   )
 }
 
@@ -160,8 +172,9 @@ export function ConnectorTile({
                 Soon
               </span>
             )}
-            {info.connected && <ConnectedBadge t={t} displayName={info.displayName} />}
+            {info.connected && <ConnectedBadge t={t} />}
           </div>
+          {info.connected && <AccountLine t={t} displayName={info.displayName} />}
           <p
             style={{
               fontSize: 12,
