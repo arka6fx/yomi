@@ -1,5 +1,34 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test"
-import { createContactsTools, googleContactsDef, rankCandidates } from "./google-contacts-def.js"
+import {
+  createContactsTools,
+  googleContactsDef,
+  rankCandidates,
+  shapePerson,
+  toBirthdayDate,
+} from "./google-contacts-def.js"
+
+describe("birthdays", () => {
+  // People API makes the year optional, and most people give only a day and month.
+  // Inventing a year to satisfy a required field would store something untrue.
+  it("parses a full date and a year-less one", () => {
+    expect(toBirthdayDate("1998-03-14")).toEqual({ year: 1998, month: 3, day: 14 })
+    expect(toBirthdayDate("03-14")).toEqual({ month: 3, day: 14 })
+  })
+
+  it("ignores an unparseable birthday rather than guessing", () => {
+    expect(toBirthdayDate("next tuesday")).toBeUndefined()
+    expect(toBirthdayDate(undefined)).toBeUndefined()
+  })
+
+  it("renders a stored birthday back, with or without a year", () => {
+    expect(
+      shapePerson({ birthdays: [{ date: { year: 1998, month: 3, day: 14 } }] }, "contacts").birthday,
+    ).toBe("1998-03-14")
+    expect(shapePerson({ birthdays: [{ date: { month: 3, day: 14 } }] }, "contacts").birthday).toBe(
+      "03-14",
+    )
+  })
+})
 
 const originalFetch = globalThis.fetch
 let requests: { url: string; method: string; body: string }[] = []

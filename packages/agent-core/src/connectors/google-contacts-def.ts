@@ -10,6 +10,7 @@ interface Person {
   emailAddresses?: { value?: string; type?: string }[]
   phoneNumbers?: { value?: string; type?: string }[]
   organizations?: { name?: string; title?: string }[]
+  birthdays?: { date?: { year?: number; month?: number; day?: number } }[]
 }
 
 type ContactSource = "contacts" | "other" | "directory"
@@ -20,10 +21,25 @@ interface ShapedContact {
   emails: string[]
   phones: string[]
   organization?: string
+  birthday?: string
   source: ContactSource
 }
 
-const PERSON_FIELDS = "names,emailAddresses,phoneNumbers,organizations"
+const PERSON_FIELDS = "names,emailAddresses,phoneNumbers,organizations,birthdays"
+
+// People API models a birthday as a date whose year is optional — most people give a
+// day and month and nothing else, and storing a made-up year would be a lie.
+export function toBirthdayDate(
+  input?: string,
+): { year?: number; month: number; day: number } | undefined {
+  if (!input) return undefined
+  const full = /^(\d{4})-(\d{2})-(\d{2})$/.exec(input.trim())
+  if (full)
+    return { year: Number(full[1]), month: Number(full[2]), day: Number(full[3]) }
+  const dayMonth = /^(\d{2})-(\d{2})$/.exec(input.trim())
+  if (dayMonth) return { month: Number(dayMonth[1]), day: Number(dayMonth[2]) }
+  return undefined
+}
 
 export function shapePerson(p: Person, source: ContactSource): ShapedContact {
   const org = p.organizations?.[0]
@@ -33,8 +49,18 @@ export function shapePerson(p: Person, source: ContactSource): ShapedContact {
     emails: (p.emailAddresses ?? []).map((e) => e.value).filter((v): v is string => !!v),
     phones: (p.phoneNumbers ?? []).map((e) => e.value).filter((v): v is string => !!v),
     organization: [org?.title, org?.name].filter(Boolean).join(" at ") || undefined,
+    birthday: formatBirthday(p.birthdays?.[0]?.date),
     source,
   }
+}
+
+// Year is optional on a People API birthday, so a year-less one renders as MM-DD
+// rather than inventing a year the user never gave.
+function formatBirthday(d?: { year?: number; month?: number; day?: number }): string | undefined {
+  if (!d?.month || !d.day) return undefined
+  const mm = String(d.month).padStart(2, "0")
+  const dd = String(d.day).padStart(2, "0")
+  return d.year ? `${d.year}-${mm}-${dd}` : `${mm}-${dd}`
 }
 
 // Rank candidates so an exact name match beats a substring, and a saved contact
@@ -261,9 +287,15 @@ export function createContactsTools(ctx: ConnectorContext): ToolSet {
         phone: z.string().optional().describe("Phone number"),
         organization: z.string().optional().describe("Company or organization"),
         jobTitle: z.string().optional().describe("Job title"),
+        birthday: z
+          .string()
+          .optional()
+          .describe(
+            "Birthday as YYYY-MM-DD, or MM-DD when the year is unknown (people often give a day and month only)",
+          ),
       }),
       execute: async (args) => {
-        const { givenName, familyName, email, phone, organization, jobTitle } = args
+        const { givenName, familyName, email, phone, organization, jobTitle, birthday } = args
         const fullName = [givenName, familyName].filter(Boolean).join(" ")
         return gateWrite(
           ctx,
@@ -283,6 +315,8 @@ export function createContactsTools(ctx: ConnectorContext): ToolSet {
               }
               if (email) body["emailAddresses"] = [{ value: email }]
               if (phone) body["phoneNumbers"] = [{ value: phone }]
+              const bday = toBirthdayDate(birthday)
+              if (bday) body["birthdays"] = [{ date: bday }]
               if (organization || jobTitle) {
                 body["organizations"] = [
                   { ...(organization ? { name: organization } : {}), ...(jobTitle ? { title: jobTitle } : {}) },
@@ -313,9 +347,14 @@ export function createContactsTools(ctx: ConnectorContext): ToolSet {
         phone: z.string().optional().describe("New phone number (replaces the existing one)"),
         organization: z.string().optional().describe("New company or organization"),
         jobTitle: z.string().optional().describe("New job title"),
+        birthday: z
+          .string()
+          .optional()
+          .describe("New birthday as YYYY-MM-DD, or MM-DD when the year is unknown"),
       }),
       execute: async (args) => {
-        const { contactId, givenName, familyName, email, phone, organization, jobTitle } = args
+        const { contactId, givenName, familyName, email, phone, organization, jobTitle, birthday } =
+          args
         return gateWrite(
           ctx,
           {
@@ -328,6 +367,7 @@ export function createContactsTools(ctx: ConnectorContext): ToolSet {
               email ? `Email: ${email}` : null,
               phone ? `Phone: ${phone}` : null,
               organization ? `Org: ${organization}` : null,
+              birthday ? `Birthday: ${birthday}` : null,
             ]
               .filter(Boolean)
               .join("\n"),
@@ -357,6 +397,11 @@ export function createContactsTools(ctx: ConnectorContext): ToolSet {
                   { ...(organization ? { name: organization } : {}), ...(jobTitle ? { title: jobTitle } : {}) },
                 ]
                 fields.push("organizations")
+              }
+              const bday = toBirthdayDate(birthday)
+              if (bday) {
+                body["birthdays"] = [{ date: bday }]
+                fields.push("birthdays")
               }
               if (fields.length === 0) return { error: "Nothing to update." }
 
