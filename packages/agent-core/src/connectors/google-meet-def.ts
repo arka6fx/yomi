@@ -10,13 +10,25 @@ interface ConferenceRecord {
   space?: string
 }
 
-// Meet restricts space mutation to the app that created the space — same
-// developer-project rule as Classroom's turnIn. Any attempt to end or reconfigure
-// a meeting a human started in the Meet UI 403s no matter what scopes we hold, so
-// translate that into the workflow that does work instead of a raw API error.
-function meetWriteError(err: unknown): { error: string; hint?: string } {
+// A 403 means two completely different things depending on what we were doing, and
+// this used to report the mutation reason for BOTH — so "create a link with restricted
+// access" (rejected because RESTRICTED is a Workspace feature) came back claiming Yomi
+// can only manage spaces it created, which had nothing to do with it.
+function meetWriteError(err: unknown, op: "create" | "mutate" = "mutate"): {
+  error: string
+  hint?: string
+} {
   const msg = err instanceof Error ? err.message : String(err)
   if (/403|PERMISSION_DENIED/i.test(msg)) {
+    if (op === "create") {
+      return {
+        error:
+          "Google rejected the meeting settings. RESTRICTED access is a Google Workspace feature and is normally unavailable on a personal Google account.",
+        hint: "Use TRUSTED (invited people join directly, everyone else has to knock) or OPEN (anyone with the link joins). TRUSTED is the default and is what meet.google.com itself creates.",
+      }
+    }
+    // Meet restricts space mutation to the app that created the space — the same
+    // developer-project rule as Classroom's turnIn.
     return {
       error:
         "Google Meet only lets an app manage the meeting spaces it created itself — Yomi cannot end or reconfigure a meeting that was started from the Meet or Calendar UI (Google API restriction; no scope unlocks this).",
@@ -131,7 +143,7 @@ export function createMeetTools(ctx: ConnectorContext): ToolSet {
           .enum(["OPEN", "TRUSTED", "RESTRICTED"])
           .default("TRUSTED")
           .describe(
-            "OPEN = anyone with the link joins directly; TRUSTED = signed-in users join, others knock (default); RESTRICTED = only invited people",
+            "OPEN = anyone with the link joins directly; TRUSTED = invited people and colleagues join directly, everyone else has to knock (default, and what meet.google.com itself creates); RESTRICTED = only invited people — a Google Workspace feature that is normally REJECTED on a personal Google account, so prefer TRUSTED unless the user is on Workspace",
           ),
       }),
       execute: async (args) => {
@@ -161,7 +173,7 @@ export function createMeetTools(ctx: ConnectorContext): ToolSet {
                 message: `Meet link ready: ${space.meetingUri ?? "(no URI returned)"}`,
               }
             } catch (err) {
-              return meetWriteError(err)
+              return meetWriteError(err, "create")
             }
           },
         )
