@@ -190,6 +190,9 @@ function DashboardContent() {
   const [integrationHealth, setIntegrationHealth] = useState<IntegrationHealth[]>([])
   const [integrationLoadingId, setIntegrationLoadingId] = useState<string | null>(null)
   const [integrationConnectError, setIntegrationConnectError] = useState("")
+  const [integrationBanner, setIntegrationBanner] = useState<
+    { kind: "success" } | { kind: "error"; message: string } | null
+  >(null)
   const [showWelcome, setShowWelcome] = useState(false)
 
   const [apiKeyModal, setApiKeyModal] = useState<{
@@ -271,10 +274,28 @@ function DashboardContent() {
     const params = new URLSearchParams(window.location.search)
     setDesiredPlan(params.get("plan"))
     if (params.has("welcome")) setShowWelcome(true)
-    if (params.has("integration_success") || params.has("integration_error")) {
+
+    const success = params.has("integration_success")
+    const error = params.get("integration_error")
+    if (success || error) {
       setActiveTab("integrations")
+      setIntegrationBanner(success ? { kind: "success" } : { kind: "error", message: error ?? "" })
+      // Strip the flag from the URL. The banner used to be rendered straight off
+      // window.location.search, so it reappeared on every reload — announcing a
+      // successful connection long after the fact, and even when nothing was connected.
+      params.delete("integration_success")
+      params.delete("integration_error")
+      const qs = params.toString()
+      window.history.replaceState({}, "", qs ? `?${qs}` : window.location.pathname)
     }
   }, [])
+
+  // A success banner is a transient confirmation, not a permanent state.
+  useEffect(() => {
+    if (integrationBanner?.kind !== "success") return
+    const t = setTimeout(() => setIntegrationBanner(null), 5000)
+    return () => clearTimeout(t)
+  }, [integrationBanner])
 
   useEffect(() => {
     if (!session) return
@@ -775,21 +796,22 @@ function DashboardContent() {
               </div>
             </div>
 
-            {new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").has(
-              "integration_success",
-            ) && (
+            {integrationBanner?.kind === "success" && (
               <div className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-400">
                 Integration connected successfully.
               </div>
             )}
-            {new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").has(
-              "integration_error",
-            ) && (
-              <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                Integration failed:{" "}
-                {new URLSearchParams(
-                  typeof window !== "undefined" ? window.location.search : "",
-                ).get("integration_error")}
+            {integrationBanner?.kind === "error" && (
+              <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                <span>Integration failed: {integrationBanner.message}</span>
+                <button
+                  type="button"
+                  onClick={() => setIntegrationBanner(null)}
+                  className="shrink-0 opacity-70 hover:opacity-100"
+                  aria-label="Dismiss"
+                >
+                  ✕
+                </button>
               </div>
             )}
             {integrationConnectError && (
