@@ -61,6 +61,31 @@ describe("parseMarkdownSlides", () => {
     const slides = parseMarkdownSlides("# One\na\n# Two\nb")
     expect(slides.map((s) => s.title)).toEqual(["One", "Two"])
   })
+
+  // A generated deck had text running off the bottom of the slide: the Slides API does
+  // not re-run autofit on text it inserts, so an overlong body simply spills over the
+  // edge instead of shrinking.
+  it("splits an overlong section into a continuation slide", () => {
+    const long = Array.from({ length: 20 }, (_, i) => `- bullet number ${i} with some text`).join(
+      "\n",
+    )
+    const slides = parseMarkdownSlides(`# Comparison\n${long}`)
+
+    expect(slides.length).toBeGreaterThan(1)
+    expect(slides[0]?.title).toBe("Comparison")
+    expect(slides[1]?.title).toBe("Comparison (cont.)")
+    // Nothing may exceed what a placeholder can hold.
+    for (const s of slides) {
+      expect(s.body.split("\n").length).toBeLessThanOrEqual(9)
+      expect(s.body.length).toBeLessThanOrEqual(520)
+    }
+  })
+
+  it("leaves a slide that already fits alone", () => {
+    const slides = parseMarkdownSlides("# Short\n- one\n- two\n- three")
+    expect(slides).toHaveLength(1)
+    expect(slides[0]?.title).toBe("Short")
+  })
 })
 
 describe("parseTableContent", () => {

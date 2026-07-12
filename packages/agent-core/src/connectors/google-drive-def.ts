@@ -69,7 +69,7 @@ export function parseMarkdownSlides(content: string): { title: string; body: str
   const rawSlides = (
     sections.length > 1 ? sections : content.split(/\r?\n(?=#{1,2} )/)
   ).filter((s) => s.trim())
-  return rawSlides.map((raw) => {
+  const parsed = rawSlides.map((raw) => {
     let title = ""
     const body: string[] = []
     for (const line of raw.split(/\r?\n/)) {
@@ -92,6 +92,42 @@ export function parseMarkdownSlides(content: string): { title: string; body: str
     }
     return { title, body: body.join("\n").trim() }
   })
+  return parsed.flatMap(splitOverlongSlide)
+}
+
+// A TITLE_AND_BODY placeholder holds roughly this much at the font size we set below.
+// The Slides API does NOT re-run autofit on text it inserts, so anything past this just
+// spills off the bottom of the slide — the deck looked broken rather than full.
+const MAX_BODY_LINES = 9
+const MAX_BODY_CHARS = 520
+
+// Overflow becomes a continuation slide rather than falling off the edge.
+export function splitOverlongSlide(slide: { title: string; body: string }): {
+  title: string
+  body: string
+}[] {
+  const lines = slide.body.split("\n")
+  if (lines.length <= MAX_BODY_LINES && slide.body.length <= MAX_BODY_CHARS) return [slide]
+
+  const out: { title: string; body: string }[] = []
+  let current: string[] = []
+  let chars = 0
+
+  const flush = () => {
+    if (current.length === 0) return
+    const title = out.length === 0 ? slide.title : `${slide.title} (cont.)`
+    out.push({ title, body: current.join("\n").trim() })
+    current = []
+    chars = 0
+  }
+
+  for (const line of lines) {
+    if (current.length >= MAX_BODY_LINES || chars + line.length > MAX_BODY_CHARS) flush()
+    current.push(line)
+    chars += line.length + 1
+  }
+  flush()
+  return out.length > 0 ? out : [slide]
 }
 
 // Build a multi-slide deck from Markdown in a freshly created presentation:
@@ -131,7 +167,19 @@ async function insertSlidesContent(
         },
       })
       if (slide.title) requests.push({ insertText: { objectId: titleId, text: slide.title } })
-      if (slide.body) requests.push({ insertText: { objectId: bodyId, text: slide.body } })
+      if (slide.body) {
+        requests.push({ insertText: { objectId: bodyId, text: slide.body } })
+        // Set the size explicitly. The layout's default is large, and the API never
+        // re-runs autofit on text it inserted, so the default overflows the placeholder.
+        requests.push({
+          updateTextStyle: {
+            objectId: bodyId,
+            style: { fontSize: { magnitude: 14, unit: "PT" } },
+            textRange: { type: "ALL" },
+            fields: "fontSize",
+          },
+        })
+      }
     })
     if (defaultSlideId) requests.push({ deleteObject: { objectId: defaultSlideId } })
 
@@ -597,7 +645,8 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
 
     "drive-createFile": tool({
       description:
-        "Create a new Google Workspace file with content. Docs render Markdown with real formatting; presentations become multi-slide decks from Markdown sections; spreadsheets are filled from CSV/TSV. Returns the new file ID and direct link. Defaults to document if kind is not specified.",
+        "Create a new Google Workspace file with content. Docs render Markdown with real formatting; presentations become multi-slide decks from Markdown sections (split on '---' or headings); spreadsheets are filled from CSV/TSV. Returns the new file ID and direct link. Defaults to document if kind is not specified. " +
+        "For a presentation, write SLIDE-SIZED content: a slide holds about 6 short bullets — keep each bullet to one line, put prose in the speaker's mouth rather than on the slide, and start a new section rather than letting one grow long. Overlong slides are split automatically, but that reads worse than writing them short.",
       parameters: z.object({
         name: z.string().describe("Name of the new file"),
         content: z
