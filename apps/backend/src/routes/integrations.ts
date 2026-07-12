@@ -90,6 +90,19 @@ async function resolveInternalUser(c: {
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 const GOOGLE_REVOKE_URL = "https://oauth2.googleapis.com/revoke"
+
+// Every Google connector shares one OAuth client, and Google treats a user's
+// authorization to a client as a SINGLE grant — revoking any one token withdraws
+// consent for the whole app. Disconnecting Gmail used to 401 Calendar, Drive,
+// Classroom, Tasks, Contacts and Meet along with it. Only revoke when the LAST Google
+// connector is going: that is when the user really is withdrawing consent.
+export function shouldRevokeGoogleGrant(
+  disconnecting: string,
+  connectedProviders: string[],
+): boolean {
+  if (!disconnecting.startsWith("google")) return false
+  return !connectedProviders.some((p) => p.startsWith("google") && p !== disconnecting)
+}
 // Scope source of truth is the Gmail ConnectorDef — this legacy /connect/google
 // route predates the generic /connect/:id path but must request identical scopes.
 const GOOGLE_SCOPES = (googleGmailDef.auth.kind === "oauth2" ? googleGmailDef.auth.scopes : []).join(
@@ -539,8 +552,22 @@ integrationsRouter.delete("/:provider", authenticate, async (c) => {
 
   if (!row) return c.json({ error: "Integration not found" }, 404)
 
-  // Revoke token with Google before deleting
-  if (provider === "google") {
+  // Every Google connector shares one OAuth client, and Google treats a user's
+  // authorization to a client as a SINGLE grant — so revoking any one token withdraws
+  // consent for the whole app. Disconnecting Gmail used to 401 Calendar, Drive,
+  // Classroom, Tasks, Contacts and Meet along with it. Only revoke when the last
+  // Google connector is going, which is when the user really is withdrawing consent.
+  const connected = await db
+    .select({ provider: mcpConnections.provider })
+    .from(mcpConnections)
+    .where(eq(mcpConnections.userId, user.id))
+
+  if (
+    shouldRevokeGoogleGrant(
+      provider,
+      connected.map((r) => r.provider),
+    )
+  ) {
     try {
       const tok = decryptTokens(row.oauthTokens)
       await fetch(`${GOOGLE_REVOKE_URL}?token=${encodeURIComponent(tok.accessToken)}`, {
