@@ -101,10 +101,47 @@ export async function createPendingAction(input: CreatePendingActionInput) {
     .returning({ id: pendingActions.id, status: pendingActions.status })
 
   if (!row) throw new Error("Failed to create pending action")
+
+  // Send the card ourselves rather than trusting the model to relay it. The model was
+  // told to summarise "in one short line", so it compressed the recipient, subject and
+  // body out of existence — the user was approving an email they could not see. An
+  // approval gate that hides what it is approving is not a safety mechanism, so this
+  // is awaited: the card IS the gate, not a nicety to fire and forget.
+  await sendApprovalCard(input.sourcePlatform, input.sourceChatId, input.title, input.preview)
+
   return {
     id: row.id,
     status: row.status,
     message: pendingApprovalMessage(input.title, input.preview),
+  }
+}
+
+export function formatApprovalCard(title: string, preview?: string): string {
+  const details = preview?.trim() ? `\n\n${preview.trim()}` : ""
+  return `Approval needed: ${title}${details}\n\nReply "yes" to approve or "no" to cancel.`
+}
+
+async function sendApprovalCard(
+  sourcePlatform: string | undefined,
+  sourceChatId: string | undefined,
+  title: string,
+  preview?: string,
+): Promise<void> {
+  if (!sourcePlatform || !sourceChatId) return
+  try {
+    const { getDefaultGateway } = await import("../gateway/index.js")
+    await getDefaultGateway().sendMessage(
+      sourcePlatform as "telegram",
+      sourceChatId,
+      formatApprovalCard(title, preview),
+    )
+  } catch (err) {
+    // The action still exists and the tool result carries the details, but the user
+    // did not see the card — worth knowing about.
+    console.warn(
+      "[pending-actions] failed to send approval card:",
+      err instanceof Error ? err.message : String(err),
+    )
   }
 }
 
