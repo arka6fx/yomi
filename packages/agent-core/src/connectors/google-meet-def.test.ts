@@ -28,44 +28,51 @@ describe("meet-updateSpaceSettings", () => {
   // nothing that edits anything.
   function patchFetch() {
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-      requests.push({
-        url: String(input),
-        method: init?.method ?? "GET",
-        body: String(init?.body ?? ""),
-      })
+      const url = String(input)
+      requests.push({ url, method: init?.method ?? "GET", body: String(init?.body ?? "") })
+      // spaces.get accepts the meeting code and returns the real resource name.
       return Response.json({
-        name: "spaces/abc123",
-        meetingUri: "https://meet.google.com/mex-ifym-mfn",
+        name: "spaces/AAAAreal_space_id",
+        meetingUri: "https://meet.google.com/jju-tncg-xos",
         config: { accessType: "OPEN" },
       })
     }) as typeof fetch
   }
 
-  it("patches the existing space instead of creating a new one", async () => {
+  it("resolves a meeting code to the resource name before patching", async () => {
+    // Live failure: the agent passed the meeting code straight from the link, we
+    // PATCHed /spaces/jju-tncg-xos, and Google 403'd — which our error mapping reported
+    // as "the app can only manage spaces it created", even though it had created it.
     patchFetch()
     const result = (await executeTool("meet-updateSpaceSettings", {
-      spaceId: "spaces/abc123",
+      spaceId: "jju-tncg-xos",
       accessType: "OPEN",
     })) as { accessType?: string; link?: string }
 
-    expect(requests).toHaveLength(1)
-    const req = requests[0]!
-    expect(req.method).toBe("PATCH")
-    expect(req.url).toContain("/spaces/abc123")
-    expect(req.url).toContain("updateMask=config.accessType")
-    expect(JSON.parse(req.body)).toEqual({ config: { accessType: "OPEN" } })
+    expect(requests).toHaveLength(2)
+    const [lookup, patch] = requests
+    expect(lookup!.method).toBe("GET")
+    expect(lookup!.url).toContain("/spaces/jju-tncg-xos")
+
+    expect(patch!.method).toBe("PATCH")
+    // Must patch the RESOURCE NAME the lookup returned, not the meeting code.
+    expect(patch!.url).toContain("/spaces/AAAAreal_space_id")
+    expect(patch!.url).toContain("updateMask=config.accessType")
+    expect(JSON.parse(patch!.body)).toEqual({ config: { accessType: "OPEN" } })
+
     // The link the user already shared must survive the change.
-    expect(result.link).toBe("https://meet.google.com/mex-ifym-mfn")
+    expect(result.link).toBe("https://meet.google.com/jju-tncg-xos")
     expect(result.accessType).toBe("OPEN")
   })
 
-  it("accepts a bare meeting code as well as a spaces/ id", async () => {
+  it("also accepts a full spaces/ resource name", async () => {
     patchFetch()
     await executeTool("meet-updateSpaceSettings", {
-      spaceId: "mex-ifym-mfn",
+      spaceId: "spaces/AAAAreal_space_id",
       accessType: "RESTRICTED",
     })
-    expect(requests[0]?.url).toContain("/spaces/mex-ifym-mfn")
+    expect(requests[0]?.url).toContain("/spaces/AAAAreal_space_id")
+    expect(requests[1]?.method).toBe("PATCH")
   })
 })
 
