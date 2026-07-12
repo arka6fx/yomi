@@ -65,6 +65,25 @@ describe("meet-updateSpaceSettings", () => {
     expect(result.accessType).toBe("OPEN")
   })
 
+  it("explains a rejected access type instead of blaming space ownership", async () => {
+    // "Give me a Meet link with restricted access" 403'd (RESTRICTED is a Workspace
+    // feature), and the single 403 handler reported the MUTATION reason — that Yomi can
+    // only manage spaces it created — which had nothing to do with creating one.
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify({ error: { code: 403, status: "PERMISSION_DENIED" } }), {
+        status: 403,
+      })) as typeof fetch
+
+    const result = (await executeTool("meet-createSpace", { accessType: "RESTRICTED" })) as {
+      error?: string
+      hint?: string
+    }
+
+    expect(result.error).toContain("Workspace")
+    expect(result.error).not.toContain("spaces it created")
+    expect(result.hint).toContain("TRUSTED")
+  })
+
   it("also accepts a full spaces/ resource name", async () => {
     patchFetch()
     await executeTool("meet-updateSpaceSettings", {
