@@ -46,6 +46,15 @@ export function createMeetTools(ctx: ConnectorContext): ToolSet {
     return (text ? JSON.parse(text) : undefined) as T
   }
 
+  // Turn whatever the user has to hand — a meeting code from the link, or a full
+  // resource name — into the resource name that spaces.patch requires. spaces.get
+  // accepts either, so it does the translation for us.
+  async function resolveSpaceName(idOrCode: string): Promise<string> {
+    const trimmed = idOrCode.trim().replace(/^spaces\//, "")
+    const space = await meetApi<{ name?: string }>(`/spaces/${encodeURIComponent(trimmed)}`)
+    return space.name ?? `spaces/${trimmed}`
+  }
+
   return {
     "meet-updateSpaceSettings": tool({
       description:
@@ -81,7 +90,11 @@ export function createMeetTools(ctx: ConnectorContext): ToolSet {
           args,
           async () => {
             try {
-              const id = spaceId.startsWith("spaces/") ? spaceId : `spaces/${spaceId}`
+              // spaces.patch needs the space RESOURCE NAME, not the meeting code from
+              // the link (jju-tncg-xos). Passing the code 403s — which reads as "the app
+              // can only manage spaces it created" even when it did create it. spaces.get
+              // does accept the code, so resolve through it first.
+              const id = await resolveSpaceName(spaceId)
               const space = await meetApi<{
                 name?: string
                 meetingUri?: string
