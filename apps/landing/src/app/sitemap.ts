@@ -2,6 +2,8 @@ import type { MetadataRoute } from "next"
 
 const BASE = "https://getyomi.in"
 
+// Only canonical, indexable URLs belong here. /features and /pricing redirect to
+// homepage anchors; /contact canonicalises to /support.
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date()
   return [
@@ -18,15 +20,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     {
-      url: `${BASE}/pricing`,
+      url: `${BASE}/docs`,
       lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${BASE}/features`,
-      lastModified: now,
-      changeFrequency: "monthly",
+      changeFrequency: "weekly",
       priority: 0.8,
     },
     {
@@ -34,12 +30,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.5,
-    },
-    {
-      url: `${BASE}/contact`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.4,
     },
     {
       url: `${BASE}/privacy`,

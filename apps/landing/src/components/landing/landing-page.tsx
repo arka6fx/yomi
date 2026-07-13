@@ -121,6 +121,9 @@ const CONNECTORS: { id: string; name: string; description: string }[] = [
     name: "Google Classroom",
     description: "Assignments, due dates, grades",
   },
+  { id: "google-tasks", name: "Google Tasks", description: "Capture and complete to-dos" },
+  { id: "google-contacts", name: "Google Contacts", description: "Look people up by name" },
+  { id: "google-meet", name: "Google Meet", description: "Create links, recap past calls" },
   { id: "github", name: "GitHub", description: "Repos, issues, and pull requests" },
   { id: "notion", name: "Notion", description: "Search pages and databases" },
   { id: "slack", name: "Slack", description: "Read context, send approved messages" },
@@ -366,6 +369,11 @@ export function LandingPage() {
                 className="font-accent text-[4.8rem] leading-[0.82] tracking-normal text-[#eaf4ff] sm:text-[7.2rem] md:text-[9rem] lg:text-[11.2rem]"
               >
                 Yomi
+                {/* the visible wordmark alone is a poor heading for search and screen readers */}
+                <span className="sr-only">
+                  {" "}
+                  — AI productivity assistant for Windows
+                </span>
               </motion.h1>
 
               <motion.div
