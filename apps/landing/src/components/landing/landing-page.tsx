@@ -347,34 +347,21 @@ export function LandingPage() {
           </motion.div>
 
           {/* big centered tagline — the heart of the hero */}
-          <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.85, delay: 0.25 }}
-            className="mx-auto flex max-w-5xl flex-col items-center px-2 text-center"
-          >
+          <div className="animate-hero-rise-delayed mx-auto flex max-w-5xl flex-col items-center px-2 text-center">
             <p className="font-serif text-5xl leading-[1.04] tracking-tight text-white drop-shadow-[0_2px_24px_rgba(8,31,66,0.55)] sm:text-6xl lg:text-7xl xl:text-[5.5rem]">
               Sees your <span className="italic text-sky-300">screen</span>, hears your{" "}
               <span className="italic text-cyan-200">voice</span>, and works across{" "}
               <span className="italic text-blue-200">your everyday apps</span>.
             </p>
-          </motion.div>
+          </div>
 
           <div>
             <div className="grid items-end gap-8 lg:grid-cols-[1fr_360px]">
-              <motion.h1
-                initial={{ opacity: 0, y: 28 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.9, delay: 0.2 }}
-                className="font-accent text-[4.8rem] leading-[0.82] tracking-normal text-[#eaf4ff] sm:text-[7.2rem] md:text-[9rem] lg:text-[11.2rem]"
-              >
+              <h1 className="animate-hero-rise-delayed font-accent text-[4.8rem] leading-[0.82] tracking-normal text-[#eaf4ff] sm:text-[7.2rem] md:text-[9rem] lg:text-[11.2rem]">
                 Yomi
                 {/* the visible wordmark alone is a poor heading for search and screen readers */}
-                <span className="sr-only">
-                  {" "}
-                  — AI productivity assistant for Windows
-                </span>
-              </motion.h1>
+                <span className="sr-only"> — AI productivity assistant for Windows</span>
+              </h1>
 
               <motion.div
                 initial={{ opacity: 0, y: 22 }}
