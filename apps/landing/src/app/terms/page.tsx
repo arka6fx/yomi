@@ -17,7 +17,7 @@ export default function TermsPage() {
         <div className="mx-auto max-w-3xl px-6 py-24">
           <p className="mb-3 font-mono text-xs uppercase tracking-widest text-sky-100/50">Legal</p>
           <h1 className="mb-2 font-accent text-5xl text-[#eaf4ff]">Terms of Service</h1>
-          <p className="mb-16 text-sm text-white/40">Last updated: June 2026</p>
+          <p className="mb-16 text-sm text-white/40">Last updated: July 2026</p>
 
           <div className="space-y-10 text-sm leading-7 text-white/55">
             <Section title="Acceptance">
@@ -84,12 +84,41 @@ export default function TermsPage() {
               </ul>
             </Section>
 
-            <Section title="Free tier and limits">
+            <Section title="Explore plan and limits">
               <p>
-                The Free tier is provided as-is. We may adjust Free tier limits at any time.
-                Sustained abuse of the Free tier (e.g., circumventing limits) may result in account
-                suspension.
+                Explore is a free 30-day trial with a monthly credit allowance, provided as-is. We
+                may adjust its limits at any time. Sustained abuse (for example, creating multiple
+                accounts to circumvent the credit allowance) may result in suspension.
               </p>
+            </Section>
+
+            <Section title="Connected accounts">
+              <p>
+                Yomi connects to third-party services on your instruction: Gmail, Google Calendar,
+                Google Drive, Google Classroom, Google Tasks, Google Contacts, Google Meet, GitHub,
+                Slack, Notion, and Linear. You connect each one individually, and you can disconnect
+                any of them at any time from your dashboard.
+              </p>
+              <ul>
+                <li>
+                  You are responsible for having the right to connect an account and to act on the
+                  data in it. Do not connect an account you are not authorised to use.
+                </li>
+                <li>
+                  Yomi acts as your agent. Actions it takes on your instruction — sending an email,
+                  creating an event, sharing a file — are your actions, and every one of them is
+                  shown to you for approval before it runs.
+                </li>
+                <li>
+                  Your use of each connected service remains governed by that service&apos;s own
+                  terms. We are not responsible for outages, data loss, or policy changes at a
+                  third-party provider.
+                </li>
+                <li>
+                  AI outputs can be wrong. Review what Yomi proposes before approving it, especially
+                  anything that leaves your account or changes a shared document.
+                </li>
+              </ul>
             </Section>
 
             <Section title="Intellectual property">
@@ -132,6 +161,13 @@ export default function TermsPage() {
               <p>
                 We may update these Terms. Material changes will be emailed to you 14 days in
                 advance. Continued use after changes take effect constitutes acceptance.
+              </p>
+            </Section>
+
+            <Section title="Governing law">
+              <p>
+                These Terms are governed by the laws of India, and the courts of West Bengal, India
+                have exclusive jurisdiction over any dispute arising from them.
               </p>
             </Section>
 

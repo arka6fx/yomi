@@ -26,7 +26,7 @@ const mono = JetBrains_Mono({
 })
 
 const META_DESC =
-  "Yomi is an AI assistant that sees your screen, hears your voice, and connects to Gmail, Calendar, Drive, GitHub, Notion, Slack, and more, so you can get answers without switching windows."
+  "Yomi is an AI assistant that sees your screen, hears your voice, and connects to Gmail, Calendar, Drive, Classroom, Tasks, Contacts, Meet, GitHub, Notion, Slack, and Linear, so you can get answers without switching windows."
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://getyomi.in"),
@@ -35,19 +35,6 @@ export const metadata: Metadata = {
     default: "Yomi: AI assistant for your screen, voice, and apps",
   },
   description: META_DESC,
-  keywords: [
-    "AI assistant",
-    "screen-aware AI",
-    "voice AI",
-    "AI productivity",
-    "desktop AI",
-    "Windows AI assistant",
-    "Gmail AI",
-    "Google Drive AI",
-    "AI for work",
-    "natural language productivity",
-    "Yomi",
-  ],
   authors: [{ name: "Arka Garai", url: "https://getyomi.in" }],
   creator: "Arka Garai",
   publisher: "Yomi",

@@ -17,32 +17,36 @@ export default function PrivacyPage() {
         <div className="mx-auto max-w-3xl px-6 py-24">
           <p className="mb-3 font-mono text-xs uppercase tracking-widest text-sky-100/50">Legal</p>
           <h1 className="mb-2 font-accent text-5xl text-[#eaf4ff]">Privacy Policy</h1>
-          <p className="mb-16 text-sm text-white/40">Last updated: June 2026</p>
+          <p className="mb-16 text-sm text-white/40">Last updated: July 2026</p>
 
           <div className="max-w-none space-y-10 text-sm leading-7 text-white/55">
             <Section title="Overview">
               <p>
                 Yomi is an AI assistant that sees your screen, hears your voice, and connects to
-                your apps: Gmail, Google Calendar, Google Drive, GitHub, Notion, Slack, Linear, and
-                others. It is designed to be private by default: data from your connected apps is
-                used only to answer your direct queries and is not stored, shared, or used to train
-                AI models.
+                your apps: Gmail, Google Calendar, Google Drive, Google Classroom, Google Tasks,
+                Google Contacts, Google Meet, GitHub, Notion, Slack, and Linear. It is designed to
+                be private by default: data from your connected apps is used only to answer your
+                direct queries and is not stored, shared, or used to train AI models.
+              </p>
+              <p>
+                Two rules govern everything below.{" "}
+                <strong className="text-label">Nothing is accessed unless you ask.</strong> Yomi
+                acts on your own data, in response to your own request, and never crawls your
+                accounts in the background.{" "}
+                <strong className="text-label">
+                  Every action that changes something is approved by you first
+                </strong>{" "}
+                — sending an email, creating an event, saving a file, or editing a contact shows you
+                exactly what will happen before it happens.
               </p>
             </Section>
 
             <Section title="Google API Services: User Data">
               <p>
-                Yomi&apos;s use of information received from Google APIs adheres to the{" "}
-                <a
-                  href="https://developers.google.com/terms/api-services-user-data-policy"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Google API Services User Data Policy
-                </a>
-                , including the Limited Use requirements.
+                Each Google service below is a separate connector that you connect individually from
+                your Yomi dashboard. You are never asked for access to a service you have not chosen
+                to connect. When you connect one, Yomi may request the following access:
               </p>
-              <p>When you connect a Google account, Yomi may request the following access:</p>
               <ul>
                 <li>
                   <strong className="text-label">Gmail</strong> (
@@ -95,10 +99,42 @@ export default function PrivacyPage() {
                 </li>
               </ul>
               <p>
-                This data is used <strong className="text-label">only</strong> to fulfil your
-                specific request at the time it is made. It is not retained after the response is
-                returned, not shared with third parties beyond the AI inference provider, and not
-                used for advertising or to train machine-learning models.
+                <strong className="text-label">Limited Use.</strong> Yomi&apos;s use and transfer of
+                information received from Google APIs to any other app will adhere to the{" "}
+                <a
+                  href="https://developers.google.com/terms/api-services-user-data-policy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Google API Services User Data Policy
+                </a>
+                , including the Limited Use requirements. Specifically, this data is used{" "}
+                <strong className="text-label">only</strong> to provide or improve user-facing
+                features that are prominent in Yomi&apos;s interface. It is{" "}
+                <strong className="text-label">not</strong> sold, <strong className="text-label">not</strong>{" "}
+                transferred to third parties except as needed to provide those features or as
+                required by law, <strong className="text-label">not</strong> used for advertising,
+                and <strong className="text-label">not</strong> used to develop, improve, or train
+                generalised AI or machine-learning models.
+              </p>
+              <p>
+                <strong className="text-label">Human access.</strong> No human at Yomi reads your
+                Google data. The only exceptions are the ones the policy allows: with your explicit
+                consent (for example if you send us a message to debug a problem), where necessary
+                for security purposes such as investigating abuse, or where required by law.
+              </p>
+              <p>
+                <strong className="text-label">Scopes we deliberately do not request.</strong> Yomi
+                does not request <code className="text-sky-100/70">https://mail.google.com/</code>,
+                so it can never permanently delete a message — the most it can do is move mail to
+                trash, which you can undo. Yomi also never submits coursework on your behalf; it
+                prepares the file and hands it back to you to attach.
+              </p>
+              <p>
+                <strong className="text-label">Retention.</strong> Content fetched from a Google API
+                to answer a request is held in memory for that request and discarded once the
+                response is returned. The exception is a file you explicitly ask Yomi to save, which
+                lives in your own Drive under your control.
               </p>
               <p>
                 You can revoke Yomi&apos;s access to your Google account at any time from{" "}
@@ -158,9 +194,9 @@ export default function PrivacyPage() {
               <p>We use the following third-party services:</p>
               <ul>
                 <li>
-                  <strong className="text-label">Google APIs</strong>: Gmail, Calendar, and Drive
-                  data accessed on your behalf when you ask Yomi a question. Governed by
-                  Google&apos;s{" "}
+                  <strong className="text-label">Google APIs</strong>: Gmail, Calendar, Drive,
+                  Classroom, Tasks, Contacts, and Meet data accessed on your behalf when you ask
+                  Yomi to do something. Governed by Google&apos;s{" "}
                   <a
                     href="https://policies.google.com/privacy"
                     target="_blank"
@@ -172,14 +208,20 @@ export default function PrivacyPage() {
                   including Limited Use requirements.
                 </li>
                 <li>
-                  <strong className="text-label">OpenAI API</strong>: LLM
-                  inference via our proxy. Query content (including excerpts from connected apps) is
-                  sent to the LLM provider only to generate a response and is subject to their
-                  privacy policy. We do not enable training data use.
+                  <strong className="text-label">OpenAI</strong>: LLM inference via our proxy, plus
+                  speech-to-text and text-to-speech for voice features. Query content (including
+                  excerpts from connected apps) is sent only to generate a response, and is subject
+                  to their privacy policy. We do not enable training data use.
                 </li>
                 <li>
-                  <strong className="text-label">ElevenLabs</strong>: cloud STT and TTS for voice
-                  features.
+                  <strong className="text-label">ElevenLabs</strong>: fallback speech-to-text and
+                  text-to-speech, used only when the primary provider is unavailable.
+                </li>
+                <li>
+                  <strong className="text-label">Telegram</strong>: if you link your Telegram
+                  account, the messages you send the Yomi bot pass through Telegram&apos;s
+                  infrastructure and are subject to their privacy policy. Linking is optional and
+                  can be undone from your dashboard.
                 </li>
                 <li>
                   <strong className="text-label">Dodo Payments</strong>: payment processing. We
