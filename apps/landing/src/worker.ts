@@ -38,9 +38,20 @@ async function handleDownloadUrl() {
   return Response.json({ url }, { status: url ? 200 : 404 })
 }
 
+// These routes each rendered a page that already existed elsewhere. next.config redirects
+// never run here — the worker serves prebuilt assets — so they have to live in the worker.
+const REDIRECTS: Record<string, string> = {
+  "/features": "/#features",
+  "/pricing": "/#pricing",
+  "/contact": "/support",
+}
+
 export default {
   async fetch(request: Request, env: { ASSETS: { fetch(request: Request): Promise<Response> } }) {
     const url = new URL(request.url)
+
+    const redirect = REDIRECTS[url.pathname.replace(/\/$/, "")]
+    if (redirect) return Response.redirect(new URL(redirect, url.origin).toString(), 301)
 
     if (url.pathname === "/api/download") {
       return handleDownload()
