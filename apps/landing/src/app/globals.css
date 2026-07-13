@@ -76,6 +76,17 @@
   }
 }
 
+@keyframes heroRise {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes blurFadeUp {
   from {
     opacity: 0;
@@ -139,6 +150,23 @@
   .animate-blur-fade-up {
     animation: blurFadeUp 1s ease-out forwards;
     opacity: 0;
+  }
+
+  /* Hero copy animates in via CSS, not JS, so the prerendered HTML never ships the
+     heading at opacity:0 — Googlebot and no-JS readers still see it. */
+  .animate-hero-rise {
+    animation: heroRise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .animate-hero-rise-delayed {
+    animation: heroRise 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.25s both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-hero-rise,
+    .animate-hero-rise-delayed {
+      animation: none;
+    }
   }
 
   .hero-grid {
