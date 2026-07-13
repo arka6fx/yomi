@@ -2,12 +2,13 @@
 const nextConfig = {
   output: "standalone",
   transpilePackages: ["@yomi/ui-connectors", "@yomi/shared"],
-  // /features and /pricing used to render the whole landing page — three URLs, one
-  // page. Google treats that as duplicate content, so they are now anchors.
+  // These routes each re-rendered a page that already existed elsewhere, so Google saw
+  // duplicate content. A redirect is the strongest canonicalisation signal there is.
   async redirects() {
     return [
       { source: "/features", destination: "/#features", permanent: true },
       { source: "/pricing", destination: "/#pricing", permanent: true },
+      { source: "/contact", destination: "/support", permanent: true },
     ]
   },
   async rewrites() {

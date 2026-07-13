@@ -17,7 +17,7 @@ import Nav from "@/components/Nav"
 import Footer from "@/components/Footer"
 
 export const metadata: Metadata = {
-  title: "Docs",
+  title: "Docs: connectors, voice, memory, and credits",
   description:
     "Everything Yomi can do today: the desktop assistant, Telegram bot, app connectors, memory, voice, and how plans and credits work.",
   alternates: { canonical: "https://getyomi.in/docs" },

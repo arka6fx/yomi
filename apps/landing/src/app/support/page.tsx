@@ -5,7 +5,7 @@ import Nav from "@/components/Nav"
 import Footer from "@/components/Footer"
 
 export const metadata: Metadata = {
-  title: "Support",
+  title: "Support and contact",
   description:
     "Get help with Yomi. Report bugs, ask questions about billing, app connectors, or your account. Reach us by email at contact.arkagarai@gmail.com.",
   alternates: { canonical: "https://getyomi.in/support" },

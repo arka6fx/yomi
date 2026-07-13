@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Download",
+  title: "Download for Windows",
   description:
     "Download the Yomi desktop app for Windows. Installs in seconds and runs quietly in your system tray, responding to Ctrl+Space for voice or Ctrl+Enter to type.",
   alternates: { canonical: "https://getyomi.in/download" },
