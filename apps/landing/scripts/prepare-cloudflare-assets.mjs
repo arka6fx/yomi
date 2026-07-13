@@ -29,6 +29,30 @@ async function copySelectedFiles(sourceDir, destDir, predicate) {
   }
 }
 
+// Next emits metadata routes (robots.txt, sitemap.xml) as `<name>.body` beside an empty
+// `<name>` directory. Copying only .html/.rsc/.meta left that directory empty, so
+// Cloudflare 307'd /sitemap.xml to / and Google could never read it.
+async function materializeMetadataRoutes(sourceDir, destDir) {
+  const entries = await readdir(sourceDir, { withFileTypes: true })
+
+  for (const entry of entries) {
+    const sourcePath = join(sourceDir, entry.name)
+    const destPath = join(destDir, entry.name)
+
+    if (entry.isDirectory()) {
+      await materializeMetadataRoutes(sourcePath, destPath)
+      continue
+    }
+
+    if (!entry.name.endsWith(".body")) continue
+
+    const served = destPath.slice(0, -".body".length)
+    await rm(served, { recursive: true, force: true })
+    await mkdir(dirname(served), { recursive: true })
+    await cp(sourcePath, served)
+  }
+}
+
 async function main() {
   await rm(assetsDir, { recursive: true, force: true })
   await mkdir(assetsDir, { recursive: true })
@@ -38,6 +62,8 @@ async function main() {
       sourcePath.endsWith(".html") || sourcePath.endsWith(".rsc") || sourcePath.endsWith(".meta")
     )
   })
+
+  await materializeMetadataRoutes(nextAppDir, assetsDir)
 
   await cp(staticDir, join(assetsDir, "_next", "static"), { recursive: true })
   await cp(publicDir, assetsDir, { recursive: true })
