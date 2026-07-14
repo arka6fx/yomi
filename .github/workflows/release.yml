@@ -47,11 +47,24 @@ jobs:
 
       - name: Write packaged sidecar env
         run: |
+          # These names must match what the code reads. They were AI_CREDITS_* until the
+          # source was renamed to OPENAI_* and this file was not, so every line here was
+          # silently inert: the sidecar fell back to calling api.openai.com with no key.
+          #
+          # No OPENAI_BASE_URL and no OPENAI_API_KEY on purpose. Their absence is the signal
+          # that makes the sidecar route LLM calls through YOMI_BACKEND_URL/api/llm/proxy,
+          # authenticated with the signed-in user's session token, with the backend injecting
+          # the real key. Setting either one here would send the proxy an unauthenticated
+          # request and get a 401.
+          #
+          # SIDECAR_SECRET is what /api/stt and /api/tts authenticate on. It was never
+          # written here, so packaged builds sent no x-sidecar-secret header and every
+          # speech call 401'd: voice input and spoken replies did not work for any user.
           $lines = @(
-            "AI_CREDITS_BASE_URL=https://api.getyomi.in/api/llm/proxy"
-            "AI_CREDITS_FAST_MODEL=${{ secrets.AI_CREDITS_FAST_MODEL }}"
-            "AI_CREDITS_AGENT_MODEL=${{ secrets.AI_CREDITS_AGENT_MODEL }}"
-            "AI_CREDITS_EMBEDDING_MODEL=text-embedding-3-small"
+            "SIDECAR_SECRET=${{ secrets.SIDECAR_SECRET }}"
+            "OPENAI_FAST_MODEL=${{ secrets.AI_CREDITS_FAST_MODEL }}"
+            "OPENAI_AGENT_MODEL=${{ secrets.AI_CREDITS_AGENT_MODEL }}"
+            "OPENAI_EMBEDDING_MODEL=text-embedding-3-small"
             "ELEVENLABS_VOICE_ID=${{ secrets.ELEVENLABS_VOICE_ID }}"
             "ELEVENLABS_STT_MODEL=scribe_v2"
             "ELEVENLABS_TTS_MODEL=eleven_flash_v2_5"
