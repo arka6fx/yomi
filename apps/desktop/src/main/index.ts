@@ -270,6 +270,13 @@ app.whenReady().then(async () => {
     openTrustedExternal(`${base}/dashboard`)
   })
 
+  // Google's OAuth verification requires the privacy policy to be reachable from inside
+  // the app itself, not just the website.
+  ipcMain.on("yomi:open-privacy", () => {
+    const base = process.env["YOMI_LANDING_URL"] ?? "https://getyomi.in"
+    openTrustedExternal(`${base}/privacy`)
+  })
+
   ipcMain.handle("yomi:pick-attachment", async () => {
     const result = await dialog.showOpenDialog({
       filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp"] }],

@@ -44,6 +44,7 @@ declare global {
       openUpgrade(): void
       openDashboard(): void
       openIntegrationsPage(): void
+      openPrivacy(): void
       pickAttachment(): Promise<{ path: string; b64: string } | null>
       // Auto-update
       onUpdateAvailable(cb: (info: { version: string; releaseDate: string }) => void): () => void

@@ -2423,6 +2423,13 @@ function MenuCard({
             </button>
           )}
           <MenuBtn
+            label="Privacy Policy"
+            onClick={() => {
+              window.yomi.openPrivacy()
+              onClose()
+            }}
+          />
+          <MenuBtn
             label="Sign out"
             onClick={() => {
               onSignOut()
