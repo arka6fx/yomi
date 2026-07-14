@@ -144,12 +144,26 @@ type ChatCompletionChunk = {
   } | null
 }
 
+// Packaged desktop builds ship no OpenAI key, so the sidecar routes LLM calls through the
+// backend proxy and authenticates with the user's session token; the backend injects the
+// real key. Without this the sidecar called api.openai.com with no Authorization header at
+// all and every request 401'd. Explicit OPENAI_* config always wins (backend, local dev).
+function proxyTarget(): { baseUrl: string; token: string } | null {
+  if (process.env["OPENAI_API_KEY"] || process.env["OPENAI_BASE_URL"]) return null
+  const backend = process.env["YOMI_BACKEND_URL"] || process.env["BACKEND_URL"]
+  const token = process.env["YOMI_SESSION_TOKEN"]
+  if (!backend || !token) return null
+  return { baseUrl: `${backend.replace(/\/+$/, "")}/api/llm/proxy`, token }
+}
+
 function baseUrl(): string {
+  const proxy = proxyTarget()
+  if (proxy) return proxy.baseUrl
   return (process.env["OPENAI_BASE_URL"] || DEFAULT_BASE_URL).replace(/\/+$/, "")
 }
 
 function apiKey(): string {
-  return process.env["OPENAI_API_KEY"] ?? ""
+  return process.env["OPENAI_API_KEY"] ?? proxyTarget()?.token ?? ""
 }
 
 function imageUrl(part: { image: unknown; mimeType?: string }): string {
