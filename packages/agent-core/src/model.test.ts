@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "bun:test"
+import { afterEach, beforeEach, describe, expect, it } from "bun:test"
 import type { LanguageModelV1CallOptions } from "@ai-sdk/provider"
 import { createModel } from "./model.js"
 
@@ -56,5 +56,77 @@ describe("requestBody sampling params", () => {
     await createModel("gpt-4o-mini").doGenerate(callOptions())
     expect(captured.body?.["temperature"]).toBe(0)
     expect(captured.body?.["top_p"]).toBe(0.9)
+  })
+})
+
+// Captures the URL and Authorization header of the outgoing request.
+function captureRequest(): { url: string; auth: string | undefined } {
+  const captured: { url: string; auth: string | undefined } = { url: "", auth: undefined }
+  globalThis.fetch = (async (url: unknown, init?: RequestInit) => {
+    captured.url = String(url)
+    captured.auth = new Headers(init?.headers).get("authorization") ?? undefined
+    return new Response(
+      JSON.stringify({
+        choices: [{ message: { content: "ok" }, finish_reason: "stop" }],
+        usage: { prompt_tokens: 1, completion_tokens: 1 },
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    )
+  }) as typeof fetch
+  return captured
+}
+
+describe("endpoint and credential resolution", () => {
+  const KEYS = ["OPENAI_API_KEY", "OPENAI_BASE_URL", "YOMI_BACKEND_URL", "YOMI_SESSION_TOKEN"]
+  const saved: Record<string, string | undefined> = {}
+
+  beforeEach(() => {
+    for (const k of KEYS) {
+      saved[k] = process.env[k]
+      delete process.env[k]
+    }
+  })
+
+  afterEach(() => {
+    for (const k of KEYS) {
+      if (saved[k] === undefined) delete process.env[k]
+      else process.env[k] = saved[k]
+    }
+  })
+
+  it("uses the backend LLM proxy with the session token when no OpenAI key is present", async () => {
+    process.env["YOMI_BACKEND_URL"] = "https://api.getyomi.in"
+    process.env["YOMI_SESSION_TOKEN"] = "session-abc"
+    const captured = captureRequest()
+    await createModel("gpt-5.5").doGenerate(callOptions())
+    expect(captured.url).toBe("https://api.getyomi.in/api/llm/proxy/chat/completions")
+    expect(captured.auth).toBe("Bearer session-abc")
+  })
+
+  it("calls OpenAI directly when an OpenAI key is present", async () => {
+    process.env["OPENAI_API_KEY"] = "sk-real"
+    process.env["YOMI_BACKEND_URL"] = "https://api.getyomi.in"
+    process.env["YOMI_SESSION_TOKEN"] = "session-abc"
+    const captured = captureRequest()
+    await createModel("gpt-5.5").doGenerate(callOptions())
+    expect(captured.url).toBe("https://api.openai.com/v1/chat/completions")
+    expect(captured.auth).toBe("Bearer sk-real")
+  })
+
+  it("does not use the proxy when the session token is missing", async () => {
+    process.env["YOMI_BACKEND_URL"] = "https://api.getyomi.in"
+    const captured = captureRequest()
+    await createModel("gpt-5.5").doGenerate(callOptions())
+    // A tokenless proxy call would 401 at the backend; fall back rather than half-configure.
+    expect(captured.url).toBe("https://api.openai.com/v1/chat/completions")
+  })
+
+  it("honours an explicit OPENAI_BASE_URL over the proxy", async () => {
+    process.env["OPENAI_BASE_URL"] = "http://localhost:11434/v1"
+    process.env["YOMI_BACKEND_URL"] = "https://api.getyomi.in"
+    process.env["YOMI_SESSION_TOKEN"] = "session-abc"
+    const captured = captureRequest()
+    await createModel("gpt-5.5").doGenerate(callOptions())
+    expect(captured.url).toBe("http://localhost:11434/v1/chat/completions")
   })
 })
