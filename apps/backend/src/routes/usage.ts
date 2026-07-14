@@ -2,6 +2,7 @@ import { Hono } from "hono"
 import { db, usageEvents } from "@yomi/db"
 import { and, eq } from "drizzle-orm"
 import { authenticate } from "../auth.js"
+import { creditRenewal } from "../entitlements.js"
 import { recordAiUsage } from "../services/ai-telemetry.js"
 import { expireCredits } from "../services/credit-ledger.js"
 import { chargeUsage, lowCreditWarning, type ChargeKind } from "../services/metering.js"
@@ -52,11 +53,6 @@ type FinalizeBody = {
 
 const VALID_KINDS: ChargeKind[] = ["chat", "voice", "analyze", "bot_message", "agent"]
 
-function nextMonthReset(): Date {
-  const now = new Date()
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
-}
-
 usageRouter.post("/interactions/reserve", authenticate, async (c) => {
   // Sweep expired credit grants before any balance check so stale credits never
   // count toward a user's available balance. Fire-and-forget; debits are idempotent.
@@ -86,7 +82,7 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
           result.code === "subscription_required" || result.code === "subscription_inactive"
             ? "/dashboard?upgrade=true"
             : "/dashboard?credits=true",
-        resetAt: nextMonthReset(),
+        resetAt: creditRenewal(user).at,
       },
       result.status,
     )
@@ -99,7 +95,7 @@ usageRouter.post("/interactions/reserve", authenticate, async (c) => {
     creditsCharged: result.creditsCharged,
     creditsRemaining: result.balance,
     paidBy: result.paidBy,
-    resetAt: nextMonthReset(),
+    resetAt: creditRenewal(user).at,
     usageEventId: result.usageEventId,
   }
 

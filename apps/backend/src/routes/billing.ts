@@ -4,7 +4,7 @@ import { db, paymentRecords, usageEvents } from "@yomi/db"
 import { and, eq, gte, sql } from "drizzle-orm"
 import { authenticate } from "../auth.js"
 import * as authSchema from "../auth-schema.js"
-import { effectivePlanForUser, effectiveRoleForUser } from "../entitlements.js"
+import { creditRenewal, effectivePlanForUser, effectiveRoleForUser } from "../entitlements.js"
 import {
   CREDIT_PACKS,
   PLANS as SHARED_PLANS,
@@ -603,9 +603,7 @@ billingRouter.get("/subscription", authenticate, async (c) => {
   const requestPeriodStart = new Date(
     Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1),
   )
-  const resetAt = new Date(
-    Date.UTC(requestPeriodStart.getUTCFullYear(), requestPeriodStart.getUTCMonth() + 1, 1),
-  )
+  const renewal = creditRenewal(user)
 
   const creditConsumptionRows = await db
     .select({
@@ -647,7 +645,8 @@ billingRouter.get("/subscription", authenticate, async (c) => {
     trialExpired,
     currentPeriodEnd: user.currentPeriodEnd,
     dodoSubscriptionId: user.dodoSubscriptionId,
-    resetAt,
+    resetAt: renewal.at,
+    resetKind: renewal.kind,
     credits: creditSummary,
     creditsUsed: totalCreditsUsed,
     totalCredits,
@@ -666,9 +665,7 @@ billingRouter.get("/usage-summary", authenticate, async (c) => {
   const requestPeriodStart = new Date(
     Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1),
   )
-  const resetAt = new Date(
-    Date.UTC(requestPeriodStart.getUTCFullYear(), requestPeriodStart.getUTCMonth() + 1, 1),
-  )
+  const renewal = creditRenewal(user)
 
   const [creditConsumptionRows, dailyRows, transactions] = await Promise.all([
     db
@@ -708,7 +705,8 @@ billingRouter.get("/usage-summary", authenticate, async (c) => {
       included: planConfig.includedCredits,
       used: creditsUsed,
       totalAvailableThisPeriod,
-      resetAt,
+      resetAt: renewal.at,
+      resetKind: renewal.kind,
       expiringSoon: creditSummary.expiringSoon,
       expiringSoonAt: creditSummary.expiringSoonAt,
     },

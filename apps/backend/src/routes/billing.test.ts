@@ -879,6 +879,29 @@ describe("Dodo billing — subscription summary", () => {
       credits: 500,
     })
   })
+
+  it("dates the usage summary from the dodo billing period, not the calendar month", async () => {
+    currentUser.currentPeriodEnd = new Date("2026-08-14T09:00:00Z")
+    mockState.dbSelectQueue = [[{ creditsCharged: 0 }], []]
+
+    const body = (await (await getUsageSummary()).json()) as any
+
+    expect(body.credits.resetKind).toBe("renewal")
+    expect(body.credits.resetAt).toBe("2026-08-14T09:00:00.000Z")
+  })
+
+  it("dates the usage summary from the trial expiry for an explore user", async () => {
+    currentUser.plan = "explore"
+    currentUser.subscriptionStatus = "inactive"
+    currentUser.dodoSubscriptionId = null
+    currentUser.trialEndDate = new Date("2026-08-13T09:00:00Z")
+    mockState.dbSelectQueue = [[{ creditsCharged: 0 }], []]
+
+    const body = (await (await getUsageSummary()).json()) as any
+
+    expect(body.credits.resetKind).toBe("trial_expiry")
+    expect(body.credits.resetAt).toBe("2026-08-13T09:00:00.000Z")
+  })
 })
 
 // ── Webhook Processing ────────────────────────────────────────────────
