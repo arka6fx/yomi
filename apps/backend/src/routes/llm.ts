@@ -1,17 +1,22 @@
 import { Hono } from "hono"
+import { authenticate } from "../auth.js"
 
 export const llmRouter = new Hono()
 
 // Proxy OpenAI-compatible chat completions to OpenAI.
 // The sidecar sends requests here when OPENAI_API_KEY is unavailable in the
 // packaged env. The backend injects the real key server-side.
+//
+// authenticate is load-bearing: without it this route is an open relay that spends our
+// OpenAI key for anyone who finds the URL, and bypasses metering entirely. Usage is
+// charged by the caller up front via /interactions/reserve, so we do not charge here.
 const DEFAULT_OPENAI_BASE = "https://api.openai.com/v1"
 
 function aiCreditsBase(): string {
   return (process.env["OPENAI_BASE_URL"] || DEFAULT_OPENAI_BASE).replace(/\/+$/, "")
 }
 
-llmRouter.all("/proxy/*", async (c) => {
+llmRouter.all("/proxy/*", authenticate, async (c) => {
   const apiKey = process.env["OPENAI_API_KEY"]
   if (!apiKey) return c.json({ error: "OPENAI_API_KEY not configured" }, 500)
 
