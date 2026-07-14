@@ -1111,46 +1111,57 @@ function DashboardContent() {
                         </p>
                         <div className="flex items-baseline gap-2">
                           <span className="text-4xl font-light text-foreground tabular-nums">
-                            {creditRemaining}
+                            {isOwner ? "∞" : creditRemaining}
                           </span>
-                          <span className="text-sm text-muted-foreground">
-                            / {creditTotal || creditIncluded} available
-                          </span>
+                          {!isOwner && (
+                            <span className="text-sm text-muted-foreground">
+                              / {creditTotal || creditIncluded} available
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
                           {creditsCaption(creditIncluded, isOwner, resetAt, resetKind)}
                         </p>
                       </div>
-                      <button
-                        onClick={() =>
-                          sub?.plan === "explore"
-                            ? handleUpgrade("pro")
-                            : sub?.creditPacks?.[0] && handleBuyCredits(sub.creditPacks[0].key)
-                        }
-                        disabled={billingLoading !== null || creditLoading !== null}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-                      >
-                        {sub?.plan === "explore" ? <Crown size={13} /> : <Zap size={13} />}
-                        {sub?.plan === "explore" ? "Upgrade" : "Add credits"}
-                      </button>
+                      {!isOwner && (
+                        <button
+                          onClick={() =>
+                            sub?.plan === "explore"
+                              ? handleUpgrade("pro")
+                              : sub?.creditPacks?.[0] && handleBuyCredits(sub.creditPacks[0].key)
+                          }
+                          disabled={billingLoading !== null || creditLoading !== null}
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                        >
+                          {sub?.plan === "explore" ? <Crown size={13} /> : <Zap size={13} />}
+                          {sub?.plan === "explore" ? "Upgrade" : "Add credits"}
+                        </button>
+                      )}
                     </div>
 
                     {sub && (
                       <div className="space-y-5">
-                        <div className="space-y-2">
-                          <div className="h-3 rounded-full bg-muted overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-primary transition-all"
-                              style={{
-                                width: `${Math.min(100, (creditUsed / Math.max(creditTotal, 1)) * 100)}%`,
-                              }}
-                            />
+                        {/* owners have no quota, so a usage bar would be measuring against nothing */}
+                        {isOwner ? (
+                          <div className="text-xs text-muted-foreground">
+                            {creditUsed} used this period · no limit
                           </div>
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>{creditUsed} used this period</span>
-                            <span>{creditRemaining} remaining</span>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="h-3 rounded-full bg-muted overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-primary transition-all"
+                                style={{
+                                  width: `${Math.min(100, (creditUsed / Math.max(creditTotal, 1)) * 100)}%`,
+                                }}
+                              />
+                            </div>
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span>{creditUsed} used this period</span>
+                              <span>{creditRemaining} remaining</span>
+                            </div>
                           </div>
-                        </div>
+                        )}
 
                         <div className="grid gap-3 sm:grid-cols-[1fr_1.2fr]">
                           <div className="rounded-xl border border-border bg-background/45 p-4">
@@ -1200,7 +1211,7 @@ function DashboardContent() {
                       </div>
                     )}
 
-                    {sub?.plan === "explore" && sub?.credits?.balance === 0 && (
+                    {!isOwner && sub?.plan === "explore" && sub?.credits?.balance === 0 && (
                       <div className="mt-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20">
                         <p className="text-sm text-destructive font-medium mb-1">
                           Free trial has ended
@@ -1221,7 +1232,7 @@ function DashboardContent() {
                       </div>
                     )}
 
-                    {sub?.plan !== "explore" && sub?.credits?.balance === 0 && (
+                    {!isOwner && sub?.plan !== "explore" && sub?.credits?.balance === 0 && (
                       <div className="mt-6 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
                         <p className="text-sm text-yellow-400 font-medium mb-1">
                           No credits remaining
