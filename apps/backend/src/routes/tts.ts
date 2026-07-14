@@ -1,21 +1,11 @@
 import { Hono } from "hono"
-import type { Context } from "hono"
 import { defaultVoiceSettings, synthesizeSpeech } from "../services/tts.js"
-
-// Machine-to-machine only — see stt.ts. Direct user-session access would bypass the
-// credit meter, so only the sidecar (with the shared secret) may reach ElevenLabs.
-function isAuthorized(c: Context): boolean {
-  const secret = process.env.SIDECAR_SECRET
-  const header = c.req.header("x-sidecar-secret")
-  if (secret && header === secret) return true
-  if (!secret && header === secret) return true // both unset → allow (dev)
-  return false
-}
+import { isSpeechAuthorized } from "../middleware/speech-auth.js"
 
 export const ttsRouter = new Hono()
 
 ttsRouter.post("/", async (c) => {
-  if (!isAuthorized(c)) return c.json({ error: "Unauthorized" }, 401)
+  if (!isSpeechAuthorized(c)) return c.json({ error: "Unauthorized" }, 401)
 
   const { text, voice_id, model_id, voice_settings } = (await c.req.json()) as {
     text: string
