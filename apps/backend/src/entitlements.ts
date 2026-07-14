@@ -15,6 +15,20 @@ type EntitlementUser = {
   plan?: string | null
 }
 
+type RenewalUser = EntitlementUser & {
+  createdAt?: Date | null
+  trialEndDate?: Date | null
+  currentPeriodEnd?: Date | null
+}
+
+// "none" — owner (credits bypassed) or a paid plan with no billing period on record yet.
+export type CreditRenewal = {
+  kind: "renewal" | "trial_expiry" | "none"
+  at: Date | null
+}
+
+const TRIAL_MS = 30 * 24 * 60 * 60 * 1000
+
 function parseList(value: string | undefined): string[] {
   return (
     value
@@ -54,6 +68,23 @@ export function effectivePlanForUser(user: EntitlementUser): string {
   if (isOwnerUser(user)) return "max"
   const plan = user.plan ?? "explore"
   return plan in PLANS ? plan : "explore"
+}
+
+// Credits are granted per user, never on a calendar boundary: explore gets a one-off
+// trial grant that expires (auth.ts signup), paid plans are re-granted by the Dodo
+// cycle webhook at currentPeriodEnd (routes/billing.ts).
+export function creditRenewal(user: RenewalUser): CreditRenewal {
+  if (isOwnerUser(user)) return { kind: "none", at: null }
+
+  if (effectivePlanForUser(user) === "explore") {
+    const trialEnd =
+      user.trialEndDate ?? (user.createdAt ? new Date(user.createdAt.getTime() + TRIAL_MS) : null)
+    return trialEnd ? { kind: "trial_expiry", at: trialEnd } : { kind: "none", at: null }
+  }
+
+  return user.currentPeriodEnd
+    ? { kind: "renewal", at: user.currentPeriodEnd }
+    : { kind: "none", at: null }
 }
 
 export function requestLimitForUser(user: EntitlementUser): number | null {

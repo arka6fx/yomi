@@ -47,6 +47,8 @@ type IntegrationHealth = {
   updatedAt: string
 }
 
+type ResetKind = "renewal" | "trial_expiry" | "none"
+
 type Sub = {
   role: string
   plan: string
@@ -55,6 +57,7 @@ type Sub = {
   currentPeriodEnd: string | null
   dodoSubscriptionId: string | null
   resetAt: string | null
+  resetKind: ResetKind
   billingWarning: string | null
   credits: {
     balance: number
@@ -84,6 +87,7 @@ type UsageSummary = {
     used: number
     totalAvailableThisPeriod: number
     resetAt: string | null
+    resetKind: ResetKind
     expiringSoon: number
     expiringSoonAt: string | null
   }
@@ -98,11 +102,27 @@ type UsageSummary = {
   actions: { canBuyCredits: boolean; canUpgrade: boolean; upgradeUrl: string }
 }
 
-function resetLabel(value?: string | null) {
-  if (!value) return "Reset date unavailable"
-  const date = new Date(value)
-  const days = Math.max(0, Math.ceil((date.getTime() - Date.now()) / 86_400_000))
-  return days > 0 ? `Resets in ${days} day${days === 1 ? "" : "s"}` : "Resets today"
+function inDays(value: string) {
+  const days = Math.max(0, Math.ceil((new Date(value).getTime() - Date.now()) / 86_400_000))
+  if (days === 0) return "today"
+  return `in ${days} day${days === 1 ? "" : "s"}`
+}
+
+// Explore credits are a one-off trial grant that expires; only paid plans renew.
+function creditsCaption(
+  included: number,
+  isOwner: boolean,
+  resetAt?: string | null,
+  resetKind?: ResetKind | null,
+) {
+  if (isOwner) return "Unlimited credits."
+  if (resetKind === "trial_expiry" && resetAt) {
+    return `${included.toLocaleString()} trial credits. Expire ${inDays(resetAt)}.`
+  }
+  if (resetKind === "renewal" && resetAt) {
+    return `${included.toLocaleString()} included monthly credits. Resets ${inDays(resetAt)}.`
+  }
+  return `${included.toLocaleString()} included monthly credits.`
 }
 
 const PLANS = [
@@ -559,6 +579,7 @@ function DashboardContent() {
     usageSummary?.credits.included ??
     ({ explore: 100, pro: 2500, max: 10000 } as Record<string, number>)[currentPlanKey] ?? 0
   const resetAt = usageSummary?.credits.resetAt ?? sub?.resetAt
+  const resetKind = usageSummary?.credits.resetKind ?? sub?.resetKind
   const trendDays = usageSummary?.monthlyUsage.days.slice(-14) ?? []
   const trendMax = Math.max(...trendDays.map((d) => d.credits), 1)
   const recentActivity = usageSummary?.recentActivity ?? []
@@ -1097,8 +1118,7 @@ function DashboardContent() {
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {creditIncluded.toLocaleString()} included monthly credits.{" "}
-                          {resetLabel(resetAt)}.
+                          {creditsCaption(creditIncluded, isOwner, resetAt, resetKind)}
                         </p>
                       </div>
                       <button
