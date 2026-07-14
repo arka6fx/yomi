@@ -1,14 +1,16 @@
 import { Hono } from "hono"
-import { gte } from "drizzle-orm"
-import { db, usageEvents, creditAccounts } from "@yomi/db"
+import { and, eq, gte, isNotNull, isNull, lt, ne } from "drizzle-orm"
+import { db, usageEvents, creditAccounts, creditGrants } from "@yomi/db"
 import { user } from "../auth-schema.js"
 import { authenticate } from "../auth.js"
-import { isOwnerUser } from "../entitlements.js"
+import { effectivePlanForUser, isOwnerUser } from "../entitlements.js"
 import { grantCredits } from "../services/credit-ledger.js"
 import { getPlan } from "@yomi/shared/plans"
 import { costMicros } from "@yomi/shared/ai-pricing"
 
 export const adminRouter = new Hono()
+
+const TRIAL_DAYS = 30
 
 type UsageMetadata = Record<string, unknown>
 
@@ -168,6 +170,105 @@ adminRouter.post("/reset-all-usage", authenticate, async (c) => {
   }
 
   return c.json({ ok: true, monthKey, usersTotal: allUsers.length, usersRestored })
+})
+
+// POST /api/admin/reset-explore-trials
+// Owner-only. Restarts every explore trial from today and tops each balance up to the
+// plan's included credits. Never lowers a balance, never touches the owner or purchased
+// credit packs. Dry-run unless the body says { "dryRun": false }.
+adminRouter.post("/reset-explore-trials", authenticate, async (c) => {
+  const caller = c.get("user")
+  if (!isOwnerUser(caller)) {
+    return c.json({ error: "Forbidden" }, 403)
+  }
+
+  const body = (await c.req.json().catch(() => ({}))) as { dryRun?: boolean }
+  const dryRun = body.dryRun !== false
+
+  const now = new Date()
+  const trialEnd = new Date(now.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000)
+  const day = dayKey(now)
+  const included = getPlan("explore").includedCredits
+
+  const candidates = await db
+    .select({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      plan: user.plan,
+      trialEndDate: user.trialEndDate,
+    })
+    .from(user)
+    .where(isNull(user.deletedAt))
+
+  const accounts = await db
+    .select({ userId: creditAccounts.userId, balance: creditAccounts.availableCredits })
+    .from(creditAccounts)
+  const balanceByUser = new Map(accounts.map((a) => [a.userId, a.balance]))
+
+  const users: Array<Record<string, unknown>> = []
+
+  for (const u of candidates) {
+    if (isOwnerUser(u)) continue
+    if (effectivePlanForUser(u) !== "explore") continue
+
+    const balance = balanceByUser.get(u.id) ?? 0
+    const topUp = Math.max(0, included - balance)
+
+    users.push({
+      email: u.email,
+      balanceBefore: balance,
+      topUp,
+      balanceAfter: balance + topUp,
+      trialEndedAt: u.trialEndDate,
+      trialEndsAt: trialEnd,
+    })
+
+    if (dryRun) continue
+
+    await db
+      .update(user)
+      .set({ trialStartDate: now, trialEndDate: trialEnd })
+      .where(eq(user.id, u.id))
+
+    // Trial credits expire with the trial, so a restarted trial has to carry its live
+    // grants forward or the balance would vanish mid-window. Only ever extends.
+    await db
+      .update(creditGrants)
+      .set({ expiresAt: trialEnd })
+      .where(
+        and(
+          eq(creditGrants.userId, u.id),
+          eq(creditGrants.status, "active"),
+          ne(creditGrants.source, "credit_pack"),
+          isNotNull(creditGrants.expiresAt),
+          lt(creditGrants.expiresAt, trialEnd),
+        ),
+      )
+
+    if (topUp > 0) {
+      await grantCredits({
+        userId: u.id,
+        amount: topUp,
+        source: "admin_adjustment",
+        sourceId: `admin:explore-reset:${day}:${u.id}`,
+        idempotencyKey: `admin:explore-reset:${day}:${u.id}`,
+        expiresAt: trialEnd,
+        reason: "Explore trial restarted by admin",
+        metadata: { plan: "explore", trialDays: TRIAL_DAYS },
+      })
+    }
+  }
+
+  return c.json({
+    ok: true,
+    dryRun,
+    includedCredits: included,
+    trialEndsAt: trialEnd,
+    usersAffected: users.length,
+    creditsGranted: users.reduce((sum, u) => sum + (u["topUp"] as number), 0),
+    users,
+  })
 })
 
 adminRouter.get("/cost-analytics", authenticate, async (c) => {
