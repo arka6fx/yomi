@@ -1,6 +1,10 @@
 const BACKEND_URL = "https://api.getyomi.in"
-const GITHUB_RELEASES_URL = "https://api.github.com/repos/arka6fx/yomi-releases/releases/latest"
 const GITHUB_RELEASES_FALLBACK = "https://github.com/arka6fx/yomi-releases/releases/latest"
+// electron-updater's manifest, served off the release CDN. Resolving the installer through
+// api.github.com instead meant every download hit GitHub's 60/hr unauthenticated limit —
+// shared Worker egress IPs blow through that, so the api returned 403 and users got dumped
+// on the releases page rather than the .exe.
+const LATEST_MANIFEST_URL = `${GITHUB_RELEASES_FALLBACK}/download/latest.yml`
 
 async function proxyToBackend(request: Request, targetPath: string) {
   const target = new URL(targetPath, BACKEND_URL)
@@ -10,18 +14,15 @@ async function proxyToBackend(request: Request, targetPath: string) {
 
 async function getAssetUrl(): Promise<string | null> {
   try {
-    const res = await fetch(GITHUB_RELEASES_URL, {
-      headers: {
-        Accept: "application/vnd.github+json",
-        "User-Agent": "yomi-landing",
-      },
-    })
+    const res = await fetch(LATEST_MANIFEST_URL, {
+      headers: { "User-Agent": "yomi-landing" },
+      cf: { cacheTtl: 300, cacheEverything: true },
+    } as RequestInit)
     if (!res.ok) return null
-    const release = (await res.json()) as {
-      assets?: Array<{ name: string; browser_download_url: string }>
-    }
-    const exeAsset = release.assets?.find((asset) => asset.name.endsWith(".exe"))
-    return exeAsset?.browser_download_url ?? null
+    const manifest = await res.text()
+    const installer = manifest.match(/^path:\s*(\S+\.exe)\s*$/m)?.[1]
+    if (!installer) return null
+    return `${GITHUB_RELEASES_FALLBACK}/download/${installer}`
   } catch {
     return null
   }
