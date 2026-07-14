@@ -177,6 +177,10 @@ contextBridge.exposeInMainWorld("yomi", {
     ipcRenderer.send("yomi:open-integrations")
   },
 
+  openPrivacy(): void {
+    ipcRenderer.send("yomi:open-privacy")
+  },
+
   pickAttachment(): Promise<{ path: string; b64: string } | null> {
     return ipcRenderer.invoke("yomi:pick-attachment")
   },
