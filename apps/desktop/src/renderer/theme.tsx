@@ -1,6 +1,6 @@
 import React from "react"
 
-export type ThemeId = "amber" | "blue" | "green" | "violet" | "hotpink" | "purple" | "black"
+export type ThemeId = "amber"
 
 export interface Theme {
   id: ThemeId

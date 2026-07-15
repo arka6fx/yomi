@@ -17,9 +17,17 @@ let onAnalyze: (() => void) | null = null
 // Register the three AI-interaction shortcuts.
 // Called on init and again on resumeHotkeys() after a hide.
 function registerAiShortcuts(): void {
+  // Push-to-talk toggle: one key starts recording and the same key stops and sends.
+  // (Electron globalShortcut has no key-up event, so true hold-to-talk isn't possible
+  // without a native key hook — a tap-tap toggle is the closest single-key behaviour.)
   globalShortcut.register("Ctrl+Space", () => {
     if (!enabled) return
-    if (state === "idle") transition("listening")
+    if (state === "idle") {
+      transition("listening")
+    } else if (state === "listening") {
+      transition("processing")
+      onListenStop?.()
+    }
   })
 
   globalShortcut.register("Ctrl+Return", () => {
@@ -88,7 +96,6 @@ export function suspendHotkeys(): void {
   globalShortcut.unregister("Ctrl+Return")
   globalShortcut.unregister("Ctrl+S")
   globalShortcut.unregister("Escape")
-  globalShortcut.unregister("Return") // defensive — may be registered if state was listening
 }
 
 // Re-register AI shortcuts when the overlay becomes visible again.
@@ -154,20 +161,6 @@ export function getHotkeyState(): HotkeyState {
 }
 
 function transition(next: HotkeyState): void {
-  const prev = state
   state = next
-
-  // Register Enter as an alternative stop-recording key only while listening,
-  // so it never captures Enter globally during normal app usage.
-  if (next === "listening") {
-    globalShortcut.register("Return", () => {
-      if (!enabled || state !== "listening") return
-      transition("processing")
-      onListenStop?.()
-    })
-  } else if (prev === "listening") {
-    globalShortcut.unregister("Return")
-  }
-
   onStateChange?.(next)
 }
