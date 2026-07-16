@@ -9,7 +9,18 @@ import type { Context, Next } from "hono"
 import * as authSchema from "./auth-schema.js"
 import { effectivePlanForUser, effectiveRoleForUser, isOwnerUser } from "./entitlements.js"
 import { grantCredits } from "./services/credit-ledger.js"
+import { recordConsentDecision } from "./services/privacy/consent.js"
 import { getPlan } from "@yomi/shared/plans"
+
+// Functional purposes granted at signup so the product works out of the box.
+// Kept to low-risk, service-necessary consents — the sensitive ones (analytics,
+// ai_improvement, cloud_memory, rag, voice, screen) stay opt-in per DPDP.
+const SIGNUP_DEFAULT_CONSENTS = [
+  "conversation_history",
+  "memory",
+  "connector_data",
+  "telegram_processing",
+] as const
 
 const REGULAR_INTERACTION_LIMIT = 100
 type AuthInstance = ReturnType<typeof createAuth>
@@ -129,6 +140,16 @@ function createAuth() {
                 metadata: { plan: "explore", trialDays: 30 },
               }).catch((err) => console.error("[signup] grantCredits failed:", createdUser.id, err))
             }
+
+            // Seed the functional consent subset so chat/memory/connectors work
+            // on first use. This records a real granted-consent decision (not a
+            // silent pre-tick) that the user can revoke from the dashboard.
+            await recordConsentDecision({
+              userId: createdUser.id,
+              purposes: [...SIGNUP_DEFAULT_CONSENTS],
+              status: "granted",
+              context: { appVersion: null, ipAddress: null, userAgent: null, metadata: { source: "signup_default" } },
+            }).catch((err) => console.error("[signup] consent seed failed:", createdUser.id, err))
           },
         },
       },
