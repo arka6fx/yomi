@@ -11,11 +11,24 @@ type TestUser = {
 
 let currentUser: TestUser
 let offerable: any[] = []
+let generatedEntries: any[] = [] // findEntry resolves generated (gen:*) keys from here
+let cacheStale = false
+let regenCalls = 0
+let regenThrows = false
 let capacity: any = { ok: true }
 let scheduleInserts: any[] = []
 let decisionInserts: any[] = []
 let scheduleDeletes = 0
 let decisionInsertThrows = false
+
+const GENERATED = {
+  dedupKey: "gen:github:morning",
+  provider: "github",
+  title: "GitHub morning digest",
+  description: "desc-gen",
+  requires: { telegram: true },
+  spec: { schedule: "every day 8am", prompt: "prompt-gen", deliverTo: ["telegram"] },
+}
 
 const CATALOG = [
   {
@@ -79,8 +92,20 @@ mock.module("../auth.js", () => ({
 
 mock.module("../services/suggestions/catalog.js", () => ({
   SUGGESTION_CATALOG: CATALOG,
-  findEntry: (key: string) => CATALOG.find((e) => e.dedupKey === key),
+  findEntry: async (_userId: string, key: string) =>
+    CATALOG.find((e) => e.dedupKey === key) ?? generatedEntries.find((e) => e.dedupKey === key),
   offerableFor: async () => offerable,
+}))
+
+mock.module("../services/suggestions/cache.js", () => ({
+  readGeneratedCache: async () => ({ entries: generatedEntries, stale: cacheStale }),
+}))
+
+mock.module("../services/suggestions/generate.js", () => ({
+  regenerateGeneratedCache: async () => {
+    regenCalls++
+    if (regenThrows) throw new Error("model exploded")
+  },
 }))
 
 mock.module("../services/schedule-quota.js", () => ({
@@ -113,6 +138,10 @@ beforeEach(() => {
     subscriptionStatus: "active",
   }
   offerable = [...CATALOG]
+  generatedEntries = []
+  cacheStale = false
+  regenCalls = 0
+  regenThrows = false
   capacity = { ok: true }
   scheduleInserts = []
   decisionInserts = []
@@ -207,5 +236,60 @@ describe("suggestions routes", () => {
   it("dismiss of an unknown key returns 404", async () => {
     const res = await app().request("/api/suggestions/nope/dismiss", { method: "POST" })
     expect(res.status).toBe(404)
+  })
+
+  it("GET fires async regeneration when the cache is stale/missing", async () => {
+    cacheStale = true
+    const res = await app().request("/api/suggestions")
+    expect(res.status).toBe(200)
+    expect(regenCalls).toBe(1)
+  })
+
+  it("GET does not regenerate when the cache is fresh", async () => {
+    cacheStale = false
+    const res = await app().request("/api/suggestions")
+    expect(res.status).toBe(200)
+    expect(regenCalls).toBe(0)
+  })
+
+  it("GET returns 200 even when regeneration (slow/failing model) throws", async () => {
+    cacheStale = true
+    regenThrows = true
+    const res = await app().request("/api/suggestions")
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as any
+    expect(body.suggestions.length).toBe(CATALOG.length) // response unaffected by the failure
+    expect(regenCalls).toBe(1)
+  })
+
+  it("GET serves generated offers first in the wire shape", async () => {
+    offerable = [GENERATED, ...CATALOG]
+    const res = await app().request("/api/suggestions")
+    const body = (await res.json()) as any
+    expect(body.suggestions[0]).toEqual({
+      dedupKey: "gen:github:morning",
+      title: "GitHub morning digest",
+      description: "desc-gen",
+      schedulePreview: "every day 8am",
+    })
+  })
+
+  it("accepts a generated dedupKey exactly like a catalog one", async () => {
+    generatedEntries = [GENERATED]
+    offerable = [GENERATED, ...CATALOG]
+    const res = await app().request("/api/suggestions/gen:github:morning/accept", { method: "POST" })
+    expect(res.status).toBe(200)
+    expect(scheduleInserts[0].prompt).toBe("prompt-gen")
+    expect(scheduleInserts[0].schedule).toBe("every day 8am")
+    expect(decisionInserts[0].decision).toBe("accepted")
+    expect(decisionInserts[0].dedupKey).toBe("gen:github:morning")
+  })
+
+  it("dismisses a generated dedupKey identically", async () => {
+    generatedEntries = [GENERATED]
+    const res = await app().request("/api/suggestions/gen:github:morning/dismiss", { method: "POST" })
+    expect(res.status).toBe(200)
+    expect(decisionInserts[0].decision).toBe("dismissed")
+    expect(decisionInserts[0].dedupKey).toBe("gen:github:morning")
   })
 })

@@ -3,6 +3,8 @@ import { eq } from "drizzle-orm"
 import { db, schedules, suggestionDecisions } from "@yomi/db"
 import { authenticate } from "../auth.js"
 import { offerableFor, findEntry } from "../services/suggestions/catalog.js"
+import { readGeneratedCache } from "../services/suggestions/cache.js"
+import { regenerateGeneratedCache } from "../services/suggestions/generate.js"
 import { ensureScheduleCapacity } from "../services/schedule-quota.js"
 import { computeNextRun, validateScheduleInput } from "../services/schedule-parser.js"
 
@@ -12,7 +14,14 @@ suggestionsRouter.use("*", authenticate)
 
 suggestionsRouter.get("/", async (c) => {
   const user = c.get("user")
-  const offers = await offerableFor(user.id)
+  // Serve instantly from the catalog floor + cached generated suggestions; never
+  // await the model. Read the cache once and reuse it for the offer list.
+  const cached = await readGeneratedCache(user.id)
+  const offers = await offerableFor(user.id, cached)
+  if (cached.stale) {
+    // fire-and-forget SWR: regenerate for the NEXT load, never blocking this one
+    void regenerateGeneratedCache(user.id).catch(() => {}) // best-effort
+  }
   return c.json({
     suggestions: offers.map((e) => ({
       dedupKey: e.dedupKey,
@@ -26,8 +35,7 @@ suggestionsRouter.get("/", async (c) => {
 suggestionsRouter.post("/:dedupKey/accept", async (c) => {
   const user = c.get("user")
   const key = c.req.param("dedupKey")
-  const entry = findEntry(key ?? "")
-  const offers = await offerableFor(user.id)
+  const [entry, offers] = await Promise.all([findEntry(user.id, key ?? ""), offerableFor(user.id)])
   if (!entry || !offers.some((e) => e.dedupKey === entry.dedupKey)) {
     return c.json({ error: "Suggestion not available", code: "not_offerable" }, 404)
   }
@@ -35,9 +43,11 @@ suggestionsRouter.post("/:dedupKey/accept", async (c) => {
   const capacity = await ensureScheduleCapacity(user)
   if (!capacity.ok) return c.json(capacity.body, capacity.status)
 
+  // Backstop only — generated schedules were already validated at assembly time
+  // (ADR-0001); this must never be the first place one is validated.
   const valid = validateScheduleInput(entry.spec.schedule)
   if (!valid.ok || !valid.scheduleType)
-    return c.json({ error: "catalog schedule invalid", code: "invalid_schedule" }, 500)
+    return c.json({ error: "schedule invalid", code: "invalid_schedule" }, 500)
 
   const [schedule] = await db
     .insert(schedules)
@@ -73,7 +83,7 @@ suggestionsRouter.post("/:dedupKey/accept", async (c) => {
 suggestionsRouter.post("/:dedupKey/dismiss", async (c) => {
   const user = c.get("user")
   const key = c.req.param("dedupKey")
-  const entry = findEntry(key ?? "")
+  const entry = await findEntry(user.id, key ?? "")
   if (!entry) return c.json({ error: "Unknown suggestion", code: "not_offerable" }, 404)
   try {
     await db.insert(suggestionDecisions).values({

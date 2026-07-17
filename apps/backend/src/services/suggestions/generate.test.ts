@@ -17,11 +17,13 @@ const memReads = { count: 0 } // times memory_entries was queried
 const genCalls: Array<{ system?: string; prompt?: string }> = []
 const telemetry: Array<Record<string, unknown>> = []
 const metering = { chargeCalled: false }
+const cache = { deletes: 0, inserted: [] as any[] } // generated-suggestions cache writes
 
 // Distinct table sentinels so the db mock can route .from(table) to the right rows.
 const mcpConnections = { __t: "mcp" }
 const memoryEntries = { __t: "mem", topic: {}, summary: {}, userId: {}, status: {}, isLatest: {}, isStatic: {}, confidence: {}, updatedAt: {} }
 const suggestionDecisions = { __t: "dec" }
+const generatedSuggestions = { __t: "gen", userId: {} }
 
 // Thenable query builder that ignores where/orderBy/limit and resolves to `rows`.
 function q(rows: unknown[]) {
@@ -51,10 +53,23 @@ mock.module("@yomi/db", () => ({
         return q([])
       },
     }),
+    delete: () => ({
+      where: () => {
+        cache.deletes++
+        return Promise.resolve()
+      },
+    }),
+    insert: () => ({
+      values: (rows: any[]) => {
+        cache.inserted.push(...rows)
+        return Promise.resolve()
+      },
+    }),
   },
   mcpConnections,
   memoryEntries,
   suggestionDecisions,
+  generatedSuggestions,
 }))
 
 mock.module("@yomi/agent-core", () => ({
@@ -99,7 +114,7 @@ mock.module("./earned-patterns.js", () => ({
   earnedPatterns: async () => state.patterns,
 }))
 
-const { generateSuggestions } = await import("./generate.js")
+const { generateSuggestions, regenerateGeneratedCache } = await import("./generate.js")
 
 const NOW = new Date("2026-07-17T12:00:00.000Z")
 
@@ -132,6 +147,8 @@ beforeEach(() => {
   genCalls.length = 0
   telemetry.length = 0
   metering.chargeCalled = false
+  cache.deletes = 0
+  cache.inserted = []
 })
 
 describe("generateSuggestions", () => {
@@ -232,5 +249,35 @@ describe("generateSuggestions", () => {
     expect(telemetry[0]!["status"]).toBe("error")
     expect(telemetry[0]!["creditsCharged"]).toBe(0)
     expect(metering.chargeCalled).toBe(false)
+  })
+})
+
+describe("regenerateGeneratedCache", () => {
+  it("persists fresh suggestions (delete + insert) with source-pattern metadata", async () => {
+    state.patterns = [pattern()]
+    state.connectors = [{ provider: "github" }]
+    state.modelOutput = [slot()]
+
+    await regenerateGeneratedCache("u1", NOW)
+
+    expect(cache.deletes).toBe(1)
+    expect(cache.inserted).toHaveLength(1)
+    expect(cache.inserted[0]).toMatchObject({
+      userId: "u1",
+      dedupKey: "gen:github:morning",
+      connector: "github",
+      timeBucket: "morning",
+      distinctDays: 5,
+      schedule: "every day 8am",
+    })
+  })
+
+  it("clears the cache (delete, no insert) when nothing is earned", async () => {
+    state.patterns = []
+
+    await regenerateGeneratedCache("u1", NOW)
+
+    expect(cache.deletes).toBe(1)
+    expect(cache.inserted).toHaveLength(0)
   })
 })
