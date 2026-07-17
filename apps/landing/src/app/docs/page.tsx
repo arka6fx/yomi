@@ -7,7 +7,6 @@ import {
   Image as ImageIcon,
   Keyboard,
   Mic,
-  Monitor,
   Send,
   ShieldCheck,
   Sparkles,
@@ -188,7 +187,7 @@ export default function DocsPage() {
           <Section id="overview" eyebrow="Overview" title="What Yomi is">
             <p>
               Yomi is an AI assistant that connects to the apps you already use. It can{" "}
-              <strong className="text-foreground">see your screen</strong>,{" "}
+              <strong className="text-foreground">analyze images and screenshots</strong>,{" "}
               <strong className="text-foreground">hear your voice</strong>, and{" "}
               <strong className="text-foreground">act across your apps</strong>, so you can ask
               questions about your work in plain language instead of switching windows and
@@ -242,8 +241,8 @@ export default function DocsPage() {
               work through your browser too.
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Feature icon={<Monitor size={17} />} title="Screen-aware answers">
-                Share what&apos;s on screen and get grounded answers in context.
+              <Feature icon={<ImageIcon size={17} />} title="Image & screen analysis">
+                Upload a screenshot or photo and get grounded answers in context.
               </Feature>
               <Feature icon={<Keyboard size={17} />} title="Voice & text">
                 Type or speak your question. A fast path replies in about two seconds.
@@ -393,7 +392,6 @@ export default function DocsPage() {
           <Section id="privacy" eyebrow="Trust" title="Privacy">
             <ul className="space-y-2.5">
               {[
-                "Screen capture is always visible. Yomi never reads your screen silently.",
                 "Connected-app data is used to answer your request, not stored beyond what's needed.",
                 "Google Drive file contents are not retained.",
                 "You can disconnect any app at any time from the dashboard.",
