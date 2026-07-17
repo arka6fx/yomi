@@ -1,6 +1,7 @@
 import { generateText, type ToolSet } from "ai"
 import { createModel } from "./model.js"
 import { createConnectorTools } from "./tools.js"
+import { LoopGuards } from "./guards.js"
 import type { ConnectorRegistry } from "./connectors/registry.js"
 
 export interface AgentMessage {
@@ -162,12 +163,19 @@ export async function runAgentLoop(opts: RunAgentLoopOptions): Promise<string> {
   const messages: AgentMessage[] = [...(opts.history ?? []), { role: "user", content: opts.text }]
   const transcript: ResponseMessages = []
 
+  const guards = new LoopGuards()
   let usedSteps = 0
   let inputTokens = 0
   let outputTokens = 0
   let toolCallCount = 0
   let budgetReason: "steps" | "tokens" | null = null
+  let guardReason: "duplicate" | "stall" | null = null
   let lastToolResults: readonly unknown[] = []
+
+  // Terminal stop reason: a tripped guard or an exhausted budget overrides the
+  // per-exit base tag, so guard/budget stops and the normal grace exit converge.
+  const stopTag = (base: string): string =>
+    guardReason ? `guard:${guardReason}` : budgetReason ? `budget:${budgetReason}` : base
 
   // Emit run-cumulative usage once, at the terminal exit. The backend persists
   // onUsage into a single usage_events row (last write wins), so per-step
@@ -197,7 +205,6 @@ export async function runAgentLoop(opts: RunAgentLoopOptions): Promise<string> {
       abortSignal: opts.signal,
     })
 
-    usedSteps++
     inputTokens += result.usage.promptTokens
     outputTokens += result.usage.completionTokens
     toolCallCount += result.toolCalls.length
@@ -209,7 +216,19 @@ export async function runAgentLoop(opts: RunAgentLoopOptions): Promise<string> {
       if (result.text.trim()) return finish(result.text, result.finishReason)
       break // stopped with empty text → grace call below
     }
-    // Otherwise tools ran this step; loop so the model can react to their results.
+
+    // Tools ran this step. Run the runaway-loop guards and charge the step
+    // budget only for meaningful (non-cheap) work, so bookkeeping doesn't cut a
+    // well-behaved agent short. A tripped guard funnels into the grace exit.
+    const decision = guards.observe(
+      result.toolCalls.map((call) => ({ toolName: call.toolName, args: call.args })),
+    )
+    if (decision.charged) usedSteps++
+    if (decision.break) {
+      guardReason = decision.break
+      break
+    }
+    // Loop so the model can react to the tool results.
   }
 
   // Grace call (hermes pattern): either a budget was exhausted mid-work or the
@@ -231,7 +250,7 @@ export async function runAgentLoop(opts: RunAgentLoopOptions): Promise<string> {
       inputTokens += grace.usage.promptTokens
       outputTokens += grace.usage.completionTokens
       if (grace.text.trim()) {
-        return finish(grace.text, budgetReason ? `budget:${budgetReason}` : `grace:${grace.finishReason}`)
+        return finish(grace.text, stopTag(`grace:${grace.finishReason}`))
       }
     } catch (err) {
       console.warn(`[agent] grace call failed: ${err instanceof Error ? err.message : String(err)}`)
@@ -239,10 +258,10 @@ export async function runAgentLoop(opts: RunAgentLoopOptions): Promise<string> {
   }
 
   const fallback = fallbackFromToolResults(lastToolResults)
-  if (fallback) return finish(fallback, budgetReason ? `budget:${budgetReason}` : "fallback")
+  if (fallback) return finish(fallback, stopTag("fallback"))
 
   console.warn(
-    `[agent] empty final text reason=${budgetReason ?? "empty"} steps=${usedSteps} outputTokens=${outputTokens}`,
+    `[agent] empty final text reason=${guardReason ?? budgetReason ?? "empty"} steps=${usedSteps} outputTokens=${outputTokens}`,
   )
-  return finish("", budgetReason ? `budget:${budgetReason}` : "empty")
+  return finish("", stopTag("empty"))
 }

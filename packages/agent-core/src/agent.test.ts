@@ -15,6 +15,14 @@ const echoTool = tool({
   execute: async () => ({ ok: true, message: "did the thing" }),
 })
 
+// A cheap/bookkeeping tool (name is in guards.CHEAP_TOOLS) taking varying args,
+// used to exercise the stall guard and the step-budget refund.
+const rememberTool = tool({
+  description: "remember",
+  parameters: z.object({ n: z.number() }),
+  execute: async () => ({ ok: true, message: "noted" }),
+})
+
 function chatResponse(body: unknown) {
   return new Response(JSON.stringify(body), {
     status: 200,
@@ -199,5 +207,131 @@ describe("runAgentLoop iteration budget", () => {
     // 2 steps × 100 + grace 4 = 204 output tokens; 2 tool calls total.
     expect(usages[0]?.outputTokens).toBe(204)
     expect(usages[0]?.toolCallCount).toBe(2)
+  })
+})
+
+// A model that keeps calling the given tool. When `varyArgs` is false the args
+// are identical every step (trips the duplicate guard); when true they carry the
+// call index (only the stall / budget guards can stop it).
+function alwaysCallsNamedTool(
+  bodies: Record<string, unknown>[],
+  toolName: string,
+  varyArgs: boolean,
+  completionTokens = 5,
+) {
+  return (async (_url: unknown, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body)) as Record<string, unknown>
+    bodies.push(body)
+    if (body["tool_choice"] === "none") {
+      return chatResponse({
+        choices: [{ message: { content: "Here's what I got so far." }, finish_reason: "stop" }],
+        usage: { prompt_tokens: 8, completion_tokens: 4 },
+      })
+    }
+    const args = varyArgs ? JSON.stringify({ n: bodies.length }) : "{}"
+    return chatResponse({
+      choices: [
+        {
+          message: {
+            content: null,
+            tool_calls: [
+              { id: `call_${bodies.length}`, type: "function", function: { name: toolName, arguments: args } },
+            ],
+          },
+          finish_reason: "tool_calls",
+        },
+      ],
+      usage: { prompt_tokens: 5, completion_tokens: completionTokens },
+    })
+  }) as typeof fetch
+}
+
+describe("runAgentLoop loop guards", () => {
+  it("stops the loop when the model repeats an identical tool call", async () => {
+    const bodies: Record<string, unknown>[] = []
+    globalThis.fetch = alwaysCallsNamedTool(bodies, "echo", false)
+
+    const reasons: string[] = []
+    const text = await runAgentLoop({
+      registry: emptyRegistry,
+      text: "loop forever",
+      extraTools: { echo: echoTool },
+      onUsage: (u) => reasons.push(u.finishReason),
+    })
+
+    expect(text).toBe("Here's what I got so far.")
+    // Three identical tool steps (break on the 3rd) + one grace/summary call.
+    expect(bodies).toHaveLength(4)
+    expect(bodies[3]?.["tool_choice"]).toBe("none")
+    expect(reasons).toContain("guard:duplicate")
+  })
+
+  it("stops the loop when the agent only ever does cheap bookkeeping (stall)", async () => {
+    const bodies: Record<string, unknown>[] = []
+    globalThis.fetch = alwaysCallsNamedTool(bodies, "remember", true)
+
+    const reasons: string[] = []
+    const text = await runAgentLoop({
+      registry: emptyRegistry,
+      text: "keep taking notes",
+      extraTools: { remember: rememberTool },
+      onUsage: (u) => reasons.push(u.finishReason),
+    })
+
+    expect(text).toBe("Here's what I got so far.")
+    // Two empty windows of 5 cheap steps (10 steps) + one grace/summary call.
+    expect(bodies).toHaveLength(11)
+    expect(bodies[10]?.["tool_choice"]).toBe("none")
+    expect(reasons).toContain("guard:stall")
+  })
+
+  it("refunds cheap steps so a low step budget does not cut a bookkeeping run short", async () => {
+    const bodies: Record<string, unknown>[] = []
+    globalThis.fetch = (async (_url: unknown, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>
+      bodies.push(body)
+      const call = bodies.length
+      if (call <= 2) {
+        // Two cheap bookkeeping steps with distinct args.
+        return chatResponse({
+          choices: [
+            {
+              message: {
+                content: null,
+                tool_calls: [
+                  {
+                    id: `call_${call}`,
+                    type: "function",
+                    function: { name: "remember", arguments: JSON.stringify({ n: call }) },
+                  },
+                ],
+              },
+              finish_reason: "tool_calls",
+            },
+          ],
+          usage: { prompt_tokens: 5, completion_tokens: 5 },
+        })
+      }
+      // Then the model answers directly.
+      return chatResponse({
+        choices: [{ message: { content: "All done." }, finish_reason: "stop" }],
+        usage: { prompt_tokens: 5, completion_tokens: 5 },
+      })
+    }) as typeof fetch
+
+    const reasons: string[] = []
+    const text = await runAgentLoop({
+      registry: emptyRegistry,
+      text: "take a couple of notes then answer",
+      extraTools: { remember: rememberTool },
+      maxSteps: 1, // would cut a non-cheap run off after one step
+      onUsage: (u) => reasons.push(u.finishReason),
+    })
+
+    // The two cheap steps are refunded, so the budget never trips and the real
+    // answer comes through instead of a grace summary.
+    expect(text).toBe("All done.")
+    expect(bodies).toHaveLength(3) // no grace call
+    expect(reasons).not.toContain("budget:steps")
   })
 })
