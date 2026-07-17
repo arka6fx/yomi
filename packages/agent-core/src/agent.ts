@@ -65,8 +65,7 @@ function agentModel(override?: string): string {
   return override || process.env["OPENAI_AGENT_MODEL"] || "gpt-5.5"
 }
 
-// Backend and sidecar read the same env contract so both surfaces can be tuned
-// together; defaults match the sidecar's IterationBudget.
+// Defaults match the standard IterationBudget.
 function maxSteps(override?: number): number {
   if (typeof override === "number") return override
   return parseInt(process.env["AGENT_MAX_STEPS"] || "25", 10)
@@ -144,7 +143,7 @@ function fallbackFromToolResults(toolResults: readonly unknown[]): string {
 type ResponseMessages = Awaited<ReturnType<typeof generateText>>["response"]["messages"]
 
 // Lean, text-only tool-calling loop over the OpenAI model provider and
-// connector tools. Runs in both the sidecar and backend; returns final text.
+// connector tools. Runs in the backend; returns final text.
 // Driven as an explicit single-step sequence (not one multi-step generateText)
 // so a cost-aware budget can halt mid-run yet keep the transcript for the grace
 // call — v4's onStepFinish can observe a step but can't stop the loop.

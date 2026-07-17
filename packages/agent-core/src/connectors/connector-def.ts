@@ -135,7 +135,6 @@ export interface ConnectorDef {
   readOnlyByDefault: boolean
   // True when the connector's tools can only run in a Node runtime (e.g. raw TCP
   // database drivers like `pg`/`mysql2`). The Cloudflare Workers backend excludes
-  // these so the agent never advertises a tool it can't execute. The desktop
-  // sidecar runs in Node and keeps them.
+// these so the agent never advertises a tool it can't execute.
   requiresNodeRuntime?: boolean
 }

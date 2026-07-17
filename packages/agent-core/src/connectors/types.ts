@@ -42,7 +42,7 @@ export interface SendResult {
 }
 
 // Resolves a valid (auto-refreshed) access token for a user+provider. Injected
-// so the same connectors run in the sidecar (HTTP to backend) and the backend
+// so the same connectors run in the backend
 // (in-process DB lookup) without code changes.
 export type TokenProvider = (userId: string, provider: string) => Promise<string>
 

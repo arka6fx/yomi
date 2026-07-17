@@ -56,8 +56,8 @@ describe("recordAiUsage", () => {
     await recordAiUsage({
       userId: "u1",
       requestId: "req-1",
-      endpoint: "sidecar.fast",
-      surface: "desktop",
+      endpoint: "backend.fast",
+      surface: "telegram",
       route: "fast",
       model: "gpt-5.4-mini",
       inputTokens: 120.9,

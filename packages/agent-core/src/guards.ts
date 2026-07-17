@@ -1,9 +1,9 @@
 // Runaway-loop guards for runAgentLoop: duplicate-call and stall detection plus
 // a cheap-tool step-budget refund. Concept ported (not imported) from
-// apps/sidecar/src/harness/guards.ts so agent-core keeps no desktop-only deps.
+// agent-core keeps no desktop-only deps.
 //
 // Adapted to the backend loop's step-at-a-time driving: there a step with no
-// tool call ends the loop, so the sidecar's "steps that never call a tool" stall
+// tool call ends the loop, so the "steps that never call a tool" stall
 // can't occur. Here a stall means consecutive windows of only bookkeeping
 // (cheap) tool calls that never do meaningful work — the failure mode the
 // cheap-tool refund itself creates (cheap steps don't spend the step budget).
@@ -13,7 +13,7 @@ const WINDOW_SIZE = 5 // steps per progress-gate check
 const MAX_STALLED_WINDOWS = 2 // consecutive windows with no meaningful work
 
 // Bookkeeping tools that don't count toward the step budget. Seeded from the
-// sidecar's CHEAP_TOOLS minus its desktop-only entries (look_at_screen,
+// CHEAP_TOOLS minus desktop-only entries (look_at_screen,
 // transcribe); the backend exposes none of these today but will when memory
 // tools land — the refund path is exercised via extraTools in tests.
 export const CHEAP_TOOLS = new Set(["memory_write", "remember", "forget"])

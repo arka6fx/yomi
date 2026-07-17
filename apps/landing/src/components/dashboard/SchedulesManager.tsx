@@ -29,7 +29,7 @@ function when(value?: string | null) {
 }
 
 // Cloud schedules. Created here and run by the backend cron trigger, so they fire even
-// when the desktop is closed. Results are delivered to Telegram.
+// Results are delivered to Telegram.
 export function SchedulesManager({ token }: { token: string }) {
   const [rows, setRows] = useState<ScheduleRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -124,7 +124,7 @@ export function SchedulesManager({ token }: { token: string }) {
               Scheduled <span className="italic">tasks</span>
             </h2>
             <p className="mt-1 max-w-md text-sm text-muted-foreground">
-              Yomi runs these on a schedule, even when your desktop is closed, and sends the result
+              Yomi runs these on a schedule and sends the result
               to your Telegram.
             </p>
           </div>

@@ -246,9 +246,8 @@ beforeEach(() => {
   soulCalls = []
   soulOnboardingReply = null
   recordedTelemetry.length = 0
-  delete process.env.YOMI_GATEWAY_DIRECT_SIDECAR
   globalThis.fetch = (async () => {
-    throw new Error("sidecar fetch should not run")
+    throw new Error("fetch should not run")
   }) as typeof fetch
 })
 
@@ -257,9 +256,8 @@ afterEach(() => {
 })
 
 describe("GatewayRunner production routing", () => {
-  it("runs backend agent for normal Telegram messages without direct sidecar forwarding", async () => {
-    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
-    runner.setSidecarResolver(async () => "http://sidecar.invalid")
+  it("runs backend agent for normal Telegram messages", async () => {
+    const runner = new GatewayRunner()
     const adapter = new FakeAdapter()
     runner.registerAdapter(adapter)
 
@@ -292,7 +290,7 @@ describe("GatewayRunner production routing", () => {
 
   it("intercepts a first-contact message with the personality ask and skips the agent", async () => {
     soulOnboardingReply = "Hey, I'm Yomi. Define my personality?"
-    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+    const runner = new GatewayRunner()
     const adapter = new FakeAdapter()
     runner.registerAdapter(adapter)
 
@@ -310,8 +308,8 @@ describe("GatewayRunner production routing", () => {
     expect(agentCalls).toEqual([])
   })
 
-  it("handles former desktop actions with the backend agent instead of queueing", async () => {
-    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+  it("handles actions with the backend agent instead of queueing", async () => {
+    const runner = new GatewayRunner()
     const adapter = new FakeAdapter()
     runner.registerAdapter(adapter)
 
@@ -333,7 +331,7 @@ describe("GatewayRunner production routing", () => {
   it("aborts a hung agent run after the timeout and tells the user", async () => {
     process.env.YOMI_AGENT_RUN_TIMEOUT_MS = "30"
     agentHangs = true
-    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+    const runner = new GatewayRunner()
     const adapter = new FakeAdapter()
     runner.registerAdapter(adapter)
 
@@ -354,7 +352,7 @@ describe("GatewayRunner production routing", () => {
       { role: "user", content: "previous question" },
       { role: "assistant", content: "previous answer" },
     ]
-    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+    const runner = new GatewayRunner()
     const adapter = new FakeAdapter()
     runner.registerAdapter(adapter)
 
@@ -370,7 +368,7 @@ describe("GatewayRunner production routing", () => {
   })
 
   it("closes the active persisted session for /new", async () => {
-    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+    const runner = new GatewayRunner()
     const adapter = new FakeAdapter()
     runner.registerAdapter(adapter)
 
@@ -399,7 +397,7 @@ describe("GatewayRunner production routing", () => {
       },
       { id: "22222222-2222-2222-2222-222222222222", title: "Create event", preview: "Tomorrow" },
     ]
-    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+    const runner = new GatewayRunner()
     const adapter = new FakeAdapter()
     runner.registerAdapter(adapter)
 
@@ -426,7 +424,7 @@ describe("GatewayRunner production routing", () => {
         preview: "To: a@example.com",
       },
     ]
-    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+    const runner = new GatewayRunner()
     const adapter = new FakeAdapter()
     runner.registerAdapter(adapter)
 
@@ -452,7 +450,7 @@ describe("GatewayRunner production routing", () => {
     pendingActions = [
       { id: "11111111-1111-1111-1111-111111111111", title: "Create Google Doc", preview: "PS2" },
     ]
-    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+    const runner = new GatewayRunner()
     const adapter = new FakeAdapter()
     runner.registerAdapter(adapter)
 
@@ -477,7 +475,7 @@ describe("GatewayRunner production routing", () => {
   it("stops giving away free resumes once the cap is hit", async () => {
     // A resume can propose a further gated write, so approving over and over would
     // otherwise fund an unbounded chain of uncharged agent runs off one paid message.
-    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+    const runner = new GatewayRunner()
     const adapter = new FakeAdapter()
     runner.registerAdapter(adapter)
 
@@ -499,7 +497,7 @@ describe("GatewayRunner production routing", () => {
   })
 
   it("restores the free-resume allowance after a real user turn", async () => {
-    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+    const runner = new GatewayRunner()
     const adapter = new FakeAdapter()
     runner.registerAdapter(adapter)
 
@@ -539,7 +537,7 @@ describe("GatewayRunner production routing", () => {
 
   it("does not resume the agent when an approval is denied", async () => {
     pendingActions = [{ id: "11111111-1111-1111-1111-111111111111", title: "T", preview: "p" }]
-    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+    const runner = new GatewayRunner()
     const adapter = new FakeAdapter()
     runner.registerAdapter(adapter)
 
@@ -556,7 +554,7 @@ describe("GatewayRunner production routing", () => {
   })
 
   it("lets bare yes continue to the agent when no approval is pending", async () => {
-    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+    const runner = new GatewayRunner()
     const adapter = new FakeAdapter()
     runner.registerAdapter(adapter)
 
@@ -580,7 +578,7 @@ describe("GatewayRunner production routing", () => {
         preview: "golang-practice",
       },
     ]
-    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+    const runner = new GatewayRunner()
     const adapter = new FakeAdapter()
     runner.registerAdapter(adapter)
 
@@ -602,7 +600,7 @@ describe("GatewayRunner production routing", () => {
   for (const phrase of ["yes", "Yes schedule it", "sure", "ok", "go ahead", "yes please", "do it"]) {
     it(`approves a pending action with "${phrase}"`, async () => {
       pendingActions = [{ id: "11111111-1111-1111-1111-111111111111", title: "T", preview: "p" }]
-      const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+      const runner = new GatewayRunner()
       const adapter = new FakeAdapter()
       runner.registerAdapter(adapter)
 
@@ -623,7 +621,7 @@ describe("GatewayRunner production routing", () => {
 
   it("sends an amendment like 'yes but change the time' to the agent, not approval", async () => {
     pendingActions = [{ id: "11111111-1111-1111-1111-111111111111", title: "T", preview: "p" }]
-    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+    const runner = new GatewayRunner()
     const adapter = new FakeAdapter()
     runner.registerAdapter(adapter)
 
@@ -650,7 +648,7 @@ describe("GatewayRunner production routing", () => {
       throw new Error(`unexpected fetch: ${String(url)}`)
     }) as typeof fetch
 
-    const runner = new GatewayRunner("http://sidecar.invalid", "secret")
+    const runner = new GatewayRunner()
     const adapter = new FakeAdapter()
     runner.registerAdapter(adapter)
 

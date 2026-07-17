@@ -49,7 +49,7 @@ export interface ChunkOptions {
   overlap?: number
 }
 
-// Structure-aware chunking shared by cloud (backend) and local (sidecar) RAG indexers.
+// Structure-aware chunking used by the cloud RAG indexer.
 // Splits on markdown blank-line / heading boundaries, then greedily packs segments into
 // ~targetChars windows with a small carried overlap. An oversized paragraph is hard-split
 // so no chunk blows the window. Returns trimmed, non-empty chunks.
@@ -123,14 +123,14 @@ export interface RouterInput {
 
 export interface FastQueryRequest {
   text?: string
-  audio_b64?: string // base64-encoded WAV; sidecar runs STT before LLM
+  audio_b64?: string // base64-encoded WAV
   screenshot_b64?: string
   screenshots?: ScreenImage[]
   tts?: boolean // true = voice output; false = text only (default: true)
   plan?: Plan // controls local-only memory injection/writes
   history?: { role: "user" | "assistant"; text: string }[]
   skipReserve?: boolean // when true, the pipeline skips its own reserveInteraction("chat") call
-  conversationId?: string // scopes conversation state; defaults to "desktop"
+  conversationId?: string // scopes conversation state
 }
 
 export interface AgentQueryRequest {
@@ -141,7 +141,7 @@ export interface AgentQueryRequest {
   plan?: Plan // controls local-only memory injection/writes
   history?: { role: "user" | "assistant"; text: string }[] // prior turns for the conversational act loop
   skipReserve?: boolean // when true, the pipeline skips its own reserveInteraction("chat") call
-  conversationId?: string // scopes conversation state; defaults to "desktop"
+  conversationId?: string // scopes conversation state
 }
 
 export interface CloudRagSnippet {
@@ -228,7 +228,7 @@ export interface GatewayMessage {
   platform: PlatformType
   chatId: string
   userId: string
-  /** Resolved Yomi user ID — set by the backend gateway before forwarding to the sidecar */
+  /** Resolved Yomi user ID — set by the backend gateway */
   yomiUserId?: string
   text: string
   messageId?: string

@@ -9,9 +9,8 @@ import type {
 } from "./types.js"
 import type { ConnectorContext } from "./connector-def.js"
 
-// Dependencies injected so the registry runs in both runtimes: the sidecar
-// fetches tokens/status over HTTP from the backend; the backend resolves them
-// in-process from the DB.
+// Dependencies injected so the registry runs in the backend
+// (in-process from the DB).
 export interface ConnectorRegistryDeps {
   getAccessToken: TokenProvider
   listConnectedProviders: ConnectedProvidersLister
@@ -19,7 +18,7 @@ export interface ConnectorRegistryDeps {
   // Set by hosts that can't run Node-only connectors (the Cloudflare Workers
   // backend). When true, defs flagged `requiresNodeRuntime` are skipped so the
   // agent never advertises a tool that would fail at execution. Defaults to
-  // false — the sidecar runs in Node and keeps every connector.
+  // false — Node keeps every connector.
   excludeNodeOnly?: boolean
 }
 
@@ -31,7 +30,7 @@ export class ConnectorRegistry {
   private connectedDefIds: Set<string> = new Set()
   // Names of connected connectors skipped because they need a Node runtime the
   // current host lacks (Workers). Surfaced so the agent can tell the user the
-  // service works from the desktop app.
+  // service works from the backend.
   private desktopOnlyNames: string[] = []
   private userId: string | null = null
   private connectedProviders: Set<string> = new Set()
@@ -76,7 +75,7 @@ export class ConnectorRegistry {
     this.desktopOnlyNames = []
 
     // Legacy Gmail path: stored as "google" in mcp_connections for existing rows.
-    // Kept so registry.get("google") still works for sidecar backward compat.
+    // Kept so registry.get("google") still works.
     if (this.connectedProviders.has("google")) {
       this.connectors.set("google", new GoogleGmailConnector(this.userId, this.deps.getAccessToken))
     }
@@ -108,7 +107,7 @@ export class ConnectorRegistry {
 
   // Names of connected connectors that were skipped on this host because they
   // require a Node runtime (only set when excludeNodeOnly is true). The agent
-  // uses this to steer the user to the desktop app for those services.
+  // uses this to note services only available in the desktop client.
   getDesktopOnlyConnected(): string[] {
     return [...this.desktopOnlyNames]
   }

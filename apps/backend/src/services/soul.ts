@@ -2,9 +2,8 @@ import { eq } from "drizzle-orm"
 import { db } from "@yomi/db"
 import * as authSchema from "../auth-schema.js"
 
-// First-contact personality ("soul") onboarding for off-device platforms (Telegram).
-// The desktop sidecar has its own in-memory flow; the backend is multi-user and runs on
-// stateless Worker isolates, so the state must live in the DB (on the user row).
+// First-contact personality ("soul") onboarding for Telegram.
+// The backend is multi-user and runs on stateless Worker isolates, so the state lives in the DB.
 
 export type SoulOnboardingState = "unprompted" | "awaiting" | "done"
 

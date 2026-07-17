@@ -18,7 +18,7 @@ const KINDS = ["fact", "preference", "project", "decision", "open_thread"] as co
 const SCOPES = ["global", "project", "app", "session"] as const
 
 // Cloud memory management. Talks to the backend /api/memory/* endpoints (the same
-// canonical store the desktop and Telegram agents read), so edits here apply everywhere.
+// canonical store the Telegram agent reads), so edits here apply everywhere.
 export function MemoryManager({ token }: { token: string }) {
   const [memories, setMemories] = useState<MemoryRow[]>([])
   const [query, setQuery] = useState("")
@@ -120,7 +120,7 @@ export function MemoryManager({ token }: { token: string }) {
               What Yomi <span className="italic">remembers</span>
             </h2>
             <p className="mt-1 max-w-md text-sm text-muted-foreground">
-              Durable facts Yomi keeps across your desktop and Telegram. Add, search, or forget them
+              Durable facts Yomi keeps across your web app and Telegram. Add, search, or forget them
               here.
             </p>
           </div>

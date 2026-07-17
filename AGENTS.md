@@ -1,85 +1,75 @@
-# Yomi — AGENTS.md
+# Yomi - AGENTS.md
 
 AI productivity assistant. Connects to Google Workspace (Gmail, Calendar, Drive,
 Classroom, Tasks, Contacts, Meet) and GitHub, Slack, Notion, Linear, and more.
-Accepts desktop voice, desktop text, screen Q&A, and Telegram messages.
-Backend-first for Telegram and durable memory.
+Accepts web/dashboard and Telegram messages. Backend-first for durable memory
+and connector agents.
 
 ---
 
-## Design principle
+## Design Principle
 
-| Request type           | Architecture                 | Budget          |
-| ---------------------- | ---------------------------- | --------------- |
-| Quick ask / screen Q&A | Linear pipeline              | < 2 s           |
-| Connector task         | Agent loop + connector tools | seconds–minutes |
-| Telegram task          | Backend agent + memory/tools | seconds–minutes |
+| Request type   | Architecture                 | Budget          |
+| -------------- | ---------------------------- | --------------- |
+| Connector task | Agent loop + connector tools | seconds-minutes |
+| Telegram task  | Backend agent + memory/tools | seconds-minutes |
 
-**Intent router** decides fast vs agent at start of every turn. Never switch
-models mid-turn — loses prompt cache and causes tool-vocab mismatch.
+Never switch models mid-turn; that loses prompt cache and causes tool-vocab
+mismatch.
 
 ---
 
-## Footprint Ladder (capability decisions)
+## Footprint Ladder
 
-Choose the highest (least-footprint) rung that solves the problem:
+Choose the highest, least-footprint rung that solves the problem:
 
-1. **Extend existing code** — capability is a variation of something that
-   already exists
-2. **CLI command + skill** — config/state expressible as shell commands
-3. **Service-gated tool** — structured params/returns, only appears when
-   prerequisite configured
-4. **Plugin** — third-party/niche/user-specific capability
-5. **MCP server** — if capability needs structured I/O but isn't
-   core-fundamental
-6. **New core tool** — only when fundamental, broadly useful, and unreachable
-   via other means
+1. **Extend existing code** - capability is a variation of something that
+   already exists.
+2. **CLI command + skill** - config/state expressible as shell commands.
+3. **Service-gated tool** - structured params/returns, only appears when
+   prerequisite configured.
+4. **Plugin** - third-party/niche/user-specific capability.
+5. **MCP server** - capability needs structured I/O but is not core-fundamental.
+6. **New core tool** - only when fundamental, broadly useful, and unreachable
+   via other means.
 
 ---
 
 ## Monorepo
 
-```
-apps/backend/        Hono/Bun — auth, billing, LLM proxy, metering
-apps/desktop/        Electron — tray/menubar/notch, hotkeys, capture
-apps/landing/        Next.js  — marketing, dashboard, account linking
-apps/sidecar/        Bun      — router, fast pipeline, agent loop, notepad
+```text
+apps/backend/        Hono/Bun - auth, billing, LLM proxy, metering
+apps/landing/        Next.js  - marketing, dashboard, account linking
 packages/agent-core/ ConnectorDef, ConnectorRegistry, agent tools
 packages/db/         Drizzle schema + Neon
-packages/shared/     TypeScript contracts (desktop ↔ sidecar ↔ backend)
+packages/shared/     TypeScript contracts
 packages/ui-connectors/ Connector UI components
 ```
 
 ```bash
-bun install && bun run dev        # install + run all in watch mode
+bun install && bun run dev
 ```
 
 ---
 
 ## Stack
 
-- **LLM:** Vercel AI SDK (`ai`) → OpenAI (standard `OPENAI_*` env vars)
-- **STT/TTS:** OpenAI (`gpt-4o-mini-transcribe`, `gpt-4o-mini-tts`) → ElevenLabs fallback
-- **Desktop:** Electron. Device-code flow only for auth
+- **LLM:** Vercel AI SDK (`ai`) -> OpenAI (standard `OPENAI_*` env vars)
+- **STT/TTS:** OpenAI (`gpt-4o-mini-transcribe`, `gpt-4o-mini-tts`) -> ElevenLabs fallback
 - **Backend:** Hono on Bun (EC2 + Docker + Caddy), Better Auth (Google + GitHub OAuth), Drizzle + Neon
 - **Billing:** Dodo Payments
-- **Agent orchestration:** AI SDK agent loop with connector tools; backend agent
-  for Telegram
+- **Agent orchestration:** AI SDK agent loop with connector tools; backend agent for Telegram
 
 ---
 
 ## Architecture
 
-```
-DESKTOP SHELL  (Electron)
-  tray/menubar/notch · global hotkey · push-to-talk · screen + mic capture
-  ↕ local socket (low-latency authenticated IPC)
-LOCAL SIDECAR  (Bun)
-  intent router · fast pipeline (STT → optional screenshot → LLM → TTS)
-  agent loop · connector tools · local notepad memory
-  ↕ authenticated HTTPS
+```text
 CLOUD BACKEND  (Hono/Bun)
-  Better Auth · Dodo webhooks · LLM proxy · usage metering · Telegram · canonical memory
+  Better Auth - Dodo webhooks - LLM proxy - usage metering - Telegram - canonical memory
+
+LANDING/DASHBOARD  (Next.js)
+  Marketing - auth pages - dashboard - account linking
 ```
 
 ---
@@ -88,39 +78,33 @@ CLOUD BACKEND  (Hono/Bun)
 
 `harness = system prompt + tools + connectors + memory + hooks`
 
-**Fast path:** `STT → optional screenshot → 1 LLM call → TTS` Tools:
-`look_at_screen`, `transcribe`, `speak`. No tool-selection loop.
-
 **Agent path:** AI SDK loop + full tool set:
 
 - Core: filesystem r/w, bash (sandboxed), web search/fetch, cron, messaging,
   memory
 - Connectors: Gmail, Google Calendar, Google Drive, Google Classroom, Google
-  Tasks, Google Contacts, Google Meet, GitHub, Notion, Slack, Linear — loaded
+  Tasks, Google Contacts, Google Meet, GitHub, Notion, Slack, Linear - loaded
   from `ConnectorRegistry`
 
-**Hooks:** `PreToolUse` (block dangerous) · `PostToolUse` (log, trim tokens) ·
-`Stop` (flush scratchpad) · `SessionEnd` (compact memory.md)
+**Hooks:** `PreToolUse` (block dangerous), `PostToolUse` (log, trim tokens),
+`Stop` (flush scratchpad), `SessionEnd` (compact memory.md)
 
-**Loop guards:** `AGENT_MAX_STEPS` cap · sidecar `IterationBudget` (output-token
-budget/turn) + `LoopGuards` (dup-call/stall) · backend grace-call wrap-up when the
-step cap is hit without a final answer
+**Loop guards:** `AGENT_MAX_STEPS` cap plus backend grace-call wrap-up when the
+step cap is hit without a final answer.
 
 ---
 
 ## Notepad (`~/.yomi/`)
 
-```
-yomi.md          ALWAYS preloaded — user identity, prefs, standing instructions
+```text
+yomi.md          ALWAYS preloaded - user identity, prefs, standing instructions
 memory.md        Long-term memory (curated, compacted)
 projects/<proj>/ context.md, scratchpad.md
-sessions/        YYYY-MM-DD-topic.md  summaries
+sessions/        YYYY-MM-DD-topic.md summaries
 ```
 
 Always preload `yomi.md`; JIT-load everything else. Backend memory is canonical
-for durable facts, document provenance, Telegram, and connector agents. Sidecar
-memory is local/private working memory and syncs durable facts to
-`/api/memory/*` when signed in.
+for durable facts, document provenance, Telegram, and connector agents.
 
 ---
 
@@ -132,105 +116,101 @@ with the plan/subscription/trial columns. `usage_events` is append-only.
 `mcp_connections.oauth_tokens` and `hook_logs` are encrypted / PII-redacted
 respectively.
 
-`apps/landing` deploys as a Cloudflare Worker and has its own I/O rules — see
+`apps/landing` deploys as a Cloudflare Worker and has its own I/O rules - see
 `apps/landing/CLAUDE.md`.
 
 ---
 
-## Plans & credits
+## Plans & Credits
 
-Billing is **pure credits** — a single credit balance is the only usage gate.
+Billing is pure credits - a single credit balance is the only usage gate.
 Per-feature monthly caps were removed; connectors are unlimited on every plan.
 
-| Plan    | Price     | Monthly credits         |
-| ------- | --------- | ----------------------- |
-| Explore | $0/mo     | 25 (30-day free trial)  |
-| Pro     | $14.99/mo | 2 500                   |
-| Max     | $39.99/mo | 10 000                  |
+| Plan    | Price     | Monthly credits        |
+| ------- | --------- | ---------------------- |
+| Explore | $0/mo     | 25 (30-day free trial) |
+| Pro     | $14.99/mo | 2 500                  |
+| Max     | $39.99/mo | 10 000                 |
 
-Credit costs (flat per interaction type, tiered by real cost): fast chat 1 ·
-image/screen analyze 1 · voice 2/min · agent run 3 (desktop agent loop) ·
-Telegram message 3. Tune from `ai_usage_events` telemetry (real API cost is
-recorded in `totalApiCostMicros` via `@yomi/shared/ai-pricing`). Out of credits
-→ Explore must subscribe, Pro/Max buy a credit pack.
-Owner email bypasses all checks. Dodo USD: Pro 1499¢, Max 3999¢. Credit packs:
-500/$4.99, 2 000/$14.99, 6 000/$39.99.
+Credit costs: fast chat 1, image/screen analyze 1, voice 2/min, agent run 3,
+Telegram message 3. Tune from `ai_usage_events` telemetry; real API cost is
+recorded in `totalApiCostMicros` via `@yomi/shared/ai-pricing`.
 
-Single chokepoint: `apps/backend/src/services/metering.ts` → `chargeUsage()`
-(owner bypass → active-plan check → `balance ≥ cost` → record event + consume).
-Callers: `routes/usage.ts` (`/interactions/reserve`), `agent/run.ts` (Telegram
-bot_message), `gateway/gateway-runner.ts` (telegram voice/image). Ledger:
-`services/credit-ledger.ts` + `services/credit-pricing.ts`. Plan source of
-truth: `packages/shared/src/plans.ts`. Billing/webhooks:
+Single chokepoint: `apps/backend/src/services/metering.ts` -> `chargeUsage()`
+(owner bypass -> active-plan check -> `balance >= cost` -> record event +
+consume). Callers: `routes/usage.ts`, `agent/run.ts`, and
+`gateway/gateway-runner.ts`. Ledger: `services/credit-ledger.ts` +
+`services/credit-pricing.ts`. Plan source of truth:
+`packages/shared/src/plans.ts`. Billing/webhooks:
 `apps/backend/src/routes/billing.ts`.
 
 ---
 
 ## Privacy
 
-- Capture (mic, screen) is local; transcription and analysis use cloud APIs
-- Visible status: tray/notch pill when listening or capturing
-- Per-app blocklist: password managers and banking apps never captured
-- Yomi window excluded from screen-shares
-- Encrypted memory sync; user-owned export/delete
+- Encrypted memory sync; user-owned export/delete.
+- OAuth tokens are encrypted at rest.
+- Hook logs must be PII-redacted.
 
 ---
 
 ## Models
 
-```
+```text
 Fast path:  gpt-5.4-mini (OpenAI)
 Agent path: gpt-5.5 (OpenAI)
 Embeddings: text-embedding-3-small (OpenAI)
-Speech:     OpenAI gpt-4o-mini-transcribe / gpt-4o-mini-tts → ElevenLabs fallback
+Speech:     OpenAI gpt-4o-mini-transcribe / gpt-4o-mini-tts -> ElevenLabs fallback
 ```
 
 LLM calls go direct to OpenAI (`api.openai.com`) using the standard `OPENAI_*`
-env vars. The backend proxies desktop/sidecar LLM calls via `/api/llm/proxy` and
-injects the key.
+env vars.
 
 ---
 
-## Desktop releases
+## Deploys
 
-**CRITICAL: All releases go to `arka6fx/yomi-releases` only.** Never create tags
-or releases in the main yomi repo.
+The backend deploys itself on push to `main`
+(`.github/workflows/deploy-backend.yml`, paths `apps/backend/**` /
+`packages/**`), via a self-hosted runner on the EC2 box. Do not also run
+`scripts/deploy-backend.sh` or `docker compose up` on the box for the same
+commit; the manual deploy races the workflow and both die on a container-name
+conflict. That script is the break-glass path for when the runner is down.
 
-**The backend deploys itself on push to `main`** (`.github/workflows/deploy-backend.yml`,
-paths `apps/backend/**` / `packages/**`), via a self-hosted runner **on the EC2 box** —
-no inbound SSH, no security-group change. So just push. Do **not** also run
-`scripts/deploy-backend.sh` or `docker compose up` on the box for the same commit:
-the manual deploy races the workflow and both die on a container-name conflict.
-That script is the break-glass path for when the runner is down.
+The frontend (Cloudflare Worker) is still manual:
 
-The frontend (Cloudflare Worker) is still manual: `cd apps/landing && bun run deploy:production`.
+```bash
+cd apps/landing && bun run deploy:production
+```
 
-### Release process (follow every time):
-
-1. **Push all changes to `main`** on the yomi repo first.
-2. **Trigger workflow:**
-   `gh workflow run release.yml --ref main -f version=<ver> -f notes="<desc>"`
-3. **Wait for completion** (~45 min). It builds sidecar, Electron app, and
-   publishes `.exe`, `.blockmap`, and `latest.yml` to `arka6fx/yomi-releases`.
-4. **Never create a release manually with `gh release create`.** Always use the
-   workflow.
-5. **Never create git tags in the yomi repo.** Tags are auto-managed by the
-   release workflow on yomi-releases.
-6. **The landing page download (/api/download) automatically picks up the latest
-   asset** from yomi-releases — no manual update needed.
-
-The installer must include `apps/sidecar/dist/sidecar-win32-x64.exe`; verify the
-binary contains `eleven_flash_v2_5` and `scribe_v2` and does not contain
-`amazon.nova-2-sonic-v1:0` or `minimax.minimax-m2.5` before release.
+Desktop client code and installer release workflows do not live in this repo.
 
 ---
 
-## Code style & cleanup
+## Code Style & Cleanup
 
 One-liners on non-obvious logic only. Never multi-line docstrings. Conventional
 commits (`feat:`, `fix:`, `refactor:`, `perf:`, `style:`, `test:`, `chore:`,
-`docs:`) are lowercase, no full stops, max 72 chars, no em-dashes; before
-pushing, ensure `bun run test` + `bun run typecheck` pass or `gh run list` is
-green, no unused
-imports, no `as any` in non-test files, no noisy production debug logs, and
-empty catches use `// ignore` or `// best-effort`.
+`docs:`) are lowercase, no full stops, max 72 chars. Before pushing, ensure
+`bun run test` and `bun run typecheck` pass or `gh run list` is green. Keep no
+unused imports, no `as any` in non-test files, no noisy production debug logs,
+and empty catches use `// ignore` or `// best-effort`.
+
+---
+
+## Agent Skills
+
+### Issue tracker
+
+Issues live in GitHub Issues on `arka6fx/yomi` via the `gh` CLI. See
+`docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default label vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`,
+`ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See
+`docs/agents/domain.md`.

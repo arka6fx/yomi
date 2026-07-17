@@ -38,10 +38,8 @@ timeout. VAD should fire shortly after silence following speech.
 
 ## Files
 
-- `apps/sidecar/src/speech/transcribe.ts` - ElevenLabs STT wrapper.
-- `apps/sidecar/src/services/elevenlabs/stt.ts` - ElevenLabs HTTP client.
-- `apps/sidecar/src/speech/vad.ts` - local VAD helpers.
-- `apps/sidecar/src/pipeline/fast.ts` - integrates STT into the fast pipeline.
+- `apps/backend/src/routes/stt.ts` - STT proxy endpoint.
+- `apps/backend/src/services/elevenlabs/stt.ts` - ElevenLabs HTTP client.
 
 ## Open Questions
 

@@ -1,6 +1,0 @@
-[test]
-preload = ["./test-setup.ts"]
-
-[test.env]
-SIDECAR_SECRET = "test-secret"
-ANTHROPIC_API_KEY = "test-key"

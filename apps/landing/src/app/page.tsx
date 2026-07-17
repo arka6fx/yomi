@@ -51,7 +51,7 @@ const jsonLd = {
         email: "contact.arkagarai@gmail.com",
         contactType: "customer support",
       },
-      sameAs: ["https://github.com/arka6fx/yomi-releases"],
+      sameAs: ["https://github.com/arka6fx/yomi"],
     },
     {
       "@type": "SoftwareApplication",
@@ -59,7 +59,7 @@ const jsonLd = {
       name: "Yomi",
       description: DESC,
       url: "https://getyomi.in",
-      downloadUrl: "https://getyomi.in/download",
+
       applicationCategory: "ProductivityApplication",
       operatingSystem: "Windows 10, Windows 11",
       softwareVersion: "1.0",

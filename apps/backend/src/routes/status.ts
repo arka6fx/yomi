@@ -32,7 +32,7 @@ function displayName(provider: string): string {
   return getConnectorDef(provider)?.name ?? provider
 }
 
-// Cloud "Status" panel data — replaces the old local desktop diagnostics. Aggregates
+// Cloud "Status" panel data. Aggregates
 // everything a user needs to confirm Yomi is healthy: gateway, plan/billing, credits,
 // Telegram link, connectors, and scheduled tasks. Best-effort: a failure in any one
 // section degrades to a warning rather than failing the whole response.

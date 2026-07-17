@@ -50,7 +50,7 @@ export const devices = pgTable("devices", {
     .references(() => users.id, { onDelete: "cascade" }),
   os: text("os").notNull(), // "windows"
   appVersion: text("app_version").notNull(),
-  sidecarUrl: text("sidecar_url"), // URL of the user's sidecar for message routing
+  sidecarUrl: text("sidecar_url"), // Legacy field for the desktop sidecar URL
   lastSeen: timestamp("last_seen").notNull().defaultNow(),
 })
 
@@ -234,7 +234,7 @@ export const agentMessages = pgTable(
 )
 
 // Cloud-managed scheduled jobs. Created/edited from the dashboard, executed by the
-// backend Worker's cron trigger so they run even when the desktop is closed.
+// backend Worker's cron trigger.
 export const schedules = pgTable(
   "schedules",
   {
@@ -731,8 +731,8 @@ export const aiUsageEvents = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     requestId: text("request_id").notNull(),
-    endpoint: text("endpoint").notNull(), // "sidecar.fast" | "sidecar.agent" | "backend.agent" | "gateway.image" | "gateway.voice"
-    surface: text("surface").notNull(), // "desktop" | "telegram" | "dashboard" | "cron" | "backend"
+    endpoint: text("endpoint").notNull(), // "backend.agent" | "gateway.image" | "gateway.voice"
+    surface: text("surface").notNull(), // "telegram" | "dashboard" | "cron" | "backend"
     route: text("route"), // "fast" | "agent" | "gateway"
     intent: text("intent"),
     complexity: text("complexity"),

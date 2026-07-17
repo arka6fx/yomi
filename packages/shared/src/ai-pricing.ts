@@ -2,7 +2,7 @@
 // Money is integer micro-USD (1 USD = 1_000_000 micros) to avoid float drift.
 // Rates are micro-USD per 1M tokens. Previously these numbers were duplicated
 // as cents-per-1K in apps/backend/routes/admin.ts and
-// apps/sidecar/insights/insights-engine.ts — both derive from here now.
+// Both backend and frontend derive from here.
 
 export interface ModelPrice {
   inputPerMTokens: number

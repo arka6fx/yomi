@@ -868,8 +868,8 @@ describe("Dodo billing — subscription summary", () => {
     expect(body.monthlyUsage.days).toEqual([{ date: "2026-06-16", credits: 3 }])
     expect(body.recentActivity[0]).toEqual({
       id: "activity-0-1781605800000",
-      label: "Desktop assistant",
-      category: "desktop_assistant",
+      label: "Chat",
+      category: "chat",
       credits: 1,
       createdAt: usageAt.toISOString(),
     })

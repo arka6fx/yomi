@@ -12,16 +12,11 @@ For the terse operational summary of the whole system, see the repo-root
 | Spec                                     | Topic                                                    |
 | ---------------------------------------- | -------------------------------------------------------- |
 | [00](00-overview.md)                     | Overview — surfaces, paths, memory model                 |
-| [01](01-architecture.md)                 | Architecture — desktop ↔ sidecar ↔ backend, backend APIs |
-| [02](02-sidecar-fast-pipeline.md)        | Sidecar fast pipeline                                    |
-| [03](03-desktop-shell.md)                | Desktop shell                                            |
-| [04](04-desktop-ui.md)                   | Desktop UI                                               |
+| [01](01-architecture.md)                 | Architecture — backend, landing, APIs                    |
 | [05](05-speech-stt.md)                   | Speech — STT (ElevenLabs `scribe_v2`)                    |
 | [06](06-speech-tts.md)                   | Speech — TTS (ElevenLabs `eleven_flash_v2_5`)            |
-| [07](07-sidecar-router.md)               | Sidecar intent router                                    |
-| [08](08-sidecar-agent.md)                | Sidecar agent                                            |
 | [09](09-harness.md)                      | Harness — prompt, tools, hooks, loop guards              |
-| [10](10-memory.md)                       | Memory — backend canonical + sidecar local               |
+| [10](10-memory.md)                       | Memory — backend canonical                               |
 | [11](11-database.md)                     | Database — Neon Postgres tables                          |
 | [12](12-backend.md)                      | Backend — Hono Worker, auth, billing, gateway            |
 | [13](13-pricing.md)                      | Pricing — pure-credit model                              |

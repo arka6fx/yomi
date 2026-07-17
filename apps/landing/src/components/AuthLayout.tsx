@@ -3,7 +3,7 @@ import { BrandMark } from "@/components/BrandMark"
 const STEPS = [
   { label: "Sign in with Google or GitHub", caption: "One tap. No password to remember." },
   { label: "Connect your apps", caption: "Gmail, Calendar, Drive, GitHub, and more." },
-  { label: "Chat from desktop or Telegram", caption: "Ask Yomi anything, anywhere." },
+  { label: "Chat from web or Telegram", caption: "Ask Yomi anything, anywhere." },
 ]
 
 // Split-screen auth shell: a sky-blue brand panel on the left, the form on the
@@ -52,7 +52,7 @@ export default function AuthLayout({
             one <span className="italic">conversation.</span>
           </h2>
           <p className="mt-5 max-w-sm text-sm leading-relaxed text-white/70">
-            Connect your tools once, then ask Yomi anything. From your desktop, or right inside
+            Connect your tools once, then ask Yomi anything. From the web app, or right inside
             Telegram.
           </p>
 

@@ -13,8 +13,8 @@ and cloud archive mirroring/search.
 - Usage is gated by a single credit balance (pure-credit model) at backend API
   boundaries; `services/metering.ts` `chargeUsage()` is the only charging
   chokepoint.
-- Structured memory stays in the sidecar; the backend hosts the mirrored archive
-  index for Cloud RAG search.
+- Memory is backend-canonical; the backend hosts the archive index for RAG
+  search.
 
 ## Route Groups
 
@@ -23,15 +23,15 @@ app.route("/api/billing", billingRoutes)
 app.route("/api/usage", usageRoutes)
 app.route("/api/llm", llmRoutes)
 app.route("/api/rag", ragRoutes)
-app.post("/api/stt", sttHandler) // machine-to-machine (sidecar secret) only
-app.post("/api/tts", ttsHandler) // machine-to-machine (sidecar secret) only
+app.post("/api/stt", sttHandler)
+app.post("/api/tts", ttsHandler)
 app.on(["GET", "POST"], "/api/auth/*", auth.handler)
 ```
 
 ## Auth
 
-Better Auth validates session cookies and bearer tokens. Desktop uses the
-device-code flow and then sends:
+Better Auth validates session cookies and bearer tokens. Clients authenticate
+via OAuth flows and send:
 
 ```http
 Authorization: Bearer <session-token>
@@ -75,25 +75,25 @@ Callers: `routes/usage.ts` (`POST /interactions/reserve`), `agent/run.ts`
 
 - accepts Vercel AI SDK compatible chat payloads
 - injects the OpenAI-compatible credentials from environment
-- streams model output back to the sidecar
+- streams model output back to the client
 - records usage events when token data is available
 
-The desktop never receives provider keys.
+Clients never receive provider keys directly.
 
 ## STT / TTS Proxy
 
 `POST /api/stt` and `POST /api/tts`
 
-- accept payloads from the sidecar only — **machine-to-machine, sidecar-secret
-  auth only** (no user-session access), so the credit meter can't be bypassed
+- accept payloads from authenticated clients only, so the credit meter can't be
+  bypassed
 - STT calls ElevenLabs `scribe_v2`; TTS calls `eleven_flash_v2_5`
 - not the metering point: voice is charged once at
   `/api/usage/interactions/reserve` (kind `voice`, per actual minute)
 
 ## Cloud RAG API
 
-Cloud RAG mirrors Yomi-generated archive material from the sidecar into the
-backend and exposes search over the mirrored corpus.
+Cloud RAG indexes Yomi-generated archive material and exposes search over the
+corpus.
 
 Routes in `apps/backend/src/routes/rag.ts`:
 
@@ -113,8 +113,7 @@ Mirror indexing parameters:
 - chunk size: `1800` chars
 - chunk overlap: `220` chars
 
-Cloud search returns compact snippets with source metadata. The sidecar keeps a
-local archive fallback but treats cloud results as primary when available.
+Cloud search returns compact snippets with source metadata.
 
 ## Memory API
 

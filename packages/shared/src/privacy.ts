@@ -58,7 +58,7 @@ export const RETENTION_DEFAULTS: Record<RetentionDomainKey, RetentionPolicy> = {
   usage_events: { label: "Detailed usage events", days: 90, userOverridable: false },
   pending_actions: { label: "Pending action requests", days: 7, userOverridable: false },
   devices: { label: "Inactive device records", days: 180, userOverridable: false },
-  expired_codes: { label: "Expired link/device codes", days: 0, userOverridable: false },
+  expired_codes: { label: "Expired link codes", days: 0, userOverridable: false },
 }
 
 export function isRetentionDomainKey(value: string): value is RetentionDomainKey {

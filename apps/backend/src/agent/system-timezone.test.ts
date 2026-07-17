@@ -14,7 +14,7 @@ describe("today in the system prompt", () => {
 
   it("uses the user's timezone for the date, not the server's", () => {
     setSystemTime(lateNightIst)
-    const prompt = buildSystemWithContext("", "", undefined, [], null, undefined, "Asia/Kolkata")
+    const prompt = buildSystemWithContext("", "", undefined, null, "", "Asia/Kolkata")
 
     expect(prompt).toContain("July 12, 2026")
     expect(prompt).not.toContain("July 11, 2026")
@@ -23,14 +23,14 @@ describe("today in the system prompt", () => {
 
   it("tells the model to resolve relative times against that zone", () => {
     setSystemTime(lateNightIst)
-    const prompt = buildSystemWithContext("", "", undefined, [], null, undefined, "Asia/Kolkata")
+    const prompt = buildSystemWithContext("", "", undefined, null, "", "Asia/Kolkata")
 
     expect(prompt).toContain("never against UTC")
   })
 
   it("falls back to the server date when the timezone is unknown", () => {
     setSystemTime(lateNightIst)
-    const prompt = buildSystemWithContext("", "", undefined, [], null, undefined, null)
+    const prompt = buildSystemWithContext("", "", undefined, null, "", null)
 
     // No zone to anchor to — say nothing about one rather than assert a wrong one.
     expect(prompt).toContain("Today is")
@@ -39,7 +39,7 @@ describe("today in the system prompt", () => {
 
   it("does not shift the date for a user already on the server's date", () => {
     setSystemTime(new Date("2026-07-12T10:00:00Z")) // 15:30 IST, same day both ways
-    const prompt = buildSystemWithContext("", "", undefined, [], null, undefined, "Asia/Kolkata")
+    const prompt = buildSystemWithContext("", "", undefined, null, "", "Asia/Kolkata")
 
     expect(prompt).toContain("July 12, 2026")
   })

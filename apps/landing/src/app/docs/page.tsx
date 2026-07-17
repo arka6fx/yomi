@@ -19,14 +19,14 @@ import Footer from "@/components/Footer"
 export const metadata: Metadata = {
   title: "Docs: connectors, voice, memory, and credits",
   description:
-    "Everything Yomi can do today: the desktop assistant, Telegram bot, app connectors, memory, voice, and how plans and credits work.",
+    "Everything Yomi can do today: Telegram bot, app connectors, memory, voice, and how plans and credits work.",
   alternates: { canonical: "https://getyomi.in/docs" },
 }
 
 const NAV = [
   { id: "overview", label: "Overview" },
   { id: "getting-started", label: "Getting started" },
-  { id: "desktop", label: "Desktop assistant" },
+  { id: "web", label: "Web app" },
   { id: "telegram", label: "Telegram bot" },
   { id: "connectors", label: "App connectors" },
   { id: "memory", label: "Memory & knowledge" },
@@ -161,7 +161,7 @@ export default function DocsPage() {
             Everything Yomi does, <span className="font-serif italic text-primary">today</span>.
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
-            A complete, honest map of what&apos;s shipped: the desktop assistant, the Telegram bot,
+            A complete, honest map of what&apos;s shipped: the Telegram bot,
             every app connector, memory, voice, and how plans and credits work.
           </p>
         </div>
@@ -187,7 +187,7 @@ export default function DocsPage() {
         <main className="min-w-0">
           <Section id="overview" eyebrow="Overview" title="What Yomi is">
             <p>
-              Yomi is an AI assistant that runs in your Windows system tray. It can{" "}
+              Yomi is an AI assistant that connects to the apps you already use. It can{" "}
               <strong className="text-foreground">see your screen</strong>,{" "}
               <strong className="text-foreground">hear your voice</strong>, and{" "}
               <strong className="text-foreground">act across your apps</strong>, so you can ask
@@ -195,15 +195,15 @@ export default function DocsPage() {
               copy-pasting.
             </p>
             <p>
-              You reach Yomi two ways: the{" "}
-              <a className="text-primary hover:underline" href="#desktop">
-                desktop overlay
+              You reach Yomi through the{" "}
+              <a className="text-primary hover:underline" href="#web">
+                web app
               </a>{" "}
-              on your PC, and the{" "}
+              or the{" "}
               <a className="text-primary hover:underline" href="#telegram">
                 Telegram bot
-              </a>{" "}
-              when you&apos;re away from it. Both share the same memory and connected apps.
+              </a>
+              . Both share the same memory and connected apps.
             </p>
           </Section>
 
@@ -211,17 +211,16 @@ export default function DocsPage() {
             <ol className="space-y-3">
               {[
                 [
-                  "Download for Windows",
-                  "Grab the installer and launch Yomi. It lives in your system tray.",
+                  "Sign up",
+                  "Create your account with Google or GitHub. No password to manage.",
                 ],
-                ["Sign in", "Continue with Google or GitHub. No password to manage."],
                 [
                   "Connect your apps",
                   "Link Gmail, Calendar, Drive and others from the dashboard with one click each.",
                 ],
                 [
-                  "Link Telegram (optional)",
-                  "Use the dashboard's secure link flow to chat with Yomi from your phone.",
+                  "Start chatting",
+                  "Ask Yomi from the web app or link Telegram to chat from your phone.",
                 ],
               ].map(([t, d], i) => (
                 <li key={t} className="flex gap-3">
@@ -234,26 +233,23 @@ export default function DocsPage() {
                 </li>
               ))}
             </ol>
-            <p className="text-sm">macOS is planned; Windows is available today.</p>
           </Section>
 
-          <Section id="desktop" eyebrow="Desktop" title="The desktop assistant">
+          <Section id="web" eyebrow="Web" title="The web app">
             <p>
-              Yomi sits quietly in your tray and appears as a floating overlay when you call it. It
-              reads the screen you point it at, so answers are grounded in what you&apos;re actually
-              looking at.
+              Open Yomi in your browser from the dashboard. It connects to your apps and can{" "}
+              read documents, search email, and act across your connected tools. Voice and vision
+              work through your browser too.
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               <Feature icon={<Monitor size={17} />} title="Screen-aware answers">
-                Ask about whatever&apos;s on screen, like a doc, an error, or a dashboard, and get a
-                grounded answer.
+                Share what&apos;s on screen and get grounded answers in context.
               </Feature>
-              <Feature icon={<Keyboard size={17} />} title="Voice & text hotkeys">
-                Trigger Yomi by hotkey, then type or speak. A fast path replies in about two
-                seconds.
+              <Feature icon={<Keyboard size={17} />} title="Voice & text">
+                Type or speak your question. A fast path replies in about two seconds.
               </Feature>
-              <Feature icon={<ShieldCheck size={17} />} title="Visible capture states">
-                You always see when Yomi is capturing the screen, so nothing happens silently.
+              <Feature icon={<ShieldCheck size={17} />} title="Visible actions">
+                Actions that send or change things pause for your approval first.
               </Feature>
               <Feature icon={<Sparkles size={17} />} title="Two routing paths">
                 Simple questions take the quick path; anything needing your apps runs the full
@@ -418,8 +414,8 @@ export default function DocsPage() {
                 Create your account
               </Link>{" "}
               or{" "}
-              <Link href="/download" className="font-medium text-primary hover:underline">
-                download for Windows
+               <Link href="/dashboard" className="font-medium text-primary hover:underline">
+                open the dashboard
               </Link>
               .
             </p>

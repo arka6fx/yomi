@@ -9,7 +9,6 @@ import {
   Check,
   Crown,
   Loader2,
-  Download,
   Shield,
   Sparkles,
   Cuboid,
@@ -963,19 +962,13 @@ function DashboardContent() {
                   <div>
                     <p className="text-sm font-medium text-foreground">Welcome to Yomi!</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Download the desktop app to get started. It lives in your system tray and
-                      responds to{" "}
-                      <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono text-[10px]">
-                        Ctrl+Space
-                      </kbd>
-                      .
+                      Connect Telegram or an integration to start using Yomi from the dashboard.
                     </p>
                     <Link
-                      href="/#download"
+                      href="/docs"
                       className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
                     >
-                      <Download size={12} />
-                      Download for Windows
+                      Open docs
                     </Link>
                   </div>
                   <button
@@ -1489,28 +1482,6 @@ function DashboardContent() {
                 </motion.div>
               )}
 
-              {/* Download CTA */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.24 }}
-              >
-                <div className="rounded-xl border border-border bg-card p-4 flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Download Yomi</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Get the Windows desktop app.
-                    </p>
-                  </div>
-                  <Link
-                    href="/#download"
-                    className="flex items-center gap-2 bg-primary text-primary-foreground rounded-xl font-medium px-4 py-2 text-sm hover:bg-primary/90 transition-colors whitespace-nowrap"
-                  >
-                    <Download size={14} />
-                    Download
-                  </Link>
-                </div>
-              </motion.div>
             </>
           ) /* end account tab */
         }
