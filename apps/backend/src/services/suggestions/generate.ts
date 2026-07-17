@@ -8,9 +8,10 @@ import { earnedPatterns, type EarnedPattern } from "./earned-patterns.js"
 import {
   assembleGeneratedSuggestions,
   type AssemblyContext,
+  type GeneratedSuggestion,
   type ModelSuggestionSlot,
 } from "./assemble.js"
-import type { SuggestionEntry } from "./catalog.js"
+import { writeGeneratedCache } from "./cache.js"
 
 // Fast model — sole job is phrasing already-earned patterns (ADR-0001). Cheap,
 // structured, and never charged to the user (mirrors per-turn memory extraction).
@@ -124,7 +125,7 @@ async function loadAssemblyContext(userId: string): Promise<AssemblyContext> {
 export async function generateSuggestions(
   userId: string,
   now: Date = new Date(),
-): Promise<SuggestionEntry[]> {
+): Promise<GeneratedSuggestion[]> {
   const patterns = await earnedPatterns(userId, now)
   if (patterns.length === 0) return [] // nothing earned — no model call, ADR-0001
 
@@ -180,4 +181,19 @@ export async function generateSuggestions(
 
   const context = await loadAssemblyContext(userId)
   return assembleGeneratedSuggestions(patterns, context, slots)
+}
+
+// SWR regeneration: generate a fresh set and persist it for the next surface load.
+// Best-effort and fire-and-forget — the GET /suggestions request never awaits this,
+// and a failure just leaves the response (and any prior cache) untouched.
+export async function regenerateGeneratedCache(
+  userId: string,
+  now: Date = new Date(),
+): Promise<void> {
+  try {
+    const suggestions = await generateSuggestions(userId, now)
+    await writeGeneratedCache(userId, suggestions)
+  } catch {
+    // best-effort — regeneration must never surface into the request path
+  }
 }

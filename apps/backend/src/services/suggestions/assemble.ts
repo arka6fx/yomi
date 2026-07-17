@@ -32,6 +32,14 @@ export interface AssemblyContext {
   existingSchedules: ExistingScheduleSignature[]
 }
 
+// A validated generated suggestion: a SuggestionEntry plus the source-pattern
+// metadata the cache needs to rank and reconstruct it on the next surface load.
+export interface GeneratedSuggestion extends SuggestionEntry {
+  connector: string
+  timeBucket: TimeBucket
+  distinctDays: number
+}
+
 const MAX_GENERATED = 3
 
 // The coarse (connector, time bucket) identity every guard keys on.
@@ -52,7 +60,7 @@ export function assembleGeneratedSuggestions(
   patterns: EarnedPattern[],
   context: AssemblyContext,
   modelOutput: ModelSuggestionSlot[],
-): SuggestionEntry[] {
+): GeneratedSuggestion[] {
   const connected = new Set(context.connectedConnectors)
   const latched = new Set(context.latchedKeys)
   const occupied = new Set(context.existingSchedules.filter((s) => s.enabled).map(sigFor))
@@ -64,7 +72,7 @@ export function assembleGeneratedSuggestions(
     else slotsBySig.set(sig, [slot])
   }
 
-  const survivors: Array<{ entry: SuggestionEntry; distinctDays: number }> = []
+  const survivors: Array<{ entry: GeneratedSuggestion; distinctDays: number }> = []
   for (const pattern of patterns) {
     const sig = sigFor(pattern)
     // (a) untrusted schedule: take the first slot the model phrased whose schedule
@@ -77,12 +85,15 @@ export function assembleGeneratedSuggestions(
     if (occupied.has(sig)) continue // (d) equivalent enabled schedule already exists
 
     const deliverTo = slot.deliverTo
-    const entry: SuggestionEntry = {
+    const entry: GeneratedSuggestion = {
       dedupKey,
       provider: pattern.connector,
       title: slot.title,
       description: slot.description,
       spec: { schedule: slot.schedule, prompt: slot.prompt, deliverTo },
+      connector: pattern.connector,
+      timeBucket: pattern.timeBucket,
+      distinctDays: pattern.distinctDays,
     }
     if (deliverTo.includes("telegram")) entry.requires = { telegram: true }
     survivors.push({ entry, distinctDays: pattern.distinctDays })

@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm"
 import { db, mcpConnections, platformConnections, suggestionDecisions } from "@yomi/db"
+import { readGeneratedCache, findGeneratedEntry } from "./cache.js"
 
 export interface SuggestionEntry {
   dedupKey: string
@@ -80,12 +81,26 @@ export const SUGGESTION_CATALOG: SuggestionEntry[] = [
   },
 ]
 
-export function findEntry(dedupKey: string): SuggestionEntry | undefined {
-  return SUGGESTION_CATALOG.find((e) => e.dedupKey === dedupKey)
+// Resolve a dedupKey to its entry. Catalog keys resolve from the static catalog;
+// generated (gen:*) keys resolve from the user's cache, so accept/dismiss treat
+// both identically. userId is required to look up per-user generated entries.
+export async function findEntry(
+  userId: string,
+  dedupKey: string,
+): Promise<SuggestionEntry | undefined> {
+  const catalogHit = SUGGESTION_CATALOG.find((e) => e.dedupKey === dedupKey)
+  if (catalogHit) return catalogHit
+  if (!dedupKey.startsWith("gen:")) return undefined
+  return findGeneratedEntry(userId, dedupKey)
 }
 
-export async function offerableFor(userId: string): Promise<SuggestionEntry[]> {
-  const [connRows, platformRows, decidedRows] = await Promise.all([
+// cache is optional so the GET route can pass a cache it already read (for the SWR
+// staleness check) instead of forcing a second identical query.
+export async function offerableFor(
+  userId: string,
+  cache?: { entries: SuggestionEntry[] },
+): Promise<SuggestionEntry[]> {
+  const [connRows, platformRows, decidedRows, cached] = await Promise.all([
     db
       .select({ provider: mcpConnections.provider })
       .from(mcpConnections)
@@ -98,15 +113,20 @@ export async function offerableFor(userId: string): Promise<SuggestionEntry[]> {
       .select({ dedupKey: suggestionDecisions.dedupKey })
       .from(suggestionDecisions)
       .where(eq(suggestionDecisions.userId, userId)),
+    cache ?? readGeneratedCache(userId),
   ])
   const providers = new Set(connRows.map((r) => r.provider))
   const hasTelegram = platformRows.some((r) => r.platform === "telegram")
   const decided = new Set(decidedRows.map((r) => r.dedupKey))
 
-  return SUGGESTION_CATALOG.filter((entry) => {
+  // Generated and catalog entries pass the SAME gating (decided latch, connector
+  // linked, telegram requirement); generated are simply placed first.
+  const gate = (entry: SuggestionEntry): boolean => {
     if (decided.has(entry.dedupKey)) return false
     if (entry.provider && !providers.has(entry.provider)) return false
     if (entry.requires?.telegram && !hasTelegram) return false
     return true
-  })
+  }
+
+  return [...cached.entries.filter(gate), ...SUGGESTION_CATALOG.filter(gate)]
 }
