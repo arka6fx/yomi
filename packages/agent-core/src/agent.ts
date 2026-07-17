@@ -27,8 +27,11 @@ export interface RunAgentLoopOptions {
   system?: string
   // Model id; defaults to OPENAI_AGENT_MODEL.
   model?: string
-  // Max ReAct steps. Defaults to AGENT_MAX_STEPS or 12.
+  // Max ReAct steps. Defaults to AGENT_MAX_STEPS or 25.
   maxSteps?: number
+  // Cumulative output-token budget for the run. Defaults to
+  // AGENT_MAX_OUTPUT_TOKENS or 16384. Distinct from maxTokens (per-call cap).
+  maxOutputTokens?: number
   // Hard cap response verbosity for chat surfaces.
   maxTokens?: number
   // Extra tools to merge in (beyond the connector tools).
@@ -61,9 +64,16 @@ function agentModel(override?: string): string {
   return override || process.env["OPENAI_AGENT_MODEL"] || "gpt-5.5"
 }
 
+// Backend and sidecar read the same env contract so both surfaces can be tuned
+// together; defaults match the sidecar's IterationBudget.
 function maxSteps(override?: number): number {
   if (typeof override === "number") return override
-  return parseInt(process.env["AGENT_MAX_STEPS"] || "12", 10)
+  return parseInt(process.env["AGENT_MAX_STEPS"] || "25", 10)
+}
+
+function maxOutputTokens(override?: number): number {
+  if (typeof override === "number") return override
+  return parseInt(process.env["AGENT_MAX_OUTPUT_TOKENS"] || "16384", 10)
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -130,71 +140,109 @@ function fallbackFromToolResults(toolResults: readonly unknown[]): string {
   return blocks.join("\n\n")
 }
 
+type ResponseMessages = Awaited<ReturnType<typeof generateText>>["response"]["messages"]
+
 // Lean, text-only tool-calling loop over the OpenAI model provider and
 // connector tools. Runs in both the sidecar and backend; returns final text.
+// Driven as an explicit single-step sequence (not one multi-step generateText)
+// so a cost-aware budget can halt mid-run yet keep the transcript for the grace
+// call — v4's onStepFinish can observe a step but can't stop the loop.
 export async function runAgentLoop(opts: RunAgentLoopOptions): Promise<string> {
   const tools: ToolSet = {
     ...createConnectorTools(opts.registry),
     ...(opts.extraTools ?? {}),
   }
 
+  const model = agentModel(opts.model)
+  const llm = createModel(model)
+  const system = opts.system ?? defaultSystem()
+  const stepBudget = maxSteps(opts.maxSteps)
+  const tokenBudget = maxOutputTokens(opts.maxOutputTokens)
+
   const messages: AgentMessage[] = [...(opts.history ?? []), { role: "user", content: opts.text }]
+  const transcript: ResponseMessages = []
 
-  const result = await generateText({
-    model: createModel(agentModel(opts.model)),
-    system: opts.system ?? defaultSystem(),
-    messages,
-    tools,
-    maxSteps: maxSteps(opts.maxSteps),
-    maxTokens: opts.maxTokens,
-    abortSignal: opts.signal,
-  })
+  let usedSteps = 0
+  let inputTokens = 0
+  let outputTokens = 0
+  let toolCallCount = 0
+  let budgetReason: "steps" | "tokens" | null = null
+  let lastToolResults: readonly unknown[] = []
 
-  opts.onUsage?.({
-    model: agentModel(opts.model),
-    inputTokens: result.usage.promptTokens,
-    outputTokens: result.usage.completionTokens,
-    toolCallCount: result.toolCalls.length,
-    finishReason: result.finishReason,
-  })
+  // Emit run-cumulative usage once, at the terminal exit. The backend persists
+  // onUsage into a single usage_events row (last write wins), so per-step
+  // emission would clobber the row down to just the final call's tiny totals.
+  const finish = (text: string, finishReason: string): string => {
+    opts.onUsage?.({ model, inputTokens, outputTokens, toolCallCount, finishReason })
+    return text
+  }
 
-  if (result.text.trim()) return result.text
+  while (true) {
+    if (usedSteps >= stepBudget) {
+      budgetReason = "steps"
+      break
+    }
+    if (outputTokens >= tokenBudget) {
+      budgetReason = "tokens"
+      break
+    }
 
-  // Grace call (hermes pattern): the loop stopped (step cap / length) after tool
-  // work but produced no final text. Re-run once over the accumulated transcript
-  // with toolChoice:"none" so the model must summarise what the tools returned
-  // instead of us dumping raw tool JSON. Tools stay declared so the transcript's
-  // tool calls still validate.
-  const priorMessages = result.response.messages
-  if (priorMessages.length > 0) {
+    const result = await generateText({
+      model: llm,
+      system,
+      messages: [...messages, ...transcript] as typeof messages,
+      tools,
+      maxSteps: 1,
+      maxTokens: opts.maxTokens,
+      abortSignal: opts.signal,
+    })
+
+    usedSteps++
+    inputTokens += result.usage.promptTokens
+    outputTokens += result.usage.completionTokens
+    toolCallCount += result.toolCalls.length
+    transcript.push(...result.response.messages)
+    lastToolResults = result.toolResults
+
+    // The model produced a final turn (no further tool calls requested).
+    if (result.toolCalls.length === 0) {
+      if (result.text.trim()) return finish(result.text, result.finishReason)
+      break // stopped with empty text → grace call below
+    }
+    // Otherwise tools ran this step; loop so the model can react to their results.
+  }
+
+  // Grace call (hermes pattern): either a budget was exhausted mid-work or the
+  // loop ended with empty text after tool work. Re-run once over the accumulated
+  // transcript with toolChoice:"none" so the model must summarise what the tools
+  // returned instead of us dumping raw tool JSON. Tools stay declared so the
+  // transcript's tool calls still validate.
+  if (transcript.length > 0) {
     try {
       const grace = await generateText({
-        model: createModel(agentModel(opts.model)),
-        system: opts.system ?? defaultSystem(),
-        messages: [...messages, ...priorMessages] as typeof messages,
+        model: llm,
+        system,
+        messages: [...messages, ...transcript] as typeof messages,
         tools,
         toolChoice: "none",
         maxTokens: opts.maxTokens,
         abortSignal: opts.signal,
       })
-      opts.onUsage?.({
-        model: agentModel(opts.model),
-        inputTokens: grace.usage.promptTokens,
-        outputTokens: grace.usage.completionTokens,
-        toolCallCount: 0,
-        finishReason: `grace:${grace.finishReason}`,
-      })
-      if (grace.text.trim()) return grace.text
+      inputTokens += grace.usage.promptTokens
+      outputTokens += grace.usage.completionTokens
+      if (grace.text.trim()) {
+        return finish(grace.text, budgetReason ? `budget:${budgetReason}` : `grace:${grace.finishReason}`)
+      }
     } catch (err) {
       console.warn(`[agent] grace call failed: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 
-  const fallback = fallbackFromToolResults(result.toolResults)
-  if (fallback) return fallback
+  const fallback = fallbackFromToolResults(lastToolResults)
+  if (fallback) return finish(fallback, budgetReason ? `budget:${budgetReason}` : "fallback")
 
   console.warn(
-    `[agent] empty final text finishReason=${result.finishReason} toolCalls=${result.toolCalls.length} toolResults=${result.toolResults.length}`,
+    `[agent] empty final text reason=${budgetReason ?? "empty"} steps=${usedSteps} outputTokens=${outputTokens}`,
   )
-  return result.text
+  return finish("", budgetReason ? `budget:${budgetReason}` : "empty")
 }
