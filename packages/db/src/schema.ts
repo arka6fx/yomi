@@ -283,6 +283,33 @@ export const suggestionDecisions = pgTable(
   }),
 )
 
+// Cache of earned proactive suggestions so GET /suggestions serves them without a
+// model call. Holds enough to reconstruct an offerable SuggestionEntry-shaped row
+// plus source-pattern metadata for ranking. generatedAt anchors the ~7-day TTL.
+export const generatedSuggestions = pgTable(
+  "generated_suggestions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    dedupKey: text("dedup_key").notNull(), // code-computed gen:{connector}:{timeBucket}
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    schedule: text("schedule").notNull(), // raw schedule spec, e.g. "every weekday 8am"
+    prompt: text("prompt").notNull(),
+    deliverTo: jsonb("deliver_to"), // string[] of delivery targets (e.g. ["telegram"])
+    connector: text("connector").notNull(), // source pattern connector
+    timeBucket: text("time_bucket").notNull(), // coarse day-part bucket
+    distinctDays: integer("distinct_days").notNull(), // ranking metric
+    generatedAt: timestamp("generated_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    userIdx: index("generated_suggestions_user_idx").on(t.userId),
+    userKeyUnique: unique("generated_suggestions_user_key_unique").on(t.userId, t.dedupKey),
+  }),
+)
+
 export const ragSources = pgTable(
   "rag_sources",
   {
