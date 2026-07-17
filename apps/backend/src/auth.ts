@@ -156,7 +156,7 @@ function createAuth() {
     },
     plugins: [
       organization(), // Team tier: orgs + members + roles
-      bearer(), // Accept Authorization: Bearer <token> from sidecar/landing proxy
+      bearer(), // Accept Authorization: Bearer <token> from landing proxy
       customSession(async (session) => {
         const fields = await getUserFields(session.user.id)
         const mergedUser = { ...session.user, ...(fields ?? {}) }

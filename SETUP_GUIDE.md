@@ -8,7 +8,6 @@ Backend API           https://api.getyomi.in    AWS EC2 + Docker + Caddy (apps/b
 Database              Neon Postgres
 LLM + speech          OpenAI (STT/TTS fall back to ElevenLabs)
 Billing               Dodo Payments
-Desktop installers    GitHub releases on arka6fx/yomi-releases
 ```
 
 - **Domain** `getyomi.in` is registered at Hostinger; DNS is managed by Cloudflare
@@ -57,7 +56,7 @@ GITHUB_CLIENT_ID=...            GITHUB_CLIENT_SECRET=...
 GITHUB_INTEGRATIONS_CLIENT_ID=...  GITHUB_INTEGRATIONS_CLIENT_SECRET=...
 
 # LLM + speech via OpenAI (standard OPENAI_* env vars, api.openai.com);
-# the backend proxies desktop/sidecar LLM calls and injects the key.
+# the backend proxies LLM calls and injects the key.
 OPENAI_API_KEY=sk-proj-...
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_FAST_MODEL=gpt-5.4-mini
@@ -135,14 +134,13 @@ https://api.getyomi.in/api/integrations/callback/{github,slack,notion,linear}
 
 ## Desktop releases
 
-Never tag or release from this repo. Build + publish via the workflow, which
-ships installers to `arka6fx/yomi-releases`:
+Never tag or release from this repo.
 
 ```bash
 gh workflow run release.yml --ref main -f version=<ver> -f notes="<desc>"
 ```
 
-The desktop app's LLM model names come from the GitHub secrets
+The LLM model names come from the GitHub secrets
 `OPENAI_FAST_MODEL` / `OPENAI_AGENT_MODEL` (must be valid OpenAI models),
 baked at release build; it routes LLM calls through `api.getyomi.in/api/llm/proxy`.
 

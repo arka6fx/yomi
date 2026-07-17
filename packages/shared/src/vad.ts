@@ -1,5 +1,4 @@
-// Energy-based voice-activity detection — shared by the sidecar (offline WAV
-// trimming) and the desktop renderer (live mic end-of-speech auto-stop).
+// Energy-based voice-activity detection.
 // Upgrade path: replace EnergyVad.processFrame with a Silero VAD; VadResult stays.
 
 export interface VadResult {
@@ -32,7 +31,7 @@ export class EnergyVad {
     this.hangoverSamples = Math.round(((opts.silenceHangoverMs ?? 300) * this.sampleRate) / 1000)
   }
 
-  // Accepts Int16 PCM (sidecar WAV path) or Float32 [-1,1] frames (renderer mic path).
+  // Accepts Int16 PCM or Float32 [-1,1] frames.
   processFrame(samples: Int16Array | Float32Array): VadResult {
     const isFloat = samples instanceof Float32Array
     // RMS → dB. Float32 is already normalised; Int16 is scaled to [-1,1].

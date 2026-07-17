@@ -5,7 +5,7 @@ import Footer from "@/components/Footer"
 export const metadata: Metadata = {
   title: "Terms of Service",
   description:
-    "Yomi Terms of Service: the agreement between you and Yomi governing your use of the desktop app, API integrations, and subscription plans.",
+    "Yomi Terms of Service: the agreement between you and Yomi governing your use of the web app, API integrations, and subscription plans.",
   alternates: { canonical: "https://getyomi.in/terms" },
 }
 
@@ -31,8 +31,7 @@ export default function TermsPage() {
               <p>
                 Yomi is an AI assistant application that integrates with your operating system to
                 provide context-aware responses to queries, autonomous task execution, and
-                persistent memory. The service includes a desktop application, a local sidecar
-                process, and optional cloud features.
+                persistent memory. The service includes a web application.
               </p>
             </Section>
 

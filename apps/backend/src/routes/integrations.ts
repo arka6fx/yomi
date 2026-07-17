@@ -67,10 +67,9 @@ async function checkProviderHealth(
 async function resolveInternalUser(c: {
   req: {
     raw: Request
-    header: (name: string) => string | undefined
     query: (name: string) => string | undefined
   }
-}): Promise<{ userId: string } | { error: string; status: 401 | 403 | 503 }> {
+}): Promise<{ userId: string } | { error: string; status: 401 | 403 }> {
   const queryUserId = c.req.query("userId")
   const session = await getAuth().api.getSession({ headers: c.req.raw.headers })
   if (session?.user) {
@@ -78,14 +77,7 @@ async function resolveInternalUser(c: {
     return { userId: session.user.id }
   }
 
-  const secret = process.env.SIDECAR_SECRET
-  if (!secret) return { error: "SIDECAR_SECRET not configured", status: 503 }
-  if (process.env["YOMI_ALLOW_SIDECAR_TOKEN_BROKER"] !== "1") {
-    return { error: "Unauthorized", status: 401 }
-  }
-  if (c.req.header("x-sidecar-secret") !== secret) return { error: "Unauthorized", status: 401 }
-  if (!queryUserId) return { error: "userId required", status: 401 }
-  return { userId: queryUserId }
+  return { error: "Unauthorized", status: 401 }
 }
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -177,8 +169,7 @@ integrationsRouter.get("/", authenticate, async (c) => {
 })
 
 // ── Status check — returns just which providers are connected ────────────────
-// Accepts sidecar-secret + ?userId=<id> (same auth pattern as /token/:provider)
-// or a normal user session for dashboard use.
+// Requires a user session for dashboard use.
 
 integrationsRouter.get("/status", async (c) => {
   const resolved = await resolveInternalUser(c)
@@ -593,10 +584,9 @@ integrationsRouter.delete("/:provider", authenticate, async (c) => {
   return c.json({ ok: true })
 })
 
-// ── Internal token endpoint — sidecar only ───────────────────────────────────
-// Returns a valid (auto-refreshed) access token for sidecar tools to use.
-// Authenticated with x-sidecar-secret; never exposed to the frontend.
-// Delegates to integration-tokens.ts so backend agents reuse the same logic.
+// ── Internal token endpoint ───────────────────────────────────────────────────
+// Returns a valid (auto-refreshed) access token for backend agents to use.
+// Requires a user session; never exposed as a public route.
 
 integrationsRouter.get("/token/:provider", async (c) => {
   const resolved = await resolveInternalUser(c)

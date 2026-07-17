@@ -13,7 +13,6 @@ const NAV_LINKS = [
   { label: "Integrations", href: "/#connectors" },
   { label: "Pricing", href: "/#pricing" },
   { label: "Docs", href: "/docs" },
-  { label: "Download", href: "/#download" },
   { label: "Support", href: "/support" },
   { label: "Privacy", href: "/privacy" },
   { label: "Terms", href: "/terms" },

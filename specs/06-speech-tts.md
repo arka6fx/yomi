@@ -60,13 +60,8 @@ if (buffer.trim().length > 0) queueTts(buffer)
 
 ## Files
 
-- `apps/sidecar/src/speech/resolver.ts` - provider selection and synthesis
-  dispatch.
-- `apps/sidecar/src/services/elevenlabs/tts.ts` - ElevenLabs TTS client.
-- `apps/sidecar/src/pipeline/fast.ts` - sentence-boundary buffering and
-  `audio_chunk` SSE.
-- `apps/sidecar/src/pipeline/fast.test.ts` - tests for sentence-boundary audio
-  events.
+- `apps/backend/src/routes/tts.ts` - TTS proxy endpoint.
+- `apps/backend/src/services/elevenlabs/tts.ts` - ElevenLabs TTS client.
 
 ## Open Questions
 

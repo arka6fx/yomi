@@ -1,9 +1,6 @@
 import type { Context } from "hono"
 
-// Machine-to-machine only. STT/TTS are reached exclusively through the metered voice
-// pipeline (desktop reserves `voice` → sidecar → backend), so a plain user session must
-// NOT be able to call the speech providers directly and bypass the credit meter — see the
-// "no meter bypass" tests in routes/proxy.test.ts.
+// STT/TTS routes are authenticated via a shared secret to prevent abuse.
 export function isSpeechAuthorized(c: Context): boolean {
   const secret = process.env["SIDECAR_SECRET"]
 

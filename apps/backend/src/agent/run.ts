@@ -54,7 +54,7 @@ async function fetchUser(userId: string) {
   return row ?? null
 }
 
-// Full-text search over the user's cloud RAG archive (synced from the sidecar).
+// Full-text search over the user's cloud RAG archive.
 // Returns up to maxChars of ranked, numbered snippet blocks for system-prompt injection.
 async function fetchRagContext(userId: string, query: string, maxChars = 3000): Promise<string> {
   try {
@@ -390,7 +390,6 @@ export function buildSystemWithContext(
   memoryContext: string,
   ragContext: string,
   profile?: { staticProfile: string; dynamicProfile: string },
-  desktopOnlyConnected: string[] = [],
   userSoul?: string | null,
   recentChat?: string,
   timeZone?: string | null,
@@ -425,10 +424,6 @@ export function buildSystemWithContext(
     `Actions and approvals: when the user asks you to create, send, edit, schedule, or delete something in a connected app, call the tool right away. Do NOT ask them to confirm first and do NOT wait for a "yes" before calling it — every such action is automatically held for the user's approval. An approval card showing the FULL details (recipients, subject, body, times) is sent to the user for you, so do not restate those details and do not summarise them away. After a tool reports an action is pending, say nothing more than a brief acknowledgement, or nothing at all — the card already asked them to reply "yes" or "no".\n` +
     `If a tool reports a service is not connected, suggest they connect it at ${appUrl}/dashboard.\n` +
     `If a tool returns an authorization or token error, suggest they reconnect at ${appUrl}/dashboard.\n` +
-    (desktopOnlyConnected.length > 0
-      ? `The user has connected these services that only work in the Yomi desktop app, not here: ${desktopOnlyConnected.join(", ")}. ` +
-        `If they ask you to use one (e.g. running a database query), explain you can't access it from this chat and ask them to use the Yomi desktop app.\n`
-      : "") +
     `\n` +
     (memoryContext || ragContext || profile?.staticProfile || profile?.dynamicProfile || recentChat
       ? `<memory>\n` +
@@ -473,7 +468,7 @@ function maxOutputTokensFor(text: string): number {
 }
 
 // Run the lean agent loop server-side, with entitlement checks and usage logging.
-// Called from the gateway when the desktop is offline. Returns the agent's final
+// Called from the gateway. Returns the agent's final
 // text reply, or a user-facing error message if quota or billing blocks it.
 export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   const user = await fetchUser(opts.userId)
@@ -581,7 +576,6 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
         memoryContext,
         ragContext,
         profile,
-        registry.getDesktopOnlyConnected(),
         user.agentSoul,
         recentChat,
         userTimeZone,

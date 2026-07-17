@@ -21,7 +21,7 @@ const channels = [
   },
   {
     title: "Bugs and product issues",
-    description: "Report reproducible app issues, broken pages, or desktop install problems.",
+    description: "Report reproducible app issues or broken pages.",
     href: "https://github.com/arka6fx/yomi/issues",
     label: "Open GitHub issues",
     icon: Bug,
@@ -80,7 +80,7 @@ export default function SupportPage() {
             <h2 className="font-accent text-2xl text-[#eaf4ff]">Before you write</h2>
             <ul className="mt-4 list-none space-y-2 [&_li]:relative [&_li]:pl-4 [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-sky-100 [&_li]:before:content-['›']">
               <li>For login issues, include whether you used Google or GitHub.</li>
-              <li>For desktop issues, include Windows version and Yomi app version.</li>
+              <li>Include browser version and steps to reproduce.</li>
               <li>For billing issues, do not send full payment card details.</li>
             </ul>
           </div>

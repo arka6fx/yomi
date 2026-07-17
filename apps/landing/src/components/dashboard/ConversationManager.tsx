@@ -5,7 +5,7 @@ import { Loader2, MessageSquare, RotateCcw } from "lucide-react"
 
 type Turn = { role: "user" | "assistant" | "system"; content: string }
 
-// The shared conversation thread Yomi keeps across your desktop and Telegram. Cloud
+// The shared conversation thread Yomi keeps across your web app and Telegram. Cloud
 // canonical, so it's the same thread everywhere. Read-only here, with a reset.
 export function ConversationManager({ token }: { token: string }) {
   const [history, setHistory] = useState<Turn[]>([])
@@ -66,7 +66,7 @@ export function ConversationManager({ token }: { token: string }) {
               Your <span className="italic">conversation</span>
             </h2>
             <p className="mt-1 max-w-md text-sm text-muted-foreground">
-              The thread Yomi shares across your desktop and Telegram. Recent turns are shown below.
+              The thread Yomi shares across your web app and Telegram. Recent turns are shown below.
             </p>
           </div>
         </div>
@@ -93,7 +93,7 @@ export function ConversationManager({ token }: { token: string }) {
         <div className="rounded-xl border border-dashed border-border/70 bg-background/40 px-5 py-10 text-center">
           <p className="text-sm font-medium text-foreground">No conversation yet</p>
           <p className="mx-auto mt-1 max-w-xs text-xs text-muted-foreground">
-            Talk to Yomi from the desktop app or Telegram and the thread shows up here.
+            Talk to Yomi from the web app or Telegram and the thread shows up here.
           </p>
         </div>
       ) : (

@@ -187,7 +187,7 @@ export function computeNextRun(input: {
   }
 }
 
-// Plan limits (mirrors sidecar CRON_LIMITS). Explore has no scheduling.
+// Plan limits. Explore has no scheduling.
 export const SCHEDULE_LIMITS: Record<string, number> = { explore: 0, pro: 5, max: 20 }
 
 export function scheduleLimitForPlan(plan: string | undefined): number {

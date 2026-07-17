@@ -341,8 +341,8 @@ function activityLabel(kind: string | null, reason: string | null): string {
   if (text.includes("notion")) return "Notion search"
   if (text.includes("schedule")) return "Scheduled task"
   if (text.includes("memory")) return "Memory update"
-  if (text.includes("request_agent") || text.includes("agent")) return "Desktop assistant"
-  if (text.includes("request_chat") || text.includes("chat")) return "Desktop assistant"
+  if (text.includes("request_agent") || text.includes("agent")) return "Agent run"
+  if (text.includes("request_chat") || text.includes("chat")) return "Chat"
   return "Yomi Activity"
 }
 

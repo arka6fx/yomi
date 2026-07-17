@@ -74,7 +74,7 @@ const platforms: Record<
   windows: {
     title: "Windows",
     icon: "⊞",
-    options: [{ label: "Installer", arch: ".exe", href: "/api/download" }],
+    options: [],
     instructions: [
       "Run the installer and follow the prompts",
       "Yomi will start automatically after install",
@@ -261,14 +261,7 @@ export function LandingPage() {
     if (p === "windows") setActive(p)
   }, [])
 
-  useEffect(() => {
-    fetch("/api/download-url")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.url) setDownloadUrl(data.url)
-      })
-      .catch(() => {})
-  }, [])
+  // Download URL fetch removed — desktop app no longer distributed.
 
   // forward oauth error redirects (/?error=) to the signin page
   useEffect(() => {
@@ -371,7 +364,7 @@ export function LandingPage() {
               >
                 <div className="mb-7 max-w-md">
                   <div className="flex flex-wrap gap-2">
-                    {["Desktop", "Telegram", "No copy-paste"].map((tag) => (
+                    {["Web app", "Telegram", "No copy-paste"].map((tag) => (
                       <span
                         key={tag}
                         className="rounded-full border border-white/12 bg-white/5 px-3 py-1 text-xs font-medium tracking-wide text-white/65 backdrop-blur-sm"
@@ -406,13 +399,6 @@ export function LandingPage() {
                     className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-white/15 bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/15"
                   >
                     See how it works
-                  </button>
-                  <button
-                    onClick={() => scrollTo("download")}
-                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-sky-200/40 bg-[linear-gradient(135deg,#38bdf8_0%,#2563eb_100%)] px-5 text-sm font-semibold text-white shadow-[0_10px_28px_rgba(37,99,235,0.36),inset_0_1px_0_rgba(255,255,255,0.28)] transition hover:scale-[1.02] hover:shadow-[0_14px_36px_rgba(37,99,235,0.48),inset_0_1px_0_rgba(255,255,255,0.34)]"
-                  >
-                    <WindowsMark />
-                    {heroDownloadLabel}
                   </button>
                   <Link
                     href="/signup"
@@ -466,7 +452,7 @@ export function LandingPage() {
           </p>
           <p>
             Ask Yomi to find a file, summarize a document, or pull context from your workspace, all
-            from a single interface on your desktop or via Telegram. Yomi only accesses your data
+            from a single interface or via Telegram. Yomi only accesses your data
             when you ask a question, and for no other purpose.
           </p>
         </div>
@@ -692,7 +678,7 @@ export function LandingPage() {
             Your tools, one <span className="italic">conversation</span> away.
           </h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
-            Connect your apps once. Ask Yomi from the desktop or from Telegram, even with your
+            Connect your apps once. Ask Yomi from the web or from Telegram, even with your
             laptop closed.
           </p>
         </div>
@@ -933,7 +919,7 @@ export function LandingPage() {
         </motion.p>
       </section>
 
-      <section id="download" className="mx-auto max-w-5xl px-6 py-24">
+      <section id="download" className="hidden">
         <div className="mb-14 text-center">
           <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
             Download

@@ -8,7 +8,6 @@ let consumeCreditsCalled = false
 let lastUpdatedCreditsCharged: number | null = null
 let lastAgentSystem: string | undefined
 let mockExecuteRows: unknown[] = []
-let mockDesktopOnlyConnected: string[] = []
 const activeTrialEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
 const fakeDbWithCount = {
@@ -65,9 +64,6 @@ mock.module("@yomi/agent-core", () => ({
   createModel: (model: string) => model,
   ConnectorRegistry: class {
     async init() {}
-    getDesktopOnlyConnected() {
-      return mockDesktopOnlyConnected
-    }
   },
   runAgentLoop: async (opts: {
     system?: string
@@ -146,7 +142,6 @@ describe("runAgent metering", () => {
     lastUpdatedCreditsCharged = null
     lastAgentSystem = undefined
     mockExecuteRows = []
-    mockDesktopOnlyConnected = []
     recordedTelemetry.length = 0
     delete process.env["YOMI_AGENT_SOUL"]
   })
@@ -264,23 +259,6 @@ describe("runAgent metering", () => {
     expect(lastAgentSystem).toContain("Prefers TypeScript")
     expect(lastAgentSystem).toContain("<dynamic_profile>")
     expect(lastAgentSystem).toContain("Working on Yomi memory")
-  })
-
-  it("notes desktop-only connected services in the system prompt", async () => {
-    mockUser = makeUser()
-    mockDesktopOnlyConnected = ["PostgreSQL", "MySQL"]
-    const { runAgent } = await import("./run.js")
-    await runAgent({ userId: "user_1", text: "query my db" })
-    expect(lastAgentSystem).toContain("only work in the Yomi desktop app")
-    expect(lastAgentSystem).toContain("PostgreSQL, MySQL")
-  })
-
-  it("omits the desktop-only note when nothing is desktop-only", async () => {
-    mockUser = makeUser()
-    mockDesktopOnlyConnected = []
-    const { runAgent } = await import("./run.js")
-    await runAgent({ userId: "user_1", text: "hi" })
-    expect(lastAgentSystem).not.toContain("only work in the Yomi desktop app")
   })
 
   it("owner bypasses all quota and credit checks", async () => {

@@ -62,7 +62,7 @@ function when(value?: string | null) {
   })
 }
 
-// Cloud "Status" panel — replaces the old local desktop diagnostics. Shows live health
+// Cloud "Status" panel.
 // of the gateway, plan/billing, credits, Telegram, connectors, and schedules.
 export function StatusManager({ token }: { token: string }) {
   const [data, setData] = useState<StatusData | null>(null)

@@ -8,7 +8,6 @@ import { sttRouter } from "./routes/stt.js"
 import { ttsRouter } from "./routes/tts.js"
 import { usageRouter } from "./routes/usage.js"
 import { billingRouter } from "./routes/billing.js"
-import { authRoutesRouter } from "./routes/auth-routes.js"
 import { profileRouter } from "./routes/profile.js"
 import { ragRouter } from "./routes/rag.js"
 import { ragDriveRouter } from "./routes/rag-drive.js"
@@ -25,9 +24,8 @@ import { statusRouter } from "./routes/status.js"
 import { privacyRouter } from "./routes/privacy.js"
 import "./connectors/defs/index.js" // registers all ConnectorDefs at startup
 import { getDefaultGateway } from "./gateway/gateway-runner.js"
-import type { SidecarResolver } from "./gateway/gateway-runner.js"
-import { eq, and, sql } from "drizzle-orm"
-import { db, platformConnections, devices, EXPECTED_MIGRATIONS } from "@yomi/db"
+import { sql } from "drizzle-orm"
+import { db, EXPECTED_MIGRATIONS } from "@yomi/db"
 
 const app = new Hono()
 
@@ -102,53 +100,13 @@ app.get("/health/db", async (c) => {
   }
 })
 
-async function getLatestExeUrl(): Promise<string | null> {
-  try {
-    const res = await fetch("https://api.github.com/repos/arka6fx/yomi-releases/releases/latest", {
-      headers: { Accept: "application/vnd.github+json", "User-Agent": "yomi-backend" },
-    })
-    if (!res.ok) return null
-    const release = (await res.json()) as {
-      assets: { name: string; browser_download_url: string }[]
-    }
-    const exe = release.assets.find((a) => a.name.endsWith(".exe"))
-    return exe?.browser_download_url ?? null
-  } catch {
-    return null
-  }
-}
-
-app.get("/api/download", async (c) => {
-  const url = await getLatestExeUrl()
-  if (url) return c.redirect(url)
-  return c.redirect("https://github.com/arka6fx/yomi-releases/releases/latest")
-})
-
-app.get("/api/download-url", async (c) => {
-  const url = await getLatestExeUrl()
-  return c.json({ url }, url ? 200 : 404)
-})
-
-// Custom auth routes first (device-code flow)
-app.route("/api/auth", authRoutesRouter)
-
 // OAuth callback: Better Auth handles directly. redirectURI is set to the API
 // domain per-provider, and crossSubDomainCookies shares the session with landing.
 app.on(["GET"], "/api/auth/callback/:provider", async (c) => {
   return getAuth().handler(c.req.raw)
 })
 
-// Better Auth handles all remaining /api/auth/* routes
-// Explicitly skip custom auth paths to avoid Better Auth intercepting them
-const SKIP_AUTH_PATHS = new Set([
-  "/api/auth/device-code",
-  "/api/auth/device-code/token",
-  "/api/auth/device-code/confirm",
-  "/api/auth/sign-out-all",
-])
 app.on(["GET", "POST"], "/api/auth/*", async (c) => {
-  if (SKIP_AUTH_PATHS.has(c.req.path)) return c.notFound()
-
   return getAuth().handler(c.req.raw)
 })
 
@@ -172,26 +130,8 @@ app.route("/api/conversation", conversationRouter)
 app.route("/api/status", statusRouter)
 app.route("/api/privacy", privacyRouter)
 
-// Register sidecar URL resolver from platform connections
-const sidecarResolver: SidecarResolver = async (userId, platform) => {
-  try {
-    const row = await db
-      .select({ url: devices.sidecarUrl })
-      .from(platformConnections)
-      .innerJoin(devices, eq(devices.userId, platformConnections.userId))
-      .where(
-        and(eq(platformConnections.userId, userId), eq(platformConnections.platform, platform)),
-      )
-      .limit(1)
-      .then((r) => r[0])
-    return row?.url ?? undefined
-  } catch {
-    return undefined
-  }
-}
 export function startGateway(): Promise<void> {
   const gateway = getDefaultGateway()
-  gateway.setSidecarResolver(sidecarResolver)
   return gateway.start(process.env["YOMI_PLAN"]).catch((err) => {
     console.error("[gateway] failed to start:", err)
   })

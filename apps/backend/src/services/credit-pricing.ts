@@ -10,7 +10,7 @@ export type UsagePricingInput = {
 }
 
 // Flat cost per interaction TYPE, tiered by real cost. A fast chat/screen answer
-// is one LLM call; an agent run (desktop agent loop or a Telegram message) does
+// is one LLM call; an agent run (a Telegram message) does
 // multi-step tool work, so it costs more. Tune from ai_usage_events telemetry.
 const CREDIT_COSTS: Record<UsageCreditKind, number> = {
   chat: 1,

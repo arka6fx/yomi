@@ -144,9 +144,9 @@ type ChatCompletionChunk = {
   } | null
 }
 
-// Packaged desktop builds ship no OpenAI key, so the sidecar routes LLM calls through the
+// When no OpenAI key is configured, LLM calls route through the
 // backend proxy and authenticates with the user's session token; the backend injects the
-// real key. Without this the sidecar called api.openai.com with no Authorization header at
+// real key. Without this the backend called api.openai.com with no Authorization header at
 // all and every request 401'd. Explicit OPENAI_* config always wins (backend, local dev).
 function proxyTarget(): { baseUrl: string; token: string } | null {
   if (process.env["OPENAI_API_KEY"] || process.env["OPENAI_BASE_URL"]) return null

@@ -34,10 +34,6 @@ const SHARED_SESSION_CHAT_ID = "global"
 const AGENT_TIMEOUT_MESSAGE =
   "That took too long, so I stopped. Please try again, or rephrase your request to make it simpler."
 
-function directSidecarEnabled(): boolean {
-  return process.env["YOMI_GATEWAY_DIRECT_SIDECAR"] === "1"
-}
-
 interface LinkingCode {
   platform: PlatformType
   platformUserId: string
@@ -62,11 +58,6 @@ interface GatewaySession {
   pendingMessages: GatewayMessage[]
 }
 
-export type SidecarResolver = (
-  userId: string,
-  platform: PlatformType,
-) => string | undefined | Promise<string | undefined>
-
 interface ConversationEntry {
   turns: AgentMessage[]
   lastAt: number
@@ -84,15 +75,9 @@ export class GatewayRunner {
   private freeResumes: Map<string, number> = new Map()
   private static readonly MAX_FREE_RESUMES = 8
   private running = false
-  private defaultSidecarUrl: string
-  private sidecarSecret: string
-  private sidecarResolver: SidecarResolver | null = null
   private cleanupTimer: ReturnType<typeof setInterval> | null = null
 
-  constructor(sidecarUrl?: string, sidecarSecret?: string) {
-    this.defaultSidecarUrl = sidecarUrl ?? process.env["SIDECAR_URL"] ?? "http://localhost:3002"
-    this.sidecarSecret = sidecarSecret ?? process.env["SIDECAR_SECRET"] ?? ""
-  }
+  constructor() {}
 
   async verifyLinkingCode(code: string): Promise<LinkingCode | null> {
     try {
@@ -712,10 +697,6 @@ export class GatewayRunner {
     return null
   }
 
-  setSidecarResolver(resolver: SidecarResolver): void {
-    this.sidecarResolver = resolver
-  }
-
   registerAdapter(adapter: PlatformAdapter): void {
     this.adapters.set(adapter.platform, adapter)
     adapter.setMessageHandler((msg) => this.onIncoming(msg))
@@ -1001,28 +982,6 @@ export class GatewayRunner {
     }))
   }
 
-  async sendToSidecar(msg: GatewayMessage): Promise<void> {
-    let url = this.defaultSidecarUrl
-    if (msg.userId && msg.userId !== "unknown" && this.sidecarResolver) {
-      const resolved = await this.sidecarResolver(msg.userId, msg.platform)
-      if (resolved) url = resolved
-    }
-
-    const res = await fetch(`${url}/gateway/receive`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.sidecarSecret}`,
-      },
-      body: JSON.stringify(msg),
-      signal: AbortSignal.timeout(4_000),
-    })
-    if (!res.ok) {
-      const text = await res.text().catch(() => "unknown")
-      console.warn(`[gateway] sidecar forward failed (${res.status}) to ${url}: ${text}`)
-    }
-  }
-
   private async onIncoming(msg: GatewayMessage): Promise<void> {
     let typingInterval: ReturnType<typeof setInterval> | undefined
     try {
@@ -1237,7 +1196,7 @@ export class GatewayRunner {
         const size = msg.documentSize ? ` (${(msg.documentSize / 1024).toFixed(0)} KB)` : ""
         console.warn(`[gateway] document received: ${docName}${size}`)
         // Download and attempt text extraction — libs (pdf-parse, mammoth) will be
-        // added to the sidecar. The backend tries a basic fetch + LLM fallback.
+        // The backend tries a basic fetch + LLM fallback.
         try {
           const docRes = await fetch(msg.documentUrl, { signal: AbortSignal.timeout(30_000) })
           if (docRes.ok) {
@@ -1278,14 +1237,9 @@ export class GatewayRunner {
           ? ` (${Math.floor(msg.videoDurationSeconds / 60)}:${(msg.videoDurationSeconds % 60).toString().padStart(2, "0")})`
           : ""
         console.warn(`[gateway] video received${dur}`)
-        const note = `🎬 _Video received_\nTranscription available via the sidecar agent tools.`
+        const note = `🎬 _Video received_`
         msg = { ...msg, text: msg.text.trim() ? `${note}\n${msg.text}` : note }
       }
-
-      // ── Backend-first routing ─────────────────────────────────────────────────
-      // Production messaging runs in the backend so Telegram is not coupled to a
-      // user's localhost sidecar. Direct sidecar forwarding is only for explicit
-      // dev/tunnel setups.
 
       // Keep the typing indicator alive for ANY processing path —
       // Telegram clears it after ~5 s so refresh every 4 s. Capped: each ping
@@ -1300,37 +1254,6 @@ export class GatewayRunner {
         }
         void this.sendTyping(msg.platform, msg.chatId).catch(() => {})
       }, 4_000)
-
-      let sidecarUrl: string | undefined
-      if (directSidecarEnabled() && this.sidecarResolver) {
-        sidecarUrl = await this.sidecarResolver(yomiUserId, msg.platform)
-      }
-
-      if (sidecarUrl) {
-        try {
-          const res = await fetch(`${sidecarUrl}/gateway/receive`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${this.sidecarSecret}`,
-            },
-            body: JSON.stringify({ ...msg, yomiUserId }),
-            signal: AbortSignal.timeout(4_000),
-          })
-          if (res.ok) {
-            console.warn(
-              `[gateway] forwarded to sidecar platform=${msg.platform} user=${yomiUserId} chat=${msg.chatId}`,
-            )
-            clearInterval(typingInterval)
-            return
-          }
-          const body = await res.text().catch(() => "")
-          throw new Error(`Sidecar returned ${res.status}: ${body.slice(0, 200)}`)
-        } catch (err) {
-          console.warn("[gateway] sidecar forward failed:", err)
-          // Fall through to backend agent.
-        }
-      }
 
       // ── Backend agent path ───────────────────────────────────────────────────
 
@@ -1563,8 +1486,6 @@ export class GatewayRunner {
     }
   }
 
-  // Kept for backward compatibility with released sidecars. Telegram no longer
-  // queues desktop-trigger messages here; backend handles messaging directly.
   async getPendingMessages(yomiUserId: string): Promise<GatewayMessage[]> {
     void yomiUserId
     return []

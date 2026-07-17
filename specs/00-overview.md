@@ -5,12 +5,8 @@ connected work apps.
 
 Core surfaces:
 
-- Desktop shell for hotkeys, tray/notch UI, microphone capture, and
-  user-initiated screen capture.
-- Local sidecar for low-latency routing, fast answers, local notes, local
-  memory, and connector tools.
 - Cloud backend for auth, billing, Telegram, connector token access, usage
-  metering, and canonical memory.
+  metering, canonical memory, and LLM/STT/TTS proxying.
 - Landing/dashboard for account, billing, downloads, bot linking, and
   integrations.
 
@@ -21,6 +17,3 @@ Primary paths:
   tools.
 - Telegram path: backend gateway to backend agent with connector and memory
   tools.
-
-Durable memory is backend-canonical. The sidecar keeps local/private working
-memory and syncs durable facts when signed in.
