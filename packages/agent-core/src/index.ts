@@ -60,6 +60,41 @@ export {
   notionComposioSpecs,
   NOTION_TOOLKIT,
 } from "./connectors/composio/notion.js"
+export {
+  makeComposioGmailDef,
+  gmailComposioSpecs,
+  GMAIL_TOOLKIT,
+} from "./connectors/composio/google-gmail.js"
+export {
+  makeComposioCalendarDef,
+  calendarComposioSpecs,
+  CALENDAR_TOOLKIT,
+} from "./connectors/composio/google-calendar.js"
+export {
+  makeComposioDriveDef,
+  driveComposioSpecs,
+  DRIVE_TOOLKIT,
+} from "./connectors/composio/google-drive.js"
+export {
+  makeComposioClassroomDef,
+  classroomComposioSpecs,
+  CLASSROOM_TOOLKIT,
+} from "./connectors/composio/google-classroom.js"
+export {
+  makeComposioTasksDef,
+  tasksComposioSpecs,
+  TASKS_TOOLKIT,
+} from "./connectors/composio/google-tasks.js"
+export {
+  makeComposioContactsDef,
+  contactsComposioSpecs,
+  CONTACTS_TOOLKIT,
+} from "./connectors/composio/google-contacts.js"
+export {
+  makeComposioMeetDef,
+  meetComposioSpecs,
+  MEET_TOOLKIT,
+} from "./connectors/composio/google-meet.js"
 export type {
   Connector,
   ConnectorStatus,
