@@ -90,6 +90,56 @@ export const COMPOSIO_RISK_MAP: Record<string, Record<string, ActionRisk>> = {
     // Irreversible — gated, and flagged as unrecoverable.
     LINEAR_DELETE_LINEAR_ISSUE: "irreversible",
   },
+  slack: {
+    // Reads — pass straight through.
+    SLACK_LIST_CONVERSATIONS: "read",
+    SLACK_SEARCH_MESSAGES: "read",
+    SLACK_LIST_ALL_USERS: "read",
+    SLACK_FETCH_CONVERSATION_HISTORY: "read",
+    SLACK_FETCH_MESSAGE_THREAD_FROM_A_CONVERSATION: "read",
+    SLACK_RETRIEVE_DETAILED_USER_INFORMATION: "read",
+    SLACK_FIND_USERS: "read",
+    SLACK_LIST_ALL_CHANNELS: "read",
+    SLACK_LIST_WORKSPACE_USERS: "read",
+    SLACK_LIST_UNREAD_CHANNEL_MESSAGES: "read",
+    SLACK_LIST_PINNED_ITEMS: "read",
+    SLACK_LIST_REMINDERS: "read",
+    SLACK_LIST_USER_GROUPS: "read",
+    SLACK_GET_REMINDER: "read",
+    SLACK_GET_BOT_USER: "read",
+    SLACK_FIND_USER_BY_EMAIL_ADDRESS: "read",
+    SLACK_GET_APP_PERMISSION_SCOPES: "read",
+    SLACK_API_TEST: "read",
+
+    // Writes — gated for approval.
+    SLACK_SEND_MESSAGE: "write",
+    SLACK_SEND_EPHEMERAL_MESSAGE: "write",
+    SLACK_SEND_ME_MESSAGE: "write",
+    SLACK_UPLOAD_OR_CREATE_A_FILE_IN_SLACK: "write",
+    SLACK_CREATE_CHANNEL: "write",
+    SLACK_CREATE_REMINDER: "write",
+    SLACK_ADD_REACTION_TO_AN_ITEM: "write",
+    SLACK_ADD_STAR: "write",
+    SLACK_CUSTOMIZE_URL_UNFURL: "write",
+    SLACK_OPEN_DM: "write",
+    SLACK_CLOSE_DM: "write",
+    SLACK_CREATE_USER_GROUP: "write",
+    SLACK_CREATE_SLACK_LIST: "write",
+    SLACK_CREATE_SLACK_LIST_ITEM: "write",
+    SLACK_ADD_REMOTE_FILE: "write",
+
+    // Irreversible — gated, flagged as unrecoverable.
+    SLACK_DELETES_A_MESSAGE_FROM_A_CHAT: "irreversible",
+    SLACK_DELETE_FILE: "irreversible",
+    SLACK_DELETE_FILE_COMMENT: "irreversible",
+    SLACK_DELETE_CHANNEL: "irreversible",
+    SLACK_DELETE_REMINDER: "irreversible",
+    SLACK_DELETE_CANVAS: "irreversible",
+    SLACK_DELETE_MULTIPLE_SLACK_LIST_ITEMS: "irreversible",
+    SLACK_DELETE_SLACK_LIST_ITEM: "irreversible",
+    SLACK_ARCHIVE_CONVERSATION: "irreversible",
+    SLACK_CONVERT_CHANNEL_TO_PRIVATE: "irreversible",
+  },
 }
 
 // Classify one action. Unknown toolkit or unknown slug → `write` (default-deny).
