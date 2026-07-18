@@ -50,3 +50,28 @@ Generation honors existing consent by degrading, not refusing. Memory consent on
 topic-enriched suggestions; memory consent off → content-free, telemetry-only
 suggestions (same generator as the cold-start path). "Proactive" describes the
 generation being unprompted — never that suggestions are pushed at the user.
+
+## Session recall
+
+**Agent session**:
+A perpetual conversation thread keyed by `(userId, platform, chatId)` in `agent_sessions`.
+Stays `active` indefinitely; only ends when the user sends `/new`. Its turns live in
+`agent_messages`, persisted only when `conversationHistoryEnabled` consent is granted.
+
+**Session summary**:
+A `memory_entries` row with `kind = "session_summary"` capturing what happened in a
+slice of an Agent session (decisions, topics, outcomes). Provenance is the session
+(`sourceType: "agent_session"`, `sourcePath: <sessionId>`) — distinct from a curated
+_fact_, though both share the `memory_entries` table. Excluded from passive memory
+injection.
+
+**Checkpoint**:
+One incremental Session summary covering the message window since the last one
+(`{fromMessage, toMessage, fromTime, toTime}`). Append-only: a growing session
+accumulates checkpoints rather than one re-summarized blob, so recall is time-scoped.
+
+**Recall**:
+The agent _deliberately_ searching its own past via the `recall_past_conversations`
+tool (hybrid search over `kind = "session_summary"`). Distinct from _injection_ — the
+passive, always-on surfacing of relevant curated memory into the system prompt. Recall
+is pull, on demand; injection is push, every turn.
