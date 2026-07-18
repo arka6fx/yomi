@@ -11,6 +11,27 @@ import type { ComposioExecutor } from "@yomi/agent-core"
 
 const DEFAULT_BASE_URL = "https://backend.composio.dev"
 
+// Wraps an executor with a per-turn call tally so the agent run can meter Composio
+// usage (one execute == one billable Composio tool call). Built fresh per run in
+// agent/run.ts; `count()` is read after the loop to charge credits + record cost.
+export interface CountingComposioExecutor extends ComposioExecutor {
+  count(): number
+}
+
+export function createCountingExecutor(inner: ComposioExecutor): CountingComposioExecutor {
+  let n = 0
+  return {
+    count: () => n,
+    execute: (input) => {
+      // Count on invocation: every in-turn call reaches Composio, so each is a real
+      // billable call. Gated writes run at approval REPLAY (a separate flow with its
+      // own executor), so they are metered there — not by this per-turn counter.
+      n++
+      return inner.execute(input)
+    },
+  }
+}
+
 export interface ComposioRestConfig {
   apiKey: string
   baseUrl?: string

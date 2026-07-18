@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test"
-import { createComposioRestExecutor } from "./composio-executor.js"
+import type { ComposioExecutor } from "@yomi/agent-core"
+import { createComposioRestExecutor, createCountingExecutor } from "./composio-executor.js"
 
 function capturingFetch(response: Response) {
   const calls: { url: string; init?: RequestInit }[] = []
@@ -54,5 +55,35 @@ describe("createComposioRestExecutor", () => {
     await expect(exec.execute({ userId: "u", slug: "S", arguments: {} })).rejects.toThrow(
       /COMPOSIO_API_KEY/,
     )
+  })
+})
+
+describe("createCountingExecutor", () => {
+  function inner(result: unknown = { ok: true }): ComposioExecutor & { seen: number } {
+    const box = { seen: 0 } as ComposioExecutor & { seen: number }
+    box.execute = async () => {
+      box.seen++
+      return result
+    }
+    return box
+  }
+
+  it("tallies each execute call and passes through the result", async () => {
+    const executor = createCountingExecutor(inner({ data: 1 }))
+    expect(executor.count()).toBe(0)
+    expect(await executor.execute({ userId: "u", slug: "A", arguments: {} })).toEqual({ data: 1 })
+    await executor.execute({ userId: "u", slug: "B", arguments: {} })
+    expect(executor.count()).toBe(2)
+  })
+
+  it("counts a call even when the inner executor throws (the call still hit Composio)", async () => {
+    const failing: ComposioExecutor = {
+      execute: async () => {
+        throw new Error("boom")
+      },
+    }
+    const executor = createCountingExecutor(failing)
+    await expect(executor.execute({ userId: "u", slug: "A", arguments: {} })).rejects.toThrow("boom")
+    expect(executor.count()).toBe(1)
   })
 })

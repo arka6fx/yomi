@@ -12,6 +12,8 @@ import { formatAgentSoul } from "@yomi/shared"
 import { compressContext, shouldCompress, estimateTokens } from "./compressor.js"
 import { getAccessToken, listConnectedProviders } from "../services/integration-tokens.js"
 import { buildComposioDefs } from "../connectors/composio-defs.js"
+import { createComposioRestExecutor, createCountingExecutor } from "../connectors/composio-executor.js"
+import { composioCostMicros } from "@yomi/shared/ai-pricing"
 import { hasBillablePlanAccess } from "../entitlements.js"
 import { chargeUsage } from "../services/metering.js"
 import { recordAiUsage } from "../services/ai-telemetry.js"
@@ -502,9 +504,11 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     usageEventId = charge.usageEventId ?? null
   }
 
+  // Per-turn counting executor so Composio tool calls can be metered after the loop.
+  const composioMeter = createCountingExecutor(createComposioRestExecutor())
   const registry = new ConnectorRegistry({
     excludeNodeOnly: true,
-    composioDefs: buildComposioDefs(),
+    composioDefs: buildComposioDefs(composioMeter),
     getAccessToken,
     createPendingAction: async (input) => {
       const { createPendingAction } = await import("../services/pending-actions.js")
@@ -633,6 +637,35 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
         `Something went wrong: ${msg.slice(0, 300)}\n\nPlease try again, or ` +
         `check your integrations at ${appUrl}/dashboard if this keeps happening.`
     }
+  }
+
+  // Meter Composio tool calls made this turn: an incremental, per-call charge on
+  // top of the flat bot_message. Charged post-turn (the work already ran) so a
+  // credit shortfall never blocks a reply mid-flight — the next turn's up-front
+  // bot_message gate catches an exhausted balance. Gated writes run at approval
+  // replay (outside this turn) and are metered there in approvePendingAction, so
+  // they are not double-counted here.
+  const composioCalls = composioMeter.count()
+  if (composioCalls > 0) {
+    const charge = await chargeUsage({
+      user,
+      kind: "composio_tool",
+      units: composioCalls,
+      metadata: { composioCalls },
+    }).catch(() => null)
+    recordAiUsage({
+      userId: opts.userId,
+      requestId: crypto.randomUUID(),
+      usageEventId: charge?.ok ? charge.usageEventId : (usageEventId ?? null),
+      endpoint: "backend.agent",
+      surface: "telegram",
+      route: "agent.composio",
+      provider: "composio",
+      toolCalls: composioCalls,
+      totalApiCostMicros: composioCostMicros(composioCalls),
+      creditsCharged: charge?.ok ? charge.creditsCharged : 0,
+      status: "done",
+    }).catch(() => {})
   }
 
   if (memoryConsent.allowed) {
