@@ -219,6 +219,52 @@ async function executePendingAction(row: {
   throw new Error(`No executor registered for ${row.connector}:${row.action}`)
 }
 
+// Meter an approved Composio write executed at replay time. Gated writes never run
+// during the agent turn, so the per-turn counter in agent/run.ts can't see them —
+// this is where that half of Composio usage gets charged. One replay == one billable
+// Composio call. Best-effort and non-blocking: metering must never fail an approval.
+export async function meterComposioReplay(
+  connector: string,
+  userId: string,
+  action: string,
+): Promise<void> {
+  try {
+    await import("../connectors/defs/index.js")
+    const { getConnectorDef } = await import("../connectors/registry.js")
+    if (getConnectorDef(connector)?.auth.kind !== "composio") return
+
+    const { chargeUsage, loadMeteringUser } = await import("./metering.js")
+    const user = await loadMeteringUser(userId)
+    if (!user) return
+    const charge = await chargeUsage({
+      user,
+      kind: "composio_tool",
+      units: 1,
+      metadata: { replay: true, action },
+    })
+
+    const [{ recordAiUsage }, { composioCostMicros }] = await Promise.all([
+      import("./ai-telemetry.js"),
+      import("@yomi/shared/ai-pricing"),
+    ])
+    await recordAiUsage({
+      userId,
+      requestId: crypto.randomUUID(),
+      usageEventId: charge.ok ? charge.usageEventId : null,
+      endpoint: "backend.approval",
+      surface: "telegram",
+      route: "approval.composio",
+      provider: "composio",
+      toolCalls: 1,
+      totalApiCostMicros: composioCostMicros(1),
+      creditsCharged: charge.ok ? charge.creditsCharged : 0,
+      status: "done",
+    })
+  } catch {
+    // best-effort — a metering hiccup must not break the approval path
+  }
+}
+
 async function replayConnectorTool(row: {
   userId: string
   connector: string
@@ -325,6 +371,10 @@ export async function approvePendingAction(
     // A tool that returned { error } did not do the thing — recording that as
     // "executed" is how a calendar event that was never created got reported as done.
     const status = isErrorResult(result) ? "failed" : "executed"
+
+    // Meter the Composio call this replay just made (no-op for native connectors).
+    // Fire-and-forget so metering never delays or fails the approval response.
+    void meterComposioReplay(approved.connector, approved.userId, approved.action)
     const [executed] = await db
       .update(pendingActions)
       .set({ status, result, executedAt: new Date(), updatedAt: new Date() })

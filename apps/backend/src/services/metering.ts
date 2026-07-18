@@ -1,5 +1,6 @@
 import { db, usageEvents } from "@yomi/db"
 import { eq } from "drizzle-orm"
+import { user as userTable } from "../auth-schema.js"
 import {
   effectivePlanForUser,
   hasBillablePlanAccess,
@@ -11,7 +12,7 @@ import { creditsForUsage, type BillableUsageKind } from "./credit-pricing.js"
 
 // The four billable surfaces. Each maps to a credit cost (BillableUsageKind) and to
 // the usageEvents.kind we persist for the dashboard breakdown.
-export type ChargeKind = "chat" | "voice" | "analyze" | "bot_message" | "agent"
+export type ChargeKind = "chat" | "voice" | "analyze" | "bot_message" | "agent" | "composio_tool"
 
 const CREDIT_KIND: Record<ChargeKind, BillableUsageKind> = {
   chat: "chat",
@@ -19,16 +20,19 @@ const CREDIT_KIND: Record<ChargeKind, BillableUsageKind> = {
   analyze: "analyze",
   bot_message: "bot_message",
   agent: "agent",
+  composio_tool: "composio_tool",
 }
 
 // What we store on usageEvents.kind — chat/voice/agent become request_* to match
-// the existing dashboard and transaction queries; the others pass through.
+// the existing dashboard and transaction queries; bot_message/analyze/composio_tool
+// pass through as-is.
 const EVENT_KIND: Record<ChargeKind, string> = {
   chat: "request_chat",
   voice: "request_voice",
   analyze: "analyze",
   bot_message: "bot_message",
   agent: "request_agent",
+  composio_tool: "composio_tool",
 }
 
 type MeteringUser = {
@@ -75,6 +79,8 @@ export async function chargeUsage(input: {
   user: MeteringUser
   kind: ChargeKind
   durationSeconds?: number
+  // Billed units for per-unit kinds (Composio tool calls in a turn). Defaults to 1.
+  units?: number
   metadata?: Record<string, unknown>
 }): Promise<ChargeResult> {
   const { user, kind } = input
@@ -121,6 +127,7 @@ export async function chargeUsage(input: {
 
   const creditsRequired = creditsForUsage(CREDIT_KIND[kind], {
     durationSeconds: input.durationSeconds,
+    units: input.units,
   })
   const summary = await getCreditSummary(user.id)
 
@@ -208,6 +215,25 @@ export async function chargeUsage(input: {
     usageEventId: event.id,
     paidBy: "credits",
   }
+}
+
+// Loads the plan/subscription fields chargeUsage needs, for callers that hold only
+// a userId (e.g. the approval-replay path metering a Composio write).
+export async function loadMeteringUser(userId: string): Promise<MeteringUser | null> {
+  const [row] = await db
+    .select({
+      id: userTable.id,
+      email: userTable.email,
+      role: userTable.role,
+      plan: userTable.plan,
+      subscriptionStatus: userTable.subscriptionStatus,
+      trialEndDate: userTable.trialEndDate,
+      currentPeriodEnd: userTable.currentPeriodEnd,
+    })
+    .from(userTable)
+    .where(eq(userTable.id, userId))
+    .limit(1)
+  return row ?? null
 }
 
 // Low-credit nudge: surfaced once remaining credits drop below 20% of the plan's

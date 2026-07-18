@@ -32,6 +32,17 @@ export function resolveModelPrice(model: string | null | undefined): ModelPrice 
   return MODEL_PRICES["*"]!
 }
 
+// Composio bills per tool call, not per token. Micro-USD per call — set from the
+// current overage rate (~$0.249–0.299 / 1K calls ≈ 250–300 micros/call; pricing
+// changes 2026-08-15, retune then). Recorded to totalApiCostMicros so Composio
+// spend can be repriced from telemetry alongside model cost.
+export const COMPOSIO_MICROS_PER_TOOL_CALL = 300
+
+// Total Composio API cost in integer micro-USD for a turn's tool calls.
+export function composioCostMicros(calls: number): number {
+  return Math.max(0, Math.floor(calls)) * COMPOSIO_MICROS_PER_TOOL_CALL
+}
+
 export interface TokenCounts {
   inputTokens?: number
   outputTokens?: number
