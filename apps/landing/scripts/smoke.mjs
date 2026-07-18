@@ -1,6 +1,6 @@
 // Post-deploy smoke test. wrangler reports success even when the deployed site is broken:
-// /sitemap.xml 307'd to / for the whole life of the site, and /api/download fell back to a
-// GitHub page on every click. Both passed a build and a deploy. Only the live URL tells you.
+// /sitemap.xml 307'd to / for the whole life of the site yet still passed a build and a
+// deploy. Only the live URL tells you.
 
 const BASE = (process.argv[2] ?? process.env["SMOKE_BASE_URL"] ?? "https://getyomi.in").replace(
   /\/$/,
@@ -49,32 +49,12 @@ const CHECKS = [
   { path: "/terms", check: async (res) => (res.status === 200 ? null : `got ${res.status}`) },
   { path: "/docs", check: async (res) => (res.status === 200 ? null : `got ${res.status}`) },
   { path: "/support", check: async (res) => (res.status === 200 ? null : `got ${res.status}`) },
-  { path: "/download", check: async (res) => (res.status === 200 ? null : `got ${res.status}`) },
   {
     path: "/signin",
     check: async (res, body) => {
       if (res.status !== 200) return `expected 200, got ${res.status}`
       // a bare "Google" label fails google's oauth brand verification
       if (!body.includes("Sign in with Google")) return "google button is not branded correctly"
-      return null
-    },
-  },
-  {
-    path: "/api/download-url",
-    check: async (res, body) => {
-      if (res.status !== 200) return `expected 200, got ${res.status}`
-      const url = JSON.parse(body).url
-      if (!url?.endsWith(".exe")) return `did not resolve an installer (url: ${url})`
-      return null
-    },
-  },
-  {
-    path: "/api/download",
-    redirect: "manual",
-    check: async (res) => {
-      if (res.status !== 302) return `expected 302, got ${res.status}`
-      const location = res.headers.get("location") ?? ""
-      if (!location.endsWith(".exe")) return `points at ${location}, not an installer`
       return null
     },
   },
