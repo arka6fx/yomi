@@ -1,6 +1,7 @@
-import { googleMeetDef } from "@yomi/agent-core"
+import { googleMeetDef, makeComposioMeetDef, isComposioBacked } from "@yomi/agent-core"
 import type { BackendConnectorDef } from "../types.js"
 import { registerConnectorDef } from "../registry.js"
+import { createComposioRestExecutor } from "../composio-executor.js"
 
 export const backendGoogleMeetDef: BackendConnectorDef = {
   ...googleMeetDef,
@@ -14,4 +15,16 @@ export const backendGoogleMeetDef: BackendConnectorDef = {
   },
 }
 
-registerConnectorDef(backendGoogleMeetDef)
+export const backendComposioMeetDef: BackendConnectorDef = {
+  ...makeComposioMeetDef(createComposioRestExecutor()),
+  getDisplayName: async (accessToken) => {
+    const res = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!res.ok) return "Meet (Composio)"
+    const data = (await res.json()) as { email?: string }
+    return data.email ? `Meet (${data.email})` : "Meet (Composio)"
+  },
+}
+
+registerConnectorDef(isComposioBacked("google-meet") ? backendComposioMeetDef : backendGoogleMeetDef)

@@ -17,7 +17,7 @@ export default function PrivacyPage() {
         <div className="mx-auto max-w-3xl px-6 py-24">
           <p className="mb-3 font-mono text-xs uppercase tracking-widest text-sky-100/50">Legal</p>
           <h1 className="mb-2 font-accent text-5xl text-[#eaf4ff]">Privacy Policy</h1>
-          <p className="mb-16 text-sm text-white/40">Last updated: July 2026</p>
+          <p className="mb-16 text-sm text-white/40">Last updated: July 18, 2026</p>
 
           <div className="max-w-none space-y-10 text-sm leading-7 text-white/55">
             <Section title="Overview">
@@ -194,6 +194,23 @@ export default function PrivacyPage() {
             <Section title="Third-party services">
               <p>We use the following third-party services:</p>
               <ul>
+                <li>
+                  <strong className="text-label">Composio</strong>: integration provider for
+                  select connected apps (currently Linear, GitHub, Slack, and Notion). When you
+                  use a Composio-backed connector, your requests to that app and their results
+                  transit Composio&apos;s servers on the way to and from the provider. Composio
+                  manages authentication and tool access and holds the connection on our behalf.
+                  For Composio-backed connectors, Yomi stores only a reference to the connection,
+                  not your access tokens. Governed by{" "}
+                  <a
+                    href="https://composio.dev/legal/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Composio&apos;s Privacy Policy
+                  </a>
+                  .
+                </li>
                 <li>
                   <strong className="text-label">Google APIs</strong>: Gmail, Calendar, Drive,
                   Classroom, Tasks, Contacts, and Meet data accessed on your behalf when you ask
