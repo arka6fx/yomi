@@ -136,6 +136,11 @@ mock.module("@yomi/db", () => {
               }),
             }
           }
+          if ((table as { __name?: string }).__name === "mcpConnections") {
+            return {
+              where: () => [],
+            }
+          }
           return {
             where: () => ({
               orderBy: () => ({
@@ -579,5 +584,35 @@ describe("MCP server endpoint", () => {
     expect(callRes.status).toBe(200)
     const body = await callRes.text()
     expect(body).toContain("pending approval")
+  })
+
+  it("execute_connector_tool returns error when connector not connected", async () => {
+    mockAuthSession = { user: { id: "u1" }, session: { id: "s1" } }
+    const app = await mcpApp()
+
+    const initRes = await rpcCall(app, "initialize", {
+      protocolVersion: "2024-11-05",
+      capabilities: { tools: {} },
+      clientInfo: { name: "test", version: "1" },
+    })
+    const sessionId = initRes.headers.get("mcp-session-id")!
+
+    await rpcCall(app, "notifications/initialized", {}, sessionId)
+
+    const callRes = await rpcCall(
+      app,
+      "tools/call",
+      {
+        name: "execute_connector_tool",
+        arguments: {
+          connector: "nonexistent-connector",
+          action: "someAction",
+        },
+      },
+      sessionId,
+    )
+    expect(callRes.status).toBe(200)
+    const body = await callRes.text()
+    expect(body).toContain("is not connected")
   })
 })
