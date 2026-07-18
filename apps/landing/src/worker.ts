@@ -12,6 +12,8 @@ const REDIRECTS: Record<string, string> = {
   "/features": "/#features",
   "/pricing": "/#pricing",
   "/contact": "/support",
+  // desktop retired — old install links land on the homepage instead of a soft 200
+  "/download": "/",
 }
 
 export default {
