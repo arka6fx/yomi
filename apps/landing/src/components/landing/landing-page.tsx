@@ -447,9 +447,11 @@ export function LandingPage() {
                   <p className="mt-0.5">
                     When you ask a question, Yomi fetches only the data needed to answer it and
                     discards it immediately after responding. No Drive files are retained on
-                    Yomi&apos;s servers between requests. Your Google data is never sold, never used
-                    to train AI models, and is not shared with any third party except the AI
-                    inference provider used to generate your response, and solely for that purpose.
+                    Yomi&apos;s servers between requests.                     Your Google data is never sold, never used
+                    to train AI models, and is not shared with third parties except the
+                    providers required to deliver the features you use: our AI inference
+                    provider, and — for connected apps routed through Composio — Composio,
+                    which manages those integrations on our behalf.
                   </p>
                 </div>
               </div>
