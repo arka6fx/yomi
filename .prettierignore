@@ -2,7 +2,6 @@ node_modules/
 dist/
 out/
 release/
-apps/desktop/release/
 bin/
 obj/
 .next/
@@ -11,7 +10,6 @@ obj/
 .agents/
 .codex/
 tmp/
-apps/sidecar/.playwright-mcp/
 apps/landing/next-env.d.ts
 
 # Vendored examples (not part of Yomi workspace)

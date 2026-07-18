@@ -132,20 +132,6 @@ https://api.getyomi.in/api/integrations/callback/{github,slack,notion,linear}
 
 ---
 
-## Desktop releases
-
-Never tag or release from this repo.
-
-```bash
-gh workflow run release.yml --ref main -f version=<ver> -f notes="<desc>"
-```
-
-The LLM model names come from the GitHub secrets
-`OPENAI_FAST_MODEL` / `OPENAI_AGENT_MODEL` (must be valid OpenAI models),
-baked at release build; it routes LLM calls through `api.getyomi.in/api/llm/proxy`.
-
----
-
 ## Verify
 
 ```bash
