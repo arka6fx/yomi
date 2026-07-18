@@ -107,31 +107,6 @@ export interface IntentClassification {
   source: "heuristic" | "llm"
 }
 
-export interface RouterInput {
-  text: string
-  history?: { role: "user" | "assistant"; text: string }[] // last 2 turns max
-}
-
-export interface FastQueryRequest {
-  text?: string
-  audio_b64?: string // base64-encoded WAV
-  tts?: boolean // true = voice output; false = text only (default: true)
-  plan?: Plan // controls local-only memory injection/writes
-  history?: { role: "user" | "assistant"; text: string }[]
-  skipReserve?: boolean // when true, the pipeline skips its own reserveInteraction("chat") call
-  conversationId?: string // scopes conversation state
-}
-
-export interface AgentQueryRequest {
-  text: string
-  task?: string
-  tts?: boolean // true = voice output; false = text only (default: true)
-  plan?: Plan // controls local-only memory injection/writes
-  history?: { role: "user" | "assistant"; text: string }[] // prior turns for the conversational act loop
-  skipReserve?: boolean // when true, the pipeline skips its own reserveInteraction("chat") call
-  conversationId?: string // scopes conversation state
-}
-
 export interface CloudRagSnippet {
   chunkId: string
   documentId: string
