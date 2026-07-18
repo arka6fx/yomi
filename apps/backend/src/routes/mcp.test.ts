@@ -81,60 +81,176 @@ const mockEntries = [
   },
 ]
 
+const mockSchedules = [
+  {
+    id: "s1",
+    userId: "u1",
+    schedule: "every day 9am",
+    scheduleType: "phrase",
+    prompt: "Check my email",
+    deliverTo: ["telegram"],
+    enabled: true,
+    oneShot: false,
+    nextRunAt: new Date("2026-01-02T09:00:00Z"),
+    lastRunAt: null,
+    lastRunStatus: null,
+    lastRunError: null,
+    runCount: 0,
+    createdAt: new Date("2026-01-01"),
+    updatedAt: new Date("2026-01-01"),
+  },
+]
+
 let executedQueries: unknown[] = []
 
-mock.module("@yomi/db", () => ({
-  db: {
-    select: () => ({
-      from: () => ({
-        where: () => ({
-          orderBy: () => ({
-            limit: () => Promise.resolve(mockEntries),
-          }),
-        }),
-      }),
-    }),
-    execute: (query: unknown) => {
-      executedQueries.push(query)
-      return Promise.resolve({ rows: mockEntries.map((e) => ({ ...e, score: 0.5, matchedBy: ["vector"] })) })
-    },
-    delete: () => ({
-      where: () => Promise.resolve(),
-    }),
-    insert: () => ({
-      values: () => Promise.resolve(),
-    }),
-  },
-  memoryEmbeddings: { userId: {}, memoryId: {}, embedding: {} },
-  memoryEntries: {
-    __name: "memory_entries",
-    userId: {},
+mock.module("@yomi/db", () => {
+  const schedules = {
+    __name: "schedules",
     id: {},
-    customId: {},
-    contentHash: {},
-    kind: {},
-    scope: {},
-    topic: {},
-    summary: {},
-    content: {},
-    status: {},
-    confidence: {},
-    sourceType: {},
-    sourcePath: {},
-    version: {},
-    isLatest: {},
-    isStatic: {},
-    rootMemoryId: {},
-    parentMemoryId: {},
-    forgetAfter: {},
-    metadata: {},
+    userId: {},
+    schedule: {},
+    scheduleType: {},
+    prompt: {},
+    deliverTo: {},
+    enabled: {},
+    oneShot: {},
+    nextRunAt: {},
+    lastRunAt: {},
+    lastRunStatus: {},
+    lastRunError: {},
+    runCount: {},
     createdAt: {},
     updatedAt: {},
-  },
-}))
+  }
+
+  return {
+    db: {
+      select: () => ({
+        from: (table: unknown) => {
+          if ((table as { __name?: string }).__name === "schedules") {
+            return {
+              where: () => ({
+                orderBy: () => ({
+                  limit: () => Promise.resolve(mockSchedules),
+                }),
+              }),
+            }
+          }
+          return {
+            where: () => ({
+              orderBy: () => ({
+                limit: () => Promise.resolve(mockEntries),
+              }),
+            }),
+          }
+        },
+      }),
+      execute: (query: unknown) => {
+        executedQueries.push(query)
+        return Promise.resolve({ rows: mockEntries.map((e) => ({ ...e, score: 0.5, matchedBy: ["vector"] })) })
+      },
+      delete: () => ({
+        where: () => Promise.resolve(),
+      }),
+      insert: () => ({
+        values: () => Promise.resolve([{ id: "p1", status: "pending" }]),
+      }),
+      update: () => ({
+        set: () => ({
+          where: () => Promise.resolve([{ id: "p1", status: "approved" }]),
+        }),
+      }),
+    },
+    memoryEmbeddings: { userId: {}, memoryId: {}, embedding: {} },
+    memoryEntries: {
+      __name: "memory_entries",
+      userId: {},
+      id: {},
+      customId: {},
+      contentHash: {},
+      kind: {},
+      scope: {},
+      topic: {},
+      summary: {},
+      content: {},
+      status: {},
+      confidence: {},
+      sourceType: {},
+      sourcePath: {},
+      version: {},
+      isLatest: {},
+      isStatic: {},
+      rootMemoryId: {},
+      parentMemoryId: {},
+      forgetAfter: {},
+      metadata: {},
+      createdAt: {},
+      updatedAt: {},
+    },
+    pendingActions: {
+      __name: "pending_actions",
+      id: {},
+      userId: {},
+      connector: {},
+      action: {},
+      risk: {},
+      title: {},
+      preview: {},
+      payload: {},
+      status: {},
+      result: {},
+      expiresAt: {},
+      decidedAt: {},
+      executedAt: {},
+      createdAt: {},
+      updatedAt: {},
+    },
+    schedules,
+    mcpConnections: {
+      __name: "mcpConnections",
+      id: {},
+      userId: {},
+      provider: {},
+      scopes: {},
+      displayName: {},
+      expiresAt: {},
+      lastSyncAt: {},
+      createdAt: {},
+      updatedAt: {},
+      oauthTokens: {},
+    },
+  }
+})
 
 mock.module("../services/privacy/checks.js", () => ({
   checkConsent: async () => ({ allowed: true, reason: null, decided: true }),
+}))
+
+mock.module("../services/pending-actions.js", () => ({
+  createPendingAction: async (input: {
+    userId: string
+    connector: string
+    action: string
+    risk: string
+    title: string
+    preview: string
+    payload: unknown
+  }) => ({
+    id: "pending-1",
+    status: "pending",
+    message: `Action pending approval: ${input.title}`,
+  }),
+  expirePendingActions: async () => {},
+  listPendingActions: async () => [],
+  denyPendingAction: async () => null,
+  approvePendingAction: async () => ({ id: "approved-1", status: "approved", result: { ok: true } }),
+}))
+
+mock.module("../gateway/index.js", () => ({
+  getDefaultGateway: () => ({
+    sendMessage: async () => ({ ok: true }),
+    getPendingMessages: async () => [],
+  }),
 }))
 
 beforeEach(() => {
@@ -240,6 +356,8 @@ describe("MCP server endpoint", () => {
     const listBody = await listRes.text()
     expect(listBody).toContain("memory_search")
     expect(listBody).toContain("memory_get_profile")
+    expect(listBody).toContain("memory_add")
+    expect(listBody).toContain("memory_forget")
   })
 
   it("calls memory_search and returns results", async () => {
@@ -300,5 +418,166 @@ describe("MCP server endpoint", () => {
       headers: { authorization: "Bearer test-token" },
     })
     expect(res.status).toBe(405)
+  })
+
+  it("calls memory_add and creates pending action", async () => {
+    mockAuthSession = { user: { id: "u1" }, session: { id: "s1" } }
+    const app = await mcpApp()
+
+    const initRes = await rpcCall(app, "initialize", {
+      protocolVersion: "2024-11-05",
+      capabilities: { tools: {} },
+      clientInfo: { name: "test", version: "1" },
+    })
+    const sessionId = initRes.headers.get("mcp-session-id")!
+
+    await rpcCall(app, "notifications/initialized", {}, sessionId)
+
+    const callRes = await rpcCall(
+      app,
+      "tools/call",
+      {
+        name: "memory_add",
+        arguments: {
+          content: "User prefers tea over coffee",
+          topic: "beverage-preference",
+          kind: "preference",
+          scope: "global",
+        },
+      },
+      sessionId,
+    )
+    expect(callRes.status).toBe(200)
+    const body = await callRes.text()
+    expect(body).toContain("pending approval")
+  })
+
+  it("calls memory_forget and creates pending action", async () => {
+    mockAuthSession = { user: { id: "u1" }, session: { id: "s1" } }
+    const app = await mcpApp()
+
+    const initRes = await rpcCall(app, "initialize", {
+      protocolVersion: "2024-11-05",
+      capabilities: { tools: {} },
+      clientInfo: { name: "test", version: "1" },
+    })
+    const sessionId = initRes.headers.get("mcp-session-id")!
+
+    await rpcCall(app, "notifications/initialized", {}, sessionId)
+
+    const callRes = await rpcCall(
+      app,
+      "tools/call",
+      {
+        name: "memory_forget",
+        arguments: {
+          id: "m1",
+          hard: false,
+        },
+      },
+      sessionId,
+    )
+    expect(callRes.status).toBe(200)
+    const body = await callRes.text()
+    expect(body).toContain("pending approval")
+  })
+
+  it("discovers schedule tools", async () => {
+    mockAuthSession = { user: { id: "u1" }, session: { id: "s1" } }
+    const app = await mcpApp()
+
+    const initRes = await rpcCall(app, "initialize", {
+      protocolVersion: "2024-11-05",
+      capabilities: { tools: {} },
+      clientInfo: { name: "test", version: "1" },
+    })
+    const sessionId = initRes.headers.get("mcp-session-id")!
+
+    await rpcCall(app, "notifications/initialized", {}, sessionId)
+
+    const listRes = await rpcCall(app, "tools/list", {}, sessionId)
+    expect(listRes.status).toBe(200)
+    const listBody = await listRes.text()
+    expect(listBody).toContain("schedule_list")
+    expect(listBody).toContain("schedule_create")
+    expect(listBody).toContain("schedule_delete")
+  })
+
+  it("calls schedule_list and returns schedules", async () => {
+    mockAuthSession = { user: { id: "u1" }, session: { id: "s1" } }
+    const app = await mcpApp()
+
+    const initRes = await rpcCall(app, "initialize", {
+      protocolVersion: "2024-11-05",
+      capabilities: { tools: {} },
+      clientInfo: { name: "test", version: "1" },
+    })
+    const sessionId = initRes.headers.get("mcp-session-id")!
+
+    await rpcCall(app, "notifications/initialized", {}, sessionId)
+
+    const callRes = await rpcCall(app, "tools/call", { name: "schedule_list", arguments: {} }, sessionId)
+    expect(callRes.status).toBe(200)
+    const body = await callRes.text()
+    expect(body).toContain("content")
+  })
+
+  it("calls schedule_create and creates pending action", async () => {
+    mockAuthSession = { user: { id: "u1" }, session: { id: "s1" } }
+    const app = await mcpApp()
+
+    const initRes = await rpcCall(app, "initialize", {
+      protocolVersion: "2024-11-05",
+      capabilities: { tools: {} },
+      clientInfo: { name: "test", version: "1" },
+    })
+    const sessionId = initRes.headers.get("mcp-session-id")!
+
+    await rpcCall(app, "notifications/initialized", {}, sessionId)
+
+    const callRes = await rpcCall(
+      app,
+      "tools/call",
+      {
+        name: "schedule_create",
+        arguments: {
+          schedule: "every day 9am",
+          prompt: "Check my email and summarize new messages",
+        },
+      },
+      sessionId,
+    )
+    expect(callRes.status).toBe(200)
+    const body = await callRes.text()
+    expect(body).toContain("pending approval")
+  })
+
+  it("calls schedule_delete and creates pending action", async () => {
+    mockAuthSession = { user: { id: "u1" }, session: { id: "s1" } }
+    const app = await mcpApp()
+
+    const initRes = await rpcCall(app, "initialize", {
+      protocolVersion: "2024-11-05",
+      capabilities: { tools: {} },
+      clientInfo: { name: "test", version: "1" },
+    })
+    const sessionId = initRes.headers.get("mcp-session-id")!
+
+    await rpcCall(app, "notifications/initialized", {}, sessionId)
+
+    const callRes = await rpcCall(
+      app,
+      "tools/call",
+      {
+        name: "schedule_delete",
+        arguments: {
+          id: "schedule-123",
+        },
+      },
+      sessionId,
+    )
+    expect(callRes.status).toBe(200)
+    const body = await callRes.text()
+    expect(body).toContain("pending approval")
   })
 })
