@@ -50,6 +50,11 @@ export {
   githubComposioSpecs,
   GITHUB_TOOLKIT,
 } from "./connectors/composio/github.js"
+export {
+  makeComposioSlackDef,
+  slackComposioSpecs,
+  SLACK_TOOLKIT,
+} from "./connectors/composio/slack.js"
 export type {
   Connector,
   ConnectorStatus,
