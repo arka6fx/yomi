@@ -77,7 +77,7 @@ describe("readGeneratedCache", () => {
   })
 
   it("omits requires.telegram when deliverTo has no telegram target", async () => {
-    state.rows = [row({ deliverTo: ["desktop"] })]
+    state.rows = [row({ deliverTo: ["email"] })]
     const { entries } = await readGeneratedCache("u1", NOW)
     expect(entries[0]?.requires).toBeUndefined()
   })

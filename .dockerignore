@@ -1,8 +1,6 @@
-# Exclude heavy app workspaces the backend doesn't need — keeps the image small
-# and avoids pulling Electron/Next toolchains onto the server.
-apps/desktop
+# Exclude the landing workspace the backend doesn't need — keeps the image small
+# and avoids pulling the Next toolchain onto the server.
 apps/landing
-apps/sidecar
 
 # Never copy installed deps, build output, or local env/secrets into the image.
 **/node_modules

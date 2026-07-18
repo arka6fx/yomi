@@ -150,10 +150,10 @@ describe("assembleGeneratedSuggestions", () => {
   it("sets requires.telegram when deliverTo includes telegram, omits it otherwise", () => {
     const tg = assembleGeneratedSuggestions([pattern()], context(), [slot({ deliverTo: ["telegram"] })])
     expect(tg[0]!.requires).toEqual({ telegram: true })
-    const desktop = assembleGeneratedSuggestions([pattern()], context(), [
-      slot({ deliverTo: ["desktop"] }),
+    const other = assembleGeneratedSuggestions([pattern()], context(), [
+      slot({ deliverTo: ["email"] }),
     ])
-    expect(desktop[0]!.requires).toBeUndefined()
+    expect(other[0]!.requires).toBeUndefined()
   })
 
   it("carries the SuggestionEntry shape with provider set to the pattern connector", () => {
