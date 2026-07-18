@@ -45,6 +45,11 @@ export {
   linearComposioSpecs,
   LINEAR_TOOLKIT,
 } from "./connectors/composio/linear.js"
+export {
+  makeComposioGitHubDef,
+  githubComposioSpecs,
+  GITHUB_TOOLKIT,
+} from "./connectors/composio/github.js"
 export type {
   Connector,
   ConnectorStatus,

@@ -2,6 +2,34 @@ import { describe, expect, it } from "bun:test"
 import { classifyAction, COMPOSIO_RISK_MAP, isReadAction } from "./classification.js"
 
 describe("Composio risk classification", () => {
+  describe("GitHub actions", () => {
+    it("classifies representative GitHub read actions as read", () => {
+      expect(classifyAction("github", "GITHUB_LIST_ISSUES")).toBe("read")
+      expect(classifyAction("github", "GITHUB_GET_PULL_REQUEST")).toBe("read")
+      expect(classifyAction("github", "GITHUB_LIST_REPOSITORIES")).toBe("read")
+      expect(classifyAction("github", "GITHUB_LIST_COMMITS")).toBe("read")
+      expect(classifyAction("github", "GITHUB_GET_FILE_CONTENTS")).toBe("read")
+      expect(classifyAction("github", "GITHUB_SEARCH_CODE")).toBe("read")
+    })
+
+    it("classifies representative GitHub write actions as write", () => {
+      expect(classifyAction("github", "GITHUB_CREATE_ISSUE")).toBe("write")
+      expect(classifyAction("github", "GITHUB_UPDATE_ISSUE")).toBe("write")
+      expect(classifyAction("github", "GITHUB_COMMENT_ON_ISSUE")).toBe("write")
+      expect(classifyAction("github", "GITHUB_CREATE_PULL_REQUEST")).toBe("write")
+      expect(classifyAction("github", "GITHUB_ADD_LABELS_TO_ISSUE")).toBe("write")
+    })
+
+    it("classifies GitHub irreversible actions as irreversible", () => {
+      expect(classifyAction("github", "GITHUB_MERGE_PULL_REQUEST")).toBe("irreversible")
+    })
+
+    it("defaults unknown GitHub actions to write (default-deny)", () => {
+      expect(classifyAction("github", "GITHUB_SOME_NEW_ACTION")).toBe("write")
+    })
+  })
+
+  describe("Linear actions", () => {
   it("classifies representative Linear read actions as read", () => {
     expect(classifyAction("linear", "LINEAR_LIST_LINEAR_ISSUES")).toBe("read")
     expect(classifyAction("linear", "LINEAR_GET_LINEAR_ISSUE")).toBe("read")
@@ -33,6 +61,7 @@ describe("Composio risk classification", () => {
 
   it("is case-insensitive on the toolkit key", () => {
     expect(classifyAction("LINEAR", "LINEAR_LIST_LINEAR_ISSUES")).toBe("read")
+    expect(classifyAction("GITHUB", "GITHUB_LIST_ISSUES")).toBe("read")
   })
 
   it("exposes isReadAction as a convenience over classifyAction", () => {
@@ -43,11 +72,13 @@ describe("Composio risk classification", () => {
 
   it("keeps the map as plain data keyed by lowercase toolkit", () => {
     expect(COMPOSIO_RISK_MAP["linear"]).toBeDefined()
+    expect(COMPOSIO_RISK_MAP["github"]).toBeDefined()
     // every value is a valid risk class
     for (const bySlug of Object.values(COMPOSIO_RISK_MAP)) {
       for (const risk of Object.values(bySlug)) {
         expect(["read", "write", "send", "paid", "irreversible"]).toContain(risk)
       }
     }
+  })
   })
 })

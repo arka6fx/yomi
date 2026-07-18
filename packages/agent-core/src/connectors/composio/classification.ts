@@ -17,6 +17,42 @@ export type WriteRisk = Exclude<ActionRisk, "read">
 // toolkit (lowercase) → action slug → risk. Slugs are Composio's identifiers
 // (e.g. `LINEAR_CREATE_LINEAR_ISSUE`).
 export const COMPOSIO_RISK_MAP: Record<string, Record<string, ActionRisk>> = {
+  github: {
+    // Reads — pass straight through.
+    GITHUB_LIST_ISSUES: "read",
+    GITHUB_GET_ISSUE: "read",
+    GITHUB_LIST_PULL_REQUESTS: "read",
+    GITHUB_GET_PULL_REQUEST: "read",
+    GITHUB_LIST_REPOSITORIES: "read",
+    GITHUB_GET_REPOSITORY: "read",
+    GITHUB_LIST_BRANCHES: "read",
+    GITHUB_LIST_COMMITS: "read",
+    GITHUB_GET_FILE_CONTENTS: "read",
+    GITHUB_LIST_WORKFLOWS: "read",
+    GITHUB_GET_WORKFLOW: "read",
+    GITHUB_LIST_WORKFLOW_RUNS: "read",
+    GITHUB_LIST_NOTIFICATIONS: "read",
+    GITHUB_SEARCH_CODE: "read",
+    GITHUB_SEARCH_ISSUES: "read",
+    GITHUB_GET_COMMIT: "read",
+
+    // Writes — gated for approval.
+    GITHUB_CREATE_ISSUE: "write",
+    GITHUB_UPDATE_ISSUE: "write",
+    GITHUB_COMMENT_ON_ISSUE: "write",
+    GITHUB_CREATE_PULL_REQUEST: "write",
+    GITHUB_UPDATE_PULL_REQUEST: "write",
+    GITHUB_SUBMIT_PULL_REQUEST_REVIEW: "write",
+    GITHUB_ADD_LABELS_TO_ISSUE: "write",
+    GITHUB_CREATE_BRANCH: "write",
+    GITHUB_CREATE_OR_UPDATE_FILE: "write",
+    GITHUB_CREATE_REPOSITORY: "write",
+    GITHUB_MARK_NOTIFICATION_READ: "write",
+    GITHUB_CREATE_WORKFLOW_DISPATCH: "write",
+
+    // Irreversible — gated, flagged as unrecoverable.
+    GITHUB_MERGE_PULL_REQUEST: "irreversible",
+  },
   linear: {
     // Reads — pass straight through.
     LINEAR_LIST_LINEAR_ISSUES: "read",
