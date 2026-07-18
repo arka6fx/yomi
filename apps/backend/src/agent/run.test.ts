@@ -62,6 +62,7 @@ mock.module("@yomi/db", () => ({
 
 mock.module("@yomi/agent-core", () => ({
   createModel: (model: string) => model,
+  makeComposioLinearDef: () => ({ id: "linear", tools: () => ({}) }),
   ConnectorRegistry: class {
     async init() {}
   },

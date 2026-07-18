@@ -44,18 +44,17 @@ function getDecryptKeys(): Buffer[] {
 }
 
 // Returns base64(iv + authTag + ciphertext)
-export function encryptTokens(tokens: OAuthTokens): string {
+export function encryptString(plain: string): string {
   const key = getKey()
   const iv = randomBytes(12)
   const cipher = createCipheriv(ALGO, key, iv)
-  const plain = JSON.stringify(tokens)
   const encrypted = Buffer.concat([cipher.update(plain, "utf8"), cipher.final()])
   const tag = cipher.getAuthTag()
   // layout: 12 bytes iv | 16 bytes tag | N bytes ciphertext
   return Buffer.concat([iv, tag, encrypted]).toString("base64")
 }
 
-export function decryptTokens(ciphertext: string): OAuthTokens {
+export function decryptString(ciphertext: string): string {
   const buf = Buffer.from(ciphertext, "base64")
   const iv = buf.subarray(0, 12)
   const tag = buf.subarray(12, 28)
@@ -66,14 +65,21 @@ export function decryptTokens(ciphertext: string): OAuthTokens {
     try {
       const decipher = createDecipheriv(ALGO, key, iv)
       decipher.setAuthTag(tag)
-      const plain = Buffer.concat([decipher.update(data), decipher.final()]).toString("utf8")
-      return JSON.parse(plain) as OAuthTokens
+      return Buffer.concat([decipher.update(data), decipher.final()]).toString("utf8")
     } catch (err) {
       // GCM auth tag mismatch (wrong key) → try the next candidate key.
       lastErr = err
     }
   }
   throw lastErr instanceof Error ? lastErr : new Error("decryption failed")
+}
+
+export function encryptTokens(tokens: OAuthTokens): string {
+  return encryptString(JSON.stringify(tokens))
+}
+
+export function decryptTokens(ciphertext: string): OAuthTokens {
+  return JSON.parse(decryptString(ciphertext)) as OAuthTokens
 }
 
 // Refresh a Google access token using the stored refresh token.

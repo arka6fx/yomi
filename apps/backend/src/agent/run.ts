@@ -11,6 +11,7 @@ import {
 import { formatAgentSoul } from "@yomi/shared"
 import { compressContext, shouldCompress, estimateTokens } from "./compressor.js"
 import { getAccessToken, listConnectedProviders } from "../services/integration-tokens.js"
+import { buildComposioDefs } from "../connectors/composio-defs.js"
 import { hasBillablePlanAccess } from "../entitlements.js"
 import { chargeUsage } from "../services/metering.js"
 import { recordAiUsage } from "../services/ai-telemetry.js"
@@ -503,6 +504,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
 
   const registry = new ConnectorRegistry({
     excludeNodeOnly: true,
+    composioDefs: buildComposioDefs(),
     getAccessToken,
     createPendingAction: async (input) => {
       const { createPendingAction } = await import("../services/pending-actions.js")
