@@ -1,7 +1,7 @@
 {
   "name": "Yomi — AI Productivity Assistant",
   "short_name": "Yomi",
-  "description": "AI assistant that sees your screen, hears your voice, and connects to Gmail, Calendar, Drive, GitHub, Slack, Notion, Linear, and more.",
+  "description": "AI assistant on Telegram that connects to Gmail, Calendar, Drive, GitHub, Slack, Notion, Linear, and more. Message it with text, voice, or a photo.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0b",

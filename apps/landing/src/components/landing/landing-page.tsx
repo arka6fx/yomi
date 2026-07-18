@@ -9,9 +9,9 @@ import {
   Check,
   Crown,
   Cuboid,
+  Layers,
   Loader2,
-  Mic,
-  Monitor,
+  MessageSquare,
   Shield,
   Sparkles,
   Zap,
@@ -29,22 +29,22 @@ function scrollTo(id: string) {
 
 const FEATURES = [
   {
-    icon: Monitor,
-    title: "Sees your screen",
+    icon: MessageSquare,
+    title: "Text, voice, or photo",
     description:
-      "Yomi captures context from whatever you're looking at. No copy-pasting, no describing. It just knows.",
+      "Message Yomi on Telegram however you like. Type a question, send a voice note, or snap a photo. It understands all three.",
   },
   {
-    icon: Mic,
-    title: "Hears your voice",
+    icon: Layers,
+    title: "Works across your apps",
     description:
-      "Push to talk or always-on VAD. Sub-2-second response on the fast path. Ask anything, anytime.",
+      "Connect Gmail, Calendar, Drive, GitHub, Slack, Notion, and more once. Then just ask, and Yomi acts across them for you.",
   },
   {
     icon: Shield,
     title: "Private by default",
     description:
-      "Screenshots are used only for your query and never stored by Yomi. No background recording, no silent capture.",
+      "Your data is read only to answer the question you just asked, and never stored afterward. Every change is shown for approval first.",
   },
 ]
 
@@ -73,14 +73,13 @@ const PLANS = [
     priceUsd: 0,
     period: "/ month",
     badge: "Free",
-    description: "Try screen-aware AI, voice, and memory for 30 days. No card needed.",
+    description: "Try Yomi on Telegram with text, voice, and memory for 30 days. No card needed.",
     features: [
       "25 credits (30-day trial)",
-      "Screen-aware AI & voice",
-      "Image/screen analyze",
-      "Local memory notepad",
+      "Text, voice & photo on Telegram",
+      "Durable memory",
       "Unlimited app connectors",
-      "Telegram bot",
+      "Web dashboard",
     ],
     cta: "Get started free",
     popular: false,
@@ -92,13 +91,13 @@ const PLANS = [
     priceUsd: 14.99,
     period: "/ month",
     badge: "Most Popular",
-    description: "Screen, voice, memory, and images for everyday work.",
+    description: "Text, voice, photos, and memory for everyday work.",
     features: [
       "2,500 credits / month",
       "Buy extra credit packs anytime",
-      "Screen, voice, memory & images",
+      "Text, voice, photos & memory",
       "Unlimited app connectors",
-      "Telegram bot",
+      "Web dashboard",
     ],
     cta: "Subscribe",
     popular: true,
@@ -124,30 +123,14 @@ const PLANS = [
   },
 ]
 
-function Keys({ keys }: { keys: { sym: string; label: string }[] }) {
-  return (
-    <span className="inline-flex items-center gap-1">
-      {keys.map(({ sym, label }, i) => (
-        <span key={i} className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center gap-1 rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">
-            <span>{sym}</span>
-            <span className="font-sans text-muted-foreground">{label}</span>
-          </kbd>
-          {i < keys.length - 1 && <span className="text-xs text-muted-foreground">+</span>}
-        </span>
-      ))}
-    </span>
-  )
-}
-
 function InteractionCard({
   type,
-  hotkey,
+  mode,
   label,
   description,
 }: {
   type: string
-  hotkey: { sym: string; label: string }[]
+  mode: string
   label: string
   description: string
 }) {
@@ -161,9 +144,12 @@ function InteractionCard({
     >
       <div className="flex items-center justify-between">
         <span className="rounded-full bg-primary/10 px-2 py-0.5 font-mono text-xs text-primary">
-          Type {type}
+          {type}
         </span>
-        <Keys keys={hotkey} />
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <ConnectorIcon id="telegram" size={14} />
+          {mode}
+        </span>
       </div>
       <p className="text-sm font-medium text-foreground">{label}</p>
       <p className="text-xs leading-relaxed text-muted-foreground">{description}</p>
@@ -247,15 +233,14 @@ export function LandingPage() {
               &lt; 2s fast path
             </span>
             <span className="hidden h-1 w-1 rounded-full bg-white/30 sm:block" />
-            <span>Windows now · macOS coming soon</span>
+            <span>On Telegram · text, voice, or photo</span>
           </motion.div>
 
           {/* big centered tagline — the heart of the hero */}
           <div className="animate-hero-rise-delayed mx-auto flex max-w-5xl flex-col items-center px-2 text-center">
             <p className="font-serif text-5xl leading-[1.04] tracking-tight text-white drop-shadow-[0_2px_24px_rgba(8,31,66,0.55)] sm:text-6xl lg:text-7xl xl:text-[5.5rem]">
-              Sees your <span className="italic text-sky-300">screen</span>, hears your{" "}
-              <span className="italic text-cyan-200">voice</span>, and works across{" "}
-              <span className="italic text-blue-200">your everyday apps</span>.
+              <span className="italic text-sky-300">Text</span> it, <span className="italic text-cyan-200">talk</span> to it, or{" "}
+              <span className="italic text-blue-200">snap a photo</span> — and it works across your everyday apps.
             </p>
           </div>
 
@@ -264,7 +249,7 @@ export function LandingPage() {
               <h1 className="animate-hero-rise-delayed font-accent text-[4.8rem] leading-[0.82] tracking-normal text-[#eaf4ff] sm:text-[7.2rem] md:text-[9rem] lg:text-[11.2rem]">
                 Yomi
                 {/* the visible wordmark alone is a poor heading for search and screen readers */}
-                <span className="sr-only"> — AI productivity assistant for Windows</span>
+                <span className="sr-only"> — AI productivity assistant on Telegram</span>
               </h1>
 
               <motion.div
@@ -275,7 +260,7 @@ export function LandingPage() {
               >
                 <div className="mb-7 max-w-md">
                   <div className="flex flex-wrap gap-2">
-                    {["Web app", "Telegram", "No copy-paste"].map((tag) => (
+                    {["Telegram", "Web dashboard", "No copy-paste"].map((tag) => (
                       <span
                         key={tag}
                         className="rounded-full border border-white/12 bg-white/5 px-3 py-1 text-xs font-medium tracking-wide text-white/65 backdrop-blur-sm"
@@ -329,16 +314,16 @@ export function LandingPage() {
               className="mt-6 grid gap-3 border-t border-white/10 pt-4 text-sm text-white/62 sm:grid-cols-3"
             >
               <span className="flex items-center gap-2">
-                <Monitor size={15} className="text-sky-100" />
-                Screen-aware responses
+                <MessageSquare size={15} className="text-sky-100" />
+                Text, voice, or photo
               </span>
               <span className="flex items-center gap-2">
-                <Mic size={15} className="text-sky-100" />
-                Voice and text hotkeys
+                <Layers size={15} className="text-sky-100" />
+                Works across your apps
               </span>
               <span className="flex items-center gap-2">
                 <Shield size={15} className="text-sky-100" />
-                Visible capture states
+                Never stored
               </span>
             </motion.div>
           </div>
@@ -510,41 +495,32 @@ export function LandingPage() {
             How it works
           </p>
           <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-            Three ways to <span className="italic">interact</span>.
+            Three ways to <span className="italic">ask</span>.
           </h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
-            Voice, type, or just press enter. Yomi routes each request through the right context and
-            model.
+            Type, talk, or send a photo — all from your Telegram chat. Yomi routes each request
+            through the right context and model.
           </p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
           <InteractionCard
             type="A"
-            hotkey={[
-              { sym: "^", label: "Ctrl" },
-              { sym: "␣", label: "Space" },
-            ]}
-            label="Voice + Screen"
-            description="Press Ctrl+Space, speak your question, then press Enter. Yomi transcribes your voice, captures screen context, and responds with text and spoken audio."
+            mode="Text"
+            label="Type a message"
+            description="Send a plain message on Telegram — 'summarize my unread email' or 'what's on my calendar tomorrow?' Yomi replies fast, pulling context from your connected apps."
           />
           <InteractionCard
             type="B"
-            hotkey={[
-              { sym: "^", label: "Ctrl" },
-              { sym: "↵", label: "Enter" },
-            ]}
-            label="Type + Screen"
-            description="Press Ctrl+Enter, type your question, then press Enter. Yomi intelligently includes your screen for spatial or UI queries and returns a fast text response."
+            mode="Voice"
+            label="Send a voice note"
+            description="Tap and hold to record. Yomi transcribes your voice note, answers the question, and can reply with spoken audio when you're on the go."
           />
           <InteractionCard
             type="C"
-            hotkey={[
-              { sym: "^", label: "Ctrl" },
-              { sym: "S", label: "S" },
-            ]}
-            label="Screen Q&A"
-            description="Press Ctrl+S to capture your screen. Yomi analyzes what's on your display and provides step-by-step visual guidance overlaid on your screen."
+            mode="Photo"
+            label="Snap a photo"
+            description="Send a picture — a receipt, a whiteboard, a screenshot. Yomi reads what's in the image and acts on it across your apps."
           />
         </div>
       </section>
