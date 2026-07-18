@@ -24,6 +24,27 @@ export {
   createLinearApiKeyTools,
 } from "./connectors/linear-def.js"
 export { ALL_CONNECTOR_DEFS } from "./connectors/all-defs.js"
+
+// Composio-backed connectors (approval-wrapped, per-connector flag).
+export {
+  createComposioTools,
+  type ComposioExecutor,
+  type ComposioToolSpec,
+  type CreateComposioToolsOptions,
+} from "./connectors/composio/adapter.js"
+export {
+  classifyAction,
+  isReadAction,
+  COMPOSIO_RISK_MAP,
+  type ActionRisk,
+  type WriteRisk,
+} from "./connectors/composio/classification.js"
+export { isComposioBacked, composioBackedConnectors } from "./connectors/composio/flags.js"
+export {
+  makeComposioLinearDef,
+  linearComposioSpecs,
+  LINEAR_TOOLKIT,
+} from "./connectors/composio/linear.js"
 export type {
   Connector,
   ConnectorStatus,

@@ -7,7 +7,8 @@ import type {
   TokenProvider,
   ConnectedProvidersLister,
 } from "./types.js"
-import type { ConnectorContext } from "./connector-def.js"
+import type { ConnectorContext, ConnectorDef } from "./connector-def.js"
+import { isComposioBacked } from "./composio/flags.js"
 
 // Dependencies injected so the registry runs in the backend
 // (in-process from the DB).
@@ -20,6 +21,11 @@ export interface ConnectorRegistryDeps {
   // agent never advertises a tool that would fail at execution. Defaults to
   // false — Node keeps every connector.
   excludeNodeOnly?: boolean
+  // Composio-backed defs keyed by connector id, injected by the host (the backend
+  // wires each with a real Composio executor). A connector here is used ONLY when
+  // it is also flagged via COMPOSIO_CONNECTORS; otherwise the native def in
+  // ALL_CONNECTOR_DEFS is kept. This is the per-connector native↔composio switch.
+  composioDefs?: Record<string, ConnectorDef>
 }
 
 // Registry maps provider name → connector instance for the current user.
@@ -82,7 +88,12 @@ export class ConnectorRegistry {
 
     // Def-based path: iterate all registered ConnectorDefs and load tools for
     // any that the user has connected (provider key matches mcp_connections row).
-    for (const def of ALL_CONNECTOR_DEFS) {
+    for (const baseDef of ALL_CONNECTOR_DEFS) {
+      // Per-connector backend selection: prefer the injected Composio def when the
+      // connector is flagged, else keep the native (hand-rolled) def.
+      const composioDef = this.deps.composioDefs?.[baseDef.id]
+      const def = composioDef && isComposioBacked(baseDef.id) ? composioDef : baseDef
+
       if (this.deps.excludeNodeOnly && def.requiresNodeRuntime) {
         if (this.connectedProviders.has(def.id)) this.desktopOnlyNames.push(def.name)
         continue

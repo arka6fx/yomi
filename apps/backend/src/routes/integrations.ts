@@ -381,6 +381,29 @@ integrationsRouter.get("/connect/:id", async (c) => {
   const def = getConnectorDef(id)
   if (!def) return c.json({ error: `Unknown connector: ${id}` }, 404)
 
+  // Composio-backed connectors: open Composio's connection flow instead of a
+  // native OAuth redirect. Composio holds the grant; we store only a reference.
+  if (def.auth.kind === "composio") {
+    try {
+      const { initiateComposioConnection } = await import("../services/composio-connect.js")
+      const base = process.env.BETTER_AUTH_BASE_URL ?? "http://localhost:3001"
+      const state = Buffer.from(JSON.stringify({ userId: user.id, ts: Date.now() })).toString(
+        "base64url",
+      )
+      const callbackUrl = `${base}/api/integrations/composio/callback/${id}?state=${state}`
+      const { redirectUrl } = await initiateComposioConnection(user.id, def, { callbackUrl })
+      const accept = c.req.header("Accept") ?? ""
+      if (accept.includes("application/json")) return c.json({ redirectUrl })
+      return c.redirect(redirectUrl)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Composio connect failed"
+      console.error(`[integrations/connect/${id}] composio:`, msg)
+      return c.redirect(
+        `${process.env.BETTER_AUTH_URL ?? "http://localhost:3000"}/dashboard?integration_error=${encodeURIComponent(msg)}`,
+      )
+    }
+  }
+
   if (def.auth.kind === "oauth2") {
     try {
       const url = buildAuthUrl(def, user.id)
@@ -445,6 +468,53 @@ integrationsRouter.get("/callback/:id", async (c) => {
     console.error(`[integrations/callback/${id}] unhandled error:`, err)
     return c.redirect(`${appUrl}/dashboard?integration_error=${encodeURIComponent(msg)}`)
   }
+})
+
+// ── Composio connect callback ────────────────────────────────────────────────
+// Composio redirects the user here after they authorize the provider. We mark the
+// connection active and store the connected-account reference (no tokens).
+
+integrationsRouter.get("/composio/callback/:id", async (c) => {
+  const id = c.req.param("id") ?? ""
+  const stateRaw = c.req.query("state") ?? ""
+  const appUrl = process.env.BETTER_AUTH_URL ?? "http://localhost:3000"
+
+  let userId: string
+  try {
+    const decoded = JSON.parse(Buffer.from(stateRaw, "base64url").toString("utf8"))
+    userId = decoded.userId
+    if (!userId) throw new Error("missing userId")
+    if (Date.now() - decoded.ts > 30 * 60 * 1000) throw new Error("state expired")
+  } catch {
+    return c.redirect(`${appUrl}/dashboard?integration_error=invalid_state`)
+  }
+
+  const def = getConnectorDef(id)
+  if (!def || def.auth.kind !== "composio") {
+    return c.redirect(`${appUrl}/dashboard?integration_error=unknown_connector`)
+  }
+
+  const status = c.req.query("status") ?? c.req.query("connectionStatus")
+  if (status && !/active|success/i.test(status)) {
+    return c.redirect(`${appUrl}/dashboard?integration_error=${encodeURIComponent(status)}`)
+  }
+
+  const connectedAccountId =
+    c.req.query("connectedAccountId") ?? c.req.query("connected_account_id") ?? null
+
+  try {
+    const { markComposioConnectionActive } = await import("../services/composio-connect.js")
+    await markComposioConnectionActive(userId, def, connectedAccountId)
+    await grantConsentIfUndecided(userId, ["connector_data"], "connector_composio").catch((err) =>
+      console.warn("[yomi/integrations] connector consent grant failed:", err),
+    )
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "callback failed"
+    console.error(`[integrations/composio/callback/${id}]`, msg)
+    return c.redirect(`${appUrl}/dashboard?integration_error=${encodeURIComponent(msg)}`)
+  }
+
+  return c.redirect(`${appUrl}/dashboard?integration_success=${id}`)
 })
 
 // ── Connect: API key (POST) ──────────────────────────────────────────────────

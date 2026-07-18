@@ -73,6 +73,16 @@ export type AuthConfig =
       field: { label: string; placeholder: string }
       readOnly: true
     }
+  | {
+      // Auth is delegated to Composio: it holds the OAuth grant and executes tools.
+      // The connect flow opens Composio's connection link instead of a native OAuth
+      // redirect, and the connection record stores a connected-account reference
+      // (not tokens). `toolkit` is the Composio toolkit slug (e.g. "linear").
+      kind: "composio"
+      toolkit: string
+      // Env var holding the Composio auth-config id used to initiate connections.
+      authConfigIdEnv?: string
+    }
 
 export interface DeveloperSetup {
   providerConsoleUrl: string
