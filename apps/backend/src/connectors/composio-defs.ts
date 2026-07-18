@@ -1,4 +1,4 @@
-import { makeComposioLinearDef, type ConnectorDef, type ComposioExecutor } from "@yomi/agent-core"
+import { makeComposioLinearDef, makeComposioGitHubDef, type ConnectorDef, type ComposioExecutor } from "@yomi/agent-core"
 import { createComposioRestExecutor } from "./composio-executor.js"
 
 // Composio-backed defs the backend can serve, keyed by connector id, each wired
@@ -12,5 +12,6 @@ export function buildComposioDefs(executor?: ComposioExecutor): Record<string, C
   const exec = executor ?? createComposioRestExecutor()
   return {
     linear: makeComposioLinearDef(exec),
+    github: makeComposioGitHubDef(exec),
   }
 }
