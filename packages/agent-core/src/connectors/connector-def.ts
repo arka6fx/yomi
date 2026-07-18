@@ -41,6 +41,8 @@ export type ConnectorCategory =
   | "communication"
   | "developer"
   | "data"
+  | "food"
+  | "lifestyle"
 
 export interface ApiKeyField {
   name: string
@@ -123,7 +125,7 @@ export async function gateWrite<T>(
     confirmText?: string
   },
   args: unknown,
-  run: () => Promise<T>,
+  run: () => Promise<T> | PromiseLike<T>,
 ): Promise<T | { id: string; status: string; message: string }> {
   if (ctx.createPendingAction) {
     return ctx.createPendingAction({ ...meta, payload: args })
@@ -147,4 +149,16 @@ export interface ConnectorDef {
   // database drivers like `pg`/`mysql2`). The Cloudflare Workers backend excludes
 // these so the agent never advertises a tool it can't execute.
   requiresNodeRuntime?: boolean
+  // True when the connector uses MCP (Model Context Protocol) for tool discovery
+  // and execution. MCP connectors don't provide static tools via the `tools`
+  // factory; instead they connect to one or more MCP servers at runtime and
+  // discover tools via `tools/list`.
+  isMCPBased?: boolean
+  // Async tool loader for MCP-based connectors. Called lazily when the registry
+  // connects MCP servers on first use. Takes the standard ConnectorContext plus
+  // a userId for auth header resolution. Returns the merged ToolSet from all
+  // configured MCP servers. Only present when isMCPBased is true.
+  connectMCP?: (
+    ctx: ConnectorContext,
+  ) => Promise<ToolSet>
 }

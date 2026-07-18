@@ -33,6 +33,7 @@ export interface ConnectorRegistryDeps {
 export class ConnectorRegistry {
   private connectors = new Map<string, Connector>()
   private defTools: ToolSet = {}
+  private mcpTools: ToolSet = {}
   private connectedDefIds: Set<string> = new Set()
   // Names of connected connectors skipped because they need a Node runtime the
   // current host lacks (Workers). Surfaced so the agent can tell the user the
@@ -41,6 +42,7 @@ export class ConnectorRegistry {
   private userId: string | null = null
   private connectedProviders: Set<string> = new Set()
   private lastRefreshed = 0
+  private mcpConnectedIds: string[] = []
 
   constructor(private readonly deps: ConnectorRegistryDeps) {}
 
@@ -70,15 +72,17 @@ export class ConnectorRegistry {
       // best-effort — connectors still work if the registry can't refresh
     }
     this.lastRefreshed = Date.now()
-    this.buildConnectors()
+    await this.buildConnectors()
   }
 
-  private buildConnectors(): void {
+  private async buildConnectors(): Promise<void> {
     if (!this.userId) return
     this.connectors.clear()
     this.defTools = {}
+    this.mcpTools = {}
     this.connectedDefIds.clear()
     this.desktopOnlyNames = []
+    this.mcpConnectedIds = []
 
     // Legacy Gmail path: stored as "google" in mcp_connections for existing rows.
     // Kept so registry.get("google") still works.
@@ -100,20 +104,50 @@ export class ConnectorRegistry {
       }
       if (this.connectedProviders.has(def.id)) {
         this.connectedDefIds.add(def.id)
-        const tools = def.tools({
-          userId: this.userId,
-          getAccessToken: this.deps.getAccessToken,
-          createPendingAction: this.deps.createPendingAction,
-        })
-        Object.assign(this.defTools, tools)
+        if (def.isMCPBased && def.connectMCP) {
+          // MCP defs: store for lazy loading, don't call tools() yet
+          this.mcpConnectedIds.push(def.id)
+        } else {
+          const tools = def.tools({
+            userId: this.userId,
+            getAccessToken: this.deps.getAccessToken,
+            createPendingAction: this.deps.createPendingAction,
+          })
+          Object.assign(this.defTools, tools)
+        }
+      }
+    }
+  }
+
+  // Lazily connects MCP servers for all connected MCP-based defs and merges
+  // their tools. Safe to call multiple times — MCP tools are loaded once.
+  async loadMCPTools(): Promise<void> {
+    if (!this.userId || this.mcpConnectedIds.length === 0) return
+    if (Object.keys(this.mcpTools).length > 0) return
+
+    for (const baseDef of ALL_CONNECTOR_DEFS) {
+      if (!this.mcpConnectedIds.includes(baseDef.id)) continue
+      const def = baseDef
+      if (def.isMCPBased && def.connectMCP) {
+        try {
+          const tools = await def.connectMCP({
+            userId: this.userId,
+            getAccessToken: this.deps.getAccessToken,
+            createPendingAction: this.deps.createPendingAction,
+          })
+          Object.assign(this.mcpTools, tools)
+        } catch (err) {
+          console.error(`[registry] MCP connect failed for ${def.id}:`, err)
+        }
       }
     }
   }
 
   // Returns the merged AI SDK tool set from all connected ConnectorDefs.
-  // This is the primary path for the agent loop.
+  // This is the primary path for the agent loop. Includes both native and
+  // already-loaded MCP tools.
   getAllDefTools(): ToolSet {
-    return this.defTools
+    return { ...this.defTools, ...this.mcpTools }
   }
 
   // Names of connected connectors that were skipped on this host because they
@@ -129,7 +163,14 @@ export class ConnectorRegistry {
 
   // Returns all connected provider/def IDs (legacy + def-based).
   getConnected(): string[] {
-    return [...new Set([...this.connectors.keys(), ...this.connectedDefIds])]
+    return [
+      ...new Set([...this.connectors.keys(), ...this.connectedDefIds]),
+    ]
+  }
+
+  // Returns IDs of MCP-based defs that are connected but not yet loaded.
+  getMCPConnectedIds(): string[] {
+    return [...this.mcpConnectedIds]
   }
 
   getStatus(provider: string): ConnectorStatus {

@@ -16,6 +16,7 @@ import {
   encodeState,
   decodeState,
 } from "../connectors/executors/oauth2-executor.js"
+import { buildSwiggyAuthUrl, handleSwiggyCallback } from "../connectors/oauth/swiggy.js"
 
 async function checkProviderHealth(
   userId: string,
@@ -406,6 +407,22 @@ integrationsRouter.get("/connect/:id", async (c) => {
     }
   }
 
+  // Swiggy uses PKCE + dynamic client registration — different from standard OAuth2.
+  if (id === "swiggy") {
+    try {
+      const url = await buildSwiggyAuthUrl(user.id)
+      const accept = c.req.header("Accept") ?? ""
+      if (accept.includes("application/json")) return c.json({ redirectUrl: url })
+      return c.redirect(url)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Swiggy OAuth setup failed"
+      console.error(`[integrations/connect/swiggy]`, msg)
+      return c.redirect(
+        `${process.env.BETTER_AUTH_URL ?? "http://localhost:3000"}/dashboard?integration_error=${encodeURIComponent(msg)}`,
+      )
+    }
+  }
+
   if (def.auth.kind === "oauth2") {
     try {
       const url = buildAuthUrl(def, user.id)
@@ -439,6 +456,31 @@ integrationsRouter.get("/connect/:id", async (c) => {
   }
 
   return c.json({ error: "Unknown auth kind" }, 400)
+})
+
+// ── Swiggy OAuth callback (PKCE + dynamic client registration) ───────────────
+
+integrationsRouter.get("/callback/swiggy", async (c) => {
+  const code = c.req.query("code")
+  const stateRaw = c.req.query("state") ?? ""
+  const error = c.req.query("error")
+
+  const appUrl = process.env.BETTER_AUTH_URL ?? "http://localhost:3000"
+
+  if (error || !code) {
+    return c.redirect(
+      `${appUrl}/dashboard?integration_error=${encodeURIComponent(error ?? "cancelled")}`,
+    )
+  }
+
+  try {
+    const { redirectTo } = await handleSwiggyCallback(code, stateRaw)
+    return c.redirect(redirectTo)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Swiggy callback failed"
+    console.error("[integrations/callback/swiggy] unhandled error:", err)
+    return c.redirect(`${appUrl}/dashboard?integration_error=${encodeURIComponent(msg)}`)
+  }
 })
 
 // ── Generic OAuth2 callback ──────────────────────────────────────────────────
