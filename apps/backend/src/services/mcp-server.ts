@@ -1,6 +1,15 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js"
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js"
-import { ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js"
+import {
+  ListToolsRequestSchema,
+  CallToolRequestSchema,
+  McpError,
+  ErrorCode,
+} from "@modelcontextprotocol/sdk/types.js"
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
+import { createHash } from "node:crypto"
+import { db, memoryEmbeddings, memoryEntries } from "@yomi/db"
+import { checkConsent } from "./privacy/checks.js"
 
 interface McpSession {
   transport: StreamableHTTPServerTransport
@@ -11,6 +20,12 @@ interface McpSession {
 const sessions = new Map<string, McpSession>()
 
 const SESSION_TTL_MS = 30 * 60 * 1000
+const EMBEDDING_DIMENSIONS = 1536
+const MEMORY_CANDIDATES = Math.max(
+  5,
+  Number.parseInt(process.env["MEMORY_CANDIDATES"] ?? "30", 10) || 30,
+)
+const MEMORY_RRF_K = Math.max(1, Number.parseInt(process.env["MEMORY_RRF_K"] ?? "60", 10) || 60)
 
 function reapStaleSessions(): void {
   const now = Date.now()
@@ -22,15 +37,315 @@ function reapStaleSessions(): void {
   }
 }
 
-function createServer(): Server {
+function clean(value: unknown, max: number): string {
+  return String(value ?? "")
+    .replace(/\r/g, "")
+    .replace(/data:image\/[a-zA-Z]+;base64,[A-Za-z0-9+/=]+/g, "[redacted image]")
+    .replace(/[A-Za-z0-9+/=]{400,}/g, "[redacted base64]")
+    .replace(/\n{3,}/g, "\n\n")
+    .slice(0, max)
+    .trim()
+}
+
+function clampLimit(value: unknown, fallback: number, max: number): number {
+  const n = Number.parseInt(String(value ?? ""), 10)
+  if (!Number.isFinite(n) || n <= 0) return fallback
+  return Math.min(n, max)
+}
+
+function hash(value: string): string {
+  return createHash("sha256").update(value).digest("hex")
+}
+
+function vectorLiteral(values: number[]): string {
+  return `[${values.map((v) => (Number.isFinite(v) ? v.toFixed(8) : "0")).join(",")}]`
+}
+
+async function embedText(input: string): Promise<number[]> {
+  if (!input.trim()) return []
+  const apiKey = process.env["OPENAI_API_KEY"]
+  if (!apiKey) return []
+  const baseUrl = (process.env["OPENAI_BASE_URL"] ?? "https://api.openai.com/v1").replace(/\/+$/, "")
+  const model = process.env["OPENAI_EMBEDDING_MODEL"] ?? "text-embedding-3-small"
+  const res = await fetch(`${baseUrl}/embeddings`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model, input }),
+  })
+  if (!res.ok) return []
+  const body = (await res.json()) as { data?: { embedding?: number[] }[] }
+  const embedding = body.data?.[0]?.embedding
+  return Array.isArray(embedding) && embedding.length === EMBEDDING_DIMENSIONS ? embedding : []
+}
+
+async function handleMemorySearch(
+  userId: string,
+  args: Record<string, unknown> | undefined,
+): Promise<{ content: { type: "text"; text: string }[] }> {
+  const consent = await checkConsent(userId, "memory")
+  if (!consent.allowed) {
+    return { content: [{ type: "text", text: `Memory consent denied: ${consent.reason}` }] }
+  }
+
+  const query = clean(args?.query, 400)
+  const limit = clampLimit(args?.limit, 8, 25)
+  const maxChars = clampLimit(args?.maxChars, 4000, 20_000)
+
+  type MemorySearchRow = typeof memoryEntries.$inferSelect & {
+    score?: number
+    matchedBy?: string[]
+  }
+  let rows: MemorySearchRow[] = []
+
+  if (!query) {
+    rows = (await db
+      .select()
+      .from(memoryEntries)
+      .where(
+        and(
+          eq(memoryEntries.userId, userId),
+          eq(memoryEntries.status, "active"),
+          eq(memoryEntries.isLatest, true),
+        ),
+      )
+      .orderBy(desc(memoryEntries.isStatic), desc(memoryEntries.confidence), desc(memoryEntries.updatedAt))
+      .limit(limit)) as MemorySearchRow[]
+  } else {
+    const queryEmbedding = await embedText(query).catch(() => [])
+    const vecSql = queryEmbedding.length
+      ? sql`
+        vec as (
+          select me.memory_id, row_number() over (order by me.embedding <=> ${vectorLiteral(queryEmbedding)}::vector) as rnk
+          from memory_embeddings me
+          where me.user_id = ${userId}
+          order by me.embedding <=> ${vectorLiteral(queryEmbedding)}::vector
+          limit ${MEMORY_CANDIDATES}
+        ),`
+      : sql`
+        vec as (
+          select null::uuid as memory_id, null::bigint as rnk
+          where false
+        ),`
+
+    const result = await db.execute(sql`
+      with ${vecSql}
+      fts as (
+        select e.id as memory_id,
+               row_number() over (order by ts_rank_cd(e.content_tsv, websearch_to_tsquery('english', ${query})) desc) as rnk
+        from memory_entries e
+        where e.user_id = ${userId}
+          and e.status = 'active'
+          and e.is_latest = true
+          and e.content_tsv @@ websearch_to_tsquery('english', ${query})
+        limit ${MEMORY_CANDIDATES}
+      ),
+      meta as (
+        select e.id as memory_id,
+               row_number() over (order by e.is_static desc, e.confidence desc, e.updated_at desc) as rnk
+        from memory_entries e
+        where e.user_id = ${userId}
+          and e.status = 'active'
+          and e.is_latest = true
+          and (
+            e.topic ilike ${`%${query}%`} or
+            e.summary ilike ${`%${query}%`} or
+            e.content ilike ${`%${query}%`} or
+            e.kind ilike ${`%${query}%`} or
+            e.scope ilike ${`%${query}%`} or
+            e.source_path ilike ${`%${query}%`}
+          )
+        limit ${MEMORY_CANDIDATES}
+      ),
+      fused as (
+        select memory_id,
+               sum(1.0 / (${MEMORY_RRF_K} + rnk)) as score,
+               array_agg(source) as matched_by
+        from (
+          select memory_id, rnk, 'vector'::text as source from vec where memory_id is not null
+          union all
+          select memory_id, rnk, 'full_text'::text as source from fts
+          union all
+          select memory_id, rnk, 'metadata'::text as source from meta
+        ) u
+        group by memory_id
+        order by score desc
+        limit ${MEMORY_CANDIDATES}
+      )
+      select
+        e.id as "id",
+        e.user_id as "userId",
+        e.custom_id as "customId",
+        e.content_hash as "contentHash",
+        e.kind as "kind",
+        e.scope as "scope",
+        e.topic as "topic",
+        e.summary as "summary",
+        e.content as "content",
+        e.status as "status",
+        e.confidence as "confidence",
+        e.source_type as "sourceType",
+        e.source_path as "sourcePath",
+        e.version as "version",
+        e.is_latest as "isLatest",
+        e.is_static as "isStatic",
+        e.root_memory_id as "rootMemoryId",
+        e.parent_memory_id as "parentMemoryId",
+        e.forget_after as "forgetAfter",
+        e.metadata as "metadata",
+        e.created_at as "createdAt",
+        e.updated_at as "updatedAt",
+        f.score as "score",
+        f.matched_by as "matchedBy"
+      from fused f
+      join memory_entries e on e.id = f.memory_id
+      order by e.is_static desc, f.score desc, e.confidence desc, e.updated_at desc
+      limit ${limit}
+    `)
+    rows = (Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? [])) as MemorySearchRow[]
+  }
+
+  const memoryLines: string[] = []
+  let used = 0
+  for (const row of rows) {
+    const serialized = `${row.kind}: ${row.topic}\n${row.summary ? `${row.summary}\n` : ""}${row.content}`
+    if (used + serialized.length > maxChars) break
+    memoryLines.push(
+      `[${row.kind}] ${row.topic}${row.score != null ? ` (score: ${row.score.toFixed(4)})` : ""}${row.matchedBy ? ` [${row.matchedBy.join(", ")}]` : ""}
+  ${row.summary ? `${row.summary}\n  ` : ""}${row.content}`,
+    )
+    used += serialized.length
+  }
+
+  return {
+    content: [
+      {
+        type: "text",
+        text: memoryLines.length > 0 ? memoryLines.join("\n---\n") : "No memories found.",
+      },
+    ],
+  }
+}
+
+async function handleMemoryGetProfile(
+  userId: string,
+  args: Record<string, unknown> | undefined,
+): Promise<{ content: { type: "text"; text: string }[] }> {
+  const consent = await checkConsent(userId, "memory")
+  if (!consent.allowed) {
+    return { content: [{ type: "text", text: `Memory consent denied: ${consent.reason}` }] }
+  }
+
+  const query = clean(args?.query, 400)
+  const limit = clampLimit(args?.limit, 24, 80)
+
+  const baseWhere = and(
+    eq(memoryEntries.userId, userId),
+    eq(memoryEntries.status, "active"),
+    eq(memoryEntries.isLatest, true),
+  )
+  const [staticRows, dynamicRows] = await Promise.all([
+    db
+      .select()
+      .from(memoryEntries)
+      .where(and(baseWhere, eq(memoryEntries.isStatic, true)))
+      .orderBy(desc(memoryEntries.confidence), desc(memoryEntries.updatedAt))
+      .limit(limit),
+    db
+      .select()
+      .from(memoryEntries)
+      .where(and(baseWhere, eq(memoryEntries.isStatic, false)))
+      .orderBy(desc(memoryEntries.confidence), desc(memoryEntries.updatedAt))
+      .limit(limit),
+  ])
+
+  const relevant = query
+    ? await db
+        .select()
+        .from(memoryEntries)
+        .where(
+          and(
+            baseWhere,
+            or(
+              ilike(memoryEntries.topic, `%${query}%`),
+              ilike(memoryEntries.content, `%${query}%`),
+              ilike(memoryEntries.summary, `%${query}%`),
+            ),
+          ),
+        )
+        .orderBy(desc(memoryEntries.confidence), desc(memoryEntries.updatedAt))
+        .limit(Math.min(limit, 12))
+    : []
+
+  const parts: string[] = []
+  if (staticRows.length > 0) {
+    parts.push("=== Static Profile ===")
+    for (const r of staticRows) parts.push(`- ${r.summary || r.content}`)
+  }
+  if (dynamicRows.length > 0) {
+    parts.push("=== Dynamic Profile ===")
+    for (const r of dynamicRows) parts.push(`- ${r.summary || r.content}`)
+  }
+  if (relevant.length > 0) {
+    parts.push("=== Relevant Memories ===")
+    for (const r of relevant) parts.push(`- [${r.kind}] ${r.topic}: ${r.summary || r.content}`)
+  }
+
+  return {
+    content: [
+      {
+        type: "text",
+        text: parts.length > 0 ? parts.join("\n") : "No profile memories found.",
+      },
+    ],
+  }
+}
+
+function createServer(userId: string): Server {
   const server = new Server(
     { name: "yomi", version: "0.1.0" },
     { capabilities: { tools: {} } },
   )
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: [],
+    tools: [
+      {
+        name: "memory_search",
+        description: "Search the user's memory using hybrid vector+FTS+metadata search. Returns ranked memory entries.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            query: { type: "string", description: "Search query (empty returns recent memories)" },
+            limit: { type: "number", description: "Max results (1-25, default 8)" },
+            maxChars: { type: "number", description: "Max total characters (100-20000, default 4000)" },
+          },
+        },
+      },
+      {
+        name: "memory_get_profile",
+        description: "Fetch the user's static and dynamic profile memories.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            query: { type: "string", description: "Optional filter query for relevant memories" },
+            limit: { type: "number", description: "Max results per section (1-80, default 24)" },
+          },
+        },
+      },
+    ],
   }))
+
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    const { name, arguments: args } = request.params
+
+    switch (name) {
+      case "memory_search":
+        return handleMemorySearch(userId, (args ?? {}) as Record<string, unknown>)
+      case "memory_get_profile":
+        return handleMemoryGetProfile(userId, (args ?? {}) as Record<string, unknown>)
+      default:
+        throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`)
+    }
+  })
 
   return server
 }
@@ -48,7 +363,7 @@ export async function handleMcpPost(
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => crypto.randomUUID(),
     })
-    const server = createServer()
+    const server = createServer(userId)
     await server.connect(transport)
     session = { transport, userId, createdAt: Date.now() }
 

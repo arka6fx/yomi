@@ -1,5 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test"
-import { Hono } from "hono"
+import { describe, it, expect, beforeEach, mock } from "bun:test"
 
 let mockAuthSession: { user: { id: string }; session: { id: string } } | null = null
 
@@ -7,13 +6,171 @@ mock.module("../auth.js", () => ({
   getAuth: () => ({ api: { getSession: async () => mockAuthSession } }),
 }))
 
+const mockEntries = [
+  {
+    id: "m1",
+    userId: "u1",
+    customId: null,
+    contentHash: "abc",
+    kind: "fact",
+    scope: "global",
+    topic: "user-preference",
+    summary: "User likes tea",
+    content: "The user prefers tea over coffee, especially green tea.",
+    status: "active",
+    confidence: 90,
+    sourceType: null,
+    sourcePath: null,
+    version: 1,
+    isLatest: true,
+    isStatic: true,
+    rootMemoryId: null,
+    parentMemoryId: null,
+    forgetAfter: null,
+    metadata: null,
+    createdAt: new Date("2026-01-01"),
+    updatedAt: new Date("2026-01-01"),
+  },
+  {
+    id: "m2",
+    userId: "u1",
+    customId: null,
+    contentHash: "def",
+    kind: "fact",
+    scope: "global",
+    topic: "work",
+    summary: "Works at Acme Corp",
+    content: "Software engineer at Acme Corp since 2024.",
+    status: "active",
+    confidence: 80,
+    sourceType: null,
+    sourcePath: null,
+    version: 1,
+    isLatest: true,
+    isStatic: true,
+    rootMemoryId: null,
+    parentMemoryId: null,
+    forgetAfter: null,
+    metadata: null,
+    createdAt: new Date("2026-01-02"),
+    updatedAt: new Date("2026-01-02"),
+  },
+  {
+    id: "m3",
+    userId: "u1",
+    customId: null,
+    contentHash: "ghi",
+    kind: "preference",
+    scope: "global",
+    topic: "food",
+    summary: null,
+    content: "Enjoys Italian cuisine, especially pasta.",
+    status: "active",
+    confidence: 70,
+    sourceType: null,
+    sourcePath: null,
+    version: 1,
+    isLatest: true,
+    isStatic: false,
+    rootMemoryId: null,
+    parentMemoryId: null,
+    forgetAfter: null,
+    metadata: null,
+    createdAt: new Date("2026-01-03"),
+    updatedAt: new Date("2026-01-03"),
+  },
+]
+
+let executedQueries: unknown[] = []
+
+mock.module("@yomi/db", () => ({
+  db: {
+    select: () => ({
+      from: () => ({
+        where: () => ({
+          orderBy: () => ({
+            limit: () => Promise.resolve(mockEntries),
+          }),
+        }),
+      }),
+    }),
+    execute: (query: unknown) => {
+      executedQueries.push(query)
+      return Promise.resolve({ rows: mockEntries.map((e) => ({ ...e, score: 0.5, matchedBy: ["vector"] })) })
+    },
+    delete: () => ({
+      where: () => Promise.resolve(),
+    }),
+    insert: () => ({
+      values: () => Promise.resolve(),
+    }),
+  },
+  memoryEmbeddings: { userId: {}, memoryId: {}, embedding: {} },
+  memoryEntries: {
+    __name: "memory_entries",
+    userId: {},
+    id: {},
+    customId: {},
+    contentHash: {},
+    kind: {},
+    scope: {},
+    topic: {},
+    summary: {},
+    content: {},
+    status: {},
+    confidence: {},
+    sourceType: {},
+    sourcePath: {},
+    version: {},
+    isLatest: {},
+    isStatic: {},
+    rootMemoryId: {},
+    parentMemoryId: {},
+    forgetAfter: {},
+    metadata: {},
+    createdAt: {},
+    updatedAt: {},
+  },
+}))
+
+mock.module("../services/privacy/checks.js", () => ({
+  checkConsent: async () => ({ allowed: true, reason: null, decided: true }),
+}))
+
 beforeEach(() => {
   mockAuthSession = null
+  executedQueries = []
 })
 
 async function mcpApp() {
   const { mcpRouter } = await import("./mcp.js")
-  return new Hono().route("/api/mcp", mcpRouter)
+  return new (await import("hono")).Hono().route("/api/mcp", mcpRouter)
+}
+
+async function rpcCall(
+  app: ReturnType<typeof Hono.prototype.route>,
+  method: string,
+  params: Record<string, unknown>,
+  sessionId?: string,
+) {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json, text/event-stream",
+    authorization: "Bearer test-token",
+  }
+  if (sessionId) headers["mcp-session-id"] = sessionId
+
+  const res = await app.request("/api/mcp", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method,
+      params,
+    }),
+  })
+  return res
 }
 
 describe("MCP server endpoint", () => {
@@ -21,9 +178,7 @@ describe("MCP server endpoint", () => {
     const app = await mcpApp()
     const res = await app.request("/api/mcp", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         jsonrpc: "2.0",
         id: 1,
@@ -42,43 +197,28 @@ describe("MCP server endpoint", () => {
     const app = await mcpApp()
     const res = await app.request("/api/mcp", {
       method: "GET",
-      headers: {
-        "mcp-session-id": "some-id",
-      },
+      headers: { "mcp-session-id": "some-id" },
     })
     expect(res.status).toBe(401)
   })
 
-  it("can initialize and discover empty tools", async () => {
+  it("can initialize and discover tools", async () => {
     mockAuthSession = { user: { id: "u1" }, session: { id: "s1" } }
     const app = await mcpApp()
 
-    const res = await app.request("/api/mcp", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json, text/event-stream",
-        authorization: "Bearer test-token",
-      },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: 1,
-        method: "initialize",
-        params: {
-          protocolVersion: "2024-11-05",
-          capabilities: { tools: {} },
-          clientInfo: { name: "test", version: "1" },
-        },
-      }),
+    const initRes = await rpcCall(app, "initialize", {
+      protocolVersion: "2024-11-05",
+      capabilities: { tools: {} },
+      clientInfo: { name: "test", version: "1" },
     })
 
-    expect(res.status).toBe(200)
-    const sessionId = res.headers.get("mcp-session-id")
+    expect(initRes.status).toBe(200)
+    const sessionId = initRes.headers.get("mcp-session-id")
     expect(sessionId).toBeTruthy()
 
-    const body = await res.text()
-    expect(body).toContain("protocolVersion")
-    expect(body).toContain("yomi")
+    const initBody = await initRes.text()
+    expect(initBody).toContain("protocolVersion")
+    expect(initBody).toContain("yomi")
 
     const notifRes = await app.request("/api/mcp", {
       method: "POST",
@@ -95,25 +235,51 @@ describe("MCP server endpoint", () => {
     })
     expect(notifRes.status).toBe(202)
 
-    const listRes = await app.request("/api/mcp", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json, text/event-stream",
-        authorization: "Bearer test-token",
-        "mcp-session-id": sessionId!,
-      },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: 2,
-        method: "tools/list",
-        params: {},
-      }),
-    })
-
+    const listRes = await rpcCall(app, "tools/list", {}, sessionId!)
     expect(listRes.status).toBe(200)
     const listBody = await listRes.text()
-    expect(listBody).toContain("tools")
+    expect(listBody).toContain("memory_search")
+    expect(listBody).toContain("memory_get_profile")
+  })
+
+  it("calls memory_search and returns results", async () => {
+    mockAuthSession = { user: { id: "u1" }, session: { id: "s1" } }
+    const app = await mcpApp()
+
+    const initRes = await rpcCall(app, "initialize", {
+      protocolVersion: "2024-11-05",
+      capabilities: { tools: {} },
+      clientInfo: { name: "test", version: "1" },
+    })
+    const sessionId = initRes.headers.get("mcp-session-id")!
+
+    await rpcCall(app, "notifications/initialized", {}, sessionId)
+
+    const callRes = await rpcCall(app, "tools/call", { name: "memory_search", arguments: { query: "tea" } }, sessionId)
+    expect(callRes.status).toBe(200)
+    const body = await callRes.text()
+    expect(body).toContain("content")
+    expect(body).toContain("text")
+  })
+
+  it("calls memory_get_profile and returns profile", async () => {
+    mockAuthSession = { user: { id: "u1" }, session: { id: "s1" } }
+    const app = await mcpApp()
+
+    const initRes = await rpcCall(app, "initialize", {
+      protocolVersion: "2024-11-05",
+      capabilities: { tools: {} },
+      clientInfo: { name: "test", version: "1" },
+    })
+    const sessionId = initRes.headers.get("mcp-session-id")!
+
+    await rpcCall(app, "notifications/initialized", {}, sessionId)
+
+    const callRes = await rpcCall(app, "tools/call", { name: "memory_get_profile", arguments: {} }, sessionId)
+    expect(callRes.status).toBe(200)
+    const body = await callRes.text()
+    expect(body).toContain("content")
+    expect(body).toContain("text")
   })
 
   it("requires mcp-session-id for GET", async () => {
@@ -121,9 +287,7 @@ describe("MCP server endpoint", () => {
     const app = await mcpApp()
     const res = await app.request("/api/mcp", {
       method: "GET",
-      headers: {
-        authorization: "Bearer test-token",
-      },
+      headers: { authorization: "Bearer test-token" },
     })
     expect(res.status).toBe(400)
   })
@@ -133,9 +297,7 @@ describe("MCP server endpoint", () => {
     const app = await mcpApp()
     const res = await app.request("/api/mcp", {
       method: "PUT",
-      headers: {
-        authorization: "Bearer test-token",
-      },
+      headers: { authorization: "Bearer test-token" },
     })
     expect(res.status).toBe(405)
   })
