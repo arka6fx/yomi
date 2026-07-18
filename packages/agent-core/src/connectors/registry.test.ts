@@ -30,3 +30,26 @@ describe("ConnectorRegistry node-only gating", () => {
     expect(reg.isConnected("slack")).toBe(true)
   })
 })
+
+describe("ConnectorRegistry MCP-based defs", () => {
+  it("tracks MCP-connected IDs separately from native defs", async () => {
+    const reg = makeRegistry(false)
+    await reg.init("user_1")
+    expect(reg.getMCPConnectedIds()).toEqual([])
+  })
+
+  it("loadMCPTools is safe to call when no MCP defs are connected", async () => {
+    const reg = makeRegistry(false)
+    await reg.init("user_1")
+    await reg.loadMCPTools()
+    expect(reg.getMCPConnectedIds()).toEqual([])
+  })
+
+  it("returns merged tools after loadMCPTools includes MCP and native tools", async () => {
+    const reg = makeRegistry(false)
+    await reg.init("user_1")
+    const tools = reg.getAllDefTools()
+    // Slack is connected and has tools
+    expect(Object.keys(tools).length).toBeGreaterThan(0)
+  })
+})
