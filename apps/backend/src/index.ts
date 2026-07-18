@@ -20,6 +20,7 @@ import { adminRouter } from "./routes/admin.js"
 import { conversationRouter } from "./routes/conversation.js"
 import { statusRouter } from "./routes/status.js"
 import { privacyRouter } from "./routes/privacy.js"
+import { mcpRouter } from "./routes/mcp.js"
 import "./connectors/defs/index.js" // registers all ConnectorDefs at startup
 import { getDefaultGateway } from "./gateway/gateway-runner.js"
 import { sql } from "drizzle-orm"
@@ -125,6 +126,7 @@ app.route("/api/admin", adminRouter)
 app.route("/api/conversation", conversationRouter)
 app.route("/api/status", statusRouter)
 app.route("/api/privacy", privacyRouter)
+app.route("/api/mcp", mcpRouter)
 
 export function startGateway(): Promise<void> {
   const gateway = getDefaultGateway()
