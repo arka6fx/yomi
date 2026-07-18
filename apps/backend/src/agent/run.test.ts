@@ -63,6 +63,16 @@ mock.module("@yomi/db", () => ({
 mock.module("@yomi/agent-core", () => ({
   createModel: (model: string) => model,
   makeComposioLinearDef: () => ({ id: "linear", tools: () => ({}) }),
+  makeComposioGitHubDef: () => ({ id: "github", tools: () => ({}) }),
+  makeComposioSlackDef: () => ({ id: "slack", tools: () => ({}) }),
+  makeComposioNotionDef: () => ({ id: "notion", tools: () => ({}) }),
+  makeComposioGmailDef: () => ({ id: "google", tools: () => ({}) }),
+  makeComposioCalendarDef: () => ({ id: "google-calendar", tools: () => ({}) }),
+  makeComposioDriveDef: () => ({ id: "google-drive", tools: () => ({}) }),
+  makeComposioClassroomDef: () => ({ id: "google-classroom", tools: () => ({}) }),
+  makeComposioTasksDef: () => ({ id: "google-tasks", tools: () => ({}) }),
+  makeComposioContactsDef: () => ({ id: "google-contacts", tools: () => ({}) }),
+  makeComposioMeetDef: () => ({ id: "google-meet", tools: () => ({}) }),
   ConnectorRegistry: class {
     async init() {}
   },
