@@ -1,4 +1,4 @@
-export const PRIVACY_POLICY_VERSION = "2026-07-04"
+export const PRIVACY_POLICY_VERSION = "2026-07-18"
 export const TERMS_VERSION = "2026-07-04"
 export const CONSENT_VERSION = "2026-07-04"
 

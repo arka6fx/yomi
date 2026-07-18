@@ -1,6 +1,7 @@
-import { githubDef } from "@yomi/agent-core"
+import { githubDef, makeComposioGitHubDef, isComposioBacked } from "@yomi/agent-core"
 import type { BackendConnectorDef } from "../types.js"
 import { registerConnectorDef } from "../registry.js"
+import { createComposioRestExecutor } from "../composio-executor.js"
 
 export const backendGithubDef: BackendConnectorDef = {
   ...githubDef,
@@ -19,4 +20,9 @@ export const backendGithubDef: BackendConnectorDef = {
   },
 }
 
-registerConnectorDef(backendGithubDef)
+export const backendComposioGitHubDef: BackendConnectorDef = {
+  ...makeComposioGitHubDef(createComposioRestExecutor()),
+  getDisplayName: async () => "GitHub (Composio)",
+}
+
+registerConnectorDef(isComposioBacked("github") ? backendComposioGitHubDef : backendGithubDef)
