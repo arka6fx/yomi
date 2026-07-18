@@ -23,12 +23,12 @@ function signState(payload: string): string {
 }
 
 // Encodes userId + timestamp with an HMAC signature for CSRF protection.
-function encodeState(userId: string): string {
+export function encodeState(userId: string): string {
   const payload = Buffer.from(JSON.stringify({ userId, ts: Date.now() })).toString("base64url")
   return `${payload}.${signState(payload)}`
 }
 
-function decodeState(state: string): { userId: string; ts: number } {
+export function decodeState(state: string): { userId: string; ts: number } {
   const [payload, signature] = state.split(".")
   if (!payload || !signature) throw new Error("invalid state format")
   const expected = signState(payload)
