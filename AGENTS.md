@@ -2,8 +2,9 @@
 
 AI productivity assistant. Connects to Google Workspace (Gmail, Calendar, Drive,
 Classroom, Tasks, Contacts, Meet) and GitHub, Slack, Notion, Linear, and more.
-Accepts web/dashboard and Telegram messages. Backend-first for durable memory
-and connector agents.
+You talk to Yomi on Telegram (text, voice, images); the web app is a management
+dashboard (account linking, schedules, memory, billing) — not a chat surface.
+Backend-first for durable memory and connector agents.
 
 ---
 
@@ -132,7 +133,7 @@ Per-feature monthly caps were removed; connectors are unlimited on every plan.
 | Pro     | $14.99/mo | 2 500                  |
 | Max     | $39.99/mo | 10 000                 |
 
-Credit costs: fast chat 1, image/screen analyze 1, voice 2/min, agent run 3,
+Credit costs: fast chat 1, image analyze 1, voice 2/min, agent run 3,
 Telegram message 3. Tune from `ai_usage_events` telemetry; real API cost is
 recorded in `totalApiCostMicros` via `@yomi/shared/ai-pricing`.
 
@@ -183,7 +184,8 @@ The frontend (Cloudflare Worker) is still manual:
 cd apps/landing && bun run deploy:production
 ```
 
-Desktop client code and installer release workflows do not live in this repo.
+The desktop client has been retired (see `docs/adr/0002-retire-desktop-telegram-only.md`);
+Yomi's only interaction surface is Telegram, managed via the web dashboard.
 
 ---
 

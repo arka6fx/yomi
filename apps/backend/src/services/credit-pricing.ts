@@ -9,7 +9,7 @@ export type UsagePricingInput = {
   outputTokens?: number
 }
 
-// Flat cost per interaction TYPE, tiered by real cost. A fast chat/screen answer
+// Flat cost per interaction TYPE, tiered by real cost. A fast chat/image answer
 // is one LLM call; an agent run (a Telegram message) does
 // multi-step tool work, so it costs more. Tune from ai_usage_events telemetry.
 const CREDIT_COSTS: Record<UsageCreditKind, number> = {
