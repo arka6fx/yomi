@@ -1,4 +1,9 @@
-import { makeComposioLinearDef, makeComposioGitHubDef, makeComposioSlackDef, makeComposioNotionDef, type ConnectorDef, type ComposioExecutor } from "@yomi/agent-core"
+import {
+  makeComposioLinearDef, makeComposioGitHubDef, makeComposioSlackDef, makeComposioNotionDef,
+  makeComposioGmailDef, makeComposioCalendarDef, makeComposioDriveDef, makeComposioClassroomDef,
+  makeComposioTasksDef, makeComposioContactsDef, makeComposioMeetDef,
+  type ConnectorDef, type ComposioExecutor,
+} from "@yomi/agent-core"
 import { createComposioRestExecutor } from "./composio-executor.js"
 
 // Composio-backed defs the backend can serve, keyed by connector id, each wired
@@ -15,5 +20,12 @@ export function buildComposioDefs(executor?: ComposioExecutor): Record<string, C
     github: makeComposioGitHubDef(exec),
     slack: makeComposioSlackDef(exec),
     notion: makeComposioNotionDef(exec),
+    google: makeComposioGmailDef(exec),
+    "google-calendar": makeComposioCalendarDef(exec),
+    "google-drive": makeComposioDriveDef(exec),
+    "google-classroom": makeComposioClassroomDef(exec),
+    "google-tasks": makeComposioTasksDef(exec),
+    "google-contacts": makeComposioContactsDef(exec),
+    "google-meet": makeComposioMeetDef(exec),
   }
 }

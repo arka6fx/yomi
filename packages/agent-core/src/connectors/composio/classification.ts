@@ -120,6 +120,118 @@ export const COMPOSIO_RISK_MAP: Record<string, Record<string, ActionRisk>> = {
     NOTION_ARCHIVE_NOTION_PAGE: "irreversible",
     NOTION_DELETE_BLOCK: "irreversible",
   },
+  gmail: {
+    // Reads — pass straight through.
+    GMAIL_SEARCH_GMAIL: "read",
+    GMAIL_GET_MAIL: "read",
+    GMAIL_GET_THREAD: "read",
+    GMAIL_LIST_LABELS: "read",
+    GMAIL_LIST_DRAFTS: "read",
+    GMAIL_GET_ATTACHMENT: "read",
+
+    // Writes — gated for approval.
+    GMAIL_MARK_AS_READ: "write",
+    GMAIL_MARK_AS_UNREAD: "write",
+    GMAIL_ARCHIVE_EMAIL: "write",
+    GMAIL_TRASH_EMAIL: "write",
+    GMAIL_CREATE_LABEL: "write",
+    GMAIL_MODIFY_LABELS: "write",
+    GMAIL_CREATE_DRAFT: "write",
+
+    // Sends — gated, flagged as sending.
+    GMAIL_SEND_EMAIL: "send",
+    GMAIL_REPLY_TO_EMAIL: "send",
+    GMAIL_SEND_DRAFT: "send",
+
+    // Irreversible — gated, flagged as unrecoverable.
+    GMAIL_DELETE_EMAIL: "irreversible",
+  },
+  googlecalendar: {
+    // Reads — pass straight through.
+    GOOGLECALENDAR_LIST_EVENTS: "read",
+    GOOGLECALENDAR_GET_EVENT: "read",
+    GOOGLECALENDAR_LIST_CALENDARS: "read",
+    GOOGLECALENDAR_GET_FREE_BUSY: "read",
+
+    // Writes — gated for approval.
+    GOOGLECALENDAR_CREATE_EVENT: "write",
+    GOOGLECALENDAR_QUICK_ADD_EVENT: "write",
+    GOOGLECALENDAR_UPDATE_EVENT: "write",
+
+    // Irreversible — gated, flagged as unrecoverable.
+    GOOGLECALENDAR_DELETE_EVENT: "irreversible",
+  },
+  googledrive: {
+    // Reads — pass straight through.
+    GOOGLEDRIVE_SEARCH_FILES: "read",
+    GOOGLEDRIVE_LIST_FILES: "read",
+    GOOGLEDRIVE_GET_FILE: "read",
+    GOOGLEDRIVE_READ_FILE: "read",
+    GOOGLEDRIVE_DOWNLOAD_FILE: "read",
+    GOOGLEDRIVE_GET_STORAGE_QUOTA: "read",
+
+    // Writes — gated for approval.
+    GOOGLEDRIVE_CREATE_FILE: "write",
+    GOOGLEDRIVE_UPLOAD_FILE: "write",
+    GOOGLEDRIVE_UPDATE_FILE: "write",
+    GOOGLEDRIVE_COPY_FILE: "write",
+    GOOGLEDRIVE_SHARE_FILE: "write",
+
+    // Irreversible — gated, flagged as unrecoverable.
+    GOOGLEDRIVE_DELETE_FILE: "irreversible",
+  },
+  googleclassroom: {
+    // Reads — pass straight through.
+    GOOGLECLASSROOM_LIST_COURSES: "read",
+    GOOGLECLASSROOM_LIST_ASSIGNMENTS: "read",
+    GOOGLECLASSROOM_GET_ASSIGNMENT: "read",
+    GOOGLECLASSROOM_LIST_ANNOUNCEMENTS: "read",
+    GOOGLECLASSROOM_GET_SUBMISSION: "read",
+
+    // Writes — gated for approval.
+    GOOGLECLASSROOM_TURN_IN: "write",
+    GOOGLECLASSROOM_ATTACH_FILE: "write",
+  },
+  googletasks: {
+    // Reads — pass straight through.
+    GOOGLETASKS_LIST_TASK_LISTS: "read",
+    GOOGLETASKS_LIST_TASKS: "read",
+    GOOGLETASKS_GET_TASK: "read",
+
+    // Writes — gated for approval.
+    GOOGLETASKS_CREATE_TASK: "write",
+    GOOGLETASKS_UPDATE_TASK: "write",
+    GOOGLETASKS_COMPLETE_TASK: "write",
+
+    // Irreversible — gated, flagged as unrecoverable.
+    GOOGLETASKS_DELETE_TASK: "irreversible",
+  },
+  googlecontacts: {
+    // Reads — pass straight through.
+    GOOGLECONTACTS_SEARCH_CONTACTS: "read",
+    GOOGLECONTACTS_LIST_CONTACTS: "read",
+    GOOGLECONTACTS_GET_CONTACT: "read",
+
+    // Writes — gated for approval.
+    GOOGLECONTACTS_CREATE_CONTACT: "write",
+    GOOGLECONTACTS_UPDATE_CONTACT: "write",
+
+    // Irreversible — gated, flagged as unrecoverable.
+    GOOGLECONTACTS_DELETE_CONTACT: "irreversible",
+  },
+  googlemeet: {
+    // Reads — pass straight through.
+    GOOGLEMEET_GET_SPACE: "read",
+    GOOGLEMEET_LIST_CONFERENCE_RECORDS: "read",
+    GOOGLEMEET_GET_CONFERENCE_RECORD: "read",
+    GOOGLEMEET_GET_TRANSCRIPT: "read",
+
+    // Writes — gated for approval.
+    GOOGLEMEET_CREATE_SPACE: "write",
+
+    // Irreversible — gated, flagged as unrecoverable.
+    GOOGLEMEET_END_ACTIVE_CONFERENCE: "irreversible",
+  },
   slack: {
     // Reads — pass straight through.
     SLACK_LIST_CONVERSATIONS: "read",
