@@ -13,6 +13,8 @@ import {
   handleOAuth2Callback,
   storeApiKeyCredential,
   storeConnectionString,
+  encodeState,
+  decodeState,
 } from "../connectors/executors/oauth2-executor.js"
 
 async function checkProviderHealth(
@@ -387,10 +389,10 @@ integrationsRouter.get("/connect/:id", async (c) => {
     try {
       const { initiateComposioConnection } = await import("../services/composio-connect.js")
       const base = process.env.BETTER_AUTH_BASE_URL ?? "http://localhost:3001"
-      const state = Buffer.from(JSON.stringify({ userId: user.id, ts: Date.now() })).toString(
-        "base64url",
-      )
-      const callbackUrl = `${base}/api/integrations/composio/callback/${id}?state=${state}`
+      // HMAC-signed state so the callback cannot be forged to attach a connection
+      // to another user's account (userId is trusted only after signature check).
+      const state = encodeState(user.id)
+      const callbackUrl = `${base}/api/integrations/composio/callback/${id}?state=${encodeURIComponent(state)}`
       const { redirectUrl } = await initiateComposioConnection(user.id, def, { callbackUrl })
       const accept = c.req.header("Accept") ?? ""
       if (accept.includes("application/json")) return c.json({ redirectUrl })
@@ -481,9 +483,10 @@ integrationsRouter.get("/composio/callback/:id", async (c) => {
 
   let userId: string
   try {
-    const decoded = JSON.parse(Buffer.from(stateRaw, "base64url").toString("utf8"))
+    // Verifies the HMAC signature before trusting userId — a forged/replayed
+    // state (or one issued for a different user) is rejected here.
+    const decoded = decodeState(stateRaw)
     userId = decoded.userId
-    if (!userId) throw new Error("missing userId")
     if (Date.now() - decoded.ts > 30 * 60 * 1000) throw new Error("state expired")
   } catch {
     return c.redirect(`${appUrl}/dashboard?integration_error=invalid_state`)
