@@ -13,8 +13,6 @@ For the terse operational summary of the whole system, see the repo-root
 | ---------------------------------------- | -------------------------------------------------------- |
 | [00](00-overview.md)                     | Overview — surfaces, paths, memory model                 |
 | [01](01-architecture.md)                 | Architecture — backend, landing, APIs                    |
-| [05](05-speech-stt.md)                   | Speech — STT (ElevenLabs `scribe_v2`)                    |
-| [06](06-speech-tts.md)                   | Speech — TTS (ElevenLabs `eleven_flash_v2_5`)            |
 | [09](09-harness.md)                      | Harness — prompt, tools, hooks, loop guards              |
 | [10](10-memory.md)                       | Memory — backend canonical                               |
 | [11](11-database.md)                     | Database — Neon Postgres tables                          |

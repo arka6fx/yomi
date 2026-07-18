@@ -64,18 +64,14 @@ playwright-report/
 test-results/
 .eslintcache
 
-# Electron build output and electron-vite temp configs
-apps/desktop/release/
-apps/desktop/electron.vite.config.*.mjs
-
 # Auto-generated Next.js type reference
 apps/landing/next-env.d.ts
 
 # Vendored examples (not part of Yomi workspace)
 examples/
 
-# Desktop automation research (large external repos, not part of Yomi workspace)
-DesktopAutomation/
+# Agent skills, regenerated from skills-lock.json (not committed)
+.agents/skills/
 
 # Local reference repos cloned for research
 ref/
