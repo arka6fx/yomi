@@ -76,8 +76,8 @@ export default function Image() {
           fontWeight: 400,
         }}
       >
-        AI assistant that sees your screen, hears your voice, and connects to Gmail, Calendar,
-        Drive, GitHub, Slack &amp; more.
+        AI assistant on Telegram that connects to Gmail, Calendar, Drive, GitHub, Slack &amp; more.
+        Text, talk, or send a photo.
       </div>
 
       {/* Domain */}

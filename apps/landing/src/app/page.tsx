@@ -4,9 +4,9 @@ import { LandingPage } from "@/components/landing/landing-page"
 // static prerender — LandingPage forwards ?error= to /signin client-side
 export const dynamic = "force-static"
 
-const TITLE = "Yomi: AI Productivity Assistant for Windows"
+const TITLE = "Yomi: AI Productivity Assistant on Telegram"
 const DESC =
-  "Yomi is an AI assistant for Windows that sees your screen, hears your voice, and acts across Gmail, Calendar, Drive, Classroom, Tasks, Contacts, Meet, GitHub, Slack, Notion, and Linear. Ask in plain language, approve every change."
+  "Yomi is an AI assistant on Telegram that acts across Gmail, Calendar, Drive, Classroom, Tasks, Contacts, Meet, GitHub, Slack, Notion, and Linear. Message it with text, voice, or a photo — ask in plain language, approve every change."
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -61,7 +61,7 @@ const jsonLd = {
       url: "https://getyomi.in",
 
       applicationCategory: "ProductivityApplication",
-      operatingSystem: "Windows 10, Windows 11",
+      operatingSystem: "Web-based, Telegram",
       softwareVersion: "1.0",
       offers: [
         {
@@ -94,8 +94,8 @@ const jsonLd = {
       },
       publisher: { "@id": "https://getyomi.in/#organization" },
       featureList: [
-        "Screen-aware AI responses",
-        "Voice push-to-talk",
+        "Telegram text, voice, and photo messages",
+        "Durable memory",
         "Gmail integration",
         "Google Calendar integration",
         "Google Drive integration",
@@ -107,9 +107,7 @@ const jsonLd = {
         "Slack integration",
         "Notion integration",
         "Linear integration",
-        "Telegram bot",
-        "System tray app",
-        "Local memory notepad",
+        "Web dashboard",
       ],
     },
     {
@@ -120,7 +118,7 @@ const jsonLd = {
           name: "What is Yomi?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yomi is an AI productivity assistant that runs in your Windows system tray. It sees your screen, hears your voice, and connects to Gmail, Google Calendar, Google Drive, Google Classroom, GitHub, Slack, Notion, and Linear so you can ask questions about your work in natural language.",
+            text: "Yomi is an AI productivity assistant you talk to on Telegram with text, voice notes, or photos. It connects to Gmail, Google Calendar, Google Drive, Google Classroom, GitHub, Slack, Notion, and Linear so you can ask questions about your work in natural language and have Yomi act across your apps.",
           },
         },
         {
@@ -133,10 +131,10 @@ const jsonLd = {
         },
         {
           "@type": "Question",
-          name: "What operating systems does Yomi support?",
+          name: "What devices does Yomi work on?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yomi currently supports Windows 10 and Windows 11. macOS support is planned for a future release.",
+            text: "Yomi works anywhere Telegram does — phone, tablet, or computer — with nothing to install. You manage your account, connectors, schedules, and billing from the Yomi web dashboard in any browser.",
           },
         },
         {
@@ -160,7 +158,7 @@ const jsonLd = {
           name: "Can I use Yomi from Telegram?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yes. Link your Telegram account from the Yomi dashboard and you can message the bot to run the same connector tasks you would from the desktop app — reading email, checking your calendar, creating documents — without opening your computer.",
+            text: "Yes — Telegram is how you use Yomi. Link your Telegram account from the Yomi dashboard and message the bot to run connector tasks — reading email, checking your calendar, creating documents — right from your phone.",
           },
         },
       ],
