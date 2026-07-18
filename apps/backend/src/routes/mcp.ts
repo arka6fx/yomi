@@ -1,6 +1,8 @@
 import { Hono } from "hono"
 import { getAuth } from "../auth.js"
 import { handleMcpPost, handleMcpGet, handleMcpDelete } from "../services/mcp-server.js"
+import { createPendingAction } from "../services/pending-actions.js"
+import type { PendingActionRisk } from "../services/pending-actions.js"
 
 export const mcpRouter = new Hono()
 
@@ -20,10 +22,19 @@ mcpRouter.all("*", async (c) => {
   const userId = session.user.id
   const mcpSessionId = c.req.header("mcp-session-id") ?? null
 
+  const createPendingActionFn = (input: {
+    connector: string
+    action: string
+    risk: PendingActionRisk
+    title: string
+    preview: string
+    payload: unknown
+  }) => createPendingAction({ userId, ...input })
+
   switch (c.req.method) {
     case "POST": {
       const body = await c.req.text()
-      const response = await handleMcpPost(body, mcpSessionId, userId)
+      const response = await handleMcpPost(body, mcpSessionId, userId, createPendingActionFn)
       return new Response(response.body, {
         status: response.status,
         headers: response.headers,

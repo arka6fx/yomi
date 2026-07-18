@@ -8,13 +8,29 @@ import {
 } from "@modelcontextprotocol/sdk/types.js"
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
 import { createHash } from "node:crypto"
-import { db, memoryEmbeddings, memoryEntries } from "@yomi/db"
+import { db, memoryEmbeddings, memoryEntries, schedules } from "@yomi/db"
 import { checkConsent } from "./privacy/checks.js"
+import { createPendingAction, type PendingActionRisk } from "./pending-actions.js"
+import { getAccessToken, listConnectedProviders } from "./integration-tokens.js"
+import { ConnectorRegistry } from "@yomi/agent-core"
+
+interface McpToolContext {
+  userId: string
+  createPendingAction: (input: {
+    connector: string
+    action: string
+    risk: PendingActionRisk
+    title: string
+    preview: string
+    payload: unknown
+  }) => Promise<{ id: string; status: string; message: string }>
+}
 
 interface McpSession {
   transport: StreamableHTTPServerTransport
   userId: string
   createdAt: number
+  ctx: McpToolContext
 }
 
 const sessions = new Map<string, McpSession>()
@@ -300,7 +316,269 @@ async function handleMemoryGetProfile(
   }
 }
 
-function createServer(userId: string): Server {
+async function handleMemoryAdd(
+  ctx: McpToolContext,
+  args: Record<string, unknown> | undefined,
+): Promise<{ content: { type: "text"; text: string }[] }> {
+  const consent = await checkConsent(ctx.userId, "memory")
+  if (!consent.allowed) {
+    return { content: [{ type: "text", text: `Memory consent denied: ${consent.reason}` }] }
+  }
+
+  const content = clean(args?.content ?? "", 8000)
+  const kind = clean(args?.kind ?? "fact", 40)
+  const scope = clean(args?.scope ?? "global", 80)
+  const topic = clean(args?.topic ?? "", 160)
+  const summary = args?.summary !== undefined ? clean(args.summary, 500) : undefined
+  const confidence = typeof args?.confidence === "number" ? Math.max(0, Math.min(100, args.confidence)) : 70
+  const isStatic = args?.isStatic === true
+  const customId = args?.customId !== undefined ? clean(args.customId, 200) : undefined
+
+  if (!content || !topic) {
+    return { content: [{ type: "text", text: "Both 'content' and 'topic' are required." }] }
+  }
+
+  const payload = { content, kind: kind || "fact", scope: scope || "global", topic, summary, confidence, isStatic, customId }
+
+  const result = await ctx.createPendingAction({
+    connector: "memory",
+    action: "memory_add",
+    risk: "write",
+    title: "Add a memory entry",
+    preview: `Kind: ${kind}\nScope: ${scope}\nTopic: ${topic}\nContent: ${content.slice(0, 200)}${content.length > 200 ? "..." : ""}`,
+    payload,
+  })
+
+  return {
+    content: [
+      {
+        type: "text",
+        text: result.message,
+      },
+    ],
+  }
+}
+
+async function handleMemoryForget(
+  ctx: McpToolContext,
+  args: Record<string, unknown> | undefined,
+): Promise<{ content: { type: "text"; text: string }[] }> {
+  const consent = await checkConsent(ctx.userId, "memory")
+  if (!consent.allowed) {
+    return { content: [{ type: "text", text: `Memory consent denied: ${consent.reason}` }] }
+  }
+
+  const id = args?.id !== undefined ? clean(args.id, 80) : undefined
+  const customId = args?.customId !== undefined ? clean(args.customId, 200) : undefined
+  const query = clean(args?.query ?? "", 400)
+  const hard = args?.hard === true
+
+  if (!id && !customId && !query) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: "Either 'id', 'customId', or 'query' is required.",
+        },
+      ],
+    }
+  }
+
+  const target = id || customId || query
+
+  const result = await ctx.createPendingAction({
+    connector: "memory",
+    action: "memory_forget",
+    risk: "write",
+    title: "Forget a memory entry",
+    preview: `Target: ${target}${hard ? " (hard delete)" : " (soft delete)"}`,
+    payload: { id, customId, query, hard },
+  })
+
+  return {
+    content: [
+      {
+        type: "text",
+        text: result.message,
+      },
+    ],
+  }
+}
+
+async function handleScheduleList(
+  userId: string,
+  _args: Record<string, unknown> | undefined,
+): Promise<{ content: { type: "text"; text: string }[] }> {
+  const rows = await db
+    .select()
+    .from(schedules)
+    .where(eq(schedules.userId, userId))
+    .orderBy(desc(schedules.createdAt))
+    .limit(100)
+
+  if (rows.length === 0) {
+    return { content: [{ type: "text", text: "No schedules found." }] }
+  }
+
+  const lines = rows.map(
+    (s) =>
+      `- ID: ${s.id}\n  Schedule: ${s.schedule}\n  Prompt: ${s.prompt}\n  Enabled: ${s.enabled}\n  Next run: ${s.nextRunAt?.toISOString() ?? "never"}`,
+  )
+
+  return { content: [{ type: "text", text: lines.join("\n---\n") }] }
+}
+
+async function handleScheduleCreate(
+  ctx: McpToolContext,
+  args: Record<string, unknown> | undefined,
+): Promise<{ content: { type: "text"; text: string }[] }> {
+  const schedule = clean(args?.schedule ?? "", 500)
+  const prompt = clean(args?.prompt ?? "", 5000)
+  const deliverTo = args?.deliverTo
+
+  if (!schedule) {
+    return { content: [{ type: "text", text: "Schedule is required." }] }
+  }
+  if (!prompt) {
+    return { content: [{ type: "text", text: "Prompt is required." }] }
+  }
+
+  const result = await ctx.createPendingAction({
+    connector: "schedule",
+    action: "schedule_create",
+    risk: "write",
+    title: "Create a schedule",
+    preview: `Schedule: ${schedule}\nPrompt: ${prompt.slice(0, 200)}${prompt.length > 200 ? "..." : ""}`,
+    payload: { schedule, prompt, deliverTo: Array.isArray(deliverTo) ? deliverTo : ["telegram"] },
+  })
+
+  return {
+    content: [
+      {
+        type: "text",
+        text: result.message,
+      },
+    ],
+  }
+}
+
+async function handleScheduleDelete(
+  ctx: McpToolContext,
+  args: Record<string, unknown> | undefined,
+): Promise<{ content: { type: "text"; text: string }[] }> {
+  const id = args?.id !== undefined ? clean(args.id, 80) : undefined
+
+  if (!id) {
+    return { content: [{ type: "text", text: "Schedule ID is required." }] }
+  }
+
+  const result = await ctx.createPendingAction({
+    connector: "schedule",
+    action: "schedule_delete",
+    risk: "write",
+    title: "Delete a schedule",
+    preview: `Schedule ID: ${id}`,
+    payload: { id },
+  })
+
+  return {
+    content: [
+      {
+        type: "text",
+        text: result.message,
+      },
+    ],
+  }
+}
+
+async function handleExecuteConnectorTool(
+  ctx: McpToolContext,
+  args: Record<string, unknown> | undefined,
+): Promise<{ content: { type: "text"; text: string }[] }> {
+  const connector = clean(args?.connector ?? "", 80)
+  const action = clean(args?.action ?? "", 80)
+  const toolArgs = args?.arguments as Record<string, unknown> | undefined
+
+  if (!connector) {
+    return { content: [{ type: "text", text: "Connector name is required." }] }
+  }
+  if (!action) {
+    return { content: [{ type: "text", text: "Action name is required." }] }
+  }
+
+  const connectedProviders = await listConnectedProviders(ctx.userId)
+  if (!connectedProviders.includes(connector)) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Connector "${connector}" is not connected. Connect it first at https://getyomi.in/dashboard`,
+        },
+      ],
+    }
+  }
+
+  const registry = new ConnectorRegistry({
+    excludeNodeOnly: true,
+    getAccessToken,
+    createPendingAction: async (input) => {
+      return ctx.createPendingAction({
+        ...input,
+      })
+    },
+    listConnectedProviders,
+  })
+  await registry.init(ctx.userId)
+
+  const allTools = registry.getAllDefTools()
+  const tool = Object.values(allTools).flatMap((t) => Object.values(t)).find((t) => t.name === action)
+
+  if (!tool) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Action "${action}" not found in connector "${connector}".`,
+        },
+      ],
+    }
+  }
+
+  const result = await tool.execute(toolArgs ?? {}, { toolCallId: action, messages: [] })
+
+  if (typeof result === "object" && result !== null) {
+    const record = result as Record<string, unknown>
+    if (record.error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error: ${record.error}`,
+          },
+        ],
+      }
+    }
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    }
+  }
+
+  return {
+    content: [
+      {
+        type: "text",
+        text: String(result ?? "No result"),
+      },
+    ],
+  }
+}
+
+function createServer(ctx: McpToolContext): Server {
   const server = new Server(
     { name: "yomi", version: "0.1.0" },
     { capabilities: { tools: {} } },
@@ -331,6 +609,89 @@ function createServer(userId: string): Server {
           },
         },
       },
+      {
+        name: "memory_add",
+        description: "Create or update a memory entry. Requires approval before execution.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            content: { type: "string", description: "The memory content (required)" },
+            kind: { type: "string", description: "Category: fact, preference, project, decision, etc. (default: fact)" },
+            scope: { type: "string", description: "Scope: global, project, app, session (default: global)" },
+            topic: { type: "string", description: "Topic/key for the memory (required)" },
+            summary: { type: "string", description: "Brief summary or title" },
+            confidence: { type: "number", description: "Confidence 0-100 (default: 70)" },
+            isStatic: { type: "boolean", description: "Whether this is a static profile memory" },
+            customId: { type: "string", description: "Custom ID for deduplication" },
+          },
+          required: ["content", "topic"],
+        },
+      },
+      {
+        name: "memory_forget",
+        description: "Delete a memory entry. Requires approval before execution.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            id: { type: "string", description: "Memory ID to forget (mutually exclusive with customId/query)" },
+            customId: { type: "string", description: "Custom ID to forget (mutually exclusive with id/query)" },
+            query: { type: "string", description: "Search query to find memories to forget (mutually exclusive with id/customId)" },
+            hard: { type: "boolean", description: "Hard delete instead of soft delete" },
+          },
+        },
+      },
+      {
+        name: "schedule_list",
+        description: "List the user's scheduled jobs. Read-only.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+        },
+      },
+      {
+        name: "schedule_create",
+        description: "Create a new schedule. Requires approval before execution.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            schedule: { type: "string", description: "Schedule spec (e.g., 'every day 9am', 'every Monday 10am')" },
+            prompt: { type: "string", description: "The prompt/action to run on schedule" },
+            deliverTo: {
+              type: "array",
+              items: { type: "string" },
+              description: "Delivery targets (e.g., ['telegram'])",
+            },
+          },
+          required: ["schedule", "prompt"],
+        },
+      },
+      {
+        name: "schedule_delete",
+        description: "Delete a schedule. Requires approval before execution.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            id: { type: "string", description: "Schedule ID to delete" },
+          },
+          required: ["id"],
+        },
+      },
+      {
+        name: "execute_connector_tool",
+        description: "Execute a tool from a connected connector. Read tools execute directly; write/send/paid/irreversible tools require approval.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            connector: { type: "string", description: "Connector name (e.g., 'gmail', 'google-calendar')" },
+            action: { type: "string", description: "Tool/action name to execute" },
+            arguments: {
+              type: "object",
+              description: "Arguments for the tool",
+            },
+          },
+          required: ["connector", "action"],
+        },
+      },
     ],
   }))
 
@@ -339,9 +700,21 @@ function createServer(userId: string): Server {
 
     switch (name) {
       case "memory_search":
-        return handleMemorySearch(userId, (args ?? {}) as Record<string, unknown>)
+        return handleMemorySearch(ctx.userId, (args ?? {}) as Record<string, unknown>)
       case "memory_get_profile":
-        return handleMemoryGetProfile(userId, (args ?? {}) as Record<string, unknown>)
+        return handleMemoryGetProfile(ctx.userId, (args ?? {}) as Record<string, unknown>)
+      case "memory_add":
+        return handleMemoryAdd(ctx, (args ?? {}) as Record<string, unknown>)
+      case "memory_forget":
+        return handleMemoryForget(ctx, (args ?? {}) as Record<string, unknown>)
+      case "schedule_list":
+        return handleScheduleList(ctx.userId, (args ?? {}) as Record<string, unknown>)
+      case "schedule_create":
+        return handleScheduleCreate(ctx, (args ?? {}) as Record<string, unknown>)
+      case "schedule_delete":
+        return handleScheduleDelete(ctx, (args ?? {}) as Record<string, unknown>)
+      case "execute_connector_tool":
+        return handleExecuteConnectorTool(ctx, (args ?? {}) as Record<string, unknown>)
       default:
         throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`)
     }
@@ -354,18 +727,27 @@ export async function handleMcpPost(
   body: string | null,
   mcpSessionId: string | null,
   userId: string,
+  createPendingActionFn: (input: {
+    connector: string
+    action: string
+    risk: PendingActionRisk
+    title: string
+    preview: string
+    payload: unknown
+  }) => Promise<{ id: string; status: string; message: string }>,
 ): Promise<Response> {
   reapStaleSessions()
 
   let session = mcpSessionId ? sessions.get(mcpSessionId) : undefined
 
   if (!session) {
+    const ctx: McpToolContext = { userId, createPendingAction: createPendingActionFn }
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => crypto.randomUUID(),
     })
-    const server = createServer(userId)
+    const server = createServer(ctx)
     await server.connect(transport)
-    session = { transport, userId, createdAt: Date.now() }
+    session = { transport, userId, createdAt: Date.now(), ctx }
 
     transport.onclose = () => {
       if (mcpSessionId) sessions.delete(mcpSessionId)
