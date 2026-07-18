@@ -62,6 +62,7 @@ const CHECKS = [
     ["/features", "/#features"],
     ["/pricing", "/#pricing"],
     ["/contact", "/support"],
+    ["/download", "/"],
   ].map(([path, target]) => ({
     path,
     redirect: "manual",
