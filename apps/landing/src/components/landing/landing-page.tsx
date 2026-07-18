@@ -3,13 +3,12 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { AnimatePresence, motion } from "framer-motion"
+import { motion } from "framer-motion"
 import {
   ArrowRight,
   Check,
   Crown,
   Cuboid,
-  Download,
   Loader2,
   Mic,
   Monitor,
@@ -23,69 +22,6 @@ import { useLocalPrice } from "@/lib/local-price"
 import Footer from "@/components/Footer"
 import Nav from "@/components/Nav"
 import { ConnectorIcon } from "@yomi/ui-connectors"
-
-type Platform = "mac" | "windows" | "unknown"
-
-function detectPlatform(): Platform {
-  if (typeof navigator === "undefined") return "unknown"
-  const ua = navigator.userAgent.toLowerCase()
-  if (ua.includes("mac")) return "mac"
-  if (ua.includes("win")) return "windows"
-  return "unknown"
-}
-
-interface DownloadOption {
-  label: string
-  arch: string
-  href: string
-  note?: string
-  disabled?: boolean
-}
-
-const platforms: Record<
-  Exclude<Platform, "unknown">,
-  {
-    title: string
-    icon: string
-    options: DownloadOption[]
-    instructions: string[]
-    comingSoon?: boolean
-  }
-> = {
-  mac: {
-    title: "macOS",
-    icon: "⌘",
-    comingSoon: true,
-    options: [
-      {
-        label: "macOS app",
-        arch: "Soon",
-        href: "#",
-        note: "Coming soon",
-        disabled: true,
-      },
-    ],
-    instructions: [
-      "macOS support is planned for a later release",
-      "Use the Windows installer today",
-      "Join early access to hear when macOS builds are available",
-    ],
-  },
-  windows: {
-    title: "Windows",
-    icon: "⊞",
-    options: [],
-    instructions: [
-      "Run the installer and follow the prompts",
-      "Yomi will start automatically after install",
-      "Find the Yomi icon in your system tray",
-      "Grant microphone and screen permissions when prompted",
-      "Press Ctrl+Space to start voice, or Ctrl+Enter to type",
-    ],
-  },
-}
-
-const allPlatforms: Exclude<Platform, "unknown">[] = ["mac", "windows"]
 
 function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" })
@@ -235,42 +171,17 @@ function InteractionCard({
   )
 }
 
-function WindowsMark() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="M1.5 2.25 7.25 1.5v6H1.5v-5.25ZM8.75 1.3l5.75-.8v7H8.75v-6.2ZM1.5 8.5h5.75v6L1.5 13.7V8.5ZM8.75 8.5h5.75v7l-5.75-.8V8.5Z"
-        fill="currentColor"
-      />
-    </svg>
-  )
-}
-
 export function LandingPage() {
   const [billingLoading, setBillingLoading] = useState<string | null>(null)
   const { data: session } = authClient.useSession()
   const router = useRouter()
   const localPrice = useLocalPrice()
-  const [detected, setDetected] = useState<Platform>("unknown")
-  const [active, setActive] = useState<Exclude<Platform, "unknown">>("windows")
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
-
-  useEffect(() => {
-    const p = detectPlatform()
-    setDetected(p)
-    if (p === "windows") setActive(p)
-  }, [])
-
-  // Download URL fetch removed — desktop app no longer distributed.
 
   // forward oauth error redirects (/?error=) to the signin page
   useEffect(() => {
     const code = new URLSearchParams(window.location.search).get("error")
     if (code) router.replace(`/signin?error=${encodeURIComponent(code)}`)
   }, [router])
-
-  const current = platforms[active]
-  const heroDownloadLabel = "Get for Windows"
 
   async function handlePlanClick(planKey: string) {
     if (planKey === "explore") {
@@ -917,158 +828,6 @@ export function LandingPage() {
           * Credits are a simple usage balance. Explore is a 30-day free trial; Pro and Max can buy
           extra credit packs.
         </motion.p>
-      </section>
-
-      <section id="download" className="hidden">
-        <div className="mb-14 text-center">
-          <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            Download
-          </p>
-          <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-            Get <span className="italic">Yomi</span>.
-          </h2>
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.15 }}
-            className="mt-3 text-sm text-muted-foreground"
-          >
-            {detected === "windows"
-              ? "We detected Windows. Ready to download."
-              : "Windows is available now. macOS is coming soon."}
-          </motion.p>
-        </div>
-
-        <div className="mx-auto max-w-2xl space-y-10">
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.4, delay: 0.2 }}
-            className="mx-auto flex w-fit gap-1 rounded-xl border border-border bg-muted p-1"
-          >
-            {allPlatforms.map((p) => (
-              <button
-                key={p}
-                onClick={() => setActive(p)}
-                className={`relative rounded-lg px-5 py-2 text-sm font-medium transition-colors duration-200 ${
-                  active === p ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {active === p && (
-                  <motion.span
-                    layoutId="tab-pill"
-                    className="absolute inset-0 rounded-lg border border-border bg-card shadow-sm"
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  />
-                )}
-                <span className="relative z-10">
-                  {platforms[p].icon} {platforms[p].title}
-                  {platforms[p].comingSoon && (
-                    <span className="ml-2 font-mono text-[10px] text-muted-foreground">
-                      (coming soon)
-                    </span>
-                  )}
-                  {detected === p && (
-                    <span className="ml-2 font-mono text-[10px] text-primary">(detected)</span>
-                  )}
-                </span>
-              </button>
-            ))}
-          </motion.div>
-
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={active}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.25 }}
-              className="space-y-3"
-            >
-              <h2 className="font-accent text-2xl text-foreground">{current.title} downloads</h2>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {current.options.map((opt) => {
-                  const className = `group flex items-center justify-between rounded-xl glass-card p-4 transition-colors ${
-                    opt.disabled ? "cursor-not-allowed opacity-65" : "hover:border-primary/40"
-                  }`
-                  const content = (
-                    <>
-                      <div>
-                        <div className="mb-0.5 flex items-center gap-2">
-                          <Download
-                            size={14}
-                            className={`text-muted-foreground transition-colors ${
-                              opt.disabled ? "" : "group-hover:text-primary"
-                            }`}
-                          />
-                          <p className="text-sm font-medium text-foreground">{opt.label}</p>
-                        </div>
-                        {opt.note && (
-                          <p className="pl-5 text-xs text-muted-foreground">{opt.note}</p>
-                        )}
-                      </div>
-                      <span className="rounded-lg border border-border px-2 py-1 font-mono text-xs text-muted-foreground transition-colors group-hover:border-primary/40 group-hover:text-primary">
-                        {opt.arch}
-                      </span>
-                    </>
-                  )
-                  return opt.disabled ? (
-                    <div key={opt.label} aria-disabled="true" className={className}>
-                      {content}
-                    </div>
-                  ) : (
-                    <a
-                      key={opt.label}
-                      href={opt.label === "Installer" && downloadUrl ? downloadUrl : opt.href}
-                      className={className}
-                    >
-                      {content}
-                    </a>
-                  )
-                })}
-              </div>
-
-              <div className="space-y-3 pt-4">
-                <h2 className="font-accent text-2xl text-foreground">Install instructions</h2>
-                <ol className="space-y-3">
-                  {current.instructions.map((step, i) => (
-                    <motion.li
-                      key={step}
-                      initial={{ opacity: 0, x: -8 }}
-                      whileInView={{ opacity: 1, x: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.3, delay: i * 0.06 }}
-                      className="flex items-start gap-3"
-                    >
-                      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-primary/10 font-mono text-xs text-primary">
-                        {i + 1}
-                      </span>
-                      <span className="text-sm leading-relaxed text-muted-foreground">{step}</span>
-                    </motion.li>
-                  ))}
-                </ol>
-              </div>
-            </motion.div>
-          </AnimatePresence>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="flex items-start gap-3 rounded-xl glass-card p-4"
-          >
-            <span className="mt-0.5 shrink-0 text-base leading-none text-muted-foreground">ℹ</span>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              Yomi is pre-release.{" "}
-              <Link href="/signup" className="text-primary hover:underline">
-                sign up for early access
-                <ArrowRight size={12} className="ml-0.5 inline" />
-              </Link>
-            </p>
-          </motion.div>
-        </div>
       </section>
 
       <Footer />

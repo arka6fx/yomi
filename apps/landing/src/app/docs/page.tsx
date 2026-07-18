@@ -241,7 +241,7 @@ export default function DocsPage() {
               work through your browser too.
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Feature icon={<ImageIcon size={17} />} title="Image & screen analysis">
+              <Feature icon={<ImageIcon size={17} />} title="Image analysis">
                 Upload a screenshot or photo and get grounded answers in context.
               </Feature>
               <Feature icon={<Keyboard size={17} />} title="Voice & text">
@@ -320,7 +320,7 @@ export default function DocsPage() {
                 Voice notes are transcribed, and Yomi can reply with a spoken voice message when you
                 ask.
               </Feature>
-              <Feature icon={<ImageIcon size={17} />} title="Image & screen analysis">
+              <Feature icon={<ImageIcon size={17} />} title="Image analysis">
                 Send a screenshot or photo and Yomi describes, reads, or reasons about what&apos;s
                 in it.
               </Feature>

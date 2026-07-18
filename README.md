@@ -21,8 +21,9 @@ packages/*-config/      Shared TypeScript and ESLint config
 ```
 
 The backend is canonical for account auth, billing, Telegram, connectors, and
-durable memory. Desktop client code and installer releases live outside this
-repo in the desktop release repository.
+durable memory. The desktop client has been retired — Yomi's only interaction
+surface is Telegram, managed via the web dashboard (see
+`docs/adr/0002-retire-desktop-telegram-only.md`).
 
 ## Request Paths
 

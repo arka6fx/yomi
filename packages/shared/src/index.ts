@@ -98,14 +98,6 @@ export function chunkMarkdown(content: string, opts: ChunkOptions = {}): string[
   return chunks
 }
 
-export interface ScreenImage {
-  screen: number
-  screenshot_b64: string
-  width: number
-  height: number
-  is_cursor_screen?: boolean
-}
-
 export type IntentPath = "fast" | "agent"
 
 export interface IntentClassification {
@@ -117,15 +109,12 @@ export interface IntentClassification {
 
 export interface RouterInput {
   text: string
-  screenshot_b64?: string
   history?: { role: "user" | "assistant"; text: string }[] // last 2 turns max
 }
 
 export interface FastQueryRequest {
   text?: string
   audio_b64?: string // base64-encoded WAV
-  screenshot_b64?: string
-  screenshots?: ScreenImage[]
   tts?: boolean // true = voice output; false = text only (default: true)
   plan?: Plan // controls local-only memory injection/writes
   history?: { role: "user" | "assistant"; text: string }[]
@@ -135,7 +124,6 @@ export interface FastQueryRequest {
 
 export interface AgentQueryRequest {
   text: string
-  screenshot_b64?: string
   task?: string
   tts?: boolean // true = voice output; false = text only (default: true)
   plan?: Plan // controls local-only memory injection/writes

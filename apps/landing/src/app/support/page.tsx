@@ -28,7 +28,7 @@ const channels = [
   },
   {
     title: "Security and privacy",
-    description: "Report sensitive privacy, OAuth, capture, or account safety concerns.",
+    description: "Report sensitive privacy, OAuth, data-handling, or account safety concerns.",
     href: "mailto:contact.arkagarai@gmail.com",
     label: "Email privacy",
     icon: MessageSquareText,

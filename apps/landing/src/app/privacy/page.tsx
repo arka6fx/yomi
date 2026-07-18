@@ -22,8 +22,8 @@ export default function PrivacyPage() {
           <div className="max-w-none space-y-10 text-sm leading-7 text-white/55">
             <Section title="Overview">
               <p>
-                Yomi is an AI assistant that sees your screen, hears your voice, and connects to
-                your apps: Gmail, Google Calendar, Google Drive, Google Classroom, Google Tasks,
+                Yomi is an AI assistant you talk to on Telegram — by text, voice, or images — and
+                that connects to your apps: Gmail, Google Calendar, Google Drive, Google Classroom, Google Tasks,
                 Google Contacts, Google Meet, GitHub, Notion, Slack, and Linear. It is designed to
                 be private by default: data from your connected apps is used only to answer your
                 direct queries and is not stored, shared, or used to train AI models.
@@ -173,7 +173,7 @@ export default function PrivacyPage() {
 
             <Section title="Data we never collect">
               <ul>
-                <li>Raw screenshots or screen recordings</li>
+                <li>Screen recordings or background screen captures</li>
                 <li>Raw audio recordings</li>
                 <li>
                   Prompt content or conversation history (unless you explicitly enable cloud memory)
@@ -184,9 +184,10 @@ export default function PrivacyPage() {
 
             <Section title="Data handling during queries">
               <p>
-                When you trigger a query, your screenshot and transcribed voice text are sent to our
-                LLM proxy to generate a response. Neither is stored after the request completes.
-                Yomi never captures your screen or microphone in the background.
+                When you send a message, any image you attach and your transcribed voice text are
+                sent to our LLM proxy to generate a response. Neither is stored after the request
+                completes. Yomi only processes what you send it — it never captures your screen or
+                microphone in the background.
               </p>
             </Section>
 

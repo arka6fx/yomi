@@ -4,8 +4,6 @@ import "./services/privacy/logging.js"
 import { getAuth } from "./auth.js"
 import { errorHandler } from "./middleware/error-handler.js"
 import { llmRouter } from "./routes/llm.js"
-import { sttRouter } from "./routes/stt.js"
-import { ttsRouter } from "./routes/tts.js"
 import { usageRouter } from "./routes/usage.js"
 import { billingRouter } from "./routes/billing.js"
 import { profileRouter } from "./routes/profile.js"
@@ -111,8 +109,6 @@ app.on(["GET", "POST"], "/api/auth/*", async (c) => {
 })
 
 app.route("/api/llm", llmRouter)
-app.route("/api/stt", sttRouter)
-app.route("/api/tts", ttsRouter)
 app.route("/api/usage", usageRouter)
 app.route("/api/billing", billingRouter)
 app.route("/api/user", profileRouter)
