@@ -1,6 +1,7 @@
-import { notionDef } from "@yomi/agent-core"
+import { notionDef, makeComposioNotionDef, isComposioBacked } from "@yomi/agent-core"
 import type { BackendConnectorDef } from "../types.js"
 import { registerConnectorDef } from "../registry.js"
+import { createComposioRestExecutor } from "../composio-executor.js"
 
 export const backendNotionDef: BackendConnectorDef = {
   ...notionDef,
@@ -21,4 +22,9 @@ export const backendNotionDef: BackendConnectorDef = {
   },
 }
 
-registerConnectorDef(backendNotionDef)
+export const backendComposioNotionDef: BackendConnectorDef = {
+  ...makeComposioNotionDef(createComposioRestExecutor()),
+  getDisplayName: async () => "Notion (Composio)",
+}
+
+registerConnectorDef(isComposioBacked("notion") ? backendComposioNotionDef : backendNotionDef)

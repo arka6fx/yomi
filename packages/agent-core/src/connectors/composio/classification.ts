@@ -90,6 +90,36 @@ export const COMPOSIO_RISK_MAP: Record<string, Record<string, ActionRisk>> = {
     // Irreversible — gated, and flagged as unrecoverable.
     LINEAR_DELETE_LINEAR_ISSUE: "irreversible",
   },
+  notion: {
+    // Reads — pass straight through.
+    NOTION_SEARCH_NOTION_PAGE: "read",
+    NOTION_RETRIEVE_PAGE: "read",
+    NOTION_FETCH_BLOCK_CONTENTS: "read",
+    NOTION_FETCH_DATABASE: "read",
+    NOTION_QUERY_DATABASE: "read",
+    NOTION_QUERY_DATABASE_WITH_FILTER: "read",
+    NOTION_LIST_USERS: "read",
+    NOTION_FETCH_COMMENTS: "read",
+    NOTION_LIST_FILE_UPLOADS: "read",
+    NOTION_LIST_DATA_SOURCE_TEMPLATES: "read",
+
+    // Writes — gated for approval.
+    NOTION_CREATE_NOTION_PAGE: "write",
+    NOTION_UPDATE_PAGE: "write",
+    NOTION_DUPLICATE_PAGE: "write",
+    NOTION_ADD_MULTIPLE_PAGE_CONTENT: "write",
+    NOTION_APPEND_TEXT_BLOCKS: "write",
+    NOTION_REPLACE_PAGE_CONTENT: "write",
+    NOTION_INSERT_ROW_DATABASE: "write",
+    NOTION_UPDATE_ROW_DATABASE: "write",
+    NOTION_CREATE_DATABASE: "write",
+    NOTION_UPDATE_SCHEMA_DATABASE: "write",
+    NOTION_CREATE_COMMENT: "write",
+
+    // Irreversible — gated, flagged as unrecoverable.
+    NOTION_ARCHIVE_NOTION_PAGE: "irreversible",
+    NOTION_DELETE_BLOCK: "irreversible",
+  },
   slack: {
     // Reads — pass straight through.
     SLACK_LIST_CONVERSATIONS: "read",

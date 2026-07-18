@@ -1,4 +1,4 @@
-import { makeComposioLinearDef, makeComposioGitHubDef, makeComposioSlackDef, type ConnectorDef, type ComposioExecutor } from "@yomi/agent-core"
+import { makeComposioLinearDef, makeComposioGitHubDef, makeComposioSlackDef, makeComposioNotionDef, type ConnectorDef, type ComposioExecutor } from "@yomi/agent-core"
 import { createComposioRestExecutor } from "./composio-executor.js"
 
 // Composio-backed defs the backend can serve, keyed by connector id, each wired
@@ -14,5 +14,6 @@ export function buildComposioDefs(executor?: ComposioExecutor): Record<string, C
     linear: makeComposioLinearDef(exec),
     github: makeComposioGitHubDef(exec),
     slack: makeComposioSlackDef(exec),
+    notion: makeComposioNotionDef(exec),
   }
 }

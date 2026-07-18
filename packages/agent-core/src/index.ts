@@ -55,6 +55,11 @@ export {
   slackComposioSpecs,
   SLACK_TOOLKIT,
 } from "./connectors/composio/slack.js"
+export {
+  makeComposioNotionDef,
+  notionComposioSpecs,
+  NOTION_TOOLKIT,
+} from "./connectors/composio/notion.js"
 export type {
   Connector,
   ConnectorStatus,
