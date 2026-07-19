@@ -160,22 +160,21 @@ export const COMPOSIO_RISK_MAP: Record<string, Record<string, ActionRisk>> = {
   },
   googledrive: {
     // Reads — pass straight through.
-    GOOGLEDRIVE_SEARCH_FILES: "read",
+    GOOGLEDRIVE_FIND_FILE: "read",
     GOOGLEDRIVE_LIST_FILES: "read",
-    GOOGLEDRIVE_GET_FILE: "read",
-    GOOGLEDRIVE_READ_FILE: "read",
+    GOOGLEDRIVE_GET_FILE_METADATA: "read",
+    GOOGLEDRIVE_PARSE_FILE: "read",
     GOOGLEDRIVE_DOWNLOAD_FILE: "read",
-    GOOGLEDRIVE_GET_STORAGE_QUOTA: "read",
+    GOOGLEDRIVE_GET_ABOUT: "read",
 
     // Writes — gated for approval.
-    GOOGLEDRIVE_CREATE_FILE: "write",
-    GOOGLEDRIVE_UPLOAD_FILE: "write",
-    GOOGLEDRIVE_UPDATE_FILE: "write",
+    GOOGLEDRIVE_CREATE_FILE_FROM_TEXT: "write",
+    GOOGLEDRIVE_UPDATE_FILE_PUT: "write",
     GOOGLEDRIVE_COPY_FILE: "write",
-    GOOGLEDRIVE_SHARE_FILE: "write",
+    GOOGLEDRIVE_ADD_FILE_SHARING_PREFERENCE: "write",
 
     // Irreversible — gated, flagged as unrecoverable.
-    GOOGLEDRIVE_DELETE_FILE: "irreversible",
+    GOOGLEDRIVE_GOOGLE_DRIVE_DELETE_FOLDER_OR_FILE_ACTION: "irreversible",
   },
   // Composio's toolkit slug is "google_classroom" (underscore) — the def id and
   // classification-map key must match it exactly, or every action here falls
