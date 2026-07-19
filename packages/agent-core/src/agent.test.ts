@@ -335,3 +335,81 @@ describe("runAgentLoop loop guards", () => {
     expect(reasons).not.toContain("budget:steps")
   })
 })
+
+// A user with enough connectors connected can push the merged tool set past
+// OpenAI's 128-tool cap, which fails the whole turn with invalid_request_error
+// regardless of what was asked. capToolSet() is the stopgap.
+describe("runAgentLoop tool cap", () => {
+  function manyTools(n: number, namedTool?: string): Record<string, typeof echoTool> {
+    const tools: Record<string, typeof echoTool> = {}
+    for (let i = 0; i < n; i++) tools[`tool_${i}`] = echoTool
+    if (namedTool) tools[namedTool] = echoTool
+    return tools
+  }
+
+  function okResponse() {
+    return chatResponse({
+      choices: [{ message: { content: "ok" }, finish_reason: "stop" }],
+      usage: { prompt_tokens: 5, completion_tokens: 5 },
+    })
+  }
+
+  it("trims the tools sent to the model to at most 128", async () => {
+    const bigRegistry = { getAllDefTools: () => manyTools(150) } as unknown as ConnectorRegistry
+    const bodies: Record<string, unknown>[] = []
+    globalThis.fetch = (async (_url: unknown, init?: RequestInit) => {
+      bodies.push(JSON.parse(String(init?.body)))
+      return okResponse()
+    }) as typeof fetch
+
+    await runAgentLoop({ registry: bigRegistry, text: "hello" })
+
+    const tools = bodies[0]?.["tools"] as unknown[]
+    expect(tools.length).toBeLessThanOrEqual(128)
+  })
+
+  it("never drops extraTools even when connector tools alone exceed the cap", async () => {
+    const bigRegistry = { getAllDefTools: () => manyTools(150) } as unknown as ConnectorRegistry
+    const bodies: Record<string, unknown>[] = []
+    globalThis.fetch = (async (_url: unknown, init?: RequestInit) => {
+      bodies.push(JSON.parse(String(init?.body)))
+      return okResponse()
+    }) as typeof fetch
+
+    await runAgentLoop({ registry: bigRegistry, text: "hello", extraTools: { echo: echoTool } })
+
+    const tools = bodies[0]?.["tools"] as Array<{ function?: { name?: string } }>
+    expect(tools.length).toBeLessThanOrEqual(128)
+    expect(tools.some((t) => t.function?.name === "echo")).toBe(true)
+  })
+
+  it("prefers a connector tool the user's message actually mentions when trimming", async () => {
+    const bigRegistry = {
+      getAllDefTools: () => manyTools(150, "gmail_search_gmail"),
+    } as unknown as ConnectorRegistry
+    const bodies: Record<string, unknown>[] = []
+    globalThis.fetch = (async (_url: unknown, init?: RequestInit) => {
+      bodies.push(JSON.parse(String(init?.body)))
+      return okResponse()
+    }) as typeof fetch
+
+    await runAgentLoop({ registry: bigRegistry, text: "search my gmail for invoices" })
+
+    const tools = bodies[0]?.["tools"] as Array<{ function?: { name?: string } }>
+    expect(tools.some((t) => t.function?.name === "gmail_search_gmail")).toBe(true)
+  })
+
+  it("passes every tool through untouched when under the cap", async () => {
+    const smallRegistry = { getAllDefTools: () => manyTools(5) } as unknown as ConnectorRegistry
+    const bodies: Record<string, unknown>[] = []
+    globalThis.fetch = (async (_url: unknown, init?: RequestInit) => {
+      bodies.push(JSON.parse(String(init?.body)))
+      return okResponse()
+    }) as typeof fetch
+
+    await runAgentLoop({ registry: smallRegistry, text: "hello" })
+
+    const tools = bodies[0]?.["tools"] as unknown[]
+    expect(tools.length).toBe(5)
+  })
+})

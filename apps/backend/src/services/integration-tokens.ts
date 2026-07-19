@@ -134,10 +134,14 @@ export async function getAccessToken(userId: string, provider: string): Promise<
 }
 
 // Lists providers the user has connected (for building the connector registry).
+// A Composio row stuck at "initiated" (consent screen abandoned or failed) is
+// not a real connection — same rule as the dashboard's connected check — so its
+// tools must not be loaded into the agent's tool set either.
 export async function listConnectedProviders(userId: string): Promise<string[]> {
+  const { isRowConnected } = await import("./composio-connect.js")
   const rows = await db
-    .select({ provider: mcpConnections.provider })
+    .select({ provider: mcpConnections.provider, oauthTokens: mcpConnections.oauthTokens })
     .from(mcpConnections)
     .where(eq(mcpConnections.userId, userId))
-  return rows.map((r) => r.provider)
+  return rows.filter((r) => isRowConnected(r.oauthTokens)).map((r) => r.provider)
 }
