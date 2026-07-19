@@ -97,7 +97,7 @@ const GOOGLE_REVOKE_URL = "https://oauth2.googleapis.com/revoke"
 // Every Google connector shares one OAuth client, and Google treats a user's
 // authorization to a client as a SINGLE grant — revoking any one token withdraws
 // consent for the whole app. Disconnecting Gmail used to 401 Calendar, Drive,
-// Classroom, Tasks, Contacts and Meet along with it. Only revoke when the LAST Google
+// Classroom, Tasks and Meet along with it. Only revoke when the LAST Google
 // connector is going: that is when the user really is withdrawing consent.
 export function shouldRevokeGoogleGrant(
   disconnecting: string,
@@ -716,7 +716,7 @@ integrationsRouter.delete("/:provider", authenticate, async (c) => {
   // Every Google connector shares one OAuth client, and Google treats a user's
   // authorization to a client as a SINGLE grant — so revoking any one token withdraws
   // consent for the whole app. Disconnecting Gmail used to 401 Calendar, Drive,
-  // Classroom, Tasks, Contacts and Meet along with it. Only revoke when the last
+  // Classroom, Tasks and Meet along with it. Only revoke when the last
   // Google connector is going, which is when the user really is withdrawing consent.
   const connected = await db
     .select({ provider: mcpConnections.provider })

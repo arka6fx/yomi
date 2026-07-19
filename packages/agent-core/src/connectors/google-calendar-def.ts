@@ -179,7 +179,7 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
     }),
 
     "calendar-createEvent": tool({
-      description: `Create a new event on the user's primary Google Calendar. ${LOCAL_TIME_HINT} If the user named a guest by name rather than address ("lunch with Priya"), resolve it with contacts-resolveRecipient before adding them as an attendee — never guess an address. Call this directly when the user asks to schedule — the system holds it for their approval automatically, so do not ask them to confirm first.`,
+      description: `Create a new event on the user's primary Google Calendar. ${LOCAL_TIME_HINT} If the user named a guest by name rather than address ("lunch with Priya"), ask the user for their email address before adding them as an attendee — never guess an address. Call this directly when the user asks to schedule — the system holds it for their approval automatically, so do not ask them to confirm first.`,
       parameters: z.object({
         title: z.string().describe("Event title / summary"),
         start: z

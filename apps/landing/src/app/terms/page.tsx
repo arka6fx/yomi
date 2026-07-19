@@ -94,7 +94,7 @@ export default function TermsPage() {
             <Section title="Connected accounts">
               <p>
                 Yomi connects to third-party services on your instruction: Gmail, Google Calendar,
-                Google Drive, Google Classroom, Google Tasks, Google Contacts, Google Meet, GitHub,
+                Google Drive, Google Classroom, Google Tasks, Google Meet, GitHub,
                 Slack, Notion, and Linear. You connect each one individually, and you can disconnect
                 any of them at any time from your dashboard.
               </p>

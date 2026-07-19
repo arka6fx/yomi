@@ -180,16 +180,6 @@ function GoogleTasksIcon({ size = 24 }: IconProps) {
   )
 }
 
-function GoogleContactsIcon({ size = 24 }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 512 512" fill="none" role="img" aria-label="Google Contacts">
-      <path d="M203.5 249.4c-90.7 0-164.1 73.4-164.1 164.1v68.9c0 16.3 13.2 29.5 29.5 29.5h78.8l78.8-262.6h-23z" fill="#86a9ff" />
-      <path d="M472.6 357.7c0-59.9-48.4-108.3-108.3-108.3h-78.8V512h78.8c59.9 0 108.3-48.4 108.3-108.3" fill="#578cff" />
-      <path d="M118.2 357.7c0-59.9 48.4-108.3 108.3-108.3h59.1c59.9 0 108.3 48.4 108.3 108.3v45.9c0 59.9-48.4 108.3-108.3 108.3H147.7c-16.3 0-29.5-13.2-29.5-29.5zM256 0c56.2 0 101.7 45.6 101.7 101.7S312.2 203.5 256 203.5s-101.7-45.6-101.7-101.7S199.8 0 256 0" fill="#0057cc" />
-    </svg>
-  )
-}
-
 function GoogleMeetIcon({ size = 24 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 45.4 512 421.2" fill="none" role="img" aria-label="Google Meet">
@@ -228,7 +218,6 @@ const ICON_MAP: Record<string, React.FC<IconProps>> = {
   "google-drive": GoogleDriveIcon,
   "google-classroom": GoogleClassroomIcon,
   "google-tasks": GoogleTasksIcon,
-  "google-contacts": GoogleContactsIcon,
   "google-meet": GoogleMeetIcon,
   github: GitHubIcon,
   notion: NotionIcon,

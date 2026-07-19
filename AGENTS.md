@@ -1,7 +1,7 @@
 # Yomi - AGENTS.md
 
 AI productivity assistant. Connects to Google Workspace (Gmail, Calendar, Drive,
-Classroom, Tasks, Contacts, Meet) and GitHub, Slack, Notion, Linear, and more.
+Classroom, Tasks, Meet) and GitHub, Slack, Notion, Linear, and more.
 You talk to Yomi on Telegram (text, voice, images); the web app is a management
 dashboard (account linking, schedules, memory, billing) — not a chat surface.
 Backend-first for durable memory and connector agents.
@@ -84,7 +84,7 @@ LANDING/DASHBOARD  (Next.js)
 - Core: filesystem r/w, bash (sandboxed), web search/fetch, cron, messaging,
   memory
 - Connectors: Gmail, Google Calendar, Google Drive, Google Classroom, Google
-  Tasks, Google Contacts, Google Meet, GitHub, Notion, Slack, Linear - loaded
+  Tasks, Google Meet, GitHub, Notion, Slack, Linear - loaded
   from `ConnectorRegistry`
 
 **Hooks:** `PreToolUse` (block dangerous), `PostToolUse` (log, trim tokens),

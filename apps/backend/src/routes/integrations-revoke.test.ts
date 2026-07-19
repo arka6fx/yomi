@@ -2,16 +2,15 @@ import { describe, expect, it } from "bun:test"
 import { shouldRevokeGoogleGrant } from "./integrations.js"
 
 describe("shouldRevokeGoogleGrant", () => {
-  // All seven Google connectors share one OAuth client, and Google treats a user's
+  // All six Google connectors share one OAuth client, and Google treats a user's
   // authorization to a client as a single grant. Revoking on every disconnect meant
-  // dropping Gmail 401'd Calendar, Drive, Classroom, Tasks, Contacts and Meet too.
+  // dropping Gmail 401'd Calendar, Drive, Classroom, Tasks and Meet too.
   const allGoogle = [
     "google",
     "google-calendar",
     "google-drive",
     "google-classroom",
     "google-tasks",
-    "google-contacts",
     "google-meet",
   ]
 

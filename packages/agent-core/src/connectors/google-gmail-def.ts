@@ -165,7 +165,7 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
 
     "gmail-sendEmail": tool({
       description:
-        "Send a NEW email via Gmail. To reply within an existing thread use gmail-replyToThread instead. If the user named the recipient by name rather than address ('email Alex'), resolve it with contacts-resolveRecipient first — never guess an address. IMPORTANT: confirm the To, Subject, and first 200 chars of body with the user before calling this tool.",
+        "Send a NEW email via Gmail. To reply within an existing thread use gmail-replyToThread instead. If the user named the recipient by name rather than address ('email Alex'), ask the user for their email address first — never guess an address. IMPORTANT: confirm the To, Subject, and first 200 chars of body with the user before calling this tool.",
       parameters: z.object({
         to: z.array(z.string()).describe("Recipient email addresses"),
         subject: z.string().describe("Email subject line"),

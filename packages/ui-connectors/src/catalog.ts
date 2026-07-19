@@ -57,15 +57,6 @@ const CATALOG_DEFS: Array<{
     available: true,
   },
   {
-    id: "google-contacts",
-    name: "Google Contacts",
-    description: "Look people up by name so Yomi can email or invite them without an address.",
-    category: "productivity",
-    authKind: "composio",
-    icon: "contact",
-    available: true,
-  },
-  {
     id: "google-meet",
     name: "Google Meet",
     description: "Create meeting links and read past calls, attendees, and transcripts.",

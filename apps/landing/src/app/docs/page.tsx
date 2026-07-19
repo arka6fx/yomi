@@ -58,11 +58,6 @@ const CONNECTORS: { id: string; name: string; access: string }[] = [
     access: "Read your to-do lists and create, edit, or complete tasks",
   },
   {
-    id: "google-contacts",
-    name: "Google Contacts",
-    access: "Look people up by name, and create or update contacts",
-  },
-  {
     id: "google-meet",
     name: "Google Meet",
     access: "Create meeting links and read past calls and transcripts",
