@@ -586,6 +586,78 @@ describe("MCP server endpoint", () => {
     expect(body).toContain("pending approval")
   })
 
+  it("denies a tool call when the caller lacks the required capability", async () => {
+    const { handleMcpPost } = await import("../services/mcp-server.js")
+    const cpa = async (input: { title: string }) => ({
+      id: "p1",
+      status: "pending",
+      message: `pending approval: ${input.title}`,
+    })
+    const granted = ["memory:read"] as const
+
+    const initResp = await handleMcpPost(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: {
+          protocolVersion: "2024-11-05",
+          capabilities: { tools: {} },
+          clientInfo: { name: "test", version: "1" },
+        },
+      }),
+      null,
+      "u1",
+      cpa,
+      granted,
+    )
+    const sessionId = initResp.headers.get("mcp-session-id")!
+    expect(sessionId).toBeTruthy()
+
+    await handleMcpPost(
+      JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
+      sessionId,
+      "u1",
+      cpa,
+      granted,
+    )
+
+    // memory_add needs memory:write, which the caller was not granted → denial
+    const denied = await handleMcpPost(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: 2,
+        method: "tools/call",
+        params: { name: "memory_add", arguments: { content: "hi", topic: "t" } },
+      }),
+      sessionId,
+      "u1",
+      cpa,
+      granted,
+    )
+    const deniedBody = await denied.text()
+    expect(deniedBody).toContain("Capability denied")
+    expect(deniedBody).toContain("memory:write")
+    expect(deniedBody).not.toContain("pending approval")
+
+    // memory_search only needs memory:read, which the caller has → allowed
+    const allowed = await handleMcpPost(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: 3,
+        method: "tools/call",
+        params: { name: "memory_search", arguments: { query: "tea" } },
+      }),
+      sessionId,
+      "u1",
+      cpa,
+      granted,
+    )
+    const allowedBody = await allowed.text()
+    expect(allowedBody).not.toContain("Capability denied")
+    expect(allowedBody).toContain("content")
+  })
+
   it("execute_connector_tool returns error when connector not connected", async () => {
     mockAuthSession = { user: { id: "u1" }, session: { id: "s1" } }
     const app = await mcpApp()
