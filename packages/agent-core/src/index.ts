@@ -80,6 +80,21 @@ export {
   CLASSROOM_TOOLKIT,
 } from "./connectors/composio/google-classroom.js"
 export {
+  makeComposioDocsDef,
+  docsComposioSpecs,
+  DOCS_TOOLKIT,
+} from "./connectors/composio/google-docs.js"
+export {
+  makeComposioSheetsDef,
+  sheetsComposioSpecs,
+  SHEETS_TOOLKIT,
+} from "./connectors/composio/google-sheets.js"
+export {
+  makeComposioSlidesDef,
+  slidesComposioSpecs,
+  SLIDES_TOOLKIT,
+} from "./connectors/composio/google-slides.js"
+export {
   makeComposioTasksDef,
   tasksComposioSpecs,
   TASKS_TOOLKIT,

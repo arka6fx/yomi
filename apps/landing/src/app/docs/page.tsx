@@ -45,7 +45,22 @@ const CONNECTORS: { id: string; name: string; access: string }[] = [
   {
     id: "google-drive",
     name: "Google Drive",
-    access: "Browse, read, create, and edit files, Docs, Sheets, and Slides",
+    access: "Browse, read, create, share, and manage files and folders",
+  },
+  {
+    id: "google-docs",
+    name: "Google Docs",
+    access: "Create and edit richly formatted docs from Markdown",
+  },
+  {
+    id: "google-sheets",
+    name: "Google Sheets",
+    access: "Read, edit, and chart spreadsheets",
+  },
+  {
+    id: "google-slides",
+    name: "Google Slides",
+    access: "Build multi-slide presentations from Markdown",
   },
   {
     id: "google-classroom",
