@@ -17,6 +17,7 @@ import {
   decodeState,
 } from "../connectors/executors/oauth2-executor.js"
 import { buildSwiggyAuthUrl, handleSwiggyCallback } from "../connectors/oauth/swiggy.js"
+import { isRowConnected } from "../services/composio-connect.js"
 
 async function checkProviderHealth(
   userId: string,
@@ -148,6 +149,7 @@ integrationsRouter.get("/", authenticate, async (c) => {
     .select({
       id: mcpConnections.id,
       provider: mcpConnections.provider,
+      oauthTokens: mcpConnections.oauthTokens,
       scopes: mcpConnections.scopes,
       expiresAt: mcpConnections.expiresAt,
       displayName: mcpConnections.displayName,
@@ -158,16 +160,18 @@ integrationsRouter.get("/", authenticate, async (c) => {
     .where(eq(mcpConnections.userId, user.id))
 
   return c.json({
-    integrations: rows.map((r) => ({
-      id: r.id,
-      provider: r.provider,
-      displayName: r.displayName ?? r.provider,
-      scopes: r.scopes,
-      connected: true,
-      lastSyncAt: r.lastSyncAt?.toISOString() ?? null,
-      expiresAt: r.expiresAt?.toISOString() ?? null,
-      createdAt: r.createdAt.toISOString(),
-    })),
+    integrations: rows
+      .filter((r) => isRowConnected(r.oauthTokens))
+      .map((r) => ({
+        id: r.id,
+        provider: r.provider,
+        displayName: r.displayName ?? r.provider,
+        scopes: r.scopes,
+        connected: true,
+        lastSyncAt: r.lastSyncAt?.toISOString() ?? null,
+        expiresAt: r.expiresAt?.toISOString() ?? null,
+        createdAt: r.createdAt.toISOString(),
+      })),
   })
 })
 
@@ -179,14 +183,19 @@ integrationsRouter.get("/status", async (c) => {
   if ("error" in resolved) return c.json({ error: resolved.error }, resolved.status)
   const userId = resolved.userId
 
-  const rows = await db
+  const allRows = await db
     .select({
       provider: mcpConnections.provider,
+      oauthTokens: mcpConnections.oauthTokens,
       displayName: mcpConnections.displayName,
       updatedAt: mcpConnections.updatedAt,
     })
     .from(mcpConnections)
     .where(eq(mcpConnections.userId, userId))
+
+  // A Composio row stuck at "initiated" (consent screen abandoned or failed) is
+  // not a real connection — exclude it so the dashboard doesn't show it as connected.
+  const rows = allRows.filter((r) => isRowConnected(r.oauthTokens))
 
   if (c.req.query("health") !== "1") return c.json({ connected: rows.map((r) => r.provider) })
 

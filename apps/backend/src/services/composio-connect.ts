@@ -126,6 +126,17 @@ export async function markComposioConnectionActive(
   })
 }
 
+// Whether a stored mcp_connections row represents a genuinely connected
+// integration. Native OAuth/api-key/DSN blobs are connected as soon as the row
+// exists. A Composio row is only connected once the user has completed the
+// provider's consent screen and Composio's callback marked it `active` —
+// `initiated` means the connect button was clicked but the flow never finished
+// (cancelled, errored, or abandoned) and must not be reported as connected.
+export function isRowConnected(oauthTokens: string): boolean {
+  const ref = decodeComposioRef(oauthTokens)
+  return ref ? ref.status === "active" : true
+}
+
 // Whether a stored connection row for this provider is Composio-backed.
 export async function isComposioConnection(userId: string, provider: string): Promise<boolean> {
   const [row] = await db
