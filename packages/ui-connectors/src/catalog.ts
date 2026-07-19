@@ -111,15 +111,6 @@ const CATALOG_DEFS: Array<{
     available: true,
   },
   {
-    id: "linear-api-key",
-    name: "Linear API Key",
-    description: "Connect Linear with a personal API key.",
-    category: "productivity",
-    authKind: "api_key",
-    icon: "key-round",
-    available: true,
-  },
-  {
     id: "swiggy",
     name: "Swiggy",
     description: "Order food, groceries, and book restaurant tables via Telegram.",

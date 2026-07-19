@@ -762,7 +762,6 @@ function createLinearToolsFrom(provider: string) {
 }
 
 export const createLinearTools = createLinearToolsFrom("linear")
-export const createLinearApiKeyTools = createLinearToolsFrom("linear-api-key")
 
 export const linearDef: ConnectorDef = {
   id: "linear",
@@ -795,44 +794,4 @@ export const linearDef: ConnectorDef = {
     docsUrl: "https://developers.linear.app/docs/oauth/authentication",
   },
   tools: createLinearTools,
-}
-
-export const linearApiKeyDef: ConnectorDef = {
-  id: "linear-api-key",
-  name: "Linear (API Key)",
-  category: "engineering",
-  icon: "linear",
-  description: "Connect to Linear using a personal API key instead of OAuth.",
-  readOnlyByDefault: false,
-  auth: {
-    kind: "api_key",
-    fields: [
-      {
-        name: "apiKey",
-        label: "Linear API Key",
-        placeholder: "lin_api_...",
-        secret: true,
-      },
-    ],
-    verify: async (fields) => {
-      const res = await fetch("https://api.linear.app/graphql", {
-        method: "POST",
-        headers: {
-          Authorization: fields.apiKey ?? "",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ query: "{ viewer { id } }" }),
-      })
-      if (!res.ok) return false
-      const data = (await res.json()) as { data?: { viewer?: { id: string } } }
-      return Boolean(data.data?.viewer?.id)
-    },
-  },
-  setup: {
-    providerConsoleUrl: "https://linear.app/settings/api",
-    steps: ["Go to linear.app/settings/api → Personal API Keys", "Create a new key and copy it"],
-    collect: [{ env: "LINEAR_API_KEY", label: "Linear Personal API Key", secret: true }],
-    docsUrl: "https://developers.linear.app/docs/graphql/working-with-the-graphql-api",
-  },
-  tools: createLinearApiKeyTools,
 }

@@ -9,7 +9,7 @@ import { googleMeetDef } from "./google-meet-def.js"
 import { githubDef } from "./github-def.js"
 import { notionDef } from "./notion-def.js"
 import { slackDef } from "./slack-def.js"
-import { linearDef, linearApiKeyDef } from "./linear-def.js"
+import { linearDef } from "./linear-def.js"
 import { swiggyDef } from "./swiggy-def.js"
 
 // All registered ConnectorDefs, in display order.
@@ -27,6 +27,5 @@ export const ALL_CONNECTOR_DEFS: ConnectorDef[] = [
   notionDef,
   slackDef,
   linearDef,
-  linearApiKeyDef,
   swiggyDef,
 ]

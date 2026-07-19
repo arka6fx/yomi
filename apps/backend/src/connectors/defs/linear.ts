@@ -1,4 +1,4 @@
-import { linearDef, linearApiKeyDef, makeComposioLinearDef, isComposioBacked } from "@yomi/agent-core"
+import { linearDef, makeComposioLinearDef, isComposioBacked } from "@yomi/agent-core"
 import type { BackendConnectorDef } from "../types.js"
 import { registerConnectorDef } from "../registry.js"
 import { createComposioRestExecutor } from "../composio-executor.js"
@@ -33,19 +33,13 @@ export const backendLinearDef: BackendConnectorDef = {
   getDisplayName: getLinearDisplayName,
 }
 
-export const backendLinearApiKeyDef: BackendConnectorDef = {
-  ...linearApiKeyDef,
-  getDisplayName: getLinearDisplayName,
-}
-
 // Composio-backed Linear: registered for the "linear" id when the connector is
-// flagged. The api-key variant is a distinct id and always stays native. This is
-// the replay/connect side of the per-connector switch; the agent-loop side is the
-// composioDefs passed to ConnectorRegistry in agent/run.ts. Native code retained.
+// flagged. This is the replay/connect side of the per-connector switch; the
+// agent-loop side is the composioDefs passed to ConnectorRegistry in agent/run.ts.
+// Native code retained.
 export const backendComposioLinearDef: BackendConnectorDef = {
   ...makeComposioLinearDef(createComposioRestExecutor()),
   getDisplayName: async () => "Linear (Composio)",
 }
 
-registerConnectorDef(backendLinearApiKeyDef)
 registerConnectorDef(isComposioBacked("linear") ? backendComposioLinearDef : backendLinearDef)
