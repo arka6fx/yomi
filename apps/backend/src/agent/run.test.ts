@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test"
+import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test"
 
 let mockUser: Record<string, unknown> | null = null
 let mockBotMessageCount = 0
@@ -60,19 +60,12 @@ mock.module("@yomi/db", () => ({
   paymentRecords: {},
 }))
 
+const realAgentCore = await import("@yomi/agent-core")
+
 mock.module("@yomi/agent-core", () => ({
+  ...realAgentCore,
   createModel: (model: string) => model,
-  makeComposioLinearDef: () => ({ id: "linear", tools: () => ({}) }),
-  makeComposioGitHubDef: () => ({ id: "github", tools: () => ({}) }),
-  makeComposioSlackDef: () => ({ id: "slack", tools: () => ({}) }),
-  makeComposioNotionDef: () => ({ id: "notion", tools: () => ({}) }),
-  makeComposioGmailDef: () => ({ id: "google", tools: () => ({}) }),
-  makeComposioCalendarDef: () => ({ id: "google-calendar", tools: () => ({}) }),
-  makeComposioDriveDef: () => ({ id: "google-drive", tools: () => ({}) }),
-  makeComposioClassroomDef: () => ({ id: "google-classroom", tools: () => ({}) }),
-  makeComposioTasksDef: () => ({ id: "google-tasks", tools: () => ({}) }),
-  makeComposioContactsDef: () => ({ id: "google-contacts", tools: () => ({}) }),
-  makeComposioMeetDef: () => ({ id: "google-meet", tools: () => ({}) }),
+  createRecallTool: () => ({}),
   ConnectorRegistry: class {
     async init() {}
   },
@@ -282,4 +275,5 @@ describe("runAgent metering", () => {
     expect(result.text).toBe("The answer is 42.")
     expect(consumeCreditsCalled).toBe(false)
   })
+
 })
