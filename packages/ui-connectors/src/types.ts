@@ -15,7 +15,7 @@ export interface ConnectorInfo {
   name: string
   description: string
   category: ConnectorCategory
-  authKind: "oauth2" | "api_key" | "connection_string"
+  authKind: "oauth2" | "composio" | "api_key" | "connection_string"
   icon: string
   /** True if this connector is fully wired (has env vars + backend handler). False = coming soon. */
   available: boolean
