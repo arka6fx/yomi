@@ -23,7 +23,7 @@ export {
   createLinearTools,
   createLinearApiKeyTools,
 } from "./connectors/linear-def.js"
-export { swiggyDef, SWIGGY_MCP_SERVERS } from "./connectors/swiggy-def.js"
+export { swiggyDef, SWIGGY_MCP_SERVERS, wrapOrderTools } from "./connectors/swiggy-def.js"
 export { createMCPToolProvider, type MCPAuthProvider, type MCPServerConfig, type MCPToolProvider } from "./connectors/mcp-connector.js"
 export { ALL_CONNECTOR_DEFS } from "./connectors/all-defs.js"
 

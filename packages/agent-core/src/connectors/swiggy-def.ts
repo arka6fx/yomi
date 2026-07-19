@@ -39,14 +39,19 @@ function getOrderPreview(toolName: string, args: unknown): string {
       return `Place order at restaurant`
     case "checkout":
       return `Checkout Instamart cart`
-    case "book_table":
-      return `Book table${a.restaurant_id ? ` at restaurant ${a.restaurant_id}` : ""}`
+    case "book_table": {
+      const previewParts = ["Book table"]
+      if (a.restaurant_id ?? a.restaurantId) previewParts.push(`at ${a.restaurant_id ?? a.restaurantId}`)
+      if (a.party_size ?? a.partySize) previewParts.push(`for ${a.party_size ?? a.partySize}`)
+      if (a.date_time ?? a.date ?? a.datetime) previewParts.push(`on ${a.date_time ?? a.date ?? a.datetime}`)
+      return previewParts.join(" ")
+    }
     default:
       return `Execute ${toolName}`
   }
 }
 
-function wrapOrderTools(tools: ToolSet, ctx: ConnectorContext): ToolSet {
+export function wrapOrderTools(tools: ToolSet, ctx: ConnectorContext): ToolSet {
   const wrapped: ToolSet = {}
   for (const [name, tool] of Object.entries(tools)) {
     if (ORDER_TOOLS.has(name) && tool.execute) {
