@@ -12,17 +12,6 @@ export const SWIGGY_MCP_SERVERS = [
 // Tools that place orders and need Telegram approval via gateWrite.
 const ORDER_TOOLS = new Set(["place_food_order", "checkout", "book_table"])
 
-// Tools that read order status (read-only, no gate).
-const TRACK_TOOLS = new Set([
-  "track_food_order",
-  "get_food_orders",
-  "get_food_order_details",
-  "get_orders",
-  "get_order_details",
-  "track_order",
-  "get_booking_status",
-])
-
 function getOrderTitle(toolName: string): string {
   const titles: Record<string, string> = {
     place_food_order: "Place food order",
@@ -35,8 +24,21 @@ function getOrderTitle(toolName: string): string {
 function getOrderPreview(toolName: string, args: unknown): string {
   const a = args as Record<string, unknown>
   switch (toolName) {
-    case "place_food_order":
-      return `Place order at restaurant`
+    case "place_food_order": {
+      const previewParts = ["Place order"]
+      if (a.restaurant_id ?? a.restaurantId) previewParts.push(`at ${a.restaurant_id ?? a.restaurantId}`)
+      if (a.items) {
+        const items = Array.isArray(a.items) ? a.items : []
+        const summary = items.map((i: Record<string, unknown>) => {
+          const name = i.name ?? i.dish_name ?? i.id ?? ""
+          const qty = i.quantity ?? i.qty ?? 1
+          return `${name} x${qty}`
+        }).join(", ")
+        if (summary) previewParts.push(`(${summary})`)
+      }
+      if (a.total ?? a.order_total) previewParts.push(`₹${a.total ?? a.order_total}`)
+      return previewParts.join(" ")
+    }
     case "checkout":
       return `Checkout Instamart cart`
     case "book_table": {

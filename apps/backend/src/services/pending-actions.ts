@@ -399,46 +399,115 @@ export async function approvePendingAction(
         title: pendingActions.title,
       })
 
-    if (status === "executed" && approved.connector === "swiggy" && approved.action === "book_table") {
+    if (status === "executed" && approved.connector === "swiggy") {
       try {
         const { upsertMemory } = await import("../routes/memory.js")
         const payload = (approved.payload ?? {}) as Record<string, unknown>
-        const restaurantId = payload.restaurant_id ?? payload.restaurantId
-        const dateTime = payload.date_time ?? payload.date ?? payload.datetime
-        const partySize = payload.party_size ?? payload.partySize ?? payload.guests
 
-        let dayName: string | undefined
-        let timeOfDay: string | undefined
-        if (dateTime) {
-          const d = new Date(String(dateTime))
-          if (Number.isFinite(d.getTime())) {
-            dayName = d.toLocaleDateString("en-US", { weekday: "long" })
-            const hour = d.getHours()
-            timeOfDay = hour >= 5 && hour < 12 ? "Morning" : hour >= 12 && hour < 17 ? "Afternoon" : hour >= 17 && hour < 22 ? "Evening" : "Night"
+        const now = new Date()
+        const dayName = now.toLocaleDateString("en-US", { weekday: "long" })
+        const hour = now.getHours()
+        const timeOfDay = hour >= 5 && hour < 12 ? "Morning" : hour >= 12 && hour < 17 ? "Afternoon" : hour >= 17 && hour < 22 ? "Evening" : "Night"
+
+        if (approved.action === "book_table") {
+          const restaurantId = payload.restaurant_id ?? payload.restaurantId
+          const dateTime = payload.date_time ?? payload.date ?? payload.datetime
+          const partySize = payload.party_size ?? payload.partySize ?? payload.guests
+          let bookingDayName: string | undefined
+          let bookingTimeOfDay: string | undefined
+          if (dateTime) {
+            const d = new Date(String(dateTime))
+            if (Number.isFinite(d.getTime())) {
+              bookingDayName = d.toLocaleDateString("en-US", { weekday: "long" })
+              const bh = d.getHours()
+              bookingTimeOfDay = bh >= 5 && bh < 12 ? "Morning" : bh >= 12 && bh < 17 ? "Afternoon" : bh >= 17 && bh < 22 ? "Evening" : "Night"
+            }
           }
-        }
 
-        await upsertMemory(approved.userId, {
-          kind: "swiggy_order",
-          scope: "global",
-          topic: restaurantId
-            ? `Dineout booking at restaurant ${restaurantId}`
-            : "Dineout restaurant booking",
-          content: [
-            restaurantId ? `Restaurant: ${restaurantId}` : "",
-            dateTime ? `Date/Time: ${dateTime}` : "",
-            partySize ? `Party size: ${partySize}` : "",
-            timeOfDay ? `Time of day: ${timeOfDay}` : "",
-            dayName ? `Day of week: ${dayName}` : "",
-          ]
-            .filter(Boolean)
-            .join("\n"),
-          summary: ["Dineout reservation", restaurantId ? `at ${restaurantId}` : "", dateTime ? `on ${dateTime}` : "", partySize ? `for ${partySize}` : ""]
-            .filter(Boolean)
-            .join(" "),
-          confidence: 90,
-          sourceType: "swiggy_dineout",
-        })
+          await upsertMemory(approved.userId, {
+            kind: "swiggy_order",
+            scope: "global",
+            topic: restaurantId
+              ? `Dineout booking at restaurant ${restaurantId}`
+              : "Dineout restaurant booking",
+            content: [
+              restaurantId ? `Restaurant: ${restaurantId}` : "",
+              dateTime ? `Date/Time: ${dateTime}` : "",
+              partySize ? `Party size: ${partySize}` : "",
+              bookingTimeOfDay ? `Time of day: ${bookingTimeOfDay}` : "",
+              bookingDayName ? `Day of week: ${bookingDayName}` : "",
+            ]
+              .filter(Boolean)
+              .join("\n"),
+            summary: ["Dineout reservation", restaurantId ? `at ${restaurantId}` : "", dateTime ? `on ${dateTime}` : "", partySize ? `for ${partySize}` : ""]
+              .filter(Boolean)
+              .join(" "),
+            confidence: 90,
+            sourceType: "swiggy_dineout",
+          })
+        } else if (approved.action === "place_food_order") {
+          const restaurantId = payload.restaurant_id ?? payload.restaurantId
+          const items = payload.items
+          const orderTotal = payload.total ?? payload.order_total
+          const itemsSummary = Array.isArray(items)
+            ? items.map((i: Record<string, unknown>) => {
+                const name = i.name ?? i.dish_name ?? i.id ?? "item"
+                const qty = i.quantity ?? i.qty ?? 1
+                return `${name} x${qty}`
+              }).join(", ")
+            : ""
+
+          await upsertMemory(approved.userId, {
+            kind: "swiggy_order",
+            scope: "global",
+            topic: restaurantId
+              ? `Food order from ${restaurantId}`
+              : "Swiggy food order",
+            content: [
+              restaurantId ? `Restaurant: ${restaurantId}` : "",
+              itemsSummary ? `Items: ${itemsSummary}` : "",
+              orderTotal ? `Total: ₹${orderTotal}` : "",
+              `Time of day: ${timeOfDay}`,
+              `Day of week: ${dayName}`,
+            ]
+              .filter(Boolean)
+              .join("\n"),
+            summary: ["Food order", restaurantId ? `from ${restaurantId}` : "", itemsSummary ? `(${itemsSummary})` : "", orderTotal ? `₹${orderTotal}` : ""]
+              .filter(Boolean)
+              .join(" "),
+            confidence: 90,
+            sourceType: "swiggy_food",
+          })
+        } else if (approved.action === "checkout") {
+          const items = payload.items
+          const orderTotal = payload.total ?? payload.order_total
+          const itemsSummary = Array.isArray(items)
+            ? items.map((i: Record<string, unknown>) => {
+                const name = i.name ?? i.product_name ?? i.id ?? "item"
+                const qty = i.quantity ?? i.qty ?? 1
+                return `${name} x${qty}`
+              }).join(", ")
+            : ""
+
+          await upsertMemory(approved.userId, {
+            kind: "swiggy_order",
+            scope: "global",
+            topic: "Instamart order",
+            content: [
+              itemsSummary ? `Items: ${itemsSummary}` : "",
+              orderTotal ? `Total: ₹${orderTotal}` : "",
+              `Time of day: ${timeOfDay}`,
+              `Day of week: ${dayName}`,
+            ]
+              .filter(Boolean)
+              .join("\n"),
+            summary: ["Instamart order", itemsSummary ? `(${itemsSummary})` : "", orderTotal ? `₹${orderTotal}` : ""]
+              .filter(Boolean)
+              .join(" "),
+            confidence: 90,
+            sourceType: "swiggy_instamart",
+          })
+        }
       } catch {
         // best-effort — memory write must not break the approval flow
       }
