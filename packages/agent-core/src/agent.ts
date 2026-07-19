@@ -142,16 +142,51 @@ function fallbackFromToolResults(toolResults: readonly unknown[]): string {
 
 type ResponseMessages = Awaited<ReturnType<typeof generateText>>["response"]["messages"]
 
+// OpenAI's tools array hard-caps at 128 entries — a user with enough connectors
+// wired up (each contributing a dozen-plus tools) can blow past that and the
+// whole turn fails with an invalid_request_error, no matter what they typed.
+// This is a last-resort safety net, not a selection strategy: connector tools
+// are always kept whole (extraTools, e.g. recall, are never dropped), and once
+// over budget we prefer tools whose name is mentioned in the user's message so
+// the connector they're actually asking about survives the cut.
+const MAX_TOOLS = 128
+
+function capToolSet(connectorTools: ToolSet, extraTools: ToolSet, text: string): ToolSet {
+  const total = Object.keys(connectorTools).length + Object.keys(extraTools).length
+  if (total <= MAX_TOOLS) return { ...connectorTools, ...extraTools }
+
+  const budget = Math.max(MAX_TOOLS - Object.keys(extraTools).length, 0)
+  const lower = text.toLowerCase()
+  const scored = Object.entries(connectorTools).map(([key, tool], index) => {
+    const words = key.toLowerCase().split(/[^a-z]+/).filter((w) => w.length > 3)
+    const mentioned = words.some((w) => lower.includes(w))
+    return { key, tool, index, mentioned }
+  })
+  scored.sort((a, b) => Number(b.mentioned) - Number(a.mentioned) || a.index - b.index)
+
+  console.warn(
+    `[agent] tool set (${total}) exceeded OpenAI's ${MAX_TOOLS}-tool limit — ` +
+      `trimmed connector tools to ${budget}. A user with this many connectors ` +
+      `connected needs a real fix (fewer tools per connector, or dynamic ` +
+      `tool loading), this is only a stopgap so the turn doesn't hard-fail.`,
+  )
+
+  const kept: ToolSet = {}
+  for (const { key, tool } of scored.slice(0, budget)) kept[key] = tool
+  return { ...kept, ...extraTools }
+}
+
 // Lean, text-only tool-calling loop over the OpenAI model provider and
 // connector tools. Runs in the backend; returns final text.
 // Driven as an explicit single-step sequence (not one multi-step generateText)
 // so a cost-aware budget can halt mid-run yet keep the transcript for the grace
 // call — v4's onStepFinish can observe a step but can't stop the loop.
 export async function runAgentLoop(opts: RunAgentLoopOptions): Promise<string> {
-  const tools: ToolSet = {
-    ...createConnectorTools(opts.registry),
-    ...(opts.extraTools ?? {}),
-  }
+  const tools: ToolSet = capToolSet(
+    createConnectorTools(opts.registry),
+    opts.extraTools ?? {},
+    opts.text,
+  )
 
   const model = agentModel(opts.model)
   const llm = createModel(model)
