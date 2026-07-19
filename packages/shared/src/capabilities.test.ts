@@ -6,6 +6,7 @@ import {
   hasCapability,
   CapabilityEnforcer,
   EXTERNAL_DEFAULT_CAPABILITIES,
+  EXTERNAL_AGENT_CAPABILITIES,
   evaluateManifest,
 } from "./capabilities.js"
 
@@ -93,6 +94,24 @@ describe("EXTERNAL_DEFAULT_CAPABILITIES", () => {
   it("does not implicitly grant the agent loop", () => {
     const enforcer = new CapabilityEnforcer(EXTERNAL_DEFAULT_CAPABILITIES)
     expect(enforcer.allows("agent:execute")).toBe(false)
+  })
+})
+
+describe("EXTERNAL_AGENT_CAPABILITIES", () => {
+  it("grants everything EXTERNAL_DEFAULT_CAPABILITIES grants, plus agent:execute", () => {
+    const enforcer = new CapabilityEnforcer(EXTERNAL_AGENT_CAPABILITIES)
+    for (const scope of [
+      "memory:read",
+      "memory:write",
+      "memory:delete",
+      "schedule:read",
+      "schedule:write",
+      "schedule:delete",
+      "connector:execute",
+      "agent:execute",
+    ]) {
+      expect(enforcer.allows(scope)).toBe(true)
+    }
   })
 })
 

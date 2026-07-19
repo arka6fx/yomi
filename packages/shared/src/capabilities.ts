@@ -28,6 +28,14 @@ export const EXTERNAL_DEFAULT_CAPABILITIES: CapabilitySet = [
   "profile:read",
 ]
 
+// Scopes for an authenticated external caller at a surface that exposes the full agent
+// loop (e.g. the `run_yomi_agent` MCP tool). Same trust boundary as
+// EXTERNAL_DEFAULT_CAPABILITIES, plus agent:execute.
+export const EXTERNAL_AGENT_CAPABILITIES: CapabilitySet = [
+  ...EXTERNAL_DEFAULT_CAPABILITIES,
+  "agent:execute",
+]
+
 // Does a granted scope satisfy a required one? "*" matches on either side.
 export function scopeGrants(granted: Scope, required: Scope): boolean {
   const [gr, ga] = granted.split(":")
