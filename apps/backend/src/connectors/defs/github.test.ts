@@ -2,7 +2,7 @@ import { beforeEach, afterEach, describe, expect, it, mock, afterAll, beforeAll 
 
 const originalEnv = { ...process.env }
 
-beforeEach(() => {
+beforeAll(() => {
   process.env.GITHUB_INTEGRATIONS_CLIENT_ID = "Ov23lioMpKQ4tSXMLaJY"
   process.env.GITHUB_INTEGRATIONS_CLIENT_SECRET = "1f9dad831bd5cc8c6d1c2b1a9e0de7cc89926f90"
   process.env.GITHUB_CLIENT_ID = "Ov23lijL89pMm38klD0y"
@@ -10,7 +10,10 @@ beforeEach(() => {
   process.env.BETTER_AUTH_BASE_URL = "http://localhost:3001"
   process.env.BETTER_AUTH_URL = "http://localhost:3000"
   process.env.ENCRYPTION_KEY = "03f5c50ad7461b5172d57041fef789cc7297c9bfd806a52eecba14e03201d040"
+  delete process.env["COMPOSIO_CONNECTORS"]
 })
+
+beforeEach(() => {})
 
 afterAll(() => {
   process.env = { ...originalEnv }
