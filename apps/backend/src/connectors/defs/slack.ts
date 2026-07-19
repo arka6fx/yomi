@@ -1,6 +1,7 @@
-import { slackDef } from "@yomi/agent-core"
+import { slackDef, makeComposioSlackDef, isComposioBacked } from "@yomi/agent-core"
 import type { BackendConnectorDef } from "../types.js"
 import { registerConnectorDef } from "../registry.js"
+import { createComposioRestExecutor } from "../composio-executor.js"
 
 export const backendSlackDef: BackendConnectorDef = {
   ...slackDef,
@@ -23,4 +24,9 @@ export const backendSlackDef: BackendConnectorDef = {
   },
 }
 
-registerConnectorDef(backendSlackDef)
+export const backendComposioSlackDef: BackendConnectorDef = {
+  ...makeComposioSlackDef(createComposioRestExecutor()),
+  getDisplayName: async () => "Slack (Composio)",
+}
+
+registerConnectorDef(isComposioBacked("slack") ? backendComposioSlackDef : backendSlackDef)
