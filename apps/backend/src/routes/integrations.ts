@@ -19,10 +19,17 @@ import {
 import { buildSwiggyAuthUrl, handleSwiggyCallback } from "../connectors/oauth/swiggy.js"
 import { isRowConnected } from "../services/composio-connect.js"
 
-async function checkProviderHealth(
+export async function checkProviderHealth(
   userId: string,
   provider: string,
 ): Promise<{ ok: boolean; message?: string }> {
+  // Composio-backed connectors: Yomi's mcp_connections row stores only a connected-
+  // account REFERENCE (see composio-connect.ts), never real provider tokens —
+  // Composio holds the OAuth grant. Probing Google/GitHub/Notion directly with that
+  // reference always 401s (no accessToken to send), which falsely told users to
+  // reconnect integrations that were already healthy. isRowConnected() already
+  // gates which rows reach here, so an active composio row is trusted as-is.
+  if (getConnectorDef(provider)?.auth.kind === "composio") return { ok: true }
   try {
     const token = await getAccessTokenService(userId, provider)
     if (provider === "notion") {
@@ -218,11 +225,33 @@ integrationsRouter.get("/status", async (c) => {
 })
 
 // ── Start Google OAuth flow ──────────────────────────────────────────────────
+// This literal path is matched before the generic "/connect/:id" route below,
+// so it must itself defer to Composio once Gmail is flagged via
+// COMPOSIO_CONNECTORS — otherwise it silently shadows the generic route and
+// every Gmail connect keeps going through the old native OAuth flow.
 
 integrationsRouter.get("/connect/google", authenticate, async (c) => {
   const user = c.get("user")
   if (!checkOAuthRateLimit(user.id)) {
     return c.json({ error: "Too many connect attempts — please wait a minute" }, 429)
+  }
+
+  const composioDef = getConnectorDef("google")
+  if (composioDef?.auth.kind === "composio") {
+    try {
+      const { initiateComposioConnection } = await import("../services/composio-connect.js")
+      const base = process.env.BETTER_AUTH_BASE_URL ?? "http://localhost:3001"
+      const state = encodeState(user.id)
+      const callbackUrl = `${base}/api/integrations/composio/callback/google?state=${encodeURIComponent(state)}`
+      const { redirectUrl } = await initiateComposioConnection(user.id, composioDef, { callbackUrl })
+      return c.redirect(redirectUrl)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Composio connect failed"
+      console.error("[integrations/connect/google] composio:", msg)
+      return c.redirect(
+        `${process.env.BETTER_AUTH_URL ?? "http://localhost:3000"}/dashboard?integration_error=${encodeURIComponent(msg)}`,
+      )
+    }
   }
 
   const state = Buffer.from(JSON.stringify({ userId: user.id, ts: Date.now() })).toString(
