@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "bun:test"
-import { encodeComposioRef, decodeComposioRef } from "./composio-connect.js"
+import { encodeComposioRef, decodeComposioRef, isRowConnected } from "./composio-connect.js"
 import { encryptTokens } from "./token-encryption.js"
 
 beforeEach(() => {
@@ -38,5 +38,36 @@ describe("Composio connection reference", () => {
 
   it("returns null for garbage input", () => {
     expect(decodeComposioRef("not-base64-or-encrypted")).toBeNull()
+  })
+})
+
+describe("isRowConnected", () => {
+  it("treats a native OAuth token blob as connected", () => {
+    const nativeBlob = encryptTokens({
+      accessToken: "at",
+      refreshToken: "rt",
+      expiresAt: Date.now(),
+    })
+    expect(isRowConnected(nativeBlob)).toBe(true)
+  })
+
+  it("treats an active Composio reference as connected", () => {
+    const blob = encodeComposioRef({
+      kind: "composio",
+      toolkit: "gmail",
+      connectedAccountId: "ca_123",
+      status: "active",
+    })
+    expect(isRowConnected(blob)).toBe(true)
+  })
+
+  it("does not treat an initiated (never-completed) Composio reference as connected", () => {
+    const blob = encodeComposioRef({
+      kind: "composio",
+      toolkit: "gmail",
+      connectedAccountId: null,
+      status: "initiated",
+    })
+    expect(isRowConnected(blob)).toBe(false)
   })
 })
