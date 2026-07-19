@@ -1,7 +1,7 @@
 import {
   makeComposioLinearDef, makeComposioGitHubDef, makeComposioSlackDef, makeComposioNotionDef,
   makeComposioGmailDef, makeComposioCalendarDef, makeComposioDriveDef, makeComposioClassroomDef,
-  makeComposioTasksDef, makeComposioMeetDef,
+  makeComposioTasksDef, makeComposioMeetDef, makeComposioDocsDef, makeComposioSheetsDef, makeComposioSlidesDef,
   type ConnectorDef, type ComposioExecutor,
 } from "@yomi/agent-core"
 import { createComposioRestExecutor } from "./composio-executor.js"
@@ -23,6 +23,9 @@ export function buildComposioDefs(executor?: ComposioExecutor): Record<string, C
     google: makeComposioGmailDef(exec),
     "google-calendar": makeComposioCalendarDef(exec),
     "google-drive": makeComposioDriveDef(exec),
+    "google-docs": makeComposioDocsDef(exec),
+    "google-sheets": makeComposioSheetsDef(exec),
+    "google-slides": makeComposioSlidesDef(exec),
     "google-classroom": makeComposioClassroomDef(exec),
     "google-tasks": makeComposioTasksDef(exec),
     "google-meet": makeComposioMeetDef(exec),

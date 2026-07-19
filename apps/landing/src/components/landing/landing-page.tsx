@@ -52,6 +52,9 @@ const CONNECTORS: { id: string; name: string; description: string }[] = [
   { id: "google", name: "Gmail", description: "Read, send, and organize email" },
   { id: "google-calendar", name: "Google Calendar", description: "Create and manage events" },
   { id: "google-drive", name: "Google Drive", description: "Find, read, and edit files" },
+  { id: "google-docs", name: "Google Docs", description: "Create and edit docs from Markdown" },
+  { id: "google-sheets", name: "Google Sheets", description: "Read, edit, and chart spreadsheets" },
+  { id: "google-slides", name: "Google Slides", description: "Build decks from Markdown" },
   {
     id: "google-classroom",
     name: "Google Classroom",

@@ -76,6 +76,9 @@ describe("Composio risk classification", () => {
     expect(COMPOSIO_RISK_MAP["gmail"]).toBeDefined()
     expect(COMPOSIO_RISK_MAP["googlecalendar"]).toBeDefined()
     expect(COMPOSIO_RISK_MAP["googledrive"]).toBeDefined()
+    expect(COMPOSIO_RISK_MAP["googledocs"]).toBeDefined()
+    expect(COMPOSIO_RISK_MAP["googlesheets"]).toBeDefined()
+    expect(COMPOSIO_RISK_MAP["googleslides"]).toBeDefined()
     expect(COMPOSIO_RISK_MAP["google_classroom"]).toBeDefined()
     expect(COMPOSIO_RISK_MAP["googletasks"]).toBeDefined()
     expect(COMPOSIO_RISK_MAP["googlemeet"]).toBeDefined()
@@ -128,6 +131,39 @@ describe("Composio risk classification", () => {
 
     it("classifies Drive irreversible actions as irreversible", () => {
       expect(classifyAction("googledrive", "GOOGLEDRIVE_GOOGLE_DRIVE_DELETE_FOLDER_OR_FILE_ACTION")).toBe("irreversible")
+    })
+
+    it("classifies Docs read actions as read, including cross-connector Sheets chart reads", () => {
+      expect(classifyAction("googledocs", "GOOGLEDOCS_GET_DOCUMENT_BY_ID")).toBe("read")
+      expect(classifyAction("googledocs", "GOOGLEDOCS_GET_CHARTS_FROM_SPREADSHEET")).toBe("read")
+    })
+
+    it("classifies Docs write actions as write", () => {
+      expect(classifyAction("googledocs", "GOOGLEDOCS_CREATE_DOCUMENT_MARKDOWN")).toBe("write")
+      expect(classifyAction("googledocs", "GOOGLEDOCS_UPDATE_DOCUMENT_MARKDOWN")).toBe("write")
+    })
+
+    it("classifies Sheets read actions as read", () => {
+      expect(classifyAction("googlesheets", "GOOGLESHEETS_GET_SPREADSHEET_INFO")).toBe("read")
+      expect(classifyAction("googlesheets", "GOOGLESHEETS_BATCH_GET")).toBe("read")
+    })
+
+    it("classifies Sheets write actions as write", () => {
+      expect(classifyAction("googlesheets", "GOOGLESHEETS_SPREADSHEETS_VALUES_APPEND")).toBe("write")
+      expect(classifyAction("googlesheets", "GOOGLESHEETS_CREATE_CHART")).toBe("write")
+    })
+
+    it("classifies Sheets irreversible actions as irreversible", () => {
+      expect(classifyAction("googlesheets", "GOOGLESHEETS_DELETE_SHEET")).toBe("irreversible")
+    })
+
+    it("classifies Slides read actions as read", () => {
+      expect(classifyAction("googleslides", "GOOGLESLIDES_PRESENTATIONS_GET")).toBe("read")
+    })
+
+    it("classifies Slides write actions as write", () => {
+      expect(classifyAction("googleslides", "GOOGLESLIDES_CREATE_SLIDES_MARKDOWN")).toBe("write")
+      expect(classifyAction("googleslides", "GOOGLESLIDES_PRESENTATIONS_CREATE")).toBe("write")
     })
 
     it("classifies Classroom read actions as read", () => {

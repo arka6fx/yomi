@@ -197,6 +197,261 @@ function GoogleMeetIcon({ size = 24 }: IconProps) {
   )
 }
 
+// Docs/Sheets/Slides all export the same rounded-page silhouette as several
+// identical duplicate <path>/<mask> pairs (one per fill layer) — an artifact of
+// the design tool that generated them. Collapsed here to one shared outline +
+// mask per icon, reused across every fill layer. IDs are per-instance
+// (useId-based) so two copies of the same icon on one page don't collide.
+function GoogleDocsIcon({ size = 24 }: IconProps) {
+  const uid = React.useId().replace(/:/g, "")
+  const outlineId = `${uid}-docs-outline`
+  const maskId = `${uid}-docs-mask`
+  const gradId = `${uid}-docs-grad`
+  const radId = `${uid}-docs-rad`
+  return (
+    <svg width={size} height={size} viewBox="0 0 47 65" role="img" aria-label="Google Docs">
+      <defs>
+        <path
+          id={outlineId}
+          d="M29.375 0H4.406C1.983 0 0 1.994 0 4.432v56.136C0 63.006 1.983 65 4.406 65h38.188C45.017 65 47 63.006 47 60.568v-42.84z"
+        />
+        <mask id={maskId} fill="#fff">
+          <use xlinkHref={`#${outlineId}`} />
+        </mask>
+        <linearGradient id={gradId} x1="50.005%" x2="50.005%" y1="8.586%" y2="100.014%">
+          <stop offset="0%" stopColor="#1A237E" stopOpacity=".2" />
+          <stop offset="100%" stopColor="#1A237E" stopOpacity=".02" />
+        </linearGradient>
+        <radialGradient
+          id={radId}
+          cx="3.168%"
+          cy="2.717%"
+          r="161.249%"
+          fx="3.168%"
+          fy="2.717%"
+          gradientTransform="matrix(1 0 0 .72308 0 .008)"
+        >
+          <stop offset="0%" stopColor="#FFF" stopOpacity=".1" />
+          <stop offset="100%" stopColor="#FFF" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <g fill="none" fillRule="evenodd">
+        <path
+          fill="#4285F4"
+          fillRule="nonzero"
+          mask={`url(#${maskId})`}
+          d="M29.375 0H4.406C1.983 0 0 1.994 0 4.432v56.136C0 63.006 1.983 65 4.406 65h38.188C45.017 65 47 63.006 47 60.568v-42.84L36.719 10.34z"
+        />
+        <path fill={`url(#${gradId})`} fillRule="nonzero" mask={`url(#${maskId})`} d="M30.664 16.431 47 32.858V17.727z" />
+        <path
+          fill="#F1F1F1"
+          fillRule="nonzero"
+          mask={`url(#${maskId})`}
+          d="M11.75 47.273h23.5v-2.955h-23.5zm0 5.909h17.625v-2.955H11.75zm0-20.682v2.955h23.5V32.5zm0 8.864h23.5v-2.955h-23.5z"
+        />
+        <g mask={`url(#${maskId})`}>
+          <path fill="#A1C2FA" fillRule="nonzero" d="M29.375 0v13.295c0 2.449 1.972 4.432 4.406 4.432H47z" />
+        </g>
+        <path
+          fill="#FFF"
+          fillOpacity=".2"
+          fillRule="nonzero"
+          mask={`url(#${maskId})`}
+          d="M4.406 0C1.983 0 0 1.994 0 4.432v.37C0 2.363 1.983.368 4.406.368h24.969V0z"
+        />
+        <path
+          fill="#1A237E"
+          fillOpacity=".2"
+          fillRule="nonzero"
+          mask={`url(#${maskId})`}
+          d="M42.594 64.63H4.406C1.983 64.63 0 62.637 0 60.2v.37C0 63.005 1.983 65 4.406 65h38.188C45.017 65 47 63.006 47 60.568v-.37c0 2.438-1.983 4.433-4.406 4.433"
+        />
+        <path
+          fill="#1A237E"
+          fillOpacity=".1"
+          fillRule="nonzero"
+          mask={`url(#${maskId})`}
+          d="M33.781 17.727c-2.434 0-4.406-1.983-4.406-4.432v.37c0 2.448 1.972 4.432 4.406 4.432H47v-.37z"
+        />
+        <path
+          fill={`url(#${radId})`}
+          fillRule="nonzero"
+          d="M29.375 0H4.406C1.983 0 0 1.994 0 4.432v56.136C0 63.006 1.983 65 4.406 65h38.188C45.017 65 47 63.006 47 60.568v-42.84z"
+        />
+      </g>
+    </svg>
+  )
+}
+
+function GoogleSheetsIcon({ size = 24 }: IconProps) {
+  const uid = React.useId().replace(/:/g, "")
+  const outlineId = `${uid}-sheets-outline`
+  const maskId = `${uid}-sheets-mask`
+  const gradId = `${uid}-sheets-grad`
+  const radId = `${uid}-sheets-rad`
+  return (
+    <svg width={size} height={size} viewBox="0 0 49 67" role="img" aria-label="Google Sheets">
+      <defs>
+        <path
+          id={outlineId}
+          d="M29.583 0H4.438A4.45 4.45 0 0 0 0 4.438v56.208a4.45 4.45 0 0 0 4.438 4.437h38.458a4.45 4.45 0 0 0 4.437-4.437V17.75z"
+        />
+        <mask id={maskId} fill="#fff">
+          <use xlinkHref={`#${outlineId}`} />
+        </mask>
+        <linearGradient id={gradId} x1="50.005%" x2="50.005%" y1="8.586%" y2="100.014%">
+          <stop offset="0%" stopColor="#263238" stopOpacity=".2" />
+          <stop offset="100%" stopColor="#263238" stopOpacity=".02" />
+        </linearGradient>
+        <radialGradient
+          id={radId}
+          cx="3.168%"
+          cy="2.717%"
+          r="161.249%"
+          fx="3.168%"
+          fy="2.717%"
+          gradientTransform="matrix(1 0 0 .72727 0 .007)"
+        >
+          <stop offset="0%" stopColor="#FFF" stopOpacity=".1" />
+          <stop offset="100%" stopColor="#FFF" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <g fill="none" fillRule="evenodd" transform="translate(0.833 0.958)">
+        <path
+          fill="#0F9D58"
+          fillRule="nonzero"
+          mask={`url(#${maskId})`}
+          d="M29.583 0H4.438A4.45 4.45 0 0 0 0 4.438v56.208a4.45 4.45 0 0 0 4.438 4.437h38.458a4.45 4.45 0 0 0 4.437-4.437V17.75L36.98 10.354z"
+        />
+        <path
+          fill="#F1F1F1"
+          fillRule="nonzero"
+          mask={`url(#${maskId})`}
+          d="M11.833 31.802V53.25H35.5V31.802zm10.355 18.49h-7.396v-3.698h7.396zm0-5.917h-7.396v-3.698h7.396zm0-5.917h-7.396V34.76h7.396zm10.354 11.834h-7.396v-3.698h7.396zm0-5.917h-7.396v-3.698h7.396zm0-5.917h-7.396V34.76h7.396z"
+        />
+        <path fill={`url(#${gradId})`} fillRule="nonzero" mask={`url(#${maskId})`} d="M30.881 16.452 47.333 32.9V17.75z" />
+        <g mask={`url(#${maskId})`}>
+          <path fill="#87CEAC" fillRule="nonzero" d="M29.583 0v13.313a4.436 4.436 0 0 0 4.438 4.437h13.312z" />
+        </g>
+        <path
+          fill="#FFF"
+          fillOpacity=".2"
+          fillRule="nonzero"
+          mask={`url(#${maskId})`}
+          d="M4.438 0A4.45 4.45 0 0 0 0 4.438v.37A4.45 4.45 0 0 1 4.438.37h25.145V0z"
+        />
+        <path
+          fill="#263238"
+          fillOpacity=".2"
+          fillRule="nonzero"
+          mask={`url(#${maskId})`}
+          d="M42.896 64.714H4.438A4.45 4.45 0 0 1 0 60.276v.37a4.45 4.45 0 0 0 4.438 4.437h38.458a4.45 4.45 0 0 0 4.437-4.437v-.37a4.45 4.45 0 0 1-4.437 4.438"
+        />
+        <path
+          fill="#263238"
+          fillOpacity=".1"
+          fillRule="nonzero"
+          mask={`url(#${maskId})`}
+          d="M34.02 17.75a4.436 4.436 0 0 1-4.437-4.437v.37a4.436 4.436 0 0 0 4.438 4.437h13.312v-.37z"
+        />
+        <path
+          fill={`url(#${radId})`}
+          fillRule="nonzero"
+          d="M29.583 0H4.438A4.45 4.45 0 0 0 0 4.438v56.208a4.45 4.45 0 0 0 4.438 4.437h38.458a4.45 4.45 0 0 0 4.437-4.437V17.75z"
+        />
+      </g>
+    </svg>
+  )
+}
+
+function GoogleSlidesIcon({ size = 24 }: IconProps) {
+  const uid = React.useId().replace(/:/g, "")
+  const outlineId = `${uid}-slides-outline`
+  const maskId = `${uid}-slides-mask`
+  const gradId = `${uid}-slides-grad`
+  const radId = `${uid}-slides-rad`
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 66" role="img" aria-label="Google Slides">
+      <defs>
+        <path
+          id={outlineId}
+          d="M29.583 0H4.438A4.45 4.45 0 0 0 0 4.438v56.208a4.45 4.45 0 0 0 4.438 4.437h38.458a4.45 4.45 0 0 0 4.437-4.437V17.75z"
+        />
+        <mask id={maskId} fill="#fff">
+          <use xlinkHref={`#${outlineId}`} />
+        </mask>
+        <linearGradient id={gradId} x1="50.005%" x2="50.005%" y1="8.586%" y2="100.014%">
+          <stop offset="0%" stopColor="#BF360C" stopOpacity=".2" />
+          <stop offset="100%" stopColor="#BF360C" stopOpacity=".02" />
+        </linearGradient>
+        <radialGradient
+          id={radId}
+          cx="3.168%"
+          cy="2.717%"
+          r="161.249%"
+          fx="3.168%"
+          fy="2.717%"
+          gradientTransform="matrix(1 0 0 .72727 0 .007)"
+        >
+          <stop offset="0%" stopColor="#FFF" stopOpacity=".1" />
+          <stop offset="100%" stopColor="#FFF" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <g fill="none" fillRule="evenodd">
+        <path
+          fill="#F4B400"
+          fillRule="nonzero"
+          mask={`url(#${maskId})`}
+          d="M29.583 0H4.438A4.45 4.45 0 0 0 0 4.438v56.208a4.45 4.45 0 0 0 4.438 4.437h38.458a4.45 4.45 0 0 0 4.437-4.437V17.75L36.98 10.354z"
+        />
+        <path
+          fill="#F1F1F1"
+          fillRule="nonzero"
+          mask={`url(#${maskId})`}
+          d="M33.281 29.583H14.052c-1.22 0-2.219.999-2.219 2.22V51.03c0 1.22.999 2.219 2.22 2.219H33.28c1.22 0 2.219-.998 2.219-2.219V31.802c0-1.22-.998-2.219-2.219-2.219m-.74 17.01H14.79V36.24h17.75z"
+        />
+        <path fill={`url(#${gradId})`} fillRule="nonzero" mask={`url(#${maskId})`} d="M30.881 16.452 47.333 32.9V17.75z" />
+        <g mask={`url(#${maskId})`}>
+          <path fill="#FADA80" fillRule="nonzero" d="M29.583 0v13.313a4.436 4.436 0 0 0 4.438 4.437h13.312z" />
+        </g>
+        <path
+          fill="#FFF"
+          fillOpacity=".1"
+          fillRule="nonzero"
+          mask={`url(#${maskId})`}
+          d="M29.583 0v.37l17.381 17.38h.369z"
+        />
+        <path
+          fill="#FFF"
+          fillOpacity=".2"
+          fillRule="nonzero"
+          mask={`url(#${maskId})`}
+          d="M4.438 0A4.45 4.45 0 0 0 0 4.438v.37A4.45 4.45 0 0 1 4.438.37h25.145V0z"
+        />
+        <path
+          fill="#BF360C"
+          fillOpacity=".2"
+          fillRule="nonzero"
+          mask={`url(#${maskId})`}
+          d="M42.896 64.714H4.438A4.45 4.45 0 0 1 0 60.276v.37a4.45 4.45 0 0 0 4.438 4.437h38.458a4.45 4.45 0 0 0 4.437-4.437v-.37a4.45 4.45 0 0 1-4.437 4.438"
+        />
+        <path
+          fill="#BF360C"
+          fillOpacity=".1"
+          fillRule="nonzero"
+          mask={`url(#${maskId})`}
+          d="M34.02 17.75a4.436 4.436 0 0 1-4.437-4.437v.37a4.436 4.436 0 0 0 4.438 4.437h13.312v-.37z"
+        />
+        <path
+          fill={`url(#${radId})`}
+          fillRule="nonzero"
+          d="M29.583 0H4.438A4.45 4.45 0 0 0 0 4.438v56.208a4.45 4.45 0 0 0 4.438 4.437h38.458a4.45 4.45 0 0 0 4.437-4.437V17.75z"
+        />
+      </g>
+    </svg>
+  )
+}
+
 function SwiggyIcon({ size = 24 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="-7.3 3.6 2520.1 3702.8" fill="none" role="img" aria-label="Swiggy">
@@ -220,6 +475,9 @@ const ICON_MAP: Record<string, React.FC<IconProps>> = {
   "google-gmail": GmailIcon,
   "google-calendar": GoogleCalendarIcon,
   "google-drive": GoogleDriveIcon,
+  "google-docs": GoogleDocsIcon,
+  "google-sheets": GoogleSheetsIcon,
+  "google-slides": GoogleSlidesIcon,
   "google-classroom": GoogleClassroomIcon,
   "google-tasks": GoogleTasksIcon,
   "google-meet": GoogleMeetIcon,

@@ -176,6 +176,56 @@ export const COMPOSIO_RISK_MAP: Record<string, Record<string, ActionRisk>> = {
     // Irreversible — gated, flagged as unrecoverable.
     GOOGLEDRIVE_GOOGLE_DRIVE_DELETE_FOLDER_OR_FILE_ACTION: "irreversible",
   },
+  googledocs: {
+    // Reads — pass straight through. The chart actions are cross-connector
+    // reads against a Google Sheet, not writes to the Doc.
+    GOOGLEDOCS_GET_DOCUMENT_BY_ID: "read",
+    GOOGLEDOCS_SEARCH_DOCUMENTS: "read",
+    GOOGLEDOCS_LIST_SPREADSHEET_CHARTS_ACTION: "read",
+    GOOGLEDOCS_GET_CHARTS_FROM_SPREADSHEET: "read",
+
+    // Writes — gated for approval. Docs edits are recoverable via the
+    // document's built-in version history, so nothing here is "irreversible".
+    GOOGLEDOCS_CREATE_DOCUMENT_MARKDOWN: "write",
+    GOOGLEDOCS_UPDATE_DOCUMENT_MARKDOWN: "write",
+    GOOGLEDOCS_INSERT_TEXT_ACTION: "write",
+    GOOGLEDOCS_REPLACE_ALL_TEXT: "write",
+    GOOGLEDOCS_CREATE_PARAGRAPH_BULLETS: "write",
+    GOOGLEDOCS_INSERT_TABLE_ACTION: "write",
+    GOOGLEDOCS_INSERT_INLINE_IMAGE: "write",
+    GOOGLEDOCS_COPY_DOCUMENT: "write",
+  },
+  googlesheets: {
+    // Reads — pass straight through.
+    GOOGLESHEETS_GET_SPREADSHEET_INFO: "read",
+    GOOGLESHEETS_BATCH_GET: "read",
+    GOOGLESHEETS_SEARCH_SPREADSHEETS: "read",
+    GOOGLESHEETS_GET_SHEET_NAMES: "read",
+    GOOGLESHEETS_QUERY_TABLE: "read",
+    GOOGLESHEETS_LOOKUP_SPREADSHEET_ROW: "read",
+
+    // Writes — gated for approval.
+    GOOGLESHEETS_CREATE_GOOGLE_SHEET1: "write",
+    GOOGLESHEETS_ADD_SHEET: "write",
+    GOOGLESHEETS_SPREADSHEETS_VALUES_APPEND: "write",
+    GOOGLESHEETS_FORMAT_CELL: "write",
+    GOOGLESHEETS_CREATE_CHART: "write",
+    GOOGLESHEETS_CLEAR_VALUES: "write",
+
+    // Irreversible — gated, flagged as unrecoverable.
+    GOOGLESHEETS_DELETE_SHEET: "irreversible",
+  },
+  googleslides: {
+    // Reads — pass straight through.
+    GOOGLESLIDES_PRESENTATIONS_GET: "read",
+    GOOGLESLIDES_PRESENTATIONS_PAGES_GET: "read",
+    GOOGLESLIDES_PRESENTATIONS_PAGES_GET_THUMBNAIL: "read",
+
+    // Writes — gated for approval.
+    GOOGLESLIDES_CREATE_SLIDES_MARKDOWN: "write",
+    GOOGLESLIDES_PRESENTATIONS_CREATE: "write",
+    GOOGLESLIDES_PRESENTATIONS_BATCH_UPDATE: "write",
+  },
   // Composio's toolkit slug is "google_classroom" (underscore) — the def id and
   // classification-map key must match it exactly, or every action here falls
   // through to the read-map's implicit default-deny (classified as "write").
