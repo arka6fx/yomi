@@ -41,6 +41,53 @@ function defaultPreview(
   return { title, preview: JSON.stringify(args).slice(0, 800) }
 }
 
+// Composio actions return whatever shape the provider's API gives back — full email
+// bodies/HTML, entire thread histories, attachment payloads — with no size contract.
+// Native connectors truncate per-field at the source (see google-gmail-def.ts's
+// `.slice()` calls); Composio results have no known shape here, so cap total
+// serialized size instead. Without this a single "fetch important mail" call was
+// seen returning ~1M tokens of raw Gmail JSON and blowing the model's TPM limit.
+const MAX_RESULT_CHARS = 20_000
+
+function truncateResult(value: unknown, budget: { remaining: number }): unknown {
+  if (budget.remaining <= 0) return "…[truncated]"
+  if (typeof value === "string") {
+    if (value.length <= budget.remaining) {
+      budget.remaining -= value.length
+      return value
+    }
+    const kept = value.slice(0, budget.remaining)
+    const omitted = value.length - kept.length
+    budget.remaining = 0
+    return `${kept}…[truncated, ${omitted} more chars]`
+  }
+  if (Array.isArray(value)) {
+    const out: unknown[] = []
+    for (const item of value) {
+      if (budget.remaining <= 0) {
+        out.push(`…[truncated, ${value.length - out.length} more items]`)
+        break
+      }
+      out.push(truncateResult(item, budget))
+    }
+    return out
+  }
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {}
+    for (const [key, v] of Object.entries(value)) {
+      out[key] = budget.remaining <= 0 ? "…[truncated]" : truncateResult(v, budget)
+    }
+    return out
+  }
+  return value
+}
+
+// Single chokepoint every Composio tool result passes through before reaching the
+// model, regardless of toolkit (Gmail, GitHub, Notion, Slack, ...).
+function capComposioResult(result: unknown): unknown {
+  return truncateResult(result, { remaining: MAX_RESULT_CHARS })
+}
+
 // Wraps a Composio toolkit as an AI SDK ToolSet behind Yomi's approval flow.
 //
 // For each spec the risk map decides the path: `read` actions execute straight
@@ -64,11 +111,12 @@ export function createComposioTools(opts: CreateComposioToolsOptions): ToolFacto
         execute: async (args: Record<string, unknown>) => {
           try {
             if (risk === "read") {
-              return await opts.executor.execute({
+              const result = await opts.executor.execute({
                 userId: ctx.userId,
                 slug: spec.slug,
                 arguments: args,
               })
+              return capComposioResult(result)
             }
 
             const card = spec.preview ? spec.preview(args) : defaultPreview(spec.slug, args)
@@ -83,8 +131,10 @@ export function createComposioTools(opts: CreateComposioToolsOptions): ToolFacto
                 confirmText: card.confirmText,
               },
               args,
-              () =>
-                opts.executor.execute({ userId: ctx.userId, slug: spec.slug, arguments: args }),
+              async () =>
+                capComposioResult(
+                  await opts.executor.execute({ userId: ctx.userId, slug: spec.slug, arguments: args }),
+                ),
             )
           } catch (err) {
             return connectorError(err)
