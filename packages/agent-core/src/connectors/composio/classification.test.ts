@@ -117,17 +117,17 @@ describe("Composio risk classification", () => {
 
     it("classifies Drive read actions as read", () => {
       expect(classifyAction("googledrive", "GOOGLEDRIVE_LIST_FILES")).toBe("read")
-      expect(classifyAction("googledrive", "GOOGLEDRIVE_SEARCH_FILES")).toBe("read")
-      expect(classifyAction("googledrive", "GOOGLEDRIVE_GET_FILE")).toBe("read")
+      expect(classifyAction("googledrive", "GOOGLEDRIVE_FIND_FILE")).toBe("read")
+      expect(classifyAction("googledrive", "GOOGLEDRIVE_GET_FILE_METADATA")).toBe("read")
     })
 
     it("classifies Drive write actions as write", () => {
-      expect(classifyAction("googledrive", "GOOGLEDRIVE_CREATE_FILE")).toBe("write")
-      expect(classifyAction("googledrive", "GOOGLEDRIVE_UPDATE_FILE")).toBe("write")
+      expect(classifyAction("googledrive", "GOOGLEDRIVE_CREATE_FILE_FROM_TEXT")).toBe("write")
+      expect(classifyAction("googledrive", "GOOGLEDRIVE_UPDATE_FILE_PUT")).toBe("write")
     })
 
     it("classifies Drive irreversible actions as irreversible", () => {
-      expect(classifyAction("googledrive", "GOOGLEDRIVE_DELETE_FILE")).toBe("irreversible")
+      expect(classifyAction("googledrive", "GOOGLEDRIVE_GOOGLE_DRIVE_DELETE_FOLDER_OR_FILE_ACTION")).toBe("irreversible")
     })
 
     it("classifies Classroom read actions as read", () => {

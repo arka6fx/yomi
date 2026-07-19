@@ -4,16 +4,22 @@ import { createComposioTools, type ComposioExecutor, type ComposioToolSpec } fro
 
 export const DRIVE_TOOLKIT = "googledrive"
 
+// Every slug and param name below was checked against Composio's live catalog
+// (GET /api/v3/tools?toolkit_slug=googledrive) — the original set was hallucinated
+// during the migration and 404'd on every real call, same class of bug as the
+// gmail/classroom/github/linear fix. Google Drive API fields are camelCase
+// (fileId, folderId, pageSize); several Composio actions instead use snake_case
+// (file_id, mime_type) — mixed per-action, not a toolkit-wide convention.
 export const driveComposioSpecs: ComposioToolSpec[] = [
   // ── Read actions ──────────────────────────────────────────────
   {
-    slug: "GOOGLEDRIVE_SEARCH_FILES",
+    slug: "GOOGLEDRIVE_FIND_FILE",
     description:
-      "Search for files in Google Drive by name, type, or content. Returns file names, types, last modified date, and links. Read-only.",
+      "Search for files in Google Drive by name, type, or content using Drive query syntax. Returns file names, types, last modified date, and links. Read-only.",
     parameters: z
       .object({
-        query: z.string().describe("Search query (supports Drive query syntax, e.g. \"name contains 'budget'\")"),
-        page_size: z.number().int().min(1).max(50).optional().describe("Max results to return"),
+        q: z.string().optional().describe("Search query (Drive query syntax, e.g. \"name contains 'budget'\")"),
+        pageSize: z.number().int().min(1).max(1000).optional().describe("Max results to return"),
       })
       .passthrough(),
   },
@@ -23,43 +29,51 @@ export const driveComposioSpecs: ComposioToolSpec[] = [
       "List files in Google Drive, sorted by most recently modified. Optionally filter to a specific folder. Read-only.",
     parameters: z
       .object({
-        folder_id: z.string().optional().describe("Drive folder ID to list. Omit to list all accessible files."),
-        page_size: z.number().int().min(1).max(50).optional().describe("Max files to return"),
+        folderId: z.string().optional().describe("Drive folder ID to list. Omit to list all accessible files."),
+        pageSize: z.number().int().min(1).max(1000).optional().describe("Max files to return"),
       })
       .passthrough(),
   },
   {
-    slug: "GOOGLEDRIVE_GET_FILE",
+    slug: "GOOGLEDRIVE_GET_FILE_METADATA",
     description:
       "Get metadata for a specific Google Drive file by ID: name, type, size, modified/created dates, and link. Read-only.",
     parameters: z
       .object({
-        file_id: z.string().describe("Google Drive file ID"),
+        fileId: z.string().describe("Google Drive file ID"),
       })
       .passthrough(),
   },
   {
-    slug: "GOOGLEDRIVE_READ_FILE",
+    slug: "GOOGLEDRIVE_PARSE_FILE",
     description:
-      "Read the text content of a Google Drive file. Works for Google Docs, Sheets (exported as CSV), and text files. Read-only.",
+      "Extract the text content of a Google Drive file, converting Google Docs/Sheets/Slides to a plain format. Read-only.",
     parameters: z
       .object({
         file_id: z.string().describe("Google Drive file ID"),
+        mime_type: z
+          .string()
+          .optional()
+          .describe("Target export MIME type for Google Workspace files, e.g. 'text/plain'"),
       })
       .passthrough(),
   },
   {
     slug: "GOOGLEDRIVE_DOWNLOAD_FILE",
     description:
-      "Download a file from Google Drive. Returns the file content in base64 encoding. For text content, prefer GOOGLEDRIVE_READ_FILE instead. Read-only.",
+      "Download a file from Google Drive. Returns the file content in base64 encoding. For text content, prefer GOOGLEDRIVE_PARSE_FILE instead. Read-only.",
     parameters: z
       .object({
         file_id: z.string().describe("Google Drive file ID"),
+        mime_type: z
+          .string()
+          .optional()
+          .describe("Target export MIME type for Google Workspace files, e.g. 'application/pdf'"),
       })
       .passthrough(),
   },
   {
-    slug: "GOOGLEDRIVE_GET_STORAGE_QUOTA",
+    slug: "GOOGLEDRIVE_GET_ABOUT",
     description:
       "Get the user's Google Drive storage usage, total limit, and remaining free space. Read-only.",
     parameters: z.object({}).passthrough(),
@@ -67,58 +81,43 @@ export const driveComposioSpecs: ComposioToolSpec[] = [
 
   // ── Write actions (gated) ─────────────────────────────────────
   {
-    slug: "GOOGLEDRIVE_CREATE_FILE",
+    slug: "GOOGLEDRIVE_CREATE_FILE_FROM_TEXT",
     description:
-      "Create a new file in Google Drive. Supports Google Docs, Sheets, and plain text. Requires user approval before it runs.",
+      "Create a new file in Google Drive from plain text content. Supports Google Docs, Sheets, Slides, or plain text via mime_type. Requires user approval before it runs.",
     parameters: z
       .object({
-        name: z.string().describe("Name of the new file"),
-        mime_type: z.string().optional().describe("MIME type (defaults to 'application/vnd.google-apps.document' for Docs)"),
-        content: z.string().optional().describe("Text content for the file"),
-        folder_id: z.string().optional().describe("Drive folder ID to create the file in"),
+        file_name: z.string().describe("Name of the new file"),
+        text_content: z.string().describe("Text content for the file"),
+        mime_type: z
+          .string()
+          .optional()
+          .describe("MIME type (defaults to 'text/plain'; use 'application/vnd.google-apps.document' for Docs)"),
+        parent_id: z.string().optional().describe("Drive folder ID to create the file in"),
       })
       .passthrough(),
     preview: (a) => ({
-      title: `Create Drive file: ${String(a["name"] ?? "")}`,
-      preview: `${String(a["name"] ?? "")}${a["folder_id"] ? ` in folder ${String(a["folder_id"]).slice(0, 12)}` : ""}`,
+      title: `Create Drive file: ${String(a["file_name"] ?? "")}`,
+      preview: `${String(a["file_name"] ?? "")}${a["parent_id"] ? ` in folder ${String(a["parent_id"]).slice(0, 12)}` : ""}`,
       confirmText: "Create file",
     }),
   },
   {
-    slug: "GOOGLEDRIVE_UPLOAD_FILE",
-    description:
-      "Upload file content to Google Drive. Creates or overwrites a file with the provided content. Requires user approval before it runs.",
-    parameters: z
-      .object({
-        name: z.string().describe("File name"),
-        content: z.string().describe("File content (base64-encoded for binary, plain text for text)"),
-        mime_type: z.string().optional().describe("MIME type of the file"),
-        folder_id: z.string().optional().describe("Drive folder ID to upload to"),
-      })
-      .passthrough(),
-    preview: (a) => ({
-      title: `Upload file: ${String(a["name"] ?? "")}`,
-      preview: `Upload "${String(a["name"] ?? "")}"${a["folder_id"] ? ` to folder ${String(a["folder_id"]).slice(0, 12)}` : ""}`,
-      confirmText: "Upload file",
-    }),
-  },
-  {
-    slug: "GOOGLEDRIVE_UPDATE_FILE",
+    slug: "GOOGLEDRIVE_UPDATE_FILE_PUT",
     description:
       "Rename a Drive file and/or move it between folders. Requires user approval before it runs.",
     parameters: z
       .object({
         file_id: z.string().describe("Google Drive file ID"),
         name: z.string().optional().describe("New file name"),
-        add_to_folder_id: z.string().optional().describe("Folder ID to add the file to"),
-        remove_from_folder_id: z.string().optional().describe("Folder ID to remove the file from"),
+        add_parents: z.string().optional().describe("Comma-separated folder IDs to add the file to"),
+        remove_parents: z.string().optional().describe("Comma-separated folder IDs to remove the file from"),
       })
       .passthrough(),
     preview: (a) => ({
       title: `Update Drive file ${String(a["file_id"] ?? "").slice(0, 12)}`,
       preview: [
         a["name"] ? `New name: ${String(a["name"])}` : null,
-        a["add_to_folder_id"] ? `Move to folder: ${String(a["add_to_folder_id"]).slice(0, 12)}` : null,
+        a["add_parents"] ? `Move to folder: ${String(a["add_parents"]).slice(0, 12)}` : null,
       ].filter(Boolean).join("\n") || "Update file details",
       confirmText: "Update file",
     }),
@@ -126,55 +125,57 @@ export const driveComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "GOOGLEDRIVE_COPY_FILE",
     description:
-      "Copy (duplicate) a Google Drive file. Optionally specify a new name and target folder. Requires user approval before it runs.",
+      "Copy (duplicate) a Google Drive file. Optionally specify a new name. Requires user approval before it runs.",
     parameters: z
       .object({
         file_id: z.string().describe("Google Drive file ID to copy"),
-        name: z.string().optional().describe("New name for the copy"),
-        folder_id: z.string().optional().describe("Folder ID to place the copy in"),
+        new_title: z.string().optional().describe("Name for the copy (defaults to 'Copy of <original>')"),
       })
       .passthrough(),
     preview: (a) => ({
       title: `Copy Drive file ${String(a["file_id"] ?? "").slice(0, 12)}`,
-      preview: `Copy file ${String(a["file_id"] ?? "").slice(0, 12)}${a["name"] ? ` as "${String(a["name"])}"` : ""}`,
+      preview: `Copy file ${String(a["file_id"] ?? "").slice(0, 12)}${a["new_title"] ? ` as "${String(a["new_title"])}"` : ""}`,
       confirmText: "Copy file",
     }),
   },
   {
-    slug: "GOOGLEDRIVE_SHARE_FILE",
+    slug: "GOOGLEDRIVE_ADD_FILE_SHARING_PREFERENCE",
     description:
-      "Share a Google Drive file with specific users or create a shareable link. Requires user approval before it runs.",
+      "Share a Google Drive file with a specific user, group, or domain, or make it link-shareable to anyone. Requires user approval before it runs.",
     parameters: z
       .object({
         file_id: z.string().describe("Google Drive file ID to share"),
-        email: z.string().optional().describe("Email to share with (omit for link sharing)"),
-        role: z.enum(["reader", "commenter", "writer"]).optional().default("reader").describe("Permission level"),
+        role: z.enum(["reader", "commenter", "writer"]).describe("Permission level"),
+        type: z.enum(["user", "group", "domain", "anyone"]).describe("Who the permission is for"),
+        email_address: z.string().optional().describe("Email to share with. Required if type is 'user' or 'group'"),
+        domain: z.string().optional().describe("Domain to share with. Required if type is 'domain'"),
       })
       .passthrough(),
     preview: (a) => ({
       title: `Share Drive file ${String(a["file_id"] ?? "").slice(0, 12)}`,
-      preview: a["email"]
-        ? `Invite ${String(a["email"])} as ${String(a["role"] ?? "reader")}`
-        : `Create shareable link (${String(a["role"] ?? "reader")})`,
+      preview: a["email_address"]
+        ? `Invite ${String(a["email_address"])} as ${String(a["role"] ?? "reader")}`
+        : a["type"] === "anyone"
+          ? `Create shareable link (${String(a["role"] ?? "reader")})`
+          : `Share with ${String(a["type"] ?? "")}${a["domain"] ? ` (${String(a["domain"])})` : ""} as ${String(a["role"] ?? "reader")}`,
       confirmText: "Share file",
     }),
   },
 
   // ── Irreversible actions ──────────────────────────────────────
   {
-    slug: "GOOGLEDRIVE_DELETE_FILE",
+    slug: "GOOGLEDRIVE_GOOGLE_DRIVE_DELETE_FOLDER_OR_FILE_ACTION",
     description:
-      "Delete a Google Drive file. Moves to trash by default; set permanent=true to delete forever. This CANNOT be undone if permanent. Requires user approval before it runs.",
+      "Permanently delete a Google Drive file or folder. Google's Drive API skips the trash for this action — it CANNOT be undone. Requires user approval before it runs.",
     parameters: z
       .object({
-        file_id: z.string().describe("Google Drive file ID to delete"),
-        permanent: z.coerce.boolean().optional().describe("If true, permanently delete (cannot be undone)"),
+        fileId: z.string().describe("Google Drive file or folder ID to delete"),
       })
       .passthrough(),
     preview: (a) => ({
-      title: a["permanent"] ? "Permanently delete Drive file" : "Trash Drive file",
-      preview: `${a["permanent"] ? "Permanently delete" : "Move to trash"} file ${String(a["file_id"] ?? "").slice(0, 12)}.${a["permanent"] ? " This CANNOT be undone." : ""}`,
-      confirmText: a["permanent"] ? "Delete permanently" : "Move to trash",
+      title: "Permanently delete Drive file",
+      preview: `Permanently delete file ${String(a["fileId"] ?? "").slice(0, 12)}. This CANNOT be undone.`,
+      confirmText: "Delete permanently",
     }),
   },
 ]

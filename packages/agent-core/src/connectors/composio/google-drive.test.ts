@@ -41,9 +41,9 @@ describe("Drive via Composio — ConnectorDef shape", () => {
   it("exposes tools factory that returns tools keyed by Composio slug", () => {
     const def = makeComposioDriveDef(fakeExecutor())
     const tools = def.tools(buildCtx())
-    expect(tools["GOOGLEDRIVE_SEARCH_FILES"]).toBeDefined()
-    expect(tools["GOOGLEDRIVE_CREATE_FILE"]).toBeDefined()
-    expect(tools["GOOGLEDRIVE_DELETE_FILE"]).toBeDefined()
+    expect(tools["GOOGLEDRIVE_FIND_FILE"]).toBeDefined()
+    expect(tools["GOOGLEDRIVE_CREATE_FILE_FROM_TEXT"]).toBeDefined()
+    expect(tools["GOOGLEDRIVE_GOOGLE_DRIVE_DELETE_FOLDER_OR_FILE_ACTION"]).toBeDefined()
   })
 })
 
@@ -59,11 +59,11 @@ describe("Drive via Composio — read pass-through", () => {
     })
     const tools = factory(buildCtx({ createPendingAction: create }))
 
-    const result = await tools["GOOGLEDRIVE_LIST_FILES"]!.execute({ page_size: 5 })
+    const result = await tools["GOOGLEDRIVE_LIST_FILES"]!.execute({ pageSize: 5 })
 
     expect(result).toEqual({ files: [{ id: "f1", name: "Notes" }] })
     expect(executor.calls).toEqual([
-      { userId: "user_1", slug: "GOOGLEDRIVE_LIST_FILES", arguments: { page_size: 5 } },
+      { userId: "user_1", slug: "GOOGLEDRIVE_LIST_FILES", arguments: { pageSize: 5 } },
     ])
     expect(create).not.toHaveBeenCalled()
   })
@@ -81,7 +81,7 @@ describe("Drive via Composio — write gating", () => {
     })
     const tools = factory(buildCtx({ createPendingAction: create }))
 
-    await tools["GOOGLEDRIVE_CREATE_FILE"]!.execute({ name: "New Doc", content: "Hello" })
+    await tools["GOOGLEDRIVE_CREATE_FILE_FROM_TEXT"]!.execute({ file_name: "New Doc", text_content: "Hello" })
 
     expect(executor.calls).toEqual([])
     const arg = create.mock.calls[0]![0] as Record<string, unknown>
@@ -99,7 +99,7 @@ describe("Drive via Composio — write gating", () => {
     })
     const tools = factory(buildCtx({ createPendingAction: create }))
 
-    await tools["GOOGLEDRIVE_DELETE_FILE"]!.execute({ file_id: "f1", permanent: true })
+    await tools["GOOGLEDRIVE_GOOGLE_DRIVE_DELETE_FOLDER_OR_FILE_ACTION"]!.execute({ fileId: "f1" })
 
     expect((create.mock.calls[0]![0] as Record<string, unknown>)["risk"]).toBe("irreversible")
   })
@@ -116,9 +116,9 @@ describe("Drive via Composio — approval replay", () => {
     })
     const tools = factory(buildCtx())
 
-    const result = await tools["GOOGLEDRIVE_CREATE_FILE"]!.execute({
-      name: "Report",
-      content: "Data",
+    const result = await tools["GOOGLEDRIVE_CREATE_FILE_FROM_TEXT"]!.execute({
+      file_name: "Report",
+      text_content: "Data",
     })
 
     expect(result).toEqual({ ok: true, id: "newfile1" })
