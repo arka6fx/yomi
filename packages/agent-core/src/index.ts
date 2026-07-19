@@ -19,9 +19,7 @@ export { notionDef, createNotionTools } from "./connectors/notion-def.js"
 export { slackDef, createSlackTools } from "./connectors/slack-def.js"
 export {
   linearDef,
-  linearApiKeyDef,
   createLinearTools,
-  createLinearApiKeyTools,
 } from "./connectors/linear-def.js"
 export { swiggyDef, SWIGGY_MCP_SERVERS, wrapOrderTools } from "./connectors/swiggy-def.js"
 export { createMCPToolProvider, type MCPAuthProvider, type MCPServerConfig, type MCPToolProvider } from "./connectors/mcp-connector.js"
