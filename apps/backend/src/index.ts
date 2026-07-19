@@ -144,6 +144,7 @@ async function runCronSweeps(): Promise<void> {
   const { runDueSchedules } = await import("./services/schedule-runner.js")
   const { runPrivacyRetention } = await import("./services/privacy/retention.js")
   const { runDriveSyncSweep } = await import("./services/rag/drive-sync.js")
+  const { summarizeUnsummarizedSessions } = await import("./services/agent-sessions.js")
   await Promise.all([
     runDueSchedules()
       .then(({ ran }) => {
@@ -163,6 +164,11 @@ async function runCronSweeps(): Promise<void> {
         if (ran > 0) console.warn(`[drive-sync] swept ${ran} source(s)`)
       })
       .catch((err) => console.error("[drive-sync] sweep error:", err)),
+    summarizeUnsummarizedSessions()
+      .then((count) => {
+        if (count > 0) console.warn(`[session-summary] summarized ${count} session(s)`)
+      })
+      .catch((err) => console.error("[session-summary] sweep error:", err)),
   ])
 }
 
