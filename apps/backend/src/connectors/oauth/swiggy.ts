@@ -32,16 +32,16 @@ interface SwiggyClientRegistration {
 }
 
 async function registerClient(redirectUri: string): Promise<SwiggyClientRegistration> {
-  const body = new URLSearchParams({
-    redirect_uris: redirectUri,
+  const body = JSON.stringify({
+    redirect_uris: [redirectUri],
     token_endpoint_auth_method: "none",
-    grant_types: "authorization_code",
-    response_types: "code",
+    grant_types: ["authorization_code"],
+    response_types: ["code"],
   })
 
   const res = await fetch(`${SWIGGY_AUTH_BASE}/register`, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: { "Content-Type": "application/json" },
     body,
   })
 
