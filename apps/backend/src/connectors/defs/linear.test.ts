@@ -2,6 +2,13 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, mock 
 
 const originalEnv = { ...process.env }
 
+// Must run before any nested describe's beforeAll imports ./linear.js — the
+// module registers native vs Composio-backed at import time based on this
+// flag, and these tests assert against the native (dash-named) tool keys.
+beforeAll(() => {
+  delete process.env["COMPOSIO_CONNECTORS"]
+})
+
 beforeEach(() => {
   process.env.LINEAR_CLIENT_ID = "bf0ad99940301a0dfb9f3a0ca9f557e6"
   process.env.LINEAR_CLIENT_SECRET = "941c77ab89de938ba6cb45f8c667750b"
