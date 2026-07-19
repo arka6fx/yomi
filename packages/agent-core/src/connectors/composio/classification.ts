@@ -93,32 +93,28 @@ export const COMPOSIO_RISK_MAP: Record<string, Record<string, ActionRisk>> = {
   notion: {
     // Reads — pass straight through.
     NOTION_SEARCH_NOTION_PAGE: "read",
-    NOTION_RETRIEVE_PAGE: "read",
+    NOTION_FETCH_DATA: "read",
     NOTION_FETCH_BLOCK_CONTENTS: "read",
     NOTION_FETCH_DATABASE: "read",
     NOTION_QUERY_DATABASE: "read",
-    NOTION_QUERY_DATABASE_WITH_FILTER: "read",
     NOTION_LIST_USERS: "read",
     NOTION_FETCH_COMMENTS: "read",
-    NOTION_LIST_FILE_UPLOADS: "read",
-    NOTION_LIST_DATA_SOURCE_TEMPLATES: "read",
 
-    // Writes — gated for approval.
+    // Writes — gated for approval. NOTION_ARCHIVE_NOTION_PAGE and
+    // NOTION_DELETE_BLOCK are soft-deletes (Composio's own description calls
+    // DELETE_BLOCK "deleted (archived)") — recoverable from trash, so neither
+    // is "irreversible". This toolkit has no genuinely unrecoverable action.
     NOTION_CREATE_NOTION_PAGE: "write",
-    NOTION_UPDATE_PAGE: "write",
-    NOTION_DUPLICATE_PAGE: "write",
     NOTION_ADD_MULTIPLE_PAGE_CONTENT: "write",
-    NOTION_APPEND_TEXT_BLOCKS: "write",
-    NOTION_REPLACE_PAGE_CONTENT: "write",
+    NOTION_UPDATE_PAGE: "write",
+    NOTION_ARCHIVE_NOTION_PAGE: "write",
+    NOTION_DUPLICATE_PAGE: "write",
+    NOTION_DELETE_BLOCK: "write",
     NOTION_INSERT_ROW_DATABASE: "write",
     NOTION_UPDATE_ROW_DATABASE: "write",
     NOTION_CREATE_DATABASE: "write",
     NOTION_UPDATE_SCHEMA_DATABASE: "write",
     NOTION_CREATE_COMMENT: "write",
-
-    // Irreversible — gated, flagged as unrecoverable.
-    NOTION_ARCHIVE_NOTION_PAGE: "irreversible",
-    NOTION_DELETE_BLOCK: "irreversible",
   },
   gmail: {
     // Reads — pass straight through.
@@ -145,14 +141,14 @@ export const COMPOSIO_RISK_MAP: Record<string, Record<string, ActionRisk>> = {
   },
   googlecalendar: {
     // Reads — pass straight through.
-    GOOGLECALENDAR_LIST_EVENTS: "read",
-    GOOGLECALENDAR_GET_EVENT: "read",
+    GOOGLECALENDAR_EVENTS_LIST: "read",
+    GOOGLECALENDAR_FIND_EVENT: "read",
     GOOGLECALENDAR_LIST_CALENDARS: "read",
-    GOOGLECALENDAR_GET_FREE_BUSY: "read",
+    GOOGLECALENDAR_FREE_BUSY_QUERY: "read",
 
     // Writes — gated for approval.
     GOOGLECALENDAR_CREATE_EVENT: "write",
-    GOOGLECALENDAR_QUICK_ADD_EVENT: "write",
+    GOOGLECALENDAR_QUICK_ADD: "write",
     GOOGLECALENDAR_UPDATE_EVENT: "write",
 
     // Irreversible — gated, flagged as unrecoverable.
@@ -245,25 +241,26 @@ export const COMPOSIO_RISK_MAP: Record<string, Record<string, ActionRisk>> = {
     GOOGLETASKS_GET_TASK: "read",
 
     // Writes — gated for approval.
-    GOOGLETASKS_CREATE_TASK: "write",
-    GOOGLETASKS_UPDATE_TASK: "write",
-    GOOGLETASKS_COMPLETE_TASK: "write",
+    GOOGLETASKS_INSERT_TASK: "write",
+    GOOGLETASKS_PATCH_TASK: "write",
 
     // Irreversible — gated, flagged as unrecoverable.
     GOOGLETASKS_DELETE_TASK: "irreversible",
   },
   googlemeet: {
     // Reads — pass straight through.
-    GOOGLEMEET_GET_SPACE: "read",
+    GOOGLEMEET_GET_MEET: "read",
     GOOGLEMEET_LIST_CONFERENCE_RECORDS: "read",
-    GOOGLEMEET_GET_CONFERENCE_RECORD: "read",
-    GOOGLEMEET_GET_TRANSCRIPT: "read",
+    GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET: "read",
+    GOOGLEMEET_GET_TRANSCRIPTS_BY_CONFERENCE_RECORD_ID: "read",
+    GOOGLEMEET_GET_RECORDINGS_BY_CONFERENCE_RECORD_ID: "read",
+    GOOGLEMEET_LIST_PARTICIPANT_SESSIONS: "read",
+    GOOGLEMEET_GET_PARTICIPANT_SESSION: "read",
 
-    // Writes — gated for approval.
-    GOOGLEMEET_CREATE_SPACE: "write",
-
-    // Irreversible — gated, flagged as unrecoverable.
-    GOOGLEMEET_END_ACTIVE_CONFERENCE: "irreversible",
+    // Writes — gated for approval. This toolkit has no "end active conference"
+    // or delete action, so there is no irreversible bucket.
+    GOOGLEMEET_CREATE_MEET: "write",
+    GOOGLEMEET_UPDATE_SPACE: "write",
   },
   slack: {
     // Reads — pass straight through.

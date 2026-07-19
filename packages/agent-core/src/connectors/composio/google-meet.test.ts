@@ -41,8 +41,8 @@ describe("Meet via Composio — ConnectorDef shape", () => {
   it("exposes tools factory that returns tools keyed by Composio slug", () => {
     const def = makeComposioMeetDef(fakeExecutor())
     const tools = def.tools(buildCtx())
-    expect(tools["GOOGLEMEET_CREATE_SPACE"]).toBeDefined()
-    expect(tools["GOOGLEMEET_GET_SPACE"]).toBeDefined()
+    expect(tools["GOOGLEMEET_CREATE_MEET"]).toBeDefined()
+    expect(tools["GOOGLEMEET_GET_MEET"]).toBeDefined()
   })
 })
 
@@ -58,11 +58,11 @@ describe("Meet via Composio — read pass-through", () => {
     })
     const tools = factory(buildCtx({ createPendingAction: create }))
 
-    const result = await tools["GOOGLEMEET_GET_SPACE"]!.execute({ space_name: "spaces/abc123" })
+    const result = await tools["GOOGLEMEET_GET_MEET"]!.execute({ space_name: "spaces/abc123" })
 
     expect(result).toEqual({ space: { name: "spaces/abc123", meetingUri: "https://meet.google.com/abc-def-ghi" } })
     expect(executor.calls).toEqual([
-      { userId: "user_1", slug: "GOOGLEMEET_GET_SPACE", arguments: { space_name: "spaces/abc123" } },
+      { userId: "user_1", slug: "GOOGLEMEET_GET_MEET", arguments: { space_name: "spaces/abc123" } },
     ])
     expect(create).not.toHaveBeenCalled()
   })
@@ -80,7 +80,7 @@ describe("Meet via Composio — write gating", () => {
     })
     const tools = factory(buildCtx({ createPendingAction: create }))
 
-    await tools["GOOGLEMEET_CREATE_SPACE"]!.execute({ title: "Sprint Review" })
+    await tools["GOOGLEMEET_CREATE_MEET"]!.execute({ access_type: "TRUSTED" })
 
     expect(executor.calls).toEqual([])
     const arg = create.mock.calls[0]![0] as Record<string, unknown>

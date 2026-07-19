@@ -105,8 +105,8 @@ describe("Composio risk classification", () => {
     })
 
     it("classifies Calendar read actions as read", () => {
-      expect(classifyAction("googlecalendar", "GOOGLECALENDAR_LIST_EVENTS")).toBe("read")
-      expect(classifyAction("googlecalendar", "GOOGLECALENDAR_GET_EVENT")).toBe("read")
+      expect(classifyAction("googlecalendar", "GOOGLECALENDAR_EVENTS_LIST")).toBe("read")
+      expect(classifyAction("googlecalendar", "GOOGLECALENDAR_FIND_EVENT")).toBe("read")
     })
 
     it("classifies Calendar write actions as write", () => {
@@ -180,8 +180,8 @@ describe("Composio risk classification", () => {
     })
 
     it("classifies Tasks write actions as write", () => {
-      expect(classifyAction("googletasks", "GOOGLETASKS_CREATE_TASK")).toBe("write")
-      expect(classifyAction("googletasks", "GOOGLETASKS_UPDATE_TASK")).toBe("write")
+      expect(classifyAction("googletasks", "GOOGLETASKS_INSERT_TASK")).toBe("write")
+      expect(classifyAction("googletasks", "GOOGLETASKS_PATCH_TASK")).toBe("write")
     })
 
     it("classifies Tasks irreversible actions as irreversible", () => {
@@ -189,11 +189,11 @@ describe("Composio risk classification", () => {
     })
 
     it("classifies Meet read actions as read", () => {
-      expect(classifyAction("googlemeet", "GOOGLEMEET_GET_SPACE")).toBe("read")
+      expect(classifyAction("googlemeet", "GOOGLEMEET_GET_MEET")).toBe("read")
     })
 
     it("classifies Meet write actions as write", () => {
-      expect(classifyAction("googlemeet", "GOOGLEMEET_CREATE_SPACE")).toBe("write")
+      expect(classifyAction("googlemeet", "GOOGLEMEET_CREATE_MEET")).toBe("write")
     })
   })
 })

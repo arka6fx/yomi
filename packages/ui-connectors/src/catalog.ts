@@ -135,7 +135,9 @@ const CATALOG_DEFS: Array<{
     category: "food",
     authKind: "oauth2",
     icon: "swiggy",
-    available: true,
+    // Code is done, but blocked on Swiggy's OAuth client allowlist (whitelist
+    // request filed as an issue on their manifest repo) — not connectable yet.
+    available: false,
   },
 ]
 

@@ -36,12 +36,13 @@ export const slackComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "SLACK_LIST_ALL_USERS",
-    description: "List all users in the Slack workspace with profile details. Read-only.",
+    description:
+      "List all users in the Slack workspace with profile details. Read-only.",
     parameters: z
       .object({
-        limit: z.number().int().min(1).max(200).optional().describe("Max users to return"),
+        limit: z.number().int().min(1).max(200).optional().describe("Max users to return (Slack may error on large workspaces if omitted)"),
         cursor: z.string().optional().describe("Pagination cursor from previous call"),
-        include_deleted: z.coerce.boolean().optional().describe("Include deactivated users"),
+        include_locale: z.coerce.boolean().optional().describe("Include each user's locale, e.g. 'en-US'"),
       })
       .passthrough(),
   },
