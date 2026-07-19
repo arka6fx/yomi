@@ -41,9 +41,9 @@ describe("Gmail via Composio — ConnectorDef shape", () => {
   it("exposes tools factory that returns tools keyed by Composio slug", () => {
     const def = makeComposioGmailDef(fakeExecutor())
     const tools = def.tools(buildCtx())
-    expect(tools["GMAIL_SEARCH_GMAIL"]).toBeDefined()
+    expect(tools["GMAIL_FETCH_EMAILS"]).toBeDefined()
     expect(tools["GMAIL_SEND_EMAIL"]).toBeDefined()
-    expect(tools["GMAIL_DELETE_EMAIL"]).toBeDefined()
+    expect(tools["GMAIL_DELETE_MESSAGE"]).toBeDefined()
   })
 })
 
@@ -59,11 +59,11 @@ describe("Gmail via Composio — read pass-through", () => {
     })
     const tools = factory(buildCtx({ createPendingAction: create }))
 
-    const result = await tools["GMAIL_SEARCH_GMAIL"]!.execute({ query: "from:boss" })
+    const result = await tools["GMAIL_FETCH_EMAILS"]!.execute({ query: "from:boss" })
 
     expect(result).toEqual({ emails: [{ id: "abc123", subject: "Hello" }] })
     expect(executor.calls).toEqual([
-      { userId: "user_1", slug: "GMAIL_SEARCH_GMAIL", arguments: { query: "from:boss" } },
+      { userId: "user_1", slug: "GMAIL_FETCH_EMAILS", arguments: { query: "from:boss" } },
     ])
     expect(create).not.toHaveBeenCalled()
   })
@@ -82,7 +82,7 @@ describe("Gmail via Composio — write gating", () => {
     const tools = factory(buildCtx({ createPendingAction: create }))
 
     const result = await tools["GMAIL_SEND_EMAIL"]!.execute({
-      to: ["alice@example.com"],
+      recipient_email: "alice@example.com",
       subject: "Hello",
       body: "How are you?",
     })
@@ -110,7 +110,7 @@ describe("Gmail via Composio — write gating", () => {
     })
     const tools = factory(buildCtx({ createPendingAction: create }))
 
-    await tools["GMAIL_DELETE_EMAIL"]!.execute({ message_id: "abc123" })
+    await tools["GMAIL_DELETE_MESSAGE"]!.execute({ message_id: "abc123" })
 
     expect((create.mock.calls[0]![0] as Record<string, unknown>)["risk"]).toBe("irreversible")
   })
@@ -128,7 +128,7 @@ describe("Gmail via Composio — approval replay", () => {
     const tools = factory(buildCtx())
 
     const result = await tools["GMAIL_SEND_EMAIL"]!.execute({
-      to: ["bob@example.com"],
+      recipient_email: "bob@example.com",
       subject: "Replay",
       body: "Works",
     })
@@ -138,7 +138,7 @@ describe("Gmail via Composio — approval replay", () => {
       {
         userId: "user_1",
         slug: "GMAIL_SEND_EMAIL",
-        arguments: { to: ["bob@example.com"], subject: "Replay", body: "Works" },
+        arguments: { recipient_email: "bob@example.com", subject: "Replay", body: "Works" },
       },
     ])
   })
@@ -157,7 +157,7 @@ describe("Gmail via Composio — error handling", () => {
     })
     const tools = factory(buildCtx())
 
-    const result = (await tools["GMAIL_SEARCH_GMAIL"]!.execute({ query: "test" })) as {
+    const result = (await tools["GMAIL_FETCH_EMAILS"]!.execute({ query: "test" })) as {
       error: string
       hint?: string
     }

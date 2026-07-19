@@ -19,39 +19,39 @@ export type WriteRisk = Exclude<ActionRisk, "read">
 export const COMPOSIO_RISK_MAP: Record<string, Record<string, ActionRisk>> = {
   github: {
     // Reads — pass straight through.
-    GITHUB_LIST_ISSUES: "read",
-    GITHUB_GET_ISSUE: "read",
-    GITHUB_LIST_PULL_REQUESTS: "read",
-    GITHUB_GET_PULL_REQUEST: "read",
-    GITHUB_LIST_REPOSITORIES: "read",
-    GITHUB_GET_REPOSITORY: "read",
+    GITHUB_LIST_REPOSITORY_ISSUES: "read",
+    GITHUB_GET_AN_ISSUE: "read",
+    GITHUB_FIND_PULL_REQUESTS: "read",
+    GITHUB_GET_A_PULL_REQUEST: "read",
+    GITHUB_LIST_REPOSITORIES_FOR_THE_AUTHENTICATED_USER: "read",
+    GITHUB_GET_A_REPOSITORY: "read",
     GITHUB_LIST_BRANCHES: "read",
     GITHUB_LIST_COMMITS: "read",
-    GITHUB_GET_FILE_CONTENTS: "read",
-    GITHUB_LIST_WORKFLOWS: "read",
-    GITHUB_GET_WORKFLOW: "read",
-    GITHUB_LIST_WORKFLOW_RUNS: "read",
-    GITHUB_LIST_NOTIFICATIONS: "read",
+    GITHUB_GET_REPOSITORY_CONTENT: "read",
+    GITHUB_LIST_REPOSITORY_WORKFLOWS: "read",
+    GITHUB_GET_A_WORKFLOW: "read",
+    GITHUB_LIST_WORKFLOW_RUNS_FOR_A_REPOSITORY: "read",
+    GITHUB_LIST_NOTIFICATIONS_FOR_THE_AUTHENTICATED_USER: "read",
     GITHUB_SEARCH_CODE: "read",
-    GITHUB_SEARCH_ISSUES: "read",
-    GITHUB_GET_COMMIT: "read",
+    GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS: "read",
+    GITHUB_GET_A_COMMIT: "read",
 
     // Writes — gated for approval.
-    GITHUB_CREATE_ISSUE: "write",
-    GITHUB_UPDATE_ISSUE: "write",
-    GITHUB_COMMENT_ON_ISSUE: "write",
-    GITHUB_CREATE_PULL_REQUEST: "write",
-    GITHUB_UPDATE_PULL_REQUEST: "write",
-    GITHUB_SUBMIT_PULL_REQUEST_REVIEW: "write",
-    GITHUB_ADD_LABELS_TO_ISSUE: "write",
-    GITHUB_CREATE_BRANCH: "write",
-    GITHUB_CREATE_OR_UPDATE_FILE: "write",
-    GITHUB_CREATE_REPOSITORY: "write",
-    GITHUB_MARK_NOTIFICATION_READ: "write",
-    GITHUB_CREATE_WORKFLOW_DISPATCH: "write",
+    GITHUB_CREATE_AN_ISSUE: "write",
+    GITHUB_UPDATE_AN_ISSUE: "write",
+    GITHUB_CREATE_AN_ISSUE_COMMENT: "write",
+    GITHUB_CREATE_A_PULL_REQUEST: "write",
+    GITHUB_UPDATE_A_PULL_REQUEST: "write",
+    GITHUB_CREATE_A_REVIEW_FOR_A_PULL_REQUEST: "write",
+    GITHUB_ADD_LABELS_TO_AN_ISSUE: "write",
+    GITHUB_CREATE_A_REFERENCE: "write",
+    GITHUB_CREATE_OR_UPDATE_FILE_CONTENTS: "write",
+    GITHUB_CREATE_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER: "write",
+    GITHUB_MARK_A_THREAD_AS_READ: "write",
+    GITHUB_CREATE_A_WORKFLOW_DISPATCH_EVENT: "write",
 
     // Irreversible — gated, flagged as unrecoverable.
-    GITHUB_MERGE_PULL_REQUEST: "irreversible",
+    GITHUB_MERGE_A_PULL_REQUEST: "irreversible",
   },
   linear: {
     // Reads — pass straight through.
@@ -122,29 +122,26 @@ export const COMPOSIO_RISK_MAP: Record<string, Record<string, ActionRisk>> = {
   },
   gmail: {
     // Reads — pass straight through.
-    GMAIL_SEARCH_GMAIL: "read",
-    GMAIL_GET_MAIL: "read",
-    GMAIL_GET_THREAD: "read",
+    GMAIL_FETCH_EMAILS: "read",
+    GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID: "read",
+    GMAIL_FETCH_MESSAGE_BY_THREAD_ID: "read",
     GMAIL_LIST_LABELS: "read",
     GMAIL_LIST_DRAFTS: "read",
     GMAIL_GET_ATTACHMENT: "read",
 
     // Writes — gated for approval.
-    GMAIL_MARK_AS_READ: "write",
-    GMAIL_MARK_AS_UNREAD: "write",
-    GMAIL_ARCHIVE_EMAIL: "write",
-    GMAIL_TRASH_EMAIL: "write",
+    GMAIL_ADD_LABEL_TO_EMAIL: "write",
+    GMAIL_MOVE_TO_TRASH: "write",
     GMAIL_CREATE_LABEL: "write",
-    GMAIL_MODIFY_LABELS: "write",
-    GMAIL_CREATE_DRAFT: "write",
+    GMAIL_CREATE_EMAIL_DRAFT: "write",
 
     // Sends — gated, flagged as sending.
     GMAIL_SEND_EMAIL: "send",
-    GMAIL_REPLY_TO_EMAIL: "send",
+    GMAIL_REPLY_TO_THREAD: "send",
     GMAIL_SEND_DRAFT: "send",
 
     // Irreversible — gated, flagged as unrecoverable.
-    GMAIL_DELETE_EMAIL: "irreversible",
+    GMAIL_DELETE_MESSAGE: "irreversible",
   },
   googlecalendar: {
     // Reads — pass straight through.
@@ -180,17 +177,17 @@ export const COMPOSIO_RISK_MAP: Record<string, Record<string, ActionRisk>> = {
     // Irreversible — gated, flagged as unrecoverable.
     GOOGLEDRIVE_DELETE_FILE: "irreversible",
   },
-  googleclassroom: {
-    // Reads — pass straight through.
-    GOOGLECLASSROOM_LIST_COURSES: "read",
-    GOOGLECLASSROOM_LIST_ASSIGNMENTS: "read",
-    GOOGLECLASSROOM_GET_ASSIGNMENT: "read",
-    GOOGLECLASSROOM_LIST_ANNOUNCEMENTS: "read",
-    GOOGLECLASSROOM_GET_SUBMISSION: "read",
-
-    // Writes — gated for approval.
-    GOOGLECLASSROOM_TURN_IN: "write",
-    GOOGLECLASSROOM_ATTACH_FILE: "write",
+  // Composio's toolkit slug is "google_classroom" (underscore) — the def id and
+  // classification-map key must match it exactly, or every action here falls
+  // through to the read-map's implicit default-deny (classified as "write").
+  google_classroom: {
+    // Reads — pass straight through. Composio's Classroom toolkit has no
+    // submit/turn-in or attach-file action, so every surfaced tool is read-only.
+    GOOGLE_CLASSROOM_COURSES_LIST: "read",
+    GOOGLE_CLASSROOM_COURSE_WORK_LIST: "read",
+    GOOGLE_CLASSROOM_COURSE_WORK_GET: "read",
+    GOOGLE_CLASSROOM_COURSES_ANNOUNCEMENTS_LIST: "read",
+    GOOGLE_CLASSROOM_COURSE_WORK_STUDENT_SUBMISSIONS_LIST: "read",
   },
   googletasks: {
     // Reads — pass straight through.
@@ -205,19 +202,6 @@ export const COMPOSIO_RISK_MAP: Record<string, Record<string, ActionRisk>> = {
 
     // Irreversible — gated, flagged as unrecoverable.
     GOOGLETASKS_DELETE_TASK: "irreversible",
-  },
-  googlecontacts: {
-    // Reads — pass straight through.
-    GOOGLECONTACTS_SEARCH_CONTACTS: "read",
-    GOOGLECONTACTS_LIST_CONTACTS: "read",
-    GOOGLECONTACTS_GET_CONTACT: "read",
-
-    // Writes — gated for approval.
-    GOOGLECONTACTS_CREATE_CONTACT: "write",
-    GOOGLECONTACTS_UPDATE_CONTACT: "write",
-
-    // Irreversible — gated, flagged as unrecoverable.
-    GOOGLECONTACTS_DELETE_CONTACT: "irreversible",
   },
   googlemeet: {
     // Reads — pass straight through.

@@ -27,8 +27,11 @@ export const linearComposioSpecs: ComposioToolSpec[] = [
     parameters: z.object({ issue_id: z.string().describe("Issue id or identifier") }).passthrough(),
   },
   {
-    slug: "LINEAR_LIST_LINEAR_TEAMS",
-    description: "List the teams in the Linear workspace. Read-only.",
+    // Not LINEAR_LIST_LINEAR_TEAMS — despite the name, that action requires a
+    // project_id and filters that project's teams. This one actually lists
+    // every team in the workspace with no required params.
+    slug: "LINEAR_GET_ALL_LINEAR_TEAMS",
+    description: "List all teams in the Linear workspace. Read-only.",
     parameters: z.object({}).passthrough(),
   },
   {

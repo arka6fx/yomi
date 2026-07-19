@@ -41,9 +41,11 @@ describe("Classroom via Composio — ConnectorDef shape", () => {
   it("exposes tools factory that returns tools keyed by Composio slug", () => {
     const def = makeComposioClassroomDef(fakeExecutor())
     const tools = def.tools(buildCtx())
-    expect(tools["GOOGLECLASSROOM_LIST_COURSES"]).toBeDefined()
-    expect(tools["GOOGLECLASSROOM_TURN_IN"]).toBeDefined()
-    expect(tools["GOOGLECLASSROOM_ATTACH_FILE"]).toBeDefined()
+    expect(tools["GOOGLE_CLASSROOM_COURSES_LIST"]).toBeDefined()
+    expect(tools["GOOGLE_CLASSROOM_COURSE_WORK_LIST"]).toBeDefined()
+    expect(tools["GOOGLE_CLASSROOM_COURSE_WORK_GET"]).toBeDefined()
+    expect(tools["GOOGLE_CLASSROOM_COURSES_ANNOUNCEMENTS_LIST"]).toBeDefined()
+    expect(tools["GOOGLE_CLASSROOM_COURSE_WORK_STUDENT_SUBMISSIONS_LIST"]).toBeDefined()
   })
 })
 
@@ -59,32 +61,30 @@ describe("Classroom via Composio — read pass-through", () => {
     })
     const tools = factory(buildCtx({ createPendingAction: create }))
 
-    const result = await tools["GOOGLECLASSROOM_LIST_COURSES"]!.execute({})
+    const result = await tools["GOOGLE_CLASSROOM_COURSES_LIST"]!.execute({})
 
     expect(result).toEqual({ courses: [{ id: "c1", name: "Math 101" }] })
     expect(executor.calls).toEqual([
-      { userId: "user_1", slug: "GOOGLECLASSROOM_LIST_COURSES", arguments: {} },
+      { userId: "user_1", slug: "GOOGLE_CLASSROOM_COURSES_LIST", arguments: {} },
     ])
     expect(create).not.toHaveBeenCalled()
   })
-})
 
-describe("Classroom via Composio — write gating", () => {
-  it("routes a createCourse write tool through createPendingAction", async () => {
-    const executor = fakeExecutor()
-    const create = mock(async () => ({ id: "p1", status: "pending", message: "queued" }))
+  it("passes courseId through to a coursework read tool", async () => {
+    const executor = fakeExecutor({ courseWork: [{ id: "cw1", title: "Homework 1" }] })
     const factory = createComposioTools({
       provider: "google-classroom",
       toolkit: CLASSROOM_TOOLKIT,
       specs: classroomComposioSpecs,
       executor,
     })
-    const tools = factory(buildCtx({ createPendingAction: create }))
+    const tools = factory(buildCtx())
 
-    await tools["GOOGLECLASSROOM_TURN_IN"]!.execute({ course_id: "c1", course_work_id: "cw1" })
+    const result = await tools["GOOGLE_CLASSROOM_COURSE_WORK_LIST"]!.execute({ courseId: "c1" })
 
-    expect(executor.calls).toEqual([])
-    const arg = create.mock.calls[0]![0] as Record<string, unknown>
-    expect(arg.risk).toBe("write")
+    expect(result).toEqual({ courseWork: [{ id: "cw1", title: "Homework 1" }] })
+    expect(executor.calls).toEqual([
+      { userId: "user_1", slug: "GOOGLE_CLASSROOM_COURSE_WORK_LIST", arguments: { courseId: "c1" } },
+    ])
   })
 })
