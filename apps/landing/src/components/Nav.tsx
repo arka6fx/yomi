@@ -29,7 +29,7 @@ export default function Nav() {
         initial={{ opacity: 0, y: -14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className="max-w-5xl mx-auto rounded-2xl border border-border bg-card/80 backdrop-blur-xl shadow-sm"
+        className="relative max-w-5xl mx-auto rounded-2xl border border-border bg-card/80 backdrop-blur-xl shadow-sm"
       >
         <div className="flex items-center justify-between px-4 md:px-6 py-3">
           <BrandMark size="md" />
@@ -95,11 +95,11 @@ export default function Nav() {
         <AnimatePresence>
           {menuOpen && (
             <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="overflow-hidden rounded-b-2xl border-t border-border bg-card"
+              className="absolute left-0 right-0 top-full mt-2 overflow-hidden rounded-2xl border border-border bg-card shadow-lg"
             >
               <div className="px-4 py-3 flex flex-col gap-0.5">
                 {NAV_LINKS.map((link) => (
