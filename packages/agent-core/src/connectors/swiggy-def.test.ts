@@ -12,7 +12,7 @@ function makeMockTools(extra?: Record<string, ToolSet[string]>): ToolSet {
     "report_error",
   ]
   const dineoutWrites = ["get_available_slots", "create_cart"]
-  const foodTools = ["place_food_order", "track_food_order", "get_food_orders", "get_food_order_details"]
+  const foodTools = ["place_food_order", "track_food_order", "get_food_orders", "get_food_order_details", "search_restaurants", "update_food_cart", "flush_food_cart", "get_food_cart"]
   const imTools = ["checkout", "get_orders", "get_order_details", "track_order"]
   const tools: ToolSet = {}
 
@@ -259,5 +259,130 @@ describe("wrapOrderTools — Food/Instamart order tools", () => {
     const result = await wrapped["track_food_order"]!.execute({ order_id: "o1" })
 
     expect(execute).toHaveBeenCalled()
+  })
+
+  it("passes get_food_orders through without gating", async () => {
+    const mockTools = makeMockTools()
+    const execute = mockTools["get_food_orders"]!.execute as ReturnType<typeof mock>
+    const ctx = buildCtx({ createPendingAction: mock(async () => ({ id: "p1", status: "pending", message: "queued" })) })
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    await wrapped["get_food_orders"]!.execute({})
+
+    expect(execute).toHaveBeenCalled()
+  })
+
+  it("passes get_food_order_details through without gating", async () => {
+    const mockTools = makeMockTools()
+    const execute = mockTools["get_food_order_details"]!.execute as ReturnType<typeof mock>
+    const ctx = buildCtx({ createPendingAction: mock(async () => ({ id: "p1", status: "pending", message: "queued" })) })
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    await wrapped["get_food_order_details"]!.execute({ order_id: "o1" })
+
+    expect(execute).toHaveBeenCalled()
+  })
+
+  it("on replay (no createPendingAction) place_food_order executes the real MCP tool", async () => {
+    const mockTools = makeMockTools()
+    const execute = mockTools["place_food_order"]!.execute as ReturnType<typeof mock>
+    const ctx = buildCtx()
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    const payload = { restaurantId: "r1", items: [{ name: "Chicken Biryani", quantity: 1 }] }
+    const result = await wrapped["place_food_order"]!.execute(payload)
+
+    expect(execute).toHaveBeenCalledTimes(1)
+    expect(execute).toHaveBeenCalledWith(payload)
+    expect(result).toMatchObject({ ok: true })
+  })
+
+  it("on replay (no createPendingAction) checkout executes the real MCP tool", async () => {
+    const mockTools = makeMockTools()
+    const execute = mockTools["checkout"]!.execute as ReturnType<typeof mock>
+    const ctx = buildCtx()
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    const payload = { items: [{ name: "Milk", quantity: 2 }] }
+    const result = await wrapped["checkout"]!.execute(payload)
+
+    expect(execute).toHaveBeenCalledTimes(1)
+    expect(execute).toHaveBeenCalledWith(payload)
+    expect(result).toMatchObject({ ok: true })
+  })
+})
+
+describe("wrapOrderTools — Food cart mutation tools (direct execution)", () => {
+  it("passes update_food_cart through without gating", async () => {
+    const mockTools = makeMockTools()
+    const execute = mockTools["update_food_cart"]!.execute as ReturnType<typeof mock>
+    if (!execute) return
+    const ctx = buildCtx({ createPendingAction: mock(async () => ({ id: "p1", status: "pending", message: "queued" })) })
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    await wrapped["update_food_cart"]!.execute({ restaurant_id: "r1", item_id: "i1", quantity: 2 })
+
+    expect(execute).toHaveBeenCalled()
+  })
+
+  it("passes flush_food_cart through without gating", async () => {
+    const mockTools = makeMockTools()
+    const execute = mockTools["flush_food_cart"]!.execute as ReturnType<typeof mock>
+    if (!execute) return
+    const ctx = buildCtx({ createPendingAction: mock(async () => ({ id: "p1", status: "pending", message: "queued" })) })
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    await wrapped["flush_food_cart"]!.execute({})
+
+    expect(execute).toHaveBeenCalled()
+  })
+
+  it("passes get_food_cart through without gating", async () => {
+    const mockTools = makeMockTools()
+    const execute = mockTools["get_food_cart"]!.execute as ReturnType<typeof mock>
+    if (!execute) return
+    const ctx = buildCtx({ createPendingAction: mock(async () => ({ id: "p1", status: "pending", message: "queued" })) })
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    await wrapped["get_food_cart"]!.execute({})
+
+    expect(execute).toHaveBeenCalled()
+  })
+
+  it("passes search_restaurants through without gating", async () => {
+    const mockTools = makeMockTools()
+    const execute = mockTools["search_restaurants"]!.execute as ReturnType<typeof mock>
+    if (!execute) return
+    const ctx = buildCtx({ createPendingAction: mock(async () => ({ id: "p1", status: "pending", message: "queued" })) })
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    await wrapped["search_restaurants"]!.execute({ query: "biryani" })
+
+    expect(execute).toHaveBeenCalled()
+  })
+})
+
+describe("getOrderPreview — Food orders", () => {
+  it("includes restaurant and items in the preview", async () => {
+    const mockTools = makeMockTools()
+    const createPendingAction = mock(async (input: unknown) => {
+      madeCalls.push(input)
+      return { id: "p1", status: "pending", message: "queued" }
+    })
+    const madeCalls: unknown[] = []
+    const ctx = buildCtx({ createPendingAction })
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    const payload = {
+      restaurant_id: "Paradise",
+      items: [{ name: "Chicken Biryani", quantity: 2 }, { name: "Raita", quantity: 1 }],
+      total: 650,
+    }
+    await wrapped["place_food_order"]!.execute(payload)
+
+    expect(madeCalls[0]).toMatchObject({
+      action: "place_food_order",
+      preview: "Place order at Paradise (Chicken Biryani x2, Raita x1) ₹650",
+    })
   })
 })
