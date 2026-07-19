@@ -7,7 +7,7 @@ export const GITHUB_TOOLKIT = "github"
 export const githubComposioSpecs: ComposioToolSpec[] = [
   // ── Read actions ──────────────────────────────────────────────
   {
-    slug: "GITHUB_LIST_ISSUES",
+    slug: "GITHUB_LIST_REPOSITORY_ISSUES",
     description:
       "List issues in a GitHub repository. Optionally filter by state (open, closed) or label. Read-only.",
     parameters: z
@@ -15,13 +15,13 @@ export const githubComposioSpecs: ComposioToolSpec[] = [
         owner: z.string().describe("Repository owner (username or org)"),
         repo: z.string().describe("Repository name"),
         state: z.enum(["open", "closed", "all"]).optional().describe("Issue state filter"),
-        label: z.string().optional().describe("Filter by label name"),
+        labels: z.string().optional().describe("Comma-separated label names to filter by"),
         per_page: z.number().int().min(1).max(100).optional().describe("Max issues to return"),
       })
       .passthrough(),
   },
   {
-    slug: "GITHUB_GET_ISSUE",
+    slug: "GITHUB_GET_AN_ISSUE",
     description: "Get full details for a specific GitHub issue. Read-only.",
     parameters: z
       .object({
@@ -32,19 +32,21 @@ export const githubComposioSpecs: ComposioToolSpec[] = [
       .passthrough(),
   },
   {
-    slug: "GITHUB_LIST_PULL_REQUESTS",
-    description: "List pull requests in a GitHub repository. Optionally filter by state. Read-only.",
+    slug: "GITHUB_FIND_PULL_REQUESTS",
+    description:
+      "Search pull requests across GitHub with smart filtering by repo, author, state, and labels. Build a query like 'repo:owner/name state:open'. Read-only.",
     parameters: z
       .object({
-        owner: z.string().describe("Repository owner"),
-        repo: z.string().describe("Repository name"),
-        state: z.enum(["open", "closed", "all"]).optional().describe("PR state filter"),
-        per_page: z.number().int().min(1).max(100).optional().describe("Max PRs to return"),
+        query: z.string().describe("Search query for PR title, description, or commit messages"),
+        owner: z.string().optional().describe("Filter by repository owner"),
+        repo: z.string().optional().describe("Filter by repository (owner/repo format)"),
+        state: z.enum(["open", "closed", "all"]).optional().describe("Filter by PR state"),
+        per_page: z.number().int().min(1).max(100).optional().describe("Max results to return"),
       })
       .passthrough(),
   },
   {
-    slug: "GITHUB_GET_PULL_REQUEST",
+    slug: "GITHUB_GET_A_PULL_REQUEST",
     description: "Get full details for a specific GitHub pull request. Read-only.",
     parameters: z
       .object({
@@ -55,7 +57,7 @@ export const githubComposioSpecs: ComposioToolSpec[] = [
       .passthrough(),
   },
   {
-    slug: "GITHUB_LIST_REPOSITORIES",
+    slug: "GITHUB_LIST_REPOSITORIES_FOR_THE_AUTHENTICATED_USER",
     description: "List repositories for the authenticated user. Read-only.",
     parameters: z
       .object({
@@ -65,7 +67,7 @@ export const githubComposioSpecs: ComposioToolSpec[] = [
       .passthrough(),
   },
   {
-    slug: "GITHUB_GET_REPOSITORY",
+    slug: "GITHUB_GET_A_REPOSITORY",
     description: "Get details for a specific repository. Read-only.",
     parameters: z
       .object({
@@ -98,8 +100,9 @@ export const githubComposioSpecs: ComposioToolSpec[] = [
       .passthrough(),
   },
   {
-    slug: "GITHUB_GET_FILE_CONTENTS",
-    description: "Get file or directory contents from a GitHub repository. Read-only.",
+    slug: "GITHUB_GET_REPOSITORY_CONTENT",
+    description:
+      "Get a file's base64-encoded content, or a directory's metadata, from a GitHub repository path. Read-only.",
     parameters: z
       .object({
         owner: z.string().describe("Repository owner"),
@@ -110,7 +113,7 @@ export const githubComposioSpecs: ComposioToolSpec[] = [
       .passthrough(),
   },
   {
-    slug: "GITHUB_LIST_WORKFLOWS",
+    slug: "GITHUB_LIST_REPOSITORY_WORKFLOWS",
     description: "List GitHub Actions workflows in a repository. Read-only.",
     parameters: z
       .object({
@@ -121,74 +124,76 @@ export const githubComposioSpecs: ComposioToolSpec[] = [
       .passthrough(),
   },
   {
-    slug: "GITHUB_GET_WORKFLOW",
+    slug: "GITHUB_GET_A_WORKFLOW",
     description: "Get details for a specific GitHub Actions workflow. Read-only.",
     parameters: z
       .object({
         owner: z.string().describe("Repository owner"),
         repo: z.string().describe("Repository name"),
-        workflow_id: z.union([z.number().int(), z.string()]).describe("Workflow ID or filename"),
+        workflow_id: z.number().int().optional().describe("Workflow numeric ID"),
+        workflow_name: z.string().optional().describe("Workflow filename, e.g. ci.yml"),
       })
       .passthrough(),
   },
   {
-    slug: "GITHUB_LIST_WORKFLOW_RUNS",
-    description: "List runs for a GitHub Actions workflow. Read-only.",
+    slug: "GITHUB_LIST_WORKFLOW_RUNS_FOR_A_REPOSITORY",
+    description: "List workflow runs for a repository, optionally filtered by branch, status, or event. Read-only.",
     parameters: z
       .object({
         owner: z.string().describe("Repository owner"),
         repo: z.string().describe("Repository name"),
-        workflow_id: z.union([z.number().int(), z.string()]).describe("Workflow ID or filename"),
+        branch: z.string().optional().describe("Filter by branch name"),
+        status: z.string().optional().describe("Filter by status/conclusion, e.g. success, in_progress"),
         per_page: z.number().int().min(1).max(100).optional().describe("Max runs to return"),
       })
       .passthrough(),
   },
   {
-    slug: "GITHUB_LIST_NOTIFICATIONS",
+    slug: "GITHUB_LIST_NOTIFICATIONS_FOR_THE_AUTHENTICATED_USER",
     description: "List notifications for the authenticated user. Read-only.",
     parameters: z
       .object({
-        all: z.coerce.boolean().optional().describe("Include read notifications"),
-        participating: z.coerce.boolean().optional().describe("Only participating"),
-        per_page: z.number().int().min(1).max(100).optional().describe("Max notifications to return"),
+        all: z.coerce.boolean().optional().describe("Include already-read notifications"),
+        participating: z.coerce.boolean().optional().describe("Only notifications the user is participating in"),
+        per_page: z.number().int().min(1).max(50).optional().describe("Max notifications to return"),
       })
       .passthrough(),
   },
   {
     slug: "GITHUB_SEARCH_CODE",
-    description: "Search code across GitHub repositories. Read-only.",
+    description: "Search code file contents and paths across GitHub repositories. Read-only.",
     parameters: z
       .object({
-        q: z.string().describe("Search query"),
+        q: z.string().describe("Code search query, e.g. 'language:ts useEffect'"),
         per_page: z.number().int().min(1).max(100).optional(),
       })
       .passthrough(),
   },
   {
-    slug: "GITHUB_SEARCH_ISSUES",
-    description: "Search issues and pull requests across GitHub. Read-only.",
+    slug: "GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS",
+    description: "Search issues and pull requests across GitHub using GitHub's search qualifiers. Read-only.",
     parameters: z
       .object({
-        q: z.string().describe("Search query"),
+        q: z.string().describe("Search query, e.g. 'repo:owner/name is:open label:bug'"),
         per_page: z.number().int().min(1).max(100).optional(),
       })
       .passthrough(),
   },
   {
-    slug: "GITHUB_GET_COMMIT",
+    slug: "GITHUB_GET_A_COMMIT",
     description: "Get a single commit from a GitHub repository. Read-only.",
     parameters: z
       .object({
         owner: z.string().describe("Repository owner"),
         repo: z.string().describe("Repository name"),
-        ref: z.string().describe("Commit SHA or ref"),
+        ref: z.string().describe("Commit SHA, branch, or tag"),
       })
       .passthrough(),
   },
 
   // ── Write actions (gated) ─────────────────────────────────────
   {
-    slug: "GITHUB_CREATE_ISSUE",
+    slug: "GITHUB_CREATE_AN_ISSUE",
     description: "Create a new issue in a GitHub repository. Requires user approval before it runs.",
     parameters: z
       .object({
@@ -209,7 +214,7 @@ export const githubComposioSpecs: ComposioToolSpec[] = [
     }),
   },
   {
-    slug: "GITHUB_UPDATE_ISSUE",
+    slug: "GITHUB_UPDATE_AN_ISSUE",
     description:
       "Update a GitHub issue: close/reopen it or edit its title, body, or labels. Requires user approval before it runs.",
     parameters: z
@@ -232,7 +237,7 @@ export const githubComposioSpecs: ComposioToolSpec[] = [
     }),
   },
   {
-    slug: "GITHUB_COMMENT_ON_ISSUE",
+    slug: "GITHUB_CREATE_AN_ISSUE_COMMENT",
     description:
       "Add a comment to a GitHub issue or pull request. Requires user approval before it runs.",
     parameters: z
@@ -250,7 +255,7 @@ export const githubComposioSpecs: ComposioToolSpec[] = [
     }),
   },
   {
-    slug: "GITHUB_CREATE_PULL_REQUEST",
+    slug: "GITHUB_CREATE_A_PULL_REQUEST",
     description:
       "Open a new pull request in a GitHub repository. Requires user approval before it runs.",
     parameters: z
@@ -273,7 +278,7 @@ export const githubComposioSpecs: ComposioToolSpec[] = [
     }),
   },
   {
-    slug: "GITHUB_UPDATE_PULL_REQUEST",
+    slug: "GITHUB_UPDATE_A_PULL_REQUEST",
     description:
       "Update a pull request's title, body, state, or base branch. Requires user approval before it runs.",
     parameters: z
@@ -294,7 +299,7 @@ export const githubComposioSpecs: ComposioToolSpec[] = [
     }),
   },
   {
-    slug: "GITHUB_MERGE_PULL_REQUEST",
+    slug: "GITHUB_MERGE_A_PULL_REQUEST",
     description:
       "Merge a GitHub pull request. This CANNOT be undone. Requires user approval before it runs.",
     parameters: z
@@ -313,7 +318,7 @@ export const githubComposioSpecs: ComposioToolSpec[] = [
     }),
   },
   {
-    slug: "GITHUB_SUBMIT_PULL_REQUEST_REVIEW",
+    slug: "GITHUB_CREATE_A_REVIEW_FOR_A_PULL_REQUEST",
     description:
       "Submit a review on a pull request (approve, request changes, comment). Requires user approval before it runs.",
     parameters: z
@@ -332,7 +337,7 @@ export const githubComposioSpecs: ComposioToolSpec[] = [
     }),
   },
   {
-    slug: "GITHUB_ADD_LABELS_TO_ISSUE",
+    slug: "GITHUB_ADD_LABELS_TO_AN_ISSUE",
     description: "Add labels to a GitHub issue or pull request. Requires user approval before it runs.",
     parameters: z
       .object({
@@ -349,46 +354,46 @@ export const githubComposioSpecs: ComposioToolSpec[] = [
     }),
   },
   {
-    slug: "GITHUB_CREATE_BRANCH",
+    slug: "GITHUB_CREATE_A_REFERENCE",
     description:
-      "Create a new branch in a GitHub repository from an existing branch. Requires user approval before it runs.",
+      "Create a new branch (git reference) in a GitHub repository from an existing commit SHA. Requires user approval before it runs.",
     parameters: z
       .object({
         owner: z.string().describe("Repository owner"),
         repo: z.string().describe("Repository name"),
-        branch: z.string().describe("New branch name"),
-        from_branch: z.string().optional().describe("Branch to fork from (defaults to default branch)"),
+        ref: z.string().describe("Fully qualified ref to create, e.g. refs/heads/my-branch"),
+        sha: z.string().describe("SHA of an existing commit the new ref should point to"),
       })
       .passthrough(),
     preview: (a) => ({
-      title: `Create branch ${String(a["branch"] ?? "")} in ${String(a["owner"] ?? "")}/${String(a["repo"] ?? "")}`,
-      preview: `${String(a["branch"] ?? "")} ← ${String(a["from_branch"] ?? "default")}`,
+      title: `Create ref ${String(a["ref"] ?? "")} in ${String(a["owner"] ?? "")}/${String(a["repo"] ?? "")}`,
+      preview: `${String(a["ref"] ?? "")} @ ${String(a["sha"] ?? "").slice(0, 12)}`,
       confirmText: "Create branch",
     }),
   },
   {
-    slug: "GITHUB_CREATE_OR_UPDATE_FILE",
+    slug: "GITHUB_CREATE_OR_UPDATE_FILE_CONTENTS",
     description:
-      "Create or update a single file in a GitHub repository. Requires user approval before it runs.",
+      "Create or update a single file in a GitHub repository. Content must be base64-encoded. Requires user approval before it runs.",
     parameters: z
       .object({
         owner: z.string().describe("Repository owner"),
         repo: z.string().describe("Repository name"),
         path: z.string().describe("File path within the repository"),
-        content: z.string().describe("File contents"),
+        content: z.string().describe("Base64-encoded file contents"),
         message: z.string().describe("Commit message"),
         branch: z.string().optional().describe("Branch to write to"),
-        sha: z.string().optional().describe("Existing file SHA (required when updating)"),
+        sha: z.string().optional().describe("Existing file blob SHA (required when updating)"),
       })
       .passthrough(),
     preview: (a) => ({
       title: `Write ${String(a["path"] ?? "")} in ${String(a["owner"] ?? "")}/${String(a["repo"] ?? "")}`,
-      preview: `${String(a["message"] ?? "")}\n\n${String(a["content"] ?? "").slice(0, 800)}`,
+      preview: String(a["message"] ?? ""),
       confirmText: "Commit file",
     }),
   },
   {
-    slug: "GITHUB_CREATE_REPOSITORY",
+    slug: "GITHUB_CREATE_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER",
     description:
       "Create a new GitHub repository for the authenticated user. Requires user approval before it runs.",
     parameters: z
@@ -406,12 +411,12 @@ export const githubComposioSpecs: ComposioToolSpec[] = [
     }),
   },
   {
-    slug: "GITHUB_MARK_NOTIFICATION_READ",
+    slug: "GITHUB_MARK_A_THREAD_AS_READ",
     description:
       "Mark a single notification thread as read. Requires user approval before it runs.",
     parameters: z
       .object({
-        thread_id: z.string().describe("Notification thread ID"),
+        thread_id: z.number().int().describe("Notification thread ID"),
       })
       .passthrough(),
     preview: (a) => ({
@@ -421,15 +426,15 @@ export const githubComposioSpecs: ComposioToolSpec[] = [
     }),
   },
   {
-    slug: "GITHUB_CREATE_WORKFLOW_DISPATCH",
+    slug: "GITHUB_CREATE_A_WORKFLOW_DISPATCH_EVENT",
     description:
-      "Trigger a GitHub Actions workflow run via repository_dispatch. Requires user approval before it runs.",
+      "Manually trigger a GitHub Actions workflow run. Requires user approval before it runs.",
     parameters: z
       .object({
         owner: z.string().describe("Repository owner"),
         repo: z.string().describe("Repository name"),
-        workflow_id: z.union([z.number().int(), z.string()]).describe("Workflow ID or filename"),
-        ref: z.string().describe("Branch to run the workflow on"),
+        workflow_id: z.number().int().describe("Numeric workflow ID"),
+        ref: z.string().describe("Branch or tag to run the workflow on"),
         inputs: z.record(z.string()).optional().describe("Workflow input parameters"),
       })
       .passthrough(),

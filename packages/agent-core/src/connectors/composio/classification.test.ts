@@ -4,24 +4,24 @@ import { classifyAction, COMPOSIO_RISK_MAP, isReadAction } from "./classificatio
 describe("Composio risk classification", () => {
   describe("GitHub actions", () => {
     it("classifies representative GitHub read actions as read", () => {
-      expect(classifyAction("github", "GITHUB_LIST_ISSUES")).toBe("read")
-      expect(classifyAction("github", "GITHUB_GET_PULL_REQUEST")).toBe("read")
-      expect(classifyAction("github", "GITHUB_LIST_REPOSITORIES")).toBe("read")
+      expect(classifyAction("github", "GITHUB_LIST_REPOSITORY_ISSUES")).toBe("read")
+      expect(classifyAction("github", "GITHUB_GET_A_PULL_REQUEST")).toBe("read")
+      expect(classifyAction("github", "GITHUB_LIST_REPOSITORIES_FOR_THE_AUTHENTICATED_USER")).toBe("read")
       expect(classifyAction("github", "GITHUB_LIST_COMMITS")).toBe("read")
-      expect(classifyAction("github", "GITHUB_GET_FILE_CONTENTS")).toBe("read")
+      expect(classifyAction("github", "GITHUB_GET_REPOSITORY_CONTENT")).toBe("read")
       expect(classifyAction("github", "GITHUB_SEARCH_CODE")).toBe("read")
     })
 
     it("classifies representative GitHub write actions as write", () => {
-      expect(classifyAction("github", "GITHUB_CREATE_ISSUE")).toBe("write")
-      expect(classifyAction("github", "GITHUB_UPDATE_ISSUE")).toBe("write")
-      expect(classifyAction("github", "GITHUB_COMMENT_ON_ISSUE")).toBe("write")
-      expect(classifyAction("github", "GITHUB_CREATE_PULL_REQUEST")).toBe("write")
-      expect(classifyAction("github", "GITHUB_ADD_LABELS_TO_ISSUE")).toBe("write")
+      expect(classifyAction("github", "GITHUB_CREATE_AN_ISSUE")).toBe("write")
+      expect(classifyAction("github", "GITHUB_UPDATE_AN_ISSUE")).toBe("write")
+      expect(classifyAction("github", "GITHUB_CREATE_AN_ISSUE_COMMENT")).toBe("write")
+      expect(classifyAction("github", "GITHUB_CREATE_A_PULL_REQUEST")).toBe("write")
+      expect(classifyAction("github", "GITHUB_ADD_LABELS_TO_AN_ISSUE")).toBe("write")
     })
 
     it("classifies GitHub irreversible actions as irreversible", () => {
-      expect(classifyAction("github", "GITHUB_MERGE_PULL_REQUEST")).toBe("irreversible")
+      expect(classifyAction("github", "GITHUB_MERGE_A_PULL_REQUEST")).toBe("irreversible")
     })
 
     it("defaults unknown GitHub actions to write (default-deny)", () => {
@@ -61,7 +61,7 @@ describe("Composio risk classification", () => {
 
   it("is case-insensitive on the toolkit key", () => {
     expect(classifyAction("LINEAR", "LINEAR_LIST_LINEAR_ISSUES")).toBe("read")
-    expect(classifyAction("GITHUB", "GITHUB_LIST_ISSUES")).toBe("read")
+    expect(classifyAction("GITHUB", "GITHUB_LIST_REPOSITORY_ISSUES")).toBe("read")
   })
 
   it("exposes isReadAction as a convenience over classifyAction", () => {
@@ -76,9 +76,8 @@ describe("Composio risk classification", () => {
     expect(COMPOSIO_RISK_MAP["gmail"]).toBeDefined()
     expect(COMPOSIO_RISK_MAP["googlecalendar"]).toBeDefined()
     expect(COMPOSIO_RISK_MAP["googledrive"]).toBeDefined()
-    expect(COMPOSIO_RISK_MAP["googleclassroom"]).toBeDefined()
+    expect(COMPOSIO_RISK_MAP["google_classroom"]).toBeDefined()
     expect(COMPOSIO_RISK_MAP["googletasks"]).toBeDefined()
-    expect(COMPOSIO_RISK_MAP["googlecontacts"]).toBeDefined()
     expect(COMPOSIO_RISK_MAP["googlemeet"]).toBeDefined()
     for (const bySlug of Object.values(COMPOSIO_RISK_MAP)) {
       for (const risk of Object.values(bySlug)) {
@@ -90,8 +89,8 @@ describe("Composio risk classification", () => {
 
   describe("Google actions", () => {
     it("classifies Gmail read actions as read", () => {
-      expect(classifyAction("gmail", "GMAIL_SEARCH_GMAIL")).toBe("read")
-      expect(classifyAction("gmail", "GMAIL_GET_MAIL")).toBe("read")
+      expect(classifyAction("gmail", "GMAIL_FETCH_EMAILS")).toBe("read")
+      expect(classifyAction("gmail", "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID")).toBe("read")
     })
 
     it("classifies Gmail send actions as send", () => {
@@ -99,7 +98,7 @@ describe("Composio risk classification", () => {
     })
 
     it("classifies Gmail irreversible actions as irreversible", () => {
-      expect(classifyAction("gmail", "GMAIL_DELETE_EMAIL")).toBe("irreversible")
+      expect(classifyAction("gmail", "GMAIL_DELETE_MESSAGE")).toBe("irreversible")
     })
 
     it("classifies Calendar read actions as read", () => {
@@ -132,11 +131,11 @@ describe("Composio risk classification", () => {
     })
 
     it("classifies Classroom read actions as read", () => {
-      expect(classifyAction("googleclassroom", "GOOGLECLASSROOM_LIST_COURSES")).toBe("read")
+      expect(classifyAction("google_classroom", "GOOGLE_CLASSROOM_COURSES_LIST")).toBe("read")
     })
 
-    it("classifies Classroom write actions as write", () => {
-      expect(classifyAction("googleclassroom", "GOOGLECLASSROOM_TURN_IN")).toBe("write")
+    it("defaults an unclassified Classroom action to write (Composio has no write actions here)", () => {
+      expect(classifyAction("google_classroom", "GOOGLE_CLASSROOM_SOME_NEW_ACTION")).toBe("write")
     })
 
     it("classifies Tasks read actions as read", () => {
@@ -151,20 +150,6 @@ describe("Composio risk classification", () => {
 
     it("classifies Tasks irreversible actions as irreversible", () => {
       expect(classifyAction("googletasks", "GOOGLETASKS_DELETE_TASK")).toBe("irreversible")
-    })
-
-    it("classifies Contacts read actions as read", () => {
-      expect(classifyAction("googlecontacts", "GOOGLECONTACTS_LIST_CONTACTS")).toBe("read")
-      expect(classifyAction("googlecontacts", "GOOGLECONTACTS_GET_CONTACT")).toBe("read")
-    })
-
-    it("classifies Contacts write actions as write", () => {
-      expect(classifyAction("googlecontacts", "GOOGLECONTACTS_CREATE_CONTACT")).toBe("write")
-      expect(classifyAction("googlecontacts", "GOOGLECONTACTS_UPDATE_CONTACT")).toBe("write")
-    })
-
-    it("classifies Contacts irreversible actions as irreversible", () => {
-      expect(classifyAction("googlecontacts", "GOOGLECONTACTS_DELETE_CONTACT")).toBe("irreversible")
     })
 
     it("classifies Meet read actions as read", () => {

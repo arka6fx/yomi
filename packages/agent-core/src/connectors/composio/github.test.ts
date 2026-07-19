@@ -42,11 +42,11 @@ describe("GitHub via Composio — ConnectorDef shape", () => {
     const def = makeComposioGitHubDef(fakeExecutor())
     const tools = def.tools(buildCtx())
     // A representative read tool
-    expect(tools["GITHUB_LIST_ISSUES"]).toBeDefined()
+    expect(tools["GITHUB_LIST_REPOSITORY_ISSUES"]).toBeDefined()
     // A representative write tool
-    expect(tools["GITHUB_CREATE_ISSUE"]).toBeDefined()
+    expect(tools["GITHUB_CREATE_AN_ISSUE"]).toBeDefined()
     // An irreversible tool
-    expect(tools["GITHUB_MERGE_PULL_REQUEST"]).toBeDefined()
+    expect(tools["GITHUB_MERGE_A_PULL_REQUEST"]).toBeDefined()
   })
 })
 
@@ -62,7 +62,7 @@ describe("GitHub via Composio — read pass-through", () => {
     })
     const tools = factory(buildCtx({ createPendingAction: create }))
 
-    const result = await tools["GITHUB_LIST_ISSUES"]!.execute({
+    const result = await tools["GITHUB_LIST_REPOSITORY_ISSUES"]!.execute({
       owner: "test-owner",
       repo: "test-repo",
     })
@@ -71,7 +71,7 @@ describe("GitHub via Composio — read pass-through", () => {
     expect(executor.calls).toEqual([
       {
         userId: "user_1",
-        slug: "GITHUB_LIST_ISSUES",
+        slug: "GITHUB_LIST_REPOSITORY_ISSUES",
         arguments: { owner: "test-owner", repo: "test-repo" },
       },
     ])
@@ -91,7 +91,7 @@ describe("GitHub via Composio — write gating", () => {
     })
     const tools = factory(buildCtx({ createPendingAction: create }))
 
-    const result = await tools["GITHUB_CREATE_ISSUE"]!.execute({
+    const result = await tools["GITHUB_CREATE_AN_ISSUE"]!.execute({
       owner: "test-owner",
       repo: "test-repo",
       title: "Found a bug",
@@ -103,7 +103,7 @@ describe("GitHub via Composio — write gating", () => {
     const arg = create.mock.calls[0]![0] as Record<string, unknown>
     expect(arg).toMatchObject({
       connector: "github",
-      action: "GITHUB_CREATE_ISSUE",
+      action: "GITHUB_CREATE_AN_ISSUE",
       risk: "write",
       title: "Create GitHub issue: test-owner/test-repo",
       payload: { owner: "test-owner", repo: "test-repo", title: "Found a bug", body: "Details here" },
@@ -122,7 +122,7 @@ describe("GitHub via Composio — write gating", () => {
     })
     const tools = factory(buildCtx({ createPendingAction: create }))
 
-    await tools["GITHUB_MERGE_PULL_REQUEST"]!.execute({
+    await tools["GITHUB_MERGE_A_PULL_REQUEST"]!.execute({
       owner: "test-owner",
       repo: "test-repo",
       pull_number: 1,
@@ -143,7 +143,7 @@ describe("GitHub via Composio — approval replay", () => {
     })
     const tools = factory(buildCtx())
 
-    const result = await tools["GITHUB_CREATE_ISSUE"]!.execute({
+    const result = await tools["GITHUB_CREATE_AN_ISSUE"]!.execute({
       owner: "test-owner",
       repo: "test-repo",
       title: "Ship it",
@@ -153,7 +153,7 @@ describe("GitHub via Composio — approval replay", () => {
     expect(executor.calls).toEqual([
       {
         userId: "user_1",
-        slug: "GITHUB_CREATE_ISSUE",
+        slug: "GITHUB_CREATE_AN_ISSUE",
         arguments: { owner: "test-owner", repo: "test-repo", title: "Ship it" },
       },
     ])
@@ -175,7 +175,7 @@ describe("GitHub via Composio — error handling", () => {
     })
     const tools = factory(buildCtx())
 
-    const result = (await tools["GITHUB_LIST_ISSUES"]!.execute({
+    const result = (await tools["GITHUB_LIST_REPOSITORY_ISSUES"]!.execute({
       owner: "test-owner",
       repo: "test-repo",
     })) as { error: string; hint?: string }
