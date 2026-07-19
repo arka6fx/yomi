@@ -6,7 +6,7 @@ export const dynamic = "force-static"
 
 const TITLE = "Yomi: AI Productivity Assistant on Telegram"
 const DESC =
-  "Yomi is an AI assistant on Telegram that acts across Gmail, Calendar, Drive, Classroom, Tasks, Contacts, Meet, GitHub, Slack, Notion, and Linear. Message it with text, voice, or a photo — ask in plain language, approve every change."
+  "Yomi is an AI assistant on Telegram that acts across Gmail, Calendar, Drive, Classroom, Tasks, Meet, GitHub, Slack, Notion, and Linear. Message it with text, voice, or a photo — ask in plain language, approve every change."
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -101,7 +101,6 @@ const jsonLd = {
         "Google Drive integration",
         "Google Classroom integration",
         "Google Tasks integration",
-        "Google Contacts integration",
         "Google Meet integration",
         "GitHub integration",
         "Slack integration",
@@ -142,7 +141,7 @@ const jsonLd = {
           name: "How does Yomi access my Google data?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yomi accesses Gmail, Google Calendar, Google Drive, Google Classroom, Google Tasks, Google Contacts, or Google Meet only after you explicitly grant permission through Google's OAuth consent flow, and only to answer the request you just made. Every action that changes something — sending an email, creating an event, saving a file — is shown to you for approval first. Data is never sold, transferred, used for advertising, or used to train AI models, and you can disconnect at any time.",
+            text: "Yomi accesses Gmail, Google Calendar, Google Drive, Google Classroom, Google Tasks, or Google Meet only after you explicitly grant permission through Google's OAuth consent flow, and only to answer the request you just made. Every action that changes something — sending an email, creating an event, saving a file — is shown to you for approval first. Data is never sold, transferred, used for advertising, or used to train AI models, and you can disconnect at any time.",
           },
         },
         {
@@ -150,7 +149,7 @@ const jsonLd = {
           name: "Which apps does Yomi connect to?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yomi connects to Gmail, Google Calendar, Google Drive, Google Classroom, Google Tasks, Google Contacts, Google Meet, GitHub, Slack, Notion, and Linear. Connectors are unlimited on every plan, including the free Explore trial.",
+            text: "Yomi connects to Gmail, Google Calendar, Google Drive, Google Classroom, Google Tasks, Google Meet, GitHub, Slack, Notion, and Linear. Connectors are unlimited on every plan, including the free Explore trial.",
           },
         },
         {

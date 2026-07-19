@@ -17,14 +17,14 @@ export default function PrivacyPage() {
         <div className="mx-auto max-w-3xl px-6 py-24">
           <p className="mb-3 font-mono text-xs uppercase tracking-widest text-sky-100/50">Legal</p>
           <h1 className="mb-2 font-accent text-5xl text-[#eaf4ff]">Privacy Policy</h1>
-          <p className="mb-16 text-sm text-white/40">Last updated: July 18, 2026</p>
+          <p className="mb-16 text-sm text-white/40">Last updated: July 19, 2026</p>
 
           <div className="max-w-none space-y-10 text-sm leading-7 text-white/55">
             <Section title="Overview">
               <p>
                 Yomi is an AI assistant you talk to on Telegram — by text, voice, or images — and
                 that connects to your apps: Gmail, Google Calendar, Google Drive, Google Classroom, Google Tasks,
-                Google Contacts, Google Meet, GitHub, Notion, Slack, and Linear. It is designed to
+                Google Meet, GitHub, Notion, Slack, and Linear. It is designed to
                 be private by default: data from your connected apps is used only to answer your
                 direct queries and is not stored, shared, or used to train AI models.
               </p>
@@ -36,7 +36,7 @@ export default function PrivacyPage() {
                 <strong className="text-label">
                   Every action that changes something is approved by you first
                 </strong>{" "}
-                — sending an email, creating an event, saving a file, or editing a contact shows you
+                — sending an email, creating an event, or saving a file shows you
                 exactly what will happen before it happens.
               </p>
             </Section>
@@ -78,15 +78,6 @@ export default function PrivacyPage() {
                   <strong className="text-label">Google Tasks</strong> (
                   <code className="text-sky-100/70">tasks</code>) to read your to-do lists and
                   create, edit, complete, or delete tasks on your request.
-                </li>
-                <li>
-                  <strong className="text-label">Google Contacts</strong> (
-                  <code className="text-sky-100/70">contacts</code>,{" "}
-                  <code className="text-sky-100/70">contacts.other.readonly</code>,{" "}
-                  <code className="text-sky-100/70">directory.readonly</code>) to look a person up
-                  by name so we can find their email address before sending anything on your
-                  behalf, and to save or update a contact on your request. We never guess an email
-                  address — if several people match, we ask you first.
                 </li>
                 <li>
                   <strong className="text-label">Google Meet</strong> (
@@ -197,7 +188,7 @@ export default function PrivacyPage() {
                 <li>
                   <strong className="text-label">Composio</strong>: integration provider for
                   select connected apps (currently all Google connectors — Gmail,
-                  Calendar, Drive, Classroom, Tasks, Contacts, Meet — plus Linear,
+                  Calendar, Drive, Classroom, Tasks, Meet — plus Linear,
                   GitHub, Slack, and Notion). When you
                   use a Composio-backed connector, your requests to that app and their results
                   transit Composio&apos;s servers on the way to and from the provider. Composio
@@ -215,7 +206,7 @@ export default function PrivacyPage() {
                 </li>
                 <li>
                   <strong className="text-label">Google APIs</strong>: Gmail, Calendar, Drive,
-                  Classroom, Tasks, Contacts, and Meet data accessed on your behalf when you ask
+                  Classroom, Tasks, and Meet data accessed on your behalf when you ask
                   Yomi to do something. Governed by Google&apos;s{" "}
                   <a
                     href="https://policies.google.com/privacy"

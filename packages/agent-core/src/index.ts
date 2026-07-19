@@ -12,7 +12,6 @@ export { googleCalendarDef, createCalendarTools } from "./connectors/google-cale
 export { googleDriveDef, createDriveTools } from "./connectors/google-drive-def.js"
 export { googleClassroomDef, createClassroomTools } from "./connectors/google-classroom-def.js"
 export { googleTasksDef, createTasksTools } from "./connectors/google-tasks-def.js"
-export { googleContactsDef, createContactsTools } from "./connectors/google-contacts-def.js"
 export { googleMeetDef, createMeetTools } from "./connectors/google-meet-def.js"
 export { githubDef, createGitHubTools } from "./connectors/github-def.js"
 export { notionDef, createNotionTools } from "./connectors/notion-def.js"
@@ -85,11 +84,6 @@ export {
   tasksComposioSpecs,
   TASKS_TOOLKIT,
 } from "./connectors/composio/google-tasks.js"
-export {
-  makeComposioContactsDef,
-  contactsComposioSpecs,
-  CONTACTS_TOOLKIT,
-} from "./connectors/composio/google-contacts.js"
 export {
   makeComposioMeetDef,
   meetComposioSpecs,

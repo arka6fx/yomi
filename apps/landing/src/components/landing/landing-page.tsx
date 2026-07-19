@@ -58,7 +58,6 @@ const CONNECTORS: { id: string; name: string; description: string }[] = [
     description: "Assignments, due dates, grades",
   },
   { id: "google-tasks", name: "Google Tasks", description: "Capture and complete to-dos" },
-  { id: "google-contacts", name: "Google Contacts", description: "Look people up by name" },
   { id: "google-meet", name: "Google Meet", description: "Create links, recap past calls" },
   { id: "github", name: "GitHub", description: "Repos, issues, and pull requests" },
   { id: "notion", name: "Notion", description: "Search pages and databases" },
