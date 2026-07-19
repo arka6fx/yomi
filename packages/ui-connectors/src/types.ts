@@ -7,6 +7,7 @@ export type ConnectorCategory =
   | "developer"
   | "data"
   | "meetings"
+  | "food"
   | "other"
 
 export interface ConnectorInfo {

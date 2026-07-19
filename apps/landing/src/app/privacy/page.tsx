@@ -196,7 +196,9 @@ export default function PrivacyPage() {
               <ul>
                 <li>
                   <strong className="text-label">Composio</strong>: integration provider for
-                  select connected apps (currently Linear, GitHub, Slack, and Notion). When you
+                  select connected apps (currently all Google connectors — Gmail,
+                  Calendar, Drive, Classroom, Tasks, Contacts, Meet — plus Linear,
+                  GitHub, Slack, and Notion). When you
                   use a Composio-backed connector, your requests to that app and their results
                   transit Composio&apos;s servers on the way to and from the provider. Composio
                   manages authentication and tool access and holds the connection on our behalf.

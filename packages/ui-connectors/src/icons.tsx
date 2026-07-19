@@ -239,6 +239,16 @@ function GoogleMeetIcon({ size = 24 }: IconProps) {
   )
 }
 
+function SwiggyIcon({ size = 24 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 512 512" fill="none" role="img" aria-label="Swiggy">
+      <rect width="512" height="512" rx="15%" fill="#fc8019" />
+      <circle cx="256" cy="256" r="90" fill="#fff" />
+      <path d="M256 196q-33 0-56.5 23.5T176 276q0 33 23.5 56.5T256 356q33 0 56.5-23.5T336 276q0-33-23.5-56.5T256 196zm0 160q-33 0-56.5-23.5T176 276q0-33 23.5-56.5T256 196q33 0 56.5 23.5T336 276q0 33-23.5 56.5T256 356z" fill="#fc8019" />
+    </svg>
+  )
+}
+
 function FallbackIcon({ size = 24 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -264,6 +274,7 @@ const ICON_MAP: Record<string, React.FC<IconProps>> = {
   linear: LinearIcon,
   "linear-api-key": LinearIcon,
   telegram: TelegramIcon,
+  swiggy: SwiggyIcon,
 }
 
 export function ConnectorIcon({ id, size = 24 }: { id: string; size?: number }) {

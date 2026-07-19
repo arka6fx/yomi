@@ -119,6 +119,15 @@ const CATALOG_DEFS: Array<{
     icon: "key-round",
     available: true,
   },
+  {
+    id: "swiggy",
+    name: "Swiggy",
+    description: "Order food, groceries, and book restaurant tables via Telegram.",
+    category: "food",
+    authKind: "oauth2",
+    icon: "swiggy",
+    available: true,
+  },
 ]
 
 // displayNames maps connector id → the account it is bound to (usually an email).
