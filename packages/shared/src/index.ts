@@ -17,6 +17,22 @@ export {
   isPrivacyConsentPurpose,
 } from "./privacy.js"
 export type { PrivacyConsentPurpose, PrivacyConsentStatus } from "./privacy.js"
+export {
+  CAPABILITY_RESOURCES,
+  CAPABILITY_ACTIONS,
+  EXTERNAL_DEFAULT_CAPABILITIES,
+  scopeGrants,
+  hasCapability,
+  denialMessage,
+  CapabilityEnforcer,
+} from "./capabilities.js"
+export type {
+  CapabilityResource,
+  CapabilityAction,
+  Scope,
+  CapabilitySet,
+  CapabilityCheck,
+} from "./capabilities.js"
 
 export type UserRole = "user" | "owner"
 export type Plan = "explore" | "pro" | "max"

@@ -1,4 +1,5 @@
 import type { ToolSet } from "ai"
+import { hasCapability, denialMessage, type CapabilitySet } from "@yomi/shared"
 
 // Returns a structured error for connector tool execute handlers.
 // Adds a reconnect hint when the underlying API returned 401 or 403.
@@ -96,6 +97,10 @@ export interface DeveloperSetup {
 export interface ConnectorContext {
   userId: string
   getAccessToken: (userId: string, provider: string) => Promise<string>
+  // Granted capability set of the caller driving this connector (ADR-0005). When
+  // present, connector writes are checked for `connector:execute` before they run
+  // or queue. Absent for core/in-process callers, which run at full trust.
+  capabilities?: CapabilitySet
   createPendingAction?: (input: {
     connector: string
     action: string
@@ -127,6 +132,9 @@ export async function gateWrite<T>(
   args: unknown,
   run: () => Promise<T> | PromiseLike<T>,
 ): Promise<T | { id: string; status: string; message: string }> {
+  if (ctx.capabilities && !hasCapability(ctx.capabilities, "connector:execute")) {
+    return { id: "", status: "denied", message: denialMessage("connector:execute") }
+  }
   if (ctx.createPendingAction) {
     return ctx.createPendingAction({ ...meta, payload: args })
   }

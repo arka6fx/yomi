@@ -13,9 +13,30 @@ import { checkConsent } from "./privacy/checks.js"
 import { createPendingAction, type PendingActionRisk } from "./pending-actions.js"
 import { getAccessToken, listConnectedProviders } from "./integration-tokens.js"
 import { ConnectorRegistry } from "@yomi/agent-core"
+import {
+  CapabilityEnforcer,
+  EXTERNAL_DEFAULT_CAPABILITIES,
+  type CapabilitySet,
+  type Scope,
+} from "@yomi/shared"
+
+// Concrete capability each MCP tool requires before it runs. The enforcer checks
+// this against the caller's granted set (ADR-0005) — an additional gate in front of
+// the existing approval flow, not a replacement.
+const TOOL_SCOPES: Record<string, Scope> = {
+  memory_search: "memory:read",
+  memory_get_profile: "memory:read",
+  memory_add: "memory:write",
+  memory_forget: "memory:delete",
+  schedule_list: "schedule:read",
+  schedule_create: "schedule:write",
+  schedule_delete: "schedule:delete",
+  execute_connector_tool: "connector:execute",
+}
 
 interface McpToolContext {
   userId: string
+  capabilities: CapabilitySet
   createPendingAction: (input: {
     connector: string
     action: string
@@ -698,6 +719,14 @@ function createServer(ctx: McpToolContext): Server {
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params
 
+    const requiredScope = TOOL_SCOPES[name]
+    if (requiredScope) {
+      const enforced = new CapabilityEnforcer(ctx.capabilities).check(requiredScope)
+      if (!enforced.allowed) {
+        return { content: [{ type: "text" as const, text: enforced.message }] }
+      }
+    }
+
     switch (name) {
       case "memory_search":
         return handleMemorySearch(ctx.userId, (args ?? {}) as Record<string, unknown>)
@@ -735,13 +764,14 @@ export async function handleMcpPost(
     preview: string
     payload: unknown
   }) => Promise<{ id: string; status: string; message: string }>,
+  capabilities: CapabilitySet = EXTERNAL_DEFAULT_CAPABILITIES,
 ): Promise<Response> {
   reapStaleSessions()
 
   let session = mcpSessionId ? sessions.get(mcpSessionId) : undefined
 
   if (!session) {
-    const ctx: McpToolContext = { userId, createPendingAction: createPendingActionFn }
+    const ctx: McpToolContext = { userId, capabilities, createPendingAction: createPendingActionFn }
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => crypto.randomUUID(),
     })
