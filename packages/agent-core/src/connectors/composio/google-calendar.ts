@@ -4,47 +4,70 @@ import { createComposioTools, type ComposioExecutor, type ComposioToolSpec } fro
 
 export const CALENDAR_TOOLKIT = "googlecalendar"
 
+// Every slug and param below was checked against Composio's live catalog
+// (GET /api/v3/tools?toolkit_slug=googlecalendar) — the original set had 4
+// hallucinated slugs (LIST_EVENTS, GET_EVENT, GET_FREE_BUSY, QUICK_ADD_EVENT
+// don't exist; real are EVENTS_LIST, FIND_EVENT, FREE_BUSY_QUERY, QUICK_ADD)
+// and, worse, CREATE_EVENT/UPDATE_EVENT kept their real slugs but every param
+// was invented (title/start_time/end_time vs the real API's summary/
+// start_datetime/event_duration_hour+minutes). There is no "get event by id"
+// action in this toolkit at all — FIND_EVENT is search-only.
 export const calendarComposioSpecs: ComposioToolSpec[] = [
   // ── Read actions ──────────────────────────────────────────────
   {
-    slug: "GOOGLECALENDAR_LIST_EVENTS",
+    slug: "GOOGLECALENDAR_EVENTS_LIST",
     description:
-      "List upcoming calendar events from the user's primary Google Calendar within a time range. Optionally filter by calendar ID. Read-only.",
+      "List events on a calendar within a time range, sorted by start time. Read-only.",
     parameters: z
       .object({
-        calendar_id: z.string().optional().describe("Calendar ID (defaults to primary)"),
-        max_results: z.number().int().min(1).max(100).optional().describe("Max events to return"),
-        time_min: z.string().optional().describe("Start time in ISO 8601 format"),
-        time_max: z.string().optional().describe("End time in ISO 8601 format"),
+        calendarId: z.string().describe("Calendar ID, or 'primary' for the user's main calendar"),
+        timeMin: z.string().optional().describe("RFC3339 lower bound for event end time, e.g. 2024-06-03T10:00:00-07:00"),
+        timeMax: z.string().optional().describe("RFC3339 upper bound for event start time"),
+        maxResults: z.number().int().min(1).max(2500).optional().describe("Max events per page (default 250)"),
+        q: z.string().optional().describe("Free-text search across event fields"),
+        singleEvents: z.boolean().optional().describe("Expand recurring events into individual instances"),
+        orderBy: z.enum(["startTime", "updated"]).optional(),
       })
       .passthrough(),
   },
   {
-    slug: "GOOGLECALENDAR_GET_EVENT",
+    slug: "GOOGLECALENDAR_FIND_EVENT",
     description:
-      "Get full details for a specific calendar event by its ID. Read-only.",
+      "Search for events by text query across summary, description, location, and attendees. There is no separate " +
+      "'get event by ID' action — use this or GOOGLECALENDAR_EVENTS_LIST to find the event_id needed by update/delete. Read-only.",
     parameters: z
       .object({
+        query: z.string().optional().describe("Free-text search terms"),
         calendar_id: z.string().optional().describe("Calendar ID (defaults to primary)"),
-        event_id: z.string().describe("Google Calendar event ID"),
+        timeMin: z.string().optional().describe("RFC3339 or 'YYYY-MM-DD HH:MM:SS' lower bound"),
+        timeMax: z.string().optional().describe("RFC3339 or 'YYYY-MM-DD HH:MM:SS' upper bound"),
+        max_results: z.number().int().optional().describe("Max results per page (default 10)"),
+        single_events: z.boolean().optional().describe("Expand recurring events into individual instances (default true)"),
       })
       .passthrough(),
   },
   {
     slug: "GOOGLECALENDAR_LIST_CALENDARS",
-    description:
-      "List all calendars the user has access to, including primary and secondary calendars. Read-only.",
-    parameters: z.object({}).passthrough(),
-  },
-  {
-    slug: "GOOGLECALENDAR_GET_FREE_BUSY",
-    description:
-      "Check availability — returns busy time slots for a date range. Useful for finding free time to schedule. Read-only.",
+    description: "List all calendars the user has access to, including primary and secondary calendars. Read-only.",
     parameters: z
       .object({
-        time_min: z.string().describe("Start time in ISO 8601 format"),
-        time_max: z.string().describe("End time in ISO 8601 format"),
-        calendar_ids: z.array(z.string()).optional().describe("Calendar IDs to check (defaults to primary)"),
+        max_results: z.number().int().max(250).optional().describe("Max calendars per page (default 10)"),
+        show_hidden: z.boolean().optional(),
+        min_access_role: z.enum(["freeBusyReader", "owner", "reader", "writer"]).optional(),
+      })
+      .passthrough(),
+  },
+  {
+    slug: "GOOGLECALENDAR_FREE_BUSY_QUERY",
+    description: "Check availability — returns busy time slots for one or more calendars over a time range. Read-only.",
+    parameters: z
+      .object({
+        timeMin: z.string().describe("RFC3339 start of the interval to query"),
+        timeMax: z.string().describe("RFC3339 end of the interval to query"),
+        items: z
+          .array(z.object({ id: z.string().describe("Calendar or group ID") }).passthrough())
+          .describe("Calendars/groups to query, e.g. [{ id: 'primary' }]"),
+        timeZone: z.string().optional().describe("Time zone for the response (defaults to UTC)"),
       })
       .passthrough(),
   },
@@ -53,32 +76,42 @@ export const calendarComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "GOOGLECALENDAR_CREATE_EVENT",
     description:
-      "Create a new event on the user's Google Calendar. Optionally add attendees and a location. Requires user approval before it runs.",
+      "Create a new event on a Google Calendar. Duration is set via event_duration_hour/event_duration_minutes, not an " +
+      "end time — event_duration_minutes must stay under 60 (use event_duration_hour=1 for a 1-hour event, not minutes=60). " +
+      "Requires user approval before it runs.",
     parameters: z
       .object({
-        calendar_id: z.string().optional().describe("Calendar ID (defaults to primary)"),
-        title: z.string().describe("Event title / summary"),
-        start_time: z.string().describe("Start datetime in ISO 8601 format"),
-        end_time: z.string().describe("End datetime in ISO 8601 format"),
-        description: z.string().optional().describe("Event description / notes"),
-        location: z.string().optional().describe("Event location"),
+        start_datetime: z
+          .string()
+          .describe("Naive local date/time with NO offset or Z, e.g. '2025-01-16T13:00:00'"),
+        summary: z.string().optional().describe("Event title"),
+        description: z.string().optional().describe("Event description (can contain HTML)"),
+        location: z.string().optional(),
+        timezone: z.string().optional().describe("IANA timezone, e.g. 'America/New_York' (required if start_datetime is naive with no offset)"),
+        calendar_id: z.string().optional().describe("Calendar ID (defaults to 'primary')"),
         attendees: z.array(z.string()).optional().describe("Attendee email addresses"),
+        event_duration_hour: z.number().int().min(0).max(24).optional().describe("Duration hours component (0-24)"),
+        event_duration_minutes: z.number().int().min(0).max(59).optional().describe("Duration minutes component (0-59 ONLY — never 60+)"),
+        send_updates: z.boolean().optional().describe("Whether to email attendees about the new event (default true)"),
+        recurrence: z.array(z.string()).optional().describe("RRULE/EXRULE/RDATE/EXDATE lines for recurring events"),
+        visibility: z.enum(["default", "public", "private", "confidential"]).optional(),
       })
       .passthrough(),
     preview: (a) => ({
-      title: `Create calendar event: ${String(a["title"] ?? "")}`,
-      preview: `${String(a["title"] ?? "")}\n${String(a["start_time"] ?? "")} – ${String(a["end_time"] ?? "")}${(a["attendees"] as string[])?.length ? `\nAttendees: ${(a["attendees"] as string[]).join(", ")}` : ""}${a["location"] ? `\nLocation: ${String(a["location"])}` : ""}`,
+      title: `Create calendar event: ${String(a["summary"] ?? "")}`,
+      preview: `${String(a["summary"] ?? "")}\n${String(a["start_datetime"] ?? "")}${a["event_duration_hour"] || a["event_duration_minutes"] ? ` (${String(a["event_duration_hour"] ?? 0)}h ${String(a["event_duration_minutes"] ?? 0)}m)` : ""}${(a["attendees"] as string[])?.length ? `\nAttendees: ${(a["attendees"] as string[]).join(", ")}` : ""}${a["location"] ? `\nLocation: ${String(a["location"])}` : ""}`,
       confirmText: "Create event",
     }),
   },
   {
-    slug: "GOOGLECALENDAR_QUICK_ADD_EVENT",
+    slug: "GOOGLECALENDAR_QUICK_ADD",
     description:
       "Quickly create a calendar event using natural language text. Google parses the text to extract title, date, time, and duration. Requires user approval before it runs.",
     parameters: z
       .object({
         text: z.string().describe("Natural language event description, e.g. 'Meeting with John next Tuesday at 2pm'"),
         calendar_id: z.string().optional().describe("Calendar ID (defaults to primary)"),
+        send_updates: z.enum(["all", "externalOnly", "none"]).optional(),
       })
       .passthrough(),
     preview: (a) => ({
@@ -90,24 +123,28 @@ export const calendarComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "GOOGLECALENDAR_UPDATE_EVENT",
     description:
-      "Update an existing calendar event. Only the fields you pass are changed. Requires user approval before it runs.",
+      "Update an existing calendar event. start_datetime is always required by the API even when unchanged — read the " +
+      "event's current time first if only changing other fields. Requires user approval before it runs.",
     parameters: z
       .object({
-        calendar_id: z.string().optional().describe("Calendar ID (defaults to primary)"),
         event_id: z.string().describe("Google Calendar event ID to update"),
-        title: z.string().optional().describe("New title"),
-        start_time: z.string().optional().describe("New start datetime"),
-        end_time: z.string().optional().describe("New end datetime"),
-        description: z.string().optional().describe("New description"),
-        location: z.string().optional().describe("New location"),
+        start_datetime: z.string().describe("Naive local date/time with NO offset or Z, e.g. '2025-01-16T13:00:00'"),
+        summary: z.string().optional().describe("New title"),
+        description: z.string().optional(),
+        location: z.string().optional(),
+        timezone: z.string().optional(),
+        calendar_id: z.string().optional().describe("Calendar ID (defaults to 'primary')"),
+        attendees: z.array(z.string()).optional(),
+        event_duration_hour: z.number().int().min(0).max(24).optional(),
+        event_duration_minutes: z.number().int().min(0).max(59).optional(),
+        send_updates: z.boolean().optional(),
       })
       .passthrough(),
     preview: (a) => ({
       title: `Update calendar event ${String(a["event_id"] ?? "").slice(0, 12)}`,
       preview: [
-        a["title"] ? `Title: ${String(a["title"])}` : null,
-        a["start_time"] ? `Start: ${String(a["start_time"])}` : null,
-        a["end_time"] ? `End: ${String(a["end_time"])}` : null,
+        a["summary"] ? `Title: ${String(a["summary"])}` : null,
+        a["start_datetime"] ? `Start: ${String(a["start_datetime"])}` : null,
         a["location"] ? `Location: ${String(a["location"])}` : null,
       ].filter(Boolean).join("\n") || "Update event details",
       confirmText: "Update event",
@@ -117,12 +154,11 @@ export const calendarComposioSpecs: ComposioToolSpec[] = [
   // ── Irreversible actions ──────────────────────────────────────
   {
     slug: "GOOGLECALENDAR_DELETE_EVENT",
-    description:
-      "Delete a calendar event by its ID. This CANNOT be undone. Requires user approval before it runs.",
+    description: "Delete a calendar event by its ID. This CANNOT be undone. Requires user approval before it runs.",
     parameters: z
       .object({
-        calendar_id: z.string().optional().describe("Calendar ID (defaults to primary)"),
         event_id: z.string().describe("Google Calendar event ID to delete"),
+        calendar_id: z.string().optional().describe("Calendar ID (defaults to primary)"),
       })
       .passthrough(),
     preview: (a) => ({

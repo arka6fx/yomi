@@ -41,7 +41,7 @@ describe("Calendar via Composio — ConnectorDef shape", () => {
   it("exposes tools factory that returns tools keyed by Composio slug", () => {
     const def = makeComposioCalendarDef(fakeExecutor())
     const tools = def.tools(buildCtx())
-    expect(tools["GOOGLECALENDAR_LIST_EVENTS"]).toBeDefined()
+    expect(tools["GOOGLECALENDAR_EVENTS_LIST"]).toBeDefined()
     expect(tools["GOOGLECALENDAR_CREATE_EVENT"]).toBeDefined()
     expect(tools["GOOGLECALENDAR_DELETE_EVENT"]).toBeDefined()
   })
@@ -59,11 +59,11 @@ describe("Calendar via Composio — read pass-through", () => {
     })
     const tools = factory(buildCtx({ createPendingAction: create }))
 
-    const result = await tools["GOOGLECALENDAR_LIST_EVENTS"]!.execute({ max_results: 10 })
+    const result = await tools["GOOGLECALENDAR_EVENTS_LIST"]!.execute({ calendarId: "primary", maxResults: 10 })
 
     expect(result).toEqual({ events: [{ id: "e1", summary: "Standup" }] })
     expect(executor.calls).toEqual([
-      { userId: "user_1", slug: "GOOGLECALENDAR_LIST_EVENTS", arguments: { max_results: 10 } },
+      { userId: "user_1", slug: "GOOGLECALENDAR_EVENTS_LIST", arguments: { calendarId: "primary", maxResults: 10 } },
     ])
     expect(create).not.toHaveBeenCalled()
   })
@@ -82,9 +82,9 @@ describe("Calendar via Composio — write gating", () => {
     const tools = factory(buildCtx({ createPendingAction: create }))
 
     await tools["GOOGLECALENDAR_CREATE_EVENT"]!.execute({
-      title: "Team standup",
-      start_time: "2026-07-20T09:00:00",
-      end_time: "2026-07-20T09:30:00",
+      summary: "Team standup",
+      start_datetime: "2026-07-20T09:00:00",
+      event_duration_minutes: 30,
     })
 
     expect(executor.calls).toEqual([])
@@ -105,9 +105,9 @@ describe("Calendar via Composio — approval replay", () => {
     const tools = factory(buildCtx())
 
     const result = await tools["GOOGLECALENDAR_CREATE_EVENT"]!.execute({
-      title: "Meeting",
-      start_time: "2026-07-20T10:00:00",
-      end_time: "2026-07-20T11:00:00",
+      summary: "Meeting",
+      start_datetime: "2026-07-20T10:00:00",
+      event_duration_hour: 1,
     })
 
     expect(result).toEqual({ ok: true, id: "evt_1", htmlLink: "https://calendar.google.com/..." })

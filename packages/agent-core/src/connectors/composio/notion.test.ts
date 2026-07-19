@@ -45,7 +45,7 @@ describe("Notion via Composio — ConnectorDef shape", () => {
     expect(tools["NOTION_SEARCH_NOTION_PAGE"]).toBeDefined()
     // A representative write tool
     expect(tools["NOTION_CREATE_NOTION_PAGE"]).toBeDefined()
-    // An irreversible tool
+    // A soft-delete (archive), which is still a gated write, not irreversible
     expect(tools["NOTION_ARCHIVE_NOTION_PAGE"]).toBeDefined()
   })
 })
@@ -93,7 +93,6 @@ describe("Notion via Composio — write gating", () => {
     const result = await tools["NOTION_CREATE_NOTION_PAGE"]!.execute({
       parent_id: "parent123",
       title: "New page",
-      markdown: "Content here",
     })
 
     expect(executor.calls).toEqual([])
@@ -104,12 +103,12 @@ describe("Notion via Composio — write gating", () => {
       action: "NOTION_CREATE_NOTION_PAGE",
       risk: "write",
       title: "Create Notion page: New page",
-      payload: { parent_id: "parent123", title: "New page", markdown: "Content here" },
+      payload: { parent_id: "parent123", title: "New page" },
     })
     expect(result).toEqual({ id: "p1", status: "pending", message: "queued" })
   })
 
-  it("gates an archive action as irreversible", async () => {
+  it("gates an archive action as write (soft-delete, recoverable — not irreversible)", async () => {
     const executor = fakeExecutor()
     const create = mock(async () => ({ id: "p2", status: "pending", message: "queued" }))
     const factory = createComposioTools({
@@ -124,7 +123,7 @@ describe("Notion via Composio — write gating", () => {
       page_id: "page123",
     })
 
-    expect((create.mock.calls[0]![0] as Record<string, unknown>)["risk"]).toBe("irreversible")
+    expect((create.mock.calls[0]![0] as Record<string, unknown>)["risk"]).toBe("write")
   })
 })
 

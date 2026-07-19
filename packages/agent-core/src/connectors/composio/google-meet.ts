@@ -4,81 +4,130 @@ import { createComposioTools, type ComposioExecutor, type ComposioToolSpec } fro
 
 export const MEET_TOOLKIT = "googlemeet"
 
+// Every slug and param below was checked against Composio's live catalog
+// (GET /api/v3/tools?toolkit_slug=googlemeet) — 5 of the original 6 slugs were
+// hallucinated (GET_SPACE, GET_CONFERENCE_RECORD, GET_TRANSCRIPT, CREATE_SPACE
+// don't exist; real are GET_MEET, GET_CONFERENCE_RECORD_FOR_MEET,
+// GET_TRANSCRIPTS_BY_CONFERENCE_RECORD_ID, CREATE_MEET). There is no
+// "end active conference" action anywhere in this toolkit — dropped, not
+// replaceable. Added GET_RECORDINGS_BY_CONFERENCE_RECORD_ID and the
+// participant-session actions since they're real, useful, and already fully
+// schema'd here.
 export const meetComposioSpecs: ComposioToolSpec[] = [
   // ── Read actions ──────────────────────────────────────────────
   {
-    slug: "GOOGLEMEET_GET_SPACE",
-    description:
-      "Get details of a Google Meet space — its link, meeting code, and access settings. Read-only.",
+    slug: "GOOGLEMEET_GET_MEET",
+    description: "Get details for a Google Meet space by its resource name. Read-only.",
     parameters: z
       .object({
-        space_id: z.string().describe("Space ID or meeting code"),
+        space_name: z.string().describe("Meet space resource name, e.g. 'spaces/jQCFfuBOdN5z'"),
       })
       .passthrough(),
   },
   {
     slug: "GOOGLEMEET_LIST_CONFERENCE_RECORDS",
-    description:
-      "List the user's past Google Meet calls, most recent first. Each record has an id you can pass to GOOGLEMEET_GET_CONFERENCE_RECORD. Read-only.",
+    description: "List past Google Meet conference records. Optionally filter by space, meeting code, or time range. Read-only.",
     parameters: z
       .object({
-        page_size: z.number().int().min(1).max(50).optional().describe("Max records to return"),
+        filter: z
+          .string()
+          .optional()
+          .describe('EBNF filter, e.g. \'space.meeting_code = "abc-mnop-xyz"\' or \'start_time>="2024-01-01T00:00:00.000Z"\''),
+        page_size: z.number().int().min(1).max(100).optional().describe("Max records to return (default 25)"),
+        page_token: z.string().optional(),
       })
       .passthrough(),
   },
   {
-    slug: "GOOGLEMEET_GET_CONFERENCE_RECORD",
-    description:
-      "Get details of one past Meet call, including everyone who attended and how long each person stayed. Read-only.",
+    slug: "GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET",
+    description: "Look up a specific past conference record by space name, meeting code, or time range. Read-only.",
     parameters: z
       .object({
-        conference_record_id: z.string().describe("Conference record ID"),
+        space_name: z.string().optional().describe("Meet space resource name"),
+        meeting_code: z.string().optional().describe("Meeting code of the Meet space"),
+        start_time: z.string().optional(),
+        end_time: z.string().optional(),
       })
       .passthrough(),
   },
   {
-    slug: "GOOGLEMEET_GET_TRANSCRIPT",
-    description:
-      "Get the transcript of a past Google Meet call — what each person said, in order. Only available if transcription was enabled during the call (paid Workspace feature). Read-only.",
+    slug: "GOOGLEMEET_GET_TRANSCRIPTS_BY_CONFERENCE_RECORD_ID",
+    description: "Get the transcript(s) for a past Google Meet conference. Read-only.",
     parameters: z
       .object({
-        conference_record_id: z.string().describe("Conference record ID"),
-        page_size: z.number().int().min(1).max(500).optional().describe("Max transcript entries"),
+        conferenceRecord_id: z.string().describe("Conference record ID, from GOOGLEMEET_LIST_CONFERENCE_RECORDS"),
+      })
+      .passthrough(),
+  },
+  {
+    slug: "GOOGLEMEET_GET_RECORDINGS_BY_CONFERENCE_RECORD_ID",
+    description: "Get the recording(s) for a past Google Meet conference. Read-only.",
+    parameters: z
+      .object({
+        conferenceRecord_id: z.string().describe("Conference record ID, from GOOGLEMEET_LIST_CONFERENCE_RECORDS"),
+      })
+      .passthrough(),
+  },
+  {
+    slug: "GOOGLEMEET_LIST_PARTICIPANT_SESSIONS",
+    description: "List participant sessions (who joined/left, and when) for a past conference. Read-only.",
+    parameters: z
+      .object({
+        parent: z.string().describe("Conference record resource name, e.g. 'conferenceRecords/my-conference-123'"),
+        filter: z.string().optional().describe("EBNF filter, e.g. 'latest_end_time IS NULL' for still-active sessions"),
+        page_size: z.number().int().min(1).max(250).optional().describe("Max results (default 100)"),
+        page_token: z.string().optional(),
+      })
+      .passthrough(),
+  },
+  {
+    slug: "GOOGLEMEET_GET_PARTICIPANT_SESSION",
+    description: "Get details for a single participant session. Read-only.",
+    parameters: z
+      .object({
+        name: z.string().describe("Resource name, e.g. 'conferenceRecords/123456789/participants/abcdefg'"),
       })
       .passthrough(),
   },
 
   // ── Write actions (gated) ─────────────────────────────────────
   {
-    slug: "GOOGLEMEET_CREATE_SPACE",
-    description:
-      "Create a new Google Meet meeting link. Optionally configure who can join (access type). Requires user approval before it runs.",
+    slug: "GOOGLEMEET_CREATE_MEET",
+    description: "Create a new Google Meet space (a reusable meeting link). Requires user approval before it runs.",
     parameters: z
       .object({
-        access_type: z.enum(["OPEN", "TRUSTED", "RESTRICTED"]).optional().describe("OPEN = anyone with link joins directly; TRUSTED = invited people join, others knock; RESTRICTED = only invited people (Workspace only)"),
+        access_type: z.enum(["OPEN", "TRUSTED", "RESTRICTED"]).optional().describe("Who can join without explicit invite"),
+        entry_point_access: z.enum(["ALL", "CREATOR_APP_ONLY"]).optional(),
       })
       .passthrough(),
-    preview: (a) => ({
-      title: "Create a Google Meet link",
-      preview: `A new Meet space will be created (access: ${String(a["access_type"] ?? "TRUSTED")}).`,
+    preview: () => ({
+      title: "Create a new Google Meet space",
+      preview: "Create a reusable Google Meet link",
       confirmText: "Create meeting",
     }),
   },
-
-  // ── Irreversible actions ──────────────────────────────────────
   {
-    slug: "GOOGLEMEET_END_ACTIVE_CONFERENCE",
+    slug: "GOOGLEMEET_UPDATE_SPACE",
     description:
-      "End the call currently happening in a Meet space, kicking everyone out. Only works on spaces created by Yomi itself (Google restriction). This CANNOT be undone. Requires user approval before it runs.",
+      "Update a Google Meet space's config: access type, moderation, recording/transcription auto-generation. Requires user approval before it runs.",
     parameters: z
       .object({
-        space_id: z.string().describe("Space ID to end the conference in"),
+        name: z.string().describe("Space resource name, e.g. 'spaces/jQCFfuBOdN5z'"),
+        config: z
+          .object({
+            accessType: z.enum(["OPEN", "TRUSTED", "RESTRICTED"]).optional(),
+            moderation: z.enum(["OFF", "ON"]).optional(),
+          })
+          .passthrough()
+          .optional()
+          .describe("Fields to change on the space"),
+        updateMask: z.string().optional().describe("Comma-separated field names to update, or '*' for all provided fields"),
       })
       .passthrough(),
     preview: (a) => ({
-      title: "End active Meet call",
-      preview: `Everyone currently in ${String(a["space_id"] ?? "").slice(0, 16)} will be disconnected.`,
-      confirmText: "End meeting",
+      title: `Update Meet space ${String(a["name"] ?? "")}`,
+      preview: "Update meeting space configuration",
+      confirmText: "Update meeting",
     }),
   },
 ]
@@ -89,7 +138,7 @@ export function makeComposioMeetDef(executor: ComposioExecutor): ConnectorDef {
     name: "Google Meet",
     category: "meetings",
     icon: "google-meet",
-    description: "Create Google Meet links and read past calls (via Composio).",
+    description: "Create meeting links and read past calls, recordings, and transcripts (via Composio).",
     readOnlyByDefault: false,
     auth: {
       kind: "composio",
