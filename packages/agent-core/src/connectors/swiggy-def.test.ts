@@ -13,7 +13,14 @@ function makeMockTools(extra?: Record<string, ToolSet[string]>): ToolSet {
   ]
   const dineoutWrites = ["get_available_slots", "create_cart"]
   const foodTools = ["place_food_order", "track_food_order", "get_food_orders", "get_food_order_details", "search_restaurants", "update_food_cart", "flush_food_cart", "get_food_cart"]
-  const imTools = ["checkout", "get_orders", "get_order_details", "track_order"]
+  const imTools = [
+    "search_products", "your_go_to_items",
+    "update_cart", "get_cart", "clear_cart",
+    "checkout",
+    "get_orders", "get_order_details", "track_order",
+    "create_address", "delete_address", "get_addresses",
+    "report_error",
+  ]
   const tools: ToolSet = {}
 
   for (const name of [...dineoutReads, ...dineoutWrites, ...foodTools, ...imTools]) {
@@ -362,6 +369,195 @@ describe("wrapOrderTools — Food cart mutation tools (direct execution)", () =>
   })
 })
 
+describe("wrapOrderTools — Instamart discover tools", () => {
+  it("passes search_products through without gating", async () => {
+    const mockTools = makeMockTools()
+    const execute = mockTools["search_products"]!.execute as ReturnType<typeof mock>
+    const ctx = buildCtx({ createPendingAction: mock(async () => ({ id: "p1", status: "pending", message: "queued" })) })
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    const result = await wrapped["search_products"]!.execute({ query: "milk" })
+
+    expect(execute).toHaveBeenCalledWith({ query: "milk" })
+    expect(result).toEqual({ ok: true, name: "search_products", args: { query: "milk" } })
+  })
+
+  it("passes your_go_to_items through without gating", async () => {
+    const mockTools = makeMockTools()
+    const execute = mockTools["your_go_to_items"]!.execute as ReturnType<typeof mock>
+    const ctx = buildCtx({ createPendingAction: mock(async () => ({ id: "p1", status: "pending", message: "queued" })) })
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    const result = await wrapped["your_go_to_items"]!.execute({})
+
+    expect(execute).toHaveBeenCalled()
+    expect(result).toMatchObject({ ok: true, name: "your_go_to_items" })
+  })
+})
+
+describe("wrapOrderTools — Instamart cart tools", () => {
+  it("passes update_cart through without gating", async () => {
+    const mockTools = makeMockTools()
+    const execute = mockTools["update_cart"]!.execute as ReturnType<typeof mock>
+    const ctx = buildCtx({ createPendingAction: mock(async () => ({ id: "p1", status: "pending", message: "queued" })) })
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    await wrapped["update_cart"]!.execute({ product_id: "p1", quantity: 2 })
+
+    expect(execute).toHaveBeenCalledWith({ product_id: "p1", quantity: 2 })
+  })
+
+  it("passes get_cart through without gating", async () => {
+    const mockTools = makeMockTools()
+    const execute = mockTools["get_cart"]!.execute as ReturnType<typeof mock>
+    const ctx = buildCtx({ createPendingAction: mock(async () => ({ id: "p1", status: "pending", message: "queued" })) })
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    await wrapped["get_cart"]!.execute({})
+
+    expect(execute).toHaveBeenCalled()
+  })
+
+  it("passes clear_cart through without gating", async () => {
+    const mockTools = makeMockTools()
+    const execute = mockTools["clear_cart"]!.execute as ReturnType<typeof mock>
+    const ctx = buildCtx({ createPendingAction: mock(async () => ({ id: "p1", status: "pending", message: "queued" })) })
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    await wrapped["clear_cart"]!.execute({})
+
+    expect(execute).toHaveBeenCalled()
+  })
+})
+
+describe("wrapOrderTools — Instamart track tools", () => {
+  it("passes get_orders through without gating", async () => {
+    const mockTools = makeMockTools()
+    const execute = mockTools["get_orders"]!.execute as ReturnType<typeof mock>
+    const ctx = buildCtx({ createPendingAction: mock(async () => ({ id: "p1", status: "pending", message: "queued" })) })
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    await wrapped["get_orders"]!.execute({})
+
+    expect(execute).toHaveBeenCalled()
+  })
+
+  it("passes get_order_details through without gating", async () => {
+    const mockTools = makeMockTools()
+    const execute = mockTools["get_order_details"]!.execute as ReturnType<typeof mock>
+    const ctx = buildCtx({ createPendingAction: mock(async () => ({ id: "p1", status: "pending", message: "queued" })) })
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    await wrapped["get_order_details"]!.execute({ order_id: "o1" })
+
+    expect(execute).toHaveBeenCalledWith({ order_id: "o1" })
+  })
+
+  it("passes track_order through without gating", async () => {
+    const mockTools = makeMockTools()
+    const execute = mockTools["track_order"]!.execute as ReturnType<typeof mock>
+    const ctx = buildCtx({ createPendingAction: mock(async () => ({ id: "p1", status: "pending", message: "queued" })) })
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    await wrapped["track_order"]!.execute({ order_id: "o1" })
+
+    expect(execute).toHaveBeenCalledWith({ order_id: "o1" })
+  })
+})
+
+describe("wrapOrderTools — Instamart address read (pass-through)", () => {
+  it("passes get_addresses through without gating", async () => {
+    const mockTools = makeMockTools()
+    const execute = mockTools["get_addresses"]!.execute as ReturnType<typeof mock>
+    const ctx = buildCtx({ createPendingAction: mock(async () => ({ id: "p1", status: "pending", message: "queued" })) })
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    const result = await wrapped["get_addresses"]!.execute({})
+
+    expect(execute).toHaveBeenCalled()
+    expect(result).toMatchObject({ ok: true, name: "get_addresses" })
+  })
+})
+
+describe("wrapOrderTools — Instamart address switch pattern", () => {
+  it("blocks create_address when _confirmAddressSwitch is not set", async () => {
+    const mockTools = makeMockTools()
+    const execute = mockTools["create_address"]!.execute as ReturnType<typeof mock>
+    const ctx = buildCtx({ createPendingAction: mock(async () => ({ id: "p1", status: "pending", message: "queued" })) })
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    const result = await wrapped["create_address"]!.execute({ address: "123 Main St" })
+
+    expect(result).toMatchObject({
+      hint: expect.stringContaining("clearing the cart"),
+    })
+    expect(execute).not.toHaveBeenCalled()
+  })
+
+  it("blocks delete_address when _confirmAddressSwitch is not set", async () => {
+    const mockTools = makeMockTools()
+    const execute = mockTools["delete_address"]!.execute as ReturnType<typeof mock>
+    const ctx = buildCtx({ createPendingAction: mock(async () => ({ id: "p1", status: "pending", message: "queued" })) })
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    const result = await wrapped["delete_address"]!.execute({ address_id: "a1" })
+
+    expect(result).toMatchObject({
+      hint: expect.stringContaining("clearing the cart"),
+    })
+    expect(execute).not.toHaveBeenCalled()
+  })
+
+  it("allows create_address with _confirmAddressSwitch flag", async () => {
+    const mockTools = makeMockTools()
+    const execute = mockTools["create_address"]!.execute as ReturnType<typeof mock>
+    const ctx = buildCtx({ createPendingAction: mock(async () => ({ id: "p1", status: "pending", message: "queued" })) })
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    const result = await wrapped["create_address"]!.execute({ address: "123 Main St", _confirmAddressSwitch: true })
+
+    expect(execute).toHaveBeenCalled()
+    expect(result).toMatchObject({ ok: true, name: "create_address" })
+  })
+
+  it("strips _confirmAddressSwitch before passing to MCP tool", async () => {
+    const mockTools = makeMockTools()
+    const execute = mockTools["create_address"]!.execute as ReturnType<typeof mock>
+    const ctx = buildCtx()
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    await wrapped["create_address"]!.execute({ address: "123 Main St", city: "Mumbai", _confirmAddressSwitch: true })
+
+    expect(execute).toHaveBeenCalledWith({ address: "123 Main St", city: "Mumbai" })
+  })
+
+  it("allows delete_address with _confirmAddressSwitch flag", async () => {
+    const mockTools = makeMockTools()
+    const execute = mockTools["delete_address"]!.execute as ReturnType<typeof mock>
+    const ctx = buildCtx({ createPendingAction: mock(async () => ({ id: "p1", status: "pending", message: "queued" })) })
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    const result = await wrapped["delete_address"]!.execute({ address_id: "a1", _confirmAddressSwitch: true })
+
+    expect(execute).toHaveBeenCalled()
+    expect(result).toMatchObject({ ok: true, name: "delete_address" })
+  })
+})
+
+describe("wrapOrderTools — Instamart report_error (pass-through)", () => {
+  it("passes report_error through without gating", async () => {
+    const mockTools = makeMockTools()
+    const execute = mockTools["report_error"]!.execute as ReturnType<typeof mock>
+    const ctx = buildCtx({ createPendingAction: mock(async () => ({ id: "p1", status: "pending", message: "queued" })) })
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    const result = await wrapped["report_error"]!.execute({ error: "delayed delivery" })
+
+    expect(execute).toHaveBeenCalled()
+    expect(result).toEqual({ ok: true, name: "report_error", args: { error: "delayed delivery" } })
+  })
+})
+
 describe("getOrderPreview — Food orders", () => {
   it("includes restaurant and items in the preview", async () => {
     const mockTools = makeMockTools()
@@ -384,5 +580,47 @@ describe("getOrderPreview — Food orders", () => {
       action: "place_food_order",
       preview: "Place order at Paradise (Chicken Biryani x2, Raita x1) ₹650",
     })
+  })
+})
+
+describe("getOrderPreview — Instamart checkout", () => {
+  it("includes items in the checkout preview", async () => {
+    const mockTools = makeMockTools()
+    const madeCalls: unknown[] = []
+    const createPendingAction = mock(async (input: unknown) => {
+      madeCalls.push(input)
+      return { id: "p1", status: "pending", message: "queued" }
+    })
+    const ctx = buildCtx({ createPendingAction })
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    const payload = {
+      items: [{ name: "Milk", quantity: 2 }, { name: "Eggs", quantity: 12 }],
+      total: 450,
+    }
+    await wrapped["checkout"]!.execute(payload)
+
+    expect(madeCalls[0]).toMatchObject({
+      action: "checkout",
+      preview: "Checkout Instamart cart",
+    })
+  })
+})
+
+describe("Order memory — backend pattern", () => {
+  it("checkout payload carries items for memory recording", async () => {
+    const mockTools = makeMockTools()
+    const execute = mockTools["checkout"]!.execute as ReturnType<typeof mock>
+    const ctx = buildCtx()
+
+    const wrapped = wrapOrderTools(mockTools, ctx)
+    const payload = {
+      items: [{ name: "Milk", product_name: "Full Cream Milk", quantity: 2 }],
+      total: 120,
+    }
+    const result = await wrapped["checkout"]!.execute(payload)
+
+    expect(execute).toHaveBeenCalledWith(payload)
+    expect(result).toMatchObject({ ok: true })
   })
 })

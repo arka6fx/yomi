@@ -12,6 +12,9 @@ export const SWIGGY_MCP_SERVERS = [
 // Tools that place orders and need Telegram approval via gateWrite.
 const ORDER_TOOLS = new Set(["place_food_order", "checkout", "book_table"])
 
+// Instamart address tools — mutating address mid-cart requires clearing it first.
+const ADDRESS_TOOLS = new Set(["create_address", "delete_address"])
+
 function getOrderTitle(toolName: string): string {
   const titles: Record<string, string> = {
     place_food_order: "Place food order",
@@ -91,6 +94,29 @@ export function wrapOrderTools(tools: ToolSet, ctx: ConnectorContext): ToolSet {
                 ? originalExecute(args, options)
                 : (originalExecute as (args: unknown) => PromiseLike<unknown>)(args),
           )
+        },
+      }
+    } else if (ADDRESS_TOOLS.has(name) && tool.execute) {
+      const originalExecute = tool.execute
+      wrapped[name] = {
+        ...tool,
+        execute: async (
+          args: unknown,
+          options?: ToolExecutionOptions,
+        ) => {
+          const a = args as Record<string, unknown>
+          if (!a._confirmAddressSwitch) {
+            return {
+              hint:
+                "Changing delivery address requires clearing the cart first. " +
+                "Call clear_cart first, then retry this call with " +
+                "_confirmAddressSwitch: true once the cart is empty.",
+            }
+          }
+          const { _confirmAddressSwitch: _, ...cleanArgs } = a
+          return options
+            ? originalExecute(cleanArgs, options)
+            : (originalExecute as (args: unknown) => PromiseLike<unknown>)(cleanArgs)
         },
       }
     } else {
