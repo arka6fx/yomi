@@ -719,17 +719,17 @@ function DashboardContent() {
                         .map((item) => (
                           <div
                             key={item.provider}
-                            className="flex items-center justify-between gap-3 rounded-xl bg-background/50 border border-yellow-500/15 px-3 py-2"
+                            className="flex flex-col gap-2 rounded-xl bg-background/50 border border-yellow-500/15 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
                           >
                             <div className="min-w-0">
                               <p className="text-sm text-foreground truncate">{item.displayName}</p>
-                              <p className="text-xs text-muted-foreground truncate">
+                              <p className="text-xs text-muted-foreground break-words line-clamp-2">
                                 {item.message ?? "Authentication failed"}
                               </p>
                             </div>
                             <button
                               onClick={() => handleConnectIntegration(item.provider)}
-                              className="shrink-0 rounded-lg bg-yellow-400 text-black px-3 py-1.5 text-xs font-medium hover:bg-yellow-300 transition-colors"
+                              className="shrink-0 self-start rounded-lg bg-yellow-400 text-black px-3 py-1.5 text-xs font-medium hover:bg-yellow-300 transition-colors sm:self-auto"
                             >
                               Reconnect
                             </button>
