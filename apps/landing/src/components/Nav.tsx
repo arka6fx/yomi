@@ -99,7 +99,7 @@ export default function Nav() {
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="overflow-hidden border-t border-border"
+              className="overflow-hidden rounded-b-2xl border-t border-border bg-card"
             >
               <div className="px-4 py-3 flex flex-col gap-0.5">
                 {NAV_LINKS.map((link) => (
