@@ -2,6 +2,7 @@ import { and, asc, eq, isNotNull, lte } from "drizzle-orm"
 import { db, schedules, platformConnections } from "@yomi/db"
 import { runAgent } from "../agent/run.js"
 import { computeNextRun, type ScheduleType } from "./schedule-parser.js"
+import { summarizeUnsummarizedSessions } from "./agent-sessions.js"
 
 const MAX_PER_SWEEP = 25
 
