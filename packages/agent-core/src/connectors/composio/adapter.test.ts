@@ -139,6 +139,39 @@ describe("createComposioTools — approval-wrap adapter", () => {
     ])
   })
 
+  it("caps an oversized read result so it can't blow the model's context/TPM limit", async () => {
+    // Composio actions (e.g. GMAIL_FETCH_MESSAGE_BY_THREAD_ID) return whatever the
+    // provider gives back, with no size contract — a real prod incident saw a single
+    // Gmail fetch return ~1M tokens of raw JSON and blow the TPM limit. The adapter
+    // must cap total result size regardless of what the executor hands back.
+    const hugeBody = "x".repeat(50_000)
+    const executor = fakeExecutor({ messages: [{ id: "1", body: hugeBody }] })
+    const tools = toolsFor(executor, buildCtx())
+
+    const result = await tools["LINEAR_LIST_LINEAR_ISSUES"]!.execute({})
+
+    expect(JSON.stringify(result).length).toBeLessThan(hugeBody.length)
+  })
+
+  it("caps a read result with many items, not just long strings", async () => {
+    const manyItems = Array.from({ length: 500 }, (_, i) => ({ id: i, snippet: "y".repeat(200) }))
+    const executor = fakeExecutor({ items: manyItems })
+    const tools = toolsFor(executor, buildCtx())
+
+    const result = await tools["LINEAR_LIST_LINEAR_ISSUES"]!.execute({})
+
+    expect(JSON.stringify(result).length).toBeLessThan(JSON.stringify({ items: manyItems }).length)
+  })
+
+  it("leaves small results byte-for-byte unchanged", async () => {
+    const executor = fakeExecutor({ issues: [{ id: "1" }] })
+    const tools = toolsFor(executor, buildCtx())
+
+    const result = await tools["LINEAR_LIST_LINEAR_ISSUES"]!.execute({})
+
+    expect(result).toEqual({ issues: [{ id: "1" }] })
+  })
+
   it("returns a structured connector error (with reconnect hint) when execute fails", async () => {
     const executor: ComposioExecutor = {
       execute: async () => {
