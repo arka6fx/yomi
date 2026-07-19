@@ -2,6 +2,7 @@ import { app, startGateway } from "./index.js"
 import { runDueSchedules } from "./services/schedule-runner.js"
 import { runPrivacyRetention } from "./services/privacy/retention.js"
 import { runDriveSyncSweep } from "./services/rag/drive-sync.js"
+import { summarizeUnsummarizedSessions } from "./services/agent-sessions.js"
 
 interface ExecutionContext {
   waitUntil(promise: Promise<unknown>): void
@@ -81,6 +82,11 @@ export default {
             if (ran > 0) console.warn(`[drive-sync] swept ${ran} source(s)`)
           })
           .catch((err) => console.error("[drive-sync] sweep error:", err)),
+        summarizeUnsummarizedSessions()
+          .then((count) => {
+            if (count > 0) console.warn(`[session-summary] summarized ${count} session(s)`)
+          })
+          .catch((err) => console.error("[session-summary] sweep error:", err)),
       ]),
     )
   },

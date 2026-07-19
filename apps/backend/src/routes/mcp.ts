@@ -3,6 +3,7 @@ import { getAuth } from "../auth.js"
 import { handleMcpPost, handleMcpGet, handleMcpDelete } from "../services/mcp-server.js"
 import { createPendingAction } from "../services/pending-actions.js"
 import type { PendingActionRisk } from "../services/pending-actions.js"
+import { EXTERNAL_AGENT_CAPABILITIES } from "@yomi/shared"
 
 export const mcpRouter = new Hono()
 
@@ -34,7 +35,7 @@ mcpRouter.all("*", async (c) => {
   switch (c.req.method) {
     case "POST": {
       const body = await c.req.text()
-      const response = await handleMcpPost(body, mcpSessionId, userId, createPendingActionFn)
+      const response = await handleMcpPost(body, mcpSessionId, userId, createPendingActionFn, EXTERNAL_AGENT_CAPABILITIES)
       return new Response(response.body, {
         status: response.status,
         headers: response.headers,

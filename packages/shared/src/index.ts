@@ -21,10 +21,12 @@ export {
   CAPABILITY_RESOURCES,
   CAPABILITY_ACTIONS,
   EXTERNAL_DEFAULT_CAPABILITIES,
+  EXTERNAL_AGENT_CAPABILITIES,
   scopeGrants,
   hasCapability,
   denialMessage,
   CapabilityEnforcer,
+  evaluateManifest,
 } from "./capabilities.js"
 export type {
   CapabilityResource,
@@ -32,7 +34,10 @@ export type {
   Scope,
   CapabilitySet,
   CapabilityCheck,
+  CapabilityManifest,
+  ManifestSatisfaction,
 } from "./capabilities.js"
+export type { PluginDef } from "./plugins.js"
 
 export type UserRole = "user" | "owner"
 export type Plan = "explore" | "pro" | "max"

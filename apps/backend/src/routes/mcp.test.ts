@@ -258,9 +258,19 @@ mock.module("../gateway/index.js", () => ({
   }),
 }))
 
+const mockRunAgent = mock(async (opts: { userId: string; text: string }) => ({
+  text: `Echo: ${opts.text}`,
+  quotaError: false,
+}))
+
+mock.module("../agent/run.js", () => ({
+  runAgent: mockRunAgent,
+}))
+
 beforeEach(() => {
   mockAuthSession = null
   executedQueries = []
+  mockRunAgent.mockClear?.()
 })
 
 async function mcpApp() {
@@ -686,5 +696,118 @@ describe("MCP server endpoint", () => {
     expect(callRes.status).toBe(200)
     const body = await callRes.text()
     expect(body).toContain("is not connected")
+  })
+
+  it("discovers run_yomi_agent tool", async () => {
+    mockAuthSession = { user: { id: "u1" }, session: { id: "s1" } }
+    const app = await mcpApp()
+
+    const initRes = await rpcCall(app, "initialize", {
+      protocolVersion: "2024-11-05",
+      capabilities: { tools: {} },
+      clientInfo: { name: "test", version: "1" },
+    })
+    const sessionId = initRes.headers.get("mcp-session-id")!
+
+    await rpcCall(app, "notifications/initialized", {}, sessionId)
+
+    const listRes = await rpcCall(app, "tools/list", {}, sessionId)
+    expect(listRes.status).toBe(200)
+    const listBody = await listRes.text()
+    expect(listBody).toContain("run_yomi_agent")
+  })
+
+  it("calls run_yomi_agent and returns agent reply", async () => {
+    mockAuthSession = { user: { id: "u1" }, session: { id: "s1" } }
+    const app = await mcpApp()
+
+    const initRes = await rpcCall(app, "initialize", {
+      protocolVersion: "2024-11-05",
+      capabilities: { tools: {} },
+      clientInfo: { name: "test", version: "1" },
+    })
+    const sessionId = initRes.headers.get("mcp-session-id")!
+
+    await rpcCall(app, "notifications/initialized", {}, sessionId)
+
+    const callRes = await rpcCall(
+      app,
+      "tools/call",
+      {
+        name: "run_yomi_agent",
+        arguments: {
+          prompt: "Hello, what's my schedule today?",
+        },
+      },
+      sessionId,
+    )
+    expect(callRes.status).toBe(200)
+    const body = await callRes.text()
+    expect(body).toContain("content")
+    expect(body).toContain("Echo: Hello, what's my schedule today?")
+    expect(mockRunAgent).toHaveBeenCalled()
+  })
+
+  it("run_yomi_agent returns error when prompt is missing", async () => {
+    mockAuthSession = { user: { id: "u1" }, session: { id: "s1" } }
+    const app = await mcpApp()
+
+    const initRes = await rpcCall(app, "initialize", {
+      protocolVersion: "2024-11-05",
+      capabilities: { tools: {} },
+      clientInfo: { name: "test", version: "1" },
+    })
+    const sessionId = initRes.headers.get("mcp-session-id")!
+
+    await rpcCall(app, "notifications/initialized", {}, sessionId)
+
+    const callRes = await rpcCall(
+      app,
+      "tools/call",
+      {
+        name: "run_yomi_agent",
+        arguments: {},
+      },
+      sessionId,
+    )
+    expect(callRes.status).toBe(200)
+    const body = await callRes.text()
+    expect(body).toContain("'prompt' field is required")
+    expect(mockRunAgent).not.toHaveBeenCalled()
+  })
+
+  it("run_yomi_agent returns quota error message", async () => {
+    mockRunAgent.mockImplementationOnce?.(async () => ({
+      text: "Your trial has ended.",
+      quotaError: true,
+    }))
+
+    mockAuthSession = { user: { id: "u1" }, session: { id: "s1" } }
+    const app = await mcpApp()
+
+    const initRes = await rpcCall(app, "initialize", {
+      protocolVersion: "2024-11-05",
+      capabilities: { tools: {} },
+      clientInfo: { name: "test", version: "1" },
+    })
+    const sessionId = initRes.headers.get("mcp-session-id")!
+
+    await rpcCall(app, "notifications/initialized", {}, sessionId)
+
+    const callRes = await rpcCall(
+      app,
+      "tools/call",
+      {
+        name: "run_yomi_agent",
+        arguments: {
+          prompt: "Do something",
+        },
+      },
+      sessionId,
+    )
+    expect(callRes.status).toBe(200)
+    const body = await callRes.text()
+    expect(body).toContain("Quota error")
+    expect(body).toContain("Your trial has ended")
   })
 })

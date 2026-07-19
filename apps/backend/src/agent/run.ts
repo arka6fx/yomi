@@ -4,12 +4,14 @@ import { db, ragSources, usageEvents } from "@yomi/db"
 import {
   ConnectorRegistry,
   createModel,
+  createRecallTool,
   runAgentLoop,
   type AgentMessage,
   type UsageInfo,
 } from "@yomi/agent-core"
 import { formatAgentSoul } from "@yomi/shared"
 import { compressContext, shouldCompress, estimateTokens } from "./compressor.js"
+import { searchSessions } from "../services/agent-sessions.js"
 import { getAccessToken, listConnectedProviders } from "../services/integration-tokens.js"
 import { buildComposioDefs } from "../connectors/composio-defs.js"
 import { createComposioRestExecutor, createCountingExecutor } from "../connectors/composio-executor.js"
@@ -570,6 +572,10 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     }
   }
 
+  const recallTool = createRecallTool((query, limit) =>
+    searchSessions(opts.userId, query, limit),
+  )
+
   let text: string
   const startedAt = Date.now()
   const userTimeZone = await resolveUserTimeZone(opts.userId)
@@ -578,6 +584,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       registry,
       text: opts.text,
       history,
+      extraTools: { recall_past_conversations: recallTool },
       system: buildSystemWithContext(
         memoryContext,
         ragContext,

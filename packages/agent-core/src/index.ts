@@ -118,6 +118,7 @@ export type {
 } from "./connectors/connector-def.js"
 
 export { createConnectorTools } from "./tools.js"
+export { createRecallTool, type SessionRecallResult, type RecallSearchFn } from "./recall.js"
 export {
   runAgentLoop,
   type AgentMessage,

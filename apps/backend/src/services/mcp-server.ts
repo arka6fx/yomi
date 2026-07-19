@@ -12,7 +12,8 @@ import { db, memoryEmbeddings, memoryEntries, schedules } from "@yomi/db"
 import { checkConsent } from "./privacy/checks.js"
 import { createPendingAction, type PendingActionRisk } from "./pending-actions.js"
 import { getAccessToken, listConnectedProviders } from "./integration-tokens.js"
-import { ConnectorRegistry } from "@yomi/agent-core"
+import { ConnectorRegistry, type AgentMessage } from "@yomi/agent-core"
+import { runAgent } from "../agent/run.js"
 import {
   CapabilityEnforcer,
   EXTERNAL_DEFAULT_CAPABILITIES,
@@ -32,6 +33,7 @@ const TOOL_SCOPES: Record<string, Scope> = {
   schedule_create: "schedule:write",
   schedule_delete: "schedule:delete",
   execute_connector_tool: "connector:execute",
+  run_yomi_agent: "agent:execute",
 }
 
 interface McpToolContext {
@@ -599,6 +601,37 @@ async function handleExecuteConnectorTool(
   }
 }
 
+async function handleRunYomiAgent(
+  ctx: McpToolContext,
+  args: Record<string, unknown> | undefined,
+): Promise<{ content: { type: "text"; text: string }[] }> {
+  const prompt = clean(args?.prompt ?? "", 8000)
+  if (!prompt) {
+    return { content: [{ type: "text", text: "The 'prompt' field is required." }] }
+  }
+
+  const history = args?.history as AgentMessage[] | undefined
+  const skipCharge = args?.skipCharge === true
+
+  const result = await runAgent({
+    userId: ctx.userId,
+    text: prompt,
+    history,
+    skipCharge,
+  })
+
+  return {
+    content: [
+      {
+        type: "text",
+        text: result.quotaError
+          ? `Quota error: ${result.text}`
+          : result.text,
+      },
+    ],
+  }
+}
+
 function createServer(ctx: McpToolContext): Server {
   const server = new Server(
     { name: "yomi", version: "0.1.0" },
@@ -713,6 +746,32 @@ function createServer(ctx: McpToolContext): Server {
           required: ["connector", "action"],
         },
       },
+      {
+        name: "run_yomi_agent",
+        description: "Send a text input to the Yomi agent and get a reply. The agent has access to all connected connectors (Gmail, Calendar, etc.), memory, and can perform actions on your behalf. Billed as a regular agent turn.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            prompt: { type: "string", description: "The user's input/prompt for the agent (required)" },
+            history: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  role: { type: "string", description: "user or assistant" },
+                  content: { type: "string", description: "Message content" },
+                },
+              },
+              description: "Optional conversation history for context",
+            },
+            skipCharge: {
+              type: "boolean",
+              description: "Skip billing for this turn (use when resuming a paid turn)",
+            },
+          },
+          required: ["prompt"],
+        },
+      },
     ],
   }))
 
@@ -744,6 +803,8 @@ function createServer(ctx: McpToolContext): Server {
         return handleScheduleDelete(ctx, (args ?? {}) as Record<string, unknown>)
       case "execute_connector_tool":
         return handleExecuteConnectorTool(ctx, (args ?? {}) as Record<string, unknown>)
+      case "run_yomi_agent":
+        return handleRunYomiAgent(ctx, (args ?? {}) as Record<string, unknown>)
       default:
         throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`)
     }
