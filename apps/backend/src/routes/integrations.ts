@@ -233,7 +233,14 @@ integrationsRouter.get("/status", async (c) => {
 integrationsRouter.get("/connect/google", authenticate, async (c) => {
   const user = c.get("user")
   if (!checkOAuthRateLimit(user.id)) {
-    return c.json({ error: "Too many connect attempts — please wait a minute" }, 429)
+    // This route always redirects the browser (never fetched as JSON from the
+    // dashboard), so a plain error response would render as raw JSON text
+    // instead of the dashboard's error banner.
+    return c.redirect(
+      `${process.env.BETTER_AUTH_URL ?? "http://localhost:3000"}/dashboard?integration_error=${encodeURIComponent(
+        "Too many connect attempts — please wait a minute",
+      )}`,
+    )
   }
 
   const composioDef = getConnectorDef("google")
@@ -415,12 +422,22 @@ integrationsRouter.get("/connect/:id", async (c) => {
   if (!session?.user) return c.json({ error: "Unauthorized" }, 401)
   const user = session.user as import("../auth.js").SessionUser
 
-  if (!checkOAuthRateLimit(user.id)) {
-    return c.json({ error: "Too many connect attempts — please wait a minute" }, 429)
-  }
-
   const def = getConnectorDef(id)
   if (!def) return c.json({ error: `Unknown connector: ${id}` }, 404)
+
+  if (!checkOAuthRateLimit(user.id)) {
+    const msg = "Too many connect attempts — please wait a minute"
+    // api_key / connection_string are always driven by a fetch() from a modal
+    // and need the JSON shape; oauth2 / composio are always a full-page
+    // navigation and need a redirect so the dashboard's error banner renders
+    // it instead of the browser showing raw JSON text.
+    if (def.auth.kind === "api_key" || def.auth.kind === "connection_string") {
+      return c.json({ error: msg }, 429)
+    }
+    return c.redirect(
+      `${process.env.BETTER_AUTH_URL ?? "http://localhost:3000"}/dashboard?integration_error=${encodeURIComponent(msg)}`,
+    )
+  }
 
   // Composio-backed connectors: open Composio's connection flow instead of a
   // native OAuth redirect. Composio holds the grant; we store only a reference.
