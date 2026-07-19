@@ -772,3 +772,26 @@ export const aiUsageEvents = pgTable(
     usageEventIdx: index("ai_usage_events_usage_event_idx").on(t.usageEventId),
   }),
 )
+
+// Registration table for third-party plugins (issue #75) — the declaration side
+// of the capability system. Stores what a plugin says it needs (required/optional
+// scopes + free-form permissions) alongside identity/version metadata. No plugin
+// runtime or sandboxing lives here, only the registration + capability manifest.
+export const plugins = pgTable(
+  "plugins",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    pluginId: text("plugin_id").notNull(), // caller-supplied stable id (PluginDef.id)
+    name: text("name").notNull(),
+    version: text("version").notNull(),
+    entrypoint: text("entrypoint").notNull(),
+    requiredCapabilities: jsonb("required_capabilities").notNull().default([]), // Scope[]
+    optionalCapabilities: jsonb("optional_capabilities").notNull().default([]), // Scope[]
+    permissions: jsonb("permissions").notNull().default([]), // string[]
+    registeredAt: timestamp("registered_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    pluginIdUnique: unique("plugins_plugin_id_unique").on(t.pluginId),
+  }),
+)

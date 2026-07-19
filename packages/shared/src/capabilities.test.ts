@@ -6,6 +6,7 @@ import {
   hasCapability,
   CapabilityEnforcer,
   EXTERNAL_DEFAULT_CAPABILITIES,
+  evaluateManifest,
 } from "./capabilities.js"
 
 describe("scopeGrants", () => {
@@ -92,6 +93,42 @@ describe("EXTERNAL_DEFAULT_CAPABILITIES", () => {
   it("does not implicitly grant the agent loop", () => {
     const enforcer = new CapabilityEnforcer(EXTERNAL_DEFAULT_CAPABILITIES)
     expect(enforcer.allows("agent:execute")).toBe(false)
+  })
+})
+
+describe("evaluateManifest", () => {
+  it("is satisfied when every required scope is granted", () => {
+    const result = evaluateManifest(
+      { required: ["memory:read", "connector:execute"], optional: [], permissions: [] },
+      ["memory:*", "connector:*"],
+    )
+    expect(result.satisfied).toBe(true)
+    expect(result.missing).toEqual([])
+  })
+
+  it("is unsatisfied and lists every missing required scope", () => {
+    const result = evaluateManifest(
+      { required: ["memory:read", "memory:write", "agent:execute"], optional: [], permissions: [] },
+      ["memory:read"],
+    )
+    expect(result.satisfied).toBe(false)
+    expect(result.missing).toEqual(["memory:write", "agent:execute"])
+  })
+
+  it("reports which optional scopes are granted without affecting satisfaction", () => {
+    const result = evaluateManifest(
+      { required: ["memory:read"], optional: ["schedule:read", "filesystem:write"], permissions: [] },
+      ["memory:read", "schedule:read"],
+    )
+    expect(result.satisfied).toBe(true)
+    expect(result.grantedOptional).toEqual(["schedule:read"])
+    expect(result.missingOptional).toEqual(["filesystem:write"])
+  })
+
+  it("is satisfied for an empty required list", () => {
+    const result = evaluateManifest({ required: [], optional: [], permissions: [] }, [])
+    expect(result.satisfied).toBe(true)
+    expect(result.missing).toEqual([])
   })
 })
 
