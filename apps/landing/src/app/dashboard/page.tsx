@@ -469,7 +469,7 @@ function DashboardContent() {
       return
     }
 
-    // OAuth2: navigate directly — backend authenticates via token query param
+    // OAuth2 / Composio: navigate directly — backend authenticates via token query param
     window.location.href = `${apiBase}/api/integrations/connect/${id}?session=${encodeURIComponent(session!.session.token)}`
   }
 
