@@ -279,6 +279,19 @@ async function replayConnectorTool(row: {
   ])
   const def = getConnectorDef(row.connector)
   if (!def) return undefined
+
+  if (def.isMCPBased && def.connectMCP) {
+    const tools = await def.connectMCP({
+      userId: row.userId,
+      getAccessToken,
+    })
+    const t = tools[row.action] as
+      | { execute?: (args: unknown, opts: unknown) => Promise<unknown> }
+      | undefined
+    if (!t?.execute) return undefined
+    return t.execute(row.payload, { toolCallId: row.action, messages: [] })
+  }
+
   const tools = def.tools({ userId: row.userId, getAccessToken }) as Record<
     string,
     { execute?: (args: unknown, opts: unknown) => Promise<unknown> }
@@ -385,6 +398,51 @@ export async function approvePendingAction(
         result: pendingActions.result,
         title: pendingActions.title,
       })
+
+    if (status === "executed" && approved.connector === "swiggy" && approved.action === "book_table") {
+      try {
+        const { upsertMemory } = await import("../routes/memory.js")
+        const payload = (approved.payload ?? {}) as Record<string, unknown>
+        const restaurantId = payload.restaurant_id ?? payload.restaurantId
+        const dateTime = payload.date_time ?? payload.date ?? payload.datetime
+        const partySize = payload.party_size ?? payload.partySize ?? payload.guests
+
+        let dayName: string | undefined
+        let timeOfDay: string | undefined
+        if (dateTime) {
+          const d = new Date(String(dateTime))
+          if (Number.isFinite(d.getTime())) {
+            dayName = d.toLocaleDateString("en-US", { weekday: "long" })
+            const hour = d.getHours()
+            timeOfDay = hour >= 5 && hour < 12 ? "Morning" : hour >= 12 && hour < 17 ? "Afternoon" : hour >= 17 && hour < 22 ? "Evening" : "Night"
+          }
+        }
+
+        await upsertMemory(approved.userId, {
+          kind: "swiggy_order",
+          scope: "global",
+          topic: restaurantId
+            ? `Dineout booking at restaurant ${restaurantId}`
+            : "Dineout restaurant booking",
+          content: [
+            restaurantId ? `Restaurant: ${restaurantId}` : "",
+            dateTime ? `Date/Time: ${dateTime}` : "",
+            partySize ? `Party size: ${partySize}` : "",
+            timeOfDay ? `Time of day: ${timeOfDay}` : "",
+            dayName ? `Day of week: ${dayName}` : "",
+          ]
+            .filter(Boolean)
+            .join("\n"),
+          summary: ["Dineout reservation", restaurantId ? `at ${restaurantId}` : "", dateTime ? `on ${dateTime}` : "", partySize ? `for ${partySize}` : ""]
+            .filter(Boolean)
+            .join(" "),
+          confidence: 90,
+          sourceType: "swiggy_dineout",
+        })
+      } catch {
+        // best-effort — memory write must not break the approval flow
+      }
+    }
 
     // Notify the user on their messaging platform after a write action
     // completes — skipped when the approval came from that same chat and the
