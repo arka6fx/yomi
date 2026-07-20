@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Menu, Search, X } from "lucide-react"
 import { BrandMark } from "@/components/BrandMark"
 import { authClient } from "@/lib/auth-client"
+import { DOCS_INDEX, matchesQuery } from "./docs-search"
 
 export function DocsHeader({
   query,
@@ -33,6 +34,16 @@ export function DocsHeader({
     return () => window.removeEventListener("keydown", onKeyDown)
   }, [])
 
+  // Enter jumps to the first matching section via a plain anchor hash, same
+  // convention as the sidebar/toc links — no router involved.
+  function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter") return
+    const match = DOCS_INDEX.find((entry) => matchesQuery(entry, query))
+    if (match) {
+      window.location.hash = match.id
+    }
+  }
+
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-6 py-3">
@@ -48,7 +59,9 @@ export function DocsHeader({
             type="text"
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
             placeholder="Search docs..."
+            aria-label="Search docs"
             className="w-full rounded-xl border border-border bg-muted/40 py-1.5 pl-9 pr-14 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
           />
           <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-border bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground">
@@ -101,7 +114,9 @@ export function DocsHeader({
               type="text"
               value={query}
               onChange={(e) => onQueryChange(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
               placeholder="Search docs..."
+              aria-label="Search docs"
               autoFocus
               className="w-full rounded-xl border border-border bg-muted/40 py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
             />

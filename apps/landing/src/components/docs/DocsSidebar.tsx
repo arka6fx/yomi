@@ -25,7 +25,7 @@ export function DocsSidebar({
   }
 
   return (
-    <nav className="space-y-5">
+    <nav aria-label="Docs sections" className="space-y-5">
       {GROUPS.map((group) => {
         const entries = matches.filter((entry) => entry.group === group)
         if (entries.length === 0) return null
