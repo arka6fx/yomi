@@ -312,6 +312,16 @@ export const COMPOSIO_RISK_MAP: Record<string, Record<string, ActionRisk>> = {
     SLACK_ARCHIVE_CONVERSATION: "irreversible",
     SLACK_CONVERT_CHANNEL_TO_PRIVATE: "irreversible",
   },
+  // Composio's toolkit slug is "google_maps" (underscore) — must match exactly,
+  // same footgun as google_classroom above: a mismatch falls through to
+  // default-deny (every action classified "write").
+  google_maps: {
+    // Reads — pass straight through. Only 2 tools are wired up for this toolkit
+    // (see google-maps.ts for why GEOCODING_API/GET_DIRECTION are excluded) —
+    // both are read-only searches, so this toolkit has no write actions at all.
+    GOOGLE_MAPS_NEARBY_SEARCH: "read",
+    GOOGLE_MAPS_TEXT_SEARCH: "read",
+  },
 }
 
 // Classify one action. Unknown toolkit or unknown slug → `write` (default-deny).
