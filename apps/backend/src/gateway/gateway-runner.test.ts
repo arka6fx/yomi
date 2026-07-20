@@ -288,6 +288,23 @@ describe("GatewayRunner production routing", () => {
     ])
   })
 
+  it("surfaces a shared location as agent context text", async () => {
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "",
+      location: { latitude: 12.9716, longitude: 77.5946 },
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(agentCalls[0]?.text).toBe("📍 _Location:_ 12.9716, 77.5946")
+  })
+
   it("intercepts a first-contact message with the personality ask and skips the agent", async () => {
     soulOnboardingReply = "Hey, I'm Yomi. Define my personality?"
     const runner = new GatewayRunner()
