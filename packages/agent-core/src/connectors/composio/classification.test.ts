@@ -82,6 +82,7 @@ describe("Composio risk classification", () => {
     expect(COMPOSIO_RISK_MAP["google_classroom"]).toBeDefined()
     expect(COMPOSIO_RISK_MAP["googletasks"]).toBeDefined()
     expect(COMPOSIO_RISK_MAP["googlemeet"]).toBeDefined()
+    expect(COMPOSIO_RISK_MAP["google_maps"]).toBeDefined()
     for (const bySlug of Object.values(COMPOSIO_RISK_MAP)) {
       for (const risk of Object.values(bySlug)) {
         expect(["read", "write", "send", "paid", "irreversible"]).toContain(risk)
@@ -194,6 +195,15 @@ describe("Composio risk classification", () => {
 
     it("classifies Meet write actions as write", () => {
       expect(classifyAction("googlemeet", "GOOGLEMEET_CREATE_MEET")).toBe("write")
+    })
+
+    it("classifies Maps read actions as read", () => {
+      expect(classifyAction("google_maps", "GOOGLE_MAPS_NEARBY_SEARCH")).toBe("read")
+      expect(classifyAction("google_maps", "GOOGLE_MAPS_TEXT_SEARCH")).toBe("read")
+    })
+
+    it("defaults an unclassified Maps action to write (covers the excluded GEOCODING_API/GET_DIRECTION tools)", () => {
+      expect(classifyAction("google_maps", "GOOGLE_MAPS_GEOCODING_API")).toBe("write")
     })
   })
 })

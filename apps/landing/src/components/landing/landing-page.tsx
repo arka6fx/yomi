@@ -62,6 +62,7 @@ const CONNECTORS: { id: string; name: string; description: string }[] = [
   },
   { id: "google-tasks", name: "Google Tasks", description: "Capture and complete to-dos" },
   { id: "google-meet", name: "Google Meet", description: "Create links, recap past calls" },
+  { id: "google-maps", name: "Google Maps", description: "Search for places near a location" },
   { id: "github", name: "GitHub", description: "Repos, issues, and pull requests" },
   { id: "notion", name: "Notion", description: "Search pages and databases" },
   { id: "slack", name: "Slack", description: "Read context, send approved messages" },

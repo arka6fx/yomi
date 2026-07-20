@@ -241,6 +241,8 @@ export interface GatewayMessage {
   videoMimeType?: string
   /** Video duration in seconds when supplied by the platform */
   videoDurationSeconds?: number
+  /** Coordinates when the user shared a location pin */
+  location?: { latitude: number; longitude: number }
 }
 
 export interface GatewaySessionInfo {
