@@ -27,14 +27,29 @@ export function DocsShell({
     )
     if (sections.length === 0) return
 
+    // IntersectionObserver callbacks only report entries whose threshold changed
+    // since the last invocation, not every observed element. Track every
+    // section's latest ratio ourselves so the "most visible" pick considers all
+    // of them, not just whichever one happened to cross a threshold this frame
+    // (that partial-batch approach made the highlight flicker backwards while
+    // scrolling monotonically down).
+    const ratios = new Map<string, number>()
+
     const observer = new IntersectionObserver(
       (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)
-        if (visible.length > 0) {
-          setActiveId(visible[0]!.target.id)
+        for (const entry of entries) {
+          ratios.set(entry.target.id, entry.isIntersecting ? entry.intersectionRatio : 0)
         }
+        let bestId: string | null = null
+        let bestRatio = 0
+        for (const section of sections) {
+          const ratio = ratios.get(section.id) ?? 0
+          if (ratio > bestRatio) {
+            bestRatio = ratio
+            bestId = section.id
+          }
+        }
+        if (bestId) setActiveId(bestId)
       },
       { rootMargin: "-96px 0px -60% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] },
     )
