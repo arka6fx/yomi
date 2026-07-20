@@ -64,6 +64,11 @@ const CONNECTORS: { id: string; name: string; access: string }[] = [
     name: "Google Meet",
     access: "Create meeting links and read past calls and transcripts",
   },
+  {
+    id: "google-maps",
+    name: "Google Maps",
+    access: "Search for places and businesses near a location",
+  },
   { id: "github", name: "GitHub", access: "Repositories, issues, and pull requests" },
   { id: "notion", name: "Notion", access: "Search and read your shared pages and databases" },
   { id: "slack", name: "Slack", access: "Read channel context and send approved messages" },
