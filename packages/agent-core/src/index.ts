@@ -104,6 +104,11 @@ export {
   meetComposioSpecs,
   MEET_TOOLKIT,
 } from "./connectors/composio/google-meet.js"
+export {
+  makeComposioMapsDef,
+  mapsComposioSpecs,
+  MAPS_TOOLKIT,
+} from "./connectors/composio/google-maps.js"
 export type {
   Connector,
   ConnectorStatus,

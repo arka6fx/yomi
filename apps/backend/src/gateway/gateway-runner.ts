@@ -1241,6 +1241,18 @@ export class GatewayRunner {
         msg = { ...msg, text: msg.text.trim() ? `${note}\n${msg.text}` : note }
       }
 
+      // ── Location context ──────────────────────────────────────────────────
+      // No automatic reverse-geocoding here — raw coordinates are already legible
+      // to the model, and an eager Maps call on every pin-share would add latency
+      // the user didn't ask for. The agent calls the Maps connector's tools
+      // itself when it decides the location is relevant to what the user wants.
+      if (msg.location) {
+        const { latitude, longitude } = msg.location
+        console.warn(`[gateway] location received: ${latitude}, ${longitude}`)
+        const note = `📍 _Location:_ ${latitude}, ${longitude}`
+        msg = { ...msg, text: msg.text.trim() ? `${note}\n${msg.text}` : note }
+      }
+
       // Keep the typing indicator alive for ANY processing path —
       // Telegram clears it after ~5 s so refresh every 4 s. Capped: each ping
       // is a subrequest sharing the invocation budget with the agent's

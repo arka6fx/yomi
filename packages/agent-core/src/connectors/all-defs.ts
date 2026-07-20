@@ -13,6 +13,7 @@ import { swiggyDef } from "./swiggy-def.js"
 import { makeComposioDocsDef } from "./composio/google-docs.js"
 import { makeComposioSheetsDef } from "./composio/google-sheets.js"
 import { makeComposioSlidesDef } from "./composio/google-slides.js"
+import { makeComposioMapsDef } from "./composio/google-maps.js"
 import type { ComposioExecutor } from "./composio/adapter.js"
 
 // Docs/Sheets/Slides have no native (pre-Composio) implementation — unlike the
@@ -43,6 +44,7 @@ export const ALL_CONNECTOR_DEFS: ConnectorDef[] = [
   googleClassroomDef,
   googleTasksDef,
   googleMeetDef,
+  makeComposioMapsDef(unconfiguredComposioExecutor),
   githubDef,
   notionDef,
   slackDef,

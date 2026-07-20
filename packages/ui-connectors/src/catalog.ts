@@ -48,6 +48,15 @@ const CATALOG_DEFS: Array<{
     available: true,
   },
   {
+    id: "google-maps",
+    name: "Google Maps",
+    description: "Search for places and businesses near a location.",
+    category: "productivity",
+    authKind: "composio",
+    icon: "map-pin",
+    available: true,
+  },
+  {
     id: "google-sheets",
     name: "Google Sheets",
     description: "Read, create, and edit spreadsheets — rows, formulas, and charts.",
