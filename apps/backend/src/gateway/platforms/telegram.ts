@@ -24,6 +24,7 @@ export interface TelegramUpdate {
       file_size?: number
       file_name?: string
     }
+    location?: { latitude: number; longitude: number }
   }
 }
 
@@ -135,7 +136,7 @@ export class TelegramAdapter implements PlatformAdapter {
         : undefined
     const documentFile =
       msg.document && !msg.document.mime_type?.startsWith("image/") ? msg.document : undefined
-    if (!hasText && !voiceFile && !imageFile && !documentFile && !msg.video) return
+    if (!hasText && !voiceFile && !imageFile && !documentFile && !msg.video && !msg.location) return
 
     let audioUrl: string | undefined
     let audioMimeType: string | undefined
@@ -227,6 +228,7 @@ export class TelegramAdapter implements PlatformAdapter {
       videoUrl,
       videoMimeType,
       videoDurationSeconds,
+      location: msg.location,
     }
     await this.messageHandler(gatewayMsg)
   }
