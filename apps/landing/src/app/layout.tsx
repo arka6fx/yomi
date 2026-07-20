@@ -1,12 +1,11 @@
 import type { Metadata } from "next"
-import { Inter, Instrument_Serif, JetBrains_Mono } from "next/font/google"
-import { caveat } from "@/lib/fonts"
+import { Geist, Instrument_Serif, EB_Garamond, JetBrains_Mono } from "next/font/google"
 import { Providers } from "@/components/providers"
 import { cn } from "@/lib/utils"
 import "./globals.css"
 
-// Body / UI typeface — Inter (optical 14..32, full weight range).
-const inter = Inter({
+// Body / UI typeface — Geist (variable weight).
+const geistSans = Geist({
   subsets: ["latin"],
   variable: "--font-sans",
 })
@@ -16,6 +15,13 @@ const instrumentSerif = Instrument_Serif({
   subsets: ["latin"],
   variable: "--font-heading",
   weight: ["400"],
+  style: ["normal", "italic"],
+})
+
+// Decorative serif accent — EB Garamond (roman + italic).
+const ebGaramond = EB_Garamond({
+  subsets: ["latin"],
+  variable: "--font-accent",
   style: ["normal", "italic"],
 })
 
@@ -90,9 +96,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="en"
       className={cn(
         "dark antialiased",
-        inter.variable,
+        geistSans.variable,
         instrumentSerif.variable,
-        caveat.variable,
+        ebGaramond.variable,
         mono.variable,
       )}
     >
