@@ -12,8 +12,8 @@ import {
   Sparkles,
 } from "lucide-react"
 import { ConnectorIcon } from "@yomi/ui-connectors"
-import Nav from "@/components/Nav"
 import Footer from "@/components/Footer"
+import { DocsShell } from "@/components/docs/DocsShell"
 
 export const metadata: Metadata = {
   title: "Docs: connectors, voice, memory, and credits",
@@ -21,19 +21,6 @@ export const metadata: Metadata = {
     "Everything Yomi can do today: Telegram bot, app connectors, memory, voice, and how plans and credits work.",
   alternates: { canonical: "https://getyomi.in/docs" },
 }
-
-const NAV = [
-  { id: "overview", label: "Overview" },
-  { id: "getting-started", label: "Getting started" },
-  { id: "web", label: "Web app" },
-  { id: "telegram", label: "Telegram bot" },
-  { id: "connectors", label: "App connectors" },
-  { id: "memory", label: "Memory & knowledge" },
-  { id: "voice-vision", label: "Voice & vision" },
-  { id: "approvals", label: "Approvals & safety" },
-  { id: "plans", label: "Plans & credits" },
-  { id: "privacy", label: "Privacy" },
-]
 
 const CONNECTORS: { id: string; name: string; access: string }[] = [
   { id: "google", name: "Gmail", access: "Read, search, send, organize, and delete email" },
@@ -150,51 +137,33 @@ function Feature({
 export default function DocsPage() {
   return (
     <div className="site-texture-bg min-h-dvh text-foreground">
-      <Nav />
-
-      {/* Header */}
-      <header className="relative overflow-hidden border-b border-border">
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(70% 120% at 50% -10%, hsl(var(--primary) / 0.18), transparent 60%)",
-          }}
-        />
-        <div className="relative mx-auto max-w-5xl px-6 py-16 text-center sm:py-20">
-          <Eyebrow>
-            <Sparkles size={11} />
-            Documentation
-          </Eyebrow>
-          <h1 className="mt-5 font-serif text-4xl tracking-tight sm:text-5xl">
-            Everything Yomi does, <span className="font-serif italic text-primary">today</span>.
-          </h1>
-          <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
-            A complete, honest map of what&apos;s shipped: the Telegram bot,
-            every app connector, memory, voice, and how plans and credits work.
-          </p>
-        </div>
-      </header>
-
-      <div className="mx-auto grid max-w-6xl gap-12 px-6 py-14 lg:grid-cols-[200px_1fr]">
-        {/* Sidebar */}
-        <aside className="hidden lg:block">
-          <nav className="sticky top-24 space-y-1">
-            {NAV.map((item) => (
-              <a
-                key={item.id}
-                href={`#${item.id}`}
-                className="block rounded-lg px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-              >
-                {item.label}
-              </a>
-            ))}
-          </nav>
-        </aside>
-
-        {/* Content */}
-        <main className="min-w-0">
-          <Section id="overview" eyebrow="Overview" title="What Yomi is">
+      <DocsShell
+        banner={
+          <header className="relative overflow-hidden border-b border-border">
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  "radial-gradient(70% 120% at 50% -10%, hsl(var(--primary) / 0.18), transparent 60%)",
+              }}
+            />
+            <div className="relative mx-auto max-w-5xl px-6 py-16 text-center sm:py-20">
+              <Eyebrow>
+                <Sparkles size={11} />
+                Documentation
+              </Eyebrow>
+              <h1 className="mt-5 font-serif text-4xl tracking-tight sm:text-5xl">
+                Everything Yomi does, <span className="font-serif italic text-primary">today</span>.
+              </h1>
+              <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
+                A complete, honest map of what&apos;s shipped: the Telegram bot,
+                every app connector, memory, voice, and how plans and credits work.
+              </p>
+            </div>
+          </header>
+        }
+      >
+        <Section id="overview" eyebrow="Overview" title="What Yomi is">
             <p>
               Yomi is an AI assistant that connects to the apps you already use. It can{" "}
               <strong className="text-foreground">analyze images and screenshots</strong>,{" "}
@@ -428,8 +397,7 @@ export default function DocsPage() {
               .
             </p>
           </div>
-        </main>
-      </div>
+      </DocsShell>
 
       <Footer />
     </div>
