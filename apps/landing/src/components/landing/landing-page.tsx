@@ -241,9 +241,8 @@ export function LandingPage() {
 
           {/* big centered tagline — the heart of the hero */}
           <div className="animate-hero-rise-delayed mx-auto flex max-w-5xl flex-col items-center px-2 text-center">
-            <p className="font-serif text-5xl leading-[1.04] tracking-tight text-white drop-shadow-[0_2px_24px_rgba(8,31,66,0.55)] sm:text-6xl lg:text-7xl xl:text-[5.5rem]">
-              <span className="italic text-sky-300">Text</span> it, <span className="italic text-cyan-200">talk</span> to it, or{" "}
-              <span className="italic text-blue-200">snap a photo</span> — and it works across your everyday apps.
+            <p className="font-serif text-4xl leading-[1.1] tracking-tight text-white/90 drop-shadow-[0_2px_24px_rgba(8,31,66,0.55)] sm:text-5xl lg:text-6xl">
+              Your AI companion for work and life
             </p>
           </div>
 
