@@ -1,6 +1,5 @@
 import type { Metadata } from "next"
 import { Inter, Instrument_Serif, JetBrains_Mono } from "next/font/google"
-import { caveat } from "@/lib/fonts"
 import { Providers } from "@/components/providers"
 import { cn } from "@/lib/utils"
 import "./globals.css"
@@ -92,7 +91,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         "dark antialiased",
         inter.variable,
         instrumentSerif.variable,
-        caveat.variable,
         mono.variable,
       )}
     >
