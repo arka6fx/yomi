@@ -18,10 +18,28 @@ const NAV_LINKS = [
   { label: "Terms", href: "/terms" },
 ]
 
-export default function Nav() {
+export default function Nav({ variant = "dark" }: { variant?: "dark" | "light" }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const { data: session } = authClient.useSession()
   const router = useRouter()
+  const light = variant === "light"
+
+  const pillClass = light
+    ? "border-black/[0.07] bg-[#FBF7EF]/85 shadow-[0_1px_2px_rgba(23,19,14,0.04),0_10px_30px_-14px_rgba(23,19,14,0.22)]"
+    : "border-border bg-card/80 shadow-sm"
+  const linkClass = light
+    ? "text-[#6B5F52] hover:text-[#17130E] transition-colors"
+    : "text-muted-foreground hover:text-foreground transition-colors"
+  const ghostBtnClass = light
+    ? "text-[#6B5F52] hover:text-[#17130E] hover:bg-black/[0.04] transition-colors"
+    : "text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+  const primaryBtnClass = light
+    ? "bg-[#17130E] text-[#F3EEE4] hover:bg-[#2b241c] transition-colors"
+    : "bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+  const menuPanelClass = light
+    ? "border-black/[0.07] bg-[#FBF7EF] shadow-lg"
+    : "border-border bg-card shadow-lg"
+  const menuBorderClass = light ? "border-black/[0.07]" : "border-border"
 
   return (
     <div className="sticky top-3 z-50 px-4">
@@ -29,18 +47,14 @@ export default function Nav() {
         initial={{ opacity: 0, y: -14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className="relative max-w-5xl mx-auto rounded-2xl border border-border bg-card/80 backdrop-blur-xl shadow-sm"
+        className={`relative max-w-5xl mx-auto rounded-2xl border backdrop-blur-xl ${pillClass}`}
       >
         <div className="flex items-center justify-between px-4 md:px-6 py-3">
-          <BrandMark size="md" />
+          <BrandMark size="md" className={light ? "[&_span]:text-[#17130E]" : ""} />
 
           <nav className="hidden md:flex items-center gap-7">
             {NAV_LINKS.map((link) => (
-              <Link
-                key={link.label}
-                href={link.href}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
+              <Link key={link.label} href={link.href} className={`text-sm ${linkClass}`}>
                 {link.label}
               </Link>
             ))}
@@ -51,7 +65,7 @@ export default function Nav() {
               <>
                 <Link
                   href="/dashboard"
-                  className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-xl hover:bg-muted/50"
+                  className={`hidden sm:block text-sm px-3 py-1.5 rounded-xl ${ghostBtnClass}`}
                 >
                   Dashboard
                 </Link>
@@ -61,7 +75,7 @@ export default function Nav() {
                     await authClient.signOut()
                     router.push("/")
                   }}
-                  className="bg-primary text-primary-foreground text-sm font-medium px-4 py-1.5 rounded-xl hover:bg-primary/90 transition-colors"
+                  className={`text-sm font-medium px-4 py-1.5 rounded-full ${primaryBtnClass}`}
                 >
                   Sign out
                 </button>
@@ -70,20 +84,20 @@ export default function Nav() {
               <>
                 <Link
                   href="/signin"
-                  className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-xl hover:bg-muted/50"
+                  className={`hidden sm:block text-sm px-3 py-1.5 rounded-xl ${ghostBtnClass}`}
                 >
                   Sign in
                 </Link>
                 <Link
                   href="/signup"
-                  className="bg-primary text-primary-foreground text-sm font-medium px-4 py-1.5 rounded-xl hover:bg-primary/90 transition-colors"
+                  className={`text-sm font-medium px-4 py-1.5 rounded-full ${primaryBtnClass}`}
                 >
                   Get started
                 </Link>
               </>
             )}
             <button
-              className="md:hidden ml-1 text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted/50 transition-colors"
+              className={`md:hidden ml-1 p-1.5 rounded-lg ${ghostBtnClass}`}
               onClick={() => setMenuOpen((v) => !v)}
               aria-label="Toggle menu"
             >
@@ -99,7 +113,7 @@ export default function Nav() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="absolute left-0 right-0 top-full mt-2 overflow-hidden rounded-2xl border border-border bg-card shadow-lg"
+              className={`absolute left-0 right-0 top-full mt-2 overflow-hidden rounded-2xl border ${menuPanelClass}`}
             >
               <div className="px-4 py-3 flex flex-col gap-0.5">
                 {NAV_LINKS.map((link) => (
@@ -107,18 +121,18 @@ export default function Nav() {
                     key={link.label}
                     href={link.href}
                     onClick={() => setMenuOpen(false)}
-                    className="py-2.5 px-3 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                    className={`py-2.5 px-3 rounded-xl text-sm ${ghostBtnClass}`}
                   >
                     {link.label}
                   </Link>
                 ))}
-                <div className="flex gap-2 mt-2 pt-2 border-t border-border">
+                <div className={`flex gap-2 mt-2 pt-2 border-t ${menuBorderClass}`}>
                   {session ? (
                     <>
                       <Link
                         href="/dashboard"
                         onClick={() => setMenuOpen(false)}
-                        className="flex-1 text-center py-2 rounded-xl text-sm text-muted-foreground border border-border hover:bg-muted/50 transition-colors"
+                        className={`flex-1 text-center py-2 rounded-xl text-sm border ${menuBorderClass} ${ghostBtnClass}`}
                       >
                         Dashboard
                       </Link>
@@ -127,7 +141,7 @@ export default function Nav() {
                           setMenuOpen(false)
                           authClient.signOut().then(() => router.push("/"))
                         }}
-                        className="flex-1 text-center py-2 rounded-xl text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                        className={`flex-1 text-center py-2 rounded-xl text-sm ${primaryBtnClass}`}
                       >
                         Sign out
                       </button>
@@ -137,14 +151,14 @@ export default function Nav() {
                       <Link
                         href="/signin"
                         onClick={() => setMenuOpen(false)}
-                        className="flex-1 text-center py-2 rounded-xl text-sm text-muted-foreground border border-border hover:bg-muted/50 transition-colors"
+                        className={`flex-1 text-center py-2 rounded-xl text-sm border ${menuBorderClass} ${ghostBtnClass}`}
                       >
                         Sign in
                       </Link>
                       <Link
                         href="/signup"
                         onClick={() => setMenuOpen(false)}
-                        className="flex-1 text-center py-2 rounded-xl text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                        className={`flex-1 text-center py-2 rounded-xl text-sm ${primaryBtnClass}`}
                       >
                         Sign up
                       </Link>

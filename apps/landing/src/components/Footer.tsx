@@ -8,8 +8,61 @@ const links = [
   { label: "GitHub", href: "https://github.com/arka6fx/yomi", external: true },
 ]
 
-export default function Footer() {
+export default function Footer({ variant = "dark" }: { variant?: "dark" | "light" }) {
   const year = new Date().getFullYear()
+  const light = variant === "light"
+
+  if (light) {
+    return (
+      <footer className="border-t border-black/[0.07] bg-[#F3EEE4]">
+        {/* Contact / developer info — required for Google OAuth verification */}
+        <div className="mx-auto max-w-6xl px-6 pt-10 pb-6">
+          <div className="grid gap-6 text-xs text-[#6B5F52] sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <p className="mb-1 font-medium text-[#17130E]">Product</p>
+              <p>Yomi: AI Productivity Assistant</p>
+            </div>
+            <div>
+              <p className="mb-1 font-medium text-[#17130E]">Developer</p>
+              <p>Arka Garai</p>
+              <p className="mt-0.5 text-[#6B5F52]/70">Independent software developer</p>
+            </div>
+            <div>
+              <p className="mb-1 font-medium text-[#17130E]">Support</p>
+              <a
+                href="mailto:contact.arkagarai@gmail.com"
+                className="transition-colors hover:text-[#17130E]"
+              >
+                contact.arkagarai@gmail.com
+              </a>
+            </div>
+            <div>
+              <p className="mb-1 font-medium text-[#17130E]">Website</p>
+              <a href="https://getyomi.in" className="transition-colors hover:text-[#17130E]">
+                getyomi.in
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 border-t border-black/[0.06] px-6 py-6 sm:flex-row">
+          <div className="flex flex-wrap items-center justify-center gap-6 sm:justify-start">
+            {links.map((link) => (
+              <Link
+                key={link.label}
+                href={link.href}
+                {...(link.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                className="text-sm text-[#6B5F52] transition-colors hover:text-[#17130E]"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+          <p className="text-xs text-[#6B5F52]/80">© {year} Yomi. All rights reserved.</p>
+        </div>
+      </footer>
+    )
+  }
 
   return (
     <footer className="border-t border-white/10 bg-[#050914]">
