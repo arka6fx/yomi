@@ -99,12 +99,22 @@ const GOOGLE_REVOKE_URL = "https://oauth2.googleapis.com/revoke"
 // consent for the whole app. Disconnecting Gmail used to 401 Calendar, Drive,
 // Classroom, Tasks and Meet along with it. Only revoke when the LAST Google
 // connector is going: that is when the user really is withdrawing consent.
+// google-docs, google-sheets, google-slides, and google-maps have no native
+// OAuth path at all — they are always Composio-only, authenticated against
+// their own Composio auth config, never the shared native Google grant. A
+// naive startsWith("google") prefix match would wrongly sweep them into the
+// checks below, and could suppress revocation when the user disconnects
+// their actual last native Google connector while one of these stays connected.
+const COMPOSIO_ONLY_GOOGLE_IDS = new Set(["google-docs", "google-sheets", "google-slides", "google-maps"])
+
 export function shouldRevokeGoogleGrant(
   disconnecting: string,
   connectedProviders: string[],
 ): boolean {
-  if (!disconnecting.startsWith("google")) return false
-  return !connectedProviders.some((p) => p.startsWith("google") && p !== disconnecting)
+  if (!disconnecting.startsWith("google") || COMPOSIO_ONLY_GOOGLE_IDS.has(disconnecting)) return false
+  return !connectedProviders.some(
+    (p) => p.startsWith("google") && p !== disconnecting && !COMPOSIO_ONLY_GOOGLE_IDS.has(p),
+  )
 }
 // Scope source of truth is the Gmail ConnectorDef — this legacy /connect/google
 // route predates the generic /connect/:id path but must request identical scopes.

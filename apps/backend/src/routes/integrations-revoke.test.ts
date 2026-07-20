@@ -33,4 +33,25 @@ describe("shouldRevokeGoogleGrant", () => {
     // The row being deleted is still in the list at the time of the check.
     expect(shouldRevokeGoogleGrant("google-tasks", ["google-tasks"])).toBe(true)
   })
+
+  it("does not count composio-only Google connectors (no native OAuth path) toward the grant", () => {
+    // google-docs/sheets/slides/maps have no native fallback at all — they
+    // authenticate against their own Composio auth config, never the shared
+    // native grant. Disconnecting the true last native connector must still
+    // revoke even if one of these stays connected.
+    expect(shouldRevokeGoogleGrant("google-meet", ["google-meet", "google-maps"])).toBe(true)
+    expect(
+      shouldRevokeGoogleGrant("google-calendar", [
+        "google-calendar",
+        "google-docs",
+        "google-sheets",
+        "google-slides",
+      ]),
+    ).toBe(true)
+  })
+
+  it("never revokes when disconnecting a composio-only Google connector itself", () => {
+    expect(shouldRevokeGoogleGrant("google-maps", ["google-maps", "google-calendar"])).toBe(false)
+    expect(shouldRevokeGoogleGrant("google-docs", ["google-docs"])).toBe(false)
+  })
 })
