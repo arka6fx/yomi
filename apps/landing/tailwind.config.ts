@@ -41,9 +41,9 @@ const config: Config = {
         ring: "hsl(var(--ring))",
       },
       fontFamily: {
-        // Body / UI = Geist; headings/display = Instrument Serif; decorative accent = EB Garamond.
-        sans: ["var(--font-sans)", "Geist", "sans-serif"],
-        accent: ["var(--font-accent)", "EB Garamond", "serif"],
+        // Body / UI = Inter; headings/display/accent = Instrument Serif.
+        sans: ["var(--font-sans)", "Inter", "sans-serif"],
+        accent: ["var(--font-heading)", "Instrument Serif", "serif"],
         serif: ["var(--font-heading)", "Instrument Serif", "Georgia", "serif"],
         display: ["var(--font-heading)", "Instrument Serif", "serif"],
         mono: [
