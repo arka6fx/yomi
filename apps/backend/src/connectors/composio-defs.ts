@@ -2,7 +2,10 @@ import {
   makeComposioLinearDef, makeComposioGitHubDef, makeComposioSlackDef, makeComposioNotionDef,
   makeComposioGmailDef, makeComposioCalendarDef, makeComposioDriveDef, makeComposioClassroomDef,
   makeComposioTasksDef, makeComposioMeetDef, makeComposioDocsDef, makeComposioSheetsDef, makeComposioSlidesDef,
-  makeComposioMapsDef,
+  makeComposioMapsDef,   makeComposioHubspotDef, makeComposioFirecrawlDef, makeComposioDiscordDef,
+  makeComposioWhatsAppDef,
+  makeComposioLinkedInDef,
+  makeComposioOutlookDef,
   type ConnectorDef, type ComposioExecutor,
 } from "@yomi/agent-core"
 import { createComposioRestExecutor } from "./composio-executor.js"
@@ -31,5 +34,11 @@ export function buildComposioDefs(executor?: ComposioExecutor): Record<string, C
     "google-tasks": makeComposioTasksDef(exec),
     "google-meet": makeComposioMeetDef(exec),
     "google-maps": makeComposioMapsDef(exec),
+    hubspot: makeComposioHubspotDef(exec),
+    firecrawl: makeComposioFirecrawlDef(exec),
+    discord: makeComposioDiscordDef(exec),
+    whatsapp: makeComposioWhatsAppDef(exec),
+    linkedin: makeComposioLinkedInDef(exec),
+    outlook: makeComposioOutlookDef(exec),
   }
 }

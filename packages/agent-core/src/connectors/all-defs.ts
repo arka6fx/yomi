@@ -14,6 +14,19 @@ import { makeComposioDocsDef } from "./composio/google-docs.js"
 import { makeComposioSheetsDef } from "./composio/google-sheets.js"
 import { makeComposioSlidesDef } from "./composio/google-slides.js"
 import { makeComposioMapsDef } from "./composio/google-maps.js"
+import { makeComposioHubspotDef } from "./composio/hubspot.js"
+import { makeComposioFirecrawlDef } from "./composio/firecrawl.js"
+import { makeComposioDiscordDef } from "./composio/discord.js"
+import { makeComposioWhatsAppDef } from "./composio/whatsapp.js"
+import { makeComposioLinkedInDef } from "./composio/linkedin.js"
+import { makeComposioOutlookDef } from "./composio/outlook.js"
+import { makeComposioFigmaDef } from "./composio/figma.js"
+import { makeComposioTodoistDef } from "./composio/todoist.js"
+import { makeComposioRedditDef } from "./composio/reddit.js"
+import { makeComposioJiraDef } from "./composio/jira.js"
+import { makeComposioAsanaDef } from "./composio/asana.js"
+import { makeComposioYouTubeDef } from "./composio/youtube.js"
+import { makeComposioZoomDef } from "./composio/zoom.js"
 import type { ComposioExecutor } from "./composio/adapter.js"
 
 // Docs/Sheets/Slides have no native (pre-Composio) implementation — unlike the
@@ -49,5 +62,18 @@ export const ALL_CONNECTOR_DEFS: ConnectorDef[] = [
   notionDef,
   slackDef,
   linearDef,
+  makeComposioHubspotDef(unconfiguredComposioExecutor),
+  makeComposioFirecrawlDef(unconfiguredComposioExecutor),
+  makeComposioDiscordDef(unconfiguredComposioExecutor),
+  makeComposioWhatsAppDef(unconfiguredComposioExecutor),
+  makeComposioLinkedInDef(unconfiguredComposioExecutor),
+  makeComposioOutlookDef(unconfiguredComposioExecutor),
+  makeComposioFigmaDef(unconfiguredComposioExecutor),
+  makeComposioTodoistDef(unconfiguredComposioExecutor),
+  makeComposioRedditDef(unconfiguredComposioExecutor),
+  makeComposioJiraDef(unconfiguredComposioExecutor),
+  makeComposioAsanaDef(unconfiguredComposioExecutor),
+  makeComposioYouTubeDef(unconfiguredComposioExecutor),
+  makeComposioZoomDef(unconfiguredComposioExecutor),
   swiggyDef,
 ]
