@@ -27,6 +27,9 @@ function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" })
 }
 
+const INK = "#17130E"
+const MUTED = "#6B5F52"
+
 const FEATURES = [
   {
     icon: MessageSquare,
@@ -48,20 +51,19 @@ const FEATURES = [
   },
 ]
 
-const CONNECTORS: { id: string; name: string; description: string }[] = [
-  { id: "google", name: "Gmail", description: "Read, send, and organize email" },
-  { id: "google-calendar", name: "Google Calendar", description: "Create and manage events" },
-  { id: "google-drive", name: "Google Drive", description: "Find, read, and edit files" },
-  { id: "google-docs", name: "Google Docs", description: "Create and edit docs from Markdown" },
-  { id: "google-sheets", name: "Google Sheets", description: "Read, edit, and chart spreadsheets" },
-  { id: "google-slides", name: "Google Slides", description: "Build decks from Markdown" },
-  {
-    id: "google-classroom",
-    name: "Google Classroom",
-    description: "Assignments, due dates, grades",
-  },
-  { id: "google-tasks", name: "Google Tasks", description: "Capture and complete to-dos" },
-  { id: "google-meet", name: "Google Meet", description: "Create links, recap past calls" },
+const GOOGLE_WORKSPACE_APPS = [
+  { id: "google", name: "Gmail" },
+  { id: "google-calendar", name: "Calendar" },
+  { id: "google-drive", name: "Drive" },
+  { id: "google-docs", name: "Docs" },
+  { id: "google-sheets", name: "Sheets" },
+  { id: "google-slides", name: "Slides" },
+  { id: "google-classroom", name: "Classroom" },
+  { id: "google-tasks", name: "Tasks" },
+  { id: "google-meet", name: "Meet" },
+]
+
+const OTHER_CONNECTORS: { id: string; name: string; description: string }[] = [
   { id: "github", name: "GitHub", description: "Repos, issues, and pull requests" },
   { id: "notion", name: "Notion", description: "Search pages and databases" },
   { id: "slack", name: "Slack", description: "Read context, send approved messages" },
@@ -142,19 +144,110 @@ function InteractionCard({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5 }}
-      className="flex flex-col gap-3 rounded-2xl glass-card p-5"
+      className="landing-card flex flex-col gap-3 rounded-2xl p-5"
     >
       <div className="flex items-center justify-between">
-        <span className="rounded-full bg-primary/10 px-2 py-0.5 font-mono text-xs text-primary">
+        <span
+          className="rounded-full px-2 py-0.5 font-mono text-xs"
+          style={{ background: "rgba(37,99,235,0.1)", color: "#2563EB" }}
+        >
           {type}
         </span>
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium" style={{ color: MUTED }}>
           <ConnectorIcon id="telegram" size={14} />
           {mode}
         </span>
       </div>
-      <p className="text-sm font-medium text-foreground">{label}</p>
-      <p className="text-xs leading-relaxed text-muted-foreground">{description}</p>
+      <p className="text-sm font-medium" style={{ color: INK }}>
+        {label}
+      </p>
+      <p className="text-xs leading-relaxed" style={{ color: MUTED }}>
+        {description}
+      </p>
+    </motion.div>
+  )
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mb-3 text-xs font-medium uppercase tracking-widest" style={{ color: "#9C8F7D" }}>
+      {children}
+    </p>
+  )
+}
+
+/** Stylized product mockup — replaces the stock photo hero with a real look at
+    the Telegram conversation, so visitors see the product instead of scenery. */
+function ProductMockup() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 28 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.7, delay: 0.5 }}
+      className="landing-hero-card mx-auto w-full max-w-xl overflow-hidden rounded-[28px]"
+    >
+      <div className="flex items-center gap-2 border-b border-black/[0.06] px-5 py-3.5">
+        <span className="h-2.5 w-2.5 rounded-full bg-black/10" />
+        <span className="h-2.5 w-2.5 rounded-full bg-black/10" />
+        <span className="h-2.5 w-2.5 rounded-full bg-black/10" />
+        <span
+          className="ml-2 inline-flex items-center gap-1.5 text-xs font-medium"
+          style={{ color: MUTED }}
+        >
+          <ConnectorIcon id="telegram" size={13} />
+          Yomi on Telegram
+        </span>
+      </div>
+
+      <div className="flex flex-col gap-3 px-5 py-6 sm:px-7">
+        <div className="flex justify-end">
+          <div
+            className="max-w-[78%] rounded-2xl rounded-tr-md px-4 py-2.5 text-sm"
+            style={{ background: INK, color: "#F3EEE4" }}
+          >
+            summarize my unread email
+          </div>
+        </div>
+
+        <div className="flex justify-start">
+          <div
+            className="max-w-[85%] rounded-2xl rounded-tl-md border border-black/[0.06] bg-white px-4 py-3 text-sm leading-relaxed"
+            style={{ color: INK }}
+          >
+            3 new: an invoice from Vercel ($40), a reply from Priya about the deck, and a calendar
+            invite for Thu 4pm.
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
+              <span
+                className="rounded-full px-2.5 py-1 text-xs font-medium"
+                style={{ background: "rgba(37,99,235,0.1)", color: "#2563EB" }}
+              >
+                Reply to Priya
+              </span>
+              <span
+                className="rounded-full border border-black/10 px-2.5 py-1 text-xs font-medium"
+                style={{ color: MUTED }}
+              >
+                Not now
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-2 flex items-center gap-2 border-t border-black/[0.06] pt-3.5 text-xs" style={{ color: MUTED }}>
+          <span>Connected</span>
+          <span className="flex items-center gap-1.5">
+            <span className="grid h-5 w-5 place-items-center rounded-full bg-white ring-1 ring-black/5">
+              <ConnectorIcon id="google" size={12} />
+            </span>
+            <span className="grid h-5 w-5 place-items-center rounded-full bg-white ring-1 ring-black/5">
+              <ConnectorIcon id="google-calendar" size={12} />
+            </span>
+            <span className="grid h-5 w-5 place-items-center rounded-full bg-white ring-1 ring-black/5">
+              <ConnectorIcon id="google-drive" size={12} />
+            </span>
+          </span>
+        </div>
+      </div>
     </motion.div>
   )
 }
@@ -199,150 +292,106 @@ export function LandingPage() {
   }
 
   return (
-    <div className="site-texture-bg min-h-screen text-foreground">
-      {/* persistent sticky nav, floats above the full-bleed hero image */}
-      <Nav />
+    <div className="landing-warm-bg min-h-screen">
+      <Nav variant="light" />
 
       <section
         id="hero"
         style={{ marginTop: "-74px" }}
-        className="relative flex min-h-screen flex-col overflow-hidden bg-zinc-950"
+        className="relative flex flex-col overflow-hidden pb-16 pt-32 sm:pb-24 sm:pt-36"
       >
-        {/* full-bleed hero image + overlays — spans the entire section, behind the nav */}
-        <div
-          className="absolute inset-0 scale-105 bg-cover bg-[center_34%] opacity-90"
-          style={{
-            backgroundImage:
-              "url('https://images.unsplash.com/photo-1499346030926-9a72daac6c63?auto=format&fit=crop&w=2400&q=88')",
-          }}
-        />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_64%_18%,rgba(219,234,254,0.22),transparent_20%),linear-gradient(180deg,rgba(8,31,66,0.04)_0%,rgba(8,31,66,0.22)_34%,rgba(3,8,20,0.74)_72%,rgba(3,8,20,0.98)_100%)]" />
-        <div className="absolute inset-0 opacity-[0.16] hero-grain" />
-        <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-black/65 to-transparent" />
-
-        <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 flex-col justify-between px-5 pb-8 pt-28 sm:px-8 sm:pb-10 lg:px-10">
+        <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center px-5 text-center sm:px-8">
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="mb-6 flex flex-wrap items-center gap-3 text-xs font-medium text-white/70"
+            transition={{ duration: 0.5 }}
+            className="mb-7 flex flex-wrap items-center justify-center gap-3 text-xs font-medium"
+            style={{ color: MUTED }}
           >
-            <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 backdrop-blur-md">
+            <span className="rounded-full border border-black/10 bg-white/70 px-3 py-1.5">
               Early access
             </span>
             <span className="flex items-center gap-1.5">
-              <Zap size={14} className="fill-sky-200 text-sky-200" />
+              <Zap size={14} className="fill-[#2563EB] text-[#2563EB]" />
               &lt; 2s fast path
             </span>
-            <span className="hidden h-1 w-1 rounded-full bg-white/30 sm:block" />
+            <span className="hidden h-1 w-1 rounded-full bg-black/15 sm:block" />
             <span>On Telegram · text, voice, or photo</span>
           </motion.div>
 
-          {/* big centered tagline — the heart of the hero */}
-          <div className="animate-hero-rise-delayed mx-auto flex max-w-5xl flex-col items-center px-2 text-center">
-            <p className="font-serif text-5xl leading-[1.04] tracking-tight text-white drop-shadow-[0_2px_24px_rgba(8,31,66,0.55)] sm:text-6xl lg:text-7xl xl:text-[5.5rem]">
-              <span className="italic text-sky-300">Text</span> it, <span className="italic text-cyan-200">talk</span> to it, or{" "}
-              <span className="italic text-blue-200">snap a photo</span> — and it works across your everyday apps.
-            </p>
-          </div>
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="font-accent text-5xl leading-[1.04] tracking-tight sm:text-6xl lg:text-7xl"
+            style={{ color: INK }}
+          >
+            The assistant that <span className="italic">actually</span> works across your apps.
+          </motion.h1>
 
-          <div>
-            <div className="grid items-end gap-8 lg:grid-cols-[1fr_360px]">
-              <h1 className="animate-hero-rise-delayed font-accent text-[4.8rem] leading-[0.82] tracking-normal text-[#eaf4ff] sm:text-[7.2rem] md:text-[9rem] lg:text-[11.2rem]">
-                Yomi
-                {/* the visible wordmark alone is a poor heading for search and screen readers */}
-                <span className="sr-only"> — AI productivity assistant on Telegram</span>
-              </h1>
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="mt-5 max-w-xl text-base leading-relaxed sm:text-lg"
+            style={{ color: MUTED }}
+          >
+            Text it, talk to it, or snap a photo. Yomi reads your Gmail, Calendar, Drive, GitHub,
+            Slack, Notion, and more — and acts on them, with your approval, from a single Telegram
+            chat.
+          </motion.p>
 
-              <motion.div
-                initial={{ opacity: 0, y: 22 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.35 }}
-                className="pb-1 lg:pb-6"
-              >
-                <div className="mb-7 max-w-md">
-                  <div className="flex flex-wrap gap-2">
-                    {["Telegram", "Web dashboard", "No copy-paste"].map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-full border border-white/12 bg-white/5 px-3 py-1 text-xs font-medium tracking-wide text-white/65 backdrop-blur-sm"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  <p className="mt-4 font-serif text-sm italic text-white/40">
-                    Your data is never stored.{" "}
-                    <a
-                      href="#google-data"
-                      className="font-sans text-xs not-italic underline underline-offset-2 transition-colors hover:text-white/65"
-                    >
-                      Learn more
-                    </a>
-                  </p>
-                </div>
-                <div className="grid w-full max-w-md grid-cols-2 gap-3">
-                  <Link
-                    href="/signup"
-                    className="group inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-xl bg-[#eaf4ff] px-5 text-sm font-semibold text-slate-950 transition hover:bg-white"
-                  >
-                    Get started
-                    <span className="grid h-6 w-6 place-items-center rounded-full bg-zinc-950 text-white transition group-hover:translate-x-0.5">
-                      <ArrowRight size={14} />
-                    </span>
-                  </Link>
-                  <button
-                    onClick={() => scrollTo("how-it-works")}
-                    className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-white/15 bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/15"
-                  >
-                    See how it works
-                  </button>
-                  <Link
-                    href="/signup"
-                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/15"
-                  >
-                    <ConnectorIcon id="telegram" size={17} />
-                    Text Yomi
-                  </Link>
-                </div>
-              </motion.div>
-            </div>
-
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.9, delay: 0.6 }}
-              className="mt-6 grid gap-3 border-t border-white/10 pt-4 text-sm text-white/62 sm:grid-cols-3"
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="mt-8 flex flex-col items-center gap-3 sm:flex-row"
+          >
+            <Link
+              href="/signup"
+              className="group inline-flex h-12 items-center justify-center gap-2.5 rounded-full px-6 text-sm font-semibold transition hover:opacity-90"
+              style={{ background: INK, color: "#F3EEE4" }}
             >
-              <span className="flex items-center gap-2">
-                <MessageSquare size={15} className="text-sky-100" />
-                Text, voice, or photo
-              </span>
-              <span className="flex items-center gap-2">
-                <Layers size={15} className="text-sky-100" />
-                Works across your apps
-              </span>
-              <span className="flex items-center gap-2">
-                <Shield size={15} className="text-sky-100" />
-                Never stored
-              </span>
-            </motion.div>
-          </div>
+              Get started free
+              <ArrowRight size={15} className="transition group-hover:translate-x-0.5" />
+            </Link>
+            <button
+              onClick={() => scrollTo("how-it-works")}
+              className="inline-flex h-12 items-center justify-center rounded-full border border-black/12 bg-white/70 px-6 text-sm font-semibold transition hover:bg-white"
+              style={{ color: INK }}
+            >
+              See how it works
+            </button>
+          </motion.div>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="mt-5 text-xs"
+            style={{ color: MUTED }}
+          >
+            Your data is never stored.{" "}
+            <Link href="/privacy" className="underline underline-offset-2 hover:text-[#17130E]">
+              Read the privacy policy
+            </Link>
+          </motion.p>
+        </div>
+
+        <div className="relative z-10 mx-auto mt-14 w-full max-w-5xl px-5 sm:px-8">
+          <ProductMockup />
         </div>
       </section>
 
       {/* ── What is Yomi?────────────────────────────────────────────────── */}
-      <section id="about" className="mx-auto max-w-3xl px-6 py-20">
+      <section id="about" className="mx-auto max-w-3xl px-6 py-16">
         <div className="mb-8 text-center">
-          <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            About
-          </p>
-          <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
+          <SectionLabel>About</SectionLabel>
+          <h2 className="font-accent text-4xl leading-[1.08] tracking-tight sm:text-5xl" style={{ color: INK }}>
             What is <span className="italic">Yomi</span>?
           </h2>
         </div>
-        <div className="space-y-4 text-center text-sm leading-relaxed text-muted-foreground">
+        <div className="space-y-4 text-center text-sm leading-relaxed" style={{ color: MUTED }}>
           <p>
             Yomi is an AI productivity assistant that connects to the apps you already use so you
             can query, analyze, and act on your work using natural language, without switching apps
@@ -350,158 +399,19 @@ export function LandingPage() {
           </p>
           <p>
             Ask Yomi to find a file, summarize a document, or pull context from your workspace, all
-            from a single interface or via Telegram. Yomi only accesses your data
-            when you ask a question, and for no other purpose.
+            from a single interface or via Telegram. Yomi only accesses your data when you ask a
+            question, and for no other purpose.
           </p>
         </div>
       </section>
 
-      {/* ── How Yomi Uses Google Data ─────────────────────────────────────── */}
-      <section id="google-data" className="mx-auto max-w-3xl px-6 py-10">
-        <div className="mb-8 text-center">
-          <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            Google Sign-In &amp; Data Policy
-          </p>
-          <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-            Why Yomi Needs Google Sign-In
-          </h2>
-          <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
-            Yomi uses Google Sign-In to authenticate your identity and to request permission to
-            access your Drive data. Below you will find exactly why sign-in is required and how your
-            data is handled.
-          </p>
-        </div>
-        <div className="space-y-4">
-          {/* Purpose banner */}
-          <div className="rounded-2xl border border-primary/20 bg-primary/5 px-6 py-4 text-sm text-muted-foreground">
-            <p className="mb-1 font-medium text-foreground">App purpose</p>
-            <p>
-              Yomi is a personal AI assistant. It accesses your Google Drive, with your explicit
-              permission, to answer questions you ask in natural language. For example: &ldquo;Find
-              the Q3 report in my Drive.&rdquo; or &ldquo;What does the product spec say about
-              pricing?&rdquo; Yomi reads data on-demand per request and never stores it.
-            </p>
-            <p className="mt-2 text-xs text-muted-foreground/70">
-              Yomi&apos;s use of Google API data complies with the{" "}
-              <a
-                href="https://developers.google.com/terms/api-services-user-data-policy"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline underline-offset-2 hover:text-muted-foreground"
-              >
-                Google API Services User Data Policy
-              </a>
-              , including the Limited Use requirements.
-            </p>
-          </div>
-
-          {/* Why Google Sign-In is required */}
-          <div className="rounded-2xl border border-sky-500/15 bg-sky-500/5 p-6 text-sm text-muted-foreground">
-            <p className="mb-4 font-medium text-foreground">Why Google Sign-In is required</p>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 font-mono text-xs font-medium text-primary">
-                  1
-                </div>
-                <div>
-                  <p className="font-medium text-foreground">To verify your identity</p>
-                  <p className="mt-0.5">
-                    Yomi uses Google&apos;s authentication system to confirm who you are, so it can
-                    securely associate your connected apps, settings, and preferences with your
-                    account. Anonymous access is not possible because Yomi operates on your personal
-                    file data, so it cannot function without knowing which Google account to query.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 font-mono text-xs font-medium text-primary">
-                  2
-                </div>
-                <div>
-                  <p className="font-medium text-foreground">
-                    To request permission to access your Drive
-                  </p>
-                  <p className="mt-0.5">
-                    Google&apos;s OAuth consent screen lets you choose exactly which services Yomi
-                    may access. Yomi cannot retrieve your Drive files without your explicit
-                    authorization. Each permission is granted individually and can be revoked at any
-                    time from your Yomi dashboard or from{" "}
-                    <a
-                      href="https://myaccount.google.com/permissions"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary underline underline-offset-2"
-                    >
-                      Google Account settings
-                    </a>
-                    .
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 font-mono text-xs font-medium text-primary">
-                  3
-                </div>
-                <div>
-                  <p className="font-medium text-foreground">
-                    Your data is never stored, sold, or shared
-                  </p>
-                  <p className="mt-0.5">
-                    When you ask a question, Yomi fetches only the data needed to answer it and
-                    discards it immediately after responding. No Drive files are retained on
-                    Yomi&apos;s servers between requests.                     Your Google data is never sold, never used
-                    to train AI models, and is not shared with third parties except the
-                    providers required to deliver the features you use: our AI inference
-                    provider, and — for connected apps routed through Composio — Composio,
-                    which manages those integrations on our behalf.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl glass-card p-6 text-sm text-muted-foreground">
-            <p className="mb-4">
-              Yomi only accesses Google data after you explicitly authorize access through
-              Google&apos;s OAuth consent flow. You may revoke access at any time.
-            </p>
-            <p className="mb-4 font-medium text-foreground">
-              Depending on the integrations you enable, Yomi may request:
-            </p>
-            <ul className="mb-4 space-y-4">
-              <li className="flex items-start gap-3">
-                <Check size={14} className="mt-0.5 shrink-0 text-primary" />
-                <div>
-                  <p className="font-medium text-foreground">Google Drive</p>
-                  <p className="mt-0.5">
-                    <span className="font-mono text-xs text-muted-foreground/70">drive.file</span>
-                  </p>
-                  <p className="mt-1">
-                    <strong className="text-foreground/80">Purpose:</strong> To search, read, and
-                    navigate files you choose to share with Yomi. For example: &ldquo;Find the Q3
-                    budget spreadsheet&rdquo; or &ldquo;What does the product spec say about
-                    pricing?&rdquo;
-                  </p>
-                </div>
-              </li>
-            </ul>
-            <p>
-              Yomi does not sell user data. Google API data is used only to respond to your current
-              request and is discarded immediately after.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-5xl px-6 py-24" id="how-it-works">
+      <section className="mx-auto max-w-5xl px-6 py-20" id="how-it-works">
         <div className="mb-14 text-center">
-          <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            How it works
-          </p>
-          <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
+          <SectionLabel>How it works</SectionLabel>
+          <h2 className="font-accent text-4xl leading-[1.08] tracking-tight sm:text-5xl" style={{ color: INK }}>
             Three ways to <span className="italic">ask</span>.
           </h2>
-          <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
+          <p className="mx-auto mt-3 max-w-md text-sm" style={{ color: MUTED }}>
             Type, talk, or send a photo — all from your Telegram chat. Yomi routes each request
             through the right context and model.
           </p>
@@ -529,12 +439,10 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section id="features" className="mx-auto max-w-5xl px-6 py-24">
+      <section id="features" className="mx-auto max-w-5xl px-6 py-20">
         <div className="mb-14 text-center">
-          <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            Built to disappear
-          </p>
-          <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
+          <SectionLabel>Built to disappear</SectionLabel>
+          <h2 className="font-accent text-4xl leading-[1.08] tracking-tight sm:text-5xl" style={{ color: INK }}>
             Everything you need, <span className="italic">nothing</span> you don't.
           </h2>
         </div>
@@ -547,180 +455,155 @@ export function LandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
-              className="rounded-2xl glass-card p-6"
+              className="landing-card rounded-2xl p-6"
             >
-              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                <feature.icon size={20} className="text-primary" />
+              <div
+                className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl"
+                style={{ background: "rgba(37,99,235,0.1)" }}
+              >
+                <feature.icon size={20} color="#2563EB" />
               </div>
-              <h3 className="mb-2 font-medium text-foreground">{feature.title}</h3>
-              <p className="text-sm leading-relaxed text-muted-foreground">{feature.description}</p>
+              <h3 className="mb-2 font-medium" style={{ color: INK }}>
+                {feature.title}
+              </h3>
+              <p className="text-sm leading-relaxed" style={{ color: MUTED }}>
+                {feature.description}
+              </p>
             </motion.div>
           ))}
         </div>
       </section>
 
       {/* ── Supported Integrations ───────────────────────────────────────────── */}
-      <section id="connectors" className="mx-auto max-w-5xl px-6 py-24">
+      <section id="connectors" className="mx-auto max-w-5xl px-6 py-20">
         <div className="mb-14 text-center">
-          <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            Supported Integrations
-          </p>
-          <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
+          <SectionLabel>Supported Integrations</SectionLabel>
+          <h2 className="font-accent text-4xl leading-[1.08] tracking-tight sm:text-5xl" style={{ color: INK }}>
             Your tools, one <span className="italic">conversation</span> away.
           </h2>
-          <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
-            Connect your apps once. Ask Yomi from the web or from Telegram, even with your
-            laptop closed.
+          <p className="mx-auto mt-3 max-w-md text-sm" style={{ color: MUTED }}>
+            Connect your apps once. Ask Yomi from the web or from Telegram, even with your laptop
+            closed.
           </p>
         </div>
 
-        <div className="mx-auto grid max-w-4xl grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {CONNECTORS.map((c, i) => (
+        <div className="mx-auto grid max-w-4xl gap-3 sm:grid-cols-2">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.4 }}
+            className="landing-card flex flex-col gap-3 rounded-2xl p-5 sm:col-span-2"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex -space-x-2">
+                {GOOGLE_WORKSPACE_APPS.slice(0, 5).map((app) => (
+                  <span
+                    key={app.id}
+                    className="grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-white ring-2 ring-[#FBF7EF]"
+                  >
+                    <ConnectorIcon id={app.id} size={20} />
+                  </span>
+                ))}
+                <span
+                  className="grid h-9 w-9 place-items-center rounded-full bg-black/[0.04] text-[11px] font-medium ring-2 ring-[#FBF7EF]"
+                  style={{ color: MUTED }}
+                >
+                  +4
+                </span>
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium" style={{ color: INK }}>
+                  Google Workspace
+                </p>
+                <p className="mt-0.5 text-xs leading-snug" style={{ color: MUTED }}>
+                  {GOOGLE_WORKSPACE_APPS.map((a) => a.name).join(" · ")}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+
+          {OTHER_CONNECTORS.map((c, i) => (
             <motion.div
               key={c.id}
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.04 }}
-              className="flex items-start gap-3 rounded-2xl glass-card p-4"
+              transition={{ duration: 0.4, delay: i * 0.05 }}
+              className="landing-card flex items-start gap-3 rounded-2xl p-4"
             >
-              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white text-neutral-900 ring-1 ring-inset ring-black/5">
-                <ConnectorIcon id={c.id} size={28} />
+              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white ring-1 ring-inset ring-black/5">
+                <ConnectorIcon id={c.id} size={22} />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-medium text-foreground">{c.name}</p>
-                <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{c.description}</p>
+                <p className="text-sm font-medium" style={{ color: INK }}>
+                  {c.name}
+                </p>
+                <p className="mt-0.5 text-xs leading-snug" style={{ color: MUTED }}>
+                  {c.description}
+                </p>
               </div>
             </motion.div>
           ))}
         </div>
       </section>
 
-      {/* ── Data & Integrations transparency ─────────────────────────────── */}
-      <section id="data-use" className="mx-auto max-w-5xl px-6 py-24">
-        <div className="mb-14 text-center">
-          <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            Transparency
-          </p>
-          <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-            What Yomi accesses, and <span className="italic">why</span>.
-          </h2>
-          <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
-            Yomi only reads data when you ask a question. Nothing is stored between queries. You can
-            revoke any integration at any time.
-          </p>
-        </div>
-
-        <div className="mx-auto max-w-3xl overflow-hidden rounded-2xl glass-card">
-          {[
-            {
-              provider: "Google Drive",
-              scopes: "drive.file",
-              why: "To list and read files you choose to share with Yomi, so you can ask questions about their content.",
-            },
-            {
-              provider: "Notion",
-              scopes: "Public integration",
-              why: "To search pages, read content, and create or update pages and database entries.",
-            },
-          ].map((row, i) => (
-            <div
-              key={row.provider}
-              className={`flex flex-col gap-1 px-6 py-4 text-sm sm:flex-row sm:gap-4 ${
-                i < 1 ? "border-b border-border" : ""
-              }`}
-            >
-              <div className="w-44 shrink-0 font-medium text-foreground">{row.provider}</div>
-              <div className="flex flex-1 flex-col gap-1">
-                <p className="font-mono text-xs text-muted-foreground/70">{row.scopes}</p>
-                <p className="text-muted-foreground">{row.why}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
+      {/* ── Trust ─────────────────────────────────────────────────────────── */}
+      <section id="privacy" className="mx-auto max-w-3xl px-6 py-20">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="mx-auto mt-8 max-w-3xl rounded-2xl glass-card p-6 text-sm text-muted-foreground"
+          transition={{ duration: 0.5 }}
+          className="landing-card rounded-2xl p-7 sm:p-8"
         >
-          <p className="mb-3 font-medium text-foreground">How your data is protected</p>
-          <ul className="space-y-2">
-            <li className="flex items-start gap-2">
-              <Check size={14} className="mt-0.5 shrink-0 text-primary" />
-              Data from integrations is used only to answer your current query and is never stored
-              after the request completes.
+          <div className="mb-5 flex items-center gap-2.5">
+            <Shield size={18} color="#2563EB" />
+            <p className="text-sm font-medium" style={{ color: INK }}>
+              Private by default
+            </p>
+          </div>
+          <ul className="space-y-2.5 text-sm" style={{ color: MUTED }}>
+            <li className="flex items-start gap-2.5">
+              <Check size={14} className="mt-0.5 shrink-0" color="#2563EB" />
+              Data from your connected apps is used only to answer the question you just asked,
+              and is never stored afterward.
             </li>
-            <li className="flex items-start gap-2">
-              <Check size={14} className="mt-0.5 shrink-0 text-primary" />
-              OAuth tokens are encrypted at rest using AES-256-GCM and are never shared with third
-              parties.
+            <li className="flex items-start gap-2.5">
+              <Check size={14} className="mt-0.5 shrink-0" color="#2563EB" />
+              OAuth tokens are encrypted at rest and never shared with third parties.
             </li>
-            <li className="flex items-start gap-2">
-              <Check size={14} className="mt-0.5 shrink-0 text-primary" />
-              Yomi&apos;s use of Google API data complies with the{" "}
-              <Link
-                href="https://developers.google.com/terms/api-services-user-data-policy"
-                className="text-primary underline underline-offset-2"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Google API Services User Data Policy
-              </Link>
-              , including the Limited Use requirements.
+            <li className="flex items-start gap-2.5">
+              <Check size={14} className="mt-0.5 shrink-0" color="#2563EB" />
+              Every action that changes something — sending an email, creating an event — is
+              shown to you for approval first.
             </li>
-            <li className="flex items-start gap-2">
-              <Check size={14} className="mt-0.5 shrink-0 text-primary" />
-              You can disconnect any integration instantly from your dashboard or from{" "}
-              <Link
-                href="https://myaccount.google.com/permissions"
-                className="text-primary underline underline-offset-2"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Google Account settings
-              </Link>
-              .
+            <li className="flex items-start gap-2.5">
+              <Check size={14} className="mt-0.5 shrink-0" color="#2563EB" />
+              You can disconnect any integration at any time from your dashboard.
             </li>
           </ul>
-          <p className="mt-4">
-            Read our full{" "}
-            <Link href="/privacy" className="text-primary underline underline-offset-2">
+          <p className="mt-5 text-sm" style={{ color: MUTED }}>
+            Full detail on data handling, Google API scopes, and your rights is in the{" "}
+            <Link href="/privacy" className="underline underline-offset-2 hover:text-[#17130E]" style={{ color: INK }}>
               Privacy Policy
             </Link>{" "}
-            for details on data handling and your rights.
+            and{" "}
+            <Link href="/terms" className="underline underline-offset-2 hover:text-[#17130E]" style={{ color: INK }}>
+              Terms of Service
+            </Link>
+            .
           </p>
         </motion.div>
-
-        {/* Privacy & Security CTA */}
-        <div className="mx-auto mt-8 flex max-w-3xl flex-col items-center gap-3 sm:flex-row sm:justify-center">
-          <Link
-            href="/privacy"
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
-          >
-            <Shield size={14} />
-            View Privacy Policy
-          </Link>
-          <Link
-            href="/terms"
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
-          >
-            View Terms of Service
-          </Link>
-        </div>
       </section>
 
-      <section id="pricing" className="mx-auto max-w-5xl px-6 py-24">
+      <section id="pricing" className="mx-auto max-w-5xl px-6 py-20">
         <div className="mb-14 text-center">
-          <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            Pricing
-          </p>
-          <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
+          <SectionLabel>Pricing</SectionLabel>
+          <h2 className="font-accent text-4xl leading-[1.08] tracking-tight sm:text-5xl" style={{ color: INK }}>
             Simple, <span className="italic">honest</span> pricing.
           </h2>
-          <p className="mt-3 text-sm text-muted-foreground">
+          <p className="mt-3 text-sm" style={{ color: MUTED }}>
             Start free. Upgrade when you outgrow it.
           </p>
         </div>
@@ -735,15 +618,15 @@ export function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.1 }}
-                className={`relative flex flex-col rounded-2xl glass-card p-6 ${
-                  plan.popular
-                    ? "border-primary shadow-[0_0_40px_-12px_hsl(var(--primary)/0.4)]"
-                    : ""
-                }`}
+                className="landing-card relative flex flex-col rounded-2xl p-6"
+                style={plan.popular ? { borderColor: "rgba(23,19,14,0.28)" } : undefined}
               >
                 {plan.popular && (
                   <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                    <span className="whitespace-nowrap rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">
+                    <span
+                      className="whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium"
+                      style={{ background: INK, color: "#F3EEE4" }}
+                    >
                       {plan.badge}
                     </span>
                   </div>
@@ -751,32 +634,41 @@ export function LandingPage() {
 
                 <div className="mb-5">
                   <div className="mb-2 flex items-center gap-2">
-                    <Icon size={18} className="text-primary" />
-                    <p className="text-sm font-medium text-foreground">{plan.name}</p>
+                    <Icon size={18} color="#2563EB" />
+                    <p className="text-sm font-medium" style={{ color: INK }}>
+                      {plan.name}
+                    </p>
                     {!plan.popular && plan.badge && (
-                      <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                      <span
+                        className="rounded-full border border-black/10 px-1.5 py-0.5 text-[10px]"
+                        style={{ color: MUTED }}
+                      >
                         {plan.badge}
                       </span>
                     )}
                   </div>
                   <div className="mb-2 flex items-baseline gap-1">
-                    <span className="font-accent text-4xl text-foreground">
+                    <span className="font-accent text-4xl" style={{ color: INK }}>
                       {localPrice.format(plan.priceUsd)}
                     </span>
-                    <span className="text-sm text-muted-foreground">{plan.period}</span>
+                    <span className="text-sm" style={{ color: MUTED }}>
+                      {plan.period}
+                    </span>
                   </div>
                   {localPrice.localized && plan.priceUsd > 0 && (
-                    <p className="mb-1 text-xs text-muted-foreground">
+                    <p className="mb-1 text-xs" style={{ color: MUTED }}>
                       approx. — billed as ${plan.priceUsd} USD
                     </p>
                   )}
-                  <p className="text-sm text-muted-foreground">{plan.description}</p>
+                  <p className="text-sm" style={{ color: MUTED }}>
+                    {plan.description}
+                  </p>
                 </div>
 
                 <ul className="mb-8 flex-1 space-y-2.5">
                   {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2.5 text-sm text-muted-foreground">
-                      <Check size={14} className="mt-0.5 shrink-0 text-primary" />
+                    <li key={f} className="flex items-start gap-2.5 text-sm" style={{ color: MUTED }}>
+                      <Check size={14} className="mt-0.5 shrink-0" color="#2563EB" />
                       {f}
                     </li>
                   ))}
@@ -785,11 +677,12 @@ export function LandingPage() {
                 <button
                   onClick={() => handlePlanClick(plan.key)}
                   disabled={billingLoading !== null}
-                  className={`flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium transition-colors disabled:opacity-70 ${
+                  className="flex w-full items-center justify-center gap-2 rounded-full py-2.5 text-sm font-medium transition-colors disabled:opacity-70"
+                  style={
                     plan.popular
-                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                      : "border border-border text-foreground hover:bg-muted/50"
-                  }`}
+                      ? { background: INK, color: "#F3EEE4" }
+                      : { border: "1px solid rgba(23,19,14,0.15)", color: INK }
+                  }
                 >
                   {billingLoading === plan.key && <Loader2 size={14} className="animate-spin" />}
                   {billingLoading === plan.key ? "Redirecting..." : plan.cta}
@@ -803,14 +696,15 @@ export function LandingPage() {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          className="mt-8 text-center text-xs text-muted-foreground"
+          className="mt-8 text-center text-xs"
+          style={{ color: MUTED }}
         >
           * Credits are a simple usage balance. Explore is a 30-day free trial; Pro and Max can buy
           extra credit packs.
         </motion.p>
       </section>
 
-      <Footer />
+      <Footer variant="light" />
     </div>
   )
 }
