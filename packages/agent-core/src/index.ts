@@ -109,6 +109,71 @@ export {
   mapsComposioSpecs,
   MAPS_TOOLKIT,
 } from "./connectors/composio/google-maps.js"
+export {
+  makeComposioHubspotDef,
+  hubspotComposioSpecs,
+  HUBSPOT_TOOLKIT,
+} from "./connectors/composio/hubspot.js"
+export {
+  makeComposioFirecrawlDef,
+  firecrawlComposioSpecs,
+  FIRECRAWL_TOOLKIT,
+} from "./connectors/composio/firecrawl.js"
+export {
+  makeComposioDiscordDef,
+  discordComposioSpecs,
+  DISCORD_TOOLKIT,
+} from "./connectors/composio/discord.js"
+export {
+  makeComposioWhatsAppDef,
+  whatsappComposioSpecs,
+  WHATSAPP_TOOLKIT,
+} from "./connectors/composio/whatsapp.js"
+export {
+  makeComposioLinkedInDef,
+  linkedinComposioSpecs,
+  LINKEDIN_TOOLKIT,
+} from "./connectors/composio/linkedin.js"
+export {
+  makeComposioOutlookDef,
+  outlookComposioSpecs,
+  OUTLOOK_TOOLKIT,
+} from "./connectors/composio/outlook.js"
+export {
+  makeComposioFigmaDef,
+  figmaComposioSpecs,
+  FIGMA_TOOLKIT,
+} from "./connectors/composio/figma.js"
+export {
+  makeComposioTodoistDef,
+  todoistComposioSpecs,
+  TODOIST_TOOLKIT,
+} from "./connectors/composio/todoist.js"
+export {
+  makeComposioRedditDef,
+  redditComposioSpecs,
+  REDDIT_TOOLKIT,
+} from "./connectors/composio/reddit.js"
+export {
+  makeComposioJiraDef,
+  jiraComposioSpecs,
+  JIRA_TOOLKIT,
+} from "./connectors/composio/jira.js"
+export {
+  makeComposioAsanaDef,
+  asanaComposioSpecs,
+  ASANA_TOOLKIT,
+} from "./connectors/composio/asana.js"
+export {
+  makeComposioYouTubeDef,
+  youtubeComposioSpecs,
+  YOUTUBE_TOOLKIT,
+} from "./connectors/composio/youtube.js"
+export {
+  makeComposioZoomDef,
+  zoomComposioSpecs,
+  ZOOM_TOOLKIT,
+} from "./connectors/composio/zoom.js"
 export type {
   Connector,
   ConnectorStatus,

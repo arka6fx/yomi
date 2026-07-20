@@ -3,6 +3,7 @@ export type ConnectorCategory =
   | "file-storage"
   | "email"
   | "data-analytics"
+  | "crm"
   | "communication"
   | "developer"
   | "data"
