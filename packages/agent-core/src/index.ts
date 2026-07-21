@@ -22,6 +22,7 @@ export {
 } from "./connectors/linear-def.js"
 export { swiggyDef, SWIGGY_MCP_SERVERS, wrapOrderTools } from "./connectors/swiggy-def.js"
 export { createMCPToolProvider, type MCPAuthProvider, type MCPServerConfig, type MCPToolProvider } from "./connectors/mcp-connector.js"
+export { resolvesToDisallowedAddress } from "./connectors/ssrf-guard.js"
 export { ALL_CONNECTOR_DEFS } from "./connectors/all-defs.js"
 
 // Composio-backed connectors (approval-wrapped, per-connector flag).

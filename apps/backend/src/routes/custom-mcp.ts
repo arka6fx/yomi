@@ -1,6 +1,7 @@
 import { Hono } from "hono"
 import { eq, and } from "drizzle-orm"
 import { db, customMcpServers } from "@yomi/db"
+import { resolvesToDisallowedAddress } from "@yomi/agent-core"
 import { authenticate } from "../auth.js"
 import { encryptString } from "../services/token-encryption.js"
 
@@ -39,6 +40,15 @@ customMcpRouter.post("/", authenticate, async (c) => {
   const body = (await c.req.json()) as { name?: string; url?: string; apiKey?: string }
   const validationError = validateCustomMcpServerInput(body)
   if (validationError) return c.json({ error: validationError }, 400)
+
+  // SSRF guard: the backend later makes a real outbound request to this URL
+  // (ConnectorRegistry.loadMCPTools), so reject anything that resolves to
+  // internal/private infrastructure (e.g. the EC2 metadata service) up front.
+  // Re-checked again at connect time too, since DNS can change in between.
+  const hostname = new URL(body.url!).hostname
+  if (await resolvesToDisallowedAddress(hostname)) {
+    return c.json({ error: "That server's address isn't allowed" }, 400)
+  }
 
   try {
     const [row] = await db
