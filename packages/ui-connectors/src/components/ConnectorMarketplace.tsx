@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react"
 import { ConnectorIcon } from "../icons"
 import { DARK_THEME } from "../types"
-import type { ConnectorInfo, ConnectorTheme } from "../types"
+import type { ConnectorCategory, ConnectorInfo, ConnectorTheme } from "../types"
 
 interface ConnectedBadgeProps {
   t: ConnectorTheme
@@ -119,91 +119,96 @@ export function ConnectorTile({
         if (info.available) e.currentTarget.style.borderColor = t.borderHi
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = highlighted ? t.accent : t.border
+        e.currentTarget.style.borderColor = highlighted ? t.accent : "transparent"
       }}
       style={{
-        background: t.surface,
-        border: `1px solid ${highlighted ? t.accent : t.border}`,
-        borderRadius: 14,
-        padding: 18,
         display: "flex",
-        flexDirection: "column" as const,
-        gap: 14,
+        alignItems: "center",
+        gap: 12,
+        padding: "10px 8px",
+        borderRadius: 10,
+        border: "1px solid transparent",
+        borderBottom: `1px solid ${t.border}`,
+        ...(highlighted
+          ? {
+              borderColor: t.accent,
+              boxShadow: `0 0 0 2px ${t.accent}40`,
+              background: `${t.accent}0d`,
+            }
+          : {}),
         opacity: !info.available ? 0.55 : 1,
         boxSizing: "border-box" as const,
-        backdropFilter: t.backdropFilter,
-        WebkitBackdropFilter: t.backdropFilter,
-        boxShadow: highlighted ? `0 0 0 3px ${t.accent}40, ${t.cardShadow}` : t.cardShadow,
-        transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+        transition: "border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease",
       }}
     >
-      {/* Icon + name row */}
-      <div style={{ display: "flex", gap: 13, alignItems: "flex-start" }}>
-        <div
-          style={{
-            width: 42,
-            height: 42,
-            borderRadius: 11,
-            background: t.btnBg,
-            border: `1px solid ${t.borderHi}`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-        >
-          <ConnectorIcon id={info.id} size={23} />
-        </div>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const }}>
+      <div
+        style={{
+          width: 30,
+          height: 30,
+          borderRadius: 8,
+          background: t.btnBg,
+          border: `1px solid ${t.borderHi}`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}
+      >
+        <ConnectorIcon id={info.id} size={17} />
+      </div>
+
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" as const }}>
+          <span
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              letterSpacing: "-0.01em",
+              color: t.text,
+              fontFamily: t.font,
+              flexShrink: 0,
+            }}
+          >
+            {info.name}
+          </span>
+          {!info.available && (
             <span
               style={{
-                fontSize: 14,
+                fontSize: 9,
                 fontWeight: 600,
-                letterSpacing: "-0.01em",
-                color: t.text,
-                fontFamily: t.font,
+                color: t.dim,
+                background: t.btnBg,
+                border: `1px solid ${t.border}`,
+                padding: "1px 6px",
+                borderRadius: 4,
+                textTransform: "uppercase" as const,
+                flexShrink: 0,
               }}
             >
-              {info.name}
+              Soon
             </span>
-            {!info.available && (
-              <span
-                style={{
-                  fontSize: 9,
-                  fontWeight: 600,
-                  color: t.dim,
-                  background: t.btnBg,
-                  border: `1px solid ${t.border}`,
-                  padding: "1px 6px",
-                  borderRadius: 4,
-                  textTransform: "uppercase" as const,
-                }}
-              >
-                Soon
-              </span>
-            )}
-            {info.connected && <ConnectedBadge t={t} />}
-          </div>
-          {info.connected && <AccountLine t={t} displayName={info.displayName} />}
-          <p
+          )}
+          <span
             style={{
-              fontSize: 12,
+              fontSize: 11,
               color: t.dim,
-              lineHeight: 1.5,
-              margin: "5px 0 0 0",
               fontFamily: t.font,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap" as const,
+              minWidth: 0,
             }}
           >
             {info.description}
-          </p>
+          </span>
         </div>
+        {info.connected && <AccountLine t={t} displayName={info.displayName} />}
       </div>
 
-      {/* Action button */}
-      {info.available && (
-        <div style={{ marginTop: "auto" }}>
-          {info.connected ? (
+      <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
+        {info.connected && <ConnectedBadge t={t} />}
+        {info.available &&
+          (info.connected ? (
             <button
               onClick={handleDisconnectClick}
               onMouseEnter={(e) => {
@@ -217,7 +222,6 @@ export function ConnectorTile({
               }}
               disabled={loading}
               style={{
-                width: "100%",
                 fontFamily: t.font,
                 fontSize: 11,
                 fontWeight: 600,
@@ -225,41 +229,31 @@ export function ConnectorTile({
                 background: "transparent",
                 border: `1px solid ${confirmDisconnect ? t.accent : t.border}`,
                 borderRadius: 6,
-                padding: "6px 0",
+                padding: "4px 10px",
                 cursor: "pointer",
                 transition: "all 0.15s ease",
+                whiteSpace: "nowrap" as const,
               }}
             >
-              {loading
-                ? "Disconnecting..."
-                : confirmDisconnect
-                  ? "Confirm disconnect?"
-                  : "Disconnect"}
+              {loading ? "Disconnecting..." : confirmDisconnect ? "Confirm?" : "Disconnect"}
             </button>
           ) : limitReached ? (
-            <div
+            <span
               style={{
-                width: "100%",
                 fontFamily: t.font,
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: 600,
                 color: t.dim,
-                background: "transparent",
-                border: `1px solid ${t.border}`,
-                borderRadius: 6,
-                padding: "6px 0",
-                textAlign: "center" as const,
-                boxSizing: "border-box" as const,
+                whiteSpace: "nowrap" as const,
               }}
             >
-              Limit reached. Upgrade to connect
-            </div>
+              Limit reached — upgrade to connect
+            </span>
           ) : (
             <button
               onClick={() => onConnect(info.id)}
               disabled={loading}
               style={{
-                width: "100%",
                 fontFamily: t.font,
                 fontSize: 11,
                 fontWeight: 600,
@@ -267,9 +261,10 @@ export function ConnectorTile({
                 background: t.btnBg,
                 border: `1px solid ${t.border}`,
                 borderRadius: 6,
-                padding: "6px 0",
+                padding: "4px 10px",
                 cursor: "pointer",
                 transition: "all 0.15s ease",
+                whiteSpace: "nowrap" as const,
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = t.accent
@@ -288,30 +283,27 @@ export function ConnectorTile({
                   ? "Add connection string"
                   : "Connect"}
             </button>
-          )}
-        </div>
-      )}
+          ))}
+      </div>
     </div>
   )
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  email: "Email",
+const CATEGORY_LABELS: Record<ConnectorCategory, string> = {
   productivity: "Productivity",
   "file-storage": "File Storage",
-  engineering: "Engineering",
-  knowledge: "Knowledge",
+  "file-management": "File Management",
+  email: "Email",
   "data-analytics": "Data & Analytics",
-  data: "Databases",
   crm: "CRM",
-  support: "Support",
-  finance: "Finance",
-  design: "Design",
-  security: "Security",
-  hr: "HR",
-  meetings: "Meetings",
-  developer: "Developer",
   communication: "Communication",
+  developer: "Developer",
+  data: "Databases",
+  meetings: "Meetings",
+  food: "Food",
+  finance: "Finance",
+  "customer-support": "Customer Support",
+  other: "Other",
 }
 
 interface ConnectorMarketplaceProps {
@@ -378,13 +370,7 @@ export function ConnectorMarketplace({
               )}
               <span style={{ flex: 1, height: 1, background: t.borderHi }} />
             </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(248px, 1fr))",
-                gap: 14,
-              }}
-            >
+            <div>
               {group.map((info) => (
                 <ConnectorTile
                   key={info.id}
