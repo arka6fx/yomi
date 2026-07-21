@@ -34,7 +34,7 @@ import { PrivacyManager } from "@/components/dashboard/PrivacyManager"
 import { SchedulesManager } from "@/components/dashboard/SchedulesManager"
 import { ConversationManager } from "@/components/dashboard/ConversationManager"
 import { StatusManager } from "@/components/dashboard/StatusManager"
-import { ConnectorMarketplace, buildCatalog, DARK_THEME } from "@yomi/ui-connectors"
+import { ConnectorMarketplace, NextStepCard, buildCatalog, DARK_THEME } from "@yomi/ui-connectors"
 
 type IntegrationHealth = {
   provider: string
@@ -751,6 +751,11 @@ function DashboardContent() {
                 </div>
               </div>
             )}
+            <NextStepCard
+              connectedIds={connectedProviders}
+              theme={DARK_THEME}
+              appUrl={window.location.origin}
+            />
             <ConnectorMarketplace
               connectors={buildCatalog(
                 connectedProviders,
