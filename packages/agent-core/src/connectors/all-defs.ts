@@ -27,6 +27,37 @@ import { makeComposioJiraDef } from "./composio/jira.js"
 import { makeComposioAsanaDef } from "./composio/asana.js"
 import { makeComposioYouTubeDef } from "./composio/youtube.js"
 import { makeComposioZoomDef } from "./composio/zoom.js"
+import { makeComposioSalesforceDef } from "./composio/salesforce.js"
+import { makeComposioInstagramDef } from "./composio/instagram.js"
+import { makeComposioFacebookDef } from "./composio/facebook.js"
+import { makeComposioCalendlyDef } from "./composio/calendly.js"
+import { makeComposioTrelloDef } from "./composio/trello.js"
+import { makeComposioOneDriveDef } from "./composio/one-drive.js"
+import { makeComposioPostHogDef } from "./composio/posthog.js"
+import { makeComposioAttioDef } from "./composio/attio.js"
+import { makeComposioZohoDef } from "./composio/zoho.js"
+import { makeComposioDropboxDef } from "./composio/dropbox.js"
+import { makeComposioMicrosoftTeamsDef } from "./composio/microsoft-teams.js"
+import { makeComposioGumroadDef } from "./composio/gumroad.js"
+import { makeComposioMiroDef } from "./composio/miro.js"
+import { makeComposioDynamics365Def } from "./composio/dynamics-365.js"
+import { makeComposioSerpapiDef } from "./composio/serpapi.js"
+import { makeComposioExaDef } from "./composio/exa.js"
+import { makeComposioMem0Def } from "./composio/mem0.js"
+import { makeComposioCloudflareDef } from "./composio/cloudflare.js"
+import { makeComposioVercelDef } from "./composio/vercel.js"
+import { makeComposioSupabaseDef } from "./composio/supabase.js"
+import { makeComposioStripeDef } from "./composio/stripe.js"
+import { makeComposioZohoInvoiceDef } from "./composio/zoho-invoice.js"
+import { makeComposioNeonDef } from "./composio/neon.js"
+import { makeComposioFirefliesDef } from "./composio/fireflies.js"
+import { makeComposioGooglePhotosDef } from "./composio/google-photos.js"
+import { makeComposioGoogleAdsDef } from "./composio/google-ads.js"
+import { makeComposioGoogleAnalyticsDef } from "./composio/google-analytics.js"
+import { makeComposioGoogleSearchConsoleDef } from "./composio/google-search-console.js"
+import { makeComposioGoogleCloudVisionDef } from "./composio/google-cloud-vision.js"
+import { makeComposioKaggleDef } from "./composio/kaggle.js"
+import { context7Def } from "./context7-def.js"
 import type { ComposioExecutor } from "./composio/adapter.js"
 
 // Docs/Sheets/Slides have no native (pre-Composio) implementation — unlike the
@@ -75,5 +106,36 @@ export const ALL_CONNECTOR_DEFS: ConnectorDef[] = [
   makeComposioAsanaDef(unconfiguredComposioExecutor),
   makeComposioYouTubeDef(unconfiguredComposioExecutor),
   makeComposioZoomDef(unconfiguredComposioExecutor),
+  makeComposioSalesforceDef(unconfiguredComposioExecutor),
+  makeComposioFacebookDef(unconfiguredComposioExecutor),
+  makeComposioInstagramDef(unconfiguredComposioExecutor),
+  makeComposioCalendlyDef(unconfiguredComposioExecutor),
+  makeComposioTrelloDef(unconfiguredComposioExecutor),
+  makeComposioOneDriveDef(unconfiguredComposioExecutor),
+  makeComposioPostHogDef(unconfiguredComposioExecutor),
+  makeComposioAttioDef(unconfiguredComposioExecutor),
+  makeComposioZohoDef(unconfiguredComposioExecutor),
+  makeComposioDropboxDef(unconfiguredComposioExecutor),
+  makeComposioMicrosoftTeamsDef(unconfiguredComposioExecutor),
+  makeComposioGumroadDef(unconfiguredComposioExecutor),
+  makeComposioMiroDef(unconfiguredComposioExecutor),
+  makeComposioDynamics365Def(unconfiguredComposioExecutor),
+  makeComposioSerpapiDef(unconfiguredComposioExecutor),
+  makeComposioExaDef(unconfiguredComposioExecutor),
+  makeComposioMem0Def(unconfiguredComposioExecutor),
+  makeComposioCloudflareDef(unconfiguredComposioExecutor),
+  makeComposioVercelDef(unconfiguredComposioExecutor),
+  makeComposioSupabaseDef(unconfiguredComposioExecutor),
+  makeComposioStripeDef(unconfiguredComposioExecutor),
+  makeComposioZohoInvoiceDef(unconfiguredComposioExecutor),
+  makeComposioNeonDef(unconfiguredComposioExecutor),
+  makeComposioFirefliesDef(unconfiguredComposioExecutor),
+  makeComposioGooglePhotosDef(unconfiguredComposioExecutor),
+  makeComposioGoogleAdsDef(unconfiguredComposioExecutor),
+  makeComposioGoogleAnalyticsDef(unconfiguredComposioExecutor),
+  makeComposioGoogleSearchConsoleDef(unconfiguredComposioExecutor),
+  makeComposioGoogleCloudVisionDef(unconfiguredComposioExecutor),
+  makeComposioKaggleDef(unconfiguredComposioExecutor),
+  context7Def,
   swiggyDef,
 ]

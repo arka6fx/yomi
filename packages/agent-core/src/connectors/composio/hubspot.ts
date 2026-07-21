@@ -4,222 +4,96 @@ import { createComposioTools, type ComposioExecutor, type ComposioToolSpec } fro
 
 export const HUBSPOT_TOOLKIT = "hubspot"
 
+// Curated subset of HubSpot's real ~304-tool catalog: companies, contacts,
+// deals, and tickets — get/list/search/create/update/archive for each.
 export const hubspotComposioSpecs: ComposioToolSpec[] = [
-  // ── Read actions ──────────────────────────────────────────────
-  {
-    slug: "HUBSPOT_LIST_CONTACTS",
-    description:
-      "List contacts in HubSpot CRM with pagination. Optionally filter by property values. Read-only.",
-    parameters: z
-      .object({
-        limit: z.number().int().min(1).max(200).optional().describe("Max contacts to return"),
-        after: z.string().optional().describe("Pagination cursor from previous response"),
-        properties: z.string().optional().describe("Comma-separated properties to include"),
-      })
-      .passthrough(),
-  },
-  {
-    slug: "HUBSPOT_LIST_DEALS",
-    description:
-      "List deals in HubSpot CRM with pagination. Read-only.",
-    parameters: z
-      .object({
-        limit: z.number().int().min(1).max(200).optional().describe("Max deals to return"),
-        after: z.string().optional().describe("Pagination cursor from previous response"),
-        properties: z.string().optional().describe("Comma-separated properties to include"),
-      })
-      .passthrough(),
-  },
-  {
-    slug: "HUBSPOT_BATCH_READ_COMPANIES_BY_PROPERTIES",
-    description:
-      "Batch-retrieve up to 100 HubSpot company records by their IDs. Read-only.",
-    parameters: z
-      .object({
-        inputs: z
-          .array(z.object({ id: z.string() }))
-          .describe("Array of company IDs to fetch"),
-        properties: z
-          .array(z.string())
-          .optional()
-          .describe("Properties to return for each company"),
-      })
-      .passthrough(),
-  },
-  {
-    slug: "HUBSPOT_SEARCH_DEALS",
-    description:
-      "Search deals using flexible criteria and filters. Read-only.",
-    parameters: z
-      .object({
-        query: z.string().optional().describe("Search query string"),
-        filterGroups: z
-          .array(z.any())
-          .optional()
-          .describe("Filter groups for structured queries"),
-        sorts: z.array(z.any()).optional().describe("Sort criteria"),
-        limit: z.number().int().min(1).max(200).optional(),
-        after: z.string().optional(),
-      })
-      .passthrough(),
-  },
-  {
-    slug: "HUBSPOT_SEARCH_TICKETS",
-    description:
-      "Search tickets using flexible criteria and filters. Read-only.",
-    parameters: z
-      .object({
-        query: z.string().optional().describe("Search query string"),
-        filterGroups: z.array(z.any()).optional(),
-        sorts: z.array(z.any()).optional(),
-        limit: z.number().int().min(1).max(200).optional(),
-        after: z.string().optional(),
-      })
-      .passthrough(),
-  },
-  {
-    slug: "HUBSPOT_SEARCH_PRODUCTS",
-    description:
-      "Search products using flexible criteria and filters. Read-only.",
-    parameters: z
-      .object({
-        query: z.string().optional(),
-        filterGroups: z.array(z.any()).optional(),
-        sorts: z.array(z.any()).optional(),
-        limit: z.number().int().min(1).max(200).optional(),
-        after: z.string().optional(),
-      })
-      .passthrough(),
-  },
-  {
-    slug: "HUBSPOT_SEARCH_CAMPAIGNS",
-    description:
-      "Search HubSpot marketing campaigns. Read-only.",
-    parameters: z
-      .object({
-        query: z.string().optional(),
-        limit: z.number().int().min(1).max(200).optional(),
-      })
-      .passthrough(),
-  },
-  {
-    slug: "HUBSPOT_LIST_PRODUCTS",
-    description:
-      "Retrieve a paginated list of HubSpot products. Read-only.",
-    parameters: z
-      .object({
-        limit: z.number().int().min(1).max(200).optional(),
-        after: z.string().optional(),
-        properties: z.string().optional(),
-      })
-      .passthrough(),
-  },
-  {
-    slug: "HUBSPOT_LIST_FEEDBACK_SUBMISSIONS",
-    description:
-      "Retrieve a paginated list of feedback submissions. Read-only.",
-    parameters: z
-      .object({
-        limit: z.number().int().min(1).max(200).optional(),
-        after: z.string().optional(),
-        properties: z.string().optional(),
-      })
-      .passthrough(),
-  },
+  // ── Read ──────────────────────────────────────────────────────
+  { slug: "HUBSPOT_HUBSPOT_GET_COMPANY", description: "Get a HubSpot company by ID. Read-only.", parameters: z.object({ companyId: z.string().describe("Company ID"), properties: z.array(z.string()).optional().describe("Properties to return") }).passthrough() },
+  { slug: "HUBSPOT_HUBSPOT_LIST_COMPANIES", description: "List HubSpot companies. Read-only.", parameters: z.object({ limit: z.number().int().optional().describe("Max results"), properties: z.array(z.string()).optional().describe("Properties to return") }).passthrough() },
+  { slug: "HUBSPOT_HUBSPOT_SEARCH_COMPANIES", description: "Search companies with flexible filters. Read-only.", parameters: z.object({ query: z.string().optional().describe("Free-text search"), filterGroups: z.array(z.record(z.string(), z.unknown())).optional().describe("Filter criteria") }).passthrough() },
+  { slug: "HUBSPOT_HUBSPOT_LIST_CONTACTS", description: "List HubSpot contacts. Read-only.", parameters: z.object({ limit: z.number().int().optional().describe("Max results"), properties: z.array(z.string()).optional().describe("Properties to return") }).passthrough() },
+  { slug: "HUBSPOT_SEARCH_CONTACTS_BY_CRITERIA", description: "Search contacts by text query or filters. Read-only.", parameters: z.object({ query: z.string().optional().describe("Free-text search"), filterGroups: z.array(z.record(z.string(), z.unknown())).optional().describe("Filter criteria") }).passthrough() },
+  { slug: "HUBSPOT_HUBSPOT_GET_DEAL", description: "Get a HubSpot deal by ID. Read-only.", parameters: z.object({ dealId: z.string().describe("Deal ID"), properties: z.array(z.string()).optional().describe("Properties to return") }).passthrough() },
+  { slug: "HUBSPOT_HUBSPOT_LIST_DEALS", description: "List HubSpot deals. Read-only.", parameters: z.object({ limit: z.number().int().optional().describe("Max results"), properties: z.array(z.string()).optional().describe("Properties to return") }).passthrough() },
+  { slug: "HUBSPOT_HUBSPOT_SEARCH_DEALS", description: "Search deals with flexible filters. Read-only.", parameters: z.object({ query: z.string().optional().describe("Free-text search"), filterGroups: z.array(z.record(z.string(), z.unknown())).optional().describe("Filter criteria") }).passthrough() },
+  { slug: "HUBSPOT_GET_TICKET", description: "Get a HubSpot ticket by ID. Read-only.", parameters: z.object({ ticketId: z.string().describe("Ticket ID"), properties: z.array(z.string()).optional().describe("Properties to return") }).passthrough() },
+  { slug: "HUBSPOT_LIST_TICKETS", description: "List HubSpot tickets. Read-only.", parameters: z.object({ limit: z.number().int().optional().describe("Max results"), properties: z.array(z.string()).optional().describe("Properties to return") }).passthrough() },
+  { slug: "HUBSPOT_SEARCH_TICKETS", description: "Search tickets with flexible filters. Read-only.", parameters: z.object({ query: z.string().optional().describe("Free-text search"), filterGroups: z.array(z.record(z.string(), z.unknown())).optional().describe("Filter criteria") }).passthrough() },
 
-  // ── Write actions (gated) ─────────────────────────────────────
+  // ── Write ────────────────────────────────────────────────────
+  {
+    slug: "HUBSPOT_CREATE_COMPANY",
+    description: "Create a new company. Requires user approval before it runs.",
+    parameters: z.object({ name: z.string().optional().describe("Company name"), domain: z.string().optional().describe("Company domain") }).passthrough(),
+    preview: (a) => ({ title: "Create company", preview: `Create company "${String(a["name"] ?? "")}"`, confirmText: "Create company" }),
+  },
+  {
+    slug: "HUBSPOT_HUBSPOT_UPDATE_COMPANY",
+    description: "Update an existing company's properties. Requires user approval before it runs.",
+    parameters: z.object({ companyId: z.string().describe("Company ID"), properties: z.record(z.string(), z.unknown()).describe("Properties to update") }).passthrough(),
+    preview: (a) => ({ title: "Update company", preview: `Update company ${String(a["companyId"] ?? "")}`, confirmText: "Update" }),
+  },
   {
     slug: "HUBSPOT_CREATE_CONTACT",
-    description:
-      "Create a new contact in HubSpot CRM. Requires user approval before it runs.",
-    parameters: z
-      .object({
-        properties: z.record(z.string()).describe("Contact properties (e.g. email, firstname, lastname, phone)"),
-      })
-      .passthrough(),
-    preview: (a) => ({
-      title: "Create HubSpot contact",
-      preview: `Create contact: ${String((a["properties"] as Record<string, string>)?.["email"] ?? "")}`,
-      confirmText: "Create contact",
-    }),
+    description: "Create a new contact. Requires user approval before it runs.",
+    parameters: z.object({ email: z.string().optional().describe("Contact email"), firstname: z.string().optional().describe("First name"), lastname: z.string().optional().describe("Last name") }).passthrough(),
+    preview: (a) => ({ title: "Create contact", preview: `Create contact ${String(a["firstname"] ?? a["email"] ?? "")}`, confirmText: "Create contact" }),
   },
   {
-    slug: "HUBSPOT_CREATE_CONTACTS",
-    description:
-      "Create multiple new HubSpot contacts in a batch. Requires user approval before it runs.",
-    parameters: z
-      .object({
-        inputs: z
-          .array(z.object({ properties: z.record(z.string()) }))
-          .describe("Array of contacts to create"),
-      })
-      .passthrough(),
-    preview: (a) => ({
-      title: "Create HubSpot contacts",
-      preview: `Create ${String((a["inputs"] as Array<unknown>)?.length ?? "?")} contacts`,
-      confirmText: "Create contacts",
-    }),
+    slug: "HUBSPOT_HUBSPOT_UPDATE_CONTACT",
+    description: "Update an existing contact's properties. Requires user approval before it runs.",
+    parameters: z.object({ contactId: z.string().describe("Contact ID"), properties: z.record(z.string(), z.unknown()).describe("Properties to update") }).passthrough(),
+    preview: (a) => ({ title: "Update contact", preview: `Update contact ${String(a["contactId"] ?? "")}`, confirmText: "Update" }),
   },
   {
     slug: "HUBSPOT_CREATE_DEAL",
-    description:
-      "Create a new deal in HubSpot CRM. Requires user approval before it runs.",
-    parameters: z
-      .object({
-        properties: z.record(z.string()).describe("Deal properties (e.g. dealname, amount, dealstage, pipeline)"),
-      })
-      .passthrough(),
-    preview: (a) => ({
-      title: "Create HubSpot deal",
-      preview: `Create deal: ${String((a["properties"] as Record<string, string>)?.["dealname"] ?? "")}`,
-      confirmText: "Create deal",
-    }),
+    description: "Create a new deal. Requires user approval before it runs.",
+    parameters: z.object({ dealname: z.string().optional().describe("Deal name"), amount: z.string().optional().describe("Deal amount"), dealstage: z.string().optional().describe("Pipeline stage") }).passthrough(),
+    preview: (a) => ({ title: "Create deal", preview: `Create deal "${String(a["dealname"] ?? "")}"`, confirmText: "Create deal" }),
   },
   {
-    slug: "HUBSPOT_CREATE_TASK",
-    description:
-      "Create a new CRM task record. Requires user approval before it runs.",
-    parameters: z
-      .object({
-        properties: z.record(z.string()).describe("Task properties (e.g. hs_timestamp, hs_task_body, hs_task_subject)"),
-      })
-      .passthrough(),
-    preview: (a) => ({
-      title: "Create HubSpot task",
-      preview: `Create task: ${String((a["properties"] as Record<string, string>)?.["hs_task_subject"] ?? "")}`,
-      confirmText: "Create task",
-    }),
+    slug: "HUBSPOT_HUBSPOT_UPDATE_DEAL",
+    description: "Update an existing deal's properties. Requires user approval before it runs.",
+    parameters: z.object({ dealId: z.string().describe("Deal ID"), properties: z.record(z.string(), z.unknown()).describe("Properties to update") }).passthrough(),
+    preview: (a) => ({ title: "Update deal", preview: `Update deal ${String(a["dealId"] ?? "")}`, confirmText: "Update" }),
   },
   {
-    slug: "HUBSPOT_CREATE_COMPANY",
-    description:
-      "Create a new company in HubSpot CRM. Requires user approval before it runs.",
-    parameters: z
-      .object({
-        properties: z.record(z.string()).describe("Company properties (e.g. name, domain, industry)"),
-      })
-      .passthrough(),
-    preview: (a) => ({
-      title: "Create HubSpot company",
-      preview: `Create company: ${String((a["properties"] as Record<string, string>)?.["name"] ?? "")}`,
-      confirmText: "Create company",
-    }),
+    slug: "HUBSPOT_CREATE_TICKET",
+    description: "Create a new support ticket. Requires user approval before it runs.",
+    parameters: z.object({ subject: z.string().optional().describe("Ticket subject"), content: z.string().optional().describe("Ticket description") }).passthrough(),
+    preview: (a) => ({ title: "Create ticket", preview: `Create ticket "${String(a["subject"] ?? "")}"`, confirmText: "Create ticket" }),
   },
   {
-    slug: "HUBSPOT_UPDATE_PRODUCT",
-    description:
-      "Update properties for an existing HubSpot product. Requires user approval before it runs.",
-    parameters: z
-      .object({
-        productId: z.string().describe("Product ID to update"),
-        properties: z.record(z.string()).describe("Product properties to update"),
-      })
-      .passthrough(),
-    preview: (a) => ({
-      title: "Update HubSpot product",
-      preview: `Update product ${String(a["productId"] ?? "")}`,
-      confirmText: "Update product",
-    }),
+    slug: "HUBSPOT_UPDATE_TICKET",
+    description: "Update an existing ticket's properties. Requires user approval before it runs.",
+    parameters: z.object({ ticketId: z.string().describe("Ticket ID"), properties: z.record(z.string(), z.unknown()).describe("Properties to update") }).passthrough(),
+    preview: (a) => ({ title: "Update ticket", preview: `Update ticket ${String(a["ticketId"] ?? "")}`, confirmText: "Update" }),
+  },
+
+  // ── Irreversible ──────────────────────────────────────────────
+  {
+    slug: "HUBSPOT_ARCHIVE_COMPANY",
+    description: "Archive (soft-delete) a company. This cannot be undone via this tool.",
+    parameters: z.object({ companyId: z.string().describe("Company ID") }).passthrough(),
+    preview: (a) => ({ title: "Archive company", preview: `Archive company ${String(a["companyId"] ?? "")}`, confirmText: "Archive" }),
+  },
+  {
+    slug: "HUBSPOT_ARCHIVE_CONTACT_BY_ID",
+    description: "Archive (soft-delete) a contact. This cannot be undone via this tool.",
+    parameters: z.object({ contactId: z.string().describe("Contact ID") }).passthrough(),
+    preview: (a) => ({ title: "Archive contact", preview: `Archive contact ${String(a["contactId"] ?? "")}`, confirmText: "Archive" }),
+  },
+  {
+    slug: "HUBSPOT_HUBSPOT_ARCHIVE_DEALS",
+    description: "Archive (soft-delete) one or more deals. This cannot be undone via this tool.",
+    parameters: z.object({ inputs: z.array(z.record(z.string(), z.unknown())).describe("Deal IDs to archive") }).passthrough(),
+    preview: () => ({ title: "Archive deals", preview: "Archive deal(s)", confirmText: "Archive" }),
+  },
+  {
+    slug: "HUBSPOT_ARCHIVE_TICKET",
+    description: "Archive (soft-delete) a ticket. This cannot be undone via this tool.",
+    parameters: z.object({ ticketId: z.string().describe("Ticket ID") }).passthrough(),
+    preview: (a) => ({ title: "Archive ticket", preview: `Archive ticket ${String(a["ticketId"] ?? "")}`, confirmText: "Archive" }),
   },
 ]
 
@@ -229,7 +103,7 @@ export function makeComposioHubspotDef(executor: ComposioExecutor): ConnectorDef
     name: "HubSpot",
     category: "crm",
     icon: "hubspot",
-    description: "Manage contacts, deals, companies, tickets, and products in HubSpot CRM (via Composio).",
+    description: "HubSpot — manage companies, contacts, deals, and support tickets (via Composio).",
     readOnlyByDefault: true,
     auth: {
       kind: "composio",
@@ -239,7 +113,7 @@ export function makeComposioHubspotDef(executor: ComposioExecutor): ConnectorDef
     setup: {
       providerConsoleUrl: "https://app.composio.dev",
       steps: [
-        "Create a HubSpot auth config in Composio (or use the managed one)",
+        "Create a HubSpot auth config in Composio (uses OAuth)",
         "Set COMPOSIO_API_KEY and COMPOSIO_HUBSPOT_AUTH_CONFIG_ID on the backend",
         "Set COMPOSIO_CONNECTORS=hubspot to route HubSpot through Composio",
       ],
@@ -247,7 +121,7 @@ export function makeComposioHubspotDef(executor: ComposioExecutor): ConnectorDef
         { env: "COMPOSIO_API_KEY", label: "Composio API key", secret: true },
         { env: "COMPOSIO_HUBSPOT_AUTH_CONFIG_ID", label: "Composio HubSpot auth config id", secret: false },
       ],
-      docsUrl: "https://docs.composio.dev/toolkits/hubspot",
+      docsUrl: "https://docs.composio.dev/tools/hubspot",
     },
     tools: createComposioTools({
       provider: "hubspot",

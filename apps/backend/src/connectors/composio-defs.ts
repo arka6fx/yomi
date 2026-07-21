@@ -6,6 +6,16 @@ import {
   makeComposioWhatsAppDef,
   makeComposioLinkedInDef,
   makeComposioOutlookDef,
+  makeComposioDynamics365Def,
+  makeComposioSerpapiDef,
+  makeComposioNeonDef,
+  makeComposioFirefliesDef,
+  makeComposioGooglePhotosDef,
+  makeComposioGoogleAdsDef,
+  makeComposioGoogleAnalyticsDef,
+  makeComposioGoogleSearchConsoleDef,
+  makeComposioGoogleCloudVisionDef,
+  makeComposioKaggleDef,
   type ConnectorDef, type ComposioExecutor,
 } from "@yomi/agent-core"
 import { createComposioRestExecutor } from "./composio-executor.js"
@@ -40,5 +50,15 @@ export function buildComposioDefs(executor?: ComposioExecutor): Record<string, C
     whatsapp: makeComposioWhatsAppDef(exec),
     linkedin: makeComposioLinkedInDef(exec),
     outlook: makeComposioOutlookDef(exec),
+    "dynamics-365": makeComposioDynamics365Def(exec),
+    serpapi: makeComposioSerpapiDef(exec),
+    neon: makeComposioNeonDef(exec),
+    fireflies: makeComposioFirefliesDef(exec),
+    "google-photos": makeComposioGooglePhotosDef(exec),
+    "google-ads": makeComposioGoogleAdsDef(exec),
+    "google-analytics": makeComposioGoogleAnalyticsDef(exec),
+    "google-search-console": makeComposioGoogleSearchConsoleDef(exec),
+    "google-cloud-vision": makeComposioGoogleCloudVisionDef(exec),
+    kaggle: makeComposioKaggleDef(exec),
   }
 }

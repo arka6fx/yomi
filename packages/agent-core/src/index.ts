@@ -174,6 +174,157 @@ export {
   zoomComposioSpecs,
   ZOOM_TOOLKIT,
 } from "./connectors/composio/zoom.js"
+export {
+  makeComposioSalesforceDef,
+  salesforceComposioSpecs,
+  SALESFORCE_TOOLKIT,
+} from "./connectors/composio/salesforce.js"
+export {
+  makeComposioFacebookDef,
+  facebookComposioSpecs,
+  FACEBOOK_TOOLKIT,
+} from "./connectors/composio/facebook.js"
+export {
+  makeComposioInstagramDef,
+  instagramComposioSpecs,
+  INSTAGRAM_TOOLKIT,
+} from "./connectors/composio/instagram.js"
+export {
+  makeComposioCalendlyDef,
+  calendlyComposioSpecs,
+  CALENDLY_TOOLKIT,
+} from "./connectors/composio/calendly.js"
+export {
+  makeComposioTrelloDef,
+  trelloComposioSpecs,
+  TRELLO_TOOLKIT,
+} from "./connectors/composio/trello.js"
+export {
+  makeComposioOneDriveDef,
+  oneDriveComposioSpecs,
+  ONE_DRIVE_TOOLKIT,
+} from "./connectors/composio/one-drive.js"
+export {
+  makeComposioPostHogDef,
+  posthogComposioSpecs,
+  POSTHOG_TOOLKIT,
+} from "./connectors/composio/posthog.js"
+export {
+  makeComposioAttioDef,
+  attioComposioSpecs,
+  ATTIO_TOOLKIT,
+} from "./connectors/composio/attio.js"
+export {
+  makeComposioZohoDef,
+  zohoComposioSpecs,
+  ZOHO_TOOLKIT,
+} from "./connectors/composio/zoho.js"
+export {
+  makeComposioDropboxDef,
+  dropboxComposioSpecs,
+  DROPBOX_TOOLKIT,
+} from "./connectors/composio/dropbox.js"
+export {
+  makeComposioMicrosoftTeamsDef,
+  microsoftTeamsComposioSpecs,
+  MICROSOFT_TEAMS_TOOLKIT,
+} from "./connectors/composio/microsoft-teams.js"
+export {
+  makeComposioGumroadDef,
+  gumroadComposioSpecs,
+  GUMROAD_TOOLKIT,
+} from "./connectors/composio/gumroad.js"
+export {
+  makeComposioMem0Def,
+  mem0ComposioSpecs,
+  MEM0_TOOLKIT,
+} from "./connectors/composio/mem0.js"
+export {
+  makeComposioDynamics365Def,
+  dynamics365ComposioSpecs,
+  DYNAMICS_365_TOOLKIT,
+} from "./connectors/composio/dynamics-365.js"
+export {
+  makeComposioSerpapiDef,
+  serpapiComposioSpecs,
+  SERPAPI_TOOLKIT,
+} from "./connectors/composio/serpapi.js"
+export {
+  makeComposioNeonDef,
+  neonComposioSpecs,
+  NEON_TOOLKIT,
+} from "./connectors/composio/neon.js"
+export {
+  makeComposioFirefliesDef,
+  firefliesComposioSpecs,
+  FIREFLIES_TOOLKIT,
+} from "./connectors/composio/fireflies.js"
+export {
+  makeComposioGooglePhotosDef,
+  googlePhotosComposioSpecs,
+  GOOGLE_PHOTOS_TOOLKIT,
+} from "./connectors/composio/google-photos.js"
+export {
+  makeComposioGoogleAdsDef,
+  googleAdsComposioSpecs,
+  GOOGLE_ADS_TOOLKIT,
+} from "./connectors/composio/google-ads.js"
+export {
+  makeComposioGoogleAnalyticsDef,
+  googleAnalyticsComposioSpecs,
+  GOOGLE_ANALYTICS_TOOLKIT,
+} from "./connectors/composio/google-analytics.js"
+export {
+  makeComposioGoogleSearchConsoleDef,
+  googleSearchConsoleComposioSpecs,
+  GOOGLE_SEARCH_CONSOLE_TOOLKIT,
+} from "./connectors/composio/google-search-console.js"
+export {
+  makeComposioGoogleCloudVisionDef,
+  googleCloudVisionComposioSpecs,
+  GOOGLE_CLOUD_VISION_TOOLKIT,
+} from "./connectors/composio/google-cloud-vision.js"
+export {
+  makeComposioKaggleDef,
+  kaggleComposioSpecs,
+  KAGGLE_TOOLKIT,
+} from "./connectors/composio/kaggle.js"
+export { context7Def, context7Tools } from "./connectors/context7-def.js"
+export {
+  makeComposioMiroDef,
+  miroComposioSpecs,
+  MIRO_TOOLKIT,
+} from "./connectors/composio/miro.js"
+export {
+  makeComposioExaDef,
+  exaComposioSpecs,
+  EXA_TOOLKIT,
+} from "./connectors/composio/exa.js"
+export {
+  makeComposioCloudflareDef,
+  cloudflareComposioSpecs,
+  CLOUDFLARE_TOOLKIT,
+} from "./connectors/composio/cloudflare.js"
+export {
+  makeComposioVercelDef,
+  vercelComposioSpecs,
+  VERCEL_TOOLKIT,
+} from "./connectors/composio/vercel.js"
+export {
+  makeComposioSupabaseDef,
+  supabaseComposioSpecs,
+  SUPABASE_TOOLKIT,
+} from "./connectors/composio/supabase.js"
+export {
+  makeComposioStripeDef,
+  stripeComposioSpecs,
+  STRIPE_TOOLKIT,
+} from "./connectors/composio/stripe.js"
+export {
+  makeComposioZohoInvoiceDef,
+  zohoInvoiceComposioSpecs,
+  ZOHO_INVOICE_TOOLKIT,
+} from "./connectors/composio/zoho-invoice.js"
 export type {
   Connector,
   ConnectorStatus,

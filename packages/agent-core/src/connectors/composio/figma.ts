@@ -28,14 +28,9 @@ export const figmaComposioSpecs: ComposioToolSpec[] = [
       .passthrough(),
   },
   {
-    slug: "FIGMA_GET_FILE_METADATA",
-    description:
-      "Get metadata for a Figma file including name, last modified, thumbnail URL, creator, and description. Read-only.",
-    parameters: z
-      .object({
-        file_key: z.string().describe("The Figma file key"),
-      })
-      .passthrough(),
+    slug: "FIGMA_GET_CURRENT_USER",
+    description: "Get details of the currently authenticated Figma user. Read-only.",
+    parameters: z.object({}).passthrough(),
   },
   {
     slug: "FIGMA_GET_FILE_COMPONENTS",

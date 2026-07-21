@@ -28,6 +28,7 @@ export function connectorError(err: unknown): { error: string; hint?: string } {
 export type ConnectorCategory =
   | "productivity"
   | "file-storage"
+  | "file-management"
   | "email"
   | "data-analytics"
   | "crm"
