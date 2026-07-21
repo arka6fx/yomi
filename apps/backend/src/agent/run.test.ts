@@ -68,6 +68,9 @@ mock.module("@yomi/agent-core", () => ({
   createRecallTool: () => ({}),
   ConnectorRegistry: class {
     async init() {}
+    getConnected() {
+      return []
+    }
   },
   runAgentLoop: async (opts: {
     system?: string
