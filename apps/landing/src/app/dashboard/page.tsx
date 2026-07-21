@@ -34,7 +34,14 @@ import { PrivacyManager } from "@/components/dashboard/PrivacyManager"
 import { SchedulesManager } from "@/components/dashboard/SchedulesManager"
 import { ConversationManager } from "@/components/dashboard/ConversationManager"
 import { StatusManager } from "@/components/dashboard/StatusManager"
-import { ConnectorMarketplace, NextStepCard, buildCatalog, DARK_THEME } from "@yomi/ui-connectors"
+import {
+  ConnectorMarketplace,
+  CustomMcpServers,
+  NextStepCard,
+  buildCatalog,
+  DARK_THEME,
+  type CustomMcpServerInfo,
+} from "@yomi/ui-connectors"
 
 type IntegrationHealth = {
   provider: string
@@ -206,6 +213,9 @@ function DashboardContent() {
   >("account")
   const [highlightConnectorId, setHighlightConnectorId] = useState<string | null>(null)
   const [connectedProviders, setConnectedProviders] = useState<string[]>([])
+  const [customServers, setCustomServers] = useState<CustomMcpServerInfo[]>([])
+  const [customMcpAdding, setCustomMcpAdding] = useState(false)
+  const [customMcpError, setCustomMcpError] = useState("")
   const [integrationHealth, setIntegrationHealth] = useState<IntegrationHealth[]>([])
   const [integrationLoadingId, setIntegrationLoadingId] = useState<string | null>(null)
   const [integrationConnectError, setIntegrationConnectError] = useState("")
@@ -338,6 +348,19 @@ function DashboardContent() {
         setIntegrationHealth(Array.isArray(d.integrations) ? d.integrations : [])
       })
       .catch(() => {}) // ignore — integrations tab is best-effort
+  }, [session])
+
+  useEffect(() => {
+    if (!session) return
+    const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ""
+    fetch(`${apiBase}/api/custom-mcp`, {
+      headers: { Authorization: `Bearer ${session.session.token}` },
+    })
+      .then((r) => (r.ok ? r.json() : { servers: [] }))
+      .then((d: { servers?: CustomMcpServerInfo[] }) => {
+        setCustomServers(Array.isArray(d.servers) ? d.servers : [])
+      })
+      .catch(() => {}) // ignore — best-effort, same as the integrations fetch above
   }, [session])
 
   useEffect(() => {
@@ -548,6 +571,44 @@ function DashboardContent() {
       /* best-effort */
     } finally {
       setIntegrationLoadingId(null)
+    }
+  }
+
+  async function handleAddCustomMcpServer(input: { name: string; url: string; apiKey: string }) {
+    if (!session) return
+    setCustomMcpError("")
+    setCustomMcpAdding(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ""
+      const res = await fetch(`${apiBase}/api/custom-mcp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.session.token}`,
+        },
+        body: JSON.stringify(input),
+      })
+      const data = (await res.json()) as { server?: CustomMcpServerInfo; error?: string }
+      if (!res.ok || !data.server) throw new Error(data.error ?? "Failed to add server")
+      setCustomServers((prev) => [...prev, data.server as CustomMcpServerInfo])
+    } catch (err) {
+      setCustomMcpError(err instanceof Error ? err.message : "Failed to add server")
+    } finally {
+      setCustomMcpAdding(false)
+    }
+  }
+
+  async function handleDeleteCustomMcpServer(id: string) {
+    if (!session) return
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ""
+      await fetch(`${apiBase}/api/custom-mcp/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session.session.token}` },
+      })
+      setCustomServers((prev) => prev.filter((s) => s.id !== id))
+    } catch {
+      /* best-effort */
     }
   }
 
@@ -766,6 +827,14 @@ function DashboardContent() {
               onDisconnect={handleDisconnectIntegration}
               loadingId={integrationLoadingId}
               highlightId={highlightConnectorId}
+            />
+            <CustomMcpServers
+              servers={customServers}
+              theme={DARK_THEME}
+              onAdd={handleAddCustomMcpServer}
+              onDelete={handleDeleteCustomMcpServer}
+              adding={customMcpAdding}
+              addError={customMcpError}
             />
           </motion.div>
         )}
