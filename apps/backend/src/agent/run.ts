@@ -5,7 +5,11 @@ import {
   ConnectorRegistry,
   createModel,
   createRecallTool,
+  createWebSearchTool,
+  formatIntegrationSuggestions,
   runAgentLoop,
+  searchWeb,
+  suggestIntegrationsFor,
   type AgentMessage,
   type UsageInfo,
 } from "@yomi/agent-core"
@@ -398,6 +402,7 @@ export function buildSystemWithContext(
   userSoul?: string | null,
   recentChat?: string,
   timeZone?: string | null,
+  integrationSuggestions?: string,
 ): string {
   // The box runs UTC. Without the user's zone this said "today is the 11th" to
   // someone whose phone said the 12th, so "tomorrow at 4pm" booked yesterday —
@@ -426,10 +431,14 @@ export function buildSystemWithContext(
     `Write the way a sharp, friendly person texts. Do not use em dashes or en dashes; use commas, periods, or parentheses instead.\n` +
     `${formatAgentSoul(soul)}\n\n` +
     `When the user asks about their email or connected apps, use the available tools to fetch real data before answering.\n` +
+    `Call web_search for anything current or time-sensitive that you can't be sure about from training data alone: news, prices, scores, recent releases, "who is/what happened" for recent events, or anything past your knowledge cutoff. Don't guess or hedge with "as of my last update" when a search would settle it. Cite sources inline as [Title](url) when you use them.\n` +
     `Swiggy cart state is server-side: at the start of every turn that may touch a food or Instamart cart, call get_food_cart or get_cart to refresh the cart before making changes.\n` +
     `Actions and approvals: when the user asks you to create, send, edit, schedule, or delete something in a connected app, call the tool right away. Do NOT ask them to confirm first and do NOT wait for a "yes" before calling it — every such action is automatically held for the user's approval. An approval card showing the FULL details (recipients, subject, body, times) is sent to the user for you, so do not restate those details and do not summarise them away. After a tool reports an action is pending, say nothing more than a brief acknowledgement, or nothing at all — the card already asked them to reply "yes" or "no".\n` +
     `If a tool reports a service is not connected, suggest they connect it at ${appUrl}/dashboard.\n` +
     `If a tool returns an authorization or token error, suggest they reconnect at ${appUrl}/dashboard.\n` +
+    (integrationSuggestions
+      ? `If the user's request needs an app you don't have a tool for, and it's named below, tell them by name and give them the link next to it to connect it — don't pretend you already did it. Don't repeat a nudge you already gave earlier in this conversation (check recent chat above).\n<available_integrations>\n${integrationSuggestions}\n</available_integrations>\n`
+      : "") +
     `\n` +
     (memoryContext || ragContext || profile?.staticProfile || profile?.dynamicProfile || recentChat
       ? `<memory>\n` +
@@ -576,6 +585,11 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   const recallTool = createRecallTool((query, limit) =>
     searchSessions(opts.userId, query, limit),
   )
+  const webSearchTool = createWebSearchTool((query) => searchWeb(query, opts.signal))
+  const integrationSuggestions = formatIntegrationSuggestions(
+    suggestIntegrationsFor(opts.text, registry.getConnected()),
+    appUrl,
+  )
 
   let text: string
   const startedAt = Date.now()
@@ -585,7 +599,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       registry,
       text: opts.text,
       history,
-      extraTools: { recall_past_conversations: recallTool },
+      extraTools: { recall_past_conversations: recallTool, web_search: webSearchTool },
       system: buildSystemWithContext(
         memoryContext,
         ragContext,
@@ -593,6 +607,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
         user.agentSoul,
         recentChat,
         userTimeZone,
+        integrationSuggestions,
       ),
       maxTokens: maxOutputTokensFor(opts.text),
       signal: opts.signal,
