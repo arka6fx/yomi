@@ -1,0 +1,45 @@
+name: Deploy Landing
+
+# apps/landing deploys as a Cloudflare Worker (yomi-landing). NEXT_PUBLIC_* are
+# baked in at build time, so they're set here rather than in wrangler.jsonc's
+# vars (which only apply at runtime). Values match SETUP_GUIDE.md's documented
+# manual deploy — public URLs, not secrets.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/landing/**"
+      - "packages/**"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/deploy-landing.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-landing
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_BACKEND_URL: https://api.getyomi.in
+      NEXT_PUBLIC_API_URL: https://api.getyomi.in
+      NEXT_PUBLIC_APP_URL: https://getyomi.in
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build, deploy, and smoke-test
+        working-directory: apps/landing
+        run: bun run deploy:production
