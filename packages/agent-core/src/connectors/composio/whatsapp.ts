@@ -5,176 +5,89 @@ import { createComposioTools, type ComposioExecutor, type ComposioToolSpec } fro
 export const WHATSAPP_TOOLKIT = "whatsapp"
 
 export const whatsappComposioSpecs: ComposioToolSpec[] = [
-  // ── Read actions ──────────────────────────────────────────────
-  {
-    slug: "WHATSAPP_GET_PHONE_NUMBERS",
-    description:
-      "List all phone numbers registered to your WhatsApp Business Account. Read-only.",
-    parameters: z.object({}).passthrough(),
-  },
-  {
-    slug: "WHATSAPP_GET_PHONE_NUMBER",
-    description:
-      "Get details about a specific WhatsApp Business phone number. Read-only.",
-    parameters: z
-      .object({
-        phone_number_id: z.string().describe("WhatsApp Business phone number ID"),
-      })
-      .passthrough(),
-  },
-  {
-    slug: "WHATSAPP_GET_BUSINESS_PROFILE",
-    description:
-      "Get business profile info for a WhatsApp Business phone number. Read-only.",
-    parameters: z
-      .object({
-        phone_number_id: z.string().describe("Phone number ID to get the business profile for"),
-      })
-      .passthrough(),
-  },
-  {
-    slug: "WHATSAPP_GET_MESSAGE_HISTORY",
-    description:
-      "Retrieve message history for a WhatsApp Business phone number. Read-only.",
-    parameters: z
-      .object({
-        phone_number_id: z.string().describe("WhatsApp Business phone number ID"),
-        limit: z.number().int().min(1).max(100).optional(),
-      })
-      .passthrough(),
-  },
-  {
-    slug: "WHATSAPP_GET_MESSAGE_TEMPLATES",
-    description:
-      "Get all message templates for the WhatsApp Business Account. Read-only.",
-    parameters: z.object({}).passthrough(),
-  },
-  {
-    slug: "WHATSAPP_GET_BUSINESS_ACCOUNT_DETAILS",
-    description:
-      "Get comprehensive details about a WhatsApp Business Account. Read-only.",
-    parameters: z.object({}).passthrough(),
-  },
-  {
-    slug: "WHATSAPP_GET_MEDIA_INFO",
-    description:
-      "Get metadata and download URL for uploaded WhatsApp media. Read-only.",
-    parameters: z
-      .object({
-        media_id: z.string().describe("WhatsApp media ID"),
-      })
-      .passthrough(),
-  },
-  {
-    slug: "WHATSAPP_GET_COMMERCE_SETTINGS",
-    description:
-      "Get commerce settings (cart/catalog visibility) for a phone number. Read-only.",
-    parameters: z
-      .object({
-        phone_number_id: z.string().describe("WhatsApp Business phone number ID"),
-      })
-      .passthrough(),
-  },
+  // ── Read ──────────────────────────────────────────────────────
+  { slug: "WHATSAPP_GET_PHONE_NUMBERS", description: "List phone numbers on the WhatsApp Business account. Read-only.", parameters: z.object({}).passthrough() },
+  { slug: "WHATSAPP_GET_PHONE_NUMBER", description: "Get details of a specific phone number. Read-only.", parameters: z.object({ phone_number_id: z.string().describe("Phone number ID") }).passthrough() },
+  { slug: "WHATSAPP_GET_BUSINESS_PROFILE", description: "Get the business profile for a phone number. Read-only.", parameters: z.object({ phone_number_id: z.string().describe("Phone number ID") }).passthrough() },
+  { slug: "WHATSAPP_GET_MESSAGE_TEMPLATES", description: "List message templates. Read-only.", parameters: z.object({ status: z.string().optional().describe("Filter by approval status") }).passthrough() },
+  { slug: "WHATSAPP_GET_TEMPLATE_STATUS", description: "Get the approval status of a message template. Read-only.", parameters: z.object({ template_id: z.string().describe("Template ID") }).passthrough() },
+  { slug: "WHATSAPP_GET_MEDIA", description: "Get uploaded media info including a temporary download URL. Read-only.", parameters: z.object({ media_id: z.string().describe("Media ID") }).passthrough() },
+  { slug: "WHATSAPP_GET_MEDIA_INFO", description: "Get metadata about uploaded media, without a download URL. Read-only.", parameters: z.object({ media_id: z.string().describe("Media ID") }).passthrough() },
 
-  // ── Write / Send actions (gated) ──────────────────────────────
+  // ── Write ────────────────────────────────────────────────────
   {
     slug: "WHATSAPP_SEND_MESSAGE",
-    description:
-      "Send a text message to a WhatsApp user. Requires user approval before it runs.",
-    parameters: z
-      .object({
-        recipient_phone_number: z.string().describe("Recipient phone number in international format (e.g. 15551234567)"),
-        message_text: z.string().describe("Message text content"),
-        phone_number_id: z.string().describe("Your WhatsApp Business phone number ID to send from"),
-      })
-      .passthrough(),
-    preview: (a) => ({
-      title: "Send WhatsApp message",
-      preview: `To: ${String(a["recipient_phone_number"] ?? "")}\n\n${String(a["message_text"] ?? "").slice(0, 500)}`,
-      confirmText: "Send message",
-    }),
+    description: "Send a text message to a WhatsApp number. Requires user approval before it runs.",
+    parameters: z.object({ phone_number_id: z.string().describe("Sending phone number ID"), to_number: z.string().describe("Recipient number"), text: z.string().describe("Message text") }).passthrough(),
+    preview: (a) => ({ title: "Send message", preview: String(a["text"] ?? "").slice(0, 100), confirmText: "Send" }),
+  },
+  {
+    slug: "WHATSAPP_SEND_REPLY",
+    description: "Reply to a specific message in a conversation. Requires user approval before it runs.",
+    parameters: z.object({ phone_number_id: z.string().describe("Sending phone number ID"), to_number: z.string().describe("Recipient number"), text: z.string().describe("Reply text"), reply_to_message_id: z.string().describe("Message ID being replied to") }).passthrough(),
+    preview: (a) => ({ title: "Send reply", preview: String(a["text"] ?? "").slice(0, 100), confirmText: "Reply" }),
+  },
+  {
+    slug: "WHATSAPP_SEND_MEDIA",
+    description: "Send a media message (image/video/document) via URL. Requires user approval before it runs.",
+    parameters: z.object({ phone_number_id: z.string().describe("Sending phone number ID"), to_number: z.string().describe("Recipient number"), media_type: z.string().describe("'image', 'video', 'document', or 'audio'"), link: z.string().describe("Media URL"), caption: z.string().optional().describe("Caption") }).passthrough(),
+    preview: (a) => ({ title: "Send media", preview: `Send ${String(a["media_type"] ?? "media")} to ${String(a["to_number"] ?? "")}`, confirmText: "Send" }),
+  },
+  {
+    slug: "WHATSAPP_SEND_MEDIA_BY_ID",
+    description: "Send previously uploaded media by its media ID. Requires user approval before it runs.",
+    parameters: z.object({ phone_number_id: z.string().describe("Sending phone number ID"), to_number: z.string().describe("Recipient number"), media_id: z.string().describe("Uploaded media ID"), media_type: z.string().describe("Media type") }).passthrough(),
+    preview: (a) => ({ title: "Send media", preview: `Send media ${String(a["media_id"] ?? "")}`, confirmText: "Send" }),
+  },
+  {
+    slug: "WHATSAPP_SEND_LOCATION",
+    description: "Send a location message. Requires user approval before it runs.",
+    parameters: z.object({ phone_number_id: z.string().describe("Sending phone number ID"), to_number: z.string().describe("Recipient number"), name: z.string().describe("Location name"), address: z.string().describe("Address"), latitude: z.string().describe("Latitude"), longitude: z.string().describe("Longitude") }).passthrough(),
+    preview: (a) => ({ title: "Send location", preview: `Send location "${String(a["name"] ?? "")}"`, confirmText: "Send" }),
+  },
+  {
+    slug: "WHATSAPP_SEND_CONTACTS",
+    description: "Send a contact card message. Requires user approval before it runs.",
+    parameters: z.object({ phone_number_id: z.string().describe("Sending phone number ID"), to_number: z.string().describe("Recipient number"), contacts: z.array(z.record(z.string(), z.unknown())).describe("Contact cards to send") }).passthrough(),
+    preview: (a) => ({ title: "Send contacts", preview: `Send contacts to ${String(a["to_number"] ?? "")}`, confirmText: "Send" }),
+  },
+  {
+    slug: "WHATSAPP_SEND_INTERACTIVE_BUTTONS",
+    description: "Send an interactive button message. Requires user approval before it runs.",
+    parameters: z.object({ phone_number_id: z.string().describe("Sending phone number ID"), to_number: z.string().describe("Recipient number"), body_text: z.string().describe("Message body"), buttons: z.array(z.record(z.string(), z.unknown())).describe("Button definitions") }).passthrough(),
+    preview: (a) => ({ title: "Send buttons", preview: String(a["body_text"] ?? "").slice(0, 100), confirmText: "Send" }),
+  },
+  {
+    slug: "WHATSAPP_SEND_INTERACTIVE_LIST",
+    description: "Send an interactive list message. Requires user approval before it runs.",
+    parameters: z.object({ phone_number_id: z.string().describe("Sending phone number ID"), to_number: z.string().describe("Recipient number"), body_text: z.string().describe("Message body"), button_text: z.string().describe("List button label"), sections: z.array(z.record(z.string(), z.unknown())).describe("List sections/items") }).passthrough(),
+    preview: (a) => ({ title: "Send list", preview: String(a["body_text"] ?? "").slice(0, 100), confirmText: "Send" }),
   },
   {
     slug: "WHATSAPP_SEND_TEMPLATE_MESSAGE",
-    description:
-      "Send a template message to a WhatsApp user (for messages outside 24hr window). Requires user approval before it runs.",
-    parameters: z
-      .object({
-        recipient_phone_number: z.string().describe("Recipient phone number"),
-        template_name: z.string().describe("Name of the approved message template"),
-        template_language: z.string().describe("Template language code (e.g. 'en_US')"),
-        phone_number_id: z.string().describe("Your WhatsApp Business phone number ID"),
-      })
-      .passthrough(),
-    preview: (a) => ({
-      title: "Send WhatsApp template message",
-      preview: `Send template "${String(a["template_name"] ?? "")}" to ${String(a["recipient_phone_number"] ?? "")}`,
-      confirmText: "Send template",
-    }),
-  },
-  {
-    slug: "WHATSAPP_MARK_MESSAGE_AS_READ",
-    description:
-      "Mark a WhatsApp message as read. Requires user approval before it runs.",
-    parameters: z
-      .object({
-        message_id: z.string().describe("The message ID to mark as read"),
-        phone_number_id: z.string().describe("Your WhatsApp Business phone number ID"),
-      })
-      .passthrough(),
-    preview: (a) => ({
-      title: "Mark WhatsApp message as read",
-      preview: `Mark message ${String(a["message_id"] ?? "")} as read`,
-      confirmText: "Mark as read",
-    }),
-  },
-  {
-    slug: "WHATSAPP_CREATE_QR_CODE",
-    description:
-      "Create a QR code with a prefilled message for a WhatsApp Business number. Requires user approval before it runs.",
-    parameters: z
-      .object({
-        phone_number_id: z.string().describe("Your WhatsApp Business phone number ID"),
-        prefilled_message: z.string().describe("Pre-filled message text that appears when scanned"),
-      })
-      .passthrough(),
-    preview: (a) => ({
-      title: "Create WhatsApp QR code",
-      preview: `QR code with message: ${String(a["prefilled_message"] ?? "").slice(0, 200)}`,
-      confirmText: "Create QR code",
-    }),
+    description: "Send a pre-approved template message. Requires user approval before it runs.",
+    parameters: z.object({ phone_number_id: z.string().describe("Sending phone number ID"), to_number: z.string().describe("Recipient number"), template_name: z.string().describe("Template name") }).passthrough(),
+    preview: (a) => ({ title: "Send template", preview: `Send template "${String(a["template_name"] ?? "")}"`, confirmText: "Send" }),
   },
   {
     slug: "WHATSAPP_UPLOAD_MEDIA",
-    description:
-      "Upload media to WhatsApp for use in messages. Requires user approval before it runs.",
-    parameters: z
-      .object({
-        file_url: z.string().describe("Public URL of the media file to upload"),
-        mime_type: z.string().describe("MIME type (e.g. 'image/jpeg', 'image/png', 'video/mp4', 'audio/ogg')"),
-        phone_number_id: z.string().describe("Your WhatsApp Business phone number ID"),
-      })
-      .passthrough(),
-    preview: (a) => ({
-      title: "Upload WhatsApp media",
-      preview: `Upload ${String(a["mime_type"] ?? "")} from ${String(a["file_url"] ?? "").slice(0, 200)}`,
-      confirmText: "Upload media",
-    }),
+    description: "Upload media to WhatsApp servers for later sending. Requires user approval before it runs.",
+    parameters: z.object({ phone_number_id: z.string().describe("Phone number ID"), media_type: z.string().describe("Media type") }).passthrough(),
+    preview: () => ({ title: "Upload media", preview: "Upload media to WhatsApp", confirmText: "Upload" }),
   },
   {
-    slug: "WHATSAPP_DELETE_MEDIA",
-    description:
-      "Delete a WhatsApp media file. Requires user approval before it runs.",
-    parameters: z
-      .object({
-        media_id: z.string().describe("WhatsApp media ID to delete"),
-      })
-      .passthrough(),
-    preview: (a) => ({
-      title: "Delete WhatsApp media",
-      preview: `Delete media ${String(a["media_id"] ?? "")} — this cannot be undone`,
-      confirmText: "Delete media",
-    }),
+    slug: "WHATSAPP_CREATE_MESSAGE_TEMPLATE",
+    description: "Create a new message template (requires Meta approval before use). Requires user approval before it runs.",
+    parameters: z.object({ name: z.string().describe("Template name"), category: z.string().describe("Template category"), language: z.string().describe("Language code") }).passthrough(),
+    preview: (a) => ({ title: "Create template", preview: `Create template "${String(a["name"] ?? "")}"`, confirmText: "Create" }),
+  },
+
+  // ── Irreversible ──────────────────────────────────────────────
+  {
+    slug: "WHATSAPP_DELETE_MESSAGE_TEMPLATE",
+    description: "Permanently delete a message template. This cannot be undone.",
+    parameters: z.object({ template_id: z.string().describe("Template ID") }).passthrough(),
+    preview: (a) => ({ title: "Delete template", preview: `Delete template ${String(a["template_id"] ?? "")} — this cannot be undone`, confirmText: "Delete" }),
   },
 ]
 
@@ -184,7 +97,7 @@ export function makeComposioWhatsAppDef(executor: ComposioExecutor): ConnectorDe
     name: "WhatsApp",
     category: "communication",
     icon: "whatsapp",
-    description: "Send messages, manage media, and view business account info via WhatsApp Business API (via Composio).",
+    description: "WhatsApp Business — send messages, media, templates, and interactive messages (via Composio).",
     readOnlyByDefault: true,
     auth: {
       kind: "composio",
@@ -194,8 +107,7 @@ export function makeComposioWhatsAppDef(executor: ComposioExecutor): ConnectorDe
     setup: {
       providerConsoleUrl: "https://app.composio.dev",
       steps: [
-        "Set up a WhatsApp Business Account (WABA) in Meta Developer Portal",
-        "Create a custom auth config in Composio with your Meta app credentials and WABA ID",
+        "Create a WhatsApp Business auth config in Composio",
         "Set COMPOSIO_API_KEY and COMPOSIO_WHATSAPP_AUTH_CONFIG_ID on the backend",
         "Set COMPOSIO_CONNECTORS=whatsapp to route WhatsApp through Composio",
       ],
@@ -203,7 +115,7 @@ export function makeComposioWhatsAppDef(executor: ComposioExecutor): ConnectorDe
         { env: "COMPOSIO_API_KEY", label: "Composio API key", secret: true },
         { env: "COMPOSIO_WHATSAPP_AUTH_CONFIG_ID", label: "Composio WhatsApp auth config id", secret: false },
       ],
-      docsUrl: "https://docs.composio.dev/toolkits/whatsapp",
+      docsUrl: "https://docs.composio.dev/tools/whatsapp",
     },
     tools: createComposioTools({
       provider: "whatsapp",

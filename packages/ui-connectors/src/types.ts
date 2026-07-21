@@ -1,6 +1,7 @@
 export type ConnectorCategory =
   | "productivity"
   | "file-storage"
+  | "file-management"
   | "email"
   | "data-analytics"
   | "crm"
@@ -9,6 +10,8 @@ export type ConnectorCategory =
   | "data"
   | "meetings"
   | "food"
+  | "finance"
+  | "customer-support"
   | "other"
 
 export interface ConnectorInfo {
