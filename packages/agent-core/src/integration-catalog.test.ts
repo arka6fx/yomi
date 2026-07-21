@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { suggestIntegrationsFor } from "./integration-catalog.js"
+import { formatIntegrationSuggestions, suggestIntegrationsFor } from "./integration-catalog.js"
 
 describe("suggestIntegrationsFor", () => {
   it("matches a single-word connector name named directly in the text", () => {
@@ -38,5 +38,33 @@ describe("suggestIntegrationsFor", () => {
       [],
     )
     expect(result.length).toBe(3)
+  })
+})
+
+describe("formatIntegrationSuggestions", () => {
+  it("returns an empty string for no suggestions", () => {
+    expect(formatIntegrationSuggestions([], "https://getyomi.in")).toBe("")
+  })
+
+  it("renders one suggestion with its deep link", () => {
+    const result = formatIntegrationSuggestions(
+      [{ id: "trello", name: "Trello", category: "productivity" }],
+      "https://getyomi.in",
+    )
+    expect(result).toBe("Trello (productivity): https://getyomi.in/dashboard?connect=trello")
+  })
+
+  it("renders multiple suggestions one per line", () => {
+    const result = formatIntegrationSuggestions(
+      [
+        { id: "trello", name: "Trello", category: "productivity" },
+        { id: "notion", name: "Notion", category: "knowledge" },
+      ],
+      "https://getyomi.in",
+    )
+    expect(result).toBe(
+      "Trello (productivity): https://getyomi.in/dashboard?connect=trello\n" +
+        "Notion (knowledge): https://getyomi.in/dashboard?connect=notion",
+    )
   })
 })
