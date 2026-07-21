@@ -204,6 +204,7 @@ function DashboardContent() {
   const [activeTab, setActiveTab] = useState<
     "account" | "integrations" | "memory" | "schedules" | "conversation" | "status" | "privacy"
   >("account")
+  const [highlightConnectorId, setHighlightConnectorId] = useState<string | null>(null)
   const [connectedProviders, setConnectedProviders] = useState<string[]>([])
   const [integrationHealth, setIntegrationHealth] = useState<IntegrationHealth[]>([])
   const [integrationLoadingId, setIntegrationLoadingId] = useState<string | null>(null)
@@ -295,14 +296,24 @@ function DashboardContent() {
 
     const success = params.has("integration_success")
     const error = params.get("integration_error")
+    const connect = params.get("connect")
     if (success || error) {
       setActiveTab("integrations")
       setIntegrationBanner(success ? { kind: "success" } : { kind: "error", message: error ?? "" })
-      // Strip the flag from the URL. The banner used to be rendered straight off
+    }
+    if (connect) {
+      setActiveTab("integrations")
+      setHighlightConnectorId(connect)
+    }
+    if (success || error || connect) {
+      // Strip one-shot flags from the URL. The banner used to be rendered straight off
       // window.location.search, so it reappeared on every reload — announcing a
       // successful connection long after the fact, and even when nothing was connected.
+      // Same reasoning applies to `connect`: it's a one-time entry point, not
+      // permanent state tied to the URL.
       params.delete("integration_success")
       params.delete("integration_error")
+      params.delete("connect")
       const qs = params.toString()
       window.history.replaceState({}, "", qs ? `?${qs}` : window.location.pathname)
     }
@@ -749,6 +760,7 @@ function DashboardContent() {
               onConnect={handleConnectIntegration}
               onDisconnect={handleDisconnectIntegration}
               loadingId={integrationLoadingId}
+              highlightId={highlightConnectorId}
             />
           </motion.div>
         )}
