@@ -524,6 +524,27 @@ export const mcpConnections = pgTable(
   }),
 )
 
+export const customMcpServers = pgTable(
+  "custom_mcp_servers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    name: text("name").notNull(),
+    url: text("url").notNull(),
+    // AES-256-GCM encrypted via encryptString/decryptString
+    // (apps/backend/src/services/token-encryption.ts) — same scheme
+    // already used for OAuth tokens. Null when the server needs no auth.
+    apiKeyEncrypted: text("api_key_encrypted"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    userUrlUnique: unique("custom_mcp_servers_user_url_unique").on(t.userId, t.url),
+  }),
+)
+
 export const platformConnections = pgTable(
   "platform_connections",
   {
