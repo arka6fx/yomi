@@ -155,8 +155,18 @@ export class ConnectorRegistry {
         const servers = await this.deps.listCustomMcpServers(this.userId)
         if (servers.length > 0) {
           const { createMCPToolProvider } = await import("./mcp-connector.js")
+          const { resolvesToDisallowedAddress } = await import("./ssrf-guard.js")
           for (const server of servers) {
             try {
+              // Re-check at connect time, not just at insert time (the backend's
+              // POST /api/custom-mcp route already does this too) — DNS for the
+              // same hostname can change between when a user adds a server and
+              // when the agent actually connects to it.
+              const hostname = new URL(server.url).hostname
+              if (await resolvesToDisallowedAddress(hostname)) {
+                console.error(`[registry] custom MCP server ${server.id} resolves to a disallowed address, skipping`)
+                continue
+              }
               const provider = createMCPToolProvider()
               const tools = await provider.loadTools({
                 userId: this.userId,
