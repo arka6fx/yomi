@@ -9,7 +9,7 @@ export const dynamic = "force-static"
 export default function SignUpPage() {
   return (
     <AuthLayout mode="signup">
-      <AuthCard defaultMode="signup" callbackURL="/dashboard?welcome=1" />
+      <AuthCard defaultMode="signup" callbackURL="/link" />
     </AuthLayout>
   )
 }
