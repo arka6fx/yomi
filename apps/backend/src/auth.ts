@@ -220,6 +220,7 @@ export type SessionUser = AuthInstance["$Infer"]["Session"]["user"] & {
   agentUsageCount: number
   dailyResetDate: string | null
   deletedAt: Date | null
+  agentSoul: string | null
 }
 
 // Hono middleware — validates Better Auth session (cookie or Bearer token)

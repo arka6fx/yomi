@@ -3,6 +3,7 @@ import { Hono } from "hono"
 
 type TestUser = {
   id: string
+  agentSoul?: string | null
 }
 
 let currentUser: TestUser
@@ -51,6 +52,14 @@ function updateName(name: string) {
   })
 }
 
+function updateProfile(body: Record<string, unknown>) {
+  return app().request("/api/user/profile", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })
+}
+
 describe("PATCH /api/user/profile", () => {
   beforeEach(() => {
     currentUser = { id: "user_1" }
@@ -78,5 +87,58 @@ describe("PATCH /api/user/profile", () => {
     expect(res.status).toBe(400)
     expect(body.code).toBe("invalid_name")
     expect(updateCalls).toBe(0)
+  })
+
+  it("updates agentSoul alone, without requiring name", async () => {
+    updateRows = [{ name: "Arka", email: "arka@example.com", agentSoul: "be terse" }]
+
+    const res = await updateProfile({ agentSoul: "be terse" })
+    const body = (await res.json()) as { agentSoul?: string }
+
+    expect(res.status).toBe(200)
+    expect(updatePayload).toEqual({ agentSoul: "be terse" })
+    expect(body.agentSoul).toBe("be terse")
+  })
+
+  it("updates name and agentSoul together", async () => {
+    updateRows = [{ name: "Arka", email: "arka@example.com", agentSoul: "be terse" }]
+
+    await updateProfile({ name: "Arka", agentSoul: "be terse" })
+
+    expect(updatePayload).toEqual({ name: "Arka", agentSoul: "be terse" })
+  })
+
+  it("rejects a request with neither name nor agentSoul", async () => {
+    const res = await updateProfile({})
+    const body = (await res.json()) as { code?: string }
+
+    expect(res.status).toBe(400)
+    expect(body.code).toBe("invalid_body")
+    expect(updateCalls).toBe(0)
+  })
+
+  it("rejects an agentSoul longer than 2000 characters", async () => {
+    const res = await updateProfile({ agentSoul: "a".repeat(2001) })
+    const body = (await res.json()) as { code?: string }
+
+    expect(res.status).toBe(400)
+    expect(body.code).toBe("invalid_agent_soul")
+    expect(updateCalls).toBe(0)
+  })
+})
+
+describe("GET /api/user/me", () => {
+  beforeEach(() => {
+    currentUser = { id: "user_1", agentSoul: "be terse" }
+  })
+
+  it("includes agentSoul in the response", async () => {
+    const res = await app().request("/api/user/me", {
+      headers: { Authorization: "Bearer test" },
+    })
+    const body = (await res.json()) as { agentSoul?: string | null }
+
+    expect(res.status).toBe(200)
+    expect(body.agentSoul).toBe("be terse")
   })
 })
