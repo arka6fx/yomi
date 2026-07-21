@@ -52,9 +52,9 @@ export interface ConnectorTheme {
 
 export const DARK_THEME: ConnectorTheme = {
   bg: "rgba(5, 8, 18, 0.4)",
-  surface: "rgba(10, 14, 28, 0.58)",
-  border: "rgba(255,255,255,0.07)",
-  borderHi: "rgba(255,255,255,0.14)",
+  surface: "rgba(14, 17, 30, 0.6)",
+  border: "rgba(255,255,255,0.09)",
+  borderHi: "rgba(255,255,255,0.16)",
   text: "#e8e8e8",
   dim: "#888",
   accent: "#2563eb",
@@ -72,9 +72,9 @@ export const DARK_THEME: ConnectorTheme = {
 
 export const LIGHT_THEME: ConnectorTheme = {
   bg: "#ffffff",
-  surface: "#f9f9f9",
-  border: "rgba(0,0,0,0.1)",
-  borderHi: "rgba(0,0,0,0.2)",
+  surface: "#f8f8f7",
+  border: "rgba(0,0,0,0.12)",
+  borderHi: "rgba(0,0,0,0.22)",
   text: "#111",
   dim: "#666",
   accent: "#2563eb",
