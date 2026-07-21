@@ -44,3 +44,13 @@ export function suggestIntegrationsFor(
 
   return matches
 }
+
+export function formatIntegrationSuggestions(
+  suggestions: IntegrationSuggestion[],
+  appUrl: string,
+): string {
+  if (suggestions.length === 0) return ""
+  return suggestions
+    .map((s) => `${s.name} (${s.category}): ${appUrl}/dashboard?connect=${s.id}`)
+    .join("\n")
+}

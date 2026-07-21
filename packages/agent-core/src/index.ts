@@ -348,6 +348,18 @@ export type {
 export { createConnectorTools } from "./tools.js"
 export { createRecallTool, type SessionRecallResult, type RecallSearchFn } from "./recall.js"
 export {
+  createWebSearchTool,
+  searchWeb,
+  type WebSearchFn,
+  type WebSearchResult,
+  type WebSearchCitation,
+} from "./web-search.js"
+export {
+  suggestIntegrationsFor,
+  formatIntegrationSuggestions,
+  type IntegrationSuggestion,
+} from "./integration-catalog.js"
+export {
   runAgentLoop,
   type AgentMessage,
   type UsageInfo,
