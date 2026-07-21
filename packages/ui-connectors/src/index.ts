@@ -1,5 +1,7 @@
 export { ConnectorMarketplace, ConnectorTile } from "./components/ConnectorMarketplace"
+export { NextStepCard, pickNextStep } from "./components/NextStepCard"
 export { ConnectorIcon } from "./icons"
 export { buildCatalog } from "./catalog"
 export type { ConnectorInfo, ConnectorTheme, ConnectorCategory } from "./types"
+export type { NextStepSuggestion } from "./components/NextStepCard"
 export { DARK_THEME, LIGHT_THEME } from "./types"
