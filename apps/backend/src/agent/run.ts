@@ -1,6 +1,6 @@
 import { eq, sql } from "drizzle-orm"
 import { generateText } from "ai"
-import { db, ragSources, usageEvents } from "@yomi/db"
+import { db, ragSources, usageEvents, customMcpServers } from "@yomi/db"
 import {
   ConnectorRegistry,
   createModel,
@@ -17,6 +17,7 @@ import { formatAgentSoul } from "@yomi/shared"
 import { compressContext, shouldCompress, estimateTokens } from "./compressor.js"
 import { searchSessions } from "../services/agent-sessions.js"
 import { getAccessToken, listConnectedProviders } from "../services/integration-tokens.js"
+import { decryptString } from "../services/token-encryption.js"
 import { buildComposioDefs } from "../connectors/composio-defs.js"
 import { createComposioRestExecutor, createCountingExecutor } from "../connectors/composio-executor.js"
 import { composioCostMicros } from "@yomi/shared/ai-pricing"
@@ -534,8 +535,21 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     listConnectedProviders: async (userId: string) => {
       return listConnectedProviders(userId)
     },
+    listCustomMcpServers: async (userId: string) => {
+      const rows = await db
+        .select()
+        .from(customMcpServers)
+        .where(eq(customMcpServers.userId, userId))
+      return rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        url: r.url,
+        apiKey: r.apiKeyEncrypted ? decryptString(r.apiKeyEncrypted) : null,
+      }))
+    },
   })
   await registry.init(opts.userId)
+  await registry.loadMCPTools()
 
   const appUrl = process.env["YOMI_APP_URL"] ?? "https://getyomi.in"
 
