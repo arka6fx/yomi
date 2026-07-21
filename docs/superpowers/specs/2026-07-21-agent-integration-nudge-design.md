@@ -7,12 +7,14 @@ Status: Approved (design); pending implementation plan
 
 When a user's Telegram message mentions an app or task that needs a
 connector Yomi supports but the user hasn't connected, the agent should
-name that connector and point the user to the dashboard to connect it —
-instead of silently failing, hallucinating that it did the task, or (the
-rejected alternative) always listing the full 60-connector catalog
-regardless of relevance. Suggestions are computed per-message from a
-lightweight word-match against the user's current text, so only what's
+name that connector and hand back a direct link to connect it on the
+dashboard — instead of silently failing, hallucinating that it did the
+task, or (the rejected alternative) always listing the full 60-connector
+catalog regardless of relevance. Suggestions are computed per-message from
+a lightweight word-match against the user's current text, so only what's
 actually relevant to the task at hand gets surfaced, never the whole list.
+The link is a deep link straight to that connector on the dashboard, not
+a generic dashboard URL the user has to search from.
 
 This is one of eight independent pieces of a larger request (Telegram
 nudge, dashboard redesign, sign-up flow, custom MCP connector UI, settings
@@ -35,10 +37,13 @@ everywhere checked.
 - **In scope:** a pure connector-suggestion function in `agent-core`, one
   new system-prompt instruction, wiring into the existing
   `buildSystemWithContext` call in `apps/backend/src/agent/run.ts`.
-- **Out of scope:** any dashboard/UI changes (deep-linking to a specific
-  connector's connect flow, "coming soon" badges, etc. — deferred to the
-  later UI-redesign spec), a `find_integrations` tool (rejected approach,
-  see below), matching against chat history beyond the current message
+- **In scope (added after review):** a minimal dashboard deep link so the
+  nudge's link lands directly on the specific connector, not a generic
+  dashboard URL the user has to search from.
+- **Out of scope:** everything else about the dashboard/UI ("coming soon"
+  badges, visual redesign, layout changes — deferred to the later
+  UI-redesign spec), a `find_integrations` tool (rejected approach, see
+  below), matching against chat history beyond the current message
   (explicitly declined by the user), any new database state for tracking
   "already nudged" (repetition control rides on existing chat history
   instead).
@@ -88,6 +93,7 @@ export function suggestIntegrationsFor(
 
 export function formatIntegrationSuggestions(
   suggestions: IntegrationSuggestion[],
+  appUrl: string,
 ): string
 ```
 
@@ -104,10 +110,15 @@ once (e.g. "connect this to Notion and Trello") legitimately returns more
 than one, but the cap keeps a pathological match from producing a
 grocery-list reply.
 
-`formatIntegrationSuggestions` renders the result as a short comma list
-with categories, e.g. `"Trello (productivity), HubSpot (crm)"`, or `""`
-when the input is empty — callers use the empty string to omit the block
-entirely, so a turn with no matches adds zero prompt weight.
+`formatIntegrationSuggestions` renders each suggestion with its deep link
+inline, one per line, e.g.
+`"Trello (productivity): https://getyomi.in/dashboard?connect=trello"`,
+using `${appUrl}/dashboard?connect=${id}` (`appUrl` is the same
+`YOMI_APP_URL`-derived value already used elsewhere in `run.ts`). Returns
+`""` when the input is empty — callers use the empty string to omit the
+block entirely, so a turn with no matches adds zero prompt weight. Giving
+the model a concrete URL per suggestion means it hands back a real link
+instead of composing one itself.
 
 Both functions are pure (no I/O), matching the existing `recall.ts` /
 `web-search.ts` pattern in this package: easy to unit test, no mocking
@@ -121,6 +132,7 @@ suggestion string, computed in `runAgent` right before the call:
 ```ts
 const suggestions = formatIntegrationSuggestions(
   suggestIntegrationsFor(opts.text, registry.getConnected()),
+  appUrl,
 )
 ```
 
@@ -130,7 +142,7 @@ match this turn, since the model needs the rule even when the block is
 absent from earlier context):
 
 > If the user's request needs an app you don't have a tool for, and it's
-> named below, tell them by name and point them to {appUrl}/dashboard to
+> named below, tell them by name and give them the link next to it to
 > connect it — don't pretend you already did it. Don't repeat a nudge you
 > already gave earlier in this conversation (check recent chat above).
 
@@ -140,7 +152,38 @@ prompt lines for connected-but-broken cases ("tool reports not connected"
 / "tool returns an authorization error") — those are unchanged and cover a
 different failure mode (a connector that's connected but mid-call fails).
 
-### 3. Repetition control
+### 3. Dashboard deep link (`apps/landing/src/app/dashboard/page.tsx`)
+
+`dashboard/page.tsx` already has a `useEffect` (around line 291) that
+reads `window.location.search` for other one-shot flags (`welcome`,
+`integration_success`/`integration_error`) and reacts by setting
+`activeTab` and clearing the param from the URL. This gets one more case:
+
+```ts
+const connect = params.get("connect")
+if (connect) {
+  setActiveTab("integrations")
+  setHighlightConnectorId(connect)
+  params.delete("connect")
+  const qs = params.toString()
+  window.history.replaceState({}, "", qs ? `?${qs}` : window.location.pathname)
+}
+```
+
+`highlightConnectorId` (new `useState<string | null>`) is passed down as
+a new `highlightId` prop through `ConnectorMarketplace` →
+`ConnectorTile` (`packages/ui-connectors/src/components/ConnectorMarketplace.tsx`).
+The matching tile gets an `id={`connector-${info.id}`}` attribute (for
+`scrollIntoView`) and a brief highlighted border/glow using existing
+`ConnectorTheme` tokens (no new design tokens). This is a params-in,
+props-down change to two existing components — not a layout or visual
+redesign, and `ConnectorInfo`/`buildCatalog` are unchanged.
+
+If `connect` names a connector id that doesn't exist in the catalog (stale
+link, typo), the tab still switches to "integrations" and nothing
+highlights — a silent no-op, not an error state.
+
+### 4. Repetition control
 
 No new database state. "Once per session" relies on the recent-chat
 history (`fetchRecentChat`, last 20 turns) already injected into the
@@ -150,7 +193,7 @@ conversation longer than 20 turns could re-nudge after the history window
 rolls past the first mention. Acceptable for a UX nicety; not worth new
 state to close.
 
-### 4. Testing
+### 5. Testing
 
 Unit tests for `suggestIntegrationsFor` and `formatIntegrationSuggestions`
 in `packages/agent-core/src/integration-catalog.test.ts`:
@@ -165,6 +208,15 @@ in `packages/agent-core/src/integration-catalog.test.ts`:
 - Caps results at `MAX_SUGGESTIONS` when a message names more than that
   many unconnected connectors.
 - Returns `[]` / `""` for a message that names nothing connector-related.
+- `formatIntegrationSuggestions` builds the correct `?connect=<id>` URL
+  per suggestion.
 
-No LLM-behavior test — consistent with how `buildSystemWithContext`
-itself isn't behavior-tested beyond what flows into it.
+For the dashboard piece: no unit test for the `useEffect` (matches the
+existing untested sibling cases in the same effect), verified instead by
+running the app and visiting `/dashboard?connect=<id>` directly (per this
+project's `run` skill) to confirm the tab switches and the tile
+highlights.
+
+No LLM-behavior test for the agent-core half — consistent with how
+`buildSystemWithContext` itself isn't behavior-tested beyond what flows
+into it.
