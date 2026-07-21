@@ -244,6 +244,14 @@ export function LandingPage() {
             <p className="font-serif text-5xl leading-[1.04] tracking-tight text-white drop-shadow-[0_2px_24px_rgba(8,31,66,0.55)] sm:text-6xl lg:text-7xl xl:text-[5.5rem]">
               Your AI companion for work and life
             </p>
+            {/* plain-language purpose statement, visible on load with no scroll or JS
+                animation required — reviewers and crawlers should not have to hunt for it */}
+            <p className="mt-5 max-w-2xl text-base leading-relaxed text-white/75 sm:text-lg">
+              Yomi is an AI assistant you message on Telegram with text, voice, or a photo. It
+              connects to Gmail, Google Calendar, Google Drive, GitHub, Slack, Notion, and Linear
+              so you can ask questions and get things done in plain language — Yomi asks for your
+              approval before it changes anything.
+            </p>
           </div>
 
           <div>
