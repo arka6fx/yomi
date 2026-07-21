@@ -225,6 +225,13 @@
       "when": 1785456000000,
       "tag": "0031_session_recall",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1785542400000,
+      "tag": "0032_custom_mcp_servers",
+      "breakpoints": true
     }
   ]
 }
