@@ -58,6 +58,7 @@ mock.module("@yomi/db", () => ({
   privacyPreferences: {},
   privacyAuditEvents: {},
   paymentRecords: {},
+  customMcpServers: {},
 }))
 
 const realAgentCore = await import("@yomi/agent-core")
@@ -71,6 +72,7 @@ mock.module("@yomi/agent-core", () => ({
     getConnected() {
       return []
     }
+    async loadMCPTools() {}
   },
   runAgentLoop: async (opts: {
     system?: string
