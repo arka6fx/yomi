@@ -79,7 +79,14 @@ change.
 
 A pure priority-pick function, colocated in the same file since it's a
 small, single-purpose component (unlike `integration-catalog.ts`, this
-doesn't need to be consumed from the backend — it's UI-only):
+doesn't need to be consumed from the backend — it's UI-only).
+
+`category` here is `ui-connectors`' own `ConnectorCategory` from `./types.js`
+— a narrower, separately-maintained 14-value type (no `"knowledge"` or
+`"engineering"`) than `agent-core`'s same-named type used by the nudge
+feature. Checked against `catalog.ts` (the source of truth for this
+package): `notion` and `linear` are both `"productivity"` here, not
+`"knowledge"`/`"engineering"` as they'd be categorized on the backend side.
 
 ```ts
 export interface NextStepSuggestion {
@@ -100,13 +107,13 @@ const NEXT_STEP_PRIORITY: NextStepSuggestion[] = [
     reason: "Let Yomi search, create, and edit your files, not just email." },
   { id: "slack", name: "Slack", category: "communication",
     reason: "Read and send Slack messages from Telegram." },
-  { id: "notion", name: "Notion", category: "knowledge",
+  { id: "notion", name: "Notion", category: "productivity",
     reason: "Search and update your Notion workspace." },
   { id: "github", name: "GitHub", category: "developer",
     reason: "Check PRs, issues, and repos without leaving the chat." },
   { id: "google-tasks", name: "Google Tasks", category: "productivity",
     reason: "Add and check off tasks by just asking." },
-  { id: "linear", name: "Linear", category: "developer",
+  { id: "linear", name: "Linear", category: "productivity",
     reason: "Track and update Linear issues from Telegram." },
 ]
 
