@@ -26,6 +26,13 @@ export interface ConnectorRegistryDeps {
   // it is also flagged via COMPOSIO_CONNECTORS; otherwise the native def in
   // ALL_CONNECTOR_DEFS is kept. This is the per-connector native↔composio switch.
   composioDefs?: Record<string, ConnectorDef>
+  // User-added MCP servers (name/URL/optional API key), injected by the host.
+  // Decryption of any stored API key happens in the host's implementation of
+  // this function — agent-core never touches the encryption key directly,
+  // same layering as getAccessToken already returning decrypted tokens.
+  listCustomMcpServers?: (
+    userId: string,
+  ) => Promise<{ id: string; name: string; url: string; apiKey: string | null }[]>
 }
 
 // Registry maps provider name → connector instance for the current user.
@@ -34,6 +41,7 @@ export class ConnectorRegistry {
   private connectors = new Map<string, Connector>()
   private defTools: ToolSet = {}
   private mcpTools: ToolSet = {}
+  private customMcpTools: ToolSet = {}
   private connectedDefIds: Set<string> = new Set()
   // Names of connected connectors skipped because they need a Node runtime the
   // current host lacks (Workers). Surfaced so the agent can tell the user the
@@ -80,6 +88,7 @@ export class ConnectorRegistry {
     this.connectors.clear()
     this.defTools = {}
     this.mcpTools = {}
+    this.customMcpTools = {}
     this.connectedDefIds.clear()
     this.desktopOnlyNames = []
     this.mcpConnectedIds = []
@@ -122,23 +131,50 @@ export class ConnectorRegistry {
   // Lazily connects MCP servers for all connected MCP-based defs and merges
   // their tools. Safe to call multiple times — MCP tools are loaded once.
   async loadMCPTools(): Promise<void> {
-    if (!this.userId || this.mcpConnectedIds.length === 0) return
-    if (Object.keys(this.mcpTools).length > 0) return
-
-    for (const baseDef of ALL_CONNECTOR_DEFS) {
-      if (!this.mcpConnectedIds.includes(baseDef.id)) continue
-      const def = baseDef
-      if (def.isMCPBased && def.connectMCP) {
-        try {
-          const tools = await def.connectMCP({
-            userId: this.userId,
-            getAccessToken: this.deps.getAccessToken,
-            createPendingAction: this.deps.createPendingAction,
-          })
-          Object.assign(this.mcpTools, tools)
-        } catch (err) {
-          console.error(`[registry] MCP connect failed for ${def.id}:`, err)
+    if (this.userId && this.mcpConnectedIds.length > 0 && Object.keys(this.mcpTools).length === 0) {
+      for (const baseDef of ALL_CONNECTOR_DEFS) {
+        if (!this.mcpConnectedIds.includes(baseDef.id)) continue
+        const def = baseDef
+        if (def.isMCPBased && def.connectMCP) {
+          try {
+            const tools = await def.connectMCP({
+              userId: this.userId,
+              getAccessToken: this.deps.getAccessToken,
+              createPendingAction: this.deps.createPendingAction,
+            })
+            Object.assign(this.mcpTools, tools)
+          } catch (err) {
+            console.error(`[registry] MCP connect failed for ${def.id}:`, err)
+          }
         }
+      }
+    }
+
+    if (this.userId && this.deps.listCustomMcpServers && Object.keys(this.customMcpTools).length === 0) {
+      try {
+        const servers = await this.deps.listCustomMcpServers(this.userId)
+        if (servers.length > 0) {
+          const { createMCPToolProvider } = await import("./mcp-connector.js")
+          for (const server of servers) {
+            try {
+              const provider = createMCPToolProvider()
+              const tools = await provider.loadTools({
+                userId: this.userId,
+                servers: [{ id: server.id, url: server.url }],
+                authProvider: {
+                  async getHeaders(): Promise<Record<string, string>> {
+                    return server.apiKey ? { Authorization: `Bearer ${server.apiKey}` } : {}
+                  },
+                },
+              })
+              Object.assign(this.customMcpTools, tools)
+            } catch (err) {
+              console.error(`[registry] custom MCP server load failed for ${server.id}:`, err)
+            }
+          }
+        }
+      } catch (err) {
+        console.error(`[registry] listCustomMcpServers failed:`, err)
       }
     }
   }
@@ -147,7 +183,7 @@ export class ConnectorRegistry {
   // This is the primary path for the agent loop. Includes both native and
   // already-loaded MCP tools.
   getAllDefTools(): ToolSet {
-    return { ...this.defTools, ...this.mcpTools }
+    return { ...this.defTools, ...this.mcpTools, ...this.customMcpTools }
   }
 
   // Names of connected connectors that were skipped on this host because they
