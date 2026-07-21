@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { ConnectorIcon } from "../icons"
 import { DARK_THEME } from "../types"
 import type { ConnectorInfo, ConnectorTheme } from "../types"
@@ -81,6 +81,7 @@ interface ConnectorTileProps {
   onDisconnect: (id: string) => void
   loading?: boolean
   limitReached?: boolean
+  highlighted?: boolean
 }
 
 export function ConnectorTile({
@@ -90,8 +91,16 @@ export function ConnectorTile({
   onDisconnect,
   loading,
   limitReached,
+  highlighted,
 }: ConnectorTileProps) {
   const [confirmDisconnect, setConfirmDisconnect] = useState(false)
+  const tileRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (highlighted && tileRef.current) {
+      tileRef.current.scrollIntoView({ behavior: "smooth", block: "center" })
+    }
+  }, [highlighted])
 
   function handleDisconnectClick() {
     if (!confirmDisconnect) {
@@ -104,15 +113,17 @@ export function ConnectorTile({
 
   return (
     <div
+      ref={tileRef}
+      id={`connector-${info.id}`}
       onMouseEnter={(e) => {
         if (info.available) e.currentTarget.style.borderColor = t.borderHi
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = t.border
+        e.currentTarget.style.borderColor = highlighted ? t.accent : t.border
       }}
       style={{
         background: t.surface,
-        border: `1px solid ${t.border}`,
+        border: `1px solid ${highlighted ? t.accent : t.border}`,
         borderRadius: 14,
         padding: 18,
         display: "flex",
@@ -122,8 +133,8 @@ export function ConnectorTile({
         boxSizing: "border-box" as const,
         backdropFilter: t.backdropFilter,
         WebkitBackdropFilter: t.backdropFilter,
-        boxShadow: t.cardShadow,
-        transition: "border-color 0.15s ease",
+        boxShadow: highlighted ? `0 0 0 3px ${t.accent}40, ${t.cardShadow}` : t.cardShadow,
+        transition: "border-color 0.15s ease, box-shadow 0.15s ease",
       }}
     >
       {/* Icon + name row */}
@@ -310,6 +321,7 @@ interface ConnectorMarketplaceProps {
   onDisconnect: (id: string) => void
   loadingId?: string | null
   limitReached?: boolean
+  highlightId?: string | null
 }
 
 export function ConnectorMarketplace({
@@ -319,6 +331,7 @@ export function ConnectorMarketplace({
   onDisconnect,
   loadingId,
   limitReached,
+  highlightId,
 }: ConnectorMarketplaceProps) {
   const categories = Array.from(new Set(connectors.map((c) => c.category)))
 
@@ -381,6 +394,7 @@ export function ConnectorMarketplace({
                   onDisconnect={onDisconnect}
                   loading={loadingId === info.id}
                   limitReached={limitReached && !info.connected}
+                  highlighted={highlightId === info.id}
                 />
               ))}
             </div>
