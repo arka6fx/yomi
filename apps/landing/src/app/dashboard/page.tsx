@@ -34,6 +34,7 @@ import { PrivacyManager } from "@/components/dashboard/PrivacyManager"
 import { SchedulesManager } from "@/components/dashboard/SchedulesManager"
 import { ConversationManager } from "@/components/dashboard/ConversationManager"
 import { StatusManager } from "@/components/dashboard/StatusManager"
+import { SettingsMenu, type DashboardTab } from "@/components/dashboard/SettingsMenu"
 import {
   ConnectorMarketplace,
   CustomMcpServers,
@@ -208,9 +209,7 @@ function DashboardContent() {
   const [desiredPlan, setDesiredPlan] = useState<string | null>(null)
   const [cancelling, setCancelling] = useState(false)
 
-  const [activeTab, setActiveTab] = useState<
-    "account" | "integrations" | "memory" | "schedules" | "conversation" | "status" | "privacy"
-  >("account")
+  const [activeTab, setActiveTab] = useState<DashboardTab>("integrations")
   const [highlightConnectorId, setHighlightConnectorId] = useState<string | null>(null)
   const [connectedProviders, setConnectedProviders] = useState<string[]>([])
   const [customServers, setCustomServers] = useState<CustomMcpServerInfo[]>([])
@@ -675,6 +674,7 @@ function DashboardContent() {
                 Owner
               </span>
             )}
+            <SettingsMenu onNavigate={setActiveTab} />
             <button
               onClick={handleSignOut}
               className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -703,15 +703,7 @@ function DashboardContent() {
         <div className="-mx-4 sm:mx-0 overflow-x-auto no-scrollbar border-b border-border">
           <div className="flex gap-1 px-4 sm:px-0 min-w-max">
             {(
-              [
-                "account",
-                "integrations",
-                "memory",
-                "schedules",
-                "conversation",
-                "status",
-                "privacy",
-              ] as const
+              ["integrations", "memory", "schedules", "conversation", "status"] as const
             ).map((tab) => (
               <button
                 key={tab}
@@ -728,7 +720,6 @@ function DashboardContent() {
                 {tab === "schedules" && <Clock size={13} />}
                 {tab === "conversation" && <MessageSquare size={13} />}
                 {tab === "status" && <Activity size={13} />}
-                {tab === "privacy" && <Shield size={13} />}
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
                 {tab === "integrations" && connectedProviders.length > 0 && (
                   <span className="ml-1 bg-primary/20 text-primary text-xs px-1.5 py-0.5 rounded-full leading-none">
@@ -894,10 +885,19 @@ function DashboardContent() {
           </motion.div>
         )}
 
-        {/* Account tab content — only shown when account tab active */}
+        {/* Profile tab content */}
         {
-          activeTab === "account" && (
+          activeTab === "profile" && (
             <>
+              <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {session.user.name || "—"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{session.user.email}</p>
+                </div>
+              </div>
+
               {/* Welcome banner — shown once after signup */}
               {showWelcome && (
                 <motion.div
@@ -925,35 +925,6 @@ function DashboardContent() {
                   >
                     ×
                   </button>
-                </motion.div>
-              )}
-
-              {/* Billing warnings */}
-              {sub?.billingWarning && (
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4 flex items-start gap-3"
-                >
-                  <AlertTriangle size={16} className="text-yellow-400 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm text-yellow-300 font-medium">Payment past due</p>
-                    <p className="text-xs text-yellow-400/80">{sub.billingWarning}</p>
-                  </div>
-                </motion.div>
-              )}
-
-              {subLoadError && (
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 flex items-start gap-3"
-                >
-                  <AlertTriangle size={16} className="text-destructive mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm text-destructive font-medium">Usage data unavailable</p>
-                    <p className="text-xs text-destructive/80">{subLoadError}</p>
-                  </div>
                 </motion.div>
               )}
 
@@ -1102,6 +1073,42 @@ function DashboardContent() {
                   </div>
                 </div>
               </motion.div>
+            </>
+          )
+        }
+
+        {/* Billing tab content */}
+        {
+          activeTab === "billing" && (
+            <>
+              {/* Billing warnings */}
+              {sub?.billingWarning && (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4 flex items-start gap-3"
+                >
+                  <AlertTriangle size={16} className="text-yellow-400 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm text-yellow-300 font-medium">Payment past due</p>
+                    <p className="text-xs text-yellow-400/80">{sub.billingWarning}</p>
+                  </div>
+                </motion.div>
+              )}
+
+              {subLoadError && (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 flex items-start gap-3"
+                >
+                  <AlertTriangle size={16} className="text-destructive mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm text-destructive font-medium">Usage data unavailable</p>
+                    <p className="text-xs text-destructive/80">{subLoadError}</p>
+                  </div>
+                </motion.div>
+              )}
 
               {/* Plan card */}
               <motion.div
@@ -1576,7 +1583,7 @@ function DashboardContent() {
               )}
 
             </>
-          ) /* end account tab */
+          ) /* end billing tab */
         }
       </main>
 
