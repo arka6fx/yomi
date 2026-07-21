@@ -33,6 +33,15 @@ function LinkPageContent() {
       .catch(() => {})
   }, [session])
 
+  useEffect(() => {
+    if (!session || connected) return
+    void fetchDeepLink()
+      .then(setDeepLink)
+      .catch(() => {
+        // best-effort — handleConnect's fallback path re-fetches on click
+      })
+  }, [session, connected])
+
   async function checkTelegramLinked() {
     const res = await fetch("/api/gateway/connections", {
       headers: { Authorization: `Bearer ${session!.session.token}` },
@@ -55,28 +64,47 @@ function LinkPageContent() {
     setWaitingForTelegram(false)
   }
 
+  async function fetchDeepLink(): Promise<string> {
+    const res = await fetch(`/api/gateway/telegram/token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session!.session.token}`,
+      },
+    })
+    const data = (await res.json()) as { deepLink?: string; error?: string }
+    if (!res.ok || !data.deepLink) throw new Error(data.error ?? "Failed to connect")
+    return data.deepLink
+  }
+
   async function handleConnect() {
     setConnecting(true)
     setError("")
-    setDeepLink("")
+
+    // Fast path: the mount-time effect already has a live token. A plain
+    // window.open with a real URL, called synchronously inside this click
+    // handler, is popup-blocker-safe — no about:blank trick needed.
+    if (deepLink) {
+      window.open(deepLink, "_blank")
+      setWaitingForTelegram(true)
+      setConnecting(false)
+      void waitForTelegramLink()
+      return
+    }
+
+    // Fallback: mount-time fetch hasn't resolved yet (or failed). Keep the
+    // about:blank-then-redirect trick here, since this path awaits a fetch
+    // before it has anywhere to send the popup.
     const telegramWindow = window.open("about:blank", "_blank")
     if (telegramWindow) telegramWindow.opener = null
     try {
-      const res = await fetch(`/api/gateway/telegram/token`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session!.session.token}`,
-        },
-      })
-      const data = (await res.json()) as { deepLink?: string; error?: string }
-      if (!res.ok || !data.deepLink) throw new Error(data.error ?? "Failed to connect")
-      setDeepLink(data.deepLink)
+      const link = await fetchDeepLink()
+      setDeepLink(link)
       setWaitingForTelegram(true)
       if (telegramWindow) {
-        telegramWindow.location.href = data.deepLink
+        telegramWindow.location.href = link
       } else {
-        window.location.href = data.deepLink
+        window.location.href = link
       }
       void waitForTelegramLink()
     } catch (err) {
