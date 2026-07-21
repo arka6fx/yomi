@@ -21,16 +21,17 @@
     "test": "bun test --pass-with-no-tests"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
+    "@yomi/ui-connectors": "workspace:*",
+    "better-auth": "^1.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.16.0",
     "next": "^16.2.6",
+    "qrcode.react": "^4.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "@yomi/ui-connectors": "workspace:*",
-    "@neondatabase/serverless": "^0.10.4",
-    "better-auth": "^1.2.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0"
   },

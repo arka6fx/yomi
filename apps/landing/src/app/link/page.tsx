@@ -6,6 +6,7 @@ import Link from "next/link"
 import { motion } from "framer-motion"
 import { ArrowRight, Check, Loader2, MessageCircle } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
+import { QRCodeSVG } from "qrcode.react"
 
 type PlatformLink = { platform: string }
 
@@ -300,6 +301,17 @@ function LinkPageContent() {
                 Use this button instead of searching for the bot manually. It includes a private
                 one-time link token.
               </p>
+
+              {deepLink && (
+                <div className="flex flex-col items-center gap-2 pt-2">
+                  {/* White background regardless of app theme — QR scanners need light
+                      modules on a light background to read reliably, not a stylistic choice. */}
+                  <div className="rounded-xl border border-border bg-white p-3">
+                    <QRCodeSVG value={deepLink} size={120} />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Or scan with your phone</p>
+                </div>
+              )}
             </>
           )}
         </motion.div>
