@@ -11,16 +11,7 @@ import { effectivePlanForUser, effectiveRoleForUser, isOwnerUser } from "./entit
 import { grantCredits } from "./services/credit-ledger.js"
 import { recordConsentDecision } from "./services/privacy/consent.js"
 import { getPlan } from "@yomi/shared/plans"
-
-// Functional purposes granted at signup so the product works out of the box.
-// Kept to low-risk, service-necessary consents — the sensitive ones (analytics,
-// ai_improvement, cloud_memory, rag, voice, screen) stay opt-in per DPDP.
-const SIGNUP_DEFAULT_CONSENTS = [
-  "conversation_history",
-  "memory",
-  "connector_data",
-  "telegram_processing",
-] as const
+import { SIGNUP_DEFAULT_CONSENT_PURPOSES } from "@yomi/shared/privacy"
 
 const REGULAR_INTERACTION_LIMIT = 100
 type AuthInstance = ReturnType<typeof createAuth>
@@ -146,7 +137,7 @@ function createAuth() {
             // silent pre-tick) that the user can revoke from the dashboard.
             await recordConsentDecision({
               userId: createdUser.id,
-              purposes: [...SIGNUP_DEFAULT_CONSENTS],
+              purposes: [...SIGNUP_DEFAULT_CONSENT_PURPOSES],
               status: "granted",
               context: { appVersion: null, ipAddress: null, userAgent: null, metadata: { source: "signup_default" } },
             }).catch((err) => console.error("[signup] consent seed failed:", createdUser.id, err))

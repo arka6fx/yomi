@@ -232,6 +232,13 @@
       "when": 1785542400000,
       "tag": "0032_custom_mcp_servers",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1785628800000,
+      "tag": "0033_drop_dead_privacy_columns",
+      "breakpoints": true
     }
   ]
 }
