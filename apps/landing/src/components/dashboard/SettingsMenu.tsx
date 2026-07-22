@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Settings, Plug, Brain, User, PenLine, Code2, WalletCards, Shield, BookOpen } from "lucide-react"
 
 export type DashboardTab =
+  | "home"
   | "integrations"
   | "memory"
   | "schedules"

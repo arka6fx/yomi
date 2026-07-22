@@ -24,6 +24,7 @@ import {
   Brain,
   Clock,
   Activity,
+  Home,
 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
@@ -35,6 +36,7 @@ import { SchedulesManager } from "@/components/dashboard/SchedulesManager"
 import { ConversationManager } from "@/components/dashboard/ConversationManager"
 import { StatusManager } from "@/components/dashboard/StatusManager"
 import { SettingsMenu, type DashboardTab } from "@/components/dashboard/SettingsMenu"
+import { DashboardHome } from "@/components/dashboard/DashboardHome"
 import {
   ConnectorMarketplace,
   CustomMcpServers,
@@ -209,7 +211,7 @@ function DashboardContent() {
   const [desiredPlan, setDesiredPlan] = useState<string | null>(null)
   const [cancelling, setCancelling] = useState(false)
 
-  const [activeTab, setActiveTab] = useState<DashboardTab>("integrations")
+  const [activeTab, setActiveTab] = useState<DashboardTab>("home")
   const [highlightConnectorId, setHighlightConnectorId] = useState<string | null>(null)
   const [connectedProviders, setConnectedProviders] = useState<string[]>([])
   const [customServers, setCustomServers] = useState<CustomMcpServerInfo[]>([])
@@ -742,7 +744,7 @@ function DashboardContent() {
         <div className="-mx-4 sm:mx-0 overflow-x-auto no-scrollbar border-b border-border">
           <div className="flex gap-1 px-4 sm:px-0 min-w-max">
             {(
-              ["integrations", "memory", "schedules", "conversation", "status"] as const
+              ["home", "integrations", "memory", "schedules", "conversation", "status"] as const
             ).map((tab) => (
               <button
                 key={tab}
@@ -754,6 +756,7 @@ function DashboardContent() {
                     : "border-transparent text-muted-foreground hover:text-foreground",
                 )}
               >
+                {tab === "home" && <Home size={13} />}
                 {tab === "integrations" && <Plug size={13} />}
                 {tab === "memory" && <Brain size={13} />}
                 {tab === "schedules" && <Clock size={13} />}
@@ -771,6 +774,20 @@ function DashboardContent() {
         </div>
 
         {/* Integrations tab */}
+        {activeTab === "home" && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <DashboardHome
+              token={session.session.token}
+              recentActivity={recentActivity}
+              onNavigate={setActiveTab}
+            />
+          </motion.div>
+        )}
+
         {activeTab === "integrations" && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
