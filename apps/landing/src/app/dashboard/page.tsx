@@ -862,7 +862,6 @@ function DashboardContent() {
                 connectedProviders,
                 Object.fromEntries(integrationHealth.map((i) => [i.provider, i.displayName])),
               )}
-              theme={DARK_THEME}
               onConnect={handleConnectIntegration}
               onDisconnect={handleDisconnectIntegration}
               loadingId={integrationLoadingId}
