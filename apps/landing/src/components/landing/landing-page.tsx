@@ -242,7 +242,7 @@ export function LandingPage() {
           {/* big centered tagline — the heart of the hero */}
           <div className="animate-hero-rise-delayed mx-auto flex max-w-5xl flex-col items-center px-2 text-center">
             <p className="font-serif text-5xl leading-[1.04] tracking-tight text-white drop-shadow-[0_2px_24px_rgba(8,31,66,0.55)] sm:text-6xl lg:text-7xl xl:text-[5.5rem]">
-              Your AI companion for work and life
+              Your <span className="text-sky-200">AI companion</span> for work and life
             </p>
             {/* plain-language purpose statement, visible on load with no scroll or JS
                 animation required — reviewers and crawlers should not have to hunt for it */}
@@ -308,7 +308,7 @@ export function LandingPage() {
                   </button>
                   <Link
                     href="/signup"
-                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/15"
+                    className="col-span-2 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/15"
                   >
                     <ConnectorIcon id="telegram" size={17} />
                     Text Yomi
