@@ -215,6 +215,9 @@ function DashboardContent() {
   const [customServers, setCustomServers] = useState<CustomMcpServerInfo[]>([])
   const [customMcpAdding, setCustomMcpAdding] = useState(false)
   const [customMcpError, setCustomMcpError] = useState("")
+  const [agentSoulDraft, setAgentSoulDraft] = useState("")
+  const [agentSoulSaving, setAgentSoulSaving] = useState(false)
+  const [agentSoulError, setAgentSoulError] = useState("")
   const [integrationHealth, setIntegrationHealth] = useState<IntegrationHealth[]>([])
   const [integrationLoadingId, setIntegrationLoadingId] = useState<string | null>(null)
   const [integrationConnectError, setIntegrationConnectError] = useState("")
@@ -360,6 +363,19 @@ function DashboardContent() {
         setCustomServers(Array.isArray(d.servers) ? d.servers : [])
       })
       .catch(() => {}) // ignore — best-effort, same as the integrations fetch above
+  }, [session])
+
+  useEffect(() => {
+    if (!session) return
+    const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ""
+    fetch(`${apiBase}/api/user/me`, {
+      headers: { Authorization: `Bearer ${session.session.token}` },
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { agentSoul?: string | null } | null) => {
+        if (d?.agentSoul) setAgentSoulDraft(d.agentSoul)
+      })
+      .catch(() => {}) // ignore — best-effort, same as the fetch above
   }, [session])
 
   useEffect(() => {
@@ -608,6 +624,29 @@ function DashboardContent() {
       setCustomServers((prev) => prev.filter((s) => s.id !== id))
     } catch {
       /* best-effort */
+    }
+  }
+
+  async function handleSaveAgentSoul() {
+    if (!session) return
+    setAgentSoulError("")
+    setAgentSoulSaving(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ""
+      const res = await fetch(`${apiBase}/api/user/profile`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.session.token}`,
+        },
+        body: JSON.stringify({ agentSoul: agentSoulDraft }),
+      })
+      const data = (await res.json()) as { error?: string }
+      if (!res.ok) throw new Error(data.error ?? "Failed to save")
+    } catch (err) {
+      setAgentSoulError(err instanceof Error ? err.message : "Failed to save")
+    } finally {
+      setAgentSoulSaving(false)
     }
   }
 
@@ -882,6 +921,41 @@ function DashboardContent() {
             transition={{ duration: 0.3 }}
           >
             <PrivacyManager token={session.session.token} />
+          </motion.div>
+        )}
+
+        {/* Writing style tab */}
+        {activeTab === "writing-style" && session && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
+                Writing style
+              </p>
+              <p className="text-sm text-muted-foreground mb-4">
+                Teach Yomi how to talk to you — e.g. &quot;always be terse, no emoji.&quot;
+              </p>
+              <textarea
+                value={agentSoulDraft}
+                onChange={(e) => setAgentSoulDraft(e.target.value)}
+                placeholder="e.g. always be terse, no emoji"
+                rows={4}
+                className="w-full rounded-lg border border-border bg-background p-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              {agentSoulError && (
+                <p className="text-xs text-destructive mt-2">{agentSoulError}</p>
+              )}
+              <button
+                onClick={handleSaveAgentSoul}
+                disabled={agentSoulSaving}
+                className="mt-3 flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-4 py-2 text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {agentSoulSaving ? "Saving..." : "Save"}
+              </button>
+            </div>
           </motion.div>
         )}
 
