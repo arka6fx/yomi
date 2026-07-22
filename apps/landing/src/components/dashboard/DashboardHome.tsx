@@ -6,15 +6,26 @@ import {
   Activity,
   AlertTriangle,
   Brain,
+  Check,
   Clock,
+  Crown,
   ExternalLink,
   Loader2,
   MessageSquare,
   Plug,
+  Plus,
 } from "lucide-react"
 import { buildCatalog, ConnectorIcon } from "@yomi/ui-connectors"
 import { cn } from "@/lib/utils"
+import { PLANS } from "@/lib/plans"
 import type { DashboardTab } from "./SettingsMenu"
+
+export type CreditPack = {
+  key: string
+  name: string
+  priceCents: number
+  priceDisplay: string
+}
 
 type ConversationTurn = { role: "user" | "assistant" | "system"; content: string }
 
@@ -204,6 +215,16 @@ export function DashboardHome({
   plan,
   connectedProviders,
   unhealthyCount,
+  currentPlanKey,
+  isOwner,
+  creditPacks,
+  billingLoading,
+  creditLoading,
+  billingError,
+  formatPlanPrice,
+  formatPackPrice,
+  onUpgrade,
+  onBuyCredits,
   onNavigate,
 }: {
   token: string
@@ -211,6 +232,16 @@ export function DashboardHome({
   plan: PlanSummary
   connectedProviders: string[]
   unhealthyCount: number
+  currentPlanKey: string
+  isOwner: boolean
+  creditPacks: CreditPack[]
+  billingLoading: string | null
+  creditLoading: string | null
+  billingError: string
+  formatPlanPrice: (usd: number) => string
+  formatPackPrice: (pack: CreditPack) => string
+  onUpgrade: (planKey: string) => void
+  onBuyCredits: (packKey: string) => void
   onNavigate: (tab: DashboardTab) => void
 }) {
   const [history, setHistory] = useState<ConversationTurn[]>([])
@@ -282,6 +313,95 @@ export function DashboardHome({
   return (
     <div className="space-y-6">
       <PlanBanner plan={plan} onClick={() => onNavigate("billing")} />
+
+      {!isOwner && (
+        <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10">
+                <Crown size={16} className="text-primary" />
+              </div>
+              <h2 className="text-sm font-medium text-foreground">Plans &amp; credits</h2>
+            </div>
+            <button
+              onClick={() => onNavigate("billing")}
+              className="text-xs font-medium text-primary hover:underline"
+            >
+              View all
+            </button>
+          </div>
+
+          {billingError && <p className="mb-3 text-xs text-destructive">{billingError}</p>}
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            {PLANS.map((p, i) => {
+              const isCurrent = p.key === currentPlanKey
+              const isUpgrade = i > PLANS.findIndex((x) => x.key === currentPlanKey)
+              const Icon = p.icon
+              return (
+                <div
+                  key={p.key}
+                  className={cn(
+                    "flex flex-col gap-2 rounded-xl border p-3.5",
+                    isCurrent ? "border-primary bg-primary/5" : "border-border bg-background/40",
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Icon size={13} className="text-primary" />
+                      <span className="text-xs font-medium text-foreground">{p.name}</span>
+                    </div>
+                    {isCurrent && <Check size={12} className="text-primary" />}
+                  </div>
+                  <span className="text-base font-light text-foreground">
+                    {formatPlanPrice(p.priceUsd)}
+                    <span className="text-[10px] text-muted-foreground">{p.priceSub}</span>
+                  </span>
+                  {isCurrent ? (
+                    <span className="text-[11px] font-medium text-primary">Current plan</span>
+                  ) : isUpgrade ? (
+                    <button
+                      onClick={() => onUpgrade(p.key)}
+                      disabled={billingLoading !== null}
+                      className="mt-0.5 flex items-center justify-center gap-1.5 rounded-lg bg-primary py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                    >
+                      {billingLoading === p.key ? (
+                        <Loader2 size={11} className="animate-spin" />
+                      ) : (
+                        <Crown size={11} />
+                      )}
+                      Upgrade
+                    </button>
+                  ) : (
+                    <span className="text-[11px] text-muted-foreground">Lower tier</span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {currentPlanKey !== "explore" && creditPacks.length > 0 && (
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {creditPacks.map((pack) => (
+                <button
+                  key={pack.key}
+                  onClick={() => onBuyCredits(pack.key)}
+                  disabled={creditLoading !== null}
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-left transition-colors hover:border-primary/60 disabled:opacity-50"
+                >
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                    <Plus size={12} className="text-primary" />
+                    {pack.name}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {creditLoading === pack.key ? "Starting..." : formatPackPrice(pack)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <StatCard
