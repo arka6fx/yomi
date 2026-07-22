@@ -41,7 +41,6 @@ import {
   CustomMcpServers,
   NextStepCard,
   buildCatalog,
-  DARK_THEME,
   type CustomMcpServerInfo,
 } from "@yomi/ui-connectors"
 
@@ -865,7 +864,6 @@ function DashboardContent() {
             />
             <CustomMcpServers
               servers={customServers}
-              theme={DARK_THEME}
               onAdd={handleAddCustomMcpServer}
               onDelete={handleDeleteCustomMcpServer}
               adding={customMcpAdding}
