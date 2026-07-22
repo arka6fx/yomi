@@ -223,6 +223,16 @@ function userContent(message: Exclude<LanguageModelV1Message, { role: "system" }
   return parts.length === 1 && parts[0]?.type === "text" ? parts[0].text : parts
 }
 
+// Tool output is untrusted — without this, content containing the literal text
+// "</tool_result>" (an attacker-crafted email/message/doc) forges a fake closing
+// tag and anything the attacker writes after it reads to the model as if it were
+// outside the untrusted-data zone, defeating the wrapping below. Only the two
+// sentinel substrings are neutralized so ordinary content (code, HTML, other
+// angle brackets) passes through unchanged.
+function escapeToolResultTag(body: string): string {
+  return body.replace(/<(\/?tool_result)>/gi, "&lt;$1&gt;")
+}
+
 function chatMessages(options: LanguageModelV1CallOptions): ChatMessage[] {
   const messages: ChatMessage[] = []
 
@@ -233,13 +243,19 @@ function chatMessages(options: LanguageModelV1CallOptions): ChatMessage[] {
     }
 
     if (message.role === "tool") {
-      // Each tool-result part becomes a separate "tool" role message (OpenAI format)
+      // Each tool-result part becomes a separate "tool" role message (OpenAI format).
+      // Wrapped in <tool_result> so the system prompt's untrusted-data rule has
+      // something to point at — this is the one chokepoint every connector's
+      // output passes through, so it's the cheapest place to mark content that
+      // came from an external service (an email body, a Slack message, a Drive
+      // doc) as data, not instructions, ahead of indirect prompt injection.
       for (const part of message.content) {
         if (part.type === "tool-result") {
+          const body = typeof part.result === "string" ? part.result : JSON.stringify(part.result)
           messages.push({
             role: "tool",
             tool_call_id: part.toolCallId,
-            content: typeof part.result === "string" ? part.result : JSON.stringify(part.result),
+            content: `<tool_result>\n${escapeToolResultTag(body)}\n</tool_result>`,
           })
         }
       }
