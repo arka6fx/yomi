@@ -1,7 +1,6 @@
 "use client"
 
-import { useState } from "react"
-import type { ConnectorTheme } from "../types"
+import { useState, type FormEvent } from "react"
 
 export interface CustomMcpServerInfo {
   id: string
@@ -9,16 +8,35 @@ export interface CustomMcpServerInfo {
   url: string
 }
 
+function PlugIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="text-primary"
+    >
+      <path d="M12 22v-5" />
+      <path d="M9 8V2" />
+      <path d="M15 8V2" />
+      <path d="M18 8v3a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z" />
+    </svg>
+  )
+}
+
 export function CustomMcpServers({
   servers,
-  theme: t,
   onAdd,
   onDelete,
   adding,
   addError,
 }: {
   servers: CustomMcpServerInfo[]
-  theme: ConnectorTheme
   onAdd: (input: { name: string; url: string; apiKey: string }) => void
   onDelete: (id: string) => void
   adding?: boolean
@@ -28,7 +46,7 @@ export function CustomMcpServers({
   const [url, setUrl] = useState("")
   const [apiKey, setApiKey] = useState("")
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!name.trim() || !url.trim()) return
     onAdd({ name: name.trim(), url: url.trim(), apiKey: apiKey.trim() })
@@ -37,78 +55,32 @@ export function CustomMcpServers({
     setApiKey("")
   }
 
-  const inputStyle = {
-    width: "100%",
-    background: t.btnBg,
-    border: `1px solid ${t.border}`,
-    borderRadius: 6,
-    padding: "8px 10px",
-    fontSize: 12,
-    color: t.text,
-    fontFamily: t.font,
-    boxSizing: "border-box" as const,
-  }
+  const inputClass =
+    "w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-mono text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
 
   return (
-    <div style={{ marginTop: 24 }}>
-      <div
-        style={{
-          fontSize: 11,
-          letterSpacing: "0.14em",
-          fontWeight: 700,
-          color: t.dim,
-          textTransform: "uppercase" as const,
-          fontFamily: t.font,
-          marginBottom: 12,
-        }}
-      >
-        Custom MCP Servers
+    <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+      <div className="mb-4 flex items-center gap-2.5">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10">
+          <PlugIcon size={16} />
+        </div>
+        <h2 className="text-sm font-medium text-foreground">Custom MCP servers</h2>
       </div>
 
       {servers.length > 0 && (
-        <div style={{ marginBottom: 14 }}>
+        <div className="mb-4 flex flex-col gap-2">
           {servers.map((s) => (
             <div
               key={s.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                padding: "10px 8px",
-                borderBottom: `1px solid ${t.border}`,
-              }}
+              className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background/50 px-3 py-2"
             >
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: t.text, fontFamily: t.font }}>
-                  {s.name}
-                </div>
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: t.dim,
-                    fontFamily: t.font,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap" as const,
-                  }}
-                >
-                  {s.url}
-                </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-foreground">{s.name}</p>
+                <p className="truncate text-xs text-muted-foreground">{s.url}</p>
               </div>
               <button
                 onClick={() => onDelete(s.id)}
-                style={{
-                  fontFamily: t.font,
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: t.dim,
-                  background: "transparent",
-                  border: `1px solid ${t.border}`,
-                  borderRadius: 6,
-                  padding: "4px 10px",
-                  cursor: "pointer",
-                  flexShrink: 0,
-                }}
+                className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-destructive/60 hover:text-destructive"
               >
                 Remove
               </button>
@@ -117,54 +89,48 @@ export function CustomMcpServers({
         </div>
       )}
 
-      <form
-        onSubmit={handleSubmit}
-        style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}
-      >
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Integration name"
-          style={inputStyle}
-        />
-        <input
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://mcp.example.com/mcp"
-          style={inputStyle}
-        />
-        <input
-          value={apiKey}
-          onChange={(e) => setApiKey(e.target.value)}
-          placeholder="API key (optional)"
-          type="password"
-          style={inputStyle}
-        />
-        <p style={{ fontSize: 10, color: t.dim, fontFamily: t.font, margin: 0 }}>
-          Leave the API key empty if the server doesn't require auth.
-        </p>
-        {addError && (
-          <p style={{ fontSize: 11, color: t.error, fontFamily: t.font, margin: 0 }}>
-            {addError}
-          </p>
-        )}
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        <div>
+          <label className="mb-1.5 block text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            Integration name
+          </label>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="My internal tools"
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            Server URL
+          </label>
+          <input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://mcp.example.com/mcp"
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            API key <span className="normal-case text-muted-foreground/70">(optional)</span>
+          </label>
+          <input
+            type="password"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder="Leave empty if the server doesn't require auth"
+            className={inputClass}
+          />
+        </div>
+        {addError && <p className="text-xs text-destructive">{addError}</p>}
         <button
           type="submit"
           disabled={adding}
-          style={{
-            alignSelf: "flex-start",
-            fontFamily: t.font,
-            fontSize: 11,
-            fontWeight: 600,
-            color: t.btnText,
-            background: t.btnBg,
-            border: `1px solid ${t.border}`,
-            borderRadius: 6,
-            padding: "6px 14px",
-            cursor: "pointer",
-          }}
+          className="self-start rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
         >
-          {adding ? "Adding..." : "Connect"}
+          {adding ? "Connecting..." : "Connect"}
         </button>
       </form>
     </div>

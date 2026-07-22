@@ -41,7 +41,6 @@ import {
   CustomMcpServers,
   NextStepCard,
   buildCatalog,
-  DARK_THEME,
   type CustomMcpServerInfo,
 } from "@yomi/ui-connectors"
 
@@ -852,17 +851,12 @@ function DashboardContent() {
                 </div>
               </div>
             )}
-            <NextStepCard
-              connectedIds={connectedProviders}
-              theme={DARK_THEME}
-              appUrl={window.location.origin}
-            />
+            <NextStepCard connectedIds={connectedProviders} appUrl={window.location.origin} />
             <ConnectorMarketplace
               connectors={buildCatalog(
                 connectedProviders,
                 Object.fromEntries(integrationHealth.map((i) => [i.provider, i.displayName])),
               )}
-              theme={DARK_THEME}
               onConnect={handleConnectIntegration}
               onDisconnect={handleDisconnectIntegration}
               loadingId={integrationLoadingId}
@@ -870,7 +864,6 @@ function DashboardContent() {
             />
             <CustomMcpServers
               servers={customServers}
-              theme={DARK_THEME}
               onAdd={handleAddCustomMcpServer}
               onDelete={handleDeleteCustomMcpServer}
               adding={customMcpAdding}
