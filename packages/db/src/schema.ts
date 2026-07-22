@@ -528,7 +528,12 @@ export const customMcpServers = pgTable(
   "custom_mcp_servers",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id")
+    // text, not uuid — Better Auth's real "user" table uses text ids
+    // (confirmed against the live DB: information_schema reports "text").
+    // mcp_connections' pre-existing userId column is uuid and is a stale
+    // inconsistency elsewhere in this schema, not the pattern to copy;
+    // schedules.userId (also text) is the correct one to match.
+    userId: text("user_id")
       .notNull()
       .references(() => users.id),
     name: text("name").notNull(),
