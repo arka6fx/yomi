@@ -4,6 +4,8 @@ import {
   Brain,
   Check,
   CircleDot,
+  Crown,
+  Cuboid,
   Globe,
   Image as ImageIcon,
   Keyboard,
@@ -410,12 +412,14 @@ export default function DocsPage() {
                 price: "Free",
                 credits: "25 credits",
                 note: "30-day trial to try everything.",
+                icon: Sparkles,
               },
               {
                 name: "Pro",
                 price: "$14.99/mo",
                 credits: "2,500 credits",
                 note: "Higher limits + credit packs.",
+                icon: Crown,
                 featured: true,
               },
               {
@@ -423,18 +427,22 @@ export default function DocsPage() {
                 price: "$39.99/mo",
                 credits: "10,000 credits",
                 note: "Highest limits for heavy use.",
+                icon: Cuboid,
               },
             ].map((p) => (
               <div
                 key={p.name}
                 className={
                   p.featured
-                    ? "rounded-2xl border border-primary/40 bg-primary/5 p-5"
+                    ? "rounded-2xl border border-primary/40 bg-primary/5 p-5 shadow-lg shadow-primary/10"
                     : "rounded-2xl border border-border bg-card/60 p-5"
                 }
               >
-                <div className="flex items-baseline justify-between">
-                  <span className="text-sm font-semibold text-foreground">{p.name}</span>
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <p.icon size={15} className="text-primary" />
+                    {p.name}
+                  </span>
                   <span className="text-sm text-muted-foreground">{p.price}</span>
                 </div>
                 <p className="mt-2 font-serif text-xl text-foreground">{p.credits}</p>
@@ -469,19 +477,38 @@ export default function DocsPage() {
           </ul>
         </Section>
 
-        <div className="mt-12 flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card/60 p-6">
-          <Send size={18} className="text-primary" />
-          <p className="text-sm text-muted-foreground">
-            Ready to try it?{" "}
-            <Link href="/signup" className="font-medium text-primary hover:underline">
-              Create your account
-            </Link>{" "}
-            or{" "}
-            <Link href="/dashboard" className="font-medium text-primary hover:underline">
-              open the dashboard
-            </Link>
-            .
-          </p>
+        <div className="relative mt-12 overflow-hidden rounded-2xl border border-primary/20 bg-card/60 p-6 sm:p-8">
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(60% 140% at 15% 0%, hsl(var(--primary) / 0.14), transparent 60%)",
+            }}
+          />
+          <div className="relative flex flex-wrap items-center justify-between gap-6">
+            <div className="flex items-center gap-3.5">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Send size={18} />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Ready to try it? Create your account or open the dashboard to get started.
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-3">
+              <Link
+                href="/dashboard"
+                className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
+              >
+                Open the dashboard
+              </Link>
+              <Link
+                href="/signup"
+                className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                Create your account
+              </Link>
+            </div>
+          </div>
         </div>
       </DocsShell>
 
