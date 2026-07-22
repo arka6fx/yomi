@@ -529,7 +529,7 @@ const CATALOG_DEFS: Array<{
     name: "Context7",
     description: "Up-to-date library documentation for AI coding assistants; query APIs, code examples, and version-specific docs.",
     category: "developer",
-    authKind: "composio",
+    authKind: "api_key",
     icon: "context7",
     available: true,
   },
