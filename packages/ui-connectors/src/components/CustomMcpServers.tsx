@@ -56,44 +56,60 @@ export function CustomMcpServers({
   }
 
   const inputClass =
-    "w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-mono text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+    "w-full rounded-xl border border-border bg-background px-4 py-3 text-sm font-mono text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+
+  const fieldLabelClass = "mb-2 block text-xs font-medium uppercase tracking-widest text-muted-foreground"
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-      <div className="mb-4 flex items-center gap-2.5">
+    <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
+      <div className="mb-6 flex items-start gap-3 border-b border-border/60 pb-6">
         <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10">
           <PlugIcon size={16} />
         </div>
-        <h2 className="text-sm font-medium text-foreground">Custom MCP servers</h2>
+        <div>
+          <h2 className="text-sm font-medium text-foreground">Custom MCP servers</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Point Yomi at any MCP-compatible server you run or trust.
+          </p>
+        </div>
       </div>
 
       {servers.length > 0 && (
-        <div className="mb-4 flex flex-col gap-2">
-          {servers.map((s) => (
-            <div
-              key={s.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background/50 px-3 py-2"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-foreground">{s.name}</p>
-                <p className="truncate text-xs text-muted-foreground">{s.url}</p>
-              </div>
-              <button
-                onClick={() => onDelete(s.id)}
-                className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-destructive/60 hover:text-destructive"
+        <div className="mb-8">
+          <span className="mb-3 block text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Connected
+          </span>
+          <div className="flex flex-col gap-2.5">
+            {servers.map((s) => (
+              <div
+                key={s.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background/50 px-4 py-3"
               >
-                Remove
-              </button>
-            </div>
-          ))}
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">{s.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">{s.url}</p>
+                </div>
+                <button
+                  onClick={() => onDelete(s.id)}
+                  className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-destructive/60 hover:text-destructive"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      {servers.length > 0 && (
+        <span className="mb-4 block text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          Add a server
+        </span>
+      )}
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         <div>
-          <label className="mb-1.5 block text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            Integration name
-          </label>
+          <label className={fieldLabelClass}>Integration name</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -102,9 +118,7 @@ export function CustomMcpServers({
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            Server URL
-          </label>
+          <label className={fieldLabelClass}>Server URL</label>
           <input
             value={url}
             onChange={(e) => setUrl(e.target.value)}
@@ -113,7 +127,7 @@ export function CustomMcpServers({
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-medium uppercase tracking-widest text-muted-foreground">
+          <label className={fieldLabelClass}>
             API key <span className="normal-case text-muted-foreground/70">(optional)</span>
           </label>
           <input
@@ -128,7 +142,7 @@ export function CustomMcpServers({
         <button
           type="submit"
           disabled={adding}
-          className="self-start rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+          className="mt-1 self-start rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
         >
           {adding ? "Connecting..." : "Connect"}
         </button>

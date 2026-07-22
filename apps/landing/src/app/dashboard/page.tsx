@@ -851,24 +851,26 @@ function DashboardContent() {
                 </div>
               </div>
             )}
-            <NextStepCard connectedIds={connectedProviders} appUrl={window.location.origin} />
-            <ConnectorMarketplace
-              connectors={buildCatalog(
-                connectedProviders,
-                Object.fromEntries(integrationHealth.map((i) => [i.provider, i.displayName])),
-              )}
-              onConnect={handleConnectIntegration}
-              onDisconnect={handleDisconnectIntegration}
-              loadingId={integrationLoadingId}
-              highlightId={highlightConnectorId}
-            />
-            <CustomMcpServers
-              servers={customServers}
-              onAdd={handleAddCustomMcpServer}
-              onDelete={handleDeleteCustomMcpServer}
-              adding={customMcpAdding}
-              addError={customMcpError}
-            />
+            <div className="flex flex-col gap-8 sm:gap-10">
+              <NextStepCard connectedIds={connectedProviders} appUrl={window.location.origin} />
+              <ConnectorMarketplace
+                connectors={buildCatalog(
+                  connectedProviders,
+                  Object.fromEntries(integrationHealth.map((i) => [i.provider, i.displayName])),
+                )}
+                onConnect={handleConnectIntegration}
+                onDisconnect={handleDisconnectIntegration}
+                loadingId={integrationLoadingId}
+                highlightId={highlightConnectorId}
+              />
+              <CustomMcpServers
+                servers={customServers}
+                onAdd={handleAddCustomMcpServer}
+                onDelete={handleDeleteCustomMcpServer}
+                adding={customMcpAdding}
+                addError={customMcpError}
+              />
+            </div>
           </motion.div>
         )}
 

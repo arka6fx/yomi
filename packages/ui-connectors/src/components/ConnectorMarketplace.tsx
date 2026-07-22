@@ -158,12 +158,45 @@ export function ConnectorMarketplace({
   limitReached,
   highlightId,
 }: ConnectorMarketplaceProps) {
-  const categories = Array.from(new Set(connectors.map((c) => c.category)))
+  const [query, setQuery] = useState("")
+
+  const trimmed = query.trim().toLowerCase()
+  const filtered = trimmed
+    ? connectors.filter(
+        (c) => c.name.toLowerCase().includes(trimmed) || c.description.toLowerCase().includes(trimmed),
+      )
+    : connectors
+
+  const categories = Array.from(new Set(filtered.map((c) => c.category)))
 
   return (
     <div className="flex flex-col gap-8">
+      <div className="relative">
+        <svg
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search connectors..."
+          aria-label="Search connectors"
+          className="w-full rounded-xl border border-border bg-card py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/60 focus:outline-none"
+        />
+      </div>
+
+      {filtered.length === 0 && (
+        <p className="text-sm text-muted-foreground">No connectors match "{query.trim()}".</p>
+      )}
+
       {categories.map((category) => {
-        const group = connectors.filter((c) => c.category === category)
+        const group = filtered.filter((c) => c.category === category)
         const label = CATEGORY_LABELS[category] ?? category
         const connectedCount = group.filter((c) => c.connected).length
 
