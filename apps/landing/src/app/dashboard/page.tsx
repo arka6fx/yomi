@@ -10,8 +10,6 @@ import {
   Crown,
   Loader2,
   Shield,
-  Sparkles,
-  Cuboid,
   Trash2,
   AlertTriangle,
   WalletCards,
@@ -29,6 +27,7 @@ import {
 import { authClient } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
 import { useLocalPrice } from "@/lib/local-price"
+import { PLANS } from "@/lib/plans"
 import { TelegramIcon } from "@/components/TelegramIcon"
 import { MemoryManager } from "@/components/dashboard/MemoryManager"
 import { PrivacyManager } from "@/components/dashboard/PrivacyManager"
@@ -133,57 +132,6 @@ function creditsCaption(
   }
   return `${included.toLocaleString()} included monthly credits.`
 }
-
-const PLANS = [
-  {
-    key: "explore",
-    name: "Explore",
-    priceUsd: 0,
-    priceSub: "/ month",
-    badge: "30-day trial",
-    desc: "Try Yomi on Telegram with text, voice, and memory for 30 days. No card needed.",
-    icon: Sparkles,
-    features: [
-      "25 credits (30-day trial)",
-      "Text, voice & photo on Telegram",
-      "Durable memory",
-      "Unlimited app connectors",
-      "Web dashboard",
-    ],
-  },
-  {
-    key: "pro",
-    name: "Pro",
-    priceUsd: 14.99,
-    priceSub: "/ month",
-    badge: "Most Popular",
-    desc: "Text, voice, photos, and memory for everyday work.",
-    icon: Crown,
-    features: [
-      "2,500 credits / month",
-      "Buy extra credit packs anytime",
-      "Text, voice, photos & memory",
-      "Unlimited app connectors",
-      "Web dashboard",
-    ],
-  },
-  {
-    key: "max",
-    name: "Max",
-    priceUsd: 39.99,
-    priceSub: "/ month",
-    badge: "Power users",
-    desc: "High-volume credits for power users.",
-    icon: Cuboid,
-    features: [
-      "Everything in Pro",
-      "10,000 credits / month",
-      "Buy extra credit packs anytime",
-      "Unlimited app connectors",
-      "Experimental features first",
-    ],
-  },
-]
 
 type PlatformLink = { platform: string; connectedAt: string }
 
@@ -814,6 +762,20 @@ function DashboardContent() {
               plan={planSummary}
               connectedProviders={connectedProviders}
               unhealthyCount={integrationHealth.filter((item) => !item.healthy).length}
+              currentPlanKey={currentPlanKey}
+              isOwner={isOwner}
+              creditPacks={sub?.creditPacks ?? []}
+              billingLoading={billingLoading}
+              creditLoading={creditLoading}
+              billingError={billingError}
+              formatPlanPrice={localPrice.format}
+              formatPackPrice={(pack) =>
+                localPrice.localized
+                  ? `${localPrice.format(pack.priceCents / 100)} (${pack.priceDisplay})`
+                  : pack.priceDisplay
+              }
+              onUpgrade={handleUpgrade}
+              onBuyCredits={handleBuyCredits}
               onNavigate={setActiveTab}
             />
           </motion.div>
