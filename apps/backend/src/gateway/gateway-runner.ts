@@ -557,7 +557,13 @@ export class GatewayRunner {
     text: string,
     yomiUserId: string,
   ): Promise<boolean> {
-    if (msg.platform !== "telegram" || !this.wantsVoiceReply(msg.text)) return false
+    // Mirror the input modality by default (a voice note in gets a voice note
+    // back) as well as honoring an explicit text request ("reply in voice") on
+    // an otherwise-typed message — msg.audioUrl survives the transcription
+    // step's `{ ...msg, text: transcript }` overwrite, so it still reflects
+    // whether this turn started as a voice note.
+    const wantsVoice = Boolean(msg.audioUrl) || this.wantsVoiceReply(msg.text)
+    if (msg.platform !== "telegram" || !wantsVoice) return false
     const adapter = this.adapters.get("telegram")
     if (!(adapter instanceof TelegramAdapter)) return false
     const spokenText = text
