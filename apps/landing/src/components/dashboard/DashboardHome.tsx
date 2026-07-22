@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react"
 import type { ReactNode } from "react"
-import { Activity, Brain, Clock, ExternalLink, Loader2, MessageSquare } from "lucide-react"
+import { Activity, AlertTriangle, Brain, Clock, ExternalLink, Loader2, MessageSquare } from "lucide-react"
+import { cn } from "@/lib/utils"
 import type { DashboardTab } from "./SettingsMenu"
 
 type ConversationTurn = { role: "user" | "assistant" | "system"; content: string }
@@ -39,6 +40,27 @@ export type ActivityItem = {
   createdAt: string
 }
 
+export type PlanSummary = {
+  loading: boolean
+  available: boolean
+  planName: string
+  statusLabel: string
+  statusTone: "owner" | "active" | "past_due" | "trial"
+  isOwner: boolean
+  creditRemaining: number
+  creditTotal: number
+  caption: string
+  renewsAt: string | null
+  billingWarning: string | null
+}
+
+const PLAN_TONE_CLASSES: Record<PlanSummary["statusTone"], string> = {
+  owner: "bg-sky-500/10 text-sky-300",
+  active: "bg-emerald-500/10 text-emerald-400",
+  past_due: "bg-red-500/10 text-red-400",
+  trial: "bg-sky-500/10 text-sky-300",
+}
+
 function truncate(text: string, max: number) {
   const trimmed = text.trim()
   return trimmed.length > max ? `${trimmed.slice(0, max).trim()}…` : trimmed
@@ -60,6 +82,71 @@ function relativeFuture(value: string) {
   const hours = Math.round(minutes / 60)
   if (hours < 24) return `in ${hours}h`
   return `in ${Math.round(hours / 24)}d`
+}
+
+function PlanBanner({ plan, onClick }: { plan: PlanSummary; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full rounded-2xl border border-border bg-card p-5 sm:p-6 text-left transition-colors hover:border-primary/40"
+    >
+      {plan.billingWarning && (
+        <div className="mb-3 flex items-center gap-2 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-300">
+          <AlertTriangle size={13} className="shrink-0" />
+          {plan.billingWarning}
+        </div>
+      )}
+      <div className="flex flex-wrap items-end justify-between gap-6">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
+            Current plan
+          </p>
+          <div className="flex items-center gap-2">
+            <span
+              className="text-2xl font-light text-foreground capitalize"
+              style={{ letterSpacing: "-0.02em" }}
+            >
+              {plan.loading ? "…" : plan.available ? plan.planName : "Unavailable"}
+            </span>
+            {!plan.loading && plan.available && (
+              <span
+                className={cn(
+                  "text-xs px-2 py-0.5 rounded-full font-medium",
+                  PLAN_TONE_CLASSES[plan.statusTone],
+                )}
+              >
+                {plan.statusLabel}
+              </span>
+            )}
+          </div>
+          {plan.renewsAt && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Renews{" "}
+              {new Date(plan.renewsAt).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </p>
+          )}
+        </div>
+        <div className="text-right">
+          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
+            Credits remaining
+          </p>
+          <div className="flex items-baseline justify-end gap-2">
+            <span className="text-3xl font-light text-foreground tabular-nums">
+              {plan.isOwner ? "∞" : plan.creditRemaining}
+            </span>
+            {!plan.isOwner && (
+              <span className="text-sm text-muted-foreground">/ {plan.creditTotal} available</span>
+            )}
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">{plan.caption}</p>
+        </div>
+      </div>
+    </button>
+  )
 }
 
 function StatCard({
@@ -104,10 +191,12 @@ function StatCard({
 export function DashboardHome({
   token,
   recentActivity,
+  plan,
   onNavigate,
 }: {
   token: string
   recentActivity: ActivityItem[]
+  plan: PlanSummary
   onNavigate: (tab: DashboardTab) => void
 }) {
   const [history, setHistory] = useState<ConversationTurn[]>([])
@@ -177,6 +266,8 @@ export function DashboardHome({
 
   return (
     <div className="space-y-6">
+      <PlanBanner plan={plan} onClick={() => onNavigate("billing")} />
+
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <StatCard
           icon={MessageSquare}

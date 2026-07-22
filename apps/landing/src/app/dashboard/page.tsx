@@ -36,7 +36,7 @@ import { SchedulesManager } from "@/components/dashboard/SchedulesManager"
 import { ConversationManager } from "@/components/dashboard/ConversationManager"
 import { StatusManager } from "@/components/dashboard/StatusManager"
 import { SettingsMenu, type DashboardTab } from "@/components/dashboard/SettingsMenu"
-import { DashboardHome } from "@/components/dashboard/DashboardHome"
+import { DashboardHome, type PlanSummary } from "@/components/dashboard/DashboardHome"
 import {
   ConnectorMarketplace,
   CustomMcpServers,
@@ -694,6 +694,34 @@ function DashboardContent() {
   const trendMax = Math.max(...trendDays.map((d) => d.credits), 1)
   const recentActivity = usageSummary?.recentActivity ?? []
 
+  const planStatusTone: PlanSummary["statusTone"] = isOwner
+    ? "owner"
+    : sub?.status === "active"
+      ? "active"
+      : sub?.status === "past_due"
+        ? "past_due"
+        : "trial"
+  const planStatusLabel = isOwner
+    ? "owner"
+    : sub?.status === "past_due"
+      ? "past due"
+      : sub?.plan === "explore"
+        ? "trial"
+        : (sub?.status ?? "trial")
+  const planSummary: PlanSummary = {
+    loading: subPending,
+    available: !!sub,
+    planName: sub ? (PLANS.find((p) => p.key === currentPlanKey)?.name ?? currentPlanKey) : "",
+    statusLabel: planStatusLabel,
+    statusTone: planStatusTone,
+    isOwner,
+    creditRemaining,
+    creditTotal: creditTotal || creditIncluded,
+    caption: creditsCaption(creditIncluded, isOwner, resetAt, resetKind),
+    renewsAt: sub?.currentPeriodEnd ?? null,
+    billingWarning: sub?.billingWarning ?? null,
+  }
+
   return (
     <div className="site-texture-bg min-h-dvh text-foreground">
       {/* Nav */}
@@ -783,6 +811,7 @@ function DashboardContent() {
             <DashboardHome
               token={session.session.token}
               recentActivity={recentActivity}
+              plan={planSummary}
               onNavigate={setActiveTab}
             />
           </motion.div>
