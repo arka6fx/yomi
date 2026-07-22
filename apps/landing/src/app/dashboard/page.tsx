@@ -852,11 +852,7 @@ function DashboardContent() {
                 </div>
               </div>
             )}
-            <NextStepCard
-              connectedIds={connectedProviders}
-              theme={DARK_THEME}
-              appUrl={window.location.origin}
-            />
+            <NextStepCard connectedIds={connectedProviders} appUrl={window.location.origin} />
             <ConnectorMarketplace
               connectors={buildCatalog(
                 connectedProviders,
