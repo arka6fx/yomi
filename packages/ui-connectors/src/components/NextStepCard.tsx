@@ -1,5 +1,6 @@
 "use client"
 
+import { ConnectorIcon } from "../icons"
 import type { ConnectorCategory } from "../types"
 
 export interface NextStepSuggestion {
@@ -75,15 +76,25 @@ export function NextStepCard({
   if (!suggestion) return null
 
   return (
-    <div className="mb-4 rounded-2xl border border-primary/40 bg-primary/5 p-4">
-      <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-primary">Next step</p>
-      <p className="mb-1 text-sm font-semibold text-foreground">Connect {suggestion.name}</p>
-      <p className="mb-3 text-xs text-muted-foreground">{suggestion.reason}</p>
+    <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-primary ring-2 ring-primary/20 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 items-start gap-3">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10">
+          <ConnectorIcon id={suggestion.id} size={17} />
+        </div>
+        <div className="min-w-0">
+          <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-primary">
+            Next step
+          </p>
+          <p className="text-sm font-medium text-foreground">Connect {suggestion.name}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{suggestion.reason}</p>
+        </div>
+      </div>
       <a
         href={`${appUrl}/dashboard?connect=${suggestion.id}`}
-        className="inline-block rounded-lg bg-primary px-3.5 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+        className="inline-flex shrink-0 items-center justify-center gap-1.5 self-start rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 sm:self-center"
       >
-        Connect →
+        Connect
+        <span aria-hidden="true">→</span>
       </a>
     </div>
   )
