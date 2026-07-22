@@ -1,10 +1,21 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Shield, Check, X, Loader2, Download, Package, Trash2, Sparkles } from "lucide-react"
+import {
+  Shield,
+  Check,
+  X,
+  Loader2,
+  Download,
+  Package,
+  Trash2,
+  Sparkles,
+  ChevronDown,
+} from "lucide-react"
 import {
   PRIVACY_CONSENT_PURPOSES,
   PRIVACY_CONSENT_PURPOSE_LABELS,
+  PRIVACY_CONSENT_PURPOSE_DESCRIPTIONS,
   OPT_IN_CONSENT_PURPOSES,
 } from "@yomi/shared/privacy"
 import { cn } from "@/lib/utils"
@@ -48,6 +59,7 @@ export function PrivacyManager({ token }: TokenProp) {
   const [preferences, setPreferences] = useState<Preferences>({})
   const [saving, setSaving] = useState<string | null>(null)
   const [enablingRecommended, setEnablingRecommended] = useState(false)
+  const [expanded, setExpanded] = useState<string | null>(null)
   const [exports, setExports] = useState<ExportRow[]>([])
   const [exporting, setExporting] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -230,38 +242,59 @@ export function PrivacyManager({ token }: TokenProp) {
         {PRIVACY_CONSENT_PURPOSES.map((purpose) => {
           const label = PRIVACY_CONSENT_PURPOSE_LABELS[purpose]
           const enabled = toggled(purpose)
+          const isExpanded = expanded === purpose
           return (
             <div
               key={purpose}
-              className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3"
+              className="rounded-xl border border-border bg-card px-4 py-3 transition-colors"
             >
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => togglePreference(purpose)}
-                  disabled={saving === purpose}
-                  className="relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50"
-                  style={{ backgroundColor: enabled ? "hsl(var(--primary))" : "hsl(var(--muted))" }}
-                >
-                  <span
-                    className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-background transition-transform"
-                    style={{ transform: enabled ? "translateX(100%)" : "translateX(0)" }}
-                  />
-                </button>
-                <span className="text-sm text-foreground">{label}</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => togglePreference(purpose)}
+                    disabled={saving === purpose}
+                    className="relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50"
+                    style={{ backgroundColor: enabled ? "hsl(var(--primary))" : "hsl(var(--muted))" }}
+                  >
+                    <span
+                      className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-background transition-transform"
+                      style={{ transform: enabled ? "translateX(100%)" : "translateX(0)" }}
+                    />
+                  </button>
+                  <button
+                    onClick={() => setExpanded(isExpanded ? null : purpose)}
+                    className="flex items-center gap-1.5 text-sm text-foreground"
+                    aria-expanded={isExpanded}
+                  >
+                    {label}
+                    <ChevronDown
+                      size={13}
+                      className={cn(
+                        "text-muted-foreground transition-transform",
+                        isExpanded && "rotate-180",
+                      )}
+                    />
+                  </button>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {saving === purpose ? (
+                    <Loader2 size={12} className="animate-spin text-muted-foreground" />
+                  ) : enabled ? (
+                    <span className="flex items-center gap-1 text-[11px] text-emerald-400">
+                      <Check size={11} /> Active
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <X size={11} /> Off
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                {saving === purpose ? (
-                  <Loader2 size={12} className="animate-spin text-muted-foreground" />
-                ) : enabled ? (
-                  <span className="flex items-center gap-1 text-[11px] text-emerald-400">
-                    <Check size={11} /> Active
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                    <X size={11} /> Off
-                  </span>
-                )}
-              </div>
+              {isExpanded && (
+                <p className="ml-12 mt-2 text-xs leading-relaxed text-muted-foreground">
+                  {PRIVACY_CONSENT_PURPOSE_DESCRIPTIONS[purpose]}
+                </p>
+              )}
             </div>
           )
         })}

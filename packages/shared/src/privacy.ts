@@ -31,6 +31,25 @@ export function isPrivacyConsentPurpose(value: string): value is PrivacyConsentP
   return (PRIVACY_CONSENT_PURPOSES as readonly string[]).includes(value)
 }
 
+// Plain-language explanation of what each purpose actually turns on, shown in
+// the dashboard's Privacy & Consent list so a toggle isn't just a bare label.
+export const PRIVACY_CONSENT_PURPOSE_DESCRIPTIONS: Record<PrivacyConsentPurpose, string> = {
+  conversation_history:
+    "Stores your Telegram conversation history so Yomi has context across messages, and so you can review past chats in the dashboard.",
+  memory:
+    "Lets Yomi extract and remember durable facts about you — preferences, ongoing projects, decisions — so it doesn't need reminding every time.",
+  cloud_memory:
+    "Lets Yomi search and quote from your synced Google Drive files and uploaded documents.",
+  connector_data:
+    "Lets Yomi read and act on data from apps you connect — Gmail, Calendar, Slack, Notion, GitHub, and more.",
+  analytics:
+    "Lets Yomi collect product usage analytics (which features get used, how often) to guide what gets improved.",
+  voice_processing: "Lets Yomi transcribe and respond to voice messages you send on Telegram.",
+  ai_improvement: "Lets Yomi use your conversations to help improve its underlying AI models.",
+  telegram_processing:
+    "Lets Yomi process the messages you send on Telegram — required for the bot to work at all.",
+}
+
 // Purposes granted automatically at signup so the product works out of the box.
 // Kept to low-risk, service-necessary consents — the rest (analytics,
 // ai_improvement, cloud_memory, voice) stay opt-in per DPDP: pre-ticking
