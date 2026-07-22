@@ -13,10 +13,8 @@ const PURPOSE_TO_PREFERENCE_KEY: Partial<Record<PrivacyConsentPurpose, BooleanPr
   connector_data: "connectorsEnabled",
   analytics: "analyticsEnabled",
   voice_processing: "voiceProcessingEnabled",
-  screen_processing: "screenProcessingEnabled",
   ai_improvement: "aiImprovementEnabled",
   telegram_processing: "telegramProcessingEnabled",
-  rag_processing: "ragProcessingEnabled",
 }
 
 export type ConsentCheckResult = {

@@ -671,10 +671,8 @@ export const privacyPreferences = pgTable("privacy_preferences", {
   connectorsEnabled: boolean("connectors_enabled").notNull().default(false),
   analyticsEnabled: boolean("analytics_enabled").notNull().default(false),
   voiceProcessingEnabled: boolean("voice_processing_enabled").notNull().default(false),
-  screenProcessingEnabled: boolean("screen_processing_enabled").notNull().default(false),
   aiImprovementEnabled: boolean("ai_improvement_enabled").notNull().default(false),
   telegramProcessingEnabled: boolean("telegram_processing_enabled").notNull().default(false),
-  ragProcessingEnabled: boolean("rag_processing_enabled").notNull().default(false),
   retentionOverrides: jsonb("retention_overrides"),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })

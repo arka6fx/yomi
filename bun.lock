@@ -44,6 +44,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@neondatabase/serverless": "^0.10.4",
+        "@yomi/shared": "workspace:*",
         "@yomi/ui-connectors": "workspace:*",
         "better-auth": "^1.2.0",
         "class-variance-authority": "^0.7.1",

@@ -8,10 +8,8 @@ export type PrivacyPreferencesShape = {
   connectorsEnabled: boolean
   analyticsEnabled: boolean
   voiceProcessingEnabled: boolean
-  screenProcessingEnabled: boolean
   aiImprovementEnabled: boolean
   telegramProcessingEnabled: boolean
-  ragProcessingEnabled: boolean
   retentionOverrides: Record<string, unknown> | null
   updatedAt: Date
 }
@@ -25,10 +23,8 @@ const DEFAULT_PREFERENCES: PrivacyPreferencesShape = {
   connectorsEnabled: false,
   analyticsEnabled: false,
   voiceProcessingEnabled: false,
-  screenProcessingEnabled: false,
   aiImprovementEnabled: false,
   telegramProcessingEnabled: false,
-  ragProcessingEnabled: false,
   retentionOverrides: null,
   updatedAt: new Date(0),
 }
@@ -41,10 +37,8 @@ function serialize(row: typeof privacyPreferences.$inferSelect): PrivacyPreferen
     connectorsEnabled: row.connectorsEnabled,
     analyticsEnabled: row.analyticsEnabled,
     voiceProcessingEnabled: row.voiceProcessingEnabled,
-    screenProcessingEnabled: row.screenProcessingEnabled,
     aiImprovementEnabled: row.aiImprovementEnabled,
     telegramProcessingEnabled: row.telegramProcessingEnabled,
-    ragProcessingEnabled: row.ragProcessingEnabled,
     retentionOverrides: row.retentionOverrides as Record<string, unknown> | null,
     updatedAt: row.updatedAt,
   }

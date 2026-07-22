@@ -1,21 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Shield, Check, X, Loader2, Download, Package, Trash2 } from "lucide-react"
+import { Shield, Check, X, Loader2, Download, Package, Trash2, Sparkles } from "lucide-react"
+import {
+  PRIVACY_CONSENT_PURPOSES,
+  PRIVACY_CONSENT_PURPOSE_LABELS,
+  OPT_IN_CONSENT_PURPOSES,
+} from "@yomi/shared/privacy"
 import { cn } from "@/lib/utils"
-
-const CONSENT_LABELS: Record<string, string> = {
-  conversation_history: "Conversation History",
-  memory: "Memory (Local)",
-  cloud_memory: "Cloud Memory (RAG)",
-  connector_data: "Connector Data Access",
-  analytics: "Analytics",
-  voice_processing: "Voice Processing",
-  screen_processing: "Screen Processing",
-  ai_improvement: "AI Improvement",
-  telegram_processing: "Telegram Processing",
-  rag_processing: "Document Search (RAG)",
-}
 
 const PURPOSE_TO_PREFKEY: Record<string, string> = {
   conversation_history: "conversationHistoryEnabled",
@@ -24,10 +16,8 @@ const PURPOSE_TO_PREFKEY: Record<string, string> = {
   connector_data: "connectorsEnabled",
   analytics: "analyticsEnabled",
   voice_processing: "voiceProcessingEnabled",
-  screen_processing: "screenProcessingEnabled",
   ai_improvement: "aiImprovementEnabled",
   telegram_processing: "telegramProcessingEnabled",
-  rag_processing: "ragProcessingEnabled",
 }
 
 type ConsentStatus = {
@@ -57,6 +47,7 @@ export function PrivacyManager({ token }: TokenProp) {
   const [consents, setConsents] = useState<ConsentStatus[]>([])
   const [preferences, setPreferences] = useState<Preferences>({})
   const [saving, setSaving] = useState<string | null>(null)
+  const [enablingRecommended, setEnablingRecommended] = useState(false)
   const [exports, setExports] = useState<ExportRow[]>([])
   const [exporting, setExporting] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -109,6 +100,35 @@ export function PrivacyManager({ token }: TokenProp) {
 
   function toggled(purpose: string): boolean {
     return preferences[PURPOSE_TO_PREFKEY[purpose] ?? `${purpose}Enabled`] ?? false
+  }
+
+  const pendingOptIns = OPT_IN_CONSENT_PURPOSES.filter((p) => !toggled(p))
+
+  async function enableRecommended() {
+    if (pendingOptIns.length === 0) return
+    setEnablingRecommended(true)
+    const patch = Object.fromEntries(pendingOptIns.map((p) => [PURPOSE_TO_PREFKEY[p], true]))
+    setPreferences((prev) => ({ ...prev, ...patch }))
+    try {
+      const responses = await Promise.all([
+        fetch("/api/privacy/preferences", {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify(patch),
+        }),
+        fetch("/api/privacy/consents", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ purposes: pendingOptIns }),
+        }),
+      ])
+      if (responses.some((r) => !r.ok)) throw new Error("Failed to update preferences")
+      void fetchOverview()
+    } catch {
+      void fetchOverview()
+    } finally {
+      setEnablingRecommended(false)
+    }
   }
 
   async function togglePreference(purpose: string) {
@@ -178,8 +198,37 @@ export function PrivacyManager({ token }: TokenProp) {
         <h2 className="text-sm font-semibold text-foreground">Privacy & Consent</h2>
       </div>
 
+      {pendingOptIns.length > 0 && (
+        <div className="mb-4 flex flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2.5">
+            <Sparkles size={15} className="mt-0.5 shrink-0 text-primary" />
+            <div>
+              <p className="text-sm text-foreground">Turn on the rest of Yomi&apos;s features</p>
+              <p className="text-xs text-muted-foreground">
+                {pendingOptIns.length} feature{pendingOptIns.length === 1 ? "" : "s"} —{" "}
+                {pendingOptIns.map((p) => PRIVACY_CONSENT_PURPOSE_LABELS[p]).join(", ")} — are off
+                by default and need your explicit okay to turn on.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => void enableRecommended()}
+            disabled={enablingRecommended}
+            className="flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            {enablingRecommended ? (
+              <Loader2 size={12} className="animate-spin" />
+            ) : (
+              <Sparkles size={12} />
+            )}
+            Enable all
+          </button>
+        </div>
+      )}
+
       <div className="space-y-3">
-        {Object.entries(CONSENT_LABELS).map(([purpose, label]) => {
+        {PRIVACY_CONSENT_PURPOSES.map((purpose) => {
+          const label = PRIVACY_CONSENT_PURPOSE_LABELS[purpose]
           const enabled = toggled(purpose)
           return (
             <div

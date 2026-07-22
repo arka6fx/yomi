@@ -82,10 +82,8 @@ function boolPatch(body: PreferencesBody): PrivacyPreferencePatch {
     "connectorsEnabled",
     "analyticsEnabled",
     "voiceProcessingEnabled",
-    "screenProcessingEnabled",
     "aiImprovementEnabled",
     "telegramProcessingEnabled",
-    "ragProcessingEnabled",
   ] as const
   for (const key of booleanKeys) {
     if (typeof body[key] === "boolean") patch[key] = body[key]

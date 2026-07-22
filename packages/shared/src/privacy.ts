@@ -9,10 +9,8 @@ export const PRIVACY_CONSENT_PURPOSES = [
   "connector_data",
   "analytics",
   "voice_processing",
-  "screen_processing",
   "ai_improvement",
   "telegram_processing",
-  "rag_processing",
 ] as const
 
 export type PrivacyConsentPurpose = (typeof PRIVACY_CONSENT_PURPOSES)[number]
@@ -25,15 +23,30 @@ export const PRIVACY_CONSENT_PURPOSE_LABELS: Record<PrivacyConsentPurpose, strin
   connector_data: "Connector data",
   analytics: "Analytics",
   voice_processing: "Voice processing",
-  screen_processing: "Screen processing",
   ai_improvement: "AI improvement",
   telegram_processing: "Telegram processing",
-  rag_processing: "Document search",
 }
 
 export function isPrivacyConsentPurpose(value: string): value is PrivacyConsentPurpose {
   return (PRIVACY_CONSENT_PURPOSES as readonly string[]).includes(value)
 }
+
+// Purposes granted automatically at signup so the product works out of the box.
+// Kept to low-risk, service-necessary consents — the rest (analytics,
+// ai_improvement, cloud_memory, voice) stay opt-in per DPDP: pre-ticking
+// consent for sensitive processing isn't valid consent under the Act.
+export const SIGNUP_DEFAULT_CONSENT_PURPOSES: readonly PrivacyConsentPurpose[] = [
+  "conversation_history",
+  "memory",
+  "connector_data",
+  "telegram_processing",
+]
+
+// The remaining purposes a user must explicitly opt into — surfaced together
+// so the dashboard can offer a single "enable all" action without silently
+// pre-granting them.
+export const OPT_IN_CONSENT_PURPOSES: readonly PrivacyConsentPurpose[] =
+  PRIVACY_CONSENT_PURPOSES.filter((p) => !SIGNUP_DEFAULT_CONSENT_PURPOSES.includes(p))
 
 // Default retention windows (spec 23 §13.1). days: null = keep until user
 // deletes. userOverridable domains may be tightened (never extended) via
