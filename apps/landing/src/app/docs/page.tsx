@@ -14,6 +14,7 @@ import {
 import { ConnectorIcon } from "@yomi/ui-connectors"
 import Footer from "@/components/Footer"
 import { DocsShell } from "@/components/docs/DocsShell"
+import { DocsHero } from "@/components/docs/DocsHero"
 
 export const metadata: Metadata = {
   title: "Docs: connectors, voice, memory, and credits",
@@ -142,32 +143,7 @@ function Feature({
 export default function DocsPage() {
   return (
     <div className="site-texture-bg min-h-dvh text-foreground">
-      <DocsShell
-        banner={
-          <header className="relative overflow-hidden border-b border-border">
-            <div
-              className="pointer-events-none absolute inset-0"
-              style={{
-                background:
-                  "radial-gradient(70% 120% at 50% -10%, hsl(var(--primary) / 0.18), transparent 60%)",
-              }}
-            />
-            <div className="relative mx-auto max-w-5xl px-6 py-16 text-center sm:py-20">
-              <Eyebrow>
-                <Sparkles size={11} />
-                Documentation
-              </Eyebrow>
-              <h1 className="mt-5 font-serif text-4xl tracking-tight sm:text-5xl">
-                Everything Yomi does, <span className="font-serif italic text-primary">today</span>.
-              </h1>
-              <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
-                A complete, honest map of what&apos;s shipped: the Telegram bot, every app
-                connector, memory, voice, and how plans and credits work.
-              </p>
-            </div>
-          </header>
-        }
-      >
+      <DocsShell banner={<DocsHero />}>
         <Section id="overview" eyebrow="Overview" title="What Yomi is">
           <p>
             Yomi is an AI assistant that connects to the apps you already use. It can{" "}
