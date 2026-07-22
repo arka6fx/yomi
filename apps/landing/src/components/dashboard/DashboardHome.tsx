@@ -2,7 +2,17 @@
 
 import { useCallback, useEffect, useState } from "react"
 import type { ReactNode } from "react"
-import { Activity, AlertTriangle, Brain, Clock, ExternalLink, Loader2, MessageSquare } from "lucide-react"
+import {
+  Activity,
+  AlertTriangle,
+  Brain,
+  Clock,
+  ExternalLink,
+  Loader2,
+  MessageSquare,
+  Plug,
+} from "lucide-react"
+import { buildCatalog, ConnectorIcon } from "@yomi/ui-connectors"
 import { cn } from "@/lib/utils"
 import type { DashboardTab } from "./SettingsMenu"
 
@@ -192,11 +202,15 @@ export function DashboardHome({
   token,
   recentActivity,
   plan,
+  connectedProviders,
+  unhealthyCount,
   onNavigate,
 }: {
   token: string
   recentActivity: ActivityItem[]
   plan: PlanSummary
+  connectedProviders: string[]
+  unhealthyCount: number
   onNavigate: (tab: DashboardTab) => void
 }) {
   const [history, setHistory] = useState<ConversationTurn[]>([])
@@ -256,6 +270,7 @@ export function DashboardHome({
     void loadMemory()
   }, [loadHistory, loadSchedules, loadMemory])
 
+  const connectedCatalog = buildCatalog(connectedProviders).filter((c) => c.connected)
   const lastUserTurn = [...history].reverse().find((t) => t.role === "user")
   const enabledSchedules = schedules.filter((s) => s.enabled)
   const soonestNextRunAt = enabledSchedules
@@ -318,6 +333,52 @@ export function DashboardHome({
             </>
           )}
         </StatCard>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10">
+              <Plug size={16} className="text-primary" />
+            </div>
+            <h2 className="text-sm font-medium text-foreground">
+              Connections{" "}
+              <span className="text-muted-foreground font-normal">({connectedCatalog.length})</span>
+            </h2>
+          </div>
+          <button
+            onClick={() => onNavigate("integrations")}
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            View all
+          </button>
+        </div>
+
+        {connectedCatalog.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Nothing connected yet. Link Gmail, Slack, Notion, GitHub and more from Connections.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {connectedCatalog.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => onNavigate("integrations")}
+                className="flex items-center gap-1.5 rounded-full border border-border bg-background/50 px-2.5 py-1.5 text-xs text-foreground transition-colors hover:border-primary/40"
+              >
+                <ConnectorIcon id={c.id} size={14} />
+                {c.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {unhealthyCount > 0 && (
+          <p className="mt-3 flex items-center gap-1.5 text-xs text-yellow-300">
+            <AlertTriangle size={12} className="shrink-0" />
+            {unhealthyCount} need{unhealthyCount === 1 ? "s" : ""} reconnecting
+          </p>
+        )}
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">

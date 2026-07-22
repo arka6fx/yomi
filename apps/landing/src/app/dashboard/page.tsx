@@ -812,6 +812,8 @@ function DashboardContent() {
               token={session.session.token}
               recentActivity={recentActivity}
               plan={planSummary}
+              connectedProviders={connectedProviders}
+              unhealthyCount={integrationHealth.filter((item) => !item.healthy).length}
               onNavigate={setActiveTab}
             />
           </motion.div>
