@@ -17,7 +17,8 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react"
-import { ConnectorIcon } from "@yomi/ui-connectors"
+import { ConnectorIcon, buildCatalog } from "@yomi/ui-connectors"
+import type { ConnectorCategory } from "@yomi/ui-connectors"
 import Footer from "@/components/Footer"
 import { DocsShell } from "@/components/docs/DocsShell"
 import { DocsHero } from "@/components/docs/DocsHero"
@@ -29,58 +30,51 @@ export const metadata: Metadata = {
   alternates: { canonical: "https://getyomi.in/docs" },
 }
 
-const CONNECTORS: { id: string; name: string; access: string }[] = [
-  { id: "google", name: "Gmail", access: "Read, search, send, organize, and delete email" },
-  {
-    id: "google-calendar",
-    name: "Google Calendar",
-    access: "Read availability and create, edit, or delete events",
-  },
-  {
-    id: "google-drive",
-    name: "Google Drive",
-    access: "Browse, read, create, share, and manage files and folders",
-  },
-  {
-    id: "google-docs",
-    name: "Google Docs",
-    access: "Create and edit richly formatted docs from Markdown",
-  },
-  {
-    id: "google-sheets",
-    name: "Google Sheets",
-    access: "Read, edit, and chart spreadsheets",
-  },
-  {
-    id: "google-slides",
-    name: "Google Slides",
-    access: "Build multi-slide presentations from Markdown",
-  },
-  {
-    id: "google-classroom",
-    name: "Google Classroom",
-    access: "Read classes, assignments, due dates, and grades",
-  },
-  {
-    id: "google-tasks",
-    name: "Google Tasks",
-    access: "Read your to-do lists and create, edit, or complete tasks",
-  },
-  {
-    id: "google-meet",
-    name: "Google Meet",
-    access: "Create meeting links and read past calls and transcripts",
-  },
-  {
-    id: "google-maps",
-    name: "Google Maps",
-    access: "Search for places and businesses near a location",
-  },
-  { id: "github", name: "GitHub", access: "Repositories, issues, and pull requests" },
-  { id: "notion", name: "Notion", access: "Search and read your shared pages and databases" },
-  { id: "slack", name: "Slack", access: "Read channel context and send approved messages" },
-  { id: "linear", name: "Linear", access: "Issues and project tracking (OAuth or API key)" },
+// Live from the same catalog the dashboard's Connections tab uses — this used
+// to be its own hand-maintained list of 14 connectors and silently fell years
+// behind the ~50 Composio actually wired up. Single source of truth now.
+const CONNECTED_CATALOG = buildCatalog().filter((c) => c.available)
+
+const CATEGORY_LABELS: Record<ConnectorCategory, string> = {
+  email: "Email",
+  productivity: "Productivity",
+  communication: "Communication",
+  meetings: "Meetings",
+  developer: "Developer",
+  crm: "CRM",
+  "data-analytics": "Data & analytics",
+  data: "Data",
+  finance: "Finance",
+  "file-management": "File management",
+  "file-storage": "File storage",
+  "customer-support": "Customer support",
+  food: "Food",
+  other: "Other",
+}
+
+// Display order for category sections — only ones with connectors render.
+const CATEGORY_ORDER: ConnectorCategory[] = [
+  "email",
+  "productivity",
+  "communication",
+  "meetings",
+  "developer",
+  "crm",
+  "data-analytics",
+  "data",
+  "finance",
+  "file-management",
+  "file-storage",
+  "customer-support",
+  "food",
+  "other",
 ]
+
+const CONNECTORS_BY_CATEGORY = CATEGORY_ORDER.map((category) => ({
+  category,
+  label: CATEGORY_LABELS[category],
+  connectors: CONNECTED_CATALOG.filter((c) => c.category === category),
+})).filter((group) => group.connectors.length > 0)
 
 const TELEGRAM_COMMANDS: { cmd: string; what: string }[] = [
   { cmd: "/new", what: "Start a fresh conversation (clears the current chat context)" },
@@ -319,21 +313,35 @@ export default function DocsPage() {
         >
           <p>
             Connect the tools you already use. Yomi requests OAuth access (or an API key) and only
-            acts when you ask. Connect and manage them from your dashboard.
+            acts when you ask. Connect and manage them from your dashboard —{" "}
+            {CONNECTED_CATALOG.length} apps and counting.
           </p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {CONNECTORS.map((c) => (
-              <div
-                key={c.id}
-                className="flex items-start gap-3 rounded-xl border border-border bg-card/60 p-4"
-              >
-                <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/60">
-                  <ConnectorIcon id={c.id} size={20} />
-                </span>
-                <span>
-                  <span className="block text-sm font-semibold text-foreground">{c.name}</span>
-                  <span className="block text-sm text-muted-foreground">{c.access}</span>
-                </span>
+          <div className="space-y-6">
+            {CONNECTORS_BY_CATEGORY.map((group) => (
+              <div key={group.category}>
+                <p className="mb-2.5 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                  {group.label}
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {group.connectors.map((c) => (
+                    <div
+                      key={c.id}
+                      className="flex items-start gap-3 rounded-xl border border-border bg-card/60 p-4"
+                    >
+                      <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/60">
+                        <ConnectorIcon id={c.id} size={20} />
+                      </span>
+                      <span>
+                        <span className="block text-sm font-semibold text-foreground">
+                          {c.name}
+                        </span>
+                        <span className="block text-sm text-muted-foreground">
+                          {c.description}
+                        </span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
@@ -366,8 +374,8 @@ export default function DocsPage() {
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <Feature icon={<Mic size={17} />} title="Speak and listen" tone="rose">
-              Voice notes are transcribed, and Yomi can reply with a spoken voice message when you
-              ask.
+              Voice notes are transcribed, and Yomi replies with a voice message back by default —
+              or say &quot;reply in voice&quot; on a typed message to get one there too.
             </Feature>
             <Feature icon={<ImageIcon size={17} />} title="Image analysis" tone="rose">
               Send a screenshot or photo and Yomi describes, reads, or reasons about what&apos;s in

@@ -292,10 +292,10 @@ export function LandingPage() {
                 </div>
                 <div className="grid w-full max-w-md grid-cols-2 gap-3">
                   <Link
-                    href="/signup"
+                    href={session ? "/dashboard" : "/signup"}
                     className="group inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-xl bg-[#eaf4ff] px-5 text-sm font-semibold text-slate-950 transition hover:bg-white"
                   >
-                    Get started
+                    {session ? "Go to dashboard" : "Get started"}
                     <span className="grid h-6 w-6 place-items-center rounded-full bg-zinc-950 text-white transition group-hover:translate-x-0.5">
                       <ArrowRight size={14} />
                     </span>
@@ -307,7 +307,11 @@ export function LandingPage() {
                     See how it works
                   </button>
                   <Link
-                    href="/signup"
+                    // Signed-in users go straight to the Telegram connect flow;
+                    // signup's callbackURL already sends new users there too, so
+                    // this used to hard-code /signup and re-prompt already
+                    // logged-in users to sign up all over again.
+                    href={session ? "/link" : "/signup"}
                     className="col-span-2 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/15"
                   >
                     <ConnectorIcon id="telegram" size={17} />
