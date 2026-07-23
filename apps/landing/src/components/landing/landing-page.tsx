@@ -25,6 +25,69 @@ function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" })
 }
 
+// Plays out once on load: user's message lands, Yomi "types," then replies
+// with the approve chip — a small proof of the approval-before-action promise
+// instead of a static screenshot.
+function TelegramHeroCard() {
+  return (
+    <div className="glass-card mb-6 max-w-md rounded-2xl p-4">
+      <div className="mb-3 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        <ConnectorIcon id="telegram" size={13} />
+        Yomi on Telegram
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.9 }}
+        className="flex justify-end"
+      >
+        <p className="max-w-[80%] rounded-2xl rounded-tr-sm bg-foreground/[0.06] px-3.5 py-2 text-sm text-foreground">
+          Move my 3pm to Thursday and tell Sarah
+        </p>
+      </motion.div>
+
+      {/* grid stacking (not absolute) so the card grows to fit whichever
+          overlapping child — indicator or reply — is tallest right now */}
+      <div className="relative mt-2 grid">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 1, 1, 0] }}
+          transition={{ duration: 1.6, delay: 1.5, times: [0, 0.2, 0.8, 1] }}
+          className="col-start-1 row-start-1 flex h-fit items-center gap-1 rounded-2xl rounded-tl-sm bg-primary/10 px-4 py-3"
+        >
+          {[0, 1, 2].map((i) => (
+            <motion.span
+              key={i}
+              className="h-1.5 w-1.5 rounded-full bg-primary/50"
+              animate={{ opacity: [0.3, 1, 0.3] }}
+              transition={{ duration: 0.9, repeat: 2, delay: i * 0.15 }}
+            />
+          ))}
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 3 }}
+          className="col-start-1 row-start-1 h-fit max-w-[85%] rounded-2xl rounded-tl-sm bg-primary/10 px-3.5 py-2.5 text-sm text-foreground"
+        >
+          <p>Done — moved to Thursday 3pm. Drafted a note to Sarah.</p>
+          <motion.p
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3, delay: 3.4, type: "spring", stiffness: 300, damping: 20 }}
+            className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground"
+          >
+            <Check size={12} />
+            Approve to send
+          </motion.p>
+        </motion.div>
+      </div>
+    </div>
+  )
+}
+
 const FEATURES = [
   {
     icon: MessageSquare,
@@ -215,14 +278,6 @@ export function LandingPage() {
               Your <span className="text-primary">AI companion</span> for work{" "}
               <em className="italic">and life</em>.
             </p>
-            {/* plain-language purpose statement, visible on load with no scroll or JS
-                animation required — reviewers and crawlers should not have to hunt for it */}
-            <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-              Yomi is an AI assistant you message on Telegram with text, voice, or a photo. It
-              connects to Gmail, Google Calendar, Google Drive, GitHub, Slack, Notion, and Linear
-              so you can ask questions and get things done in plain language — Yomi asks for your
-              approval before it changes anything.
-            </p>
           </div>
 
           <div>
@@ -240,27 +295,9 @@ export function LandingPage() {
                 className="pb-1 lg:pb-6"
               >
                 {/* the hero's one visual: a real exchange, not a stock photo —
-                    doubles as proof of the approval-before-action promise below */}
-                <div className="glass-card mb-6 max-w-md rounded-2xl p-4">
-                  <div className="mb-3 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                    <ConnectorIcon id="telegram" size={13} />
-                    Yomi on Telegram
-                  </div>
-                  <div className="flex justify-end">
-                    <p className="max-w-[80%] rounded-2xl rounded-tr-sm bg-foreground/[0.06] px-3.5 py-2 text-sm text-foreground">
-                      Move my 3pm to Thursday and tell Sarah
-                    </p>
-                  </div>
-                  <div className="mt-2 flex justify-start">
-                    <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-primary/10 px-3.5 py-2.5 text-sm text-foreground">
-                      <p>Done — moved to Thursday 3pm. Drafted a note to Sarah.</p>
-                      <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground">
-                        <Check size={12} />
-                        Approve to send
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                    plays out as Yomi actually replies, doubling as proof of
+                    the approval-before-action promise */}
+                <TelegramHeroCard />
 
                 <div className="mb-7 max-w-md">
                   <div className="flex flex-wrap gap-2">
