@@ -20,6 +20,32 @@ export function connectorError(err: unknown): { error: string; hint?: string } {
         "with the Yomi integration (••• → Add connections) inside Notion.",
     }
   }
+  // Meta enforces this on every app, not just Yomi's — the recipient must message the
+  // business account first (or reply within 24h of doing so) before it can DM them via API.
+  const isInstagramWindow = /outside of allowed window|"error_subcode"\s*:\s*2534022|IGApiException/i.test(
+    msg,
+  )
+  if (isInstagramWindow) {
+    return {
+      error: msg,
+      hint:
+        "Instagram only allows a business account to message someone within 24 hours of that " +
+        "person's last DM to you (Meta's messaging window policy). Ask them to message you first.",
+    }
+  }
+  // Same Meta policy, WhatsApp's version: free-form replies only within 24h of the
+  // customer's last message; outside that window only pre-approved templates can be sent.
+  const isWhatsAppWindow = /re-?engagement message|"error_subcode"\s*:\s*131047|"code"\s*:\s*131047/i.test(
+    msg,
+  )
+  if (isWhatsAppWindow) {
+    return {
+      error: msg,
+      hint:
+        "WhatsApp only allows free-form messages within 24 hours of the customer's last message " +
+        "to you. Outside that window you need a pre-approved message template.",
+    }
+  }
   return isAuth
     ? { error: msg, hint: `Token expired or revoked — reconnect at ${appUrl}/dashboard` }
     : { error: msg }

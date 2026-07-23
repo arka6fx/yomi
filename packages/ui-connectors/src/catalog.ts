@@ -185,7 +185,7 @@ const CATALOG_DEFS: Array<{
   {
     id: "whatsapp",
     name: "WhatsApp",
-    description: "Send messages, manage media, and read business account info via WhatsApp Business API.",
+    description: "WhatsApp Business Account only (not a personal number) — send messages, media, and templates.",
     category: "communication",
     authKind: "composio",
     icon: "whatsapp",
@@ -248,7 +248,7 @@ const CATALOG_DEFS: Array<{
   {
     id: "instagram",
     name: "Instagram",
-    description: "Manage Instagram Business/Creator account — media, comments, stories, DMs, analytics, and publishing.",
+    description: "Instagram Business or Creator account only (not personal) — media, comments, DMs, analytics, and publishing.",
     category: "communication",
     authKind: "composio",
     icon: "instagram",
