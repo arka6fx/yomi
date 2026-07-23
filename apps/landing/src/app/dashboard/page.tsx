@@ -25,7 +25,7 @@ import {
 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
-import { useLocalPrice } from "@/lib/local-price"
+import { formatUsd } from "@/lib/local-price"
 import { PLANS } from "@/lib/plans"
 import { MemoryManager } from "@/components/dashboard/MemoryManager"
 import { PrivacyManager } from "@/components/dashboard/PrivacyManager"
@@ -133,7 +133,6 @@ type PlatformLink = { platform: string; connectedAt: string }
 function DashboardContent() {
   const { data: session, isPending } = authClient.useSession()
   const router = useRouter()
-  const localPrice = useLocalPrice()
 
   const [sub, setSub] = useState<Sub | null>(null)
   const [usageSummary, setUsageSummary] = useState<UsageSummary | null>(null)
@@ -754,12 +753,8 @@ function DashboardContent() {
               billingLoading={billingLoading}
               creditLoading={creditLoading}
               billingError={billingError}
-              formatPlanPrice={localPrice.format}
-              formatPackPrice={(pack) =>
-                localPrice.localized
-                  ? `${localPrice.format(pack.priceCents / 100)} (${pack.priceDisplay})`
-                  : pack.priceDisplay
-              }
+              formatPlanPrice={formatUsd}
+              formatPackPrice={(pack) => pack.priceDisplay}
               onUpgrade={handleUpgrade}
               onBuyCredits={handleBuyCredits}
               onNavigate={setActiveTab}
@@ -1360,11 +1355,7 @@ function DashboardContent() {
                               {pack.name}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              {creditLoading === pack.key
-                                ? "Starting..."
-                                : localPrice.localized
-                                  ? `${localPrice.format(pack.priceCents / 100)} (${pack.priceDisplay})`
-                                  : pack.priceDisplay}
+                              {creditLoading === pack.key ? "Starting..." : pack.priceDisplay}
                             </span>
                           </button>
                         ))}
@@ -1470,15 +1461,10 @@ function DashboardContent() {
                             </div>
                             <div className="flex items-baseline gap-1 mb-0.5">
                               <span className="text-lg font-light text-foreground">
-                                {localPrice.format(plan.priceUsd)}
+                                {formatUsd(plan.priceUsd)}
                               </span>
                               <span className="text-xs text-muted-foreground">{plan.priceSub}</span>
                             </div>
-                            {localPrice.localized && plan.priceUsd > 0 && (
-                              <p className="text-[10px] text-muted-foreground mb-0.5">
-                                approx. — billed as ${plan.priceUsd} USD
-                              </p>
-                            )}
                             <p className="text-xs text-muted-foreground mb-2.5 leading-relaxed">
                               {plan.desc}
                             </p>

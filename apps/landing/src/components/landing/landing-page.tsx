@@ -15,7 +15,7 @@ import {
   Zap,
 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
-import { useLocalPrice } from "@/lib/local-price"
+import { formatUsd } from "@/lib/local-price"
 
 import LandingFooter from "@/components/landing/LandingFooter"
 import Nav from "@/components/Nav"
@@ -209,7 +209,6 @@ export function LandingPage() {
   const [billingLoading, setBillingLoading] = useState<string | null>(null)
   const { data: session } = authClient.useSession()
   const router = useRouter()
-  const localPrice = useLocalPrice()
 
   // forward oauth error redirects (/?error=) to the signin page
   useEffect(() => {
@@ -793,15 +792,10 @@ export function LandingPage() {
                   </div>
                   <div className="mb-2 flex items-baseline gap-1">
                     <span className="font-accent text-4xl text-foreground">
-                      {localPrice.format(plan.priceUsd)}
+                      {formatUsd(plan.priceUsd)}
                     </span>
                     <span className="text-sm text-muted-foreground">{plan.period}</span>
                   </div>
-                  {localPrice.localized && plan.priceUsd > 0 && (
-                    <p className="mb-1 text-xs text-muted-foreground">
-                      approx. — billed as ${plan.priceUsd} USD
-                    </p>
-                  )}
                   <p className="text-sm text-muted-foreground">{plan.description}</p>
                 </div>
 
