@@ -1,7 +1,12 @@
 # Landing Page Visual/Copy Redesign — Design
 
 Date: 2026-07-22
-Status: Approved (design); pending implementation plan
+Status: **Superseded** by
+`docs/superpowers/specs/2026-07-23-landing-hero-footer-light-redesign-design.md`
+(2026-07-23) — never implemented. That spec carries forward this one's
+per-section layout/copy fixes, adapted to a light palette instead of a
+dark gradient, and replaces its dark hero + "footer unchanged" call
+with a light hero and full footer redesign.
 
 ## Summary
 
