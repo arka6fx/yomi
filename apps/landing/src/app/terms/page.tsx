@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import Nav from "@/components/Nav"
-import Footer from "@/components/Footer"
+import LandingFooter from "@/components/landing/LandingFooter"
 
 export const metadata: Metadata = {
   title: "Terms of Service",
@@ -11,15 +11,17 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <div className="site-texture-bg min-h-screen text-foreground">
+    <div className="landing-light site-texture-bg-light min-h-screen text-foreground">
       <Nav />
       <main className="pt-16">
         <div className="mx-auto max-w-3xl px-6 py-24">
-          <p className="mb-3 font-mono text-xs uppercase tracking-widest text-sky-100/50">Legal</p>
-          <h1 className="mb-2 font-accent text-5xl text-[#eaf4ff]">Terms of Service</h1>
-          <p className="mb-16 text-sm text-white/40">Last updated: July 2026</p>
+          <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            Legal
+          </p>
+          <h1 className="mb-2 font-accent text-5xl text-foreground">Terms of Service</h1>
+          <p className="mb-16 text-sm text-muted-foreground/70">Last updated: July 2026</p>
 
-          <div className="space-y-10 text-sm leading-7 text-white/55">
+          <div className="space-y-10 text-sm leading-7 text-muted-foreground">
             <Section title="Acceptance">
               <p>
                 By downloading, installing, or using Yomi, you agree to these Terms of Service. If
@@ -173,7 +175,10 @@ export default function TermsPage() {
             <Section title="Contact">
               <p>
                 Questions about these Terms? Email{" "}
-                <a href="mailto:contact.arkagarai@gmail.com" className="text-accent">
+                <a
+                  href="mailto:contact.arkagarai@gmail.com"
+                  className="text-primary underline underline-offset-2 hover:text-foreground"
+                >
                   contact.arkagarai@gmail.com
                 </a>
                 .
@@ -182,7 +187,7 @@ export default function TermsPage() {
           </div>
         </div>
       </main>
-      <Footer />
+      <LandingFooter />
     </div>
   )
 }
@@ -190,8 +195,8 @@ export default function TermsPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-3">
-      <h2 className="font-accent text-2xl text-[#eaf4ff]">{title}</h2>
-      <div className="space-y-3 [&_a]:text-sky-100 [&_a]:transition-colors [&_a]:hover:text-white [&_li]:relative [&_li]:pl-4 [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-xs [&_li]:before:text-sky-100 [&_li]:before:content-['›'] [&_ul]:list-none [&_ul]:space-y-1.5">
+      <h2 className="font-accent text-2xl text-foreground">{title}</h2>
+      <div className="space-y-3 [&_a]:text-primary [&_a]:transition-colors [&_a]:hover:text-foreground [&_li]:relative [&_li]:pl-4 [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-xs [&_li]:before:text-primary [&_li]:before:content-['›'] [&_ul]:list-none [&_ul]:space-y-1.5">
         {children}
       </div>
     </div>
