@@ -7,6 +7,7 @@ import { motion } from "framer-motion"
 import {
   ArrowRight,
   Check,
+  ChevronRight,
   Crown,
   Cuboid,
   Layers,
@@ -69,6 +70,27 @@ const CONNECTORS: { id: string; name: string; description: string }[] = [
   { id: "linear", name: "Linear", description: "Issues and project tracking" },
 ]
 
+const STEPS = [
+  {
+    mode: "Text",
+    label: "Type a message",
+    description:
+      "Send a plain message on Telegram — 'summarize my unread email' or 'what's on my calendar tomorrow?' Yomi replies fast, pulling context from your connected apps.",
+  },
+  {
+    mode: "Voice",
+    label: "Send a voice note",
+    description:
+      "Tap and hold to record. Yomi transcribes your voice note, answers the question, and can reply with spoken audio when you're on the go.",
+  },
+  {
+    mode: "Photo",
+    label: "Snap a photo",
+    description:
+      "Send a picture — a receipt, a whiteboard, a screenshot. Yomi reads what's in the image and acts on it across your apps.",
+  },
+]
+
 const PLANS = [
   {
     key: "explore",
@@ -125,40 +147,6 @@ const PLANS = [
     icon: Cuboid,
   },
 ]
-
-function InteractionCard({
-  type,
-  mode,
-  label,
-  description,
-}: {
-  type: string
-  mode: string
-  label: string
-  description: string
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.5 }}
-      className="flex flex-col gap-3 rounded-2xl glass-card p-5"
-    >
-      <div className="flex items-center justify-between">
-        <span className="rounded-full bg-primary/10 px-2 py-0.5 font-mono text-xs text-primary">
-          {type}
-        </span>
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-          <ConnectorIcon id="telegram" size={14} />
-          {mode}
-        </span>
-      </div>
-      <p className="text-sm font-medium text-foreground">{label}</p>
-      <p className="text-xs leading-relaxed text-muted-foreground">{description}</p>
-    </motion.div>
-  )
-}
 
 export function LandingPage() {
   const [billingLoading, setBillingLoading] = useState<string | null>(null)
@@ -335,15 +323,10 @@ export function LandingPage() {
 
       {/* ── What is Yomi?────────────────────────────────────────────────── */}
       <section id="about" className="mx-auto max-w-3xl px-6 py-20">
-        <div className="mb-8 text-center">
-          <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            About
-          </p>
-          <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-            What is <span className="italic">Yomi</span>?
-          </h2>
-        </div>
-        <div className="space-y-4 text-center text-sm leading-relaxed text-muted-foreground">
+        <h2 className="mb-6 font-accent text-3xl leading-[1.1] tracking-tight text-foreground sm:text-4xl">
+          What is Yomi?
+        </h2>
+        <div className="space-y-4 text-left text-sm leading-relaxed text-muted-foreground">
           <p>
             Yomi is an AI productivity assistant that connects to the apps you already use so you
             can query, analyze, and act on your work using natural language, without switching apps
@@ -500,7 +483,7 @@ export function LandingPage() {
             How it works
           </p>
           <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-            Three ways to <span className="italic">ask</span>.
+            Three ways to reach Yomi
           </h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
             Type, talk, or send a photo — all from your Telegram chat. Yomi routes each request
@@ -508,25 +491,28 @@ export function LandingPage() {
           </p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <InteractionCard
-            type="A"
-            mode="Text"
-            label="Type a message"
-            description="Send a plain message on Telegram — 'summarize my unread email' or 'what's on my calendar tomorrow?' Yomi replies fast, pulling context from your connected apps."
-          />
-          <InteractionCard
-            type="B"
-            mode="Voice"
-            label="Send a voice note"
-            description="Tap and hold to record. Yomi transcribes your voice note, answers the question, and can reply with spoken audio when you're on the go."
-          />
-          <InteractionCard
-            type="C"
-            mode="Photo"
-            label="Snap a photo"
-            description="Send a picture — a receipt, a whiteboard, a screenshot. Yomi reads what's in the image and acts on it across your apps."
-          />
+        <div className="grid gap-8 sm:grid-cols-3">
+          {STEPS.map((step, i) => (
+            <div key={step.mode} className="relative">
+              {i > 0 && (
+                <ChevronRight
+                  size={16}
+                  className="absolute -left-6 top-3 hidden text-border sm:block"
+                />
+              )}
+              <span className="mb-3 flex h-8 w-8 items-center justify-center rounded-full border border-primary/30 bg-primary/10 font-mono text-sm font-medium text-primary">
+                {i + 1}
+              </span>
+              <p className="mb-1 flex items-center gap-1.5 text-sm font-medium text-foreground">
+                {step.label}
+                <span className="inline-flex items-center gap-1 text-xs font-normal text-muted-foreground">
+                  <ConnectorIcon id="telegram" size={12} />
+                  {step.mode}
+                </span>
+              </p>
+              <p className="text-xs leading-relaxed text-muted-foreground">{step.description}</p>
+            </div>
+          ))}
         </div>
       </section>
 
