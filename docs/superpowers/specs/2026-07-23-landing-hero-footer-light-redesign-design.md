@@ -1,7 +1,7 @@
 # Landing Page Light Redesign (Hero, Footer, Content Sections) — Design
 
 Date: 2026-07-23
-Status: Approved (design); pending implementation plan
+Status: Implemented
 
 ## Supersession note
 
