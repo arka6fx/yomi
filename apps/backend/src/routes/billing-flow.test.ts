@@ -523,7 +523,7 @@ describe("E2E: explore -> pro -> consume -> buy credits -> consume -> edge cases
     })
   })
 
-  it("3: subscription.active webhook upgrades user to Pro and grants 2500 credits", async () => {
+  it("3: subscription.active webhook upgrades user to Pro and grants 85 credits", async () => {
     expect(flow.user.plan).toBe("explore")
 
     const webhookBody = {
@@ -545,22 +545,22 @@ describe("E2E: explore -> pro -> consume -> buy credits -> consume -> edge cases
     expect(flow.user.dodoSubscriptionId).toBe("dodo_sub_pro_1")
     expect(flow.user.currentPeriodEnd).toEqual(proPeriodEnd1)
 
-    // 2500 credits granted from Pro subscription
+    // 85 credits granted from Pro subscription
     const balance = flow.creditGrants
       .filter((g) => g.status === "active")
       .reduce((s, g) => s + g.creditsRemaining, 0)
-    expect(balance).toBe(2500)
+    expect(balance).toBe(85)
     // Trial grant (now expired) + new Pro grant.
     expect(flow.creditGrants.length).toBe(2)
     const proGrant = flow.creditGrants.find((g) => g.status === "active")
     expect(proGrant).toBeDefined()
     expect(proGrant!.source).toBe("subscription_cycle")
-    expect(proGrant!.creditsGranted).toBe(2500)
+    expect(proGrant!.creditsGranted).toBe(85)
   })
 
-  it("4: consumes all 2500 Pro credits, then blocks with credits_exhausted", async () => {
-    // Pure-credit gating: 2500 credits = 2500 chats (1 credit each), then blocked.
-    const TOTAL_CREDITS = 2500
+  it("4: consumes all 85 Pro credits, then blocks with credits_exhausted", async () => {
+    // Pure-credit gating: 85 credits = 85 chats (1 credit each), then blocked.
+    const TOTAL_CREDITS = 85
     let lastBody: any = null
 
     for (let i = 0; i < TOTAL_CREDITS; i++) {
@@ -570,7 +570,7 @@ describe("E2E: explore -> pro -> consume -> buy credits -> consume -> edge cases
       expect(lastBody.ok).toBe(true)
     }
 
-    // After 2500 chats, all credits consumed.
+    // After 85 chats, all credits consumed.
     expect(lastBody.creditsRemaining).toBe(0)
 
     // No credits remain -> next request is blocked (buy a pack on Pro).
@@ -701,7 +701,7 @@ describe("E2E: explore -> pro -> consume -> buy credits -> consume -> edge cases
     const activeBalance = flow.creditGrants
       .filter((g) => g.status === "active")
       .reduce((s, g) => s + g.creditsRemaining, 0)
-    expect(activeBalance).toBe(2500)
+    expect(activeBalance).toBe(85)
     expect(trialGrant!.status).toBe("expired")
     expect(trialGrant!.creditsRemaining).toBe(0)
   })

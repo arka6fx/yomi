@@ -122,7 +122,7 @@ async function detectCountry(): Promise<string | null> {
 }
 
 export type LocalPriceFormatter = {
-  /** e.g. 14.99 -> "₹1,319" for IN, "$14.99" for US/unknown */
+  /** e.g. 5 -> "₹440" for IN, "$5" for US/unknown */
   format: (usd: number) => string
   /** true when showing a non-USD approximation (render a "billed in USD" note) */
   localized: boolean

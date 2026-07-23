@@ -396,16 +396,16 @@ describe("Dodo billing — plan catalog", () => {
 
     const explore = body.plans.find((plan: any) => plan.key === "explore")
     expect(explore.amountCents).toBe(0)
-    expect(explore.includedCredits).toBe(25)
-    expect(explore.features).toContain("25 trial credits")
+    expect(explore.includedCredits).toBe(100)
+    expect(explore.features).toContain("100 trial credits")
     expect(explore.features).toContain("Screen-aware AI and voice")
     expect(explore.features).toContain("Unlimited app connectors")
     expect(explore.features).toContain("30-day free trial")
 
     const pro = body.plans.find((plan: any) => plan.key === "pro")
-    expect(pro.amountCents).toBe(1499)
-    expect(pro.includedCredits).toBe(2500)
-    expect(pro.features).toContain("2,500 credits / month")
+    expect(pro.amountCents).toBe(500)
+    expect(pro.includedCredits).toBe(85)
+    expect(pro.features).toContain("85 credits / month")
     expect(pro.features).toContain("Credit packs available")
 
     const max = body.plans.find((plan: any) => plan.key === "max")
@@ -860,7 +860,7 @@ describe("Dodo billing — subscription summary", () => {
     expect(res.status).toBe(200)
     expect(body.credits).toMatchObject({
       remaining: 497,
-      included: 2500,
+      included: 85,
       used: 3,
       totalAvailableThisPeriod: 500,
       expiringSoon: 25,
@@ -958,7 +958,7 @@ describe("Dodo billing — webhook processing", () => {
     const grantCalls: any[] = []
     mockState.grantCredits = async (input: any) => {
       grantCalls.push(input)
-      return { granted: true, balance: 2500 }
+      return { granted: true, balance: 85 }
     }
 
     const body = {
@@ -976,13 +976,13 @@ describe("Dodo billing — webhook processing", () => {
 
     // Should have granted monthly credits
     expect(grantCalls.length).toBe(1)
-    expect(grantCalls[0]?.amount).toBe(2500)
+    expect(grantCalls[0]?.amount).toBe(85)
     expect(grantCalls[0]?.source).toBe("subscription_cycle")
   })
 
   it("grants the correct included credits for every paid subscription plan", async () => {
     const plans = [
-      ["pro", 2500],
+      ["pro", 85],
       ["max", 10000],
     ] as const
 
