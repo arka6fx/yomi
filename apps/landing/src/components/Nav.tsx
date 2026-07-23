@@ -34,7 +34,7 @@ export default function Nav() {
         <div className="flex items-center justify-between px-4 md:px-6 py-3">
           <BrandMark size="md" />
 
-          <nav className="hidden md:flex items-center gap-7">
+          <nav className="hidden lg:flex items-center gap-7">
             {NAV_LINKS.map((link) => (
               <Link
                 key={link.label}
@@ -83,7 +83,7 @@ export default function Nav() {
               </>
             )}
             <button
-              className="md:hidden ml-1 text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted/50 transition-colors"
+              className="lg:hidden ml-1 text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted/50 transition-colors"
               onClick={() => setMenuOpen((v) => !v)}
               aria-label="Toggle menu"
             >
