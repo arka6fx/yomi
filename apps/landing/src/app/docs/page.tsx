@@ -432,7 +432,7 @@ export default function DocsPage() {
               },
               {
                 name: "Max",
-                price: "$39.99/mo",
+                price: "$40/mo",
                 credits: "750 credits",
                 note: "Highest limits for heavy use.",
                 icon: Cuboid,

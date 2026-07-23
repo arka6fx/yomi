@@ -36,7 +36,7 @@ export const PLANS = [
   {
     key: "max",
     name: "Max",
-    priceUsd: 39.99,
+    priceUsd: 40,
     priceSub: "/ month",
     badge: "Power users",
     desc: "High-volume credits for power users.",

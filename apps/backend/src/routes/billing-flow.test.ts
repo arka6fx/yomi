@@ -601,7 +601,7 @@ describe("E2E: explore -> pro -> consume -> buy credits -> consume -> edge cases
       data: {
         payment_id: "pay_credit_500",
         checkout_id: "checkout_500",
-        amount: 499,
+        amount: 500,
         currency: "USD",
         metadata: {
           userId: "user_lily",

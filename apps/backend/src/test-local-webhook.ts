@@ -142,7 +142,7 @@ async function run() {
       id: `pay_test_${Math.random().toString(36).substring(2, 11)}`,
       checkout_id: `chk_test_${Math.random().toString(36).substring(2, 11)}`,
       customer_id: `cus_test_${Math.random().toString(36).substring(2, 11)}`,
-      amount: 499, // cents
+      amount: 500, // cents
       currency: "USD",
       metadata: {
         userId: testUser.id,
