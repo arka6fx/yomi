@@ -180,16 +180,6 @@
     perspective: 1200px;
   }
 
-  .hero-grain {
-    background-image:
-      radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.22) 0 1px, transparent 1px),
-      radial-gradient(circle at 70% 60%, rgba(255, 255, 255, 0.16) 0 1px, transparent 1px);
-    background-size:
-      3px 3px,
-      5px 5px;
-    mix-blend-mode: screen;
-  }
-
   .auth-grid {
     background-image:
       linear-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px),

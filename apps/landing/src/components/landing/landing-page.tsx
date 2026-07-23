@@ -183,7 +183,7 @@ export function LandingPage() {
 
   return (
     <div className="landing-light site-texture-bg-light min-h-screen text-foreground">
-      {/* persistent sticky nav, floats above the full-bleed hero image */}
+      {/* persistent sticky nav, floats above the hero */}
       <Nav />
 
       <section
