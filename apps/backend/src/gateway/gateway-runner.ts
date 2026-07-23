@@ -16,7 +16,6 @@ import {
   loadAgentHistory,
 } from "../services/agent-sessions.js"
 import { transcribeAudioUrl } from "../services/transcription.js"
-import { synthesizeSpeech } from "../services/tts.js"
 import { recordAiUsage } from "../services/ai-telemetry.js"
 import { consumeCredits, getCreditSummary } from "../services/credit-ledger.js"
 import { advanceSoulOnboarding } from "../services/soul.js"
@@ -400,12 +399,6 @@ export class GatewayRunner {
     return `${platform}:${chatId}`
   }
 
-  private wantsVoiceReply(text: string): boolean {
-    return /\b(voice reply|reply in voice|send (me )?(a )?(voice|voicemail|voice note|audio)|say it aloud|read it out)\b/i.test(
-      text,
-    )
-  }
-
   // Cheap gpt-5.4-mini path for simple Q&A, greetings, knowledge questions.
   // Returns the reply text, or null when the query needs the full agent loop.
   private async fastTelegramRespond(text: string, history: AgentMessage[]): Promise<string | null> {
@@ -550,59 +543,6 @@ export class GatewayRunner {
     }
 
     return null
-  }
-
-  private async sendVoiceReplyIfRequested(
-    msg: GatewayMessage,
-    text: string,
-    yomiUserId: string,
-  ): Promise<boolean> {
-    // Mirror the input modality by default (a voice note in gets a voice note
-    // back) as well as honoring an explicit text request ("reply in voice") on
-    // an otherwise-typed message — msg.audioUrl survives the transcription
-    // step's `{ ...msg, text: transcript }` overwrite, so it still reflects
-    // whether this turn started as a voice note.
-    const wantsVoice = Boolean(msg.audioUrl) || this.wantsVoiceReply(msg.text)
-    if (msg.platform !== "telegram" || !wantsVoice) return false
-    const adapter = this.adapters.get("telegram")
-    if (!(adapter instanceof TelegramAdapter)) return false
-    const spokenText = text
-      .replace(/https?:\/\/\S+/g, "")
-      .slice(0, 1200)
-      .trim()
-    if (!spokenText) return false
-    try {
-      const audio = await synthesizeSpeech(spokenText)
-      const result = await adapter.sendVoice(msg.chatId, audio.audio, {
-        replyTo: msg.messageId,
-        caption: text.length > 500 ? text.slice(0, 500) : undefined,
-      })
-      if (!result.ok)
-        console.warn(`[gateway] telegram voice send failed: ${result.error ?? "unknown"}`)
-      if (result.ok) {
-        const estimatedMinutes = Math.max(1, Math.ceil(spokenText.length / 900))
-        await this.recordGatewayCreditAddon({
-          userId: yomiUserId,
-          kind: "request_voice",
-          amount: estimatedMinutes * 2,
-          reason: "telegram voice reply",
-          metadata: { direction: "output", estimatedMinutes },
-        })
-        recordAiUsage({
-          userId: yomiUserId,
-          requestId: crypto.randomUUID(),
-          endpoint: "gateway.voice",
-          surface: "telegram",
-          route: "gateway",
-          ttsChars: spokenText.length,
-          status: "done",
-        }).catch(() => {})
-      }
-      return result.ok
-    } catch (err) {
-      console.warn("[gateway] telegram voice synthesis failed:", err)
-      return false
-    }
   }
 
   private async recordGatewayCreditAddon(input: {
@@ -1325,15 +1265,13 @@ export class GatewayRunner {
             this.appendHistory(msg.platform, msg.chatId, msg.text || "[image]", imageReply)
           }
           clearInterval(typingInterval)
-          if (!(await this.sendVoiceReplyIfRequested(msg, imageReply, yomiUserId))) {
-            await this.sendMessageAndLog(
-              msg.platform,
-              msg.chatId,
-              imageReply,
-              "telegram-image-reply",
-              { replyTo: msg.messageId },
-            )
-          }
+          await this.sendMessageAndLog(
+            msg.platform,
+            msg.chatId,
+            imageReply,
+            "telegram-image-reply",
+            { replyTo: msg.messageId },
+          )
         } catch (err) {
           clearInterval(typingInterval)
           console.warn("[gateway] image analysis error:", err)
@@ -1420,9 +1358,7 @@ export class GatewayRunner {
         // invocation's subrequest budget, and losing the user-visible reply
         // is worse than losing a history write (which has an in-memory fallback).
         const reply = result.text || "I couldn't produce a reply. Please try again."
-        if (!(await this.sendVoiceReplyIfRequested(msg, reply, yomiUserId))) {
-          await this.sendMessageAndLog(msg.platform, msg.chatId, reply, "backend-agent-reply")
-        }
+        await this.sendMessageAndLog(msg.platform, msg.chatId, reply, "backend-agent-reply")
         if (result.text) {
           if (conversationConsent.allowed && persistentSession) {
             await appendAgentTurn({

@@ -260,28 +260,6 @@ export class TelegramAdapter implements PlatformAdapter {
     }
   }
 
-  async sendVoice(
-    chatId: string,
-    audio: ArrayBuffer,
-    options?: { replyTo?: string; caption?: string },
-  ): Promise<{ ok: boolean; messageId?: string; error?: string }> {
-    try {
-      const form = new FormData()
-      form.set("chat_id", chatId)
-      form.set("voice", new Blob([audio], { type: "audio/mpeg" }), "yomi.mp3")
-      if (options?.caption)
-        form.set("caption", truncateMessage(removeMarkdown(options.caption), 900))
-      if (options?.replyTo) form.set("reply_to_message_id", options.replyTo)
-
-      const res = await fetch(`${this.apiUrl}/sendVoice`, { method: "POST", body: form })
-      const data = (await res.json()) as TelegramResponse
-      if (!data.ok) return { ok: false, error: data.description ?? "send voice failed" }
-      return { ok: true, messageId: String(data.result?.message_id ?? "") }
-    } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message : String(err) }
-    }
-  }
-
   async sendDocument(
     chatId: string,
     documentUrl: string,

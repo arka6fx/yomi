@@ -18,7 +18,7 @@ plan.
 | -------------------- | ------------------ |
 | AI chat              | 1 credit           |
 | Image/screen analyze | 1 credit           |
-| Voice (STT/TTS)      | 2 credits / minute |
+| Voice (STT input)    | 2 credits / minute |
 | Telegram bot message | 1 credit           |
 
 ## Credit packs (Pro/Max only)

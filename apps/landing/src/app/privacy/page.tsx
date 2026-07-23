@@ -220,13 +220,10 @@ export default function PrivacyPage() {
                 </li>
                 <li>
                   <strong className="text-label">OpenAI</strong>: LLM inference via our proxy, plus
-                  speech-to-text and text-to-speech for voice features. Query content (including
-                  excerpts from connected apps) is sent only to generate a response, and is subject
-                  to their privacy policy. We do not enable training data use.
-                </li>
-                <li>
-                  <strong className="text-label">ElevenLabs</strong>: fallback speech-to-text and
-                  text-to-speech, used only when the primary provider is unavailable.
+                  speech-to-text for voice messages you send (Yomi always replies in text). Query
+                  content (including excerpts from connected apps) is sent only to generate a
+                  response, and is subject to their privacy policy. We do not enable training data
+                  use.
                 </li>
                 <li>
                   <strong className="text-label">Telegram</strong>: if you link your Telegram
@@ -293,7 +290,7 @@ export default function PrivacyPage() {
                 </a>{" "}
                 or open an issue on{" "}
                 <a
-                  href="https://github.com/arka6fx/yomi"
+                  href="https://github.com/arka6fx/yomi-feedback"
                   className="text-accent"
                   target="_blank"
                   rel="noopener noreferrer"

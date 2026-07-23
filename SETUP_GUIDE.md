@@ -6,7 +6,7 @@ Production topology (two providers):
 Frontend / dashboard  https://getyomi.in        Cloudflare Worker (apps/landing)
 Backend API           https://api.getyomi.in    AWS EC2 + Docker + Caddy (apps/backend)
 Database              Neon Postgres
-LLM + speech          OpenAI (STT/TTS fall back to ElevenLabs)
+LLM + speech          OpenAI (STT for incoming voice notes; replies are text)
 Billing               Dodo Payments
 ```
 
@@ -62,10 +62,8 @@ OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_FAST_MODEL=gpt-5.4-mini
 OPENAI_AGENT_MODEL=gpt-5.5
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
-# STT/TTS: OpenAI primary (gpt-4o-mini-transcribe / gpt-4o-mini-tts),
-# ElevenLabs fallback.
-ELEVENLABS_API_KEY=...
-ELEVENLABS_VOICE_ID=...
+# STT: OpenAI (gpt-4o-mini-transcribe). Incoming Telegram voice notes are
+# transcribed to text; Yomi always replies in text, never with synthesized voice.
 
 TELEGRAM_BOT_TOKEN=...          TELEGRAM_BOT_USERNAME=yomi_assistant_bot
 

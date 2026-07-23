@@ -168,8 +168,6 @@ export interface RagSourceInfo {
 export type SseEvent =
   | { type: "transcript"; text: string }
   | { type: "llm_chunk"; text: string }
-  | { type: "audio_chunk"; base64: string }
-  | { type: "tts_error"; message: string }
   | {
       type: "router_decision"
       path: IntentPath
