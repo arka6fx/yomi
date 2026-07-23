@@ -2,7 +2,7 @@
 
 ```text
 Cloud Backend (Hono/Bun)
-  Better Auth, billing, Telegram gateway, LLM/STT/TTS proxy, usage metering, canonical memory
+  Better Auth, billing, Telegram gateway, LLM/STT proxy, usage metering, canonical memory
 
 Landing (Next.js)
   marketing, dashboard, billing, downloads, integrations, bot linking

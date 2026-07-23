@@ -42,7 +42,6 @@ Prerequisites:
 - Node 20+
 - A Neon Postgres database
 - An OpenAI API key
-- An ElevenLabs API key for speech fallback, if enabled
 
 ```bash
 git clone https://github.com/arka6fx/yomi.git
@@ -62,9 +61,9 @@ Common dev targets:
 ## Environment
 
 [`.env.example`](./.env.example) is the source of truth for every variable:
-database, Better Auth, Google/GitHub OAuth, the OpenAI endpoint, ElevenLabs,
-encryption keys, and Dodo Payments. The LLM/speech env vars use the standard
-`OPENAI_*` names and point at OpenAI (`api.openai.com`).
+database, Better Auth, Google/GitHub OAuth, the OpenAI endpoint, encryption
+keys, and Dodo Payments. The LLM/speech env vars use the standard `OPENAI_*`
+names and point at OpenAI (`api.openai.com`).
 
 Production uses split hostnames:
 
@@ -129,7 +128,7 @@ changed.
   `getyomi.in` and `www.getyomi.in`. Deploy with
   `wrangler deploy --env production`.
 - Database: Neon Postgres.
-- LLM and speech: OpenAI, with speech fallback to ElevenLabs when enabled.
+- LLM and speech: OpenAI.
 - Billing: Dodo Payments.
 
 See [SETUP_GUIDE.md](./SETUP_GUIDE.md) for the current runbook.
@@ -153,12 +152,11 @@ http://localhost:3001/api/auth/callback/google
 | Fast LLM   | OpenAI `gpt-5.4-mini`                                   |
 | Agent LLM  | OpenAI `gpt-5.5`                                        |
 | Embeddings | OpenAI `text-embedding-3-small`                         |
-| STT        | OpenAI `gpt-4o-mini-transcribe` -> ElevenLabs `scribe_v2` |
-| TTS        | OpenAI `gpt-4o-mini-tts` -> ElevenLabs `eleven_flash_v2_5` |
+| STT        | OpenAI `gpt-4o-mini-transcribe`                          |
 
-STT/TTS use OpenAI first and fall back to ElevenLabs on error. The provider uses
-the standard `OPENAI_*` env vars (`api.openai.com`). Set `TTS_ENGINE=none` to
-disable voice output.
+STT transcribes incoming Telegram voice notes to text via the standard
+`OPENAI_*` env vars (`api.openai.com`). Yomi never replies with synthesized
+voice — every reply is text.
 
 ## Specs
 

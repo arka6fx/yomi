@@ -56,7 +56,7 @@ bun install && bun run dev
 ## Stack
 
 - **LLM:** Vercel AI SDK (`ai`) -> OpenAI (standard `OPENAI_*` env vars)
-- **STT/TTS:** OpenAI (`gpt-4o-mini-transcribe`, `gpt-4o-mini-tts`) -> ElevenLabs fallback
+- **STT:** OpenAI (`gpt-4o-mini-transcribe`) — transcribes incoming voice notes; replies are always text
 - **Backend:** Hono on Bun (EC2 + Docker + Caddy), Better Auth (Google + GitHub OAuth), Drizzle + Neon
 - **Billing:** Dodo Payments
 - **Agent orchestration:** AI SDK agent loop with connector tools; backend agent for Telegram
@@ -161,7 +161,7 @@ consume). Callers: `routes/usage.ts`, `agent/run.ts`, and
 Fast path:  gpt-5.4-mini (OpenAI)
 Agent path: gpt-5.5 (OpenAI)
 Embeddings: text-embedding-3-small (OpenAI)
-Speech:     OpenAI gpt-4o-mini-transcribe / gpt-4o-mini-tts -> ElevenLabs fallback
+Speech:     OpenAI gpt-4o-mini-transcribe (STT only — replies are always text)
 ```
 
 LLM calls go direct to OpenAI (`api.openai.com`) using the standard `OPENAI_*`

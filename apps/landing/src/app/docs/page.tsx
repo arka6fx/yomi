@@ -373,9 +373,9 @@ export default function DocsPage() {
           icon={<Mic size={11} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <Feature icon={<Mic size={17} />} title="Speak and listen" tone="rose">
-              Voice notes are transcribed, and Yomi replies with a voice message back by default —
-              or say &quot;reply in voice&quot; on a typed message to get one there too.
+            <Feature icon={<Mic size={17} />} title="Speak, read replies" tone="rose">
+              Send a voice note and Yomi transcribes it automatically — replies always come back as
+              text.
             </Feature>
             <Feature icon={<ImageIcon size={17} />} title="Image analysis" tone="rose">
               Send a screenshot or photo and Yomi describes, reads, or reasons about what&apos;s in

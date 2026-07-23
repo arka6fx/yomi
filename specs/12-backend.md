@@ -23,8 +23,6 @@ app.route("/api/billing", billingRoutes)
 app.route("/api/usage", usageRoutes)
 app.route("/api/llm", llmRoutes)
 app.route("/api/rag", ragRoutes)
-app.post("/api/stt", sttHandler)
-app.post("/api/tts", ttsHandler)
 app.on(["GET", "POST"], "/api/auth/*", auth.handler)
 ```
 
@@ -80,15 +78,13 @@ Callers: `routes/usage.ts` (`POST /interactions/reserve`), `agent/run.ts`
 
 Clients never receive provider keys directly.
 
-## STT / TTS Proxy
+## Voice Notes
 
-`POST /api/stt` and `POST /api/tts`
-
-- accept payloads from authenticated clients only, so the credit meter can't be
-  bypassed
-- STT calls ElevenLabs `scribe_v2`; TTS calls `eleven_flash_v2_5`
-- not the metering point: voice is charged once at
-  `/api/usage/interactions/reserve` (kind `voice`, per actual minute)
+There is no client-facing STT/TTS HTTP proxy. Incoming Telegram voice notes
+are downloaded and transcribed inline by the gateway via
+`services/transcription.ts` (OpenAI `gpt-4o-mini-transcribe`); the transcript
+is charged at `recordGatewayCreditAddon` (kind `request_voice`, per actual
+minute). Yomi never replies with synthesized voice — every reply is text.
 
 ## Cloud RAG API
 
@@ -134,7 +130,7 @@ Routes in `apps/backend/src/routes/memory.ts`:
 - `apps/backend/src/index.ts`
 - `apps/backend/src/routes/billing.ts`
 - `apps/backend/src/routes/usage.ts`
-- `apps/backend/src/routes/stt.ts`, `apps/backend/src/routes/tts.ts`
+- `apps/backend/src/services/transcription.ts`
 - `apps/backend/src/routes/llm.ts`
 - `apps/backend/src/routes/rag.ts`
 - `apps/backend/src/routes/memory.ts`
