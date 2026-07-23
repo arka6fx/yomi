@@ -5,7 +5,7 @@ const links = [
   { label: "Support", href: "/support", external: false },
   { label: "Privacy", href: "/privacy", external: false },
   { label: "Terms", href: "/terms", external: false },
-  { label: "GitHub", href: "https://github.com/arka6fx/yomi", external: true },
+  { label: "GitHub", href: "https://github.com/arka6fx/yomi-feedback", external: true },
 ]
 
 export default function Footer() {
