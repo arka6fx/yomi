@@ -8,13 +8,10 @@ import {
   ArrowRight,
   Check,
   ChevronRight,
-  Crown,
-  Cuboid,
   Layers,
   Loader2,
   MessageSquare,
   Shield,
-  Sparkles,
   Zap,
 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
@@ -108,7 +105,6 @@ const PLANS = [
     ],
     cta: "Get started free",
     popular: false,
-    icon: Sparkles,
   },
   {
     key: "pro",
@@ -126,7 +122,6 @@ const PLANS = [
     ],
     cta: "Subscribe",
     popular: true,
-    icon: Crown,
   },
   {
     key: "max",
@@ -144,7 +139,6 @@ const PLANS = [
     ],
     cta: "Subscribe",
     popular: false,
-    icon: Cuboid,
   },
 ]
 
@@ -522,7 +516,7 @@ export function LandingPage() {
             Built to disappear
           </p>
           <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-            Everything you need, <span className="italic">nothing</span> you don't.
+            What Yomi does
           </h2>
         </div>
 
@@ -536,10 +530,10 @@ export function LandingPage() {
               transition={{ duration: 0.5, delay: i * 0.1 }}
               className="rounded-2xl glass-card p-6"
             >
-              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                <feature.icon size={20} className="text-primary" />
-              </div>
-              <h3 className="mb-2 font-medium text-foreground">{feature.title}</h3>
+              <h3 className="mb-2 flex items-center gap-2 font-medium text-foreground">
+                <feature.icon size={18} className="text-primary" />
+                {feature.title}
+              </h3>
               <p className="text-sm leading-relaxed text-muted-foreground">{feature.description}</p>
             </motion.div>
           ))}
@@ -553,7 +547,7 @@ export function LandingPage() {
             Supported Integrations
           </p>
           <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-            Your tools, one <span className="italic">conversation</span> away.
+            Connects to the apps you use
           </h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
             Connect your apps once. Ask Yomi from the web or from Telegram, even with your
@@ -590,7 +584,7 @@ export function LandingPage() {
             Transparency
           </p>
           <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-            What Yomi accesses, and <span className="italic">why</span>.
+            What Yomi accesses, and why
           </h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
             Yomi only reads data when you ask a question. Nothing is stored between queries. You can
@@ -631,48 +625,37 @@ export function LandingPage() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="mx-auto mt-8 max-w-3xl rounded-2xl glass-card p-6 text-sm text-muted-foreground"
+          className="mx-auto mt-8 max-w-3xl rounded-2xl glass-card p-6 text-sm leading-relaxed text-muted-foreground"
         >
           <p className="mb-3 font-medium text-foreground">How your data is protected</p>
-          <ul className="space-y-2">
-            <li className="flex items-start gap-2">
-              <Check size={14} className="mt-0.5 shrink-0 text-primary" />
-              Data from integrations is used only to answer your current query and is never stored
-              after the request completes.
-            </li>
-            <li className="flex items-start gap-2">
-              <Check size={14} className="mt-0.5 shrink-0 text-primary" />
-              OAuth tokens are encrypted at rest using AES-256-GCM and are never shared with third
-              parties.
-            </li>
-            <li className="flex items-start gap-2">
-              <Check size={14} className="mt-0.5 shrink-0 text-primary" />
-              Yomi&apos;s use of Google API data complies with the{" "}
-              <Link
-                href="https://developers.google.com/terms/api-services-user-data-policy"
-                className="text-primary underline underline-offset-2"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Google API Services User Data Policy
-              </Link>
-              , including the Limited Use requirements.
-            </li>
-            <li className="flex items-start gap-2">
-              <Check size={14} className="mt-0.5 shrink-0 text-primary" />
-              You can disconnect any integration instantly from your dashboard or from{" "}
-              <Link
-                href="https://myaccount.google.com/permissions"
-                className="text-primary underline underline-offset-2"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Google Account settings
-              </Link>
-              .
-            </li>
-          </ul>
-          <p className="mt-4">
+          <p className="mb-3">
+            Data from integrations is used only to answer your current query and is never stored
+            after the request completes. OAuth tokens are encrypted at rest using AES-256-GCM and
+            are never shared with third parties.
+          </p>
+          <p className="mb-3">
+            Yomi&apos;s use of Google API data complies with the{" "}
+            <Link
+              href="https://developers.google.com/terms/api-services-user-data-policy"
+              className="text-primary underline underline-offset-2"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Google API Services User Data Policy
+            </Link>
+            , including the Limited Use requirements. You can disconnect any integration instantly
+            from your dashboard or from{" "}
+            <Link
+              href="https://myaccount.google.com/permissions"
+              className="text-primary underline underline-offset-2"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Google Account settings
+            </Link>
+            .
+          </p>
+          <p>
             Read our full{" "}
             <Link href="/privacy" className="text-primary underline underline-offset-2">
               Privacy Policy
@@ -705,7 +688,7 @@ export function LandingPage() {
             Pricing
           </p>
           <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-            Simple, <span className="italic">honest</span> pricing.
+            Pricing
           </h2>
           <p className="mt-3 text-sm text-muted-foreground">
             Start free. Upgrade when you outgrow it.
@@ -714,7 +697,6 @@ export function LandingPage() {
 
         <div className="mx-auto grid max-w-4xl gap-5 sm:grid-cols-3">
           {PLANS.map((plan, i) => {
-            const Icon = plan.icon
             return (
               <motion.div
                 key={plan.name}
@@ -738,7 +720,6 @@ export function LandingPage() {
 
                 <div className="mb-5">
                   <div className="mb-2 flex items-center gap-2">
-                    <Icon size={18} className="text-primary" />
                     <p className="text-sm font-medium text-foreground">{plan.name}</p>
                     {!plan.popular && plan.badge && (
                       <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
