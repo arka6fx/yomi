@@ -436,26 +436,50 @@ export class GatewayRunner {
     }
   }
 
+  // Photos get one vision call that does double duty: describe the image, and
+  // decide whether the caption is a question (DESCRIBE) or a task ("post this",
+  // "send it", "save it" — ACTION). ACTION replies get handed to the real agent
+  // loop with the uploaded asset's URL, since this method has no connector tools
+  // of its own and can only ever describe, never act.
   private async analyzeImage(
     msg: GatewayMessage,
     history: AgentMessage[],
     yomiUserId: string,
-  ): Promise<string> {
-    if (!msg.imageUrl) return "I couldn't access the image. Please send it again."
+  ): Promise<{ kind: "describe"; text: string } | { kind: "action"; description: string; assetUrl: string | null }> {
+    if (!msg.imageUrl) return { kind: "describe", text: "I couldn't access the image. Please send it again." }
     const imageRes = await fetch(msg.imageUrl, { signal: AbortSignal.timeout(10_000) })
     if (!imageRes.ok) throw new Error(`Failed to download image: ${imageRes.status}`)
     const contentType = imageRes.headers.get("content-type") || msg.imageMimeType || "image/jpeg"
     const bytes = await imageRes.arrayBuffer()
     if (bytes.byteLength > 8 * 1024 * 1024)
-      return "That image is too large for me to analyze. Please send a smaller image."
+      return { kind: "describe", text: "That image is too large for me to analyze. Please send a smaller image." }
     const image = `data:${contentType};base64,${Buffer.from(bytes).toString("base64")}`
     const prompt = msg.text.trim() || "Analyze this image. Keep the answer concise and useful."
     const model = process.env["OPENAI_AGENT_MODEL"] || "gpt-5.5"
     const startedAt = Date.now()
+
+    // Upload happens in parallel with the vision call — it's wasted work on a
+    // DESCRIBE caption, but that's cheaper than serializing the two for the
+    // common case, and it's a no-op (null) when asset storage isn't configured.
+    const assetUploadPromise = (async () => {
+      const { uploadAsset } = await import("../services/asset-storage.js")
+      return uploadAsset(yomiUserId, bytes, contentType)
+    })()
+
+    // Flat budget, not proportional to image byte size — a bigger PNG doesn't need a
+    // longer answer, and gpt-5.x's hidden reasoning tokens draw from this same cap
+    // (Chat Completions API), so a tight limit on an action-shaped caption ("post this
+    // to Instagram...") let reasoning consume the whole budget and leave 0 visible
+    // tokens, which read to the user as a silent failure.
     const result = await generateText({
       model: createModel(model),
       system:
-        "You are Yomi. Analyze the image and answer concisely. If the user asks for details, include only the useful details.",
+        "You are Yomi's image classifier. First line of your reply: exactly ACTION if the " +
+        "caption asks you to DO something with the image (post it, send it, save it, upload it, " +
+        "share it, or any other task), or exactly DESCRIBE if the caption is just a question about " +
+        "the image or there is no caption. Second line onward: for DESCRIBE, a concise, useful " +
+        "answer about the image. For ACTION, a short factual description of the image (what it " +
+        "shows) — not a reply to the user, this feeds a tool-using agent that will act on it.",
       messages: [
         ...history
           .slice(-8)
@@ -468,7 +492,7 @@ export class GatewayRunner {
           ],
         },
       ],
-      maxTokens: Math.min(600, Math.max(200, (prompt.length + bytes.byteLength / 1024) * 1.2)),
+      maxTokens: 1500,
     })
     recordAiUsage({
       userId: yomiUserId,
@@ -483,7 +507,29 @@ export class GatewayRunner {
       latencyMs: Date.now() - startedAt,
       status: "done",
     }).catch(() => {})
-    return result.text.trim() || "I couldn't produce an image analysis. Please try again."
+
+    const raw = result.text.trim()
+    const isAction = /^ACTION\b/.test(raw)
+    const rest = raw.replace(/^(ACTION|DESCRIBE)\s*/, "").trim()
+
+    if (isAction) {
+      const asset = await assetUploadPromise.catch((err) => {
+        console.warn("[gateway] asset upload failed:", err)
+        return null
+      })
+      return { kind: "action", description: rest || "an image", assetUrl: asset?.url ?? null }
+    }
+
+    // Fire-and-forget: nothing downstream needs the upload for a DESCRIBE reply.
+    assetUploadPromise.catch(() => {})
+    if (rest) return { kind: "describe", text: rest }
+    return {
+      kind: "describe",
+      text:
+        result.finishReason === "length"
+          ? "That image needed more thinking than I had room for — try asking a shorter, more specific question about it."
+          : "I couldn't produce an image analysis. Please try again.",
+    }
   }
 
   /**
@@ -1243,7 +1289,7 @@ export class GatewayRunner {
           return
         }
         try {
-          const imageReply = await this.analyzeImage(msg, history, yomiUserId)
+          const result = await this.analyzeImage(msg, history, yomiUserId)
           await this.recordGatewayCreditAddon({
             userId: yomiUserId,
             kind: "analyze",
@@ -1251,27 +1297,56 @@ export class GatewayRunner {
             reason: "telegram image analysis",
             metadata: { imageMimeType: msg.imageMimeType ?? null },
           })
-          if (conversationConsent.allowed && persistentSession) {
-            await appendAgentTurn({
-              sessionId: persistentSession.id,
-              userId: yomiUserId,
-              userText: msg.text || "[image]",
-              assistantText: imageReply,
-            }).catch((err) => {
-              console.warn("[gateway] append image session failed:", err)
-              this.appendHistory(msg.platform, msg.chatId, msg.text || "[image]", imageReply)
-            })
+
+          if (result.kind === "action") {
+            if (!result.assetUrl) {
+              clearInterval(typingInterval)
+              await this.sendMessageAndLog(
+                msg.platform,
+                msg.chatId,
+                "I can't act on attachments yet — attachment uploads aren't set up on this " +
+                  `server. (I can see it's ${result.description}, but can't do anything with it.)`,
+                "telegram-image-action-unconfigured",
+                { replyTo: msg.messageId },
+              )
+              return
+            }
+            // Hand off to the real agent loop below instead of replying here: this
+            // method only describes images, it has no connector tools. Rewriting
+            // msg.text lets the existing fast-path/agent routing pick this up like
+            // any other turn, now with the asset it needs to actually act on.
+            msg = {
+              ...msg,
+              text:
+                `${msg.text.trim() ? `${msg.text.trim()}\n\n` : ""}` +
+                `[Attached image: ${result.description}. File available at ${result.assetUrl} ` +
+                `(expires in 1 hour, ${msg.imageMimeType ?? "image"}).]`,
+            }
+            // No return — falls through to the fast-path/agent handling below.
           } else {
-            this.appendHistory(msg.platform, msg.chatId, msg.text || "[image]", imageReply)
+            if (conversationConsent.allowed && persistentSession) {
+              await appendAgentTurn({
+                sessionId: persistentSession.id,
+                userId: yomiUserId,
+                userText: msg.text || "[image]",
+                assistantText: result.text,
+              }).catch((err) => {
+                console.warn("[gateway] append image session failed:", err)
+                this.appendHistory(msg.platform, msg.chatId, msg.text || "[image]", result.text)
+              })
+            } else {
+              this.appendHistory(msg.platform, msg.chatId, msg.text || "[image]", result.text)
+            }
+            clearInterval(typingInterval)
+            await this.sendMessageAndLog(
+              msg.platform,
+              msg.chatId,
+              result.text,
+              "telegram-image-reply",
+              { replyTo: msg.messageId },
+            )
+            return
           }
-          clearInterval(typingInterval)
-          await this.sendMessageAndLog(
-            msg.platform,
-            msg.chatId,
-            imageReply,
-            "telegram-image-reply",
-            { replyTo: msg.messageId },
-          )
         } catch (err) {
           clearInterval(typingInterval)
           console.warn("[gateway] image analysis error:", err)
@@ -1282,8 +1357,8 @@ export class GatewayRunner {
             "telegram-image-error",
             { replyTo: msg.messageId },
           )
+          return
         }
-        return
       }
 
       // ── Fast path: cheap model call for simple Q&A ──────────────────────────
