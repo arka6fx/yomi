@@ -19,7 +19,7 @@ import {
 } from "lucide-react"
 import { ConnectorIcon, buildCatalog } from "@yomi/ui-connectors"
 import type { ConnectorCategory } from "@yomi/ui-connectors"
-import Footer from "@/components/Footer"
+import LandingFooter from "@/components/landing/LandingFooter"
 import { DocsShell } from "@/components/docs/DocsShell"
 import { DocsHero } from "@/components/docs/DocsHero"
 
@@ -100,26 +100,26 @@ type Tone =
 const TONE_CLASSES: Record<Tone, { badge: string; icon: string }> = {
   primary: { badge: "border-primary/25 bg-primary/10 text-primary", icon: "bg-primary/10 text-primary" },
   emerald: {
-    badge: "border-emerald-500/25 bg-emerald-500/10 text-emerald-400",
-    icon: "bg-emerald-500/10 text-emerald-400",
+    badge: "border-emerald-500/25 bg-emerald-500/10 text-emerald-600",
+    icon: "bg-emerald-500/10 text-emerald-600",
   },
-  sky: { badge: "border-sky-500/25 bg-sky-500/10 text-sky-400", icon: "bg-sky-500/10 text-sky-400" },
-  blue: { badge: "border-blue-500/25 bg-blue-500/10 text-blue-400", icon: "bg-blue-500/10 text-blue-400" },
+  sky: { badge: "border-sky-500/25 bg-sky-500/10 text-sky-600", icon: "bg-sky-500/10 text-sky-600" },
+  blue: { badge: "border-blue-500/25 bg-blue-500/10 text-blue-600", icon: "bg-blue-500/10 text-blue-600" },
   violet: {
-    badge: "border-violet-500/25 bg-violet-500/10 text-violet-400",
-    icon: "bg-violet-500/10 text-violet-400",
+    badge: "border-violet-500/25 bg-violet-500/10 text-violet-600",
+    icon: "bg-violet-500/10 text-violet-600",
   },
   amber: {
-    badge: "border-amber-500/25 bg-amber-500/10 text-amber-400",
-    icon: "bg-amber-500/10 text-amber-400",
+    badge: "border-amber-500/25 bg-amber-500/10 text-amber-600",
+    icon: "bg-amber-500/10 text-amber-600",
   },
-  rose: { badge: "border-rose-500/25 bg-rose-500/10 text-rose-400", icon: "bg-rose-500/10 text-rose-400" },
-  teal: { badge: "border-teal-500/25 bg-teal-500/10 text-teal-400", icon: "bg-teal-500/10 text-teal-400" },
+  rose: { badge: "border-rose-500/25 bg-rose-500/10 text-rose-600", icon: "bg-rose-500/10 text-rose-600" },
+  teal: { badge: "border-teal-500/25 bg-teal-500/10 text-teal-600", icon: "bg-teal-500/10 text-teal-600" },
   yellow: {
-    badge: "border-yellow-500/25 bg-yellow-500/10 text-yellow-400",
-    icon: "bg-yellow-500/10 text-yellow-400",
+    badge: "border-yellow-500/25 bg-yellow-500/10 text-yellow-700",
+    icon: "bg-yellow-500/10 text-yellow-700",
   },
-  cyan: { badge: "border-cyan-500/25 bg-cyan-500/10 text-cyan-400", icon: "bg-cyan-500/10 text-cyan-400" },
+  cyan: { badge: "border-cyan-500/25 bg-cyan-500/10 text-cyan-600", icon: "bg-cyan-500/10 text-cyan-600" },
 }
 
 function Eyebrow({
@@ -200,7 +200,7 @@ function Feature({
 
 export default function DocsPage() {
   return (
-    <div className="site-texture-bg min-h-dvh text-foreground">
+    <div className="landing-light site-texture-bg-light min-h-dvh text-foreground">
       <DocsShell banner={<DocsHero />}>
         <Section id="overview" eyebrow="Overview" title="What Yomi is">
           <p>
@@ -520,7 +520,7 @@ export default function DocsPage() {
         </div>
       </DocsShell>
 
-      <Footer />
+      <LandingFooter />
     </div>
   )
 }
