@@ -17,7 +17,7 @@ import {
 import { authClient } from "@/lib/auth-client"
 import { useLocalPrice } from "@/lib/local-price"
 
-import Footer from "@/components/Footer"
+import LandingFooter from "@/components/landing/LandingFooter"
 import Nav from "@/components/Nav"
 import { ConnectorIcon } from "@yomi/ui-connectors"
 
@@ -778,7 +778,7 @@ export function LandingPage() {
         </motion.p>
       </section>
 
-      <Footer />
+      <LandingFooter />
     </div>
   )
 }
