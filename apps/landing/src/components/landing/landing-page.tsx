@@ -157,10 +157,10 @@ const PLANS = [
     name: "Explore",
     priceUsd: 0,
     period: "/ month",
-    badge: "Free",
-    description: "Try Yomi on Telegram with text, voice, and memory for 30 days. No card needed.",
+    badge: "Free forever",
+    description: "Text, voice, and memory on Telegram, free every month. No card needed.",
     features: [
-      "25 credits (30-day trial)",
+      "100 credits every month",
       "Text, voice & photo on Telegram",
       "Durable memory",
       "Unlimited app connectors",
@@ -172,12 +172,12 @@ const PLANS = [
   {
     key: "pro",
     name: "Pro",
-    priceUsd: 14.99,
+    priceUsd: 5,
     period: "/ month",
     badge: "Most Popular",
     description: "Text, voice, photos, and memory for everyday work.",
     features: [
-      "2,500 credits / month",
+      "300 credits / month",
       "Buy extra credit packs anytime",
       "Text, voice, photos & memory",
       "Unlimited app connectors",
@@ -195,7 +195,7 @@ const PLANS = [
     description: "High-volume credits for power users.",
     features: [
       "Everything in Pro",
-      "10,000 credits / month",
+      "750 credits / month",
       "Buy extra credit packs anytime",
       "Unlimited app connectors",
       "Experimental features first",
@@ -837,8 +837,8 @@ export function LandingPage() {
           viewport={{ once: true }}
           className="mt-8 text-center text-xs text-muted-foreground"
         >
-          * Credits are a simple usage balance. Explore is a 30-day free trial; Pro and Max can buy
-          extra credit packs.
+          * Credits are a simple usage balance. Explore is free every month, forever; Pro and Max
+          can buy extra credit packs.
         </motion.p>
       </section>
 

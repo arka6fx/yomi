@@ -890,7 +890,7 @@ describe("Dodo billing — subscription summary", () => {
     expect(body.credits.resetAt).toBe("2026-08-14T09:00:00.000Z")
   })
 
-  it("dates the usage summary from the trial expiry for an explore user", async () => {
+  it("dates the usage summary from the explore renewal date for an explore user", async () => {
     currentUser.plan = "explore"
     currentUser.subscriptionStatus = "inactive"
     currentUser.dodoSubscriptionId = null
@@ -899,7 +899,7 @@ describe("Dodo billing — subscription summary", () => {
 
     const body = (await (await getUsageSummary()).json()) as any
 
-    expect(body.credits.resetKind).toBe("trial_expiry")
+    expect(body.credits.resetKind).toBe("renewal")
     expect(body.credits.resetAt).toBe("2026-08-13T09:00:00.000Z")
   })
 })

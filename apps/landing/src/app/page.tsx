@@ -69,15 +69,15 @@ const jsonLd = {
           name: "Explore",
           price: "0",
           priceCurrency: "USD",
-          description: "Free 30-day trial with 25 monthly credits and unlimited app connectors",
+          description: "Free every month, forever, with 100 monthly credits and unlimited app connectors",
         },
         {
           "@type": "Offer",
           name: "Pro",
-          price: "14.99",
+          price: "5",
           priceCurrency: "USD",
           billingDuration: "P1M",
-          description: "2,500 monthly credits, unlimited app connectors, Telegram bot",
+          description: "300 monthly credits, unlimited app connectors, Telegram bot",
         },
         {
           "@type": "Offer",
@@ -85,7 +85,7 @@ const jsonLd = {
           price: "39.99",
           priceCurrency: "USD",
           billingDuration: "P1M",
-          description: "10,000 monthly credits, unlimited app connectors, early access",
+          description: "750 monthly credits, unlimited app connectors, early access",
         },
       ],
       author: {
@@ -125,7 +125,7 @@ const jsonLd = {
           name: "Is Yomi free?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yes. Yomi has a free 30-day Explore trial with 25 credits and unlimited app connectors. Paid plans start at $14.99/month (Pro: 2,500 credits/mo). Credits are a simple usage balance; the dashboard shows remaining credits, monthly usage, and reset date.",
+            text: "Yes. Yomi's Explore plan is free every month, forever, with 100 credits and unlimited app connectors. Paid plans start at $5/month (Pro: 300 credits/mo). Credits are a simple usage balance; the dashboard shows remaining credits, monthly usage, and reset date.",
           },
         },
         {

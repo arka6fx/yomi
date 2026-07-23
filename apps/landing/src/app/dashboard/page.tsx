@@ -53,7 +53,7 @@ type IntegrationHealth = {
   updatedAt: string
 }
 
-type ResetKind = "renewal" | "trial_expiry" | "none"
+type ResetKind = "renewal" | "none"
 
 type Sub = {
   role: string
@@ -114,7 +114,7 @@ function inDays(value: string) {
   return `in ${days} day${days === 1 ? "" : "s"}`
 }
 
-// Explore credits are a one-off trial grant that expires; only paid plans renew.
+// Explore renews monthly just like a paid plan now (see explore-renewal.ts's cron).
 function creditsCaption(
   included: number,
   isOwner: boolean,
@@ -122,9 +122,6 @@ function creditsCaption(
   resetKind?: ResetKind | null,
 ) {
   if (isOwner) return "Unlimited credits."
-  if (resetKind === "trial_expiry" && resetAt) {
-    return `${included.toLocaleString()} trial credits. Expire ${inDays(resetAt)}.`
-  }
   if (resetKind === "renewal" && resetAt) {
     return `${included.toLocaleString()} included monthly credits. Resets ${inDays(resetAt)}.`
   }
@@ -624,7 +621,7 @@ function DashboardContent() {
     usageSummary?.credits.totalAvailableThisPeriod ?? sub?.totalCredits ?? creditRemaining
   const creditIncluded =
     usageSummary?.credits.included ??
-    ({ explore: 100, pro: 2500, max: 10000 } as Record<string, number>)[currentPlanKey] ?? 0
+    ({ explore: 100, pro: 300, max: 750 } as Record<string, number>)[currentPlanKey] ?? 0
   const resetAt = usageSummary?.credits.resetAt ?? sub?.resetAt
   const resetKind = usageSummary?.credits.resetKind ?? sub?.resetKind
   const trendDays = usageSummary?.monthlyUsage.days.slice(-14) ?? []
@@ -1248,12 +1245,12 @@ function DashboardContent() {
                     {!isOwner && sub?.plan === "explore" && sub?.credits?.balance === 0 && (
                       <div className="mt-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20">
                         <p className="text-sm text-destructive font-medium mb-1">
-                          Free trial has ended
+                          Out of free credits for this month
                         </p>
                         <p className="text-xs text-destructive/80 mb-3">
                           {sub.trialExpired
-                            ? "Your 30-day Explore trial has ended. Subscribe to Pro or Max to continue using Yomi."
-                            : "You've used all your trial credits. Subscribe to Pro or Max to keep using Yomi."}
+                            ? "Your free credits are renewing — check back in a moment, or upgrade to Pro or Max to skip the wait."
+                            : "You've used all your free credits for this month. They renew automatically, or upgrade to Pro or Max for more right now."}
                         </p>
                         <button
                           onClick={() => handleUpgrade("pro")}
@@ -1261,7 +1258,7 @@ function DashboardContent() {
                           className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
                         >
                           <Crown size={12} />
-                          Subscribe to Pro · $14.99/mo
+                          Subscribe to Pro · $5/mo
                         </button>
                       </div>
                     )}

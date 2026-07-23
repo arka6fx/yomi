@@ -23,7 +23,7 @@ type RenewalUser = EntitlementUser & {
 
 // "none" — owner (credits bypassed) or a paid plan with no billing period on record yet.
 export type CreditRenewal = {
-  kind: "renewal" | "trial_expiry" | "none"
+  kind: "renewal" | "none"
   at: Date | null
 }
 
@@ -70,16 +70,17 @@ export function effectivePlanForUser(user: EntitlementUser): string {
   return plan in PLANS ? plan : "explore"
 }
 
-// Credits are granted per user, never on a calendar boundary: explore gets a one-off
-// trial grant that expires (auth.ts signup), paid plans are re-granted by the Dodo
-// cycle webhook at currentPeriodEnd (routes/billing.ts).
+// Explore renews every month like a paid plan now (see explore-renewal.ts's cron
+// sweep) rather than expiring after a one-off trial grant, so it reports the same
+// "renewal" kind — trialEndDate is the recurring renewal date, not an end date.
+// Paid plans are re-granted by the Dodo cycle webhook at currentPeriodEnd (billing.ts).
 export function creditRenewal(user: RenewalUser): CreditRenewal {
   if (isOwnerUser(user)) return { kind: "none", at: null }
 
   if (effectivePlanForUser(user) === "explore") {
     const trialEnd =
       user.trialEndDate ?? (user.createdAt ? new Date(user.createdAt.getTime() + TRIAL_MS) : null)
-    return trialEnd ? { kind: "trial_expiry", at: trialEnd } : { kind: "none", at: null }
+    return trialEnd ? { kind: "renewal", at: trialEnd } : { kind: "none", at: null }
   }
 
   return user.currentPeriodEnd

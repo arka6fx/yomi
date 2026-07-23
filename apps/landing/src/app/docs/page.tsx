@@ -418,14 +418,14 @@ export default function DocsPage() {
               {
                 name: "Explore",
                 price: "Free",
-                credits: "25 credits",
-                note: "30-day trial to try everything.",
+                credits: "100 credits",
+                note: "Renews every month, forever.",
                 icon: Sparkles,
               },
               {
                 name: "Pro",
-                price: "$14.99/mo",
-                credits: "2,500 credits",
+                price: "$5/mo",
+                credits: "300 credits",
                 note: "Higher limits + credit packs.",
                 icon: Crown,
                 featured: true,
@@ -433,7 +433,7 @@ export default function DocsPage() {
               {
                 name: "Max",
                 price: "$39.99/mo",
-                credits: "10,000 credits",
+                credits: "750 credits",
                 note: "Highest limits for heavy use.",
                 icon: Cuboid,
               },

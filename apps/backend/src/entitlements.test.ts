@@ -13,21 +13,21 @@ const base = {
 }
 
 describe("creditRenewal", () => {
-  it("reports the trial expiry for an explore user, not a calendar-month reset", () => {
+  it("reports the explore renewal date, not a calendar-month reset", () => {
     const renewal = creditRenewal({
       ...base,
       plan: "explore",
       trialEndDate: new Date("2026-08-13T09:00:00Z"),
     })
 
-    expect(renewal.kind).toBe("trial_expiry")
+    expect(renewal.kind).toBe("renewal")
     expect(renewal.at?.toISOString()).toBe("2026-08-13T09:00:00.000Z")
   })
 
   it("falls back to signup + 30 days when an explore user has no trialEndDate", () => {
     const renewal = creditRenewal({ ...base, plan: "explore" })
 
-    expect(renewal.kind).toBe("trial_expiry")
+    expect(renewal.kind).toBe("renewal")
     expect(renewal.at?.toISOString()).toBe("2026-08-13T09:00:00.000Z")
   })
 
