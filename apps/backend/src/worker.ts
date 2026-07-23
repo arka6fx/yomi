@@ -3,6 +3,7 @@ import { runDueSchedules } from "./services/schedule-runner.js"
 import { runPrivacyRetention } from "./services/privacy/retention.js"
 import { runDriveSyncSweep } from "./services/rag/drive-sync.js"
 import { summarizeUnsummarizedSessions } from "./services/agent-sessions.js"
+import { renewExploreCredits } from "./services/explore-renewal.js"
 
 interface ExecutionContext {
   waitUntil(promise: Promise<unknown>): void
@@ -87,6 +88,11 @@ export default {
             if (count > 0) console.warn(`[session-summary] summarized ${count} session(s)`)
           })
           .catch((err) => console.error("[session-summary] sweep error:", err)),
+        renewExploreCredits()
+          .then(({ renewed }) => {
+            if (renewed > 0) console.warn(`[explore-renewal] renewed ${renewed} account(s)`)
+          })
+          .catch((err) => console.error("[explore-renewal] sweep error:", err)),
       ]),
     )
   },

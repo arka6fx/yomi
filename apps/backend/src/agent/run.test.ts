@@ -170,13 +170,13 @@ describe("runAgent metering", () => {
     expect(result.text).toInclude("inactive")
   })
 
-  it("blocks explore user out of credits (must subscribe)", async () => {
+  it("blocks explore user out of credits (renews monthly or upgrade)", async () => {
     mockUser = makeUser({ plan: "explore", subscriptionStatus: "active" })
     mockCreditBalance = 0
     const { runAgent } = await import("./run.js")
     const result = await runAgent({ userId: "user_1", text: "hi" })
     expect(result.quotaError).toBe(true)
-    expect(result.text).toInclude("trial credits")
+    expect(result.text).toInclude("free credits")
   })
 
   it("blocks subscribed user out of credits (buy a pack)", async () => {

@@ -6,11 +6,11 @@ export const PLANS = [
     name: "Explore",
     priceUsd: 0,
     priceSub: "/ month",
-    badge: "30-day trial",
-    desc: "Try Yomi on Telegram with text, voice, and memory for 30 days. No card needed.",
+    badge: "Free forever",
+    desc: "Text, voice, and memory on Telegram, free every month. No card needed.",
     icon: Sparkles,
     features: [
-      "100 credits (30-day trial)",
+      "100 credits every month",
       "Text, voice & photo on Telegram",
       "Durable memory",
       "Unlimited app connectors",
@@ -26,7 +26,7 @@ export const PLANS = [
     desc: "Text, voice, photos, and memory for everyday work.",
     icon: Crown,
     features: [
-      "85 credits / month",
+      "300 credits / month",
       "Buy extra credit packs anytime",
       "Text, voice, photos & memory",
       "Unlimited app connectors",
@@ -43,7 +43,7 @@ export const PLANS = [
     icon: Cuboid,
     features: [
       "Everything in Pro",
-      "10,000 credits / month",
+      "750 credits / month",
       "Buy extra credit packs anytime",
       "Unlimited app connectors",
       "Experimental features first",
