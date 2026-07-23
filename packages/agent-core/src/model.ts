@@ -108,6 +108,13 @@ type ChatMessage =
       content: string
     }
 
+type UsageDetails = {
+  prompt_tokens?: number
+  completion_tokens?: number
+  // OpenAI's automatic prompt-caching discount, in tokens — a subset of prompt_tokens.
+  prompt_tokens_details?: { cached_tokens?: number }
+}
+
 type ChatCompletionResponse = {
   id?: string
   model?: string
@@ -118,10 +125,7 @@ type ChatCompletionResponse = {
     }
     finish_reason?: string | null
   }>
-  usage?: {
-    prompt_tokens?: number
-    completion_tokens?: number
-  }
+  usage?: UsageDetails
 }
 
 type ChatCompletionChunk = {
@@ -138,10 +142,7 @@ type ChatCompletionChunk = {
     }
     finish_reason?: string | null
   }>
-  usage?: {
-    prompt_tokens?: number
-    completion_tokens?: number
-  } | null
+  usage?: UsageDetails | null
 }
 
 // When no OpenAI key is configured, LLM calls route through the
@@ -359,6 +360,14 @@ function tokenUsage(inputTokens?: number, outputTokens?: number) {
   }
 }
 
+// Surfaces OpenAI's prompt-caching discount as provider metadata (LanguageModelV1's
+// usage shape has no room for it) so callers can tell real cached spend from billed-at-
+// full-price tokens — previously silently dropped, so telemetry always read 0% cached.
+function cacheProviderMetadata(cachedTokens?: number): Record<string, Record<string, number>> | undefined {
+  if (!cachedTokens) return undefined
+  return { openai: { cachedPromptTokens: cachedTokens } }
+}
+
 function warnings(_options: LanguageModelV1CallOptions): LanguageModelV1CallWarning[] {
   return []
 }
@@ -454,6 +463,7 @@ export function createModel(modelId = DEFAULT_MODEL): LanguageModelV1 {
         toolCalls,
         finishReason: finishReason(choice?.finish_reason),
         usage: tokenUsage(json.usage?.prompt_tokens, json.usage?.completion_tokens),
+        providerMetadata: cacheProviderMetadata(json.usage?.prompt_tokens_details?.cached_tokens),
         rawCall: { rawPrompt: options.prompt, rawSettings: body },
         rawResponse: { body: json },
         response: { id: json.id, modelId: json.model ?? modelId },
@@ -482,6 +492,7 @@ export function createModel(modelId = DEFAULT_MODEL): LanguageModelV1 {
           let stopReason: string | null | undefined
           let inputTokens = 0
           let outputTokens = 0
+          let cachedTokens = 0
           controller.enqueue({ type: "response-metadata", timestamp: new Date(), modelId })
 
           try {
@@ -535,6 +546,7 @@ export function createModel(modelId = DEFAULT_MODEL): LanguageModelV1 {
                 if (chunk.usage) {
                   inputTokens = chunk.usage.prompt_tokens ?? inputTokens
                   outputTokens = chunk.usage.completion_tokens ?? outputTokens
+                  cachedTokens = chunk.usage.prompt_tokens_details?.cached_tokens ?? cachedTokens
                 }
               }
             }
@@ -554,6 +566,7 @@ export function createModel(modelId = DEFAULT_MODEL): LanguageModelV1 {
               type: "finish",
               finishReason: finishReason(stopReason),
               usage: tokenUsage(inputTokens, outputTokens),
+              providerMetadata: cacheProviderMetadata(cachedTokens),
             })
             controller.close()
           } catch (error) {

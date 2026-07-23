@@ -104,6 +104,30 @@ describe("runAgentLoop grace call", () => {
     expect(text).toBe("Here is your answer.")
     expect(bodies).toHaveLength(1) // no grace call
   })
+
+  it("accumulates cachedInputTokens from prompt_tokens_details across the run", async () => {
+    globalThis.fetch = (async () =>
+      chatResponse({
+        choices: [{ message: { content: "answer" }, finish_reason: "stop" }],
+        usage: {
+          prompt_tokens: 2000,
+          completion_tokens: 10,
+          prompt_tokens_details: { cached_tokens: 1800 },
+        },
+      })) as typeof fetch
+
+    let usage: { cachedInputTokens: number; inputTokens: number } | undefined
+    await runAgentLoop({
+      registry: emptyRegistry,
+      text: "hi",
+      onUsage: (u) => {
+        usage = u
+      },
+    })
+
+    expect(usage?.inputTokens).toBe(2000)
+    expect(usage?.cachedInputTokens).toBe(1800)
+  })
 })
 
 // A model that always asks for another echo tool call, so the loop only ever

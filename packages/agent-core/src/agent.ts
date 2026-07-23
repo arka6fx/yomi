@@ -13,6 +13,8 @@ export interface UsageInfo {
   model: string
   inputTokens: number
   outputTokens: number
+  // Subset of inputTokens OpenAI billed at the discounted prompt-cache rate.
+  cachedInputTokens: number
   toolCallCount: number
   finishReason: string
 }
@@ -82,6 +84,17 @@ function maxOutputTokens(override?: number): number {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+// model.ts (our hand-rolled OpenAI client) surfaces the prompt-cache discount via
+// providerMetadata.openai.cachedPromptTokens since LanguageModelV1's usage shape
+// has no field for it.
+function cachedTokensFrom(providerMetadata: unknown): number {
+  if (!isRecord(providerMetadata)) return 0
+  const openai = providerMetadata["openai"]
+  if (!isRecord(openai)) return 0
+  const cached = openai["cachedPromptTokens"]
+  return typeof cached === "number" && Number.isFinite(cached) ? cached : 0
 }
 
 function formatToolItem(item: unknown): string | null {
@@ -205,6 +218,7 @@ export async function runAgentLoop(opts: RunAgentLoopOptions): Promise<string> {
   let usedSteps = 0
   let inputTokens = 0
   let outputTokens = 0
+  let cachedInputTokens = 0
   let toolCallCount = 0
   let budgetReason: "steps" | "tokens" | null = null
   let guardReason: "duplicate" | "stall" | null = null
@@ -219,7 +233,14 @@ export async function runAgentLoop(opts: RunAgentLoopOptions): Promise<string> {
   // onUsage into a single usage_events row (last write wins), so per-step
   // emission would clobber the row down to just the final call's tiny totals.
   const finish = (text: string, finishReason: string): string => {
-    opts.onUsage?.({ model, inputTokens, outputTokens, toolCallCount, finishReason })
+    opts.onUsage?.({
+      model,
+      inputTokens,
+      outputTokens,
+      cachedInputTokens,
+      toolCallCount,
+      finishReason,
+    })
     return text
   }
 
@@ -245,6 +266,7 @@ export async function runAgentLoop(opts: RunAgentLoopOptions): Promise<string> {
 
     inputTokens += result.usage.promptTokens
     outputTokens += result.usage.completionTokens
+    cachedInputTokens += cachedTokensFrom(result.providerMetadata)
     toolCallCount += result.toolCalls.length
     transcript.push(...result.response.messages)
     lastToolResults = result.toolResults
@@ -287,6 +309,7 @@ export async function runAgentLoop(opts: RunAgentLoopOptions): Promise<string> {
       })
       inputTokens += grace.usage.promptTokens
       outputTokens += grace.usage.completionTokens
+      cachedInputTokens += cachedTokensFrom(grace.providerMetadata)
       if (grace.text.trim()) {
         return finish(grace.text, stopTag(`grace:${grace.finishReason}`))
       }

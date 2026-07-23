@@ -130,6 +130,40 @@ describe("tool-result untrusted-data wrapping", () => {
   })
 })
 
+describe("prompt-cache token reporting", () => {
+  it("surfaces cached_tokens as providerMetadata.openai.cachedPromptTokens", async () => {
+    globalThis.fetch = (async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: "ok" }, finish_reason: "stop" }],
+          usage: {
+            prompt_tokens: 1000,
+            completion_tokens: 10,
+            prompt_tokens_details: { cached_tokens: 900 },
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      )) as typeof fetch
+
+    const result = await createModel("gpt-5.5").doGenerate(callOptions())
+    expect(result.providerMetadata).toEqual({ openai: { cachedPromptTokens: 900 } })
+  })
+
+  it("omits providerMetadata when the response has no cached tokens", async () => {
+    globalThis.fetch = (async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: "ok" }, finish_reason: "stop" }],
+          usage: { prompt_tokens: 5, completion_tokens: 5 },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      )) as typeof fetch
+
+    const result = await createModel("gpt-5.5").doGenerate(callOptions())
+    expect(result.providerMetadata).toBeUndefined()
+  })
+})
+
 describe("endpoint and credential resolution", () => {
   const KEYS = ["OPENAI_API_KEY", "OPENAI_BASE_URL", "YOMI_BACKEND_URL", "YOMI_SESSION_TOKEN"]
   const saved: Record<string, string | undefined> = {}
