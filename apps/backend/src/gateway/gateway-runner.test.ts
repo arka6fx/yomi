@@ -25,6 +25,12 @@ let deniedActions: string[] = []
 let soulCalls: { userId: string; text: string }[] = []
 // null = onboarding complete, proceed to the agent (default for most tests).
 let soulOnboardingReply: string | null = null
+// "empty-length" simulates a reasoning model that spent its whole token budget on
+// hidden reasoning and returned no visible text — see gateway-runner.ts's analyzeImage().
+// "action" simulates the vision classifier deciding the caption is a task, not a question.
+let imageAnalysisMode: "normal" | "empty-length" | "action" = "normal"
+// null = asset storage not configured (default for most tests).
+let uploadedAsset: { key: string; url: string; contentType: string } | null = null
 
 const fakeDb = {
   select: () => ({
@@ -173,6 +179,22 @@ mock.module("@yomi/agent-core", () => ({
       const isImage =
         Array.isArray(last?.content) &&
         (last.content as Array<{ type?: string }>).some((c) => c.type === "image")
+      if (isImage && imageAnalysisMode === "empty-length") {
+        return {
+          text: "",
+          finishReason: "length",
+          usage: { promptTokens: 120, completionTokens: 600 },
+          rawCall: { rawPrompt: options.prompt, rawSettings: {} },
+        }
+      }
+      if (isImage && imageAnalysisMode === "action") {
+        return {
+          text: "ACTION\nA blue cat mascot logo on a gradient background.",
+          finishReason: "stop",
+          usage: { promptTokens: 120, completionTokens: 40 },
+          rawCall: { rawPrompt: options.prompt, rawSettings: {} },
+        }
+      }
       return {
         text: isImage ? "It looks like a cat." : "NEED_AGENT",
         finishReason: "stop",
@@ -183,6 +205,11 @@ mock.module("@yomi/agent-core", () => ({
       }
     },
   }),
+}))
+
+mock.module("../services/asset-storage.js", () => ({
+  uploadAsset: async () => uploadedAsset,
+  assetStorageConfigured: () => uploadedAsset !== null,
 }))
 
 mock.module("../services/credit-ledger.js", () => ({
@@ -245,6 +272,8 @@ beforeEach(() => {
   deniedActions = []
   soulCalls = []
   soulOnboardingReply = null
+  imageAnalysisMode = "normal"
+  uploadedAsset = null
   recordedTelemetry.length = 0
   globalThis.fetch = (async () => {
     throw new Error("fetch should not run")
@@ -687,5 +716,105 @@ describe("GatewayRunner production routing", () => {
     expect(recordedTelemetry[0]!["inputTokens"]).toBe(120)
     expect(recordedTelemetry[0]!["outputTokens"]).toBe(40)
     expect(recordedTelemetry[0]!["userId"]).toBe("user_1")
+  })
+
+  it("gives a specific message when the vision model hits its token cap with no visible text", async () => {
+    imageAnalysisMode = "empty-length"
+    globalThis.fetch = (async (url: RequestInfo | URL) => {
+      if (String(url) === "https://img.example.com/pic.jpg") {
+        return new Response(new Uint8Array([1, 2, 3]).buffer, {
+          status: 200,
+          headers: { "content-type": "image/jpeg" },
+        })
+      }
+      throw new Error(`unexpected fetch: ${String(url)}`)
+    }) as typeof fetch
+
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "post this as my new logo and add getyomi.in as a collaborator",
+      imageUrl: "https://img.example.com/pic.jpg",
+      imageMimeType: "image/jpeg",
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(adapter.messages.at(-1)?.text).toBe(
+      "That image needed more thinking than I had room for — try asking a shorter, more specific question about it.",
+    )
+  })
+
+  it("tells the user attachments aren't set up yet when the caption is a task but asset storage is unconfigured", async () => {
+    imageAnalysisMode = "action"
+    uploadedAsset = null // asset storage not configured
+    globalThis.fetch = (async (url: RequestInfo | URL) => {
+      if (String(url) === "https://img.example.com/pic.jpg") {
+        return new Response(new Uint8Array([1, 2, 3]).buffer, {
+          status: 200,
+          headers: { "content-type": "image/jpeg" },
+        })
+      }
+      throw new Error(`unexpected fetch: ${String(url)}`)
+    }) as typeof fetch
+
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "post this as my new logo",
+      imageUrl: "https://img.example.com/pic.jpg",
+      imageMimeType: "image/jpeg",
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(adapter.messages.at(-1)?.text).toContain("can't act on attachments yet")
+    expect(agentCalls.length).toBe(0)
+  })
+
+  it("hands an action-shaped caption to the real agent loop with the uploaded asset's URL", async () => {
+    imageAnalysisMode = "action"
+    uploadedAsset = {
+      key: "assets/user_1/abc.jpg",
+      url: "https://getyomi-assets.s3.amazonaws.com/assets/user_1/abc.jpg?X-Amz-Signature=fake",
+      contentType: "image/jpeg",
+    }
+    globalThis.fetch = (async (url: RequestInfo | URL) => {
+      if (String(url) === "https://img.example.com/pic.jpg") {
+        return new Response(new Uint8Array([1, 2, 3]).buffer, {
+          status: 200,
+          headers: { "content-type": "image/jpeg" },
+        })
+      }
+      throw new Error(`unexpected fetch: ${String(url)}`)
+    }) as typeof fetch
+
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "post this as my new logo",
+      imageUrl: "https://img.example.com/pic.jpg",
+      imageMimeType: "image/jpeg",
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(agentCalls.length).toBe(1)
+    expect(agentCalls[0]!.text).toContain("post this as my new logo")
+    expect(agentCalls[0]!.text).toContain("A blue cat mascot logo")
+    expect(agentCalls[0]!.text).toContain(uploadedAsset.url)
+    expect(adapter.messages.at(-1)?.text).toBe("backend reply")
   })
 })
