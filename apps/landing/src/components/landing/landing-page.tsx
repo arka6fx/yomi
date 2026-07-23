@@ -239,6 +239,29 @@ export function LandingPage() {
                 transition={{ duration: 0.8, delay: 0.35 }}
                 className="pb-1 lg:pb-6"
               >
+                {/* the hero's one visual: a real exchange, not a stock photo —
+                    doubles as proof of the approval-before-action promise below */}
+                <div className="glass-card mb-6 max-w-md rounded-2xl p-4">
+                  <div className="mb-3 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    <ConnectorIcon id="telegram" size={13} />
+                    Yomi on Telegram
+                  </div>
+                  <div className="flex justify-end">
+                    <p className="max-w-[80%] rounded-2xl rounded-tr-sm bg-foreground/[0.06] px-3.5 py-2 text-sm text-foreground">
+                      Move my 3pm to Thursday and tell Sarah
+                    </p>
+                  </div>
+                  <div className="mt-2 flex justify-start">
+                    <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-primary/10 px-3.5 py-2.5 text-sm text-foreground">
+                      <p>Done — moved to Thursday 3pm. Drafted a note to Sarah.</p>
+                      <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground">
+                        <Check size={12} />
+                        Approve to send
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="mb-7 max-w-md">
                   <div className="flex flex-wrap gap-2">
                     {["Telegram", "Web dashboard", "No copy-paste"].map((tag) => (
