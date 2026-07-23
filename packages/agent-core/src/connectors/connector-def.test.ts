@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { gateWrite, type ConnectorContext } from "./connector-def.js"
+import { connectorError, gateWrite, type ConnectorContext } from "./connector-def.js"
 
 function baseCtx(overrides: Partial<ConnectorContext> = {}): ConnectorContext {
   return {
@@ -76,5 +76,31 @@ describe("gateWrite capability enforcement", () => {
     })
     expect(ran).toBe(true)
     expect(result).toBe("sent")
+  })
+})
+
+describe("connectorError", () => {
+  it("adds a messaging-window hint for Instagram's 24h DM policy", () => {
+    const err = new Error(
+      'Failed to send message (status 403). Response: {"error":{"message":"This message is sent outside of allowed window.","type":"IGApiException","code":10,"error_subcode":2534022}}',
+    )
+    const result = connectorError(err)
+    expect(result.hint).toContain("24 hours")
+    expect(result.hint).toContain("Instagram")
+  })
+
+  it("adds a messaging-window hint for WhatsApp's 24h re-engagement policy", () => {
+    const err = new Error(
+      'Failed to send message (status 403). Response: {"error":{"message":"Re-engagement message","type":"OAuthException","code":131047}}',
+    )
+    const result = connectorError(err)
+    expect(result.hint).toContain("template")
+    expect(result.hint).toContain("WhatsApp")
+  })
+
+  it("falls back to a reconnect hint for an unrelated 403", () => {
+    const err = new Error("Composio execute SLACK_SEND_MESSAGE → status 403: forbidden")
+    const result = connectorError(err)
+    expect(result.hint).toContain("reconnect")
   })
 })
