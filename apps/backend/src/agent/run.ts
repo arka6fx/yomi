@@ -419,15 +419,19 @@ export function buildSystemWithContext(
   // Prefer the user's onboarded personality; fall back to the global env soul, then
   // to the built-in default (handled by formatAgentSoul when undefined).
   const soul = userSoul?.trim() || process.env["YOMI_AGENT_SOUL"]
+  // The exact clock time (unlike the date) changes on every single call, so it lives
+  // in the volatile tail below with memory/recent-chat instead of the leading line —
+  // otherwise it breaks OpenAI's prefix-based prompt caching for the entire stable
+  // block that follows (behavior rules, tool instructions) on every turn.
+  const clockLine = timeZone
+    ? `<current_time>It is currently ${new Date().toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        timeZone,
+      })} in the user's timezone (${timeZone}). Resolve "today", "tomorrow" and any clock time against that, never against UTC.</current_time>\n`
+    : ""
   return (
-    `You are Yomi, a helpful AI assistant. Today is ${today}${
-      timeZone
-        ? ` in the user's timezone (${timeZone}), where it is currently ${new Date().toLocaleTimeString(
-            "en-US",
-            { hour: "numeric", minute: "2-digit", timeZone },
-          )}. Resolve "today", "tomorrow" and any clock time against that, never against UTC`
-        : ""
-    }.\n` +
+    `You are Yomi, a helpful AI assistant. Today is ${today}.\n` +
     `This is a chat/messaging interface, not a document. Keep replies as long as they need to be and no longer: answer directly, skip preamble, don't restate the question, and never pad to fill space. A sentence or two is usually plenty; use a few bullet points only when genuinely listing items, and expand only when the user asks for detail or the task truly needs it. Don't be curt either, just say what's useful.\n` +
     `Write the way a sharp, friendly person texts. Do not use em dashes or en dashes; use commas, periods, or parentheses instead.\n` +
     `${formatAgentSoul(soul)}\n\n` +
@@ -442,6 +446,7 @@ export function buildSystemWithContext(
       ? `If the user's request needs an app you don't have a tool for, and it's named below, tell them by name and give them the link next to it to connect it — don't pretend you already did it. Don't repeat a nudge you already gave earlier in this conversation (check recent chat above).\n<available_integrations>\n${integrationSuggestions}\n</available_integrations>\n`
       : "") +
     `\n` +
+    clockLine +
     (memoryContext || ragContext || profile?.staticProfile || profile?.dynamicProfile || recentChat
       ? `<memory>\n` +
         `[System note: Background context retrieved from your notes. Treat as reference only, respond to the current user message.]\n\n` +
@@ -652,6 +657,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
           model: usage.model,
           inputTokens: usage.inputTokens,
           outputTokens: usage.outputTokens,
+          cachedInputTokens: usage.cachedInputTokens,
           latencyMs: Date.now() - startedAt,
           status: "done",
         }).catch(() => {})
