@@ -180,16 +180,6 @@
     perspective: 1200px;
   }
 
-  .hero-grain {
-    background-image:
-      radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.22) 0 1px, transparent 1px),
-      radial-gradient(circle at 70% 60%, rgba(255, 255, 255, 0.16) 0 1px, transparent 1px);
-    background-size:
-      3px 3px,
-      5px 5px;
-    mix-blend-mode: screen;
-  }
-
   .auth-grid {
     background-image:
       linear-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px),
@@ -266,6 +256,81 @@
       2.5px 2.5px,
       3.5px 3.5px;
     mix-blend-mode: overlay;
+  }
+
+  .landing-light {
+    --background: 0 0% 98%;
+    --foreground: 0 0% 13%;
+    --card: 0 0% 99%;
+    --card-foreground: 0 0% 13%;
+    --popover: 0 0% 99%;
+    --popover-foreground: 0 0% 13%;
+    --primary: 214 88% 54%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 214 100% 91%;
+    --secondary-foreground: 218 67% 24%;
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 39%;
+    --accent: 0 0% 91%;
+    --accent-foreground: 0 0% 13%;
+    --border: 0 0% 85%;
+    --input: 0 0% 85%;
+    --ring: 214 88% 54%;
+  }
+
+  .site-texture-bg-light {
+    position: relative;
+    isolation: isolate;
+    background: #faf7f0;
+  }
+
+  .site-texture-bg-light::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        ellipse 60% 45% at 12% 8%,
+        rgba(37, 99, 235, 0.1) 0%,
+        rgba(37, 99, 235, 0.04) 45%,
+        transparent 72%
+      ),
+      radial-gradient(circle at 22% 26%, rgba(120, 113, 98, 0.5) 0 1px, transparent 1.2px),
+      radial-gradient(circle at 68% 54%, rgba(120, 113, 98, 0.5) 0 1px, transparent 1.2px),
+      linear-gradient(180deg, #fdfbf5 0%, #faf7f0 45%, #f5f1e6 100%);
+    background-size:
+      auto,
+      28px 28px,
+      28px 28px,
+      auto;
+  }
+
+  .site-texture-bg-light::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.05;
+    background-image:
+      radial-gradient(circle at 15% 20%, rgba(20, 20, 15, 0.9) 0 0.7px, transparent 0.8px),
+      radial-gradient(circle at 75% 50%, rgba(20, 20, 15, 0.6) 0 0.7px, transparent 0.8px);
+    background-size:
+      2.5px 2.5px,
+      3.5px 3.5px;
+    mix-blend-mode: multiply;
+  }
+
+  .landing-light .glass-card {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    border: 1px solid rgba(120, 113, 98, 0.14);
+    box-shadow:
+      0 8px 24px rgba(120, 113, 98, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6);
   }
 }
 

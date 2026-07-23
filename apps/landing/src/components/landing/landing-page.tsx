@@ -7,19 +7,17 @@ import { motion } from "framer-motion"
 import {
   ArrowRight,
   Check,
-  Crown,
-  Cuboid,
+  ChevronRight,
   Layers,
   Loader2,
   MessageSquare,
   Shield,
-  Sparkles,
   Zap,
 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { useLocalPrice } from "@/lib/local-price"
 
-import Footer from "@/components/Footer"
+import LandingFooter from "@/components/landing/LandingFooter"
 import Nav from "@/components/Nav"
 import { ConnectorIcon } from "@yomi/ui-connectors"
 
@@ -69,6 +67,27 @@ const CONNECTORS: { id: string; name: string; description: string }[] = [
   { id: "linear", name: "Linear", description: "Issues and project tracking" },
 ]
 
+const STEPS = [
+  {
+    mode: "Text",
+    label: "Type a message",
+    description:
+      "Send a plain message on Telegram — 'summarize my unread email' or 'what's on my calendar tomorrow?' Yomi replies fast, pulling context from your connected apps.",
+  },
+  {
+    mode: "Voice",
+    label: "Send a voice note",
+    description:
+      "Tap and hold to record. Yomi transcribes your voice note, answers the question, and can reply with spoken audio when you're on the go.",
+  },
+  {
+    mode: "Photo",
+    label: "Snap a photo",
+    description:
+      "Send a picture — a receipt, a whiteboard, a screenshot. Yomi reads what's in the image and acts on it across your apps.",
+  },
+]
+
 const PLANS = [
   {
     key: "explore",
@@ -86,7 +105,6 @@ const PLANS = [
     ],
     cta: "Get started free",
     popular: false,
-    icon: Sparkles,
   },
   {
     key: "pro",
@@ -104,7 +122,6 @@ const PLANS = [
     ],
     cta: "Subscribe",
     popular: true,
-    icon: Crown,
   },
   {
     key: "max",
@@ -122,43 +139,8 @@ const PLANS = [
     ],
     cta: "Subscribe",
     popular: false,
-    icon: Cuboid,
   },
 ]
-
-function InteractionCard({
-  type,
-  mode,
-  label,
-  description,
-}: {
-  type: string
-  mode: string
-  label: string
-  description: string
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.5 }}
-      className="flex flex-col gap-3 rounded-2xl glass-card p-5"
-    >
-      <div className="flex items-center justify-between">
-        <span className="rounded-full bg-primary/10 px-2 py-0.5 font-mono text-xs text-primary">
-          {type}
-        </span>
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-          <ConnectorIcon id="telegram" size={14} />
-          {mode}
-        </span>
-      </div>
-      <p className="text-sm font-medium text-foreground">{label}</p>
-      <p className="text-xs leading-relaxed text-muted-foreground">{description}</p>
-    </motion.div>
-  )
-}
 
 export function LandingPage() {
   const [billingLoading, setBillingLoading] = useState<string | null>(null)
@@ -200,53 +182,42 @@ export function LandingPage() {
   }
 
   return (
-    <div className="site-texture-bg min-h-screen text-foreground">
-      {/* persistent sticky nav, floats above the full-bleed hero image */}
+    <div className="landing-light site-texture-bg-light min-h-screen text-foreground">
+      {/* persistent sticky nav, floats above the hero */}
       <Nav />
 
       <section
         id="hero"
         style={{ marginTop: "-74px" }}
-        className="relative flex min-h-screen flex-col overflow-hidden bg-zinc-950"
+        className="relative flex min-h-screen flex-col overflow-hidden"
       >
-        {/* full-bleed hero image + overlays — spans the entire section, behind the nav */}
-        <div
-          className="absolute inset-0 scale-105 bg-cover bg-[center_34%] opacity-90"
-          style={{
-            backgroundImage:
-              "url('https://images.unsplash.com/photo-1499346030926-9a72daac6c63?auto=format&fit=crop&w=2400&q=88')",
-          }}
-        />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_64%_18%,rgba(219,234,254,0.22),transparent_20%),linear-gradient(180deg,rgba(8,31,66,0.04)_0%,rgba(8,31,66,0.22)_34%,rgba(3,8,20,0.74)_72%,rgba(3,8,20,0.98)_100%)]" />
-        <div className="absolute inset-0 opacity-[0.16] hero-grain" />
-        <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-black/65 to-transparent" />
-
         <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 flex-col justify-between px-5 pb-8 pt-28 sm:px-8 sm:pb-10 lg:px-10">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="mb-6 flex flex-wrap items-center gap-3 text-xs font-medium text-white/70"
+            className="mb-6 flex flex-wrap items-center gap-3 text-xs font-medium text-muted-foreground"
           >
-            <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 backdrop-blur-md">
+            <span className="rounded-full border border-border bg-card/70 px-3 py-1.5 backdrop-blur-md">
               Early access
             </span>
             <span className="flex items-center gap-1.5">
-              <Zap size={14} className="fill-sky-200 text-sky-200" />
+              <Zap size={14} className="fill-primary/30 text-primary" />
               &lt; 2s fast path
             </span>
-            <span className="hidden h-1 w-1 rounded-full bg-white/30 sm:block" />
+            <span className="hidden h-1 w-1 rounded-full bg-border sm:block" />
             <span>On Telegram · text, voice, or photo</span>
           </motion.div>
 
           {/* big centered tagline — the heart of the hero */}
           <div className="animate-hero-rise-delayed mx-auto flex max-w-5xl flex-col items-center px-2 text-center">
-            <p className="font-serif text-5xl leading-[1.04] tracking-tight text-white drop-shadow-[0_2px_24px_rgba(8,31,66,0.55)] sm:text-6xl lg:text-7xl xl:text-[5.5rem]">
-              Your <span className="text-sky-200">AI companion</span> for work and life
+            <p className="font-serif text-5xl leading-[1.04] tracking-tight text-foreground sm:text-6xl lg:text-7xl xl:text-[5.5rem]">
+              Your <span className="text-primary">AI companion</span> for work{" "}
+              <em className="italic">and life</em>.
             </p>
             {/* plain-language purpose statement, visible on load with no scroll or JS
                 animation required — reviewers and crawlers should not have to hunt for it */}
-            <p className="mt-5 max-w-2xl text-base leading-relaxed text-white/75 sm:text-lg">
+            <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
               Yomi is an AI assistant you message on Telegram with text, voice, or a photo. It
               connects to Gmail, Google Calendar, Google Drive, GitHub, Slack, Notion, and Linear
               so you can ask questions and get things done in plain language — Yomi asks for your
@@ -256,7 +227,7 @@ export function LandingPage() {
 
           <div>
             <div className="grid items-end gap-8 lg:grid-cols-[1fr_360px]">
-              <h1 className="animate-hero-rise-delayed font-accent text-[4.8rem] leading-[0.82] tracking-normal text-[#eaf4ff] sm:text-[7.2rem] md:text-[9rem] lg:text-[11.2rem]">
+              <h1 className="animate-hero-rise-delayed font-accent text-[4.8rem] leading-[0.82] tracking-normal text-foreground sm:text-[7.2rem] md:text-[9rem] lg:text-[11.2rem]">
                 Yomi
                 {/* the visible wordmark alone is a poor heading for search and screen readers */}
                 <span className="sr-only"> — AI productivity assistant on Telegram</span>
@@ -273,18 +244,18 @@ export function LandingPage() {
                     {["Telegram", "Web dashboard", "No copy-paste"].map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-full border border-white/12 bg-white/5 px-3 py-1 text-xs font-medium tracking-wide text-white/65 backdrop-blur-sm"
+                        className="rounded-full border border-border bg-card/50 px-3 py-1 text-xs font-medium tracking-wide text-muted-foreground backdrop-blur-sm"
                       >
                         {tag}
                       </span>
                     ))}
                   </div>
 
-                  <p className="mt-4 font-serif text-sm italic text-white/40">
+                  <p className="mt-4 font-serif text-sm italic text-muted-foreground/70">
                     Your data is never stored.{" "}
                     <a
                       href="#google-data"
-                      className="font-sans text-xs not-italic underline underline-offset-2 transition-colors hover:text-white/65"
+                      className="font-sans text-xs not-italic underline underline-offset-2 transition-colors hover:text-foreground"
                     >
                       Learn more
                     </a>
@@ -293,16 +264,16 @@ export function LandingPage() {
                 <div className="grid w-full max-w-md grid-cols-2 gap-3">
                   <Link
                     href={session ? "/dashboard" : "/signup"}
-                    className="group inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-xl bg-[#eaf4ff] px-5 text-sm font-semibold text-slate-950 transition hover:bg-white"
+                    className="group inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
                   >
                     {session ? "Go to dashboard" : "Get started"}
-                    <span className="grid h-6 w-6 place-items-center rounded-full bg-zinc-950 text-white transition group-hover:translate-x-0.5">
+                    <span className="grid h-6 w-6 place-items-center rounded-full bg-primary-foreground text-primary transition group-hover:translate-x-0.5">
                       <ArrowRight size={14} />
                     </span>
                   </Link>
                   <button
                     onClick={() => scrollTo("how-it-works")}
-                    className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-white/15 bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/15"
+                    className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-border bg-card/60 px-5 text-sm font-semibold text-foreground backdrop-blur-md transition hover:bg-card/80"
                   >
                     See how it works
                   </button>
@@ -312,7 +283,7 @@ export function LandingPage() {
                     // this used to hard-code /signup and re-prompt already
                     // logged-in users to sign up all over again.
                     href={session ? "/link" : "/signup"}
-                    className="col-span-2 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/15"
+                    className="col-span-2 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card/60 px-5 text-sm font-semibold text-foreground backdrop-blur-md transition hover:bg-card/80"
                   >
                     <ConnectorIcon id="telegram" size={17} />
                     Text Yomi
@@ -325,18 +296,18 @@ export function LandingPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.9, delay: 0.6 }}
-              className="mt-6 grid gap-3 border-t border-white/10 pt-4 text-sm text-white/62 sm:grid-cols-3"
+              className="mt-6 grid gap-3 border-t border-border pt-4 text-sm text-muted-foreground sm:grid-cols-3"
             >
               <span className="flex items-center gap-2">
-                <MessageSquare size={15} className="text-sky-100" />
+                <MessageSquare size={15} className="text-primary" />
                 Text, voice, or photo
               </span>
               <span className="flex items-center gap-2">
-                <Layers size={15} className="text-sky-100" />
+                <Layers size={15} className="text-primary" />
                 Works across your apps
               </span>
               <span className="flex items-center gap-2">
-                <Shield size={15} className="text-sky-100" />
+                <Shield size={15} className="text-primary" />
                 Never stored
               </span>
             </motion.div>
@@ -346,15 +317,10 @@ export function LandingPage() {
 
       {/* ── What is Yomi?────────────────────────────────────────────────── */}
       <section id="about" className="mx-auto max-w-3xl px-6 py-20">
-        <div className="mb-8 text-center">
-          <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            About
-          </p>
-          <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-            What is <span className="italic">Yomi</span>?
-          </h2>
-        </div>
-        <div className="space-y-4 text-center text-sm leading-relaxed text-muted-foreground">
+        <h2 className="mb-6 font-accent text-3xl leading-[1.1] tracking-tight text-foreground sm:text-4xl">
+          What is Yomi?
+        </h2>
+        <div className="space-y-4 text-left text-sm leading-relaxed text-muted-foreground">
           <p>
             Yomi is an AI productivity assistant that connects to the apps you already use so you
             can query, analyze, and act on your work using natural language, without switching apps
@@ -511,7 +477,7 @@ export function LandingPage() {
             How it works
           </p>
           <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-            Three ways to <span className="italic">ask</span>.
+            Three ways to reach Yomi
           </h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
             Type, talk, or send a photo — all from your Telegram chat. Yomi routes each request
@@ -519,25 +485,28 @@ export function LandingPage() {
           </p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <InteractionCard
-            type="A"
-            mode="Text"
-            label="Type a message"
-            description="Send a plain message on Telegram — 'summarize my unread email' or 'what's on my calendar tomorrow?' Yomi replies fast, pulling context from your connected apps."
-          />
-          <InteractionCard
-            type="B"
-            mode="Voice"
-            label="Send a voice note"
-            description="Tap and hold to record. Yomi transcribes your voice note, answers the question, and can reply with spoken audio when you're on the go."
-          />
-          <InteractionCard
-            type="C"
-            mode="Photo"
-            label="Snap a photo"
-            description="Send a picture — a receipt, a whiteboard, a screenshot. Yomi reads what's in the image and acts on it across your apps."
-          />
+        <div className="grid gap-8 sm:grid-cols-3">
+          {STEPS.map((step, i) => (
+            <div key={step.mode} className="relative">
+              {i > 0 && (
+                <ChevronRight
+                  size={16}
+                  className="absolute -left-6 top-3 hidden text-border sm:block"
+                />
+              )}
+              <span className="mb-3 flex h-8 w-8 items-center justify-center rounded-full border border-primary/30 bg-primary/10 font-mono text-sm font-medium text-primary">
+                {i + 1}
+              </span>
+              <p className="mb-1 flex items-center gap-1.5 text-sm font-medium text-foreground">
+                {step.label}
+                <span className="inline-flex items-center gap-1 text-xs font-normal text-muted-foreground">
+                  <ConnectorIcon id="telegram" size={12} />
+                  {step.mode}
+                </span>
+              </p>
+              <p className="text-xs leading-relaxed text-muted-foreground">{step.description}</p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -547,7 +516,7 @@ export function LandingPage() {
             Built to disappear
           </p>
           <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-            Everything you need, <span className="italic">nothing</span> you don't.
+            What Yomi does
           </h2>
         </div>
 
@@ -561,10 +530,10 @@ export function LandingPage() {
               transition={{ duration: 0.5, delay: i * 0.1 }}
               className="rounded-2xl glass-card p-6"
             >
-              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                <feature.icon size={20} className="text-primary" />
-              </div>
-              <h3 className="mb-2 font-medium text-foreground">{feature.title}</h3>
+              <h3 className="mb-2 flex items-center gap-2 font-medium text-foreground">
+                <feature.icon size={18} className="text-primary" />
+                {feature.title}
+              </h3>
               <p className="text-sm leading-relaxed text-muted-foreground">{feature.description}</p>
             </motion.div>
           ))}
@@ -578,7 +547,7 @@ export function LandingPage() {
             Supported Integrations
           </p>
           <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-            Your tools, one <span className="italic">conversation</span> away.
+            Connects to the apps you use
           </h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
             Connect your apps once. Ask Yomi from the web or from Telegram, even with your
@@ -615,7 +584,7 @@ export function LandingPage() {
             Transparency
           </p>
           <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-            What Yomi accesses, and <span className="italic">why</span>.
+            What Yomi accesses, and why
           </h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
             Yomi only reads data when you ask a question. Nothing is stored between queries. You can
@@ -656,48 +625,37 @@ export function LandingPage() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="mx-auto mt-8 max-w-3xl rounded-2xl glass-card p-6 text-sm text-muted-foreground"
+          className="mx-auto mt-8 max-w-3xl rounded-2xl glass-card p-6 text-sm leading-relaxed text-muted-foreground"
         >
           <p className="mb-3 font-medium text-foreground">How your data is protected</p>
-          <ul className="space-y-2">
-            <li className="flex items-start gap-2">
-              <Check size={14} className="mt-0.5 shrink-0 text-primary" />
-              Data from integrations is used only to answer your current query and is never stored
-              after the request completes.
-            </li>
-            <li className="flex items-start gap-2">
-              <Check size={14} className="mt-0.5 shrink-0 text-primary" />
-              OAuth tokens are encrypted at rest using AES-256-GCM and are never shared with third
-              parties.
-            </li>
-            <li className="flex items-start gap-2">
-              <Check size={14} className="mt-0.5 shrink-0 text-primary" />
-              Yomi&apos;s use of Google API data complies with the{" "}
-              <Link
-                href="https://developers.google.com/terms/api-services-user-data-policy"
-                className="text-primary underline underline-offset-2"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Google API Services User Data Policy
-              </Link>
-              , including the Limited Use requirements.
-            </li>
-            <li className="flex items-start gap-2">
-              <Check size={14} className="mt-0.5 shrink-0 text-primary" />
-              You can disconnect any integration instantly from your dashboard or from{" "}
-              <Link
-                href="https://myaccount.google.com/permissions"
-                className="text-primary underline underline-offset-2"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Google Account settings
-              </Link>
-              .
-            </li>
-          </ul>
-          <p className="mt-4">
+          <p className="mb-3">
+            Data from integrations is used only to answer your current query and is never stored
+            after the request completes. OAuth tokens are encrypted at rest using AES-256-GCM and
+            are never shared with third parties.
+          </p>
+          <p className="mb-3">
+            Yomi&apos;s use of Google API data complies with the{" "}
+            <Link
+              href="https://developers.google.com/terms/api-services-user-data-policy"
+              className="text-primary underline underline-offset-2"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Google API Services User Data Policy
+            </Link>
+            , including the Limited Use requirements. You can disconnect any integration instantly
+            from your dashboard or from{" "}
+            <Link
+              href="https://myaccount.google.com/permissions"
+              className="text-primary underline underline-offset-2"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Google Account settings
+            </Link>
+            .
+          </p>
+          <p>
             Read our full{" "}
             <Link href="/privacy" className="text-primary underline underline-offset-2">
               Privacy Policy
@@ -730,7 +688,7 @@ export function LandingPage() {
             Pricing
           </p>
           <h2 className="font-accent text-4xl leading-[1.08] tracking-tight text-foreground sm:text-5xl">
-            Simple, <span className="italic">honest</span> pricing.
+            Pricing
           </h2>
           <p className="mt-3 text-sm text-muted-foreground">
             Start free. Upgrade when you outgrow it.
@@ -739,7 +697,6 @@ export function LandingPage() {
 
         <div className="mx-auto grid max-w-4xl gap-5 sm:grid-cols-3">
           {PLANS.map((plan, i) => {
-            const Icon = plan.icon
             return (
               <motion.div
                 key={plan.name}
@@ -763,7 +720,6 @@ export function LandingPage() {
 
                 <div className="mb-5">
                   <div className="mb-2 flex items-center gap-2">
-                    <Icon size={18} className="text-primary" />
                     <p className="text-sm font-medium text-foreground">{plan.name}</p>
                     {!plan.popular && plan.badge && (
                       <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
@@ -822,7 +778,7 @@ export function LandingPage() {
         </motion.p>
       </section>
 
-      <Footer />
+      <LandingFooter />
     </div>
   )
 }
