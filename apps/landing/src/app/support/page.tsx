@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { Bug, Mail, MessageSquareText } from "lucide-react"
 import Nav from "@/components/Nav"
-import Footer from "@/components/Footer"
+import LandingFooter from "@/components/landing/LandingFooter"
 
 export const metadata: Metadata = {
   title: "Support and contact",
@@ -37,16 +37,16 @@ const channels = [
 
 export default function SupportPage() {
   return (
-    <div className="site-texture-bg min-h-screen text-foreground">
+    <div className="landing-light site-texture-bg-light min-h-screen text-foreground">
       <Nav />
       <main className="pt-16">
         <section className="mx-auto max-w-5xl px-6 py-24">
-          <p className="mb-3 font-mono text-xs uppercase tracking-widest text-sky-100/50">
+          <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
             Contact
           </p>
           <div className="max-w-3xl">
-            <h1 className="font-accent text-5xl text-[#eaf4ff] sm:text-6xl">Support for Yomi.</h1>
-            <p className="mt-5 max-w-2xl text-base leading-8 text-white/55">
+            <h1 className="font-accent text-5xl text-foreground sm:text-6xl">Support for Yomi.</h1>
+            <p className="mt-5 max-w-2xl text-base leading-8 text-muted-foreground">
               Send a note with the email on your account, what you expected to happen, what happened
               instead, and any screenshots or logs that do not contain secrets.
             </p>
@@ -59,16 +59,16 @@ export default function SupportPage() {
                 <Link
                   key={channel.title}
                   href={channel.href}
-                  className="group rounded-2xl border border-white/10 bg-white/[0.03] p-6 transition-colors hover:border-sky-100/30 hover:bg-white/[0.06]"
+                  className="group rounded-2xl glass-card p-6 transition-colors hover:border-primary/30"
                   target={channel.href.startsWith("http") ? "_blank" : undefined}
                   rel={channel.href.startsWith("http") ? "noopener noreferrer" : undefined}
                 >
-                  <Icon className="mb-8 h-5 w-5 text-sky-100/70" aria-hidden="true" />
-                  <h2 className="font-accent text-2xl text-[#eaf4ff]">{channel.title}</h2>
-                  <p className="mt-3 min-h-24 text-sm leading-7 text-white/50">
+                  <Icon className="mb-8 h-5 w-5 text-primary" aria-hidden="true" />
+                  <h2 className="font-accent text-2xl text-foreground">{channel.title}</h2>
+                  <p className="mt-3 min-h-24 text-sm leading-7 text-muted-foreground">
                     {channel.description}
                   </p>
-                  <span className="mt-5 inline-flex text-sm font-medium text-sky-100 transition-colors group-hover:text-white">
+                  <span className="mt-5 inline-flex text-sm font-medium text-primary transition-colors group-hover:text-foreground">
                     {channel.label}
                   </span>
                 </Link>
@@ -76,9 +76,9 @@ export default function SupportPage() {
             })}
           </div>
 
-          <div className="mt-14 rounded-2xl border border-white/10 bg-[#08111f] p-6 text-sm leading-7 text-white/55">
-            <h2 className="font-accent text-2xl text-[#eaf4ff]">Before you write</h2>
-            <ul className="mt-4 list-none space-y-2 [&_li]:relative [&_li]:pl-4 [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-sky-100 [&_li]:before:content-['›']">
+          <div className="mt-14 rounded-2xl glass-card p-6 text-sm leading-7 text-muted-foreground">
+            <h2 className="font-accent text-2xl text-foreground">Before you write</h2>
+            <ul className="mt-4 list-none space-y-2 [&_li]:relative [&_li]:pl-4 [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-primary [&_li]:before:content-['›']">
               <li>For login issues, include whether you used Google or GitHub.</li>
               <li>Include browser version and steps to reproduce.</li>
               <li>For billing issues, do not send full payment card details.</li>
@@ -86,7 +86,7 @@ export default function SupportPage() {
           </div>
         </section>
       </main>
-      <Footer />
+      <LandingFooter />
     </div>
   )
 }

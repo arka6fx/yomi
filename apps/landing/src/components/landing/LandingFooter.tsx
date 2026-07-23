@@ -22,9 +22,9 @@ export default function LandingFooter() {
 
   return (
     <footer className="relative overflow-hidden border-t border-border">
-      <div className="relative z-10 mx-auto max-w-6xl px-6 py-16">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
+      <div className="relative z-10 mx-auto max-w-6xl px-6 py-10 sm:py-16">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:gap-10 lg:grid-cols-4">
+          <div className="col-span-2 sm:col-span-1">
             <BrandMark size="sm" />
             <p className="mt-4 max-w-[22ch] text-sm leading-relaxed text-muted-foreground">
               AI assistant for Gmail, Calendar, Drive, GitHub, Slack, Notion, and more — on
@@ -75,11 +75,13 @@ export default function LandingFooter() {
           {/* Contact / developer info — required for Google OAuth verification.
               Content must not change: product name, developer identity, support
               email, and website link all need to stay present and accurate. */}
-          <div>
+          <div className="col-span-2 sm:col-span-1">
             <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
               Company
             </p>
-            <div className="space-y-3 text-sm">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:block sm:space-y-3">
+              {/* Support email is one unbreakable token — force-wrap it or it
+                  overflows its grid cell into the adjacent Website column. */}
               <div>
                 <p className="text-muted-foreground/70">Product</p>
                 <p className="text-foreground">Yomi: AI Productivity Assistant</p>
@@ -93,7 +95,7 @@ export default function LandingFooter() {
                 <p className="text-muted-foreground/70">Support</p>
                 <a
                   href="mailto:contact.arkagarai@gmail.com"
-                  className="text-foreground transition-colors hover:text-primary"
+                  className="break-all text-foreground transition-colors hover:text-primary"
                 >
                   contact.arkagarai@gmail.com
                 </a>
