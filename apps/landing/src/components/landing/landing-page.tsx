@@ -207,46 +207,35 @@ export function LandingPage() {
       <section
         id="hero"
         style={{ marginTop: "-74px" }}
-        className="relative flex min-h-screen flex-col overflow-hidden bg-zinc-950"
+        className="relative flex min-h-screen flex-col overflow-hidden"
       >
-        {/* full-bleed hero image + overlays — spans the entire section, behind the nav */}
-        <div
-          className="absolute inset-0 scale-105 bg-cover bg-[center_34%] opacity-90"
-          style={{
-            backgroundImage:
-              "url('https://images.unsplash.com/photo-1499346030926-9a72daac6c63?auto=format&fit=crop&w=2400&q=88')",
-          }}
-        />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_64%_18%,rgba(219,234,254,0.22),transparent_20%),linear-gradient(180deg,rgba(8,31,66,0.04)_0%,rgba(8,31,66,0.22)_34%,rgba(3,8,20,0.74)_72%,rgba(3,8,20,0.98)_100%)]" />
-        <div className="absolute inset-0 opacity-[0.16] hero-grain" />
-        <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-black/65 to-transparent" />
-
         <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 flex-col justify-between px-5 pb-8 pt-28 sm:px-8 sm:pb-10 lg:px-10">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="mb-6 flex flex-wrap items-center gap-3 text-xs font-medium text-white/70"
+            className="mb-6 flex flex-wrap items-center gap-3 text-xs font-medium text-muted-foreground"
           >
-            <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 backdrop-blur-md">
+            <span className="rounded-full border border-border bg-card/70 px-3 py-1.5 backdrop-blur-md">
               Early access
             </span>
             <span className="flex items-center gap-1.5">
-              <Zap size={14} className="fill-sky-200 text-sky-200" />
+              <Zap size={14} className="fill-primary/30 text-primary" />
               &lt; 2s fast path
             </span>
-            <span className="hidden h-1 w-1 rounded-full bg-white/30 sm:block" />
+            <span className="hidden h-1 w-1 rounded-full bg-border sm:block" />
             <span>On Telegram · text, voice, or photo</span>
           </motion.div>
 
           {/* big centered tagline — the heart of the hero */}
           <div className="animate-hero-rise-delayed mx-auto flex max-w-5xl flex-col items-center px-2 text-center">
-            <p className="font-serif text-5xl leading-[1.04] tracking-tight text-white drop-shadow-[0_2px_24px_rgba(8,31,66,0.55)] sm:text-6xl lg:text-7xl xl:text-[5.5rem]">
-              Your <span className="text-sky-200">AI companion</span> for work and life
+            <p className="font-serif text-5xl leading-[1.04] tracking-tight text-foreground sm:text-6xl lg:text-7xl xl:text-[5.5rem]">
+              Your <span className="text-primary">AI companion</span> for work{" "}
+              <em className="italic">and life</em>.
             </p>
             {/* plain-language purpose statement, visible on load with no scroll or JS
                 animation required — reviewers and crawlers should not have to hunt for it */}
-            <p className="mt-5 max-w-2xl text-base leading-relaxed text-white/75 sm:text-lg">
+            <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
               Yomi is an AI assistant you message on Telegram with text, voice, or a photo. It
               connects to Gmail, Google Calendar, Google Drive, GitHub, Slack, Notion, and Linear
               so you can ask questions and get things done in plain language — Yomi asks for your
@@ -256,7 +245,7 @@ export function LandingPage() {
 
           <div>
             <div className="grid items-end gap-8 lg:grid-cols-[1fr_360px]">
-              <h1 className="animate-hero-rise-delayed font-accent text-[4.8rem] leading-[0.82] tracking-normal text-[#eaf4ff] sm:text-[7.2rem] md:text-[9rem] lg:text-[11.2rem]">
+              <h1 className="animate-hero-rise-delayed font-accent text-[4.8rem] leading-[0.82] tracking-normal text-foreground sm:text-[7.2rem] md:text-[9rem] lg:text-[11.2rem]">
                 Yomi
                 {/* the visible wordmark alone is a poor heading for search and screen readers */}
                 <span className="sr-only"> — AI productivity assistant on Telegram</span>
@@ -273,18 +262,18 @@ export function LandingPage() {
                     {["Telegram", "Web dashboard", "No copy-paste"].map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-full border border-white/12 bg-white/5 px-3 py-1 text-xs font-medium tracking-wide text-white/65 backdrop-blur-sm"
+                        className="rounded-full border border-border bg-card/50 px-3 py-1 text-xs font-medium tracking-wide text-muted-foreground backdrop-blur-sm"
                       >
                         {tag}
                       </span>
                     ))}
                   </div>
 
-                  <p className="mt-4 font-serif text-sm italic text-white/40">
+                  <p className="mt-4 font-serif text-sm italic text-muted-foreground/70">
                     Your data is never stored.{" "}
                     <a
                       href="#google-data"
-                      className="font-sans text-xs not-italic underline underline-offset-2 transition-colors hover:text-white/65"
+                      className="font-sans text-xs not-italic underline underline-offset-2 transition-colors hover:text-foreground"
                     >
                       Learn more
                     </a>
@@ -293,16 +282,16 @@ export function LandingPage() {
                 <div className="grid w-full max-w-md grid-cols-2 gap-3">
                   <Link
                     href={session ? "/dashboard" : "/signup"}
-                    className="group inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-xl bg-[#eaf4ff] px-5 text-sm font-semibold text-slate-950 transition hover:bg-white"
+                    className="group inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
                   >
                     {session ? "Go to dashboard" : "Get started"}
-                    <span className="grid h-6 w-6 place-items-center rounded-full bg-zinc-950 text-white transition group-hover:translate-x-0.5">
+                    <span className="grid h-6 w-6 place-items-center rounded-full bg-primary-foreground text-primary transition group-hover:translate-x-0.5">
                       <ArrowRight size={14} />
                     </span>
                   </Link>
                   <button
                     onClick={() => scrollTo("how-it-works")}
-                    className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-white/15 bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/15"
+                    className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-border bg-card/60 px-5 text-sm font-semibold text-foreground backdrop-blur-md transition hover:bg-card/80"
                   >
                     See how it works
                   </button>
@@ -312,7 +301,7 @@ export function LandingPage() {
                     // this used to hard-code /signup and re-prompt already
                     // logged-in users to sign up all over again.
                     href={session ? "/link" : "/signup"}
-                    className="col-span-2 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/15"
+                    className="col-span-2 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card/60 px-5 text-sm font-semibold text-foreground backdrop-blur-md transition hover:bg-card/80"
                   >
                     <ConnectorIcon id="telegram" size={17} />
                     Text Yomi
@@ -325,18 +314,18 @@ export function LandingPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.9, delay: 0.6 }}
-              className="mt-6 grid gap-3 border-t border-white/10 pt-4 text-sm text-white/62 sm:grid-cols-3"
+              className="mt-6 grid gap-3 border-t border-border pt-4 text-sm text-muted-foreground sm:grid-cols-3"
             >
               <span className="flex items-center gap-2">
-                <MessageSquare size={15} className="text-sky-100" />
+                <MessageSquare size={15} className="text-primary" />
                 Text, voice, or photo
               </span>
               <span className="flex items-center gap-2">
-                <Layers size={15} className="text-sky-100" />
+                <Layers size={15} className="text-primary" />
                 Works across your apps
               </span>
               <span className="flex items-center gap-2">
-                <Shield size={15} className="text-sky-100" />
+                <Shield size={15} className="text-primary" />
                 Never stored
               </span>
             </motion.div>
