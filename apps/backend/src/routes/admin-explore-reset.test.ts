@@ -58,7 +58,7 @@ mock.module("@yomi/db", () => ({
 mock.module("../services/credit-ledger.js", () => ({
   grantCredits: async (input: any) => {
     state.grants.push({ userId: input.userId, amount: input.amount, expiresAt: input.expiresAt })
-    return { granted: true, balance: 25 }
+    return { granted: true, balance: 100 }
   },
 }))
 
@@ -85,7 +85,7 @@ describe("admin — reset explore trials", () => {
     state.users = [
       // holds 100 from the old explore grant — must not be reduced
       { id: "u_rich", email: "rich@example.com", role: "user", plan: "explore", trialEndDate: new Date("2026-07-17T00:00:00Z"), deletedAt: null },
-      // signup grant failed — must be topped up to 25
+      // signup grant failed — must be topped up to 100
       { id: "u_zero", email: "zero@example.com", role: "user", plan: "explore", trialEndDate: new Date("2026-07-16T00:00:00Z"), deletedAt: null },
       // paying customer — must be skipped entirely
       { id: "u_pro", email: "pro@example.com", role: "user", plan: "pro", trialEndDate: null, deletedAt: null },
@@ -95,7 +95,7 @@ describe("admin — reset explore trials", () => {
     state.balances = [
       { userId: "u_rich", balance: 100 },
       { userId: "u_zero", balance: 0 },
-      { userId: "u_pro", balance: 2500 },
+      { userId: "u_pro", balance: 85 },
       { userId: "owner_1", balance: 8958 },
     ]
     state.grants = []
@@ -121,17 +121,17 @@ describe("admin — reset explore trials", () => {
     expect(state.grantExpiryUpdates).toBe(0)
   })
 
-  it("tops up to 25 without ever reducing a larger balance", async () => {
+  it("tops up to 100 without ever reducing a larger balance", async () => {
     const body = (await (await resetTrials({ dryRun: false })).json()) as any
 
     expect(body.usersAffected).toBe(2)
     expect(body.users.map((u: any) => [u.email, u.balanceBefore, u.topUp, u.balanceAfter])).toEqual([
       ["rich@example.com", 100, 0, 100],
-      ["zero@example.com", 0, 25, 25],
+      ["zero@example.com", 0, 100, 100],
     ])
     // only the zero-balance account is granted anything
     expect(state.grants).toEqual([
-      { userId: "u_zero", amount: 25, expiresAt: expect.any(Date) },
+      { userId: "u_zero", amount: 100, expiresAt: expect.any(Date) },
     ])
   })
 

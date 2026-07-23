@@ -26,7 +26,7 @@ export const PLANS: Record<string, PlanConfig> = {
     priceCents: 0,
     priceDisplay: "$0",
     interval: "month",
-    includedCredits: 25,
+    includedCredits: 100,
     limits: {
       chat: 100,
       voiceMinutes: 20,
@@ -35,19 +35,24 @@ export const PLANS: Record<string, PlanConfig> = {
       botMessages: 20,
     },
   },
+  // $5/mo, tax-inclusive. Credit budget is sized to real OpenAI cost from
+  // ai_usage_events telemetry (~$0.037/Telegram message pre-cache-fix), targeting
+  // 70% gross margin on the ~$3.54 Dodo nets after GST + processing fees. Revisit
+  // once the prompt-cache fix (see agent-core cachedInputTokens) is live and
+  // real cost is re-measured — this number is a conservative floor, not a ceiling.
   pro: {
     key: "pro",
     name: "Pro",
-    priceCents: 1499,
-    priceDisplay: "$14.99",
+    priceCents: 500,
+    priceDisplay: "$5",
     interval: "month",
-    includedCredits: 2500,
+    includedCredits: 85,
     limits: {
-      chat: 2000,
-      voiceMinutes: 180,
-      analyze: 400,
+      chat: 60,
+      voiceMinutes: 20,
+      analyze: 50,
       connectors: null,
-      botMessages: 200,
+      botMessages: 28,
     },
   },
   max: {
