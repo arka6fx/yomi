@@ -22,7 +22,7 @@ const channels = [
   {
     title: "Bugs and product issues",
     description: "Report reproducible app issues or broken pages.",
-    href: "https://github.com/arka6fx/yomi/issues",
+    href: "https://github.com/arka6fx/yomi-feedback/issues",
     label: "Open GitHub issues",
     icon: Bug,
   },

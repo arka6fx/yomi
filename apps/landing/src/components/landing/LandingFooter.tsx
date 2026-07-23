@@ -14,7 +14,7 @@ const RESOURCE_LINKS: { label: string; href: string; external?: boolean }[] = [
   { label: "Support", href: "/support" },
   { label: "Privacy", href: "/privacy" },
   { label: "Terms", href: "/terms" },
-  { label: "GitHub", href: "https://github.com/arka6fx/yomi", external: true },
+  { label: "GitHub", href: "https://github.com/arka6fx/yomi-feedback", external: true },
 ]
 
 export default function LandingFooter() {

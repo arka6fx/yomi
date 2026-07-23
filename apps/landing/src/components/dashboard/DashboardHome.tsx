@@ -540,7 +540,7 @@ export function DashboardHome({
 
       <div className="flex justify-center">
         <a
-          href="https://github.com/arka6fx/yomi/issues/new"
+          href="https://github.com/arka6fx/yomi-feedback/issues/new"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
