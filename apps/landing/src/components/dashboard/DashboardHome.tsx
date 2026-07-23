@@ -19,6 +19,7 @@ import { buildCatalog, ConnectorIcon } from "@yomi/ui-connectors"
 import { cn } from "@/lib/utils"
 import { PLANS } from "@/lib/plans"
 import type { DashboardTab } from "./SettingsMenu"
+import { TelegramCard, type PlatformLink } from "./TelegramCard"
 
 export type CreditPack = {
   key: string
@@ -226,6 +227,10 @@ export function DashboardHome({
   onUpgrade,
   onBuyCredits,
   onNavigate,
+  platformLinks,
+  platformsLoading,
+  unlinkingPlatform,
+  onUnlinkPlatform,
 }: {
   token: string
   recentActivity: ActivityItem[]
@@ -243,6 +248,10 @@ export function DashboardHome({
   onUpgrade: (planKey: string) => void
   onBuyCredits: (packKey: string) => void
   onNavigate: (tab: DashboardTab) => void
+  platformLinks: PlatformLink[]
+  platformsLoading: boolean
+  unlinkingPlatform: string | null
+  onUnlinkPlatform: (platform: string) => void
 }) {
   const [history, setHistory] = useState<ConversationTurn[]>([])
   const [historyLoading, setHistoryLoading] = useState(true)
@@ -312,6 +321,13 @@ export function DashboardHome({
 
   return (
     <div className="space-y-6">
+      <TelegramCard
+        platformLinks={platformLinks}
+        platformsLoading={platformsLoading}
+        unlinking={unlinkingPlatform}
+        onUnlink={onUnlinkPlatform}
+      />
+
       <PlanBanner plan={plan} onClick={() => onNavigate("billing")} />
 
       {!isOwner && (
