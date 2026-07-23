@@ -189,7 +189,7 @@ const PLANS = [
   {
     key: "max",
     name: "Max",
-    priceUsd: 39.99,
+    priceUsd: 40,
     period: "/ month",
     badge: "Power users",
     description: "High-volume credits for power users.",

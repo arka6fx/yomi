@@ -409,7 +409,7 @@ describe("Dodo billing — plan catalog", () => {
     expect(pro.features).toContain("Credit packs available")
 
     const max = body.plans.find((plan: any) => plan.key === "max")
-    expect(max.amountCents).toBe(3999)
+    expect(max.amountCents).toBe(4000)
     expect(max.includedCredits).toBe(750)
     expect(max.features).toContain("750 credits / month")
   })
@@ -1094,7 +1094,7 @@ describe("Dodo billing — webhook processing", () => {
       data: {
         payment_id: "pay_500",
         checkout_id: "checkout_500",
-        amount: 499,
+        amount: 500,
         currency: "USD",
         metadata: {
           userId: "user_1",
@@ -1130,7 +1130,7 @@ describe("Dodo billing — webhook processing", () => {
         data: {
           payment_id: `pay_${productKey}`,
           checkout_id: `checkout_${productKey}`,
-          amount: 499,
+          amount: 500,
           currency: "USD",
           metadata: {
             userId: "user_1",

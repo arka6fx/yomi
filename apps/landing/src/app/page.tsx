@@ -82,7 +82,7 @@ const jsonLd = {
         {
           "@type": "Offer",
           name: "Max",
-          price: "39.99",
+          price: "40",
           priceCurrency: "USD",
           billingDuration: "P1M",
           description: "750 monthly credits, unlimited app connectors, early access",
