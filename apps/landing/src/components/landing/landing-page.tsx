@@ -282,7 +282,11 @@ export function LandingPage() {
 
           <div>
             <div className="grid items-end gap-8 lg:grid-cols-[1fr_360px]">
-              <h1 className="animate-hero-rise-delayed font-accent text-[4.8rem] leading-[0.82] tracking-normal text-foreground sm:text-[7.2rem] md:text-[9rem] lg:text-[11.2rem]">
+              {/* the giant display size is a two-column composition paired
+                  against the CTA panel — that pairing only exists at lg+
+                  (grid-cols-[1fr_360px]), so below that it stays a normal
+                  heading instead of an orphaned oversized word */}
+              <h1 className="animate-hero-rise-delayed font-accent text-4xl leading-tight tracking-normal text-foreground lg:text-[11.2rem] lg:leading-[0.82]">
                 Yomi
                 {/* the visible wordmark alone is a poor heading for search and screen readers */}
                 <span className="sr-only"> — AI productivity assistant on Telegram</span>
