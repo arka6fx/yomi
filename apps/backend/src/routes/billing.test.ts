@@ -404,14 +404,14 @@ describe("Dodo billing — plan catalog", () => {
 
     const pro = body.plans.find((plan: any) => plan.key === "pro")
     expect(pro.amountCents).toBe(500)
-    expect(pro.includedCredits).toBe(85)
-    expect(pro.features).toContain("85 credits / month")
+    expect(pro.includedCredits).toBe(300)
+    expect(pro.features).toContain("300 credits / month")
     expect(pro.features).toContain("Credit packs available")
 
     const max = body.plans.find((plan: any) => plan.key === "max")
     expect(max.amountCents).toBe(3999)
-    expect(max.includedCredits).toBe(10000)
-    expect(max.features).toContain("10,000 credits / month")
+    expect(max.includedCredits).toBe(750)
+    expect(max.features).toContain("750 credits / month")
   })
 })
 
@@ -860,7 +860,7 @@ describe("Dodo billing — subscription summary", () => {
     expect(res.status).toBe(200)
     expect(body.credits).toMatchObject({
       remaining: 497,
-      included: 85,
+      included: 300,
       used: 3,
       totalAvailableThisPeriod: 500,
       expiringSoon: 25,
@@ -958,7 +958,7 @@ describe("Dodo billing — webhook processing", () => {
     const grantCalls: any[] = []
     mockState.grantCredits = async (input: any) => {
       grantCalls.push(input)
-      return { granted: true, balance: 85 }
+      return { granted: true, balance: 300 }
     }
 
     const body = {
@@ -976,14 +976,14 @@ describe("Dodo billing — webhook processing", () => {
 
     // Should have granted monthly credits
     expect(grantCalls.length).toBe(1)
-    expect(grantCalls[0]?.amount).toBe(85)
+    expect(grantCalls[0]?.amount).toBe(300)
     expect(grantCalls[0]?.source).toBe("subscription_cycle")
   })
 
   it("grants the correct included credits for every paid subscription plan", async () => {
     const plans = [
-      ["pro", 85],
-      ["max", 10000],
+      ["pro", 300],
+      ["max", 750],
     ] as const
 
     for (const [plan, includedCredits] of plans) {

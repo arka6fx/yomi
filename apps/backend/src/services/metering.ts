@@ -71,6 +71,17 @@ function nextMonthResetLabel(): string {
   return reset.toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" })
 }
 
+// Explore renews on the user's own trialEndDate (the explore-renewal cron tops
+// credits back up there), not a calendar month boundary like paid plans.
+function exploreRenewalLabel(user: MeteringUser): string {
+  if (!user.trialEndDate) return "next month"
+  return user.trialEndDate.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  })
+}
+
 // Single chokepoint for charging a billable action. Credits are the only gate:
 // owners bypass, an active plan is required, and the action proceeds only when the
 // credit balance covers the cost — then exactly one usage event is recorded and the
@@ -120,7 +131,7 @@ export async function chargeUsage(input: {
       status === "past_due"
         ? "Payment didn't go through — Yomi is paused. Update your payment method in the dashboard."
         : status === "inactive" && plan === "explore"
-          ? "Your 30-day free trial has ended. Subscribe to Pro or Max to keep using Yomi."
+          ? "Your free credits are renewing — try again in a moment, or upgrade to Pro or Max to skip the wait."
           : "Subscription isn't active. Head to the dashboard to sort it out."
     return { ok: false, status: 402, code: "subscription_inactive", message, plan }
   }
@@ -138,7 +149,7 @@ export async function chargeUsage(input: {
         ok: false,
         status: 402,
         code: "subscription_required",
-        message: "You're out of trial credits. Subscribe to Pro or Max to keep using Yomi.",
+        message: `You're out of free credits for this month. They renew ${exploreRenewalLabel(user)}, or upgrade to Pro or Max for more right now.`,
         plan,
       }
     }
@@ -195,7 +206,7 @@ export async function chargeUsage(input: {
       code: plan === "explore" ? "subscription_required" : "credits_exhausted",
       message:
         plan === "explore"
-          ? "You're out of trial credits. Subscribe to Pro or Max to keep using Yomi."
+          ? `You're out of free credits for this month. They renew ${exploreRenewalLabel(user)}, or upgrade to Pro or Max for more right now.`
           : `You're out of credits. Buy a credit pack to continue. Resets ${nextMonthResetLabel()}.`,
       plan,
     }

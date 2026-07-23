@@ -9,6 +9,11 @@ export interface PlanConfig {
   priceDisplay: string
   interval: "month"
   includedCredits: number
+  // Agent-loop model for this plan's Telegram turns. gpt-5.4-mini is ~3.75x
+  // cheaper than gpt-5.5 on both input and output tokens — routing the
+  // cost-sensitive tiers through it is what makes their credit allotments
+  // affordable at 70% margin. Max keeps the flagship model as its differentiator.
+  model: string
 
   limits: {
     chat: number
@@ -19,7 +24,16 @@ export interface PlanConfig {
   }
 }
 
+// Credit budgets below are sized against real OpenAI cost from ai_usage_events
+// telemetry (~$0.037/Telegram message on gpt-5.5, ~$0.0099 on gpt-5.4-mini,
+// pre-cache-fix), targeting 70% gross margin on each plan's net-of-Dodo-fees-
+// and-GST revenue. Revisit once the prompt-cache fix (agent-core
+// cachedInputTokens) is live and real cost is re-measured — these are a
+// conservative floor, not a ceiling.
 export const PLANS: Record<string, PlanConfig> = {
+  // Free, renews every month (not a one-time trial) — see the Explore
+  // auto-renewal cron. gpt-5.4-mini keeps the free tier's cost bounded
+  // indefinitely regardless of how many people stay on it forever.
   explore: {
     key: "explore",
     name: "Explore",
@@ -27,6 +41,7 @@ export const PLANS: Record<string, PlanConfig> = {
     priceDisplay: "$0",
     interval: "month",
     includedCredits: 100,
+    model: "gpt-5.4-mini",
     limits: {
       chat: 100,
       voiceMinutes: 20,
@@ -35,24 +50,20 @@ export const PLANS: Record<string, PlanConfig> = {
       botMessages: 20,
     },
   },
-  // $5/mo, tax-inclusive. Credit budget is sized to real OpenAI cost from
-  // ai_usage_events telemetry (~$0.037/Telegram message pre-cache-fix), targeting
-  // 70% gross margin on the ~$3.54 Dodo nets after GST + processing fees. Revisit
-  // once the prompt-cache fix (see agent-core cachedInputTokens) is live and
-  // real cost is re-measured — this number is a conservative floor, not a ceiling.
   pro: {
     key: "pro",
     name: "Pro",
     priceCents: 500,
     priceDisplay: "$5",
     interval: "month",
-    includedCredits: 85,
+    includedCredits: 300,
+    model: "gpt-5.4-mini",
     limits: {
-      chat: 60,
-      voiceMinutes: 20,
-      analyze: 50,
+      chat: 250,
+      voiceMinutes: 60,
+      analyze: 150,
       connectors: null,
-      botMessages: 28,
+      botMessages: 100,
     },
   },
   max: {
@@ -61,13 +72,14 @@ export const PLANS: Record<string, PlanConfig> = {
     priceCents: 3999,
     priceDisplay: "$39.99",
     interval: "month",
-    includedCredits: 10000,
+    includedCredits: 750,
+    model: "gpt-5.5",
     limits: {
-      chat: 8000,
-      voiceMinutes: 750,
-      analyze: 2000,
+      chat: 600,
+      voiceMinutes: 150,
+      analyze: 400,
       connectors: null,
-      botMessages: 500,
+      botMessages: 250,
     },
   },
 }

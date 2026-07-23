@@ -14,6 +14,7 @@ import {
   type UsageInfo,
 } from "@yomi/agent-core"
 import { formatAgentSoul } from "@yomi/shared"
+import { getPlan } from "@yomi/shared/plans"
 import { compressContext, shouldCompress, estimateTokens } from "./compressor.js"
 import { searchSessions } from "../services/agent-sessions.js"
 import { getAccessToken, listConnectedProviders } from "../services/integration-tokens.js"
@@ -21,7 +22,7 @@ import { decryptString } from "../services/token-encryption.js"
 import { buildComposioDefs } from "../connectors/composio-defs.js"
 import { createComposioRestExecutor, createCountingExecutor } from "../connectors/composio-executor.js"
 import { composioCostMicros } from "@yomi/shared/ai-pricing"
-import { hasBillablePlanAccess } from "../entitlements.js"
+import { hasBillablePlanAccess, effectivePlanForUser } from "../entitlements.js"
 import { chargeUsage } from "../services/metering.js"
 import { recordAiUsage } from "../services/ai-telemetry.js"
 import { checkConsent } from "../services/privacy/checks.js"
@@ -614,6 +615,11 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   let text: string
   const startedAt = Date.now()
   const userTimeZone = await resolveUserTimeZone(opts.userId)
+  // Explore and Pro run the agent loop on gpt-5.4-mini (~3.75x cheaper than gpt-5.5
+  // on both input and output) so their credit allotments stay generous at 70%
+  // margin; Max keeps the flagship model as its differentiator. Reassess if mini's
+  // tool-calling reliability doesn't hold up under real traffic.
+  const agentModel = getPlan(effectivePlanForUser(user)).model
   try {
     text = await runAgentLoop({
       registry,
@@ -629,6 +635,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
         userTimeZone,
         integrationSuggestions,
       ),
+      model: agentModel,
       maxTokens: maxOutputTokensFor(opts.text),
       signal: opts.signal,
       onUsage: (usage: UsageInfo) => {
