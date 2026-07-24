@@ -42,6 +42,13 @@ export class ConnectorRegistry {
   private defTools: ToolSet = {}
   private mcpTools: ToolSet = {}
   private customMcpTools: ToolSet = {}
+  // Same tools as defTools/mcpTools, kept indexed by connector id too (defTools/
+  // mcpTools are the flat merge used by the "load everything" path). Lets a caller
+  // that only needs a subset of connected connectors — see getToolsForConnectors —
+  // avoid sending every connected service's schema on every turn.
+  private defToolsByConnector = new Map<string, ToolSet>()
+  private mcpToolsByConnector = new Map<string, ToolSet>()
+  private connectedDefMeta = new Map<string, { name: string; description: string }>()
   private connectedDefIds: Set<string> = new Set()
   // Names of connected connectors skipped because they need a Node runtime the
   // current host lacks (Workers). Surfaced so the agent can tell the user the
@@ -89,6 +96,9 @@ export class ConnectorRegistry {
     this.defTools = {}
     this.mcpTools = {}
     this.customMcpTools = {}
+    this.defToolsByConnector.clear()
+    this.mcpToolsByConnector.clear()
+    this.connectedDefMeta.clear()
     this.connectedDefIds.clear()
     this.desktopOnlyNames = []
     this.mcpConnectedIds = []
@@ -113,6 +123,7 @@ export class ConnectorRegistry {
       }
       if (this.connectedProviders.has(def.id)) {
         this.connectedDefIds.add(def.id)
+        this.connectedDefMeta.set(def.id, { name: def.name, description: def.description })
         if (def.isMCPBased && def.connectMCP) {
           // MCP defs: store for lazy loading, don't call tools() yet
           this.mcpConnectedIds.push(def.id)
@@ -123,6 +134,7 @@ export class ConnectorRegistry {
             createPendingAction: this.deps.createPendingAction,
           })
           Object.assign(this.defTools, tools)
+          this.defToolsByConnector.set(def.id, tools)
         }
       }
     }
@@ -143,6 +155,7 @@ export class ConnectorRegistry {
               createPendingAction: this.deps.createPendingAction,
             })
             Object.assign(this.mcpTools, tools)
+            this.mcpToolsByConnector.set(def.id, tools)
           } catch (err) {
             console.error(`[registry] MCP connect failed for ${def.id}:`, err)
           }
@@ -194,6 +207,28 @@ export class ConnectorRegistry {
   // already-loaded MCP tools.
   getAllDefTools(): ToolSet {
     return { ...this.defTools, ...this.mcpTools, ...this.customMcpTools }
+  }
+
+  // id/name/description for every connected connector — enough for a cheap
+  // classifier to decide relevance without seeing any tool schemas. Excludes
+  // MCP-based defs not yet loaded (loadMCPTools() populates their metadata too,
+  // via the same connectedDefMeta map buildConnectors() already writes to).
+  getConnectorSummaries(): { id: string; name: string; description: string }[] {
+    return [...this.connectedDefMeta.entries()].map(([id, meta]) => ({ id, ...meta }))
+  }
+
+  // Merged tools for just the given connector ids (plus custom MCP servers,
+  // always included — few in number and deliberately added by the user, not
+  // part of the catalog-bloat problem this exists to solve). Unknown ids are
+  // silently ignored. Used by the agent loop to load only what a turn's cheap
+  // relevance classifier picked, instead of every connected connector's tools.
+  getToolsForConnectors(ids: string[]): ToolSet {
+    const tools: ToolSet = { ...this.customMcpTools }
+    for (const id of ids) {
+      Object.assign(tools, this.defToolsByConnector.get(id))
+      Object.assign(tools, this.mcpToolsByConnector.get(id))
+    }
+    return tools
   }
 
   // Names of connected connectors that were skipped on this host because they
