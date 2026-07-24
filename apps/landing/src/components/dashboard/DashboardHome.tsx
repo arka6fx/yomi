@@ -6,7 +6,6 @@ import {
   Activity,
   AlertTriangle,
   Brain,
-  Check,
   Clock,
   Crown,
   ExternalLink,
@@ -118,7 +117,7 @@ function PlanBanner({ plan, onClick }: { plan: PlanSummary; onClick: () => void 
           {plan.billingWarning}
         </div>
       )}
-      <div className="flex flex-wrap items-end justify-between gap-6">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
         <div>
           <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
             Current plan
@@ -152,11 +151,11 @@ function PlanBanner({ plan, onClick }: { plan: PlanSummary; onClick: () => void 
             </p>
           )}
         </div>
-        <div className="text-right">
+        <div className="sm:text-right">
           <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
             Credits remaining
           </p>
-          <div className="flex items-baseline justify-end gap-2">
+          <div className="flex items-baseline gap-2 sm:justify-end">
             <span className="text-3xl font-light text-foreground tabular-nums">
               {plan.isOwner ? "∞" : plan.creditRemaining}
             </span>
@@ -349,52 +348,56 @@ export function DashboardHome({
 
           {billingError && <p className="mb-3 text-xs text-destructive">{billingError}</p>}
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            {PLANS.map((p, i) => {
-              const isCurrent = p.key === currentPlanKey
-              const isUpgrade = i > PLANS.findIndex((x) => x.key === currentPlanKey)
-              const Icon = p.icon
+          {(() => {
+            const currentIndex = PLANS.findIndex((x) => x.key === currentPlanKey)
+            const upgrades = PLANS.filter((_, i) => i > currentIndex)
+            if (upgrades.length === 0) {
               return (
-                <div
-                  key={p.key}
-                  className={cn(
-                    "flex flex-col gap-2 rounded-xl border p-3.5",
-                    isCurrent ? "border-primary bg-primary/5" : "border-border bg-background/40",
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <Icon size={13} className="text-primary" />
-                      <span className="text-xs font-medium text-foreground">{p.name}</span>
-                    </div>
-                    {isCurrent && <Check size={12} className="text-primary" />}
-                  </div>
-                  <span className="text-base font-light text-foreground">
-                    {formatPlanPrice(p.priceUsd)}
-                    <span className="text-[10px] text-muted-foreground">{p.priceSub}</span>
-                  </span>
-                  {isCurrent ? (
-                    <span className="text-[11px] font-medium text-primary">Current plan</span>
-                  ) : isUpgrade ? (
-                    <button
-                      onClick={() => onUpgrade(p.key)}
-                      disabled={billingLoading !== null}
-                      className="mt-0.5 flex items-center justify-center gap-1.5 rounded-lg bg-primary py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-                    >
-                      {billingLoading === p.key ? (
-                        <Loader2 size={11} className="animate-spin" />
-                      ) : (
-                        <Crown size={11} />
-                      )}
-                      Upgrade
-                    </button>
-                  ) : (
-                    <span className="text-[11px] text-muted-foreground">Lower tier</span>
-                  )}
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  You&apos;re on our top plan — thanks for being a power user.
+                </p>
               )
-            })}
-          </div>
+            }
+            return (
+              <div
+                className={cn(
+                  "grid grid-cols-1 gap-2.5",
+                  upgrades.length > 1 ? "sm:grid-cols-2" : "sm:max-w-xs",
+                )}
+              >
+                {upgrades.map((p) => {
+                  const Icon = p.icon
+                  return (
+                    <div
+                      key={p.key}
+                      className="flex flex-col gap-2 rounded-xl border border-border bg-background/40 p-3.5"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <Icon size={13} className="text-primary" />
+                        <span className="text-xs font-medium text-foreground">{p.name}</span>
+                      </div>
+                      <span className="text-base font-light text-foreground">
+                        {formatPlanPrice(p.priceUsd)}
+                        <span className="text-[10px] text-muted-foreground">{p.priceSub}</span>
+                      </span>
+                      <button
+                        onClick={() => onUpgrade(p.key)}
+                        disabled={billingLoading !== null}
+                        className="mt-0.5 flex items-center justify-center gap-1.5 rounded-lg bg-primary py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                      >
+                        {billingLoading === p.key ? (
+                          <Loader2 size={11} className="animate-spin" />
+                        ) : (
+                          <Crown size={11} />
+                        )}
+                        Upgrade
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
 
           {currentPlanKey !== "explore" && creditPacks.length > 0 && (
             <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
