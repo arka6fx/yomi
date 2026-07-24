@@ -127,15 +127,21 @@ respectively.
 Billing is pure credits - a single credit balance is the only usage gate.
 Per-feature monthly caps were removed; connectors are unlimited on every plan.
 
-| Plan    | Price     | Monthly credits        |
-| ------- | --------- | ---------------------- |
-| Explore | $0/mo     | 25 (30-day free trial) |
-| Pro     | $14.99/mo | 2 500                  |
-| Max     | $39.99/mo | 10 000                 |
+| Plan    | Price  | Monthly credits           | Model         |
+| ------- | ------ | -------------------------- | ------------- |
+| Explore | $0/mo  | 100 (perpetual, renews)    | gpt-5.4-mini  |
+| Pro     | $5/mo  | 300                         | gpt-5.4-mini  |
+| Max     | $40/mo | 750                         | gpt-5.5       |
 
-Credit costs: fast chat 1, image analyze 1, voice 2/min, agent run 3,
-Telegram message 3. Tune from `ai_usage_events` telemetry; real API cost is
-recorded in `totalApiCostMicros` via `@yomi/shared/ai-pricing`.
+Credit packs (shared currency, any plan): 85 credits/$5, 250 credits/$15,
+750 credits/$40 - priced against worst-case gpt-5.5 cost since Max users can
+buy them too.
+
+Explore/Pro route through the cheap model on purpose - that's the margin
+lever, not the credit count alone. Credit costs: fast chat 1, image analyze 1,
+voice 2/min, bot message 3, agent run 3 base (+1 per Composio tool call in
+that turn, charged separately). Tune from `ai_usage_events` telemetry; real
+API cost is recorded in `totalApiCostMicros` via `@yomi/shared/ai-pricing`.
 
 Single chokepoint: `apps/backend/src/services/metering.ts` -> `chargeUsage()`
 (owner bypass -> active-plan check -> `balance >= cost` -> record event +
