@@ -224,7 +224,11 @@ export class ConnectorRegistry {
   // relevance classifier picked, instead of every connected connector's tools.
   getToolsForConnectors(ids: string[]): ToolSet {
     const tools: ToolSet = { ...this.customMcpTools }
-    for (const id of ids) {
+    // Sort so the same connector set always serializes to the same key order —
+    // the classifier's output order carries no meaning, but the resulting tool
+    // schema is part of OpenAI's cacheable prompt prefix, and a reordered
+    // prefix is a cache miss even when the content is identical.
+    for (const id of [...ids].sort()) {
       Object.assign(tools, this.defToolsByConnector.get(id))
       Object.assign(tools, this.mcpToolsByConnector.get(id))
     }

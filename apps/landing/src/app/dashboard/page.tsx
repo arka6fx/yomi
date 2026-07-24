@@ -639,7 +639,7 @@ function DashboardContent() {
     : sub?.status === "past_due"
       ? "past due"
       : sub?.plan === "explore"
-        ? "trial"
+        ? "free"
         : (sub?.status ?? "trial")
   const planSummary: PlanSummary = {
     loading: subPending,
@@ -1083,7 +1083,7 @@ function DashboardContent() {
                             : sub.status === "past_due"
                               ? "past due"
                               : sub.plan === "explore"
-                                ? "trial"
+                                ? "free"
                                 : sub.status}
                         </span>
                       )}
