@@ -1,11 +1,11 @@
 import { Hono } from "hono"
 import { and, eq, gte, isNotNull, isNull, lt, ne } from "drizzle-orm"
-import { db, usageEvents, creditAccounts, creditGrants } from "@yomi/db"
+import { db, usageEvents, creditAccounts, creditGrants, paymentRecords } from "@yomi/db"
 import { user } from "../auth-schema.js"
 import { authenticate } from "../auth.js"
 import { effectivePlanForUser, isOwnerUser } from "../entitlements.js"
 import { grantCredits } from "../services/credit-ledger.js"
-import { getPlan } from "@yomi/shared/plans"
+import { getPlan, PLANS, type PlanKey } from "@yomi/shared/plans"
 import { costMicros } from "@yomi/shared/ai-pricing"
 
 export const adminRouter = new Hono()
@@ -271,6 +271,79 @@ adminRouter.post("/reset-explore-trials", authenticate, async (c) => {
   })
 })
 
+type RevenueSummary = {
+  mrrUsd: number
+  planMix: { plan: string; count: number }[]
+  subscriptionRevenueUsd: number
+  creditPackRevenueUsd: number
+  newSubscriptionsInPeriod: number
+  trialToPaidRate: number | null
+}
+
+// Revenue is computed independently of the usage-events period query above:
+// MRR is a live snapshot (active subscribers today), while subscription/credit-pack
+// revenue and trial conversion are read straight from payment_records and user, not
+// derived from usage telemetry.
+async function computeRevenueSummary(since: Date): Promise<RevenueSummary> {
+  const allUsers = await db
+    .select({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      plan: user.plan,
+      subscriptionStatus: user.subscriptionStatus,
+      trialEndDate: user.trialEndDate,
+    })
+    .from(user)
+    .where(isNull(user.deletedAt))
+
+  const billableUsers = allUsers.filter((u) => !isOwnerUser(u))
+
+  const planMix = new Map<string, number>()
+  let mrrCents = 0
+  for (const u of billableUsers) {
+    const plan = u.plan in PLANS ? (u.plan as PlanKey) : "explore"
+    planMix.set(plan, (planMix.get(plan) ?? 0) + 1)
+    if (plan !== "explore" && u.subscriptionStatus === "active") {
+      mrrCents += getPlan(plan).priceCents
+    }
+  }
+
+  const now = new Date()
+  const trialEnded = billableUsers.filter((u) => u.trialEndDate && u.trialEndDate < now)
+  const trialConverted = trialEnded.filter((u) => u.plan !== "explore")
+  const trialToPaidRate = trialEnded.length > 0 ? trialConverted.length / trialEnded.length : null
+
+  const payments = await db
+    .select({
+      kind: paymentRecords.kind,
+      amountCents: paymentRecords.amountCents,
+    })
+    .from(paymentRecords)
+    .where(and(gte(paymentRecords.createdAt, since), eq(paymentRecords.status, "paid")))
+
+  let subscriptionRevenueCents = 0
+  let creditPackRevenueCents = 0
+  let newSubscriptionsInPeriod = 0
+  for (const p of payments) {
+    if (p.kind === "subscription") {
+      subscriptionRevenueCents += p.amountCents
+      newSubscriptionsInPeriod++
+    } else if (p.kind === "credit_pack") {
+      creditPackRevenueCents += p.amountCents
+    }
+  }
+
+  return {
+    mrrUsd: mrrCents / 100,
+    planMix: Array.from(planMix.entries()).map(([plan, count]) => ({ plan, count })),
+    subscriptionRevenueUsd: subscriptionRevenueCents / 100,
+    creditPackRevenueUsd: creditPackRevenueCents / 100,
+    newSubscriptionsInPeriod,
+    trialToPaidRate,
+  }
+}
+
 adminRouter.get("/cost-analytics", authenticate, async (c) => {
   const caller = c.get("user")
   if (!isOwnerUser(caller)) {
@@ -300,10 +373,11 @@ adminRouter.get("/cost-analytics", authenticate, async (c) => {
   const users = await db.select({ id: user.id, email: user.email, name: user.name }).from(user)
   const usersById = new Map(users.map((u) => [u.id, u]))
 
+  const revenue = await computeRevenueSummary(since)
+
   const byEndpoint = new Map<string, CostBucket>()
   const byModel = new Map<string, CostBucket>()
   const byConnector = new Map<string, CostBucket>()
-  const byTaskType = new Map<string, CostBucket>()
   const byUser = new Map<string, CostBucket>()
   const daily = new Map<string, CostBucket>()
   const monthly = new Map<string, CostBucket>()
@@ -325,11 +399,6 @@ adminRouter.get("/cost-analytics", authenticate, async (c) => {
       Number(row.costCents ?? 0),
     )
     const endpoint = metadataString(meta, ["endpoint", "route", "source"], row.kind)
-    const taskType = metadataString(
-      meta,
-      ["taskType", "task_type", "intent", "reserveKind"],
-      row.kind,
-    )
     const model = row.model ?? "unknown"
 
     totalInputTokens += inputTokens
@@ -339,7 +408,6 @@ adminRouter.get("/cost-analytics", authenticate, async (c) => {
 
     addBucket(byEndpoint, endpoint, inputTokens, outputTokens, latencyMs, costMicros)
     addBucket(byModel, model, inputTokens, outputTokens, latencyMs, costMicros)
-    addBucket(byTaskType, taskType, inputTokens, outputTokens, latencyMs, costMicros)
     addBucket(byUser, row.userId, inputTokens, outputTokens, latencyMs, costMicros)
     addBucket(daily, dayKey(row.createdAt), inputTokens, outputTokens, latencyMs, costMicros)
     addBucket(monthly, monthKey(row.createdAt), inputTokens, outputTokens, latencyMs, costMicros)
@@ -383,10 +451,10 @@ adminRouter.get("/cost-analytics", authenticate, async (c) => {
       avgLatencyMs: Math.round(totalLatencyMs / Math.max(rows.length, 1)),
       estimatedCostUsd: money(totalCostMicros),
     },
+    revenue,
     costPerEndpoint: serializeSorted(byEndpoint),
     costPerModel: serializeSorted(byModel),
     costPerConnector: serializeSorted(byConnector),
-    tokenDistributionByTaskType: serializeSorted(byTaskType),
     dailySpend: Array.from(daily.values())
       .sort((a, b) => a.key.localeCompare(b.key))
       .map(serializeBucket),

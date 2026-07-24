@@ -13,6 +13,7 @@ import {
   Loader2,
   Plug,
   RefreshCw,
+  TrendingUp,
   Users,
   WalletCards,
   type LucideIcon,
@@ -37,6 +38,15 @@ type TopUser = AnalyticsBucket & {
   name: string | null
 }
 
+type RevenueSummary = {
+  mrrUsd: number
+  planMix: { plan: string; count: number }[]
+  subscriptionRevenueUsd: number
+  creditPackRevenueUsd: number
+  newSubscriptionsInPeriod: number
+  trialToPaidRate: number | null
+}
+
 type AnalyticsResponse = {
   generatedAt: string
   period: { days: number; since: string; until: string }
@@ -49,10 +59,10 @@ type AnalyticsResponse = {
     avgLatencyMs: number
     estimatedCostUsd: number
   }
+  revenue: RevenueSummary
   costPerEndpoint: AnalyticsBucket[]
   costPerModel: AnalyticsBucket[]
   costPerConnector: AnalyticsBucket[]
-  tokenDistributionByTaskType: AnalyticsBucket[]
   dailySpend: AnalyticsBucket[]
   monthlySpend: AnalyticsBucket[]
   topUsers: TopUser[]
@@ -68,6 +78,10 @@ function dollars(value: number) {
 
 function number(value: number) {
   return value.toLocaleString("en-US")
+}
+
+function percent(value: number) {
+  return `${Math.round(value * 100)}%`
 }
 
 function when(value: string) {
@@ -212,6 +226,77 @@ export default function DeveloperDashboardPage() {
               />
             </section>
 
+            <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+              <div className="mb-5 flex items-center gap-2">
+                <TrendingUp size={16} className="text-muted-foreground" />
+                <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                  Revenue &amp; billing
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <MetricCard icon={WalletCards} label="MRR" value={dollars(data.revenue.mrrUsd)} />
+                <MetricCard
+                  icon={Activity}
+                  label={`Revenue (${data.period.days}d)`}
+                  value={dollars(
+                    data.revenue.subscriptionRevenueUsd + data.revenue.creditPackRevenueUsd,
+                  )}
+                />
+                <MetricCard
+                  icon={Users}
+                  label={`New subscriptions (${data.period.days}d)`}
+                  value={number(data.revenue.newSubscriptionsInPeriod)}
+                />
+                <MetricCard
+                  icon={TrendingUp}
+                  label="Trial → paid"
+                  value={
+                    data.revenue.trialToPaidRate === null
+                      ? "—"
+                      : percent(data.revenue.trialToPaidRate)
+                  }
+                />
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-border bg-background/40 p-4">
+                  <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                    Plan mix
+                  </p>
+                  <div className="space-y-2">
+                    {data.revenue.planMix.map((row) => (
+                      <div key={row.plan} className="flex items-center justify-between text-sm">
+                        <span className="capitalize text-foreground">{row.plan}</span>
+                        <span className="tabular-nums text-muted-foreground">
+                          {number(row.count)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-border bg-background/40 p-4">
+                  <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                    Revenue split ({data.period.days}d)
+                  </p>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-foreground">Subscriptions</span>
+                      <span className="tabular-nums text-muted-foreground">
+                        {dollars(data.revenue.subscriptionRevenueUsd)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-foreground">Credit packs</span>
+                      <span className="tabular-nums text-muted-foreground">
+                        {dollars(data.revenue.creditPackRevenueUsd)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
             <section className="grid gap-4 lg:grid-cols-2">
               <AnalyticsTable
                 title="Cost per endpoint"
@@ -220,11 +305,6 @@ export default function DeveloperDashboardPage() {
               />
               <AnalyticsTable title="Cost per model" icon={Cpu} rows={data.costPerModel} />
               <AnalyticsTable title="Cost per connector" icon={Plug} rows={data.costPerConnector} />
-              <AnalyticsTable
-                title="Token distribution by task"
-                icon={Database}
-                rows={data.tokenDistributionByTaskType}
-              />
             </section>
 
             <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">

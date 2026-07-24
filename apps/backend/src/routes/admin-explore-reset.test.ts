@@ -29,6 +29,7 @@ mock.module("../auth.js", () => ({
 
 mock.module("@yomi/db", () => ({
   usageEvents: {},
+  paymentRecords: {},
   creditAccounts: { userId: "user_id", availableCredits: "available_credits" },
   creditGrants: { userId: "user_id", status: "status", source: "source", expiresAt: "expires_at" },
   db: {
