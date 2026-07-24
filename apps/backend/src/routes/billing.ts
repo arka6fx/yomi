@@ -662,9 +662,14 @@ billingRouter.get("/usage-summary", authenticate, async (c) => {
   const user = c.get("user")
   const effectivePlan = effectivePlanForUser(user)
   const planConfig = getPlan(effectivePlan)
-  const requestPeriodStart = new Date(
-    Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1),
-  )
+  // Explore renews on trialStartDate, not a calendar-month boundary — using the
+  // 1st of the month here counted usage from a prior (already-reset) cycle
+  // toward "this period," inflating totalAvailableThisPeriod past `included`
+  // right after a renewal or admin top-up.
+  const requestPeriodStart =
+    effectivePlan === "explore" && user.trialStartDate
+      ? user.trialStartDate
+      : new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1))
   const renewal = creditRenewal(user)
 
   const [creditConsumptionRows, dailyRows, transactions] = await Promise.all([
