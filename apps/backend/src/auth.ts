@@ -199,6 +199,7 @@ export type SessionUser = AuthInstance["$Infer"]["Session"]["user"] & {
   role: string
   plan: string
   subscriptionStatus: string
+  trialStartDate: Date | null
   trialEndDate: Date | null
   currentPeriodEnd: Date | null
   dodoCustomerId: string | null

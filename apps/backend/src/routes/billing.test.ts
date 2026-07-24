@@ -10,6 +10,7 @@ type TestUser = {
   plan: string
   subscriptionStatus: string
   dodoSubscriptionId: string | null
+  trialStartDate?: Date | null
   trialEndDate?: Date | null
   currentPeriodEnd?: Date | null
 }
