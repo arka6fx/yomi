@@ -1,5 +1,5 @@
 export { GatewayRunner, getDefaultGateway } from "./gateway-runner.js"
 export type { GatewayStatus } from "./gateway-runner.js"
 export type { PlatformAdapter } from "./platform-adapter.js"
-export { removeMarkdown, truncateMessage } from "./platform-adapter.js"
+export { markdownToTelegramHtml, truncateMessage } from "./platform-adapter.js"
 export { TelegramAdapter } from "./platforms/telegram.js"

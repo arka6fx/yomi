@@ -19,43 +19,74 @@ export interface PlatformAdapter {
   setMessageHandler(handler: (msg: GatewayMessage) => void | Promise<void>): void
 }
 
-export function removeMarkdown(text: string): string {
-  // URLs are held out of the way first: Drive file IDs contain underscores, and an
-  // emphasis rule that ate them turned a working link into a dead "unable to open
-  // the file" page. Nothing inside a URL is markdown.
-  const urls: string[] = []
-  const withoutUrls = text.replace(/https?:\/\/\S+/g, (url) => {
-    urls.push(url)
-    return `\uE000URL${urls.length - 1}\uE000`
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+}
+
+// Converts the model's markdown into the small HTML tag set Telegram's `HTML`
+// parse_mode supports (b/i/s/code/pre/a), instead of stripping formatting down to
+// plain text. Code, links, and bare URLs are pulled out and rendered to their
+// final form up front (same reasoning as removeMarkdown's URL handling above —
+// underscores in Drive file IDs aren't emphasis) so the escaping and emphasis
+// passes below never touch them, and never touch our own inserted tags either.
+export function markdownToTelegramHtml(text: string): string {
+  const codeBlocks: string[] = []
+  let out = text.replace(/```[a-z]*\n([\s\S]*?)\n```/g, (_m, code: string) => {
+    codeBlocks.push("<pre>" + escapeHtml(code) + "</pre>")
+    return "TGCODEBLOCKMARK" + (codeBlocks.length - 1) + "END"
   })
 
-  const stripped = withoutUrls
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "")
-    // Keep the target: "[the PDF](<link>)" must not throw the link away.
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1: $2")
-    .replace(/```[a-z]*\n([\s\S]*?)\n```/g, "$1")
-    .replace(/~~([^~]+)~~/g, "$1")
-    .replace(/\*{1,2}([^*\n]+)\*{1,2}/g, "$1")
-    // Emphasis only at word boundaries. Markdown does not italicise mid-word
-    // underscores either, and filenames like Arka_Garai_29_PS2 depend on that.
-    .replace(/(^|\s)_{1,2}([^_\n]+)_{1,2}(?=$|\s|[.,!?;:])/gm, "$1$2")
-    // Unwrap inline code — the old rule deleted its contents outright.
-    .replace(/`([^`\n]+)`/g, "$1")
-    .replace(/^>\s+/gm, "")
-    .replace(/^[-*+]\s+/gm, "")
-    .replace(/^\d+[.)]\s+/gm, "")
-    .replace(/^#{1,6}\s+/gm, "")
+  const inlineCode: string[] = []
+  out = out.replace(/`([^`\n]+)`/g, (_m, code: string) => {
+    inlineCode.push("<code>" + escapeHtml(code) + "</code>")
+    return "TGCODEMARK" + (inlineCode.length - 1) + "END"
+  })
+
+  out = out.replace(/!\[([^\]]*)\]\([^)]+\)/g, "")
+
+  const links: string[] = []
+  out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, linkText: string, url: string) => {
+    links.push('<a href="' + escapeHtml(url) + '">' + escapeHtml(linkText) + "</a>")
+    return "TGLINKMARK" + (links.length - 1) + "END"
+  })
+
+  const bareUrls: string[] = []
+  out = out.replace(/https?:\/\/\S+/g, (url) => {
+    bareUrls.push(escapeHtml(url))
+    return "TGURLMARK" + (bareUrls.length - 1) + "END"
+  })
+
+  out = escapeHtml(out)
+
+  out = out
+    // Bullets first: a "* item" marker is a lone asterisk with no closing partner,
+    // and resolving it before the italic pass keeps that asterisk from being read
+    // as an unterminated emphasis marker that swallows the rest of the line.
+    .replace(/^[-*+]\s+/gm, "• ")
+    .replace(/^#{1,6}\s+(.+)$/gm, "<b>$1</b>")
+    .replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>")
+    .replace(/__([^_\n]+)__/g, "<b>$1</b>")
+    .replace(/(^|\s)\*([^*\n]+)\*(?=$|\s|[.,!?;:])/gm, "$1<i>$2</i>")
+    .replace(/(^|\s)_([^_\n]+)_(?=$|\s|[.,!?;:])/gm, "$1<i>$2</i>")
+    .replace(/~~([^~\n]+)~~/g, "<s>$1</s>")
+    .replace(/^&gt;\s+/gm, "")
     .replace(/^---+$/gm, "")
     .replace(/\n{3,}/g, "\n\n")
     .trim()
 
-  return stripped.replace(/\uE000URL(\d+)\uE000/g, (_m, i) => urls[Number(i)] ?? "")
+  out = out
+    .replace(/TGURLMARK(\d+)END/g, (_m, i) => bareUrls[Number(i)] ?? "")
+    .replace(/TGLINKMARK(\d+)END/g, (_m, i) => links[Number(i)] ?? "")
+    .replace(/TGCODEBLOCKMARK(\d+)END/g, (_m, i) => codeBlocks[Number(i)] ?? "")
+    .replace(/TGCODEMARK(\d+)END/g, (_m, i) => inlineCode[Number(i)] ?? "")
+
+  return out
 }
 
 export function truncateMessage(text: string, maxLen = 2000): string {
   if (text.length <= maxLen) return text
   if (maxLen <= 0) return ""
-  const suffix = "\u2026"
+  const suffix = "…"
   let end = maxLen - suffix.length
   if (end <= 0) return suffix
   const truncated = text.slice(0, end)

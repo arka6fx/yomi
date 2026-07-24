@@ -358,6 +358,7 @@ export {
 export {
   suggestIntegrationsFor,
   formatIntegrationSuggestions,
+  formatConnectorIdCatalog,
   type IntegrationSuggestion,
 } from "./integration-catalog.js"
 export {

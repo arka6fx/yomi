@@ -1,7 +1,7 @@
 import type { GatewayMessage, PlatformType } from "@yomi/shared"
 import { humanizeDashes } from "@yomi/shared"
 import type { PlatformAdapter } from "../platform-adapter.js"
-import { removeMarkdown, truncateMessage } from "../platform-adapter.js"
+import { markdownToTelegramHtml, truncateMessage } from "../platform-adapter.js"
 
 const API_BASE = "https://api.telegram.org/bot"
 
@@ -239,11 +239,14 @@ export class TelegramAdapter implements PlatformAdapter {
     options?: { replyTo?: string },
   ): Promise<{ ok: boolean; messageId?: string; error?: string }> {
     try {
-      const clean = truncateMessage(humanizeDashes(removeMarkdown(text)))
+      // Truncate the plain markdown before converting to HTML tags, never after —
+      // cutting a formatted string mid-tag (e.g. "<b>bo") would leave Telegram's
+      // strict HTML parser an unterminated tag and reject the whole message.
+      const clean = markdownToTelegramHtml(truncateMessage(humanizeDashes(text)))
       const body: Record<string, unknown> = {
         chat_id: chatId,
         text: clean,
-        parse_mode: undefined,
+        parse_mode: "HTML",
       }
       if (options?.replyTo) body.reply_to_message_id = Number(options.replyTo)
 
@@ -270,7 +273,10 @@ export class TelegramAdapter implements PlatformAdapter {
         chat_id: chatId,
         document: documentUrl,
       }
-      if (options?.caption) body.caption = truncateMessage(removeMarkdown(options.caption), 900)
+      if (options?.caption) {
+        body.caption = markdownToTelegramHtml(truncateMessage(options.caption, 900))
+        body.parse_mode = "HTML"
+      }
       if (options?.replyTo) body.reply_to_message_id = Number(options.replyTo)
 
       const res = await fetch(`${this.apiUrl}/sendDocument`, {

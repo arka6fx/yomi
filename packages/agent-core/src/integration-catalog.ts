@@ -54,3 +54,11 @@ export function formatIntegrationSuggestions(
     .map((s) => `${s.name} (${s.category}): ${appUrl}/dashboard?connect=${s.id}`)
     .join("\n")
 }
+
+// Static name→id reference so the agent can build a working dashboard deep link
+// (?connect=<id>) when a tool reports its service isn't connected, instead of
+// guessing or falling back to the bare dashboard URL. Same list for every turn,
+// so it belongs in the cacheable, fixed part of the system prompt.
+export function formatConnectorIdCatalog(): string {
+  return ALL_CONNECTOR_DEFS.map((d) => `${d.name}: ${d.id}`).join("\n")
+}
