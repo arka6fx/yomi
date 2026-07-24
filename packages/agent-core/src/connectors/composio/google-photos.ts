@@ -60,9 +60,10 @@ export const googlePhotosComposioSpecs: ComposioToolSpec[] = [
     slug: "GOOGLEPHOTOS_UPLOAD_MEDIA",
     description: "Upload a media file (image up to 200MB, video up to 20GB). Requires approval.",
     parameters: z.object({
-      file_to_upload: z.record(z.string(), z.unknown()).describe("File reference/content to upload"),
+      file_to_upload: z.string().describe("URL of the media file to upload"),
       description: z.string().optional().describe("Media item description"),
     }).passthrough(),
+    fileParams: ["file_to_upload"],
     preview: () => ({
       title: "Upload media",
       preview: "Upload a file to Google Photos",

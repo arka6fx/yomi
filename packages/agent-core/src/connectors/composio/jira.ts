@@ -66,7 +66,11 @@ export const jiraComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "JIRA_ADD_ATTACHMENT",
     description: "Attach a file to an issue. Requires user approval before it runs.",
-    parameters: z.object({ issue_key: z.string().describe("Issue key") }).passthrough(),
+    parameters: z.object({
+      issue_key: z.string().describe("Issue key"),
+      file_to_upload: z.string().describe("URL of the file to attach"),
+    }).passthrough(),
+    fileParams: ["file_to_upload"],
     preview: (a) => ({ title: "Add attachment", preview: `Attach file to ${String(a["issue_key"] ?? "")}`, confirmText: "Attach" }),
   },
 

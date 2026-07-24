@@ -9,6 +9,15 @@ import { classifyAction, type ActionRisk } from "./classification.js"
 // tool result surfaced back to the agent.
 export interface ComposioExecutor {
   execute(input: { userId: string; slug: string; arguments: unknown }): Promise<unknown>
+  // Stages a file at `url` through Composio's upload pipeline and returns the
+  // `{name, mimetype, s3key}` descriptor their tools expect in place of a raw
+  // file value. Optional: only the real REST executor implements it; fakes in
+  // tests can omit it for specs with no fileParams.
+  stageFile?(input: {
+    url: string
+    toolSlug: string
+    toolkitSlug: string
+  }): Promise<{ name: string; mimetype: string; s3key: string }>
 }
 
 // One tool the toolkit surfaces to the agent. `slug` is Composio's action id and
@@ -20,6 +29,13 @@ export interface ComposioToolSpec {
   // Builds the approval-card title/preview for a gated (write) action from its
   // args. Falls back to the slug + JSON args when omitted.
   preview?: (args: Record<string, unknown>) => { title: string; preview: string; confirmText?: string }
+  // Names of string params that are actually file URLs. Composio's own schema
+  // marks the underlying parameter `file_uploadable: true` — it wants a staged
+  // `{name, mimetype, s3key}` descriptor, not a raw URL or path. Listed here,
+  // the adapter stages each named arg via executor.stageFile() right before
+  // execution (replay time, so short-lived asset URLs are still fresh) and
+  // substitutes the descriptor in its place.
+  fileParams?: string[]
 }
 
 export interface CreateComposioToolsOptions {
@@ -88,6 +104,31 @@ function capComposioResult(result: unknown): unknown {
   return truncateResult(result, { remaining: MAX_RESULT_CHARS })
 }
 
+// Replaces each fileParams entry in `args` (a URL string the model provided)
+// with its staged {name, mimetype, s3key} descriptor. No-ops a param that's
+// missing, not a string, or already an object (already staged/replayed).
+// Throws if the spec declares fileParams but the executor has no stageFile —
+// that's a real misconfiguration (a native/test executor wired to a toolkit
+// that needs staging), not something to silently skip.
+async function stageFileParams(
+  executor: ComposioExecutor,
+  spec: ComposioToolSpec,
+  toolkit: string,
+  args: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  if (!spec.fileParams?.length) return args
+  if (!executor.stageFile) {
+    throw new Error(`${spec.slug} needs file staging but the executor has no stageFile()`)
+  }
+  const staged = { ...args }
+  for (const param of spec.fileParams) {
+    const value = staged[param]
+    if (typeof value !== "string" || !value) continue
+    staged[param] = await executor.stageFile({ url: value, toolSlug: spec.slug, toolkitSlug: toolkit })
+  }
+  return staged
+}
+
 // Wraps a Composio toolkit as an AI SDK ToolSet behind Yomi's approval flow.
 //
 // For each spec the risk map decides the path: `read` actions execute straight
@@ -111,10 +152,11 @@ export function createComposioTools(opts: CreateComposioToolsOptions): ToolFacto
         execute: async (args: Record<string, unknown>) => {
           try {
             if (risk === "read") {
+              const staged = await stageFileParams(opts.executor, spec, opts.toolkit, args)
               const result = await opts.executor.execute({
                 userId: ctx.userId,
                 slug: spec.slug,
-                arguments: args,
+                arguments: staged,
               })
               return capComposioResult(result)
             }
@@ -131,10 +173,16 @@ export function createComposioTools(opts: CreateComposioToolsOptions): ToolFacto
                 confirmText: card.confirmText,
               },
               args,
-              async () =>
-                capComposioResult(
-                  await opts.executor.execute({ userId: ctx.userId, slug: spec.slug, arguments: args }),
-                ),
+              async () => {
+                // Staged at replay time, not when the pending action is created —
+                // an approval can sit for up to 30 minutes, and the source asset
+                // URL (a short-lived presigned S3 link) needs to still be valid
+                // when this actually runs.
+                const staged = await stageFileParams(opts.executor, spec, opts.toolkit, args)
+                return capComposioResult(
+                  await opts.executor.execute({ userId: ctx.userId, slug: spec.slug, arguments: staged }),
+                )
+              },
             )
           } catch (err) {
             return connectorError(err)

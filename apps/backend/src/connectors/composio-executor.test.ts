@@ -58,6 +58,125 @@ describe("createComposioRestExecutor", () => {
   })
 })
 
+function routedFetch(routes: Record<string, () => Response>) {
+  const calls: { url: string; init?: RequestInit }[] = []
+  const fn = (async (url: string | URL | Request, init?: RequestInit) => {
+    const u = String(url)
+    calls.push({ url: u, init })
+    const route = routes[u]
+    if (!route) throw new Error(`unexpected fetch: ${u}`)
+    return route()
+  }) as unknown as typeof fetch
+  return { fn, calls }
+}
+
+describe("createComposioRestExecutor.stageFile", () => {
+  const sourceUrl = "https://assets.example.com/photo.jpg"
+  const stageUrl = "https://x.test/api/v3.1/files/upload/request"
+  const uploadUrl = "https://storage.composio.dev/upload-here"
+
+  function sourceResponse() {
+    return new Response(new Uint8Array([1, 2, 3]).buffer, {
+      status: 200,
+      headers: { "content-type": "image/jpeg" },
+    })
+  }
+
+  function stageResponse(storageBackend: "s3" | "azure_blob_storage" = "s3") {
+    return Response.json({
+      id: "req_1",
+      key: "projects/pr_1/requests/dropbox/photo.jpg",
+      new_presigned_url: uploadUrl,
+      metadata: { storage_backend: storageBackend },
+    })
+  }
+
+  it("fetches the source, requests a presigned upload, PUTs the bytes, and returns the descriptor", async () => {
+    const { fn, calls } = routedFetch({
+      [sourceUrl]: sourceResponse,
+      [stageUrl]: () => stageResponse("s3"),
+      [uploadUrl]: () => new Response(null, { status: 200 }),
+    })
+    const exec = createComposioRestExecutor({ apiKey: "k1", baseUrl: "https://x.test", fetchImpl: fn })
+
+    const result = await exec.stageFile!({
+      url: sourceUrl,
+      toolSlug: "DROPBOX_UPLOAD_FILE",
+      toolkitSlug: "dropbox",
+    })
+
+    expect(result).toEqual({
+      name: "photo.jpg",
+      mimetype: "image/jpeg",
+      s3key: "projects/pr_1/requests/dropbox/photo.jpg",
+    })
+
+    const stageCall = calls.find((c) => c.url === stageUrl)!
+    const body = JSON.parse(stageCall.init!.body as string)
+    expect(body).toMatchObject({
+      filename: "photo.jpg",
+      mimetype: "image/jpeg",
+      tool_slug: "DROPBOX_UPLOAD_FILE",
+      toolkit_slug: "dropbox",
+    })
+    expect(body.md5).toMatch(/^[0-9a-f]{32}$/) // real md5 of the 3 source bytes, not a placeholder
+    expect((stageCall.init!.headers as Record<string, string>)["x-api-key"]).toBe("k1")
+
+    const putCall = calls.find((c) => c.url === uploadUrl)!
+    expect(putCall.init!.method).toBe("PUT")
+    expect((putCall.init!.headers as Record<string, string>)["Content-Type"]).toBe("image/jpeg")
+    expect(putCall.init!.headers).not.toHaveProperty("x-ms-blob-type")
+  })
+
+  it("sets the Azure blob-type header when the storage backend is azure_blob_storage", async () => {
+    const { fn, calls } = routedFetch({
+      [sourceUrl]: sourceResponse,
+      [stageUrl]: () => stageResponse("azure_blob_storage"),
+      [uploadUrl]: () => new Response(null, { status: 200 }),
+    })
+    const exec = createComposioRestExecutor({ apiKey: "k1", baseUrl: "https://x.test", fetchImpl: fn })
+
+    await exec.stageFile!({ url: sourceUrl, toolSlug: "S", toolkitSlug: "t" })
+
+    const putCall = calls.find((c) => c.url === uploadUrl)!
+    expect((putCall.init!.headers as Record<string, string>)["x-ms-blob-type"]).toBe("BlockBlob")
+  })
+
+  it("throws when the source file can't be fetched", async () => {
+    const { fn } = routedFetch({ [sourceUrl]: () => new Response("nope", { status: 404 }) })
+    const exec = createComposioRestExecutor({ apiKey: "k1", baseUrl: "https://x.test", fetchImpl: fn })
+
+    await expect(
+      exec.stageFile!({ url: sourceUrl, toolSlug: "S", toolkitSlug: "t" }),
+    ).rejects.toThrow(/404/)
+  })
+
+  it("throws when the presigned-upload request fails", async () => {
+    const { fn } = routedFetch({
+      [sourceUrl]: sourceResponse,
+      [stageUrl]: () => new Response("denied", { status: 403 }),
+    })
+    const exec = createComposioRestExecutor({ apiKey: "k1", baseUrl: "https://x.test", fetchImpl: fn })
+
+    await expect(
+      exec.stageFile!({ url: sourceUrl, toolSlug: "S", toolkitSlug: "t" }),
+    ).rejects.toThrow(/403/)
+  })
+
+  it("throws when the final upload to storage fails", async () => {
+    const { fn } = routedFetch({
+      [sourceUrl]: sourceResponse,
+      [stageUrl]: () => stageResponse("s3"),
+      [uploadUrl]: () => new Response("nope", { status: 500 }),
+    })
+    const exec = createComposioRestExecutor({ apiKey: "k1", baseUrl: "https://x.test", fetchImpl: fn })
+
+    await expect(
+      exec.stageFile!({ url: sourceUrl, toolSlug: "S", toolkitSlug: "t" }),
+    ).rejects.toThrow(/500/)
+  })
+})
+
 describe("createCountingExecutor", () => {
   function inner(result: unknown = { ok: true }): ComposioExecutor & { seen: number } {
     const box = { seen: 0 } as ComposioExecutor & { seen: number }
@@ -85,5 +204,24 @@ describe("createCountingExecutor", () => {
     const executor = createCountingExecutor(failing)
     await expect(executor.execute({ userId: "u", slug: "A", arguments: {} })).rejects.toThrow("boom")
     expect(executor.count()).toBe(1)
+  })
+
+  it("forwards stageFile without counting it (staging isn't a tools/execute call)", async () => {
+    const staged = { name: "f", mimetype: "image/jpeg", s3key: "k1" }
+    const withStaging: ComposioExecutor = {
+      execute: async () => ({ ok: true }),
+      stageFile: async () => staged,
+    }
+    const executor = createCountingExecutor(withStaging)
+
+    const result = await executor.stageFile!({ url: "https://x", toolSlug: "S", toolkitSlug: "t" })
+
+    expect(result).toEqual(staged)
+    expect(executor.count()).toBe(0)
+  })
+
+  it("has no stageFile when the inner executor doesn't provide one", () => {
+    const executor = createCountingExecutor(inner())
+    expect(executor.stageFile).toBeUndefined()
   })
 })

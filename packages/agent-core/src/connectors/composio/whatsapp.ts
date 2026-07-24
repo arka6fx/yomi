@@ -72,7 +72,12 @@ export const whatsappComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "WHATSAPP_UPLOAD_MEDIA",
     description: "Upload media to WhatsApp servers for later sending. Requires user approval before it runs.",
-    parameters: z.object({ phone_number_id: z.string().describe("Phone number ID"), media_type: z.string().describe("Media type") }).passthrough(),
+    parameters: z.object({
+      phone_number_id: z.string().describe("Phone number ID"),
+      media_type: z.string().describe("Media type"),
+      file_to_upload: z.string().describe("URL of the media file to upload"),
+    }).passthrough(),
+    fileParams: ["file_to_upload"],
     preview: () => ({ title: "Upload media", preview: "Upload media to WhatsApp", confirmText: "Upload" }),
   },
   {
