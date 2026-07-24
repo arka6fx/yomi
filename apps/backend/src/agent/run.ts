@@ -24,7 +24,7 @@ import { buildComposioDefs } from "../connectors/composio-defs.js"
 import { createComposioRestExecutor, createCountingExecutor } from "../connectors/composio-executor.js"
 import { composioCostMicros } from "@yomi/shared/ai-pricing"
 import { hasBillablePlanAccess, effectivePlanForUser } from "../entitlements.js"
-import { chargeUsage } from "../services/metering.js"
+import { chargeUsage, lowCreditWarning } from "../services/metering.js"
 import { recordAiUsage } from "../services/ai-telemetry.js"
 import { checkConsent } from "../services/privacy/checks.js"
 import * as authSchema from "../auth-schema.js"
@@ -521,12 +521,14 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   // can't cover it (or the plan is inactive) we return the block message and bail.
   // A resumed turn is already paid for — see skipCharge.
   let usageEventId: string | null = null
+  let creditBalance: number | null = null
   if (!opts.skipCharge) {
     const charge = await chargeUsage({ user, kind: "bot_message" })
     if (!charge.ok) {
       return { text: charge.message, quotaError: true }
     }
     usageEventId = charge.usageEventId ?? null
+    creditBalance = charge.balance
   }
 
   // Per-turn counting executor so Composio tool calls can be metered after the loop.
@@ -709,6 +711,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       units: composioCalls,
       metadata: { composioCalls },
     }).catch(() => null)
+    if (charge?.ok) creditBalance = charge.balance
     recordAiUsage({
       userId: opts.userId,
       requestId: crypto.randomUUID(),
@@ -726,6 +729,14 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
 
   if (memoryConsent.allowed) {
     await captureBackendMemory(opts.userId, opts.text, text).catch(() => {})
+  }
+
+  // Nudge once balance drops below 20% of the plan's allotment — this was
+  // wired into the dashboard's reserve/finalize path but never the Telegram
+  // path, so real users could run to 0 credits with no warning at all.
+  if (creditBalance !== null) {
+    const warning = lowCreditWarning(user, creditBalance)
+    if (warning) text += `\n\n_${warning} Buy more or upgrade at ${appUrl}/dashboard._`
   }
 
   // Usage was already recorded and credits consumed by chargeUsage() up front.
