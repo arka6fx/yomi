@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import type { ComposioExecutor } from "@yomi/agent-core"
 
 // Raw-fetch Composio tool executor. Matches the native connectors' fetch style
@@ -29,6 +30,10 @@ export function createCountingExecutor(inner: ComposioExecutor): CountingComposi
       n++
       return inner.execute(input)
     },
+    // Not counted: staging is a separate Composio API (file upload/request), not a
+    // `tools/execute` call, so it doesn't consume the tool-calls quota the counter
+    // exists to meter. The subsequent real tool execute() is what gets billed.
+    stageFile: inner.stageFile ? (input) => inner.stageFile!(input) : undefined,
   }
 }
 
@@ -42,12 +47,77 @@ export function composioBaseUrl(): string {
   return process.env["COMPOSIO_BASE_URL"] || DEFAULT_BASE_URL
 }
 
+// Best-effort filename from a URL's last path segment; Composio only uses this
+// for display, so a generic fallback is fine when the URL has none (e.g. a bare
+// presigned query string root).
+function filenameFromUrl(url: string): string {
+  try {
+    const last = new URL(url).pathname.split("/").pop()
+    return last && last.length > 0 ? decodeURIComponent(last) : "upload.bin"
+  } catch {
+    return "upload.bin"
+  }
+}
+
+interface PresignedUploadResponse {
+  key: string
+  new_presigned_url: string
+  metadata?: { storage_backend?: "s3" | "azure_blob_storage" }
+}
+
 export function createComposioRestExecutor(config?: Partial<ComposioRestConfig>): ComposioExecutor {
   const apiKey = config?.apiKey ?? process.env["COMPOSIO_API_KEY"] ?? ""
   const baseUrl = config?.baseUrl ?? composioBaseUrl()
   const doFetch = config?.fetchImpl ?? fetch
 
   return {
+    // Stages a file Composio's tools can consume without adopting their SDK: request
+    // a presigned upload slot, PUT the bytes straight to their storage, hand back the
+    // {name, mimetype, s3key} descriptor their `file_uploadable` params expect. Mirrors
+    // what `composio.files.upload()` does internally (confirmed from their public
+    // fileUtils.node.ts source) — this is the one piece of that convenience we need.
+    async stageFile({ url, toolSlug, toolkitSlug }) {
+      if (!apiKey) throw new Error("COMPOSIO_API_KEY not set")
+      const sourceRes = await doFetch(url, { signal: AbortSignal.timeout(30_000) })
+      if (!sourceRes.ok) throw new Error(`Failed to fetch file to stage: ${sourceRes.status}`)
+      const mimetype = sourceRes.headers.get("content-type") || "application/octet-stream"
+      const bytes = new Uint8Array(await sourceRes.arrayBuffer())
+      const filename = filenameFromUrl(url)
+      const md5 = createHash("md5").update(bytes).digest("hex")
+
+      const reqRes = await doFetch(`${baseUrl}/api/v3.1/files/upload/request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": apiKey },
+        body: JSON.stringify({
+          filename,
+          mimetype,
+          md5,
+          tool_slug: toolSlug,
+          toolkit_slug: toolkitSlug,
+        }),
+      })
+      if (!reqRes.ok) {
+        const detail = await reqRes.text().catch(() => "")
+        throw new Error(`Composio file stage request failed: status ${reqRes.status}: ${detail.slice(0, 300)}`)
+      }
+      const { key, new_presigned_url, metadata } = (await reqRes.json()) as PresignedUploadResponse
+
+      const uploadHeaders: Record<string, string> = { "Content-Type": mimetype }
+      if (metadata?.storage_backend === "azure_blob_storage") {
+        uploadHeaders["x-ms-blob-type"] = "BlockBlob"
+      }
+      const uploadRes = await doFetch(new_presigned_url, {
+        method: "PUT",
+        body: bytes,
+        headers: uploadHeaders,
+      })
+      if (!uploadRes.ok) {
+        throw new Error(`Failed to upload staged file to storage: ${uploadRes.status}`)
+      }
+
+      return { name: filename, mimetype, s3key: key }
+    },
+
     async execute({ userId, slug, arguments: args }) {
       if (!apiKey) throw new Error("COMPOSIO_API_KEY not set")
       const res = await doFetch(`${baseUrl}/api/v3/tools/execute/${encodeURIComponent(slug)}`, {

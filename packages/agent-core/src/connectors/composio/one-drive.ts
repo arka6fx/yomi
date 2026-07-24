@@ -31,7 +31,11 @@ export const oneDriveComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "ONE_DRIVE_ONEDRIVE_UPLOAD_FILE",
     description: "Upload a file to a OneDrive folder. Requires user approval before it runs.",
-    parameters: z.object({ folder: z.string().optional().describe("Destination folder path") }).passthrough(),
+    parameters: z.object({
+      file: z.string().describe("URL of the file to upload"),
+      folder: z.string().optional().describe("Destination folder path"),
+    }).passthrough(),
+    fileParams: ["file"],
     preview: () => ({ title: "Upload file", preview: "Upload a file to OneDrive", confirmText: "Upload" }),
   },
   {

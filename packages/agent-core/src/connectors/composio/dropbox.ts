@@ -49,7 +49,12 @@ export const dropboxComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "DROPBOX_UPLOAD_FILE",
     description: "Upload a file to Dropbox. Requires user approval before it runs.",
-    parameters: z.object({ path: z.string().describe("Destination path"), mode: z.string().optional().describe("Write mode: 'add', 'overwrite', 'update'") }).passthrough(),
+    parameters: z.object({
+      path: z.string().describe("Destination path"),
+      content: z.string().describe("URL of the file to upload"),
+      mode: z.string().optional().describe("Write mode: 'add', 'overwrite', 'update'"),
+    }).passthrough(),
+    fileParams: ["content"],
     preview: (a) => ({ title: "Upload file", preview: `Upload to ${String(a["path"] ?? "")}`, confirmText: "Upload" }),
   },
   {
