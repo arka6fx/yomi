@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test"
+import { afterEach, describe, expect, it } from "bun:test"
 import type { GatewayMessage } from "@yomi/shared"
 import { TelegramAdapter, type TelegramUpdate } from "./telegram.js"
 
@@ -10,6 +10,30 @@ function makeAdapter() {
   })
   return { adapter, received }
 }
+
+describe("TelegramAdapter.sendMessage", () => {
+  const originalFetch = globalThis.fetch
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  it("sends HTML parse_mode with markdown converted to Telegram tags", async () => {
+    let capturedBody: Record<string, unknown> | null = null
+    globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
+      capturedBody = JSON.parse(String(init?.body))
+      return new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), { status: 200 })
+    }) as typeof fetch
+
+    const adapter = new TelegramAdapter("dummy-token")
+    await adapter.sendMessage("42", "this is **bold** and a list:\n- one\n- two")
+
+    expect(capturedBody?.parse_mode).toBe("HTML")
+    expect(capturedBody?.text).toBe(
+      "this is <b>bold</b> and a list:\n• one\n• two",
+    )
+  })
+})
 
 describe("TelegramAdapter.processUpdate — location", () => {
   it("surfaces a location-only update as a GatewayMessage with location set", async () => {

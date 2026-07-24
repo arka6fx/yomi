@@ -1,5 +1,9 @@
 import { describe, expect, it } from "bun:test"
-import { formatIntegrationSuggestions, suggestIntegrationsFor } from "./integration-catalog.js"
+import {
+  formatConnectorIdCatalog,
+  formatIntegrationSuggestions,
+  suggestIntegrationsFor,
+} from "./integration-catalog.js"
 
 describe("suggestIntegrationsFor", () => {
   it("matches a single-word connector name named directly in the text", () => {
@@ -66,5 +70,24 @@ describe("formatIntegrationSuggestions", () => {
       "Trello (productivity): https://getyomi.in/dashboard?connect=trello\n" +
         "Notion (knowledge): https://getyomi.in/dashboard?connect=notion",
     )
+  })
+})
+
+describe("formatConnectorIdCatalog", () => {
+  it("maps Gmail's display name to its dashboard id", () => {
+    const result = formatConnectorIdCatalog()
+    expect(result).toContain("Google Gmail: google")
+  })
+
+  it("maps Slack's display name to its dashboard id", () => {
+    const result = formatConnectorIdCatalog()
+    expect(result).toContain("Slack: slack")
+  })
+
+  it("lists one connector per line", () => {
+    const result = formatConnectorIdCatalog()
+    const lines = result.split("\n")
+    expect(lines.length).toBeGreaterThan(10)
+    for (const line of lines) expect(line).toMatch(/^.+: \S+$/)
   })
 })

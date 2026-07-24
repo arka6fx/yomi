@@ -302,7 +302,7 @@ describe("buildSystemWithContext cache stability", () => {
     )
 
     // Stable through the last instruction line that never depends on turn content.
-    const stableMarker = "suggest they reconnect at https://getyomi.in/dashboard."
+    const stableMarker = "</connector_ids>"
     const basePrefix = base.slice(0, base.indexOf(stableMarker) + stableMarker.length)
     const variedPrefix = varied.slice(0, varied.indexOf(stableMarker) + stableMarker.length)
     expect(variedPrefix).toBe(basePrefix)
@@ -319,8 +319,15 @@ describe("buildSystemWithContext cache stability", () => {
       "Asia/Kolkata",
       "Slack (communication): https://getyomi.in/dashboard?connect=slack",
     )
-    const stableMarker = "suggest they reconnect at https://getyomi.in/dashboard."
+    const stableMarker = "</connector_ids>"
     expect(system.indexOf("<available_integrations>")).toBeGreaterThan(system.indexOf(stableMarker))
   })
 
+  it("tells the agent to deep-link the not-connected/reconnect nudge with the service's id", async () => {
+    const { buildSystemWithContext } = await import("./run.js")
+    const system = buildSystemWithContext("", "", undefined, null, "", "Asia/Kolkata", "")
+    expect(system).toContain("?connect=<id>")
+    expect(system).toContain("<connector_ids>")
+    expect(system).toContain("Google Gmail: google")
+  })
 })
