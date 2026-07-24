@@ -1086,7 +1086,7 @@ describe("Dodo billing — webhook processing", () => {
     const grantCalls: any[] = []
     mockState.grantCredits = async (input: any) => {
       grantCalls.push(input)
-      return { granted: true, balance: 500 }
+      return { granted: true, balance: 85 }
     }
 
     const body = {
@@ -1107,15 +1107,15 @@ describe("Dodo billing — webhook processing", () => {
     const res = await sendWebhook(body)
     expect(res.status).toBe(200)
     expect(grantCalls.length).toBe(1)
-    expect(grantCalls[0]?.amount).toBe(500)
+    expect(grantCalls[0]?.amount).toBe(85)
     expect(grantCalls[0]?.source).toBe("credit_pack")
   })
 
   it("grants the correct credits for every credit pack payment", async () => {
     const packs = [
-      ["credits_500", 500, "500 credits"],
-      ["credits_2000", 2000, "2,000 credits"],
-      ["credits_6000", 6000, "6,000 credits"],
+      ["credits_500", 85, "85 credits"],
+      ["credits_2000", 250, "250 credits"],
+      ["credits_6000", 750, "750 credits"],
     ] as const
 
     for (const [productKey, credits, name] of packs) {

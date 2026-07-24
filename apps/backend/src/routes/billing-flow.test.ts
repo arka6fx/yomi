@@ -580,7 +580,7 @@ describe("E2E: explore -> pro -> consume -> buy credits -> consume -> edge cases
     expect(failBody.code).toBe("credits_exhausted")
   }, 60_000)
 
-  it("5: buys a 500-credit pack after exhausting Pro credits", async () => {
+  it("5: buys an 85-credit pack after exhausting Pro credits", async () => {
     expect(flow.user.plan).toBe("pro")
 
     const checkoutRes = await createCreditPack("credits_500")
@@ -613,24 +613,24 @@ describe("E2E: explore -> pro -> consume -> buy credits -> consume -> edge cases
     const whRes = await sendWebhook(webhookBody)
     expect(whRes.status).toBe(200)
 
-    // Should have 500 credits now
+    // Should have 85 credits now
     const balance = flow.creditGrants
       .filter((g) => g.status === "active")
       .reduce((s, g) => s + g.creditsRemaining, 0)
-    expect(balance).toBe(500)
+    expect(balance).toBe(85)
 
     const packGrant = flow.creditGrants.find((g) => g.source === "credit_pack")
     expect(packGrant).toBeDefined()
-    expect(packGrant!.creditsGranted).toBe(500)
+    expect(packGrant!.creditsGranted).toBe(85)
   })
 
-  it("6: consumes the 500 purchased credits", async () => {
+  it("6: consumes the 85 purchased credits", async () => {
     const balance = flow.creditGrants
       .filter((g) => g.status === "active")
       .reduce((s, g) => s + g.creditsRemaining, 0)
-    expect(balance).toBe(500)
+    expect(balance).toBe(85)
 
-    for (let i = 0; i < 500; i++) {
+    for (let i = 0; i < 85; i++) {
       const res = await reserveChat()
       expect(res.status).toBe(200)
       const body = (await res.json()) as any
