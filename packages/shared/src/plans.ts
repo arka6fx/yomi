@@ -96,27 +96,34 @@ export interface CreditPackConfig {
   currency: "USD"
 }
 
+// Credit packs are a shared currency purchasable by any plan, including Max
+// (routed to gpt-5.5, ~3.75x costlier per credit than Explore/Pro's
+// gpt-5.4-mini) — so they must be priced safe against that worst case, not
+// against the cheap-model cost. Sized for 70% margin against ~$0.0123/credit
+// real cost (gpt-5.5, pre-cache-fix). The `credits_*` keys stay stable since
+// they map to fixed Dodo product IDs (DODO_LIVE_PRODUCT_CREDITS_*); only the
+// credit amounts and display copy changed.
 export const CREDIT_PACKS: Record<string, CreditPackConfig> = {
   credits_500: {
     key: "credits_500",
-    name: "500 credits",
-    credits: 500,
+    name: "85 credits",
+    credits: 85,
     priceCents: 500,
     priceDisplay: "$5",
     currency: "USD",
   },
   credits_2000: {
     key: "credits_2000",
-    name: "2,000 credits",
-    credits: 2000,
+    name: "250 credits",
+    credits: 250,
     priceCents: 1500,
     priceDisplay: "$15",
     currency: "USD",
   },
   credits_6000: {
     key: "credits_6000",
-    name: "6,000 credits",
-    credits: 6000,
+    name: "750 credits",
+    credits: 750,
     priceCents: 4000,
     priceDisplay: "$40",
     currency: "USD",
