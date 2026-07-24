@@ -437,3 +437,118 @@ describe("runAgentLoop tool cap", () => {
     expect(tools.length).toBe(5)
   })
 })
+
+// Above CLASSIFY_THRESHOLD_TOOLS, a cheap classifier call picks which connected
+// connectors this turn needs before the real call — see resolveConnectorTools /
+// selectRelevantConnectors in agent.ts. These exercise that path directly
+// (distinct from "runAgentLoop tool cap" above, which is the >128 hard limit).
+describe("runAgentLoop dynamic connector-tool selection", () => {
+  function manyTools(n: number, prefix: string): Record<string, typeof echoTool> {
+    const tools: Record<string, typeof echoTool> = {}
+    for (let i = 0; i < n; i++) tools[`${prefix}_${i}`] = echoTool
+    return tools
+  }
+
+  function fakeRegistry(byConnector: Record<string, Record<string, typeof echoTool>>) {
+    const summaries = Object.keys(byConnector).map((id) => ({
+      id,
+      name: id,
+      description: `${id} connector`,
+    }))
+    return {
+      getAllDefTools: () => Object.assign({}, ...Object.values(byConnector)),
+      getConnectorSummaries: () => summaries,
+      getToolsForConnectors: (ids: string[]) =>
+        Object.assign({}, ...ids.map((id) => byConnector[id] ?? {})),
+    } as unknown as ConnectorRegistry
+  }
+
+  function okResponse() {
+    return chatResponse({
+      choices: [{ message: { content: "ok" }, finish_reason: "stop" }],
+      usage: { prompt_tokens: 5, completion_tokens: 5 },
+    })
+  }
+
+  function classifyResponse(text: string) {
+    return chatResponse({
+      choices: [{ message: { content: text }, finish_reason: "stop" }],
+      usage: { prompt_tokens: 5, completion_tokens: 5 },
+    })
+  }
+
+  it("skips the classifier entirely under the threshold — one fetch call, everything passed through", async () => {
+    const registry = fakeRegistry({ slack: manyTools(10, "slack") })
+    const bodies: Record<string, unknown>[] = []
+    globalThis.fetch = (async (_url: unknown, init?: RequestInit) => {
+      bodies.push(JSON.parse(String(init?.body)))
+      return okResponse()
+    }) as typeof fetch
+
+    await runAgentLoop({ registry, text: "hello" })
+
+    expect(bodies.length).toBe(1) // no classify call
+    const tools = bodies[0]?.["tools"] as unknown[]
+    expect(tools.length).toBe(10)
+  })
+
+  it("above the threshold, loads only the connector(s) the classifier picks", async () => {
+    const registry = fakeRegistry({
+      slack: manyTools(25, "slack"),
+      github: manyTools(25, "github"),
+    })
+    const bodies: Record<string, unknown>[] = []
+    let call = 0
+    globalThis.fetch = (async (_url: unknown, init?: RequestInit) => {
+      call++
+      bodies.push(JSON.parse(String(init?.body)))
+      return call === 1 ? classifyResponse("github") : okResponse()
+    }) as typeof fetch
+
+    await runAgentLoop({ registry, text: "what's the status of my PR?" })
+
+    expect(bodies.length).toBe(2)
+    const mainTools = bodies[1]?.["tools"] as Array<{ function?: { name?: string } }>
+    expect(mainTools.every((t) => t.function?.name?.startsWith("github_"))).toBe(true)
+    expect(mainTools.length).toBe(25)
+  })
+
+  it("loads no connector tools when the classifier says NONE, but keeps extraTools", async () => {
+    const registry = fakeRegistry({
+      slack: manyTools(25, "slack"),
+      github: manyTools(25, "github"),
+    })
+    const bodies: Record<string, unknown>[] = []
+    let call = 0
+    globalThis.fetch = (async (_url: unknown, init?: RequestInit) => {
+      call++
+      bodies.push(JSON.parse(String(init?.body)))
+      return call === 1 ? classifyResponse("NONE") : okResponse()
+    }) as typeof fetch
+
+    await runAgentLoop({ registry, text: "what's 2+2?", extraTools: { echo: echoTool } })
+
+    const mainTools = bodies[1]?.["tools"] as Array<{ function?: { name?: string } }>
+    expect(mainTools).toEqual([expect.objectContaining({ function: expect.objectContaining({ name: "echo" }) })])
+  })
+
+  it("fails open to loading everything when the classifier call itself fails", async () => {
+    const registry = fakeRegistry({
+      slack: manyTools(25, "slack"),
+      github: manyTools(25, "github"),
+    })
+    const bodies: Record<string, unknown>[] = []
+    let call = 0
+    globalThis.fetch = (async (_url: unknown, init?: RequestInit) => {
+      call++
+      if (call === 1) return new Response("boom", { status: 500 })
+      bodies.push(JSON.parse(String(init?.body)))
+      return okResponse()
+    }) as typeof fetch
+
+    await runAgentLoop({ registry, text: "hello" })
+
+    const mainTools = bodies[0]?.["tools"] as unknown[]
+    expect(mainTools.length).toBe(50) // both connectors' tools, unfiltered
+  })
+})

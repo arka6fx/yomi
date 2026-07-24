@@ -193,14 +193,85 @@ function capToolSet(connectorTools: ToolSet, extraTools: ToolSet, text: string):
   return { ...kept, ...extraTools }
 }
 
+// Below this many connected tools, every connector's schema fits comfortably
+// in a turn without meaningfully hurting cost, latency, or tool-selection
+// accuracy — not worth the extra classifier round-trip. Roughly 3-5 average
+// connectors' worth. Above it, selectRelevantConnectors decides what's loaded.
+const CLASSIFY_THRESHOLD_TOOLS = 40
+
+// Cheap pre-step, same shape as gateway-runner.ts's fastTelegramRespond: ask a
+// fast model which of the user's CONNECTED connectors (by name/description
+// only — no tool schemas) this turn plausibly needs, so the real call only
+// loads those connectors' tools instead of everyone's. Fails open (returns
+// null) on any error or empty/unparseable reply — the caller then falls back
+// to loading everything, today's behavior, rather than a turn silently having
+// no tools at all because the classifier hiccuped.
+async function selectRelevantConnectors(
+  text: string,
+  connectors: { id: string; name: string; description: string }[],
+  fastModel: string,
+): Promise<string[] | null> {
+  const listing = connectors.map((c) => `${c.id}: ${c.name} — ${c.description}`).join("\n")
+  try {
+    const result = await generateText({
+      model: createModel(fastModel),
+      system:
+        "Pick which of the user's connected services (if any) this message plausibly needs. " +
+        "Reply with ONLY a comma-separated list of ids from the list below, nothing else, or " +
+        "NONE if the message doesn't need any of them. When in doubt, include it — a missed " +
+        "connector breaks the turn, an extra one is cheap.",
+      messages: [{ role: "user", content: `Connected services:\n${listing}\n\nMessage: ${text}` }],
+      maxTokens: 200,
+      abortSignal: AbortSignal.timeout(5_000),
+    })
+    const raw = result.text.trim()
+    if (!raw) return null
+    if (/^NONE$/i.test(raw)) return []
+    const validIds = new Set(connectors.map((c) => c.id))
+    return raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter((id) => validIds.has(id))
+  } catch {
+    return null
+  }
+}
+
+async function resolveConnectorTools(
+  registry: ConnectorRegistry,
+  text: string,
+  fastModel: string,
+): Promise<ToolSet> {
+  const all = createConnectorTools(registry)
+  if (Object.keys(all).length <= CLASSIFY_THRESHOLD_TOOLS) return all
+
+  // The whole classify-and-narrow attempt fails open to `all`, not just the
+  // model call inside it — a registry that doesn't support the newer
+  // per-connector methods (an older host, a test double) is exactly as
+  // recoverable as the classifier itself being unavailable.
+  try {
+    const picked = await selectRelevantConnectors(text, registry.getConnectorSummaries(), fastModel)
+    if (picked === null) return all // classifier unavailable/unparseable — fail open
+    if (picked.length === 0) return {} // confidently "none apply" — trust it, don't load everything
+    const narrowed = registry.getToolsForConnectors(picked)
+    // Picked ids that mapped to nothing is a signal something's wrong (an id
+    // mismatch, a registry that doesn't track what was asked for) rather than
+    // a legitimate "nothing relevant" — that case already returned above.
+    return Object.keys(narrowed).length > 0 ? narrowed : all
+  } catch {
+    return all
+  }
+}
+
 // Lean, text-only tool-calling loop over the OpenAI model provider and
 // connector tools. Runs in the backend; returns final text.
 // Driven as an explicit single-step sequence (not one multi-step generateText)
 // so a cost-aware budget can halt mid-run yet keep the transcript for the grace
 // call — v4's onStepFinish can observe a step but can't stop the loop.
 export async function runAgentLoop(opts: RunAgentLoopOptions): Promise<string> {
+  const fastModel = process.env["OPENAI_FAST_MODEL"] || "gpt-5.4-mini"
   const tools: ToolSet = capToolSet(
-    createConnectorTools(opts.registry),
+    await resolveConnectorTools(opts.registry, opts.text, fastModel),
     opts.extraTools ?? {},
     opts.text,
   )
