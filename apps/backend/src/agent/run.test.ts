@@ -280,5 +280,47 @@ describe("runAgent metering", () => {
     expect(result.text).toBe("The answer is 42.")
     expect(consumeCreditsCalled).toBe(false)
   })
+})
+
+// A per-turn-variable block (clock time, integration nudges, memory) placed ahead of
+// a stable instruction paragraph defeats OpenAI's prefix-based prompt caching for
+// everything after it — the whole point of these tests. A regression here silently
+// re-inflates real cost without breaking anything functionally, which is exactly
+// how the integrationSuggestions placement went unnoticed the first time.
+describe("buildSystemWithContext cache stability", () => {
+  it("keeps the fixed instruction prefix byte-identical across turns with different suggestions/memory/time", async () => {
+    const { buildSystemWithContext } = await import("./run.js")
+    const base = buildSystemWithContext("", "", undefined, null, "", "Asia/Kolkata", "")
+    const varied = buildSystemWithContext(
+      "some durable memory",
+      "some rag context",
+      { staticProfile: "static", dynamicProfile: "dynamic" },
+      null,
+      "recent chat here",
+      "Asia/Kolkata",
+      "Slack (communication): https://getyomi.in/dashboard?connect=slack",
+    )
+
+    // Stable through the last instruction line that never depends on turn content.
+    const stableMarker = "suggest they reconnect at https://getyomi.in/dashboard."
+    const basePrefix = base.slice(0, base.indexOf(stableMarker) + stableMarker.length)
+    const variedPrefix = varied.slice(0, varied.indexOf(stableMarker) + stableMarker.length)
+    expect(variedPrefix).toBe(basePrefix)
+  })
+
+  it("places integrationSuggestions after the stable prefix, not before it", async () => {
+    const { buildSystemWithContext } = await import("./run.js")
+    const system = buildSystemWithContext(
+      "",
+      "",
+      undefined,
+      null,
+      "",
+      "Asia/Kolkata",
+      "Slack (communication): https://getyomi.in/dashboard?connect=slack",
+    )
+    const stableMarker = "suggest they reconnect at https://getyomi.in/dashboard."
+    expect(system.indexOf("<available_integrations>")).toBeGreaterThan(system.indexOf(stableMarker))
+  })
 
 })

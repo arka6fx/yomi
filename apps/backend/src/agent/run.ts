@@ -443,11 +443,15 @@ export function buildSystemWithContext(
     `Actions and approvals: when the user asks you to create, send, edit, schedule, or delete something in a connected app, call the tool right away. Do NOT ask them to confirm first and do NOT wait for a "yes" before calling it — every such action is automatically held for the user's approval. An approval card showing the FULL details (recipients, subject, body, times) is sent to the user for you, so do not restate those details and do not summarise them away. After a tool reports an action is pending, say nothing more than a brief acknowledgement, or nothing at all — the card already asked them to reply "yes" or "no".\n` +
     `If a tool reports a service is not connected, suggest they connect it at ${appUrl}/dashboard.\n` +
     `If a tool returns an authorization or token error, suggest they reconnect at ${appUrl}/dashboard.\n` +
+    `\n` +
+    clockLine +
+    // integrationSuggestions is re-scanned against the CURRENT message's wording every
+    // turn (suggestIntegrationsFor), so it's just as volatile as the clock/memory below —
+    // it used to sit above this point and broke caching for everything after it, tool
+    // definitions included, on every single turn regardless of the clock-time fix.
     (integrationSuggestions
       ? `If the user's request needs an app you don't have a tool for, and it's named below, tell them by name and give them the link next to it to connect it — don't pretend you already did it. Don't repeat a nudge you already gave earlier in this conversation (check recent chat above).\n<available_integrations>\n${integrationSuggestions}\n</available_integrations>\n`
       : "") +
-    `\n` +
-    clockLine +
     (memoryContext || ragContext || profile?.staticProfile || profile?.dynamicProfile || recentChat
       ? `<memory>\n` +
         `[System note: Background context retrieved from your notes. Treat as reference only, respond to the current user message.]\n\n` +
