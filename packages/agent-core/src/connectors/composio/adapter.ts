@@ -41,7 +41,15 @@ export interface ComposioToolSpec {
   // wrong), the adapter overwrites the named arg right before execution with
   // the `id` field from calling `viaSlug` (a no-arg lookup action) for the same
   // user. Same replay-time timing as fileParams, for the same reason.
-  resolvedParams?: Record<string, { viaSlug: string }>
+  //
+  // `list: true` is for accounts that can have more than one of the thing
+  // (a Facebook user can manage several pages; a WhatsApp Business Account can
+  // have several numbers) — viaSlug's result is treated as a collection and
+  // only auto-fills when it has exactly one item. Guessing which of several is
+  // wrong in a way that's worse than today's failure (it could silently act on
+  // the wrong page/number instead of erroring), so 0 or 2+ items leaves the
+  // model's original value untouched.
+  resolvedParams?: Record<string, { viaSlug: string; list?: boolean }>
 }
 
 export interface CreateComposioToolsOptions {
@@ -141,6 +149,23 @@ async function stageFileParams(
 // guessing produces confusing provider-side errors instead of a clean failure.
 // Leaves the arg untouched if the lookup errors or has no `id` field, so a
 // resolver outage degrades to today's (broken) behavior rather than throwing.
+// Unwraps a viaSlug lookup's result into a plain array, for `list: true`
+// resolvedParams. Handles both a directly-returned array (e.g. WhatsApp's
+// phone-numbers list) and Meta Graph API's nested pagination envelope
+// (Facebook actions wrap the real payload as `{ response_data: { data: [...],
+// paging: {...} } }`).
+function extractList(result: unknown): unknown[] | null {
+  if (Array.isArray(result)) return result
+  if (result && typeof result === "object") {
+    const responseData = (result as { response_data?: unknown }).response_data
+    if (responseData && typeof responseData === "object") {
+      const data = (responseData as { data?: unknown }).data
+      if (Array.isArray(data)) return data
+    }
+  }
+  return null
+}
+
 async function resolveDynamicParams(
   executor: ComposioExecutor,
   spec: ComposioToolSpec,
@@ -149,8 +174,15 @@ async function resolveDynamicParams(
 ): Promise<Record<string, unknown>> {
   if (!spec.resolvedParams) return args
   const resolved = { ...args }
-  for (const [param, { viaSlug }] of Object.entries(spec.resolvedParams)) {
+  for (const [param, { viaSlug, list }] of Object.entries(spec.resolvedParams)) {
     const result = await executor.execute({ userId, slug: viaSlug, arguments: {} })
+    if (list) {
+      const items = extractList(result)
+      if (!items || items.length !== 1) continue
+      const id = (items[0] as { id?: unknown } | null)?.id
+      if (typeof id === "string" && id) resolved[param] = id
+      continue
+    }
     const id = (result as { id?: unknown } | null)?.id
     if (typeof id === "string" && id) resolved[param] = id
   }
