@@ -50,17 +50,43 @@ export function assetStorageConfigured(): boolean {
   return client() !== null
 }
 
-function extensionFor(contentType: string): string {
-  const known: Record<string, string> = {
-    "image/jpeg": "jpg",
-    "image/png": "png",
-    "image/gif": "gif",
-    "image/webp": "webp",
-    "video/mp4": "mp4",
-    "video/quicktime": "mov",
-    "application/pdf": "pdf",
-  }
-  return known[contentType] ?? "bin"
+const KNOWN_EXTENSIONS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/gif": "gif",
+  "image/webp": "webp",
+  "video/mp4": "mp4",
+  "video/quicktime": "mov",
+  "application/pdf": "pdf",
+}
+
+const MAGIC_BYTE_SNIFFERS: Array<{ contentType: string; extension: string; matches: (b: Uint8Array) => boolean }> = [
+  { contentType: "image/jpeg", extension: "jpg", matches: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
+  {
+    contentType: "image/png",
+    extension: "png",
+    matches: (b) => b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47,
+  },
+  { contentType: "image/gif", extension: "gif", matches: (b) => b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 },
+  {
+    contentType: "image/webp",
+    extension: "webp",
+    matches: (b) =>
+      b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45,
+  },
+]
+
+// Callers (e.g. Telegram's file-download CDN) sometimes report a generic
+// content-type like application/octet-stream instead of the file's real type.
+// Trusting that blindly produces a .bin asset with a wrong Content-Type header
+// that connectors' APIs (e.g. Instagram) then reject as "not a photo or video" —
+// so an unrecognized content-type falls back to sniffing the actual bytes.
+export function resolveAssetType(contentType: string, bytes: Uint8Array): { extension: string; contentType: string } {
+  const known = KNOWN_EXTENSIONS[contentType]
+  if (known) return { extension: known, contentType }
+  const sniffed = MAGIC_BYTE_SNIFFERS.find((s) => s.matches(bytes))
+  if (sniffed) return { extension: sniffed.extension, contentType: sniffed.contentType }
+  return { extension: "bin", contentType }
 }
 
 // Uploads bytes under the user's namespace and returns a short-lived presigned
@@ -75,14 +101,16 @@ export async function uploadAsset(
   const cfg = client()
   if (!cfg) return null
 
-  const key = `assets/${userId}/${crypto.randomUUID()}.${extensionFor(contentType)}`
+  const body = new Uint8Array(bytes)
+  const resolved = resolveAssetType(contentType, body)
+  const key = `assets/${userId}/${crypto.randomUUID()}.${resolved.extension}`
 
   await cfg.client.send(
     new PutObjectCommand({
       Bucket: cfg.bucket,
       Key: key,
-      Body: new Uint8Array(bytes),
-      ContentType: contentType,
+      Body: body,
+      ContentType: resolved.contentType,
     }),
   )
 
@@ -92,5 +120,5 @@ export async function uploadAsset(
     { expiresIn: 3600 },
   )
 
-  return { key, url, contentType }
+  return { key, url, contentType: resolved.contentType }
 }

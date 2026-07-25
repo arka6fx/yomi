@@ -31,6 +31,7 @@ let soulOnboardingReply: string | null = null
 let imageAnalysisMode: "normal" | "empty-length" | "action" = "normal"
 // null = asset storage not configured (default for most tests).
 let uploadedAsset: { key: string; url: string; contentType: string } | null = null
+let capturedUploadContentType: string | null = null
 
 const fakeDb = {
   select: () => ({
@@ -208,7 +209,10 @@ mock.module("@yomi/agent-core", () => ({
 }))
 
 mock.module("../services/asset-storage.js", () => ({
-  uploadAsset: async () => uploadedAsset,
+  uploadAsset: async (_userId: string, _bytes: ArrayBuffer, contentType: string) => {
+    capturedUploadContentType = contentType
+    return uploadedAsset
+  },
   assetStorageConfigured: () => uploadedAsset !== null,
 }))
 
@@ -274,6 +278,7 @@ beforeEach(() => {
   soulOnboardingReply = null
   imageAnalysisMode = "normal"
   uploadedAsset = null
+  capturedUploadContentType = null
   recordedTelemetry.length = 0
   globalThis.fetch = (async () => {
     throw new Error("fetch should not run")
@@ -816,5 +821,40 @@ describe("GatewayRunner production routing", () => {
     expect(agentCalls[0]!.text).toContain("A blue cat mascot logo")
     expect(agentCalls[0]!.text).toContain(uploadedAsset.url)
     expect(adapter.messages.at(-1)?.text).toBe("backend reply")
+  })
+
+  it("uploads with Telegram's own mime type, not a generic content-type header from the file CDN", async () => {
+    imageAnalysisMode = "action"
+    uploadedAsset = {
+      key: "assets/user_1/abc.png",
+      url: "https://getyomi-assets.s3.amazonaws.com/assets/user_1/abc.png?X-Amz-Signature=fake",
+      contentType: "image/png",
+    }
+    globalThis.fetch = (async (url: RequestInfo | URL) => {
+      if (String(url) === "https://img.example.com/pic.png") {
+        // Telegram's file-download CDN serving a generic type, as it commonly does.
+        return new Response(new Uint8Array([1, 2, 3]).buffer, {
+          status: 200,
+          headers: { "content-type": "application/octet-stream" },
+        })
+      }
+      throw new Error(`unexpected fetch: ${String(url)}`)
+    }) as typeof fetch
+
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "post this as my new logo",
+      imageUrl: "https://img.example.com/pic.png",
+      imageMimeType: "image/png",
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(capturedUploadContentType).toBe("image/png")
   })
 })
