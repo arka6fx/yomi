@@ -27,11 +27,17 @@ const specs: ComposioToolSpec[] = [
     parameters: z.object({ path: z.string(), content: z.string() }),
     fileParams: ["content"],
   },
+  {
+    slug: "INSTAGRAM_CREATE_MEDIA_CONTAINER",
+    description: "Create a media container",
+    parameters: z.object({ ig_user_id: z.string().optional(), image_url: z.string().optional() }),
+    resolvedParams: { ig_user_id: { viaSlug: "INSTAGRAM_GET_USER_INFO" } },
+  },
 ]
 
 function fakeExecutor(
   result: unknown = { ok: true },
-  opts?: { withStageFile?: boolean },
+  opts?: { withStageFile?: boolean; resultFor?: Record<string, unknown> },
 ): ComposioExecutor & {
   calls: { userId: string; slug: string; arguments: unknown }[]
   stageCalls: { url: string; toolSlug: string; toolkitSlug: string }[]
@@ -43,7 +49,7 @@ function fakeExecutor(
     stageCalls,
     execute: async (input) => {
       calls.push(input)
-      return result
+      return opts?.resultFor?.[input.slug] ?? result
     },
     ...(opts?.withStageFile
       ? {
@@ -82,6 +88,7 @@ describe("createComposioTools — approval-wrap adapter", () => {
     const tools = toolsFor(fakeExecutor(), buildCtx())
     expect(Object.keys(tools).sort()).toEqual([
       "DROPBOX_UPLOAD_FILE",
+      "INSTAGRAM_CREATE_MEDIA_CONTAINER",
       "LINEAR_CREATE_LINEAR_ISSUE",
       "LINEAR_DELETE_LINEAR_ISSUE",
       "LINEAR_LIST_LINEAR_ISSUES",
@@ -281,5 +288,48 @@ describe("createComposioTools — fileParams staging", () => {
 
     expect(result.error).toContain("stageFile")
     expect(executor.calls).toEqual([])
+  })
+})
+
+describe("createComposioTools — resolvedParams", () => {
+  it("overrides a model-guessed account id with the real one resolved via another action (replay path)", async () => {
+    const executor = fakeExecutor(
+      { ok: true },
+      { resultFor: { INSTAGRAM_GET_USER_INFO: { id: "17841400000000000" } } },
+    )
+    const tools = toolsFor(executor, buildCtx())
+
+    const result = await tools["INSTAGRAM_CREATE_MEDIA_CONTAINER"]!.execute({
+      ig_user_id: "media", // whatever the model guessed — must not reach the executor
+      image_url: "https://assets.example.com/logo.jpg",
+    })
+
+    expect(result).toEqual({ ok: true })
+    expect(executor.calls).toEqual([
+      { userId: "user_1", slug: "INSTAGRAM_GET_USER_INFO", arguments: {} },
+      {
+        userId: "user_1",
+        slug: "INSTAGRAM_CREATE_MEDIA_CONTAINER",
+        arguments: { ig_user_id: "17841400000000000", image_url: "https://assets.example.com/logo.jpg" },
+      },
+    ])
+  })
+
+  it("does not resolve while only queuing for approval — resolution waits for replay", async () => {
+    const executor = fakeExecutor(
+      { ok: true },
+      { resultFor: { INSTAGRAM_GET_USER_INFO: { id: "17841400000000000" } } },
+    )
+    const create = mock(async () => ({ id: "p1", status: "pending", message: "queued" }))
+    const tools = toolsFor(executor, buildCtx({ createPendingAction: create }))
+
+    await tools["INSTAGRAM_CREATE_MEDIA_CONTAINER"]!.execute({
+      ig_user_id: "media",
+      image_url: "https://assets.example.com/logo.jpg",
+    })
+
+    expect(executor.calls).toEqual([])
+    const arg = create.mock.calls[0]![0] as Record<string, unknown>
+    expect((arg["payload"] as Record<string, unknown>)["ig_user_id"]).toBe("media")
   })
 })

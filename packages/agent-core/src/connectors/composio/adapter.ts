@@ -36,6 +36,12 @@ export interface ComposioToolSpec {
   // execution (replay time, so short-lived asset URLs are still fresh) and
   // substitutes the descriptor in its place.
   fileParams?: string[]
+  // Params the model has no reliable way to fill in itself — e.g. an Instagram
+  // Business Account ID. Rather than let the model guess (it will, and guess
+  // wrong), the adapter overwrites the named arg right before execution with
+  // the `id` field from calling `viaSlug` (a no-arg lookup action) for the same
+  // user. Same replay-time timing as fileParams, for the same reason.
+  resolvedParams?: Record<string, { viaSlug: string }>
 }
 
 export interface CreateComposioToolsOptions {
@@ -129,6 +135,28 @@ async function stageFileParams(
   return staged
 }
 
+// Overwrites each resolvedParams entry in `args` with the real value looked up
+// via its viaSlug action, discarding whatever the model supplied — the model
+// has no ground truth for these (e.g. an Instagram Business Account ID) and
+// guessing produces confusing provider-side errors instead of a clean failure.
+// Leaves the arg untouched if the lookup errors or has no `id` field, so a
+// resolver outage degrades to today's (broken) behavior rather than throwing.
+async function resolveDynamicParams(
+  executor: ComposioExecutor,
+  spec: ComposioToolSpec,
+  userId: string,
+  args: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  if (!spec.resolvedParams) return args
+  const resolved = { ...args }
+  for (const [param, { viaSlug }] of Object.entries(spec.resolvedParams)) {
+    const result = await executor.execute({ userId, slug: viaSlug, arguments: {} })
+    const id = (result as { id?: unknown } | null)?.id
+    if (typeof id === "string" && id) resolved[param] = id
+  }
+  return resolved
+}
+
 // Wraps a Composio toolkit as an AI SDK ToolSet behind Yomi's approval flow.
 //
 // For each spec the risk map decides the path: `read` actions execute straight
@@ -153,10 +181,11 @@ export function createComposioTools(opts: CreateComposioToolsOptions): ToolFacto
           try {
             if (risk === "read") {
               const staged = await stageFileParams(opts.executor, spec, opts.toolkit, args)
+              const resolved = await resolveDynamicParams(opts.executor, spec, ctx.userId, staged)
               const result = await opts.executor.execute({
                 userId: ctx.userId,
                 slug: spec.slug,
-                arguments: staged,
+                arguments: resolved,
               })
               return capComposioResult(result)
             }
@@ -179,8 +208,9 @@ export function createComposioTools(opts: CreateComposioToolsOptions): ToolFacto
                 // URL (a short-lived presigned S3 link) needs to still be valid
                 // when this actually runs.
                 const staged = await stageFileParams(opts.executor, spec, opts.toolkit, args)
+                const resolved = await resolveDynamicParams(opts.executor, spec, ctx.userId, staged)
                 return capComposioResult(
-                  await opts.executor.execute({ userId: ctx.userId, slug: spec.slug, arguments: staged }),
+                  await opts.executor.execute({ userId: ctx.userId, slug: spec.slug, arguments: resolved }),
                 )
               },
             )
