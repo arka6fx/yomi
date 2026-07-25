@@ -34,7 +34,7 @@ beforeEach(() => {
   process.env.TELEGRAM_BOT_TOKEN = BOT_TOKEN
 })
 
-function webhookRequest(): Request {
+function webhookRequest(updateId = 1): Request {
   return new Request(`http://test/telegram/webhook/${BOT_TOKEN}`, {
     method: "POST",
     headers: {
@@ -42,8 +42,8 @@ function webhookRequest(): Request {
       "X-Telegram-Bot-Api-Secret-Token": SECRET,
     },
     body: JSON.stringify({
-      update_id: 1,
-      message: { message_id: 1, chat: { id: 1, type: "private" }, text: "hi" },
+      update_id: updateId,
+      message: { message_id: updateId, chat: { id: 1, type: "private" }, text: "hi" },
     }),
   })
 }
@@ -64,6 +64,34 @@ describe("Telegram webhook", () => {
       expect(processedUpdates).toHaveLength(1)
       // The hung processUpdate must have been handed to waitUntil, not awaited.
       expect(waitUntilPromises).toHaveLength(1)
+    },
+    { timeout: 1500 },
+  )
+
+  it(
+    "does not reprocess the same update_id delivered twice (e.g. a Telegram retry)",
+    async () => {
+      const execCtx = { waitUntil: () => {}, passThroughOnException: () => {} }
+
+      const first = await gatewayRouter.fetch(webhookRequest(42), {}, execCtx as never)
+      const second = await gatewayRouter.fetch(webhookRequest(42), {}, execCtx as never)
+
+      expect(first.status).toBe(200)
+      expect(second.status).toBe(200)
+      expect(processedUpdates).toHaveLength(1)
+    },
+    { timeout: 1500 },
+  )
+
+  it(
+    "still processes a different update_id normally after seeing an earlier one",
+    async () => {
+      const execCtx = { waitUntil: () => {}, passThroughOnException: () => {} }
+
+      await gatewayRouter.fetch(webhookRequest(43), {}, execCtx as never)
+      await gatewayRouter.fetch(webhookRequest(44), {}, execCtx as never)
+
+      expect(processedUpdates).toHaveLength(2)
     },
     { timeout: 1500 },
   )
