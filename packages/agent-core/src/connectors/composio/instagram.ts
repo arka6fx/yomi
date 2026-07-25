@@ -17,22 +17,31 @@ export const instagramComposioSpecs: ComposioToolSpec[] = [
   { slug: "INSTAGRAM_LIST_ALL_MESSAGES", description: "List messages in a DM conversation. Read-only.", parameters: z.object({ conversation_id: z.string().describe("Conversation ID"), limit: z.number().int().optional().describe("Max results") }).passthrough() },
 
   // ── Write ────────────────────────────────────────────────────
+  // ig_user_id is auto-filled from INSTAGRAM_GET_USER_INFO right before each
+  // call runs (see `resolvedParams` below) — the model has no way to know the
+  // real Instagram Business Account ID, and a guessed value fails with a
+  // confusing Graph API error instead of a clean one. Kept optional/described
+  // in the schema only so a model that fills it in anyway doesn't hard-fail
+  // validation; the resolved value always wins.
   {
     slug: "INSTAGRAM_CREATE_MEDIA_CONTAINER",
     description: "Create a draft media container for a photo/video/reel before publishing. Requires user approval before it runs.",
-    parameters: z.object({ ig_user_id: z.string().describe("Instagram business account ID"), image_url: z.string().optional().describe("Image URL"), video_url: z.string().optional().describe("Video URL"), caption: z.string().optional().describe("Caption") }).passthrough(),
+    parameters: z.object({ ig_user_id: z.string().optional().describe("Instagram business account ID (auto-filled, leave blank)"), image_url: z.string().optional().describe("Image URL"), video_url: z.string().optional().describe("Video URL"), caption: z.string().optional().describe("Caption") }).passthrough(),
+    resolvedParams: { ig_user_id: { viaSlug: "INSTAGRAM_GET_USER_INFO" } },
     preview: (a) => ({ title: "Create media container", preview: String(a["caption"] ?? "New media").slice(0, 100), confirmText: "Create" }),
   },
   {
     slug: "INSTAGRAM_CREATE_CAROUSEL_CONTAINER",
     description: "Create a draft carousel post with multiple images/videos. Requires user approval before it runs.",
-    parameters: z.object({ ig_user_id: z.string().describe("Instagram business account ID"), children: z.array(z.string()).describe("Media container IDs"), caption: z.string().optional().describe("Caption") }).passthrough(),
+    parameters: z.object({ ig_user_id: z.string().optional().describe("Instagram business account ID (auto-filled, leave blank)"), children: z.array(z.string()).describe("Media container IDs"), caption: z.string().optional().describe("Caption") }).passthrough(),
+    resolvedParams: { ig_user_id: { viaSlug: "INSTAGRAM_GET_USER_INFO" } },
     preview: (a) => ({ title: "Create carousel", preview: String(a["caption"] ?? "New carousel").slice(0, 100), confirmText: "Create" }),
   },
   {
     slug: "INSTAGRAM_CREATE_POST",
     description: "Publish a draft media container to Instagram (final publishing step). Requires user approval before it runs.",
-    parameters: z.object({ ig_user_id: z.string().describe("Instagram business account ID"), creation_id: z.string().describe("Media container ID to publish") }).passthrough(),
+    parameters: z.object({ ig_user_id: z.string().optional().describe("Instagram business account ID (auto-filled, leave blank)"), creation_id: z.string().describe("Media container ID to publish") }).passthrough(),
+    resolvedParams: { ig_user_id: { viaSlug: "INSTAGRAM_GET_USER_INFO" } },
     preview: (a) => ({ title: "Publish post", preview: `Publish container ${String(a["creation_id"] ?? "")}`, confirmText: "Publish" }),
   },
   {
