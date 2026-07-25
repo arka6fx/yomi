@@ -8,6 +8,25 @@ import type { PlatformType } from "@yomi/shared"
 
 export const gatewayRouter = new Hono()
 
+// Telegram redelivers an update (e.g. after a slow/lost 2xx during a deploy
+// restart, or its own retry) if it doesn't get acked fast enough — without this
+// a redelivered update runs the agent turn twice, and the second run (with
+// nothing left to approve/act on) produces a confusing stray reply. update_id
+// is per-bot monotonically increasing, so a bounded, time-evicted set is
+// enough; no DB needed since this runs as a single process.
+const SEEN_UPDATE_ID_TTL_MS = 10 * 60 * 1000
+const seenUpdateIds = new Map<number, number>()
+
+function isDuplicateTelegramUpdate(updateId: number): boolean {
+  const now = Date.now()
+  for (const [id, seenAt] of seenUpdateIds) {
+    if (now - seenAt > SEEN_UPDATE_ID_TTL_MS) seenUpdateIds.delete(id)
+  }
+  if (seenUpdateIds.has(updateId)) return true
+  seenUpdateIds.set(updateId, now)
+  return false
+}
+
 // Run async work after the response is sent. On Cloudflare Workers this uses
 // executionCtx.waitUntil so the isolate stays alive; in local dev (bun server)
 // there is no execution context, so we just let the promise run detached.
@@ -172,6 +191,11 @@ gatewayRouter.post("/telegram/webhook/:token", async (c) => {
   console.warn(
     `[gateway/telegram] webhook update=${update.update_id} hasMessage=${update.message ? "yes" : "no"}`,
   )
+
+  if (isDuplicateTelegramUpdate(update.update_id)) {
+    console.warn(`[gateway/telegram] duplicate update=${update.update_id}, skipping`)
+    return c.json({ ok: true })
+  }
 
   const gateway = getDefaultGateway()
   const adapter = gateway.getAdapter("telegram")
