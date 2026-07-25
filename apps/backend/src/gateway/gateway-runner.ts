@@ -449,7 +449,11 @@ export class GatewayRunner {
     if (!msg.imageUrl) return { kind: "describe", text: "I couldn't access the image. Please send it again." }
     const imageRes = await fetch(msg.imageUrl, { signal: AbortSignal.timeout(10_000) })
     if (!imageRes.ok) throw new Error(`Failed to download image: ${imageRes.status}`)
-    const contentType = imageRes.headers.get("content-type") || msg.imageMimeType || "image/jpeg"
+    // Telegram's own file metadata is authoritative; its file-download CDN often
+    // serves a generic content-type (e.g. application/octet-stream) regardless of
+    // the file's real type, which would otherwise corrupt the re-hosted asset's
+    // extension/content-type and break connectors (e.g. Instagram) that fetch it.
+    const contentType = msg.imageMimeType || imageRes.headers.get("content-type") || "image/jpeg"
     const bytes = await imageRes.arrayBuffer()
     if (bytes.byteLength > 8 * 1024 * 1024)
       return { kind: "describe", text: "That image is too large for me to analyze. Please send a smaller image." }
