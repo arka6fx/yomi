@@ -33,6 +33,12 @@ const specs: ComposioToolSpec[] = [
     parameters: z.object({ ig_user_id: z.string().optional(), image_url: z.string().optional() }),
     resolvedParams: { ig_user_id: { viaSlug: "INSTAGRAM_GET_USER_INFO" } },
   },
+  {
+    slug: "WHATSAPP_SEND_MESSAGE",
+    description: "Send a WhatsApp message",
+    parameters: z.object({ phone_number_id: z.string().optional(), to_number: z.string(), text: z.string() }),
+    resolvedParams: { phone_number_id: { viaSlug: "WHATSAPP_GET_PHONE_NUMBERS", list: true } },
+  },
 ]
 
 function fakeExecutor(
@@ -92,6 +98,7 @@ describe("createComposioTools — approval-wrap adapter", () => {
       "LINEAR_CREATE_LINEAR_ISSUE",
       "LINEAR_DELETE_LINEAR_ISSUE",
       "LINEAR_LIST_LINEAR_ISSUES",
+      "WHATSAPP_SEND_MESSAGE",
     ])
   })
 
@@ -331,5 +338,102 @@ describe("createComposioTools — resolvedParams", () => {
     expect(executor.calls).toEqual([])
     const arg = create.mock.calls[0]![0] as Record<string, unknown>
     expect((arg["payload"] as Record<string, unknown>)["ig_user_id"]).toBe("media")
+  })
+
+  it("auto-fills a list-resolved param when the account has exactly one item", async () => {
+    const executor = fakeExecutor(
+      { ok: true },
+      { resultFor: { WHATSAPP_GET_PHONE_NUMBERS: [{ id: "1234567890", display_phone_number: "+1 555" }] } },
+    )
+    const tools = toolsFor(executor, buildCtx())
+
+    await tools["WHATSAPP_SEND_MESSAGE"]!.execute({
+      phone_number_id: "guessed-wrong",
+      to_number: "+1 555 000 0000",
+      text: "hi",
+    })
+
+    expect(executor.calls).toEqual([
+      { userId: "user_1", slug: "WHATSAPP_GET_PHONE_NUMBERS", arguments: {} },
+      {
+        userId: "user_1",
+        slug: "WHATSAPP_SEND_MESSAGE",
+        arguments: { phone_number_id: "1234567890", to_number: "+1 555 000 0000", text: "hi" },
+      },
+    ])
+  })
+
+  it("leaves a list-resolved param untouched when the account has more than one item — guessing wrong is worse than not guessing", async () => {
+    const executor = fakeExecutor(
+      { ok: true },
+      {
+        resultFor: {
+          WHATSAPP_GET_PHONE_NUMBERS: [{ id: "1111111111" }, { id: "2222222222" }],
+        },
+      },
+    )
+    const tools = toolsFor(executor, buildCtx())
+
+    await tools["WHATSAPP_SEND_MESSAGE"]!.execute({
+      phone_number_id: "guessed-wrong",
+      to_number: "+1 555 000 0000",
+      text: "hi",
+    })
+
+    expect(executor.calls[1]).toEqual({
+      userId: "user_1",
+      slug: "WHATSAPP_SEND_MESSAGE",
+      arguments: { phone_number_id: "guessed-wrong", to_number: "+1 555 000 0000", text: "hi" },
+    })
+  })
+
+  it("leaves a list-resolved param untouched when the account has zero items", async () => {
+    const executor = fakeExecutor({ ok: true }, { resultFor: { WHATSAPP_GET_PHONE_NUMBERS: [] } })
+    const tools = toolsFor(executor, buildCtx())
+
+    await tools["WHATSAPP_SEND_MESSAGE"]!.execute({
+      phone_number_id: "guessed-wrong",
+      to_number: "+1 555 000 0000",
+      text: "hi",
+    })
+
+    expect(executor.calls[1]).toEqual({
+      userId: "user_1",
+      slug: "WHATSAPP_SEND_MESSAGE",
+      arguments: { phone_number_id: "guessed-wrong", to_number: "+1 555 000 0000", text: "hi" },
+    })
+  })
+
+  it("also unwraps Facebook's nested Graph API pagination envelope ({ response_data: { data: [...] } })", async () => {
+    const executor = fakeExecutor(
+      { ok: true },
+      {
+        resultFor: {
+          FACEBOOK_GET_USER_PAGES: { response_data: { data: [{ id: "998877", name: "My Page" }], paging: {} } },
+        },
+      },
+    )
+    const specsWithFacebook: ComposioToolSpec[] = [
+      {
+        slug: "FACEBOOK_CREATE_POST",
+        description: "Create a post",
+        parameters: z.object({ page_id: z.string().optional(), message: z.string() }),
+        resolvedParams: { page_id: { viaSlug: "FACEBOOK_GET_USER_PAGES", list: true } },
+      },
+    ]
+    const tools = createComposioTools({
+      provider: "facebook",
+      toolkit: "facebook",
+      specs: specsWithFacebook,
+      executor,
+    })(buildCtx()) as Record<string, { execute: (args: unknown) => Promise<unknown> }>
+
+    await tools["FACEBOOK_CREATE_POST"]!.execute({ page_id: "guessed-wrong", message: "hello" })
+
+    expect(executor.calls[1]).toEqual({
+      userId: "user_1",
+      slug: "FACEBOOK_CREATE_POST",
+      arguments: { page_id: "998877", message: "hello" },
+    })
   })
 })
