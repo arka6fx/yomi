@@ -229,4 +229,65 @@ describe("Composio risk classification", () => {
       expect(classifyAction("stripe", "STRIPE_LIST_SHIPPING_RATES")).toBe("read")
     })
   })
+
+  describe("HubSpot actions", () => {
+    // Confirmed by the connector audit: the map used single-prefixed slugs
+    // (HUBSPOT_LIST_CONTACTS) while HubSpot's real Composio catalog double-prefixes
+    // most of them (HUBSPOT_HUBSPOT_LIST_CONTACTS) — 10 of 11 reads Yomi actually
+    // implements fell through to the "write" default.
+    it("classifies the real (double-prefixed) HubSpot read slugs as read", () => {
+      expect(classifyAction("hubspot", "HUBSPOT_HUBSPOT_GET_COMPANY")).toBe("read")
+      expect(classifyAction("hubspot", "HUBSPOT_HUBSPOT_LIST_COMPANIES")).toBe("read")
+      expect(classifyAction("hubspot", "HUBSPOT_HUBSPOT_SEARCH_COMPANIES")).toBe("read")
+      expect(classifyAction("hubspot", "HUBSPOT_HUBSPOT_LIST_CONTACTS")).toBe("read")
+      expect(classifyAction("hubspot", "HUBSPOT_SEARCH_CONTACTS_BY_CRITERIA")).toBe("read")
+      expect(classifyAction("hubspot", "HUBSPOT_HUBSPOT_GET_DEAL")).toBe("read")
+      expect(classifyAction("hubspot", "HUBSPOT_HUBSPOT_LIST_DEALS")).toBe("read")
+      expect(classifyAction("hubspot", "HUBSPOT_HUBSPOT_SEARCH_DEALS")).toBe("read")
+      expect(classifyAction("hubspot", "HUBSPOT_GET_TICKET")).toBe("read")
+      expect(classifyAction("hubspot", "HUBSPOT_LIST_TICKETS")).toBe("read")
+    })
+
+    it("classifies the real archive slugs as irreversible, not the write default", () => {
+      expect(classifyAction("hubspot", "HUBSPOT_ARCHIVE_CONTACT_BY_ID")).toBe("irreversible")
+      expect(classifyAction("hubspot", "HUBSPOT_HUBSPOT_ARCHIVE_DEALS")).toBe("irreversible")
+    })
+  })
+
+  describe("Dynamics 365 actions", () => {
+    // Confirmed by the connector audit: the whole block was keyed "dynamics_365"
+    // (underscore) while the real toolkit slug is "dynamics365" (none) — so the
+    // lookup always missed regardless of slug content. The slugs themselves were
+    // also fictional (DYNAMICS_365_GET_ACCOUNT, DYNAMICS_365_LIST_ACCOUNTS, ...);
+    // dynamics-365.ts's own comment documents the real catalog has no delete/
+    // list-accounts/search actions at all — real slugs are double-prefixed
+    // (DYNAMICS365_DYNAMICSCRM_*).
+    it("classifies real Dynamics 365 reads under the correct toolkit key", () => {
+      expect(classifyAction("dynamics365", "DYNAMICS365_DYNAMICSCRM_GET_A_LEAD")).toBe("read")
+      expect(classifyAction("dynamics365", "DYNAMICS365_DYNAMICSCRM_GET_ALL_LEADS")).toBe("read")
+      expect(classifyAction("dynamics365", "DYNAMICS365_DYNAMICSCRM_GET_A_INVOICE")).toBe("read")
+      expect(classifyAction("dynamics365", "DYNAMICS365_DYNAMICS365_GET_ALL_INVOICES_ACTION")).toBe("read")
+    })
+
+    it("classifies real Dynamics 365 create/update actions as write", () => {
+      expect(classifyAction("dynamics365", "DYNAMICS365_DYNAMICSCRM_CREATE_ACCOUNT")).toBe("write")
+      expect(classifyAction("dynamics365", "DYNAMICS365_DYNAMICSCRM_CREATE_INVOICE")).toBe("write")
+      expect(classifyAction("dynamics365", "DYNAMICS365_DYNAMICSCRM_UPDATE_LEAD")).toBe("write")
+      expect(classifyAction("dynamics365", "DYNAMICS365_DYNAMICSCRM_UPDATE_SALES_ORDER")).toBe("write")
+    })
+  })
+
+  describe("Zoho Invoice actions", () => {
+    // Confirmed by the connector audit: the map was keyed "zoho-invoice" (hyphen)
+    // while the real toolkit slug is "zoho_invoice" (underscore), so the lookup
+    // always missed. zoho-invoice.ts implements 6 real actions, all read-only.
+    it("classifies the real Zoho Invoice read slugs under the correct (underscore) toolkit key", () => {
+      expect(classifyAction("zoho_invoice", "ZOHO_INVOICE_LIST_INVOICES")).toBe("read")
+      expect(classifyAction("zoho_invoice", "ZOHO_INVOICE_LIST_CONTACTS")).toBe("read")
+      expect(classifyAction("zoho_invoice", "ZOHO_INVOICE_LIST_ITEMS")).toBe("read")
+      expect(classifyAction("zoho_invoice", "ZOHO_INVOICE_GET_ITEM")).toBe("read")
+      expect(classifyAction("zoho_invoice", "ZOHO_INVOICE_LIST_EXPENSES")).toBe("read")
+      expect(classifyAction("zoho_invoice", "ZOHO_INVOICE_LIST_PAYMENTS")).toBe("read")
+    })
+  })
 })
