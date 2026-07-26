@@ -47,7 +47,7 @@ export const driveComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "GOOGLEDRIVE_PARSE_FILE",
     description:
-      "Extract the text content of a Google Drive file, converting Google Docs/Sheets/Slides to a plain format. Read-only.",
+      "Deprecated by Composio — use GOOGLEDRIVE_DOWNLOAD_FILE instead. Read-only.",
     parameters: z
       .object({
         file_id: z.string().describe("Google Drive file ID"),
@@ -61,7 +61,7 @@ export const driveComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "GOOGLEDRIVE_DOWNLOAD_FILE",
     description:
-      "Download a file from Google Drive. Returns the file content in base64 encoding. For text content, prefer GOOGLEDRIVE_PARSE_FILE instead. Read-only.",
+      "Download a file from Google Drive, or export a Google Docs/Sheets/Slides file to a target format via mime_type. Returns the file content in base64 encoding. Read-only.",
     parameters: z
       .object({
         file_id: z.string().describe("Google Drive file ID"),

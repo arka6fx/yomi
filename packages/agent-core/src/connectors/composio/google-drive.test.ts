@@ -105,6 +105,24 @@ describe("Drive via Composio — write gating", () => {
   })
 })
 
+describe("Drive via Composio — deprecated-tool steering", () => {
+  // Confirmed live (GET /api/v3/tools?tool_slugs=GOOGLEDRIVE_PARSE_FILE): Composio
+  // marks PARSE_FILE is_deprecated:true and its own description says "use
+  // `googledrive download file` instead" — the opposite of what Yomi told the
+  // model. DOWNLOAD_FILE must never steer toward the deprecated tool, and
+  // PARSE_FILE's own description must steer back to DOWNLOAD_FILE.
+  it("does not steer the model toward the deprecated GOOGLEDRIVE_PARSE_FILE tool", () => {
+    const downloadFile = driveComposioSpecs.find((s) => s.slug === "GOOGLEDRIVE_DOWNLOAD_FILE")
+    expect(downloadFile?.description).not.toContain("GOOGLEDRIVE_PARSE_FILE")
+  })
+
+  it("marks GOOGLEDRIVE_PARSE_FILE deprecated and points to GOOGLEDRIVE_DOWNLOAD_FILE instead", () => {
+    const parseFile = driveComposioSpecs.find((s) => s.slug === "GOOGLEDRIVE_PARSE_FILE")
+    expect(parseFile?.description).toContain("Deprecated")
+    expect(parseFile?.description).toContain("GOOGLEDRIVE_DOWNLOAD_FILE")
+  })
+})
+
 describe("Drive via Composio — approval replay", () => {
   it("on replay (no createPendingAction) a write runs the real executor", async () => {
     const executor = fakeExecutor({ ok: true, id: "newfile1" })
