@@ -214,18 +214,26 @@ export const figmaComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "FIGMA_CREATE_DEV_RESOURCES",
     description:
-      "Create dev resources (developer handoff links) for Figma file nodes. Requires user approval before it runs.",
+      "Create dev resources (developer handoff links, e.g. a Jira ticket or GitHub issue URL) for Figma file nodes, up to 10 per node. Requires user approval before it runs.",
     parameters: z
       .object({
-        file_key: z.string().describe("The Figma file key"),
-        node_ids: z.array(z.string()).describe("Node IDs to create dev resources for"),
-        name: z.string().optional().describe("Resource name"),
-        description: z.string().optional().describe("Resource description"),
+        dev_resources: z
+          .array(
+            z
+              .object({
+                name: z.string().describe("Visible name for the dev resource in Figma"),
+                url: z.string().describe("URL for the dev resource, e.g. a Jira ticket or GitHub issue"),
+                file_key: z.string().describe("The Figma file key"),
+                node_id: z.string().describe("Node ID to attach the resource to"),
+              })
+              .passthrough(),
+          )
+          .describe("Dev resources to create"),
       })
       .passthrough(),
     preview: (a) => ({
       title: "Create dev resources",
-      preview: `Create dev resources for ${String((a["node_ids"] as string[])?.length ?? 0)} nodes in ${String(a["file_key"] ?? "")}`,
+      preview: `Create ${String((a["dev_resources"] as unknown[])?.length ?? 0)} dev resource(s)`,
       confirmText: "Create dev resources",
     }),
   },

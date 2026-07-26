@@ -22,15 +22,26 @@ export function connectorError(err: unknown): { error: string; hint?: string } {
   }
   // Meta enforces this on every app, not just Yomi's — the recipient must message the
   // business account first (or reply within 24h of doing so) before it can DM them via API.
-  const isInstagramWindow = /outside of allowed window|"error_subcode"\s*:\s*2534022|IGApiException/i.test(
-    msg,
-  )
+  // IGApiException / subcode 2534022 are Instagram-specific signals — Facebook Messenger
+  // enforces the identical policy but with its own error shape (OAuthException, a
+  // different subcode), and used to get mislabeled "Instagram" because the old check
+  // matched on the generic phrase alone.
+  const isInstagramWindow = /"error_subcode"\s*:\s*2534022|IGApiException/i.test(msg)
   if (isInstagramWindow) {
     return {
       error: msg,
       hint:
         "Instagram only allows a business account to message someone within 24 hours of that " +
         "person's last DM to you (Meta's messaging window policy). Ask them to message you first.",
+    }
+  }
+  const isMetaMessagingWindow = /outside of allowed window/i.test(msg)
+  if (isMetaMessagingWindow) {
+    return {
+      error: msg,
+      hint:
+        "Meta only allows messaging someone within 24 hours of that person's last message to you " +
+        "(the standard messaging window policy). Ask them to message you first.",
     }
   }
   // Same Meta policy, WhatsApp's version: free-form replies only within 24h of the

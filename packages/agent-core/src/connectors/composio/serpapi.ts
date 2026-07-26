@@ -22,7 +22,7 @@ export const serpapiComposioSpecs: ComposioToolSpec[] = [
   { slug: "SERPAPI_DUCK_DUCK_GO_SEARCH", description: "Search via DuckDuckGo. Read-only.", parameters: z.object({ query: z.string().describe("Search query") }).passthrough() },
   { slug: "SERPAPI_BAIDU_SEARCH", description: "Search via Baidu. Read-only.", parameters: z.object({ q: z.string().describe("Search query") }).passthrough() },
   { slug: "SERPAPI_EBAY_SEARCH", description: "Search eBay listings. Read-only.", parameters: z.object({ nkw: z.string().describe("Search keywords") }).passthrough() },
-  { slug: "SERPAPI_WALMART_SEARCH", description: "Search Walmart listings. Read-only.", parameters: z.object({ query: z.string().describe("Search query") }).passthrough() },
+  { slug: "SERPAPI_WALMART_SEARCH", description: "Search Walmart listings. Read-only.", parameters: z.object({ q: z.string().describe("Search query") }).passthrough() },
   { slug: "SERPAPI_PLAY_SEARCH", description: "Search the Google Play Store. Read-only.", parameters: z.object({ q: z.string().optional().describe("Search query") }).passthrough() },
 ]
 
