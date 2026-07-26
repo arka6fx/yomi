@@ -6,10 +6,20 @@ import { createComposioTools, type ComposioExecutor, type ComposioToolSpec } fro
 // against the live auth-configs/tools catalog, not "google_photos".
 export const GOOGLE_PHOTOS_TOOLKIT = "googlephotos"
 
+// Google restricted the Photos Library API's broad photoslibrary.readonly scope in
+// 2025 to apps with a verification tier Yomi doesn't have — confirmed live, the
+// granted scope is photoslibrary.readonly.appcreateddata / .edit.appcreateddata
+// only. Every read action below can only see albums/media Yomi itself created or
+// uploaded — never the user's actual existing library. That has to be in the
+// description itself, not just a code comment, or the model promises "arrange
+// your photos by event" and then has nothing to show for it.
+const APP_CREATED_ONLY =
+  " Limitation: Yomi can only see photos/albums Yomi itself uploaded or created — Google restricts broader library access. It cannot browse, list, or search the user's existing Google Photos library."
+
 export const googlePhotosComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "GOOGLEPHOTOS_LIST_ALBUMS",
-    description: "List all Google Photos albums. Read-only.",
+    description: `List Google Photos albums.${APP_CREATED_ONLY} Read-only.`,
     parameters: z.object({
       pageSize: z.number().int().optional().describe("Max results per page"),
       pageToken: z.string().optional().describe("Pagination token"),
@@ -17,12 +27,12 @@ export const googlePhotosComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "GOOGLEPHOTOS_GET_ALBUM",
-    description: "Get details of a specific album. Read-only.",
+    description: `Get details of a specific album.${APP_CREATED_ONLY} Read-only.`,
     parameters: z.object({ albumId: z.string().describe("Google Photos album ID") }).passthrough(),
   },
   {
     slug: "GOOGLEPHOTOS_LIST_MEDIA_ITEMS",
-    description: "List media items in the user's library. Read-only.",
+    description: `List media items.${APP_CREATED_ONLY} Read-only.`,
     parameters: z.object({
       pageSize: z.number().int().optional().describe("Max results per page"),
       pageToken: z.string().optional().describe("Pagination token"),
@@ -30,7 +40,7 @@ export const googlePhotosComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "GOOGLEPHOTOS_SEARCH_MEDIA_ITEMS",
-    description: "Search media items by album or filters. Read-only.",
+    description: `Search media items by album or filters.${APP_CREATED_ONLY} Read-only.`,
     parameters: z.object({
       albumId: z.string().optional().describe("Restrict search to this album"),
       pageSize: z.number().int().optional().describe("Max results per page"),
@@ -38,7 +48,7 @@ export const googlePhotosComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "GOOGLEPHOTOS_BATCH_GET_MEDIA_ITEMS",
-    description: "Get details for a batch of media items by ID. Read-only.",
+    description: `Get details for a batch of media items by ID.${APP_CREATED_ONLY} Read-only.`,
     parameters: z.object({ mediaItemIds: z.array(z.string()).describe("Media item IDs") }).passthrough(),
   },
   {
@@ -104,7 +114,8 @@ export function makeComposioGooglePhotosDef(executor: ComposioExecutor): Connect
     name: "Google Photos",
     category: "file-management",
     icon: "google-photos",
-    description: "Google Photos — browse albums and media, and upload/organize photos (via Composio).",
+    description:
+      "Google Photos — upload and organize photos Yomi itself creates (via Composio). Cannot browse or search the user's existing library — Google restricts that scope.",
     readOnlyByDefault: true,
     auth: {
       kind: "composio",
