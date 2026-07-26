@@ -4,10 +4,20 @@ import { createComposioTools, type ComposioExecutor, type ComposioToolSpec } fro
 
 export const CLASSROOM_TOOLKIT = "google_classroom"
 
-// Composio's Google Classroom toolkit is read-only — it has no submit/turn-in or
-// attach-file action, so Yomi can surface classes, coursework, and announcements
-// but cannot act on them. All params use Classroom API's native camelCase field
-// names (courseId, courseWorkId, …), not snake_case.
+// Composio's Google Classroom toolkit is NOT read-only — confirmed live
+// (GET /api/v3/tools?toolkit_slug=google_classroom), it has 20+ write actions
+// (COURSE_WORK_CREATE, COURSES_ANNOUNCEMENTS_CREATE, COURSES_TOPICS_CREATE, etc.).
+// Yomi only implements reads today, by choice, not because the toolkit lacks
+// writes — a real gap if per-course posting/coursework-creation gets requested.
+// One real constraint if that gets built: the granted OAuth scopes (confirmed
+// live via GET /api/v3/toolkits/google_classroom) include classroom.courses.
+// readonly but NOT the full classroom.courses scope, so COURSES_CREATE/
+// COURSES_DELETE/COURSES_PATCH (course-level writes) would fail auth even if
+// implemented — coursework/announcements/topics/materials writes ARE grantable
+// (classroom.coursework.students, classroom.announcements, classroom.topics,
+// classroom.courseworkmaterials are all present as full, non-readonly scopes).
+// All params use Classroom API's native camelCase field names (courseId,
+// courseWorkId, …), not snake_case.
 export const classroomComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "GOOGLE_CLASSROOM_COURSES_LIST",
