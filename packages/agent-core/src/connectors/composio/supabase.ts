@@ -62,7 +62,13 @@ export const supabaseComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "SUPABASE_DEPLOY_FUNCTION",
     description: "Deploy an edge function to a project. Requires user approval before it runs.",
-    parameters: z.object({ ref: z.string().describe("Project reference ID"), slug: z.string().optional().describe("Function slug") }).passthrough(),
+    parameters: z
+      .object({
+        ref: z.string().describe("Project reference ID"),
+        file: z.string().describe("Function code file content to deploy"),
+        slug: z.string().optional().describe("Function slug. If omitted, deploys all functions"),
+      })
+      .passthrough(),
     preview: (a) => ({ title: "Deploy function", preview: `Deploy function to ${String(a["ref"] ?? "")}`, confirmText: "Deploy" }),
   },
   {

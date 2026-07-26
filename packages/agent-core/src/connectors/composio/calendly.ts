@@ -30,13 +30,33 @@ export const calendlyComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "CALENDLY_CREATE_ONE_OFF_EVENT_TYPE",
     description: "Create a temporary one-off event type for a unique meeting. Requires user approval before it runs.",
-    parameters: z.object({ name: z.string().describe("Event name"), host: z.string().describe("Host user URI"), duration: z.number().int().describe("Duration in minutes") }).passthrough(),
+    parameters: z
+      .object({
+        name: z.string().describe("Event name"),
+        host: z.string().describe("Host user URI"),
+        duration: z.number().int().describe("Duration in minutes"),
+        date_setting: z
+          .object({
+            type: z.literal("date_range").describe("Must be 'date_range'"),
+            start_date: z.string().describe("Start date for availability, YYYY-MM-DD"),
+            end_date: z.string().describe("End date for availability, YYYY-MM-DD"),
+          })
+          .describe("Date range the one-off event is available within"),
+      })
+      .passthrough(),
     preview: (a) => ({ title: "Create event type", preview: `Create "${String(a["name"] ?? "")}"`, confirmText: "Create" }),
   },
   {
     slug: "CALENDLY_CREATE_WEBHOOK_SUBSCRIPTION",
     description: "Create a webhook subscription for Calendly events. Requires user approval before it runs.",
-    parameters: z.object({ url: z.string().describe("Webhook callback URL"), events: z.array(z.string()).describe("Event types to subscribe to"), scope: z.string().describe("'organization' or 'user'") }).passthrough(),
+    parameters: z
+      .object({
+        url: z.string().describe("Webhook callback URL"),
+        events: z.array(z.string()).describe("Event types to subscribe to"),
+        scope: z.string().describe("'organization', 'user', or 'group'"),
+        organization: z.string().describe("URI of the organization for the webhook"),
+      })
+      .passthrough(),
     preview: (a) => ({ title: "Create webhook", preview: `Subscribe ${String(a["url"] ?? "")}`, confirmText: "Create webhook" }),
   },
   {

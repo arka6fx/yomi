@@ -104,6 +104,28 @@ describe("connectorError", () => {
     expect(result.hint).toContain("reconnect")
   })
 
+  it("does not call a Facebook Messenger messaging-window error 'Instagram' — same Meta policy, different app", () => {
+    // Facebook Messenger's Send API enforces the identical 24h messaging-window
+    // policy as Instagram, but with Facebook's own error shape (OAuthException,
+    // a different error_subcode) — not IGApiException, not subcode 2534022.
+    // The old isInstagramWindow check matched on the generic phrase alone, so a
+    // Facebook error got a hint that confusingly said "Instagram".
+    const err = new Error(
+      'Failed to send message (status 403). Response: {"error":{"message":"This message is sent outside of allowed window.","type":"OAuthException","code":10,"error_subcode":2018278}}',
+    )
+    const result = connectorError(err)
+    expect(result.hint).toContain("24 hours")
+    expect(result.hint).not.toContain("Instagram")
+  })
+
+  it("still calls a real Instagram messaging-window error 'Instagram'", () => {
+    const err = new Error(
+      'Failed to send message (status 403). Response: {"error":{"message":"This message is sent outside of allowed window.","type":"IGApiException","code":10,"error_subcode":2534022}}',
+    )
+    const result = connectorError(err)
+    expect(result.hint).toContain("Instagram")
+  })
+
   it("adds a reconnect hint for Google's UNAUTHENTICATED shape, not just the literal words 'unauthorized'/'forbidden'", () => {
     // Real response, reproduced live via Composio against the Photos Library API:
     // a 200-but-successful:false call whose error string is Google's own nested

@@ -59,11 +59,15 @@ export const kaggleComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "KAGGLE_DATASET_VERSION",
-    description: "Create a new version of an existing dataset. Requires approval.",
+    description:
+      "Create a new version of an existing dataset. Each file must reference an upload token from a prior file-upload step — Composio's Kaggle toolkit has no upload-token tool exposed, so this can only succeed if a token is already known. Requires approval.",
     parameters: z.object({
       owner_slug: z.string().describe("Dataset owner"),
       dataset_slug: z.string().describe("Dataset slug"),
       version_notes: z.string().describe("Notes describing this version"),
+      files: z
+        .array(z.object({ token: z.string().describe("Upload token referencing a prior file upload") }).passthrough())
+        .describe("Files to include in this version, each referencing an upload token"),
     }).passthrough(),
     preview: (a) => ({
       title: "Create dataset version",
