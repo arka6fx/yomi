@@ -554,6 +554,20 @@ export const COMPOSIO_RISK_MAP: Record<string, Record<string, ActionRisk>> = {
   },
   hubspot: {
     // Reads — pass straight through.
+    // The 10 entries below are the real (double-prefixed where applicable) slugs
+    // hubspot.ts actually calls — confirmed live, HubSpot's Composio catalog
+    // double-prefixes most read/update actions (HUBSPOT_HUBSPOT_LIST_CONTACTS,
+    // not HUBSPOT_LIST_CONTACTS below, which no implemented tool calls).
+    HUBSPOT_HUBSPOT_GET_COMPANY: "read",
+    HUBSPOT_HUBSPOT_LIST_COMPANIES: "read",
+    HUBSPOT_HUBSPOT_SEARCH_COMPANIES: "read",
+    HUBSPOT_HUBSPOT_LIST_CONTACTS: "read",
+    HUBSPOT_SEARCH_CONTACTS_BY_CRITERIA: "read",
+    HUBSPOT_HUBSPOT_GET_DEAL: "read",
+    HUBSPOT_HUBSPOT_LIST_DEALS: "read",
+    HUBSPOT_HUBSPOT_SEARCH_DEALS: "read",
+    HUBSPOT_GET_TICKET: "read",
+    HUBSPOT_LIST_TICKETS: "read",
     HUBSPOT_LIST_CONTACTS: "read",
     HUBSPOT_LIST_DEALS: "read",
     HUBSPOT_BATCH_READ_COMPANIES_BY_PROPERTIES: "read",
@@ -585,6 +599,11 @@ export const COMPOSIO_RISK_MAP: Record<string, Record<string, ActionRisk>> = {
     HUBSPOT_CREATE_BATCH_OF_QUOTES: "send",
 
     // Irreversible — gated, flagged as unrecoverable.
+    // Real slugs hubspot.ts calls (double-prefixed / _BY_ID-suffixed where the
+    // live catalog uses that form — the un-prefixed entries below match nothing
+    // implemented and were left as-is rather than removed).
+    HUBSPOT_ARCHIVE_CONTACT_BY_ID: "irreversible",
+    HUBSPOT_HUBSPOT_ARCHIVE_DEALS: "irreversible",
     HUBSPOT_ARCHIVE_CONTACT: "irreversible",
     HUBSPOT_ARCHIVE_CONTACTS: "irreversible",
     HUBSPOT_ARCHIVE_DEALS: "irreversible",
@@ -2747,41 +2766,32 @@ export const COMPOSIO_RISK_MAP: Record<string, Record<string, ActionRisk>> = {
     SERPAPI_GET_GOOGLE_ABOUT_THIS_RESULT: "read",
     SERPAPI_GET_SEARCH_ARCHIVE: "read",
   },
-  dynamics_365: {
+  // Confirmed by the connector audit: this block was keyed "dynamics_365"
+  // (underscore) while the real toolkit slug is "dynamics365" (none), so the
+  // lookup always missed regardless of slug content — and the old slugs below
+  // were fictional (dynamics-365.ts's own comment: the real catalog has no
+  // delete/list-accounts/search actions at all). Replaced with the real,
+  // double-prefixed slugs dynamics-365.ts actually calls.
+  dynamics365: {
     // Reads — pass straight through.
-    DYNAMICS_365_GET_ACCOUNT: "read",
-    DYNAMICS_365_GET_CONTACT: "read",
-    DYNAMICS_365_GET_LEAD: "read",
-    DYNAMICS_365_GET_OPPORTUNITY: "read",
-    DYNAMICS_365_LIST_ACCOUNTS: "read",
-    DYNAMICS_365_LIST_CONTACTS: "read",
-    DYNAMICS_365_LIST_LEADS: "read",
-    DYNAMICS_365_LIST_OPPORTUNITIES: "read",
-    DYNAMICS_365_LIST_CAMPAIGNS: "read",
-    DYNAMICS_365_LIST_QUOTES: "read",
-    DYNAMICS_365_LIST_SALES_ORDERS: "read",
-    DYNAMICS_365_LIST_INVOICES: "read",
-    DYNAMICS_365_SEARCH_ACCOUNTS: "read",
-    DYNAMICS_365_SEARCH_CONTACTS: "read",
-    DYNAMICS_365_SEARCH_LEADS: "read",
-    DYNAMICS_365_QUERY: "read",
+    DYNAMICS365_DYNAMICSCRM_GET_A_LEAD: "read",
+    DYNAMICS365_DYNAMICSCRM_GET_ALL_LEADS: "read",
+    DYNAMICS365_DYNAMICSCRM_GET_A_INVOICE: "read",
+    DYNAMICS365_DYNAMICS365_GET_ALL_INVOICES_ACTION: "read",
 
     // Writes — gated for approval.
-    DYNAMICS_365_CREATE_ACCOUNT: "write",
-    DYNAMICS_365_CREATE_CONTACT: "write",
-    DYNAMICS_365_CREATE_LEAD: "write",
-    DYNAMICS_365_CREATE_OPPORTUNITY: "write",
-    DYNAMICS_365_CREATE_TASK: "write",
-    DYNAMICS_365_UPDATE_ACCOUNT: "write",
-    DYNAMICS_365_UPDATE_CONTACT: "write",
-    DYNAMICS_365_UPDATE_LEAD: "write",
-    DYNAMICS_365_UPDATE_OPPORTUNITY: "write",
-
-    // Irreversible — gated, flagged as unrecoverable.
-    DYNAMICS_365_DELETE_ACCOUNT: "irreversible",
-    DYNAMICS_365_DELETE_CONTACT: "irreversible",
-    DYNAMICS_365_DELETE_LEAD: "irreversible",
-    DYNAMICS_365_DELETE_OPPORTUNITY: "irreversible",
+    DYNAMICS365_DYNAMICSCRM_CREATE_ACCOUNT: "write",
+    DYNAMICS365_DYNAMICSCRM_CREATE_CONTACT: "write",
+    DYNAMICS365_DYNAMICSCRM_CREATE_LEAD: "write",
+    DYNAMICS365_DYNAMICSCRM_CREATE_OPPORTUNITY: "write",
+    DYNAMICS365_DYNAMICSCRM_CREATE_CASE: "write",
+    DYNAMICS365_DYNAMICSCRM_CREATE_INVOICE: "write",
+    DYNAMICS365_DYNAMICSCRM_CREATE_SALES_ORDER: "write",
+    DYNAMICS365_DYNAMICSCRM_UPDATE_LEAD: "write",
+    DYNAMICS365_DYNAMICSCRM_UPDATE_OPPORTUNITY: "write",
+    DYNAMICS365_DYNAMICSCRM_UPDATE_CASE: "write",
+    DYNAMICS365_DYNAMICSCRM_UPDATE_INVOICE: "write",
+    DYNAMICS365_DYNAMICSCRM_UPDATE_SALES_ORDER: "write",
   },
   salesforce: {
     // Reads — pass straight through.
@@ -3646,6 +3656,19 @@ export const COMPOSIO_RISK_MAP: Record<string, Record<string, ActionRisk>> = {
     VERCEL_DELETE_WEBHOOK: "irreversible",
     VERCEL_REMOVE_PROJECT_DOMAIN: "irreversible",
     VERCEL_REQUEST_DELETE_USER: "irreversible",
+  },
+  // Confirmed by the connector audit: the block below is keyed "zoho-invoice"
+  // (hyphen) while the real toolkit slug is "zoho_invoice" (underscore), so the
+  // lookup always missed. zoho-invoice.ts implements 6 real actions, all
+  // read-only (confirmed: no create/update/delete/email actions exist in what
+  // Yomi calls).
+  zoho_invoice: {
+    ZOHO_INVOICE_LIST_INVOICES: "read",
+    ZOHO_INVOICE_LIST_CONTACTS: "read",
+    ZOHO_INVOICE_LIST_ITEMS: "read",
+    ZOHO_INVOICE_GET_ITEM: "read",
+    ZOHO_INVOICE_LIST_EXPENSES: "read",
+    ZOHO_INVOICE_LIST_PAYMENTS: "read",
   },
   "zoho-invoice": {
     // All slugs start as "write" — reclassify read-only slugs here later.
