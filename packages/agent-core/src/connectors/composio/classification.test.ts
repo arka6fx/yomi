@@ -206,4 +206,27 @@ describe("Composio risk classification", () => {
       expect(classifyAction("google_maps", "GOOGLE_MAPS_GEOCODING_API")).toBe("write")
     })
   })
+
+  describe("Stripe actions", () => {
+    // Confirmed by the connector audit: money-movement writes sat at the same
+    // "write" tier as trivial writes, and 4 real reads Yomi implements were
+    // missing from the map entirely (defaulting to "write" — safe direction,
+    // but needless approval friction for a plain read).
+    it("classifies money-movement writes as paid, not plain write", () => {
+      expect(classifyAction("stripe", "STRIPE_CREATE_PAYMENT_INTENT")).toBe("paid")
+      expect(classifyAction("stripe", "STRIPE_CONFIRM_PAYMENT_INTENT")).toBe("paid")
+      expect(classifyAction("stripe", "STRIPE_CREATE_REFUND")).toBe("paid")
+    })
+
+    it("classifies cancelling a subscription as irreversible — its own description says 'cannot be undone'", () => {
+      expect(classifyAction("stripe", "STRIPE_CANCEL_SUBSCRIPTION")).toBe("irreversible")
+    })
+
+    it("classifies the 4 reads that were falling through to the write default", () => {
+      expect(classifyAction("stripe", "STRIPE_LIST_CUSTOMER_PAYMENT_METHODS")).toBe("read")
+      expect(classifyAction("stripe", "STRIPE_RETRIEVE_SUBSCRIPTION")).toBe("read")
+      expect(classifyAction("stripe", "STRIPE_RETRIEVE_REFUND")).toBe("read")
+      expect(classifyAction("stripe", "STRIPE_LIST_SHIPPING_RATES")).toBe("read")
+    })
+  })
 })
