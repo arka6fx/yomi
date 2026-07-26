@@ -19,6 +19,13 @@ function mapAuthError(code: string): string {
   }
 }
 
+// Instagram/Facebook/TikTok/Line/etc. embed an in-app WebView that Google
+// blocks from completing OAuth (disallowed_useragent) — GitHub is flaky there
+// too, so warn before the user hits the generic post-redirect failure.
+function isInAppBrowser(ua: string): boolean {
+  return /Instagram|FBAN|FBAV|Line\/|MicroMessenger|TikTok|musical_ly|Twitter/i.test(ua)
+}
+
 interface AuthCardProps {
   defaultMode: "signin" | "signup"
   plan?: string
@@ -29,6 +36,7 @@ interface AuthCardProps {
 export default function AuthCard({ defaultMode, plan, callbackURL, initialError }: AuthCardProps) {
   const [loading, setLoading] = useState<"github" | "google" | null>(null)
   const [error, setError] = useState(initialError ? mapAuthError(initialError) : "")
+  const [inAppBrowser, setInAppBrowser] = useState(false)
 
   // read ?error= client-side so the page can stay statically prerendered
   useEffect(() => {
@@ -36,6 +44,10 @@ export default function AuthCard({ defaultMode, plan, callbackURL, initialError 
     const code = new URLSearchParams(window.location.search).get("error")
     if (code) setError(mapAuthError(code))
   }, [initialError])
+
+  useEffect(() => {
+    setInAppBrowser(isInAppBrowser(window.navigator.userAgent))
+  }, [])
 
   const busy = loading !== null
   const isSignup = defaultMode === "signup"
@@ -98,6 +110,15 @@ export default function AuthCard({ defaultMode, plan, callbackURL, initialError 
           ? "Start free in seconds. Continue with a provider below."
           : "Sign in to your Yomi account to continue."}
       </p>
+
+      {inAppBrowser && (
+        <p className="mt-6 rounded-lg border border-border bg-muted/50 p-3 text-xs text-muted-foreground">
+          You're viewing this inside an app's built-in browser, which blocks Google/GitHub
+          sign-in. Tap the <span className="font-medium text-foreground">⋯</span> menu above and
+          choose <span className="font-medium text-foreground">Open in Browser</span>, then try
+          again.
+        </p>
+      )}
 
       <div className="mt-7 grid gap-3">
         {/* Google's branding guidelines require the label to read "Sign in/Sign up with
