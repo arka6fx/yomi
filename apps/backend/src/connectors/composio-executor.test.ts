@@ -50,6 +50,37 @@ describe("createComposioRestExecutor", () => {
     await expect(exec.execute({ userId: "u", slug: "S", arguments: {} })).rejects.toThrow(/401/)
   })
 
+  it("surfaces the real message from Composio's nested error object, not '[object Object]'", async () => {
+    // Real shape, reproduced live against backend.composio.dev: HTTP-level failures
+    // (bad user id, no connected account, invalid params) return `error` as an
+    // OBJECT ({ message, code, slug, status, request_id, suggested_fix }), not a
+    // string — unlike the 200-but-successful:false path, which does return a
+    // plain string. `String(body.error)` on that object silently produced
+    // "[object Object]", discarding the one piece of information (why the call
+    // failed) the model needed to answer the user honestly instead of guessing
+    // "not connected" every time.
+    const { fn } = capturingFetch(
+      Response.json(
+        {
+          error: {
+            message: "No connected account found for user ID u for toolkit instagram",
+            code: 1810,
+            slug: "ActionExecute_ConnectedAccountNotFound",
+            status: 400,
+            request_id: "req_1",
+            suggested_fix: "Connect your instagram account first via the dashboard.",
+          },
+        },
+        { status: 400 },
+      ),
+    )
+    const exec = createComposioRestExecutor({ apiKey: "k1", fetchImpl: fn })
+
+    await expect(exec.execute({ userId: "u", slug: "S", arguments: {} })).rejects.toThrow(
+      /No connected account found for user ID u for toolkit instagram/,
+    )
+  })
+
   it("throws when no api key is configured", async () => {
     const exec = createComposioRestExecutor({ apiKey: "" })
     await expect(exec.execute({ userId: "u", slug: "S", arguments: {} })).rejects.toThrow(

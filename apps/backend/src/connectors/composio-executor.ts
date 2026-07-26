@@ -65,6 +65,24 @@ interface PresignedUploadResponse {
   metadata?: { storage_backend?: "s3" | "azure_blob_storage" }
 }
 
+// HTTP-level failures (bad user id, no connected account, invalid params) return
+// `error` as an object ({ message, code, slug, status, request_id, suggested_fix }),
+// confirmed live against backend.composio.dev — not the plain string the
+// 200-but-successful:false path returns. Stringifying that object directly
+// produced "[object Object]", discarding the one piece of information (why the
+// call failed) that let the model tell a user "you're not connected" accurately
+// instead of guessing it every time something else was actually wrong.
+function errorDetail(errorField: unknown): string | null {
+  if (typeof errorField === "string") return errorField
+  if (errorField && typeof errorField === "object") {
+    const e = errorField as { message?: unknown; suggested_fix?: unknown }
+    if (typeof e.message === "string") {
+      return typeof e.suggested_fix === "string" ? `${e.message} (${e.suggested_fix})` : e.message
+    }
+  }
+  return null
+}
+
 export function createComposioRestExecutor(config?: Partial<ComposioRestConfig>): ComposioExecutor {
   const apiKey = config?.apiKey ?? process.env["COMPOSIO_API_KEY"] ?? ""
   const baseUrl = config?.baseUrl ?? composioBaseUrl()
@@ -136,10 +154,11 @@ export function createComposioRestExecutor(config?: Partial<ComposioRestConfig>)
         body = { raw: text }
       }
       if (!res.ok) {
-        const detail =
+        const errorField =
           typeof body === "object" && body && "error" in body
-            ? String((body as { error: unknown }).error)
-            : text.slice(0, 300)
+            ? (body as { error: unknown }).error
+            : undefined
+        const detail = errorDetail(errorField) ?? text.slice(0, 300)
         throw new Error(`Composio execute ${slug} → status ${res.status}: ${detail}`)
       }
       // Composio wraps results as { data, error, successful }. Surface the useful
