@@ -2,6 +2,19 @@ import { tool, type ToolSet } from "ai"
 import type { z } from "zod"
 import type { ConnectorContext, ToolFactory } from "../connector-def.js"
 import { connectorError, gateWrite } from "../connector-def.js"
+
+// Composio's own { error: "..." } result (the 200-but-successful:false shape) is a
+// normal RETURN value, not a thrown exception — connectorError()'s reconnect/hint
+// detection only ran on throws, so a read action's real auth failure (e.g. a 401
+// from the underlying provider) reached the model as raw, unhinted text and left
+// it guessing "not connected" instead of "reconnect". Runs every read result
+// through the same detection connectorError() already does for throws.
+function enrichReadError(result: unknown): unknown {
+  if (typeof result !== "object" || result === null) return result
+  const record = result as Record<string, unknown>
+  if (typeof record["error"] !== "string") return result
+  return { ...record, ...connectorError(record["error"]) }
+}
 import { classifyAction, type ActionRisk } from "./classification.js"
 
 // Remote tool executor. Production wraps Composio's execute (REST or SDK); tests
@@ -219,7 +232,7 @@ export function createComposioTools(opts: CreateComposioToolsOptions): ToolFacto
                 slug: spec.slug,
                 arguments: resolved,
               })
-              return capComposioResult(result)
+              return capComposioResult(enrichReadError(result))
             }
 
             const card = spec.preview ? spec.preview(args) : defaultPreview(spec.slug, args)

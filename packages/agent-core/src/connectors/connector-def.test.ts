@@ -103,4 +103,18 @@ describe("connectorError", () => {
     const result = connectorError(err)
     expect(result.hint).toContain("reconnect")
   })
+
+  it("adds a reconnect hint for Google's UNAUTHENTICATED shape, not just the literal words 'unauthorized'/'forbidden'", () => {
+    // Real response, reproduced live via Composio against the Photos Library API:
+    // a 200-but-successful:false call whose error string is Google's own nested
+    // JSON. It says "UNAUTHENTICATED" and "invalid authentication credentials" —
+    // never the word "unauthorized" our regex was matching on — so it fell
+    // through with no reconnect hint and the model was left to guess "not
+    // connected" from an opaque JSON blob.
+    const err = new Error(
+      'Composio execute GOOGLEPHOTOS_LIST_ALBUMS → status 200: {\n  "error": {\n    "code": 401,\n    "message": "Request had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential.",\n    "status": "UNAUTHENTICATED"\n  }\n}\n',
+    )
+    const result = connectorError(err)
+    expect(result.hint).toContain("reconnect")
+  })
 })

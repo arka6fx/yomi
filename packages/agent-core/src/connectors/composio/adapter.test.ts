@@ -207,6 +207,40 @@ describe("createComposioTools — approval-wrap adapter", () => {
     expect(result).toEqual({ issues: [{ id: "1" }] })
   })
 
+  it("enriches a read tool's { error } result with the same reconnect hint a thrown auth error would get", async () => {
+    // Composio's real 200-but-successful:false shape (reproduced live against the
+    // Photos Library API) is a normal RETURN value, not a thrown exception — so it
+    // never reached connectorError()'s hint logic for read actions. The model saw
+    // raw, unhinted JSON and had no signal to tell the user "reconnect" instead of
+    // guessing "not connected".
+    const executor = fakeExecutor({
+      error:
+        'Composio execute GOOGLEPHOTOS_LIST_ALBUMS → status 200: {"error":{"code":401,"message":"Request had invalid authentication credentials. Expected OAuth 2 access token.","status":"UNAUTHENTICATED"}}',
+    })
+    const tools = toolsFor(executor, buildCtx())
+
+    const result = (await tools["LINEAR_LIST_LINEAR_ISSUES"]!.execute({})) as {
+      error: string
+      hint?: string
+    }
+
+    expect(result.error).toContain("invalid authentication credentials")
+    expect(result.hint).toContain("reconnect")
+  })
+
+  it("leaves a non-auth read error result alone — no spurious hint", async () => {
+    const executor = fakeExecutor({ error: "Rate limit exceeded, try again later" })
+    const tools = toolsFor(executor, buildCtx())
+
+    const result = (await tools["LINEAR_LIST_LINEAR_ISSUES"]!.execute({})) as {
+      error: string
+      hint?: string
+    }
+
+    expect(result.error).toContain("Rate limit exceeded")
+    expect(result.hint).toBeUndefined()
+  })
+
   it("returns a structured connector error (with reconnect hint) when execute fails", async () => {
     const executor: ComposioExecutor = {
       execute: async () => {
