@@ -66,9 +66,9 @@ export function getDodoConfig(): DodoConfig {
       explore: null,
       pro: read("PRODUCT_PRO"),
       max: read("PRODUCT_MAX"),
-      credits_500: read("PRODUCT_CREDITS_500"),
-      credits_2000: read("PRODUCT_CREDITS_2000"),
-      credits_6000: read("PRODUCT_CREDITS_6000"),
+      credits_500: read("PRODUCT_CREDITS_85"),
+      credits_2000: read("PRODUCT_CREDITS_250"),
+      credits_6000: read("PRODUCT_CREDITS_750"),
     },
   }
 }

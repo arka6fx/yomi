@@ -394,9 +394,9 @@ function setDodoEnv() {
     DODO_TEST_API_BASE: "https://test-api.dodopayments.com",
     DODO_TEST_PRODUCT_PRO: "test_pro",
     DODO_TEST_PRODUCT_MAX: "test_max",
-    DODO_TEST_PRODUCT_CREDITS_500: "test_500",
-    DODO_TEST_PRODUCT_CREDITS_2000: "test_2000",
-    DODO_TEST_PRODUCT_CREDITS_6000: "test_6000",
+    DODO_TEST_PRODUCT_CREDITS_85: "test_500",
+    DODO_TEST_PRODUCT_CREDITS_250: "test_2000",
+    DODO_TEST_PRODUCT_CREDITS_750: "test_6000",
   }
   for (const [k, v] of Object.entries(keys)) process.env[k] = v
 }
@@ -409,9 +409,9 @@ function clearDodoEnv() {
     "DODO_TEST_API_BASE",
     "DODO_TEST_PRODUCT_PRO",
     "DODO_TEST_PRODUCT_MAX",
-    "DODO_TEST_PRODUCT_CREDITS_500",
-    "DODO_TEST_PRODUCT_CREDITS_2000",
-    "DODO_TEST_PRODUCT_CREDITS_6000",
+    "DODO_TEST_PRODUCT_CREDITS_85",
+    "DODO_TEST_PRODUCT_CREDITS_250",
+    "DODO_TEST_PRODUCT_CREDITS_750",
   ]
   for (const k of keys) delete process.env[k]
 }

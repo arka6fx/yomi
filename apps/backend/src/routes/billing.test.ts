@@ -178,18 +178,18 @@ function setDodoEnv(mode: "test" | "live") {
   process.env.DODO_TEST_API_BASE = "https://test-api.dodopayments.com"
   process.env.DODO_TEST_PRODUCT_PRO = "test_pro"
   process.env.DODO_TEST_PRODUCT_MAX = "test_max"
-  process.env.DODO_TEST_PRODUCT_CREDITS_500 = "test_500"
-  process.env.DODO_TEST_PRODUCT_CREDITS_2000 = "test_2000"
-  process.env.DODO_TEST_PRODUCT_CREDITS_6000 = "test_6000"
+  process.env.DODO_TEST_PRODUCT_CREDITS_85 = "test_500"
+  process.env.DODO_TEST_PRODUCT_CREDITS_250 = "test_2000"
+  process.env.DODO_TEST_PRODUCT_CREDITS_750 = "test_6000"
 
   process.env.DODO_LIVE_API_KEY = "live_key"
   process.env.DODO_LIVE_WEBHOOK_SECRET = "live_secret"
   process.env.DODO_LIVE_API_BASE = "https://live-api.dodopayments.com"
   process.env.DODO_LIVE_PRODUCT_PRO = "live_pro"
   process.env.DODO_LIVE_PRODUCT_MAX = "live_max"
-  process.env.DODO_LIVE_PRODUCT_CREDITS_500 = "live_500"
-  process.env.DODO_LIVE_PRODUCT_CREDITS_2000 = "live_2000"
-  process.env.DODO_LIVE_PRODUCT_CREDITS_6000 = "live_6000"
+  process.env.DODO_LIVE_PRODUCT_CREDITS_85 = "live_500"
+  process.env.DODO_LIVE_PRODUCT_CREDITS_250 = "live_2000"
+  process.env.DODO_LIVE_PRODUCT_CREDITS_750 = "live_6000"
 }
 
 function clearDodoEnv() {
@@ -200,25 +200,25 @@ function clearDodoEnv() {
     "DODO_TEST_API_BASE",
     "DODO_TEST_PRODUCT_PRO",
     "DODO_TEST_PRODUCT_MAX",
-    "DODO_TEST_PRODUCT_CREDITS_500",
-    "DODO_TEST_PRODUCT_CREDITS_2000",
-    "DODO_TEST_PRODUCT_CREDITS_6000",
+    "DODO_TEST_PRODUCT_CREDITS_85",
+    "DODO_TEST_PRODUCT_CREDITS_250",
+    "DODO_TEST_PRODUCT_CREDITS_750",
     "DODO_LIVE_API_KEY",
     "DODO_LIVE_WEBHOOK_SECRET",
     "DODO_LIVE_API_BASE",
     "DODO_LIVE_PRODUCT_PRO",
     "DODO_LIVE_PRODUCT_MAX",
-    "DODO_LIVE_PRODUCT_CREDITS_500",
-    "DODO_LIVE_PRODUCT_CREDITS_2000",
-    "DODO_LIVE_PRODUCT_CREDITS_6000",
+    "DODO_LIVE_PRODUCT_CREDITS_85",
+    "DODO_LIVE_PRODUCT_CREDITS_250",
+    "DODO_LIVE_PRODUCT_CREDITS_750",
     "DODO_API_KEY",
     "DODO_WEBHOOK_SECRET",
     "DODO_API_BASE",
     "DODO_PRODUCT_PRO",
     "DODO_PRODUCT_MAX",
-    "DODO_PRODUCT_CREDITS_500",
-    "DODO_PRODUCT_CREDITS_2000",
-    "DODO_PRODUCT_CREDITS_6000",
+    "DODO_PRODUCT_CREDITS_85",
+    "DODO_PRODUCT_CREDITS_250",
+    "DODO_PRODUCT_CREDITS_750",
   ]
   for (const k of keys) delete process.env[k]
 }
@@ -329,9 +329,9 @@ describe("Dodo billing — configuration", () => {
     process.env.DODO_TEST_API_KEY = "key"
     process.env.DODO_TEST_PRODUCT_PRO = "pro"
     process.env.DODO_TEST_PRODUCT_MAX = "max"
-    process.env.DODO_TEST_PRODUCT_CREDITS_500 = "c500"
-    process.env.DODO_TEST_PRODUCT_CREDITS_2000 = "c2000"
-    process.env.DODO_TEST_PRODUCT_CREDITS_6000 = "c6000"
+    process.env.DODO_TEST_PRODUCT_CREDITS_85 = "c500"
+    process.env.DODO_TEST_PRODUCT_CREDITS_250 = "c2000"
+    process.env.DODO_TEST_PRODUCT_CREDITS_750 = "c6000"
     delete process.env.DODO_TEST_API_BASE
     const config = getDodoConfig()
     expect(config.apiBase).toBe("https://test.dodopayments.com")
@@ -343,9 +343,9 @@ describe("Dodo billing — configuration", () => {
     process.env.DODO_LIVE_API_KEY = "key"
     process.env.DODO_LIVE_PRODUCT_PRO = "pro"
     process.env.DODO_LIVE_PRODUCT_MAX = "max"
-    process.env.DODO_LIVE_PRODUCT_CREDITS_500 = "c500"
-    process.env.DODO_LIVE_PRODUCT_CREDITS_2000 = "c2000"
-    process.env.DODO_LIVE_PRODUCT_CREDITS_6000 = "c6000"
+    process.env.DODO_LIVE_PRODUCT_CREDITS_85 = "c500"
+    process.env.DODO_LIVE_PRODUCT_CREDITS_250 = "c2000"
+    process.env.DODO_LIVE_PRODUCT_CREDITS_750 = "c6000"
     delete process.env.DODO_LIVE_API_BASE
     const config = getDodoConfig()
     expect(config.apiBase).toBe("https://live.dodopayments.com")
@@ -358,9 +358,9 @@ describe("Dodo billing — configuration", () => {
     process.env.DODO_TEST_API_BASE = "https://test.dodopayments.com"
     process.env.DODO_TEST_PRODUCT_PRO = "pro"
     process.env.DODO_TEST_PRODUCT_MAX = "max"
-    process.env.DODO_TEST_PRODUCT_CREDITS_500 = "c500"
-    process.env.DODO_TEST_PRODUCT_CREDITS_2000 = "c2000"
-    process.env.DODO_TEST_PRODUCT_CREDITS_6000 = "c6000"
+    process.env.DODO_TEST_PRODUCT_CREDITS_85 = "c500"
+    process.env.DODO_TEST_PRODUCT_CREDITS_250 = "c2000"
+    process.env.DODO_TEST_PRODUCT_CREDITS_750 = "c6000"
     const config = getDodoConfig()
     expect(config.mode).toBe("test")
   })
@@ -649,7 +649,7 @@ describe("Dodo billing — credit pack checkout", () => {
   })
 
   it("returns 500 when product ID is not configured for the pack", async () => {
-    process.env.DODO_TEST_PRODUCT_CREDITS_500 = ""
+    process.env.DODO_TEST_PRODUCT_CREDITS_85 = ""
     const res = await createCreditPack("credits_500")
     expect(res.status).toBe(500)
   })
