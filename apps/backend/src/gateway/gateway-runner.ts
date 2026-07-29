@@ -938,6 +938,25 @@ export class GatewayRunner {
     await adapter.sendTyping(chatId)
   }
 
+  async setReaction(
+    platform: PlatformType,
+    chatId: string,
+    messageId: string,
+    emoji: string,
+  ): Promise<void> {
+    const adapter = this.adapters.get(platform)
+    if (!adapter) return
+    const result = await adapter.setReaction(chatId, messageId, emoji).catch((err) => ({
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    }))
+    if (!result.ok) {
+      console.warn(
+        `[gateway] setReaction failed platform=${platform} chat=${chatId}: ${result.error ?? "unknown"}`,
+      )
+    }
+  }
+
   async broadcastMessage(text: string): Promise<void> {
     const adapterList = Array.from(this.adapters.entries())
     const results = await Promise.allSettled(
@@ -1415,6 +1434,10 @@ export class GatewayRunner {
           signal: runController.signal,
           sourcePlatform: msg.platform,
           sourceChatId: msg.chatId,
+          onReact: (emoji) =>
+            msg.messageId
+              ? this.setReaction(msg.platform, msg.chatId, msg.messageId, emoji)
+              : Promise.resolve(),
         })
         clearTimeout(runTimeout)
         clearInterval(typingInterval)

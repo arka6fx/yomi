@@ -348,6 +348,7 @@ export type {
 
 export { createConnectorTools } from "./tools.js"
 export { createRecallTool, type SessionRecallResult, type RecallSearchFn } from "./recall.js"
+export { createReactionTool, ALLOWED_REACTIONS, type ReactFn } from "./react.js"
 export {
   createWebSearchTool,
   searchWeb,

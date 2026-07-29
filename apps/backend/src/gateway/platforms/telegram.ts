@@ -321,4 +321,27 @@ export class TelegramAdapter implements PlatformAdapter {
       return { ok: false, error: err instanceof Error ? err.message : String(err) }
     }
   }
+
+  async setReaction(
+    chatId: string,
+    messageId: string,
+    emoji: string,
+  ): Promise<{ ok: boolean; error?: string }> {
+    try {
+      const res = await fetch(`${this.apiUrl}/setMessageReaction`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          message_id: Number(messageId),
+          reaction: [{ type: "emoji", emoji }],
+        }),
+      })
+      const data = (await res.json()) as TelegramResponse
+      if (!data.ok) return { ok: false, error: data.description ?? "reaction failed" }
+      return { ok: true }
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
 }

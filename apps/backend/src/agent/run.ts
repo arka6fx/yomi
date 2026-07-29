@@ -4,6 +4,7 @@ import { db, ragSources, usageEvents, customMcpServers } from "@yomi/db"
 import {
   ConnectorRegistry,
   createModel,
+  createReactionTool,
   createRecallTool,
   createWebSearchTool,
   formatConnectorIdCatalog,
@@ -12,6 +13,7 @@ import {
   searchWeb,
   suggestIntegrationsFor,
   type AgentMessage,
+  type ReactFn,
   type UsageInfo,
 } from "@yomi/agent-core"
 import { formatAgentSoul } from "@yomi/shared"
@@ -41,6 +43,10 @@ export interface RunAgentOptions {
   // re-enters the loop so the agent can finish its plan, and billing that "yes" as
   // a fresh message would charge a multi-write task once per approval.
   skipCharge?: boolean
+  // When set, the agent gets a react_to_message tool that calls this to react to
+  // the user's message. Only meaningful on platforms that support reactions
+  // (Telegram) — omit on call sites that don't wire one up.
+  onReact?: ReactFn
 }
 
 export interface RunAgentResult {
@@ -614,6 +620,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     searchSessions(opts.userId, query, limit),
   )
   const webSearchTool = createWebSearchTool((query) => searchWeb(query, opts.signal))
+  const reactionTool = opts.onReact ? createReactionTool(opts.onReact) : null
   const integrationSuggestions = formatIntegrationSuggestions(
     suggestIntegrationsFor(opts.text, registry.getConnected()),
     appUrl,
@@ -632,7 +639,11 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       registry,
       text: opts.text,
       history,
-      extraTools: { recall_past_conversations: recallTool, web_search: webSearchTool },
+      extraTools: {
+        recall_past_conversations: recallTool,
+        web_search: webSearchTool,
+        ...(reactionTool ? { react_to_message: reactionTool } : {}),
+      },
       system: buildSystemWithContext(
         memoryContext,
         ragContext,

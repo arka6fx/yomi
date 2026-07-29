@@ -23,6 +23,7 @@ let pendingActions: { id: string; title: string; preview: string }[] = []
 let approvedActions: string[] = []
 let deniedActions: string[] = []
 let soulCalls: { userId: string; text: string }[] = []
+let capturedOnReact: ((emoji: string) => Promise<void>) | undefined
 // null = onboarding complete, proceed to the agent (default for most tests).
 let soulOnboardingReply: string | null = null
 // "empty-length" simulates a reasoning model that spent its whole token budget on
@@ -94,14 +95,17 @@ mock.module("../agent/run.js", () => ({
     history,
     signal,
     skipCharge,
+    onReact,
   }: {
     userId: string
     text: string
     history?: AgentMessage[]
     signal?: AbortSignal
     skipCharge?: boolean
+    onReact?: (emoji: string) => Promise<void>
   }) => {
     agentCalls.push({ userId, text, history, signal, skipCharge })
+    capturedOnReact = onReact
     if (agentHangs) {
       // Mimic the real runAgent: when the abort signal fires it stops and
       // returns (it does not throw), yielding no usable text.
@@ -237,6 +241,7 @@ const { GatewayRunner } = await import("./gateway-runner.js")
 class FakeAdapter implements PlatformAdapter {
   readonly platform: PlatformType = "telegram"
   messages: { chatId: string; text: string }[] = []
+  reactions: { chatId: string; messageId: string; emoji: string }[] = []
   handler: ((msg: GatewayMessage) => void | Promise<void>) | null = null
   async connect() {}
   async disconnect() {}
@@ -254,6 +259,10 @@ class FakeAdapter implements PlatformAdapter {
     return { ok: true }
   }
   async sendTyping() {}
+  async setReaction(chatId: string, messageId: string, emoji: string) {
+    this.reactions.push({ chatId, messageId, emoji })
+    return { ok: true }
+  }
 }
 
 function incoming(runner: GatewayRunner, msg: GatewayMessage) {
@@ -276,6 +285,7 @@ beforeEach(() => {
   deniedActions = []
   soulCalls = []
   soulOnboardingReply = null
+  capturedOnReact = undefined
   imageAnalysisMode = "normal"
   uploadedAsset = null
   capturedUploadContentType = null
@@ -320,6 +330,44 @@ describe("GatewayRunner production routing", () => {
         assistantText: "backend reply",
       },
     ])
+  })
+
+  it("wires onReact through to the platform adapter's setReaction", async () => {
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      messageId: "msg_100",
+      text: "thanks!",
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(capturedOnReact).toBeDefined()
+    await capturedOnReact?.("🔥")
+
+    expect(adapter.reactions).toEqual([{ chatId: "chat_1", messageId: "msg_100", emoji: "🔥" }])
+  })
+
+  it("no-ops onReact when the inbound message has no messageId", async () => {
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "thanks!",
+      timestamp: new Date().toISOString(),
+    })
+
+    await capturedOnReact?.("🔥")
+
+    expect(adapter.reactions).toEqual([])
   })
 
   it("surfaces a shared location as agent context text", async () => {

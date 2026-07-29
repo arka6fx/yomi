@@ -35,6 +35,46 @@ describe("TelegramAdapter.sendMessage", () => {
   })
 })
 
+describe("TelegramAdapter.setReaction", () => {
+  const originalFetch = globalThis.fetch
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  it("posts a single emoji reaction to setMessageReaction", async () => {
+    let capturedUrl = ""
+    let capturedBody: Record<string, unknown> | null = null
+    globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+      capturedUrl = String(url)
+      capturedBody = JSON.parse(String(init?.body))
+      return new Response(JSON.stringify({ ok: true, result: {} }), { status: 200 })
+    }) as typeof fetch
+
+    const adapter = new TelegramAdapter("dummy-token")
+    const result = await adapter.setReaction("42", "100", "🔥")
+
+    expect(capturedUrl).toContain("/setMessageReaction")
+    expect(capturedBody?.chat_id).toBe("42")
+    expect(capturedBody?.message_id).toBe(100)
+    expect(capturedBody?.reaction).toEqual([{ type: "emoji", emoji: "🔥" }])
+    expect(result).toEqual({ ok: true })
+  })
+
+  it("surfaces a non-ok Telegram response as ok: false", async () => {
+    globalThis.fetch = (async () =>
+      new Response(
+        JSON.stringify({ ok: false, description: "message not found" }),
+        { status: 400 },
+      )) as typeof fetch
+
+    const adapter = new TelegramAdapter("dummy-token")
+    const result = await adapter.setReaction("42", "999", "👍")
+
+    expect(result).toEqual({ ok: false, error: "message not found" })
+  })
+})
+
 describe("TelegramAdapter.processUpdate — location", () => {
   it("surfaces a location-only update as a GatewayMessage with location set", async () => {
     const { adapter, received } = makeAdapter()
