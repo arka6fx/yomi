@@ -39,6 +39,24 @@ describe("Google Maps via Composio — ConnectorDef shape", () => {
     })
   })
 
+  // #84: with no geocoding/directions tool in this catalog (see the code comment
+  // in google-maps.ts on why GEOCODING_API/GET_DIRECTION are excluded), the model
+  // was improvising routes and "you're near X" claims on top of a plain place-search
+  // match. Every tool description must say directly that routing isn't supported,
+  // or the model keeps offering to compute one it has no way to back up.
+  it.each(["GOOGLE_MAPS_NEARBY_SEARCH", "GOOGLE_MAPS_TEXT_SEARCH"])(
+    "tells the model routing/directions are not supported for %s",
+    (slug) => {
+      const spec = mapsComposioSpecs.find((s) => s.slug === slug)
+      expect(spec?.description).toContain("does not compute directions, routes, distances, or ETAs")
+    },
+  )
+
+  it("states the place-search-only limitation on the connector description", () => {
+    const def = makeComposioMapsDef(fakeExecutor())
+    expect(def.description).toContain("cannot provide directions, routes, distances, or ETAs")
+  })
+
   it("exposes exactly the 2 live-verified tools, keyed by Composio slug", () => {
     const def = makeComposioMapsDef(fakeExecutor())
     const tools = def.tools(buildCtx())
