@@ -5,7 +5,7 @@ import { db, platformConnections, linkingCodes, telegramLinkTokens, usageEvents 
 import type { PlatformType, GatewayMessage, GatewaySessionInfo } from "@yomi/shared"
 import { checkConsent } from "../services/privacy/checks.js"
 import { recordConsentDecision } from "../services/privacy/consent.js"
-import { createModel, type AgentMessage } from "@yomi/agent-core"
+import { ALLOWED_REACTIONS, createModel, type AgentMessage } from "@yomi/agent-core"
 import type { PlatformAdapter } from "./platform-adapter.js"
 import { TelegramAdapter } from "./platforms/telegram.js"
 import { runAgent } from "../agent/run.js"
@@ -400,8 +400,12 @@ export class GatewayRunner {
   }
 
   // Cheap gpt-5.4-mini path for simple Q&A, greetings, knowledge questions.
-  // Returns the reply text, or null when the query needs the full agent loop.
-  private async fastTelegramRespond(text: string, history: AgentMessage[]): Promise<string | null> {
+  // Returns the reply (plus an optional reaction emoji), or null when the
+  // query needs the full agent loop.
+  private async fastTelegramRespond(
+    text: string,
+    history: AgentMessage[],
+  ): Promise<{ text: string; reaction: string | null } | null> {
     const modelId =
       process.env["OPENAI_FAST_MODEL"] ||
       process.env["OPENAI_AGENT_MODEL"] ||
@@ -417,7 +421,8 @@ export class GatewayRunner {
           "- If the user asks you to do something (send, create, draft, schedule, open, deploy), respond with exactly: NEED_AGENT\n" +
           "- If you need to look something up or use a tool, respond with exactly: NEED_AGENT\n" +
           "- If unsure, respond with exactly: NEED_AGENT\n" +
-          "- Never use em dashes \u2014 use commas or periods.",
+          "- Never use em dashes \u2014 use commas or periods.\n" +
+          `- Rarely \u2014 only when it genuinely fits (a clear win, a thanks, a funny moment, a strong yes/no) \u2014 you may react to the user's message. To do so, put a single line "REACT:<emoji>" first, using exactly one of: ${ALLOWED_REACTIONS.join(" ")}. Most replies should have no REACT line at all.`,
         messages: [
           ...history.slice(-4).map((h) => ({
             role: h.role as "user" | "assistant",
@@ -428,9 +433,18 @@ export class GatewayRunner {
         maxTokens: Math.min(400, Math.max(100, text.length * 1.5)),
         abortSignal: AbortSignal.timeout(5_000),
       })
-      const reply = result.text.trim()
+      let reply = result.text.trim()
       if (!reply || reply === "NEED_AGENT") return null
-      return reply
+
+      let reaction: string | null = null
+      const reactMatch = /^REACT:(\S+)\n+([\s\S]*)$/.exec(reply)
+      if (reactMatch) {
+        const [, emoji, rest] = reactMatch
+        if ((ALLOWED_REACTIONS as readonly string[]).includes(emoji!)) reaction = emoji!
+        reply = rest!.trim()
+      }
+      if (!reply) return null
+      return { text: reply, reaction }
     } catch {
       return null
     }
@@ -1389,22 +1403,29 @@ export class GatewayRunner {
       // If the fast path handles it, we save credits and latency.
       const fastReply = await this.fastTelegramRespond(msg.text, history)
       if (fastReply !== null) {
+        if (fastReply.reaction && msg.messageId) {
+          void this.setReaction(msg.platform, msg.chatId, msg.messageId, fastReply.reaction)
+        }
         if (conversationConsent.allowed && persistentSession) {
           await appendAgentTurn({
             sessionId: persistentSession.id,
             userId: yomiUserId,
             userText: msg.text,
-            assistantText: fastReply,
+            assistantText: fastReply.text,
           }).catch(() => {
-            this.appendHistory(msg.platform, msg.chatId, msg.text, fastReply)
+            this.appendHistory(msg.platform, msg.chatId, msg.text, fastReply.text)
           })
         } else {
-          this.appendHistory(msg.platform, msg.chatId, msg.text, fastReply)
+          this.appendHistory(msg.platform, msg.chatId, msg.text, fastReply.text)
         }
         clearInterval(typingInterval)
-        await this.sendMessageAndLog(msg.platform, msg.chatId, fastReply, "telegram-fast-reply", {
-          replyTo: msg.messageId,
-        })
+        await this.sendMessageAndLog(
+          msg.platform,
+          msg.chatId,
+          fastReply.text,
+          "telegram-fast-reply",
+          { replyTo: msg.messageId },
+        )
         return
       }
 

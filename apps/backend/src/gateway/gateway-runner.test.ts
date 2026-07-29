@@ -24,6 +24,9 @@ let approvedActions: string[] = []
 let deniedActions: string[] = []
 let soulCalls: { userId: string; text: string }[] = []
 let capturedOnReact: ((emoji: string) => Promise<void>) | undefined
+// Overrides the fast path's fake model text for a single test; null falls back
+// to the default "NEED_AGENT" (forces the full agent loop) for non-image text.
+let fastReplyOverride: string | null = null
 // null = onboarding complete, proceed to the agent (default for most tests).
 let soulOnboardingReply: string | null = null
 // "empty-length" simulates a reasoning model that spent its whole token budget on
@@ -166,14 +169,16 @@ mock.module("../services/ai-telemetry.js", () => ({
   },
 }))
 
-// gateway-runner.ts's only runtime import from @yomi/agent-core is createModel
-// (AgentMessage is type-only); no other file in this test's import graph reaches
-// the real package, so it's safe to replace wholesale. The real generateText()
+// gateway-runner.ts's only runtime imports from @yomi/agent-core are createModel
+// and ALLOWED_REACTIONS (AgentMessage is type-only); no other file in this test's
+// import graph reaches the real package, so it's safe to replace wholesale. The
+// real generateText()
 // (from "ai", left un-mocked) calls this fake model's doGenerate, so it completes
 // without touching the network. Image messages (content is an array with an
 // "image" part) get a canned vision reply + usage; anything else mimics
 // NEED_AGENT so the existing fast-path-falls-through-to-agent tests still work.
 mock.module("@yomi/agent-core", () => ({
+  ALLOWED_REACTIONS: ["👍", "❤️", "🔥"],
   createModel: () => ({
     specificationVersion: "v1",
     provider: "openai",
@@ -201,7 +206,7 @@ mock.module("@yomi/agent-core", () => ({
         }
       }
       return {
-        text: isImage ? "It looks like a cat." : "NEED_AGENT",
+        text: isImage ? "It looks like a cat." : (fastReplyOverride ?? "NEED_AGENT"),
         finishReason: "stop",
         usage: isImage
           ? { promptTokens: 120, completionTokens: 40 }
@@ -286,6 +291,7 @@ beforeEach(() => {
   soulCalls = []
   soulOnboardingReply = null
   capturedOnReact = undefined
+  fastReplyOverride = null
   imageAnalysisMode = "normal"
   uploadedAsset = null
   capturedUploadContentType = null
@@ -368,6 +374,46 @@ describe("GatewayRunner production routing", () => {
     await capturedOnReact?.("🔥")
 
     expect(adapter.reactions).toEqual([])
+  })
+
+  it("reacts on the fast path when the cheap model emits a REACT line", async () => {
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+    fastReplyOverride = "REACT:🔥\nYou're very welcome!"
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      messageId: "msg_200",
+      text: "thank you so much, you're a lifesaver",
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(adapter.reactions).toEqual([{ chatId: "chat_1", messageId: "msg_200", emoji: "🔥" }])
+    expect(adapter.messages.at(-1)?.text).toBe("You're very welcome!")
+    // Handled entirely by the fast path — never reached the full agent loop.
+    expect(agentCalls).toEqual([])
+  })
+
+  it("ignores a REACT line with an emoji outside the allowed set", async () => {
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+    fastReplyOverride = "REACT:🍑\nYou're very welcome!"
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      messageId: "msg_201",
+      text: "thank you",
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(adapter.reactions).toEqual([])
+    expect(adapter.messages.at(-1)?.text).toBe("You're very welcome!")
   })
 
   it("surfaces a shared location as agent context text", async () => {
