@@ -66,6 +66,11 @@ app.use("*", async (c, next) => {
 
 app.get("/health", (c) => c.json({ status: "ok", version: "0.1.0" }))
 
+// Pure API host, nothing here is a page — keep it out of search entirely. getyomi.in's
+// GSC property is domain-level so it covers this subdomain too and was flagging api root
+// as a 404 "page that isn't indexed", even though a 404 already achieves that outcome.
+app.get("/robots.txt", (c) => c.text("User-agent: *\nDisallow: /\n"))
+
 // Deploys ship code automatically but migrations run manually, so the two can
 // drift — the recurring cause of production 42703 errors. This endpoint makes
 // drift observable: curl it after every deploy and alert on non-200.
