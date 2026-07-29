@@ -36,7 +36,17 @@ export default {
     }
 
     const assetResponse = await env.ASSETS.fetch(request)
-    if (assetResponse.status !== 404) return assetResponse
+    if (assetResponse.status !== 404) {
+      // Cloudflare infers content-type from the file extension. The prerendered og:image
+      // ships extensionless (it's served at next's route path, "/opengraph-image"), so it
+      // comes back with no content-type — some og:image scrapers require one to render it.
+      if (url.pathname === "/opengraph-image" && !assetResponse.headers.get("content-type")) {
+        const headers = new Headers(assetResponse.headers)
+        headers.set("content-type", "image/png")
+        return new Response(assetResponse.body, { status: assetResponse.status, headers })
+      }
+      return assetResponse
+    }
 
     const fallbackUrl = new URL(request.url)
     fallbackUrl.pathname = "/index.html"
