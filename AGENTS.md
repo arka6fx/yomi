@@ -42,7 +42,7 @@ Choose the highest, least-footprint rung that solves the problem:
 apps/backend/        Hono/Bun - auth, billing, LLM proxy, metering
 apps/landing/        Next.js  - marketing, dashboard, account linking
 packages/agent-core/ ConnectorDef, ConnectorRegistry, agent tools
-packages/db/         Drizzle schema + Neon
+packages/db/         Drizzle schema + PostgreSQL (AWS RDS)
 packages/shared/     TypeScript contracts
 packages/ui-connectors/ Connector UI components
 ```
@@ -57,7 +57,7 @@ bun install && bun run dev
 
 - **LLM:** Vercel AI SDK (`ai`) -> OpenAI (standard `OPENAI_*` env vars)
 - **STT:** OpenAI (`gpt-4o-mini-transcribe`) — transcribes incoming voice notes; replies are always text
-- **Backend:** Hono on Bun (EC2 + Docker + Caddy), Better Auth (Google + GitHub OAuth), Drizzle + Neon
+- **Backend:** Hono on Bun (EC2 + Docker + Caddy), Better Auth (Google + GitHub OAuth), Drizzle + PostgreSQL (AWS RDS)
 - **Billing:** Dodo Payments
 - **Agent orchestration:** AI SDK agent loop with connector tools; backend agent for Telegram
 
@@ -184,7 +184,10 @@ The backend deploys itself on push to `main`
 commit; the manual deploy races the workflow and both die on a container-name
 conflict. That script is the break-glass path for when the runner is down.
 
-The frontend (Cloudflare Worker) is still manual:
+The frontend (Cloudflare Worker) also deploys itself on push to `main`
+(`.github/workflows/deploy-landing.yml`, paths `apps/landing/**` /
+`packages/**` / `package.json` / `bun.lock`), via a GitHub-hosted runner.
+Manual deploy remains available as a break-glass/on-demand path:
 
 ```bash
 cd apps/landing && bun run deploy:production

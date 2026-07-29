@@ -11,7 +11,7 @@ supermemory, nia, composio, pi, openclaw) measured against what Yomi already has
   fold in codebase-health only where cheap or blocking.
 - **Sort:** impact-to-effort ratio, differentiation as tiebreaker. Size = S/M/L.
 - **Constraints (adopted):** no new connectors · stay on the current stack (OpenAI
-  + Vercel AI SDK single-loop, Neon/Drizzle, EC2/Cloudflare — no new orchestrator,
+  + Vercel AI SDK single-loop, RDS Postgres/Drizzle, EC2/Cloudflare — no new orchestrator,
   no new managed vendors) · billing/auth internals not a primary target · **no
   sidecar/desktop implementation** (shared `packages/agent-core` is fair game).
 

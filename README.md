@@ -14,7 +14,7 @@ apps/backend/           Hono on Bun    auth, billing, LLM proxy, usage metering 
 apps/landing/           Next.js 16     landing, auth pages, dashboard
 
 packages/agent-core/    Connector definitions, registry, agent tools
-packages/db/            Drizzle schema and Neon client
+packages/db/            Drizzle schema and PostgreSQL client
 packages/shared/        Shared backend and frontend contracts
 packages/ui-connectors/ Connector UI components
 packages/*-config/      Shared TypeScript and ESLint config
@@ -40,7 +40,7 @@ Prerequisites:
 
 - Bun 1.3.x
 - Node 20+
-- A Neon Postgres database
+- A PostgreSQL database
 - An OpenAI API key
 
 ```bash
@@ -127,7 +127,7 @@ changed.
 - Frontend/dashboard: Cloudflare Worker (`yomi-landing`) from `apps/landing`, at
   `getyomi.in` and `www.getyomi.in`. Deploy with
   `wrangler deploy --env production`.
-- Database: Neon Postgres.
+- Database: AWS RDS PostgreSQL.
 - LLM and speech: OpenAI.
 - Billing: Dodo Payments.
 

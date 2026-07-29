@@ -5,7 +5,7 @@ Production topology (two providers):
 ```text
 Frontend / dashboard  https://getyomi.in        Cloudflare Worker (apps/landing)
 Backend API           https://api.getyomi.in    AWS EC2 + Docker + Caddy (apps/backend)
-Database              Neon Postgres
+Database              AWS RDS PostgreSQL (private, no public IP — see scripts/rds-tunnel.sh)
 LLM + speech          OpenAI (STT for incoming voice notes; replies are text)
 Billing               Dodo Payments
 ```
@@ -39,7 +39,7 @@ Caddy, which terminates TLS for `api.getyomi.in`. Compose file: `docker-compose.
 ```bash
 ENVIRONMENT=production
 PORT=3001
-DATABASE_URL=postgresql://...            # Neon
+DATABASE_URL=postgresql://...            # AWS RDS — private, admin access via scripts/rds-tunnel.sh
 ENCRYPTION_KEY=<hex32>                    # MUST match the value tokens were encrypted with
 ENCRYPTION_KEY_FALLBACKS=                 # old key(s) if rotating, comma-separated
 BETTER_AUTH_SECRET=...
@@ -119,14 +119,16 @@ public URL or SEO metadata.
 ## OAuth callback URLs
 
 Add these (alongside `http://localhost:3001/...` for dev) in the Google Cloud and
-GitHub OAuth apps — both sign-in and the connector app:
+GitHub OAuth apps used for **sign-in**:
 
 ```text
 https://api.getyomi.in/api/auth/callback/google
 https://api.getyomi.in/api/auth/callback/github
-https://api.getyomi.in/api/integrations/callback/google
-https://api.getyomi.in/api/integrations/callback/{github,slack,notion,linear}
 ```
+
+GitHub/Google/Slack/Notion/Linear connectors route exclusively through Composio
+now — there are no native `/api/integrations/callback/*` OAuth apps to register
+for them anymore (see `COMPOSIO_CONNECTORS` in `.env.example`).
 
 ---
 

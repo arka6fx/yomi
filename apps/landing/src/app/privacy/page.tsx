@@ -238,7 +238,7 @@ export default function PrivacyPage() {
                   never store card details.
                 </li>
                 <li>
-                  <strong className="text-foreground">Neon (Postgres)</strong>: encrypted database
+                  <strong className="text-foreground">AWS RDS (Postgres)</strong>: encrypted database
                   hosting for account data, usage events, and encrypted OAuth tokens.
                 </li>
               </ul>
