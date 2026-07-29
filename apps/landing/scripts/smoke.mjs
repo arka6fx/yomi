@@ -50,6 +50,17 @@ const CHECKS = [
   { path: "/docs", check: async (res) => (res.status === 200 ? null : `got ${res.status}`) },
   { path: "/support", check: async (res) => (res.status === 200 ? null : `got ${res.status}`) },
   {
+    path: "/opengraph-image",
+    check: async (res) => {
+      if (res.status !== 200) return `expected 200, got ${res.status}`
+      // the edge-runtime OG route never got prerendered as a static asset — the worker
+      // 404'd it and cloudflare redirected to "/", which google flagged as a broken page
+      const contentType = res.headers.get("content-type") ?? ""
+      if (!contentType.startsWith("image/")) return `expected an image, got content-type ${contentType}`
+      return null
+    },
+  },
+  {
     path: "/signin",
     check: async (res, body) => {
       if (res.status !== 200) return `expected 200, got ${res.status}`
