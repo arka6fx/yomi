@@ -423,7 +423,7 @@ export function LandingPage() {
                 &ldquo;Find the Q3 report in my Drive.&rdquo; or &ldquo;What does the product spec
                 say about pricing?&rdquo; Yomi reads data on-demand per request and never stores it.
               </p>
-              <p className="mt-2 text-xs text-muted-foreground/90">
+              <p className="mt-2 text-xs text-muted-foreground">
                 Yomi&apos;s use of Google API data complies with the{" "}
                 <a
                   href="https://developers.google.com/terms/api-services-user-data-policy"
