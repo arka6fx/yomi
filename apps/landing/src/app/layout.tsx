@@ -95,8 +95,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       )}
     >
       {/* warms the DNS/TLS handshake to the API host before the first fetch — react 19
-          hoists link/meta tags rendered anywhere in the tree up into <head> */}
-      <link rel="preconnect" href="https://api.getyomi.in" />
+          hoists link/meta tags rendered anywhere in the tree up into <head>.
+          use-credentials matches how auth-client actually calls the API (cross-subdomain
+          session cookies), otherwise the browser opens a second connection and this is wasted */}
+      <link rel="preconnect" href="https://api.getyomi.in" crossOrigin="use-credentials" />
       <body className="bg-background text-foreground min-h-dvh">
         <Providers>{children}</Providers>
       </body>
