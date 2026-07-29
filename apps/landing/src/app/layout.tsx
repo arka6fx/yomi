@@ -94,6 +94,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         mono.variable,
       )}
     >
+      {/* warms the DNS/TLS handshake to the API host before the first fetch — react 19
+          hoists link/meta tags rendered anywhere in the tree up into <head> */}
+      <link rel="preconnect" href="https://api.getyomi.in" />
       <body className="bg-background text-foreground min-h-dvh">
         <Providers>{children}</Providers>
       </body>

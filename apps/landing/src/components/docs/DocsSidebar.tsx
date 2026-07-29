@@ -32,7 +32,7 @@ export function DocsSidebar({
 
         return (
           <div key={group}>
-            <p className="px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">
+            <p className="px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground/90">
               {group}
             </p>
             <div className="mt-1.5 space-y-0.5">

@@ -10,7 +10,8 @@
     --card-foreground: 0 0% 13%;
     --popover: 0 0% 99%;
     --popover-foreground: 0 0% 13%;
-    --primary: 214 88% 54%;
+    /* 48% lightness, not the brand's 54% — white text on it needs 4.5:1 (WCAG AA) */
+    --primary: 214 88% 48%;
     --primary-foreground: 0 0% 100%;
     --secondary: 214 100% 91%;
     --secondary-foreground: 218 67% 24%;
@@ -265,7 +266,8 @@
     --card-foreground: 0 0% 13%;
     --popover: 0 0% 99%;
     --popover-foreground: 0 0% 13%;
-    --primary: 214 88% 54%;
+    /* 48% lightness, not the brand's 54% — white text on it needs 4.5:1 (WCAG AA) */
+    --primary: 214 88% 48%;
     --primary-foreground: 0 0% 100%;
     --secondary: 214 100% 91%;
     --secondary-foreground: 218 67% 24%;

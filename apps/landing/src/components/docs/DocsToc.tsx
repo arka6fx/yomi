@@ -6,7 +6,7 @@ import { DOCS_INDEX } from "./docs-search"
 export function DocsToc({ activeId }: { activeId: string | null }) {
   return (
     <nav aria-label="On this page" className="space-y-3">
-      <p className="px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">
+      <p className="px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground/90">
         On this page
       </p>
       <div className="space-y-0.5">

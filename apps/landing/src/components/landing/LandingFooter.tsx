@@ -30,7 +30,7 @@ export default function LandingFooter() {
               AI assistant for Gmail, Calendar, Drive, GitHub, Slack, Notion, and more — on
               Telegram.
             </p>
-            <p className="mt-4 text-xs text-muted-foreground/70">
+            <p className="mt-4 text-xs text-muted-foreground/90">
               © {year} Yomi. All rights reserved.
             </p>
           </div>
@@ -83,16 +83,16 @@ export default function LandingFooter() {
               {/* Support email is one unbreakable token — force-wrap it or it
                   overflows its grid cell into the adjacent Website column. */}
               <div>
-                <p className="text-muted-foreground/70">Product</p>
+                <p className="text-muted-foreground/90">Product</p>
                 <p className="text-foreground">Yomi: AI Productivity Assistant</p>
               </div>
               <div>
-                <p className="text-muted-foreground/70">Developer</p>
+                <p className="text-muted-foreground/90">Developer</p>
                 <p className="text-foreground">Arka Garai</p>
-                <p className="text-xs text-muted-foreground/70">Independent software developer</p>
+                <p className="text-xs text-muted-foreground/90">Independent software developer</p>
               </div>
               <div>
-                <p className="text-muted-foreground/70">Support</p>
+                <p className="text-muted-foreground/90">Support</p>
                 <a
                   href="mailto:contact.arkagarai@gmail.com"
                   className="break-all text-foreground transition-colors hover:text-primary"
@@ -101,7 +101,7 @@ export default function LandingFooter() {
                 </a>
               </div>
               <div>
-                <p className="text-muted-foreground/70">Website</p>
+                <p className="text-muted-foreground/90">Website</p>
                 <a
                   href="https://getyomi.in"
                   className="text-foreground transition-colors hover:text-primary"

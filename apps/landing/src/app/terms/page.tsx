@@ -19,7 +19,7 @@ export default function TermsPage() {
             Legal
           </p>
           <h1 className="mb-2 font-accent text-5xl text-foreground">Terms of Service</h1>
-          <p className="mb-16 text-sm text-muted-foreground/70">Last updated: July 2026</p>
+          <p className="mb-16 text-sm text-muted-foreground/90">Last updated: July 2026</p>
 
           <div className="space-y-10 text-sm leading-7 text-muted-foreground">
             <Section title="Acceptance">

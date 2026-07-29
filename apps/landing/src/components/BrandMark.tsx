@@ -22,7 +22,9 @@ export function BrandMark({ withText = true, size = "md", className = "" }: Bran
       aria-label="Yomi home"
     >
       <img
-        src="/android-chrome-192x192.png"
+        // 128x128 covers the largest rendered size (lg, 64px) at 2x without
+        // shipping the full 192x192 icon file for a 48px header mark
+        src="/brand-mark-128.png"
         alt=""
         className={`${sizes[size]} rounded-[22%]`}
         width={48}
