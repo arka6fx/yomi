@@ -17,11 +17,11 @@ supermemory, nia, composio, pi, openclaw) measured against what Yomi already has
 
 ## Findings that frame the list
 
-- **LangGraph is not used.** `apps/sidecar/src/graph/run.ts` is a 24-line
-  passthrough into `agentPipeline`; there is no `@langchain`/`StateGraph`
-  dependency anywhere. The agent is a single-loop Vercel AI SDK ReAct agent. The
-  `graph/` folder is a vestigial name — a rename/cleanup, but it lives in the
-  sidecar so it's **out of scope** here (noted, not ranked).
+- **The sidecar is gone, not just out of scope.** ADR 0002 retired the desktop
+  client and the sidecar it drove; `apps/sidecar` no longer exists in this repo
+  (only `apps/backend` and `apps/landing` remain). The LangGraph-was-never-used
+  finding below is kept for history — it no longer needs "out of scope" framing
+  since there's nothing left to scope around.
 - **Backend memory is already an engine, not a store.** `routes/memory.ts` +
   `agent/run.ts` give versioned entries, hybrid vector+FTS+metadata RRF search, a
   relations graph (`updates`/`extends`/`derives`), temporal `forgetAfter`
@@ -39,7 +39,7 @@ supermemory, nia, composio, pi, openclaw) measured against what Yomi already has
 |---|------|------|------|-------------|----------------|
 | 1 | ✅ **DONE** — Loop guards + iteration budget on the backend agent | S | Foundation | sidecar `LoopGuards`/`IterationBudget` | Caps runaway tool loops & cost on the paid Telegram path |
 | 2 | ✅ **DONE** — Proactive suggestions from telemetry + memory | M | Capability | hermes self-nudge | Turns a static 5-item catalog into personalized, earned nudges |
-| 3 | Session summarization + cross-session recall tool | M | Capability | hermes FTS5 recall | "What did we decide last week?" — memory that spans sessions |
+| 3 | ✅ **DONE** — Session summarization + cross-session recall tool | M | Capability | hermes FTS5 recall | "What did we decide last week?" — memory that spans sessions |
 | 4 | Sharper memory contradiction + consolidation | M | Capability/Health | supermemory | Stops duplicate/stale memories; correctness of the memory engine |
 | 5 | Deep-research tool (bounded sub-loop over RAG+memory+web) | M/L | Capability | nia Oracle | Cited synthesis instead of one-shot retrieval |
 | 6 | Subagent delegation on the backend agent | M | Capability/Foundation | hermes / sidecar subagent | Parallel workstreams; unblocks bigger tasks |
@@ -79,6 +79,13 @@ applied to automation discovery.
 
 ### 3. Session summarization + cross-session recall tool — M · Capability
 
+✅ **DONE.** Shipped in `apps/backend/src/services/agent-sessions.ts`
+(`summarizeSession` / `summarizeUnsummarizedSessions`, generateObject-based
+title+summary per session) and wired into the agent as the
+`recall_past_conversations` `extraTool` in `agent/run.ts`, backed by a hybrid
+FTS + RRF search over session summaries (ADR 0003). The description below is
+the original pre-work framing, retained for history.
+
 You store `agent_sessions` and `agent_messages` but the agent can't search its own
 past. Add a background summarizer (per session) and expose a
 `recall_past_conversations` `extraTool` that does hybrid search over those
@@ -99,10 +106,10 @@ merges near-duplicate active memories. Directly hardens the engine you already r
 `fetchRagContext` is one-shot top-5 FTS. Add an `extraTool` that runs a small,
 step-capped researcher loop (query → retrieve from RAG + memory + web → refine →
 synthesize with inline citations), returning a synthesis instead of raw chunks —
-nia's "Oracle." Note: web search is currently a **sidecar-only** capability (see
-memory `project_web_search_gap`), so this also closes the backend web-search gap.
-**Touches:** `agent-core` extraTools, `services/rag/*`; needs a backend web-search
-primitive (OpenAI provider-executed search fits the "no new vendor" rule).
+nia's "Oracle." Note: the backend web-search gap this once implied is already
+closed — `web_search` is a live `extraTool` in `agent/run.ts` — so this item is
+purely about adding a bounded multi-step research loop on top of it.
+**Touches:** `agent-core` extraTools, `services/rag/*`.
 
 ### 6. Subagent delegation on the backend agent — M · Capability/Foundation
 
@@ -133,12 +140,13 @@ This is hermes's closed learning loop + composio's "skills that evolve." Best do
 
 ### 9. Grow `agent-core` into the shared "brain" — L · Foundation
 
-Today the backend loop (`agent-core/runAgentLoop`) and the sidecar loop
-(`pipeline/agent.ts`) have diverged; memory-context assembly, guards, and budget
-are re-implemented per surface. Consolidate the reusable parts into `agent-core`
-and adopt on the **backend now** (sidecar adoption deferred — out of scope). This
-is the foundation items #1, #5, #6, #8 all lean on; sequence it early if you plan
-to do several of them.
+**Largely moot since the sidecar retirement (ADR 0002).** The original
+rationale — backend/sidecar loop divergence — no longer applies; there is no
+sidecar loop left to unify with. What's left of this item is just internal
+organization of `agent-core` itself (memory-context assembly, guards, budget
+as clean seams within the one remaining loop), which items #5/#6/#8 can lean
+on incrementally as they're built rather than needing a dedicated upfront pass.
+Kept for history; deprioritize unless a specific item below needs the seam.
 **Touches:** `packages/agent-core/*`, `apps/backend/src/agent/run.ts`.
 
 ### 10. RAG "index anything" beyond Drive — M/L · Capability
@@ -154,12 +162,14 @@ the value of #5.
 
 ## Suggested sequencing
 
-- **✅ Done:** #1 (loop guards, `e1beb80c`) and #2 (proactive suggestions, #46–#51).
-- **Highest impact-to-effort next:** #3 (session summarization + cross-session recall,
-  M) — leverages memory data you already store, and pairs naturally with #4 (memory
-  contradiction/consolidation).
-- **Then pick a differentiation bet:** #9 → #8 if you want the learning loop, or
-  #5 → #10 if you want research/knowledge depth.
+- **✅ Done:** #1 (loop guards, `e1beb80c`), #2 (proactive suggestions, #46–#51),
+  #3 (session summarization + cross-session recall, ADR 0003).
+- **Highest impact-to-effort next:** #4 (memory contradiction/consolidation) —
+  directly hardens the recall engine #3 just shipped, and the embeddings it
+  needs already exist.
+- **Then pick a differentiation bet:** #8 (self-improving skills) if you want the
+  learning loop, or #5 → #10 if you want research/knowledge depth. #9 is
+  deprioritized (see its entry above) now that there's no sidecar to unify with.
 
-With #1 and #2 shipped, the next item to take into `/grill-with-docs` is **#3
-(session summarization + cross-session recall)**.
+With #1, #2, and #3 shipped, the next item to take into `/grill-with-docs` is
+**#4 (memory contradiction + consolidation)**.
