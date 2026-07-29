@@ -10,8 +10,8 @@
     --card-foreground: 0 0% 13%;
     --popover: 0 0% 99%;
     --popover-foreground: 0 0% 13%;
-    /* 48% lightness, not the brand's 54% — white text on it needs 4.5:1 (WCAG AA) */
-    --primary: 214 88% 48%;
+    /* 44% lightness, not the brand's 54% — needs headroom for both white-on-primary buttons and primary-as-link-text on tinted card backgrounds */
+    --primary: 214 88% 44%;
     --primary-foreground: 0 0% 100%;
     --secondary: 214 100% 91%;
     --secondary-foreground: 218 67% 24%;
@@ -266,8 +266,8 @@
     --card-foreground: 0 0% 13%;
     --popover: 0 0% 99%;
     --popover-foreground: 0 0% 13%;
-    /* 48% lightness, not the brand's 54% — white text on it needs 4.5:1 (WCAG AA) */
-    --primary: 214 88% 48%;
+    /* 44% lightness, not the brand's 54% — needs headroom for both white-on-primary buttons and primary-as-link-text on tinted card backgrounds */
+    --primary: 214 88% 44%;
     --primary-foreground: 0 0% 100%;
     --secondary: 214 100% 91%;
     --secondary-foreground: 218 67% 24%;
