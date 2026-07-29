@@ -19,7 +19,7 @@ export default function PrivacyPage() {
             Legal
           </p>
           <h1 className="mb-2 font-accent text-5xl text-foreground">Privacy Policy</h1>
-          <p className="mb-16 text-sm text-muted-foreground/70">Last updated: July 19, 2026</p>
+          <p className="mb-16 text-sm text-muted-foreground/90">Last updated: July 19, 2026</p>
 
           <div className="max-w-none space-y-10 text-sm leading-7 text-muted-foreground">
             <Section title="Overview">

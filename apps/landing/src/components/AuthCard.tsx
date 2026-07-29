@@ -185,7 +185,7 @@ export default function AuthCard({ defaultMode, plan, callbackURL, initialError 
         </Link>
       </p>
 
-      <p className="mt-6 text-center text-[11px] leading-relaxed text-muted-foreground/70">
+      <p className="mt-6 text-center text-[11px] leading-relaxed text-muted-foreground/90">
         By continuing you agree to our{" "}
         <Link href="/terms" className="underline underline-offset-2 hover:text-foreground">
           Terms

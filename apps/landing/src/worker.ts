@@ -16,19 +16,48 @@ const REDIRECTS: Record<string, string> = {
   "/download": "/",
 }
 
+// No per-request nonces here — the worker only ever serves prebuilt static HTML (no
+// server to stamp a fresh nonce into each response), so next's inline hydration
+// scripts and the JSON-LD/RSC payload scripts need 'unsafe-inline'. Still meaningfully
+// narrows the attack surface: no third-party script host, no framing, no plugins.
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: https:",
+  "font-src 'self'",
+  "connect-src 'self' https://api.getyomi.in https://static.cloudflareinsights.com https://cloudflareinsights.com",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "object-src 'none'",
+].join("; ")
+
+function withSecurityHeaders(response: Response): Response {
+  const headers = new Headers(response.headers)
+  headers.set("content-security-policy", CSP)
+  // Staged rollout per Lighthouse guidance — raise max-age once this has run
+  // in production a while without an accidental HTTPS misconfiguration.
+  headers.set("strict-transport-security", "max-age=300")
+  return new Response(response.body, { status: response.status, headers })
+}
+
 export default {
   async fetch(request: Request, env: { ASSETS: { fetch(request: Request): Promise<Response> } }) {
     const url = new URL(request.url)
 
     const redirect = REDIRECTS[url.pathname.replace(/\/$/, "")]
-    if (redirect) return Response.redirect(new URL(redirect, url.origin).toString(), 301)
+    if (redirect)
+      return withSecurityHeaders(Response.redirect(new URL(redirect, url.origin).toString(), 301))
 
     // IP-based country for localized price display. Served here (not proxied):
     // Cloudflare stamps request.cf.country from the visitor's IP, which is far
     // more reliable than browser language.
     if (url.pathname === "/api/geo") {
       const country = (request as { cf?: { country?: string } }).cf?.country ?? null
-      return Response.json({ country }, { headers: { "cache-control": "no-store" } })
+      return withSecurityHeaders(
+        Response.json({ country }, { headers: { "cache-control": "no-store" } }),
+      )
     }
 
     if (url.pathname.startsWith("/api/")) {
@@ -43,13 +72,15 @@ export default {
       if (url.pathname === "/opengraph-image" && !assetResponse.headers.get("content-type")) {
         const headers = new Headers(assetResponse.headers)
         headers.set("content-type", "image/png")
-        return new Response(assetResponse.body, { status: assetResponse.status, headers })
+        return withSecurityHeaders(
+          new Response(assetResponse.body, { status: assetResponse.status, headers }),
+        )
       }
-      return assetResponse
+      return withSecurityHeaders(assetResponse)
     }
 
     const fallbackUrl = new URL(request.url)
     fallbackUrl.pathname = "/index.html"
-    return env.ASSETS.fetch(new Request(fallbackUrl.toString(), request))
+    return withSecurityHeaders(await env.ASSETS.fetch(new Request(fallbackUrl.toString(), request)))
   },
 }

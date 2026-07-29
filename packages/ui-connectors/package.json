@@ -20,8 +20,5 @@
     "@yomi/eslint-config": "workspace:*",
     "@yomi/typescript-config": "workspace:*",
     "typescript": "^5.5.0"
-  },
-  "dependencies": {
-    "@yomi/agent-core": "workspace:*"
   }
 }

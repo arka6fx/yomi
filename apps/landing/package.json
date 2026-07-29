@@ -21,7 +21,6 @@
     "test": "bun test --pass-with-no-tests"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^0.10.4",
     "@yomi/shared": "workspace:*",
     "@yomi/ui-connectors": "workspace:*",
     "better-auth": "^1.2.0",
@@ -47,5 +46,11 @@
     "tailwindcss": "^3.4.0",
     "typescript": "^5.5.0",
     "wrangler": "^4.0.0"
-  }
+  },
+  "browserslist": [
+    "chrome >= 91",
+    "edge >= 91",
+    "firefox >= 90",
+    "safari >= 15"
+  ]
 }
