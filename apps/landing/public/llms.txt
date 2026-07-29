@@ -1,0 +1,17 @@
+# Yomi
+
+> Yomi is an AI productivity assistant you talk to on Telegram with text, voice notes, or
+> photos. It connects to Gmail, Google Calendar, Google Drive, Google Classroom, Google Tasks,
+> Google Meet, GitHub, Slack, Notion, and Linear, and asks for approval before it changes
+> anything.
+
+Yomi reads data only to answer the question you just asked and never stores it afterward.
+The web dashboard at [getyomi.in](https://getyomi.in) is account management (linking,
+schedules, memory, billing) — Telegram is the only chat surface.
+
+## Docs
+
+- [Docs](https://getyomi.in/docs): connectors, voice, memory, and credits
+- [Support](https://getyomi.in/support): contact and help
+- [Privacy Policy](https://getyomi.in/privacy): data handling, retention, and Google API Services User Data Policy compliance
+- [Terms of Service](https://getyomi.in/terms): terms of use

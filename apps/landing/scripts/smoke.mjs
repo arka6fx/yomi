@@ -50,6 +50,15 @@ const CHECKS = [
   { path: "/docs", check: async (res) => (res.status === 200 ? null : `got ${res.status}`) },
   { path: "/support", check: async (res) => (res.status === 200 ? null : `got ${res.status}`) },
   {
+    path: "/llms.txt",
+    check: async (res, body) => {
+      if (res.status !== 200) return `expected 200, got ${res.status}`
+      if (!body.startsWith("# ")) return "missing required H1 header"
+      if (!body.includes("](")) return "no markdown links found"
+      return null
+    },
+  },
+  {
     path: "/opengraph-image",
     check: async (res) => {
       if (res.status !== 200) return `expected 200, got ${res.status}`
