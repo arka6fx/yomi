@@ -19,11 +19,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^0.9.0",
-    "drizzle-orm": "^0.31.0"
+    "drizzle-orm": "^0.31.0",
+    "pg": "^8.12.0"
   },
   "devDependencies": {
     "@types/bun": "^1.1.0",
+    "@types/pg": "^8.11.0",
     "@yomi/eslint-config": "workspace:*",
     "@yomi/typescript-config": "workspace:*",
     "drizzle-kit": "^0.22.0",

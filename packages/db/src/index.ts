@@ -1,24 +1,36 @@
-import { neon } from "@neondatabase/serverless"
-import { drizzle } from "drizzle-orm/neon-http"
+import { readFileSync } from "node:fs"
+import { fileURLToPath } from "node:url"
+import { Pool } from "pg"
+import { drizzle } from "drizzle-orm/node-postgres"
 import * as schema from "./schema.js"
 import journal from "../drizzle/meta/_journal.json" with { type: "json" }
 
 type Db = ReturnType<typeof drizzle>
 
 let dbInstance: Db | null = null
+let pool: Pool | null = null
 
 function getDatabaseUrl() {
   const url = typeof process !== "undefined" ? process.env["DATABASE_URL"] : undefined
   if (!url) {
-    throw new Error("No database connection string was provided to neon()")
+    throw new Error("No database connection string was provided")
   }
   return url
 }
 
+// RDS presents an AWS-issued cert; verify it against AWS's own CA bundle
+// rather than disabling verification, since app<->DB traffic carries auth tokens.
+const rdsCaBundle = readFileSync(
+  fileURLToPath(new URL("../certs/rds-global-bundle.pem", import.meta.url)),
+)
+
 function getDb() {
   if (dbInstance) return dbInstance
-  const sql = neon(getDatabaseUrl())
-  dbInstance = drizzle(sql, { schema })
+  pool = new Pool({
+    connectionString: getDatabaseUrl(),
+    ssl: { ca: rdsCaBundle },
+  })
+  dbInstance = drizzle(pool, { schema })
   return dbInstance
 }
 
