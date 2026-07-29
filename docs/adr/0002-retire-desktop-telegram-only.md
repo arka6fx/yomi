@@ -28,12 +28,16 @@ we no longer ship, we make the pivot explicit: one surface, fully owned.
 
 The voice and image *capabilities* survive because they live on the Telegram
 path, not on desktop. The Telegram gateway transcribes inbound voice messages
-and synthesizes spoken replies directly via `services/transcription` and
-`services/tts`; it analyzes images the user sends. So "retire desktop" is a
-surface removal, not a capability loss — the `transcribe*`/`synthesizeSpeech`
-services and the `voice` (2/min) and `analyze` (1) credit kinds all stay. Only
-the desktop-only *screen capture* is gone; the credit description "image/screen
-analyze" becomes "image analyze".
+directly via `services/transcription`; it analyzes images the user sends. So
+"retire desktop" is a surface removal, not a capability loss — the
+`transcribe*` service and the `voice` (2/min) and `analyze` (1) credit kinds
+all stay. Only the desktop-only *screen capture* is gone; the credit
+description "image/screen analyze" becomes "image analyze".
+
+> **Superseded (2026-07-2x, see commit `344da121`):** voice *replies* (TTS,
+> `services/tts`, `synthesizeSpeech`) were removed outright afterward — Yomi
+> now transcribes inbound voice but never synthesizes spoken replies; every
+> reply is text. The `transcribe*` half of the paragraph above still holds.
 
 ## Consequences
 

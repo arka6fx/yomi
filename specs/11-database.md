@@ -1,7 +1,7 @@
 # Spec 11 - Database
 
-Database: Neon Postgres through Drizzle and `@neondatabase/serverless` HTTP
-mode.
+Database: PostgreSQL (AWS RDS) through Drizzle and `pg`/`drizzle-orm/node-postgres`.
+RDS is private (no public IP) — admin access goes through `scripts/rds-tunnel.sh`.
 
 Core tables:
 
@@ -22,5 +22,5 @@ Core tables:
   `memory_relations`, `memory_embeddings`.
 - Observability: `hook_logs` (PII redacted).
 
-Cloudflare Worker rule: use `neon()` HTTP mode only. Do not use pooled WebSocket
-clients in the Worker.
+The landing Worker does not connect to Postgres directly; all DB access goes
+through the backend API.

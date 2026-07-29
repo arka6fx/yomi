@@ -15,7 +15,7 @@ For the terse operational summary of the whole system, see the repo-root
 | [01](01-architecture.md)                 | Architecture — backend, landing, APIs                    |
 | [09](09-harness.md)                      | Harness — prompt, tools, hooks, loop guards              |
 | [10](10-memory.md)                       | Memory — backend canonical                               |
-| [11](11-database.md)                     | Database — Neon Postgres tables                          |
+| [11](11-database.md)                     | Database — PostgreSQL (AWS RDS) tables                   |
 | [12](12-backend.md)                      | Backend — Hono Worker, auth, billing, gateway            |
 | [13](13-pricing.md)                      | Pricing — pure-credit model                              |
 | [14](14-landing-page.md)                 | Landing page + dashboard                                 |

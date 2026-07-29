@@ -30,8 +30,9 @@ user data must require confirmation before the mutation. Prefer the shared
 pending-action gate where available; otherwise the tool must block until an
 explicit confirmation argument is supplied.
 
-The sidecar supplies `createPendingAction` (queueing into the per-conversation
-`PendingActionManager`, persisted under `~/.yomi/state/`), so `gateWrite()`
-gates writes on desktop exactly as the backend gates Telegram writes. Approval
-synonyms ("yes", "/approve", …) are intercepted before intent routing and
-replay the stored tool call — see `apps/sidecar/src/conversation/`.
+The desktop client and its sidecar are retired (see
+`docs/adr/0002-retire-desktop-telegram-only.md`) — Telegram is the only
+interaction surface now. `gateWrite()` gates writes backend-side via
+`apps/backend/src/services/pending-actions.ts`. Approval synonyms ("yes",
+"/approve", …) are intercepted before intent routing and replay the stored
+tool call.
