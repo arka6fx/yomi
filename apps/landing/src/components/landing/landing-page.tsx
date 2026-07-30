@@ -12,7 +12,10 @@ import { HeroActions } from "@/components/landing/HeroActions"
 import { OauthErrorRedirect } from "@/components/landing/OauthErrorRedirect"
 import { PlanButton } from "@/components/landing/PlanButton"
 import Nav from "@/components/Nav"
-import { ConnectorIcon } from "@yomi/ui-connectors"
+// Deliberately the /icons subpath, not the package root. The root barrel also re-exports
+// three "use client" components, so importing anything from it makes those client entry
+// points and ships all ~50 connector SVGs (116 KiB) to the browser for a server-only page.
+import { ConnectorIcon } from "@yomi/ui-connectors/icons"
 
 // Plays out once on load: user's message lands, Yomi "types," then replies
 // with the approve chip — a small proof of the approval-before-action promise
@@ -248,7 +251,7 @@ export function LandingPage() {
                       </a>
                     </p>
                   </div>
-                  <HeroActions />
+                  <HeroActions telegramIcon={<ConnectorIcon id="telegram" size={17} />} />
                 </div>
               </div>
 
