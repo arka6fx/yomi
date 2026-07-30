@@ -111,6 +111,18 @@ const CHECKS = [
       return null
     },
   },
+  {
+    // Every check here fetches cold, which is how a 3xx-range bug shipped unnoticed: 304
+    // Not Modified was being read as a redirect-to-nowhere and answered with a 404, so
+    // only repeat visitors with a warm cache saw broken fonts and icons. Revalidate an
+    // asset the way a returning browser does and require 304 or 200 — never 404.
+    path: "/site.webmanifest",
+    conditional: true,
+    check: async (res) => {
+      if (res.status === 304 || res.status === 200) return null
+      return `conditional request got ${res.status} — 304 handled as a redirect?`
+    },
+  },
   ...[
     ["/features", "/#features"],
     ["/pricing", "/#pricing"],
@@ -129,15 +141,23 @@ const CHECKS = [
   })),
 ]
 
-async function run({ path, check, redirect }) {
+async function run({ path, check, redirect, conditional }) {
   let last = "no attempt made"
   for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
     try {
+      const headers = { "cache-control": "no-cache" }
+      if (conditional) {
+        // read the live etag first, then replay it the way a warm browser cache would
+        const probe = await fetch(`${BASE}${path}`, { headers })
+        const etag = probe.headers.get("etag")
+        if (!etag) return `no etag on ${path}, cannot test revalidation`
+        headers["if-none-match"] = etag
+      }
       const res = await fetch(`${BASE}${path}`, {
         redirect: redirect ?? "follow",
-        headers: { "cache-control": "no-cache" },
+        headers,
       })
-      const body = redirect === "manual" ? "" : await res.text()
+      const body = redirect === "manual" || conditional ? "" : await res.text()
       const failure = await check(res, body)
       if (!failure) return null
       last = failure
