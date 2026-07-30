@@ -82,14 +82,9 @@ export default function LandingFooter() {
             <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:block sm:space-y-3">
               {/* Support email is one unbreakable token — force-wrap it or it
                   overflows its grid cell into the adjacent Website column. */}
-              {/* Name only — this must read as the exact app name on the Google OAuth
-                  consent screen ("Yomi"); the descriptor stays a separate line so the
-                  branding review can't read "Yomi: AI Productivity Assistant" as a
-                  mismatched app name. */}
               <div>
                 <p className="text-muted-foreground/90">Product</p>
-                <p className="text-foreground">Yomi</p>
-                <p className="text-xs text-muted-foreground/90">AI productivity assistant</p>
+                <p className="text-foreground">Yomi: AI Productivity Assistant</p>
               </div>
               <div>
                 <p className="text-muted-foreground/90">Developer</p>

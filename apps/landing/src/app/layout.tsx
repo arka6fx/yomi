@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://getyomi.in"),
   title: {
     template: "%s | Yomi",
-    default: "Yomi — AI assistant on Telegram for your apps",
+    default: "Yomi: AI assistant on Telegram for your apps",
   },
   description: META_DESC,
   authors: [{ name: "Arka Garai", url: "https://getyomi.in" }],
@@ -44,20 +44,20 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "https://getyomi.in",
     siteName: "Yomi",
-    title: "Yomi — AI assistant on Telegram for your apps",
+    title: "Yomi: AI assistant on Telegram for your apps",
     description: META_DESC,
     images: [
       {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "Yomi — AI assistant on Telegram for your apps",
+        alt: "Yomi: AI assistant on Telegram for your apps",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Yomi — AI assistant on Telegram for your apps",
+    title: "Yomi: AI assistant on Telegram for your apps",
     description: META_DESC,
     images: ["/opengraph-image"],
     creator: "@yomi_app",
