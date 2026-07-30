@@ -1,0 +1,20 @@
+# The repo is stored LF, but a Windows checkout with core.autocrlf=true writes CRLF to
+# disk, and prettier is configured endOfLine: "lf" — so `format:check` failed on every
+# text file locally while passing in CI, where the checkout is already LF. Pinning the
+# working tree to LF here overrides core.autocrlf and makes the two agree everywhere.
+* text=auto eol=lf
+
+# Binaries must never be line-ending converted.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.mp4 binary
+*.zip binary
