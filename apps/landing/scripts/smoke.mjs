@@ -111,6 +111,20 @@ const CHECKS = [
       return null
     },
   },
+  ...["/docs//", "/docs%2F"].map((path) => ({
+    // The over-correction had a second half: the worker only modelled two of the binding's
+    // normalizations, so a URL that names a real page via a duplicate slash or an escaped
+    // one was answered with a 404 instead of its canonical redirect. A leading "//docs" is
+    // the same bug but fetch normalizes it before it leaves the client — unit test only.
+    path,
+    redirect: "manual",
+    check: async (res) => {
+      if (res.status !== 307) return `expected 307, got ${res.status}`
+      const location = res.headers.get("location") ?? ""
+      if (!location.endsWith("/docs")) return `redirects to ${location}, expected /docs`
+      return null
+    },
+  })),
   {
     // Every check here fetches cold, which is how a 3xx-range bug shipped unnoticed: 304
     // Not Modified was being read as a redirect-to-nowhere and answered with a 404, so
