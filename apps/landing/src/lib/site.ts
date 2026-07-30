@@ -14,7 +14,9 @@ export const TITLE_TEMPLATE = "%s – Yomi"
 export const SITE_DESC =
   "The AI assistant that lives in your Telegram. Text, talk, or send a photo — Yomi acts across Gmail, Calendar, Drive, GitHub, Slack, and Notion, and asks first."
 
-const pageTitle = (title: string) => TITLE_TEMPLATE.replace("%s", title)
+// Next applies TITLE_TEMPLATE via the metadata export; this is for global-error, which
+// replaces the root layout and so has to render its own <title>.
+export const pageTitle = (title: string) => TITLE_TEMPLATE.replace("%s", title)
 
 const OG_IMAGE = { url: "/opengraph-image", width: 1200, height: 630 }
 
