@@ -32,6 +32,12 @@ jobs:
             exit 1
           fi
 
+      # Never ran here before, so formatting drifted across 269 files unnoticed while
+      # `format:check` also failed locally for an unrelated reason (CRLF checkout) that
+      # masked it.
+      - name: Format
+        run: bun run format:check
+
       - name: Lint
         run: bun run lint
 
