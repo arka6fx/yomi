@@ -49,13 +49,23 @@ function withSecurityHeaders(response: Response): Response {
 //
 // Redirects that normalise a *real* asset's URL still have to be honoured, and they are
 // not distinguishable by target alone: "/index.html" legitimately normalises to "/",
-// exactly like a missing path does. They are distinguishable by whether the target is
-// what you get by stripping a redundant suffix off the requested path.
-function normalizeAssetPath(pathname: string): string {
+// exactly like a missing path does. They are distinguishable by whether the requested
+// path and the target canonicalise to the same thing — a miss always targets "/" no
+// matter what was asked for, so only a real asset's own URL can round-trip.
+//
+// This has to model every normalisation the binding performs, or a real page 404s: it
+// also percent-decodes and collapses duplicate slashes, so "//docs", "/docs//" and
+// "/docs%2F" are all live URLs for "/docs" that used to be answered with a 404.
+function canonicalizeAssetPath(pathname: string): string {
   let out = pathname
+  try {
+    out = decodeURIComponent(out)
+  } catch {
+    // malformed escape — compare the raw form rather than throwing
+  }
+  out = out.replace(/\/{2,}/g, "/").replace(/\/+$/, "")
   if (out.endsWith("/index.html")) out = out.slice(0, -"/index.html".length)
   else if (out.endsWith(".html")) out = out.slice(0, -".html".length)
-  if (out.length > 1 && out.endsWith("/")) out = out.slice(0, -1)
   return out === "" ? "/" : out
 }
 
@@ -66,7 +76,7 @@ function normalizeAssetPath(pathname: string): string {
 // visitors got broken assets.
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
 
-function isUrlNormalizingRedirect(requested: URL, location: string | null): boolean {
+export function isUrlNormalizingRedirect(requested: URL, location: string | null): boolean {
   if (!location) return false
   let target: URL
   try {
@@ -75,7 +85,7 @@ function isUrlNormalizingRedirect(requested: URL, location: string | null): bool
     return false
   }
   if (target.origin !== requested.origin) return false
-  return target.pathname === normalizeAssetPath(requested.pathname)
+  return canonicalizeAssetPath(target.pathname) === canonicalizeAssetPath(requested.pathname)
 }
 
 export default {
