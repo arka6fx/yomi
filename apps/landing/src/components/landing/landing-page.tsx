@@ -36,53 +36,33 @@ function TelegramHeroCard() {
         Yomi on Telegram
       </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.9 }}
-        className="flex justify-end"
-      >
+      <div className="animate-msg-in flex justify-end">
         <p className="max-w-[80%] rounded-2xl rounded-tr-sm bg-foreground/[0.06] px-3.5 py-2 text-sm text-foreground">
           Move my 3pm to Thursday and tell Sarah
         </p>
-      </motion.div>
+      </div>
 
       {/* grid stacking (not absolute) so the card grows to fit whichever
           overlapping child — indicator or reply — is tallest right now */}
       <div className="relative mt-2 grid">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: [0, 1, 1, 0] }}
-          transition={{ duration: 1.6, delay: 1.5, times: [0, 0.2, 0.8, 1] }}
-          className="col-start-1 row-start-1 flex h-fit items-center gap-1 rounded-2xl rounded-tl-sm bg-primary/10 px-4 py-3"
-        >
+        <div className="hero-typing col-start-1 row-start-1 flex h-fit items-center gap-1 rounded-2xl rounded-tl-sm bg-primary/10 px-4 py-3">
           {[0, 1, 2].map((i) => (
-            <motion.span
+            <span
               key={i}
-              className="h-1.5 w-1.5 rounded-full bg-primary/50"
-              animate={{ opacity: [0.3, 1, 0.3] }}
-              transition={{ duration: 0.9, repeat: 2, delay: i * 0.15 }}
+              // staggered to match the indicator's own 1.5s start
+              style={{ animationDelay: `${1.5 + i * 0.15}s` }}
+              className="hero-typing-dot h-1.5 w-1.5 rounded-full bg-primary/50"
             />
           ))}
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 3 }}
-          className="col-start-1 row-start-1 h-fit max-w-[85%] rounded-2xl rounded-tl-sm bg-primary/10 px-3.5 py-2.5 text-sm text-foreground"
-        >
+        <div className="animate-reply-in col-start-1 row-start-1 h-fit max-w-[85%] rounded-2xl rounded-tl-sm bg-primary/10 px-3.5 py-2.5 text-sm text-foreground">
           <p>Done — moved to Thursday 3pm. Drafted a note to Sarah.</p>
-          <motion.p
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3, delay: 3.4, type: "spring", stiffness: 300, damping: 20 }}
-            className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground"
-          >
+          <p className="animate-chip-in mt-2 inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground">
             <Check size={12} />
             Approve to send
-          </motion.p>
-        </motion.div>
+          </p>
+        </div>
       </div>
     </div>
   )
@@ -292,12 +272,7 @@ export function LandingPage() {
                   <span className="sr-only"> — AI productivity assistant on Telegram</span>
                 </h1>
 
-                <motion.div
-                  initial={{ opacity: 0, y: 22 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.35 }}
-                  className="pb-1 lg:pb-6"
-                >
+                <div className="animate-card-rise pb-1 lg:pb-6">
                   {/* the hero's one visual: a real exchange, not a stock photo —
                     plays out as Yomi actually replies, doubling as proof of
                     the approval-before-action promise */}
@@ -353,7 +328,7 @@ export function LandingPage() {
                       Text Yomi
                     </Link>
                   </div>
-                </motion.div>
+                </div>
               </div>
 
               <motion.div

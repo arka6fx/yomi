@@ -21,7 +21,7 @@ export default function LandingFooter() {
   const year = new Date().getFullYear()
 
   return (
-    <footer className="relative overflow-hidden border-t border-border">
+    <footer className="footer-wordmark relative overflow-hidden border-t border-border">
       <div className="relative z-10 mx-auto max-w-6xl px-6 py-10 sm:py-16">
         <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:gap-10 lg:grid-cols-4">
           <div className="col-span-2 sm:col-span-1">
@@ -113,14 +113,7 @@ export default function LandingFooter() {
           </div>
         </div>
       </div>
-
-      {/* decorative ghost wordmark — non-interactive, no fabricated stat */}
-      <p
-        aria-hidden="true"
-        className="pointer-events-none select-none overflow-hidden whitespace-nowrap pb-4 text-center font-accent text-[18vw] italic leading-none text-foreground/[0.05] sm:text-[14vw]"
-      >
-        Yomi
-      </p>
+      {/* decorative ghost wordmark renders from .footer-wordmark::after — see globals.css */}
     </footer>
   )
 }
