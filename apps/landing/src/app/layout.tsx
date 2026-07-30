@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { Inter, Instrument_Serif, JetBrains_Mono } from "next/font/google"
 import { Providers } from "@/components/providers"
+import { SITE_DESC, SITE_NAME, SITE_TITLE, TITLE_TEMPLATE } from "@/lib/site"
 import { cn } from "@/lib/utils"
 import "./globals.css"
 
@@ -24,16 +25,13 @@ const mono = JetBrains_Mono({
   weight: ["400", "500"],
 })
 
-const META_DESC =
-  "Yomi is an AI assistant on Telegram that connects to Gmail, Calendar, Drive, Classroom, Tasks, Contacts, Meet, GitHub, Notion, Slack, and Linear. Message it with text, voice, or a photo and get answers without switching apps."
-
 export const metadata: Metadata = {
   metadataBase: new URL("https://getyomi.in"),
   title: {
-    template: "%s | Yomi",
-    default: "Yomi: AI assistant on Telegram for your apps",
+    template: TITLE_TEMPLATE,
+    default: SITE_TITLE,
   },
-  description: META_DESC,
+  description: SITE_DESC,
   authors: [{ name: "Arka Garai", url: "https://getyomi.in" }],
   creator: "Arka Garai",
   publisher: "Yomi",
@@ -43,22 +41,22 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "https://getyomi.in",
-    siteName: "Yomi",
-    title: "Yomi: AI assistant on Telegram for your apps",
-    description: META_DESC,
+    siteName: SITE_NAME,
+    title: SITE_TITLE,
+    description: SITE_DESC,
     images: [
       {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "Yomi: AI assistant on Telegram for your apps",
+        alt: SITE_TITLE,
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Yomi: AI assistant on Telegram for your apps",
-    description: META_DESC,
+    title: SITE_TITLE,
+    description: SITE_DESC,
     images: ["/opengraph-image"],
     creator: "@yomi_app",
   },

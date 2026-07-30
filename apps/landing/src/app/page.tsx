@@ -1,27 +1,15 @@
 import type { Metadata } from "next"
 import { LandingPage } from "@/components/landing/landing-page"
+import { SITE_DESC } from "@/lib/site"
 
 // static prerender — LandingPage forwards ?error= to /signin client-side
 export const dynamic = "force-static"
 
-const TITLE = "Yomi: AI Productivity Assistant on Telegram"
-const DESC =
-  "Yomi is an AI assistant on Telegram that acts across Gmail, Calendar, Drive, Classroom, Tasks, Meet, GitHub, Slack, Notion, and Linear. Message it with text, voice, or a photo — ask in plain language, approve every change."
-
+// title/description/og/twitter are all inherited from the root layout, whose defaults
+// are the home page's. Overriding openGraph here replaced the whole object and silently
+// dropped siteName, locale, and the image.
 export const metadata: Metadata = {
-  title: { absolute: TITLE },
-  description: DESC,
   alternates: { canonical: "https://getyomi.in" },
-  openGraph: {
-    title: TITLE,
-    description: DESC,
-    url: "https://getyomi.in",
-    type: "website",
-  },
-  twitter: {
-    title: TITLE,
-    description: DESC,
-  },
 }
 
 const jsonLd = {
@@ -32,7 +20,7 @@ const jsonLd = {
       "@id": "https://getyomi.in/#website",
       url: "https://getyomi.in",
       name: "Yomi",
-      description: DESC,
+      description: SITE_DESC,
       publisher: { "@id": "https://getyomi.in/#organization" },
     },
     {
@@ -57,7 +45,7 @@ const jsonLd = {
       "@type": "SoftwareApplication",
       "@id": "https://getyomi.in/#app",
       name: "Yomi",
-      description: DESC,
+      description: SITE_DESC,
       url: "https://getyomi.in",
 
       applicationCategory: "ProductivityApplication",

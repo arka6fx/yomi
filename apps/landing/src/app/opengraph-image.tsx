@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og"
+import { SITE_DESC, SITE_TITLE } from "@/lib/site"
 
-export const alt = "Yomi: AI assistant on Telegram for your apps"
+export const alt = SITE_TITLE
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 
@@ -83,8 +84,7 @@ export default function Image() {
           fontWeight: 400,
         }}
       >
-        AI assistant on Telegram that connects to Gmail, Calendar, Drive, GitHub, Slack &amp;
-        Notion. Text, talk, or send a photo — Yomi asks before it changes anything.
+        {SITE_DESC}
       </div>
 
       {/* Domain */}

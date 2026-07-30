@@ -1,13 +1,14 @@
 import type { Metadata } from "next"
+import { pageMetadata } from "@/lib/site"
 import Nav from "@/components/Nav"
 import LandingFooter from "@/components/landing/LandingFooter"
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Privacy Policy",
   description:
     "Read Yomi's Privacy Policy: how we handle your data, what Google API scopes we request, and your rights to access, export, or delete your information.",
-  alternates: { canonical: "https://getyomi.in/privacy" },
-}
+  path: "/privacy",
+})
 
 export default function PrivacyPage() {
   return (
