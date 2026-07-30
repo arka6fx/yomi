@@ -4,9 +4,7 @@ import { LandingPage } from "@/components/landing/landing-page"
 // static prerender — LandingPage forwards ?error= to /signin client-side
 export const dynamic = "force-static"
 
-// dash, not a colon — the app name is exactly "Yomi" (matching the Google OAuth
-// consent screen); everything after the dash reads as a descriptor, not the name
-const TITLE = "Yomi — AI productivity assistant on Telegram"
+const TITLE = "Yomi: AI Productivity Assistant on Telegram"
 const DESC =
   "Yomi is an AI assistant on Telegram that acts across Gmail, Calendar, Drive, Classroom, Tasks, Meet, GitHub, Slack, Notion, and Linear. Message it with text, voice, or a photo — ask in plain language, approve every change."
 
