@@ -1,29 +1,18 @@
-"use client"
-
-import { useEffect, useState } from "react"
+// Deliberately NOT "use client". This page is almost entirely static marketing copy, but it
+// used to be one big client component, so all of it hydrated and it pulled framer-motion in
+// with it — measured at ~2.5s of LCP and every bit of the page's TBT. The three things that
+// genuinely need the browser are client islands (HeroActions, PlanButton,
+// OauthErrorRedirect) and the entrance animations are now CSS.
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
-import {
-  ArrowRight,
-  Check,
-  ChevronRight,
-  Layers,
-  Loader2,
-  MessageSquare,
-  Shield,
-  Zap,
-} from "lucide-react"
-import { authClient } from "@/lib/auth-client"
+import { Check, ChevronRight, Layers, MessageSquare, Shield, Zap } from "lucide-react"
 import { formatUsd } from "@/lib/local-price"
 
 import LandingFooter from "@/components/landing/LandingFooter"
+import { HeroActions } from "@/components/landing/HeroActions"
+import { OauthErrorRedirect } from "@/components/landing/OauthErrorRedirect"
+import { PlanButton } from "@/components/landing/PlanButton"
 import Nav from "@/components/Nav"
 import { ConnectorIcon } from "@yomi/ui-connectors"
-
-function scrollTo(id: string) {
-  document.getElementById(id)?.scrollIntoView({ behavior: "smooth" })
-}
 
 // Plays out once on load: user's message lands, Yomi "types," then replies
 // with the approve chip — a small proof of the approval-before-action promise
@@ -186,45 +175,9 @@ const PLANS = [
 ]
 
 export function LandingPage() {
-  const [billingLoading, setBillingLoading] = useState<string | null>(null)
-  const { data: session } = authClient.useSession()
-  const router = useRouter()
-
-  // forward oauth error redirects (/?error=) to the signin page
-  useEffect(() => {
-    const code = new URLSearchParams(window.location.search).get("error")
-    if (code) router.replace(`/signin?error=${encodeURIComponent(code)}`)
-  }, [router])
-
-  async function handlePlanClick(planKey: string) {
-    if (planKey === "explore") {
-      router.push(session ? "/dashboard" : "/signup")
-      return
-    }
-    if (!session) {
-      router.push(`/signup?plan=${planKey}`)
-      return
-    }
-    setBillingLoading(planKey)
-    try {
-      const res = await fetch("/api/billing/create-subscription", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.session.token}`,
-        },
-        body: JSON.stringify({ plan: planKey }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? "Billing error")
-      window.location.href = data.short_url
-    } catch {
-      setBillingLoading(null)
-    }
-  }
-
   return (
     <div className="landing-light site-texture-bg-light min-h-screen text-foreground">
+      <OauthErrorRedirect />
       {/* persistent sticky nav, floats above the hero */}
       <Nav />
 
@@ -235,12 +188,7 @@ export function LandingPage() {
           className="relative flex min-h-screen flex-col overflow-hidden"
         >
           <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 flex-col justify-between px-5 pb-8 pt-28 sm:px-8 sm:pb-10 lg:px-10">
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="mb-6 flex flex-wrap items-center gap-3 text-xs font-medium text-muted-foreground"
-            >
+            <div className="animate-rise-in mb-6 flex flex-wrap items-center gap-3 text-xs font-medium text-muted-foreground">
               <span className="rounded-full border border-border bg-card/70 px-3 py-1.5 backdrop-blur-md">
                 Early access
               </span>
@@ -250,7 +198,7 @@ export function LandingPage() {
               </span>
               <span className="hidden h-1 w-1 rounded-full bg-border sm:block" />
               <span>On Telegram · text, voice, or photo</span>
-            </motion.div>
+            </div>
 
             {/* big centered tagline — the heart of the hero */}
             <div className="animate-hero-rise-delayed mx-auto flex max-w-5xl flex-col items-center px-2 text-center">
@@ -300,43 +248,11 @@ export function LandingPage() {
                       </a>
                     </p>
                   </div>
-                  <div className="grid w-full max-w-md grid-cols-2 gap-3">
-                    <Link
-                      href={session ? "/dashboard" : "/signup"}
-                      className="group inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
-                    >
-                      {session ? "Go to dashboard" : "Get started"}
-                      <span className="grid h-6 w-6 place-items-center rounded-full bg-primary-foreground text-primary transition group-hover:translate-x-0.5">
-                        <ArrowRight size={14} />
-                      </span>
-                    </Link>
-                    <button
-                      onClick={() => scrollTo("how-it-works")}
-                      className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-border bg-card/60 px-5 text-sm font-semibold text-foreground backdrop-blur-md transition hover:bg-card/80"
-                    >
-                      See how it works
-                    </button>
-                    <Link
-                      // Signed-in users go straight to the Telegram connect flow;
-                      // signup's callbackURL already sends new users there too, so
-                      // this used to hard-code /signup and re-prompt already
-                      // logged-in users to sign up all over again.
-                      href={session ? "/link" : "/signup"}
-                      className="col-span-2 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card/60 px-5 text-sm font-semibold text-foreground backdrop-blur-md transition hover:bg-card/80"
-                    >
-                      <ConnectorIcon id="telegram" size={17} />
-                      Text Yomi
-                    </Link>
-                  </div>
+                  <HeroActions />
                 </div>
               </div>
 
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.9, delay: 0.6 }}
-                className="mt-6 grid gap-3 border-t border-border pt-4 text-sm text-muted-foreground sm:grid-cols-3"
-              >
+              <div className="animate-fade-in mt-6 grid gap-3 border-t border-border pt-4 text-sm text-muted-foreground sm:grid-cols-3">
                 <span className="flex items-center gap-2">
                   <MessageSquare size={15} className="text-primary" />
                   Text, voice, or photo
@@ -349,7 +265,7 @@ export function LandingPage() {
                   <Shield size={15} className="text-primary" />
                   Never stored
                 </span>
-              </motion.div>
+              </div>
             </div>
           </div>
         </section>
@@ -561,15 +477,8 @@ export function LandingPage() {
           </div>
 
           <div className="grid gap-5 sm:grid-cols-3">
-            {FEATURES.map((feature, i) => (
-              <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="rounded-2xl glass-card p-6"
-              >
+            {FEATURES.map((feature) => (
+              <div key={feature.title} className="rounded-2xl glass-card p-6">
                 <h3 className="mb-2 flex items-center gap-2 font-medium text-foreground">
                   <feature.icon size={18} className="text-primary" />
                   {feature.title}
@@ -577,7 +486,7 @@ export function LandingPage() {
                 <p className="text-sm leading-relaxed text-muted-foreground">
                   {feature.description}
                 </p>
-              </motion.div>
+              </div>
             ))}
           </div>
         </section>
@@ -598,15 +507,8 @@ export function LandingPage() {
           </div>
 
           <div className="mx-auto grid max-w-4xl grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {CONNECTORS.map((c, i) => (
-              <motion.div
-                key={c.id}
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: i * 0.04 }}
-                className="flex items-start gap-3 rounded-2xl glass-card p-4"
-              >
+            {CONNECTORS.map((c) => (
+              <div key={c.id} className="flex items-start gap-3 rounded-2xl glass-card p-4">
                 <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white text-neutral-900 ring-1 ring-inset ring-black/5">
                   <ConnectorIcon id={c.id} size={28} />
                 </div>
@@ -616,7 +518,7 @@ export function LandingPage() {
                     {c.description}
                   </p>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         </section>
@@ -664,13 +566,7 @@ export function LandingPage() {
             ))}
           </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="mx-auto mt-8 max-w-3xl rounded-2xl glass-card p-6 text-sm leading-relaxed text-muted-foreground"
-          >
+          <div className="mx-auto mt-8 max-w-3xl rounded-2xl glass-card p-6 text-sm leading-relaxed text-muted-foreground">
             <p className="mb-3 font-medium text-foreground">How your data is protected</p>
             <p className="mb-3">
               Data from integrations is used only to answer your current query and is never stored
@@ -706,7 +602,7 @@ export function LandingPage() {
               </Link>{" "}
               for details on data handling and your rights.
             </p>
-          </motion.div>
+          </div>
 
           {/* Privacy & Security CTA */}
           <div className="mx-auto mt-8 flex max-w-3xl flex-col items-center gap-3 sm:flex-row sm:justify-center">
@@ -740,14 +636,10 @@ export function LandingPage() {
           </div>
 
           <div className="mx-auto grid max-w-4xl gap-5 sm:grid-cols-3">
-            {PLANS.map((plan, i) => {
+            {PLANS.map((plan) => {
               return (
-                <motion.div
+                <div
                   key={plan.name}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: i * 0.1 }}
                   className={`relative flex flex-col rounded-2xl glass-card p-6 ${
                     plan.popular
                       ? "border-primary shadow-[0_0_40px_-12px_hsl(var(--primary)/0.4)]"
@@ -792,32 +684,16 @@ export function LandingPage() {
                     ))}
                   </ul>
 
-                  <button
-                    onClick={() => handlePlanClick(plan.key)}
-                    disabled={billingLoading !== null}
-                    className={`flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium transition-colors disabled:opacity-70 ${
-                      plan.popular
-                        ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                        : "border border-border text-foreground hover:bg-muted/50"
-                    }`}
-                  >
-                    {billingLoading === plan.key && <Loader2 size={14} className="animate-spin" />}
-                    {billingLoading === plan.key ? "Redirecting..." : plan.cta}
-                  </button>
-                </motion.div>
+                  <PlanButton planKey={plan.key} label={plan.cta} popular={plan.popular} />
+                </div>
               )
             })}
           </div>
 
-          <motion.p
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            className="mt-8 text-center text-xs text-muted-foreground"
-          >
+          <p className="mt-8 text-center text-xs text-muted-foreground">
             * Credits are a simple usage balance. Explore is free every month, forever; Pro and Max
             can buy extra credit packs.
-          </motion.p>
+          </p>
         </section>
       </main>
 

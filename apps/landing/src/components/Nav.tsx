@@ -4,7 +4,6 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Menu, X } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
 import { authClient } from "@/lib/auth-client"
 import { BrandMark } from "@/components/BrandMark"
 
@@ -25,12 +24,7 @@ export default function Nav() {
 
   return (
     <div className="sticky top-3 z-50 px-4">
-      <motion.header
-        initial={{ opacity: 0, y: -14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className="relative max-w-5xl mx-auto rounded-2xl border border-border bg-card/80 backdrop-blur-xl shadow-sm"
-      >
+      <header className="animate-nav-in relative max-w-5xl mx-auto rounded-2xl border border-border bg-card/80 backdrop-blur-xl shadow-sm">
         <div className="flex items-center justify-between px-4 md:px-6 py-3">
           <BrandMark size="md" />
 
@@ -92,70 +86,64 @@ export default function Nav() {
           </div>
         </div>
 
-        <AnimatePresence>
-          {menuOpen && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              className="absolute left-0 right-0 top-full mt-2 overflow-hidden rounded-2xl border border-border bg-card shadow-lg"
-            >
-              <div className="px-4 py-3 flex flex-col gap-0.5">
-                {NAV_LINKS.map((link) => (
-                  <Link
-                    key={link.label}
-                    href={link.href}
-                    onClick={() => setMenuOpen(false)}
-                    className="py-2.5 px-3 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-                <div className="flex gap-2 mt-2 pt-2 border-t border-border">
-                  {session ? (
-                    <>
-                      <Link
-                        href="/dashboard"
-                        onClick={() => setMenuOpen(false)}
-                        className="flex-1 text-center py-2 rounded-xl text-sm text-muted-foreground border border-border hover:bg-muted/50 transition-colors"
-                      >
-                        Dashboard
-                      </Link>
-                      <button
-                        onClick={() => {
-                          setMenuOpen(false)
-                          authClient.signOut().then(() => router.push("/"))
-                        }}
-                        className="flex-1 text-center py-2 rounded-xl text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                      >
-                        Sign out
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <Link
-                        href="/signin"
-                        onClick={() => setMenuOpen(false)}
-                        className="flex-1 text-center py-2 rounded-xl text-sm text-muted-foreground border border-border hover:bg-muted/50 transition-colors"
-                      >
-                        Sign in
-                      </Link>
-                      <Link
-                        href="/signup"
-                        onClick={() => setMenuOpen(false)}
-                        className="flex-1 text-center py-2 rounded-xl text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                      >
-                        Sign up
-                      </Link>
-                    </>
-                  )}
-                </div>
+        {/* no exit animation — that was the only thing AnimatePresence was here for, and it
+            is not worth shipping an animation runtime on every route to fade a menu out */}
+        {menuOpen && (
+          <div className="animate-menu-in absolute left-0 right-0 top-full mt-2 overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
+            <div className="px-4 py-3 flex flex-col gap-0.5">
+              {NAV_LINKS.map((link) => (
+                <Link
+                  key={link.label}
+                  href={link.href}
+                  onClick={() => setMenuOpen(false)}
+                  className="py-2.5 px-3 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                >
+                  {link.label}
+                </Link>
+              ))}
+              <div className="flex gap-2 mt-2 pt-2 border-t border-border">
+                {session ? (
+                  <>
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex-1 text-center py-2 rounded-xl text-sm text-muted-foreground border border-border hover:bg-muted/50 transition-colors"
+                    >
+                      Dashboard
+                    </Link>
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false)
+                        authClient.signOut().then(() => router.push("/"))
+                      }}
+                      className="flex-1 text-center py-2 rounded-xl text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                    >
+                      Sign out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/signin"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex-1 text-center py-2 rounded-xl text-sm text-muted-foreground border border-border hover:bg-muted/50 transition-colors"
+                    >
+                      Sign in
+                    </Link>
+                    <Link
+                      href="/signup"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex-1 text-center py-2 rounded-xl text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                    >
+                      Sign up
+                    </Link>
+                  </>
+                )}
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.header>
+            </div>
+          </div>
+        )}
+      </header>
     </div>
   )
 }
