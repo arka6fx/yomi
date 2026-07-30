@@ -59,6 +59,13 @@ function normalizeAssetPath(pathname: string): string {
   return out === "" ? "/" : out
 }
 
+// Only actual redirects. 304 Not Modified is a 3xx but carries no Location, so treating
+// the whole 3xx range as redirects turned every conditional request — i.e. every repeat
+// visit with warm cache — into a 404 for fonts, icons and the webmanifest. It never showed
+// up in a fresh load, so smoke, curl and Lighthouse all passed while real returning
+// visitors got broken assets.
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
+
 function isUrlNormalizingRedirect(requested: URL, location: string | null): boolean {
   if (!location) return false
   let target: URL
@@ -94,7 +101,7 @@ export default {
     }
 
     const assetResponse = await env.ASSETS.fetch(request)
-    const isRedirect = assetResponse.status >= 300 && assetResponse.status < 400
+    const isRedirect = REDIRECT_STATUSES.has(assetResponse.status)
     const missing =
       assetResponse.status === 404 ||
       (isRedirect && !isUrlNormalizingRedirect(url, assetResponse.headers.get("location")))
