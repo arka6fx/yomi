@@ -18,8 +18,9 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react"
-import { ConnectorIcon, buildCatalog } from "@yomi/ui-connectors"
-import type { ConnectorCategory } from "@yomi/ui-connectors"
+import { ConnectorIcon } from "@yomi/ui-connectors/icons"
+import { buildCatalog } from "@yomi/ui-connectors/catalog"
+import type { ConnectorCategory } from "@yomi/ui-connectors/types"
 import LandingFooter from "@/components/landing/LandingFooter"
 import { DocsShell } from "@/components/docs/DocsShell"
 import { DocsHero } from "@/components/docs/DocsHero"

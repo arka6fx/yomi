@@ -1,13 +1,17 @@
 "use client"
 
+import type { ReactNode } from "react"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
-import { ConnectorIcon } from "@yomi/ui-connectors"
 
 // A client island purely because the labels and hrefs depend on the session. The rest of
 // the landing page is static, so it renders on the server and ships no JS.
-export function HeroActions() {
+//
+// telegramIcon arrives already rendered from the server parent rather than being imported
+// here: ConnectorIcon resolves through a runtime ICON_MAP, so naming it in a client
+// component forced all ~50 connector SVGs (116 KiB) into the browser bundle for one glyph.
+export function HeroActions({ telegramIcon }: { telegramIcon: ReactNode }) {
   const { data: session } = authClient.useSession()
 
   return (
@@ -37,7 +41,7 @@ export function HeroActions() {
         href={session ? "/link" : "/signup"}
         className="col-span-2 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card/60 px-5 text-sm font-semibold text-foreground backdrop-blur-md transition hover:bg-card/80"
       >
-        <ConnectorIcon id="telegram" size={17} />
+        {telegramIcon}
         Text Yomi
       </Link>
     </div>
