@@ -19,14 +19,10 @@ const instrumentSerif = Instrument_Serif({
   style: ["normal", "italic"],
 })
 
-// Not preloaded: mono only appears below the fold (step numbers, scope labels), so
-// preloading it just put two more font files in front of the hero on slow connections.
-// Still self-hosted — it fetches when something on the page actually asks for it.
 const mono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
   weight: ["400", "500"],
-  preload: false,
 })
 
 export const metadata: Metadata = {
