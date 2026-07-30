@@ -252,11 +252,13 @@ export function LandingPage() {
               <span>On Telegram · text, voice, or photo</span>
             </motion.div>
 
-            {/* big centered tagline — the heart of the hero */}
+            {/* big centered tagline — the heart of the hero. Names what the app
+                actually does rather than a mood: Google's OAuth branding review
+                reads the above-the-fold copy as the app's purpose statement. */}
             <div className="animate-hero-rise-delayed mx-auto flex max-w-5xl flex-col items-center px-2 text-center">
               <p className="font-serif text-5xl leading-[1.04] tracking-tight text-foreground sm:text-6xl lg:text-7xl xl:text-[5.5rem]">
-                Your <span className="text-primary">AI companion</span> for work{" "}
-                <em className="italic">and life</em>.
+                Your <span className="text-primary">AI assistant</span> for email, calendar{" "}
+                <em className="italic">and files</em>.
               </p>
             </div>
 
@@ -266,11 +268,26 @@ export function LandingPage() {
                   against the CTA panel — that pairing only exists at lg+
                   (grid-cols-[1fr_360px]), so below that it stays a normal
                   heading instead of an orphaned oversized word */}
-                <h1 className="animate-hero-rise-delayed font-accent text-4xl leading-tight tracking-normal text-foreground lg:text-[11.2rem] lg:leading-[0.82]">
-                  Yomi
-                  {/* the visible wordmark alone is a poor heading for search and screen readers */}
-                  <span className="sr-only"> — AI productivity assistant on Telegram</span>
-                </h1>
+                {/* The wordmark is the app name exactly as it appears on the Google
+                    OAuth consent screen ("Yomi"), followed by a plain-language
+                    descriptor and purpose — both must be visible above the fold and
+                    static (no framer-motion), so a reviewer's first screenshot shows
+                    the name, what the app does, and which data it touches. */}
+                <div className="animate-hero-rise-delayed">
+                  <h1 className="font-accent text-4xl leading-tight tracking-normal text-foreground lg:text-[11.2rem] lg:leading-[0.82]">
+                    Yomi
+                  </h1>
+                  <p className="mt-2 text-sm font-semibold text-foreground lg:mt-5">
+                    AI productivity assistant on Telegram
+                  </p>
+                  <p className="mt-2 max-w-[52ch] text-sm leading-relaxed text-muted-foreground">
+                    Ask Yomi in plain language and it works across your Gmail, Google Calendar,
+                    Google Drive, Google Classroom, Google Tasks, and Google Meet — plus GitHub,
+                    Slack, Notion, and Linear. It reads your data only to carry out the request you
+                    just made, and asks for your approval before anything is sent, created, or
+                    changed.
+                  </p>
+                </div>
 
                 <div className="animate-card-rise pb-1 lg:pb-6">
                   {/* the hero's one visual: a real exchange, not a stock photo —
@@ -361,14 +378,25 @@ export function LandingPage() {
           </h2>
           <div className="space-y-4 text-left text-sm leading-relaxed text-muted-foreground">
             <p>
-              Yomi is an AI productivity assistant that connects to the apps you already use so you
-              can query, analyze, and act on your work using natural language, without switching
-              apps or copy-pasting context.
+              <strong className="font-medium text-foreground">Yomi</strong> is an AI productivity
+              assistant that connects to the apps you already use so you can query, analyze, and act
+              on your work using natural language, without switching apps or copy-pasting context.
             </p>
             <p>
-              Ask Yomi to find a file, summarize a document, or pull context from your workspace,
-              all from a single interface or via Telegram. Yomi only accesses your data when you ask
-              a question, and for no other purpose.
+              You talk to Yomi on Telegram — by text, voice note, or photo. Ask it to summarize your
+              unread email, move a meeting, find a file in Drive, draft a document, check an
+              assignment due date, or open an issue on GitHub. Yomi reads the context it needs from
+              your connected apps, answers in the chat, and shows you every change for approval
+              before making it. The web dashboard at getyomi.in is where you sign in, connect apps,
+              and manage memory, schedules, and billing.
+            </p>
+            <p>
+              Yomi only accesses your data when you ask a question, and for no other purpose. It is
+              never sold, never used for advertising, and never used to train AI models — see the{" "}
+              <Link href="/privacy" className="text-primary underline underline-offset-2">
+                Privacy Policy
+              </Link>{" "}
+              for details.
             </p>
           </div>
         </section>
@@ -393,10 +421,11 @@ export function LandingPage() {
             <div className="rounded-2xl border border-primary/20 bg-primary/5 px-6 py-4 text-sm text-muted-foreground">
               <p className="mb-1 font-medium text-foreground">App purpose</p>
               <p>
-                Yomi is a personal AI assistant. It accesses your Google Drive, with your explicit
-                permission, to answer questions you ask in natural language. For example:
-                &ldquo;Find the Q3 report in my Drive.&rdquo; or &ldquo;What does the product spec
-                say about pricing?&rdquo; Yomi reads data on-demand per request and never stores it.
+                Yomi is a personal AI productivity assistant you message on Telegram. It accesses
+                your Google Drive, with your explicit permission, to answer questions you ask in
+                natural language. For example: &ldquo;Find the Q3 report in my Drive.&rdquo; or
+                &ldquo;What does the product spec say about pricing?&rdquo; Yomi reads data
+                on-demand per request and never stores it.
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
                 Yomi&apos;s use of Google API data complies with the{" "}
