@@ -71,7 +71,8 @@ const CHECKS = [
       // the edge-runtime OG route never got prerendered as a static asset — the worker
       // 404'd it and cloudflare redirected to "/", which google flagged as a broken page
       const contentType = res.headers.get("content-type") ?? ""
-      if (!contentType.startsWith("image/")) return `expected an image, got content-type ${contentType}`
+      if (!contentType.startsWith("image/"))
+        return `expected an image, got content-type ${contentType}`
       return null
     },
   },
@@ -81,6 +82,32 @@ const CHECKS = [
       if (res.status !== 200) return `expected 200, got ${res.status}`
       // a bare "Google" label fails google's oauth brand verification
       if (!body.includes("Sign in with Google")) return "google button is not branded correctly"
+      return null
+    },
+  },
+  {
+    // The asset binding answers an unknown path with a 307 to "/", and the worker used to
+    // pass that through — every dead link soft-redirected to the homepage, which Search
+    // Console reported as "Page with redirect". Must be a real 404, not a redirect and not
+    // a 200 soft-404.
+    path: "/this-path-should-never-exist-smoke",
+    redirect: "manual",
+    check: async (res) => {
+      if (res.status === 307 || res.status === 301 || res.status === 302)
+        return `soft-redirects to ${res.headers.get("location")} instead of 404ing`
+      if (res.status !== 404) return `expected 404, got ${res.status}`
+      return null
+    },
+  },
+  {
+    // The guard against over-correcting the above: dropping a redundant trailing slash is
+    // a legitimate normalization of a page that really exists, and must keep redirecting.
+    path: "/docs/",
+    redirect: "manual",
+    check: async (res) => {
+      if (res.status !== 307) return `expected 307, got ${res.status}`
+      const location = res.headers.get("location") ?? ""
+      if (!location.endsWith("/docs")) return `redirects to ${location}, expected /docs`
       return null
     },
   },
