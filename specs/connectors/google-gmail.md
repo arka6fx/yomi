@@ -10,28 +10,28 @@ Permanent deletion is intentionally not offered, so the full
 
 ## Tools
 
-| Tool                          | Type  | Purpose                                          |
-| ----------------------------- | ----- | ------------------------------------------------ |
-| `gmail-searchEmails`          | Read  | Search Gmail with Gmail query operators.         |
-| `gmail-readEmail`             | Read  | Read a message body and metadata by message ID.  |
-| `gmail-getUnreadEmails`       | Read  | List recent unread inbox messages.               |
-| `gmail-getImportantEmails`    | Read  | List important inbox messages, unread first.     |
-| `gmail-summarizeEmails`       | Read  | Fetch raw email content for summarization.       |
-| `gmail-getThread`             | Read  | Read all messages in a thread.                   |
-| `gmail-listLabels`            | Read  | List user labels and system labels.              |
-| `gmail-getAttachment`         | Read  | Get an attachment by message and attachment ID.  |
-| `gmail-listDrafts`            | Read  | List drafts.                                     |
-| `gmail-sendEmail`             | Send  | Send a new plain-text email.                     |
-| `gmail-replyToThread`         | Send  | Reply in-thread with proper threading headers.   |
-| `gmail-sendDraft`             | Send  | Send a saved draft.                              |
-| `gmail-createDraft`           | Write | Create a draft with recipients, subject, body.   |
-| `gmail-markAsRead`            | Write | Remove the unread label.                         |
-| `gmail-markAsUnread`          | Write | Add the unread label.                            |
-| `gmail-archiveEmail`          | Write | Remove the inbox label.                          |
-| `gmail-trashEmail`            | Write | Move a message to Trash.                         |
-| `gmail-applyLabels`           | Write | Add/remove labels on a message.                  |
-| `gmail-createLabel`           | Write | Create a new label.                              |
-| `gmail-saveAttachmentToDrive` | Write | Save an attachment straight into Google Drive.   |
+| Tool                          | Type  | Purpose                                         |
+| ----------------------------- | ----- | ----------------------------------------------- |
+| `gmail-searchEmails`          | Read  | Search Gmail with Gmail query operators.        |
+| `gmail-readEmail`             | Read  | Read a message body and metadata by message ID. |
+| `gmail-getUnreadEmails`       | Read  | List recent unread inbox messages.              |
+| `gmail-getImportantEmails`    | Read  | List important inbox messages, unread first.    |
+| `gmail-summarizeEmails`       | Read  | Fetch raw email content for summarization.      |
+| `gmail-getThread`             | Read  | Read all messages in a thread.                  |
+| `gmail-listLabels`            | Read  | List user labels and system labels.             |
+| `gmail-getAttachment`         | Read  | Get an attachment by message and attachment ID. |
+| `gmail-listDrafts`            | Read  | List drafts.                                    |
+| `gmail-sendEmail`             | Send  | Send a new plain-text email.                    |
+| `gmail-replyToThread`         | Send  | Reply in-thread with proper threading headers.  |
+| `gmail-sendDraft`             | Send  | Send a saved draft.                             |
+| `gmail-createDraft`           | Write | Create a draft with recipients, subject, body.  |
+| `gmail-markAsRead`            | Write | Remove the unread label.                        |
+| `gmail-markAsUnread`          | Write | Add the unread label.                           |
+| `gmail-archiveEmail`          | Write | Remove the inbox label.                         |
+| `gmail-trashEmail`            | Write | Move a message to Trash.                        |
+| `gmail-applyLabels`           | Write | Add/remove labels on a message.                 |
+| `gmail-createLabel`           | Write | Create a new label.                             |
+| `gmail-saveAttachmentToDrive` | Write | Save an attachment straight into Google Drive.  |
 
 ## Notes
 

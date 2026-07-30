@@ -8,4 +8,6 @@ export const backendComposioZohoInvoiceDef: BackendConnectorDef = {
   getDisplayName: async () => "Zoho Invoice (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("zoho-invoice") ? backendComposioZohoInvoiceDef : backendComposioZohoInvoiceDef)
+registerConnectorDef(
+  isComposioBacked("zoho-invoice") ? backendComposioZohoInvoiceDef : backendComposioZohoInvoiceDef,
+)

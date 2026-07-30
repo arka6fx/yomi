@@ -28,7 +28,10 @@ export function TelegramCard({
     <div className="overflow-hidden rounded-2xl border border-border bg-card">
       <div className="flex items-start justify-between gap-3 sm:gap-4 border-b border-border/60 p-5 sm:p-6">
         <div className="flex items-start gap-3.5">
-          <TelegramIcon size={44} className="shrink-0 drop-shadow-[0_4px_14px_rgba(34,158,217,0.35)]" />
+          <TelegramIcon
+            size={44}
+            className="shrink-0 drop-shadow-[0_4px_14px_rgba(34,158,217,0.35)]"
+          />
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-foreground">Telegram</h3>
@@ -56,11 +59,16 @@ export function TelegramCard({
             </p>
             <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
               {["Text chat", "Voice notes", "Image analysis"].map((label) => (
-                <span key={label} className="inline-flex items-center rounded-md bg-muted/60 px-1.5 py-0.5">
+                <span
+                  key={label}
+                  className="inline-flex items-center rounded-md bg-muted/60 px-1.5 py-0.5"
+                >
                   {label}
                 </span>
               ))}
-              <span className="text-muted-foreground/60">· usage draws from your credit balance</span>
+              <span className="text-muted-foreground/60">
+                · usage draws from your credit balance
+              </span>
             </div>
           </div>
         </div>
@@ -119,7 +127,10 @@ export function TelegramCard({
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Link href="/link" className="text-xs text-muted-foreground transition-colors hover:text-foreground">
+                    <Link
+                      href="/link"
+                      className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+                    >
                       Manage
                     </Link>
                     <button

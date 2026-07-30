@@ -27,4 +27,6 @@ export const backendComposioDriveDef: BackendConnectorDef = {
   },
 }
 
-registerConnectorDef(isComposioBacked("google-drive") ? backendComposioDriveDef : backendGoogleDriveDef)
+registerConnectorDef(
+  isComposioBacked("google-drive") ? backendComposioDriveDef : backendGoogleDriveDef,
+)

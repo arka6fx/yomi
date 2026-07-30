@@ -25,21 +25,21 @@ export default function PrivacyPage() {
             <Section title="Overview">
               <p>
                 Yomi is an AI assistant you talk to on Telegram — by text, voice, or images — and
-                that connects to your apps: Gmail, Google Calendar, Google Drive, Google Classroom, Google Tasks,
-                Google Meet, GitHub, Notion, Slack, and Linear. It is designed to
-                be private by default: data from your connected apps is used only to answer your
-                direct queries and is not stored, shared, or used to train AI models.
+                that connects to your apps: Gmail, Google Calendar, Google Drive, Google Classroom,
+                Google Tasks, Google Meet, GitHub, Notion, Slack, and Linear. It is designed to be
+                private by default: data from your connected apps is used only to answer your direct
+                queries and is not stored, shared, or used to train AI models.
               </p>
               <p>
                 Two rules govern everything below.{" "}
-                <strong className="text-foreground">Nothing is accessed unless you ask.</strong> Yomi
-                acts on your own data, in response to your own request, and never crawls your
+                <strong className="text-foreground">Nothing is accessed unless you ask.</strong>{" "}
+                Yomi acts on your own data, in response to your own request, and never crawls your
                 accounts in the background.{" "}
                 <strong className="text-foreground">
                   Every action that changes something is approved by you first
                 </strong>{" "}
-                — sending an email, creating an event, or saving a file shows you
-                exactly what will happen before it happens.
+                — sending an email, creating an event, or saving a file shows you exactly what will
+                happen before it happens.
               </p>
             </Section>
 
@@ -53,47 +53,46 @@ export default function PrivacyPage() {
                 <li>
                   <strong className="text-foreground">Gmail</strong> (
                   <code className="text-primary">gmail.modify</code>,{" "}
-                  <code className="text-primary">gmail.send</code>) to read, search, organize,
-                  and send emails when you ask Yomi a question about your inbox.
+                  <code className="text-primary">gmail.send</code>) to read, search, organize, and
+                  send emails when you ask Yomi a question about your inbox.
                 </li>
                 <li>
                   <strong className="text-foreground">Google Calendar</strong> (
-                  <code className="text-primary">calendar</code>) to answer schedule queries
-                  such as &ldquo;What&apos;s on my calendar today?&rdquo; and to create, update, or
-                  delete events when you ask — every change requires your approval first.
+                  <code className="text-primary">calendar</code>) to answer schedule queries such as
+                  &ldquo;What&apos;s on my calendar today?&rdquo; and to create, update, or delete
+                  events when you ask — every change requires your approval first.
                 </li>
                 <li>
                   <strong className="text-foreground">Google Drive</strong> (
-                  <code className="text-primary">drive</code>) to search and read your Drive
-                  files when you ask about them, and to create or convert documents,
-                  spreadsheets, and presentations on your request.
+                  <code className="text-primary">drive</code>) to search and read your Drive files
+                  when you ask about them, and to create or convert documents, spreadsheets, and
+                  presentations on your request.
                 </li>
                 <li>
                   <strong className="text-foreground">Google Classroom</strong> (
                   <code className="text-primary">classroom.courses.readonly</code>,{" "}
                   <code className="text-primary">classroom.coursework.me</code>,{" "}
-                  <code className="text-primary">classroom.announcements.readonly</code>) to
-                  list your classes, assignments, and announcements and check your own submission
-                  status.
+                  <code className="text-primary">classroom.announcements.readonly</code>) to list
+                  your classes, assignments, and announcements and check your own submission status.
                 </li>
                 <li>
                   <strong className="text-foreground">Google Tasks</strong> (
-                  <code className="text-primary">tasks</code>) to read your to-do lists and
-                  create, edit, complete, or delete tasks on your request.
+                  <code className="text-primary">tasks</code>) to read your to-do lists and create,
+                  edit, complete, or delete tasks on your request.
                 </li>
                 <li>
                   <strong className="text-foreground">Google Meet</strong> (
                   <code className="text-primary">meetings.space.created</code>,{" "}
                   <code className="text-primary">meetings.space.readonly</code>,{" "}
-                  <code className="text-primary">meetings.space.settings</code>) to create
-                  meeting links on your request and read your past calls — who attended and, where
-                  your plan produces one, the transcript — so we can summarise a meeting you ask
-                  about.
+                  <code className="text-primary">meetings.space.settings</code>) to create meeting
+                  links on your request and read your past calls — who attended and, where your plan
+                  produces one, the transcript — so we can summarise a meeting you ask about.
                 </li>
               </ul>
               <p>
-                <strong className="text-foreground">Limited Use.</strong> Yomi&apos;s use and transfer of
-                information received from Google APIs to any other app will adhere to the{" "}
+                <strong className="text-foreground">Limited Use.</strong> Yomi&apos;s use and
+                transfer of information received from Google APIs to any other app will adhere to
+                the{" "}
                 <a
                   href="https://developers.google.com/terms/api-services-user-data-policy"
                   target="_blank"
@@ -104,30 +103,32 @@ export default function PrivacyPage() {
                 , including the Limited Use requirements. Specifically, this data is used{" "}
                 <strong className="text-foreground">only</strong> to provide or improve user-facing
                 features that are prominent in Yomi&apos;s interface. It is{" "}
-                <strong className="text-foreground">not</strong> sold, <strong className="text-foreground">not</strong>{" "}
-                transferred to third parties except as needed to provide those features or as
-                required by law, <strong className="text-foreground">not</strong> used for advertising,
-                and <strong className="text-foreground">not</strong> used to develop, improve, or train
+                <strong className="text-foreground">not</strong> sold,{" "}
+                <strong className="text-foreground">not</strong> transferred to third parties except
+                as needed to provide those features or as required by law,{" "}
+                <strong className="text-foreground">not</strong> used for advertising, and{" "}
+                <strong className="text-foreground">not</strong> used to develop, improve, or train
                 generalised AI or machine-learning models.
               </p>
               <p>
-                <strong className="text-foreground">Human access.</strong> No human at Yomi reads your
-                Google data. The only exceptions are the ones the policy allows: with your explicit
-                consent (for example if you send us a message to debug a problem), where necessary
-                for security purposes such as investigating abuse, or where required by law.
+                <strong className="text-foreground">Human access.</strong> No human at Yomi reads
+                your Google data. The only exceptions are the ones the policy allows: with your
+                explicit consent (for example if you send us a message to debug a problem), where
+                necessary for security purposes such as investigating abuse, or where required by
+                law.
               </p>
               <p>
-                <strong className="text-foreground">Scopes we deliberately do not request.</strong> Yomi
-                does not request <code className="text-primary">https://mail.google.com/</code>,
-                so it can never permanently delete a message — the most it can do is move mail to
+                <strong className="text-foreground">Scopes we deliberately do not request.</strong>{" "}
+                Yomi does not request <code className="text-primary">https://mail.google.com/</code>
+                , so it can never permanently delete a message — the most it can do is move mail to
                 trash, which you can undo. Yomi also never submits coursework on your behalf; it
                 prepares the file and hands it back to you to attach.
               </p>
               <p>
-                <strong className="text-foreground">Retention.</strong> Content fetched from a Google API
-                to answer a request is held in memory for that request and discarded once the
-                response is returned. The exception is a file you explicitly ask Yomi to save, which
-                lives in your own Drive under your control.
+                <strong className="text-foreground">Retention.</strong> Content fetched from a
+                Google API to answer a request is held in memory for that request and discarded once
+                the response is returned. The exception is a file you explicitly ask Yomi to save,
+                which lives in your own Drive under your control.
               </p>
               <p>
                 You can revoke Yomi&apos;s access to your Google account at any time from{" "}
@@ -150,16 +151,17 @@ export default function PrivacyPage() {
                   provider identifier (Google or GitHub). No passwords stored.
                 </li>
                 <li>
-                  <strong className="text-foreground">Usage events</strong>: query count, agent runs,
-                  token usage, and cost. Used for metering and billing. No prompt content stored.
+                  <strong className="text-foreground">Usage events</strong>: query count, agent
+                  runs, token usage, and cost. Used for metering and billing. No prompt content
+                  stored.
                 </li>
                 <li>
                   <strong className="text-foreground">Device metadata</strong>: OS, app version,
                   last-seen timestamp. Used for support and compatibility.
                 </li>
                 <li>
-                  <strong className="text-foreground">Memory blobs</strong>: if cloud sync is enabled,
-                  your Yomi notepad is encrypted and synced. You can delete it at any time.
+                  <strong className="text-foreground">Memory blobs</strong>: if cloud sync is
+                  enabled, your Yomi notepad is encrypted and synced. You can delete it at any time.
                 </li>
               </ul>
             </Section>
@@ -189,14 +191,13 @@ export default function PrivacyPage() {
               <ul>
                 <li>
                   <strong className="text-foreground">Composio</strong>: integration provider for
-                  select connected apps (currently all Google connectors — Gmail,
-                  Calendar, Drive, Classroom, Tasks, Meet — plus Linear,
-                  GitHub, Slack, and Notion). When you
-                  use a Composio-backed connector, your requests to that app and their results
-                  transit Composio&apos;s servers on the way to and from the provider. Composio
-                  manages authentication and tool access and holds the connection on our behalf.
-                  For Composio-backed connectors, Yomi stores only a reference to the connection,
-                  not your access tokens. Governed by{" "}
+                  select connected apps (currently all Google connectors — Gmail, Calendar, Drive,
+                  Classroom, Tasks, Meet — plus Linear, GitHub, Slack, and Notion). When you use a
+                  Composio-backed connector, your requests to that app and their results transit
+                  Composio&apos;s servers on the way to and from the provider. Composio manages
+                  authentication and tool access and holds the connection on our behalf. For
+                  Composio-backed connectors, Yomi stores only a reference to the connection, not
+                  your access tokens. Governed by{" "}
                   <a
                     href="https://composio.dev/legal/privacy"
                     target="_blank"
@@ -208,8 +209,8 @@ export default function PrivacyPage() {
                 </li>
                 <li>
                   <strong className="text-foreground">Google APIs</strong>: Gmail, Calendar, Drive,
-                  Classroom, Tasks, and Meet data accessed on your behalf when you ask
-                  Yomi to do something. Governed by Google&apos;s{" "}
+                  Classroom, Tasks, and Meet data accessed on your behalf when you ask Yomi to do
+                  something. Governed by Google&apos;s{" "}
                   <a
                     href="https://policies.google.com/privacy"
                     target="_blank"
@@ -221,9 +222,9 @@ export default function PrivacyPage() {
                   including Limited Use requirements.
                 </li>
                 <li>
-                  <strong className="text-foreground">OpenAI</strong>: LLM inference via our proxy, plus
-                  speech-to-text for voice messages you send (Yomi always replies in text). Query
-                  content (including excerpts from connected apps) is sent only to generate a
+                  <strong className="text-foreground">OpenAI</strong>: LLM inference via our proxy,
+                  plus speech-to-text for voice messages you send (Yomi always replies in text).
+                  Query content (including excerpts from connected apps) is sent only to generate a
                   response, and is subject to their privacy policy. We do not enable training data
                   use.
                 </li>
@@ -238,8 +239,8 @@ export default function PrivacyPage() {
                   never store card details.
                 </li>
                 <li>
-                  <strong className="text-foreground">AWS RDS (Postgres)</strong>: encrypted database
-                  hosting for account data, usage events, and encrypted OAuth tokens.
+                  <strong className="text-foreground">AWS RDS (Postgres)</strong>: encrypted
+                  database hosting for account data, usage events, and encrypted OAuth tokens.
                 </li>
               </ul>
             </Section>

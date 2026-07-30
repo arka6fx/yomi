@@ -31,8 +31,8 @@ export default function NotFound() {
             This page doesn&apos;t exist.
           </h1>
           <p className="mt-5 max-w-xl text-base leading-8 text-muted-foreground">
-            The link may be out of date, or the page may have moved. Yomi itself lives on
-            Telegram — the site is just the dashboard and the docs.
+            The link may be out of date, or the page may have moved. Yomi itself lives on Telegram —
+            the site is just the dashboard and the docs.
           </p>
 
           <div className="mt-10 flex flex-wrap items-center gap-3">

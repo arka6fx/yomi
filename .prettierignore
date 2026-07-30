@@ -15,6 +15,9 @@ apps/landing/next-env.d.ts
 # Vendored examples (not part of Yomi workspace)
 examples/
 
+# Vendored plugin skills — reformatting these diverges them from upstream
+.claude/skills/
+
 bun.lockb
 *.lock
 *.enc

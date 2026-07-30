@@ -27,4 +27,6 @@ export const backendComposioClassroomDef: BackendConnectorDef = {
   },
 }
 
-registerConnectorDef(isComposioBacked("google-classroom") ? backendComposioClassroomDef : backendGoogleClassroomDef)
+registerConnectorDef(
+  isComposioBacked("google-classroom") ? backendComposioClassroomDef : backendGoogleClassroomDef,
+)

@@ -1,10 +1,18 @@
 import { describe, expect, it, mock } from "bun:test"
 import type { ConnectorContext } from "../connector-def.js"
-import { instagramComposioSpecs, makeComposioInstagramDef, publishInstagramMedia } from "./instagram.js"
+import {
+  instagramComposioSpecs,
+  makeComposioInstagramDef,
+  publishInstagramMedia,
+} from "./instagram.js"
 import type { ComposioExecutor } from "./adapter.js"
 
 describe("instagramComposioSpecs", () => {
-  it.each(["INSTAGRAM_CREATE_MEDIA_CONTAINER", "INSTAGRAM_CREATE_CAROUSEL_CONTAINER", "INSTAGRAM_CREATE_POST"])(
+  it.each([
+    "INSTAGRAM_CREATE_MEDIA_CONTAINER",
+    "INSTAGRAM_CREATE_CAROUSEL_CONTAINER",
+    "INSTAGRAM_CREATE_POST",
+  ])(
     "auto-resolves ig_user_id via INSTAGRAM_GET_USER_INFO for %s instead of trusting the model's guess",
     (slug) => {
       const spec = instagramComposioSpecs.find((s) => s.slug === slug)
@@ -46,7 +54,10 @@ describe("publishInstagramMedia", () => {
     const executor = fakeExecutor({
       INSTAGRAM_GET_USER_INFO: { id: "17841400000000000" },
       INSTAGRAM_CREATE_MEDIA_CONTAINER: { id: "container-1" },
-      INSTAGRAM_GET_POST_STATUS: [{ id: "container-1", status_code: "IN_PROGRESS" }, { id: "container-1", status_code: "FINISHED" }],
+      INSTAGRAM_GET_POST_STATUS: [
+        { id: "container-1", status_code: "IN_PROGRESS" },
+        { id: "container-1", status_code: "FINISHED" },
+      ],
       INSTAGRAM_CREATE_POST: { id: "published-1" },
     })
 
@@ -63,18 +74,40 @@ describe("publishInstagramMedia", () => {
       {
         userId: "user_1",
         slug: "INSTAGRAM_CREATE_MEDIA_CONTAINER",
-        arguments: { ig_user_id: "17841400000000000", image_url: "https://assets.example.com/logo.jpg", video_url: undefined, caption: "New logo" },
+        arguments: {
+          ig_user_id: "17841400000000000",
+          image_url: "https://assets.example.com/logo.jpg",
+          video_url: undefined,
+          caption: "New logo",
+        },
       },
-      { userId: "user_1", slug: "INSTAGRAM_GET_POST_STATUS", arguments: { creation_id: "container-1" } },
-      { userId: "user_1", slug: "INSTAGRAM_GET_POST_STATUS", arguments: { creation_id: "container-1" } },
-      { userId: "user_1", slug: "INSTAGRAM_CREATE_POST", arguments: { ig_user_id: "17841400000000000", creation_id: "container-1" } },
+      {
+        userId: "user_1",
+        slug: "INSTAGRAM_GET_POST_STATUS",
+        arguments: { creation_id: "container-1" },
+      },
+      {
+        userId: "user_1",
+        slug: "INSTAGRAM_GET_POST_STATUS",
+        arguments: { creation_id: "container-1" },
+      },
+      {
+        userId: "user_1",
+        slug: "INSTAGRAM_CREATE_POST",
+        arguments: { ig_user_id: "17841400000000000", creation_id: "container-1" },
+      },
     ])
   })
 
   it("stops and returns the error when the account can't be resolved, without touching the media APIs", async () => {
     const executor = fakeExecutor({ INSTAGRAM_GET_USER_INFO: {} })
 
-    const result = await publishInstagramMedia(executor, "user_1", { image_url: "https://x/y.jpg" }, FAST)
+    const result = await publishInstagramMedia(
+      executor,
+      "user_1",
+      { image_url: "https://x/y.jpg" },
+      FAST,
+    )
 
     expect(result).toEqual({ error: "Could not resolve the connected Instagram account." })
     expect(executor.calls).toHaveLength(1)
@@ -86,10 +119,18 @@ describe("publishInstagramMedia", () => {
       INSTAGRAM_CREATE_MEDIA_CONTAINER: { error: "Failed to create container (status 400)." },
     })
 
-    const result = await publishInstagramMedia(executor, "user_1", { image_url: "https://x/y.jpg" }, FAST)
+    const result = await publishInstagramMedia(
+      executor,
+      "user_1",
+      { image_url: "https://x/y.jpg" },
+      FAST,
+    )
 
     expect(result).toEqual({ error: "Failed to create container (status 400)." })
-    expect(executor.calls.map((c) => c.slug)).toEqual(["INSTAGRAM_GET_USER_INFO", "INSTAGRAM_CREATE_MEDIA_CONTAINER"])
+    expect(executor.calls.map((c) => c.slug)).toEqual([
+      "INSTAGRAM_GET_USER_INFO",
+      "INSTAGRAM_CREATE_MEDIA_CONTAINER",
+    ])
   })
 
   it("does not publish when Instagram reports the container as ERROR", async () => {
@@ -99,7 +140,12 @@ describe("publishInstagramMedia", () => {
       INSTAGRAM_GET_POST_STATUS: { id: "container-1", status_code: "ERROR" },
     })
 
-    const result = await publishInstagramMedia(executor, "user_1", { image_url: "https://x/y.jpg" }, FAST)
+    const result = await publishInstagramMedia(
+      executor,
+      "user_1",
+      { image_url: "https://x/y.jpg" },
+      FAST,
+    )
 
     expect(result).toEqual({ error: "Instagram couldn't process the media (status: ERROR)." })
     expect(executor.calls.map((c) => c.slug)).toEqual([
@@ -116,10 +162,15 @@ describe("publishInstagramMedia", () => {
       INSTAGRAM_GET_POST_STATUS: { id: "container-1", status_code: "IN_PROGRESS" },
     })
 
-    const result = await publishInstagramMedia(executor, "user_1", { image_url: "https://x/y.jpg" }, {
-      pollIntervalMs: 0,
-      timeoutMs: 5,
-    })
+    const result = await publishInstagramMedia(
+      executor,
+      "user_1",
+      { image_url: "https://x/y.jpg" },
+      {
+        pollIntervalMs: 0,
+        timeoutMs: 5,
+      },
+    )
 
     expect(result).toEqual({ error: "Instagram couldn't process the media (status: IN_PROGRESS)." })
   })
@@ -154,9 +205,15 @@ describe("makeComposioInstagramDef — INSTAGRAM_PUBLISH_MEDIA tool", () => {
       INSTAGRAM_CREATE_POST: { id: "published-1" },
     })
     const def = makeComposioInstagramDef(executor)
-    const tools = def.tools(buildCtx()) as Record<string, { execute: (args: unknown) => Promise<unknown> }>
+    const tools = def.tools(buildCtx()) as Record<
+      string,
+      { execute: (args: unknown) => Promise<unknown> }
+    >
 
-    const result = await tools["INSTAGRAM_PUBLISH_MEDIA"]!.execute({ image_url: "https://x/y.jpg", caption: "hi" })
+    const result = await tools["INSTAGRAM_PUBLISH_MEDIA"]!.execute({
+      image_url: "https://x/y.jpg",
+      caption: "hi",
+    })
 
     expect(result).toEqual({ id: "published-1" })
   })

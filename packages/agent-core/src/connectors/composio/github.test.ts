@@ -106,7 +106,12 @@ describe("GitHub via Composio — write gating", () => {
       action: "GITHUB_CREATE_AN_ISSUE",
       risk: "write",
       title: "Create GitHub issue: test-owner/test-repo",
-      payload: { owner: "test-owner", repo: "test-repo", title: "Found a bug", body: "Details here" },
+      payload: {
+        owner: "test-owner",
+        repo: "test-repo",
+        title: "Found a bug",
+        body: "Details here",
+      },
     })
     expect(result).toEqual({ id: "p1", status: "pending", message: "queued" })
   })

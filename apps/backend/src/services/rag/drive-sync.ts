@@ -199,8 +199,7 @@ async function incrementalStep(
         continue
       }
       const inScope =
-        knownIds.has(change.fileId) ||
-        (change.file?.parents?.includes(st.folderId) ?? false)
+        knownIds.has(change.fileId) || (change.file?.parents?.includes(st.folderId) ?? false)
       if (!inScope) continue
       if (change.file) {
         // Cost guardrail extends to incremental sync: past the per-source cap,

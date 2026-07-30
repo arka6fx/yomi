@@ -10,10 +10,12 @@ export const neonComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "NEON_RETRIEVE_PROJECTS_LIST",
     description: "List all Neon projects for the authenticated account. Read-only.",
-    parameters: z.object({
-      limit: z.number().int().optional().describe("Max results"),
-      search: z.string().optional().describe("Filter by project name/id"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        limit: z.number().int().optional().describe("Max results"),
+        search: z.string().optional().describe("Filter by project name/id"),
+      })
+      .passthrough(),
   },
   {
     slug: "NEON_ACCESS_PROJECT_DETAILS_BY_ID",
@@ -23,12 +25,22 @@ export const neonComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "NEON_GET_BRANCHES_FOR_PROJECT",
     description: "List branches for a Neon project. Read-only.",
-    parameters: z.object({ project_id: z.string().describe("Neon project ID"), search: z.string().optional().describe("Filter by branch name") }).passthrough(),
+    parameters: z
+      .object({
+        project_id: z.string().describe("Neon project ID"),
+        search: z.string().optional().describe("Filter by branch name"),
+      })
+      .passthrough(),
   },
   {
     slug: "NEON_FETCH_DATABASE_FOR_BRANCH",
     description: "List databases in a Neon branch. Read-only.",
-    parameters: z.object({ project_id: z.string().describe("Neon project ID"), branch_id: z.string().describe("Branch ID") }).passthrough(),
+    parameters: z
+      .object({
+        project_id: z.string().describe("Neon project ID"),
+        branch_id: z.string().describe("Branch ID"),
+      })
+      .passthrough(),
   },
   {
     slug: "NEON_GET_PROJECT_ENDPOINT_INFORMATION",
@@ -38,27 +50,39 @@ export const neonComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "NEON_GET_PROJECT_CONNECTION_URI",
     description: "Get the PostgreSQL connection URI for a branch/database. Read-only.",
-    parameters: z.object({
-      project_id: z.string().describe("Neon project ID"),
-      database_name: z.string().describe("Database name"),
-      role_name: z.string().describe("Database role name"),
-      branch_id: z.string().optional().describe("Branch ID (defaults to the project's default branch)"),
-      pooled: z.boolean().optional().describe("Use the pooled connection endpoint"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        project_id: z.string().describe("Neon project ID"),
+        database_name: z.string().describe("Database name"),
+        role_name: z.string().describe("Database role name"),
+        branch_id: z
+          .string()
+          .optional()
+          .describe("Branch ID (defaults to the project's default branch)"),
+        pooled: z.boolean().optional().describe("Use the pooled connection endpoint"),
+      })
+      .passthrough(),
   },
   {
     slug: "NEON_RETRIEVE_PROJECT_OPERATIONS",
     description: "List recent operations (create/restart/restore, etc.) for a project. Read-only.",
-    parameters: z.object({ project_id: z.string().describe("Neon project ID"), limit: z.number().int().optional().describe("Max results") }).passthrough(),
+    parameters: z
+      .object({
+        project_id: z.string().describe("Neon project ID"),
+        limit: z.number().int().optional().describe("Max results"),
+      })
+      .passthrough(),
   },
   {
     slug: "NEON_CREATE_PROJECT_WITH_QUOTA_AND_SETTINGS",
     description: "Create a new Neon project. Requires approval.",
-    parameters: z.object({
-      project__name: z.string().optional().describe("Project name"),
-      project__region__id: z.string().optional().describe("Region ID (e.g. 'aws-us-east-1')"),
-      project__pg__version: z.number().int().optional().describe("Postgres major version"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        project__name: z.string().optional().describe("Project name"),
+        project__region__id: z.string().optional().describe("Region ID (e.g. 'aws-us-east-1')"),
+        project__pg__version: z.number().int().optional().describe("Postgres major version"),
+      })
+      .passthrough(),
     preview: (a) => ({
       title: `Create Neon project ${String(a["project__name"] ?? "")}`,
       preview: `Create project "${String(a["project__name"] ?? "")}"`,
@@ -93,7 +117,8 @@ export function makeComposioNeonDef(executor: ComposioExecutor): ConnectorDef {
     name: "Neon",
     category: "developer",
     icon: "neon",
-    description: "Neon — serverless Postgres project/branch management and connection strings (via Composio).",
+    description:
+      "Neon — serverless Postgres project/branch management and connection strings (via Composio).",
     readOnlyByDefault: true,
     auth: {
       kind: "composio",
@@ -109,7 +134,11 @@ export function makeComposioNeonDef(executor: ComposioExecutor): ConnectorDef {
       ],
       collect: [
         { env: "COMPOSIO_API_KEY", label: "Composio API key", secret: true },
-        { env: "COMPOSIO_NEON_AUTH_CONFIG_ID", label: "Composio Neon auth config id", secret: false },
+        {
+          env: "COMPOSIO_NEON_AUTH_CONFIG_ID",
+          label: "Composio Neon auth config id",
+          secret: false,
+        },
       ],
       docsUrl: "https://docs.composio.dev/toolkits/neon",
     },

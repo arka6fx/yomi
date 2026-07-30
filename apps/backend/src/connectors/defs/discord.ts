@@ -8,4 +8,6 @@ export const backendComposioDiscordDef: BackendConnectorDef = {
   getDisplayName: async () => "Discord (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("discord") ? backendComposioDiscordDef : backendComposioDiscordDef)
+registerConnectorDef(
+  isComposioBacked("discord") ? backendComposioDiscordDef : backendComposioDiscordDef,
+)

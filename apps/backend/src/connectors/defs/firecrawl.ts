@@ -8,4 +8,6 @@ export const backendComposioFirecrawlDef: BackendConnectorDef = {
   getDisplayName: async () => "Firecrawl (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("firecrawl") ? backendComposioFirecrawlDef : backendComposioFirecrawlDef)
+registerConnectorDef(
+  isComposioBacked("firecrawl") ? backendComposioFirecrawlDef : backendComposioFirecrawlDef,
+)

@@ -31,7 +31,12 @@ describe("facebookComposioSpecs", () => {
   )
 
   it("does not attach resolvedParams to actions scoped by post/comment/message id instead of page_id", () => {
-    for (const slug of ["FACEBOOK_GET_POST", "FACEBOOK_UPDATE_POST", "FACEBOOK_DELETE_POST", "FACEBOOK_CREATE_COMMENT"]) {
+    for (const slug of [
+      "FACEBOOK_GET_POST",
+      "FACEBOOK_UPDATE_POST",
+      "FACEBOOK_DELETE_POST",
+      "FACEBOOK_CREATE_COMMENT",
+    ]) {
       const spec = facebookComposioSpecs.find((s) => s.slug === slug)
       expect(spec?.resolvedParams).toBeUndefined()
     }

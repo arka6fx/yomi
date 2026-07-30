@@ -1,9 +1,9 @@
 # Yomi
 
-AI productivity assistant. Connects to Google Workspace (Gmail, Calendar,
-Drive, Classroom), GitHub, Slack, Notion, Linear, and more so you can query,
-draft, summarize, and schedule in natural language from the web app and
-Telegram without copy-pasting context.
+AI productivity assistant. Connects to Google Workspace (Gmail, Calendar, Drive,
+Classroom), GitHub, Slack, Notion, Linear, and more so you can query, draft,
+summarize, and schedule in natural language from the web app and Telegram
+without copy-pasting context.
 
 ## Architecture
 
@@ -27,9 +27,9 @@ surface is Telegram, managed via the web dashboard (see
 
 ## Request Paths
 
-| Request         | Path                                                               | Target  |
-| --------------- | ------------------------------------------------------------------ | ------- |
-| Connector query | backend agent -> connector tools -> response                       | seconds |
+| Request         | Path                                                                | Target  |
+| --------------- | ------------------------------------------------------------------- | ------- |
+| Connector query | backend agent -> connector tools -> response                        | seconds |
 | Telegram query  | backend gateway -> backend agent -> connector/memory tools -> reply | seconds |
 
 The backend routes connector and Telegram work through the server-side agent.
@@ -114,8 +114,8 @@ bun run db:studio
 ## Test Layout
 
 Tests are package-local and colocated next to the code they exercise
-(`apps/backend/src/routes/usage.test.ts`, not a root `tests/` folder).
-Turborepo schedules and caches by package, so colocated tests let
+(`apps/backend/src/routes/usage.test.ts`, not a root `tests/` folder). Turborepo
+schedules and caches by package, so colocated tests let
 `turbo run test --filter ...` and `--affected` run only the packages that
 changed.
 
@@ -147,12 +147,12 @@ http://localhost:3001/api/auth/callback/google
 
 ## Speech And Models
 
-| Capability | Provider / default                                      |
-| ---------- | ------------------------------------------------------- |
-| Fast LLM   | OpenAI `gpt-5.4-mini`                                   |
-| Agent LLM  | OpenAI `gpt-5.5`                                        |
-| Embeddings | OpenAI `text-embedding-3-small`                         |
-| STT        | OpenAI `gpt-4o-mini-transcribe`                          |
+| Capability | Provider / default              |
+| ---------- | ------------------------------- |
+| Fast LLM   | OpenAI `gpt-5.4-mini`           |
+| Agent LLM  | OpenAI `gpt-5.5`                |
+| Embeddings | OpenAI `text-embedding-3-small` |
+| STT        | OpenAI `gpt-4o-mini-transcribe` |
 
 STT transcribes incoming Telegram voice notes to text via the standard
 `OPENAI_*` env vars (`api.openai.com`). Yomi never replies with synthesized
@@ -161,9 +161,9 @@ voice — every reply is text.
 ## Specs
 
 Implementation references live in [`specs/`](specs/README.md): system specs,
-per-connector docs, and runbooks. Start with the
-[index](specs/README.md), then [00-overview](specs/00-overview.md). The terse
-operational summary agents load is [`AGENTS.md`](./AGENTS.md).
+per-connector docs, and runbooks. Start with the [index](specs/README.md), then
+[00-overview](specs/00-overview.md). The terse operational summary agents load
+is [`AGENTS.md`](./AGENTS.md).
 
 ## Privacy
 

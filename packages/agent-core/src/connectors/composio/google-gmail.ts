@@ -12,7 +12,10 @@ export const gmailComposioSpecs: ComposioToolSpec[] = [
       "Search Gmail for emails matching a query string. Supports Gmail search operators like from:, subject:, after:, before:, has:attachment, is:unread. Omit the query to list recent mail. Returns matching emails with ID, sender, subject, date, and snippet. Read-only.",
     parameters: z
       .object({
-        query: z.string().optional().describe("Gmail search query, e.g. 'from:boss@example.com is:unread'"),
+        query: z
+          .string()
+          .optional()
+          .describe("Gmail search query, e.g. 'from:boss@example.com is:unread'"),
         max_results: z.number().int().min(1).max(50).optional().describe("Max results to return"),
       })
       .passthrough(),
@@ -111,7 +114,10 @@ export const gmailComposioSpecs: ComposioToolSpec[] = [
     parameters: z
       .object({
         message_id: z.string().describe("The Gmail message ID to modify"),
-        add_label_ids: z.array(z.string()).optional().describe("Label IDs to add, e.g. STARRED, IMPORTANT"),
+        add_label_ids: z
+          .array(z.string())
+          .optional()
+          .describe("Label IDs to add, e.g. STARRED, IMPORTANT"),
         remove_label_ids: z
           .array(z.string())
           .optional()
@@ -122,7 +128,9 @@ export const gmailComposioSpecs: ComposioToolSpec[] = [
       title: "Modify Gmail labels",
       preview: [
         `Message: ${String(a["message_id"] ?? "").slice(0, 12)}`,
-        (a["add_label_ids"] as string[])?.length ? `Add labels: ${(a["add_label_ids"] as string[]).join(", ")}` : null,
+        (a["add_label_ids"] as string[])?.length
+          ? `Add labels: ${(a["add_label_ids"] as string[]).join(", ")}`
+          : null,
         (a["remove_label_ids"] as string[])?.length
           ? `Remove labels: ${(a["remove_label_ids"] as string[]).join(", ")}`
           : null,
@@ -134,8 +142,7 @@ export const gmailComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "GMAIL_MOVE_TO_TRASH",
-    description:
-      "Move a Gmail message to the trash. Requires user approval before it runs.",
+    description: "Move a Gmail message to the trash. Requires user approval before it runs.",
     parameters: z
       .object({
         message_id: z.string().describe("The Gmail message ID to trash"),
@@ -149,8 +156,7 @@ export const gmailComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "GMAIL_CREATE_LABEL",
-    description:
-      "Create a new Gmail label. Requires user approval before it runs.",
+    description: "Create a new Gmail label. Requires user approval before it runs.",
     parameters: z
       .object({
         label_name: z.string().describe("Name of the new label"),
@@ -237,7 +243,11 @@ export function makeComposioGmailDef(executor: ComposioExecutor): ConnectorDef {
       ],
       collect: [
         { env: "COMPOSIO_API_KEY", label: "Composio API key", secret: true },
-        { env: "COMPOSIO_GMAIL_AUTH_CONFIG_ID", label: "Composio Gmail auth config id", secret: false },
+        {
+          env: "COMPOSIO_GMAIL_AUTH_CONFIG_ID",
+          label: "Composio Gmail auth config id",
+          secret: false,
+        },
       ],
       docsUrl: "https://docs.composio.dev/toolkits/gmail",
     },

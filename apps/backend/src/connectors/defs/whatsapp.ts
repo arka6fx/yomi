@@ -8,4 +8,6 @@ export const backendComposioWhatsAppDef: BackendConnectorDef = {
   getDisplayName: async () => "WhatsApp (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("whatsapp") ? backendComposioWhatsAppDef : backendComposioWhatsAppDef)
+registerConnectorDef(
+  isComposioBacked("whatsapp") ? backendComposioWhatsAppDef : backendComposioWhatsAppDef,
+)

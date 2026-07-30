@@ -62,7 +62,11 @@ describe("Slides via Composio — read pass-through", () => {
 
     expect(result).toEqual({ presentationId: "p1", slides: [] })
     expect(executor.calls).toEqual([
-      { userId: "user_1", slug: "GOOGLESLIDES_PRESENTATIONS_GET", arguments: { presentationId: "p1" } },
+      {
+        userId: "user_1",
+        slug: "GOOGLESLIDES_PRESENTATIONS_GET",
+        arguments: { presentationId: "p1" },
+      },
     ])
     expect(create).not.toHaveBeenCalled()
   })

@@ -8,4 +8,6 @@ export const backendComposioInstagramDef: BackendConnectorDef = {
   getDisplayName: async () => "Instagram (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("instagram") ? backendComposioInstagramDef : backendComposioInstagramDef)
+registerConnectorDef(
+  isComposioBacked("instagram") ? backendComposioInstagramDef : backendComposioInstagramDef,
+)

@@ -65,13 +65,7 @@ export function pickNextStep(connectedIds: string[]): NextStepSuggestion | null 
   return NEXT_STEP_PRIORITY.find((s) => !connected.has(s.id)) ?? null
 }
 
-export function NextStepCard({
-  connectedIds,
-  appUrl,
-}: {
-  connectedIds: string[]
-  appUrl: string
-}) {
+export function NextStepCard({ connectedIds, appUrl }: { connectedIds: string[]; appUrl: string }) {
   const suggestion = pickNextStep(connectedIds)
   if (!suggestion) return null
 

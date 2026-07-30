@@ -8,4 +8,6 @@ export const backendComposioKaggleDef: BackendConnectorDef = {
   getDisplayName: async () => "Kaggle (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("kaggle") ? backendComposioKaggleDef : backendComposioKaggleDef)
+registerConnectorDef(
+  isComposioBacked("kaggle") ? backendComposioKaggleDef : backendComposioKaggleDef,
+)

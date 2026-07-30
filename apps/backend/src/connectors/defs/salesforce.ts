@@ -8,4 +8,6 @@ export const backendComposioSalesforceDef: BackendConnectorDef = {
   getDisplayName: async () => "Salesforce (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("salesforce") ? backendComposioSalesforceDef : backendComposioSalesforceDef)
+registerConnectorDef(
+  isComposioBacked("salesforce") ? backendComposioSalesforceDef : backendComposioSalesforceDef,
+)

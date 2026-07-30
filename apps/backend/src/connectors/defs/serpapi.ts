@@ -8,4 +8,6 @@ export const backendComposioSerpapiDef: BackendConnectorDef = {
   getDisplayName: async () => "SerpApi (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("serpapi") ? backendComposioSerpapiDef : backendComposioSerpapiDef)
+registerConnectorDef(
+  isComposioBacked("serpapi") ? backendComposioSerpapiDef : backendComposioSerpapiDef,
+)

@@ -29,14 +29,17 @@ function getOrderPreview(toolName: string, args: unknown): string {
   switch (toolName) {
     case "place_food_order": {
       const previewParts = ["Place order"]
-      if (a.restaurant_id ?? a.restaurantId) previewParts.push(`at ${a.restaurant_id ?? a.restaurantId}`)
+      if (a.restaurant_id ?? a.restaurantId)
+        previewParts.push(`at ${a.restaurant_id ?? a.restaurantId}`)
       if (a.items) {
         const items = Array.isArray(a.items) ? a.items : []
-        const summary = items.map((i: Record<string, unknown>) => {
-          const name = i.name ?? i.dish_name ?? i.id ?? ""
-          const qty = i.quantity ?? i.qty ?? 1
-          return `${name} x${qty}`
-        }).join(", ")
+        const summary = items
+          .map((i: Record<string, unknown>) => {
+            const name = i.name ?? i.dish_name ?? i.id ?? ""
+            const qty = i.quantity ?? i.qty ?? 1
+            return `${name} x${qty}`
+          })
+          .join(", ")
         if (summary) previewParts.push(`(${summary})`)
       }
       if (a.total ?? a.order_total) previewParts.push(`₹${a.total ?? a.order_total}`)
@@ -46,9 +49,11 @@ function getOrderPreview(toolName: string, args: unknown): string {
       return `Checkout Instamart cart`
     case "book_table": {
       const previewParts = ["Book table"]
-      if (a.restaurant_id ?? a.restaurantId) previewParts.push(`at ${a.restaurant_id ?? a.restaurantId}`)
+      if (a.restaurant_id ?? a.restaurantId)
+        previewParts.push(`at ${a.restaurant_id ?? a.restaurantId}`)
       if (a.party_size ?? a.partySize) previewParts.push(`for ${a.party_size ?? a.partySize}`)
-      if (a.date_time ?? a.date ?? a.datetime) previewParts.push(`on ${a.date_time ?? a.date ?? a.datetime}`)
+      if (a.date_time ?? a.date ?? a.datetime)
+        previewParts.push(`on ${a.date_time ?? a.date ?? a.datetime}`)
       return previewParts.join(" ")
     }
     default:
@@ -63,10 +68,7 @@ export function wrapOrderTools(tools: ToolSet, ctx: ConnectorContext): ToolSet {
       const originalExecute = tool.execute
       wrapped[name] = {
         ...tool,
-        execute: async (
-          args: unknown,
-          options?: ToolExecutionOptions,
-        ) => {
+        execute: async (args: unknown, options?: ToolExecutionOptions) => {
           // Dineout: only free reservations are supported in v1 (Swiggy constraint).
           if (name === "book_table") {
             const a = args as Record<string, unknown>
@@ -100,10 +102,7 @@ export function wrapOrderTools(tools: ToolSet, ctx: ConnectorContext): ToolSet {
       const originalExecute = tool.execute
       wrapped[name] = {
         ...tool,
-        execute: async (
-          args: unknown,
-          options?: ToolExecutionOptions,
-        ) => {
+        execute: async (args: unknown, options?: ToolExecutionOptions) => {
           const a = args as Record<string, unknown>
           if (!a._confirmAddressSwitch) {
             return {

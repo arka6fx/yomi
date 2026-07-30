@@ -8,4 +8,6 @@ export const backendComposioOneDriveDef: BackendConnectorDef = {
   getDisplayName: async () => "OneDrive (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("one-drive") ? backendComposioOneDriveDef : backendComposioOneDriveDef)
+registerConnectorDef(
+  isComposioBacked("one-drive") ? backendComposioOneDriveDef : backendComposioOneDriveDef,
+)

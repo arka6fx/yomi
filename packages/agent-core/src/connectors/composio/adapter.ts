@@ -41,7 +41,11 @@ export interface ComposioToolSpec {
   parameters: z.ZodTypeAny
   // Builds the approval-card title/preview for a gated (write) action from its
   // args. Falls back to the slug + JSON args when omitted.
-  preview?: (args: Record<string, unknown>) => { title: string; preview: string; confirmText?: string }
+  preview?: (args: Record<string, unknown>) => {
+    title: string
+    preview: string
+    confirmText?: string
+  }
   // Names of string params that are actually file URLs. Composio's own schema
   // marks the underlying parameter `file_uploadable: true` — it wants a staged
   // `{name, mimetype, s3key}` descriptor, not a raw URL or path. Listed here,
@@ -151,7 +155,11 @@ async function stageFileParams(
   for (const param of spec.fileParams) {
     const value = staged[param]
     if (typeof value !== "string" || !value) continue
-    staged[param] = await executor.stageFile({ url: value, toolSlug: spec.slug, toolkitSlug: toolkit })
+    staged[param] = await executor.stageFile({
+      url: value,
+      toolSlug: spec.slug,
+      toolkitSlug: toolkit,
+    })
   }
   return staged
 }
@@ -255,7 +263,11 @@ export function createComposioTools(opts: CreateComposioToolsOptions): ToolFacto
                 const staged = await stageFileParams(opts.executor, spec, opts.toolkit, args)
                 const resolved = await resolveDynamicParams(opts.executor, spec, ctx.userId, staged)
                 return capComposioResult(
-                  await opts.executor.execute({ userId: ctx.userId, slug: spec.slug, arguments: resolved }),
+                  await opts.executor.execute({
+                    userId: ctx.userId,
+                    slug: spec.slug,
+                    arguments: resolved,
+                  }),
                 )
               },
             )

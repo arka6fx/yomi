@@ -26,21 +26,31 @@ export const meetComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "GOOGLEMEET_LIST_CONFERENCE_RECORDS",
-    description: "List past Google Meet conference records. Optionally filter by space, meeting code, or time range. Read-only.",
+    description:
+      "List past Google Meet conference records. Optionally filter by space, meeting code, or time range. Read-only.",
     parameters: z
       .object({
         filter: z
           .string()
           .optional()
-          .describe('EBNF filter, e.g. \'space.meeting_code = "abc-mnop-xyz"\' or \'start_time>="2024-01-01T00:00:00.000Z"\''),
-        page_size: z.number().int().min(1).max(100).optional().describe("Max records to return (default 25)"),
+          .describe(
+            "EBNF filter, e.g. 'space.meeting_code = \"abc-mnop-xyz\"' or 'start_time>=\"2024-01-01T00:00:00.000Z\"'",
+          ),
+        page_size: z
+          .number()
+          .int()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe("Max records to return (default 25)"),
         page_token: z.string().optional(),
       })
       .passthrough(),
   },
   {
     slug: "GOOGLEMEET_GET_CONFERENCE_RECORD_FOR_MEET",
-    description: "Look up a specific past conference record by space name, meeting code, or time range. Read-only.",
+    description:
+      "Look up a specific past conference record by space name, meeting code, or time range. Read-only.",
     parameters: z
       .object({
         space_name: z.string().optional().describe("Meet space resource name"),
@@ -55,7 +65,9 @@ export const meetComposioSpecs: ComposioToolSpec[] = [
     description: "Get the transcript(s) for a past Google Meet conference. Read-only.",
     parameters: z
       .object({
-        conferenceRecord_id: z.string().describe("Conference record ID, from GOOGLEMEET_LIST_CONFERENCE_RECORDS"),
+        conferenceRecord_id: z
+          .string()
+          .describe("Conference record ID, from GOOGLEMEET_LIST_CONFERENCE_RECORDS"),
       })
       .passthrough(),
   },
@@ -64,18 +76,32 @@ export const meetComposioSpecs: ComposioToolSpec[] = [
     description: "Get the recording(s) for a past Google Meet conference. Read-only.",
     parameters: z
       .object({
-        conferenceRecord_id: z.string().describe("Conference record ID, from GOOGLEMEET_LIST_CONFERENCE_RECORDS"),
+        conferenceRecord_id: z
+          .string()
+          .describe("Conference record ID, from GOOGLEMEET_LIST_CONFERENCE_RECORDS"),
       })
       .passthrough(),
   },
   {
     slug: "GOOGLEMEET_LIST_PARTICIPANT_SESSIONS",
-    description: "List participant sessions (who joined/left, and when) for a past conference. Read-only.",
+    description:
+      "List participant sessions (who joined/left, and when) for a past conference. Read-only.",
     parameters: z
       .object({
-        parent: z.string().describe("Conference record resource name, e.g. 'conferenceRecords/my-conference-123'"),
-        filter: z.string().optional().describe("EBNF filter, e.g. 'latest_end_time IS NULL' for still-active sessions"),
-        page_size: z.number().int().min(1).max(250).optional().describe("Max results (default 100)"),
+        parent: z
+          .string()
+          .describe("Conference record resource name, e.g. 'conferenceRecords/my-conference-123'"),
+        filter: z
+          .string()
+          .optional()
+          .describe("EBNF filter, e.g. 'latest_end_time IS NULL' for still-active sessions"),
+        page_size: z
+          .number()
+          .int()
+          .min(1)
+          .max(250)
+          .optional()
+          .describe("Max results (default 100)"),
         page_token: z.string().optional(),
       })
       .passthrough(),
@@ -85,7 +111,9 @@ export const meetComposioSpecs: ComposioToolSpec[] = [
     description: "Get details for a single participant session. Read-only.",
     parameters: z
       .object({
-        name: z.string().describe("Resource name, e.g. 'conferenceRecords/123456789/participants/abcdefg'"),
+        name: z
+          .string()
+          .describe("Resource name, e.g. 'conferenceRecords/123456789/participants/abcdefg'"),
       })
       .passthrough(),
   },
@@ -93,10 +121,14 @@ export const meetComposioSpecs: ComposioToolSpec[] = [
   // ── Write actions (gated) ─────────────────────────────────────
   {
     slug: "GOOGLEMEET_CREATE_MEET",
-    description: "Create a new Google Meet space (a reusable meeting link). Requires user approval before it runs.",
+    description:
+      "Create a new Google Meet space (a reusable meeting link). Requires user approval before it runs.",
     parameters: z
       .object({
-        access_type: z.enum(["OPEN", "TRUSTED", "RESTRICTED"]).optional().describe("Who can join without explicit invite"),
+        access_type: z
+          .enum(["OPEN", "TRUSTED", "RESTRICTED"])
+          .optional()
+          .describe("Who can join without explicit invite"),
         entry_point_access: z.enum(["ALL", "CREATOR_APP_ONLY"]).optional(),
       })
       .passthrough(),
@@ -121,7 +153,10 @@ export const meetComposioSpecs: ComposioToolSpec[] = [
           .passthrough()
           .optional()
           .describe("Fields to change on the space"),
-        updateMask: z.string().optional().describe("Comma-separated field names to update, or '*' for all provided fields"),
+        updateMask: z
+          .string()
+          .optional()
+          .describe("Comma-separated field names to update, or '*' for all provided fields"),
       })
       .passthrough(),
     preview: (a) => ({
@@ -138,7 +173,8 @@ export function makeComposioMeetDef(executor: ComposioExecutor): ConnectorDef {
     name: "Google Meet",
     category: "meetings",
     icon: "google-meet",
-    description: "Create meeting links and read past calls, recordings, and transcripts (via Composio).",
+    description:
+      "Create meeting links and read past calls, recordings, and transcripts (via Composio).",
     readOnlyByDefault: false,
     auth: {
       kind: "composio",
@@ -154,7 +190,11 @@ export function makeComposioMeetDef(executor: ComposioExecutor): ConnectorDef {
       ],
       collect: [
         { env: "COMPOSIO_API_KEY", label: "Composio API key", secret: true },
-        { env: "COMPOSIO_MEET_AUTH_CONFIG_ID", label: "Composio Meet auth config id", secret: false },
+        {
+          env: "COMPOSIO_MEET_AUTH_CONFIG_ID",
+          label: "Composio Meet auth config id",
+          secret: false,
+        },
       ],
       docsUrl: "https://docs.composio.dev/toolkits/googlemeet",
     },

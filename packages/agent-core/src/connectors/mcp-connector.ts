@@ -91,7 +91,9 @@ export function createMCPToolProvider(): MCPToolProvider {
 
     async close() {
       for (const [id, client] of clients) {
-        await client.close().catch(() => { /* ignore */ })
+        await client.close().catch(() => {
+          /* ignore */
+        })
         clients.delete(id)
       }
     },

@@ -48,7 +48,9 @@ describe("Meet via Composio — ConnectorDef shape", () => {
 
 describe("Meet via Composio — read pass-through", () => {
   it("executes a Meet read tool directly and returns the result", async () => {
-    const executor = fakeExecutor({ space: { name: "spaces/abc123", meetingUri: "https://meet.google.com/abc-def-ghi" } })
+    const executor = fakeExecutor({
+      space: { name: "spaces/abc123", meetingUri: "https://meet.google.com/abc-def-ghi" },
+    })
     const create = mock(async () => ({ id: "p1", status: "pending", message: "queued" }))
     const factory = createComposioTools({
       provider: "google-meet",
@@ -60,7 +62,9 @@ describe("Meet via Composio — read pass-through", () => {
 
     const result = await tools["GOOGLEMEET_GET_MEET"]!.execute({ space_name: "spaces/abc123" })
 
-    expect(result).toEqual({ space: { name: "spaces/abc123", meetingUri: "https://meet.google.com/abc-def-ghi" } })
+    expect(result).toEqual({
+      space: { name: "spaces/abc123", meetingUri: "https://meet.google.com/abc-def-ghi" },
+    })
     expect(executor.calls).toEqual([
       { userId: "user_1", slug: "GOOGLEMEET_GET_MEET", arguments: { space_name: "spaces/abc123" } },
     ])

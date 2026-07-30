@@ -104,7 +104,10 @@ async function embedText(input: string): Promise<number[]> {
   if (!input.trim()) return []
   const apiKey = process.env["OPENAI_API_KEY"]
   if (!apiKey) return []
-  const baseUrl = (process.env["OPENAI_BASE_URL"] ?? "https://api.openai.com/v1").replace(/\/+$/, "")
+  const baseUrl = (process.env["OPENAI_BASE_URL"] ?? "https://api.openai.com/v1").replace(
+    /\/+$/,
+    "",
+  )
   const model = process.env["OPENAI_EMBEDDING_MODEL"] ?? "text-embedding-3-small"
   const res = await fetch(`${baseUrl}/embeddings`, {
     method: "POST",
@@ -147,7 +150,11 @@ async function handleMemorySearch(
           eq(memoryEntries.isLatest, true),
         ),
       )
-      .orderBy(desc(memoryEntries.isStatic), desc(memoryEntries.confidence), desc(memoryEntries.updatedAt))
+      .orderBy(
+        desc(memoryEntries.isStatic),
+        desc(memoryEntries.confidence),
+        desc(memoryEntries.updatedAt),
+      )
       .limit(limit)) as MemorySearchRow[]
   } else {
     const queryEmbedding = await embedText(query).catch(() => [])
@@ -240,7 +247,9 @@ async function handleMemorySearch(
       order by e.is_static desc, f.score desc, e.confidence desc, e.updated_at desc
       limit ${limit}
     `)
-    rows = (Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? [])) as MemorySearchRow[]
+    rows = (
+      Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? [])
+    ) as MemorySearchRow[]
   }
 
   const memoryLines: string[] = []
@@ -353,7 +362,8 @@ async function handleMemoryAdd(
   const scope = clean(args?.scope ?? "global", 80)
   const topic = clean(args?.topic ?? "", 160)
   const summary = args?.summary !== undefined ? clean(args.summary, 500) : undefined
-  const confidence = typeof args?.confidence === "number" ? Math.max(0, Math.min(100, args.confidence)) : 70
+  const confidence =
+    typeof args?.confidence === "number" ? Math.max(0, Math.min(100, args.confidence)) : 70
   const isStatic = args?.isStatic === true
   const customId = args?.customId !== undefined ? clean(args.customId, 200) : undefined
 
@@ -361,7 +371,16 @@ async function handleMemoryAdd(
     return { content: [{ type: "text", text: "Both 'content' and 'topic' are required." }] }
   }
 
-  const payload = { content, kind: kind || "fact", scope: scope || "global", topic, summary, confidence, isStatic, customId }
+  const payload = {
+    content,
+    kind: kind || "fact",
+    scope: scope || "global",
+    topic,
+    summary,
+    confidence,
+    isStatic,
+    customId,
+  }
 
   const result = await ctx.createPendingAction({
     connector: "memory",
@@ -554,7 +573,9 @@ async function handleExecuteConnectorTool(
   await registry.init(ctx.userId)
 
   const allTools = registry.getAllDefTools()
-  const tool = Object.values(allTools).flatMap((t) => Object.values(t)).find((t) => t.name === action)
+  const tool = Object.values(allTools)
+    .flatMap((t) => Object.values(t))
+    .find((t) => t.name === action)
 
   if (!tool) {
     return {
@@ -624,31 +645,30 @@ async function handleRunYomiAgent(
     content: [
       {
         type: "text",
-        text: result.quotaError
-          ? `Quota error: ${result.text}`
-          : result.text,
+        text: result.quotaError ? `Quota error: ${result.text}` : result.text,
       },
     ],
   }
 }
 
 function createServer(ctx: McpToolContext): Server {
-  const server = new Server(
-    { name: "yomi", version: "0.1.0" },
-    { capabilities: { tools: {} } },
-  )
+  const server = new Server({ name: "yomi", version: "0.1.0" }, { capabilities: { tools: {} } })
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: [
       {
         name: "memory_search",
-        description: "Search the user's memory using hybrid vector+FTS+metadata search. Returns ranked memory entries.",
+        description:
+          "Search the user's memory using hybrid vector+FTS+metadata search. Returns ranked memory entries.",
         inputSchema: {
           type: "object",
           properties: {
             query: { type: "string", description: "Search query (empty returns recent memories)" },
             limit: { type: "number", description: "Max results (1-25, default 8)" },
-            maxChars: { type: "number", description: "Max total characters (100-20000, default 4000)" },
+            maxChars: {
+              type: "number",
+              description: "Max total characters (100-20000, default 4000)",
+            },
           },
         },
       },
@@ -670,8 +690,14 @@ function createServer(ctx: McpToolContext): Server {
           type: "object",
           properties: {
             content: { type: "string", description: "The memory content (required)" },
-            kind: { type: "string", description: "Category: fact, preference, project, decision, etc. (default: fact)" },
-            scope: { type: "string", description: "Scope: global, project, app, session (default: global)" },
+            kind: {
+              type: "string",
+              description: "Category: fact, preference, project, decision, etc. (default: fact)",
+            },
+            scope: {
+              type: "string",
+              description: "Scope: global, project, app, session (default: global)",
+            },
             topic: { type: "string", description: "Topic/key for the memory (required)" },
             summary: { type: "string", description: "Brief summary or title" },
             confidence: { type: "number", description: "Confidence 0-100 (default: 70)" },
@@ -687,9 +713,19 @@ function createServer(ctx: McpToolContext): Server {
         inputSchema: {
           type: "object",
           properties: {
-            id: { type: "string", description: "Memory ID to forget (mutually exclusive with customId/query)" },
-            customId: { type: "string", description: "Custom ID to forget (mutually exclusive with id/query)" },
-            query: { type: "string", description: "Search query to find memories to forget (mutually exclusive with id/customId)" },
+            id: {
+              type: "string",
+              description: "Memory ID to forget (mutually exclusive with customId/query)",
+            },
+            customId: {
+              type: "string",
+              description: "Custom ID to forget (mutually exclusive with id/query)",
+            },
+            query: {
+              type: "string",
+              description:
+                "Search query to find memories to forget (mutually exclusive with id/customId)",
+            },
             hard: { type: "boolean", description: "Hard delete instead of soft delete" },
           },
         },
@@ -708,7 +744,10 @@ function createServer(ctx: McpToolContext): Server {
         inputSchema: {
           type: "object",
           properties: {
-            schedule: { type: "string", description: "Schedule spec (e.g., 'every day 9am', 'every Monday 10am')" },
+            schedule: {
+              type: "string",
+              description: "Schedule spec (e.g., 'every day 9am', 'every Monday 10am')",
+            },
             prompt: { type: "string", description: "The prompt/action to run on schedule" },
             deliverTo: {
               type: "array",
@@ -732,11 +771,15 @@ function createServer(ctx: McpToolContext): Server {
       },
       {
         name: "execute_connector_tool",
-        description: "Execute a tool from a connected connector. Read tools execute directly; write/send/paid/irreversible tools require approval.",
+        description:
+          "Execute a tool from a connected connector. Read tools execute directly; write/send/paid/irreversible tools require approval.",
         inputSchema: {
           type: "object",
           properties: {
-            connector: { type: "string", description: "Connector name (e.g., 'gmail', 'google-calendar')" },
+            connector: {
+              type: "string",
+              description: "Connector name (e.g., 'gmail', 'google-calendar')",
+            },
             action: { type: "string", description: "Tool/action name to execute" },
             arguments: {
               type: "object",
@@ -748,11 +791,15 @@ function createServer(ctx: McpToolContext): Server {
       },
       {
         name: "run_yomi_agent",
-        description: "Send a text input to the Yomi agent and get a reply. The agent has access to all connected connectors (Gmail, Calendar, etc.), memory, and can perform actions on your behalf. Billed as a regular agent turn.",
+        description:
+          "Send a text input to the Yomi agent and get a reply. The agent has access to all connected connectors (Gmail, Calendar, etc.), memory, and can perform actions on your behalf. Billed as a regular agent turn.",
         inputSchema: {
           type: "object",
           properties: {
-            prompt: { type: "string", description: "The user's input/prompt for the agent (required)" },
+            prompt: {
+              type: "string",
+              description: "The user's input/prompt for the agent (required)",
+            },
             history: {
               type: "array",
               items: {
@@ -855,7 +902,11 @@ export async function handleMcpPost(
     body,
   })
 
-  const wt = (session.transport as unknown as { _webStandardTransport: { handleRequest: (req: Request) => Promise<Response> } })._webStandardTransport
+  const wt = (
+    session.transport as unknown as {
+      _webStandardTransport: { handleRequest: (req: Request) => Promise<Response> }
+    }
+  )._webStandardTransport
   const response = await wt.handleRequest(req)
 
   const newSessionId = response.headers.get("mcp-session-id")
@@ -866,10 +917,7 @@ export async function handleMcpPost(
   return response
 }
 
-export async function handleMcpGet(
-  mcpSessionId: string,
-  _userId: string,
-): Promise<Response> {
+export async function handleMcpGet(mcpSessionId: string, _userId: string): Promise<Response> {
   const session = sessions.get(mcpSessionId)
   if (!session) return new Response("Session not found", { status: 404 })
 
@@ -881,7 +929,11 @@ export async function handleMcpGet(
     },
   })
 
-  const wt = (session.transport as unknown as { _webStandardTransport: { handleRequest: (req: Request) => Promise<Response> } })._webStandardTransport
+  const wt = (
+    session.transport as unknown as {
+      _webStandardTransport: { handleRequest: (req: Request) => Promise<Response> }
+    }
+  )._webStandardTransport
   return wt.handleRequest(req)
 }
 
@@ -896,7 +948,11 @@ export async function handleMcpDelete(mcpSessionId: string): Promise<Response> {
     },
   })
 
-  const wt = (session.transport as unknown as { _webStandardTransport: { handleRequest: (req: Request) => Promise<Response> } })._webStandardTransport
+  const wt = (
+    session.transport as unknown as {
+      _webStandardTransport: { handleRequest: (req: Request) => Promise<Response> }
+    }
+  )._webStandardTransport
   const response = await wt.handleRequest(req)
   sessions.delete(mcpSessionId)
   return response

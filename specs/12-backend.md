@@ -80,11 +80,11 @@ Clients never receive provider keys directly.
 
 ## Voice Notes
 
-There is no client-facing STT/TTS HTTP proxy. Incoming Telegram voice notes
-are downloaded and transcribed inline by the gateway via
-`services/transcription.ts` (OpenAI `gpt-4o-mini-transcribe`); the transcript
-is charged at `recordGatewayCreditAddon` (kind `request_voice`, per actual
-minute). Yomi never replies with synthesized voice — every reply is text.
+There is no client-facing STT/TTS HTTP proxy. Incoming Telegram voice notes are
+downloaded and transcribed inline by the gateway via `services/transcription.ts`
+(OpenAI `gpt-4o-mini-transcribe`); the transcript is charged at
+`recordGatewayCreditAddon` (kind `request_voice`, per actual minute). Yomi never
+replies with synthesized voice — every reply is text.
 
 ## Cloud RAG API
 

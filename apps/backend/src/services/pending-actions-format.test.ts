@@ -32,7 +32,10 @@ describe("formatActionResult", () => {
 
   it("includes the hint when the tool offers one", () => {
     const text = formatActionResult(
-      { error: "Google Meet only manages spaces it created", hint: "Use meet-createSpace instead." },
+      {
+        error: "Google Meet only manages spaces it created",
+        hint: "Use meet-createSpace instead.",
+      },
       "Done: x",
     )
     expect(text).toContain("Use meet-createSpace instead.")

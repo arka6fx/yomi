@@ -88,18 +88,18 @@ export default function TermsPage() {
             <Section title="Explore plan and limits">
               <p>
                 Explore is a free plan with a monthly credit allowance that renews automatically,
-                provided as-is. We
-                may adjust its limits at any time. Sustained abuse (for example, creating multiple
-                accounts to circumvent the credit allowance) may result in suspension.
+                provided as-is. We may adjust its limits at any time. Sustained abuse (for example,
+                creating multiple accounts to circumvent the credit allowance) may result in
+                suspension.
               </p>
             </Section>
 
             <Section title="Connected accounts">
               <p>
                 Yomi connects to third-party services on your instruction: Gmail, Google Calendar,
-                Google Drive, Google Classroom, Google Tasks, Google Meet, GitHub,
-                Slack, Notion, and Linear. You connect each one individually, and you can disconnect
-                any of them at any time from your dashboard.
+                Google Drive, Google Classroom, Google Tasks, Google Meet, GitHub, Slack, Notion,
+                and Linear. You connect each one individually, and you can disconnect any of them at
+                any time from your dashboard.
               </p>
               <ul>
                 <li>

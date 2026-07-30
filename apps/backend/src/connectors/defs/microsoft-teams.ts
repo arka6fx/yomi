@@ -8,4 +8,8 @@ export const backendComposioMicrosoftTeamsDef: BackendConnectorDef = {
   getDisplayName: async () => "Microsoft Teams (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("microsoft-teams") ? backendComposioMicrosoftTeamsDef : backendComposioMicrosoftTeamsDef)
+registerConnectorDef(
+  isComposioBacked("microsoft-teams")
+    ? backendComposioMicrosoftTeamsDef
+    : backendComposioMicrosoftTeamsDef,
+)

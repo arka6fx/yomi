@@ -81,7 +81,10 @@ describe("Drive via Composio — write gating", () => {
     })
     const tools = factory(buildCtx({ createPendingAction: create }))
 
-    await tools["GOOGLEDRIVE_CREATE_FILE_FROM_TEXT"]!.execute({ file_name: "New Doc", text_content: "Hello" })
+    await tools["GOOGLEDRIVE_CREATE_FILE_FROM_TEXT"]!.execute({
+      file_name: "New Doc",
+      text_content: "Hello",
+    })
 
     expect(executor.calls).toEqual([])
     const arg = create.mock.calls[0]![0] as Record<string, unknown>

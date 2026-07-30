@@ -1,6 +1,10 @@
 import { describe, expect, it, mock } from "bun:test"
 import type { ConnectorContext } from "../connector-def.js"
-import { makeComposioClassroomDef, classroomComposioSpecs, CLASSROOM_TOOLKIT } from "./google-classroom.js"
+import {
+  makeComposioClassroomDef,
+  classroomComposioSpecs,
+  CLASSROOM_TOOLKIT,
+} from "./google-classroom.js"
 import { createComposioTools } from "./adapter.js"
 import type { ComposioExecutor } from "./adapter.js"
 
@@ -84,7 +88,11 @@ describe("Classroom via Composio — read pass-through", () => {
 
     expect(result).toEqual({ courseWork: [{ id: "cw1", title: "Homework 1" }] })
     expect(executor.calls).toEqual([
-      { userId: "user_1", slug: "GOOGLE_CLASSROOM_COURSE_WORK_LIST", arguments: { courseId: "c1" } },
+      {
+        userId: "user_1",
+        slug: "GOOGLE_CLASSROOM_COURSE_WORK_LIST",
+        arguments: { courseId: "c1" },
+      },
     ])
   })
 })

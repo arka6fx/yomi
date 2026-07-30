@@ -8,7 +8,8 @@ export const slackComposioSpecs: ComposioToolSpec[] = [
   // ── Read actions ──────────────────────────────────────────────
   {
     slug: "SLACK_LIST_CONVERSATIONS",
-    description: "List public Slack channels accessible by the user. Optionally filter by type. Read-only.",
+    description:
+      "List public Slack channels accessible by the user. Optionally filter by type. Read-only.",
     parameters: z
       .object({
         limit: z.number().int().min(1).max(200).optional().describe("Max channels to return"),
@@ -36,19 +37,28 @@ export const slackComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "SLACK_LIST_ALL_USERS",
-    description:
-      "List all users in the Slack workspace with profile details. Read-only.",
+    description: "List all users in the Slack workspace with profile details. Read-only.",
     parameters: z
       .object({
-        limit: z.number().int().min(1).max(200).optional().describe("Max users to return (Slack may error on large workspaces if omitted)"),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(200)
+          .optional()
+          .describe("Max users to return (Slack may error on large workspaces if omitted)"),
         cursor: z.string().optional().describe("Pagination cursor from previous call"),
-        include_locale: z.coerce.boolean().optional().describe("Include each user's locale, e.g. 'en-US'"),
+        include_locale: z.coerce
+          .boolean()
+          .optional()
+          .describe("Include each user's locale, e.g. 'en-US'"),
       })
       .passthrough(),
   },
   {
     slug: "SLACK_FETCH_CONVERSATION_HISTORY",
-    description: "Fetch recent messages from a Slack channel. Returns message text and metadata. Read-only.",
+    description:
+      "Fetch recent messages from a Slack channel. Returns message text and metadata. Read-only.",
     parameters: z
       .object({
         channel: z.string().describe("Channel ID (e.g. C01234567)"),
@@ -94,7 +104,10 @@ export const slackComposioSpecs: ComposioToolSpec[] = [
         channel: z.string().describe("Channel ID or name (e.g. C01234567 or #general)"),
         markdown_text: z.string().describe("Message text (supports Slack mrkdwn formatting)"),
         thread_ts: z.string().optional().describe("Timestamp of parent message to reply in thread"),
-        reply_broadcast: z.coerce.boolean().optional().describe("Broadcast thread reply to channel"),
+        reply_broadcast: z.coerce
+          .boolean()
+          .optional()
+          .describe("Broadcast thread reply to channel"),
       })
       .passthrough(),
     preview: (a) => ({
@@ -147,7 +160,11 @@ export function makeComposioSlackDef(executor: ComposioExecutor): ConnectorDef {
       ],
       collect: [
         { env: "COMPOSIO_API_KEY", label: "Composio API key", secret: true },
-        { env: "COMPOSIO_SLACK_AUTH_CONFIG_ID", label: "Composio Slack auth config id", secret: false },
+        {
+          env: "COMPOSIO_SLACK_AUTH_CONFIG_ID",
+          label: "Composio Slack auth config id",
+          secret: false,
+        },
       ],
       docsUrl: "https://docs.composio.dev/toolkits/slack",
     },

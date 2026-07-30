@@ -34,5 +34,5 @@ The desktop client and its sidecar are retired (see
 `docs/adr/0002-retire-desktop-telegram-only.md`) — Telegram is the only
 interaction surface now. `gateWrite()` gates writes backend-side via
 `apps/backend/src/services/pending-actions.ts`. Approval synonyms ("yes",
-"/approve", …) are intercepted before intent routing and replay the stored
-tool call.
+"/approve", …) are intercepted before intent routing and replay the stored tool
+call.

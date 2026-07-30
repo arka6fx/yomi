@@ -8,4 +8,6 @@ export const backendComposioOutlookDef: BackendConnectorDef = {
   getDisplayName: async () => "Outlook (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("outlook") ? backendComposioOutlookDef : backendComposioOutlookDef)
+registerConnectorDef(
+  isComposioBacked("outlook") ? backendComposioOutlookDef : backendComposioOutlookDef,
+)

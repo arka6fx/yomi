@@ -105,22 +105,28 @@ const GOOGLE_REVOKE_URL = "https://oauth2.googleapis.com/revoke"
 // naive startsWith("google") prefix match would wrongly sweep them into the
 // checks below, and could suppress revocation when the user disconnects
 // their actual last native Google connector while one of these stays connected.
-const COMPOSIO_ONLY_GOOGLE_IDS = new Set(["google-docs", "google-sheets", "google-slides", "google-maps"])
+const COMPOSIO_ONLY_GOOGLE_IDS = new Set([
+  "google-docs",
+  "google-sheets",
+  "google-slides",
+  "google-maps",
+])
 
 export function shouldRevokeGoogleGrant(
   disconnecting: string,
   connectedProviders: string[],
 ): boolean {
-  if (!disconnecting.startsWith("google") || COMPOSIO_ONLY_GOOGLE_IDS.has(disconnecting)) return false
+  if (!disconnecting.startsWith("google") || COMPOSIO_ONLY_GOOGLE_IDS.has(disconnecting))
+    return false
   return !connectedProviders.some(
     (p) => p.startsWith("google") && p !== disconnecting && !COMPOSIO_ONLY_GOOGLE_IDS.has(p),
   )
 }
 // Scope source of truth is the Gmail ConnectorDef — this legacy /connect/google
 // route predates the generic /connect/:id path but must request identical scopes.
-const GOOGLE_SCOPES = (googleGmailDef.auth.kind === "oauth2" ? googleGmailDef.auth.scopes : []).join(
-  " ",
-)
+const GOOGLE_SCOPES = (
+  googleGmailDef.auth.kind === "oauth2" ? googleGmailDef.auth.scopes : []
+).join(" ")
 
 function googleClientId(): string {
   const v = process.env.GOOGLE_INTEGRATIONS_CLIENT_ID
@@ -260,7 +266,9 @@ integrationsRouter.get("/connect/google", authenticate, async (c) => {
       const base = process.env.BETTER_AUTH_BASE_URL ?? "http://localhost:3001"
       const state = encodeState(user.id)
       const callbackUrl = `${base}/api/integrations/composio/callback/google?state=${encodeURIComponent(state)}`
-      const { redirectUrl } = await initiateComposioConnection(user.id, composioDef, { callbackUrl })
+      const { redirectUrl } = await initiateComposioConnection(user.id, composioDef, {
+        callbackUrl,
+      })
       return c.redirect(redirectUrl)
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Composio connect failed"
@@ -629,84 +637,76 @@ integrationsRouter.get("/composio/callback/:id", async (c) => {
 
 // ── Connect: API key (POST) ──────────────────────────────────────────────────
 
-integrationsRouter.post(
-  "/connect/api-key/:id",
-  authenticate,
-  async (c) => {
-    const id = c.req.param("id") ?? ""
-    const userId = c.get("user").id
-    // Submitting credentials IS consent — only an explicit prior revocation
-    // blocks connecting; undecided users get connector_data granted on success.
-    const consent = await checkConsent(userId, "connector_data")
-    if (consent.decided && !consent.allowed) {
-      return c.json({ error: "Connector data access is disabled in your privacy settings" }, 403)
-    }
-    const def = getConnectorDef(id)
-    if (!def) return c.json({ error: `Unknown connector: ${id}` }, 404)
-    if (def.auth.kind !== "api_key") return c.json({ error: "Not an api_key connector" }, 400)
+integrationsRouter.post("/connect/api-key/:id", authenticate, async (c) => {
+  const id = c.req.param("id") ?? ""
+  const userId = c.get("user").id
+  // Submitting credentials IS consent — only an explicit prior revocation
+  // blocks connecting; undecided users get connector_data granted on success.
+  const consent = await checkConsent(userId, "connector_data")
+  if (consent.decided && !consent.allowed) {
+    return c.json({ error: "Connector data access is disabled in your privacy settings" }, 403)
+  }
+  const def = getConnectorDef(id)
+  if (!def) return c.json({ error: `Unknown connector: ${id}` }, 404)
+  if (def.auth.kind !== "api_key") return c.json({ error: "Not an api_key connector" }, 400)
 
-    let fields: Record<string, string>
+  let fields: Record<string, string>
+  try {
+    const body = await c.req.json()
+    fields = body.fields as Record<string, string>
+    if (!fields) throw new Error("fields required")
+  } catch {
+    return c.json({ error: "Invalid body" }, 400)
+  }
+
+  // Optional live verification
+  if (def.auth.verify) {
     try {
-      const body = await c.req.json()
-      fields = body.fields as Record<string, string>
-      if (!fields) throw new Error("fields required")
-    } catch {
-      return c.json({ error: "Invalid body" }, 400)
+      const ok = await def.auth.verify(fields)
+      if (!ok) return c.json({ error: "API key verification failed" }, 422)
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : "Verification failed" }, 422)
     }
+  }
 
-    // Optional live verification
-    if (def.auth.verify) {
-      try {
-        const ok = await def.auth.verify(fields)
-        if (!ok) return c.json({ error: "API key verification failed" }, 422)
-      } catch (err) {
-        return c.json({ error: err instanceof Error ? err.message : "Verification failed" }, 422)
-      }
-    }
-
-    await storeApiKeyCredential(def, userId, fields)
-    await grantConsentIfUndecided(userId, ["connector_data"], "connector_api_key").catch((err) =>
-      console.warn("[yomi/integrations] connector consent grant failed:", err),
-    )
-    return c.json({ ok: true })
-  },
-)
+  await storeApiKeyCredential(def, userId, fields)
+  await grantConsentIfUndecided(userId, ["connector_data"], "connector_api_key").catch((err) =>
+    console.warn("[yomi/integrations] connector consent grant failed:", err),
+  )
+  return c.json({ ok: true })
+})
 
 // ── Connect: Connection string / DSN (POST) ──────────────────────────────────
 
-integrationsRouter.post(
-  "/connect/dsn/:id",
-  authenticate,
-  async (c) => {
-    const id = c.req.param("id") ?? ""
-    const userId = c.get("user").id
-    // Submitting credentials IS consent — only an explicit prior revocation
-    // blocks connecting; undecided users get connector_data granted on success.
-    const consent = await checkConsent(userId, "connector_data")
-    if (consent.decided && !consent.allowed) {
-      return c.json({ error: "Connector data access is disabled in your privacy settings" }, 403)
-    }
-    const def = getConnectorDef(id)
-    if (!def) return c.json({ error: `Unknown connector: ${id}` }, 404)
-    if (def.auth.kind !== "connection_string")
-      return c.json({ error: "Not a connection_string connector" }, 400)
+integrationsRouter.post("/connect/dsn/:id", authenticate, async (c) => {
+  const id = c.req.param("id") ?? ""
+  const userId = c.get("user").id
+  // Submitting credentials IS consent — only an explicit prior revocation
+  // blocks connecting; undecided users get connector_data granted on success.
+  const consent = await checkConsent(userId, "connector_data")
+  if (consent.decided && !consent.allowed) {
+    return c.json({ error: "Connector data access is disabled in your privacy settings" }, 403)
+  }
+  const def = getConnectorDef(id)
+  if (!def) return c.json({ error: `Unknown connector: ${id}` }, 404)
+  if (def.auth.kind !== "connection_string")
+    return c.json({ error: "Not a connection_string connector" }, 400)
 
-    let dsn: string
-    try {
-      const body = await c.req.json()
-      dsn = body.dsn as string
-      if (!dsn) throw new Error("dsn required")
-    } catch {
-      return c.json({ error: "Invalid body — expected { dsn: string }" }, 400)
-    }
+  let dsn: string
+  try {
+    const body = await c.req.json()
+    dsn = body.dsn as string
+    if (!dsn) throw new Error("dsn required")
+  } catch {
+    return c.json({ error: "Invalid body — expected { dsn: string }" }, 400)
+  }
 
-    await storeConnectionString(def, userId, dsn)
-    await grantConsentIfUndecided(userId, ["connector_data"], "connector_dsn").catch((err) =>
-      console.warn("[yomi/integrations] connector consent grant failed:", err),
-    )
-    return c.json({ ok: true })
-  },
-)
+  await storeConnectionString(def, userId, dsn)
+  await grantConsentIfUndecided(userId, ["connector_data"], "connector_dsn").catch((err) =>
+    console.warn("[yomi/integrations] connector consent grant failed:", err),
+  )
+  return c.json({ ok: true })
+})
 
 // ── Disconnect integration ───────────────────────────────────────────────────
 

@@ -38,12 +38,12 @@ privacy-relevant files:
 
 ### 2.1 Existing Data Stores
 
-| Store                                 | Purpose                                                                                         | Privacy status                                  |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| Postgres via Drizzle                  | Canonical app, auth, billing, memory, RAG, usage, connector data                                | Primary privacy surface                         |
-| Better Auth tables                    | User, sessions, OAuth accounts, verification, orgs                                              | Contains profile, sessions, provider tokens     |
-| Sidecar environment and local runtime | Session token, local pipeline, cloud memory calls                                               | Needs preference enforcement before cloud calls |
-| Desktop app runtime                   | Capture, auth, IPC, sidecar process                                                             | Needs consent and capture status integration    |
+| Store                                 | Purpose                                                                              | Privacy status                                  |
+| ------------------------------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| Postgres via Drizzle                  | Canonical app, auth, billing, memory, RAG, usage, connector data                     | Primary privacy surface                         |
+| Better Auth tables                    | User, sessions, OAuth accounts, verification, orgs                                   | Contains profile, sessions, provider tokens     |
+| Sidecar environment and local runtime | Session token, local pipeline, cloud memory calls                                    | Needs preference enforcement before cloud calls |
+| Desktop app runtime                   | Capture, auth, IPC, sidecar process                                                  | Needs consent and capture status integration    |
 | External providers                    | OpenAI-compatible, ElevenLabs, Dodo, Google, GitHub, Notion, Slack, Linear, Telegram | Requires disclosure and data flow tracking      |
 
 ### 2.2 Existing Privacy Controls

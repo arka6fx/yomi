@@ -8,4 +8,6 @@ export const backendComposioFirefliesDef: BackendConnectorDef = {
   getDisplayName: async () => "Fireflies (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("fireflies") ? backendComposioFirefliesDef : backendComposioFirefliesDef)
+registerConnectorDef(
+  isComposioBacked("fireflies") ? backendComposioFirefliesDef : backendComposioFirefliesDef,
+)

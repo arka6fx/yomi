@@ -98,7 +98,9 @@ export async function closeAgentSession(input: {
   const session = sessions[0]
   if (session) {
     summarizeSession(session.id).catch((err) => {
-      console.warn(`[agent-sessions] summarization failed for ${session.id}: ${err instanceof Error ? err.message : String(err)}`)
+      console.warn(
+        `[agent-sessions] summarization failed for ${session.id}: ${err instanceof Error ? err.message : String(err)}`,
+      )
     })
   }
 }
@@ -110,8 +112,14 @@ export async function summarizeSession(sessionId: string): Promise<void> {
     .where(eq(agentMessages.sessionId, sessionId))
     .orderBy(asc(agentMessages.createdAt))
 
-  const userMsgs = messages.filter((m) => m.role === "user").map((m) => m.content).filter(Boolean)
-  const assistantMsgs = messages.filter((m) => m.role === "assistant").map((m) => m.content).filter(Boolean)
+  const userMsgs = messages
+    .filter((m) => m.role === "user")
+    .map((m) => m.content)
+    .filter(Boolean)
+  const assistantMsgs = messages
+    .filter((m) => m.role === "assistant")
+    .map((m) => m.content)
+    .filter(Boolean)
   if (userMsgs.length === 0 && assistantMsgs.length === 0) return
 
   const conversation = [
@@ -133,7 +141,8 @@ export async function summarizeSession(sessionId: string): Promise<void> {
         title: { type: "string", description: "Short title for this conversation (max 8 words)" },
         summary: {
           type: "string",
-          description: "2-3 sentence summary of key decisions, facts, and user preferences revealed",
+          description:
+            "2-3 sentence summary of key decisions, facts, and user preferences revealed",
         },
       },
     }),
@@ -232,7 +241,9 @@ export async function searchSessions(
     LIMIT ${limit}
   `)
 
-  const rows = (Array.isArray(fused) ? fused : ((fused as { rows?: unknown[] }).rows ?? [])) as SessionRow[]
+  const rows = (
+    Array.isArray(fused) ? fused : ((fused as { rows?: unknown[] }).rows ?? [])
+  ) as SessionRow[]
 
   const results: SessionRecallResult[] = await Promise.all(
     rows.map(async (row) => {

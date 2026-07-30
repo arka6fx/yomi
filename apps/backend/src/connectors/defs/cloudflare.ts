@@ -8,4 +8,6 @@ export const backendComposioCloudflareDef: BackendConnectorDef = {
   getDisplayName: async () => "Cloudflare (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("cloudflare") ? backendComposioCloudflareDef : backendComposioCloudflareDef)
+registerConnectorDef(
+  isComposioBacked("cloudflare") ? backendComposioCloudflareDef : backendComposioCloudflareDef,
+)

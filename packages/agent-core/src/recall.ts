@@ -15,17 +15,14 @@ export interface SessionRecallResult {
   }[]
 }
 
-export type RecallSearchFn = (
-  query: string,
-  limit: number,
-) => Promise<SessionRecallResult[]>
+export type RecallSearchFn = (query: string, limit: number) => Promise<SessionRecallResult[]>
 
 export function createRecallTool(search: RecallSearchFn) {
   return tool({
     description:
       "Search past conversations the user had with Yomi. Use this when the user asks " +
-      "\"what did we discuss last week?\", \"remind me what I asked about X\", or " +
-      "\"what did we decide about Y?\". Returns summarized results from closed sessions.",
+      '"what did we discuss last week?", "remind me what I asked about X", or ' +
+      '"what did we decide about Y?". Returns summarized results from closed sessions.',
     parameters: z.object({
       query: z
         .string()

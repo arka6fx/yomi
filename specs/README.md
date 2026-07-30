@@ -9,19 +9,19 @@ For the terse operational summary of the whole system, see the repo-root
 
 ## System
 
-| Spec                                     | Topic                                                    |
-| ---------------------------------------- | -------------------------------------------------------- |
-| [00](00-overview.md)                     | Overview — surfaces, paths, memory model                 |
-| [01](01-architecture.md)                 | Architecture — backend, landing, APIs                    |
-| [09](09-harness.md)                      | Harness — prompt, tools, hooks, loop guards              |
-| [10](10-memory.md)                       | Memory — backend canonical                               |
-| [11](11-database.md)                     | Database — PostgreSQL (AWS RDS) tables                   |
-| [12](12-backend.md)                      | Backend — Hono Worker, auth, billing, gateway            |
-| [13](13-pricing.md)                      | Pricing — pure-credit model                              |
-| [14](14-landing-page.md)                 | Landing page + dashboard                                 |
-| [15](15-dashboard-credits-connectors.md) | Dashboard credits + connectors                           |
-| [16](16-rag.md)                          | RAG — retrieval + Drive auto-sync                        |
-| [19](19-hermes-features.md)              | Agent features                                           |
+| Spec                                     | Topic                                         |
+| ---------------------------------------- | --------------------------------------------- |
+| [00](00-overview.md)                     | Overview — surfaces, paths, memory model      |
+| [01](01-architecture.md)                 | Architecture — backend, landing, APIs         |
+| [09](09-harness.md)                      | Harness — prompt, tools, hooks, loop guards   |
+| [10](10-memory.md)                       | Memory — backend canonical                    |
+| [11](11-database.md)                     | Database — PostgreSQL (AWS RDS) tables        |
+| [12](12-backend.md)                      | Backend — Hono Worker, auth, billing, gateway |
+| [13](13-pricing.md)                      | Pricing — pure-credit model                   |
+| [14](14-landing-page.md)                 | Landing page + dashboard                      |
+| [15](15-dashboard-credits-connectors.md) | Dashboard credits + connectors                |
+| [16](16-rag.md)                          | RAG — retrieval + Drive auto-sync             |
+| [19](19-hermes-features.md)              | Agent features                                |
 
 ## Connectors
 

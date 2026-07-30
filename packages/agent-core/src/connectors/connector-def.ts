@@ -46,9 +46,8 @@ export function connectorError(err: unknown): { error: string; hint?: string } {
   }
   // Same Meta policy, WhatsApp's version: free-form replies only within 24h of the
   // customer's last message; outside that window only pre-approved templates can be sent.
-  const isWhatsAppWindow = /re-?engagement message|"error_subcode"\s*:\s*131047|"code"\s*:\s*131047/i.test(
-    msg,
-  )
+  const isWhatsAppWindow =
+    /re-?engagement message|"error_subcode"\s*:\s*131047|"code"\s*:\s*131047/i.test(msg)
   if (isWhatsAppWindow) {
     return {
       error: msg,
@@ -193,7 +192,7 @@ export interface ConnectorDef {
   readOnlyByDefault: boolean
   // True when the connector's tools can only run in a Node runtime (e.g. raw TCP
   // database drivers like `pg`/`mysql2`). The Cloudflare Workers backend excludes
-// these so the agent never advertises a tool it can't execute.
+  // these so the agent never advertises a tool it can't execute.
   requiresNodeRuntime?: boolean
   // True when the connector uses MCP (Model Context Protocol) for tool discovery
   // and execution. MCP connectors don't provide static tools via the `tools`
@@ -204,7 +203,5 @@ export interface ConnectorDef {
   // connects MCP servers on first use. Takes the standard ConnectorContext plus
   // a userId for auth header resolution. Returns the merged ToolSet from all
   // configured MCP servers. Only present when isMCPBased is true.
-  connectMCP?: (
-    ctx: ConnectorContext,
-  ) => Promise<ToolSet>
+  connectMCP?: (ctx: ConnectorContext) => Promise<ToolSet>
 }

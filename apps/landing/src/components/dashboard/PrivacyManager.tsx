@@ -254,7 +254,9 @@ export function PrivacyManager({ token }: TokenProp) {
                     onClick={() => togglePreference(purpose)}
                     disabled={saving === purpose}
                     className="relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50"
-                    style={{ backgroundColor: enabled ? "hsl(var(--primary))" : "hsl(var(--muted))" }}
+                    style={{
+                      backgroundColor: enabled ? "hsl(var(--primary))" : "hsl(var(--muted))",
+                    }}
                   >
                     <span
                       className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-background transition-transform"

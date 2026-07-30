@@ -407,7 +407,14 @@ export async function approvePendingAction(
         const now = new Date()
         const dayName = now.toLocaleDateString("en-US", { weekday: "long" })
         const hour = now.getHours()
-        const timeOfDay = hour >= 5 && hour < 12 ? "Morning" : hour >= 12 && hour < 17 ? "Afternoon" : hour >= 17 && hour < 22 ? "Evening" : "Night"
+        const timeOfDay =
+          hour >= 5 && hour < 12
+            ? "Morning"
+            : hour >= 12 && hour < 17
+              ? "Afternoon"
+              : hour >= 17 && hour < 22
+                ? "Evening"
+                : "Night"
 
         if (approved.action === "book_table") {
           const restaurantId = payload.restaurant_id ?? payload.restaurantId
@@ -420,7 +427,14 @@ export async function approvePendingAction(
             if (Number.isFinite(d.getTime())) {
               bookingDayName = d.toLocaleDateString("en-US", { weekday: "long" })
               const bh = d.getHours()
-              bookingTimeOfDay = bh >= 5 && bh < 12 ? "Morning" : bh >= 12 && bh < 17 ? "Afternoon" : bh >= 17 && bh < 22 ? "Evening" : "Night"
+              bookingTimeOfDay =
+                bh >= 5 && bh < 12
+                  ? "Morning"
+                  : bh >= 12 && bh < 17
+                    ? "Afternoon"
+                    : bh >= 17 && bh < 22
+                      ? "Evening"
+                      : "Night"
             }
           }
 
@@ -439,7 +453,12 @@ export async function approvePendingAction(
             ]
               .filter(Boolean)
               .join("\n"),
-            summary: ["Dineout reservation", restaurantId ? `at ${restaurantId}` : "", dateTime ? `on ${dateTime}` : "", partySize ? `for ${partySize}` : ""]
+            summary: [
+              "Dineout reservation",
+              restaurantId ? `at ${restaurantId}` : "",
+              dateTime ? `on ${dateTime}` : "",
+              partySize ? `for ${partySize}` : "",
+            ]
               .filter(Boolean)
               .join(" "),
             confidence: 90,
@@ -450,19 +469,19 @@ export async function approvePendingAction(
           const items = payload.items
           const orderTotal = payload.total ?? payload.order_total
           const itemsSummary = Array.isArray(items)
-            ? items.map((i: Record<string, unknown>) => {
-                const name = i.name ?? i.dish_name ?? i.id ?? "item"
-                const qty = i.quantity ?? i.qty ?? 1
-                return `${name} x${qty}`
-              }).join(", ")
+            ? items
+                .map((i: Record<string, unknown>) => {
+                  const name = i.name ?? i.dish_name ?? i.id ?? "item"
+                  const qty = i.quantity ?? i.qty ?? 1
+                  return `${name} x${qty}`
+                })
+                .join(", ")
             : ""
 
           await upsertMemory(approved.userId, {
             kind: "swiggy_order",
             scope: "global",
-            topic: restaurantId
-              ? `Food order from ${restaurantId}`
-              : "Swiggy food order",
+            topic: restaurantId ? `Food order from ${restaurantId}` : "Swiggy food order",
             content: [
               restaurantId ? `Restaurant: ${restaurantId}` : "",
               itemsSummary ? `Items: ${itemsSummary}` : "",
@@ -472,7 +491,12 @@ export async function approvePendingAction(
             ]
               .filter(Boolean)
               .join("\n"),
-            summary: ["Food order", restaurantId ? `from ${restaurantId}` : "", itemsSummary ? `(${itemsSummary})` : "", orderTotal ? `₹${orderTotal}` : ""]
+            summary: [
+              "Food order",
+              restaurantId ? `from ${restaurantId}` : "",
+              itemsSummary ? `(${itemsSummary})` : "",
+              orderTotal ? `₹${orderTotal}` : "",
+            ]
               .filter(Boolean)
               .join(" "),
             confidence: 90,
@@ -482,11 +506,13 @@ export async function approvePendingAction(
           const items = payload.items
           const orderTotal = payload.total ?? payload.order_total
           const itemsSummary = Array.isArray(items)
-            ? items.map((i: Record<string, unknown>) => {
-                const name = i.name ?? i.product_name ?? i.id ?? "item"
-                const qty = i.quantity ?? i.qty ?? 1
-                return `${name} x${qty}`
-              }).join(", ")
+            ? items
+                .map((i: Record<string, unknown>) => {
+                  const name = i.name ?? i.product_name ?? i.id ?? "item"
+                  const qty = i.quantity ?? i.qty ?? 1
+                  return `${name} x${qty}`
+                })
+                .join(", ")
             : ""
 
           await upsertMemory(approved.userId, {
@@ -501,7 +527,11 @@ export async function approvePendingAction(
             ]
               .filter(Boolean)
               .join("\n"),
-            summary: ["Instamart order", itemsSummary ? `(${itemsSummary})` : "", orderTotal ? `₹${orderTotal}` : ""]
+            summary: [
+              "Instamart order",
+              itemsSummary ? `(${itemsSummary})` : "",
+              orderTotal ? `₹${orderTotal}` : "",
+            ]
               .filter(Boolean)
               .join(" "),
             confidence: 90,

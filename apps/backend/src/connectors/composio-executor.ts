@@ -116,7 +116,9 @@ export function createComposioRestExecutor(config?: Partial<ComposioRestConfig>)
       })
       if (!reqRes.ok) {
         const detail = await reqRes.text().catch(() => "")
-        throw new Error(`Composio file stage request failed: status ${reqRes.status}: ${detail.slice(0, 300)}`)
+        throw new Error(
+          `Composio file stage request failed: status ${reqRes.status}: ${detail.slice(0, 300)}`,
+        )
       }
       const { key, new_presigned_url, metadata } = (await reqRes.json()) as PresignedUploadResponse
 

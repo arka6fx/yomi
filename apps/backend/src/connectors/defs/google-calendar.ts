@@ -27,4 +27,6 @@ export const backendComposioCalendarDef: BackendConnectorDef = {
   },
 }
 
-registerConnectorDef(isComposioBacked("google-calendar") ? backendComposioCalendarDef : backendGoogleCalendarDef)
+registerConnectorDef(
+  isComposioBacked("google-calendar") ? backendComposioCalendarDef : backendGoogleCalendarDef,
+)

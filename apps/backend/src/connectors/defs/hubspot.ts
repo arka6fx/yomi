@@ -8,4 +8,6 @@ export const backendComposioHubspotDef: BackendConnectorDef = {
   getDisplayName: async () => "HubSpot (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("hubspot") ? backendComposioHubspotDef : backendComposioHubspotDef)
+registerConnectorDef(
+  isComposioBacked("hubspot") ? backendComposioHubspotDef : backendComposioHubspotDef,
+)

@@ -24,7 +24,9 @@ function captureRequestBody(): { body: Record<string, unknown> | null } {
   return captured
 }
 
-function callOptions(overrides: Partial<LanguageModelV1CallOptions> = {}): LanguageModelV1CallOptions {
+function callOptions(
+  overrides: Partial<LanguageModelV1CallOptions> = {},
+): LanguageModelV1CallOptions {
   return {
     inputFormat: "messages",
     mode: { type: "regular" },

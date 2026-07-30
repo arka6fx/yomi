@@ -57,7 +57,13 @@ export const classroomComposioSpecs: ComposioToolSpec[] = [
     parameters: z
       .object({
         courseId: z.string().describe("Classroom course ID"),
-        pageSize: z.number().int().min(1).max(30).optional().describe("Max announcements to return"),
+        pageSize: z
+          .number()
+          .int()
+          .min(1)
+          .max(30)
+          .optional()
+          .describe("Max announcements to return"),
       })
       .passthrough(),
   },
@@ -81,7 +87,8 @@ export function makeComposioClassroomDef(executor: ComposioExecutor): ConnectorD
     name: "Google Classroom",
     category: "productivity",
     icon: "google-classroom",
-    description: "List courses, assignments, and announcements from Google Classroom (via Composio).",
+    description:
+      "List courses, assignments, and announcements from Google Classroom (via Composio).",
     readOnlyByDefault: true,
     auth: {
       kind: "composio",
@@ -97,7 +104,11 @@ export function makeComposioClassroomDef(executor: ComposioExecutor): ConnectorD
       ],
       collect: [
         { env: "COMPOSIO_API_KEY", label: "Composio API key", secret: true },
-        { env: "COMPOSIO_CLASSROOM_AUTH_CONFIG_ID", label: "Composio Classroom auth config id", secret: false },
+        {
+          env: "COMPOSIO_CLASSROOM_AUTH_CONFIG_ID",
+          label: "Composio Classroom auth config id",
+          secret: false,
+        },
       ],
       docsUrl: "https://docs.composio.dev/toolkits/googleclassroom",
     },

@@ -8,4 +8,8 @@ export const backendComposioGoogleCloudVisionDef: BackendConnectorDef = {
   getDisplayName: async () => "Google Cloud Vision (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("google-cloud-vision") ? backendComposioGoogleCloudVisionDef : backendComposioGoogleCloudVisionDef)
+registerConnectorDef(
+  isComposioBacked("google-cloud-vision")
+    ? backendComposioGoogleCloudVisionDef
+    : backendComposioGoogleCloudVisionDef,
+)

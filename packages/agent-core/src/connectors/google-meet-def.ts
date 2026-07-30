@@ -14,7 +14,10 @@ interface ConferenceRecord {
 // this used to report the mutation reason for BOTH — so "create a link with restricted
 // access" (rejected because RESTRICTED is a Workspace feature) came back claiming Yomi
 // can only manage spaces it created, which had nothing to do with it.
-function meetWriteError(err: unknown, op: "create" | "mutate" = "mutate"): {
+function meetWriteError(
+  err: unknown,
+  op: "create" | "mutate" = "mutate",
+): {
   error: string
   hint?: string
 } {
@@ -161,10 +164,11 @@ export function createMeetTools(ctx: ConnectorContext): ToolSet {
           args,
           async () => {
             try {
-              const space = await meetApi<{ name?: string; meetingUri?: string; meetingCode?: string }>(
-                "/spaces",
-                { method: "POST", body: JSON.stringify({ config: { accessType } }) },
-              )
+              const space = await meetApi<{
+                name?: string
+                meetingUri?: string
+                meetingCode?: string
+              }>("/spaces", { method: "POST", body: JSON.stringify({ config: { accessType } }) })
               return {
                 ok: true,
                 spaceId: space.name,
@@ -185,7 +189,9 @@ export function createMeetTools(ctx: ConnectorContext): ToolSet {
         "Get details of a Google Meet space — its link, meeting code, and access settings. " +
         "Accepts a space ID (spaces/abc123) or a meeting code from a Meet URL.",
       parameters: z.object({
-        space: z.string().describe("Space ID like spaces/abc123, or the meeting code from the Meet URL"),
+        space: z
+          .string()
+          .describe("Space ID like spaces/abc123, or the meeting code from the Meet URL"),
       }),
       execute: async ({ space }) => {
         try {
@@ -285,7 +291,9 @@ export function createMeetTools(ctx: ConnectorContext): ToolSet {
       parameters: z.object({
         conferenceRecordId: z
           .string()
-          .describe("Conference record id from meet-listConferenceRecords, e.g. conferenceRecords/abc"),
+          .describe(
+            "Conference record id from meet-listConferenceRecords, e.g. conferenceRecords/abc",
+          ),
       }),
       execute: async ({ conferenceRecordId }) => {
         try {

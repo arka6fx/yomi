@@ -57,7 +57,8 @@ export const SUGGESTION_CATALOG: SuggestionEntry[] = [
     dedupKey: "github-daily-notifications-v1",
     provider: "github",
     title: "GitHub notifications digest",
-    description: "Every evening at 6pm, unread notifications grouped by repo; review requests first.",
+    description:
+      "Every evening at 6pm, unread notifications grouped by repo; review requests first.",
     requires: { telegram: true },
     spec: {
       schedule: "every day 6pm",

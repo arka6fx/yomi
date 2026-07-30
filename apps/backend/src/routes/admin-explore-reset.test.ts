@@ -85,13 +85,41 @@ describe("admin — reset explore trials", () => {
     currentUser = { id: "owner_1", email: "owner@example.com", role: "owner" }
     state.users = [
       // holds 100 from the old explore grant — must not be reduced
-      { id: "u_rich", email: "rich@example.com", role: "user", plan: "explore", trialEndDate: new Date("2026-07-17T00:00:00Z"), deletedAt: null },
+      {
+        id: "u_rich",
+        email: "rich@example.com",
+        role: "user",
+        plan: "explore",
+        trialEndDate: new Date("2026-07-17T00:00:00Z"),
+        deletedAt: null,
+      },
       // signup grant failed — must be topped up to 100
-      { id: "u_zero", email: "zero@example.com", role: "user", plan: "explore", trialEndDate: new Date("2026-07-16T00:00:00Z"), deletedAt: null },
+      {
+        id: "u_zero",
+        email: "zero@example.com",
+        role: "user",
+        plan: "explore",
+        trialEndDate: new Date("2026-07-16T00:00:00Z"),
+        deletedAt: null,
+      },
       // paying customer — must be skipped entirely
-      { id: "u_pro", email: "pro@example.com", role: "user", plan: "pro", trialEndDate: null, deletedAt: null },
+      {
+        id: "u_pro",
+        email: "pro@example.com",
+        role: "user",
+        plan: "pro",
+        trialEndDate: null,
+        deletedAt: null,
+      },
       // owner — must be skipped entirely
-      { id: "owner_1", email: "owner@example.com", role: "owner", plan: "explore", trialEndDate: null, deletedAt: null },
+      {
+        id: "owner_1",
+        email: "owner@example.com",
+        role: "owner",
+        plan: "explore",
+        trialEndDate: null,
+        deletedAt: null,
+      },
     ]
     state.balances = [
       { userId: "u_rich", balance: 100 },
@@ -126,14 +154,14 @@ describe("admin — reset explore trials", () => {
     const body = (await (await resetTrials({ dryRun: false })).json()) as any
 
     expect(body.usersAffected).toBe(2)
-    expect(body.users.map((u: any) => [u.email, u.balanceBefore, u.topUp, u.balanceAfter])).toEqual([
-      ["rich@example.com", 100, 0, 100],
-      ["zero@example.com", 0, 100, 100],
-    ])
+    expect(body.users.map((u: any) => [u.email, u.balanceBefore, u.topUp, u.balanceAfter])).toEqual(
+      [
+        ["rich@example.com", 100, 0, 100],
+        ["zero@example.com", 0, 100, 100],
+      ],
+    )
     // only the zero-balance account is granted anything
-    expect(state.grants).toEqual([
-      { userId: "u_zero", amount: 100, expiresAt: expect.any(Date) },
-    ])
+    expect(state.grants).toEqual([{ userId: "u_zero", amount: 100, expiresAt: expect.any(Date) }])
   })
 
   it("skips the owner and paid plans", async () => {

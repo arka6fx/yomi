@@ -363,7 +363,9 @@ function tokenUsage(inputTokens?: number, outputTokens?: number) {
 // Surfaces OpenAI's prompt-caching discount as provider metadata (LanguageModelV1's
 // usage shape has no room for it) so callers can tell real cached spend from billed-at-
 // full-price tokens — previously silently dropped, so telemetry always read 0% cached.
-function cacheProviderMetadata(cachedTokens?: number): Record<string, Record<string, number>> | undefined {
+function cacheProviderMetadata(
+  cachedTokens?: number,
+): Record<string, Record<string, number>> | undefined {
   if (!cachedTokens) return undefined
   return { openai: { cachedPromptTokens: cachedTokens } }
 }

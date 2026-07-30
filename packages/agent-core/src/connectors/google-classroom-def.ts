@@ -48,7 +48,11 @@ function formatMaterial(m: ClassroomMaterial) {
   }
   if (m.link) return { type: "link" as const, title: m.link.title, link: m.link.url }
   if (m.youtubeVideo)
-    return { type: "youtube" as const, title: m.youtubeVideo.title, link: m.youtubeVideo.alternateLink }
+    return {
+      type: "youtube" as const,
+      title: m.youtubeVideo.title,
+      link: m.youtubeVideo.alternateLink,
+    }
   if (m.form) return { type: "form" as const, title: m.form.title, link: m.form.formUrl }
   return { type: "unknown" as const }
 }
@@ -62,8 +66,7 @@ function classroomWriteError(err: unknown): { error: string; hint?: string } {
     return {
       error:
         "Google Classroom only allows the app that created an assignment to attach files or turn it in — teacher-created assignments cannot be submitted by Yomi (Google API restriction; no scope unlocks this).",
-      hint:
-        "Do this instead: create the solution with drive-createFile, convert it with drive-convertFile to pdf (schools almost always want a PDF), then give the user the PDF's link plus the assignment's link (from classroom-getAssignment) so they can attach and turn it in themselves in one click.",
+      hint: "Do this instead: create the solution with drive-createFile, convert it with drive-convertFile to pdf (schools almost always want a PDF), then give the user the PDF's link plus the assignment's link (from classroom-getAssignment) so they can attach and turn it in themselves in one click.",
     }
   }
   return connectorError(err)
@@ -210,8 +213,7 @@ export function createClassroomTools(ctx: ConnectorContext): ToolSet {
             .slice(0, limit)
             .map(({ dueAt: _dueAt, ...rest }) => rest)
 
-          if (assignments.length === 0)
-            return { assignments: [], message: "No assignments found." }
+          if (assignments.length === 0) return { assignments: [], message: "No assignments found." }
           return { count: assignments.length, assignments }
         } catch (err) {
           return connectorError(err)

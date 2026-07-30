@@ -23,7 +23,10 @@ import { searchSessions } from "../services/agent-sessions.js"
 import { getAccessToken, listConnectedProviders } from "../services/integration-tokens.js"
 import { decryptString } from "../services/token-encryption.js"
 import { buildComposioDefs } from "../connectors/composio-defs.js"
-import { createComposioRestExecutor, createCountingExecutor } from "../connectors/composio-executor.js"
+import {
+  createComposioRestExecutor,
+  createCountingExecutor,
+} from "../connectors/composio-executor.js"
 import { composioCostMicros } from "@yomi/shared/ai-pricing"
 import { hasBillablePlanAccess, effectivePlanForUser } from "../entitlements.js"
 import { chargeUsage, lowCreditWarning } from "../services/metering.js"
@@ -326,17 +329,14 @@ function parseExtractedMemories(text: string): ExtractedMemory[] {
 }
 
 async function captureBackendMemory(userId: string, input: string, output: string): Promise<void> {
-  if (!process.env["OPENAI_API_KEY"] || process.env["YOMI_DISABLE_MEMORY_CAPTURE"] === "1")
-    return
+  if (!process.env["OPENAI_API_KEY"] || process.env["YOMI_DISABLE_MEMORY_CAPTURE"] === "1") return
   const cleanInput = input.replace(/\r/g, "").slice(0, 1800).trim()
   const cleanOutput = output.replace(/\r/g, "").slice(0, 1800).trim()
   if (!cleanInput || !cleanOutput) return
 
   const { text } = await generateText({
     model: createModel(
-      process.env["MEMORY_EXTRACTION_MODEL"] ||
-        process.env["OPENAI_FAST_MODEL"] ||
-        "gpt-5.4-mini",
+      process.env["MEMORY_EXTRACTION_MODEL"] || process.env["OPENAI_FAST_MODEL"] || "gpt-5.4-mini",
     ),
     messages: [
       {
@@ -388,10 +388,9 @@ async function resolveUserTimeZone(userId: string): Promise<string | null> {
   try {
     const token = await getAccessToken(userId, "google-calendar")
     if (token) {
-      const res = await fetch(
-        "https://www.googleapis.com/calendar/v3/users/me/settings/timezone",
-        { headers: { Authorization: `Bearer ${token}` } },
-      )
+      const res = await fetch("https://www.googleapis.com/calendar/v3/users/me/settings/timezone", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       if (res.ok) {
         const data = (await res.json()) as { value?: string }
         tz = data.value ?? null
@@ -616,9 +615,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     }
   }
 
-  const recallTool = createRecallTool((query, limit) =>
-    searchSessions(opts.userId, query, limit),
-  )
+  const recallTool = createRecallTool((query, limit) => searchSessions(opts.userId, query, limit))
   const webSearchTool = createWebSearchTool((query) => searchWeb(query, opts.signal))
   const reactionTool = opts.onReact ? createReactionTool(opts.onReact) : null
   const integrationSuggestions = formatIntegrationSuggestions(

@@ -27,4 +27,6 @@ export const backendComposioTasksDef: BackendConnectorDef = {
   },
 }
 
-registerConnectorDef(isComposioBacked("google-tasks") ? backendComposioTasksDef : backendGoogleTasksDef)
+registerConnectorDef(
+  isComposioBacked("google-tasks") ? backendComposioTasksDef : backendGoogleTasksDef,
+)

@@ -58,7 +58,8 @@ export function CustomMcpServers({
   const inputClass =
     "w-full rounded-xl border border-border bg-background px-4 py-3 text-sm font-mono text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
 
-  const fieldLabelClass = "mb-2 block text-xs font-medium uppercase tracking-widest text-muted-foreground"
+  const fieldLabelClass =
+    "mb-2 block text-xs font-medium uppercase tracking-widest text-muted-foreground"
 
   return (
     <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">

@@ -69,7 +69,8 @@ const jsonLd = {
           name: "Explore",
           price: "0",
           priceCurrency: "USD",
-          description: "Free every month, forever, with 100 monthly credits and unlimited app connectors",
+          description:
+            "Free every month, forever, with 100 monthly credits and unlimited app connectors",
         },
         {
           "@type": "Offer",

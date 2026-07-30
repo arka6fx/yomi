@@ -107,7 +107,9 @@ export async function runPrivacyRetention(): Promise<RetentionReport> {
       .where(lt(agentSessions.lastMessageAt, conversationCutoff))
       .returning({ id: agentSessions.id })
   } catch (err) {
-    console.warn(`[retention] conversations sweep failed: ${err instanceof Error ? err.message : String(err)}`)
+    console.warn(
+      `[retention] conversations sweep failed: ${err instanceof Error ? err.message : String(err)}`,
+    )
   }
 
   try {
@@ -118,7 +120,9 @@ export async function runPrivacyRetention(): Promise<RetentionReport> {
         .returning({ id: ragRetrievalLogs.id })
     ).length
   } catch (err) {
-    console.warn(`[retention] rag_retrieval_logs sweep failed: ${err instanceof Error ? err.message : String(err)}`)
+    console.warn(
+      `[retention] rag_retrieval_logs sweep failed: ${err instanceof Error ? err.message : String(err)}`,
+    )
   }
 
   try {
@@ -129,7 +133,9 @@ export async function runPrivacyRetention(): Promise<RetentionReport> {
         .returning({ id: usageEvents.id })
     ).length
   } catch (err) {
-    console.warn(`[retention] usage_events sweep failed: ${err instanceof Error ? err.message : String(err)}`)
+    console.warn(
+      `[retention] usage_events sweep failed: ${err instanceof Error ? err.message : String(err)}`,
+    )
   }
 
   try {
@@ -141,7 +147,9 @@ export async function runPrivacyRetention(): Promise<RetentionReport> {
         .returning({ id: pendingActions.id })
     ).length
   } catch (err) {
-    console.warn(`[retention] pending_actions sweep failed: ${err instanceof Error ? err.message : String(err)}`)
+    console.warn(
+      `[retention] pending_actions sweep failed: ${err instanceof Error ? err.message : String(err)}`,
+    )
   }
 
   try {
@@ -152,7 +160,9 @@ export async function runPrivacyRetention(): Promise<RetentionReport> {
         .returning({ id: devices.id })
     ).length
   } catch (err) {
-    console.warn(`[retention] devices sweep failed: ${err instanceof Error ? err.message : String(err)}`)
+    console.warn(
+      `[retention] devices sweep failed: ${err instanceof Error ? err.message : String(err)}`,
+    )
   }
 
   try {
@@ -178,7 +188,9 @@ export async function runPrivacyRetention(): Promise<RetentionReport> {
       ).length
     report.domains.expired_codes = expiredCodes
   } catch (err) {
-    console.warn(`[retention] expired_codes sweep failed: ${err instanceof Error ? err.message : String(err)}`)
+    console.warn(
+      `[retention] expired_codes sweep failed: ${err instanceof Error ? err.message : String(err)}`,
+    )
   }
 
   // Counts-only audit trail entry — never persist row content.

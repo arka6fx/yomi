@@ -47,7 +47,10 @@ export async function renewExploreCredits(now: Date = new Date()): Promise<Explo
     const balance = balanceByUser.get(u.id) ?? 0
     const topUp = Math.max(0, included - balance)
 
-    await db.update(user).set({ trialStartDate: now, trialEndDate: trialEnd }).where(eq(user.id, u.id))
+    await db
+      .update(user)
+      .set({ trialStartDate: now, trialEndDate: trialEnd })
+      .where(eq(user.id, u.id))
 
     if (topUp > 0) {
       await grantCredits({

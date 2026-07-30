@@ -124,8 +124,7 @@ export function SchedulesManager({ token }: { token: string }) {
               Scheduled <span className="italic">tasks</span>
             </h2>
             <p className="mt-1 max-w-md text-sm text-muted-foreground">
-              Yomi runs these on a schedule and sends the result
-              to your Telegram.
+              Yomi runs these on a schedule and sends the result to your Telegram.
             </p>
           </div>
         </div>

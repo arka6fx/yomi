@@ -12,7 +12,8 @@ let userExists = true
 mock.module("@yomi/db", () => ({ db: {}, pendingActions: {} }))
 mock.module("../connectors/defs/index.js", () => ({}))
 mock.module("../connectors/registry.js", () => ({
-  getConnectorDef: (id: string) => (id === "unknown" ? undefined : { auth: { kind: connectorKind } }),
+  getConnectorDef: (id: string) =>
+    id === "unknown" ? undefined : { auth: { kind: connectorKind } },
 }))
 mock.module("./metering.js", () => ({
   loadMeteringUser: async () => (userExists ? { id: "user_1", plan: "pro" } : null),

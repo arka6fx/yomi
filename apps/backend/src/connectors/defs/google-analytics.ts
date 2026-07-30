@@ -8,4 +8,8 @@ export const backendComposioGoogleAnalyticsDef: BackendConnectorDef = {
   getDisplayName: async () => "Google Analytics (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("google-analytics") ? backendComposioGoogleAnalyticsDef : backendComposioGoogleAnalyticsDef)
+registerConnectorDef(
+  isComposioBacked("google-analytics")
+    ? backendComposioGoogleAnalyticsDef
+    : backendComposioGoogleAnalyticsDef,
+)

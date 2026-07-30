@@ -53,13 +53,37 @@ describe("renewExploreCredits", () => {
     process.env["OWNER_EMAIL"] = "owner@example.com"
     state.users = [
       // window ended, balance already at 0 — full top-up
-      { id: "u_zero", email: "zero@example.com", role: "user", plan: "explore", trialEndDate: new Date("2026-06-01T00:00:00Z") },
+      {
+        id: "u_zero",
+        email: "zero@example.com",
+        role: "user",
+        plan: "explore",
+        trialEndDate: new Date("2026-06-01T00:00:00Z"),
+      },
       // window ended, still holds some unused credits — tops up only the gap
-      { id: "u_partial", email: "partial@example.com", role: "user", plan: "explore", trialEndDate: new Date("2026-06-01T00:00:00Z") },
+      {
+        id: "u_partial",
+        email: "partial@example.com",
+        role: "user",
+        plan: "explore",
+        trialEndDate: new Date("2026-06-01T00:00:00Z"),
+      },
       // paid plan whose trialEndDate happens to be null/past — must be skipped
-      { id: "u_pro", email: "pro@example.com", role: "user", plan: "pro", trialEndDate: new Date("2020-01-01T00:00:00Z") },
+      {
+        id: "u_pro",
+        email: "pro@example.com",
+        role: "user",
+        plan: "pro",
+        trialEndDate: new Date("2020-01-01T00:00:00Z"),
+      },
       // owner — must be skipped entirely
-      { id: "owner_1", email: "owner@example.com", role: "owner", plan: "explore", trialEndDate: new Date("2020-01-01T00:00:00Z") },
+      {
+        id: "owner_1",
+        email: "owner@example.com",
+        role: "owner",
+        plan: "explore",
+        trialEndDate: new Date("2020-01-01T00:00:00Z"),
+      },
     ]
     state.balances = [
       { userId: "u_zero", balance: 0 },

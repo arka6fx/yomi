@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it } from "bun:test"
-import { createWebSearchTool, parseResponsesOutput, searchWeb, type WebSearchFn } from "./web-search.js"
+import {
+  createWebSearchTool,
+  parseResponsesOutput,
+  searchWeb,
+  type WebSearchFn,
+} from "./web-search.js"
 
 const originalFetch = globalThis.fetch
 const originalApiKey = process.env["OPENAI_API_KEY"]
@@ -85,7 +90,12 @@ describe("parseResponsesOutput", () => {
 
   it("returns an empty answer and no citations when there's no message item", () => {
     const output = [
-      { type: "web_search_call", id: "ws_1", status: "completed", action: { type: "search", query: "x" } },
+      {
+        type: "web_search_call",
+        id: "ws_1",
+        status: "completed",
+        action: { type: "search", query: "x" },
+      },
     ]
     const result = parseResponsesOutput(output)
     expect(result).toEqual({ answer: "", citations: [] })
@@ -123,7 +133,9 @@ describe("searchWeb", () => {
       capturedAuth = new Headers(init?.headers).get("authorization") ?? undefined
       return new Response(
         JSON.stringify({
-          output: [{ type: "message", content: [{ type: "output_text", text: "ok", annotations: [] }] }],
+          output: [
+            { type: "message", content: [{ type: "output_text", text: "ok", annotations: [] }] },
+          ],
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       )
@@ -142,7 +154,10 @@ describe("searchWeb", () => {
   it("throws with the response body when the request fails", async () => {
     process.env["OPENAI_API_KEY"] = "test-key"
     globalThis.fetch = (async () =>
-      new Response("insufficient_quota", { status: 429, statusText: "Too Many Requests" })) as typeof fetch
+      new Response("insufficient_quota", {
+        status: 429,
+        statusText: "Too Many Requests",
+      })) as typeof fetch
 
     await expect(searchWeb("anything")).rejects.toThrow(/429/)
   })

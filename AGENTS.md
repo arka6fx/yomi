@@ -1,9 +1,9 @@
 # Yomi - AGENTS.md
 
 AI productivity assistant. Connects to Google Workspace (Gmail, Calendar, Drive,
-Classroom, Tasks, Meet) and GitHub, Slack, Notion, Linear, and more.
-You talk to Yomi on Telegram (text, voice, images); the web app is a management
-dashboard (account linking, schedules, memory, billing) — not a chat surface.
+Classroom, Tasks, Meet) and GitHub, Slack, Notion, Linear, and more. You talk to
+Yomi on Telegram (text, voice, images); the web app is a management dashboard
+(account linking, schedules, memory, billing) — not a chat surface.
 Backend-first for durable memory and connector agents.
 
 ---
@@ -56,10 +56,13 @@ bun install && bun run dev
 ## Stack
 
 - **LLM:** Vercel AI SDK (`ai`) -> OpenAI (standard `OPENAI_*` env vars)
-- **STT:** OpenAI (`gpt-4o-mini-transcribe`) — transcribes incoming voice notes; replies are always text
-- **Backend:** Hono on Bun (EC2 + Docker + Caddy), Better Auth (Google + GitHub OAuth), Drizzle + PostgreSQL (AWS RDS)
+- **STT:** OpenAI (`gpt-4o-mini-transcribe`) — transcribes incoming voice notes;
+  replies are always text
+- **Backend:** Hono on Bun (EC2 + Docker + Caddy), Better Auth (Google + GitHub
+  OAuth), Drizzle + PostgreSQL (AWS RDS)
 - **Billing:** Dodo Payments
-- **Agent orchestration:** AI SDK agent loop with connector tools; backend agent for Telegram
+- **Agent orchestration:** AI SDK agent loop with connector tools; backend agent
+  for Telegram
 
 ---
 
@@ -84,8 +87,8 @@ LANDING/DASHBOARD  (Next.js)
 - Core: filesystem r/w, bash (sandboxed), web search/fetch, cron, messaging,
   memory
 - Connectors: Gmail, Google Calendar, Google Drive, Google Classroom, Google
-  Tasks, Google Meet, GitHub, Notion, Slack, Linear - loaded
-  from `ConnectorRegistry`
+  Tasks, Google Meet, GitHub, Notion, Slack, Linear - loaded from
+  `ConnectorRegistry`
 
 **Hooks:** `PreToolUse` (block dangerous), `PostToolUse` (log, trim tokens),
 `Stop` (flush scratchpad), `SessionEnd` (compact memory.md)
@@ -127,21 +130,21 @@ respectively.
 Billing is pure credits - a single credit balance is the only usage gate.
 Per-feature monthly caps were removed; connectors are unlimited on every plan.
 
-| Plan    | Price  | Monthly credits           | Model         |
-| ------- | ------ | -------------------------- | ------------- |
-| Explore | $0/mo  | 100 (perpetual, renews)    | gpt-5.4-mini  |
-| Pro     | $5/mo  | 300                         | gpt-5.4-mini  |
-| Max     | $40/mo | 750                         | gpt-5.5       |
+| Plan    | Price  | Monthly credits         | Model        |
+| ------- | ------ | ----------------------- | ------------ |
+| Explore | $0/mo  | 100 (perpetual, renews) | gpt-5.4-mini |
+| Pro     | $5/mo  | 300                     | gpt-5.4-mini |
+| Max     | $40/mo | 750                     | gpt-5.5      |
 
-Credit packs (shared currency, any plan): 85 credits/$5, 250 credits/$15,
-750 credits/$40 - priced against worst-case gpt-5.5 cost since Max users can
-buy them too.
+Credit packs (shared currency, any plan): 85 credits/$5, 250 credits/$15, 750
+credits/$40 - priced against worst-case gpt-5.5 cost since Max users can buy
+them too.
 
-Explore/Pro route through the cheap model on purpose - that's the margin
-lever, not the credit count alone. Credit costs: fast chat 1, image analyze 1,
-voice 2/min, bot message 3, agent run 3 base (+1 per Composio tool call in
-that turn, charged separately). Tune from `ai_usage_events` telemetry; real
-API cost is recorded in `totalApiCostMicros` via `@yomi/shared/ai-pricing`.
+Explore/Pro route through the cheap model on purpose - that's the margin lever,
+not the credit count alone. Credit costs: fast chat 1, image analyze 1, voice
+2/min, bot message 3, agent run 3 base (+1 per Composio tool call in that turn,
+charged separately). Tune from `ai_usage_events` telemetry; real API cost is
+recorded in `totalApiCostMicros` via `@yomi/shared/ai-pricing`.
 
 Single chokepoint: `apps/backend/src/services/metering.ts` -> `chargeUsage()`
 (owner bypass -> active-plan check -> `balance >= cost` -> record event +
@@ -185,16 +188,17 @@ commit; the manual deploy races the workflow and both die on a container-name
 conflict. That script is the break-glass path for when the runner is down.
 
 The frontend (Cloudflare Worker) also deploys itself on push to `main`
-(`.github/workflows/deploy-landing.yml`, paths `apps/landing/**` /
-`packages/**` / `package.json` / `bun.lock`), via a GitHub-hosted runner.
-Manual deploy remains available as a break-glass/on-demand path:
+(`.github/workflows/deploy-landing.yml`, paths `apps/landing/**` / `packages/**`
+/ `package.json` / `bun.lock`), via a GitHub-hosted runner. Manual deploy
+remains available as a break-glass/on-demand path:
 
 ```bash
 cd apps/landing && bun run deploy:production
 ```
 
-The desktop client has been retired (see `docs/adr/0002-retire-desktop-telegram-only.md`);
-Yomi's only interaction surface is Telegram, managed via the web dashboard.
+The desktop client has been retired (see
+`docs/adr/0002-retire-desktop-telegram-only.md`); Yomi's only interaction
+surface is Telegram, managed via the web dashboard.
 
 ---
 

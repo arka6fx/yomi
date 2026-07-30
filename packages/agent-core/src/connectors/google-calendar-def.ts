@@ -184,7 +184,9 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
         title: z.string().describe("Event title / summary"),
         start: z
           .string()
-          .describe("Start datetime in the user's local time, e.g. 2026-07-01T14:00:00 (no offset)"),
+          .describe(
+            "Start datetime in the user's local time, e.g. 2026-07-01T14:00:00 (no offset)",
+          ),
         end: z.string().describe("End datetime in the user's local time (no offset)"),
         description: z.string().optional().describe("Event description / notes"),
         location: z.string().optional().describe("Event location"),
@@ -239,8 +241,14 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
       parameters: z.object({
         eventId: z.string().describe("Google Calendar event ID to update"),
         title: z.string().optional().describe("New title / summary"),
-        start: z.string().optional().describe("New start datetime in the user's local time (no offset)"),
-        end: z.string().optional().describe("New end datetime in the user's local time (no offset)"),
+        start: z
+          .string()
+          .optional()
+          .describe("New start datetime in the user's local time (no offset)"),
+        end: z
+          .string()
+          .optional()
+          .describe("New end datetime in the user's local time (no offset)"),
         description: z.string().optional().describe("New description"),
         location: z.string().optional().describe("New location"),
       }),
@@ -434,8 +442,7 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
     }),
 
     "calendar-createEventWithMeet": tool({
-      description:
-        `Create a new event on a Google Calendar with a Google Meet video conferencing link attached. ${LOCAL_TIME_HINT} Call this directly when the user asks to schedule — the system holds it for their approval automatically, so do not ask them to confirm first.`,
+      description: `Create a new event on a Google Calendar with a Google Meet video conferencing link attached. ${LOCAL_TIME_HINT} Call this directly when the user asks to schedule — the system holds it for their approval automatically, so do not ask them to confirm first.`,
       parameters: z.object({
         calendarId: z
           .string()
@@ -444,7 +451,9 @@ export function createCalendarTools(ctx: ConnectorContext): ToolSet {
         title: z.string().describe("Event title / summary"),
         start: z
           .string()
-          .describe("Start datetime in the user's local time, e.g. 2026-07-01T14:00:00 (no offset)"),
+          .describe(
+            "Start datetime in the user's local time, e.g. 2026-07-01T14:00:00 (no offset)",
+          ),
         end: z.string().describe("End datetime in the user's local time (no offset)"),
         description: z.string().optional().describe("Event description / notes"),
         location: z.string().optional().describe("Event location"),

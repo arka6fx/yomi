@@ -48,10 +48,7 @@ export async function unregisterPlugin(pluginId: string): Promise<void> {
 }
 
 export async function getPlugin(pluginId: string): Promise<RegisteredPlugin | null> {
-  const [row] = await db
-    .select()
-    .from(plugins)
-    .where(eq(plugins.pluginId, pluginId))
+  const [row] = await db.select().from(plugins).where(eq(plugins.pluginId, pluginId))
   return (row as RegisteredPlugin | undefined) ?? null
 }
 

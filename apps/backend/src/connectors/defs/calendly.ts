@@ -8,4 +8,6 @@ export const backendComposioCalendlyDef: BackendConnectorDef = {
   getDisplayName: async () => "Calendly (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("calendly") ? backendComposioCalendlyDef : backendComposioCalendlyDef)
+registerConnectorDef(
+  isComposioBacked("calendly") ? backendComposioCalendlyDef : backendComposioCalendlyDef,
+)

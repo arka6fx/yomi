@@ -43,7 +43,15 @@ mock.module("@yomi/db", () => {
         },
       }),
     }),
-    insert: () => ({ values: (v: any) => ({ returning: () => { const row = { id: "src-1", ...v }; state.sources.push(row); return Promise.resolve([row]) } }) }),
+    insert: () => ({
+      values: (v: any) => ({
+        returning: () => {
+          const row = { id: "src-1", ...v }
+          state.sources.push(row)
+          return Promise.resolve([row])
+        },
+      }),
+    }),
     delete: () => ({
       where: () => {
         // purgeDriveSources deletes ragDocuments scoped to a source id; the mock
@@ -59,11 +67,18 @@ mock.module("@yomi/db", () => {
   return { db, ragSources: {}, ragDocuments: {}, mcpConnections: {} }
 })
 mock.module("./index-document.js", () => ({
-  indexDocument: async (i: any) => { state.indexed.push(i.externalId); return { status: "indexed", documentId: "d" } },
-  deleteDocumentByExternalId: async (_u: string, _s: string, e: string) => { state.deleted.push(e); return true },
+  indexDocument: async (i: any) => {
+    state.indexed.push(i.externalId)
+    return { status: "indexed", documentId: "d" }
+  },
+  deleteDocumentByExternalId: async (_u: string, _s: string, e: string) => {
+    state.deleted.push(e)
+    return true
+  },
 }))
 
-const { createDriveSource, syncSource, MAX_BACKFILL_FILES_PER_TICK } = await import("./drive-sync.js")
+const { createDriveSource, syncSource, MAX_BACKFILL_FILES_PER_TICK } =
+  await import("./drive-sync.js")
 
 function client(overrides: any = {}) {
   return {
@@ -75,7 +90,13 @@ function client(overrides: any = {}) {
   }
 }
 
-beforeEach(() => { state.sources = []; state.indexed = []; state.deleted = []; state.deletedDocSourceIds = []; state.knownDocs = [] })
+beforeEach(() => {
+  state.sources = []
+  state.indexed = []
+  state.deleted = []
+  state.deletedDocSourceIds = []
+  state.knownDocs = []
+})
 
 describe("drive-sync", () => {
   it("captures a start page token when creating a source", async () => {
@@ -85,7 +106,18 @@ describe("drive-sync", () => {
   })
 
   it("backfill indexes children then flips to active", async () => {
-    const src = { id: "src-1", userId: "u1", path: "folder-1", status: "backfilling", syncState: { folderId: "folder-1", drivePageToken: "ptok-0", filesIndexed: 0, filesSkipped: 0 } }
+    const src = {
+      id: "src-1",
+      userId: "u1",
+      path: "folder-1",
+      status: "backfilling",
+      syncState: {
+        folderId: "folder-1",
+        drivePageToken: "ptok-0",
+        filesIndexed: 0,
+        filesSkipped: 0,
+      },
+    }
     state.sources.push(src)
     const res = await syncSource(src as any, client() as any)
     expect(state.indexed).toContain("f1")
@@ -93,24 +125,67 @@ describe("drive-sync", () => {
   })
 
   it("incremental deletes trashed files in scope", async () => {
-    const src = { id: "src-1", userId: "u1", path: "folder-1", status: "active", syncState: { folderId: "folder-1", drivePageToken: "ptok-0", filesIndexed: 1, filesSkipped: 0 } }
+    const src = {
+      id: "src-1",
+      userId: "u1",
+      path: "folder-1",
+      status: "active",
+      syncState: {
+        folderId: "folder-1",
+        drivePageToken: "ptok-0",
+        filesIndexed: 1,
+        filesSkipped: 0,
+      },
+    }
     state.sources.push(src)
-    const c = client({ listChanges: async () => ({ changes: [{ fileId: "f1", removed: true }], newStartPageToken: "ptok-2" }) })
+    const c = client({
+      listChanges: async () => ({
+        changes: [{ fileId: "f1", removed: true }],
+        newStartPageToken: "ptok-2",
+      }),
+    })
     await syncSource(src as any, c as any)
     expect(state.deleted).toContain("f1")
   })
 
   it("marks needs_reconnect on 401", async () => {
     const { DriveApiError } = await import("./drive-client.js")
-    const src = { id: "src-1", userId: "u1", path: "folder-1", status: "active", syncState: { folderId: "folder-1", drivePageToken: "ptok-0", filesIndexed: 0, filesSkipped: 0 } }
+    const src = {
+      id: "src-1",
+      userId: "u1",
+      path: "folder-1",
+      status: "active",
+      syncState: {
+        folderId: "folder-1",
+        drivePageToken: "ptok-0",
+        filesIndexed: 0,
+        filesSkipped: 0,
+      },
+    }
     state.sources.push(src)
-    const c = client({ listChanges: async () => { throw new DriveApiError("unauthorized", 401) } })
+    const c = client({
+      listChanges: async () => {
+        throw new DriveApiError("unauthorized", 401)
+      },
+    })
     const res = await syncSource(src as any, c as any)
     expect(res.status).toBe("needs_reconnect")
   })
 
   it("backfill batches across ticks without dropping files", async () => {
-    const src = { id: "src-1", userId: "u1", path: "folder-1", status: "backfilling", syncState: { folderId: "folder-1", drivePageToken: "ptok-0", backfillCursor: null, filesIndexed: 0, filesSkipped: 0 } }
+    const src = {
+      id: "src-1",
+      userId: "u1",
+      path: "folder-1",
+      status: "backfilling",
+      syncState: {
+        folderId: "folder-1",
+        drivePageToken: "ptok-0",
+        backfillCursor: null,
+        filesIndexed: 0,
+        filesSkipped: 0,
+      },
+    }
     state.sources.push(src)
     let call = 0
     const c = client({
@@ -146,7 +221,18 @@ describe("drive-sync", () => {
   })
 
   it("incremental indexes changed files in scope and skips out-of-scope ones", async () => {
-    const src = { id: "src-1", userId: "u1", path: "folder-1", status: "active", syncState: { folderId: "folder-1", drivePageToken: "ptok-0", filesIndexed: 0, filesSkipped: 0 } }
+    const src = {
+      id: "src-1",
+      userId: "u1",
+      path: "folder-1",
+      status: "active",
+      syncState: {
+        folderId: "folder-1",
+        drivePageToken: "ptok-0",
+        filesIndexed: 0,
+        filesSkipped: 0,
+      },
+    }
     state.sources.push(src)
     const c = client({
       listChanges: async () => ({
@@ -154,12 +240,22 @@ describe("drive-sync", () => {
           {
             fileId: "in-scope",
             removed: false,
-            file: { id: "in-scope", name: "InScope", mimeType: "text/plain", parents: ["folder-1"] },
+            file: {
+              id: "in-scope",
+              name: "InScope",
+              mimeType: "text/plain",
+              parents: ["folder-1"],
+            },
           },
           {
             fileId: "out-of-scope",
             removed: false,
-            file: { id: "out-of-scope", name: "OutOfScope", mimeType: "text/plain", parents: ["other-folder"] },
+            file: {
+              id: "out-of-scope",
+              name: "OutOfScope",
+              mimeType: "text/plain",
+              parents: ["other-folder"],
+            },
           },
         ],
         newStartPageToken: "ptok-2",
@@ -172,12 +268,28 @@ describe("drive-sync", () => {
 
   it("re-captures a fresh start page token and backfills on 410", async () => {
     const { DriveApiError } = await import("./drive-client.js")
-    const src = { id: "src-1", userId: "u1", path: "folder-1", status: "active", syncState: { folderId: "folder-1", drivePageToken: "ptok-0", filesIndexed: 5, filesSkipped: 3 } }
+    const src = {
+      id: "src-1",
+      userId: "u1",
+      path: "folder-1",
+      status: "active",
+      syncState: {
+        folderId: "folder-1",
+        drivePageToken: "ptok-0",
+        filesIndexed: 5,
+        filesSkipped: 3,
+      },
+    }
     state.sources.push(src)
     let startTokenCalls = 0
     const c = client({
-      getStartPageToken: async () => { startTokenCalls++; return "ptok-fresh" },
-      listChanges: async () => { throw new DriveApiError("gone", 410) },
+      getStartPageToken: async () => {
+        startTokenCalls++
+        return "ptok-fresh"
+      },
+      listChanges: async () => {
+        throw new DriveApiError("gone", 410)
+      },
     })
     const res = await syncSource(src as any, c as any)
     expect(res.status).toBe("backfilling")
@@ -191,7 +303,19 @@ describe("drive-sync", () => {
   })
 
   it("isolates a per-file failure during backfill: other files still index, filesSkipped increments, status still progresses", async () => {
-    const src = { id: "src-1", userId: "u1", path: "folder-1", status: "backfilling", syncState: { folderId: "folder-1", drivePageToken: "ptok-0", backfillCursor: null, filesIndexed: 0, filesSkipped: 0 } }
+    const src = {
+      id: "src-1",
+      userId: "u1",
+      path: "folder-1",
+      status: "backfilling",
+      syncState: {
+        folderId: "folder-1",
+        drivePageToken: "ptok-0",
+        backfillCursor: null,
+        filesIndexed: 0,
+        filesSkipped: 0,
+      },
+    }
     state.sources.push(src)
     const c = client({
       listFolderChildren: async () => ({
@@ -216,7 +340,19 @@ describe("drive-sync", () => {
 
   it("lets a per-file 401/403 propagate to needs_reconnect instead of being swallowed", async () => {
     const { DriveApiError } = await import("./drive-client.js")
-    const src = { id: "src-1", userId: "u1", path: "folder-1", status: "backfilling", syncState: { folderId: "folder-1", drivePageToken: "ptok-0", backfillCursor: null, filesIndexed: 0, filesSkipped: 0 } }
+    const src = {
+      id: "src-1",
+      userId: "u1",
+      path: "folder-1",
+      status: "backfilling",
+      syncState: {
+        folderId: "folder-1",
+        drivePageToken: "ptok-0",
+        backfillCursor: null,
+        filesIndexed: 0,
+        filesSkipped: 0,
+      },
+    }
     state.sources.push(src)
     const c = client({
       listFolderChildren: async () => ({
@@ -239,7 +375,19 @@ describe("drive-sync", () => {
     const realCap = process.env["DRIVE_MAX_FILES_PER_SOURCE"]
     process.env["DRIVE_MAX_FILES_PER_SOURCE"] = "2"
     try {
-      const src = { id: "src-1", userId: "u1", path: "folder-1", status: "backfilling", syncState: { folderId: "folder-1", drivePageToken: "ptok-0", backfillCursor: null, filesIndexed: 0, filesSkipped: 0 } }
+      const src = {
+        id: "src-1",
+        userId: "u1",
+        path: "folder-1",
+        status: "backfilling",
+        syncState: {
+          folderId: "folder-1",
+          drivePageToken: "ptok-0",
+          backfillCursor: null,
+          filesIndexed: 0,
+          filesSkipped: 0,
+        },
+      }
       state.sources.push(src)
       const c = client({
         listFolderChildren: async () => ({
@@ -268,13 +416,32 @@ describe("drive-sync", () => {
     process.env["DRIVE_MAX_FILES_PER_SOURCE"] = "1"
     try {
       state.knownDocs = [{ externalId: "known-file" }]
-      const src = { id: "src-1", userId: "u1", path: "folder-1", status: "active", syncState: { folderId: "folder-1", drivePageToken: "ptok-0", filesIndexed: 1, filesSkipped: 0 } }
+      const src = {
+        id: "src-1",
+        userId: "u1",
+        path: "folder-1",
+        status: "active",
+        syncState: {
+          folderId: "folder-1",
+          drivePageToken: "ptok-0",
+          filesIndexed: 1,
+          filesSkipped: 0,
+        },
+      }
       state.sources.push(src)
       const c = client({
         listChanges: async () => ({
           changes: [
-            { fileId: "new-file", removed: false, file: { id: "new-file", name: "N", mimeType: "text/plain", parents: ["folder-1"] } },
-            { fileId: "known-file", removed: false, file: { id: "known-file", name: "K", mimeType: "text/plain", parents: ["folder-1"] } },
+            {
+              fileId: "new-file",
+              removed: false,
+              file: { id: "new-file", name: "N", mimeType: "text/plain", parents: ["folder-1"] },
+            },
+            {
+              fileId: "known-file",
+              removed: false,
+              file: { id: "known-file", name: "K", mimeType: "text/plain", parents: ["folder-1"] },
+            },
           ],
           newStartPageToken: "ptok-2",
         }),

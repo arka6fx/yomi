@@ -87,12 +87,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={cn(
-        "dark antialiased",
-        inter.variable,
-        instrumentSerif.variable,
-        mono.variable,
-      )}
+      className={cn("dark antialiased", inter.variable, instrumentSerif.variable, mono.variable)}
     >
       {/* warms the DNS/TLS handshake to the API host before the first fetch — react 19
           hoists link/meta tags rendered anywhere in the tree up into <head>.

@@ -13,8 +13,16 @@ export interface ModelPrice {
 
 // micro-USD per 1M tokens. gpt-5.x cached input is ~10% of the input rate.
 const MODEL_PRICES: Record<string, ModelPrice> = {
-  "gpt-5.5": { inputPerMTokens: 1_500_000, outputPerMTokens: 6_000_000, cachedInputPerMTokens: 150_000 },
-  "gpt-5.4-mini": { inputPerMTokens: 400_000, outputPerMTokens: 1_600_000, cachedInputPerMTokens: 40_000 },
+  "gpt-5.5": {
+    inputPerMTokens: 1_500_000,
+    outputPerMTokens: 6_000_000,
+    cachedInputPerMTokens: 150_000,
+  },
+  "gpt-5.4-mini": {
+    inputPerMTokens: 400_000,
+    outputPerMTokens: 1_600_000,
+    cachedInputPerMTokens: 40_000,
+  },
   "text-embedding-3-small": { inputPerMTokens: 20_000, outputPerMTokens: 0 },
   // Catch-all for unknown models — deliberately conservative (never under-bills).
   "*": { inputPerMTokens: 10_000_000, outputPerMTokens: 40_000_000 },

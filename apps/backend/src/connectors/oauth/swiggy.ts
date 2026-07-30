@@ -54,15 +54,21 @@ async function registerClient(redirectUri: string): Promise<SwiggyClientRegistra
 }
 
 // Stores PKCE session data (code verifier + registered client id) for the callback.
-const pkceSessions = new Map<string, { codeVerifier: string; clientId: string; userId: string; ts: number }>()
+const pkceSessions = new Map<
+  string,
+  { codeVerifier: string; clientId: string; userId: string; ts: number }
+>()
 
 // Prune stale PKCE sessions every 5 minutes.
-setInterval(() => {
-  const now = Date.now()
-  for (const [key, session] of pkceSessions) {
-    if (now - session.ts > 10 * 60 * 1000) pkceSessions.delete(key)
-  }
-}, 5 * 60 * 1000)
+setInterval(
+  () => {
+    const now = Date.now()
+    for (const [key, session] of pkceSessions) {
+      if (now - session.ts > 10 * 60 * 1000) pkceSessions.delete(key)
+    }
+  },
+  5 * 60 * 1000,
+)
 
 // Build the Swiggy OAuth authorization URL.
 export async function buildSwiggyAuthUrl(userId: string): Promise<string> {
