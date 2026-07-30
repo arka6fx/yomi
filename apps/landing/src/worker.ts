@@ -42,6 +42,35 @@ function withSecurityHeaders(response: Response): Response {
   return new Response(response.body, { status: response.status, headers })
 }
 
+// The asset binding answers a path it has no asset for with a 307 to "/" rather than a
+// 404, so passing every non-404 straight through soft-redirected every unknown URL to
+// the homepage — what Search Console reported as "Page with redirect", and the same
+// shape as the og:image bug. It also meant the 404 branch below was unreachable.
+//
+// Redirects that normalise a *real* asset's URL still have to be honoured, and they are
+// not distinguishable by target alone: "/index.html" legitimately normalises to "/",
+// exactly like a missing path does. They are distinguishable by whether the target is
+// what you get by stripping a redundant suffix off the requested path.
+function normalizeAssetPath(pathname: string): string {
+  let out = pathname
+  if (out.endsWith("/index.html")) out = out.slice(0, -"/index.html".length)
+  else if (out.endsWith(".html")) out = out.slice(0, -".html".length)
+  if (out.length > 1 && out.endsWith("/")) out = out.slice(0, -1)
+  return out === "" ? "/" : out
+}
+
+function isUrlNormalizingRedirect(requested: URL, location: string | null): boolean {
+  if (!location) return false
+  let target: URL
+  try {
+    target = new URL(location, requested.origin)
+  } catch {
+    return false
+  }
+  if (target.origin !== requested.origin) return false
+  return target.pathname === normalizeAssetPath(requested.pathname)
+}
+
 export default {
   async fetch(request: Request, env: { ASSETS: { fetch(request: Request): Promise<Response> } }) {
     const url = new URL(request.url)
@@ -65,7 +94,12 @@ export default {
     }
 
     const assetResponse = await env.ASSETS.fetch(request)
-    if (assetResponse.status !== 404) {
+    const isRedirect = assetResponse.status >= 300 && assetResponse.status < 400
+    const missing =
+      assetResponse.status === 404 ||
+      (isRedirect && !isUrlNormalizingRedirect(url, assetResponse.headers.get("location")))
+
+    if (!missing) {
       // Cloudflare infers content-type from the file extension. The prerendered og:image
       // ships extensionless (it's served at next's route path, "/opengraph-image"), so it
       // comes back with no content-type — some og:image scrapers require one to render it.
@@ -79,8 +113,22 @@ export default {
       return withSecurityHeaders(assetResponse)
     }
 
-    const fallbackUrl = new URL(request.url)
-    fallbackUrl.pathname = "/index.html"
-    return withSecurityHeaders(await env.ASSETS.fetch(new Request(fallbackUrl.toString(), request)))
+    // Serve next's prerendered 404 page with a real 404. Not a redirect to "/" (a
+    // crawler reads that as the homepage moving) and not a 200 (a soft 404). Requested
+    // extensionless: "/_not-found.html" would itself normalise to "/_not-found".
+    const notFound = await env.ASSETS.fetch(
+      new Request(new URL("/_not-found", url.origin).toString(), { headers: request.headers }),
+    )
+    return withSecurityHeaders(
+      new Response(notFound.body, {
+        status: 404,
+        headers: {
+          "content-type": notFound.headers.get("content-type") ?? "text/html; charset=utf-8",
+          // never let a 404 stick at the edge — adding the file later must take effect
+          // immediately, which is how adding llms.txt failed its own deploy check
+          "cache-control": "no-store",
+        },
+      }),
+    )
   },
 }
