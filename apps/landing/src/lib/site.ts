@@ -3,10 +3,12 @@ import type { Metadata } from "next"
 export const SITE_NAME = "Yomi"
 export const SITE_URL = "https://getyomi.in"
 
-// Home gets brand + tagline with no suffix; every other page is "<Page> – Yomi".
+// Home is brand + short action with no suffix; every other page is "<Page> – Yomi".
+// Short on purpose: the descriptive version was truncated in the browser tab. The
+// keywords it used to carry live in SITE_DESC, which is what search results show.
 // Kept here because the home title is also the OG/Twitter/og-image title, and the
 // copies in layout.tsx and page.tsx had already drifted apart.
-export const SITE_TITLE = "Yomi – AI productivity assistant on Telegram"
+export const SITE_TITLE = "Yomi – Chat with Yomi"
 export const TITLE_TEMPLATE = "%s – Yomi"
 
 // One description for description/og/twitter, kept under ~160 chars so search results
