@@ -1,15 +1,16 @@
 import type { Metadata } from "next"
+import { pageMetadata } from "@/lib/site"
 import Link from "next/link"
 import { Bug, Mail, MessageSquareText } from "lucide-react"
 import Nav from "@/components/Nav"
 import LandingFooter from "@/components/landing/LandingFooter"
 
-export const metadata: Metadata = {
-  title: "Support and contact",
+export const metadata: Metadata = pageMetadata({
+  title: "Support",
   description:
     "Get help with Yomi. Report bugs, ask questions about billing, app connectors, or your account. Reach us by email at contact.arkagarai@gmail.com.",
-  alternates: { canonical: "https://getyomi.in/support" },
-}
+  path: "/support",
+})
 
 const channels = [
   {

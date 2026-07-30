@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { pageMetadata } from "@/lib/site"
 import Link from "next/link"
 import {
   Brain,
@@ -23,12 +24,12 @@ import LandingFooter from "@/components/landing/LandingFooter"
 import { DocsShell } from "@/components/docs/DocsShell"
 import { DocsHero } from "@/components/docs/DocsHero"
 
-export const metadata: Metadata = {
-  title: "Docs: connectors, voice, memory, and credits",
+export const metadata: Metadata = pageMetadata({
+  title: "Docs",
   description:
     "Everything Yomi can do today: Telegram bot, app connectors, memory, voice, and how plans and credits work.",
-  alternates: { canonical: "https://getyomi.in/docs" },
-}
+  path: "/docs",
+})
 
 // Live from the same catalog the dashboard's Connections tab uses — this used
 // to be its own hand-maintained list of 14 connectors and silently fell years

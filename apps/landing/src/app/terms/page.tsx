@@ -1,13 +1,14 @@
 import type { Metadata } from "next"
+import { pageMetadata } from "@/lib/site"
 import Nav from "@/components/Nav"
 import LandingFooter from "@/components/landing/LandingFooter"
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Terms of Service",
   description:
     "Yomi Terms of Service: the agreement between you and Yomi governing your use of the web app, API integrations, and subscription plans.",
-  alternates: { canonical: "https://getyomi.in/terms" },
-}
+  path: "/terms",
+})
 
 export default function TermsPage() {
   return (
