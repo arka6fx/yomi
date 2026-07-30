@@ -77,13 +77,15 @@
   }
 }
 
+/* Transform-only on purpose. The hero tagline is the LCP element, and fading it in from
+   opacity:0 with a `both` fill meant it held at 0 through the delay — chrome scored LCP
+   somewhere inside the fade rather than at first paint, which was most of the 1.9s gap
+   between FCP and LCP on mobile. A rise with no fade paints immediately and looks the same. */
 @keyframes heroRise {
   from {
-    opacity: 0;
     transform: translateY(28px);
   }
   to {
-    opacity: 1;
     transform: translateY(0);
   }
 }
