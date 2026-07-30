@@ -7,8 +7,14 @@ const BASE = (process.argv[2] ?? process.env["SMOKE_BASE_URL"] ?? "https://getyo
   "",
 )
 
-const ATTEMPTS = 3
-const RETRY_MS = 3000
+// A path that did not exist before this deploy can still be answered from the edge with the
+// old response for a few seconds after wrangler returns. That is how adding llms.txt failed
+// its own deploy: the edge replied with the pre-deploy 307 to /, the check followed it to the
+// homepage and reported the file as having no H1, while the file itself was already correct.
+// Cache-busting via a query param does not help — Cloudflare normalises the query string out
+// of the cache key for static assets — so the only lever here is waiting longer.
+const ATTEMPTS = 6
+const RETRY_MS = 5000
 
 // Each check gets the Response; return null to pass, or a string describing the failure.
 const CHECKS = [
