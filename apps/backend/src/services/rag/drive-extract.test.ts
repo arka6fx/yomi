@@ -4,16 +4,22 @@ import { driveExtract } from "./drive-extract.js"
 describe("driveExtract", () => {
   it("exports Google Docs as text/plain", async () => {
     let calledWith: any = null
-    const res = await driveExtract({ mimeType: "application/vnd.google-apps.document" }, async (k, m) => {
-      calledWith = { k, m }
-      return "doc body"
-    })
+    const res = await driveExtract(
+      { mimeType: "application/vnd.google-apps.document" },
+      async (k, m) => {
+        calledWith = { k, m }
+        return "doc body"
+      },
+    )
     expect(res).toEqual({ text: "doc body" })
     expect(calledWith).toEqual({ k: "export", m: "text/plain" })
   })
 
   it("exports Sheets as CSV", async () => {
-    const res = await driveExtract({ mimeType: "application/vnd.google-apps.spreadsheet" }, async () => "a,b")
+    const res = await driveExtract(
+      { mimeType: "application/vnd.google-apps.spreadsheet" },
+      async () => "a,b",
+    )
     expect(res).toEqual({ text: "a,b" })
   })
 
@@ -31,7 +37,10 @@ describe("driveExtract", () => {
   })
 
   it("skips folders", async () => {
-    const res = await driveExtract({ mimeType: "application/vnd.google-apps.folder" }, async () => "")
+    const res = await driveExtract(
+      { mimeType: "application/vnd.google-apps.folder" },
+      async () => "",
+    )
     expect("skipped" in res).toBe(true)
   })
 })

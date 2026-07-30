@@ -71,10 +71,7 @@ const fakeDb = {
 
 mock.module("@yomi/db", () => ({ db: fakeDb, plugins: {} }))
 mock.module("drizzle-orm", () => ({
-  eq:
-    (_col: unknown, value: string) =>
-    (row: FakeRow) =>
-      row.pluginId === value,
+  eq: (_col: unknown, value: string) => (row: FakeRow) => row.pluginId === value,
 }))
 
 const { registerPlugin, unregisterPlugin, getPlugin, listPlugins, checkPluginAccess } =

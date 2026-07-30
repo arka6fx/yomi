@@ -98,13 +98,22 @@ type Tone =
   | "cyan"
 
 const TONE_CLASSES: Record<Tone, { badge: string; icon: string }> = {
-  primary: { badge: "border-primary/25 bg-primary/10 text-primary", icon: "bg-primary/10 text-primary" },
+  primary: {
+    badge: "border-primary/25 bg-primary/10 text-primary",
+    icon: "bg-primary/10 text-primary",
+  },
   emerald: {
     badge: "border-emerald-500/25 bg-emerald-500/10 text-emerald-600",
     icon: "bg-emerald-500/10 text-emerald-600",
   },
-  sky: { badge: "border-sky-500/25 bg-sky-500/10 text-sky-600", icon: "bg-sky-500/10 text-sky-600" },
-  blue: { badge: "border-blue-500/25 bg-blue-500/10 text-blue-600", icon: "bg-blue-500/10 text-blue-600" },
+  sky: {
+    badge: "border-sky-500/25 bg-sky-500/10 text-sky-600",
+    icon: "bg-sky-500/10 text-sky-600",
+  },
+  blue: {
+    badge: "border-blue-500/25 bg-blue-500/10 text-blue-600",
+    icon: "bg-blue-500/10 text-blue-600",
+  },
   violet: {
     badge: "border-violet-500/25 bg-violet-500/10 text-violet-600",
     icon: "bg-violet-500/10 text-violet-600",
@@ -113,13 +122,22 @@ const TONE_CLASSES: Record<Tone, { badge: string; icon: string }> = {
     badge: "border-amber-500/25 bg-amber-500/10 text-amber-600",
     icon: "bg-amber-500/10 text-amber-600",
   },
-  rose: { badge: "border-rose-500/25 bg-rose-500/10 text-rose-600", icon: "bg-rose-500/10 text-rose-600" },
-  teal: { badge: "border-teal-500/25 bg-teal-500/10 text-teal-600", icon: "bg-teal-500/10 text-teal-600" },
+  rose: {
+    badge: "border-rose-500/25 bg-rose-500/10 text-rose-600",
+    icon: "bg-rose-500/10 text-rose-600",
+  },
+  teal: {
+    badge: "border-teal-500/25 bg-teal-500/10 text-teal-600",
+    icon: "bg-teal-500/10 text-teal-600",
+  },
   yellow: {
     badge: "border-yellow-500/25 bg-yellow-500/10 text-yellow-700",
     icon: "bg-yellow-500/10 text-yellow-700",
   },
-  cyan: { badge: "border-cyan-500/25 bg-cyan-500/10 text-cyan-600", icon: "bg-cyan-500/10 text-cyan-600" },
+  cyan: {
+    badge: "border-cyan-500/25 bg-cyan-500/10 text-cyan-600",
+    icon: "bg-cyan-500/10 text-cyan-600",
+  },
 }
 
 function Eyebrow({
@@ -335,9 +353,7 @@ export default function DocsPage() {
                         <span className="block text-sm font-semibold text-foreground">
                           {c.name}
                         </span>
-                        <span className="block text-sm text-muted-foreground">
-                          {c.description}
-                        </span>
+                        <span className="block text-sm text-muted-foreground">{c.description}</span>
                       </span>
                     </div>
                   ))}
@@ -464,13 +480,7 @@ export default function DocsPage() {
           </p>
         </Section>
 
-        <Section
-          id="privacy"
-          eyebrow="Trust"
-          title="Privacy"
-          tone="cyan"
-          icon={<Lock size={11} />}
-        >
+        <Section id="privacy" eyebrow="Trust" title="Privacy" tone="cyan" icon={<Lock size={11} />}>
           <ul className="space-y-2.5">
             {[
               "Connected-app data is used to answer your request, not stored beyond what's needed.",

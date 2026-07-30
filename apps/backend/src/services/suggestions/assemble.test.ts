@@ -27,11 +27,9 @@ function context(over: Partial<AssemblyContext> = {}): AssemblyContext {
 describe("assembleGeneratedSuggestions", () => {
   it("computes dedupKey as gen:{connector}:{timeBucket} from the pattern, not model prose", () => {
     const p = pattern({ connector: "google", timeBucket: "evening" })
-    const result = assembleGeneratedSuggestions(
-      [p],
-      context({ connectedConnectors: ["google"] }),
-      [slot({ connector: "google", timeBucket: "evening" })],
-    )
+    const result = assembleGeneratedSuggestions([p], context({ connectedConnectors: ["google"] }), [
+      slot({ connector: "google", timeBucket: "evening" }),
+    ])
     expect(result).toHaveLength(1)
     expect(result[0]!.dedupKey).toBe("gen:google:evening")
     expect(dedupKeyFor(p)).toBe("gen:google:evening")
@@ -76,7 +74,9 @@ describe("assembleGeneratedSuggestions", () => {
   it("drops a candidate overlapping an existing enabled schedule (connector + bucket)", () => {
     const result = assembleGeneratedSuggestions(
       [pattern()],
-      context({ existingSchedules: [{ connector: "github", timeBucket: "morning", enabled: true }] }),
+      context({
+        existingSchedules: [{ connector: "github", timeBucket: "morning", enabled: true }],
+      }),
       [slot()],
     )
     expect(result).toHaveLength(0)
@@ -99,7 +99,9 @@ describe("assembleGeneratedSuggestions", () => {
   it("ignores a disabled overlapping schedule (only enabled ones dedup)", () => {
     const result = assembleGeneratedSuggestions(
       [pattern()],
-      context({ existingSchedules: [{ connector: "github", timeBucket: "morning", enabled: false }] }),
+      context({
+        existingSchedules: [{ connector: "github", timeBucket: "morning", enabled: false }],
+      }),
       [slot()],
     )
     expect(result).toHaveLength(1)
@@ -148,7 +150,9 @@ describe("assembleGeneratedSuggestions", () => {
   })
 
   it("sets requires.telegram when deliverTo includes telegram, omits it otherwise", () => {
-    const tg = assembleGeneratedSuggestions([pattern()], context(), [slot({ deliverTo: ["telegram"] })])
+    const tg = assembleGeneratedSuggestions([pattern()], context(), [
+      slot({ deliverTo: ["telegram"] }),
+    ])
     expect(tg[0]!.requires).toEqual({ telegram: true })
     const other = assembleGeneratedSuggestions([pattern()], context(), [
       slot({ deliverTo: ["email"] }),

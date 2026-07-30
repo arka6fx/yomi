@@ -1,8 +1,8 @@
 # apps/landing — Cloudflare Workers I/O rules
 
 The landing app deploys as a Cloudflare Worker. The **backend runs on EC2 (Bun),
-not Workers**, so these rules are landing-only. CF Workers bind native I/O to the
-originating request context:
+not Workers**, so these rules are landing-only. CF Workers bind native I/O to
+the originating request context:
 
 - **Landing never touches Postgres directly.** All DB access goes through the
   backend API (EC2, `pg`/`drizzle-orm/node-postgres` against AWS RDS) — don't

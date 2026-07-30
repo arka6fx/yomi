@@ -19,7 +19,9 @@ mock.module("@yomi/db", () => {
     }),
   })
   const db = {
-    select: () => ({ from: () => ({ where: () => ({ limit: () => Promise.resolve(existingDocRows) }) }) }),
+    select: () => ({
+      from: () => ({ where: () => ({ limit: () => Promise.resolve(existingDocRows) }) }),
+    }),
     insert: (table: any) => makeChain(table.__name),
     delete: () => ({ where: () => Promise.resolve() }),
   }

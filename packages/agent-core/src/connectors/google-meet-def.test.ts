@@ -157,7 +157,11 @@ describe("google meet connector", () => {
       }
       return Response.json({
         transcriptEntries: [
-          { participant: "participants/p1", text: "Let's ship on Friday.", startTime: "2026-07-11T10:00:00Z" },
+          {
+            participant: "participants/p1",
+            text: "Let's ship on Friday.",
+            startTime: "2026-07-11T10:00:00Z",
+          },
         ],
       })
     }) as typeof fetch

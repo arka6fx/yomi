@@ -54,7 +54,9 @@ export async function resolvesToDisallowedAddress(hostname: string): Promise<boo
     // per-case via mock.module before this actually runs.
     const { promises: dns } = await import("node:dns")
     const addresses = await dns.lookup(hostname, { all: true })
-    return addresses.some((a) => (a.family === 4 ? isBlockedIPv4(a.address) : isBlockedIPv6(a.address)))
+    return addresses.some((a) =>
+      a.family === 4 ? isBlockedIPv4(a.address) : isBlockedIPv6(a.address),
+    )
   } catch {
     return true
   }

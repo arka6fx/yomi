@@ -175,7 +175,10 @@ function capToolSet(connectorTools: ToolSet, extraTools: ToolSet, text: string):
   const budget = Math.max(MAX_TOOLS - Object.keys(extraTools).length, 0)
   const lower = text.toLowerCase()
   const scored = Object.entries(connectorTools).map(([key, tool], index) => {
-    const words = key.toLowerCase().split(/[^a-z]+/).filter((w) => w.length > 3)
+    const words = key
+      .toLowerCase()
+      .split(/[^a-z]+/)
+      .filter((w) => w.length > 3)
     const mentioned = words.some((w) => lower.includes(w))
     return { key, tool, index, mentioned }
   })

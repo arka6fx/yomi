@@ -6,7 +6,9 @@ describe("Composio risk classification", () => {
     it("classifies representative GitHub read actions as read", () => {
       expect(classifyAction("github", "GITHUB_LIST_REPOSITORY_ISSUES")).toBe("read")
       expect(classifyAction("github", "GITHUB_GET_A_PULL_REQUEST")).toBe("read")
-      expect(classifyAction("github", "GITHUB_LIST_REPOSITORIES_FOR_THE_AUTHENTICATED_USER")).toBe("read")
+      expect(classifyAction("github", "GITHUB_LIST_REPOSITORIES_FOR_THE_AUTHENTICATED_USER")).toBe(
+        "read",
+      )
       expect(classifyAction("github", "GITHUB_LIST_COMMITS")).toBe("read")
       expect(classifyAction("github", "GITHUB_GET_REPOSITORY_CONTENT")).toBe("read")
       expect(classifyAction("github", "GITHUB_SEARCH_CODE")).toBe("read")
@@ -30,65 +32,65 @@ describe("Composio risk classification", () => {
   })
 
   describe("Linear actions", () => {
-  it("classifies representative Linear read actions as read", () => {
-    expect(classifyAction("linear", "LINEAR_LIST_LINEAR_ISSUES")).toBe("read")
-    expect(classifyAction("linear", "LINEAR_GET_LINEAR_ISSUE")).toBe("read")
-    expect(classifyAction("linear", "LINEAR_LIST_LINEAR_TEAMS")).toBe("read")
-  })
+    it("classifies representative Linear read actions as read", () => {
+      expect(classifyAction("linear", "LINEAR_LIST_LINEAR_ISSUES")).toBe("read")
+      expect(classifyAction("linear", "LINEAR_GET_LINEAR_ISSUE")).toBe("read")
+      expect(classifyAction("linear", "LINEAR_LIST_LINEAR_TEAMS")).toBe("read")
+    })
 
-  it("classifies representative Linear write/send actions to the right risk", () => {
-    expect(classifyAction("linear", "LINEAR_CREATE_LINEAR_ISSUE")).toBe("write")
-    expect(classifyAction("linear", "LINEAR_UPDATE_ISSUE")).toBe("write")
-    expect(classifyAction("linear", "LINEAR_CREATE_LINEAR_COMMENT")).toBe("write")
-  })
+    it("classifies representative Linear write/send actions to the right risk", () => {
+      expect(classifyAction("linear", "LINEAR_CREATE_LINEAR_ISSUE")).toBe("write")
+      expect(classifyAction("linear", "LINEAR_UPDATE_ISSUE")).toBe("write")
+      expect(classifyAction("linear", "LINEAR_CREATE_LINEAR_COMMENT")).toBe("write")
+    })
 
-  it("classifies irreversible Linear actions as irreversible", () => {
-    expect(classifyAction("linear", "LINEAR_DELETE_LINEAR_ISSUE")).toBe("irreversible")
-  })
+    it("classifies irreversible Linear actions as irreversible", () => {
+      expect(classifyAction("linear", "LINEAR_DELETE_LINEAR_ISSUE")).toBe("irreversible")
+    })
 
-  it("gates the arbitrary-GraphQL action (it can run mutations)", () => {
-    expect(classifyAction("linear", "LINEAR_RUN_QUERY_OR_MUTATION")).not.toBe("read")
-  })
+    it("gates the arbitrary-GraphQL action (it can run mutations)", () => {
+      expect(classifyAction("linear", "LINEAR_RUN_QUERY_OR_MUTATION")).not.toBe("read")
+    })
 
-  it("defaults any unclassified action to a write (default-deny)", () => {
-    expect(classifyAction("linear", "LINEAR_SOME_BRAND_NEW_ACTION")).toBe("write")
-    expect(classifyAction("linear", "TOTALLY_UNKNOWN")).toBe("write")
-  })
+    it("defaults any unclassified action to a write (default-deny)", () => {
+      expect(classifyAction("linear", "LINEAR_SOME_BRAND_NEW_ACTION")).toBe("write")
+      expect(classifyAction("linear", "TOTALLY_UNKNOWN")).toBe("write")
+    })
 
-  it("defaults actions in an unknown toolkit to a write (default-deny)", () => {
-    expect(classifyAction("no_such_toolkit", "ANYTHING")).toBe("write")
-  })
+    it("defaults actions in an unknown toolkit to a write (default-deny)", () => {
+      expect(classifyAction("no_such_toolkit", "ANYTHING")).toBe("write")
+    })
 
-  it("is case-insensitive on the toolkit key", () => {
-    expect(classifyAction("LINEAR", "LINEAR_LIST_LINEAR_ISSUES")).toBe("read")
-    expect(classifyAction("GITHUB", "GITHUB_LIST_REPOSITORY_ISSUES")).toBe("read")
-  })
+    it("is case-insensitive on the toolkit key", () => {
+      expect(classifyAction("LINEAR", "LINEAR_LIST_LINEAR_ISSUES")).toBe("read")
+      expect(classifyAction("GITHUB", "GITHUB_LIST_REPOSITORY_ISSUES")).toBe("read")
+    })
 
-  it("exposes isReadAction as a convenience over classifyAction", () => {
-    expect(isReadAction("linear", "LINEAR_LIST_LINEAR_ISSUES")).toBe(true)
-    expect(isReadAction("linear", "LINEAR_CREATE_LINEAR_ISSUE")).toBe(false)
-    expect(isReadAction("linear", "UNKNOWN")).toBe(false)
-  })
+    it("exposes isReadAction as a convenience over classifyAction", () => {
+      expect(isReadAction("linear", "LINEAR_LIST_LINEAR_ISSUES")).toBe(true)
+      expect(isReadAction("linear", "LINEAR_CREATE_LINEAR_ISSUE")).toBe(false)
+      expect(isReadAction("linear", "UNKNOWN")).toBe(false)
+    })
 
-  it("keeps the map as plain data keyed by lowercase toolkit", () => {
-    expect(COMPOSIO_RISK_MAP["linear"]).toBeDefined()
-    expect(COMPOSIO_RISK_MAP["github"]).toBeDefined()
-    expect(COMPOSIO_RISK_MAP["gmail"]).toBeDefined()
-    expect(COMPOSIO_RISK_MAP["googlecalendar"]).toBeDefined()
-    expect(COMPOSIO_RISK_MAP["googledrive"]).toBeDefined()
-    expect(COMPOSIO_RISK_MAP["googledocs"]).toBeDefined()
-    expect(COMPOSIO_RISK_MAP["googlesheets"]).toBeDefined()
-    expect(COMPOSIO_RISK_MAP["googleslides"]).toBeDefined()
-    expect(COMPOSIO_RISK_MAP["google_classroom"]).toBeDefined()
-    expect(COMPOSIO_RISK_MAP["googletasks"]).toBeDefined()
-    expect(COMPOSIO_RISK_MAP["googlemeet"]).toBeDefined()
-    expect(COMPOSIO_RISK_MAP["google_maps"]).toBeDefined()
-    for (const bySlug of Object.values(COMPOSIO_RISK_MAP)) {
-      for (const risk of Object.values(bySlug)) {
-        expect(["read", "write", "send", "paid", "irreversible"]).toContain(risk)
+    it("keeps the map as plain data keyed by lowercase toolkit", () => {
+      expect(COMPOSIO_RISK_MAP["linear"]).toBeDefined()
+      expect(COMPOSIO_RISK_MAP["github"]).toBeDefined()
+      expect(COMPOSIO_RISK_MAP["gmail"]).toBeDefined()
+      expect(COMPOSIO_RISK_MAP["googlecalendar"]).toBeDefined()
+      expect(COMPOSIO_RISK_MAP["googledrive"]).toBeDefined()
+      expect(COMPOSIO_RISK_MAP["googledocs"]).toBeDefined()
+      expect(COMPOSIO_RISK_MAP["googlesheets"]).toBeDefined()
+      expect(COMPOSIO_RISK_MAP["googleslides"]).toBeDefined()
+      expect(COMPOSIO_RISK_MAP["google_classroom"]).toBeDefined()
+      expect(COMPOSIO_RISK_MAP["googletasks"]).toBeDefined()
+      expect(COMPOSIO_RISK_MAP["googlemeet"]).toBeDefined()
+      expect(COMPOSIO_RISK_MAP["google_maps"]).toBeDefined()
+      for (const bySlug of Object.values(COMPOSIO_RISK_MAP)) {
+        for (const risk of Object.values(bySlug)) {
+          expect(["read", "write", "send", "paid", "irreversible"]).toContain(risk)
+        }
       }
-    }
-  })
+    })
   })
 
   describe("Google actions", () => {
@@ -131,7 +133,9 @@ describe("Composio risk classification", () => {
     })
 
     it("classifies Drive irreversible actions as irreversible", () => {
-      expect(classifyAction("googledrive", "GOOGLEDRIVE_GOOGLE_DRIVE_DELETE_FOLDER_OR_FILE_ACTION")).toBe("irreversible")
+      expect(
+        classifyAction("googledrive", "GOOGLEDRIVE_GOOGLE_DRIVE_DELETE_FOLDER_OR_FILE_ACTION"),
+      ).toBe("irreversible")
     })
 
     it("classifies Docs read actions as read, including cross-connector Sheets chart reads", () => {
@@ -150,7 +154,9 @@ describe("Composio risk classification", () => {
     })
 
     it("classifies Sheets write actions as write", () => {
-      expect(classifyAction("googlesheets", "GOOGLESHEETS_SPREADSHEETS_VALUES_APPEND")).toBe("write")
+      expect(classifyAction("googlesheets", "GOOGLESHEETS_SPREADSHEETS_VALUES_APPEND")).toBe(
+        "write",
+      )
       expect(classifyAction("googlesheets", "GOOGLESHEETS_CREATE_CHART")).toBe("write")
     })
 
@@ -266,14 +272,18 @@ describe("Composio risk classification", () => {
       expect(classifyAction("dynamics365", "DYNAMICS365_DYNAMICSCRM_GET_A_LEAD")).toBe("read")
       expect(classifyAction("dynamics365", "DYNAMICS365_DYNAMICSCRM_GET_ALL_LEADS")).toBe("read")
       expect(classifyAction("dynamics365", "DYNAMICS365_DYNAMICSCRM_GET_A_INVOICE")).toBe("read")
-      expect(classifyAction("dynamics365", "DYNAMICS365_DYNAMICS365_GET_ALL_INVOICES_ACTION")).toBe("read")
+      expect(classifyAction("dynamics365", "DYNAMICS365_DYNAMICS365_GET_ALL_INVOICES_ACTION")).toBe(
+        "read",
+      )
     })
 
     it("classifies real Dynamics 365 create/update actions as write", () => {
       expect(classifyAction("dynamics365", "DYNAMICS365_DYNAMICSCRM_CREATE_ACCOUNT")).toBe("write")
       expect(classifyAction("dynamics365", "DYNAMICS365_DYNAMICSCRM_CREATE_INVOICE")).toBe("write")
       expect(classifyAction("dynamics365", "DYNAMICS365_DYNAMICSCRM_UPDATE_LEAD")).toBe("write")
-      expect(classifyAction("dynamics365", "DYNAMICS365_DYNAMICSCRM_UPDATE_SALES_ORDER")).toBe("write")
+      expect(classifyAction("dynamics365", "DYNAMICS365_DYNAMICSCRM_UPDATE_SALES_ORDER")).toBe(
+        "write",
+      )
     })
   })
 

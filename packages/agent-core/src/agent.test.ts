@@ -139,9 +139,7 @@ function alwaysCallsTool(bodies: Record<string, unknown>[], completionTokens: nu
     if (body["tool_choice"] === "none") {
       // Grace / summary call: forced to answer with no tools.
       return chatResponse({
-        choices: [
-          { message: { content: "Here's what I got so far." }, finish_reason: "stop" },
-        ],
+        choices: [{ message: { content: "Here's what I got so far." }, finish_reason: "stop" }],
         usage: { prompt_tokens: 8, completion_tokens: 4 },
       })
     }
@@ -151,7 +149,11 @@ function alwaysCallsTool(bodies: Record<string, unknown>[], completionTokens: nu
           message: {
             content: null,
             tool_calls: [
-              { id: `call_${bodies.length}`, type: "function", function: { name: "echo", arguments: "{}" } },
+              {
+                id: `call_${bodies.length}`,
+                type: "function",
+                function: { name: "echo", arguments: "{}" },
+              },
             ],
           },
           finish_reason: "tool_calls",
@@ -259,7 +261,11 @@ function alwaysCallsNamedTool(
           message: {
             content: null,
             tool_calls: [
-              { id: `call_${bodies.length}`, type: "function", function: { name: toolName, arguments: args } },
+              {
+                id: `call_${bodies.length}`,
+                type: "function",
+                function: { name: toolName, arguments: args },
+              },
             ],
           },
           finish_reason: "tool_calls",
@@ -529,7 +535,9 @@ describe("runAgentLoop dynamic connector-tool selection", () => {
     await runAgentLoop({ registry, text: "what's 2+2?", extraTools: { echo: echoTool } })
 
     const mainTools = bodies[1]?.["tools"] as Array<{ function?: { name?: string } }>
-    expect(mainTools).toEqual([expect.objectContaining({ function: expect.objectContaining({ name: "echo" }) })])
+    expect(mainTools).toEqual([
+      expect.objectContaining({ function: expect.objectContaining({ name: "echo" }) }),
+    ])
   })
 
   it("fails open to loading everything when the classifier call itself fails", async () => {

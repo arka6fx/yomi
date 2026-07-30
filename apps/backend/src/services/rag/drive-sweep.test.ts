@@ -1,14 +1,26 @@
 import { describe, expect, it, mock } from "bun:test"
 
 const dueRows = [
-  { id: "src-1", userId: "u1", path: "f1", status: "active", syncState: { folderId: "f1", filesIndexed: 0, filesSkipped: 0 } },
+  {
+    id: "src-1",
+    userId: "u1",
+    path: "f1",
+    status: "active",
+    syncState: { folderId: "f1", filesIndexed: 0, filesSkipped: 0 },
+  },
 ]
 const updates: any[] = []
 
 mock.module("@yomi/db", () => ({
   db: {
     select: () => ({ from: () => ({ where: () => ({ limit: async () => dueRows }) }) }),
-    update: () => ({ set: (v: any) => ({ where: async () => { updates.push(v) } }) }),
+    update: () => ({
+      set: (v: any) => ({
+        where: async () => {
+          updates.push(v)
+        },
+      }),
+    }),
   },
   ragSources: { sourceType: {}, status: {}, updatedAt: {} },
   ragDocuments: {},
@@ -45,14 +57,24 @@ describe("runDriveSyncSweep", () => {
       userId: "u1",
       path: "f2",
       status: "backfilling",
-      syncState: { folderId: "f2", filesIndexed: 0, filesSkipped: 0, syncingAt: new Date().toISOString() },
+      syncState: {
+        folderId: "f2",
+        filesIndexed: 0,
+        filesSkipped: 0,
+        syncingAt: new Date().toISOString(),
+      },
     }
     const stale = {
       id: "src-stale",
       userId: "u1",
       path: "f3",
       status: "backfilling",
-      syncState: { folderId: "f3", filesIndexed: 0, filesSkipped: 0, syncingAt: new Date(Date.now() - 10 * 60 * 1000).toISOString() },
+      syncState: {
+        folderId: "f3",
+        filesIndexed: 0,
+        filesSkipped: 0,
+        syncingAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+      },
     }
     dueRows.push(leased, stale)
     updates.length = 0

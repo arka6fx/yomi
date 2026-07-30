@@ -620,7 +620,8 @@ function DashboardContent() {
     usageSummary?.credits.totalAvailableThisPeriod ?? sub?.totalCredits ?? creditRemaining
   const creditIncluded =
     usageSummary?.credits.included ??
-    ({ explore: 100, pro: 300, max: 750 } as Record<string, number>)[currentPlanKey] ?? 0
+    ({ explore: 100, pro: 300, max: 750 } as Record<string, number>)[currentPlanKey] ??
+    0
   const resetAt = usageSummary?.credits.resetAt ?? sub?.resetAt
   const resetKind = usageSummary?.credits.resetKind ?? sub?.resetKind
   const trendDays = usageSummary?.monthlyUsage.days.slice(-14) ?? []
@@ -772,8 +773,6 @@ function DashboardContent() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-
-
             {integrationBanner?.kind === "success" && (
               <div className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-400">
                 Integration connected successfully.
@@ -936,9 +935,7 @@ function DashboardContent() {
                 rows={4}
                 className="w-full rounded-lg border border-border bg-background p-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
               />
-              {agentSoulError && (
-                <p className="text-xs text-destructive mt-2">{agentSoulError}</p>
-              )}
+              {agentSoulError && <p className="text-xs text-destructive mt-2">{agentSoulError}</p>}
               <button
                 onClick={handleSaveAgentSoul}
                 disabled={agentSoulSaving}
@@ -951,64 +948,60 @@ function DashboardContent() {
         )}
 
         {/* Profile tab content */}
-        {
-          activeTab === "profile" && (
-            <>
-              <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    {session.user.name || "—"}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{session.user.email}</p>
-                </div>
+        {activeTab === "profile" && (
+          <>
+            <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">{session.user.name || "—"}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{session.user.email}</p>
               </div>
+            </div>
 
-              {/* Welcome banner — shown once after signup */}
-              {showWelcome && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4 }}
-                  className="rounded-xl border border-primary/30 bg-primary/5 p-4 flex items-start justify-between gap-4"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Welcome to Yomi!</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Connect Telegram or an integration to start using Yomi from the dashboard.
-                    </p>
-                    <Link
-                      href="/docs"
-                      className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
-                    >
-                      Open docs
-                    </Link>
-                  </div>
-                  <button
-                    onClick={() => setShowWelcome(false)}
-                    className="text-muted-foreground hover:text-foreground transition-colors shrink-0 text-lg leading-none"
-                    aria-label="Dismiss"
-                  >
-                    ×
-                  </button>
-                </motion.div>
-              )}
-
-              {/* Telegram */}
+            {/* Welcome banner — shown once after signup */}
+            {showWelcome && (
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
+                transition={{ duration: 0.4 }}
+                className="rounded-xl border border-primary/30 bg-primary/5 p-4 flex items-start justify-between gap-4"
               >
-                <TelegramCard
-                  platformLinks={platformLinks}
-                  platformsLoading={platformsLoading}
-                  unlinking={unlinking}
-                  onUnlink={handleUnlink}
-                />
+                <div>
+                  <p className="text-sm font-medium text-foreground">Welcome to Yomi!</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Connect Telegram or an integration to start using Yomi from the dashboard.
+                  </p>
+                  <Link
+                    href="/docs"
+                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                  >
+                    Open docs
+                  </Link>
+                </div>
+                <button
+                  onClick={() => setShowWelcome(false)}
+                  className="text-muted-foreground hover:text-foreground transition-colors shrink-0 text-lg leading-none"
+                  aria-label="Dismiss"
+                >
+                  ×
+                </button>
               </motion.div>
-            </>
-          )
-        }
+            )}
+
+            {/* Telegram */}
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <TelegramCard
+                platformLinks={platformLinks}
+                platformsLoading={platformsLoading}
+                unlinking={unlinking}
+                onUnlink={handleUnlink}
+              />
+            </motion.div>
+          </>
+        )}
 
         {/* Billing tab content */}
         {
@@ -1505,7 +1498,6 @@ function DashboardContent() {
                   </div>
                 </motion.div>
               )}
-
             </>
           ) /* end billing tab */
         }

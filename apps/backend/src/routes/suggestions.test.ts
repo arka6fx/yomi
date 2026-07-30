@@ -60,9 +60,13 @@ mock.module("@yomi/db", () => ({
         }
         if (decisionInsertThrows) {
           const chain = {
-            returning: () => Promise.reject(new Error("duplicate key value violates unique constraint")),
+            returning: () =>
+              Promise.reject(new Error("duplicate key value violates unique constraint")),
             then: (_res: any, rej: any) =>
-              Promise.reject(new Error("duplicate key value violates unique constraint")).then(_res, rej),
+              Promise.reject(new Error("duplicate key value violates unique constraint")).then(
+                _res,
+                rej,
+              ),
           }
           return chain
         }
@@ -277,7 +281,9 @@ describe("suggestions routes", () => {
   it("accepts a generated dedupKey exactly like a catalog one", async () => {
     generatedEntries = [GENERATED]
     offerable = [GENERATED, ...CATALOG]
-    const res = await app().request("/api/suggestions/gen:github:morning/accept", { method: "POST" })
+    const res = await app().request("/api/suggestions/gen:github:morning/accept", {
+      method: "POST",
+    })
     expect(res.status).toBe(200)
     expect(scheduleInserts[0].prompt).toBe("prompt-gen")
     expect(scheduleInserts[0].schedule).toBe("every day 8am")
@@ -287,7 +293,9 @@ describe("suggestions routes", () => {
 
   it("dismisses a generated dedupKey identically", async () => {
     generatedEntries = [GENERATED]
-    const res = await app().request("/api/suggestions/gen:github:morning/dismiss", { method: "POST" })
+    const res = await app().request("/api/suggestions/gen:github:morning/dismiss", {
+      method: "POST",
+    })
     expect(res.status).toBe(200)
     expect(decisionInserts[0].decision).toBe("dismissed")
     expect(decisionInserts[0].dedupKey).toBe("gen:github:morning")

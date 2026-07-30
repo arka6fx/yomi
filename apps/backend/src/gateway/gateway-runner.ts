@@ -261,7 +261,9 @@ export class GatewayRunner {
         }
       }
       if (actions.length === 0)
-        return isExplicitApprovalCommand ? { reply: "No pending approvals.", executed: false } : null
+        return isExplicitApprovalCommand
+          ? { reply: "No pending approvals.", executed: false }
+          : null
       const id = actions[0]!.id
       if (wantsApprove) {
         try {
@@ -315,9 +317,8 @@ export class GatewayRunner {
 
     if (actionCommand === "approve" || actionCommand === "confirm" || actionCommand === "send") {
       try {
-        const { approvePendingAction, formatActionResult } = await import(
-          "../services/pending-actions.js"
-        )
+        const { approvePendingAction, formatActionResult } =
+          await import("../services/pending-actions.js")
         const result = await approvePendingAction(userId, id, { skipNotify: true })
         if (!result)
           return {
@@ -344,7 +345,8 @@ export class GatewayRunner {
       const denied = await denyPendingAction(userId, id)
       if (!denied)
         return {
-          reply: "I couldn't find that pending action. It may have expired or already been handled.",
+          reply:
+            "I couldn't find that pending action. It may have expired or already been handled.",
           executed: false,
         }
       return { reply: "Denied.", executed: false }
@@ -407,9 +409,7 @@ export class GatewayRunner {
     history: AgentMessage[],
   ): Promise<{ text: string; reaction: string | null } | null> {
     const modelId =
-      process.env["OPENAI_FAST_MODEL"] ||
-      process.env["OPENAI_AGENT_MODEL"] ||
-      "gpt-5.4-mini"
+      process.env["OPENAI_FAST_MODEL"] || process.env["OPENAI_AGENT_MODEL"] || "gpt-5.4-mini"
     try {
       const result = await generateText({
         model: createModel(modelId),
@@ -459,8 +459,12 @@ export class GatewayRunner {
     msg: GatewayMessage,
     history: AgentMessage[],
     yomiUserId: string,
-  ): Promise<{ kind: "describe"; text: string } | { kind: "action"; description: string; assetUrl: string | null }> {
-    if (!msg.imageUrl) return { kind: "describe", text: "I couldn't access the image. Please send it again." }
+  ): Promise<
+    | { kind: "describe"; text: string }
+    | { kind: "action"; description: string; assetUrl: string | null }
+  > {
+    if (!msg.imageUrl)
+      return { kind: "describe", text: "I couldn't access the image. Please send it again." }
     const imageRes = await fetch(msg.imageUrl, { signal: AbortSignal.timeout(10_000) })
     if (!imageRes.ok) throw new Error(`Failed to download image: ${imageRes.status}`)
     // Telegram's own file metadata is authoritative; its file-download CDN often
@@ -470,7 +474,10 @@ export class GatewayRunner {
     const contentType = msg.imageMimeType || imageRes.headers.get("content-type") || "image/jpeg"
     const bytes = await imageRes.arrayBuffer()
     if (bytes.byteLength > 8 * 1024 * 1024)
-      return { kind: "describe", text: "That image is too large for me to analyze. Please send a smaller image." }
+      return {
+        kind: "describe",
+        text: "That image is too large for me to analyze. Please send a smaller image.",
+      }
     const image = `data:${contentType};base64,${Buffer.from(bytes).toString("base64")}`
     const prompt = msg.text.trim() || "Analyze this image. Keep the answer concise and useful."
     const model = process.env["OPENAI_AGENT_MODEL"] || "gpt-5.5"

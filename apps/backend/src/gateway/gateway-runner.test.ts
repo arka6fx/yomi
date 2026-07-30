@@ -742,7 +742,15 @@ describe("GatewayRunner production routing", () => {
     expect(agentCalls).toHaveLength(1)
   })
 
-  for (const phrase of ["yes", "Yes schedule it", "sure", "ok", "go ahead", "yes please", "do it"]) {
+  for (const phrase of [
+    "yes",
+    "Yes schedule it",
+    "sure",
+    "ok",
+    "go ahead",
+    "yes please",
+    "do it",
+  ]) {
     it(`approves a pending action with "${phrase}"`, async () => {
       pendingActions = [{ id: "11111111-1111-1111-1111-111111111111", title: "T", preview: "p" }]
       const runner = new GatewayRunner()

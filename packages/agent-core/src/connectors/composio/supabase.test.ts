@@ -10,6 +10,9 @@ describe("supabaseComposioSpecs", () => {
     const base = { ref: "proj_ref" }
 
     expect(spec.parameters.safeParse(base).success).toBe(false)
-    expect(spec.parameters.safeParse({ ...base, file: "export default () => new Response('ok')" }).success).toBe(true)
+    expect(
+      spec.parameters.safeParse({ ...base, file: "export default () => new Response('ok')" })
+        .success,
+    ).toBe(true)
   })
 })

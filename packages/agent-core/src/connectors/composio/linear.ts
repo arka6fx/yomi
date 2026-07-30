@@ -143,7 +143,11 @@ export function makeComposioLinearDef(executor: ComposioExecutor): ConnectorDef 
       ],
       collect: [
         { env: "COMPOSIO_API_KEY", label: "Composio API key", secret: true },
-        { env: "COMPOSIO_LINEAR_AUTH_CONFIG_ID", label: "Composio Linear auth config id", secret: false },
+        {
+          env: "COMPOSIO_LINEAR_AUTH_CONFIG_ID",
+          label: "Composio Linear auth config id",
+          secret: false,
+        },
       ],
       docsUrl: "https://docs.composio.dev/toolkits/linear",
     },

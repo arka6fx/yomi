@@ -189,7 +189,13 @@ describe("Sheets read and append", () => {
   it("reads a range, quoting the tab name", async () => {
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
       requests.push({ url: String(input), method: init?.method ?? "GET", body: "" })
-      return Response.json({ range: "Sheet1!A1:B2", values: [["item", "cost"], ["rent", "900"]] })
+      return Response.json({
+        range: "Sheet1!A1:B2",
+        values: [
+          ["item", "cost"],
+          ["rent", "900"],
+        ],
+      })
     }) as typeof fetch
 
     const res = (await executeTool("drive-readSheet", {

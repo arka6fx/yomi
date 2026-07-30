@@ -9,15 +9,15 @@ student submission read/write, and user email scopes.
 
 ## Tools
 
-| Tool                            | Type  | Purpose                                                     |
-| ------------------------------- | ----- | ----------------------------------------------------------- |
-| `classroom-listCourses`         | Read  | List active Classroom courses.                              |
-| `classroom-listAssignments`     | Read  | List coursework for a course.                               |
-| `classroom-getAssignment`       | Read  | Full assignment detail: description, materials, deep link.  |
-| `classroom-listAnnouncements`   | Read  | List course announcements.                                  |
-| `classroom-getSubmissionStatus` | Read  | Check the connected student's submission state and grade.   |
-| `classroom-modifyAttachments`   | Write | Attach a Drive file to a Yomi-created assignment.           |
-| `classroom-turnIn`              | Write | Turn in (submit) a Yomi-created assignment.                 |
+| Tool                            | Type  | Purpose                                                    |
+| ------------------------------- | ----- | ---------------------------------------------------------- |
+| `classroom-listCourses`         | Read  | List active Classroom courses.                             |
+| `classroom-listAssignments`     | Read  | List coursework for a course.                              |
+| `classroom-getAssignment`       | Read  | Full assignment detail: description, materials, deep link. |
+| `classroom-listAnnouncements`   | Read  | List course announcements.                                 |
+| `classroom-getSubmissionStatus` | Read  | Check the connected student's submission state and grade.  |
+| `classroom-modifyAttachments`   | Write | Attach a Drive file to a Yomi-created assignment.          |
+| `classroom-turnIn`              | Write | Turn in (submit) a Yomi-created assignment.                |
 
 ## Solution flow (teacher-created assignments)
 

@@ -8,4 +8,8 @@ export const backendComposioGooglePhotosDef: BackendConnectorDef = {
   getDisplayName: async () => "Google Photos (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("google-photos") ? backendComposioGooglePhotosDef : backendComposioGooglePhotosDef)
+registerConnectorDef(
+  isComposioBacked("google-photos")
+    ? backendComposioGooglePhotosDef
+    : backendComposioGooglePhotosDef,
+)

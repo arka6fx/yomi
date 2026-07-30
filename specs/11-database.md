@@ -1,7 +1,8 @@
 # Spec 11 - Database
 
-Database: PostgreSQL (AWS RDS) through Drizzle and `pg`/`drizzle-orm/node-postgres`.
-RDS is private (no public IP) — admin access goes through `scripts/rds-tunnel.sh`.
+Database: PostgreSQL (AWS RDS) through Drizzle and
+`pg`/`drizzle-orm/node-postgres`. RDS is private (no public IP) — admin access
+goes through `scripts/rds-tunnel.sh`.
 
 Core tables:
 

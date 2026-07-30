@@ -9,7 +9,8 @@ export const LINKEDIN_TOOLKIT = "linkedin"
 export const linkedinComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "LINKEDIN_GET_MY_INFO",
-    description: "Get the authenticated user's LinkedIn profile, including the author ID needed to post. Read-only.",
+    description:
+      "Get the authenticated user's LinkedIn profile, including the author ID needed to post. Read-only.",
     parameters: z.object({}).passthrough(),
   },
   {
@@ -19,19 +20,30 @@ export const linkedinComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "LINKEDIN_CREATE_LINKED_IN_POST",
-    description: "Create a new post on LinkedIn for the user or an organization they manage. Requires user approval before it runs.",
-    parameters: z.object({
-      author: z.string().describe("Author URN (person or organization)"),
-      commentary: z.string().describe("Post text"),
-      visibility: z.string().optional().describe("'PUBLIC' or 'CONNECTIONS'"),
-    }).passthrough(),
-    preview: (a) => ({ title: "Create post", preview: String(a["commentary"] ?? "").slice(0, 150), confirmText: "Post" }),
+    description:
+      "Create a new post on LinkedIn for the user or an organization they manage. Requires user approval before it runs.",
+    parameters: z
+      .object({
+        author: z.string().describe("Author URN (person or organization)"),
+        commentary: z.string().describe("Post text"),
+        visibility: z.string().optional().describe("'PUBLIC' or 'CONNECTIONS'"),
+      })
+      .passthrough(),
+    preview: (a) => ({
+      title: "Create post",
+      preview: String(a["commentary"] ?? "").slice(0, 150),
+      confirmText: "Post",
+    }),
   },
   {
     slug: "LINKEDIN_DELETE_LINKED_IN_POST",
     description: "Delete a LinkedIn post. This cannot be undone.",
     parameters: z.object({ share_id: z.string().describe("Post share ID") }).passthrough(),
-    preview: (a) => ({ title: "Delete post", preview: `Delete post ${String(a["share_id"] ?? "")} — this cannot be undone`, confirmText: "Delete" }),
+    preview: (a) => ({
+      title: "Delete post",
+      preview: `Delete post ${String(a["share_id"] ?? "")} — this cannot be undone`,
+      confirmText: "Delete",
+    }),
   },
 ]
 
@@ -57,7 +69,11 @@ export function makeComposioLinkedInDef(executor: ComposioExecutor): ConnectorDe
       ],
       collect: [
         { env: "COMPOSIO_API_KEY", label: "Composio API key", secret: true },
-        { env: "COMPOSIO_LINKEDIN_AUTH_CONFIG_ID", label: "Composio LinkedIn auth config id", secret: false },
+        {
+          env: "COMPOSIO_LINKEDIN_AUTH_CONFIG_ID",
+          label: "Composio LinkedIn auth config id",
+          secret: false,
+        },
       ],
       docsUrl: "https://docs.composio.dev/tools/linkedin",
     },

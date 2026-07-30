@@ -36,7 +36,9 @@ let executedQueries: unknown[] = []
 function sqlToString(query: unknown): string {
   const chunks = (query as { queryChunks?: unknown[] })?.queryChunks ?? []
   return chunks
-    .map((c) => ((c as { value?: string[] })?.value ? (c as { value: string[] }).value.join("") : ""))
+    .map((c) =>
+      (c as { value?: string[] })?.value ? (c as { value: string[] }).value.join("") : "",
+    )
     .join("")
 }
 const realFetch = globalThis.fetch

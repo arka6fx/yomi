@@ -71,9 +71,7 @@ export async function searchWeb(query: string, signal?: AbortSignal): Promise<We
 
   if (!response.ok) {
     const text = await response.text().catch(() => "")
-    throw new Error(
-      `OpenAI web search failed (${response.status}): ${text || response.statusText}`,
-    )
+    throw new Error(`OpenAI web search failed (${response.status}): ${text || response.statusText}`)
   }
 
   const json = (await response.json()) as { output?: ResponsesOutputItem[] }

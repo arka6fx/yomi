@@ -137,13 +137,17 @@ export const githubComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "GITHUB_LIST_WORKFLOW_RUNS_FOR_A_REPOSITORY",
-    description: "List workflow runs for a repository, optionally filtered by branch, status, or event. Read-only.",
+    description:
+      "List workflow runs for a repository, optionally filtered by branch, status, or event. Read-only.",
     parameters: z
       .object({
         owner: z.string().describe("Repository owner"),
         repo: z.string().describe("Repository name"),
         branch: z.string().optional().describe("Filter by branch name"),
-        status: z.string().optional().describe("Filter by status/conclusion, e.g. success, in_progress"),
+        status: z
+          .string()
+          .optional()
+          .describe("Filter by status/conclusion, e.g. success, in_progress"),
         per_page: z.number().int().min(1).max(100).optional().describe("Max runs to return"),
       })
       .passthrough(),
@@ -154,8 +158,17 @@ export const githubComposioSpecs: ComposioToolSpec[] = [
     parameters: z
       .object({
         all: z.coerce.boolean().optional().describe("Include already-read notifications"),
-        participating: z.coerce.boolean().optional().describe("Only notifications the user is participating in"),
-        per_page: z.number().int().min(1).max(50).optional().describe("Max notifications to return"),
+        participating: z.coerce
+          .boolean()
+          .optional()
+          .describe("Only notifications the user is participating in"),
+        per_page: z
+          .number()
+          .int()
+          .min(1)
+          .max(50)
+          .optional()
+          .describe("Max notifications to return"),
       })
       .passthrough(),
   },
@@ -171,7 +184,8 @@ export const githubComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "GITHUB_SEARCH_ISSUES_AND_PULL_REQUESTS",
-    description: "Search issues and pull requests across GitHub using GitHub's search qualifiers. Read-only.",
+    description:
+      "Search issues and pull requests across GitHub using GitHub's search qualifiers. Read-only.",
     parameters: z
       .object({
         q: z.string().describe("Search query, e.g. 'repo:owner/name is:open label:bug'"),
@@ -194,7 +208,8 @@ export const githubComposioSpecs: ComposioToolSpec[] = [
   // ── Write actions (gated) ─────────────────────────────────────
   {
     slug: "GITHUB_CREATE_AN_ISSUE",
-    description: "Create a new issue in a GitHub repository. Requires user approval before it runs.",
+    description:
+      "Create a new issue in a GitHub repository. Requires user approval before it runs.",
     parameters: z
       .object({
         owner: z.string().describe("Repository owner"),
@@ -230,7 +245,10 @@ export const githubComposioSpecs: ComposioToolSpec[] = [
       .passthrough(),
     preview: (a) => ({
       title: `Update GitHub issue ${String(a["owner"] ?? "")}/${String(a["repo"] ?? "")}#${String(a["issue_number"] ?? "")}`,
-      preview: [a["state"] ? `State: ${String(a["state"])}` : null, a["title"] ? `Title: ${String(a["title"])}` : null]
+      preview: [
+        a["state"] ? `State: ${String(a["state"])}` : null,
+        a["title"] ? `Title: ${String(a["title"])}` : null,
+      ]
         .filter(Boolean)
         .join("\n"),
       confirmText: "Update issue",
@@ -338,7 +356,8 @@ export const githubComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "GITHUB_ADD_LABELS_TO_AN_ISSUE",
-    description: "Add labels to a GitHub issue or pull request. Requires user approval before it runs.",
+    description:
+      "Add labels to a GitHub issue or pull request. Requires user approval before it runs.",
     parameters: z
       .object({
         owner: z.string().describe("Repository owner"),
@@ -468,7 +487,11 @@ export function makeComposioGitHubDef(executor: ComposioExecutor): ConnectorDef 
       ],
       collect: [
         { env: "COMPOSIO_API_KEY", label: "Composio API key", secret: true },
-        { env: "COMPOSIO_GITHUB_AUTH_CONFIG_ID", label: "Composio GitHub auth config id", secret: false },
+        {
+          env: "COMPOSIO_GITHUB_AUTH_CONFIG_ID",
+          label: "Composio GitHub auth config id",
+          secret: false,
+        },
       ],
       docsUrl: "https://docs.composio.dev/toolkits/github",
     },

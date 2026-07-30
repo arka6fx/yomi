@@ -98,10 +98,7 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
         "Get the most important recent emails in the Gmail inbox, ranked by Gmail's importance markers with unread ones first. Use this when the user asks what emails matter, what needs attention, or wants an inbox briefing.",
       parameters: z.object({
         limit: z.number().int().min(1).max(20).default(10).describe("Max emails to return"),
-        unreadOnly: z
-          .boolean()
-          .default(false)
-          .describe("Only include unread important emails"),
+        unreadOnly: z.boolean().default(false).describe("Only include unread important emails"),
       }),
       execute: async ({ limit, unreadOnly }) => {
         if (!gmail.isConnected()) return notConnectedError()
@@ -539,10 +536,7 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
             try {
               const att = await gmail.getAttachment(messageId, attachmentId)
               // Gmail returns base64url; Drive upload needs the raw bytes.
-              const bytes = Buffer.from(
-                att.data.replace(/-/g, "+").replace(/_/g, "/"),
-                "base64",
-              )
+              const bytes = Buffer.from(att.data.replace(/-/g, "+").replace(/_/g, "/"), "base64")
               const metadata: Record<string, unknown> = {
                 name: name ?? att.filename,
                 ...(folderId ? { parents: [folderId] } : {}),
@@ -564,7 +558,8 @@ export function createGmailTools(ctx: ConnectorContext): ToolSet {
                   body: new Blob([head, new Uint8Array(bytes), tail]),
                 },
               )
-              if (!res.ok) throw new Error(`Drive upload failed: ${res.status}: ${await res.text()}`)
+              if (!res.ok)
+                throw new Error(`Drive upload failed: ${res.status}: ${await res.text()}`)
               const file = (await res.json()) as {
                 id: string
                 name: string

@@ -12,11 +12,7 @@ import { authenticate } from "../auth.js"
 import { requireConsent } from "../middleware/consent.js"
 import { effectivePlanForUser, isOwnerUser } from "../entitlements.js"
 import { llmRerank, mmrRerank, parseVector, type RerankCandidate } from "../lib/rerank.js"
-import {
-  embedText,
-  chunkText,
-  DEFAULT_EMBEDDING_MODEL,
-} from "../services/rag/embeddings.js"
+import { embedText, chunkText, DEFAULT_EMBEDDING_MODEL } from "../services/rag/embeddings.js"
 import { indexDocument } from "../services/rag/index-document.js"
 
 const MAX_DOCUMENT_CHARS = 120_000

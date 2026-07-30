@@ -60,19 +60,36 @@ const KNOWN_EXTENSIONS: Record<string, string> = {
   "application/pdf": "pdf",
 }
 
-const MAGIC_BYTE_SNIFFERS: Array<{ contentType: string; extension: string; matches: (b: Uint8Array) => boolean }> = [
-  { contentType: "image/jpeg", extension: "jpg", matches: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
+const MAGIC_BYTE_SNIFFERS: Array<{
+  contentType: string
+  extension: string
+  matches: (b: Uint8Array) => boolean
+}> = [
+  {
+    contentType: "image/jpeg",
+    extension: "jpg",
+    matches: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
+  },
   {
     contentType: "image/png",
     extension: "png",
     matches: (b) => b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47,
   },
-  { contentType: "image/gif", extension: "gif", matches: (b) => b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 },
+  {
+    contentType: "image/gif",
+    extension: "gif",
+    matches: (b) => b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46,
+  },
   {
     contentType: "image/webp",
     extension: "webp",
     matches: (b) =>
-      b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45,
+      b[0] === 0x52 &&
+      b[1] === 0x49 &&
+      b[2] === 0x46 &&
+      b[3] === 0x46 &&
+      b[8] === 0x57 &&
+      b[9] === 0x45,
   },
 ]
 
@@ -81,7 +98,10 @@ const MAGIC_BYTE_SNIFFERS: Array<{ contentType: string; extension: string; match
 // Trusting that blindly produces a .bin asset with a wrong Content-Type header
 // that connectors' APIs (e.g. Instagram) then reject as "not a photo or video" —
 // so an unrecognized content-type falls back to sniffing the actual bytes.
-export function resolveAssetType(contentType: string, bytes: Uint8Array): { extension: string; contentType: string } {
+export function resolveAssetType(
+  contentType: string,
+  bytes: Uint8Array,
+): { extension: string; contentType: string } {
   const known = KNOWN_EXTENSIONS[contentType]
   if (known) return { extension: known, contentType }
   const sniffed = MAGIC_BYTE_SNIFFERS.find((s) => s.matches(bytes))

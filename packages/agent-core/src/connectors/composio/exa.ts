@@ -9,13 +9,16 @@ export const EXA_TOOLKIT = "exa"
 export const exaComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "EXA_SEARCH",
-    description: "Search the web with Exa's neural/keyword search engine, with filtering options. Read-only.",
-    parameters: z.object({
-      query: z.string().describe("Search query"),
-      numResults: z.number().int().optional().describe("Max results"),
-      includeDomains: z.array(z.string()).optional().describe("Restrict to these domains"),
-      excludeDomains: z.array(z.string()).optional().describe("Exclude these domains"),
-    }).passthrough(),
+    description:
+      "Search the web with Exa's neural/keyword search engine, with filtering options. Read-only.",
+    parameters: z
+      .object({
+        query: z.string().describe("Search query"),
+        numResults: z.number().int().optional().describe("Max results"),
+        includeDomains: z.array(z.string()).optional().describe("Restrict to these domains"),
+        excludeDomains: z.array(z.string()).optional().describe("Exclude these domains"),
+      })
+      .passthrough(),
   },
   {
     slug: "EXA_ANSWER",
@@ -25,12 +28,22 @@ export const exaComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "EXA_FIND_SIMILAR",
     description: "Find web pages semantically similar to a given URL. Read-only.",
-    parameters: z.object({ url: z.string().describe("Reference URL"), num_results: z.number().int().optional().describe("Max results") }).passthrough(),
+    parameters: z
+      .object({
+        url: z.string().describe("Reference URL"),
+        num_results: z.number().int().optional().describe("Max results"),
+      })
+      .passthrough(),
   },
   {
     slug: "EXA_GET_CONTENTS_ACTION",
     description: "Get text/highlights for a list of Exa document IDs or URLs. Read-only.",
-    parameters: z.object({ ids: z.array(z.string()).describe("Exa document IDs or URLs"), text: z.boolean().optional().describe("Include full text") }).passthrough(),
+    parameters: z
+      .object({
+        ids: z.array(z.string()).describe("Exa document IDs or URLs"),
+        text: z.boolean().optional().describe("Include full text"),
+      })
+      .passthrough(),
   },
   {
     slug: "EXA_LIST_IMPORTS",
@@ -45,7 +58,9 @@ export const exaComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "EXA_LIST_EVENTS",
     description: "List Websets events (paginated). Read-only.",
-    parameters: z.object({ types: z.array(z.string()).optional().describe("Filter by event type") }).passthrough(),
+    parameters: z
+      .object({ types: z.array(z.string()).optional().describe("Filter by event type") })
+      .passthrough(),
   },
   {
     slug: "EXA_GET_EVENT",
@@ -56,27 +71,65 @@ export const exaComposioSpecs: ComposioToolSpec[] = [
   // ── Write ────────────────────────────────────────────────────
   {
     slug: "EXA_CREATE_WEBSET",
-    description: "Create a webset (saved search with import/enrichment config). Requires user approval before it runs.",
-    parameters: z.object({ search: z.record(z.string(), z.unknown()).describe("Search configuration for the webset") }).passthrough(),
-    preview: () => ({ title: "Create webset", preview: "Create a new Exa webset", confirmText: "Create webset" }),
+    description:
+      "Create a webset (saved search with import/enrichment config). Requires user approval before it runs.",
+    parameters: z
+      .object({
+        search: z.record(z.string(), z.unknown()).describe("Search configuration for the webset"),
+      })
+      .passthrough(),
+    preview: () => ({
+      title: "Create webset",
+      preview: "Create a new Exa webset",
+      confirmText: "Create webset",
+    }),
   },
   {
     slug: "EXA_CREATE_MONITOR",
     description: "Schedule automated updates for a webset. Requires user approval before it runs.",
-    parameters: z.object({ websetId: z.string().describe("Webset ID"), cadence: z.record(z.string(), z.unknown()).describe("Update schedule"), behavior: z.record(z.string(), z.unknown()).describe("Monitor behavior config") }).passthrough(),
-    preview: (a) => ({ title: "Create monitor", preview: `Create monitor for webset ${String(a["websetId"] ?? "")}`, confirmText: "Create monitor" }),
+    parameters: z
+      .object({
+        websetId: z.string().describe("Webset ID"),
+        cadence: z.record(z.string(), z.unknown()).describe("Update schedule"),
+        behavior: z.record(z.string(), z.unknown()).describe("Monitor behavior config"),
+      })
+      .passthrough(),
+    preview: (a) => ({
+      title: "Create monitor",
+      preview: `Create monitor for webset ${String(a["websetId"] ?? "")}`,
+      confirmText: "Create monitor",
+    }),
   },
   {
     slug: "EXA_CREATE_IMPORT",
-    description: "Create an import to upload data into a webset. Requires user approval before it runs.",
-    parameters: z.object({ entity: z.record(z.string(), z.unknown()).describe("Entity type config"), format: z.string().describe("Import format") }).passthrough(),
-    preview: () => ({ title: "Create import", preview: "Create a new webset import", confirmText: "Create import" }),
+    description:
+      "Create an import to upload data into a webset. Requires user approval before it runs.",
+    parameters: z
+      .object({
+        entity: z.record(z.string(), z.unknown()).describe("Entity type config"),
+        format: z.string().describe("Import format"),
+      })
+      .passthrough(),
+    preview: () => ({
+      title: "Create import",
+      preview: "Create a new webset import",
+      confirmText: "Create import",
+    }),
   },
   {
     slug: "EXA_UPDATE_IMPORT",
     description: "Update an import's title or metadata. Requires user approval before it runs.",
-    parameters: z.object({ id: z.string().describe("Import ID"), title: z.string().optional().describe("New title") }).passthrough(),
-    preview: (a) => ({ title: "Update import", preview: `Update import ${String(a["id"] ?? "")}`, confirmText: "Update" }),
+    parameters: z
+      .object({
+        id: z.string().describe("Import ID"),
+        title: z.string().optional().describe("New title"),
+      })
+      .passthrough(),
+    preview: (a) => ({
+      title: "Update import",
+      preview: `Update import ${String(a["id"] ?? "")}`,
+      confirmText: "Update",
+    }),
   },
 
   // ── Irreversible ──────────────────────────────────────────────
@@ -84,13 +137,21 @@ export const exaComposioSpecs: ComposioToolSpec[] = [
     slug: "EXA_DELETE_WEBSET",
     description: "Permanently delete a webset. This cannot be undone.",
     parameters: z.object({ id: z.string().describe("Webset ID") }).passthrough(),
-    preview: (a) => ({ title: "Delete webset", preview: `Delete webset ${String(a["id"] ?? "")} — this cannot be undone`, confirmText: "Delete" }),
+    preview: (a) => ({
+      title: "Delete webset",
+      preview: `Delete webset ${String(a["id"] ?? "")} — this cannot be undone`,
+      confirmText: "Delete",
+    }),
   },
   {
     slug: "EXA_DELETE_IMPORT",
     description: "Permanently delete an import. This cannot be undone.",
     parameters: z.object({ id: z.string().describe("Import ID") }).passthrough(),
-    preview: (a) => ({ title: "Delete import", preview: `Delete import ${String(a["id"] ?? "")} — this cannot be undone`, confirmText: "Delete" }),
+    preview: (a) => ({
+      title: "Delete import",
+      preview: `Delete import ${String(a["id"] ?? "")} — this cannot be undone`,
+      confirmText: "Delete",
+    }),
   },
 ]
 
@@ -100,7 +161,8 @@ export function makeComposioExaDef(executor: ComposioExecutor): ConnectorDef {
     name: "Exa",
     category: "data",
     icon: "exa",
-    description: "Exa — neural web search, direct Q&A, similar-page discovery, and Websets (saved searches/monitors) (via Composio).",
+    description:
+      "Exa — neural web search, direct Q&A, similar-page discovery, and Websets (saved searches/monitors) (via Composio).",
     readOnlyByDefault: true,
     auth: {
       kind: "composio",

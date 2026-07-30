@@ -8,4 +8,6 @@ export const backendComposioTodoistDef: BackendConnectorDef = {
   getDisplayName: async () => "Todoist (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("todoist") ? backendComposioTodoistDef : backendComposioTodoistDef)
+registerConnectorDef(
+  isComposioBacked("todoist") ? backendComposioTodoistDef : backendComposioTodoistDef,
+)

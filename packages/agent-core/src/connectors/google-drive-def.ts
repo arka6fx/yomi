@@ -66,9 +66,9 @@ function escapeXml(s: string): string {
 // placeholders take plain text only).
 export function parseMarkdownSlides(content: string): { title: string; body: string }[] {
   const sections = content.split(/\r?\n\s*---\s*\r?\n/)
-  const rawSlides = (
-    sections.length > 1 ? sections : content.split(/\r?\n(?=#{1,2} )/)
-  ).filter((s) => s.trim())
+  const rawSlides = (sections.length > 1 ? sections : content.split(/\r?\n(?=#{1,2} )/)).filter(
+    (s) => s.trim(),
+  )
   const parsed = rawSlides.map((raw) => {
     let title = ""
     const body: string[] = []
@@ -655,10 +655,21 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
             "File content. Docs: Markdown (headings, bold, lists, links become real formatting). Slides: Markdown deck — '---' on its own line separates slides, the first heading of each section is the slide title, remaining lines the body. Sheets: CSV or TSV rows starting at A1. Drawings: rendered as SVG text. AppsScript: the .gs source.",
           ),
         kind: z
-          .enum(["document", "spreadsheet", "presentation", "drawing", "appsScript", "form", "sites", "jamboard"])
+          .enum([
+            "document",
+            "spreadsheet",
+            "presentation",
+            "drawing",
+            "appsScript",
+            "form",
+            "sites",
+            "jamboard",
+          ])
           .optional()
           .default("document")
-          .describe("Type of file to create: document (Google Doc), spreadsheet (Google Sheet), presentation (Google Slides), drawing (Google Drawing), appsScript (Google Apps Script), form (Google Form — limited use with plain text), sites (Google Site — needs structured data for full layout), jamboard (Google Jamboard — being deprecated by Google)"),
+          .describe(
+            "Type of file to create: document (Google Doc), spreadsheet (Google Sheet), presentation (Google Slides), drawing (Google Drawing), appsScript (Google Apps Script), form (Google Form — limited use with plain text), sites (Google Site — needs structured data for full layout), jamboard (Google Jamboard — being deprecated by Google)",
+          ),
         folderId: z.string().optional().describe("Optional folder ID to create the file in"),
       }),
       execute: async (args) => {
@@ -894,7 +905,9 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
               if (rows.length === 0) return { error: "No rows to append." }
               // RAW, never USER_ENTERED — agent content is untrusted, and RAW stores
               // "=IMPORTXML(...)" as inert text instead of evaluating it (formula injection).
-              const data = await googleApi<{ updates?: { updatedRange?: string; updatedRows?: number } }>(
+              const data = await googleApi<{
+                updates?: { updatedRange?: string; updatedRows?: number }
+              }>(
                 `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(
                   a1("A1", sheetName),
                 )}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
@@ -1004,10 +1017,15 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
               const content = doc.body?.content ?? []
               const endIndex = content[content.length - 1]?.endIndex ?? 1
               const index = Math.max(1, endIndex - 1)
-              await googleApi(`https://docs.googleapis.com/v1/documents/${documentId}:batchUpdate`, {
-                method: "POST",
-                body: JSON.stringify({ requests: [{ insertText: { location: { index }, text } }] }),
-              })
+              await googleApi(
+                `https://docs.googleapis.com/v1/documents/${documentId}:batchUpdate`,
+                {
+                  method: "POST",
+                  body: JSON.stringify({
+                    requests: [{ insertText: { location: { index }, text } }],
+                  }),
+                },
+              )
               return {
                 ok: true,
                 link: `https://docs.google.com/document/d/${documentId}/edit`,
@@ -1053,7 +1071,12 @@ export function createDriveTools(ctx: ConnectorContext): ToolSet {
                 method: "POST",
                 body: JSON.stringify({
                   requests: [
-                    { replaceAllText: { containsText: { text: find, matchCase }, replaceText: replaceWith } },
+                    {
+                      replaceAllText: {
+                        containsText: { text: find, matchCase },
+                        replaceText: replaceWith,
+                      },
+                    },
                   ],
                 }),
               })

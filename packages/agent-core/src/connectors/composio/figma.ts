@@ -23,7 +23,10 @@ export const figmaComposioSpecs: ComposioToolSpec[] = [
     parameters: z
       .object({
         file_key: z.string().describe("The Figma file key from the URL (e.g. 'ABC123xyz')"),
-        simplify: z.coerce.boolean().optional().describe("Simplify output for AI consumption (default true)"),
+        simplify: z.coerce
+          .boolean()
+          .optional()
+          .describe("Simplify output for AI consumption (default true)"),
       })
       .passthrough(),
   },
@@ -34,8 +37,7 @@ export const figmaComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "FIGMA_GET_FILE_COMPONENTS",
-    description:
-      "Get all components and component metadata in a Figma file. Read-only.",
+    description: "Get all components and component metadata in a Figma file. Read-only.",
     parameters: z
       .object({
         file_key: z.string().describe("The Figma file key"),
@@ -65,8 +67,7 @@ export const figmaComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "FIGMA_GET_VERSIONS_OF_A_FILE",
-    description:
-      "Get the version history for a Figma file. Read-only.",
+    description: "Get the version history for a Figma file. Read-only.",
     parameters: z
       .object({
         file_key: z.string().describe("The Figma file key"),
@@ -85,8 +86,7 @@ export const figmaComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "FIGMA_GET_FILES_IN_A_PROJECT",
-    description:
-      "Get a list of files in a Figma project, including branch metadata. Read-only.",
+    description: "Get a list of files in a Figma project, including branch metadata. Read-only.",
     parameters: z
       .object({
         project_id: z.string().describe("The Figma project ID"),
@@ -96,8 +96,7 @@ export const figmaComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "FIGMA_GET_LOCAL_VARIABLES",
-    description:
-      "Get all local variables and variable collections in a Figma file. Read-only.",
+    description: "Get all local variables and variable collections in a Figma file. Read-only.",
     parameters: z
       .object({
         file_key: z.string().describe("The Figma file key"),
@@ -116,8 +115,7 @@ export const figmaComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "FIGMA_EXTRACT_PROTOTYPE_INTERACTIONS",
-    description:
-      "Extract prototype interactions and animations from a Figma file. Read-only.",
+    description: "Extract prototype interactions and animations from a Figma file. Read-only.",
     parameters: z
       .object({
         file_key: z.string().describe("The Figma file key"),
@@ -133,7 +131,12 @@ export const figmaComposioSpecs: ComposioToolSpec[] = [
         file_key: z.string().describe("The Figma file key"),
         ids: z.string().describe("Comma-separated node IDs to render (e.g. '1:2,1:3')"),
         format: z.string().optional().describe("Output format: 'png', 'jpg', 'svg', or 'pdf'"),
-        scale: z.number().min(0.01).max(4).optional().describe("Image scale (0.01-4.0) for raster formats"),
+        scale: z
+          .number()
+          .min(0.01)
+          .max(4)
+          .optional()
+          .describe("Image scale (0.01-4.0) for raster formats"),
       })
       .passthrough(),
   },
@@ -152,14 +155,15 @@ export const figmaComposioSpecs: ComposioToolSpec[] = [
               format: z.string().optional(),
             }),
           )
-          .describe("Array of node images to download: each with node_id, file_name, and optional format"),
+          .describe(
+            "Array of node images to download: each with node_id, file_name, and optional format",
+          ),
       })
       .passthrough(),
   },
   {
     slug: "FIGMA_GET_TEAM_COMPONENTS",
-    description:
-      "Get all components in a Figma team library. Read-only.",
+    description: "Get all components in a Figma team library. Read-only.",
     parameters: z
       .object({
         team_id: z.string().describe("The Figma team ID"),
@@ -222,7 +226,9 @@ export const figmaComposioSpecs: ComposioToolSpec[] = [
             z
               .object({
                 name: z.string().describe("Visible name for the dev resource in Figma"),
-                url: z.string().describe("URL for the dev resource, e.g. a Jira ticket or GitHub issue"),
+                url: z
+                  .string()
+                  .describe("URL for the dev resource, e.g. a Jira ticket or GitHub issue"),
                 file_key: z.string().describe("The Figma file key"),
                 node_id: z.string().describe("Node ID to attach the resource to"),
               })
@@ -241,8 +247,7 @@ export const figmaComposioSpecs: ComposioToolSpec[] = [
   // ── Irreversible actions (gated, flagged) ────────────────────
   {
     slug: "FIGMA_DELETE_A_COMMENT",
-    description:
-      "Delete a comment from a Figma file. This action is irreversible.",
+    description: "Delete a comment from a Figma file. This action is irreversible.",
     parameters: z
       .object({
         file_key: z.string().describe("The Figma file key"),
@@ -263,7 +268,8 @@ export function makeComposioFigmaDef(executor: ComposioExecutor): ConnectorDef {
     name: "Figma",
     category: "design",
     icon: "figma",
-    description: "Browse designs, extract components and tokens, manage comments, and render assets from Figma (via Composio).",
+    description:
+      "Browse designs, extract components and tokens, manage comments, and render assets from Figma (via Composio).",
     readOnlyByDefault: true,
     auth: {
       kind: "composio",
@@ -279,7 +285,11 @@ export function makeComposioFigmaDef(executor: ComposioExecutor): ConnectorDef {
       ],
       collect: [
         { env: "COMPOSIO_API_KEY", label: "Composio API key", secret: true },
-        { env: "COMPOSIO_FIGMA_AUTH_CONFIG_ID", label: "Composio Figma auth config id", secret: false },
+        {
+          env: "COMPOSIO_FIGMA_AUTH_CONFIG_ID",
+          label: "Composio Figma auth config id",
+          secret: false,
+        },
       ],
       docsUrl: "https://docs.composio.dev/toolkits/figma",
     },

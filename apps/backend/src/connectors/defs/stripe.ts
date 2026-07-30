@@ -8,4 +8,6 @@ export const backendComposioStripeDef: BackendConnectorDef = {
   getDisplayName: async () => "Stripe (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("stripe") ? backendComposioStripeDef : backendComposioStripeDef)
+registerConnectorDef(
+  isComposioBacked("stripe") ? backendComposioStripeDef : backendComposioStripeDef,
+)

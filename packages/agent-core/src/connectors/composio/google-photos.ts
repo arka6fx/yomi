@@ -20,10 +20,12 @@ export const googlePhotosComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "GOOGLEPHOTOS_LIST_ALBUMS",
     description: `List Google Photos albums.${APP_CREATED_ONLY} Read-only.`,
-    parameters: z.object({
-      pageSize: z.number().int().optional().describe("Max results per page"),
-      pageToken: z.string().optional().describe("Pagination token"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        pageSize: z.number().int().optional().describe("Max results per page"),
+        pageToken: z.string().optional().describe("Pagination token"),
+      })
+      .passthrough(),
   },
   {
     slug: "GOOGLEPHOTOS_GET_ALBUM",
@@ -33,28 +35,36 @@ export const googlePhotosComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "GOOGLEPHOTOS_LIST_MEDIA_ITEMS",
     description: `List media items.${APP_CREATED_ONLY} Read-only.`,
-    parameters: z.object({
-      pageSize: z.number().int().optional().describe("Max results per page"),
-      pageToken: z.string().optional().describe("Pagination token"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        pageSize: z.number().int().optional().describe("Max results per page"),
+        pageToken: z.string().optional().describe("Pagination token"),
+      })
+      .passthrough(),
   },
   {
     slug: "GOOGLEPHOTOS_SEARCH_MEDIA_ITEMS",
     description: `Search media items by album or filters.${APP_CREATED_ONLY} Read-only.`,
-    parameters: z.object({
-      albumId: z.string().optional().describe("Restrict search to this album"),
-      pageSize: z.number().int().optional().describe("Max results per page"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        albumId: z.string().optional().describe("Restrict search to this album"),
+        pageSize: z.number().int().optional().describe("Max results per page"),
+      })
+      .passthrough(),
   },
   {
     slug: "GOOGLEPHOTOS_BATCH_GET_MEDIA_ITEMS",
     description: `Get details for a batch of media items by ID.${APP_CREATED_ONLY} Read-only.`,
-    parameters: z.object({ mediaItemIds: z.array(z.string()).describe("Media item IDs") }).passthrough(),
+    parameters: z
+      .object({ mediaItemIds: z.array(z.string()).describe("Media item IDs") })
+      .passthrough(),
   },
   {
     slug: "GOOGLEPHOTOS_GET_MEDIA_ITEM_DOWNLOAD",
     description: "Download a media item's file content. Read-only.",
-    parameters: z.object({ mediaItemId: z.string().describe("Google Photos media item ID") }).passthrough(),
+    parameters: z
+      .object({ mediaItemId: z.string().describe("Google Photos media item ID") })
+      .passthrough(),
   },
   {
     slug: "GOOGLEPHOTOS_CREATE_ALBUM",
@@ -69,10 +79,12 @@ export const googlePhotosComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "GOOGLEPHOTOS_UPLOAD_MEDIA",
     description: "Upload a media file (image up to 200MB, video up to 20GB). Requires approval.",
-    parameters: z.object({
-      file_to_upload: z.string().describe("URL of the media file to upload"),
-      description: z.string().optional().describe("Media item description"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        file_to_upload: z.string().describe("URL of the media file to upload"),
+        description: z.string().optional().describe("Media item description"),
+      })
+      .passthrough(),
     fileParams: ["file_to_upload"],
     preview: () => ({
       title: "Upload media",
@@ -83,10 +95,12 @@ export const googlePhotosComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "GOOGLEPHOTOS_BATCH_ADD_MEDIA_ITEMS",
     description: "Add existing media items to an album. Requires approval.",
-    parameters: z.object({
-      albumId: z.string().describe("Album ID"),
-      mediaItemIds: z.array(z.string()).describe("Media item IDs to add"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        albumId: z.string().describe("Album ID"),
+        mediaItemIds: z.array(z.string()).describe("Media item IDs to add"),
+      })
+      .passthrough(),
     preview: (a) => ({
       title: "Add media to album",
       preview: `Add ${Array.isArray(a["mediaItemIds"]) ? (a["mediaItemIds"] as unknown[]).length : 0} item(s) to album ${String(a["albumId"] ?? "")}`,
@@ -96,10 +110,12 @@ export const googlePhotosComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "GOOGLEPHOTOS_UPDATE_ALBUM",
     description: "Update an album's title or cover photo. Requires approval.",
-    parameters: z.object({
-      albumId: z.string().describe("Album ID"),
-      title: z.string().optional().describe("New album title"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        albumId: z.string().describe("Album ID"),
+        title: z.string().optional().describe("New album title"),
+      })
+      .passthrough(),
     preview: (a) => ({
       title: "Update album",
       preview: `Update album ${String(a["albumId"] ?? "")}`,
@@ -131,7 +147,11 @@ export function makeComposioGooglePhotosDef(executor: ComposioExecutor): Connect
       ],
       collect: [
         { env: "COMPOSIO_API_KEY", label: "Composio API key", secret: true },
-        { env: "COMPOSIO_GOOGLE_PHOTOS_AUTH_CONFIG_ID", label: "Composio Google Photos auth config id", secret: false },
+        {
+          env: "COMPOSIO_GOOGLE_PHOTOS_AUTH_CONFIG_ID",
+          label: "Composio Google Photos auth config id",
+          secret: false,
+        },
       ],
       docsUrl: "https://docs.composio.dev/toolkits/googlephotos",
     },

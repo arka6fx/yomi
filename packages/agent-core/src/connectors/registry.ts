@@ -163,7 +163,11 @@ export class ConnectorRegistry {
       }
     }
 
-    if (this.userId && this.deps.listCustomMcpServers && Object.keys(this.customMcpTools).length === 0) {
+    if (
+      this.userId &&
+      this.deps.listCustomMcpServers &&
+      Object.keys(this.customMcpTools).length === 0
+    ) {
       try {
         const servers = await this.deps.listCustomMcpServers(this.userId)
         if (servers.length > 0) {
@@ -177,7 +181,9 @@ export class ConnectorRegistry {
               // when the agent actually connects to it.
               const hostname = new URL(server.url).hostname
               if (await resolvesToDisallowedAddress(hostname)) {
-                console.error(`[registry] custom MCP server ${server.id} resolves to a disallowed address, skipping`)
+                console.error(
+                  `[registry] custom MCP server ${server.id} resolves to a disallowed address, skipping`,
+                )
                 continue
               }
               const provider = createMCPToolProvider()
@@ -248,9 +254,7 @@ export class ConnectorRegistry {
 
   // Returns all connected provider/def IDs (legacy + def-based).
   getConnected(): string[] {
-    return [
-      ...new Set([...this.connectors.keys(), ...this.connectedDefIds]),
-    ]
+    return [...new Set([...this.connectors.keys(), ...this.connectedDefIds])]
   }
 
   // Returns IDs of MCP-based defs that are connected but not yet loaded.

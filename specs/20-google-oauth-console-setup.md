@@ -50,7 +50,7 @@ added once.
 | Scope                                                              | Used by   | Google tier    | Notes                                                                |
 | ------------------------------------------------------------------ | --------- | -------------- | -------------------------------------------------------------------- |
 | `https://www.googleapis.com/auth/gmail.modify`                     | Gmail     | **Restricted** | Read/send/modify mail (no permanent delete). Requires CASA.          |
-| `https://www.googleapis.com/auth/gmail.send`                       | Gmail     | Sensitive      | Send mail.                                                            |
+| `https://www.googleapis.com/auth/gmail.send`                       | Gmail     | Sensitive      | Send mail.                                                           |
 | `https://www.googleapis.com/auth/drive`                            | Drive     | **Restricted** | Full Drive access. Requires CASA for public release.                 |
 | `https://www.googleapis.com/auth/calendar`                         | Calendar  | Sensitive      | Read + create/edit/delete events. Brand verification for public use. |
 | `https://www.googleapis.com/auth/classroom.courses.readonly`       | Classroom | **Restricted** | Read enrolled classes.                                               |
@@ -73,9 +73,9 @@ https://www.googleapis.com/auth/userinfo.email
 
 ### Restricted vs sensitive (what it means for you)
 
-| Tier          | Scopes in Yomi today               | Test with your account            | Launch to all users                                              |
-| ------------- | ---------------------------------- | --------------------------------- | ---------------------------------------------------------------- |
-| Non-sensitive | `userinfo.email`                   | Works in Testing mode             | Works after publish                                              |
+| Tier          | Scopes in Yomi today                        | Test with your account            | Launch to all users                                              |
+| ------------- | ------------------------------------------- | --------------------------------- | ---------------------------------------------------------------- |
+| Non-sensitive | `userinfo.email`                            | Works in Testing mode             | Works after publish                                              |
 | Sensitive     | `calendar`, `gmail.send`                    | Works in Testing mode + test user | Brand verification (~2–3 business days)                          |
 | Restricted    | `gmail.modify`, Drive, all Classroom scopes | Works in Testing mode + test user | Brand verification **+ annual CASA security assessment** (weeks) |
 
@@ -93,8 +93,8 @@ immediately — no CASA yet. Refresh tokens for sensitive/restricted scopes
       `ENCRYPTION_KEY` as your deployed backend.
 - [ ] If you connect in prod, do not expect those tokens to decrypt in local dev
       (or vice versa) unless both use the **same** `ENCRYPTION_KEY`.
-- [ ] Have access to DNS / Search Console for `getyomi.in` (needed later
-      for verification, not for personal testing).
+- [ ] Have access to DNS / Search Console for `getyomi.in` (needed later for
+      verification, not for personal testing).
 
 ---
 
@@ -125,18 +125,18 @@ immediately — no CASA yet. Refresh tokens for sensitive/restricted scopes
 
 Go to **APIs & Services → Library** and enable each API:
 
-| API                  | Search name            | Required for                                     |
-| -------------------- | ---------------------- | ------------------------------------------------ |
-| Gmail API            | `Gmail API`            | Gmail connector                                  |
-| Google Calendar API  | `Google Calendar API`  | Calendar connector                               |
-| Google Drive API     | `Google Drive API`     | Drive connector                                  |
-| Google Classroom API | `Google Classroom API` | Classroom connector                              |
-| Google Slides API    | `Google Slides API`    | `drive-createFile` building multi-slide decks    |
-| Google Sheets API    | `Google Sheets API`    | `drive-readSheet` / `drive-appendSheetRows`      |
-| Google Docs API      | `Google Docs API`      | `drive-appendToDoc` / `drive-replaceInDoc`       |
-| Google Tasks API     | `Google Tasks API`     | Tasks connector                                  |
+| API                  | Search name            | Required for                                                               |
+| -------------------- | ---------------------- | -------------------------------------------------------------------------- |
+| Gmail API            | `Gmail API`            | Gmail connector                                                            |
+| Google Calendar API  | `Google Calendar API`  | Calendar connector                                                         |
+| Google Drive API     | `Google Drive API`     | Drive connector                                                            |
+| Google Classroom API | `Google Classroom API` | Classroom connector                                                        |
+| Google Slides API    | `Google Slides API`    | `drive-createFile` building multi-slide decks                              |
+| Google Sheets API    | `Google Sheets API`    | `drive-readSheet` / `drive-appendSheetRows`                                |
+| Google Docs API      | `Google Docs API`      | `drive-appendToDoc` / `drive-replaceInDoc`                                 |
+| Google Tasks API     | `Google Tasks API`     | Tasks connector                                                            |
 | People API           | `People API`           | Contacts connector — **not** the legacy "Contacts API", which is shut down |
-| Google Meet API      | `Google Meet API`      | Meet connector                                   |
+| Google Meet API      | `Google Meet API`      | Meet connector                                                             |
 
 > Slides and Sheets creation runs through the **Drive scope** (no extra scope),
 > but the Slides API and Sheets API themselves must be enabled or those
@@ -157,15 +157,15 @@ Go to **APIs & Services → Library** and enable each API:
 
 Go to **APIs & Services → OAuth consent screen**.
 
-| Field                              | Value                                                                |
-| ---------------------------------- | -------------------------------------------------------------------- |
-| User type                          | **External** (unless you only use Google Workspace internal users)   |
-| App name                           | `Yomi` (or your public product name)                                 |
-| User support email                 | Your support address                                                 |
-| App logo                           | Optional for Testing; **required** for brand verification            |
-| App domain → Application home page | `https://getyomi.in`                                           |
-| Authorized domains                 | `getyomi.in` (and `arka6fx.com` if privacy policy lives there) |
-| Developer contact email            | Your email                                                           |
+| Field                              | Value                                                              |
+| ---------------------------------- | ------------------------------------------------------------------ |
+| User type                          | **External** (unless you only use Google Workspace internal users) |
+| App name                           | `Yomi` (or your public product name)                               |
+| User support email                 | Your support address                                               |
+| App logo                           | Optional for Testing; **required** for brand verification          |
+| App domain → Application home page | `https://getyomi.in`                                               |
+| Authorized domains                 | `getyomi.in` (and `arka6fx.com` if privacy policy lives there)     |
+| Developer contact email            | Your email                                                         |
 
 **Publishing status for now:** leave as **Testing** until verification is
 complete.

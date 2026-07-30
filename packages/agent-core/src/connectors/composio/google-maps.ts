@@ -28,22 +28,43 @@ const NO_ROUTING =
 export const mapsComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "GOOGLE_MAPS_NEARBY_SEARCH",
-    description:
-      `Search for places (restaurants, parks, pharmacies, etc.) within a circular area around a coordinate. Takes lat/lon directly — the natural fit right after a user shares a location pin. Read-only.${NO_ROUTING}`,
+    description: `Search for places (restaurants, parks, pharmacies, etc.) within a circular area around a coordinate. Takes lat/lon directly — the natural fit right after a user shares a location pin. Read-only.${NO_ROUTING}`,
     parameters: z
       .object({
-        latitude: z.number().min(-90).max(90).describe("Latitude of the search center, in decimal degrees"),
-        longitude: z.number().min(-180).max(180).describe("Longitude of the search center, in decimal degrees"),
-        radius: z.number().min(0).max(50000).describe("Radius of the search area in meters (max 50000)"),
+        latitude: z
+          .number()
+          .min(-90)
+          .max(90)
+          .describe("Latitude of the search center, in decimal degrees"),
+        longitude: z
+          .number()
+          .min(-180)
+          .max(180)
+          .describe("Longitude of the search center, in decimal degrees"),
+        radius: z
+          .number()
+          .min(0)
+          .max(50000)
+          .describe("Radius of the search area in meters (max 50000)"),
         includedTypes: z
           .array(z.string())
           .optional()
-          .describe("Place types to include, e.g. ['restaurant'] or ['atm', 'bank'] — results match at least one"),
+          .describe(
+            "Place types to include, e.g. ['restaurant'] or ['atm', 'bank'] — results match at least one",
+          ),
         excludedTypes: z
           .array(z.string())
           .optional()
-          .describe("Place types to exclude, e.g. ['cafe'] — results matching any of these are omitted"),
-        maxResultCount: z.number().int().min(1).max(20).optional().describe("Max results to return (default 10)"),
+          .describe(
+            "Place types to exclude, e.g. ['cafe'] — results matching any of these are omitted",
+          ),
+        maxResultCount: z
+          .number()
+          .int()
+          .min(1)
+          .max(20)
+          .optional()
+          .describe("Max results to return (default 10)"),
         fieldMask: z
           .string()
           .optional()
@@ -55,12 +76,21 @@ export const mapsComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "GOOGLE_MAPS_TEXT_SEARCH",
-    description:
-      `Search for places using a free-text query, e.g. 'coffee shops near Koramangala' or 'Eiffel Tower'. Matches against place name, address, and category. Read-only.${NO_ROUTING}`,
+    description: `Search for places using a free-text query, e.g. 'coffee shops near Koramangala' or 'Eiffel Tower'. Matches against place name, address, and category. Read-only.${NO_ROUTING}`,
     parameters: z
       .object({
-        textQuery: z.string().describe("Free-text search query, e.g. 'restaurants in London' or 'coffee shops near me'"),
-        maxResultCount: z.number().int().min(1).max(20).optional().describe("Max results to return (default 10)"),
+        textQuery: z
+          .string()
+          .describe(
+            "Free-text search query, e.g. 'restaurants in London' or 'coffee shops near me'",
+          ),
+        maxResultCount: z
+          .number()
+          .int()
+          .min(1)
+          .max(20)
+          .optional()
+          .describe("Max results to return (default 10)"),
         fieldMask: z
           .string()
           .optional()
@@ -95,7 +125,11 @@ export function makeComposioMapsDef(executor: ComposioExecutor): ConnectorDef {
       ],
       collect: [
         { env: "COMPOSIO_API_KEY", label: "Composio API key", secret: true },
-        { env: "COMPOSIO_MAPS_AUTH_CONFIG_ID", label: "Composio Maps auth config id", secret: false },
+        {
+          env: "COMPOSIO_MAPS_AUTH_CONFIG_ID",
+          label: "Composio Maps auth config id",
+          secret: false,
+        },
       ],
       docsUrl: "https://docs.composio.dev/toolkits/google_maps",
     },

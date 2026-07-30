@@ -24,7 +24,12 @@ await recordConsentDecision({
   userId: account.id,
   purposes: ["conversation_history", "memory", "connector_data", "telegram_processing"],
   status: "granted",
-  context: { appVersion: null, ipAddress: null, userAgent: null, metadata: { source: "manual_grant" } },
+  context: {
+    appVersion: null,
+    ipAddress: null,
+    userAgent: null,
+    metadata: { source: "manual_grant" },
+  },
 })
 
 const snapshot = await getConsentSnapshot(account.id)

@@ -38,7 +38,15 @@ const outputSchema = jsonSchema<ModelOutput>({
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["connector", "timeBucket", "title", "description", "schedule", "prompt", "deliverTo"],
+        required: [
+          "connector",
+          "timeBucket",
+          "title",
+          "description",
+          "schedule",
+          "prompt",
+          "deliverTo",
+        ],
         properties: {
           connector: { type: "string" },
           timeBucket: { type: "string", enum: ["morning", "afternoon", "evening"] },

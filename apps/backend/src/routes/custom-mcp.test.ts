@@ -9,9 +9,7 @@ describe("validateCustomMcpServerInput", () => {
   })
 
   it("rejects a missing url", () => {
-    expect(validateCustomMcpServerInput({ name: "My Server" })).toBe(
-      "name and url are required",
-    )
+    expect(validateCustomMcpServerInput({ name: "My Server" })).toBe("name and url are required")
   })
 
   it("rejects a malformed url", () => {
@@ -21,9 +19,9 @@ describe("validateCustomMcpServerInput", () => {
   })
 
   it("rejects a non-https url", () => {
-    expect(
-      validateCustomMcpServerInput({ name: "My Server", url: "http://mcp.example.com" }),
-    ).toBe("url must use https")
+    expect(validateCustomMcpServerInput({ name: "My Server", url: "http://mcp.example.com" })).toBe(
+      "url must use https",
+    )
   })
 
   it("accepts a valid https url with a name", () => {

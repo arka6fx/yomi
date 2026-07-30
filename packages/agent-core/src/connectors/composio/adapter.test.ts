@@ -36,7 +36,11 @@ const specs: ComposioToolSpec[] = [
   {
     slug: "WHATSAPP_SEND_MESSAGE",
     description: "Send a WhatsApp message",
-    parameters: z.object({ phone_number_id: z.string().optional(), to_number: z.string(), text: z.string() }),
+    parameters: z.object({
+      phone_number_id: z.string().optional(),
+      to_number: z.string(),
+      text: z.string(),
+    }),
     resolvedParams: { phone_number_id: { viaSlug: "WHATSAPP_GET_PHONE_NUMBERS", list: true } },
   },
 ]
@@ -61,7 +65,11 @@ function fakeExecutor(
       ? {
           stageFile: async (input: { url: string; toolSlug: string; toolkitSlug: string }) => {
             stageCalls.push(input)
-            return { name: "staged.bin", mimetype: "application/octet-stream", s3key: `key-${stageCalls.length}` }
+            return {
+              name: "staged.bin",
+              mimetype: "application/octet-stream",
+              s3key: `key-${stageCalls.length}`,
+            }
           },
         }
       : {}),
@@ -272,7 +280,11 @@ describe("createComposioTools — fileParams staging", () => {
 
     expect(result).toEqual({ ok: true })
     expect(executor.stageCalls).toEqual([
-      { url: "https://assets.example.com/photo.jpg", toolSlug: "DROPBOX_UPLOAD_FILE", toolkitSlug: "linear" },
+      {
+        url: "https://assets.example.com/photo.jpg",
+        toolSlug: "DROPBOX_UPLOAD_FILE",
+        toolkitSlug: "linear",
+      },
     ])
     expect(executor.calls).toEqual([
       {
@@ -351,7 +363,10 @@ describe("createComposioTools — resolvedParams", () => {
       {
         userId: "user_1",
         slug: "INSTAGRAM_CREATE_MEDIA_CONTAINER",
-        arguments: { ig_user_id: "17841400000000000", image_url: "https://assets.example.com/logo.jpg" },
+        arguments: {
+          ig_user_id: "17841400000000000",
+          image_url: "https://assets.example.com/logo.jpg",
+        },
       },
     ])
   })
@@ -377,7 +392,11 @@ describe("createComposioTools — resolvedParams", () => {
   it("auto-fills a list-resolved param when the account has exactly one item", async () => {
     const executor = fakeExecutor(
       { ok: true },
-      { resultFor: { WHATSAPP_GET_PHONE_NUMBERS: [{ id: "1234567890", display_phone_number: "+1 555" }] } },
+      {
+        resultFor: {
+          WHATSAPP_GET_PHONE_NUMBERS: [{ id: "1234567890", display_phone_number: "+1 555" }],
+        },
+      },
     )
     const tools = toolsFor(executor, buildCtx())
 
@@ -443,7 +462,9 @@ describe("createComposioTools — resolvedParams", () => {
       { ok: true },
       {
         resultFor: {
-          FACEBOOK_GET_USER_PAGES: { response_data: { data: [{ id: "998877", name: "My Page" }], paging: {} } },
+          FACEBOOK_GET_USER_PAGES: {
+            response_data: { data: [{ id: "998877", name: "My Page" }], paging: {} },
+          },
         },
       },
     )

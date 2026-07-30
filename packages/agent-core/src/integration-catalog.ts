@@ -23,7 +23,10 @@ function escapeRegExp(word: string): string {
 // connector's display name — e.g. "calendar" matches "Google Calendar",
 // but "example" does not match "Exa" (word-boundary regex, not substring).
 function nameMatches(name: string, lowerText: string): boolean {
-  const words = name.toLowerCase().split(/\s+/).filter((w) => w.length >= 3)
+  const words = name
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((w) => w.length >= 3)
   return words.some((word) => new RegExp(`\\b${escapeRegExp(word)}\\b`).test(lowerText))
 }
 

@@ -8,4 +8,6 @@ export const backendComposioPostHogDef: BackendConnectorDef = {
   getDisplayName: async () => "PostHog (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("posthog") ? backendComposioPostHogDef : backendComposioPostHogDef)
+registerConnectorDef(
+  isComposioBacked("posthog") ? backendComposioPostHogDef : backendComposioPostHogDef,
+)

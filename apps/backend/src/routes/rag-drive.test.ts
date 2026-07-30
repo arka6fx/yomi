@@ -14,7 +14,9 @@ type TestUser = {
 
 let currentUser: TestUser
 let updateRows: unknown[] = []
-let sourceRows: unknown[] = [{ id: "src-1", userId: "user_1", path: "folder-1", status: "active", syncState: null }]
+let sourceRows: unknown[] = [
+  { id: "src-1", userId: "user_1", path: "folder-1", status: "active", syncState: null },
+]
 let deletedFrom: unknown[] = []
 
 const fakeDb = {

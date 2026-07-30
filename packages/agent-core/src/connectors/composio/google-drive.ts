@@ -18,7 +18,10 @@ export const driveComposioSpecs: ComposioToolSpec[] = [
       "Search for files in Google Drive by name, type, or content using Drive query syntax. Returns file names, types, last modified date, and links. Read-only.",
     parameters: z
       .object({
-        q: z.string().optional().describe("Search query (Drive query syntax, e.g. \"name contains 'budget'\")"),
+        q: z
+          .string()
+          .optional()
+          .describe("Search query (Drive query syntax, e.g. \"name contains 'budget'\")"),
         pageSize: z.number().int().min(1).max(1000).optional().describe("Max results to return"),
       })
       .passthrough(),
@@ -29,7 +32,10 @@ export const driveComposioSpecs: ComposioToolSpec[] = [
       "List files in Google Drive, sorted by most recently modified. Optionally filter to a specific folder. Read-only.",
     parameters: z
       .object({
-        folderId: z.string().optional().describe("Drive folder ID to list. Omit to list all accessible files."),
+        folderId: z
+          .string()
+          .optional()
+          .describe("Drive folder ID to list. Omit to list all accessible files."),
         pageSize: z.number().int().min(1).max(1000).optional().describe("Max files to return"),
       })
       .passthrough(),
@@ -46,8 +52,7 @@ export const driveComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "GOOGLEDRIVE_PARSE_FILE",
-    description:
-      "Deprecated by Composio — use GOOGLEDRIVE_DOWNLOAD_FILE instead. Read-only.",
+    description: "Deprecated by Composio — use GOOGLEDRIVE_DOWNLOAD_FILE instead. Read-only.",
     parameters: z
       .object({
         file_id: z.string().describe("Google Drive file ID"),
@@ -91,7 +96,9 @@ export const driveComposioSpecs: ComposioToolSpec[] = [
         mime_type: z
           .string()
           .optional()
-          .describe("MIME type (defaults to 'text/plain'; use 'application/vnd.google-apps.document' for Docs)"),
+          .describe(
+            "MIME type (defaults to 'text/plain'; use 'application/vnd.google-apps.document' for Docs)",
+          ),
         parent_id: z.string().optional().describe("Drive folder ID to create the file in"),
       })
       .passthrough(),
@@ -109,16 +116,25 @@ export const driveComposioSpecs: ComposioToolSpec[] = [
       .object({
         file_id: z.string().describe("Google Drive file ID"),
         name: z.string().optional().describe("New file name"),
-        add_parents: z.string().optional().describe("Comma-separated folder IDs to add the file to"),
-        remove_parents: z.string().optional().describe("Comma-separated folder IDs to remove the file from"),
+        add_parents: z
+          .string()
+          .optional()
+          .describe("Comma-separated folder IDs to add the file to"),
+        remove_parents: z
+          .string()
+          .optional()
+          .describe("Comma-separated folder IDs to remove the file from"),
       })
       .passthrough(),
     preview: (a) => ({
       title: `Update Drive file ${String(a["file_id"] ?? "").slice(0, 12)}`,
-      preview: [
-        a["name"] ? `New name: ${String(a["name"])}` : null,
-        a["add_parents"] ? `Move to folder: ${String(a["add_parents"]).slice(0, 12)}` : null,
-      ].filter(Boolean).join("\n") || "Update file details",
+      preview:
+        [
+          a["name"] ? `New name: ${String(a["name"])}` : null,
+          a["add_parents"] ? `Move to folder: ${String(a["add_parents"]).slice(0, 12)}` : null,
+        ]
+          .filter(Boolean)
+          .join("\n") || "Update file details",
       confirmText: "Update file",
     }),
   },
@@ -129,7 +145,10 @@ export const driveComposioSpecs: ComposioToolSpec[] = [
     parameters: z
       .object({
         file_id: z.string().describe("Google Drive file ID to copy"),
-        new_title: z.string().optional().describe("Name for the copy (defaults to 'Copy of <original>')"),
+        new_title: z
+          .string()
+          .optional()
+          .describe("Name for the copy (defaults to 'Copy of <original>')"),
       })
       .passthrough(),
     preview: (a) => ({
@@ -147,8 +166,14 @@ export const driveComposioSpecs: ComposioToolSpec[] = [
         file_id: z.string().describe("Google Drive file ID to share"),
         role: z.enum(["reader", "commenter", "writer"]).describe("Permission level"),
         type: z.enum(["user", "group", "domain", "anyone"]).describe("Who the permission is for"),
-        email_address: z.string().optional().describe("Email to share with. Required if type is 'user' or 'group'"),
-        domain: z.string().optional().describe("Domain to share with. Required if type is 'domain'"),
+        email_address: z
+          .string()
+          .optional()
+          .describe("Email to share with. Required if type is 'user' or 'group'"),
+        domain: z
+          .string()
+          .optional()
+          .describe("Domain to share with. Required if type is 'domain'"),
       })
       .passthrough(),
     preview: (a) => ({
@@ -202,7 +227,11 @@ export function makeComposioDriveDef(executor: ComposioExecutor): ConnectorDef {
       ],
       collect: [
         { env: "COMPOSIO_API_KEY", label: "Composio API key", secret: true },
-        { env: "COMPOSIO_DRIVE_AUTH_CONFIG_ID", label: "Composio Drive auth config id", secret: false },
+        {
+          env: "COMPOSIO_DRIVE_AUTH_CONFIG_ID",
+          label: "Composio Drive auth config id",
+          secret: false,
+        },
       ],
       docsUrl: "https://docs.composio.dev/toolkits/googledrive",
     },

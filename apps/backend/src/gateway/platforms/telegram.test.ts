@@ -29,9 +29,7 @@ describe("TelegramAdapter.sendMessage", () => {
     await adapter.sendMessage("42", "this is **bold** and a list:\n- one\n- two")
 
     expect(capturedBody?.parse_mode).toBe("HTML")
-    expect(capturedBody?.text).toBe(
-      "this is <b>bold</b> and a list:\n• one\n• two",
-    )
+    expect(capturedBody?.text).toBe("this is <b>bold</b> and a list:\n• one\n• two")
   })
 })
 
@@ -63,10 +61,9 @@ describe("TelegramAdapter.setReaction", () => {
 
   it("surfaces a non-ok Telegram response as ok: false", async () => {
     globalThis.fetch = (async () =>
-      new Response(
-        JSON.stringify({ ok: false, description: "message not found" }),
-        { status: 400 },
-      )) as typeof fetch
+      new Response(JSON.stringify({ ok: false, description: "message not found" }), {
+        status: 400,
+      })) as typeof fetch
 
     const adapter = new TelegramAdapter("dummy-token")
     const result = await adapter.setReaction("42", "999", "👍")

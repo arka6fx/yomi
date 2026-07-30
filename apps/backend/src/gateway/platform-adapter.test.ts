@@ -16,18 +16,12 @@ describe("markdownToTelegramHtml", () => {
   })
 
   it("converts *italic* and _italic_ to <i>", () => {
-    expect(markdownToTelegramHtml("this is *important* text")).toBe(
-      "this is <i>important</i> text",
-    )
-    expect(markdownToTelegramHtml("this is _important_ text")).toBe(
-      "this is <i>important</i> text",
-    )
+    expect(markdownToTelegramHtml("this is *important* text")).toBe("this is <i>important</i> text")
+    expect(markdownToTelegramHtml("this is _important_ text")).toBe("this is <i>important</i> text")
   })
 
   it("converts ~~strikethrough~~ to <s>", () => {
-    expect(markdownToTelegramHtml("~~old price~~ new price")).toBe(
-      "<s>old price</s> new price",
-    )
+    expect(markdownToTelegramHtml("~~old price~~ new price")).toBe("<s>old price</s> new price")
   })
 
   it("converts inline code to <code>, escaping its contents", () => {

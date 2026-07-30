@@ -27,126 +27,158 @@ export const posthogComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "POSTHOG_LIST_AND_MANAGE_PROJECT_FEATURE_FLAGS",
     description: "List feature flags for a project. Read-only.",
-    parameters: z.object({
-      project_id: z.string().describe("Project ID (from /api/projects/)"),
-      limit: z.number().int().optional().describe("Max results per page"),
-      offset: z.number().int().optional().describe("Pagination offset"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        project_id: z.string().describe("Project ID (from /api/projects/)"),
+        limit: z.number().int().optional().describe("Max results per page"),
+        offset: z.number().int().optional().describe("Pagination offset"),
+      })
+      .passthrough(),
   },
   {
     slug: "POSTHOG_RETRIEVE_PROJECT_INSIGHTS_WITH_PAGINATION",
     description: "List insights (saved analyses/charts) in a project. Read-only.",
-    parameters: z.object({
-      project_id: z.string().describe("Project ID (from /api/projects/)"),
-      limit: z.number().int().optional().describe("Max results per page"),
-      offset: z.number().int().optional().describe("Pagination offset"),
-      format: z.string().optional().describe("'csv' or 'json'"),
-      short_id: z.string().optional().describe("Filter by insight short ID"),
-      created_by: z.number().int().optional().describe("Filter by creator user ID"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        project_id: z.string().describe("Project ID (from /api/projects/)"),
+        limit: z.number().int().optional().describe("Max results per page"),
+        offset: z.number().int().optional().describe("Pagination offset"),
+        format: z.string().optional().describe("'csv' or 'json'"),
+        short_id: z.string().optional().describe("Filter by insight short ID"),
+        created_by: z.number().int().optional().describe("Filter by creator user ID"),
+      })
+      .passthrough(),
   },
   {
     slug: "POSTHOG_RETRIEVE_PROJECT_INSIGHT_DETAILS",
     description: "Get a specific insight's details, results, and metadata. Read-only.",
-    parameters: z.object({
-      id: z.number().int().describe("Insight ID"),
-      project_id: z.string().describe("Project ID (from /api/projects/)"),
-      format: z.string().optional().describe("'csv' or 'json'"),
-      refresh: z.boolean().optional().describe("Ask the server to refresh cached results"),
-      from_dashboard: z.number().int().optional().describe("Dashboard ID for dashboard-scoped context"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        id: z.number().int().describe("Insight ID"),
+        project_id: z.string().describe("Project ID (from /api/projects/)"),
+        format: z.string().optional().describe("'csv' or 'json'"),
+        refresh: z.boolean().optional().describe("Ask the server to refresh cached results"),
+        from_dashboard: z
+          .number()
+          .int()
+          .optional()
+          .describe("Dashboard ID for dashboard-scoped context"),
+      })
+      .passthrough(),
   },
   {
     slug: "POSTHOG_RETRIEVE_PROJECT_TREND_INSIGHTS",
     description: "Get trend insights (metrics over time) for a project. Read-only.",
-    parameters: z.object({
-      project_id: z.string().describe("Project ID (from /api/projects/)"),
-      format: z.string().optional().describe("'csv' or 'json'"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        project_id: z.string().describe("Project ID (from /api/projects/)"),
+        format: z.string().optional().describe("'csv' or 'json'"),
+      })
+      .passthrough(),
   },
   {
     slug: "POSTHOG_RETRIEVE_RETENTION_INSIGHTS",
     description: "Get retention insights for a project. Read-only.",
-    parameters: z.object({
-      project_id: z.string().describe("Project ID (from /api/projects/)"),
-      format: z.string().optional().describe("'csv' or 'json'"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        project_id: z.string().describe("Project ID (from /api/projects/)"),
+        format: z.string().optional().describe("'csv' or 'json'"),
+      })
+      .passthrough(),
   },
   {
     slug: "POSTHOG_RETRIEVE_PROJECT_COHORTS_WITH_PAGINATION",
     description: "List cohorts in a project. Read-only.",
-    parameters: z.object({
-      project_id: z.string().describe("Project ID (from /api/projects/)"),
-      limit: z.number().int().optional().describe("Max results per page"),
-      offset: z.number().int().optional().describe("Pagination offset"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        project_id: z.string().describe("Project ID (from /api/projects/)"),
+        limit: z.number().int().optional().describe("Max results per page"),
+        offset: z.number().int().optional().describe("Pagination offset"),
+      })
+      .passthrough(),
   },
   {
     slug: "POSTHOG_RETRIEVE_PROJECT_COHORT_DETAILS",
     description: "Get a specific cohort's details (name, creator, status). Read-only.",
-    parameters: z.object({
-      id: z.number().int().describe("Cohort ID"),
-      project_id: z.string().describe("Project ID (from /api/projects/)"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        id: z.number().int().describe("Cohort ID"),
+        project_id: z.string().describe("Project ID (from /api/projects/)"),
+      })
+      .passthrough(),
   },
   {
     slug: "POSTHOG_LIST_PROJECT_DASHBOARDS_WITH_PAGINATION",
     description: "List dashboards in a project. Read-only.",
-    parameters: z.object({
-      project_id: z.string().describe("Project ID (from /api/projects/)"),
-      limit: z.number().int().optional().describe("Max results per page"),
-      offset: z.number().int().optional().describe("Pagination offset"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        project_id: z.string().describe("Project ID (from /api/projects/)"),
+        limit: z.number().int().optional().describe("Max results per page"),
+        offset: z.number().int().optional().describe("Pagination offset"),
+      })
+      .passthrough(),
   },
   {
     slug: "POSTHOG_RETRIEVE_SPECIFIC_PROJECT_DASHBOARD_DETAILS",
     description: "Get a specific dashboard's details (owner, access, layout). Read-only.",
-    parameters: z.object({
-      id: z.number().int().describe("Dashboard ID"),
-      project_id: z.string().describe("Project ID (from /api/projects/)"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        id: z.number().int().describe("Dashboard ID"),
+        project_id: z.string().describe("Project ID (from /api/projects/)"),
+      })
+      .passthrough(),
   },
   {
     slug: "POSTHOG_LIST_PAGINATED_SURVEYS_FOR_A_PROJECT",
     description: "List surveys in a project. Read-only.",
-    parameters: z.object({
-      project_id: z.string().describe("Project ID (from /api/projects/)"),
-      limit: z.number().int().optional().describe("Max results per page"),
-      offset: z.number().int().optional().describe("Pagination offset"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        project_id: z.string().describe("Project ID (from /api/projects/)"),
+        limit: z.number().int().optional().describe("Max results per page"),
+        offset: z.number().int().optional().describe("Pagination offset"),
+      })
+      .passthrough(),
   },
   {
     slug: "POSTHOG_LIST_PROJECT_EXPERIMENTS_WITH_PAGINATION",
     description: "List experiments (A/B tests) in a project. Read-only.",
-    parameters: z.object({
-      project_id: z.string().describe("Project ID (from /api/projects/)"),
-      limit: z.number().int().optional().describe("Max results per page"),
-      offset: z.number().int().optional().describe("Pagination offset"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        project_id: z.string().describe("Project ID (from /api/projects/)"),
+        limit: z.number().int().optional().describe("Max results per page"),
+        offset: z.number().int().optional().describe("Pagination offset"),
+      })
+      .passthrough(),
   },
   {
     slug: "POSTHOG_LIST_PROJECT_SESSION_RECORDINGS",
     description: "List session recordings for a project. Read-only.",
-    parameters: z.object({
-      project_id: z.string().describe("Project ID (from /api/projects/)"),
-      limit: z.number().int().optional().describe("Max results per page"),
-      offset: z.number().int().optional().describe("Pagination offset"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        project_id: z.string().describe("Project ID (from /api/projects/)"),
+        limit: z.number().int().optional().describe("Max results per page"),
+        offset: z.number().int().optional().describe("Pagination offset"),
+      })
+      .passthrough(),
   },
   {
     slug: "POSTHOG_RETRIEVE_EVENT_DEFINITIONS_BY_PROJECT_ID",
     description: "List event definitions (the event catalog) for a project. Read-only.",
-    parameters: z.object({
-      project_id: z.string().describe("Project ID (from /api/projects/)"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        project_id: z.string().describe("Project ID (from /api/projects/)"),
+      })
+      .passthrough(),
   },
   {
     slug: "POSTHOG_RETRIEVE_EVENT_DEFINITION_BY_UUID",
     description: "Get a specific event definition by its UUID. Read-only.",
-    parameters: z.object({
-      id: z.string().describe("Event definition UUID"),
-      project_id: z.string().describe("Project ID (from /api/projects/)"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        id: z.string().describe("Event definition UUID"),
+        project_id: z.string().describe("Project ID (from /api/projects/)"),
+      })
+      .passthrough(),
   },
 ]
 
@@ -156,7 +188,8 @@ export function makeComposioPostHogDef(executor: ComposioExecutor): ConnectorDef
     name: "PostHog",
     category: "data-analytics",
     icon: "posthog",
-    description: "PostHog — product analytics, feature flags, session recordings, funnels, event tracking, and data insights (via Composio).",
+    description:
+      "PostHog — product analytics, feature flags, session recordings, funnels, event tracking, and data insights (via Composio).",
     readOnlyByDefault: true,
     auth: {
       kind: "composio",
@@ -172,7 +205,11 @@ export function makeComposioPostHogDef(executor: ComposioExecutor): ConnectorDef
       ],
       collect: [
         { env: "COMPOSIO_API_KEY", label: "Composio API key", secret: true },
-        { env: "COMPOSIO_POSTHOG_AUTH_CONFIG_ID", label: "Composio PostHog auth config id", secret: false },
+        {
+          env: "COMPOSIO_POSTHOG_AUTH_CONFIG_ID",
+          label: "Composio PostHog auth config id",
+          secret: false,
+        },
       ],
       docsUrl: "https://docs.composio.dev/tools/posthog",
     },

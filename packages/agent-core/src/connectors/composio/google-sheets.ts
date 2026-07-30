@@ -14,7 +14,8 @@ export const sheetsComposioSpecs: ComposioToolSpec[] = [
   // ── Read actions ──────────────────────────────────────────────
   {
     slug: "GOOGLESHEETS_GET_SPREADSHEET_INFO",
-    description: "Get a Google Sheet's metadata: title, tabs (sheetId, title, row/column counts). Read-only.",
+    description:
+      "Get a Google Sheet's metadata: title, tabs (sheetId, title, row/column counts). Read-only.",
     parameters: z
       .object({
         spreadsheet_id: z.string().describe("Google Sheets spreadsheet ID"),
@@ -28,7 +29,10 @@ export const sheetsComposioSpecs: ComposioToolSpec[] = [
     parameters: z
       .object({
         spreadsheet_id: z.string().describe("Google Sheets spreadsheet ID"),
-        ranges: z.array(z.string()).optional().describe("A1-notation ranges, e.g. ['Sheet1!A1:B2']"),
+        ranges: z
+          .array(z.string())
+          .optional()
+          .describe("A1-notation ranges, e.g. ['Sheet1!A1:B2']"),
       })
       .passthrough(),
   },
@@ -38,9 +42,18 @@ export const sheetsComposioSpecs: ComposioToolSpec[] = [
       "Search the user's Google Sheets by name or content, e.g. \"name contains 'budget'\". Read-only.",
     parameters: z
       .object({
-        query: z.string().optional().describe("Drive query syntax search string. Omit to list all sheets."),
+        query: z
+          .string()
+          .optional()
+          .describe("Drive query syntax search string. Omit to list all sheets."),
         order_by: z.string().optional().describe("e.g. 'modifiedTime desc' (default), 'name'"),
-        max_results: z.number().int().min(1).max(1000).optional().describe("Max results (default 10)"),
+        max_results: z
+          .number()
+          .int()
+          .min(1)
+          .max(1000)
+          .optional()
+          .describe("Max results (default 10)"),
         starred_only: z.boolean().optional(),
         shared_with_me: z.boolean().optional(),
       })
@@ -62,8 +75,13 @@ export const sheetsComposioSpecs: ComposioToolSpec[] = [
     parameters: z
       .object({
         spreadsheet_id: z.string().describe("Google Sheets spreadsheet ID"),
-        sql: z.string().describe('SQL SELECT, e.g. \'SELECT * FROM "Sheet1" WHERE total > 10 LIMIT 20\''),
-        include_formulas: z.boolean().optional().describe("Return formula text instead of computed values"),
+        sql: z
+          .string()
+          .describe("SQL SELECT, e.g. 'SELECT * FROM \"Sheet1\" WHERE total > 10 LIMIT 20'"),
+        include_formulas: z
+          .boolean()
+          .optional()
+          .describe("Return formula text instead of computed values"),
       })
       .passthrough(),
   },
@@ -74,7 +92,10 @@ export const sheetsComposioSpecs: ComposioToolSpec[] = [
       .object({
         spreadsheet_id: z.string().describe("Google Sheets spreadsheet ID"),
         query: z.string().describe("Exact cell value to find"),
-        range: z.string().optional().describe("A1 range to search, e.g. 'Sheet1!A1:D5'. Defaults to first sheet."),
+        range: z
+          .string()
+          .optional()
+          .describe("A1 range to search, e.g. 'Sheet1!A1:D5'. Defaults to first sheet."),
         case_sensitive: z.boolean().optional(),
       })
       .passthrough(),
@@ -97,14 +118,20 @@ export const sheetsComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "GOOGLESHEETS_ADD_SHEET",
-    description: "Add a new tab to an existing Google Sheet. Requires user approval before it runs.",
+    description:
+      "Add a new tab to an existing Google Sheet. Requires user approval before it runs.",
     parameters: z
       .object({
         spreadsheetId: z.string().describe("Google Sheets spreadsheet ID"),
         properties: z
           .object({
             title: z.string().optional().describe("Name for the new tab"),
-            index: z.number().int().min(0).optional().describe("Zero-based position for the new tab"),
+            index: z
+              .number()
+              .int()
+              .min(0)
+              .optional()
+              .describe("Zero-based position for the new tab"),
           })
           .passthrough()
           .optional(),
@@ -126,13 +153,17 @@ export const sheetsComposioSpecs: ComposioToolSpec[] = [
     parameters: z
       .object({
         spreadsheetId: z.string().describe("Google Sheets spreadsheet ID"),
-        range: z.string().describe("A1 range identifying the table to append after, e.g. 'Sheet1!A1:B2'"),
+        range: z
+          .string()
+          .describe("A1 range identifying the table to append after, e.g. 'Sheet1!A1:B2'"),
         values: z
           .array(z.array(z.union([z.string(), z.number(), z.boolean()])))
           .describe("Rows to append — array of arrays, each inner array is one row"),
         valueInputOption: z
           .enum(["RAW", "USER_ENTERED"])
-          .describe("RAW stores strings literally (safe for untrusted data); USER_ENTERED evaluates formulas"),
+          .describe(
+            "RAW stores strings literally (safe for untrusted data); USER_ENTERED evaluates formulas",
+          ),
       })
       .passthrough(),
     preview: (a) => {
@@ -140,7 +171,10 @@ export const sheetsComposioSpecs: ComposioToolSpec[] = [
       const rows = values?.length ?? 0
       return {
         title: `Append ${rows} row${rows === 1 ? "" : "s"} to a Google Sheet`,
-        preview: (values ?? []).slice(0, 5).map((r) => r.join(" | ")).join("\n"),
+        preview: (values ?? [])
+          .slice(0, 5)
+          .map((r) => r.join(" | "))
+          .join("\n"),
         confirmText: "Append rows",
       }
     },
@@ -152,11 +186,17 @@ export const sheetsComposioSpecs: ComposioToolSpec[] = [
     parameters: z
       .object({
         spreadsheet_id: z.string().describe("Google Sheets spreadsheet ID"),
-        worksheet_id: z.number().int().describe("Tab's numeric sheetId (from GOOGLESHEETS_GET_SPREADSHEET_INFO)"),
+        worksheet_id: z
+          .number()
+          .int()
+          .describe("Tab's numeric sheetId (from GOOGLESHEETS_GET_SPREADSHEET_INFO)"),
         start_row_index: z.number().int().describe("0-based first row"),
         end_row_index: z.number().int().describe("0-based row after the last row (exclusive)"),
         start_column_index: z.number().int().describe("0-based first column"),
-        end_column_index: z.number().int().describe("0-based column after the last column (exclusive)"),
+        end_column_index: z
+          .number()
+          .int()
+          .describe("0-based column after the last column (exclusive)"),
         bold: z.boolean().optional(),
         italic: z.boolean().optional(),
         underline: z.boolean().optional(),
@@ -182,7 +222,11 @@ export const sheetsComposioSpecs: ComposioToolSpec[] = [
         spreadsheet_id: z.string().describe("Google Sheets spreadsheet ID"),
         chart_type: z.string().describe("BAR, LINE, AREA, COLUMN, SCATTER, COMBO, or STEPPED_AREA"),
         data_range: z.string().describe("A1 range for the chart data, e.g. 'Sheet1!A1:C10'"),
-        sheet_id: z.number().int().optional().describe("Tab to place the chart in (default 0, first sheet)"),
+        sheet_id: z
+          .number()
+          .int()
+          .optional()
+          .describe("Tab to place the chart in (default 0, first sheet)"),
         title: z.string().optional(),
         subtitle: z.string().optional(),
         x_axis_title: z.string().optional(),
@@ -256,7 +300,11 @@ export function makeComposioSheetsDef(executor: ComposioExecutor): ConnectorDef 
       ],
       collect: [
         { env: "COMPOSIO_API_KEY", label: "Composio API key", secret: true },
-        { env: "COMPOSIO_SHEETS_AUTH_CONFIG_ID", label: "Composio Sheets auth config id", secret: false },
+        {
+          env: "COMPOSIO_SHEETS_AUTH_CONFIG_ID",
+          label: "Composio Sheets auth config id",
+          secret: false,
+        },
       ],
       docsUrl: "https://docs.composio.dev/toolkits/googlesheets",
     },

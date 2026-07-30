@@ -8,4 +8,6 @@ export const backendComposioVercelDef: BackendConnectorDef = {
   getDisplayName: async () => "Vercel (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("vercel") ? backendComposioVercelDef : backendComposioVercelDef)
+registerConnectorDef(
+  isComposioBacked("vercel") ? backendComposioVercelDef : backendComposioVercelDef,
+)

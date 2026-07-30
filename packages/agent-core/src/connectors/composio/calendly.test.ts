@@ -21,7 +21,9 @@ describe("calendlyComposioSpecs", () => {
   // Confirmed live (GET /api/v3/tools?tool_slugs=CALENDLY_CREATE_WEBHOOK_SUBSCRIPTION):
   // organization is required and was missing entirely from the spec.
   it("CALENDLY_CREATE_WEBHOOK_SUBSCRIPTION requires organization", () => {
-    const spec = calendlyComposioSpecs.find((s) => s.slug === "CALENDLY_CREATE_WEBHOOK_SUBSCRIPTION")!
+    const spec = calendlyComposioSpecs.find(
+      (s) => s.slug === "CALENDLY_CREATE_WEBHOOK_SUBSCRIPTION",
+    )!
     const base = {
       url: "https://yourapp.com/webhook",
       events: ["invitee.created"],

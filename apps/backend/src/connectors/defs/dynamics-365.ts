@@ -8,4 +8,6 @@ export const backendComposioDynamics365Def: BackendConnectorDef = {
   getDisplayName: async () => "Dynamics 365 (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("dynamics-365") ? backendComposioDynamics365Def : backendComposioDynamics365Def)
+registerConnectorDef(
+  isComposioBacked("dynamics-365") ? backendComposioDynamics365Def : backendComposioDynamics365Def,
+)

@@ -8,4 +8,6 @@ export const backendComposioGoogleAdsDef: BackendConnectorDef = {
   getDisplayName: async () => "Google Ads (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("google-ads") ? backendComposioGoogleAdsDef : backendComposioGoogleAdsDef)
+registerConnectorDef(
+  isComposioBacked("google-ads") ? backendComposioGoogleAdsDef : backendComposioGoogleAdsDef,
+)

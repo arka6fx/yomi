@@ -15,7 +15,9 @@ export const discordComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "DISCORD_LIST_MY_GUILDS",
     description: "List servers (guilds) the authenticated user is a member of. Read-only.",
-    parameters: z.object({ limit: z.number().int().optional().describe("Max results") }).passthrough(),
+    parameters: z
+      .object({ limit: z.number().int().optional().describe("Max results") })
+      .passthrough(),
   },
   {
     slug: "DISCORD_GET_MY_GUILD_MEMBER",
@@ -61,7 +63,11 @@ export function makeComposioDiscordDef(executor: ComposioExecutor): ConnectorDef
       ],
       collect: [
         { env: "COMPOSIO_API_KEY", label: "Composio API key", secret: true },
-        { env: "COMPOSIO_DISCORD_AUTH_CONFIG_ID", label: "Composio Discord auth config id", secret: false },
+        {
+          env: "COMPOSIO_DISCORD_AUTH_CONFIG_ID",
+          label: "Composio Discord auth config id",
+          secret: false,
+        },
       ],
       docsUrl: "https://docs.composio.dev/tools/discord",
     },

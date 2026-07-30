@@ -90,7 +90,7 @@ export async function getAccessToken(userId: string, provider: string): Promise<
   // Swiggy uses MCP OAuth with no refresh token in v1.0 — if expired, surface
   // a reconnect error immediately instead of returning a dead token.
   const expiresAt = tokens.expiresAt ?? null
-  if ((provider === "swiggy") && expiresAt !== null && expiresAt < Date.now()) {
+  if (provider === "swiggy" && expiresAt !== null && expiresAt < Date.now()) {
     throw new Error("Swiggy session expired. Reconnect from the dashboard.")
   }
 

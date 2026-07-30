@@ -6,7 +6,10 @@ let mockAuthSession: { user: { id: string }; session: { id: string } } | null = 
 mock.module("../auth.js", () => ({
   getAuth: () => ({ api: { getSession: async () => mockAuthSession } }),
   // Re-implement rather than import: the real authenticate pulls in the full auth stack.
-  authenticate: async (c: { json: (b: unknown, s: number) => Response }, next: () => Promise<void>) => {
+  authenticate: async (
+    c: { json: (b: unknown, s: number) => Response },
+    next: () => Promise<void>,
+  ) => {
     if (!mockAuthSession?.user) return c.json({ error: "Unauthorized" }, 401)
     await next()
   },

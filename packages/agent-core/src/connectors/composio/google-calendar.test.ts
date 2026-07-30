@@ -1,6 +1,10 @@
 import { describe, expect, it, mock } from "bun:test"
 import type { ConnectorContext } from "../connector-def.js"
-import { makeComposioCalendarDef, calendarComposioSpecs, CALENDAR_TOOLKIT } from "./google-calendar.js"
+import {
+  makeComposioCalendarDef,
+  calendarComposioSpecs,
+  CALENDAR_TOOLKIT,
+} from "./google-calendar.js"
 import { createComposioTools } from "./adapter.js"
 import type { ComposioExecutor } from "./adapter.js"
 
@@ -59,11 +63,18 @@ describe("Calendar via Composio — read pass-through", () => {
     })
     const tools = factory(buildCtx({ createPendingAction: create }))
 
-    const result = await tools["GOOGLECALENDAR_EVENTS_LIST"]!.execute({ calendarId: "primary", maxResults: 10 })
+    const result = await tools["GOOGLECALENDAR_EVENTS_LIST"]!.execute({
+      calendarId: "primary",
+      maxResults: 10,
+    })
 
     expect(result).toEqual({ events: [{ id: "e1", summary: "Standup" }] })
     expect(executor.calls).toEqual([
-      { userId: "user_1", slug: "GOOGLECALENDAR_EVENTS_LIST", arguments: { calendarId: "primary", maxResults: 10 } },
+      {
+        userId: "user_1",
+        slug: "GOOGLECALENDAR_EVENTS_LIST",
+        arguments: { calendarId: "primary", maxResults: 10 },
+      },
     ])
     expect(create).not.toHaveBeenCalled()
   })
@@ -95,7 +106,11 @@ describe("Calendar via Composio — write gating", () => {
 
 describe("Calendar via Composio — approval replay", () => {
   it("on replay (no createPendingAction) a write runs the real executor", async () => {
-    const executor = fakeExecutor({ ok: true, id: "evt_1", htmlLink: "https://calendar.google.com/..." })
+    const executor = fakeExecutor({
+      ok: true,
+      id: "evt_1",
+      htmlLink: "https://calendar.google.com/...",
+    })
     const factory = createComposioTools({
       provider: "google-calendar",
       toolkit: CALENDAR_TOOLKIT,

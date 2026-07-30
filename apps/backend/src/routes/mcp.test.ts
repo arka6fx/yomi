@@ -152,7 +152,9 @@ mock.module("@yomi/db", () => {
       }),
       execute: (query: unknown) => {
         executedQueries.push(query)
-        return Promise.resolve({ rows: mockEntries.map((e) => ({ ...e, score: 0.5, matchedBy: ["vector"] })) })
+        return Promise.resolve({
+          rows: mockEntries.map((e) => ({ ...e, score: 0.5, matchedBy: ["vector"] })),
+        })
       },
       delete: () => ({
         where: () => Promise.resolve(),
@@ -248,7 +250,11 @@ mock.module("../services/pending-actions.js", () => ({
   expirePendingActions: async () => {},
   listPendingActions: async () => [],
   denyPendingAction: async () => null,
-  approvePendingAction: async () => ({ id: "approved-1", status: "approved", result: { ok: true } }),
+  approvePendingAction: async () => ({
+    id: "approved-1",
+    status: "approved",
+    result: { ok: true },
+  }),
 }))
 
 mock.module("../gateway/index.js", () => ({
@@ -388,7 +394,12 @@ describe("MCP server endpoint", () => {
 
     await rpcCall(app, "notifications/initialized", {}, sessionId)
 
-    const callRes = await rpcCall(app, "tools/call", { name: "memory_search", arguments: { query: "tea" } }, sessionId)
+    const callRes = await rpcCall(
+      app,
+      "tools/call",
+      { name: "memory_search", arguments: { query: "tea" } },
+      sessionId,
+    )
     expect(callRes.status).toBe(200)
     const body = await callRes.text()
     expect(body).toContain("content")
@@ -408,7 +419,12 @@ describe("MCP server endpoint", () => {
 
     await rpcCall(app, "notifications/initialized", {}, sessionId)
 
-    const callRes = await rpcCall(app, "tools/call", { name: "memory_get_profile", arguments: {} }, sessionId)
+    const callRes = await rpcCall(
+      app,
+      "tools/call",
+      { name: "memory_get_profile", arguments: {} },
+      sessionId,
+    )
     expect(callRes.status).toBe(200)
     const body = await callRes.text()
     expect(body).toContain("content")
@@ -531,7 +547,12 @@ describe("MCP server endpoint", () => {
 
     await rpcCall(app, "notifications/initialized", {}, sessionId)
 
-    const callRes = await rpcCall(app, "tools/call", { name: "schedule_list", arguments: {} }, sessionId)
+    const callRes = await rpcCall(
+      app,
+      "tools/call",
+      { name: "schedule_list", arguments: {} },
+      sessionId,
+    )
     expect(callRes.status).toBe(200)
     const body = await callRes.text()
     expect(body).toContain("content")

@@ -139,7 +139,12 @@ function createAuth() {
               userId: createdUser.id,
               purposes: [...SIGNUP_DEFAULT_CONSENT_PURPOSES],
               status: "granted",
-              context: { appVersion: null, ipAddress: null, userAgent: null, metadata: { source: "signup_default" } },
+              context: {
+                appVersion: null,
+                ipAddress: null,
+                userAgent: null,
+                metadata: { source: "signup_default" },
+              },
             }).catch((err) => console.error("[signup] consent seed failed:", createdUser.id, err))
           },
         },

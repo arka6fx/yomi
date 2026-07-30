@@ -8,4 +8,6 @@ export const backendComposioGumroadDef: BackendConnectorDef = {
   getDisplayName: async () => "Gumroad (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("gumroad") ? backendComposioGumroadDef : backendComposioGumroadDef)
+registerConnectorDef(
+  isComposioBacked("gumroad") ? backendComposioGumroadDef : backendComposioGumroadDef,
+)

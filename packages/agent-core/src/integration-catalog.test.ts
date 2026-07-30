@@ -37,10 +37,7 @@ describe("suggestIntegrationsFor", () => {
   })
 
   it("caps results at 3 when the message names more than 3 unconnected connectors", () => {
-    const result = suggestIntegrationsFor(
-      "connect this to Trello, Jira, Asana, and Notion",
-      [],
-    )
+    const result = suggestIntegrationsFor("connect this to Trello, Jira, Asana, and Notion", [])
     expect(result.length).toBe(3)
   })
 })

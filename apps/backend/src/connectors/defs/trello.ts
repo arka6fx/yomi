@@ -8,4 +8,6 @@ export const backendComposioTrelloDef: BackendConnectorDef = {
   getDisplayName: async () => "Trello (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("trello") ? backendComposioTrelloDef : backendComposioTrelloDef)
+registerConnectorDef(
+  isComposioBacked("trello") ? backendComposioTrelloDef : backendComposioTrelloDef,
+)

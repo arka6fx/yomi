@@ -27,9 +27,21 @@ export const docsComposioSpecs: ComposioToolSpec[] = [
       "Search the user's Google Docs by name or content, e.g. \"name contains 'report'\" or \"fullText contains 'budget'\". Read-only.",
     parameters: z
       .object({
-        query: z.string().optional().describe("Drive query syntax search string. Omit to list all docs."),
-        order_by: z.string().optional().describe("e.g. 'modifiedTime desc' (default), 'name', 'createdTime desc'"),
-        max_results: z.number().int().min(1).max(1000).optional().describe("Max results (default 10)"),
+        query: z
+          .string()
+          .optional()
+          .describe("Drive query syntax search string. Omit to list all docs."),
+        order_by: z
+          .string()
+          .optional()
+          .describe("e.g. 'modifiedTime desc' (default), 'name', 'createdTime desc'"),
+        max_results: z
+          .number()
+          .int()
+          .min(1)
+          .max(1000)
+          .optional()
+          .describe("Max results (default 10)"),
         starred_only: z.boolean().optional(),
         shared_with_me: z.boolean().optional(),
       })
@@ -64,7 +76,9 @@ export const docsComposioSpecs: ComposioToolSpec[] = [
     parameters: z
       .object({
         title: z.string().describe("Title for the new document"),
-        markdown_text: z.string().describe("Document content as Markdown. Empty string creates a title-only doc."),
+        markdown_text: z
+          .string()
+          .describe("Document content as Markdown. Empty string creates a title-only doc."),
       })
       .passthrough(),
     preview: (a) => ({
@@ -80,7 +94,9 @@ export const docsComposioSpecs: ComposioToolSpec[] = [
     parameters: z
       .object({
         document_id: z.string().describe("Google Docs document ID"),
-        new_markdown_text: z.string().describe("Markdown that replaces the document's full content"),
+        new_markdown_text: z
+          .string()
+          .describe("Markdown that replaces the document's full content"),
       })
       .passthrough(),
     preview: (a) => ({
@@ -97,7 +113,10 @@ export const docsComposioSpecs: ComposioToolSpec[] = [
       .object({
         document_id: z.string().describe("Google Docs document ID"),
         text_to_insert: z.string().describe("Text to insert"),
-        insertion_index: z.number().int().describe("Zero-based UTF-16 index to insert at (1 = document start)"),
+        insertion_index: z
+          .number()
+          .int()
+          .describe("Zero-based UTF-16 index to insert at (1 = document start)"),
       })
       .passthrough(),
     preview: (a) => ({
@@ -138,7 +157,10 @@ export const docsComposioSpecs: ComposioToolSpec[] = [
               .object({
                 startIndex: z.number().int().describe("Zero-based inclusive start index"),
                 endIndex: z.number().int().describe("Zero-based exclusive end index"),
-                segmentId: z.string().optional().describe("Header/footer/footnote ID; omit for the document body"),
+                segmentId: z
+                  .string()
+                  .optional()
+                  .describe("Header/footer/footnote ID; omit for the document body"),
               })
               .passthrough(),
             bulletPreset: z
@@ -162,7 +184,9 @@ export const docsComposioSpecs: ComposioToolSpec[] = [
               .describe("Bullet or numbering glyph style"),
           })
           .passthrough()
-          .describe("The bullet preset request, matching the Docs API's createParagraphBullets shape"),
+          .describe(
+            "The bullet preset request, matching the Docs API's createParagraphBullets shape",
+          ),
       })
       .passthrough(),
     preview: (a) => ({
@@ -179,8 +203,15 @@ export const docsComposioSpecs: ComposioToolSpec[] = [
         documentId: z.string().describe("Google Docs document ID"),
         rows: z.number().int().min(1).describe("Number of rows"),
         columns: z.number().int().min(1).describe("Number of columns"),
-        index: z.number().int().optional().describe("Zero-based insertion index. Omit to insert at document end."),
-        insertAtEndOfSegment: z.boolean().optional().describe("Insert at the end of the body/header/footer"),
+        index: z
+          .number()
+          .int()
+          .optional()
+          .describe("Zero-based insertion index. Omit to insert at document end."),
+        insertAtEndOfSegment: z
+          .boolean()
+          .optional()
+          .describe("Insert at the end of the body/header/footer"),
       })
       .passthrough(),
     preview: (a) => ({
@@ -199,7 +230,11 @@ export const docsComposioSpecs: ComposioToolSpec[] = [
         uri: z.string().describe("Public image URL (max 2kB)"),
         location: z
           .object({
-            index: z.number().int().optional().describe("Zero-based insertion index. Omit to insert at segment end."),
+            index: z
+              .number()
+              .int()
+              .optional()
+              .describe("Zero-based insertion index. Omit to insert at segment end."),
             segmentId: z.string().optional(),
           })
           .passthrough()
@@ -218,7 +253,10 @@ export const docsComposioSpecs: ComposioToolSpec[] = [
     parameters: z
       .object({
         document_id: z.string().describe("Google Docs document ID to copy"),
-        title: z.string().optional().describe("Title for the copy (defaults to 'Copy of <original>')"),
+        title: z
+          .string()
+          .optional()
+          .describe("Title for the copy (defaults to 'Copy of <original>')"),
       })
       .passthrough(),
     preview: (a) => ({
@@ -251,7 +289,11 @@ export function makeComposioDocsDef(executor: ComposioExecutor): ConnectorDef {
       ],
       collect: [
         { env: "COMPOSIO_API_KEY", label: "Composio API key", secret: true },
-        { env: "COMPOSIO_DOCS_AUTH_CONFIG_ID", label: "Composio Docs auth config id", secret: false },
+        {
+          env: "COMPOSIO_DOCS_AUTH_CONFIG_ID",
+          label: "Composio Docs auth config id",
+          secret: false,
+        },
       ],
       docsUrl: "https://docs.composio.dev/toolkits/googledocs",
     },

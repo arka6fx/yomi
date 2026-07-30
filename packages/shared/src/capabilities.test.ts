@@ -136,7 +136,11 @@ describe("evaluateManifest", () => {
 
   it("reports which optional scopes are granted without affecting satisfaction", () => {
     const result = evaluateManifest(
-      { required: ["memory:read"], optional: ["schedule:read", "filesystem:write"], permissions: [] },
+      {
+        required: ["memory:read"],
+        optional: ["schedule:read", "filesystem:write"],
+        permissions: [],
+      },
       ["memory:read", "schedule:read"],
     )
     expect(result.satisfied).toBe(true)

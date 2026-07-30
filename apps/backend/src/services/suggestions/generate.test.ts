@@ -21,7 +21,17 @@ const cache = { deletes: 0, inserted: [] as any[] } // generated-suggestions cac
 
 // Distinct table sentinels so the db mock can route .from(table) to the right rows.
 const mcpConnections = { __t: "mcp" }
-const memoryEntries = { __t: "mem", topic: {}, summary: {}, userId: {}, status: {}, isLatest: {}, isStatic: {}, confidence: {}, updatedAt: {} }
+const memoryEntries = {
+  __t: "mem",
+  topic: {},
+  summary: {},
+  userId: {},
+  status: {},
+  isLatest: {},
+  isStatic: {},
+  confidence: {},
+  updatedAt: {},
+}
 const suggestionDecisions = { __t: "dec" }
 const generatedSuggestions = { __t: "gen", userId: {} }
 

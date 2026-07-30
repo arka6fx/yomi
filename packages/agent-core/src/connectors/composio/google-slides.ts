@@ -19,11 +19,15 @@ export const slidesComposioSpecs: ComposioToolSpec[] = [
   // ── Read actions ──────────────────────────────────────────────
   {
     slug: "GOOGLESLIDES_PRESENTATIONS_GET",
-    description: "Fetch a Google Slides presentation's structure: slides, page elements, layouts. Read-only.",
+    description:
+      "Fetch a Google Slides presentation's structure: slides, page elements, layouts. Read-only.",
     parameters: z
       .object({
         presentationId: z.string().describe("Google Slides presentation ID"),
-        fields: z.string().optional().describe("Comma-separated field selector, e.g. 'presentationId,title,slides'"),
+        fields: z
+          .string()
+          .optional()
+          .describe("Comma-separated field selector, e.g. 'presentationId,title,slides'"),
       })
       .passthrough(),
   },
@@ -65,7 +69,9 @@ export const slidesComposioSpecs: ComposioToolSpec[] = [
     parameters: z
       .object({
         title: z.string().describe("Title for the new presentation"),
-        markdown_text: z.string().describe("Deck content as Markdown — see tool description for syntax"),
+        markdown_text: z
+          .string()
+          .describe("Deck content as Markdown — see tool description for syntax"),
       })
       .passthrough(),
     preview: (a) => ({
@@ -82,11 +88,16 @@ export const slidesComposioSpecs: ComposioToolSpec[] = [
     parameters: z
       .object({
         title: z.string().optional().describe("Title for the new presentation"),
-        duplicatePresentationId: z.string().optional().describe("Existing presentation ID to copy instead of creating blank"),
+        duplicatePresentationId: z
+          .string()
+          .optional()
+          .describe("Existing presentation ID to copy instead of creating blank"),
       })
       .passthrough(),
     preview: (a) => ({
-      title: a["duplicatePresentationId"] ? "Duplicate a Slides presentation" : "Create an empty Slides presentation",
+      title: a["duplicatePresentationId"]
+        ? "Duplicate a Slides presentation"
+        : "Create an empty Slides presentation",
       preview: String(a["title"] ?? ""),
       confirmText: "Create presentation",
     }),
@@ -99,7 +110,10 @@ export const slidesComposioSpecs: ComposioToolSpec[] = [
     parameters: z
       .object({
         presentationId: z.string().describe("Google Slides presentation ID to update"),
-        markdown_text: z.string().optional().describe("Markdown for new slides to append. Omit if using requests."),
+        markdown_text: z
+          .string()
+          .optional()
+          .describe("Markdown for new slides to append. Omit if using requests."),
         requests: z
           .array(z.record(z.unknown()))
           .optional()
@@ -108,7 +122,9 @@ export const slidesComposioSpecs: ComposioToolSpec[] = [
       .passthrough(),
     preview: (a) => ({
       title: `Update Slides presentation ${String(a["presentationId"] ?? "").slice(0, 12)}`,
-      preview: a["markdown_text"] ? String(a["markdown_text"]).slice(0, 500) : "Apply raw batchUpdate requests",
+      preview: a["markdown_text"]
+        ? String(a["markdown_text"]).slice(0, 500)
+        : "Apply raw batchUpdate requests",
       confirmText: "Update deck",
     }),
   },
@@ -120,7 +136,8 @@ export function makeComposioSlidesDef(executor: ComposioExecutor): ConnectorDef 
     name: "Google Slides",
     category: "productivity",
     icon: "google-slides",
-    description: "Build multi-slide presentations from Markdown and edit existing decks (via Composio).",
+    description:
+      "Build multi-slide presentations from Markdown and edit existing decks (via Composio).",
     readOnlyByDefault: false,
     auth: {
       kind: "composio",
@@ -136,7 +153,11 @@ export function makeComposioSlidesDef(executor: ComposioExecutor): ConnectorDef 
       ],
       collect: [
         { env: "COMPOSIO_API_KEY", label: "Composio API key", secret: true },
-        { env: "COMPOSIO_SLIDES_AUTH_CONFIG_ID", label: "Composio Slides auth config id", secret: false },
+        {
+          env: "COMPOSIO_SLIDES_AUTH_CONFIG_ID",
+          label: "Composio Slides auth config id",
+          secret: false,
+        },
       ],
       docsUrl: "https://docs.composio.dev/toolkits/googleslides",
     },

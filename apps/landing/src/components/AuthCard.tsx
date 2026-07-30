@@ -113,10 +113,9 @@ export default function AuthCard({ defaultMode, plan, callbackURL, initialError 
 
       {inAppBrowser && (
         <p className="mt-6 rounded-lg border border-border bg-muted/50 p-3 text-xs text-muted-foreground">
-          You're viewing this inside an app's built-in browser, which blocks Google/GitHub
-          sign-in. Tap the <span className="font-medium text-foreground">⋯</span> menu above and
-          choose <span className="font-medium text-foreground">Open in Browser</span>, then try
-          again.
+          You're viewing this inside an app's built-in browser, which blocks Google/GitHub sign-in.
+          Tap the <span className="font-medium text-foreground">⋯</span> menu above and choose{" "}
+          <span className="font-medium text-foreground">Open in Browser</span>, then try again.
         </p>
       )}
 

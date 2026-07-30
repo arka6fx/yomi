@@ -27,4 +27,6 @@ export const backendComposioMeetDef: BackendConnectorDef = {
   },
 }
 
-registerConnectorDef(isComposioBacked("google-meet") ? backendComposioMeetDef : backendGoogleMeetDef)
+registerConnectorDef(
+  isComposioBacked("google-meet") ? backendComposioMeetDef : backendGoogleMeetDef,
+)

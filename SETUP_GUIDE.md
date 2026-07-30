@@ -10,21 +10,22 @@ LLM + speech          OpenAI (STT for incoming voice notes; replies are text)
 Billing               Dodo Payments
 ```
 
-- **Domain** `getyomi.in` is registered at Hostinger; DNS is managed by Cloudflare
-  (nameservers point at Cloudflare). `api.getyomi.in` is an **A record → the EC2
-  Elastic IP, DNS-only (grey cloud)** so Caddy can obtain a Let's Encrypt cert.
+- **Domain** `getyomi.in` is registered at Hostinger; DNS is managed by
+  Cloudflare (nameservers point at Cloudflare). `api.getyomi.in` is an **A
+  record → the EC2 Elastic IP, DNS-only (grey cloud)** so Caddy can obtain a
+  Let's Encrypt cert.
 - **Backend is NOT on Cloudflare Workers.** It runs as a container on EC2.
-  `apps/backend/src/worker.ts` + `wrangler.jsonc` are kept only as a fallback and
-  are not deployed.
+  `apps/backend/src/worker.ts` + `wrangler.jsonc` are kept only as a fallback
+  and are not deployed.
 
 ---
 
 ## Backend — EC2 + Docker
 
 The backend is a Bun/Hono server (`apps/backend/src/index.ts`, port 3001) behind
-Caddy, which terminates TLS for `api.getyomi.in`. Compose file: `docker-compose.yml`
-(services `backend` + `caddy`), Dockerfile: `apps/backend/Dockerfile`, TLS config:
-`Caddyfile`.
+Caddy, which terminates TLS for `api.getyomi.in`. Compose file:
+`docker-compose.yml` (services `backend` + `caddy`), Dockerfile:
+`apps/backend/Dockerfile`, TLS config: `Caddyfile`.
 
 ### One-time box setup
 
@@ -90,16 +91,16 @@ CD for the backend** — the SG locks SSH to the owner IP, so hosted runners can
 reach the box. To automate later, install a self-hosted runner on the EC2 box or
 use AWS SSM Run Command.
 
-Migrations are **not** run by deploy. After a migration lands, run `bun run
-db:migrate` from `packages/db` against `DATABASE_URL`.
+Migrations are **not** run by deploy. After a migration lands, run
+`bun run db:migrate` from `packages/db` against `DATABASE_URL`.
 
 ---
 
 ## Frontend — Cloudflare Worker
 
-`apps/landing` (Next.js 16) deploys as a static-assets Worker named `yomi-landing`,
-with `getyomi.in` and `www.getyomi.in` as custom domains (declared in
-`apps/landing/wrangler.jsonc`).
+`apps/landing` (Next.js 16) deploys as a static-assets Worker named
+`yomi-landing`, with `getyomi.in` and `www.getyomi.in` as custom domains
+(declared in `apps/landing/wrangler.jsonc`).
 
 ```bash
 bunx wrangler login   # needs Workers Scripts + Routes write
@@ -118,8 +119,8 @@ public URL or SEO metadata.
 
 ## OAuth callback URLs
 
-Add these (alongside `http://localhost:3001/...` for dev) in the Google Cloud and
-GitHub OAuth apps used for **sign-in**:
+Add these (alongside `http://localhost:3001/...` for dev) in the Google Cloud
+and GitHub OAuth apps used for **sign-in**:
 
 ```text
 https://api.getyomi.in/api/auth/callback/google
@@ -157,7 +158,7 @@ curl https://api.getyomi.in/health/db       # -> {"status":"ok"} (schema in sync
 
 - Keep every `.env*` (except `*.example`) out of git.
 - `ENCRYPTION_KEY` must match what connector tokens were encrypted with — a
-  mismatch makes every stored token undecryptable. Use `ENCRYPTION_KEY_FALLBACKS`
-  to rotate safely.
+  mismatch makes every stored token undecryptable. Use
+  `ENCRYPTION_KEY_FALLBACKS` to rotate safely.
 - The Elastic IP incurs a small hourly charge; release it if you tear the box
   down. Set an AWS Budget alert.

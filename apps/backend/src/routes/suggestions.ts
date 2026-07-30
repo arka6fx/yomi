@@ -59,7 +59,10 @@ suggestionsRouter.post("/:dedupKey/accept", async (c) => {
       deliverTo: entry.spec.deliverTo,
       enabled: true,
       oneShot: false,
-      nextRunAt: computeNextRun({ scheduleType: valid.scheduleType, schedule: entry.spec.schedule }),
+      nextRunAt: computeNextRun({
+        scheduleType: valid.scheduleType,
+        schedule: entry.spec.schedule,
+      }),
     })
     .returning()
   if (!schedule) return c.json({ error: "failed to create schedule", code: "create_failed" }, 500)

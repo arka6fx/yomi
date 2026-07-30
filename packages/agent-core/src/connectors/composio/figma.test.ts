@@ -12,7 +12,14 @@ describe("figmaComposioSpecs", () => {
     expect(spec.parameters.safeParse({ file_key: "abc", node_ids: ["1:2"] }).success).toBe(false)
     expect(
       spec.parameters.safeParse({
-        dev_resources: [{ name: "Jira Ticket", url: "https://jira.example.com/T-1", file_key: "abc", node_id: "1:2" }],
+        dev_resources: [
+          {
+            name: "Jira Ticket",
+            url: "https://jira.example.com/T-1",
+            file_key: "abc",
+            node_id: "1:2",
+          },
+        ],
       }).success,
     ).toBe(true)
   })

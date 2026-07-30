@@ -94,7 +94,9 @@ export async function initiateComposioConnection(
     }),
   })
   if (!res.ok) {
-    throw new Error(`Composio link create → status ${res.status}: ${(await res.text()).slice(0, 300)}`)
+    throw new Error(
+      `Composio link create → status ${res.status}: ${(await res.text()).slice(0, 300)}`,
+    )
   }
   const body = (await res.json()) as { redirect_url?: string; connected_account_id?: string }
   const redirectUrl = body.redirect_url

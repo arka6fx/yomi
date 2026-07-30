@@ -16,16 +16,27 @@ export const calendarComposioSpecs: ComposioToolSpec[] = [
   // ── Read actions ──────────────────────────────────────────────
   {
     slug: "GOOGLECALENDAR_EVENTS_LIST",
-    description:
-      "List events on a calendar within a time range, sorted by start time. Read-only.",
+    description: "List events on a calendar within a time range, sorted by start time. Read-only.",
     parameters: z
       .object({
         calendarId: z.string().describe("Calendar ID, or 'primary' for the user's main calendar"),
-        timeMin: z.string().optional().describe("RFC3339 lower bound for event end time, e.g. 2024-06-03T10:00:00-07:00"),
+        timeMin: z
+          .string()
+          .optional()
+          .describe("RFC3339 lower bound for event end time, e.g. 2024-06-03T10:00:00-07:00"),
         timeMax: z.string().optional().describe("RFC3339 upper bound for event start time"),
-        maxResults: z.number().int().min(1).max(2500).optional().describe("Max events per page (default 250)"),
+        maxResults: z
+          .number()
+          .int()
+          .min(1)
+          .max(2500)
+          .optional()
+          .describe("Max events per page (default 250)"),
         q: z.string().optional().describe("Free-text search across event fields"),
-        singleEvents: z.boolean().optional().describe("Expand recurring events into individual instances"),
+        singleEvents: z
+          .boolean()
+          .optional()
+          .describe("Expand recurring events into individual instances"),
         orderBy: z.enum(["startTime", "updated"]).optional(),
       })
       .passthrough(),
@@ -42,16 +53,25 @@ export const calendarComposioSpecs: ComposioToolSpec[] = [
         timeMin: z.string().optional().describe("RFC3339 or 'YYYY-MM-DD HH:MM:SS' lower bound"),
         timeMax: z.string().optional().describe("RFC3339 or 'YYYY-MM-DD HH:MM:SS' upper bound"),
         max_results: z.number().int().optional().describe("Max results per page (default 10)"),
-        single_events: z.boolean().optional().describe("Expand recurring events into individual instances (default true)"),
+        single_events: z
+          .boolean()
+          .optional()
+          .describe("Expand recurring events into individual instances (default true)"),
       })
       .passthrough(),
   },
   {
     slug: "GOOGLECALENDAR_LIST_CALENDARS",
-    description: "List all calendars the user has access to, including primary and secondary calendars. Read-only.",
+    description:
+      "List all calendars the user has access to, including primary and secondary calendars. Read-only.",
     parameters: z
       .object({
-        max_results: z.number().int().max(250).optional().describe("Max calendars per page (default 10)"),
+        max_results: z
+          .number()
+          .int()
+          .max(250)
+          .optional()
+          .describe("Max calendars per page (default 10)"),
         show_hidden: z.boolean().optional(),
         min_access_role: z.enum(["freeBusyReader", "owner", "reader", "writer"]).optional(),
       })
@@ -59,7 +79,8 @@ export const calendarComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "GOOGLECALENDAR_FREE_BUSY_QUERY",
-    description: "Check availability — returns busy time slots for one or more calendars over a time range. Read-only.",
+    description:
+      "Check availability — returns busy time slots for one or more calendars over a time range. Read-only.",
     parameters: z
       .object({
         timeMin: z.string().describe("RFC3339 start of the interval to query"),
@@ -87,13 +108,36 @@ export const calendarComposioSpecs: ComposioToolSpec[] = [
         summary: z.string().optional().describe("Event title"),
         description: z.string().optional().describe("Event description (can contain HTML)"),
         location: z.string().optional(),
-        timezone: z.string().optional().describe("IANA timezone, e.g. 'America/New_York' (required if start_datetime is naive with no offset)"),
+        timezone: z
+          .string()
+          .optional()
+          .describe(
+            "IANA timezone, e.g. 'America/New_York' (required if start_datetime is naive with no offset)",
+          ),
         calendar_id: z.string().optional().describe("Calendar ID (defaults to 'primary')"),
         attendees: z.array(z.string()).optional().describe("Attendee email addresses"),
-        event_duration_hour: z.number().int().min(0).max(24).optional().describe("Duration hours component (0-24)"),
-        event_duration_minutes: z.number().int().min(0).max(59).optional().describe("Duration minutes component (0-59 ONLY — never 60+)"),
-        send_updates: z.boolean().optional().describe("Whether to email attendees about the new event (default true)"),
-        recurrence: z.array(z.string()).optional().describe("RRULE/EXRULE/RDATE/EXDATE lines for recurring events"),
+        event_duration_hour: z
+          .number()
+          .int()
+          .min(0)
+          .max(24)
+          .optional()
+          .describe("Duration hours component (0-24)"),
+        event_duration_minutes: z
+          .number()
+          .int()
+          .min(0)
+          .max(59)
+          .optional()
+          .describe("Duration minutes component (0-59 ONLY — never 60+)"),
+        send_updates: z
+          .boolean()
+          .optional()
+          .describe("Whether to email attendees about the new event (default true)"),
+        recurrence: z
+          .array(z.string())
+          .optional()
+          .describe("RRULE/EXRULE/RDATE/EXDATE lines for recurring events"),
         visibility: z.enum(["default", "public", "private", "confidential"]).optional(),
       })
       .passthrough(),
@@ -109,7 +153,11 @@ export const calendarComposioSpecs: ComposioToolSpec[] = [
       "Quickly create a calendar event using natural language text. Google parses the text to extract title, date, time, and duration. Requires user approval before it runs.",
     parameters: z
       .object({
-        text: z.string().describe("Natural language event description, e.g. 'Meeting with John next Tuesday at 2pm'"),
+        text: z
+          .string()
+          .describe(
+            "Natural language event description, e.g. 'Meeting with John next Tuesday at 2pm'",
+          ),
         calendar_id: z.string().optional().describe("Calendar ID (defaults to primary)"),
         send_updates: z.enum(["all", "externalOnly", "none"]).optional(),
       })
@@ -128,7 +176,9 @@ export const calendarComposioSpecs: ComposioToolSpec[] = [
     parameters: z
       .object({
         event_id: z.string().describe("Google Calendar event ID to update"),
-        start_datetime: z.string().describe("Naive local date/time with NO offset or Z, e.g. '2025-01-16T13:00:00'"),
+        start_datetime: z
+          .string()
+          .describe("Naive local date/time with NO offset or Z, e.g. '2025-01-16T13:00:00'"),
         summary: z.string().optional().describe("New title"),
         description: z.string().optional(),
         location: z.string().optional(),
@@ -142,11 +192,14 @@ export const calendarComposioSpecs: ComposioToolSpec[] = [
       .passthrough(),
     preview: (a) => ({
       title: `Update calendar event ${String(a["event_id"] ?? "").slice(0, 12)}`,
-      preview: [
-        a["summary"] ? `Title: ${String(a["summary"])}` : null,
-        a["start_datetime"] ? `Start: ${String(a["start_datetime"])}` : null,
-        a["location"] ? `Location: ${String(a["location"])}` : null,
-      ].filter(Boolean).join("\n") || "Update event details",
+      preview:
+        [
+          a["summary"] ? `Title: ${String(a["summary"])}` : null,
+          a["start_datetime"] ? `Start: ${String(a["start_datetime"])}` : null,
+          a["location"] ? `Location: ${String(a["location"])}` : null,
+        ]
+          .filter(Boolean)
+          .join("\n") || "Update event details",
       confirmText: "Update event",
     }),
   },
@@ -154,7 +207,8 @@ export const calendarComposioSpecs: ComposioToolSpec[] = [
   // ── Irreversible actions ──────────────────────────────────────
   {
     slug: "GOOGLECALENDAR_DELETE_EVENT",
-    description: "Delete a calendar event by its ID. This CANNOT be undone. Requires user approval before it runs.",
+    description:
+      "Delete a calendar event by its ID. This CANNOT be undone. Requires user approval before it runs.",
     parameters: z
       .object({
         event_id: z.string().describe("Google Calendar event ID to delete"),
@@ -191,7 +245,11 @@ export function makeComposioCalendarDef(executor: ComposioExecutor): ConnectorDe
       ],
       collect: [
         { env: "COMPOSIO_API_KEY", label: "Composio API key", secret: true },
-        { env: "COMPOSIO_CALENDAR_AUTH_CONFIG_ID", label: "Composio Calendar auth config id", secret: false },
+        {
+          env: "COMPOSIO_CALENDAR_AUTH_CONFIG_ID",
+          label: "Composio Calendar auth config id",
+          secret: false,
+        },
       ],
       docsUrl: "https://docs.composio.dev/toolkits/googlecalendar",
     },

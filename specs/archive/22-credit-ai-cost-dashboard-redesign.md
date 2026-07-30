@@ -51,8 +51,8 @@ and friendly recent activity. Developer diagnostics move to a separate page.
 - `apps/backend`: Hono/Bun Cloudflare Worker backend for auth, billing,
   canonical credits, Telegram gateway, memory, RAG, integrations, and LLM proxy.
 - `apps/landing`: Next.js marketing, dashboard, account linking, billing UI.
-- `packages/agent-core`: OpenAI-compatible model adapter, connector
-  tool loop, connector definitions.
+- `packages/agent-core`: OpenAI-compatible model adapter, connector tool loop,
+  connector definitions.
 - `packages/db`: Drizzle schema for Better Auth, credits, usage events, agent
   sessions, memory, RAG, integrations, and pending actions.
 - `packages/shared`: plan definitions, shared contracts, chunking utilities.
@@ -200,8 +200,8 @@ and friendly recent activity. Developer diagnostics move to a separate page.
 
 | Area                        | File                                           | API                           | Model                                             | Budget                  | Notes                                                                          |
 | --------------------------- | ---------------------------------------------- | ----------------------------- | ------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------ |
-| Sidecar fast answer         | `apps/sidecar/src/pipeline/fast.ts`            | `streamText`                  | `OPENAI_FAST_MODEL` or `gpt-5.4-mini`         | 800-1400                | Good model choice, context often too broad for Pro/Max.                        |
-| Sidecar agent               | `apps/sidecar/src/pipeline/agent.ts`           | `streamText`                  | `OPENAI_AGENT_MODEL` or `gpt-5.5`             | none explicit           | Highest risk: full tools, memory/RAG, up to 20 steps.                          |
+| Sidecar fast answer         | `apps/sidecar/src/pipeline/fast.ts`            | `streamText`                  | `OPENAI_FAST_MODEL` or `gpt-5.4-mini`             | 800-1400                | Good model choice, context often too broad for Pro/Max.                        |
+| Sidecar agent               | `apps/sidecar/src/pipeline/agent.ts`           | `streamText`                  | `OPENAI_AGENT_MODEL` or `gpt-5.5`                 | none explicit           | Highest risk: full tools, memory/RAG, up to 20 steps.                          |
 | Sidecar router LLM fallback | `apps/sidecar/src/router/llm.ts`               | `generateObject`              | `gpt-5.4-mini`                                    | 80                      | Good, but should be avoided when heuristics are confident.                     |
 | Sidecar compressor          | `apps/sidecar/src/agent/compressor.ts`         | `generateText`                | `COMPRESSOR_MODEL`, fast model, or `gpt-5.4-mini` | none explicit           | Should add explicit budget.                                                    |
 | Sidecar cron agent          | `apps/sidecar/src/tools/cron/cron-executor.ts` | `generateText`                | job model or cron model                           | none explicit           | Needs max output and telemetry.                                                |

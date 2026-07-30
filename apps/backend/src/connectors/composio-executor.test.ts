@@ -13,10 +13,12 @@ function capturingFetch(response: Response) {
 
 describe("createComposioRestExecutor", () => {
   it("posts to the execute endpoint with the api key and snake_case body", async () => {
-    const { fn, calls } = capturingFetch(
-      Response.json({ data: { issues: [] }, successful: true }),
-    )
-    const exec = createComposioRestExecutor({ apiKey: "k1", baseUrl: "https://x.test", fetchImpl: fn })
+    const { fn, calls } = capturingFetch(Response.json({ data: { issues: [] }, successful: true }))
+    const exec = createComposioRestExecutor({
+      apiKey: "k1",
+      baseUrl: "https://x.test",
+      fetchImpl: fn,
+    })
 
     const result = await exec.execute({
       userId: "user_1",
@@ -36,7 +38,9 @@ describe("createComposioRestExecutor", () => {
   })
 
   it("surfaces a Composio 200-but-failed response as an error result", async () => {
-    const { fn } = capturingFetch(Response.json({ successful: false, error: "no connected account" }))
+    const { fn } = capturingFetch(
+      Response.json({ successful: false, error: "no connected account" }),
+    )
     const exec = createComposioRestExecutor({ apiKey: "k1", fetchImpl: fn })
     const result = (await exec.execute({ userId: "u", slug: "S", arguments: {} })) as {
       error: string
@@ -128,7 +132,11 @@ describe("createComposioRestExecutor.stageFile", () => {
       [stageUrl]: () => stageResponse("s3"),
       [uploadUrl]: () => new Response(null, { status: 200 }),
     })
-    const exec = createComposioRestExecutor({ apiKey: "k1", baseUrl: "https://x.test", fetchImpl: fn })
+    const exec = createComposioRestExecutor({
+      apiKey: "k1",
+      baseUrl: "https://x.test",
+      fetchImpl: fn,
+    })
 
     const result = await exec.stageFile!({
       url: sourceUrl,
@@ -165,7 +173,11 @@ describe("createComposioRestExecutor.stageFile", () => {
       [stageUrl]: () => stageResponse("azure_blob_storage"),
       [uploadUrl]: () => new Response(null, { status: 200 }),
     })
-    const exec = createComposioRestExecutor({ apiKey: "k1", baseUrl: "https://x.test", fetchImpl: fn })
+    const exec = createComposioRestExecutor({
+      apiKey: "k1",
+      baseUrl: "https://x.test",
+      fetchImpl: fn,
+    })
 
     await exec.stageFile!({ url: sourceUrl, toolSlug: "S", toolkitSlug: "t" })
 
@@ -175,7 +187,11 @@ describe("createComposioRestExecutor.stageFile", () => {
 
   it("throws when the source file can't be fetched", async () => {
     const { fn } = routedFetch({ [sourceUrl]: () => new Response("nope", { status: 404 }) })
-    const exec = createComposioRestExecutor({ apiKey: "k1", baseUrl: "https://x.test", fetchImpl: fn })
+    const exec = createComposioRestExecutor({
+      apiKey: "k1",
+      baseUrl: "https://x.test",
+      fetchImpl: fn,
+    })
 
     await expect(
       exec.stageFile!({ url: sourceUrl, toolSlug: "S", toolkitSlug: "t" }),
@@ -187,7 +203,11 @@ describe("createComposioRestExecutor.stageFile", () => {
       [sourceUrl]: sourceResponse,
       [stageUrl]: () => new Response("denied", { status: 403 }),
     })
-    const exec = createComposioRestExecutor({ apiKey: "k1", baseUrl: "https://x.test", fetchImpl: fn })
+    const exec = createComposioRestExecutor({
+      apiKey: "k1",
+      baseUrl: "https://x.test",
+      fetchImpl: fn,
+    })
 
     await expect(
       exec.stageFile!({ url: sourceUrl, toolSlug: "S", toolkitSlug: "t" }),
@@ -200,7 +220,11 @@ describe("createComposioRestExecutor.stageFile", () => {
       [stageUrl]: () => stageResponse("s3"),
       [uploadUrl]: () => new Response("nope", { status: 500 }),
     })
-    const exec = createComposioRestExecutor({ apiKey: "k1", baseUrl: "https://x.test", fetchImpl: fn })
+    const exec = createComposioRestExecutor({
+      apiKey: "k1",
+      baseUrl: "https://x.test",
+      fetchImpl: fn,
+    })
 
     await expect(
       exec.stageFile!({ url: sourceUrl, toolSlug: "S", toolkitSlug: "t" }),
@@ -233,7 +257,9 @@ describe("createCountingExecutor", () => {
       },
     }
     const executor = createCountingExecutor(failing)
-    await expect(executor.execute({ userId: "u", slug: "A", arguments: {} })).rejects.toThrow("boom")
+    await expect(executor.execute({ userId: "u", slug: "A", arguments: {} })).rejects.toThrow(
+      "boom",
+    )
     expect(executor.count()).toBe(1)
   })
 

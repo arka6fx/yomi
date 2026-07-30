@@ -27,10 +27,12 @@ export const googleAdsComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "GOOGLEADS_CREATE_CUSTOMER_LIST",
     description: "Create a new customer match list. Requires approval.",
-    parameters: z.object({
-      name: z.string().describe("List name"),
-      description: z.string().optional().describe("List description"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        name: z.string().describe("List name"),
+        description: z.string().optional().describe("List description"),
+      })
+      .passthrough(),
     preview: (a) => ({
       title: "Create customer list",
       preview: `Create list "${String(a["name"] ?? "")}"`,
@@ -40,11 +42,13 @@ export const googleAdsComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "GOOGLEADS_GOOGLEADS_ADD_OR_REMOVE_TO_CUSTOMER_LIST",
     description: "Add or remove contacts (by email) from a customer match list. Requires approval.",
-    parameters: z.object({
-      resource_name: z.string().describe("Customer list resource name"),
-      emails: z.array(z.string()).describe("Emails to add or remove"),
-      operation: z.string().optional().describe("'add' or 'remove'"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        resource_name: z.string().describe("Customer list resource name"),
+        emails: z.array(z.string()).describe("Emails to add or remove"),
+        operation: z.string().optional().describe("'add' or 'remove'"),
+      })
+      .passthrough(),
     preview: (a) => ({
       title: "Update customer list",
       preview: `${String(a["operation"] ?? "add")} ${Array.isArray(a["emails"]) ? (a["emails"] as unknown[]).length : 0} email(s)`,
@@ -75,7 +79,11 @@ export function makeComposioGoogleAdsDef(executor: ComposioExecutor): ConnectorD
       ],
       collect: [
         { env: "COMPOSIO_API_KEY", label: "Composio API key", secret: true },
-        { env: "COMPOSIO_GOOGLE_ADS_AUTH_CONFIG_ID", label: "Composio Google Ads auth config id", secret: false },
+        {
+          env: "COMPOSIO_GOOGLE_ADS_AUTH_CONFIG_ID",
+          label: "Composio Google Ads auth config id",
+          secret: false,
+        },
       ],
       docsUrl: "https://docs.composio.dev/toolkits/googleads",
     },

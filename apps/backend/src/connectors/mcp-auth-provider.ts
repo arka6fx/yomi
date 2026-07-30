@@ -34,10 +34,10 @@ export function createMCPAuthProvider(provider: string): MCPAuthProvider {
     },
 
     async onUnauthorized(userId: string): Promise<Record<string, string>> {
-      console.warn(`[mcp-auth] 401 for ${provider} user ${userId} — re-auth not supported (no refresh token)`)
-      throw new Error(
-        `${provider} session expired. Visit the dashboard to reconnect.`,
+      console.warn(
+        `[mcp-auth] 401 for ${provider} user ${userId} — re-auth not supported (no refresh token)`,
       )
+      throw new Error(`${provider} session expired. Visit the dashboard to reconnect.`)
     },
   }
 }

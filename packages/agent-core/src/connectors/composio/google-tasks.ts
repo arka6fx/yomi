@@ -39,7 +39,12 @@ export const tasksComposioSpecs: ComposioToolSpec[] = [
         showCompleted: z.boolean().optional().describe("Include completed tasks (default true)"),
         showHidden: z.boolean().optional(),
         showDeleted: z.boolean().optional(),
-        maxResults: z.number().int().max(100).optional().describe("Max tasks to return (default 20)"),
+        maxResults: z
+          .number()
+          .int()
+          .max(100)
+          .optional()
+          .describe("Max tasks to return (default 20)"),
         dueMin: z.string().optional().describe("Exclude tasks due before this date"),
         dueMax: z.string().optional().describe("Exclude tasks due after this date"),
       })
@@ -65,14 +70,22 @@ export const tasksComposioSpecs: ComposioToolSpec[] = [
       .object({
         tasklist_id: z.string().describe("Task list ID, or '@default' for the user's primary list"),
         title: z.string().describe("What the task is, e.g. 'Renew passport'"),
-        status: z.enum(["needsAction", "completed"]).describe("Almost always 'needsAction' for a new task"),
+        status: z
+          .enum(["needsAction", "completed"])
+          .describe("Almost always 'needsAction' for a new task"),
         notes: z.string().optional().describe("Longer detail or context for the task"),
-        due: z.string().optional().describe("Due date/time, e.g. '2025-01-16T13:00:00Z' or 'UTC-5:30, 6:50 PM'"),
+        due: z
+          .string()
+          .optional()
+          .describe("Due date/time, e.g. '2025-01-16T13:00:00Z' or 'UTC-5:30, 6:50 PM'"),
       })
       .passthrough(),
     preview: (a) => ({
       title: `Create task: ${String(a["title"] ?? "")}`,
-      preview: [a["notes"] ? String(a["notes"]) : null, a["due"] ? `Due: ${String(a["due"])}` : null].filter(Boolean).join("\n") || String(a["title"] ?? ""),
+      preview:
+        [a["notes"] ? String(a["notes"]) : null, a["due"] ? `Due: ${String(a["due"])}` : null]
+          .filter(Boolean)
+          .join("\n") || String(a["title"] ?? ""),
       confirmText: "Create task",
     }),
   },
@@ -87,7 +100,9 @@ export const tasksComposioSpecs: ComposioToolSpec[] = [
         tasklist_id: z.string().describe("Task list ID, or '@default' for the user's primary list"),
         task_id: z.string().describe("Task ID to update"),
         title: z.string().describe("Task title (re-send the current title if not changing it)"),
-        status: z.enum(["needsAction", "completed"]).describe("Re-send the current status if not changing it"),
+        status: z
+          .enum(["needsAction", "completed"])
+          .describe("Re-send the current status if not changing it"),
         notes: z.string().optional(),
         due: z.string().optional().describe("Due date/time, e.g. '2025-01-16T13:00:00Z'"),
       })
@@ -97,10 +112,9 @@ export const tasksComposioSpecs: ComposioToolSpec[] = [
         a["status"] === "completed"
           ? "Mark task done"
           : `Update task ${String(a["task_id"] ?? "").slice(0, 12)}`,
-      preview: [
-        `Title: ${String(a["title"] ?? "")}`,
-        a["due"] ? `Due: ${String(a["due"])}` : null,
-      ].filter(Boolean).join("\n"),
+      preview: [`Title: ${String(a["title"] ?? "")}`, a["due"] ? `Due: ${String(a["due"])}` : null]
+        .filter(Boolean)
+        .join("\n"),
       confirmText: a["status"] === "completed" ? "Mark done" : "Update task",
     }),
   },
@@ -146,7 +160,11 @@ export function makeComposioTasksDef(executor: ComposioExecutor): ConnectorDef {
       ],
       collect: [
         { env: "COMPOSIO_API_KEY", label: "Composio API key", secret: true },
-        { env: "COMPOSIO_TASKS_AUTH_CONFIG_ID", label: "Composio Tasks auth config id", secret: false },
+        {
+          env: "COMPOSIO_TASKS_AUTH_CONFIG_ID",
+          label: "Composio Tasks auth config id",
+          secret: false,
+        },
       ],
       docsUrl: "https://docs.composio.dev/toolkits/googletasks",
     },

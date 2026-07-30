@@ -8,4 +8,6 @@ export const backendComposioYouTubeDef: BackendConnectorDef = {
   getDisplayName: async () => "YouTube (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("youtube") ? backendComposioYouTubeDef : backendComposioYouTubeDef)
+registerConnectorDef(
+  isComposioBacked("youtube") ? backendComposioYouTubeDef : backendComposioYouTubeDef,
+)

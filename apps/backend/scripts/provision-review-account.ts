@@ -40,5 +40,9 @@ const { granted, balance } = await grantCredits({
 })
 
 console.log(`${email} -> plan=max, subscription=active`)
-console.log(granted ? `granted ${credits} credits, balance ${balance}` : `already granted, balance ${balance}`)
+console.log(
+  granted
+    ? `granted ${credits} credits, balance ${balance}`
+    : `already granted, balance ${balance}`,
+)
 console.log(`role=${account.role} (must not be owner)`)

@@ -8,4 +8,6 @@ export const backendComposioDropboxDef: BackendConnectorDef = {
   getDisplayName: async () => "Dropbox (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("dropbox") ? backendComposioDropboxDef : backendComposioDropboxDef)
+registerConnectorDef(
+  isComposioBacked("dropbox") ? backendComposioDropboxDef : backendComposioDropboxDef,
+)

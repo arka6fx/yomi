@@ -12,7 +12,11 @@ import { connectorError, type ConnectorContext, type ConnectorDef } from "./conn
 // raises it.
 const BASE_URL = "https://context7.com/api/v1"
 
-async function context7Fetch(path: string, params: Record<string, string | undefined>, apiKey: string | null) {
+async function context7Fetch(
+  path: string,
+  params: Record<string, string | undefined>,
+  apiKey: string | null,
+) {
   const url = new URL(`${BASE_URL}${path}`)
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined) url.searchParams.set(k, v)
@@ -42,7 +46,9 @@ export function context7Tools(ctx: ConnectorContext): ToolSet {
         "Resolve a library/package name to a Context7-compatible library ID (e.g. '/vercel/next.js'). " +
         "Call this before queryDocs unless the user already gave an exact '/org/project' ID. Read-only.",
       parameters: z.object({
-        libraryName: z.string().describe("Official library name, e.g. 'Next.js', 'Prisma', 'React'"),
+        libraryName: z
+          .string()
+          .describe("Official library name, e.g. 'Next.js', 'Prisma', 'React'"),
       }),
       execute: async ({ libraryName }) => {
         try {
@@ -60,7 +66,11 @@ export function context7Tools(ctx: ConnectorContext): ToolSet {
         "Fetch up-to-date documentation and code examples for a library, scoped to one topic/question. " +
         "Requires an exact Context7 library ID from resolveLibraryId (or given directly by the user). Read-only.",
       parameters: z.object({
-        libraryId: z.string().describe("Exact Context7 library ID, e.g. '/vercel/next.js' or '/vercel/next.js/v14.3.0'"),
+        libraryId: z
+          .string()
+          .describe(
+            "Exact Context7 library ID, e.g. '/vercel/next.js' or '/vercel/next.js/v14.3.0'",
+          ),
         topic: z.string().optional().describe("The specific question/topic to fetch docs for"),
         tokens: z.number().int().optional().describe("Max response size in tokens (default ~5000)"),
       }),
@@ -68,11 +78,15 @@ export function context7Tools(ctx: ConnectorContext): ToolSet {
         try {
           const apiKey = await getApiKey(ctx)
           const path = libraryId.startsWith("/") ? libraryId : `/${libraryId}`
-          const res = await context7Fetch(path, {
-            type: "txt",
-            topic,
-            tokens: tokens ? String(tokens) : undefined,
-          }, apiKey)
+          const res = await context7Fetch(
+            path,
+            {
+              type: "txt",
+              topic,
+              tokens: tokens ? String(tokens) : undefined,
+            },
+            apiKey,
+          )
           return { docs: (await res.text()).slice(0, 20_000) }
         } catch (err) {
           return connectorError(err)
@@ -87,12 +101,18 @@ export const context7Def: ConnectorDef = {
   name: "Context7",
   category: "developer",
   icon: "context7",
-  description: "Context7 — up-to-date library documentation for AI coding assistants; resolve library IDs and query API docs/code examples.",
+  description:
+    "Context7 — up-to-date library documentation for AI coding assistants; resolve library IDs and query API docs/code examples.",
   readOnlyByDefault: true,
   auth: {
     kind: "api_key",
     fields: [
-      { name: "CONTEXT7_API_KEY", label: "Context7 API Key", placeholder: "ctx7sk-...", secret: true },
+      {
+        name: "CONTEXT7_API_KEY",
+        label: "Context7 API Key",
+        placeholder: "ctx7sk-...",
+        secret: true,
+      },
     ],
   },
   setup: {

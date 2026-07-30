@@ -8,7 +8,8 @@ function thenable<T>(value: T) {
   const p = Promise.resolve(value)
   return Object.assign(p, {
     orderBy: () => thenable(value),
-    limit: (n: number) => Promise.resolve(Array.isArray(value) ? (value as unknown[]).slice(0, n) : value),
+    limit: (n: number) =>
+      Promise.resolve(Array.isArray(value) ? (value as unknown[]).slice(0, n) : value),
   }) as Promise<T> & { orderBy: () => unknown; limit: (n: number) => Promise<unknown> }
 }
 
@@ -16,7 +17,8 @@ mock.module("@yomi/db", () => ({
   db: {
     select: (fields: unknown) => ({
       from: () => {
-        const isMsgQuery = fields && typeof fields === "object" && "role" in (fields as Record<string, unknown>)
+        const isMsgQuery =
+          fields && typeof fields === "object" && "role" in (fields as Record<string, unknown>)
         return {
           where: () => thenable(isMsgQuery ? mockMessages : mockSessions),
         }
@@ -33,14 +35,17 @@ mock.module("@yomi/db", () => ({
         return { where: () => Promise.resolve() }
       },
     }),
-    execute: () => Promise.resolve({ rows: mockSessions.slice(0, 5).map((s) => ({
-      id: s.id,
-      title: s.title ?? null,
-      summary: s.summary ?? null,
-      messageCount: s.messageCount ?? 0,
-      closedAt: s.closedAt ?? null,
-      score: s.score ?? 1,
-    })) }),
+    execute: () =>
+      Promise.resolve({
+        rows: mockSessions.slice(0, 5).map((s) => ({
+          id: s.id,
+          title: s.title ?? null,
+          summary: s.summary ?? null,
+          messageCount: s.messageCount ?? 0,
+          closedAt: s.closedAt ?? null,
+          score: s.score ?? 1,
+        })),
+      }),
   },
   agentSessions: {},
   agentMessages: {},
@@ -140,7 +145,13 @@ describe("summarizeUnsummarizedSessions", () => {
   it("returns a count of summarized sessions", async () => {
     mockSessions = [
       { id: "s1", title: null, status: "closed", closedAt: new Date().toISOString(), score: 1 },
-      { id: "s2", title: "Has Title", status: "closed", closedAt: new Date().toISOString(), score: 1 },
+      {
+        id: "s2",
+        title: "Has Title",
+        status: "closed",
+        closedAt: new Date().toISOString(),
+        score: 1,
+      },
     ]
     const count = await summarizeUnsummarizedSessions(10)
     expect(typeof count).toBe("number")
@@ -149,14 +160,16 @@ describe("summarizeUnsummarizedSessions", () => {
 
 describe("searchSessions", () => {
   it("returns results for a valid query", async () => {
-    mockSessions = [{
-      id: "session_1",
-      title: "Pricing Discussion",
-      summary: "Decided on $19/mo Pro tier",
-      messageCount: 12,
-      closedAt: new Date().toISOString(),
-      score: 0.92,
-    }]
+    mockSessions = [
+      {
+        id: "session_1",
+        title: "Pricing Discussion",
+        summary: "Decided on $19/mo Pro tier",
+        messageCount: 12,
+        closedAt: new Date().toISOString(),
+        score: 0.92,
+      },
+    ]
     const results = await searchSessions("user_1", "pricing", 5)
     expect(Array.isArray(results)).toBe(true)
   })

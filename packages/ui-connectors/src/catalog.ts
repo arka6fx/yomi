@@ -167,7 +167,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "linkedin",
     name: "LinkedIn",
-    description: "Post updates, share articles, comment on posts, and read your profile and company pages.",
+    description:
+      "Post updates, share articles, comment on posts, and read your profile and company pages.",
     category: "communication",
     authKind: "composio",
     icon: "linkedin",
@@ -185,7 +186,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "whatsapp",
     name: "WhatsApp",
-    description: "WhatsApp Business Account only (not a personal number) — send messages, media, and templates.",
+    description:
+      "WhatsApp Business Account only (not a personal number) — send messages, media, and templates.",
     category: "communication",
     authKind: "composio",
     icon: "whatsapp",
@@ -212,7 +214,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "todoist",
     name: "Todoist",
-    description: "Create, read, update, and manage tasks, projects, sections, labels, and comments.",
+    description:
+      "Create, read, update, and manage tasks, projects, sections, labels, and comments.",
     category: "productivity",
     authKind: "composio",
     icon: "list-checks",
@@ -221,7 +224,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "figma",
     name: "Figma",
-    description: "Browse designs, extract components and design tokens, manage comments, and render assets.",
+    description:
+      "Browse designs, extract components and design tokens, manage comments, and render assets.",
     category: "other",
     authKind: "composio",
     icon: "figma",
@@ -230,7 +234,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "zoom",
     name: "Zoom",
-    description: "Schedule and manage meetings, webinars, recordings, whiteboards, and user settings.",
+    description:
+      "Schedule and manage meetings, webinars, recordings, whiteboards, and user settings.",
     category: "meetings",
     authKind: "composio",
     icon: "zoom",
@@ -239,7 +244,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "salesforce",
     name: "Salesforce",
-    description: "Manage Salesforce CRM — accounts, contacts, leads, opportunities, campaigns, tasks, and SOQL queries.",
+    description:
+      "Manage Salesforce CRM — accounts, contacts, leads, opportunities, campaigns, tasks, and SOQL queries.",
     category: "crm",
     authKind: "composio",
     icon: "salesforce",
@@ -248,7 +254,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "instagram",
     name: "Instagram",
-    description: "Instagram Business or Creator account only (not personal) — media, comments, DMs, analytics, and publishing.",
+    description:
+      "Instagram Business or Creator account only (not personal) — media, comments, DMs, analytics, and publishing.",
     category: "communication",
     authKind: "composio",
     icon: "instagram",
@@ -257,7 +264,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "facebook",
     name: "Facebook",
-    description: "Manage Facebook Pages — posts, comments, messages, photos, videos, insights, and page settings.",
+    description:
+      "Manage Facebook Pages — posts, comments, messages, photos, videos, insights, and page settings.",
     category: "communication",
     authKind: "composio",
     icon: "facebook",
@@ -266,7 +274,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "calendly",
     name: "Calendly",
-    description: "Schedule meetings, manage event types, check availability, handle invites, and configure webhooks.",
+    description:
+      "Schedule meetings, manage event types, check availability, handle invites, and configure webhooks.",
     category: "meetings",
     authKind: "composio",
     icon: "calendly",
@@ -284,7 +293,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "one-drive",
     name: "OneDrive",
-    description: "Microsoft OneDrive — store, sync, and share files; manage folders, permissions, sharing links, version history, and Excel workbooks.",
+    description:
+      "Microsoft OneDrive — store, sync, and share files; manage folders, permissions, sharing links, version history, and Excel workbooks.",
     category: "productivity",
     authKind: "composio",
     icon: "one-drive",
@@ -293,7 +303,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "posthog",
     name: "PostHog",
-    description: "PostHog — product analytics, feature flags, session recordings, funnels, event tracking, and data insights.",
+    description:
+      "PostHog — product analytics, feature flags, session recordings, funnels, event tracking, and data insights.",
     category: "data-analytics",
     authKind: "composio",
     icon: "posthog",
@@ -302,7 +313,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "attio",
     name: "Attio",
-    description: "Attio — modern CRM for relationship-driven businesses; manage contacts, deals, notes, tasks, lists, and custom objects.",
+    description:
+      "Attio — modern CRM for relationship-driven businesses; manage contacts, deals, notes, tasks, lists, and custom objects.",
     category: "crm",
     authKind: "composio",
     icon: "attio",
@@ -311,7 +323,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "dropbox",
     name: "Dropbox",
-    description: "Dropbox — cloud file storage and sharing; manage files, folders, sharing, and team admin.",
+    description:
+      "Dropbox — cloud file storage and sharing; manage files, folders, sharing, and team admin.",
     category: "file-management",
     authKind: "composio",
     icon: "dropbox",
@@ -320,7 +333,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "microsoft-teams",
     name: "Microsoft Teams",
-    description: "Microsoft Teams — team chat and collaboration; manage channels, chats, members, meetings, shifts, teams, presence, and scheduling.",
+    description:
+      "Microsoft Teams — team chat and collaboration; manage channels, chats, members, meetings, shifts, teams, presence, and scheduling.",
     category: "communication",
     authKind: "composio",
     icon: "microsoft-teams",
@@ -329,7 +343,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "gumroad",
     name: "Gumroad",
-    description: "Gumroad — sell digital products; manage products, sales, licenses, and webhook subscriptions.",
+    description:
+      "Gumroad — sell digital products; manage products, sales, licenses, and webhook subscriptions.",
     category: "other",
     authKind: "composio",
     icon: "gumroad",
@@ -338,7 +353,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "miro",
     name: "Miro",
-    description: "Miro — collaborative whiteboard platform; create and manage boards, cards, sticky notes, shapes, connectors, and tags.",
+    description:
+      "Miro — collaborative whiteboard platform; create and manage boards, cards, sticky notes, shapes, connectors, and tags.",
     category: "productivity",
     authKind: "composio",
     icon: "miro",
@@ -347,7 +363,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "mem0",
     name: "Mem0",
-    description: "Mem0 — intelligent memory layer for AI agents; store, search, retrieve, and manage memories, entities, organizations, and projects.",
+    description:
+      "Mem0 — intelligent memory layer for AI agents; store, search, retrieve, and manage memories, entities, organizations, and projects.",
     category: "data",
     authKind: "composio",
     icon: "mem0",
@@ -356,7 +373,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "zoho",
     name: "Zoho CRM",
-    description: "Zoho CRM — cloud-based CRM platform; manage accounts, contacts, leads, deals, tasks, events, notes, and custom modules.",
+    description:
+      "Zoho CRM — cloud-based CRM platform; manage accounts, contacts, leads, deals, tasks, events, notes, and custom modules.",
     category: "crm",
     authKind: "composio",
     icon: "zoho",
@@ -365,7 +383,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "serpapi",
     name: "SerpApi",
-    description: "SerpApi — real-time search engine results API; search the web, news, images, shopping, local listings, academic articles, and more across Google, Bing, Yahoo, and other engines.",
+    description:
+      "SerpApi — real-time search engine results API; search the web, news, images, shopping, local listings, academic articles, and more across Google, Bing, Yahoo, and other engines.",
     category: "data",
     authKind: "composio",
     icon: "serpapi",
@@ -374,7 +393,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "dynamics-365",
     name: "Dynamics 365",
-    description: "Microsoft Dynamics 365 CRM — manage accounts, contacts, leads, opportunities, campaigns, quotes, sales orders, and invoices.",
+    description:
+      "Microsoft Dynamics 365 CRM — manage accounts, contacts, leads, opportunities, campaigns, quotes, sales orders, and invoices.",
     category: "crm",
     authKind: "composio",
     icon: "dynamics-365",
@@ -383,7 +403,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "exa",
     name: "Exa",
-    description: "AI-powered web search and data extraction — search, answer, find similar content, monitor URLs, and research.",
+    description:
+      "AI-powered web search and data extraction — search, answer, find similar content, monitor URLs, and research.",
     category: "data",
     authKind: "composio",
     icon: "exa",
@@ -392,7 +413,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "youtube",
     name: "YouTube",
-    description: "Search, watch, comment, manage playlists, upload videos, and analyze channel data.",
+    description:
+      "Search, watch, comment, manage playlists, upload videos, and analyze channel data.",
     category: "communication",
     authKind: "composio",
     icon: "youtube",
@@ -410,7 +432,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "stripe",
     name: "Stripe",
-    description: "Stripe — payment processing, subscriptions, invoices, billing, and financial operations.",
+    description:
+      "Stripe — payment processing, subscriptions, invoices, billing, and financial operations.",
     category: "finance",
     authKind: "composio",
     icon: "stripe",
@@ -419,7 +442,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "supabase",
     name: "Supabase",
-    description: "Supabase — open-source backend-as-a-service: Postgres database, auth, storage, edge functions, and real-time APIs.",
+    description:
+      "Supabase — open-source backend-as-a-service: Postgres database, auth, storage, edge functions, and real-time APIs.",
     category: "developer",
     authKind: "composio",
     icon: "supabase",
@@ -428,7 +452,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "vercel",
     name: "Vercel",
-    description: "Vercel — frontend deployment platform: projects, deployments, domains, edge config, environment variables, and team management.",
+    description:
+      "Vercel — frontend deployment platform: projects, deployments, domains, edge config, environment variables, and team management.",
     category: "developer",
     authKind: "composio",
     icon: "vercel",
@@ -437,7 +462,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "cloudflare",
     name: "Cloudflare",
-    description: "Cloudflare — DNS management, WAF, zones, tunnels, load balancers, bot management, and account administration.",
+    description:
+      "Cloudflare — DNS management, WAF, zones, tunnels, load balancers, bot management, and account administration.",
     category: "developer",
     authKind: "composio",
     icon: "cloudflare",
@@ -446,7 +472,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "zoho-invoice",
     name: "Zoho Invoice",
-    description: "Zoho Invoice — billing and invoicing platform: estimates, invoices, credit notes, expenses, projects, and payments.",
+    description:
+      "Zoho Invoice — billing and invoicing platform: estimates, invoices, credit notes, expenses, projects, and payments.",
     category: "finance",
     authKind: "composio",
     icon: "zoho-invoice",
@@ -455,7 +482,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "neon",
     name: "Neon",
-    description: "Serverless Postgres with branching, point-in-time restore, and connection pooling.",
+    description:
+      "Serverless Postgres with branching, point-in-time restore, and connection pooling.",
     category: "developer",
     authKind: "composio",
     icon: "neon",
@@ -473,7 +501,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "google-photos",
     name: "Google Photos",
-    description: "AI-powered photo storage and sharing; organize albums, search media, and manage your library.",
+    description:
+      "AI-powered photo storage and sharing; organize albums, search media, and manage your library.",
     category: "file-management",
     authKind: "composio",
     icon: "google-photos",
@@ -491,7 +520,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "google-analytics",
     name: "Google Analytics",
-    description: "Web and app analytics for traffic, engagement, conversions, and audience insights.",
+    description:
+      "Web and app analytics for traffic, engagement, conversions, and audience insights.",
     category: "data-analytics",
     authKind: "composio",
     icon: "google-analytics",
@@ -500,7 +530,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "google-search-console",
     name: "Google Search Console",
-    description: "Monitor and optimize your site's search performance, index coverage, and sitemaps.",
+    description:
+      "Monitor and optimize your site's search performance, index coverage, and sitemaps.",
     category: "data-analytics",
     authKind: "composio",
     icon: "google-search-console",
@@ -509,7 +540,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "google-cloud-vision",
     name: "Google Cloud Vision",
-    description: "Image analysis and recognition: OCR, object/face/landmark detection, safe search, and web entities.",
+    description:
+      "Image analysis and recognition: OCR, object/face/landmark detection, safe search, and web entities.",
     category: "data",
     authKind: "composio",
     icon: "google-cloud-vision",
@@ -518,7 +550,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "kaggle",
     name: "Kaggle",
-    description: "Discover datasets, participate in competitions, and explore ML models and notebooks.",
+    description:
+      "Discover datasets, participate in competitions, and explore ML models and notebooks.",
     category: "data",
     authKind: "composio",
     icon: "kaggle",
@@ -527,7 +560,8 @@ const CATALOG_DEFS: Array<{
   {
     id: "context7",
     name: "Context7",
-    description: "Up-to-date library documentation for AI coding assistants; query APIs, code examples, and version-specific docs.",
+    description:
+      "Up-to-date library documentation for AI coding assistants; query APIs, code examples, and version-specific docs.",
     category: "developer",
     authKind: "api_key",
     icon: "context7",

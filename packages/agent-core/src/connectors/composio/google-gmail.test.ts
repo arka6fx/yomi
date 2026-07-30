@@ -147,7 +147,9 @@ describe("Gmail via Composio — approval replay", () => {
 describe("Gmail via Composio — error handling", () => {
   it("returns a structured connector error with reconnect hint when the executor fails", async () => {
     const executor: ComposioExecutor = {
-      execute: async () => { throw new Error("Composio execute → status 401 unauthorized") },
+      execute: async () => {
+        throw new Error("Composio execute → status 401 unauthorized")
+      },
     }
     const factory = createComposioTools({
       provider: "google",

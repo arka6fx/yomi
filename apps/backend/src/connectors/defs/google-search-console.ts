@@ -8,4 +8,8 @@ export const backendComposioGoogleSearchConsoleDef: BackendConnectorDef = {
   getDisplayName: async () => "Google Search Console (Composio)",
 }
 
-registerConnectorDef(isComposioBacked("google-search-console") ? backendComposioGoogleSearchConsoleDef : backendComposioGoogleSearchConsoleDef)
+registerConnectorDef(
+  isComposioBacked("google-search-console")
+    ? backendComposioGoogleSearchConsoleDef
+    : backendComposioGoogleSearchConsoleDef,
+)

@@ -81,7 +81,11 @@ describe("Tasks via Composio — write gating", () => {
     })
     const tools = factory(buildCtx({ createPendingAction: create }))
 
-    await tools["GOOGLETASKS_INSERT_TASK"]!.execute({ tasklist_id: "tl1", title: "Buy milk", status: "needsAction" })
+    await tools["GOOGLETASKS_INSERT_TASK"]!.execute({
+      tasklist_id: "tl1",
+      title: "Buy milk",
+      status: "needsAction",
+    })
 
     expect(executor.calls).toEqual([])
     const arg = create.mock.calls[0]![0] as Record<string, unknown>

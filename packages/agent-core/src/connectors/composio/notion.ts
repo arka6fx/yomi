@@ -27,12 +27,22 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
   // ── Read actions ──────────────────────────────────────────────
   {
     slug: "NOTION_SEARCH_NOTION_PAGE",
-    description: "Search Notion pages or databases by title. Returns results with IDs, titles, and URLs. Read-only.",
+    description:
+      "Search Notion pages or databases by title. Returns results with IDs, titles, and URLs. Read-only.",
     parameters: z
       .object({
         query: z.string().optional().describe("Search text. Omit to list everything accessible."),
-        filter_value: z.enum(["page", "database"]).optional().describe("Restrict results to pages or databases (default page)"),
-        page_size: z.number().int().min(1).max(100).optional().describe("Max results (default 2 — set higher for real use)"),
+        filter_value: z
+          .enum(["page", "database"])
+          .optional()
+          .describe("Restrict results to pages or databases (default page)"),
+        page_size: z
+          .number()
+          .int()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe("Max results (default 2 — set higher for real use)"),
         start_cursor: z.string().optional(),
       })
       .passthrough(),
@@ -45,9 +55,20 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
     parameters: z
       .object({
         query: z.string().optional().describe("Filter by title/content text"),
-        get_pages: z.boolean().optional().describe("Fetch pages. Exactly one of get_pages/get_databases/get_all must be true."),
-        get_databases: z.boolean().optional().describe("Fetch databases. Exactly one of get_pages/get_databases/get_all must be true."),
-        get_all: z.boolean().optional().describe("Fetch both. Exactly one of get_pages/get_databases/get_all must be true."),
+        get_pages: z
+          .boolean()
+          .optional()
+          .describe("Fetch pages. Exactly one of get_pages/get_databases/get_all must be true."),
+        get_databases: z
+          .boolean()
+          .optional()
+          .describe(
+            "Fetch databases. Exactly one of get_pages/get_databases/get_all must be true.",
+          ),
+        get_all: z
+          .boolean()
+          .optional()
+          .describe("Fetch both. Exactly one of get_pages/get_databases/get_all must be true."),
         page_size: z.number().int().min(1).max(100).optional().describe("Max items (default 100)"),
       })
       .passthrough(),
@@ -85,14 +106,19 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
           .array(z.object({ property_name: z.string(), ascending: z.boolean() }).passthrough())
           .optional()
           .describe("Sort rules, e.g. [{ property_name: 'Due', ascending: false }]"),
-        page_size: z.number().int().optional().describe("Max rows (default 2 — set higher for real use)"),
+        page_size: z
+          .number()
+          .int()
+          .optional()
+          .describe("Max rows (default 2 — set higher for real use)"),
         start_cursor: z.string().optional(),
       })
       .passthrough(),
   },
   {
     slug: "NOTION_LIST_USERS",
-    description: "List users in the Notion workspace who have access to the integration. Read-only.",
+    description:
+      "List users in the Notion workspace who have access to the integration. Read-only.",
     parameters: z
       .object({
         page_size: z.number().int().max(100).optional().describe("Max users (default 30)"),
@@ -168,8 +194,13 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
           )
           .min(1)
           .max(100)
-          .describe("Blocks to append, e.g. [{ content_block: { content: 'Title', block_property: 'heading_1' } }]"),
-        after: z.string().optional().describe("Existing block ID to insert after (omit to append at the end)"),
+          .describe(
+            "Blocks to append, e.g. [{ content_block: { content: 'Title', block_property: 'heading_1' } }]",
+          ),
+        after: z
+          .string()
+          .optional()
+          .describe("Existing block ID to insert after (omit to append at the end)"),
       })
       .passthrough(),
     preview: (a) => ({
@@ -186,25 +217,42 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
     parameters: z
       .object({
         page_id: z.string().describe("Notion page ID to update"),
-        properties: z.object({}).passthrough().optional().describe("Raw Notion property-value object to update"),
+        properties: z
+          .object({})
+          .passthrough()
+          .optional()
+          .describe("Raw Notion property-value object to update"),
         icon: z.object({}).passthrough().optional().describe("e.g. { type: 'emoji', emoji: '🎉' }"),
-        cover: z.object({}).passthrough().optional().describe("e.g. { type: 'external', external: { url: '...' } }"),
+        cover: z
+          .object({})
+          .passthrough()
+          .optional()
+          .describe("e.g. { type: 'external', external: { url: '...' } }"),
         archived: z.boolean().optional().describe("true to archive (trash), false to restore"),
       })
       .passthrough(),
     preview: (a) => ({
       title: `Update Notion page ${String(a["page_id"] ?? "").slice(0, 12)}`,
-      preview: a["archived"] === true ? "Archive (trash) this page" : a["archived"] === false ? "Restore from trash" : "Update page",
+      preview:
+        a["archived"] === true
+          ? "Archive (trash) this page"
+          : a["archived"] === false
+            ? "Restore from trash"
+            : "Update page",
       confirmText: a["archived"] === true ? "Archive page" : "Update page",
     }),
   },
   {
     slug: "NOTION_ARCHIVE_NOTION_PAGE",
-    description: "Archive (soft-delete, recoverable) or restore a Notion page. Requires user approval before it runs.",
+    description:
+      "Archive (soft-delete, recoverable) or restore a Notion page. Requires user approval before it runs.",
     parameters: z
       .object({
         page_id: z.string().describe("Notion page ID"),
-        archive: z.boolean().optional().describe("true to archive (default), false to restore from trash"),
+        archive: z
+          .boolean()
+          .optional()
+          .describe("true to archive (default), false to restore from trash"),
       })
       .passthrough(),
     preview: (a) => ({
@@ -215,12 +263,18 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "NOTION_DUPLICATE_PAGE",
-    description: "Duplicate a Notion page under a chosen parent. Requires user approval before it runs.",
+    description:
+      "Duplicate a Notion page under a chosen parent. Requires user approval before it runs.",
     parameters: z
       .object({
         page_id: z.string().describe("Notion page ID to duplicate"),
-        parent_id: z.string().describe("Parent page/workspace ID for the duplicate (cannot be page_id itself)"),
-        title: z.string().optional().describe("Title for the duplicate (defaults to 'Copy of <original>')"),
+        parent_id: z
+          .string()
+          .describe("Parent page/workspace ID for the duplicate (cannot be page_id itself)"),
+        title: z
+          .string()
+          .optional()
+          .describe("Title for the duplicate (defaults to 'Copy of <original>')"),
       })
       .passthrough(),
     preview: (a) => ({
@@ -231,7 +285,8 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "NOTION_DELETE_BLOCK",
-    description: "Archive (soft-delete, recoverable) a block, page, or database. Requires user approval before it runs.",
+    description:
+      "Archive (soft-delete, recoverable) a block, page, or database. Requires user approval before it runs.",
     parameters: z
       .object({
         block_id: z.string().describe("Block, page, or database ID to archive"),
@@ -275,13 +330,22 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
         properties: z
           .array(z.object({ name: z.string(), type: z.string(), value: z.string() }).passthrough())
           .optional()
-          .describe("Column values to change, e.g. [{ name: 'Status', type: 'select', value: 'Done' }]"),
-        delete_row: z.boolean().optional().describe("If true, archives the row instead of updating it"),
+          .describe(
+            "Column values to change, e.g. [{ name: 'Status', type: 'select', value: 'Done' }]",
+          ),
+        delete_row: z
+          .boolean()
+          .optional()
+          .describe("If true, archives the row instead of updating it"),
       })
       .passthrough(),
     preview: (a) => ({
-      title: a["delete_row"] ? `Archive row ${String(a["row_id"] ?? "").slice(0, 12)}` : `Update row ${String(a["row_id"] ?? "").slice(0, 12)}`,
-      preview: a["delete_row"] ? "Archive this database row" : JSON.stringify(a["properties"] ?? []).slice(0, 500),
+      title: a["delete_row"]
+        ? `Archive row ${String(a["row_id"] ?? "").slice(0, 12)}`
+        : `Update row ${String(a["row_id"] ?? "").slice(0, 12)}`,
+      preview: a["delete_row"]
+        ? "Archive this database row"
+        : JSON.stringify(a["properties"] ?? []).slice(0, 500),
       confirmText: a["delete_row"] ? "Archive row" : "Update row",
     }),
   },
@@ -344,13 +408,22 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
     parameters: z
       .object({
         comment: z.object({ content: z.string().describe("Comment text") }).passthrough(),
-        parent_page_id: z.string().optional().describe("Page to comment on (required if discussion_id is omitted)"),
-        discussion_id: z.string().optional().describe("Existing thread to reply in (required if parent_page_id is omitted)"),
+        parent_page_id: z
+          .string()
+          .optional()
+          .describe("Page to comment on (required if discussion_id is omitted)"),
+        discussion_id: z
+          .string()
+          .optional()
+          .describe("Existing thread to reply in (required if parent_page_id is omitted)"),
       })
       .passthrough(),
     preview: (a) => ({
       title: `Comment on Notion page ${String(a["parent_page_id"] ?? "").slice(0, 12)}`,
-      preview: String((a["comment"] as { content?: string } | undefined)?.content ?? "").slice(0, 500),
+      preview: String((a["comment"] as { content?: string } | undefined)?.content ?? "").slice(
+        0,
+        500,
+      ),
       confirmText: "Post comment",
     }),
   },
@@ -362,7 +435,8 @@ export function makeComposioNotionDef(executor: ComposioExecutor): ConnectorDef 
     name: "Notion",
     category: "knowledge",
     icon: "notion",
-    description: "Search, read, create, and update pages and database entries in Notion (via Composio).",
+    description:
+      "Search, read, create, and update pages and database entries in Notion (via Composio).",
     readOnlyByDefault: false,
     auth: {
       kind: "composio",
@@ -378,7 +452,11 @@ export function makeComposioNotionDef(executor: ComposioExecutor): ConnectorDef 
       ],
       collect: [
         { env: "COMPOSIO_API_KEY", label: "Composio API key", secret: true },
-        { env: "COMPOSIO_NOTION_AUTH_CONFIG_ID", label: "Composio Notion auth config id", secret: false },
+        {
+          env: "COMPOSIO_NOTION_AUTH_CONFIG_ID",
+          label: "Composio Notion auth config id",
+          secret: false,
+        },
       ],
       docsUrl: "https://docs.composio.dev/toolkits/notion",
     },

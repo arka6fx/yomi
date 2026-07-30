@@ -23,7 +23,8 @@ ragDriveRouter.use("*", authenticate)
 
 ragDriveRouter.post("/sources", requireConsent("cloud_memory"), async (c) => {
   const user = c.get("user")
-  if (!ragAllowed(user)) return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
+  if (!ragAllowed(user))
+    return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
   const body = (await c.req.json().catch(() => ({}))) as { folderId?: string; name?: string }
   const folderId = (body.folderId ?? "").trim()
   const name = (body.name ?? "Drive folder").trim().slice(0, 120)
@@ -36,7 +37,8 @@ ragDriveRouter.post("/sources", requireConsent("cloud_memory"), async (c) => {
 
 ragDriveRouter.get("/sources", requireConsent("cloud_memory"), async (c) => {
   const user = c.get("user")
-  if (!ragAllowed(user)) return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
+  if (!ragAllowed(user))
+    return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
   const rows = await db
     .select()
     .from(ragSources)
@@ -55,7 +57,8 @@ ragDriveRouter.get("/sources", requireConsent("cloud_memory"), async (c) => {
 
 ragDriveRouter.delete("/sources/:id", async (c) => {
   const user = c.get("user")
-  if (!ragAllowed(user)) return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
+  if (!ragAllowed(user))
+    return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
 
   const id = c.req.param("id")
   const [source] = await db
@@ -71,7 +74,8 @@ ragDriveRouter.delete("/sources/:id", async (c) => {
 
 ragDriveRouter.post("/sources/:id/sync", requireConsent("cloud_memory"), async (c) => {
   const user = c.get("user")
-  if (!ragAllowed(user)) return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
+  if (!ragAllowed(user))
+    return c.json({ error: "Cloud RAG requires Pro", code: "upgrade_required" }, 403)
   const id = c.req.param("id")
   if (!id) return c.json({ error: "id is required", code: "invalid_id" }, 400)
   const [row] = await db

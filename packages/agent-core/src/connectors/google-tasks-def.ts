@@ -68,7 +68,10 @@ export function createTasksTools(ctx: ConnectorContext): ToolSet {
           const data = await tasksApi<{ items?: { id: string; title?: string }[] }>(
             "/users/@me/lists?maxResults=100",
           )
-          const lists = (data.items ?? []).map((l) => ({ id: l.id, title: l.title ?? "(untitled)" }))
+          const lists = (data.items ?? []).map((l) => ({
+            id: l.id,
+            title: l.title ?? "(untitled)",
+          }))
           if (lists.length === 0) return { lists: [], message: "No task lists found." }
           return { count: lists.length, lists }
         } catch (err) {
@@ -155,9 +158,7 @@ export function createTasksTools(ctx: ConnectorContext): ToolSet {
           args,
           async () => {
             try {
-              const params = parentTaskId
-                ? `?${new URLSearchParams({ parent: parentTaskId })}`
-                : ""
+              const params = parentTaskId ? `?${new URLSearchParams({ parent: parentTaskId })}` : ""
               const body: Record<string, unknown> = { title }
               if (notes) body["notes"] = notes
               if (due) body["due"] = toDue(due)

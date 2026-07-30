@@ -35,7 +35,13 @@ mcpRouter.all("*", async (c) => {
   switch (c.req.method) {
     case "POST": {
       const body = await c.req.text()
-      const response = await handleMcpPost(body, mcpSessionId, userId, createPendingActionFn, EXTERNAL_AGENT_CAPABILITIES)
+      const response = await handleMcpPost(
+        body,
+        mcpSessionId,
+        userId,
+        createPendingActionFn,
+        EXTERNAL_AGENT_CAPABILITIES,
+      )
       return new Response(response.body, {
         status: response.status,
         headers: response.headers,

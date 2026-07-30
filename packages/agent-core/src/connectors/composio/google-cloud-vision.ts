@@ -11,7 +11,9 @@ export const googleCloudVisionComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "GOOGLE_CLOUD_VISION_VISION_LIST_PROJECTS",
     description: "List Google Cloud projects accessible by the authenticated user. Read-only.",
-    parameters: z.object({ pageSize: z.number().int().optional().describe("Max results per page") }).passthrough(),
+    parameters: z
+      .object({ pageSize: z.number().int().optional().describe("Max results per page") })
+      .passthrough(),
   },
   {
     slug: "GOOGLE_CLOUD_VISION_GET_PRODUCT",
@@ -26,27 +28,44 @@ export const googleCloudVisionComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "GOOGLE_CLOUD_VISION_VISION_LIST_PRODUCTS_IN_PRODUCT_SET",
     description: "List the products in a product set. Read-only.",
-    parameters: z.object({ name: z.string().describe("Product set resource name"), pageSize: z.number().int().optional().describe("Max results per page") }).passthrough(),
+    parameters: z
+      .object({
+        name: z.string().describe("Product set resource name"),
+        pageSize: z.number().int().optional().describe("Max results per page"),
+      })
+      .passthrough(),
   },
   {
     slug: "GOOGLE_CLOUD_VISION_VISION_LIST_REFERENCE_IMAGES",
     description: "List reference images for a product. Read-only.",
-    parameters: z.object({ parent: z.string().describe("Product resource name"), pageSize: z.number().int().optional().describe("Max results per page") }).passthrough(),
+    parameters: z
+      .object({
+        parent: z.string().describe("Product resource name"),
+        pageSize: z.number().int().optional().describe("Max results per page"),
+      })
+      .passthrough(),
   },
   {
     slug: "GOOGLE_CLOUD_VISION_LIST_OPERATIONS",
     description: "List long-running Vision API operations matching a filter. Read-only.",
-    parameters: z.object({ name: z.string().describe("Parent resource name"), filter: z.string().optional().describe("Operation filter") }).passthrough(),
+    parameters: z
+      .object({
+        name: z.string().describe("Parent resource name"),
+        filter: z.string().optional().describe("Operation filter"),
+      })
+      .passthrough(),
   },
   {
     slug: "GOOGLE_CLOUD_VISION_CREATE_PRODUCT",
     description: "Register a new Product Search product. Requires approval.",
-    parameters: z.object({
-      parent: z.string().describe("Parent resource name (project/location)"),
-      displayName: z.string().describe("Product display name"),
-      productCategory: z.string().describe("Product category, e.g. 'apparel-v2'"),
-      description: z.string().optional().describe("Product description"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        parent: z.string().describe("Parent resource name (project/location)"),
+        displayName: z.string().describe("Product display name"),
+        productCategory: z.string().describe("Product category, e.g. 'apparel-v2'"),
+        description: z.string().optional().describe("Product description"),
+      })
+      .passthrough(),
     preview: (a) => ({
       title: "Create product",
       preview: `Create product "${String(a["displayName"] ?? "")}"`,
@@ -56,10 +75,12 @@ export const googleCloudVisionComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "GOOGLE_CLOUD_VISION_CREATE_REFERENCE_IMAGE",
     description: "Add a reference image to a product. Requires approval.",
-    parameters: z.object({
-      parent: z.string().describe("Product resource name"),
-      uri: z.string().describe("GCS URI of the reference image"),
-    }).passthrough(),
+    parameters: z
+      .object({
+        parent: z.string().describe("Product resource name"),
+        uri: z.string().describe("GCS URI of the reference image"),
+      })
+      .passthrough(),
     preview: (a) => ({
       title: "Add reference image",
       preview: `Add ${String(a["uri"] ?? "")} to ${String(a["parent"] ?? "")}`,
@@ -84,7 +105,8 @@ export function makeComposioGoogleCloudVisionDef(executor: ComposioExecutor): Co
     name: "Google Cloud Vision",
     category: "data",
     icon: "google-cloud-vision",
-    description: "Google Cloud Vision — manage Product Search catalogs (products, product sets, reference images) for visual product search (via Composio).",
+    description:
+      "Google Cloud Vision — manage Product Search catalogs (products, product sets, reference images) for visual product search (via Composio).",
     readOnlyByDefault: true,
     auth: {
       kind: "composio",
@@ -100,7 +122,11 @@ export function makeComposioGoogleCloudVisionDef(executor: ComposioExecutor): Co
       ],
       collect: [
         { env: "COMPOSIO_API_KEY", label: "Composio API key", secret: true },
-        { env: "COMPOSIO_GOOGLE_CLOUD_VISION_AUTH_CONFIG_ID", label: "Composio Google Cloud Vision auth config id", secret: false },
+        {
+          env: "COMPOSIO_GOOGLE_CLOUD_VISION_AUTH_CONFIG_ID",
+          label: "Composio Google Cloud Vision auth config id",
+          secret: false,
+        },
       ],
       docsUrl: "https://docs.composio.dev/toolkits/google_cloud_vision",
     },

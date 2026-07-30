@@ -156,7 +156,8 @@ usageRouter.post("/interactions/finalize", authenticate, async (c) => {
       maxOutputTokens: t.maxOutputTokens,
       latencyMs: t.latencyMs,
       firstTokenLatencyMs: t.firstTokenLatencyMs ?? null,
-      status: body.status === "error" ? "error" : body.status === "cancelled" ? "cancelled" : "done",
+      status:
+        body.status === "error" ? "error" : body.status === "cancelled" ? "cancelled" : "done",
       metadata: body.metadata,
     })
   }
