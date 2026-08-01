@@ -262,6 +262,25 @@ export const COMPOSIO_RISK_MAP: Record<string, Record<string, ActionRisk>> = {
     GOOGLEMEET_CREATE_MEET: "write",
     GOOGLEMEET_UPDATE_SPACE: "write",
   },
+  googlephotos: {
+    // Reads — pass straight through. All of these only ever see media Yomi
+    // itself uploaded (Google restricts the broad library scope), so they leak
+    // nothing of the user's real library.
+    GOOGLEPHOTOS_LIST_ALBUMS: "read",
+    GOOGLEPHOTOS_GET_ALBUM: "read",
+    GOOGLEPHOTOS_LIST_MEDIA_ITEMS: "read",
+    GOOGLEPHOTOS_SEARCH_MEDIA_ITEMS: "read",
+    GOOGLEPHOTOS_BATCH_GET_MEDIA_ITEMS: "read",
+    GOOGLEPHOTOS_GET_MEDIA_ITEM_DOWNLOAD: "read",
+
+    // Writes — gated for approval. Google Photos exposes no delete action, so
+    // there is no irreversible bucket.
+    GOOGLEPHOTOS_CREATE_ALBUM: "write",
+    GOOGLEPHOTOS_UPLOAD_MEDIA: "write",
+    GOOGLEPHOTOS_BATCH_CREATE_MEDIA_ITEMS: "write",
+    GOOGLEPHOTOS_BATCH_ADD_MEDIA_ITEMS: "write",
+    GOOGLEPHOTOS_UPDATE_ALBUM: "write",
+  },
   slack: {
     // Reads — pass straight through.
     SLACK_LIST_CONVERSATIONS: "read",
