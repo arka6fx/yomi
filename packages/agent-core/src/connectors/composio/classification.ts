@@ -280,6 +280,8 @@ export const COMPOSIO_RISK_MAP: Record<string, Record<string, ActionRisk>> = {
     GOOGLEPHOTOS_BATCH_CREATE_MEDIA_ITEMS: "write",
     GOOGLEPHOTOS_BATCH_ADD_MEDIA_ITEMS: "write",
     GOOGLEPHOTOS_UPDATE_ALBUM: "write",
+    GOOGLEPHOTOS_UPDATE_MEDIA_ITEM: "write",
+    GOOGLEPHOTOS_ADD_ENRICHMENT: "write",
   },
   slack: {
     // Reads — pass straight through.

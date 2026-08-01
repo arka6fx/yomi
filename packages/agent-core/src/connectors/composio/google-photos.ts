@@ -151,6 +151,83 @@ export const googlePhotosComposioSpecs: ComposioToolSpec[] = [
       confirmText: "Update",
     }),
   },
+  {
+    slug: "GOOGLEPHOTOS_UPDATE_MEDIA_ITEM",
+    description:
+      "Replace a media item's description (max 1000 characters). Only works on media Yomi itself uploaded, since that's the only media it can obtain an ID for. Requires approval.",
+    parameters: z
+      .object({
+        mediaItemId: z.string().describe("Google Photos media item ID"),
+        description: z
+          .string()
+          .max(1000)
+          .describe("New description, replacing the existing one; under 1000 characters"),
+      })
+      .passthrough(),
+    preview: (a) => ({
+      title: "Update media description",
+      preview: `Set description of ${String(a["mediaItemId"] ?? "")} to "${String(a["description"] ?? "").slice(0, 120)}"`,
+      confirmText: "Update",
+    }),
+  },
+  {
+    slug: "GOOGLEPHOTOS_ADD_ENRICHMENT",
+    description:
+      "Add a text, location, or map caption block to an album at a chosen position. Exactly one of textEnrichment / locationEnrichment / mapEnrichment must be set. Requires approval.",
+    parameters: z
+      .object({
+        albumId: z.string().describe("Album to add the enrichment to"),
+        albumPosition: z
+          .object({
+            position: z
+              .enum(["FIRST_IN_ALBUM", "LAST_IN_ALBUM", "AFTER_MEDIA_ITEM", "AFTER_ENRICHMENT_ITEM"])
+              .describe("Where in the album to place the enrichment"),
+            relativeMediaItemId: z.string().optional().describe("Required for AFTER_MEDIA_ITEM"),
+            relativeEnrichmentItemId: z
+              .string()
+              .optional()
+              .describe("Required for AFTER_ENRICHMENT_ITEM"),
+          })
+          .passthrough(),
+        // Composio documents the three enrichment kinds but not their inner shapes,
+        // so these stay permissive and mirror Google's own field names.
+        newEnrichmentItem: z
+          .object({
+            textEnrichment: z
+              .object({ text: z.string().describe("Caption text") })
+              .passthrough()
+              .optional(),
+            locationEnrichment: z
+              .object({})
+              .passthrough()
+              .optional()
+              .describe("{ location: { locationName, latlng: { latitude, longitude } } }"),
+            mapEnrichment: z
+              .object({})
+              .passthrough()
+              .optional()
+              .describe("{ origin: { location }, destination: { location } }"),
+          })
+          .passthrough(),
+      })
+      .passthrough(),
+    preview: (a) => {
+      const item = (a["newEnrichmentItem"] ?? {}) as Record<string, unknown>
+      const kind = item["textEnrichment"]
+        ? "text"
+        : item["locationEnrichment"]
+          ? "location"
+          : item["mapEnrichment"]
+            ? "map"
+            : "unknown"
+      const pos = (a["albumPosition"] as Record<string, unknown> | undefined)?.["position"]
+      return {
+        title: "Add album enrichment",
+        preview: `Add a ${kind} enrichment to album ${String(a["albumId"] ?? "")} at ${String(pos ?? "unspecified position")}`,
+        confirmText: "Add",
+      }
+    },
+  },
 ]
 
 export function makeComposioGooglePhotosDef(executor: ComposioExecutor): ConnectorDef {
