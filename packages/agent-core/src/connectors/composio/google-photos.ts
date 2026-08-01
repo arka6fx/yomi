@@ -93,6 +93,35 @@ export const googlePhotosComposioSpecs: ComposioToolSpec[] = [
     }),
   },
   {
+    slug: "GOOGLEPHOTOS_BATCH_CREATE_MEDIA_ITEMS",
+    description:
+      "Upload up to 50 media files from public URLs, optionally straight into an album. Prefer this over GOOGLEPHOTOS_UPLOAD_MEDIA whenever the target album is known — upload_media has no albumId, so it needs a second approval-gated batch_add_media_items call to place the file. Requires approval.",
+    // No fileParams: `urls` is Composio's "simplified input" — it fetches each URL
+    // server-side, so staging the bytes through stageFile() would be a pointless
+    // download-and-reupload round trip.
+    parameters: z
+      .object({
+        urls: z
+          .array(z.string())
+          .max(50)
+          .describe("Public URLs of the media files to upload (max 50)"),
+        albumId: z
+          .string()
+          .optional()
+          .describe("Album to add the items to; omit to add to the library only"),
+      })
+      .passthrough(),
+    preview: (a) => {
+      const count = Array.isArray(a["urls"]) ? (a["urls"] as unknown[]).length : 0
+      const album = a["albumId"] ? ` into album ${String(a["albumId"])}` : ""
+      return {
+        title: "Upload media",
+        preview: `Upload ${count} file(s) to Google Photos${album}`,
+        confirmText: "Upload",
+      }
+    },
+  },
+  {
     slug: "GOOGLEPHOTOS_BATCH_ADD_MEDIA_ITEMS",
     description: "Add existing media items to an album. Requires approval.",
     parameters: z

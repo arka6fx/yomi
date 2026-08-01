@@ -502,7 +502,7 @@ const CATALOG_DEFS: Array<{
     id: "google-photos",
     name: "Google Photos",
     description:
-      "AI-powered photo storage and sharing; organize albums, search media, and manage your library.",
+      "Upload photos and organize them into albums. Google restricts library access, so Yomi only sees media it uploaded itself — it can't browse or search your existing library.",
     category: "file-management",
     authKind: "composio",
     icon: "google-photos",
