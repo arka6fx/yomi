@@ -180,7 +180,12 @@ export const googlePhotosComposioSpecs: ComposioToolSpec[] = [
         albumPosition: z
           .object({
             position: z
-              .enum(["FIRST_IN_ALBUM", "LAST_IN_ALBUM", "AFTER_MEDIA_ITEM", "AFTER_ENRICHMENT_ITEM"])
+              .enum([
+                "FIRST_IN_ALBUM",
+                "LAST_IN_ALBUM",
+                "AFTER_MEDIA_ITEM",
+                "AFTER_ENRICHMENT_ITEM",
+              ])
               .describe("Where in the album to place the enrichment"),
             relativeMediaItemId: z.string().optional().describe("Required for AFTER_MEDIA_ITEM"),
             relativeEnrichmentItemId: z
