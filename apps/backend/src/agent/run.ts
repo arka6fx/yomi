@@ -3,6 +3,7 @@ import { generateText } from "ai"
 import { db, ragSources, usageEvents, customMcpServers } from "@yomi/db"
 import {
   ConnectorRegistry,
+  createDelegateTool,
   createModel,
   createReactionTool,
   createRecallTool,
@@ -553,6 +554,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   // margin; Max keeps the flagship model as its differentiator. Reassess if mini's
   // tool-calling reliability doesn't hold up under real traffic.
   const agentModel = getPlan(effectivePlanForUser(user)).model
+  const delegateTool = createDelegateTool({ registry, model: agentModel, signal: opts.signal })
   try {
     text = await runAgentLoop({
       registry,
@@ -561,6 +563,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       extraTools: {
         recall_past_conversations: recallTool,
         web_search: webSearchTool,
+        delegate: delegateTool,
         ...(reactionTool ? { react_to_message: reactionTool } : {}),
       },
       system: buildSystemWithContext(
