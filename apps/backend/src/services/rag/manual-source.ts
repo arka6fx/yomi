@@ -1,10 +1,11 @@
-import { and, eq } from "drizzle-orm"
+import { and, eq, ne } from "drizzle-orm"
 import { db, ragSources } from "@yomi/db"
 import { indexDocument } from "./index-document.js"
 import { checkConsent } from "../privacy/checks.js"
 
 export const MANUAL_SOURCE_TYPE = "manual"
 const MANUAL_SOURCE_NAME = "Chat notes"
+const MANUAL_SOURCE_PATH = "chat-notes"
 
 function cleanTitle(value: string, max: number): string {
   return value
@@ -20,7 +21,13 @@ export async function ensureManualSource(userId: string): Promise<string> {
   const existing = await db
     .select({ id: ragSources.id })
     .from(ragSources)
-    .where(and(eq(ragSources.userId, userId), eq(ragSources.sourceType, MANUAL_SOURCE_TYPE)))
+    .where(
+      and(
+        eq(ragSources.userId, userId),
+        eq(ragSources.path, MANUAL_SOURCE_PATH),
+        ne(ragSources.status, "deleted"),
+      ),
+    )
     .limit(1)
   if (existing[0]) return existing[0].id
 
@@ -29,11 +36,24 @@ export async function ensureManualSource(userId: string): Promise<string> {
     .values({
       userId,
       name: MANUAL_SOURCE_NAME,
+      path: MANUAL_SOURCE_PATH,
       sourceType: MANUAL_SOURCE_TYPE,
       status: "ready",
     })
+    .onConflictDoNothing({ target: [ragSources.userId, ragSources.path] })
     .returning()
-  return created!.id
+  if (created) return created.id
+
+  // Lost the insert race (or hit a stale deleted row's unique slot) — re-select.
+  // Note: if the only row at this path is soft-deleted, this still returns it —
+  // acceptable rare edge case, not solved here.
+  const [row] = await db
+    .select({ id: ragSources.id })
+    .from(ragSources)
+    .where(and(eq(ragSources.userId, userId), eq(ragSources.path, MANUAL_SOURCE_PATH)))
+    .limit(1)
+  if (!row) throw new Error("failed to create or find manual source")
+  return row.id
 }
 
 // Consent-gated wrapper around indexDocument() for agent-triggered text pastes. Never
@@ -48,7 +68,11 @@ export async function indexManualText(
 ): Promise<{ ok: true; documentId: string } | { error: string }> {
   try {
     const consent = await checkConsent(userId, "cloud_memory")
-    if (!consent.allowed) return { error: "cloud memory consent not granted" }
+    if (!consent.allowed) {
+      return {
+        error: `cloud memory consent not granted${consent.reason ? `: ${consent.reason}` : ""}`,
+      }
+    }
 
     const sourceId = await ensureManualSource(userId)
     const result = await indexDocument({
@@ -59,9 +83,16 @@ export async function indexManualText(
       mimeType: "text/plain",
       text: content,
     })
+    // Only errors on a missing documentId — with a fresh externalId per call, indexDocument's
+    // "unchanged" status is unreachable here, so checking for it (as an earlier draft of the
+    // design spec suggested) would be dead code.
     if (!result.documentId) return { error: "failed to index" }
     return { ok: true, documentId: result.documentId }
-  } catch {
+  } catch (err) {
+    console.error(
+      "[indexManualText] failed:",
+      err instanceof Error ? (err.stack ?? err.message) : err,
+    )
     return { error: "failed to index" }
   }
 }

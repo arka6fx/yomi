@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, mock } from "bun:test"
 let selectRows: { id: string }[] = []
 let insertedSources: Record<string, unknown>[] = []
 let nextSourceId = 1
+let insertConflicts = false
 
 mock.module("@yomi/db", () => ({
   db: {
@@ -13,11 +14,14 @@ mock.module("@yomi/db", () => ({
     }),
     insert: () => ({
       values: (v: Record<string, unknown>) => ({
-        returning: () => {
-          const id = `source-${nextSourceId++}`
-          insertedSources.push({ id, ...v })
-          return Promise.resolve([{ id, ...v }])
-        },
+        onConflictDoNothing: () => ({
+          returning: () => {
+            if (insertConflicts) return Promise.resolve([])
+            const id = `source-${nextSourceId++}`
+            insertedSources.push({ id, ...v })
+            return Promise.resolve([{ id, ...v }])
+          },
+        }),
       }),
     }),
   },
@@ -25,11 +29,12 @@ mock.module("@yomi/db", () => ({
 }))
 
 let consentAllowed = true
+let consentReason: string | null = "not granted"
 let consentShouldThrow = false
 mock.module("../privacy/checks.js", () => ({
   checkConsent: async () => {
     if (consentShouldThrow) throw new Error("db connection blip")
-    return { allowed: consentAllowed, reason: null }
+    return { allowed: consentAllowed, reason: consentReason }
   },
 }))
 
@@ -47,15 +52,16 @@ mock.module("./index-document.js", () => ({
   },
 }))
 
-const { MANUAL_SOURCE_TYPE, ensureManualSource, indexManualText } = await import(
-  "./manual-source.js"
-)
+const { MANUAL_SOURCE_TYPE, ensureManualSource, indexManualText } =
+  await import("./manual-source.js")
 
 beforeEach(() => {
   selectRows = []
   insertedSources = []
   nextSourceId = 1
+  insertConflicts = false
   consentAllowed = true
+  consentReason = "not granted"
   consentShouldThrow = false
   indexDocumentResult = { status: "indexed", documentId: "doc-1" }
   indexDocumentShouldThrow = false
@@ -77,6 +83,18 @@ describe("ensureManualSource", () => {
     expect(id).toBe("existing-source")
     expect(insertedSources).toHaveLength(0)
   })
+
+  it("does not reuse a soft-deleted source", async () => {
+    // The real lookup filters on ne(status, "deleted"), so a soft-deleted row at this
+    // path never matches — modeled here by an empty select result, which drives
+    // ensureManualSource down the insert path instead of reusing the deleted row's id.
+    selectRows = []
+    const id = await ensureManualSource("u1")
+    expect(id).toBe("source-1")
+    expect(id).not.toBe("existing-deleted-source")
+    expect(insertedSources).toHaveLength(1)
+    expect(insertedSources[0]!["path"]).toBe("chat-notes")
+  })
 })
 
 describe("indexManualText", () => {
@@ -85,7 +103,7 @@ describe("indexManualText", () => {
 
     const result = await indexManualText("u1", "Notes", "some content")
 
-    expect(result).toEqual({ error: "cloud memory consent not granted" })
+    expect(result).toEqual({ error: "cloud memory consent not granted: not granted" })
     expect(indexDocumentCalls).toHaveLength(0)
   })
 
@@ -111,7 +129,7 @@ describe("indexManualText", () => {
     expect(indexDocumentCalls[0]!["externalId"]).not.toBe(indexDocumentCalls[1]!["externalId"])
   })
 
-  it("returns an error when indexDocument reports unchanged with no documentId", async () => {
+  it("returns an error when indexDocument returns no documentId", async () => {
     indexDocumentResult = { status: "unchanged", documentId: null }
 
     const result = await indexManualText("u1", "Notes", "some content")
