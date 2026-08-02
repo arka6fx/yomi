@@ -20,10 +20,14 @@ and every supersession is recorded so it can be undone later.
   similar one). The model makes the call; the vector search only shortlists.
 - **Outcome — supersede, recoverably.** A confirmed contradiction sets the old
   row `status = 'superseded'`, `isLatest = false`. The `updates` relation edge
-  and the `parentMemoryId`/`rootMemoryId` chain are **non-optional** on every
-  supersession, and a read path exposes superseded rows. Undo UI belongs to the
-  landing memory viewer (backlog #7); the data contract ships now so #7 isn't
-  blocked.
+  is **non-optional** on every supersession — written in the same transaction as
+  the supersession itself, so one cannot land without the other. The
+  `parentMemoryId`/`rootMemoryId` chain follows only the **primary** row a save
+  versions over: one save can supersede several memories on a topic and
+  `parentMemoryId` holds a single id, so the edge, not the chain, is what
+  guarantees every superseded row stays reachable. `GET /memory/superseded`
+  exposes superseded rows and what replaced them. Undo UI belongs to the landing
+  memory viewer (backlog #7); the data contract ships now so #7 isn't blocked.
 - **Safety net — recency in the prompt.** Injected memory snippets render the
   memory's **age**, in both `fetchMemoryContext` and `fetchMemoryProfile`, plus
   one rule in the `<memory>` block: when two memories conflict, the more recent
