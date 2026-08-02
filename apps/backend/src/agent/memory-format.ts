@@ -2,12 +2,12 @@
 // thing it corrected. Without it two contradictory memories look equally current
 // and the model picks arbitrarily — see ADR 0006.
 
+// Date as well as string: the pg driver hands back Date for timestamp columns,
+// and the raw-SQL row types that cast them to string are unchecked.
 export type MemoryAgeInput = string | Date | null | undefined
 
 const DAY = 24 * 60 * 60 * 1000
 
-// The pg driver hands back Date for timestamp columns, but the raw-SQL row types
-// cast them as string — accept either rather than trust the cast.
 const startOfUtcDay = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
 
 export function formatMemoryAge(updatedAt: MemoryAgeInput, now: Date = new Date()): string {

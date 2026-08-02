@@ -199,7 +199,7 @@ async function fetchMemoryContext(userId: string, query: string, maxChars = 2000
       content: string
       sourcePath: string | null
       isStatic: boolean
-      updatedAt: string
+      updatedAt: string | Date
       score: number
       matchedBy: string[]
     }
@@ -254,7 +254,7 @@ async function fetchMemoryProfile(
       content: string
       summary: string | null
       isStatic: boolean
-      updatedAt: string
+      updatedAt: string | Date
     }
     const result = await db.execute(sql`
       select content, summary, is_static as "isStatic", updated_at as "updatedAt"
