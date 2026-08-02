@@ -466,7 +466,7 @@ export function buildSystemWithContext(
     (memoryContext || ragContext || profile?.staticProfile || profile?.dynamicProfile || recentChat
       ? `<memory>\n` +
         `[System note: Background context retrieved from your notes. Treat as reference only, respond to the current user message.]\n` +
-        `[Memories are tagged with their age. When two memories conflict, the more recent one is current — the older one is out of date, so follow the newer one and don't mention the stale version.]\n\n` +
+        `[Memories are tagged with their age. When two memories conflict, the more recent one is current.]\n\n` +
         (profile?.staticProfile
           ? `<static_profile>\n${profile.staticProfile}\n</static_profile>\n`
           : "") +

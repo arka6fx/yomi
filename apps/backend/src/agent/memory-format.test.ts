@@ -30,6 +30,25 @@ describe("formatMemoryAge", () => {
     expect(formatMemoryAge(ago(400 * DAY), NOW)).toBe("1y ago")
   })
 
+  it("calls the previous calendar day yesterday even when barely a day has elapsed", () => {
+    // 23:00 the night before, read at 10:00 — elapsed is under a day, the date is not
+    const lateLastNight = new Date("2026-07-31T23:00:00Z")
+    const thisMorning = new Date("2026-08-01T10:00:00Z")
+    expect(formatMemoryAge(lateLastNight, thisMorning)).toBe("yesterday")
+  })
+
+  it("treats a future timestamp as today rather than a negative age", () => {
+    expect(formatMemoryAge(new Date(NOW.getTime() + 5 * DAY), NOW)).toBe("today")
+  })
+
+  it("rolls over to years rather than reporting 12mo", () => {
+    expect(formatMemoryAge(ago(350 * DAY), NOW)).toBe("1y ago")
+  })
+
+  it("accepts a Date, since the pg driver returns Date for timestamp columns", () => {
+    expect(formatMemoryAge(new Date(NOW.getTime() - 3 * DAY), NOW)).toBe("3d ago")
+  })
+
   it("returns empty for a missing or unparseable timestamp", () => {
     expect(formatMemoryAge(null, NOW)).toBe("")
     expect(formatMemoryAge(undefined, NOW)).toBe("")
@@ -80,8 +99,14 @@ describe("formatMemorySnippet", () => {
   })
 
   it("orders a newer memory's age ahead of an older one for the same topic", () => {
-    const stale = formatMemorySnippet({ ...row, content: "Uses vim", updatedAt: ago(200 * DAY) }, NOW)
-    const fresh = formatMemorySnippet({ ...row, content: "Uses VS Code", updatedAt: ago(1 * DAY) }, NOW)
+    const stale = formatMemorySnippet(
+      { ...row, content: "Uses vim", updatedAt: ago(200 * DAY) },
+      NOW,
+    )
+    const fresh = formatMemorySnippet(
+      { ...row, content: "Uses VS Code", updatedAt: ago(1 * DAY) },
+      NOW,
+    )
     expect(stale).toContain("7mo ago")
     expect(fresh).toContain("yesterday")
   })
