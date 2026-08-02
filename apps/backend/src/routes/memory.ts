@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
 import { Hono } from "hono"
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
+import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm"
 import { db, memoryEmbeddings, memoryEntries, memoryRelations, memorySources } from "@yomi/db"
 import { authenticate } from "../auth.js"
 import { requireConsent } from "../middleware/consent.js"
@@ -135,19 +135,6 @@ export function relationForMemory(
   return null
 }
 
-async function linkMemoryRelation(
-  userId: string,
-  fromMemoryId: string,
-  toMemoryId: string,
-  relationType: MemoryRelation,
-) {
-  if (fromMemoryId === toMemoryId) return
-  await db
-    .insert(memoryRelations)
-    .values({ userId, fromMemoryId, toMemoryId, relationType })
-    .catch(() => undefined)
-}
-
 async function pruneExpired(userId: string): Promise<void> {
   await db.execute(sql`
     update memory_entries
@@ -204,6 +191,17 @@ export async function upsertMemory(userId: string, input: MemoryInput) {
     .orderBy(desc(memoryEntries.confidence), desc(memoryEntries.updatedAt))
     .limit(8)
 
+  // Everything this save replaces: the row it versions over, plus every active memory on the
+  // same topic. Every one gets an `updates` edge; the first also becomes the chain parent,
+  // since parentMemoryId holds one id (ADR 0006).
+  const superseded = [
+    ...(existing ? [existing] : []),
+    ...candidates.filter(
+      (row) => row.id !== existing?.id && relationForMemory(input, row) === "updates",
+    ),
+  ]
+  const parent = superseded[0] ?? null
+
   const values = {
     userId,
     customId: customId ?? existing?.customId ?? null,
@@ -223,25 +221,44 @@ export async function upsertMemory(userId: string, input: MemoryInput) {
     updatedAt: new Date(),
   }
 
-  if (existing) {
-    await db
-      .update(memoryEntries)
-      .set({ customId: null, status: "superseded", isLatest: false, updatedAt: new Date() })
-      .where(eq(memoryEntries.id, existing.id))
-  }
+  // One transaction: a supersession must never land without the `updates` edge and the
+  // parent/root chain that make it undoable (ADR 0006).
+  const entry = await db.transaction(async (tx) => {
+    // Free the custom id first — (user_id, custom_id) is uniquely indexed where it is not null,
+    // so the insert below would collide with the row it is versioning over.
+    if (existing?.customId) {
+      await tx
+        .update(memoryEntries)
+        .set({ customId: null })
+        .where(eq(memoryEntries.id, existing.id))
+    }
+    const [inserted] = await tx
+      .insert(memoryEntries)
+      .values({
+        ...values,
+        version: parent ? parent.version + 1 : 1,
+        rootMemoryId: parent?.rootMemoryId ?? parent?.id ?? null,
+        parentMemoryId: parent?.id ?? null,
+        isLatest: true,
+      })
+      .returning()
+    if (!inserted) throw new Error("memory insert returned no row")
+    for (const replaced of superseded) {
+      await tx
+        .update(memoryEntries)
+        .set({ status: "superseded", isLatest: false, updatedAt: new Date() })
+        .where(eq(memoryEntries.id, replaced.id))
+      await tx.insert(memoryRelations).values({
+        userId,
+        fromMemoryId: inserted.id,
+        toMemoryId: replaced.id,
+        relationType: "updates",
+      })
+    }
+    return inserted
+  })
 
-  const [entry] = await db
-    .insert(memoryEntries)
-    .values({
-      ...values,
-      version: existing ? existing.version + 1 : 1,
-      rootMemoryId: existing?.rootMemoryId ?? existing?.id ?? null,
-      parentMemoryId: existing?.id ?? null,
-      isLatest: true,
-    })
-    .returning()
-
-  if (entry && input.sourcePath) {
+  if (input.sourcePath) {
     await db
       .insert(memorySources)
       .values({
@@ -251,27 +268,12 @@ export async function upsertMemory(userId: string, input: MemoryInput) {
       })
       .catch(() => undefined)
   }
-  if (entry) {
-    await storeMemoryEmbedding(
-      userId,
-      entry.id,
-      `${entry.kind}: ${entry.topic}\n${entry.summary ?? ""}\n${entry.content}`,
-    ).catch(() => undefined)
-    if (existing) await linkMemoryRelation(userId, entry.id, existing.id, "updates")
-    for (const candidate of candidates) {
-      if (candidate.id === entry.id || candidate.id === existing?.id) continue
-      const relationType = relationForMemory(input, candidate)
-      if (!relationType) continue
-      await linkMemoryRelation(userId, entry.id, candidate.id, relationType)
-      if (relationType === "updates") {
-        await db
-          .update(memoryEntries)
-          .set({ status: "superseded", isLatest: false, updatedAt: new Date() })
-          .where(eq(memoryEntries.id, candidate.id))
-      }
-    }
-  }
-  return entry ?? null
+  await storeMemoryEmbedding(
+    userId,
+    entry.id,
+    `${entry.kind}: ${entry.topic}\n${entry.summary ?? ""}\n${entry.content}`,
+  ).catch(() => undefined)
+  return entry
 }
 
 memoryRouter.use("*", authenticate)
@@ -301,6 +303,57 @@ memoryRouter.get("/entries", requireConsent("memory"), async (c) => {
     .orderBy(desc(memoryEntries.isStatic), desc(memoryEntries.updatedAt))
     .limit(limit)
   return c.json({ memories: rows })
+})
+
+// Superseded memories are gone from every other read path, so this is the only way back to one
+// that was replaced by mistake — the data contract the memory viewer's undo will read.
+memoryRouter.get("/superseded", requireConsent("memory"), async (c) => {
+  const user = c.get("user")
+  const limit = clampLimit(c.req.query("limit"), 50, 200)
+  const rows = await db
+    .select()
+    .from(memoryEntries)
+    .where(and(eq(memoryEntries.userId, user.id), eq(memoryEntries.status, "superseded")))
+    .orderBy(desc(memoryEntries.updatedAt))
+    .limit(limit)
+  if (!rows.length) return c.json({ memories: [] })
+
+  const edges = await db
+    .select({
+      fromMemoryId: memoryRelations.fromMemoryId,
+      toMemoryId: memoryRelations.toMemoryId,
+    })
+    .from(memoryRelations)
+    .where(
+      and(
+        eq(memoryRelations.userId, user.id),
+        eq(memoryRelations.relationType, "updates"),
+        inArray(
+          memoryRelations.toMemoryId,
+          rows.map((row) => row.id),
+        ),
+      ),
+    )
+  const replacements = edges.length
+    ? await db
+        .select()
+        .from(memoryEntries)
+        .where(
+          and(
+            eq(memoryEntries.userId, user.id),
+            inArray(
+              memoryEntries.id,
+              edges.map((edge) => edge.fromMemoryId),
+            ),
+          ),
+        )
+    : []
+
+  const byId = new Map(replacements.map((row) => [row.id, row]))
+  const replacedBy = new Map(edges.map((edge) => [edge.toMemoryId, byId.get(edge.fromMemoryId)]))
+  return c.json({
+    memories: rows.map((row) => ({ ...row, replacedBy: replacedBy.get(row.id) ?? null })),
+  })
 })
 
 memoryRouter.post("/search", requireConsent("memory"), async (c) => {
@@ -644,6 +697,9 @@ memoryRouter.post("/graph-walk", requireConsent("memory"), async (c) => {
       kind: entry.kind,
       scope: entry.scope,
       topic: entry.topic,
+      // Guaranteed `updates` edges make superseded rows reliably reachable here — say which
+      // ones they are rather than passing them off as current.
+      status: entry.status,
       content: entry.content,
       confidence: entry.confidence,
       isStatic: entry.isStatic,
