@@ -78,7 +78,10 @@ demand; injection is push, every turn.
 Canonical vocabulary for how a new memory relates to what is already stored.
 Full design in
 [ADR-0006](docs/adr/0006-contradiction-resolution-at-extraction.md). These three
-definitions are the ones the extraction prompt uses — keep them in sync.
+definitions are the ones the extraction prompt uses
+(`apps/backend/src/services/memory/contradiction.ts`) — keep them in sync;
+`apps/backend/scripts/eval-memory-contradiction.ts` is the opt-in eval that
+catches drift.
 
 **Contradiction**: A new memory asserting something **incompatible** with an
 existing active memory on the same subject ("uses vim" → "switched to VS Code").

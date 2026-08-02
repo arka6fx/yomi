@@ -34,6 +34,13 @@ import { chargeUsage, lowCreditWarning } from "../services/metering.js"
 import { recordAiUsage } from "../services/ai-telemetry.js"
 import { checkConsent } from "../services/privacy/checks.js"
 import { embedMemoryText, memoryVectorLiteral } from "../services/memory/embeddings.js"
+import {
+  buildExtractionPrompt,
+  fetchTurnCandidates,
+  parseExtractedMemories,
+  pickReplacesId,
+  turnTextFor,
+} from "../services/memory/contradiction.js"
 import * as authSchema from "../auth-schema.js"
 import { upsertMemory } from "../routes/memory.js"
 
@@ -292,51 +299,24 @@ async function fetchRecentChat(userId: string, maxTurns = 20): Promise<string> {
   }
 }
 
-type ExtractedMemory = {
-  kind?: string
-  scope?: string
-  topic?: string
-  content?: string
-  confidence?: number
-  replaces_topic?: string
-}
-
-function parseExtractedMemories(text: string): ExtractedMemory[] {
-  try {
-    const parsed = JSON.parse(text) as { memories?: ExtractedMemory[] }
-    return Array.isArray(parsed.memories) ? parsed.memories : []
-  } catch {
-    return []
-  }
-}
-
 async function captureBackendMemory(userId: string, input: string, output: string): Promise<void> {
   if (!process.env["OPENAI_API_KEY"] || process.env["YOMI_DISABLE_MEMORY_CAPTURE"] === "1") return
   const cleanInput = input.replace(/\r/g, "").slice(0, 1800).trim()
   const cleanOutput = output.replace(/\r/g, "").slice(0, 1800).trim()
   if (!cleanInput || !cleanOutput) return
 
+  // Retrieval is best-effort: with no candidates the model simply has nothing to supersede,
+  // which costs a correction — never the turn's memories (ADR 0006).
+  const candidates = await fetchTurnCandidates(userId, turnTextFor(cleanInput, cleanOutput)).catch(
+    () => [],
+  )
+
   const { text } = await generateText({
     model: createModel(
       process.env["MEMORY_EXTRACTION_MODEL"] || process.env["OPENAI_FAST_MODEL"] || "gpt-5.4-mini",
     ),
     messages: [
-      {
-        role: "user",
-        content: `Extract durable user memory from this Yomi backend-agent interaction.
-
-Return strict JSON only:
-{"memories":[{"kind":"preference|fact|project|decision|open_thread|correction","scope":"global|project|app|session","topic":"short key","content":"one concise memory","confidence":0.0,"replaces_topic":"optional old topic"}]}
-
-Rules:
-- Store only useful future context.
-- Do not store secrets, passwords, API keys, or one-off trivia.
-- Prefer high precision. If uncertain, omit it.
-- Use replaces_topic only for clear corrections or updates.
-
-User: ${cleanInput}
-Assistant: ${cleanOutput}`,
-      },
+      { role: "user", content: buildExtractionPrompt(cleanInput, cleanOutput, candidates) },
     ],
   })
 
@@ -350,7 +330,10 @@ Assistant: ${cleanOutput}`,
       confidence: Math.round(Math.max(0, Math.min(1, memory.confidence ?? 0.7)) * 100),
       sourceType: "backend_agent_turn",
       isStatic: memory.kind === "preference" || memory.kind === "fact",
-      replaces_topic: memory.replaces_topic,
+      replacesId: pickReplacesId(memory.replaces_id, candidates),
+      // Only a model that was actually shown candidates has judged them; when retrieval came
+      // back empty the save falls back to the old topic rule rather than superseding nothing.
+      modelJudged: candidates.length > 0,
     })
   }
 }

@@ -23,9 +23,11 @@ type MemoryInput = {
   sourcePath?: string
   isStatic?: boolean
   forgetAfter?: string | null
-  replacesTopic?: string
-  replaces_topic?: string
   metadata?: Record<string, unknown>
+  // Turn-path only: what the extraction model judged this memory to contradict, named from the
+  // candidates it was shown (ADR 0006). Never accepted from an API body — see fromApiBody.
+  replacesId?: string
+  modelJudged?: boolean
 }
 
 type SearchMemoryBody = { query?: string; limit?: number; maxChars?: number }
@@ -43,6 +45,7 @@ const MEMORY_CANDIDATES = Math.max(
   Number.parseInt(process.env["MEMORY_CANDIDATES"] ?? "30", 10) || 30,
 )
 const MEMORY_RRF_K = Math.max(1, Number.parseInt(process.env["MEMORY_RRF_K"] ?? "60", 10) || 60)
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export const memoryRouter = new Hono()
 
@@ -90,6 +93,15 @@ function forgetAfterDate(value: unknown): Date | null {
   return Number.isFinite(d.getTime()) ? d : null
 }
 
+// Supersession by id is judged against candidates a model was shown. A request body carries no
+// such judgment, so the API path keeps the conservative topic rule (ADR 0006).
+function fromApiBody(input: MemoryInput): MemoryInput {
+  const sanitized = { ...input }
+  delete sanitized.replacesId
+  delete sanitized.modelJudged
+  return sanitized
+}
+
 function normalizeTopic(value: string): string {
   return value
     .toLowerCase()
@@ -103,13 +115,7 @@ export function relationForMemory(
   candidate: { topic: string },
 ): MemoryRelation | null {
   const topic = normalizeTopic(input.topic || input.summary || "")
-  const replacesTopic = normalizeTopic(input.replacesTopic ?? input.replaces_topic ?? "")
   const candidateTopic = normalizeTopic(candidate.topic)
-  if (
-    replacesTopic &&
-    (candidateTopic.includes(replacesTopic) || replacesTopic.includes(candidateTopic))
-  )
-    return "updates"
   if (topic && candidateTopic === topic) return "updates"
   return null
 }
@@ -156,27 +162,62 @@ export async function upsertMemory(userId: string, input: MemoryInput) {
           .then((rows) => rows[0] ?? null)
       : null
 
-  const candidates = await db
-    .select()
-    .from(memoryEntries)
-    .where(
-      and(
-        eq(memoryEntries.userId, userId),
-        eq(memoryEntries.status, "active"),
-        eq(memoryEntries.isLatest, true),
-        or(ilike(memoryEntries.topic, `%${topic}%`), ilike(memoryEntries.summary, `%${topic}%`)),
-      ),
-    )
-    .orderBy(desc(memoryEntries.confidence), desc(memoryEntries.updatedAt))
-    .limit(8)
+  // A turn-aware writer names what it replaces by id, judged against candidates the model was
+  // shown (ADR 0006). An id that matches nothing costs the supersession, never the memory —
+  // including a malformed one, which `memory_entries.id` being a uuid column would otherwise
+  // turn into a 22P02 that takes the whole write down.
+  const namedId = clean(input.replacesId, 80)
+  const replacesId = UUID_PATTERN.test(namedId) ? namedId : ""
+  const replaced =
+    replacesId && replacesId !== existing?.id
+      ? await db
+          .select()
+          .from(memoryEntries)
+          .where(
+            and(
+              eq(memoryEntries.userId, userId),
+              eq(memoryEntries.id, replacesId),
+              eq(memoryEntries.status, "active"),
+              eq(memoryEntries.isLatest, true),
+            ),
+          )
+          .limit(1)
+          .then((rows) => rows[0] ?? null)
+      : null
 
-  // Everything this save replaces: the row it versions over, plus every active memory on the
-  // same topic. Every one gets an `updates` edge; the first also becomes the chain parent,
-  // since parentMemoryId holds one id (ADR 0006).
+  // A model that saw this turn already decided what it contradicts. Letting topic equality fire
+  // as well would supersede the duplicates and elaborations it deliberately left alone — the
+  // false positive the whole judgment exists to avoid (ADR 0006).
+  const candidates = input.modelJudged
+    ? []
+    : await db
+        .select()
+        .from(memoryEntries)
+        .where(
+          and(
+            eq(memoryEntries.userId, userId),
+            eq(memoryEntries.status, "active"),
+            eq(memoryEntries.isLatest, true),
+            or(
+              ilike(memoryEntries.topic, `%${topic}%`),
+              ilike(memoryEntries.summary, `%${topic}%`),
+            ),
+          ),
+        )
+        .orderBy(desc(memoryEntries.confidence), desc(memoryEntries.updatedAt))
+        .limit(8)
+
+  // Everything this save replaces: the row it versions over, the row a turn-aware writer named,
+  // plus every active memory on the same topic. Every one gets an `updates` edge; the first
+  // also becomes the chain parent, since parentMemoryId holds one id (ADR 0006).
   const superseded = [
     ...(existing ? [existing] : []),
+    ...(replaced ? [replaced] : []),
     ...candidates.filter(
-      (row) => row.id !== existing?.id && relationForMemory(input, row) === "updates",
+      (row) =>
+        row.id !== existing?.id &&
+        row.id !== replaced?.id &&
+        relationForMemory(input, row) === "updates",
     ),
   ]
   const parent = superseded[0] ?? null
@@ -260,7 +301,7 @@ memoryRouter.use("*", authenticate)
 memoryRouter.post("/add", requireConsent("memory"), async (c) => {
   const user = c.get("user")
   const body = (await c.req.json().catch(() => ({}))) as MemoryInput
-  const memory = await upsertMemory(user.id, body)
+  const memory = await upsertMemory(user.id, fromApiBody(body))
   if (!memory) return c.json({ error: "content is required", code: "invalid_content" }, 400)
   return c.json({ memory })
 })
@@ -563,7 +604,7 @@ memoryRouter.post("/sync", requireConsent("memory"), async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as SyncMemoryBody
   const synced = []
   for (const item of body.memories ?? []) {
-    const memory = await upsertMemory(user.id, item)
+    const memory = await upsertMemory(user.id, fromApiBody(item))
     if (memory) synced.push(memory.id)
   }
 
