@@ -1,5 +1,5 @@
-import { sql } from "drizzle-orm"
-import { db } from "@yomi/db"
+import { eq, sql } from "drizzle-orm"
+import { db, memoryEntries, memoryRelations } from "@yomi/db"
 
 // Deliberately much stricter than TURN_CANDIDATE_LIMIT's unbounded shortlist (contradiction.ts)
 // — there is no LLM double-check here to catch an elaboration being wrongly merged, so detection
@@ -63,4 +63,34 @@ export async function findDuplicatePairs(batchSize: number): Promise<DuplicatePa
   } catch {
     return []
   }
+}
+
+// The row with the later createdAt survives; ties break on id for determinism.
+export function pickSurvivor(pair: DuplicatePair): { survivorId: string; retiredId: string } {
+  const aWins =
+    pair.aCreatedAt.getTime() > pair.bCreatedAt.getTime() ||
+    (pair.aCreatedAt.getTime() === pair.bCreatedAt.getTime() && pair.aId > pair.bId)
+  return aWins
+    ? { survivorId: pair.aId, retiredId: pair.bId }
+    : { survivorId: pair.bId, retiredId: pair.aId }
+}
+
+// One transaction: the retired row's status flip and the `merges` relation edge that makes the
+// merge inspectable must land together. status='merged', never 'superseded' — CONTEXT.md is
+// explicit a duplicate must never supersede. No version/parentMemoryId change on either row: a
+// duplicate is not a content evolution of the survivor.
+export async function mergePair(pair: DuplicatePair): Promise<void> {
+  const { survivorId, retiredId } = pickSurvivor(pair)
+  await db.transaction(async (tx) => {
+    await tx
+      .update(memoryEntries)
+      .set({ status: "merged", isLatest: false, updatedAt: new Date() })
+      .where(eq(memoryEntries.id, retiredId))
+    await tx.insert(memoryRelations).values({
+      userId: pair.userId,
+      fromMemoryId: survivorId,
+      toMemoryId: retiredId,
+      relationType: "merges",
+    })
+  })
 }

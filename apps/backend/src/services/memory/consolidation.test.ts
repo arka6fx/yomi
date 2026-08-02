@@ -5,6 +5,9 @@ type SqlCall = { text: string; values: unknown[] }
 let sqlCalls: SqlCall[] = []
 let executeRows: unknown[] = []
 let executeFails = false
+let updates: { set: Record<string, unknown>; where: unknown }[] = []
+let relationInserts: Record<string, unknown>[] = []
+let transactionShouldFail = false
 
 mock.module("drizzle-orm", () => ({
   eq: (col: { name: string }, value: unknown) => ({ op: "eq", col, value }),
@@ -15,18 +18,37 @@ mock.module("drizzle-orm", () => ({
   },
 }))
 
+const writer = {
+  update: () => ({
+    set: (set: Record<string, unknown>) => ({
+      where: (where: unknown) => {
+        if (transactionShouldFail) throw new Error("update failed")
+        updates.push({ set, where })
+        return Promise.resolve([])
+      },
+    }),
+  }),
+  insert: () => ({
+    values: (values: Record<string, unknown>) => {
+      relationInserts.push(values)
+      return Promise.resolve(undefined)
+    },
+  }),
+}
+
 mock.module("@yomi/db", () => ({
   db: {
     execute: async () => {
       if (executeFails) throw new Error("query failed")
       return executeRows
     },
+    transaction: async <T>(fn: (tx: typeof writer) => Promise<T>): Promise<T> => fn(writer),
   },
   memoryEntries: { id: { name: "id" } },
   memoryRelations: { __name: "memory_relations" },
 }))
 
-const { findDuplicatePairs } = await import("./consolidation.js")
+const { findDuplicatePairs, pickSurvivor, mergePair } = await import("./consolidation.js")
 
 function pairRow(over: Partial<Record<string, unknown>> = {}): Record<string, unknown> {
   return {
@@ -43,6 +65,9 @@ beforeEach(() => {
   sqlCalls = []
   executeRows = []
   executeFails = false
+  updates = []
+  relationInserts = []
+  transactionShouldFail = false
   delete process.env["MEMORY_CONSOLIDATION_MAX_DISTANCE"]
 })
 
@@ -111,5 +136,40 @@ describe("findDuplicatePairs", () => {
 
     expect(pairs).toHaveLength(1)
     expect(pairs[0]!.aId).toBe("m1")
+  })
+})
+
+describe("pickSurvivor", () => {
+  it("keeps the row with the later createdAt", () => {
+    expect(pickSurvivor(pairRow() as unknown as import("./consolidation.js").DuplicatePair)).toEqual(
+      { survivorId: "m2", retiredId: "m1" },
+    )
+  })
+
+  it("breaks a tie on id, higher wins", () => {
+    const tie = new Date("2026-07-01T00:00:00Z")
+    expect(
+      pickSurvivor({ userId: "u1", aId: "m1", aCreatedAt: tie, bId: "m2", bCreatedAt: tie }),
+    ).toEqual({ survivorId: "m2", retiredId: "m1" })
+    expect(
+      pickSurvivor({ userId: "u1", aId: "m9", aCreatedAt: tie, bId: "m2", bCreatedAt: tie }),
+    ).toEqual({ survivorId: "m9", retiredId: "m2" })
+  })
+})
+
+describe("mergePair", () => {
+  it("retires the older row as status=merged, isLatest=false", async () => {
+    await mergePair(pairRow() as unknown as import("./consolidation.js").DuplicatePair)
+
+    expect(updates).toHaveLength(1)
+    expect(updates[0]!.set).toMatchObject({ status: "merged", isLatest: false })
+  })
+
+  it("writes a merges relation edge from the survivor to the retired row", async () => {
+    await mergePair(pairRow() as unknown as import("./consolidation.js").DuplicatePair)
+
+    expect(relationInserts).toEqual([
+      { userId: "u1", fromMemoryId: "m2", toMemoryId: "m1", relationType: "merges" },
+    ])
   })
 })
