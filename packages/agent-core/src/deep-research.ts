@@ -67,7 +67,13 @@ function createResearchWebSearchTool(search: (query: string) => Promise<WebSearc
     parameters: z.object({
       query: z.string().min(1).max(500).describe("Natural-language search query"),
     }),
-    execute: async ({ query }) => search(query),
+    execute: async ({ query }) => {
+      try {
+        return await search(query)
+      } catch (err) {
+        return { error: err instanceof Error ? err.message : String(err) }
+      }
+    },
   })
 }
 
@@ -106,22 +112,26 @@ export function createDeepResearchTool(opts: CreateDeepResearchToolOptions) {
         return { error: `research limit (${MAX_RESEARCH_CALLS_PER_TURN} per turn) reached` }
       }
       calls++
-      const result = await runLoop({
-        registry: opts.registry,
-        text: question,
-        model: opts.model,
-        system: RESEARCH_SYSTEM_PREFIX + (opts.system ?? ""),
-        extraTools: {
-          rag_search: createRagSearchTool(opts.ragSearch),
-          memory_search: createMemorySearchTool(opts.memorySearch),
-          web_search: createResearchWebSearchTool(opts.webSearch),
-        },
-        maxSteps: RESEARCH_MAX_STEPS,
-        maxOutputTokens: RESEARCH_MAX_OUTPUT_TOKENS,
-        signal: opts.signal,
-        onUsage: opts.onUsage,
-      })
-      return { result }
+      try {
+        const result = await runLoop({
+          registry: opts.registry,
+          text: question,
+          model: opts.model,
+          system: RESEARCH_SYSTEM_PREFIX + (opts.system ?? ""),
+          extraTools: {
+            rag_search: createRagSearchTool(opts.ragSearch),
+            memory_search: createMemorySearchTool(opts.memorySearch),
+            web_search: createResearchWebSearchTool(opts.webSearch),
+          },
+          maxSteps: RESEARCH_MAX_STEPS,
+          maxOutputTokens: RESEARCH_MAX_OUTPUT_TOKENS,
+          signal: opts.signal,
+          onUsage: opts.onUsage,
+        })
+        return { result }
+      } catch (err) {
+        return { error: err instanceof Error ? err.message : String(err) }
+      }
     },
   })
 }

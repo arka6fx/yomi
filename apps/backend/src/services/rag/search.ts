@@ -27,7 +27,10 @@ export async function searchRagDocuments(
     const rows = (
       Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? [])
     ) as RagSearchResult[]
-    return rows
+    return rows.map((row) => ({
+      ...row,
+      content: row.content.length > 1200 ? `${row.content.slice(0, 1200)}...` : row.content,
+    }))
   } catch {
     return []
   }

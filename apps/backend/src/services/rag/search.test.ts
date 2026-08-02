@@ -69,4 +69,13 @@ describe("searchRagDocuments", () => {
 
     expect(await searchRagDocuments("u1", "hello", 5)).toEqual([])
   })
+
+  it("truncates long content to keep a single wide rag_search call bounded", async () => {
+    executeRows = [row({ content: "x".repeat(2000) })]
+
+    const rows = await searchRagDocuments("u1", "hello", 5)
+
+    expect(rows[0]!.content.length).toBeLessThanOrEqual(1203) // 1200 + "..."
+    expect(rows[0]!.content.endsWith("...")).toBe(true)
+  })
 })

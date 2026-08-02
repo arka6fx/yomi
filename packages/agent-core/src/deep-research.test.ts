@@ -171,6 +171,17 @@ describe("createDeepResearchTool", () => {
     expect(result).toEqual([{ sourceName: "Notes", title: "Notes", content: "hello" }])
   })
 
+  it("returns an error instead of throwing when the sub-loop rejects", async () => {
+    const runLoop = async () => {
+      throw new Error("model unavailable")
+    }
+    const t = createDeepResearchTool({ registry: fakeRegistry, ragSearch, memorySearch, webSearch, runLoop })
+
+    const result = await t.execute!({ question: "x" }, {} as never)
+
+    expect(result).toEqual({ error: "model unavailable" })
+  })
+
   it("the memory_search tool calls the injected memorySearch callback", async () => {
     let calledArgs: [string, number] | null = null
     const spyMemorySearch: CreateDeepResearchToolOptions["memorySearch"] = async (query, limit) => {
