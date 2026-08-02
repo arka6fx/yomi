@@ -33,7 +33,8 @@ import { hasBillablePlanAccess, effectivePlanForUser } from "../entitlements.js"
 import { chargeUsage, lowCreditWarning } from "../services/metering.js"
 import { recordAiUsage } from "../services/ai-telemetry.js"
 import { checkConsent } from "../services/privacy/checks.js"
-import { embedMemoryText, memoryVectorLiteral } from "../services/memory/embeddings.js"
+import { embedMemoryText } from "../services/memory/embeddings.js"
+import { AGENT_META_COLUMNS, buildRecallCte, memorySearchKnobs } from "../services/memory/search.js"
 import {
   buildExtractionPrompt,
   fetchTurnCandidates,
@@ -121,72 +122,26 @@ async function fetchRagContext(userId: string, query: string, maxChars = 3000): 
   }
 }
 
+// The agent injects a handful of memories into a turn; the API and MCP surfaces page instead.
+const AGENT_RECALL_LIMIT = 8
+
 async function fetchMemoryContext(userId: string, query: string, maxChars = 2000): Promise<string> {
   try {
     const safe = query.trim().slice(0, 400)
     if (!safe) return ""
 
-    const MEMORY_CANDIDATES = 30
-    const MEMORY_RRF_K = 60
-
     const queryEmbedding = await embedMemoryText(safe).catch(() => [])
-    const vecSql = queryEmbedding.length
-      ? sql`
-        vec as (
-          select me.memory_id, row_number() over (order by me.embedding <=> ${memoryVectorLiteral(queryEmbedding)}::vector) as rnk
-          from memory_embeddings me
-          where me.user_id = ${userId}
-          order by me.embedding <=> ${memoryVectorLiteral(queryEmbedding)}::vector
-          limit ${MEMORY_CANDIDATES}
-        ),`
-      : sql`
-        vec as (
-          select null::uuid as memory_id, null::bigint as rnk
-          where false
-        ),`
+    const recallCte = buildRecallCte({
+      userId,
+      query: safe,
+      queryEmbedding,
+      knobs: memorySearchKnobs(),
+      fusedLimit: AGENT_RECALL_LIMIT,
+      metaColumns: AGENT_META_COLUMNS,
+    })
 
     const result = await db.execute(sql`
-      with ${vecSql}
-      fts as (
-        select e.id as memory_id,
-               row_number() over (order by ts_rank_cd(e.content_tsv, websearch_to_tsquery('english', ${safe})) desc) as rnk
-        from memory_entries e
-        where e.user_id = ${userId}
-          and e.status = 'active'
-          and e.is_latest = true
-          and e.content_tsv @@ websearch_to_tsquery('english', ${safe})
-        limit ${MEMORY_CANDIDATES}
-      ),
-      meta as (
-        select e.id as memory_id,
-               row_number() over (order by e.is_static desc, e.confidence desc, e.updated_at desc) as rnk
-        from memory_entries e
-        where e.user_id = ${userId}
-          and e.status = 'active'
-          and e.is_latest = true
-          and (
-            e.topic ilike ${`%${safe}%`} or
-            e.content ilike ${`%${safe}%`} or
-            e.kind ilike ${`%${safe}%`} or
-            e.scope ilike ${`%${safe}%`}
-          )
-        limit ${MEMORY_CANDIDATES}
-      ),
-      fused as (
-        select memory_id,
-               sum(1.0 / (${MEMORY_RRF_K} + rnk)) as score,
-               array_agg(source) as matched_by
-        from (
-          select memory_id, rnk, 'vector'::text as source from vec where memory_id is not null
-          union all
-          select memory_id, rnk, 'full_text'::text as source from fts
-          union all
-          select memory_id, rnk, 'metadata'::text as source from meta
-        ) u
-        group by memory_id
-        order by score desc
-        limit 8
-      )
+      ${recallCte}
       select
         e.kind as "kind",
         e.topic as "topic",
@@ -199,7 +154,7 @@ async function fetchMemoryContext(userId: string, query: string, maxChars = 2000
       from fused f
       join memory_entries e on e.id = f.memory_id
       order by e.is_static desc, f.score desc, e.confidence desc, e.updated_at desc
-      limit 8
+      limit ${AGENT_RECALL_LIMIT}
     `)
     type Row = {
       kind: string
