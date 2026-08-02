@@ -18,6 +18,7 @@ import {
 } from "@yomi/agent-core"
 import { formatAgentSoul } from "@yomi/shared"
 import { getPlan } from "@yomi/shared/plans"
+import { formatMemorySnippet, formatProfileLine } from "./memory-format.js"
 import { compressContext, shouldCompress, estimateTokens } from "./compressor.js"
 import { searchSessions } from "../services/agent-sessions.js"
 import { getAccessToken, listConnectedProviders } from "../services/integration-tokens.js"
@@ -182,7 +183,6 @@ async function fetchMemoryContext(userId: string, query: string, maxChars = 2000
         e.kind as "kind",
         e.topic as "topic",
         e.content as "content",
-        e.confidence as "confidence",
         e.source_path as "sourcePath",
         e.is_static as "isStatic",
         e.updated_at as "updatedAt",
@@ -197,7 +197,6 @@ async function fetchMemoryContext(userId: string, query: string, maxChars = 2000
       kind: string
       topic: string
       content: string
-      confidence: number
       sourcePath: string | null
       isStatic: boolean
       updatedAt: string
@@ -209,9 +208,9 @@ async function fetchMemoryContext(userId: string, query: string, maxChars = 2000
 
     const out: string[] = []
     let used = 0
+    const now = new Date()
     for (const row of rows) {
-      const matched = row.matchedBy?.length ? ` (${row.matchedBy.join("+")})` : ""
-      const snippet = `- [${row.kind}${matched}, confidence ${row.confidence}] ${row.topic}: ${row.content}${row.sourcePath ? ` (source: ${row.sourcePath})` : ""}`
+      const snippet = formatMemorySnippet(row, now)
       if (used + snippet.length > maxChars) break
       out.push(snippet)
       used += snippet.length
@@ -251,9 +250,14 @@ async function fetchMemoryProfile(
   maxChars = 2500,
 ): Promise<{ staticProfile: string; dynamicProfile: string }> {
   try {
-    type Row = { content: string; summary: string | null; isStatic: boolean }
+    type Row = {
+      content: string
+      summary: string | null
+      isStatic: boolean
+      updatedAt: string
+    }
     const result = await db.execute(sql`
-      select content, summary, is_static as "isStatic"
+      select content, summary, is_static as "isStatic", updated_at as "updatedAt"
       from memory_entries
       where user_id = ${userId}
         and status = 'active'
@@ -264,12 +268,13 @@ async function fetchMemoryProfile(
     const rows = (
       Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? [])
     ) as Row[]
+    const now = new Date()
     const format = (title: string, isStatic: boolean) => {
       const out: string[] = []
       let used = 0
       for (const row of rows) {
         if (row.isStatic !== isStatic) continue
-        const line = `- ${row.summary || row.content}`
+        const line = formatProfileLine(row, now)
         if (used + line.length > maxChars) break
         out.push(line)
         used += line.length
@@ -460,7 +465,8 @@ export function buildSystemWithContext(
       : "") +
     (memoryContext || ragContext || profile?.staticProfile || profile?.dynamicProfile || recentChat
       ? `<memory>\n` +
-        `[System note: Background context retrieved from your notes. Treat as reference only, respond to the current user message.]\n\n` +
+        `[System note: Background context retrieved from your notes. Treat as reference only, respond to the current user message.]\n` +
+        `[Memories are tagged with their age. When two memories conflict, the more recent one is current — the older one is out of date, so follow the newer one and don't mention the stale version.]\n\n` +
         (profile?.staticProfile
           ? `<static_profile>\n${profile.staticProfile}\n</static_profile>\n`
           : "") +
