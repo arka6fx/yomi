@@ -77,6 +77,11 @@ const CONTRADICTION_RULES = `- contradiction: the new memory is incompatible wit
 
 Test a pairing by asking whether both statements can be true of the user at the same time. "Uses vim" and "uses vim with a custom leader key" can both be true, so that is an elaboration and replaces_id stays out. "Uses vim" and "is a vim user" say the same thing in different words, so that is a duplicate and replaces_id stays out. "Uses vim" and "switched to VS Code" cannot both be true, so that is a contradiction. Same subject, more detail, or more recent wording is never enough on its own — only the listed memory being wrong now. A restatement of a listed memory is a duplicate however much better it is worded, and duplicates are stored alongside, so replaces_id stays out. Before emitting replaces_id, say to yourself what the listed memory claims and what became false about it; if nothing did, omit replaces_id.`
 
+// Kept in sync with the Static entry of CONTEXT.md's "Memory contradiction" section — if this
+// drifts, marking every extracted preference and fact static makes a stale one permanently
+// resident in the prompt (#87).
+const STATIC_RULE = `is_static is true only for a durable identity or standing fact — the user's name, role, timezone, or a standing instruction they gave for all future turns ("always cc my manager"). It is not derived from kind: an ordinary preference, project detail, or one-off fact is not static even when it is a "preference" or "fact" kind. When unsure, use false — a false-negative here is merely not injected on every turn, a false-positive never leaves the prompt.`
+
 export function buildExtractionPrompt(
   input: string,
   output: string,
@@ -85,7 +90,7 @@ export function buildExtractionPrompt(
   return `Extract durable user memory from this Yomi backend-agent interaction.
 
 Return strict JSON only:
-{"memories":[{"kind":"preference|fact|project|decision|open_thread|correction","scope":"global|project|app|session","topic":"short key","content":"one concise memory","confidence":0.0,"replaces_id":"omit unless this turn makes a listed memory false"}]}
+{"memories":[{"kind":"preference|fact|project|decision|open_thread|correction","scope":"global|project|app|session","topic":"short key","content":"one concise memory","confidence":0.0,"is_static":false,"replaces_id":"omit unless this turn makes a listed memory false"}]}
 
 Rules:
 - Store only useful future context.
@@ -98,6 +103,8 @@ ${renderTurnCandidates(candidates)}
 replaces_id retires a listed memory: the one it names stops being part of what you know about this user. Set it only for a contradiction, and only to an id exactly as listed above:
 ${CONTRADICTION_RULES}
 
+${STATIC_RULE}
+
 ${turnTextFor(input, output)}`
 }
 
@@ -107,6 +114,7 @@ export type ExtractedMemory = {
   topic?: string
   content?: string
   confidence?: number
+  is_static?: unknown
   replaces_id?: unknown
 }
 
@@ -124,4 +132,11 @@ export function pickReplacesId(value: unknown, candidates: TurnCandidate[]): str
   if (typeof value !== "string" || !value.trim()) return undefined
   const id = value.trim()
   return candidates.some((candidate) => candidate.id === id) ? id : undefined
+}
+
+// Deliberately not derived from kind (#87) — see the Static entry of CONTEXT.md's "Memory
+// contradiction" section. Anything other than an explicit true, including a missing or
+// malformed judgment, defaults to false: the safe failure direction per STATIC_RULE above.
+export function resolveIsStatic(memory: ExtractedMemory): boolean {
+  return memory.is_static === true
 }

@@ -8,6 +8,7 @@ let consumeCreditsCalled = false
 let lastUpdatedCreditsCharged: number | null = null
 let lastAgentSystem: string | undefined
 let mockExecuteRows: unknown[] = []
+let executedStatements: unknown[] = []
 const activeTrialEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
 const fakeDbWithCount = {
@@ -37,7 +38,10 @@ const fakeDbWithCount = {
       return { where: () => Promise.resolve() }
     },
   }),
-  execute: () => Promise.resolve({ rows: mockExecuteRows }),
+  execute: (statement: unknown) => {
+    executedStatements.push(statement)
+    return Promise.resolve({ rows: mockExecuteRows })
+  },
 }
 
 mock.module("@yomi/db", () => ({
@@ -151,8 +155,10 @@ describe("runAgent metering", () => {
     lastUpdatedCreditsCharged = null
     lastAgentSystem = undefined
     mockExecuteRows = []
+    executedStatements = []
     recordedTelemetry.length = 0
     delete process.env["YOMI_AGENT_SOUL"]
+    delete process.env["MEMORY_CANDIDATES"]
   })
 
   it("returns error when user not found", async () => {
@@ -254,6 +260,32 @@ describe("runAgent metering", () => {
     await runAgent({ userId: "user_1", text: "hi" })
     expect(lastAgentSystem).toContain("<agent_soul>\nBe concise and precise.\n</agent_soul>")
     expect(lastAgentSystem).not.toContain("You are Yomi: sharp, warm, and practical.")
+  })
+
+  // Deliberately asserts on the emitted statement rather than on behaviour: the agent's
+  // recall tuning has no other observable surface, and it silently ignoring the env var
+  // is the exact bug this guards (#94).
+  it("tunes agent recall from MEMORY_CANDIDATES rather than a hardcoded constant", async () => {
+    process.env["MEMORY_CANDIDATES"] = "77"
+    mockUser = makeUser()
+    const { runAgent } = await import("./run.js")
+    await runAgent({ userId: "user_1", text: "what do you remember?" })
+
+    const numbers: number[] = []
+    const walk = (chunks: unknown[]) => {
+      for (const chunk of chunks) {
+        if (typeof chunk === "number") numbers.push(chunk)
+        else if (chunk && typeof chunk === "object" && "queryChunks" in chunk) {
+          walk((chunk as { queryChunks: unknown[] }).queryChunks)
+        }
+      }
+    }
+    for (const statement of executedStatements) {
+      if (statement && typeof statement === "object" && "queryChunks" in statement) {
+        walk((statement as { queryChunks: unknown[] }).queryChunks)
+      }
+    }
+    expect(numbers).toContain(77)
   })
 
   it("injects static and dynamic memory profiles in the backend system prompt", async () => {

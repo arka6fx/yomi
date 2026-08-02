@@ -40,6 +40,7 @@ const {
   parseExtractedMemories,
   renderTurnCandidates,
   pickReplacesId,
+  resolveIsStatic,
 } = await import("./contradiction.js")
 
 function embeddingResponse(): Response {
@@ -178,6 +179,16 @@ describe("buildExtractionPrompt", () => {
     expect(prompt).toContain("duplicate")
     expect(prompt).toContain("elaboration")
   })
+
+  // Kept in sync with the Static entry of CONTEXT.md's "Memory contradiction" section — if
+  // this drifts, the model starts marking ordinary preferences static (#87).
+  it("asks for is_static and states the identity/standing-fact rule, not a kind-based one", () => {
+    const prompt = buildExtractionPrompt("hi", "hello", candidates)
+
+    expect(prompt).toContain("is_static")
+    expect(prompt).toContain("identity")
+    expect(prompt).toContain("standing")
+  })
 })
 
 describe("parseExtractedMemories", () => {
@@ -213,5 +224,27 @@ describe("pickReplacesId", () => {
     expect(pickReplacesId(undefined, candidates)).toBeUndefined()
     expect(pickReplacesId("", candidates)).toBeUndefined()
     expect(pickReplacesId(42, candidates)).toBeUndefined()
+  })
+})
+
+describe("resolveIsStatic", () => {
+  it("accepts the model's true judgment", () => {
+    expect(resolveIsStatic({ is_static: true })).toBe(true)
+  })
+
+  it("defaults an ordinary extracted preference to false", () => {
+    expect(resolveIsStatic({ kind: "preference", is_static: false })).toBe(false)
+  })
+
+  // The bug #87 fixes: static must not fall out of kind alone.
+  it("does not infer static from kind, even for preference or fact", () => {
+    expect(resolveIsStatic({ kind: "preference" })).toBe(false)
+    expect(resolveIsStatic({ kind: "fact" })).toBe(false)
+  })
+
+  it("defaults a missing or malformed judgment to false", () => {
+    expect(resolveIsStatic({})).toBe(false)
+    expect(resolveIsStatic({ is_static: "true" })).toBe(false)
+    expect(resolveIsStatic({ is_static: 1 })).toBe(false)
   })
 })
