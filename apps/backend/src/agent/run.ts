@@ -40,6 +40,7 @@ import {
   fetchTurnCandidates,
   parseExtractedMemories,
   pickReplacesId,
+  resolveIsStatic,
   turnTextFor,
 } from "../services/memory/contradiction.js"
 import * as authSchema from "../auth-schema.js"
@@ -284,7 +285,7 @@ async function captureBackendMemory(userId: string, input: string, output: strin
       content: memory.content,
       confidence: Math.round(Math.max(0, Math.min(1, memory.confidence ?? 0.7)) * 100),
       sourceType: "backend_agent_turn",
-      isStatic: memory.kind === "preference" || memory.kind === "fact",
+      isStatic: resolveIsStatic(memory),
       replacesId: pickReplacesId(memory.replaces_id, candidates),
       // Only a model that was actually shown candidates has judged them; when retrieval came
       // back empty the save falls back to the old topic rule rather than superseding nothing.
