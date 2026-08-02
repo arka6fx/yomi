@@ -98,3 +98,13 @@ instead of silent.
   a prompt and a call-graph change rather than a migration — the genuinely
   hard-to-reverse part is the supersession data written in the meantime, which
   is why the recoverability guarantee is recorded here.
+
+## Update (2026-08-02)
+
+`extends` is dropped from `MemoryRelation` entirely (#93). The judge this ADR
+introduced emits `replaces_id` for a contradiction and nothing for a duplicate
+or elaboration — it never gained a producer for `extends`, so the type kept
+advertising a capability nothing built, the same argument that dropped `derives`
+above. `relation_type` stays plain `text`, so any row already holding the string
+is untouched; a future elaboration edge is a new decision, not a revival of this
+one.

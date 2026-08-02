@@ -34,7 +34,8 @@ type SyncMemoryBody = {
   removedIds?: string[]
   removedCustomIds?: string[]
 }
-type MemoryRelation = "updates" | "extends"
+// "extends" was dropped after #90 landed without giving it a producer — see ADR 0006.
+type MemoryRelation = "updates"
 
 const MAX_MEMORY_CHARS = 8_000
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
