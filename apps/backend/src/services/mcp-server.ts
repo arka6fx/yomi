@@ -12,6 +12,7 @@ import { db, memoryEntries, schedules } from "@yomi/db"
 import { checkConsent } from "./privacy/checks.js"
 import { embedMemoryText } from "./memory/embeddings.js"
 import { buildRecallCte, FULL_META_COLUMNS, memorySearchKnobs } from "./memory/search.js"
+import { formatMemorySnippet } from "../agent/memory-format.js"
 import { createPendingAction, type PendingActionRisk } from "./pending-actions.js"
 import { getAccessToken, listConnectedProviders } from "./integration-tokens.js"
 import { ConnectorRegistry, type AgentMessage } from "@yomi/agent-core"
@@ -180,12 +181,15 @@ async function handleMemorySearch(
   const memoryLines: string[] = []
   let used = 0
   for (const row of rows) {
-    const serialized = `${row.kind}: ${row.topic}\n${row.summary ? `${row.summary}\n` : ""}${row.content}`
-    if (used + serialized.length > maxChars) break
-    memoryLines.push(
-      `[${row.kind}] ${row.topic}${row.score != null ? ` (score: ${row.score.toFixed(4)})` : ""}${row.matchedBy ? ` [${row.matchedBy.join(", ")}]` : ""}
-  ${row.summary ? `${row.summary}\n  ` : ""}${row.content}`,
+    // score is a raw fusion float the model can't calibrate (ADR 0006 dropped confidence for
+    // the same reason); matchedBy and the age tag come from the same shared formatter #86
+    // introduced for the agent's own memory snippets, so this stays the one place that renders one.
+    const serialized = formatMemorySnippet(
+      { ...row, content: row.summary || row.content },
+      new Date(),
     )
+    if (used + serialized.length > maxChars) break
+    memoryLines.push(serialized)
     used += serialized.length
   }
 

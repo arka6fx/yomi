@@ -406,6 +406,52 @@ describe("MCP server endpoint", () => {
     expect(body).toContain("text")
   })
 
+  it("carries each memory's age in memory_search results, via the shared formatter", async () => {
+    mockAuthSession = { user: { id: "u1" }, session: { id: "s1" } }
+    const app = await mcpApp()
+
+    const initRes = await rpcCall(app, "initialize", {
+      protocolVersion: "2024-11-05",
+      capabilities: { tools: {} },
+      clientInfo: { name: "test", version: "1" },
+    })
+    const sessionId = initRes.headers.get("mcp-session-id")!
+    await rpcCall(app, "notifications/initialized", {}, sessionId)
+
+    const callRes = await rpcCall(
+      app,
+      "tools/call",
+      { name: "memory_search", arguments: { query: "tea" } },
+      sessionId,
+    )
+    const body = await callRes.text()
+    // The formatter's own vocabulary (memory-format.test.ts) — any one of these confirms an
+    // age tag reached the output, without pinning this test to today's date.
+    expect(body).toMatch(/\d+d ago|\d+w ago|\d+mo ago|\d+y ago|yesterday|today/)
+  })
+
+  it("drops the raw score from memory_search results, which the model can't calibrate", async () => {
+    mockAuthSession = { user: { id: "u1" }, session: { id: "s1" } }
+    const app = await mcpApp()
+
+    const initRes = await rpcCall(app, "initialize", {
+      protocolVersion: "2024-11-05",
+      capabilities: { tools: {} },
+      clientInfo: { name: "test", version: "1" },
+    })
+    const sessionId = initRes.headers.get("mcp-session-id")!
+    await rpcCall(app, "notifications/initialized", {}, sessionId)
+
+    const callRes = await rpcCall(
+      app,
+      "tools/call",
+      { name: "memory_search", arguments: { query: "tea" } },
+      sessionId,
+    )
+    const body = await callRes.text()
+    expect(body).not.toContain("score")
+  })
+
   it("calls memory_get_profile and returns profile", async () => {
     mockAuthSession = { user: { id: "u1" }, session: { id: "s1" } }
     const app = await mcpApp()
