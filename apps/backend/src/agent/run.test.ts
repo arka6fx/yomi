@@ -270,6 +270,19 @@ describe("runAgent metering", () => {
     expect(delegateTool.description).toContain("sub-agent")
   })
 
+  it("wires a deep_research tool into extraTools", async () => {
+    mockUser = makeUser()
+    const { runAgent } = await import("./run.js")
+    await runAgent({ userId: "user_1", text: "hi" })
+    expect(lastAgentExtraTools).toBeDefined()
+    const researchTool = lastAgentExtraTools!["deep_research"] as {
+      execute?: unknown
+      description?: string
+    }
+    expect(typeof researchTool.execute).toBe("function")
+    expect(researchTool.description).toContain("cited")
+  })
+
   it("supports a backend soul override", async () => {
     process.env["YOMI_AGENT_SOUL"] = "Be concise and precise."
     mockUser = makeUser()
