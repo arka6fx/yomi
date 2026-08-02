@@ -1,5 +1,5 @@
-import { eq, sql } from "drizzle-orm"
-import { db, memoryEntries, memoryRelations } from "@yomi/db"
+import { sql } from "drizzle-orm"
+import { db } from "@yomi/db"
 
 // Deliberately much stricter than TURN_CANDIDATE_LIMIT's unbounded shortlist (contradiction.ts)
 // — there is no LLM double-check here to catch an elaboration being wrongly merged, so detection
