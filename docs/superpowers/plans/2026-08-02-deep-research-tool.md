@@ -1,59 +1,108 @@
 # Deep-Research Tool Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> superpowers:subagent-driven-development (recommended) or
+> superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a `deep_research` tool the backend agent can call to research a question across RAG, memory, and the web via a bounded sub-loop, returning a synthesized, cited answer.
+**Goal:** Add a `deep_research` tool the backend agent can call to research a
+question across RAG, memory, and the web via a bounded sub-loop, returning a
+synthesized, cited answer.
 
-**Architecture:** One new agent-core file (`deep-research.ts`) exporting `createDeepResearchTool` plus two small tool factories (`createRagSearchTool`, `createMemorySearchTool`) that only it consumes; two new backend query functions (`searchRagDocuments`, `searchMemoryEntries`) that the existing passive-injection functions (`fetchRagContext`, `fetchMemoryContext`) are refactored to reuse; wired into `apps/backend/src/agent/run.ts`'s `extraTools` alongside `delegate`.
+**Architecture:** One new agent-core file (`deep-research.ts`) exporting
+`createDeepResearchTool` plus two small tool factories (`createRagSearchTool`,
+`createMemorySearchTool`) that only it consumes; two new backend query functions
+(`searchRagDocuments`, `searchMemoryEntries`) that the existing
+passive-injection functions (`fetchRagContext`, `fetchMemoryContext`) are
+refactored to reuse; wired into `apps/backend/src/agent/run.ts`'s `extraTools`
+alongside `delegate`.
 
-**Tech Stack:** Bun, `ai` SDK's `tool()`/`zod`, Drizzle ORM, TypeScript, `bun:test`.
+**Tech Stack:** Bun, `ai` SDK's `tool()`/`zod`, Drizzle ORM, TypeScript,
+`bun:test`.
 
 ## Global Constraints
 
-- Spec: `docs/superpowers/specs/2026-08-02-deep-research-tool-design.md` — this plan implements it exactly; do not deviate without re-checking that file.
-- No connector access: the sub-loop's registry is a `ConnectorRegistry` that is **never** `.init()`'d, so it naturally contributes zero connector tools.
-- Sub-loop budget is fixed and non-configurable: `maxSteps: 12`, `maxOutputTokens: 6144`.
-- Per-turn cap: at most 2 `deep_research` calls per constructed tool instance. The 3rd+ call returns `{ error: "research limit (2 per turn) reached" }` and does **not** call the sub-loop.
-- The sub-loop's `extraTools` contains exactly `rag_search`, `memory_search`, `web_search` — never `delegate` or `deep_research` (recursion bound, same reasoning as item 6).
-- `CreateDeepResearchToolOptions` includes `onUsage`/`system` from the start (lessons already learned from item 6's final review — not bolted on after this plan's own review).
-- `packages/agent-core`'s `bun test` script has **no** `--isolate` flag — do not use `mock.module` to fake `./agent.js` in this package's tests. `createDeepResearchTool` takes an optional, injectable `runLoop` parameter (defaulting to the real `runAgentLoop`), same pattern as `delegate.ts`.
-- Success returns `{ result: string }`; cap-exceeded returns `{ error: string }` — never throws.
-- `searchRagDocuments`/`searchMemoryEntries` each degrade to `[]` on failure or empty query — never throw.
-- Conventional commit messages (`feat:`, `test:`), lowercase, no full stop, max 72 chars, per `AGENTS.md`.
+- Spec: `docs/superpowers/specs/2026-08-02-deep-research-tool-design.md` — this
+  plan implements it exactly; do not deviate without re-checking that file.
+- No connector access: the sub-loop's registry is a `ConnectorRegistry` that is
+  **never** `.init()`'d, so it naturally contributes zero connector tools.
+- Sub-loop budget is fixed and non-configurable: `maxSteps: 12`,
+  `maxOutputTokens: 6144`.
+- Per-turn cap: at most 2 `deep_research` calls per constructed tool instance.
+  The 3rd+ call returns `{ error: "research limit (2 per turn) reached" }` and
+  does **not** call the sub-loop.
+- The sub-loop's `extraTools` contains exactly `rag_search`, `memory_search`,
+  `web_search` — never `delegate` or `deep_research` (recursion bound, same
+  reasoning as item 6).
+- `CreateDeepResearchToolOptions` includes `onUsage`/`system` from the start
+  (lessons already learned from item 6's final review — not bolted on after this
+  plan's own review).
+- `packages/agent-core`'s `bun test` script has **no** `--isolate` flag — do not
+  use `mock.module` to fake `./agent.js` in this package's tests.
+  `createDeepResearchTool` takes an optional, injectable `runLoop` parameter
+  (defaulting to the real `runAgentLoop`), same pattern as `delegate.ts`.
+- Success returns `{ result: string }`; cap-exceeded returns `{ error: string }`
+  — never throws.
+- `searchRagDocuments`/`searchMemoryEntries` each degrade to `[]` on failure or
+  empty query — never throw.
+- Conventional commit messages (`feat:`, `test:`), lowercase, no full stop, max
+  72 chars, per `AGENTS.md`.
 - Test commands, run from repo root:
   - `bun test --isolate packages/agent-core/src/deep-research.test.ts` (Task 1)
   - `bun test --isolate apps/backend/src/services/rag/search.test.ts` (Task 3)
-  - `bun test --isolate apps/backend/src/services/memory/search.test.ts` (Task 4)
+  - `bun test --isolate apps/backend/src/services/memory/search.test.ts`
+    (Task 4)
   - `bun test --isolate apps/backend/src/agent/run.test.ts` (Task 5)
 
 ---
 
 ## File Structure
 
-- Create: `packages/agent-core/src/deep-research.ts` — `createDeepResearchTool`, `createRagSearchTool`, `createMemorySearchTool` (single-consumer factories, co-located rather than split — only `deep-research.ts` uses them).
-- Create: `packages/agent-core/src/deep-research.test.ts` — tests for all of the above.
-- Modify: `packages/agent-core/src/index.ts` — export the three new symbols and their types.
+- Create: `packages/agent-core/src/deep-research.ts` — `createDeepResearchTool`,
+  `createRagSearchTool`, `createMemorySearchTool` (single-consumer factories,
+  co-located rather than split — only `deep-research.ts` uses them).
+- Create: `packages/agent-core/src/deep-research.test.ts` — tests for all of the
+  above.
+- Modify: `packages/agent-core/src/index.ts` — export the three new symbols and
+  their types.
 - Create: `apps/backend/src/services/rag/search.ts` — `searchRagDocuments`.
 - Create: `apps/backend/src/services/rag/search.test.ts` — tests for it.
-- Modify: `apps/backend/src/services/memory/search.ts` — add `searchMemoryEntries`.
-- Modify: `apps/backend/src/services/memory/search.test.ts` — convert to dynamic import (needed so `@yomi/db` can be mocked before the module loads) and add tests for `searchMemoryEntries`.
-- Modify: `apps/backend/src/agent/run.ts` — refactor `fetchRagContext`/`fetchMemoryContext` to call the new functions; construct `researchRegistry` + `deepResearchTool`; add to `extraTools`.
-- Modify: `apps/backend/src/agent/run.test.ts` — wiring test for `deep_research`.
+- Modify: `apps/backend/src/services/memory/search.ts` — add
+  `searchMemoryEntries`.
+- Modify: `apps/backend/src/services/memory/search.test.ts` — convert to dynamic
+  import (needed so `@yomi/db` can be mocked before the module loads) and add
+  tests for `searchMemoryEntries`.
+- Modify: `apps/backend/src/agent/run.ts` — refactor
+  `fetchRagContext`/`fetchMemoryContext` to call the new functions; construct
+  `researchRegistry` + `deepResearchTool`; add to `extraTools`.
+- Modify: `apps/backend/src/agent/run.test.ts` — wiring test for
+  `deep_research`.
 
 ---
 
 ### Task 1: `createDeepResearchTool` in agent-core
 
 **Files:**
+
 - Create: `packages/agent-core/src/deep-research.ts`
 - Create: `packages/agent-core/src/deep-research.test.ts`
 
 **Interfaces:**
-- Consumes: `runAgentLoop`, `RunAgentLoopOptions`, `UsageInfo` from `./agent.js`; `ConnectorRegistry` type from `./connectors/registry.js`.
+
+- Consumes: `runAgentLoop`, `RunAgentLoopOptions`, `UsageInfo` from
+  `./agent.js`; `ConnectorRegistry` type from `./connectors/registry.js`.
 - Produces:
+
   ```ts
-  export type RagSearchResult = { sourceName: string; title: string; content: string }
-  export type RagSearchFn = (query: string, limit: number) => Promise<RagSearchResult[]>
+  export type RagSearchResult = {
+    sourceName: string
+    title: string
+    content: string
+  }
+  export type RagSearchFn = (
+    query: string,
+    limit: number,
+  ) => Promise<RagSearchResult[]>
   export type MemorySearchResult = {
     kind: string
     topic: string
@@ -64,13 +113,23 @@
     score: number
     matchedBy: string[]
   }
-  export type MemorySearchFn = (query: string, limit: number) => Promise<MemorySearchResult[]>
-  export type DeepResearchRunLoopFn = (opts: RunAgentLoopOptions) => Promise<string>
+  export type MemorySearchFn = (
+    query: string,
+    limit: number,
+  ) => Promise<MemorySearchResult[]>
+  export type DeepResearchRunLoopFn = (
+    opts: RunAgentLoopOptions,
+  ) => Promise<string>
   export interface CreateDeepResearchToolOptions {
     registry: ConnectorRegistry
     ragSearch: RagSearchFn
     memorySearch: MemorySearchFn
-    webSearch: (query: string) => Promise<{ answer: string; citations: { title: string; url: string }[] }>
+    webSearch: (
+      query: string,
+    ) => Promise<{
+      answer: string
+      citations: { title: string; url: string }[]
+    }>
     model?: string
     system?: string
     signal?: AbortSignal
@@ -79,7 +138,12 @@
   }
   export function createDeepResearchTool(opts: CreateDeepResearchToolOptions)
   ```
-  Task 5 consumes `createDeepResearchTool`/`CreateDeepResearchToolOptions` by these exact names (imported via `@yomi/agent-core` after Task 2 exports them). Tasks 3-4 produce the backend functions that get adapted into `RagSearchFn`/`MemorySearchFn`-shaped closures in Task 5 — this task does not depend on Tasks 3-4.
+
+  Task 5 consumes `createDeepResearchTool`/`CreateDeepResearchToolOptions` by
+  these exact names (imported via `@yomi/agent-core` after Task 2 exports them).
+  Tasks 3-4 produce the backend functions that get adapted into
+  `RagSearchFn`/`MemorySearchFn`-shaped closures in Task 5 — this task does not
+  depend on Tasks 3-4.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -95,7 +159,8 @@ import type { RunAgentLoopOptions } from "./agent.js"
 
 const fakeRegistry = {} as CreateDeepResearchToolOptions["registry"]
 const ragSearch: CreateDeepResearchToolOptions["ragSearch"] = async () => []
-const memorySearch: CreateDeepResearchToolOptions["memorySearch"] = async () => []
+const memorySearch: CreateDeepResearchToolOptions["memorySearch"] =
+  async () => []
 const webSearch: CreateDeepResearchToolOptions["webSearch"] = async () => ({
   answer: "",
   citations: [],
@@ -131,7 +196,10 @@ describe("createDeepResearchTool", () => {
       runLoop,
     })
 
-    const result = await t.execute!({ question: "what changed in yomi memory this week" }, {} as never)
+    const result = await t.execute!(
+      { question: "what changed in yomi memory this week" },
+      {} as never,
+    )
 
     expect(captured).not.toBeNull()
     expect(captured!.text).toBe("what changed in yomi memory this week")
@@ -151,7 +219,13 @@ describe("createDeepResearchTool", () => {
       captured = opts
       return "ok"
     }
-    const t = createDeepResearchTool({ registry: fakeRegistry, ragSearch, memorySearch, webSearch, runLoop })
+    const t = createDeepResearchTool({
+      registry: fakeRegistry,
+      ragSearch,
+      memorySearch,
+      webSearch,
+      runLoop,
+    })
 
     await t.execute!({ question: "x" }, {} as never)
 
@@ -212,7 +286,13 @@ describe("createDeepResearchTool", () => {
       calls++
       return `result ${calls}`
     }
-    const t = createDeepResearchTool({ registry: fakeRegistry, ragSearch, memorySearch, webSearch, runLoop })
+    const t = createDeepResearchTool({
+      registry: fakeRegistry,
+      ragSearch,
+      memorySearch,
+      webSearch,
+      runLoop,
+    })
 
     const r1 = await t.execute!({ question: "a" }, {} as never)
     const r2 = await t.execute!({ question: "b" }, {} as never)
@@ -226,13 +306,21 @@ describe("createDeepResearchTool", () => {
 
   it("constructing without a runLoop override does not throw (defaults to the real runAgentLoop)", () => {
     expect(() =>
-      createDeepResearchTool({ registry: fakeRegistry, ragSearch, memorySearch, webSearch }),
+      createDeepResearchTool({
+        registry: fakeRegistry,
+        ragSearch,
+        memorySearch,
+        webSearch,
+      }),
     ).not.toThrow()
   })
 
   it("the rag_search tool calls the injected ragSearch callback", async () => {
     let calledArgs: [string, number] | null = null
-    const spyRagSearch: CreateDeepResearchToolOptions["ragSearch"] = async (query, limit) => {
+    const spyRagSearch: CreateDeepResearchToolOptions["ragSearch"] = async (
+      query,
+      limit,
+    ) => {
       calledArgs = [query, limit]
       return [{ sourceName: "Notes", title: "Notes", content: "hello" }]
     }
@@ -251,20 +339,29 @@ describe("createDeepResearchTool", () => {
     await t.execute!({ question: "x" }, {} as never)
 
     const ragTool = captured!.extraTools!["rag_search"] as {
-      execute: (args: { query: string; limit?: number }, ctx: never) => Promise<unknown>
+      execute: (
+        args: { query: string; limit?: number },
+        ctx: never,
+      ) => Promise<unknown>
     }
-    const result = await ragTool.execute({ query: "editor config" }, {} as never)
+    const result = await ragTool.execute(
+      { query: "editor config" },
+      {} as never,
+    )
 
     expect(calledArgs).toEqual(["editor config", 5])
-    expect(result).toEqual([{ sourceName: "Notes", title: "Notes", content: "hello" }])
+    expect(result).toEqual([
+      { sourceName: "Notes", title: "Notes", content: "hello" },
+    ])
   })
 
   it("the memory_search tool calls the injected memorySearch callback", async () => {
     let calledArgs: [string, number] | null = null
-    const spyMemorySearch: CreateDeepResearchToolOptions["memorySearch"] = async (query, limit) => {
-      calledArgs = [query, limit]
-      return []
-    }
+    const spyMemorySearch: CreateDeepResearchToolOptions["memorySearch"] =
+      async (query, limit) => {
+        calledArgs = [query, limit]
+        return []
+      }
     let captured: RunAgentLoopOptions | null = null
     const runLoop = async (opts: RunAgentLoopOptions) => {
       captured = opts
@@ -280,7 +377,10 @@ describe("createDeepResearchTool", () => {
     await t.execute!({ question: "x" }, {} as never)
 
     const memTool = captured!.extraTools!["memory_search"] as {
-      execute: (args: { query: string; limit?: number }, ctx: never) => Promise<unknown>
+      execute: (
+        args: { query: string; limit?: number },
+        ctx: never,
+      ) => Promise<unknown>
     }
     await memTool.execute({ query: "editor preference", limit: 3 }, {} as never)
 
@@ -301,7 +401,11 @@ Create `packages/agent-core/src/deep-research.ts` with this content:
 ```ts
 import { tool } from "ai"
 import { z } from "zod"
-import { runAgentLoop, type RunAgentLoopOptions, type UsageInfo } from "./agent.js"
+import {
+  runAgentLoop,
+  type RunAgentLoopOptions,
+  type UsageInfo,
+} from "./agent.js"
 import type { ConnectorRegistry } from "./connectors/registry.js"
 
 // Fixed, non-configurable — more room than delegate's generic budget to cover
@@ -318,8 +422,15 @@ const RESEARCH_SYSTEM_PREFIX =
   "web_search's own attached citations for web results. Search as many times " +
   "as needed to cover the question, then synthesize a single cited answer.\n\n"
 
-export type RagSearchResult = { sourceName: string; title: string; content: string }
-export type RagSearchFn = (query: string, limit: number) => Promise<RagSearchResult[]>
+export type RagSearchResult = {
+  sourceName: string
+  title: string
+  content: string
+}
+export type RagSearchFn = (
+  query: string,
+  limit: number,
+) => Promise<RagSearchResult[]>
 
 export type MemorySearchResult = {
   kind: string
@@ -331,42 +442,73 @@ export type MemorySearchResult = {
   score: number
   matchedBy: string[]
 }
-export type MemorySearchFn = (query: string, limit: number) => Promise<MemorySearchResult[]>
+export type MemorySearchFn = (
+  query: string,
+  limit: number,
+) => Promise<MemorySearchResult[]>
 
-export type WebSearchResultLike = { answer: string; citations: { title: string; url: string }[] }
+export type WebSearchResultLike = {
+  answer: string
+  citations: { title: string; url: string }[]
+}
 
-export type DeepResearchRunLoopFn = (opts: RunAgentLoopOptions) => Promise<string>
+export type DeepResearchRunLoopFn = (
+  opts: RunAgentLoopOptions,
+) => Promise<string>
 
 const DEFAULT_RAG_LIMIT = 5
 const DEFAULT_MEMORY_LIMIT = 8
 
 function createRagSearchTool(search: RagSearchFn) {
   return tool({
-    description: "Search the user's indexed RAG documents for relevant passages.",
+    description:
+      "Search the user's indexed RAG documents for relevant passages.",
     parameters: z.object({
       query: z.string().min(1).max(500).describe("Search query"),
-      limit: z.number().int().min(1).max(10).optional().describe("Max results (default 5)"),
+      limit: z
+        .number()
+        .int()
+        .min(1)
+        .max(10)
+        .optional()
+        .describe("Max results (default 5)"),
     }),
-    execute: async ({ query, limit }) => search(query, limit ?? DEFAULT_RAG_LIMIT),
+    execute: async ({ query, limit }) =>
+      search(query, limit ?? DEFAULT_RAG_LIMIT),
   })
 }
 
 function createMemorySearchTool(search: MemorySearchFn) {
   return tool({
-    description: "Search the user's stored memory for relevant facts, preferences, and context.",
+    description:
+      "Search the user's stored memory for relevant facts, preferences, and context.",
     parameters: z.object({
       query: z.string().min(1).max(500).describe("Search query"),
-      limit: z.number().int().min(1).max(20).optional().describe("Max results (default 8)"),
+      limit: z
+        .number()
+        .int()
+        .min(1)
+        .max(20)
+        .optional()
+        .describe("Max results (default 8)"),
     }),
-    execute: async ({ query, limit }) => search(query, limit ?? DEFAULT_MEMORY_LIMIT),
+    execute: async ({ query, limit }) =>
+      search(query, limit ?? DEFAULT_MEMORY_LIMIT),
   })
 }
 
-function createResearchWebSearchTool(search: (query: string) => Promise<WebSearchResultLike>) {
+function createResearchWebSearchTool(
+  search: (query: string) => Promise<WebSearchResultLike>,
+) {
   return tool({
-    description: "Search the live web for current information relevant to the research question.",
+    description:
+      "Search the live web for current information relevant to the research question.",
     parameters: z.object({
-      query: z.string().min(1).max(500).describe("Natural-language search query"),
+      query: z
+        .string()
+        .min(1)
+        .max(500)
+        .describe("Natural-language search query"),
     }),
     execute: async ({ query }) => search(query),
   })
@@ -404,7 +546,9 @@ export function createDeepResearchTool(opts: CreateDeepResearchToolOptions) {
     }),
     execute: async ({ question }) => {
       if (calls >= MAX_RESEARCH_CALLS_PER_TURN) {
-        return { error: `research limit (${MAX_RESEARCH_CALLS_PER_TURN} per turn) reached` }
+        return {
+          error: `research limit (${MAX_RESEARCH_CALLS_PER_TURN} per turn) reached`,
+        }
       }
       calls++
       const result = await runLoop({
@@ -445,11 +589,17 @@ git commit -m "feat(agent-core): add bounded deep-research tool"
 ### Task 2: Export from agent-core's public API
 
 **Files:**
+
 - Modify: `packages/agent-core/src/index.ts`
 
 **Interfaces:**
-- Consumes: `createDeepResearchTool`, `CreateDeepResearchToolOptions`, `RagSearchResult`, `RagSearchFn`, `MemorySearchResult`, `MemorySearchFn`, `DeepResearchRunLoopFn`, `WebSearchResultLike` from `./deep-research.js` (Task 1).
-- Produces: `@yomi/agent-core` now exports `createDeepResearchTool` — Task 5 imports it from there.
+
+- Consumes: `createDeepResearchTool`, `CreateDeepResearchToolOptions`,
+  `RagSearchResult`, `RagSearchFn`, `MemorySearchResult`, `MemorySearchFn`,
+  `DeepResearchRunLoopFn`, `WebSearchResultLike` from `./deep-research.js` (Task
+  1).
+- Produces: `@yomi/agent-core` now exports `createDeepResearchTool` — Task 5
+  imports it from there.
 
 - [ ] **Step 1: Add the export**
 
@@ -480,8 +630,7 @@ export {
 
 - [ ] **Step 2: Typecheck the package**
 
-Run: `bun run typecheck`
-Expected: no errors.
+Run: `bun run typecheck` Expected: no errors.
 
 - [ ] **Step 3: Commit**
 
@@ -495,17 +644,30 @@ git commit -m "feat(agent-core): export createDeepResearchTool"
 ### Task 3: `searchRagDocuments` backend query function
 
 **Files:**
+
 - Create: `apps/backend/src/services/rag/search.ts`
 - Create: `apps/backend/src/services/rag/search.test.ts`
 
 **Interfaces:**
+
 - Consumes: `db`, `ragSources` from `@yomi/db`; `sql` from `drizzle-orm`.
 - Produces:
+
   ```ts
-  export type RagSearchResult = { sourceName: string; title: string; content: string }
-  export async function searchRagDocuments(userId: string, query: string, limit: number): Promise<RagSearchResult[]>
+  export type RagSearchResult = {
+    sourceName: string
+    title: string
+    content: string
+  }
+  export async function searchRagDocuments(
+    userId: string,
+    query: string,
+    limit: number,
+  ): Promise<RagSearchResult[]>
   ```
-  Task 5 consumes `searchRagDocuments` by this exact name, importing it from `../services/rag/search.js`.
+
+  Task 5 consumes `searchRagDocuments` by this exact name, importing it from
+  `../services/rag/search.js`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -540,8 +702,15 @@ mock.module("@yomi/db", () => ({
 
 const { searchRagDocuments } = await import("./search.js")
 
-function row(over: Partial<Record<string, unknown>> = {}): Record<string, unknown> {
-  return { sourceName: "Notes", title: "Notes", content: "some content", ...over }
+function row(
+  over: Partial<Record<string, unknown>> = {},
+): Record<string, unknown> {
+  return {
+    sourceName: "Notes",
+    title: "Notes",
+    content: "some content",
+    ...over,
+  }
 }
 
 beforeEach(() => {
@@ -556,7 +725,9 @@ describe("searchRagDocuments", () => {
 
     const rows = await searchRagDocuments("u1", "hello", 5)
 
-    expect(rows).toEqual([{ sourceName: "Docs", title: "API", content: "hello" }])
+    expect(rows).toEqual([
+      { sourceName: "Docs", title: "API", content: "hello" },
+    ])
   })
 
   it("restricts to the caller's ready/active/backfilling chunks", async () => {
@@ -588,8 +759,8 @@ describe("searchRagDocuments", () => {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `bun test --isolate apps/backend/src/services/rag/search.test.ts`
-Expected: FAIL — `search.js` does not exist yet.
+Run: `bun test --isolate apps/backend/src/services/rag/search.test.ts` Expected:
+FAIL — `search.js` does not exist yet.
 
 - [ ] **Step 3: Write the minimal implementation**
 
@@ -599,7 +770,11 @@ Create `apps/backend/src/services/rag/search.ts` with this content:
 import { sql } from "drizzle-orm"
 import { db, ragSources } from "@yomi/db"
 
-export type RagSearchResult = { sourceName: string; title: string; content: string }
+export type RagSearchResult = {
+  sourceName: string
+  title: string
+  content: string
+}
 
 // Same FTS query fetchRagContext (apps/backend/src/agent/run.ts) uses for passive
 // injection, factored out so it can also back the actively-callable rag_search tool.
@@ -623,7 +798,9 @@ export async function searchRagDocuments(
       limit ${limit}
     `)
     const rows = (
-      Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? [])
+      Array.isArray(result)
+        ? result
+        : ((result as { rows?: unknown[] }).rows ?? [])
     ) as RagSearchResult[]
     return rows
   } catch {
@@ -634,8 +811,8 @@ export async function searchRagDocuments(
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `bun test --isolate apps/backend/src/services/rag/search.test.ts`
-Expected: PASS — 5 tests, 0 fail.
+Run: `bun test --isolate apps/backend/src/services/rag/search.test.ts` Expected:
+PASS — 5 tests, 0 fail.
 
 - [ ] **Step 5: Commit**
 
@@ -649,12 +826,18 @@ git commit -m "feat(rag): add searchRagDocuments query function"
 ### Task 4: `searchMemoryEntries` backend query function
 
 **Files:**
+
 - Modify: `apps/backend/src/services/memory/search.ts` (append)
-- Modify: `apps/backend/src/services/memory/search.test.ts` (convert to dynamic import, append tests)
+- Modify: `apps/backend/src/services/memory/search.test.ts` (convert to dynamic
+  import, append tests)
 
 **Interfaces:**
-- Consumes: `buildRecallCte`, `memorySearchKnobs`, `AGENT_META_COLUMNS` (all already exported from this file); `embedMemoryText` from `./embeddings.js`; `db` from `@yomi/db`.
+
+- Consumes: `buildRecallCte`, `memorySearchKnobs`, `AGENT_META_COLUMNS` (all
+  already exported from this file); `embedMemoryText` from `./embeddings.js`;
+  `db` from `@yomi/db`.
 - Produces:
+
   ```ts
   export type MemorySearchRow = {
     kind: string
@@ -666,13 +849,21 @@ git commit -m "feat(rag): add searchRagDocuments query function"
     score: number
     matchedBy: string[]
   }
-  export async function searchMemoryEntries(userId: string, query: string, limit: number): Promise<MemorySearchRow[]>
+  export async function searchMemoryEntries(
+    userId: string,
+    query: string,
+    limit: number,
+  ): Promise<MemorySearchRow[]>
   ```
-  Task 5 consumes `searchMemoryEntries` by this exact name, importing it from `../services/memory/search.js` (added to the existing import line that already pulls `AGENT_META_COLUMNS`, `buildRecallCte`, `memorySearchKnobs` from there).
+
+  Task 5 consumes `searchMemoryEntries` by this exact name, importing it from
+  `../services/memory/search.js` (added to the existing import line that already
+  pulls `AGENT_META_COLUMNS`, `buildRecallCte`, `memorySearchKnobs` from there).
 
 - [ ] **Step 1: Write the failing tests**
 
-Read the current `apps/backend/src/services/memory/search.test.ts` first — it currently starts with:
+Read the current `apps/backend/src/services/memory/search.test.ts` first — it
+currently starts with:
 
 ```ts
 import { describe, it, expect, afterEach } from "bun:test"
@@ -701,7 +892,8 @@ mock.module("@yomi/db", () => ({
   },
 }))
 
-const { buildRecallCte, memorySearchKnobs, searchMemoryEntries } = await import("./search.js")
+const { buildRecallCte, memorySearchKnobs, searchMemoryEntries } =
+  await import("./search.js")
 
 beforeEach(() => {
   executeRows = []
@@ -711,7 +903,13 @@ beforeEach(() => {
 })
 ```
 
-Leave everything else in the file (the `numbersIn`/`textIn` helpers, `restoreEnv`, the existing `describe("memorySearchKnobs", ...)` block, and any `describe("buildRecallCte", ...)` block) exactly as it is — this change only swaps the static import for a dynamic one (so the `@yomi/db` mock is registered before `search.js` loads) and adds the mock/state needed for the new tests below. The existing tests for `buildRecallCte`/`memorySearchKnobs` don't touch `@yomi/db` at all, so they are unaffected by this change.
+Leave everything else in the file (the `numbersIn`/`textIn` helpers,
+`restoreEnv`, the existing `describe("memorySearchKnobs", ...)` block, and any
+`describe("buildRecallCte", ...)` block) exactly as it is — this change only
+swaps the static import for a dynamic one (so the `@yomi/db` mock is registered
+before `search.js` loads) and adds the mock/state needed for the new tests
+below. The existing tests for `buildRecallCte`/`memorySearchKnobs` don't touch
+`@yomi/db` at all, so they are unaffected by this change.
 
 Append this new `describe` block at the end of the file:
 
@@ -730,7 +928,11 @@ describe("searchMemoryEntries", () => {
       }
     }
     for (const statement of executedStatements) {
-      if (statement && typeof statement === "object" && "queryChunks" in statement) {
+      if (
+        statement &&
+        typeof statement === "object" &&
+        "queryChunks" in statement
+      ) {
         walk((statement as { queryChunks: unknown[] }).queryChunks)
       }
     }
@@ -776,7 +978,8 @@ Expected: FAIL — `searchMemoryEntries` is not exported yet from `search.js`.
 
 - [ ] **Step 3: Write the minimal implementation**
 
-Append to `apps/backend/src/services/memory/search.ts`. First change the top import line from:
+Append to `apps/backend/src/services/memory/search.ts`. First change the top
+import line from:
 
 ```ts
 import { sql, type SQL } from "drizzle-orm"
@@ -845,7 +1048,8 @@ export async function searchMemoryEntries(
       order by e.is_static desc, f.score desc, e.confidence desc, e.updated_at desc
       limit ${limit}
     `)
-    const rows = ((result as unknown as { rows?: MemorySearchRow[] }).rows ?? []) as MemorySearchRow[]
+    const rows = ((result as unknown as { rows?: MemorySearchRow[] }).rows ??
+      []) as MemorySearchRow[]
     return rows
   } catch {
     return []
@@ -870,52 +1074,64 @@ git commit -m "feat(memory): add searchMemoryEntries query function"
 ### Task 5: Wire `deep_research` into the backend agent
 
 **Files:**
-- Modify: `apps/backend/src/agent/run.ts` — import block (~lines 1-19); `fetchRagContext` (~lines 92-125); `fetchMemoryContext` (~lines 130-187); tool construction (~lines 549-607).
+
+- Modify: `apps/backend/src/agent/run.ts` — import block (~lines 1-19);
+  `fetchRagContext` (~lines 92-125); `fetchMemoryContext` (~lines 130-187); tool
+  construction (~lines 549-607).
 - Modify: `apps/backend/src/agent/run.test.ts`
 
 **Interfaces:**
-- Consumes: `createDeepResearchTool` from `@yomi/agent-core` (Task 2); `searchRagDocuments` from `../services/rag/search.js` (Task 3); `searchMemoryEntries` from `../services/memory/search.js` (Task 4). The existing in-scope `registry`, `agentModel`, `agentSystem`, `usageEventId`, `startedAt`, `opts.userId`, `opts.signal` (all already used by the `delegateTool` construction directly above where `deepResearchTool` will be added).
+
+- Consumes: `createDeepResearchTool` from `@yomi/agent-core` (Task 2);
+  `searchRagDocuments` from `../services/rag/search.js` (Task 3);
+  `searchMemoryEntries` from `../services/memory/search.js` (Task 4). The
+  existing in-scope `registry`, `agentModel`, `agentSystem`, `usageEventId`,
+  `startedAt`, `opts.userId`, `opts.signal` (all already used by the
+  `delegateTool` construction directly above where `deepResearchTool` will be
+  added).
 - Produces: nothing new for later tasks — this is the final integration point.
 
 - [ ] **Step 1: Write the failing test**
 
-In `apps/backend/src/agent/run.test.ts`, find the existing test (added when `delegate` was wired):
+In `apps/backend/src/agent/run.test.ts`, find the existing test (added when
+`delegate` was wired):
 
 ```ts
-  it("wires a delegate tool into extraTools", async () => {
-    mockUser = makeUser()
-    const { runAgent } = await import("./run.js")
-    await runAgent({ userId: "user_1", text: "hi" })
-    expect(lastAgentExtraTools).toBeDefined()
-    const delegateTool = lastAgentExtraTools!["delegate"] as {
-      execute?: unknown
-      description?: string
-    }
-    expect(typeof delegateTool.execute).toBe("function")
-    expect(delegateTool.description).toContain("sub-agent")
-  })
+it("wires a delegate tool into extraTools", async () => {
+  mockUser = makeUser()
+  const { runAgent } = await import("./run.js")
+  await runAgent({ userId: "user_1", text: "hi" })
+  expect(lastAgentExtraTools).toBeDefined()
+  const delegateTool = lastAgentExtraTools!["delegate"] as {
+    execute?: unknown
+    description?: string
+  }
+  expect(typeof delegateTool.execute).toBe("function")
+  expect(delegateTool.description).toContain("sub-agent")
+})
 ```
 
 Add a new test immediately after it:
 
 ```ts
-  it("wires a deep_research tool into extraTools", async () => {
-    mockUser = makeUser()
-    const { runAgent } = await import("./run.js")
-    await runAgent({ userId: "user_1", text: "hi" })
-    expect(lastAgentExtraTools).toBeDefined()
-    const researchTool = lastAgentExtraTools!["deep_research"] as {
-      execute?: unknown
-      description?: string
-    }
-    expect(typeof researchTool.execute).toBe("function")
-    expect(researchTool.description).toContain("cited")
-  })
+it("wires a deep_research tool into extraTools", async () => {
+  mockUser = makeUser()
+  const { runAgent } = await import("./run.js")
+  await runAgent({ userId: "user_1", text: "hi" })
+  expect(lastAgentExtraTools).toBeDefined()
+  const researchTool = lastAgentExtraTools!["deep_research"] as {
+    execute?: unknown
+    description?: string
+  }
+  expect(typeof researchTool.execute).toBe("function")
+  expect(researchTool.description).toContain("cited")
+})
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `bun test --isolate apps/backend/src/agent/run.test.ts -t "wires a deep_research tool"`
+Run:
+`bun test --isolate apps/backend/src/agent/run.test.ts -t "wires a deep_research tool"`
 Expected: FAIL — `lastAgentExtraTools!["deep_research"]` is `undefined`.
 
 - [ ] **Step 3: Add the imports**
@@ -966,7 +1182,11 @@ import {
 Then find this line (part of a multi-import from the memory search service):
 
 ```ts
-import { AGENT_META_COLUMNS, buildRecallCte, memorySearchKnobs } from "../services/memory/search.js"
+import {
+  AGENT_META_COLUMNS,
+  buildRecallCte,
+  memorySearchKnobs,
+} from "../services/memory/search.js"
 ```
 
 Change it to:
@@ -998,7 +1218,11 @@ import { searchRagDocuments } from "../services/rag/search.js"
 Find the current `fetchRagContext` function:
 
 ```ts
-async function fetchRagContext(userId: string, query: string, maxChars = 3000): Promise<string> {
+async function fetchRagContext(
+  userId: string,
+  query: string,
+  maxChars = 3000,
+): Promise<string> {
   try {
     const safe = query.trim().slice(0, 500)
     if (!safe) return ""
@@ -1015,7 +1239,9 @@ async function fetchRagContext(userId: string, query: string, maxChars = 3000): 
       limit 5
     `)
     const rows = (
-      Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? [])
+      Array.isArray(result)
+        ? result
+        : ((result as { rows?: unknown[] }).rows ?? [])
     ) as Row[]
     if (!rows.length) return ""
     const blocks: string[] = []
@@ -1037,7 +1263,11 @@ async function fetchRagContext(userId: string, query: string, maxChars = 3000): 
 Replace it with:
 
 ```ts
-async function fetchRagContext(userId: string, query: string, maxChars = 3000): Promise<string> {
+async function fetchRagContext(
+  userId: string,
+  query: string,
+  maxChars = 3000,
+): Promise<string> {
   const rows = await searchRagDocuments(userId, query, 5)
   if (!rows.length) return ""
   const blocks: string[] = []
@@ -1053,14 +1283,20 @@ async function fetchRagContext(userId: string, query: string, maxChars = 3000): 
 }
 ```
 
-(`searchRagDocuments` already degrades to `[]` on failure or empty query, so the `try/catch` that used to guard this whole function is no longer needed here — `rows.length === 0` covers both cases identically to before.)
+(`searchRagDocuments` already degrades to `[]` on failure or empty query, so the
+`try/catch` that used to guard this whole function is no longer needed here —
+`rows.length === 0` covers both cases identically to before.)
 
 - [ ] **Step 5: Refactor `fetchMemoryContext` to call `searchMemoryEntries`**
 
 Find the current `fetchMemoryContext` function:
 
 ```ts
-async function fetchMemoryContext(userId: string, query: string, maxChars = 2000): Promise<string> {
+async function fetchMemoryContext(
+  userId: string,
+  query: string,
+  maxChars = 2000,
+): Promise<string> {
   try {
     const safe = query.trim().slice(0, 400)
     if (!safe) return ""
@@ -1123,7 +1359,11 @@ async function fetchMemoryContext(userId: string, query: string, maxChars = 2000
 Replace it with:
 
 ```ts
-async function fetchMemoryContext(userId: string, query: string, maxChars = 2000): Promise<string> {
+async function fetchMemoryContext(
+  userId: string,
+  query: string,
+  maxChars = 2000,
+): Promise<string> {
   const rows = await searchMemoryEntries(userId, query, AGENT_RECALL_LIMIT)
   if (!rows.length) return ""
 
@@ -1140,7 +1380,10 @@ async function fetchMemoryContext(userId: string, query: string, maxChars = 2000
 }
 ```
 
-Note: `searchMemoryEntries` returns `[]` for both an empty query and a failed query (matching the original try/catch's behavior), and `AGENT_RECALL_LIMIT` (the existing module-level constant) is passed as the limit — unchanged from before.
+Note: `searchMemoryEntries` returns `[]` for both an empty query and a failed
+query (matching the original try/catch's behavior), and `AGENT_RECALL_LIMIT`
+(the existing module-level constant) is passed as the limit — unchanged from
+before.
 
 - [ ] **Step 6: Construct `deepResearchTool` and add it to `extraTools`**
 
@@ -1187,7 +1430,8 @@ Find the `delegateTool` construction block (this exists already from item 6):
       },
 ```
 
-Change it to (adding `researchRegistry`/`deepResearchTool` construction right after `delegateTool`'s, and `deep_research` to the `extraTools` object):
+Change it to (adding `researchRegistry`/`deepResearchTool` construction right
+after `delegateTool`'s, and `deep_research` to the `extraTools` object):
 
 ```ts
   const delegateTool = createDelegateTool({
@@ -1268,19 +1512,16 @@ Change it to (adding `researchRegistry`/`deepResearchTool` construction right af
 
 - [ ] **Step 7: Run the full test file to verify everything passes**
 
-Run: `bun test --isolate apps/backend/src/agent/run.test.ts`
-Expected: PASS — all existing tests plus the new one.
+Run: `bun test --isolate apps/backend/src/agent/run.test.ts` Expected: PASS —
+all existing tests plus the new one.
 
 - [ ] **Step 8: Typecheck and run the full backend + agent-core suites**
 
-Run: `bun run typecheck`
-Expected: 0 errors.
+Run: `bun run typecheck` Expected: 0 errors.
 
-Run: `bun test --isolate apps/backend/src`
-Expected: all pass.
+Run: `bun test --isolate apps/backend/src` Expected: all pass.
 
-Run: `bun test --isolate packages/agent-core/src`
-Expected: all pass.
+Run: `bun test --isolate packages/agent-core/src` Expected: all pass.
 
 - [ ] **Step 9: Commit**
 
@@ -1293,9 +1534,17 @@ git commit -m "feat(agent): wire deep_research tool into the backend agent"
 
 ## Final Verification
 
-- [ ] Run `bun run lint` (AGENTS.md: CI runs lint; it's part of the pre-push checklist).
-- [ ] Run `bun run format:check` (CI's "PR quality" job runs `prettier --check .` and has failed on the last two plans in this session for unformatted new files — run `bun run format` if it fails, then re-verify tests still pass).
+- [ ] Run `bun run lint` (AGENTS.md: CI runs lint; it's part of the pre-push
+      checklist).
+- [ ] Run `bun run format:check` (CI's "PR quality" job runs
+      `prettier --check .` and has failed on the last two plans in this session
+      for unformatted new files — run `bun run format` if it fails, then
+      re-verify tests still pass).
 - [ ] Run `bun run typecheck` from repo root — 0 errors.
-- [ ] Run `bun test --isolate packages/agent-core/src` from repo root — all pass.
+- [ ] Run `bun test --isolate packages/agent-core/src` from repo root — all
+      pass.
 - [ ] Run `bun test --isolate apps/backend/src` from repo root — all pass.
-- [ ] Re-read `docs/superpowers/specs/2026-08-02-deep-research-tool-design.md` and confirm every section (no connector access, new search tools, budget/cap, interface, wiring, error handling) has a corresponding implemented piece.
+- [ ] Re-read `docs/superpowers/specs/2026-08-02-deep-research-tool-design.md`
+      and confirm every section (no connector access, new search tools,
+      budget/cap, interface, wiring, error handling) has a corresponding
+      implemented piece.

@@ -157,7 +157,8 @@ export async function searchMemoryEntries(
       order by e.is_static desc, f.score desc, e.confidence desc, e.updated_at desc
       limit ${limit}
     `)
-    const rows = ((result as unknown as { rows?: MemorySearchRow[] }).rows ?? []) as MemorySearchRow[]
+    const rows = ((result as unknown as { rows?: MemorySearchRow[] }).rows ??
+      []) as MemorySearchRow[]
     return rows
   } catch {
     return []

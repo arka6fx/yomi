@@ -1,8 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import {
-  createDeepResearchTool,
-  type CreateDeepResearchToolOptions,
-} from "./deep-research.js"
+import { createDeepResearchTool, type CreateDeepResearchToolOptions } from "./deep-research.js"
 import type { RunAgentLoopOptions } from "./agent.js"
 
 const fakeRegistry = {} as CreateDeepResearchToolOptions["registry"]
@@ -43,7 +40,10 @@ describe("createDeepResearchTool", () => {
       runLoop,
     })
 
-    const result = await t.execute!({ question: "what changed in yomi memory this week" }, {} as never)
+    const result = await t.execute!(
+      { question: "what changed in yomi memory this week" },
+      {} as never,
+    )
 
     expect(captured).not.toBeNull()
     expect(captured!.text).toBe("what changed in yomi memory this week")
@@ -63,7 +63,13 @@ describe("createDeepResearchTool", () => {
       captured = opts
       return "ok"
     }
-    const t = createDeepResearchTool({ registry: fakeRegistry, ragSearch, memorySearch, webSearch, runLoop })
+    const t = createDeepResearchTool({
+      registry: fakeRegistry,
+      ragSearch,
+      memorySearch,
+      webSearch,
+      runLoop,
+    })
 
     await t.execute!({ question: "x" }, {} as never)
 
@@ -124,7 +130,13 @@ describe("createDeepResearchTool", () => {
       calls++
       return `result ${calls}`
     }
-    const t = createDeepResearchTool({ registry: fakeRegistry, ragSearch, memorySearch, webSearch, runLoop })
+    const t = createDeepResearchTool({
+      registry: fakeRegistry,
+      ragSearch,
+      memorySearch,
+      webSearch,
+      runLoop,
+    })
 
     const r1 = await t.execute!({ question: "a" }, {} as never)
     const r2 = await t.execute!({ question: "b" }, {} as never)
@@ -175,7 +187,13 @@ describe("createDeepResearchTool", () => {
     const runLoop = async () => {
       throw new Error("model unavailable")
     }
-    const t = createDeepResearchTool({ registry: fakeRegistry, ragSearch, memorySearch, webSearch, runLoop })
+    const t = createDeepResearchTool({
+      registry: fakeRegistry,
+      ragSearch,
+      memorySearch,
+      webSearch,
+      runLoop,
+    })
 
     const result = await t.execute!({ question: "x" }, {} as never)
 
