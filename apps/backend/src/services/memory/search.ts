@@ -1,6 +1,7 @@
 import { sql, type SQL } from "drizzle-orm"
+import { db } from "@yomi/db"
 
-import { memoryVectorLiteral } from "./embeddings.js"
+import { embedMemoryText, memoryVectorLiteral } from "./embeddings.js"
 
 export type MemorySearchKnobs = {
   candidates: number
@@ -105,4 +106,61 @@ export function buildRecallCte({
         order by score desc
         limit ${fusedLimit}
       )`
+}
+
+export type MemorySearchRow = {
+  kind: string
+  topic: string
+  content: string
+  sourcePath: string | null
+  isStatic: boolean
+  updatedAt: string | Date
+  score: number
+  matchedBy: string[]
+}
+
+// Same hybrid vector+FTS+metadata query fetchMemoryContext (apps/backend/src/agent/run.ts)
+// uses for passive injection, factored out so it can also back the actively-callable
+// memory_search tool.
+export async function searchMemoryEntries(
+  userId: string,
+  query: string,
+  limit: number,
+): Promise<MemorySearchRow[]> {
+  try {
+    const safe = query.trim().slice(0, 400)
+    if (!safe) return []
+
+    const queryEmbedding = await embedMemoryText(safe).catch(() => [])
+    const recallCte = buildRecallCte({
+      userId,
+      query: safe,
+      queryEmbedding,
+      knobs: memorySearchKnobs(),
+      fusedLimit: limit,
+      metaColumns: AGENT_META_COLUMNS,
+    })
+
+    const result = await db.execute(sql`
+      ${recallCte}
+      select
+        e.kind as "kind",
+        e.topic as "topic",
+        e.content as "content",
+        e.source_path as "sourcePath",
+        e.is_static as "isStatic",
+        e.updated_at as "updatedAt",
+        f.score as "score",
+        f.matched_by as "matchedBy"
+      from fused f
+      join memory_entries e on e.id = f.memory_id
+      order by e.is_static desc, f.score desc, e.confidence desc, e.updated_at desc
+      limit ${limit}
+    `)
+    const rows = ((result as unknown as { rows?: MemorySearchRow[] }).rows ??
+      []) as MemorySearchRow[]
+    return rows
+  } catch {
+    return []
+  }
 }

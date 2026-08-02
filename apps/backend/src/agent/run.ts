@@ -1,8 +1,9 @@
 import { eq, sql } from "drizzle-orm"
 import { generateText } from "ai"
-import { db, ragSources, usageEvents, customMcpServers } from "@yomi/db"
+import { db, usageEvents, customMcpServers } from "@yomi/db"
 import {
   ConnectorRegistry,
+  createDeepResearchTool,
   createDelegateTool,
   createModel,
   createReactionTool,
@@ -34,8 +35,8 @@ import { hasBillablePlanAccess, effectivePlanForUser } from "../entitlements.js"
 import { chargeUsage, lowCreditWarning } from "../services/metering.js"
 import { recordAiUsage } from "../services/ai-telemetry.js"
 import { checkConsent } from "../services/privacy/checks.js"
-import { embedMemoryText } from "../services/memory/embeddings.js"
-import { AGENT_META_COLUMNS, buildRecallCte, memorySearchKnobs } from "../services/memory/search.js"
+import { searchRagDocuments } from "../services/rag/search.js"
+import { searchMemoryEntries } from "../services/memory/search.js"
 import {
   buildExtractionPrompt,
   fetchTurnCandidates,
@@ -90,100 +91,37 @@ async function fetchUser(userId: string) {
 // Full-text search over the user's cloud RAG archive.
 // Returns up to maxChars of ranked, numbered snippet blocks for system-prompt injection.
 async function fetchRagContext(userId: string, query: string, maxChars = 3000): Promise<string> {
-  try {
-    const safe = query.trim().slice(0, 500)
-    if (!safe) return ""
-    type Row = { sourceName: string; title: string; content: string }
-    const result = await db.execute(sql`
-      select s.name as "sourceName", d.title as "title", c.content as "content"
-      from rag_chunks c
-      join rag_documents d on d.id = c.document_id
-      join ${ragSources} s on s.id = d.source_id
-      where c.user_id = ${userId}
-        and s.status in ('ready', 'active', 'backfilling')
-        and c.content_tsv @@ websearch_to_tsquery('english', ${safe})
-      order by ts_rank_cd(c.content_tsv, websearch_to_tsquery('english', ${safe})) desc
-      limit 5
-    `)
-    const rows = (
-      Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? [])
-    ) as Row[]
-    if (!rows.length) return ""
-    const blocks: string[] = []
-    let used = 0
-    for (const [i, row] of rows.entries()) {
-      const header = `[${i + 1}] ${row.sourceName}${row.title && row.title !== row.sourceName ? `: ${row.title}` : ""}`
-      const block = `${header}\n${row.content}`
-      if (used + block.length > maxChars) break
-      blocks.push(block)
-      used += block.length
-    }
-    return blocks.join("\n\n")
-  } catch {
-    return ""
+  const rows = await searchRagDocuments(userId, query, 5)
+  if (!rows.length) return ""
+  const blocks: string[] = []
+  let used = 0
+  for (const [i, row] of rows.entries()) {
+    const header = `[${i + 1}] ${row.sourceName}${row.title && row.title !== row.sourceName ? `: ${row.title}` : ""}`
+    const block = `${header}\n${row.content}`
+    if (used + block.length > maxChars) break
+    blocks.push(block)
+    used += block.length
   }
+  return blocks.join("\n\n")
 }
 
 // The agent injects a handful of memories into a turn; the API and MCP surfaces page instead.
 const AGENT_RECALL_LIMIT = 8
 
 async function fetchMemoryContext(userId: string, query: string, maxChars = 2000): Promise<string> {
-  try {
-    const safe = query.trim().slice(0, 400)
-    if (!safe) return ""
+  const rows = await searchMemoryEntries(userId, query, AGENT_RECALL_LIMIT)
+  if (!rows.length) return ""
 
-    const queryEmbedding = await embedMemoryText(safe).catch(() => [])
-    const recallCte = buildRecallCte({
-      userId,
-      query: safe,
-      queryEmbedding,
-      knobs: memorySearchKnobs(),
-      fusedLimit: AGENT_RECALL_LIMIT,
-      metaColumns: AGENT_META_COLUMNS,
-    })
-
-    const result = await db.execute(sql`
-      ${recallCte}
-      select
-        e.kind as "kind",
-        e.topic as "topic",
-        e.content as "content",
-        e.source_path as "sourcePath",
-        e.is_static as "isStatic",
-        e.updated_at as "updatedAt",
-        f.score as "score",
-        f.matched_by as "matchedBy"
-      from fused f
-      join memory_entries e on e.id = f.memory_id
-      order by e.is_static desc, f.score desc, e.confidence desc, e.updated_at desc
-      limit ${AGENT_RECALL_LIMIT}
-    `)
-    type Row = {
-      kind: string
-      topic: string
-      content: string
-      sourcePath: string | null
-      isStatic: boolean
-      updatedAt: string | Date
-      score: number
-      matchedBy: string[]
-    }
-    const rows = ((result as unknown as { rows?: Row[] }).rows ?? []) as Row[]
-    if (!rows.length) return ""
-
-    const out: string[] = []
-    let used = 0
-    const now = new Date()
-    for (const row of rows) {
-      const snippet = formatMemorySnippet(row, now)
-      if (used + snippet.length > maxChars) break
-      out.push(snippet)
-      used += snippet.length
-    }
-    return out.join("\n")
-  } catch {
-    return ""
+  const out: string[] = []
+  let used = 0
+  const now = new Date()
+  for (const row of rows) {
+    const snippet = formatMemorySnippet(row, now)
+    if (used + snippet.length > maxChars) break
+    out.push(snippet)
+    used += snippet.length
   }
+  return out.join("\n")
 }
 
 async function fetchMemoryProfile(
@@ -590,6 +528,47 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       }).catch(() => {})
     },
   })
+  // Never .init()'d, so its internal tool maps stay empty for the process's lifetime —
+  // deep_research gets zero connector tools by construction, not by convention.
+  // getAccessToken/listConnectedProviders are the only required deps and are never
+  // actually called since init()/refresh() never run.
+  const researchRegistry = new ConnectorRegistry({
+    getAccessToken: async () => {
+      throw new Error("research registry has no connected providers — never called")
+    },
+    listConnectedProviders: async () => [],
+  })
+  const deepResearchTool = createDeepResearchTool({
+    registry: researchRegistry,
+    // Gated the same way passive injection is above (memoryConsent/cloudMemoryConsent) —
+    // deep_research must not give the model a side door around a denied consent.
+    ragSearch: (query, limit) =>
+      cloudMemoryConsent.allowed
+        ? searchRagDocuments(opts.userId, query, limit)
+        : Promise.resolve([]),
+    memorySearch: (query, limit) =>
+      memoryConsent.allowed ? searchMemoryEntries(opts.userId, query, limit) : Promise.resolve([]),
+    webSearch: (query) => searchWeb(query, opts.signal),
+    model: agentModel,
+    system: agentSystem,
+    signal: opts.signal,
+    onUsage: (usage: UsageInfo) => {
+      recordAiUsage({
+        userId: opts.userId,
+        requestId: crypto.randomUUID(),
+        usageEventId: usageEventId ?? null,
+        endpoint: "backend.agent",
+        surface: "telegram",
+        route: "agent.deep_research",
+        model: usage.model,
+        inputTokens: usage.inputTokens,
+        outputTokens: usage.outputTokens,
+        cachedInputTokens: usage.cachedInputTokens,
+        latencyMs: Date.now() - startedAt,
+        status: "done",
+      }).catch(() => {})
+    },
+  })
   try {
     text = await runAgentLoop({
       registry,
@@ -599,6 +578,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
         recall_past_conversations: recallTool,
         web_search: webSearchTool,
         delegate: delegateTool,
+        deep_research: deepResearchTool,
         ...(reactionTool ? { react_to_message: reactionTool } : {}),
       },
       system: agentSystem,
