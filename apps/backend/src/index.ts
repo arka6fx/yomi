@@ -155,6 +155,7 @@ async function runCronSweeps(): Promise<void> {
   const { runDriveSyncSweep } = await import("./services/rag/drive-sync.js")
   const { summarizeUnsummarizedSessions } = await import("./services/agent-sessions.js")
   const { renewExploreCredits } = await import("./services/explore-renewal.js")
+  const { sweepMemoryConsolidation } = await import("./services/memory/consolidation.js")
   await Promise.all([
     runDueSchedules()
       .then(({ ran }) => {
@@ -184,6 +185,11 @@ async function runCronSweeps(): Promise<void> {
         if (renewed > 0) console.warn(`[explore-renewal] renewed ${renewed} account(s)`)
       })
       .catch((err) => console.error("[explore-renewal] sweep error:", err)),
+    sweepMemoryConsolidation()
+      .then((count) => {
+        if (count > 0) console.warn(`[memory-consolidation] merged ${count} pair(s)`)
+      })
+      .catch((err) => console.error("[memory-consolidation] sweep error:", err)),
   ])
 }
 
