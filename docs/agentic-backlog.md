@@ -157,9 +157,9 @@ given `extraTools`, so a delegated sub-agent can't itself call `delegate`),
 steps/output tokens are fixed and non-configurable, and delegations are capped
 per turn — see
 `docs/superpowers/specs/2026-08-02-subagent-delegation-design.md`. **Scope
-note:** the original framing below ("fan out parallel workstreams") was
-narrowed to sequential-only delegation in the approved design — the agent
-calls `delegate` and awaits each result before continuing, it does not fan out
+note:** the original framing below ("fan out parallel workstreams") was narrowed
+to sequential-only delegation in the approved design — the agent calls
+`delegate` and awaits each result before continuing, it does not fan out
 concurrent sub-agent calls. That's a deliberate scope cut, not an oversight;
 parallel fan-out remains a possible fast-follow. The description below is the
 original pre-work framing, retained for history.
