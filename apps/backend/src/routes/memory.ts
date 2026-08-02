@@ -4,6 +4,11 @@ import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm"
 import { db, memoryEmbeddings, memoryEntries, memoryRelations, memorySources } from "@yomi/db"
 import { authenticate } from "../auth.js"
 import { requireConsent } from "../middleware/consent.js"
+import {
+  embedMemoryText,
+  memoryEmbeddingModel,
+  memoryVectorLiteral,
+} from "../services/memory/embeddings.js"
 
 type MemoryInput = {
   id?: string
@@ -33,8 +38,6 @@ type SyncMemoryBody = {
 type MemoryRelation = "updates" | "extends"
 
 const MAX_MEMORY_CHARS = 8_000
-const EMBEDDING_DIMENSIONS = 1536
-const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
 const MEMORY_CANDIDATES = Math.max(
   5,
   Number.parseInt(process.env["MEMORY_CANDIDATES"] ?? "30", 10) || 30,
@@ -57,38 +60,14 @@ function hash(value: string): string {
   return createHash("sha256").update(value).digest("hex")
 }
 
-async function embedText(input: string): Promise<number[]> {
-  if (!input.trim()) return []
-  const apiKey = process.env["OPENAI_API_KEY"]
-  if (!apiKey) return []
-  const baseUrl = (process.env["OPENAI_BASE_URL"] ?? "https://api.openai.com/v1").replace(
-    /\/+$/,
-    "",
-  )
-  const model = process.env["OPENAI_EMBEDDING_MODEL"] ?? DEFAULT_EMBEDDING_MODEL
-  const res = await fetch(`${baseUrl}/embeddings`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model, input }),
-  })
-  if (!res.ok) return []
-  const body = (await res.json()) as { data?: { embedding?: number[] }[] }
-  const embedding = body.data?.[0]?.embedding
-  return Array.isArray(embedding) && embedding.length === EMBEDDING_DIMENSIONS ? embedding : []
-}
-
-function vectorLiteral(values: number[]): string {
-  return `[${values.map((v) => (Number.isFinite(v) ? v.toFixed(8) : "0")).join(",")}]`
-}
-
 async function storeMemoryEmbedding(userId: string, memoryId: string, text: string): Promise<void> {
-  const embedding = await embedText(text).catch(() => [])
+  const embedding = await embedMemoryText(text).catch(() => [])
   if (!embedding.length) return
   await db.delete(memoryEmbeddings).where(eq(memoryEmbeddings.memoryId, memoryId))
   await db.insert(memoryEmbeddings).values({
     userId,
     memoryId,
-    model: process.env["OPENAI_EMBEDDING_MODEL"] ?? DEFAULT_EMBEDDING_MODEL,
+    model: memoryEmbeddingModel(),
     embedding,
   })
 }
@@ -387,14 +366,14 @@ memoryRouter.post("/search", requireConsent("memory"), async (c) => {
       )
       .limit(limit)
   } else {
-    const queryEmbedding = await embedText(query).catch(() => [])
+    const queryEmbedding = await embedMemoryText(query).catch(() => [])
     const vecSql = queryEmbedding.length
       ? sql`
         vec as (
-          select me.memory_id, row_number() over (order by me.embedding <=> ${vectorLiteral(queryEmbedding)}::vector) as rnk
+          select me.memory_id, row_number() over (order by me.embedding <=> ${memoryVectorLiteral(queryEmbedding)}::vector) as rnk
           from memory_embeddings me
           where me.user_id = ${user.id}
-          order by me.embedding <=> ${vectorLiteral(queryEmbedding)}::vector
+          order by me.embedding <=> ${memoryVectorLiteral(queryEmbedding)}::vector
           limit ${MEMORY_CANDIDATES}
         ),`
       : sql`
