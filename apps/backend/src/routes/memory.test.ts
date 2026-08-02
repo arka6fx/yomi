@@ -140,7 +140,10 @@ mock.module("drizzle-orm", () => ({
   ilike: (col: { name: string }, value: unknown) => ({ op: "ilike", col, value }),
   inArray: (col: { name: string }, value: unknown) => ({ op: "inArray", col, value }),
   desc: (col: { name: string }) => ({ op: "desc", col }),
-  sql: () => ({ op: "sql" }),
+  sql: Object.assign(() => ({ op: "sql" }), {
+    raw: (value: string) => ({ op: "raw", value }),
+    join: (parts: unknown[], separator: unknown) => ({ op: "join", parts, separator }),
+  }),
 }))
 
 mock.module("../auth.js", () => ({
