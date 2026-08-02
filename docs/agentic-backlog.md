@@ -45,7 +45,7 @@ has.
 | 2   | ✅ **DONE** — Proactive suggestions from telemetry + memory       | M    | Capability            | hermes self-nudge                      | Turns a static 5-item catalog into personalized, earned nudges    |
 | 3   | ✅ **DONE** — Session summarization + cross-session recall tool   | M    | Capability            | hermes FTS5 recall                     | "What did we decide last week?" — memory that spans sessions      |
 | 4a  | Memory contradiction resolution (designed — ADR 0006)             | M    | Capability/Health     | supermemory                            | Stops Yomi contradicting itself; correctness of the memory engine |
-| 4b  | Memory consolidation sweep (near-duplicate merge)                 | M    | Health                | supermemory                            | Stops duplicate memories crowding the injection budget            |
+| 4b  | ✅ **DONE** — Memory consolidation sweep (near-duplicate merge)   | M    | Health                | supermemory                            | Stops duplicate memories crowding the injection budget            |
 | 5   | Deep-research tool (bounded sub-loop over RAG+memory+web)         | M/L  | Capability            | nia Oracle                             | Cited synthesis instead of one-shot retrieval                     |
 | 6   | Subagent delegation on the backend agent                          | M    | Capability/Foundation | hermes / sidecar subagent              | Parallel workstreams; unblocks bigger tasks                       |
 | 7   | Landing: memory viewer + usage/cost insights                      | M    | Capability/Trust      | openclaw / nia dashboards              | User-visible control over memory + spend; privacy story           |
@@ -119,6 +119,11 @@ paths, and narrows `isStatic` so stale preferences stop being permanently
 resident. **Touches:** `routes/memory.ts`, `agent/run.ts`.
 
 ### 4b. Memory consolidation sweep — M · Health
+
+✅ **DONE.** Shipped as `apps/backend/src/services/memory/consolidation.ts`
+(`sweepMemoryConsolidation`), a periodic embedding-similarity sweep with no LLM
+calls, wired into `runCronSweeps` (`index.ts`) gated to run once per hour. The
+description below is the original pre-work framing, retained for history.
 
 Split out of the original #4 (see 4a). A periodic job that merges near-duplicate
 **active** memories — distinct from contradiction, which supersedes an
