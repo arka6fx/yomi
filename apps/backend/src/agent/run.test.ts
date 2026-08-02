@@ -270,6 +270,46 @@ describe("runAgent metering", () => {
     expect(lastAgentSystem).toContain("Working on Yomi memory")
   })
 
+  it("injects each memory's age so the model can tell a correction from what it corrected", async () => {
+    mockExecuteRows = [
+      {
+        content: "Uses VS Code",
+        summary: null,
+        isStatic: true,
+        updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        kind: "preference",
+        topic: "editor",
+        sourcePath: null,
+        matchedBy: ["vector"],
+      },
+    ]
+    mockUser = makeUser()
+    const { runAgent } = await import("./run.js")
+    await runAgent({ userId: "user_1", text: "what editor do I use?" })
+    expect(lastAgentSystem).toContain("3d ago")
+  })
+
+  it("stops advertising confidence, which made the model prefer stale-but-confident memories", async () => {
+    mockExecuteRows = [
+      {
+        content: "Uses vim",
+        summary: null,
+        isStatic: true,
+        updatedAt: new Date(Date.now() - 200 * 24 * 60 * 60 * 1000).toISOString(),
+        kind: "preference",
+        topic: "editor",
+        confidence: 95,
+        sourcePath: null,
+        matchedBy: ["vector"],
+      },
+    ]
+    mockUser = makeUser()
+    const { runAgent } = await import("./run.js")
+    await runAgent({ userId: "user_1", text: "what editor do I use?" })
+    expect(lastAgentSystem).toContain("7mo ago")
+    expect(lastAgentSystem).not.toContain("confidence 95")
+  })
+
   it("owner bypasses all quota and credit checks", async () => {
     mockUser = makeUser({ role: "owner", plan: "explore", subscriptionStatus: null })
     mockBotMessageCount = 9999
@@ -321,6 +361,26 @@ describe("buildSystemWithContext cache stability", () => {
     )
     const stableMarker = "</connector_ids>"
     expect(system.indexOf("<available_integrations>")).toBeGreaterThan(system.indexOf(stableMarker))
+  })
+
+  it("tells the agent that the more recent of two conflicting memories is the current one", async () => {
+    const { buildSystemWithContext } = await import("./run.js")
+    const system = buildSystemWithContext(
+      "- [preference, 3d ago] editor: Uses VS Code",
+      "",
+      undefined,
+      null,
+      "",
+      "Asia/Kolkata",
+      "",
+    )
+    expect(system).toContain("more recent one is current")
+  })
+
+  it("omits the conflict rule entirely when there is no memory block", async () => {
+    const { buildSystemWithContext } = await import("./run.js")
+    const system = buildSystemWithContext("", "", undefined, null, "", "Asia/Kolkata", "")
+    expect(system).not.toContain("more recent one is current")
   })
 
   it("tells the agent to deep-link the not-connected/reconnect nudge with the service's id", async () => {
