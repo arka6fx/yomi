@@ -30,7 +30,7 @@ type SyncMemoryBody = {
   removedIds?: string[]
   removedCustomIds?: string[]
 }
-type MemoryRelation = "updates" | "extends" | "derives"
+type MemoryRelation = "updates" | "extends"
 
 const MAX_MEMORY_CHARS = 8_000
 const EMBEDDING_DIMENSIONS = 1536
@@ -118,9 +118,10 @@ function normalizeTopic(value: string): string {
     .trim()
 }
 
-function relationForMemory(
+// Topic equality only — the conservative path for writers with no conversational context (ADR 0006)
+export function relationForMemory(
   input: MemoryInput,
-  candidate: typeof memoryEntries.$inferSelect,
+  candidate: { topic: string },
 ): MemoryRelation | null {
   const topic = normalizeTopic(input.topic || input.summary || "")
   const replacesTopic = normalizeTopic(input.replacesTopic ?? input.replaces_topic ?? "")
@@ -131,8 +132,6 @@ function relationForMemory(
   )
     return "updates"
   if (topic && candidateTopic === topic) return "updates"
-  if ((input.kind ?? "fact") === candidate.kind && (input.scope ?? "global") === candidate.scope)
-    return "extends"
   return null
 }
 
@@ -199,11 +198,7 @@ export async function upsertMemory(userId: string, input: MemoryInput) {
         eq(memoryEntries.userId, userId),
         eq(memoryEntries.status, "active"),
         eq(memoryEntries.isLatest, true),
-        or(
-          ilike(memoryEntries.topic, `%${topic}%`),
-          ilike(memoryEntries.summary, `%${topic}%`),
-          ilike(memoryEntries.kind, `%${input.kind ?? "fact"}%`),
-        ),
+        or(ilike(memoryEntries.topic, `%${topic}%`), ilike(memoryEntries.summary, `%${topic}%`)),
       ),
     )
     .orderBy(desc(memoryEntries.confidence), desc(memoryEntries.updatedAt))

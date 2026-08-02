@@ -27,7 +27,7 @@ has.
   since there's nothing left to scope around.
 - **Backend memory is already an engine, not a store.** `routes/memory.ts` +
   `agent/run.ts` give versioned entries, hybrid vector+FTS+metadata RRF search,
-  a relations graph (`updates`/`extends`/`derives`), temporal `forgetAfter`
+  a relations graph (`updates` supersession edges), temporal `forgetAfter`
   forgetting, and per-turn LLM fact-extraction (`captureBackendMemory`). So the
   supermemory pattern is _largely built_ — several items below **sharpen** it
   rather than build it.
