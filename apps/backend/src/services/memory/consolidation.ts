@@ -94,3 +94,19 @@ export async function mergePair(pair: DuplicatePair): Promise<void> {
     })
   })
 }
+
+// Best-effort per pair: one failure (e.g. a row deleted concurrently) doesn't abort the batch —
+// matches every other sweep in runCronSweeps (index.ts).
+export async function sweepMemoryConsolidation(batchSize = 25): Promise<number> {
+  const pairs = await findDuplicatePairs(batchSize)
+  let merged = 0
+  for (const pair of pairs) {
+    try {
+      await mergePair(pair)
+      merged++
+    } catch {
+      // best-effort — continue with the remaining pairs
+    }
+  }
+  return merged
+}

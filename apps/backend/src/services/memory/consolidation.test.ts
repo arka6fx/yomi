@@ -48,7 +48,8 @@ mock.module("@yomi/db", () => ({
   memoryRelations: { __name: "memory_relations" },
 }))
 
-const { findDuplicatePairs, pickSurvivor, mergePair } = await import("./consolidation.js")
+const { findDuplicatePairs, pickSurvivor, mergePair, sweepMemoryConsolidation } =
+  await import("./consolidation.js")
 
 function pairRow(over: Partial<Record<string, unknown>> = {}): Record<string, unknown> {
   return {
@@ -171,5 +172,42 @@ describe("mergePair", () => {
     expect(relationInserts).toEqual([
       { userId: "u1", fromMemoryId: "m2", toMemoryId: "m1", relationType: "merges" },
     ])
+  })
+})
+
+describe("sweepMemoryConsolidation", () => {
+  it("merges every pair the query returns and reports the count", async () => {
+    executeRows = [pairRow(), pairRow({ aId: "m3", bId: "m4" })]
+
+    expect(await sweepMemoryConsolidation(25)).toBe(2)
+    expect(relationInserts).toHaveLength(2)
+  })
+
+  it("continues past a pair that fails to merge, rather than aborting the batch", async () => {
+    executeRows = [pairRow(), pairRow({ aId: "m3", bId: "m4" })]
+    let calls = 0
+    transactionShouldFail = false
+    const originalUpdate = writer.update
+    writer.update = () => {
+      calls++
+      if (calls === 1) throw new Error("first pair failed")
+      return originalUpdate()
+    }
+
+    expect(await sweepMemoryConsolidation(25)).toBe(1)
+
+    writer.update = originalUpdate
+  })
+
+  it("returns 0 when the detection query fails", async () => {
+    executeFails = true
+
+    expect(await sweepMemoryConsolidation(25)).toBe(0)
+  })
+
+  it("defaults batchSize to 25", async () => {
+    await sweepMemoryConsolidation()
+
+    expect(sqlCalls.at(-1)!.values).toContain(25)
   })
 })
