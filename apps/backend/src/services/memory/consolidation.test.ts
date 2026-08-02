@@ -129,7 +129,10 @@ describe("findDuplicatePairs", () => {
   })
 
   it("drops a row missing an expected id field instead of throwing", async () => {
-    executeRows = [pairRow(), { userId: "u1", aId: null, aCreatedAt: new Date(), bId: "m4", bCreatedAt: new Date() }]
+    executeRows = [
+      pairRow(),
+      { userId: "u1", aId: null, aCreatedAt: new Date(), bId: "m4", bCreatedAt: new Date() },
+    ]
 
     const pairs = await findDuplicatePairs(25)
 
@@ -140,9 +143,9 @@ describe("findDuplicatePairs", () => {
 
 describe("pickSurvivor", () => {
   it("keeps the row with the later createdAt", () => {
-    expect(pickSurvivor(pairRow() as unknown as import("./consolidation.js").DuplicatePair)).toEqual(
-      { survivorId: "m2", retiredId: "m1" },
-    )
+    expect(
+      pickSurvivor(pairRow() as unknown as import("./consolidation.js").DuplicatePair),
+    ).toEqual({ survivorId: "m2", retiredId: "m1" })
   })
 
   it("breaks a tie on id, higher wins", () => {
@@ -162,7 +165,10 @@ describe("mergePair", () => {
 
     expect(updates).toHaveLength(1)
     expect(updates[0]!.set).toMatchObject({ status: "merged", isLatest: false })
-    const where = updates[0]!.where as { op: string; conditions: { op: string; col: { name: string }; value: unknown }[] }
+    const where = updates[0]!.where as {
+      op: string
+      conditions: { op: string; col: { name: string }; value: unknown }[]
+    }
     expect(where.op).toBe("and")
     const idCondition = where.conditions.find((c) => c.col?.name === "id")
     expect(idCondition?.value).toBe("m1")

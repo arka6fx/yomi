@@ -1,44 +1,70 @@
 # Memory Consolidation Sweep Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> superpowers:subagent-driven-development (recommended) or
+> superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a periodic cron sweep that merges near-duplicate active memories using pure embedding similarity, with zero background LLM cost.
+**Goal:** Add a periodic cron sweep that merges near-duplicate active memories
+using pure embedding similarity, with zero background LLM cost.
 
-**Architecture:** One new service file (`consolidation.ts`) with three functions — a raw-SQL pgvector self-join that finds duplicate pairs, a survivor-picking/transaction-writing merge action, and a batch orchestrator — wired into the existing `runCronSweeps()` alongside the other five sweeps.
+**Architecture:** One new service file (`consolidation.ts`) with three functions
+— a raw-SQL pgvector self-join that finds duplicate pairs, a
+survivor-picking/transaction-writing merge action, and a batch orchestrator —
+wired into the existing `runCronSweeps()` alongside the other five sweeps.
 
-**Tech Stack:** Bun, Drizzle ORM (raw `sql` template for the pgvector join, query builder for the merge transaction), Postgres/pgvector, `bun:test` with `mock.module`.
+**Tech Stack:** Bun, Drizzle ORM (raw `sql` template for the pgvector join,
+query builder for the merge transaction), Postgres/pgvector, `bun:test` with
+`mock.module`.
 
 ## Global Constraints
 
-- Spec: `docs/superpowers/specs/2026-08-02-memory-consolidation-sweep-design.md` — this plan implements it exactly; do not deviate without re-checking that file.
+- Spec: `docs/superpowers/specs/2026-08-02-memory-consolidation-sweep-design.md`
+  — this plan implements it exactly; do not deviate without re-checking that
+  file.
 - No LLM calls anywhere in this feature (design's core cost decision).
 - `MEMORY_CONSOLIDATION_MAX_DISTANCE` env var, default `0.03`.
-- Retired row: `status = 'merged'` (never `'superseded'`), `isLatest = false`. No `version`/`parentMemoryId`/`rootMemoryId` change on either row.
-- Relation edge: `{ fromMemoryId: survivorId, toMemoryId: retiredId, relationType: "merges" }`.
-- Survivor = later `createdAt`; tie breaks on `id` (string comparison, higher wins).
-- Every DB-touching function must degrade to a safe empty/zero result on failure rather than throw — matches `fetchTurnCandidates` and every existing cron sweep's `.catch()` pattern.
-- Conventional commit messages (`feat:`, `test:`), lowercase, no full stop, max 72 chars, per `AGENTS.md`.
-- Test command for a single file, run from repo root: `bun test --isolate apps/backend/src/services/memory/consolidation.test.ts`.
+- Retired row: `status = 'merged'` (never `'superseded'`), `isLatest = false`.
+  No `version`/`parentMemoryId`/`rootMemoryId` change on either row.
+- Relation edge:
+  `{ fromMemoryId: survivorId, toMemoryId: retiredId, relationType: "merges" }`.
+- Survivor = later `createdAt`; tie breaks on `id` (string comparison, higher
+  wins).
+- Every DB-touching function must degrade to a safe empty/zero result on failure
+  rather than throw — matches `fetchTurnCandidates` and every existing cron
+  sweep's `.catch()` pattern.
+- Conventional commit messages (`feat:`, `test:`), lowercase, no full stop, max
+  72 chars, per `AGENTS.md`.
+- Test command for a single file, run from repo root:
+  `bun test --isolate apps/backend/src/services/memory/consolidation.test.ts`.
 
 ---
 
 ## File Structure
 
-- Create: `apps/backend/src/services/memory/consolidation.ts` — all three functions (`findDuplicatePairs`, `pickSurvivor` + `mergePair`, `sweepMemoryConsolidation`), built up across Tasks 1–3.
-- Create: `apps/backend/src/services/memory/consolidation.test.ts` — tests for all three, built up across Tasks 1–3.
-- Modify: `apps/backend/src/index.ts` (`runCronSweeps()`, currently lines 152–188) — add the sixth sweep, Task 4.
+- Create: `apps/backend/src/services/memory/consolidation.ts` — all three
+  functions (`findDuplicatePairs`, `pickSurvivor` + `mergePair`,
+  `sweepMemoryConsolidation`), built up across Tasks 1–3.
+- Create: `apps/backend/src/services/memory/consolidation.test.ts` — tests for
+  all three, built up across Tasks 1–3.
+- Modify: `apps/backend/src/index.ts` (`runCronSweeps()`, currently lines
+  152–188) — add the sixth sweep, Task 4.
 
 ---
 
 ### Task 1: Detection — `findDuplicatePairs`
 
 **Files:**
+
 - Create: `apps/backend/src/services/memory/consolidation.ts`
 - Create: `apps/backend/src/services/memory/consolidation.test.ts`
 
 **Interfaces:**
-- Consumes: `db` and `sql` from `@yomi/db` / `drizzle-orm`, same shape as `apps/backend/src/services/memory/contradiction.ts`'s `fetchTurnCandidates`.
+
+- Consumes: `db` and `sql` from `@yomi/db` / `drizzle-orm`, same shape as
+  `apps/backend/src/services/memory/contradiction.ts`'s `fetchTurnCandidates`.
 - Produces:
+
   ```ts
   export type DuplicatePair = {
     userId: string
@@ -47,13 +73,17 @@
     bId: string
     bCreatedAt: Date
   }
-  export async function findDuplicatePairs(batchSize: number): Promise<DuplicatePair[]>
+  export async function findDuplicatePairs(
+    batchSize: number,
+  ): Promise<DuplicatePair[]>
   ```
+
   Task 2 and Task 3 consume this type and function by these exact names.
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `apps/backend/src/services/memory/consolidation.test.ts` with this content:
+Create `apps/backend/src/services/memory/consolidation.test.ts` with this
+content:
 
 ```ts
 import { beforeEach, describe, expect, it, mock } from "bun:test"
@@ -86,7 +116,9 @@ mock.module("@yomi/db", () => ({
 
 const { findDuplicatePairs } = await import("./consolidation.js")
 
-function pairRow(over: Partial<Record<string, unknown>> = {}): Record<string, unknown> {
+function pairRow(
+  over: Partial<Record<string, unknown>> = {},
+): Record<string, unknown> {
   return {
     userId: "u1",
     aId: "m1",
@@ -163,7 +195,16 @@ describe("findDuplicatePairs", () => {
   })
 
   it("drops a row missing an expected id field instead of throwing", async () => {
-    executeRows = [pairRow(), { userId: "u1", aId: null, aCreatedAt: new Date(), bId: "m4", bCreatedAt: new Date() }]
+    executeRows = [
+      pairRow(),
+      {
+        userId: "u1",
+        aId: null,
+        aCreatedAt: new Date(),
+        bId: "m4",
+        bCreatedAt: new Date(),
+      },
+    ]
 
     const pairs = await findDuplicatePairs(25)
 
@@ -209,7 +250,9 @@ export type DuplicatePair = {
 // twice), requiring both sides active/latest and sharing a kind. Once a row's status flips to
 // 'merged' it fails this join, so a merged pair can never be rematched — no tracking column
 // needed (design doc, "Self-limiting, no new column").
-export async function findDuplicatePairs(batchSize: number): Promise<DuplicatePair[]> {
+export async function findDuplicatePairs(
+  batchSize: number,
+): Promise<DuplicatePair[]> {
   const distance = maxDistance()
   try {
     const result = await db.execute(sql`
@@ -229,7 +272,9 @@ export async function findDuplicatePairs(batchSize: number): Promise<DuplicatePa
       limit ${batchSize}
     `)
     const rows = (
-      Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? [])
+      Array.isArray(result)
+        ? result
+        : ((result as { rows?: unknown[] }).rows ?? [])
     ) as Record<string, unknown>[]
     return rows
       .filter(
@@ -268,21 +313,31 @@ git commit -m "feat(memory): detect near-duplicate memories by embedding distanc
 ### Task 2: Merge action — `pickSurvivor` + `mergePair`
 
 **Files:**
+
 - Modify: `apps/backend/src/services/memory/consolidation.ts` (append)
-- Modify: `apps/backend/src/services/memory/consolidation.test.ts` (append; extend the `@yomi/db` mock)
+- Modify: `apps/backend/src/services/memory/consolidation.test.ts` (append;
+  extend the `@yomi/db` mock)
 
 **Interfaces:**
+
 - Consumes: `DuplicatePair` from Task 1.
 - Produces:
+
   ```ts
-  export function pickSurvivor(pair: DuplicatePair): { survivorId: string; retiredId: string }
+  export function pickSurvivor(pair: DuplicatePair): {
+    survivorId: string
+    retiredId: string
+  }
   export async function mergePair(pair: DuplicatePair): Promise<void>
   ```
+
   Task 3 consumes `mergePair` by this exact name and signature.
 
 - [ ] **Step 1: Write the failing tests**
 
-Add to the top of `consolidation.test.ts`, replacing the existing `@yomi/db` mock (it needs `transaction` now) — replace the whole `mock.module("@yomi/db", ...)` block with:
+Add to the top of `consolidation.test.ts`, replacing the existing `@yomi/db`
+mock (it needs `transaction` now) — replace the whole
+`mock.module("@yomi/db", ...)` block with:
 
 ```ts
 let updates: { set: Record<string, unknown>; where: unknown }[] = []
@@ -313,7 +368,8 @@ mock.module("@yomi/db", () => ({
       if (executeFails) throw new Error("query failed")
       return executeRows
     },
-    transaction: async <T>(fn: (tx: typeof writer) => Promise<T>): Promise<T> => fn(writer),
+    transaction: async <T>(fn: (tx: typeof writer) => Promise<T>): Promise<T> =>
+      fn(writer),
   },
   memoryEntries: { id: { name: "id" } },
   memoryRelations: { __name: "memory_relations" },
@@ -337,7 +393,8 @@ beforeEach(() => {
 Update the import line to also pull in the two new exports:
 
 ```ts
-const { findDuplicatePairs, pickSurvivor, mergePair } = await import("./consolidation.js")
+const { findDuplicatePairs, pickSurvivor, mergePair } =
+  await import("./consolidation.js")
 ```
 
 Then append these new `describe` blocks at the end of the file:
@@ -345,35 +402,58 @@ Then append these new `describe` blocks at the end of the file:
 ```ts
 describe("pickSurvivor", () => {
   it("keeps the row with the later createdAt", () => {
-    expect(pickSurvivor(pairRow() as unknown as import("./consolidation.js").DuplicatePair)).toEqual(
-      { survivorId: "m2", retiredId: "m1" },
-    )
+    expect(
+      pickSurvivor(
+        pairRow() as unknown as import("./consolidation.js").DuplicatePair,
+      ),
+    ).toEqual({ survivorId: "m2", retiredId: "m1" })
   })
 
   it("breaks a tie on id, higher wins", () => {
     const tie = new Date("2026-07-01T00:00:00Z")
     expect(
-      pickSurvivor({ userId: "u1", aId: "m1", aCreatedAt: tie, bId: "m2", bCreatedAt: tie }),
+      pickSurvivor({
+        userId: "u1",
+        aId: "m1",
+        aCreatedAt: tie,
+        bId: "m2",
+        bCreatedAt: tie,
+      }),
     ).toEqual({ survivorId: "m2", retiredId: "m1" })
     expect(
-      pickSurvivor({ userId: "u1", aId: "m9", aCreatedAt: tie, bId: "m2", bCreatedAt: tie }),
+      pickSurvivor({
+        userId: "u1",
+        aId: "m9",
+        aCreatedAt: tie,
+        bId: "m2",
+        bCreatedAt: tie,
+      }),
     ).toEqual({ survivorId: "m9", retiredId: "m2" })
   })
 })
 
 describe("mergePair", () => {
   it("retires the older row as status=merged, isLatest=false", async () => {
-    await mergePair(pairRow() as unknown as import("./consolidation.js").DuplicatePair)
+    await mergePair(
+      pairRow() as unknown as import("./consolidation.js").DuplicatePair,
+    )
 
     expect(updates).toHaveLength(1)
     expect(updates[0]!.set).toMatchObject({ status: "merged", isLatest: false })
   })
 
   it("writes a merges relation edge from the survivor to the retired row", async () => {
-    await mergePair(pairRow() as unknown as import("./consolidation.js").DuplicatePair)
+    await mergePair(
+      pairRow() as unknown as import("./consolidation.js").DuplicatePair,
+    )
 
     expect(relationInserts).toEqual([
-      { userId: "u1", fromMemoryId: "m2", toMemoryId: "m1", relationType: "merges" },
+      {
+        userId: "u1",
+        fromMemoryId: "m2",
+        toMemoryId: "m1",
+        relationType: "merges",
+      },
     ])
   })
 })
@@ -390,10 +470,14 @@ Append to `consolidation.ts`:
 
 ```ts
 // The row with the later createdAt survives; ties break on id for determinism.
-export function pickSurvivor(pair: DuplicatePair): { survivorId: string; retiredId: string } {
+export function pickSurvivor(pair: DuplicatePair): {
+  survivorId: string
+  retiredId: string
+} {
   const aWins =
     pair.aCreatedAt.getTime() > pair.bCreatedAt.getTime() ||
-    (pair.aCreatedAt.getTime() === pair.bCreatedAt.getTime() && pair.aId > pair.bId)
+    (pair.aCreatedAt.getTime() === pair.bCreatedAt.getTime() &&
+      pair.aId > pair.bId)
   return aWins
     ? { survivorId: pair.aId, retiredId: pair.bId }
     : { survivorId: pair.bId, retiredId: pair.aId }
@@ -437,24 +521,35 @@ git commit -m "feat(memory): merge a duplicate pair via a merges relation edge"
 ### Task 3: Orchestration — `sweepMemoryConsolidation`
 
 **Files:**
+
 - Modify: `apps/backend/src/services/memory/consolidation.ts` (append)
 - Modify: `apps/backend/src/services/memory/consolidation.test.ts` (append)
 
 **Interfaces:**
+
 - Consumes: `findDuplicatePairs`, `mergePair` from this file (Tasks 1–2).
 - Produces:
+
   ```ts
-  export async function sweepMemoryConsolidation(batchSize?: number): Promise<number>
+  export async function sweepMemoryConsolidation(
+    batchSize?: number,
+  ): Promise<number>
   ```
-  Task 4 consumes this by this exact name, called with no arguments (default `batchSize = 25`).
+
+  Task 4 consumes this by this exact name, called with no arguments (default
+  `batchSize = 25`).
 
 - [ ] **Step 1: Write the failing tests**
 
 Update the import line in `consolidation.test.ts` once more:
 
 ```ts
-const { findDuplicatePairs, pickSurvivor, mergePair, sweepMemoryConsolidation } =
-  await import("./consolidation.js")
+const {
+  findDuplicatePairs,
+  pickSurvivor,
+  mergePair,
+  sweepMemoryConsolidation,
+} = await import("./consolidation.js")
 ```
 
 Append at the end of the file:
@@ -510,7 +605,9 @@ Append to `consolidation.ts`:
 ```ts
 // Best-effort per pair: one failure (e.g. a row deleted concurrently) doesn't abort the batch —
 // matches every other sweep in runCronSweeps (index.ts).
-export async function sweepMemoryConsolidation(batchSize = 25): Promise<number> {
+export async function sweepMemoryConsolidation(
+  batchSize = 25,
+): Promise<number> {
   const pairs = await findDuplicatePairs(batchSize)
   let merged = 0
   for (const pair of pairs) {
@@ -542,24 +639,32 @@ git commit -m "feat(memory): orchestrate the consolidation sweep batch"
 ### Task 4: Wire into the cron sweep
 
 **Files:**
+
 - Modify: `apps/backend/src/index.ts:152-188` (`runCronSweeps`)
 
 **Interfaces:**
-- Consumes: `sweepMemoryConsolidation` from `./services/memory/consolidation.js` (Task 3), called with no arguments.
+
+- Consumes: `sweepMemoryConsolidation` from `./services/memory/consolidation.js`
+  (Task 3), called with no arguments.
 - Produces: nothing new — this is the final integration point.
 
 - [ ] **Step 1: Modify `runCronSweeps`**
 
-In `apps/backend/src/index.ts`, inside `runCronSweeps()`, add the import alongside the other five lazy imports (after the `renewExploreCredits` import line):
+In `apps/backend/src/index.ts`, inside `runCronSweeps()`, add the import
+alongside the other five lazy imports (after the `renewExploreCredits` import
+line):
 
 ```ts
 async function runCronSweeps(): Promise<void> {
   const { runDueSchedules } = await import("./services/schedule-runner.js")
-  const { runPrivacyRetention } = await import("./services/privacy/retention.js")
+  const { runPrivacyRetention } =
+    await import("./services/privacy/retention.js")
   const { runDriveSyncSweep } = await import("./services/rag/drive-sync.js")
-  const { summarizeUnsummarizedSessions } = await import("./services/agent-sessions.js")
+  const { summarizeUnsummarizedSessions } =
+    await import("./services/agent-sessions.js")
   const { renewExploreCredits } = await import("./services/explore-renewal.js")
-  const { sweepMemoryConsolidation } = await import("./services/memory/consolidation.js")
+  const { sweepMemoryConsolidation } =
+    await import("./services/memory/consolidation.js")
   await Promise.all([
     runDueSchedules()
       .then(({ ran }) => {
@@ -568,9 +673,16 @@ async function runCronSweeps(): Promise<void> {
       .catch((err) => console.error("[schedules] sweep error:", err)),
     runPrivacyRetention()
       .then((r) => {
-        const domainTotal = Object.values(r.domains).reduce((sum, n) => sum + n, 0)
+        const domainTotal = Object.values(r.domains).reduce(
+          (sum, n) => sum + n,
+          0,
+        )
         const total =
-          r.expiredExports + r.oldDeletionJobs + r.hardDeletedUsers + r.oldAuditEvents + domainTotal
+          r.expiredExports +
+          r.oldDeletionJobs +
+          r.hardDeletedUsers +
+          r.oldAuditEvents +
+          domainTotal
         if (total > 0) console.warn(`[retention] cleaned ${total} items`)
       })
       .catch((err) => console.error("[retention] sweep error:", err)),
@@ -581,32 +693,36 @@ async function runCronSweeps(): Promise<void> {
       .catch((err) => console.error("[drive-sync] sweep error:", err)),
     summarizeUnsummarizedSessions()
       .then((count) => {
-        if (count > 0) console.warn(`[session-summary] summarized ${count} session(s)`)
+        if (count > 0)
+          console.warn(`[session-summary] summarized ${count} session(s)`)
       })
       .catch((err) => console.error("[session-summary] sweep error:", err)),
     renewExploreCredits()
       .then(({ renewed }) => {
-        if (renewed > 0) console.warn(`[explore-renewal] renewed ${renewed} account(s)`)
+        if (renewed > 0)
+          console.warn(`[explore-renewal] renewed ${renewed} account(s)`)
       })
       .catch((err) => console.error("[explore-renewal] sweep error:", err)),
     sweepMemoryConsolidation()
       .then((count) => {
-        if (count > 0) console.warn(`[memory-consolidation] merged ${count} pair(s)`)
+        if (count > 0)
+          console.warn(`[memory-consolidation] merged ${count} pair(s)`)
       })
-      .catch((err) => console.error("[memory-consolidation] sweep error:", err)),
+      .catch((err) =>
+        console.error("[memory-consolidation] sweep error:", err),
+      ),
   ])
 }
 ```
 
 - [ ] **Step 2: Typecheck**
 
-Run: `bun run typecheck`
-Expected: no errors.
+Run: `bun run typecheck` Expected: no errors.
 
 - [ ] **Step 3: Run the full backend test suite**
 
-Run: `bun test --isolate apps/backend/src`
-Expected: all pass, including the 15 new consolidation tests — confirms the wiring didn't break an existing sweep.
+Run: `bun test --isolate apps/backend/src` Expected: all pass, including the 15
+new consolidation tests — confirms the wiring didn't break an existing sweep.
 
 - [ ] **Step 4: Commit**
 
@@ -619,7 +735,11 @@ git commit -m "feat(memory): run the consolidation sweep every cron tick"
 
 ## Final Verification
 
-- [ ] Run `bun run lint` (AGENTS.md: CI runs lint; it's part of the pre-push checklist).
+- [ ] Run `bun run lint` (AGENTS.md: CI runs lint; it's part of the pre-push
+      checklist).
 - [ ] Run `bun run typecheck` from repo root — 0 errors.
 - [ ] Run `bun test --isolate apps/backend/src` from repo root — all pass.
-- [ ] Re-read `docs/superpowers/specs/2026-08-02-memory-consolidation-sweep-design.md` and confirm every section (Detection, Merge action, Self-limiting, Wiring, Error handling, Testing) has a corresponding implemented piece.
+- [ ] Re-read
+      `docs/superpowers/specs/2026-08-02-memory-consolidation-sweep-design.md`
+      and confirm every section (Detection, Merge action, Self-limiting, Wiring,
+      Error handling, Testing) has a corresponding implemented piece.

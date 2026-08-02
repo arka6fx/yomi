@@ -1,37 +1,35 @@
 # Memory consolidation sweep — design
 
-Status: approved
-Date: 2026-08-02
-Backlog ref: `docs/agentic-backlog.md` item 4b
+Status: approved Date: 2026-08-02 Backlog ref: `docs/agentic-backlog.md` item 4b
 
 ## Problem
 
 `memory_entries` accumulates near-duplicate active memories — the same claim
 reworded across turns ("uses vim" / "is a vim user"). Per the `Duplicate`
 definition in `CONTEXT.md`, a duplicate must never supersede (that's reserved
-for `Contradiction`), so today duplicates simply pile up, crowding the
-injection budget and the candidate set every future turn embeds against.
+for `Contradiction`), so today duplicates simply pile up, crowding the injection
+budget and the candidate set every future turn embeds against.
 
 Item 4b in the agentic backlog was deliberately deferred because a periodic
-merge sweep implies background LLM judging calls with no established
-per-user cost or fairness story — unmetered spend outside any user-initiated
-action. This design resolves that by not using an LLM at all.
+merge sweep implies background LLM judging calls with no established per-user
+cost or fairness story — unmetered spend outside any user-initiated action. This
+design resolves that by not using an LLM at all.
 
 ## Goal
 
 A periodic sweep that merges near-duplicate **active** memories using pure
-embedding similarity — zero background LLM cost, fully deterministic,
-reversible via the same relation-edge pattern the memory engine already uses
-for supersession.
+embedding similarity — zero background LLM cost, fully deterministic, reversible
+via the same relation-edge pattern the memory engine already uses for
+supersession.
 
 ## Non-goals
 
-- Catching paraphrased duplicates that aren't near-identical in embedding
-  space (e.g. "uses vim" / "is a vim user" phrased very differently). That
-  needs a judge call and is out of scope here — tracked as a possible future
-  iteration if the embedding-only approach proves too conservative.
-- Synthesizing a new combined memory from two duplicates. Out of scope;
-  revisit only if plain retire-the-older loses information in practice.
+- Catching paraphrased duplicates that aren't near-identical in embedding space
+  (e.g. "uses vim" / "is a vim user" phrased very differently). That needs a
+  judge call and is out of scope here — tracked as a possible future iteration
+  if the embedding-only approach proves too conservative.
+- Synthesizing a new combined memory from two duplicates. Out of scope; revisit
+  only if plain retire-the-older loses information in practice.
 - Cross-user or cross-kind merging. A pair must share `userId` and `kind`.
 
 ## Detection
@@ -60,12 +58,12 @@ limit :batchSize
 ```
 
 - `memory_id > memory_id` join guard avoids matching a pair twice.
-- `maxDistance` is `MEMORY_CONSOLIDATION_MAX_DISTANCE`, default **0.03**
-  (~0.97 cosine similarity). Deliberately much stricter than the 20-nearest
-  shortlist used for contradiction detection (`TURN_CANDIDATE_LIMIT`,
-  distance-unbounded) — there is no LLM double-check here to catch an
-  elaboration being wrongly merged, so detection must be conservative by
-  default. Configurable via env for tuning without a code change.
+- `maxDistance` is `MEMORY_CONSOLIDATION_MAX_DISTANCE`, default **0.03** (~0.97
+  cosine similarity). Deliberately much stricter than the 20-nearest shortlist
+  used for contradiction detection (`TURN_CANDIDATE_LIMIT`, distance-unbounded)
+  — there is no LLM double-check here to catch an elaboration being wrongly
+  merged, so detection must be conservative by default. Configurable via env for
+  tuning without a code change.
 - `kind` equality is a cheap additional guard against merging across
   semantically different memory types that happen to embed closely.
 
@@ -76,42 +74,40 @@ For each matched pair, in one `db.transaction`:
 1. Survivor = the row with the later `createdAt` (ties broken by `id` for
    determinism). Retired = the other.
 2. Update retired row: `status = 'merged'`, `isLatest = false`,
-   `updatedAt = now()`. **Not** `'superseded'` — `CONTEXT.md` is explicit
-   that a duplicate must never supersede, and reusing `'superseded'` would
-   make a merged duplicate indistinguishable from a contradiction-replaced
-   memory in every status-based query and UI.
+   `updatedAt = now()`. **Not** `'superseded'` — `CONTEXT.md` is explicit that a
+   duplicate must never supersede, and reusing `'superseded'` would make a
+   merged duplicate indistinguishable from a contradiction-replaced memory in
+   every status-based query and UI.
 3. Insert a `memoryRelations` row:
    `{ userId, fromMemoryId: survivor.id, toMemoryId: retired.id, relationType: "merges" }`.
    Mirrors the existing `updates` edge shape (`fromMemoryId` is the one that
    acted, `toMemoryId` is the one acted upon) so relation-graph consumers
    generalize the same way.
-4. No `version` bump, no `parentMemoryId`/`rootMemoryId` change on either
-   row. A duplicate is not a content evolution of the survivor — the
-   version/parent chain is reserved for supersession (ADR 0006) and stays
-   untouched here.
+4. No `version` bump, no `parentMemoryId`/`rootMemoryId` change on either row. A
+   duplicate is not a content evolution of the survivor — the version/parent
+   chain is reserved for supersession (ADR 0006) and stays untouched here.
 
-`relation_type` is a plain `text` column (no enum, no migration needed to add
-a new value — confirmed by how `"extends"` was previously dropped/could be
+`relation_type` is a plain `text` column (no enum, no migration needed to add a
+new value — confirmed by how `"extends"` was previously dropped/could be
 re-added without a migration, per `d8086b2e`). The `MemoryRelation` TypeScript
-type in `routes/memory.ts` is a separate, narrower type scoped to the
-turn-write path (`upsertMemory`); consolidation writes its relation directly
-via `db.insert(memoryRelations)`, not through that type, so it does not need
+type in `routes/memory.ts` is a separate, narrower type scoped to the turn-write
+path (`upsertMemory`); consolidation writes its relation directly via
+`db.insert(memoryRelations)`, not through that type, so it does not need
 widening.
 
 ## Self-limiting, no new column
 
-Once a row's `status` flips to `'merged'` it fails the
-`status = 'active'` join condition, so a merged pair can never be
-rematched — no "already checked" marker column or migration required.
-`LIMIT batchSize` bounds work per invocation the same way
-`summarizeUnsummarizedSessions(batchSize)` bounds its per-tick work.
+Once a row's `status` flips to `'merged'` it fails the `status = 'active'` join
+condition, so a merged pair can never be rematched — no "already checked" marker
+column or migration required. `LIMIT batchSize` bounds work per invocation the
+same way `summarizeUnsummarizedSessions(batchSize)` bounds its per-tick work.
 
 ## Wiring
 
 Added as a sixth sweep in `runCronSweeps()` (`apps/backend/src/index.ts`),
 alongside `runDueSchedules`, `runPrivacyRetention`, `runDriveSyncSweep`,
-`summarizeUnsummarizedSessions`, `renewExploreCredits` — same
-`.then()/.catch()` result-logging pattern, same lazy `await import(...)`.
+`summarizeUnsummarizedSessions`, `renewExploreCredits` — same `.then()/.catch()`
+result-logging pattern, same lazy `await import(...)`.
 
 ```ts
 const { sweepMemoryConsolidation } = await import("./services/memory/consolidation.js")
@@ -126,20 +122,20 @@ sweepMemoryConsolidation()
 ## Error handling
 
 - Per-pair transaction: one bad pair failing (e.g. a row deleted between the
-  select and the update) does not abort the batch — wrap each pair's
-  transaction in try/catch, log, continue.
+  select and the update) does not abort the batch — wrap each pair's transaction
+  in try/catch, log, continue.
 - Whole-sweep failure (e.g. DB unreachable) is caught by the `runCronSweeps`
-  `.catch()` already, consistent with every other sweep — best-effort by
-  design, never blocks the other five sweeps in the `Promise.all`.
+  `.catch()` already, consistent with every other sweep — best-effort by design,
+  never blocks the other five sweeps in the `Promise.all`.
 
 ## Testing
 
 New `apps/backend/src/services/memory/consolidation.test.ts`, following the
 style of `agent-sessions.test.ts` / `contradiction.test.ts`:
 
-- Two memories with near-identical embeddings (distance below threshold),
-  same `kind` → merged; older gets `status='merged'`, `isLatest=false`;
-  newer untouched; `merges` relation row written with correct direction.
+- Two memories with near-identical embeddings (distance below threshold), same
+  `kind` → merged; older gets `status='merged'`, `isLatest=false`; newer
+  untouched; `merges` relation row written with correct direction.
 - Two memories with distance above threshold → neither touched.
 - Two memories same embedding but different `kind` → neither touched (kind
   guard).
@@ -154,6 +150,6 @@ style of `agent-sessions.test.ts` / `contradiction.test.ts`:
   (rejected for this iteration on cost/fairness grounds — see Goal). Revisit
   with real data after this ships.
 - No admin/user-facing surface to inspect or undo a merge yet (the `merges`
-  relation edge makes it inspectable via the existing relation-graph read
-  path in `routes/memory.ts`, same as `updates` — no new UI work needed for
+  relation edge makes it inspectable via the existing relation-graph read path
+  in `routes/memory.ts`, same as `updates` — no new UI work needed for
   reversibility, just no dedicated view highlighting it).
