@@ -1,7 +1,28 @@
-import { describe, it, expect, afterEach } from "bun:test"
+import { beforeEach, describe, it, expect, afterEach, mock } from "bun:test"
 import type { SQL } from "drizzle-orm"
 
-import { buildRecallCte, memorySearchKnobs } from "./search.js"
+let executeRows: unknown[] = []
+let executedStatements: unknown[] = []
+let executeFails = false
+
+mock.module("@yomi/db", () => ({
+  db: {
+    execute: async (statement: unknown) => {
+      executedStatements.push(statement)
+      if (executeFails) throw new Error("query failed")
+      return { rows: executeRows }
+    },
+  },
+}))
+
+const { buildRecallCte, memorySearchKnobs, searchMemoryEntries } = await import("./search.js")
+
+beforeEach(() => {
+  executeRows = []
+  executedStatements = []
+  executeFails = false
+  delete process.env["OPENAI_API_KEY"]
+})
 
 // The knobs reach Postgres as bare numeric chunks, so the emitted numbers are readable
 // without rendering the statement through a dialect.
@@ -116,5 +137,57 @@ describe("buildRecallCte", () => {
     )
     expect(wide).toContain("e.summary ilike")
     expect(wide).toContain("e.source_path ilike")
+  })
+})
+
+describe("searchMemoryEntries", () => {
+  it("passes the limit through as the fused-CTE candidate count and the final limit", async () => {
+    await searchMemoryEntries("u1", "editor", 12)
+
+    const numbers: number[] = []
+    const walk = (chunks: unknown[]) => {
+      for (const chunk of chunks) {
+        if (typeof chunk === "number") numbers.push(chunk)
+        else if (chunk && typeof chunk === "object" && "queryChunks" in chunk) {
+          walk((chunk as { queryChunks: unknown[] }).queryChunks)
+        }
+      }
+    }
+    for (const statement of executedStatements) {
+      if (statement && typeof statement === "object" && "queryChunks" in statement) {
+        walk((statement as { queryChunks: unknown[] }).queryChunks)
+      }
+    }
+    expect(numbers).toContain(12)
+  })
+
+  it("returns the rows the query produces", async () => {
+    executeRows = [
+      {
+        kind: "preference",
+        topic: "editor",
+        content: "uses vim",
+        sourcePath: null,
+        isStatic: false,
+        updatedAt: "2026-07-01T00:00:00Z",
+        score: 0.9,
+        matchedBy: ["full_text"],
+      },
+    ]
+
+    const rows = await searchMemoryEntries("u1", "editor", 8)
+
+    expect(rows).toEqual(executeRows)
+  })
+
+  it("returns no rows for an empty query", async () => {
+    expect(await searchMemoryEntries("u1", "   ", 8)).toEqual([])
+    expect(executedStatements).toEqual([])
+  })
+
+  it("returns no rows when the query fails, rather than throwing", async () => {
+    executeFails = true
+
+    expect(await searchMemoryEntries("u1", "editor", 8)).toEqual([])
   })
 })
