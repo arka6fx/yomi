@@ -336,6 +336,16 @@ export {
   type DelegateRunLoopFn,
 } from "./delegate.js"
 export {
+  createDeepResearchTool,
+  type CreateDeepResearchToolOptions,
+  type RagSearchResult,
+  type RagSearchFn,
+  type MemorySearchResult,
+  type MemorySearchFn,
+  type WebSearchResultLike,
+  type DeepResearchRunLoopFn,
+} from "./deep-research.js"
+export {
   suggestIntegrationsFor,
   formatIntegrationSuggestions,
   formatConnectorIdCatalog,
