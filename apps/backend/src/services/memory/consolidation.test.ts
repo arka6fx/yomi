@@ -7,10 +7,10 @@ let executeRows: unknown[] = []
 let executeFails = false
 let updates: { set: Record<string, unknown>; where: unknown }[] = []
 let relationInserts: Record<string, unknown>[] = []
-let transactionShouldFail = false
 
 mock.module("drizzle-orm", () => ({
   eq: (col: { name: string }, value: unknown) => ({ op: "eq", col, value }),
+  and: (...conditions: unknown[]) => ({ op: "and", conditions }),
   sql: (strings: TemplateStringsArray, ...values: unknown[]) => {
     const call = { text: strings.join("?"), values }
     sqlCalls.push(call)
@@ -22,7 +22,6 @@ const writer = {
   update: () => ({
     set: (set: Record<string, unknown>) => ({
       where: (where: unknown) => {
-        if (transactionShouldFail) throw new Error("update failed")
         updates.push({ set, where })
         return Promise.resolve([])
       },
@@ -44,7 +43,7 @@ mock.module("@yomi/db", () => ({
     },
     transaction: async <T>(fn: (tx: typeof writer) => Promise<T>): Promise<T> => fn(writer),
   },
-  memoryEntries: { id: { name: "id" } },
+  memoryEntries: { id: { name: "id" }, status: { name: "status" } },
   memoryRelations: { __name: "memory_relations" },
 }))
 
@@ -68,7 +67,6 @@ beforeEach(() => {
   executeFails = false
   updates = []
   relationInserts = []
-  transactionShouldFail = false
   delete process.env["MEMORY_CONSOLIDATION_MAX_DISTANCE"]
 })
 
@@ -164,6 +162,10 @@ describe("mergePair", () => {
 
     expect(updates).toHaveLength(1)
     expect(updates[0]!.set).toMatchObject({ status: "merged", isLatest: false })
+    const where = updates[0]!.where as { op: string; conditions: { op: string; col: { name: string }; value: unknown }[] }
+    expect(where.op).toBe("and")
+    const idCondition = where.conditions.find((c) => c.col?.name === "id")
+    expect(idCondition?.value).toBe("m1")
   })
 
   it("writes a merges relation edge from the survivor to the retired row", async () => {
@@ -186,7 +188,6 @@ describe("sweepMemoryConsolidation", () => {
   it("continues past a pair that fails to merge, rather than aborting the batch", async () => {
     executeRows = [pairRow(), pairRow({ aId: "m3", bId: "m4" })]
     let calls = 0
-    transactionShouldFail = false
     const originalUpdate = writer.update
     writer.update = () => {
       calls++

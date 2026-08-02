@@ -91,8 +91,9 @@ correction (`correction` is a `kind` value, not a relation).
 
 **Duplicate**: A new memory making the **same claim** as an existing one, only
 reworded ("uses vim" → "is a vim user"). Not a contradiction and must never
-supersede. Merging duplicates is _consolidation_ — a separate, unbuilt backlog
-item — so today a duplicate is simply stored alongside.
+supersede. Merging duplicates is _consolidation_ — a periodic sweep that finds
+near-duplicate active memories by embedding similarity alone and merges them
+into the **Merged** end-state below.
 
 **Elaboration**: A new memory **compatible** with an existing one that adds
 detail ("uses vim" → "uses vim with a custom leader key"). Both stay active.
@@ -110,7 +111,7 @@ verdict. _Avoid_: similar, related (too vague to act on).
 **recall ceiling** on the whole mechanism — a memory absent from the candidate
 set can never be found contradicted, and the miss is silent.
 
-Three distinct end-states are easy to confuse; they are not interchangeable:
+Four distinct end-states are easy to confuse; they are not interchangeable:
 
 **Superseded**: Replaced by a newer version. `status = 'superseded'`,
 `isLatest = false`; the row **persists** and is reachable through the
@@ -124,6 +125,13 @@ aged out. _Avoid_: expired, stale.
 
 **Deleted**: Physically removed by the privacy pipeline at the user's request.
 The row is gone; no chain, no recovery. The only irreversible one.
+
+**Merged**: `status = 'merged'`, `isLatest = false`, written by the periodic
+consolidation sweep — not contradiction resolution — when two active memories
+are judged near-duplicates by embedding similarity alone. Distinct from
+Superseded: a merge is not a content evolution, so it leaves both rows'
+`version`/`parentMemoryId`/`rootMemoryId` untouched and links them via a
+`merges` relation edge instead of `updates`.
 
 **Static** (`isStatic`): A durable **identity or standing** fact — name, role,
 timezone, standing instructions — injected into every turn's profile regardless

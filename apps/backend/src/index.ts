@@ -185,11 +185,13 @@ async function runCronSweeps(): Promise<void> {
         if (renewed > 0) console.warn(`[explore-renewal] renewed ${renewed} account(s)`)
       })
       .catch((err) => console.error("[explore-renewal] sweep error:", err)),
-    sweepMemoryConsolidation()
-      .then((count) => {
-        if (count > 0) console.warn(`[memory-consolidation] merged ${count} pair(s)`)
-      })
-      .catch((err) => console.error("[memory-consolidation] sweep error:", err)),
+    new Date().getMinutes() === 0
+      ? sweepMemoryConsolidation()
+          .then((count) => {
+            if (count > 0) console.warn(`[memory-consolidation] merged ${count} pair(s)`)
+          })
+          .catch((err) => console.error("[memory-consolidation] sweep error:", err))
+      : Promise.resolve(),
   ])
 }
 

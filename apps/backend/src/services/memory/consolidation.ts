@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm"
+import { and, eq, sql } from "drizzle-orm"
 import { db, memoryEntries, memoryRelations } from "@yomi/db"
 
 // Deliberately much stricter than TURN_CANDIDATE_LIMIT's unbounded shortlist (contradiction.ts)
@@ -9,7 +9,8 @@ const DEFAULT_MAX_DISTANCE = 0.03
 
 function maxDistance(): number {
   const raw = Number(process.env["MEMORY_CONSOLIDATION_MAX_DISTANCE"])
-  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_MAX_DISTANCE
+  if (!Number.isFinite(raw) || raw <= 0) return DEFAULT_MAX_DISTANCE
+  return Math.min(raw, 0.25)
 }
 
 export type DuplicatePair = {
@@ -84,8 +85,8 @@ export async function mergePair(pair: DuplicatePair): Promise<void> {
   await db.transaction(async (tx) => {
     await tx
       .update(memoryEntries)
-      .set({ status: "merged", isLatest: false, updatedAt: new Date() })
-      .where(eq(memoryEntries.id, retiredId))
+      .set({ status: "merged", isLatest: false, customId: null, updatedAt: new Date() })
+      .where(and(eq(memoryEntries.id, retiredId), eq(memoryEntries.status, "active")))
     await tx.insert(memoryRelations).values({
       userId: pair.userId,
       fromMemoryId: survivorId,
