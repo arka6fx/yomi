@@ -33,6 +33,7 @@ import { hasBillablePlanAccess, effectivePlanForUser } from "../entitlements.js"
 import { chargeUsage, lowCreditWarning } from "../services/metering.js"
 import { recordAiUsage } from "../services/ai-telemetry.js"
 import { checkConsent } from "../services/privacy/checks.js"
+import { embedMemoryText, memoryVectorLiteral } from "../services/memory/embeddings.js"
 import * as authSchema from "../auth-schema.js"
 import { upsertMemory } from "../routes/memory.js"
 
@@ -121,14 +122,14 @@ async function fetchMemoryContext(userId: string, query: string, maxChars = 2000
     const MEMORY_CANDIDATES = 30
     const MEMORY_RRF_K = 60
 
-    const queryEmbedding = await embedTextLocal(safe).catch(() => [])
+    const queryEmbedding = await embedMemoryText(safe).catch(() => [])
     const vecSql = queryEmbedding.length
       ? sql`
         vec as (
-          select me.memory_id, row_number() over (order by me.embedding <=> ${vectorLiteralLocal(queryEmbedding)}::vector) as rnk
+          select me.memory_id, row_number() over (order by me.embedding <=> ${memoryVectorLiteral(queryEmbedding)}::vector) as rnk
           from memory_embeddings me
           where me.user_id = ${userId}
-          order by me.embedding <=> ${vectorLiteralLocal(queryEmbedding)}::vector
+          order by me.embedding <=> ${memoryVectorLiteral(queryEmbedding)}::vector
           limit ${MEMORY_CANDIDATES}
         ),`
       : sql`
@@ -219,30 +220,6 @@ async function fetchMemoryContext(userId: string, query: string, maxChars = 2000
   } catch {
     return ""
   }
-}
-
-function embedTextLocal(input: string): Promise<number[]> {
-  const apiKey = process.env["OPENAI_API_KEY"]
-  if (!apiKey || !input.trim()) return Promise.resolve([])
-  const baseUrl = (process.env["OPENAI_BASE_URL"] ?? "https://api.openai.com/v1").replace(
-    /\/+$/,
-    "",
-  )
-  const model = process.env["OPENAI_EMBEDDING_MODEL"] ?? "text-embedding-3-small"
-  return fetch(`${baseUrl}/embeddings`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model, input: input.trim() }),
-  })
-    .then((r) => r.json() as Promise<{ data?: { embedding?: number[] }[] }>)
-    .then((body) => {
-      const emb = body.data?.[0]?.embedding
-      return Array.isArray(emb) && emb.length === 1536 ? emb : []
-    })
-}
-
-function vectorLiteralLocal(values: number[]): string {
-  return `[${values.map((v) => (Number.isFinite(v) ? v.toFixed(8) : "0")).join(",")}]`
 }
 
 async function fetchMemoryProfile(
