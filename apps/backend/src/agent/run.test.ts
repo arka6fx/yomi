@@ -7,6 +7,7 @@ let lastInsertedKind: string | null = null
 let consumeCreditsCalled = false
 let lastUpdatedCreditsCharged: number | null = null
 let lastAgentSystem: string | undefined
+let lastAgentExtraTools: Record<string, unknown> | undefined
 let mockExecuteRows: unknown[] = []
 let executedStatements: unknown[] = []
 const activeTrialEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
@@ -80,9 +81,11 @@ mock.module("@yomi/agent-core", () => ({
   },
   runAgentLoop: async (opts: {
     system?: string
+    extraTools?: Record<string, unknown>
     onUsage?: (usage: Record<string, unknown>) => void
   }) => {
     lastAgentSystem = opts.system
+    lastAgentExtraTools = opts.extraTools
     opts.onUsage?.({
       model: "gpt-5.5",
       inputTokens: 100,
@@ -154,6 +157,7 @@ describe("runAgent metering", () => {
     consumeCreditsCalled = false
     lastUpdatedCreditsCharged = null
     lastAgentSystem = undefined
+    lastAgentExtraTools = undefined
     mockExecuteRows = []
     executedStatements = []
     recordedTelemetry.length = 0
@@ -251,6 +255,19 @@ describe("runAgent metering", () => {
     await runAgent({ userId: "user_1", text: "hi" })
     expect(lastAgentSystem).toContain("<agent_soul>")
     expect(lastAgentSystem).toContain("You are Yomi: sharp, warm, and practical.")
+  })
+
+  it("wires a delegate tool into extraTools", async () => {
+    mockUser = makeUser()
+    const { runAgent } = await import("./run.js")
+    await runAgent({ userId: "user_1", text: "hi" })
+    expect(lastAgentExtraTools).toBeDefined()
+    const delegateTool = lastAgentExtraTools!["delegate"] as {
+      execute?: unknown
+      description?: string
+    }
+    expect(typeof delegateTool.execute).toBe("function")
+    expect(delegateTool.description).toContain("sub-agent")
   })
 
   it("supports a backend soul override", async () => {
