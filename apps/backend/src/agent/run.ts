@@ -5,6 +5,7 @@ import {
   ConnectorRegistry,
   createDeepResearchTool,
   createDelegateTool,
+  createIndexTextTool,
   createModel,
   createReactionTool,
   createRecallTool,
@@ -31,12 +32,13 @@ import {
   createCountingExecutor,
 } from "../connectors/composio-executor.js"
 import { composioCostMicros } from "@yomi/shared/ai-pricing"
-import { hasBillablePlanAccess, effectivePlanForUser } from "../entitlements.js"
+import { hasBillablePlanAccess, effectivePlanForUser, isOwnerUser } from "../entitlements.js"
 import { chargeUsage, lowCreditWarning } from "../services/metering.js"
 import { recordAiUsage } from "../services/ai-telemetry.js"
 import { checkConsent } from "../services/privacy/checks.js"
 import { searchRagDocuments } from "../services/rag/search.js"
 import { searchMemoryEntries } from "../services/memory/search.js"
+import { indexManualText } from "../services/rag/manual-source.js"
 import {
   buildExtractionPrompt,
   fetchTurnCandidates,
@@ -569,6 +571,16 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       }).catch(() => {})
     },
   })
+  // Cloud RAG is a paid-plan feature at the REST layer (ragAllowed() in routes/rag.ts) —
+  // index_text must not be a side door around that for an Explore user. Rather than add
+  // the tool and have it always error for Explore, it's simply absent from extraTools.
+  const canUseRag =
+    isOwnerUser(user) ||
+    effectivePlanForUser(user) === "pro" ||
+    effectivePlanForUser(user) === "max"
+  const indexTextTool = canUseRag
+    ? createIndexTextTool((title, content) => indexManualText(opts.userId, title, content))
+    : null
   try {
     text = await runAgentLoop({
       registry,
@@ -579,6 +591,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
         web_search: webSearchTool,
         delegate: delegateTool,
         deep_research: deepResearchTool,
+        ...(indexTextTool ? { index_text: indexTextTool } : {}),
         ...(reactionTool ? { react_to_message: reactionTool } : {}),
       },
       system: agentSystem,
