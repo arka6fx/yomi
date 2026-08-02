@@ -540,8 +540,14 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   })
   const deepResearchTool = createDeepResearchTool({
     registry: researchRegistry,
-    ragSearch: (query, limit) => searchRagDocuments(opts.userId, query, limit),
-    memorySearch: (query, limit) => searchMemoryEntries(opts.userId, query, limit),
+    // Gated the same way passive injection is above (memoryConsent/cloudMemoryConsent) —
+    // deep_research must not give the model a side door around a denied consent.
+    ragSearch: (query, limit) =>
+      cloudMemoryConsent.allowed
+        ? searchRagDocuments(opts.userId, query, limit)
+        : Promise.resolve([]),
+    memorySearch: (query, limit) =>
+      memoryConsent.allowed ? searchMemoryEntries(opts.userId, query, limit) : Promise.resolve([]),
     webSearch: (query) => searchWeb(query, opts.signal),
     model: agentModel,
     system: agentSystem,

@@ -124,9 +124,7 @@ alongside `delegate`.
     registry: ConnectorRegistry
     ragSearch: RagSearchFn
     memorySearch: MemorySearchFn
-    webSearch: (
-      query: string,
-    ) => Promise<{
+    webSearch: (query: string) => Promise<{
       answer: string
       citations: { title: string; url: string }[]
     }>
