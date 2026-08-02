@@ -25,8 +25,12 @@ mock.module("@yomi/db", () => ({
 }))
 
 let consentAllowed = true
+let consentShouldThrow = false
 mock.module("../privacy/checks.js", () => ({
-  checkConsent: async () => ({ allowed: consentAllowed, reason: null }),
+  checkConsent: async () => {
+    if (consentShouldThrow) throw new Error("db connection blip")
+    return { allowed: consentAllowed, reason: null }
+  },
 }))
 
 let indexDocumentResult: { status: "indexed" | "unchanged"; documentId: string | null } = {
@@ -52,6 +56,7 @@ beforeEach(() => {
   insertedSources = []
   nextSourceId = 1
   consentAllowed = true
+  consentShouldThrow = false
   indexDocumentResult = { status: "indexed", documentId: "doc-1" }
   indexDocumentShouldThrow = false
   indexDocumentCalls = []
@@ -120,5 +125,14 @@ describe("indexManualText", () => {
     const result = await indexManualText("u1", "Notes", "some content")
 
     expect(result).toEqual({ error: "failed to index" })
+  })
+
+  it("returns an error instead of throwing when checkConsent rejects", async () => {
+    consentShouldThrow = true
+
+    const result = await indexManualText("u1", "Notes", "some content")
+
+    expect(result).toEqual({ error: "failed to index" })
+    expect(indexDocumentCalls).toHaveLength(0)
   })
 })

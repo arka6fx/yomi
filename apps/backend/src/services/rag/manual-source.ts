@@ -37,18 +37,19 @@ export async function ensureManualSource(userId: string): Promise<string> {
 }
 
 // Consent-gated wrapper around indexDocument() for agent-triggered text pastes. Never
-// throws — a thrown error from indexDocument would otherwise propagate out of the
-// index_text tool's execute and kill the whole parent turn (same class of bug fixed
-// for delegate/deep_research after item 6/5's final reviews).
+// throws — a thrown error from checkConsent, ensureManualSource, or indexDocument would
+// otherwise propagate out of the index_text tool's execute and kill the whole parent
+// turn (same class of bug fixed for delegate/deep_research after item 6/5's final
+// reviews), so the whole body — including the consent check — is guarded.
 export async function indexManualText(
   userId: string,
   title: string,
   content: string,
 ): Promise<{ ok: true; documentId: string } | { error: string }> {
-  const consent = await checkConsent(userId, "cloud_memory")
-  if (!consent.allowed) return { error: "cloud memory consent not granted" }
-
   try {
+    const consent = await checkConsent(userId, "cloud_memory")
+    if (!consent.allowed) return { error: "cloud memory consent not granted" }
+
     const sourceId = await ensureManualSource(userId)
     const result = await indexDocument({
       userId,
