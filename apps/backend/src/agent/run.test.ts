@@ -262,7 +262,9 @@ describe("runAgent metering", () => {
     const { runAgent } = await import("./run.js")
     await runAgent({ userId: "user_1", text: "hi" })
     expect(lastAgentExtraTools).toBeDefined()
-    expect(lastAgentExtraTools!["delegate"]).toBeDefined()
+    const delegateTool = lastAgentExtraTools!["delegate"] as { execute?: unknown; description?: string }
+    expect(typeof delegateTool.execute).toBe("function")
+    expect(delegateTool.description).toContain("sub-agent")
   })
 
   it("supports a backend soul override", async () => {

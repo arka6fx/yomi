@@ -1,6 +1,6 @@
 import { tool } from "ai"
 import { z } from "zod"
-import { runAgentLoop, type RunAgentLoopOptions } from "./agent.js"
+import { runAgentLoop, type RunAgentLoopOptions, type UsageInfo } from "./agent.js"
 import type { ConnectorRegistry } from "./connectors/registry.js"
 
 // Fixed, small, and non-configurable — this sub-loop is meant to be cheap and
@@ -15,7 +15,9 @@ export type DelegateRunLoopFn = (opts: RunAgentLoopOptions) => Promise<string>
 export interface CreateDelegateToolOptions {
   registry: ConnectorRegistry
   model?: string
+  system?: string
   signal?: AbortSignal
+  onUsage?: (usage: UsageInfo) => void
   // Test-only override — production callers omit this and get the real
   // runAgentLoop. Keeps this file's tests from needing to mock a sibling
   // module, which packages/agent-core's non-isolated test run can't do
@@ -51,9 +53,11 @@ export function createDelegateTool(opts: CreateDelegateToolOptions) {
         registry: opts.registry,
         text: task,
         model: opts.model,
+        system: opts.system,
         maxSteps: DELEGATE_MAX_STEPS,
         maxOutputTokens: DELEGATE_MAX_OUTPUT_TOKENS,
         signal: opts.signal,
+        onUsage: opts.onUsage,
       })
       return { result }
     },

@@ -554,7 +554,42 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   // margin; Max keeps the flagship model as its differentiator. Reassess if mini's
   // tool-calling reliability doesn't hold up under real traffic.
   const agentModel = getPlan(effectivePlanForUser(user)).model
-  const delegateTool = createDelegateTool({ registry, model: agentModel, signal: opts.signal })
+  const agentSystem = buildSystemWithContext(
+    memoryContext,
+    ragContext,
+    profile,
+    user.agentSoul,
+    recentChat,
+    userTimeZone,
+    integrationSuggestions,
+  )
+  const delegateTool = createDelegateTool({
+    registry,
+    model: agentModel,
+    system: agentSystem,
+    signal: opts.signal,
+    // A separate handler from the parent's onUsage below: the parent's does a
+    // db.update keyed by this turn's single usageEventId row, and a delegated
+    // sub-loop call must never clobber the parent's own totals in that row.
+    // This only records telemetry, tagged with a distinct route, so delegate
+    // usage stays visible in ai_usage_events without last-write-wins damage.
+    onUsage: (usage: UsageInfo) => {
+      recordAiUsage({
+        userId: opts.userId,
+        requestId: crypto.randomUUID(),
+        usageEventId: usageEventId ?? null,
+        endpoint: "backend.agent",
+        surface: "telegram",
+        route: "agent.delegate",
+        model: usage.model,
+        inputTokens: usage.inputTokens,
+        outputTokens: usage.outputTokens,
+        cachedInputTokens: usage.cachedInputTokens,
+        latencyMs: Date.now() - startedAt,
+        status: "done",
+      }).catch(() => {})
+    },
+  })
   try {
     text = await runAgentLoop({
       registry,
@@ -566,15 +601,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
         delegate: delegateTool,
         ...(reactionTool ? { react_to_message: reactionTool } : {}),
       },
-      system: buildSystemWithContext(
-        memoryContext,
-        ragContext,
-        profile,
-        user.agentSoul,
-        recentChat,
-        userTimeZone,
-        integrationSuggestions,
-      ),
+      system: agentSystem,
       model: agentModel,
       maxTokens: maxOutputTokensFor(opts.text),
       signal: opts.signal,

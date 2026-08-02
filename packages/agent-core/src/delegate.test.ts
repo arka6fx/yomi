@@ -32,6 +32,27 @@ describe("createDelegateTool", () => {
     expect(result).toEqual({ result: "sub-agent result" })
   })
 
+  it("passes system and onUsage through to the sub-loop", async () => {
+    let captured: RunAgentLoopOptions | null = null
+    const runLoop = async (opts: RunAgentLoopOptions) => {
+      captured = opts
+      return "ok"
+    }
+    const usageEvents: unknown[] = []
+    const onUsage = (usage: unknown) => usageEvents.push(usage)
+    const t = createDelegateTool({
+      registry: fakeRegistry,
+      system: "You are a helpful sub-agent. Today is Tuesday, in Asia/Kolkata.",
+      onUsage,
+      runLoop,
+    })
+
+    await t.execute!({ task: "x" }, {} as never)
+
+    expect(captured!.system).toBe("You are a helpful sub-agent. Today is Tuesday, in Asia/Kolkata.")
+    expect(captured!.onUsage).toBe(onUsage)
+  })
+
   it("bounds the sub-loop to a fixed small budget regardless of caller intent", async () => {
     let captured: RunAgentLoopOptions | null = null
     const runLoop = async (opts: RunAgentLoopOptions) => {
