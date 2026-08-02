@@ -44,7 +44,8 @@ has.
 | 1   | ✅ **DONE** — Loop guards + iteration budget on the backend agent | S    | Foundation            | sidecar `LoopGuards`/`IterationBudget` | Caps runaway tool loops & cost on the paid Telegram path          |
 | 2   | ✅ **DONE** — Proactive suggestions from telemetry + memory       | M    | Capability            | hermes self-nudge                      | Turns a static 5-item catalog into personalized, earned nudges    |
 | 3   | ✅ **DONE** — Session summarization + cross-session recall tool   | M    | Capability            | hermes FTS5 recall                     | "What did we decide last week?" — memory that spans sessions      |
-| 4   | Sharper memory contradiction + consolidation                      | M    | Capability/Health     | supermemory                            | Stops duplicate/stale memories; correctness of the memory engine  |
+| 4a  | Memory contradiction resolution (designed — ADR 0006)             | M    | Capability/Health     | supermemory                            | Stops Yomi contradicting itself; correctness of the memory engine |
+| 4b  | Memory consolidation sweep (near-duplicate merge)                 | M    | Health                | supermemory                            | Stops duplicate memories crowding the injection budget            |
 | 5   | Deep-research tool (bounded sub-loop over RAG+memory+web)         | M/L  | Capability            | nia Oracle                             | Cited synthesis instead of one-shot retrieval                     |
 | 6   | Subagent delegation on the backend agent                          | M    | Capability/Foundation | hermes / sidecar subagent              | Parallel workstreams; unblocks bigger tasks                       |
 | 7   | Landing: memory viewer + usage/cost insights                      | M    | Capability/Trust      | openclaw / nia dashboards              | User-visible control over memory + spend; privacy story           |
@@ -97,15 +98,39 @@ summaries — hermes's FTS5 + LLM-summary recall. Leverages data you already kee
 **Touches:** `services/agent-sessions.ts`, `agent-core` extraTools, memory
 search.
 
-### 4. Sharper memory contradiction + consolidation — M · Capability/Health
+### 4a. Memory contradiction resolution — M · Capability/Health
 
-`relationForMemory` decides "updates vs extends" by normalized-topic **string**
-matching (`ilike`), which misses paraphrased contradictions ("I use vim" later
-"switched to VS Code"). Move contradiction detection onto embedding similarity
-(the embeddings already exist), and add a periodic **consolidation** job that
-merges near-duplicate active memories. Directly hardens the engine you already
-run. **Touches:** `routes/memory.ts`, a scheduled job via
-`services/schedule-runner.ts`.
+📐 **DESIGNED** — see
+[ADR 0006](adr/0006-contradiction-resolution-at-extraction.md) and the
+`Memory contradiction` section of `CONTEXT.md`. Not yet built.
+
+Two independent causes make Yomi contradict itself. **Detection**:
+`relationForMemory` matches normalized topics by **string** equality, so
+paraphrased corrections ("I use vim" later "switched to VS Code") never fire and
+both rows stay active. **Injection**: the memory snippet renders `kind`,
+`confidence`, `topic`, `content` but silently drops `updatedAt`, so when two
+contradictory memories do both survive the model gets no recency signal — and
+because confidence _is_ shown, it prefers the stale one.
+
+Fix folds contradiction judgment into the per-turn extraction call that already
+runs (candidates retrieved by embedding the full turn, model emits a real
+`replaces_id`), supersedes recoverably, renders memory age in both injection
+paths, and narrows `isStatic` so stale preferences stop being permanently
+resident. **Touches:** `routes/memory.ts`, `agent/run.ts`.
+
+### 4b. Memory consolidation sweep — M · Health
+
+Split out of the original #4 (see 4a). A periodic job that merges near-duplicate
+**active** memories — distinct from contradiction, which supersedes an
+incompatible memory; a duplicate makes the _same_ claim in different words.
+Would be a 6th job in `runCronSweeps` (`index.ts`), following the
+`summarizeUnsummarizedSessions` template.
+
+Deferred deliberately: narrowing `isStatic` in 4a already cuts a large part of
+the prompt bloat this targets, so build it only once there's evidence duplicates
+still hurt. **Unresolved:** merge sweeps need LLM calls as unmetered background
+spend, with no per-user fairness or cost-cap story yet — that design is the real
+work here. **Touches:** `routes/memory.ts`, `index.ts` / `worker.ts` sweeps.
 
 ### 5. Deep-research tool (bounded sub-loop over RAG+memory+web) — M/L · Capability
 
@@ -170,12 +195,13 @@ new extract path.
 
 - **✅ Done:** #1 (loop guards, `e1beb80c`), #2 (proactive suggestions,
   #46–#51), #3 (session summarization + cross-session recall, ADR 0003).
-- **Highest impact-to-effort next:** #4 (memory contradiction/consolidation) —
+- **Highest impact-to-effort next:** #4a (memory contradiction resolution) —
   directly hardens the recall engine #3 just shipped, and the embeddings it
-  needs already exist.
+  needs already exist. Designed in ADR 0006; #4b (consolidation) split out
+  behind it.
 - **Then pick a differentiation bet:** #8 (self-improving skills) if you want
   the learning loop, or #5 → #10 if you want research/knowledge depth. #9 is
   deprioritized (see its entry above) now that there's no sidecar to unify with.
 
-With #1, #2, and #3 shipped, the next item to take into `/grill-with-docs` is
-**#4 (memory contradiction + consolidation)**.
+With #1, #2, and #3 shipped, **#4a** has been through `/grill-with-docs` and is
+recorded in ADR 0006 — it is the next item to build.

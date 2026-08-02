@@ -73,6 +73,61 @@ recall is time-scoped.
 surfacing of relevant curated memory into the system prompt. Recall is pull, on
 demand; injection is push, every turn.
 
+## Memory contradiction
+
+Canonical vocabulary for how a new memory relates to what is already stored.
+Full design in
+[ADR-0006](docs/adr/0006-contradiction-resolution-at-extraction.md). These three
+definitions are the ones the extraction prompt uses — keep them in sync.
+
+**Contradiction**: A new memory asserting something **incompatible** with an
+existing active memory on the same subject ("uses vim" → "switched to VS Code").
+The only relation that supersedes. Judged by the model during extraction, never
+by a similarity threshold — see _Same-subject_ below. _Avoid_: conflict,
+correction (`correction` is a `kind` value, not a relation).
+
+**Duplicate**: A new memory making the **same claim** as an existing one, only
+reworded ("uses vim" → "is a vim user"). Not a contradiction and must never
+supersede. Merging duplicates is _consolidation_ — a separate, unbuilt backlog
+item — so today a duplicate is simply stored alongside.
+
+**Elaboration**: A new memory **compatible** with an existing one that adds
+detail ("uses vim" → "uses vim with a custom leader key"). Both stay active.
+Superseding an elaboration is the primary false-positive risk of sharper
+detection.
+
+**Same-subject**: The property embedding similarity actually measures — that two
+memories are _about the same thing_. It is a **shortlisting** signal only:
+contradictions, duplicates, and elaborations all score alike, and a
+contradicting pair is often the _less_ similar one. No cosine threshold yields a
+verdict. _Avoid_: similar, related (too vague to act on).
+
+**Candidate set**: The ~20 nearest active memories retrieved by embedding the
+**full turn** (user message + assistant reply) before extraction runs. It is the
+**recall ceiling** on the whole mechanism — a memory absent from the candidate
+set can never be found contradicted, and the miss is silent.
+
+Three distinct end-states are easy to confuse; they are not interchangeable:
+
+**Superseded**: Replaced by a newer version. `status = 'superseded'`,
+`isLatest = false`; the row **persists** and is reachable through the
+`parentMemoryId`/`rootMemoryId` chain and its `updates` relation edge, both of
+which are guaranteed on every supersession so the act stays undoable. Written by
+contradiction resolution.
+
+**Forgotten**: Expired by its own TTL. `status = 'forgotten'`, set by
+`pruneExpired` when `forgetAfter` passes. Nothing judged it wrong — it simply
+aged out. _Avoid_: expired, stale.
+
+**Deleted**: Physically removed by the privacy pipeline at the user's request.
+The row is gone; no chain, no recovery. The only irreversible one.
+
+**Static** (`isStatic`): A durable **identity or standing** fact — name, role,
+timezone, standing instructions — injected into every turn's profile regardless
+of the query. Reserved for that: it is deliberately _not_ derived from `kind`,
+because marking every extracted preference and fact static makes a stale memory
+permanently resident in the prompt. _Avoid_: durable, permanent, important.
+
 ## Capability model
 
 Canonical vocabulary for what plugin, MCP, and automation code is allowed to do.
