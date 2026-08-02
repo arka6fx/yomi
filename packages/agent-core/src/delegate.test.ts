@@ -117,4 +117,15 @@ describe("createDelegateTool", () => {
   it("constructing without a runLoop override does not throw (defaults to the real runAgentLoop)", () => {
     expect(() => createDelegateTool({ registry: fakeRegistry })).not.toThrow()
   })
+
+  it("returns an error instead of throwing when the sub-loop rejects", async () => {
+    const runLoop = async () => {
+      throw new Error("model unavailable")
+    }
+    const t = createDelegateTool({ registry: fakeRegistry, runLoop })
+
+    const result = await t.execute!({ task: "x" }, {} as never)
+
+    expect(result).toEqual({ error: "model unavailable" })
+  })
 })

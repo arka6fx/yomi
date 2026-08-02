@@ -49,17 +49,21 @@ export function createDelegateTool(opts: CreateDelegateToolOptions) {
         return { error: `delegation limit (${MAX_DELEGATIONS_PER_TURN} per turn) reached` }
       }
       calls++
-      const result = await runLoop({
-        registry: opts.registry,
-        text: task,
-        model: opts.model,
-        system: opts.system,
-        maxSteps: DELEGATE_MAX_STEPS,
-        maxOutputTokens: DELEGATE_MAX_OUTPUT_TOKENS,
-        signal: opts.signal,
-        onUsage: opts.onUsage,
-      })
-      return { result }
+      try {
+        const result = await runLoop({
+          registry: opts.registry,
+          text: task,
+          model: opts.model,
+          system: opts.system,
+          maxSteps: DELEGATE_MAX_STEPS,
+          maxOutputTokens: DELEGATE_MAX_OUTPUT_TOKENS,
+          signal: opts.signal,
+          onUsage: opts.onUsage,
+        })
+        return { result }
+      } catch (err) {
+        return { error: err instanceof Error ? err.message : String(err) }
+      }
     },
   })
 }
