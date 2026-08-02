@@ -10,7 +10,8 @@ import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
 import { createHash } from "node:crypto"
 import { db, memoryEntries, schedules } from "@yomi/db"
 import { checkConsent } from "./privacy/checks.js"
-import { embedMemoryText, memoryVectorLiteral } from "./memory/embeddings.js"
+import { embedMemoryText } from "./memory/embeddings.js"
+import { buildRecallCte, FULL_META_COLUMNS, memorySearchKnobs } from "./memory/search.js"
 import { createPendingAction, type PendingActionRisk } from "./pending-actions.js"
 import { getAccessToken, listConnectedProviders } from "./integration-tokens.js"
 import { ConnectorRegistry, type AgentMessage } from "@yomi/agent-core"
@@ -60,11 +61,6 @@ interface McpSession {
 const sessions = new Map<string, McpSession>()
 
 const SESSION_TTL_MS = 30 * 60 * 1000
-const MEMORY_CANDIDATES = Math.max(
-  5,
-  Number.parseInt(process.env["MEMORY_CANDIDATES"] ?? "30", 10) || 30,
-)
-const MEMORY_RRF_K = Math.max(1, Number.parseInt(process.env["MEMORY_RRF_K"] ?? "60", 10) || 60)
 
 function reapStaleSessions(): void {
   const now = Date.now()
@@ -134,65 +130,18 @@ async function handleMemorySearch(
       .limit(limit)) as MemorySearchRow[]
   } else {
     const queryEmbedding = await embedMemoryText(query).catch(() => [])
-    const vecSql = queryEmbedding.length
-      ? sql`
-        vec as (
-          select me.memory_id, row_number() over (order by me.embedding <=> ${memoryVectorLiteral(queryEmbedding)}::vector) as rnk
-          from memory_embeddings me
-          where me.user_id = ${userId}
-          order by me.embedding <=> ${memoryVectorLiteral(queryEmbedding)}::vector
-          limit ${MEMORY_CANDIDATES}
-        ),`
-      : sql`
-        vec as (
-          select null::uuid as memory_id, null::bigint as rnk
-          where false
-        ),`
+    const knobs = memorySearchKnobs()
+    const recallCte = buildRecallCte({
+      userId,
+      query,
+      queryEmbedding,
+      knobs,
+      fusedLimit: knobs.candidates,
+      metaColumns: FULL_META_COLUMNS,
+    })
 
     const result = await db.execute(sql`
-      with ${vecSql}
-      fts as (
-        select e.id as memory_id,
-               row_number() over (order by ts_rank_cd(e.content_tsv, websearch_to_tsquery('english', ${query})) desc) as rnk
-        from memory_entries e
-        where e.user_id = ${userId}
-          and e.status = 'active'
-          and e.is_latest = true
-          and e.content_tsv @@ websearch_to_tsquery('english', ${query})
-        limit ${MEMORY_CANDIDATES}
-      ),
-      meta as (
-        select e.id as memory_id,
-               row_number() over (order by e.is_static desc, e.confidence desc, e.updated_at desc) as rnk
-        from memory_entries e
-        where e.user_id = ${userId}
-          and e.status = 'active'
-          and e.is_latest = true
-          and (
-            e.topic ilike ${`%${query}%`} or
-            e.summary ilike ${`%${query}%`} or
-            e.content ilike ${`%${query}%`} or
-            e.kind ilike ${`%${query}%`} or
-            e.scope ilike ${`%${query}%`} or
-            e.source_path ilike ${`%${query}%`}
-          )
-        limit ${MEMORY_CANDIDATES}
-      ),
-      fused as (
-        select memory_id,
-               sum(1.0 / (${MEMORY_RRF_K} + rnk)) as score,
-               array_agg(source) as matched_by
-        from (
-          select memory_id, rnk, 'vector'::text as source from vec where memory_id is not null
-          union all
-          select memory_id, rnk, 'full_text'::text as source from fts
-          union all
-          select memory_id, rnk, 'metadata'::text as source from meta
-        ) u
-        group by memory_id
-        order by score desc
-        limit ${MEMORY_CANDIDATES}
-      )
+      ${recallCte}
       select
         e.id as "id",
         e.user_id as "userId",
