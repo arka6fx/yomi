@@ -47,7 +47,7 @@ has.
 | 4a  | Memory contradiction resolution (designed — ADR 0006)             | M    | Capability/Health     | supermemory                            | Stops Yomi contradicting itself; correctness of the memory engine |
 | 4b  | ✅ **DONE** — Memory consolidation sweep (near-duplicate merge)   | M    | Health                | supermemory                            | Stops duplicate memories crowding the injection budget            |
 | 5   | Deep-research tool (bounded sub-loop over RAG+memory+web)         | M/L  | Capability            | nia Oracle                             | Cited synthesis instead of one-shot retrieval                     |
-| 6   | Subagent delegation on the backend agent                          | M    | Capability/Foundation | hermes / sidecar subagent              | Parallel workstreams; unblocks bigger tasks                       |
+| 6   | ✅ **DONE** — Subagent delegation on the backend agent            | M    | Capability/Foundation | hermes / sidecar subagent              | Parallel workstreams; unblocks bigger tasks                       |
 | 7   | Landing: memory viewer + usage/cost insights                      | M    | Capability/Trust      | openclaw / nia dashboards              | User-visible control over memory + spend; privacy story           |
 | 8   | Self-improving skills / learning loop                             | L    | Capability            | hermes + composio                      | The differentiator nobody else ships — agent gets better with use |
 | 9   | Grow `agent-core` into the shared "brain"                         | L    | Foundation            | pi agent runtime                       | One loop both surfaces share; kills backend/sidecar divergence    |
@@ -148,6 +148,21 @@ purely about adding a bounded multi-step research loop on top of it.
 **Touches:** `agent-core` extraTools, `services/rag/*`.
 
 ### 6. Subagent delegation on the backend agent — M · Capability/Foundation
+
+✅ **DONE.** Shipped as `packages/agent-core/src/delegate.ts`
+(`createDelegateTool`), a `delegate` `extraTool` wired into
+`apps/backend/src/agent/run.ts` that spawns a bounded, isolated `runAgentLoop`
+for a sub-task. Depth is capped at 1 by construction (the sub-loop is never
+given `extraTools`, so a delegated sub-agent can't itself call `delegate`),
+steps/output tokens are fixed and non-configurable, and delegations are capped
+per turn — see
+`docs/superpowers/specs/2026-08-02-subagent-delegation-design.md`. **Scope
+note:** the original framing below ("fan out parallel workstreams") was narrowed
+to sequential-only delegation in the approved design — the agent calls
+`delegate` and awaits each result before continuing, it does not fan out
+concurrent sub-agent calls. That's a deliberate scope cut, not an oversight;
+parallel fan-out remains a possible fast-follow. The description below is the
+original pre-work framing, retained for history.
 
 Add a `delegate` `extraTool` that spawns a bounded, isolated `runAgentLoop` for
 a sub-task, so the main agent can fan out parallel workstreams and collapse

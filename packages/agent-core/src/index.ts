@@ -331,6 +331,11 @@ export {
   type WebSearchCitation,
 } from "./web-search.js"
 export {
+  createDelegateTool,
+  type CreateDelegateToolOptions,
+  type DelegateRunLoopFn,
+} from "./delegate.js"
+export {
   suggestIntegrationsFor,
   formatIntegrationSuggestions,
   formatConnectorIdCatalog,
