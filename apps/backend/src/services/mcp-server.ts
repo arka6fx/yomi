@@ -8,8 +8,9 @@ import {
 } from "@modelcontextprotocol/sdk/types.js"
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
 import { createHash } from "node:crypto"
-import { db, memoryEmbeddings, memoryEntries, schedules } from "@yomi/db"
+import { db, memoryEntries, schedules } from "@yomi/db"
 import { checkConsent } from "./privacy/checks.js"
+import { embedMemoryText, memoryVectorLiteral } from "./memory/embeddings.js"
 import { createPendingAction, type PendingActionRisk } from "./pending-actions.js"
 import { getAccessToken, listConnectedProviders } from "./integration-tokens.js"
 import { ConnectorRegistry, type AgentMessage } from "@yomi/agent-core"
@@ -59,7 +60,6 @@ interface McpSession {
 const sessions = new Map<string, McpSession>()
 
 const SESSION_TTL_MS = 30 * 60 * 1000
-const EMBEDDING_DIMENSIONS = 1536
 const MEMORY_CANDIDATES = Math.max(
   5,
   Number.parseInt(process.env["MEMORY_CANDIDATES"] ?? "30", 10) || 30,
@@ -94,30 +94,6 @@ function clampLimit(value: unknown, fallback: number, max: number): number {
 
 function hash(value: string): string {
   return createHash("sha256").update(value).digest("hex")
-}
-
-function vectorLiteral(values: number[]): string {
-  return `[${values.map((v) => (Number.isFinite(v) ? v.toFixed(8) : "0")).join(",")}]`
-}
-
-async function embedText(input: string): Promise<number[]> {
-  if (!input.trim()) return []
-  const apiKey = process.env["OPENAI_API_KEY"]
-  if (!apiKey) return []
-  const baseUrl = (process.env["OPENAI_BASE_URL"] ?? "https://api.openai.com/v1").replace(
-    /\/+$/,
-    "",
-  )
-  const model = process.env["OPENAI_EMBEDDING_MODEL"] ?? "text-embedding-3-small"
-  const res = await fetch(`${baseUrl}/embeddings`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model, input }),
-  })
-  if (!res.ok) return []
-  const body = (await res.json()) as { data?: { embedding?: number[] }[] }
-  const embedding = body.data?.[0]?.embedding
-  return Array.isArray(embedding) && embedding.length === EMBEDDING_DIMENSIONS ? embedding : []
 }
 
 async function handleMemorySearch(
@@ -157,14 +133,14 @@ async function handleMemorySearch(
       )
       .limit(limit)) as MemorySearchRow[]
   } else {
-    const queryEmbedding = await embedText(query).catch(() => [])
+    const queryEmbedding = await embedMemoryText(query).catch(() => [])
     const vecSql = queryEmbedding.length
       ? sql`
         vec as (
-          select me.memory_id, row_number() over (order by me.embedding <=> ${vectorLiteral(queryEmbedding)}::vector) as rnk
+          select me.memory_id, row_number() over (order by me.embedding <=> ${memoryVectorLiteral(queryEmbedding)}::vector) as rnk
           from memory_embeddings me
           where me.user_id = ${userId}
-          order by me.embedding <=> ${vectorLiteral(queryEmbedding)}::vector
+          order by me.embedding <=> ${memoryVectorLiteral(queryEmbedding)}::vector
           limit ${MEMORY_CANDIDATES}
         ),`
       : sql`
