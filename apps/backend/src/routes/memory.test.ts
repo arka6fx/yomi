@@ -203,14 +203,6 @@ describe("relationForMemory", () => {
     expect(relation).toBe("updates")
   })
 
-  it("supersedes a candidate named by replacesTopic", () => {
-    const relation = relationForMemory(
-      { topic: "commute", replacesTopic: "office commute", content: "works from home" },
-      candidate({ id: "c1", topic: "Office commute route" }),
-    )
-    expect(relation).toBe("updates")
-  })
-
   it("returns no relation for a candidate sharing only kind and scope", () => {
     const relation = relationForMemory(
       { kind: "fact", scope: "global", topic: "coffee order", content: "oat flat white" },
@@ -260,6 +252,118 @@ describe("upsertMemory relation edges", () => {
     await upsertMemory("u1", { kind: "fact", topic: "coffee order", content: "oat flat white" })
     const matched = conditionsMatching(selects[0]?.where, "ilike").map((c) => c.col?.name)
     expect(matched).toEqual(["topic", "summary"])
+  })
+})
+
+// What the extraction model named after being shown candidates (issue #90).
+const NAMED_ID = "11111111-1111-4111-8111-111111111111"
+
+describe("upsertMemory replacesId", () => {
+  it("supersedes the memory the caller named by id", async () => {
+    // Topics differ, so only the named id can produce this supersession.
+    rowQueue = [[candidate({ id: NAMED_ID, topic: "editor", version: 2, rootMemoryId: "m0" })], []]
+    const saved = await upsertMemory("u1", {
+      topic: "tooling",
+      content: "uses vs code",
+      replacesId: NAMED_ID,
+    })
+    expect(relationInserts).toEqual([
+      { userId: "u1", fromMemoryId: saved!.id, toMemoryId: NAMED_ID, relationType: "updates" },
+    ])
+    expect(updates[0]!.set).toMatchObject({ status: "superseded", isLatest: false })
+    expect(entryInserts[0]).toMatchObject({
+      parentMemoryId: NAMED_ID,
+      rootMemoryId: "m0",
+      version: 3,
+    })
+  })
+
+  it("looks the named memory up as the caller's own active memory", async () => {
+    rowQueue = [[], []]
+    await upsertMemory("u1", { topic: "editor", content: "uses vs code", replacesId: NAMED_ID })
+    expect(valuesFor(selects[0]?.where, "id")).toEqual([NAMED_ID])
+    expect(valuesFor(selects[0]?.where, "user_id")).toEqual(["u1"])
+    expect(valuesFor(selects[0]?.where, "status")).toEqual(["active"])
+    expect(valuesFor(selects[0]?.where, "is_latest")).toEqual([true])
+  })
+
+  // Retrieval or extraction going wrong must cost the supersession, never the memory.
+  it("stores the memory anyway when the named id matches nothing", async () => {
+    rowQueue = [[], []]
+    const saved = await upsertMemory("u1", {
+      topic: "tooling",
+      content: "uses vs code",
+      replacesId: NAMED_ID,
+    })
+    expect(saved).not.toBeNull()
+    expect(relationInserts).toEqual([])
+    expect(updates).toEqual([])
+    expect(entryInserts[0]).toMatchObject({ parentMemoryId: null, version: 1 })
+  })
+
+  // memory_entries.id is a uuid column, so querying a non-uuid raises 22P02 — which would take
+  // the whole write down instead of just the supersession.
+  it("never queries for an id that is not a memory id", async () => {
+    rowQueue = [[]]
+    const saved = await upsertMemory("u1", {
+      topic: "tooling",
+      content: "uses vs code",
+      replacesId: "not-a-uuid",
+    })
+    expect(saved).not.toBeNull()
+    expect(selects.flatMap((s) => valuesFor(s.where, "id"))).toEqual([])
+  })
+
+  it("supersedes a named memory once even when it also matches by topic", async () => {
+    rowQueue = [
+      [candidate({ id: NAMED_ID, topic: "editor" })],
+      [candidate({ id: NAMED_ID, topic: "editor" })],
+    ]
+    await upsertMemory("u1", { topic: "editor", content: "uses vs code", replacesId: NAMED_ID })
+    expect(relationInserts.map((r) => r.toMemoryId)).toEqual([NAMED_ID])
+    expect(updates).toHaveLength(1)
+  })
+})
+
+describe("upsertMemory model-judged writes", () => {
+  // The model saw the candidates and named nothing, so this turn is a duplicate or an
+  // elaboration — letting topic equality supersede anyway is the false positive the judgment
+  // exists to prevent (ADR 0006).
+  it("leaves same-topic memories alone when the model judged the turn", async () => {
+    rowQueue = [[candidate({ id: "c1", topic: "editor" })]]
+    const saved = await upsertMemory("u1", {
+      topic: "editor",
+      content: "uses vim with a custom leader key",
+      modelJudged: true,
+    })
+    expect(saved).not.toBeNull()
+    expect(selects).toEqual([])
+    expect(relationInserts).toEqual([])
+    expect(updates).toEqual([])
+  })
+
+  // Retrieval failing leaves the model with nothing to judge, so the conservative topic rule
+  // stays in charge rather than nothing at all.
+  it("still supersedes by topic when the write was not model-judged", async () => {
+    rowQueue = [[candidate({ id: "c1", topic: "editor" })]]
+    await upsertMemory("u1", { topic: "editor", content: "uses vs code" })
+    expect(relationInserts.map((r) => r.toMemoryId)).toEqual(["c1"])
+  })
+})
+
+describe("POST /add", () => {
+  // Supersession by id is a judgment a model makes about candidates it was shown; a request
+  // body carries no such judgment (ADR 0006).
+  it("ignores a replacesId supplied by an API caller", async () => {
+    rowQueue = [[]]
+    const res = await memoryRouter.request("/add", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic: "editor", content: "uses vs code", replacesId: NAMED_ID }),
+    })
+    expect(res.status).toBe(200)
+    expect(selects.flatMap((s) => valuesFor(s.where, "id"))).toEqual([])
+    expect(relationInserts).toEqual([])
   })
 })
 
