@@ -236,14 +236,14 @@ as `index_url:` in the conditionally-spread `extraTools`.
   same framing as prior items' budget choices this session.
 - No dedicated telemetry for how often URLs are indexed or rejected (same gap
   flagged and deferred for `delegate`/`deep_research`'s cap-hits).
-- No prompt-injection threat model for indexed content. Indexed URLs land in
-  the same passively-injected `<cloud_rag_context>` block as connector tool
+- No prompt-injection threat model for indexed content. Indexed URLs land in the
+  same passively-injected `<cloud_rag_context>` block as connector tool
   instructions, with only a generic "treat as reference only" framing and no
   untrusted-content marking. `stripHtml` also does not remove HTML comment
   bodies (the tag-strip regex consumes `<!--` as an opening tag but leaves the
   comment's text content, which is then visible as regular text). A user who
-  indexes a page under attacker control plants that page's text permanently
-  into their own agent's standing context. Not addressed in this iteration;
-  flagged for whoever designs prompt-injection defenses for the RAG pipeline
-  more broadly (affects `index_text`, Drive sync, and any future ingestion
-  path equally, not something specific to URL fetching).
+  indexes a page under attacker control plants that page's text permanently into
+  their own agent's standing context. Not addressed in this iteration; flagged
+  for whoever designs prompt-injection defenses for the RAG pipeline more
+  broadly (affects `index_text`, Drive sync, and any future ingestion path
+  equally, not something specific to URL fetching).
