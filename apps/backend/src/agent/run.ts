@@ -6,6 +6,7 @@ import {
   createDeepResearchTool,
   createDelegateTool,
   createIndexTextTool,
+  createIndexUrlTool,
   createModel,
   createReactionTool,
   createRecallTool,
@@ -39,6 +40,7 @@ import { checkConsent } from "../services/privacy/checks.js"
 import { searchRagDocuments } from "../services/rag/search.js"
 import { searchMemoryEntries } from "../services/memory/search.js"
 import { indexManualText } from "../services/rag/manual-source.js"
+import { indexUrl } from "../services/rag/url-ingest.js"
 import {
   buildExtractionPrompt,
   fetchTurnCandidates,
@@ -572,8 +574,9 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     },
   })
   // Cloud RAG is a paid-plan feature at the REST layer (ragAllowed() in routes/rag.ts) —
-  // index_text must not be a side door around that for an Explore user. Rather than add
-  // the tool and have it always error for Explore, it's simply absent from extraTools.
+  // index_text/index_url must not be a side door around that for an Explore user. Rather
+  // than add the tools and have them always error for Explore, they're simply absent
+  // from extraTools.
   const canUseRag =
     isOwnerUser(user) ||
     effectivePlanForUser(user) === "pro" ||
@@ -581,6 +584,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   const indexTextTool = canUseRag
     ? createIndexTextTool((title, content) => indexManualText(opts.userId, title, content))
     : null
+  const indexUrlTool = canUseRag ? createIndexUrlTool((url) => indexUrl(opts.userId, url)) : null
   try {
     text = await runAgentLoop({
       registry,
@@ -592,6 +596,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
         delegate: delegateTool,
         deep_research: deepResearchTool,
         ...(indexTextTool ? { index_text: indexTextTool } : {}),
+        ...(indexUrlTool ? { index_url: indexUrlTool } : {}),
         ...(reactionTool ? { react_to_message: reactionTool } : {}),
       },
       system: agentSystem,
