@@ -85,6 +85,28 @@ describe("indexUploadedDocument", () => {
     expect((call["externalId"] as string).length).toBeGreaterThan(10)
   })
 
+  it("includes a warning when content is at or above the truncation-risk threshold", async () => {
+    const longContent = "x".repeat(15_000)
+
+    const result = await indexUploadedDocument("u1", "report.pdf", longContent)
+
+    expect(result).toEqual({
+      ok: true,
+      documentId: "doc-1",
+      warning:
+        "This document may have been too large to index in full — the content indexed could be a partial capture of the original.",
+    })
+  })
+
+  it("does not include a warning when content is below the truncation-risk threshold", async () => {
+    const shortContent = "x".repeat(14_999)
+
+    const result = await indexUploadedDocument("u1", "report.pdf", shortContent)
+
+    expect(result).toEqual({ ok: true, documentId: "doc-1" })
+    expect("warning" in result).toBe(false)
+  })
+
   it("uses a distinct externalId on each call, so repeated uploads never overwrite", async () => {
     await indexUploadedDocument("u1", "report.pdf", "first version")
     await indexUploadedDocument("u1", "report.pdf", "second version")
