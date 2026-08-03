@@ -27,6 +27,7 @@ let sourceRows: unknown[] = [{ id: "source_1" }]
 let documentRows: unknown[] = []
 let conflictTargets: unknown[][] = []
 let executedQueries: unknown[] = []
+let deleteCalls: { table: unknown; condition: unknown }[] = []
 
 // Drizzle's sql`` tagged template returns an SQL object whose queryChunks are
 // StringChunk instances (literal text between interpolations) interleaved with
@@ -87,8 +88,11 @@ const fakeDb = {
       }),
     }),
   }),
-  delete: () => ({
-    where: () => Promise.resolve(),
+  delete: (table?: unknown) => ({
+    where: (condition: unknown) => {
+      deleteCalls.push({ table, condition })
+      return Promise.resolve()
+    },
   }),
   execute: (query: unknown) => {
     executedQueries.push(query)
@@ -163,6 +167,7 @@ describe("Cloud RAG routes", () => {
     documentRows = []
     conflictTargets = []
     executedQueries = []
+    deleteCalls = []
   })
 
   afterEach(() => {
@@ -351,6 +356,14 @@ describe("Cloud RAG routes", () => {
     expect(body.ok).toBe(true)
   })
 
+  it("hard-deletes the source's documents (and cascading chunks/embeddings) before marking it deleted", async () => {
+    const res = await app().request("/api/rag/sources/source_1", { method: "DELETE" })
+
+    expect(res.status).toBe(200)
+    expect(deleteCalls).toHaveLength(1)
+    expect(deleteCalls[0]!.table).toBe(mockRagDocuments)
+  })
+
   it("returns not found when deleting an unknown source", async () => {
     updateRows = []
 
@@ -359,5 +372,13 @@ describe("Cloud RAG routes", () => {
 
     expect(res.status).toBe(404)
     expect(body.code).toBe("source_not_found")
+  })
+
+  it("does not delete any documents when the source is not found or not owned", async () => {
+    updateRows = []
+
+    await app().request("/api/rag/sources/missing", { method: "DELETE" })
+
+    expect(deleteCalls).toHaveLength(0)
   })
 })

@@ -418,5 +418,11 @@ ragRouter.delete("/sources/:id", async (c) => {
     .returning({ id: ragSources.id })
 
   if (!source) return c.json({ error: "Source not found", code: "source_not_found" }, 404)
+
+  // Hard-delete the source's documents so a later re-index into the same
+  // (userId, path) slot can't resurrect them into visibility (#100) — rag_chunks
+  // and rag_embeddings cascade-delete automatically via their FK onDelete rules.
+  await db.delete(ragDocuments).where(eq(ragDocuments.sourceId, source.id))
+
   return c.json({ ok: true })
 })
