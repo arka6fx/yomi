@@ -30,7 +30,6 @@ export function MemoryHistoryView({ token }: { token: string }) {
 
   useEffect(() => {
     void load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   if (loading) {
