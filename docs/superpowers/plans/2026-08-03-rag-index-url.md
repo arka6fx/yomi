@@ -13,7 +13,7 @@
 - Spec: `docs/superpowers/specs/2026-08-03-rag-index-url-design.md` — this plan implements it exactly; do not deviate without re-checking that file.
 - **SSRF:** every `http`/`https` URL's hostname is checked via `resolvesToDisallowedAddress` (from `@yomi/agent-core`, already used by `registry.ts` for custom MCP servers) before any fetch. Non-`http`/`https` schemes are rejected before that check even runs. The fetch itself uses `redirect: "manual"`; any 3xx response is a hard failure — no redirect is ever followed.
 - **Fetch bounds:** `AbortSignal.timeout(10_000)`. `Content-Length` header checked before buffering (reject over 2,000,000 bytes without downloading). Actual buffered body length checked as a backstop (reject over 2,000,000 bytes). `Content-Type` must start with `text/html` or `text/plain` — anything else is rejected.
-- **Extraction:** regex-based, same approach as `gateway-runner.ts`'s `parseDocument` — strip `<style>`/`<script>`, strip remaining tags, collapse whitespace. `text/plain` used as-is. Title from `<title>...</title>` (regex `/<title[^>]*>([^<]*)<\/title>/i`), falling back to the URL itself when absent or for plain-text.
+- **Extraction:** regex-based, same approach as `gateway-runner.ts`'s `parseDocument` — strip `<title>`/`<style>`/`<script>` content (title is stripped from the body text because it's extracted separately, below), strip remaining tags, collapse whitespace. `text/plain` used as-is. Title from `<title>...</title>` (regex `/<title[^>]*>([^<]*)<\/title>/i`), falling back to the URL itself when absent or for plain-text.
 - **Document keying — differs from `index_text`:** `externalId` is the normalized URL (fragment stripped), not a random UUID — re-indexing the same URL updates the existing document via `indexDocument()`'s content-hash check, rather than creating a duplicate.
 - **Source keying:** one shared per-user `ragSources` row via `ensureSource(userId, { path: "indexed-urls", name: "Indexed URLs", sourceType: "url" })`.
 - **Gating:** identical to `index_text` — `checkConsent(userId, "cloud_memory")` inside the service function (before any fetch); Pro/Max/owner plan check at tool-construction time in `run.ts` (tool absent from `extraTools`, not present-and-erroring, for Explore).
@@ -1056,6 +1056,7 @@ function extractTitle(html: string, fallback: string): string {
 
 function stripHtml(html: string): string {
   return html
+    .replace(/<title[^>]*>[\s\S]*?<\/title>/gi, "")
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
     .replace(/<[^>]+>/g, " ")
@@ -1172,7 +1173,7 @@ export async function indexUrl(
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `bun test --isolate apps/backend/src/services/rag/url-ingest.test.ts`
-Expected: PASS — 21 tests, 0 fail.
+Expected: PASS — 19 tests, 0 fail.
 
 - [ ] **Step 5: Commit**
 
