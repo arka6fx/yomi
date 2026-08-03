@@ -318,7 +318,7 @@ export const ragSources = pgTable(
     name: text("name").notNull(),
     path: text("path"),
     contentHash: text("content_hash"),
-    sourceType: text("source_type").notNull(), // "upload" | "url" | "folder" | "manual"
+    sourceType: text("source_type").notNull(), // "upload" | "url" | "folder" | "manual" | "document"
     privacyScope: text("privacy_scope").notNull().default("cloud_rag"),
     status: text("status").notNull().default("indexing"),
     syncState: jsonb("sync_state"),
