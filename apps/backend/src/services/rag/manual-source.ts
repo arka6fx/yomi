@@ -1,7 +1,6 @@
-import { and, eq, ne } from "drizzle-orm"
-import { db, ragSources } from "@yomi/db"
 import { indexDocument } from "./index-document.js"
 import { checkConsent } from "../privacy/checks.js"
+import { ensureSource } from "./source-lookup.js"
 
 export const MANUAL_SOURCE_TYPE = "manual"
 const MANUAL_SOURCE_NAME = "Chat notes"
@@ -18,50 +17,11 @@ function cleanTitle(value: string, max: number): string {
 // Idempotent get-or-create: every index_text call for a user reuses the same
 // "Chat notes" source rather than creating a new one each time.
 export async function ensureManualSource(userId: string): Promise<string> {
-  const existing = await db
-    .select({ id: ragSources.id })
-    .from(ragSources)
-    .where(
-      and(
-        eq(ragSources.userId, userId),
-        eq(ragSources.path, MANUAL_SOURCE_PATH),
-        ne(ragSources.status, "deleted"),
-      ),
-    )
-    .limit(1)
-  if (existing[0]) return existing[0].id
-
-  const [created] = await db
-    .insert(ragSources)
-    .values({
-      userId,
-      name: MANUAL_SOURCE_NAME,
-      path: MANUAL_SOURCE_PATH,
-      sourceType: MANUAL_SOURCE_TYPE,
-      status: "ready",
-    })
-    .onConflictDoNothing({ target: [ragSources.userId, ragSources.path] })
-    .returning()
-  if (created) return created.id
-
-  // Lost the insert race, or the (userId, path) slot is occupied by a row this
-  // user soft-deleted earlier (DELETE /rag/sources/:id doesn't free the path).
-  // Re-select without the status filter to find whichever row holds the slot,
-  // then resurrect it if it's the deleted one — the alternative (leaving it dead
-  // and permanently failing to create a fresh "Chat notes" source) is worse.
-  const [row] = await db
-    .select({ id: ragSources.id, status: ragSources.status })
-    .from(ragSources)
-    .where(and(eq(ragSources.userId, userId), eq(ragSources.path, MANUAL_SOURCE_PATH)))
-    .limit(1)
-  if (!row) throw new Error("failed to create or find manual source")
-  if (row.status === "deleted") {
-    await db
-      .update(ragSources)
-      .set({ status: "ready", updatedAt: new Date() })
-      .where(eq(ragSources.id, row.id))
-  }
-  return row.id
+  return ensureSource(userId, {
+    path: MANUAL_SOURCE_PATH,
+    name: MANUAL_SOURCE_NAME,
+    sourceType: MANUAL_SOURCE_TYPE,
+  })
 }
 
 // Consent-gated wrapper around indexDocument() for agent-triggered text pastes. Never
@@ -91,9 +51,6 @@ export async function indexManualText(
       mimeType: "text/plain",
       text: content,
     })
-    // Only errors on a missing documentId — with a fresh externalId per call, indexDocument's
-    // "unchanged" status is unreachable here, so checking for it (as an earlier draft of the
-    // design spec suggested) would be dead code.
     if (!result.documentId) return { error: "failed to index" }
     return { ok: true, documentId: result.documentId }
   } catch (err) {
