@@ -51,7 +51,7 @@ has.
 | 7   | Landing: memory viewer + usage/cost insights                      | M    | Capability/Trust      | openclaw / nia dashboards              | User-visible control over memory + spend; privacy story           |
 | 8   | Self-improving skills / learning loop                             | L    | Capability            | hermes + composio                      | The differentiator nobody else ships — agent gets better with use |
 | 9   | Grow `agent-core` into the shared "brain"                         | L    | Foundation            | pi agent runtime                       | One loop both surfaces share; kills backend/sidecar divergence    |
-| 10  | RAG "index anything" beyond Drive                                 | M/L  | Capability            | nia universal indexing                 | Ingest URLs/PDFs/pasted text, not only Drive sync                 |
+| 10  | ✅ **DONE** — RAG "index anything" beyond Drive                   | M/L  | Capability            | nia universal indexing                 | Ingest URLs/PDFs/pasted text, not only Drive sync                 |
 
 ---
 

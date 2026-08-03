@@ -94,11 +94,7 @@ describe("indexUploadedDocument", () => {
   })
 
   it("sanitizes the title before indexing", async () => {
-    const result = await indexUploadedDocument(
-      "u1",
-      "weird\r\n\n\n\ntitle.pdf",
-      "extracted text",
-    )
+    const result = await indexUploadedDocument("u1", "weird\r\n\n\n\ntitle.pdf", "extracted text")
 
     expect(result).toEqual({ ok: true, documentId: "doc-1" })
     expect(indexDocumentCalls[0]!["title"]).toBe("weird\n\ntitle.pdf")
