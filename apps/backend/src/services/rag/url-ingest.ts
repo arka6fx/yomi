@@ -20,6 +20,17 @@ function extractTitle(html: string, fallback: string): string {
   return title || fallback
 }
 
+// Mirrors manual-source.ts's cleanTitle — third-party page titles are attacker-
+// controlled, so bound length and collapse newlines before they reach the
+// single-line RAG context header format.
+function cleanTitle(value: string, max: number): string {
+  return value
+    .replace(/\r/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .slice(0, max)
+    .trim()
+}
+
 function stripHtml(html: string): string {
   return html
     .replace(/<title[^>]*>[\s\S]*?<\/title>/gi, "")
@@ -79,14 +90,37 @@ export async function fetchAndExtractUrl(rawUrl: string): Promise<UrlExtractResu
     return { error: "only HTML and plain-text pages can be indexed" }
   }
 
+  if (!response.body) {
+    return { error: "that page is too large to index" }
+  }
+
   let buffer: ArrayBuffer
   try {
-    buffer = await response.arrayBuffer()
+    const reader = response.body.getReader()
+    const chunks: Uint8Array[] = []
+    let total = 0
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      if (!value) continue
+      total += value.byteLength
+      if (total > MAX_BODY_BYTES) {
+        reader.cancel().catch(() => {
+          // ignore — we're already bailing out on the size cap
+        })
+        return { error: "that page is too large to index" }
+      }
+      chunks.push(value)
+    }
+    const combined = new Uint8Array(total)
+    let offset = 0
+    for (const chunk of chunks) {
+      combined.set(chunk, offset)
+      offset += chunk.byteLength
+    }
+    buffer = combined.buffer
   } catch {
     return { error: "failed to fetch that URL" }
-  }
-  if (buffer.byteLength > MAX_BODY_BYTES) {
-    return { error: "that page is too large to index" }
   }
 
   const raw = new TextDecoder().decode(buffer)
@@ -119,16 +153,17 @@ export async function indexUrl(
       name: URL_SOURCE_NAME,
       sourceType: URL_SOURCE_TYPE,
     })
+    const title = cleanTitle(extracted.title, 200)
     const result = await indexDocument({
       userId,
       sourceId,
       externalId: extracted.normalizedUrl,
-      title: extracted.title,
+      title,
       mimeType: "text/html",
       text: extracted.text,
     })
     if (!result.documentId) return { error: "failed to index" }
-    return { ok: true, documentId: result.documentId, title: extracted.title }
+    return { ok: true, documentId: result.documentId, title }
   } catch (err) {
     console.error("[indexUrl] failed:", err instanceof Error ? (err.stack ?? err.message) : err)
     return { error: "failed to index" }

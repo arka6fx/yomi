@@ -15,18 +15,24 @@ mock.module("./source-lookup.js", () => ({
 
 let consentAllowed = true
 let consentReason: string | null = "not granted"
+let consentShouldThrow = false
 mock.module("../privacy/checks.js", () => ({
-  checkConsent: async () => ({ allowed: consentAllowed, reason: consentReason }),
+  checkConsent: async () => {
+    if (consentShouldThrow) throw new Error("db connection blip")
+    return { allowed: consentAllowed, reason: consentReason }
+  },
 }))
 
 let indexDocumentResult: { status: "indexed" | "unchanged"; documentId: string | null } = {
   status: "indexed",
   documentId: "doc-1",
 }
+let indexDocumentShouldThrow = false
 let indexDocumentCalls: Record<string, unknown>[] = []
 mock.module("./index-document.js", () => ({
   indexDocument: async (input: Record<string, unknown>) => {
     indexDocumentCalls.push(input)
+    if (indexDocumentShouldThrow) throw new Error("db write failed")
     return indexDocumentResult
   },
 }))
@@ -45,12 +51,40 @@ function htmlResponse(
   return new Response(body, { status: init.status ?? 200, headers })
 }
 
+// Produces a Response backed by a real streamed ReadableStream that hands out one
+// chunk per pull, so tests can assert the reader stops being pulled once the running
+// total crosses the size cap (rather than only checking the final byte count).
+function streamedResponse(
+  chunks: Uint8Array[],
+  init: { status?: number; contentType?: string } = {},
+): { response: Response; pullCount: () => number } {
+  const queue = [...chunks]
+  let pulls = 0
+  const stream = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      pulls++
+      const chunk = queue.shift()
+      if (chunk) {
+        controller.enqueue(chunk)
+      } else {
+        controller.close()
+      }
+    },
+  })
+  const headers = new Headers()
+  headers.set("content-type", init.contentType ?? "text/html")
+  const response = new Response(stream, { status: init.status ?? 200, headers })
+  return { response, pullCount: () => pulls }
+}
+
 beforeEach(() => {
   disallowedAddress = false
   ensureSourceCalls = []
   consentAllowed = true
   consentReason = "not granted"
+  consentShouldThrow = false
   indexDocumentResult = { status: "indexed", documentId: "doc-1" }
+  indexDocumentShouldThrow = false
   indexDocumentCalls = []
   globalThis.fetch = realFetch
 })
@@ -134,6 +168,25 @@ describe("fetchAndExtractUrl", () => {
     const result = await fetchAndExtractUrl("https://example.com")
 
     expect(result).toEqual({ error: "that page is too large to index" })
+  })
+
+  it("stops reading the stream once the running total crosses the size cap", async () => {
+    // 10 chunks of 500,000 bytes = 5,000,000 total, well over the 2,000,000 cap.
+    // The cap is crossed partway through the 5th chunk (2,500,000 > 2,000,000), so
+    // an unbounded reader would need to pull all 10; a bounded one should stop early.
+    const chunk = new Uint8Array(500_000).fill(120) // 'x'
+    const chunks = Array.from({ length: 10 }, () => chunk)
+    const { response, pullCount } = streamedResponse(chunks)
+    globalThis.fetch = mock(async () => response) as unknown as typeof fetch
+
+    const result = await fetchAndExtractUrl("https://example.com")
+
+    expect(result).toEqual({ error: "that page is too large to index" })
+    const pullsAtReturn = pullCount()
+    expect(pullsAtReturn).toBeLessThan(chunks.length)
+    // Let any stray microtasks/pulls settle, then confirm reading truly stopped.
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    expect(pullCount()).toBe(pullsAtReturn)
   })
 
   it("extracts title and strips HTML tags/scripts/styles", async () => {
@@ -266,5 +319,27 @@ describe("indexUrl", () => {
     const result = await indexUrl("u1", "https://example.com")
 
     expect(result).toEqual({ error: "failed to fetch that URL" })
+  })
+
+  it("returns an error instead of throwing when checkConsent rejects", async () => {
+    consentShouldThrow = true
+    globalThis.fetch = mock(async () => htmlResponse("<html></html>")) as unknown as typeof fetch
+
+    const result = await indexUrl("u1", "https://example.com")
+
+    expect(result).toEqual({ error: "failed to index" })
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+    expect(indexDocumentCalls).toHaveLength(0)
+  })
+
+  it("returns an error instead of throwing when indexDocument rejects", async () => {
+    indexDocumentShouldThrow = true
+    globalThis.fetch = mock(async () =>
+      htmlResponse("<html><title>Article</title><body>Body text</body></html>"),
+    ) as unknown as typeof fetch
+
+    const result = await indexUrl("u1", "https://example.com")
+
+    expect(result).toEqual({ error: "failed to index" })
   })
 })
