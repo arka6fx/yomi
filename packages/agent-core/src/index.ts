@@ -348,6 +348,11 @@ export {
 export { createIndexTextTool, type IndexTextResult, type IndexTextFn } from "./index-text.js"
 export { createIndexUrlTool, type IndexUrlResult, type IndexUrlFn } from "./index-url.js"
 export {
+  createIndexDocumentTool,
+  type IndexDocumentResult,
+  type IndexDocumentFn,
+} from "./index-document.js"
+export {
   suggestIntegrationsFor,
   formatIntegrationSuggestions,
   formatConnectorIdCatalog,

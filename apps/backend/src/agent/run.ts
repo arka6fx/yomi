@@ -5,6 +5,7 @@ import {
   ConnectorRegistry,
   createDeepResearchTool,
   createDelegateTool,
+  createIndexDocumentTool,
   createIndexTextTool,
   createIndexUrlTool,
   createModel,
@@ -41,6 +42,7 @@ import { searchRagDocuments } from "../services/rag/search.js"
 import { searchMemoryEntries } from "../services/memory/search.js"
 import { indexManualText } from "../services/rag/manual-source.js"
 import { indexUrl } from "../services/rag/url-ingest.js"
+import { indexUploadedDocument } from "../services/rag/document-source.js"
 import {
   buildExtractionPrompt,
   fetchTurnCandidates,
@@ -574,9 +576,9 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     },
   })
   // Cloud RAG is a paid-plan feature at the REST layer (ragAllowed() in routes/rag.ts) —
-  // index_text/index_url must not be a side door around that for an Explore user. Rather
-  // than add the tools and have them always error for Explore, they're simply absent
-  // from extraTools.
+  // index_text/index_url/index_document must not be a side door around that for an
+  // Explore user. Rather than add the tools and have them always error for Explore,
+  // they're simply absent from extraTools.
   const canUseRag =
     isOwnerUser(user) ||
     effectivePlanForUser(user) === "pro" ||
@@ -585,6 +587,11 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     ? createIndexTextTool((title, content) => indexManualText(opts.userId, title, content))
     : null
   const indexUrlTool = canUseRag ? createIndexUrlTool((url) => indexUrl(opts.userId, url)) : null
+  const indexDocumentTool = canUseRag
+    ? createIndexDocumentTool((title, content) =>
+        indexUploadedDocument(opts.userId, title, content),
+      )
+    : null
   try {
     text = await runAgentLoop({
       registry,
@@ -597,6 +604,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
         deep_research: deepResearchTool,
         ...(indexTextTool ? { index_text: indexTextTool } : {}),
         ...(indexUrlTool ? { index_url: indexUrlTool } : {}),
+        ...(indexDocumentTool ? { index_document: indexDocumentTool } : {}),
         ...(reactionTool ? { react_to_message: reactionTool } : {}),
       },
       system: agentSystem,
