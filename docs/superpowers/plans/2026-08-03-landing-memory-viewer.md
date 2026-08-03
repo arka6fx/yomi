@@ -1,51 +1,104 @@
 # Landing Memory Viewer Enhancements Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> superpowers:subagent-driven-development (recommended) or
+> superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add edit, read-only history, and client-side filtering to the landing dashboard's memory tab, entirely as a frontend build against the already-complete backend memory API.
+**Goal:** Add edit, read-only history, and client-side filtering to the landing
+dashboard's memory tab, entirely as a frontend build against the
+already-complete backend memory API.
 
-**Architecture:** `MemoryManager.tsx` stays the container (fetch calls, top-level state, layout). Three new presentational components — `MemoryRow` (view/edit-in-place), `MemoryFilterBar` (kind/scope/pinned filters), `MemoryHistoryView` (read-only superseded list) — plus a shared types file and a pure, unit-tested filter-predicate module. No new backend routes.
+**Architecture:** `MemoryManager.tsx` stays the container (fetch calls,
+top-level state, layout). Three new presentational components — `MemoryRow`
+(view/edit-in-place), `MemoryFilterBar` (kind/scope/pinned filters),
+`MemoryHistoryView` (read-only superseded list) — plus a shared types file and a
+pure, unit-tested filter-predicate module. No new backend routes.
 
-**Tech Stack:** Next.js (App Router, client components only), React, TypeScript, Tailwind CSS, `lucide-react` icons, `bun:test`.
+**Tech Stack:** Next.js (App Router, client components only), React, TypeScript,
+Tailwind CSS, `lucide-react` icons, `bun:test`.
 
 ## Global Constraints
 
-- Spec: `docs/superpowers/specs/2026-08-03-landing-memory-viewer-design.md` — this plan implements it exactly; do not deviate without re-checking that file.
-- **No new backend routes.** Every fetch calls an endpoint that already exists in `apps/backend/src/routes/memory.ts` (`GET /entries`, `GET /superseded`, `PATCH /:id`) exactly as it exists today.
-- **No Next.js Route Handlers.** The landing app deploys as a Cloudflare Worker that proxies all `/api/*` requests directly to the backend before Next.js routing ever runs (`apps/landing/src/worker.ts`) — a new file under `apps/landing/src/app/api/` would silently be dead code in production. All new fetches are plain client-side `fetch()` calls from `"use client"` components.
-- **Fetch pattern:** relative path + `Authorization: Bearer ${token}` header + manual `useState` for loading/error/data, matching the existing pattern in `MemoryManager.tsx` exactly. No shared API client exists in this codebase to adopt instead.
-- **No relative-import file extensions.** This codebase's TypeScript/bundler resolution does not use `.js` extensions on relative imports (confirmed via `DashboardHome.tsx`, `DocsShell.tsx`) — `import { X } from "./memory-types"`, not `"./memory-types.js"`.
-- **Edit → new id.** `PATCH /:id`'s response has a **different `id`** than the URL parameter (the backend always inserts a new versioned row and marks the old one superseded). After a successful save, replace the edited row's entire object in the list (matched by the *old* id), not just its fields.
-- **History view replaces the filter bar**, it doesn't coexist with it — filters apply only to the active list.
-- **`replacedBy` can be `null`** in a `GET /superseded` row — render "no longer active" instead of naming a successor in that case.
-- **No component-rendering tests.** This codebase has no React Testing Library/jsdom setup and no dashboard component has tests today. Only the pure filter-predicate function gets `bun:test` unit tests (matching the existing `docs-search.test.ts` precedent).
-- Visual conventions to match exactly (verbatim from the existing `MemoryManager.tsx`): card `rounded-2xl border border-border bg-card p-5 sm:p-6`, primary button `rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50`, inline error `text-xs text-destructive`, empty state `rounded-xl border border-dashed border-border/70 bg-background/40 px-5 py-10 text-center`, section/loading spinner `Loader2` with `className="animate-spin"`.
-- Test command, run from repo root: `bun test --isolate apps/landing/src/components/dashboard/memory-filters.test.ts` (Task 1).
+- Spec: `docs/superpowers/specs/2026-08-03-landing-memory-viewer-design.md` —
+  this plan implements it exactly; do not deviate without re-checking that file.
+- **No new backend routes.** Every fetch calls an endpoint that already exists
+  in `apps/backend/src/routes/memory.ts` (`GET /entries`, `GET /superseded`,
+  `PATCH /:id`) exactly as it exists today.
+- **No Next.js Route Handlers.** The landing app deploys as a Cloudflare Worker
+  that proxies all `/api/*` requests directly to the backend before Next.js
+  routing ever runs (`apps/landing/src/worker.ts`) — a new file under
+  `apps/landing/src/app/api/` would silently be dead code in production. All new
+  fetches are plain client-side `fetch()` calls from `"use client"` components.
+- **Fetch pattern:** relative path + `Authorization: Bearer ${token}` header +
+  manual `useState` for loading/error/data, matching the existing pattern in
+  `MemoryManager.tsx` exactly. No shared API client exists in this codebase to
+  adopt instead.
+- **No relative-import file extensions.** This codebase's TypeScript/bundler
+  resolution does not use `.js` extensions on relative imports (confirmed via
+  `DashboardHome.tsx`, `DocsShell.tsx`) — `import { X } from "./memory-types"`,
+  not `"./memory-types.js"`.
+- **Edit → new id.** `PATCH /:id`'s response has a **different `id`** than the
+  URL parameter (the backend always inserts a new versioned row and marks the
+  old one superseded). After a successful save, replace the edited row's entire
+  object in the list (matched by the _old_ id), not just its fields.
+- **History view replaces the filter bar**, it doesn't coexist with it — filters
+  apply only to the active list.
+- **`replacedBy` can be `null`** in a `GET /superseded` row — render "no longer
+  active" instead of naming a successor in that case.
+- **No component-rendering tests.** This codebase has no React Testing
+  Library/jsdom setup and no dashboard component has tests today. Only the pure
+  filter-predicate function gets `bun:test` unit tests (matching the existing
+  `docs-search.test.ts` precedent).
+- Visual conventions to match exactly (verbatim from the existing
+  `MemoryManager.tsx`): card
+  `rounded-2xl border border-border bg-card p-5 sm:p-6`, primary button
+  `rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50`,
+  inline error `text-xs text-destructive`, empty state
+  `rounded-xl border border-dashed border-border/70 bg-background/40 px-5 py-10 text-center`,
+  section/loading spinner `Loader2` with `className="animate-spin"`.
+- Test command, run from repo root:
+  `bun test --isolate apps/landing/src/components/dashboard/memory-filters.test.ts`
+  (Task 1).
 - Typecheck command, run from repo root: `bun run typecheck`.
 
 ---
 
 ## File Structure
 
-- Create: `apps/landing/src/components/dashboard/memory-types.ts` — shared `MemoryRow` type, `KINDS`/`SCOPES` constants (moved out of `MemoryManager.tsx` so the new components can import them without a circular dependency).
-- Create: `apps/landing/src/components/dashboard/memory-filters.ts` — `MemoryFilters` type, `matchesMemoryFilter()` pure function.
-- Create: `apps/landing/src/components/dashboard/memory-filters.test.ts` — unit tests for the filter predicate.
-- Create: `apps/landing/src/components/dashboard/MemoryRow.tsx` — one memory: view mode (existing layout) + inline edit mode.
-- Create: `apps/landing/src/components/dashboard/MemoryFilterBar.tsx` — kind/scope/pinned-only filter controls.
-- Create: `apps/landing/src/components/dashboard/MemoryHistoryView.tsx` — read-only superseded-memories list with its own fetch.
-- Modify: `apps/landing/src/components/dashboard/MemoryManager.tsx` — container: adds filter state, history-toggle state, edit-save handler (with the new-id splice), bumps the entries fetch to `limit=200`, renders `MemoryFilterBar`/`MemoryRow`/`MemoryHistoryView` in place of the current inline list JSX.
+- Create: `apps/landing/src/components/dashboard/memory-types.ts` — shared
+  `MemoryRow` type, `KINDS`/`SCOPES` constants (moved out of `MemoryManager.tsx`
+  so the new components can import them without a circular dependency).
+- Create: `apps/landing/src/components/dashboard/memory-filters.ts` —
+  `MemoryFilters` type, `matchesMemoryFilter()` pure function.
+- Create: `apps/landing/src/components/dashboard/memory-filters.test.ts` — unit
+  tests for the filter predicate.
+- Create: `apps/landing/src/components/dashboard/MemoryRow.tsx` — one memory:
+  view mode (existing layout) + inline edit mode.
+- Create: `apps/landing/src/components/dashboard/MemoryFilterBar.tsx` —
+  kind/scope/pinned-only filter controls.
+- Create: `apps/landing/src/components/dashboard/MemoryHistoryView.tsx` —
+  read-only superseded-memories list with its own fetch.
+- Modify: `apps/landing/src/components/dashboard/MemoryManager.tsx` — container:
+  adds filter state, history-toggle state, edit-save handler (with the new-id
+  splice), bumps the entries fetch to `limit=200`, renders
+  `MemoryFilterBar`/`MemoryRow`/`MemoryHistoryView` in place of the current
+  inline list JSX.
 
 ---
 
 ### Task 1: Shared types + filter predicate
 
 **Files:**
+
 - Create: `apps/landing/src/components/dashboard/memory-types.ts`
 - Create: `apps/landing/src/components/dashboard/memory-filters.ts`
 - Create: `apps/landing/src/components/dashboard/memory-filters.test.ts`
 
 **Interfaces:**
+
 - Produces:
+
   ```ts
   // memory-types.ts
   export type MemoryRow = {
@@ -58,18 +111,35 @@
     isStatic?: boolean
     updatedAt?: string | null
   }
-  export const KINDS: readonly ["fact", "preference", "project", "decision", "open_thread"]
+  export const KINDS: readonly [
+    "fact",
+    "preference",
+    "project",
+    "decision",
+    "open_thread",
+  ]
   export const SCOPES: readonly ["global", "project", "app", "session"]
 
   // memory-filters.ts
-  export type MemoryFilters = { kind: string | null; scope: string | null; pinnedOnly: boolean }
-  export function matchesMemoryFilter(memory: MemoryRow, filters: MemoryFilters): boolean
+  export type MemoryFilters = {
+    kind: string | null
+    scope: string | null
+    pinnedOnly: boolean
+  }
+  export function matchesMemoryFilter(
+    memory: MemoryRow,
+    filters: MemoryFilters,
+  ): boolean
   ```
-  Tasks 2-5 consume `MemoryRow`/`KINDS`/`SCOPES` from `./memory-types` and `MemoryFilters`/`matchesMemoryFilter` from `./memory-filters` by these exact names.
+
+  Tasks 2-5 consume `MemoryRow`/`KINDS`/`SCOPES` from `./memory-types` and
+  `MemoryFilters`/`matchesMemoryFilter` from `./memory-filters` by these exact
+  names.
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `apps/landing/src/components/dashboard/memory-filters.test.ts` with this content:
+Create `apps/landing/src/components/dashboard/memory-filters.test.ts` with this
+content:
 
 ```ts
 import { describe, expect, it } from "bun:test"
@@ -99,59 +169,83 @@ describe("matchesMemoryFilter", () => {
 
   it("matches when kind filter equals the memory's kind", () => {
     const memory = makeMemory({ kind: "preference" })
-    expect(matchesMemoryFilter(memory, { ...noFilter, kind: "preference" })).toBe(true)
+    expect(
+      matchesMemoryFilter(memory, { ...noFilter, kind: "preference" }),
+    ).toBe(true)
   })
 
   it("excludes when kind filter does not equal the memory's kind", () => {
     const memory = makeMemory({ kind: "fact" })
-    expect(matchesMemoryFilter(memory, { ...noFilter, kind: "preference" })).toBe(false)
+    expect(
+      matchesMemoryFilter(memory, { ...noFilter, kind: "preference" }),
+    ).toBe(false)
   })
 
   it("matches when scope filter equals the memory's scope", () => {
     const memory = makeMemory({ scope: "project" })
-    expect(matchesMemoryFilter(memory, { ...noFilter, scope: "project" })).toBe(true)
+    expect(matchesMemoryFilter(memory, { ...noFilter, scope: "project" })).toBe(
+      true,
+    )
   })
 
   it("excludes when scope filter does not equal the memory's scope", () => {
     const memory = makeMemory({ scope: "global" })
-    expect(matchesMemoryFilter(memory, { ...noFilter, scope: "project" })).toBe(false)
+    expect(matchesMemoryFilter(memory, { ...noFilter, scope: "project" })).toBe(
+      false,
+    )
   })
 
   it("excludes a non-pinned memory when pinnedOnly is true", () => {
     const memory = makeMemory({ isStatic: false })
-    expect(matchesMemoryFilter(memory, { ...noFilter, pinnedOnly: true })).toBe(false)
+    expect(matchesMemoryFilter(memory, { ...noFilter, pinnedOnly: true })).toBe(
+      false,
+    )
   })
 
   it("includes a pinned memory when pinnedOnly is true", () => {
     const memory = makeMemory({ isStatic: true })
-    expect(matchesMemoryFilter(memory, { ...noFilter, pinnedOnly: true })).toBe(true)
+    expect(matchesMemoryFilter(memory, { ...noFilter, pinnedOnly: true })).toBe(
+      true,
+    )
   })
 
   it("requires every active filter to match (combination)", () => {
     const memory = makeMemory({ kind: "fact", scope: "global", isStatic: true })
     expect(
-      matchesMemoryFilter(memory, { kind: "fact", scope: "global", pinnedOnly: true }),
+      matchesMemoryFilter(memory, {
+        kind: "fact",
+        scope: "global",
+        pinnedOnly: true,
+      }),
     ).toBe(true)
     expect(
-      matchesMemoryFilter(memory, { kind: "fact", scope: "project", pinnedOnly: true }),
+      matchesMemoryFilter(memory, {
+        kind: "fact",
+        scope: "project",
+        pinnedOnly: true,
+      }),
     ).toBe(false)
   })
 
   it("treats a memory with no kind as not matching a specific kind filter", () => {
     const memory = makeMemory({ kind: null })
-    expect(matchesMemoryFilter(memory, { ...noFilter, kind: "fact" })).toBe(false)
+    expect(matchesMemoryFilter(memory, { ...noFilter, kind: "fact" })).toBe(
+      false,
+    )
   })
 })
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `bun test --isolate apps/landing/src/components/dashboard/memory-filters.test.ts`
+Run:
+`bun test --isolate apps/landing/src/components/dashboard/memory-filters.test.ts`
 Expected: FAIL — `memory-filters.ts` / `memory-types.ts` do not exist yet.
 
 - [ ] **Step 3: Write the minimal implementation**
 
-Create `apps/landing/src/components/dashboard/memory-types.ts` with this content:
+Create `apps/landing/src/components/dashboard/memory-types.ts` with this
+content:
 
 ```ts
 export type MemoryRow = {
@@ -165,11 +259,18 @@ export type MemoryRow = {
   updatedAt?: string | null
 }
 
-export const KINDS = ["fact", "preference", "project", "decision", "open_thread"] as const
+export const KINDS = [
+  "fact",
+  "preference",
+  "project",
+  "decision",
+  "open_thread",
+] as const
 export const SCOPES = ["global", "project", "app", "session"] as const
 ```
 
-Create `apps/landing/src/components/dashboard/memory-filters.ts` with this content:
+Create `apps/landing/src/components/dashboard/memory-filters.ts` with this
+content:
 
 ```ts
 import type { MemoryRow } from "./memory-types"
@@ -180,7 +281,10 @@ export type MemoryFilters = {
   pinnedOnly: boolean
 }
 
-export function matchesMemoryFilter(memory: MemoryRow, filters: MemoryFilters): boolean {
+export function matchesMemoryFilter(
+  memory: MemoryRow,
+  filters: MemoryFilters,
+): boolean {
   if (filters.kind && memory.kind !== filters.kind) return false
   if (filters.scope && memory.scope !== filters.scope) return false
   if (filters.pinnedOnly && !memory.isStatic) return false
@@ -190,7 +294,8 @@ export function matchesMemoryFilter(memory: MemoryRow, filters: MemoryFilters): 
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `bun test --isolate apps/landing/src/components/dashboard/memory-filters.test.ts`
+Run:
+`bun test --isolate apps/landing/src/components/dashboard/memory-filters.test.ts`
 Expected: PASS — 9 tests, 0 fail.
 
 - [ ] **Step 5: Commit**
@@ -205,9 +310,11 @@ git commit -m "feat(landing): add memory filter predicate and shared types"
 ### Task 2: `MemoryRow` — view + inline edit
 
 **Files:**
+
 - Create: `apps/landing/src/components/dashboard/MemoryRow.tsx`
 
 **Interfaces:**
+
 - Consumes: `MemoryRow`, `KINDS`, `SCOPES` from `./memory-types` (Task 1).
 - Produces:
   ```tsx
@@ -215,12 +322,24 @@ git commit -m "feat(landing): add memory filter predicate and shared types"
     memory: MemoryRow
     forgetting: boolean
     onForget: (id: string) => void
-    onSave: (id: string, patch: { topic: string; content: string; kind: string; scope: string }) => Promise<boolean>
+    onSave: (
+      id: string,
+      patch: { topic: string; content: string; kind: string; scope: string },
+    ) => Promise<boolean>
   }): JSX.Element
   ```
-  `onSave` returns `Promise<boolean>` — `true` on success (the row exits edit mode), `false` on failure (the row stays in edit mode with an inline error, and the caller is expected to have already set whatever error state it wants `MemoryRow` to display via re-render — see Step 3's `saveError` local state for how the row itself surfaces a message independent of the parent). Task 5 consumes `MemoryRow` (the component) and calls it with these exact prop names.
+  `onSave` returns `Promise<boolean>` — `true` on success (the row exits edit
+  mode), `false` on failure (the row stays in edit mode with an inline error,
+  and the caller is expected to have already set whatever error state it wants
+  `MemoryRow` to display via re-render — see Step 3's `saveError` local state
+  for how the row itself surfaces a message independent of the parent). Task 5
+  consumes `MemoryRow` (the component) and calls it with these exact prop names.
 
-This is a pure presentational component — it holds its own transient edit-form state (draft topic/content/kind/scope, saving flag, save error) but does **not** call `fetch` itself; `onSave` is provided by the container (Task 5), matching the "row itself holds no fetch logic" requirement from the spec's Architecture section.
+This is a pure presentational component — it holds its own transient edit-form
+state (draft topic/content/kind/scope, saving flag, save error) but does **not**
+call `fetch` itself; `onSave` is provided by the container (Task 5), matching
+the "row itself holds no fetch logic" requirement from the spec's Architecture
+section.
 
 - [ ] **Step 1: Write the component**
 
@@ -304,7 +423,9 @@ export function MemoryRow({
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <select
             value={draftKind}
-            onChange={(e) => setDraftKind(e.target.value as (typeof KINDS)[number])}
+            onChange={(e) =>
+              setDraftKind(e.target.value as (typeof KINDS)[number])
+            }
             className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground outline-none focus:border-primary/50"
           >
             {KINDS.map((k) => (
@@ -315,7 +436,9 @@ export function MemoryRow({
           </select>
           <select
             value={draftScope}
-            onChange={(e) => setDraftScope(e.target.value as (typeof SCOPES)[number])}
+            onChange={(e) =>
+              setDraftScope(e.target.value as (typeof SCOPES)[number])
+            }
             className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground outline-none focus:border-primary/50"
           >
             {SCOPES.map((s) => (
@@ -329,7 +452,11 @@ export function MemoryRow({
             disabled={!draftContent.trim() || saving}
             className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
           >
-            {saving ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+            {saving ? (
+              <Loader2 size={12} className="animate-spin" />
+            ) : (
+              <Check size={12} />
+            )}
             Save
           </button>
           <button
@@ -341,7 +468,9 @@ export function MemoryRow({
             Cancel
           </button>
         </div>
-        {saveError && <p className="mt-2 text-xs text-destructive">{saveError}</p>}
+        {saveError && (
+          <p className="mt-2 text-xs text-destructive">{saveError}</p>
+        )}
       </li>
     )
   }
@@ -350,7 +479,9 @@ export function MemoryRow({
     <li className="group flex items-start justify-between gap-3 rounded-xl border border-border bg-background/40 px-4 py-3 transition-colors hover:border-border/80">
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          {memory.isStatic && <Pin size={11} className="shrink-0 text-primary" />}
+          {memory.isStatic && (
+            <Pin size={11} className="shrink-0 text-primary" />
+          )}
           <span className="truncate text-sm font-medium text-foreground">
             {memory.topic || memory.kind || "Memory"}
           </span>
@@ -383,7 +514,11 @@ export function MemoryRow({
           aria-label="Forget memory"
           className="rounded-lg p-1.5 text-muted-foreground/60 transition-all hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
         >
-          {forgetting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+          {forgetting ? (
+            <Loader2 size={14} className="animate-spin" />
+          ) : (
+            <Trash2 size={14} />
+          )}
         </button>
       </div>
     </li>
@@ -393,8 +528,10 @@ export function MemoryRow({
 
 - [ ] **Step 2: Typecheck**
 
-Run: `bun run typecheck`
-Expected: 0 errors. (No automated test for this component per the plan's no-component-testing constraint — verify by reading the diff against the spec's Architecture section: view mode preserved from the original inline JSX, edit mode added, no fetch calls inside the component.)
+Run: `bun run typecheck` Expected: 0 errors. (No automated test for this
+component per the plan's no-component-testing constraint — verify by reading the
+diff against the spec's Architecture section: view mode preserved from the
+original inline JSX, edit mode added, no fetch calls inside the component.)
 
 - [ ] **Step 3: Commit**
 
@@ -408,10 +545,13 @@ git commit -m "feat(landing): add MemoryRow view/edit-in-place component"
 ### Task 3: `MemoryFilterBar`
 
 **Files:**
+
 - Create: `apps/landing/src/components/dashboard/MemoryFilterBar.tsx`
 
 **Interfaces:**
-- Consumes: `KINDS`, `SCOPES` from `./memory-types` (Task 1); `MemoryFilters` from `./memory-filters` (Task 1).
+
+- Consumes: `KINDS`, `SCOPES` from `./memory-types` (Task 1); `MemoryFilters`
+  from `./memory-filters` (Task 1).
 - Produces:
   ```tsx
   export function MemoryFilterBar(props: {
@@ -419,13 +559,17 @@ git commit -m "feat(landing): add MemoryRow view/edit-in-place component"
     onChange: (filters: MemoryFilters) => void
   }): JSX.Element
   ```
-  Task 5 consumes `MemoryFilterBar` and renders it with these exact prop names, holding the `MemoryFilters` state itself.
+  Task 5 consumes `MemoryFilterBar` and renders it with these exact prop names,
+  holding the `MemoryFilters` state itself.
 
-Purely presentational and controlled — all state lives in the parent (Task 5); this component only renders controls and calls `onChange` with the next filters value.
+Purely presentational and controlled — all state lives in the parent (Task 5);
+this component only renders controls and calls `onChange` with the next filters
+value.
 
 - [ ] **Step 1: Write the component**
 
-Create `apps/landing/src/components/dashboard/MemoryFilterBar.tsx` with this content:
+Create `apps/landing/src/components/dashboard/MemoryFilterBar.tsx` with this
+content:
 
 ```tsx
 "use client"
@@ -457,7 +601,9 @@ export function MemoryFilterBar({
       </select>
       <select
         value={filters.scope ?? ""}
-        onChange={(e) => onChange({ ...filters, scope: e.target.value || null })}
+        onChange={(e) =>
+          onChange({ ...filters, scope: e.target.value || null })
+        }
         className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground outline-none focus:border-primary/50"
       >
         <option value="">All scopes</option>
@@ -468,7 +614,9 @@ export function MemoryFilterBar({
         ))}
       </select>
       <button
-        onClick={() => onChange({ ...filters, pinnedOnly: !filters.pinnedOnly })}
+        onClick={() =>
+          onChange({ ...filters, pinnedOnly: !filters.pinnedOnly })
+        }
         className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
           filters.pinnedOnly
             ? "border-primary/50 bg-primary/10 text-primary"
@@ -485,8 +633,7 @@ export function MemoryFilterBar({
 
 - [ ] **Step 2: Typecheck**
 
-Run: `bun run typecheck`
-Expected: 0 errors.
+Run: `bun run typecheck` Expected: 0 errors.
 
 - [ ] **Step 3: Commit**
 
@@ -500,19 +647,29 @@ git commit -m "feat(landing): add MemoryFilterBar component"
 ### Task 4: `MemoryHistoryView`
 
 **Files:**
+
 - Create: `apps/landing/src/components/dashboard/MemoryHistoryView.tsx`
 
 **Interfaces:**
-- Consumes: `MemoryRow` type from `./memory-types` (Task 1). Fetches `GET /api/memory/superseded?limit=200` directly (this component owns its own fetch, unlike `MemoryRow`/`MemoryFilterBar` — matching the spec's Architecture section, which describes `MemoryHistoryView` as fetching independently once per toggle-on).
+
+- Consumes: `MemoryRow` type from `./memory-types` (Task 1). Fetches
+  `GET /api/memory/superseded?limit=200` directly (this component owns its own
+  fetch, unlike `MemoryRow`/`MemoryFilterBar` — matching the spec's Architecture
+  section, which describes `MemoryHistoryView` as fetching independently once
+  per toggle-on).
 - Produces:
+
   ```tsx
   export function MemoryHistoryView(props: { token: string }): JSX.Element
   ```
-  Task 5 consumes `MemoryHistoryView` and renders it (passing `token`) in place of the active list when the history toggle is on.
+
+  Task 5 consumes `MemoryHistoryView` and renders it (passing `token`) in place
+  of the active list when the history toggle is on.
 
 - [ ] **Step 1: Write the component**
 
-Create `apps/landing/src/components/dashboard/MemoryHistoryView.tsx` with this content:
+Create `apps/landing/src/components/dashboard/MemoryHistoryView.tsx` with this
+content:
 
 ```tsx
 "use client"
@@ -591,7 +748,10 @@ export function MemoryHistoryView({ token }: { token: string }) {
           key={row.id}
           className="flex items-start gap-3 rounded-xl border border-border bg-background/40 px-4 py-3"
         >
-          <RotateCcw size={14} className="mt-0.5 shrink-0 text-muted-foreground" />
+          <RotateCcw
+            size={14}
+            className="mt-0.5 shrink-0 text-muted-foreground"
+          />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="truncate text-sm font-medium text-foreground">
@@ -621,8 +781,7 @@ export function MemoryHistoryView({ token }: { token: string }) {
 
 - [ ] **Step 2: Typecheck**
 
-Run: `bun run typecheck`
-Expected: 0 errors.
+Run: `bun run typecheck` Expected: 0 errors.
 
 - [ ] **Step 3: Commit**
 
@@ -636,15 +795,33 @@ git commit -m "feat(landing): add MemoryHistoryView component"
 ### Task 5: Wire everything into `MemoryManager.tsx`
 
 **Files:**
-- Modify: `apps/landing/src/components/dashboard/MemoryManager.tsx` (full current content shown below — this task rewrites the file)
+
+- Modify: `apps/landing/src/components/dashboard/MemoryManager.tsx` (full
+  current content shown below — this task rewrites the file)
 
 **Interfaces:**
-- Consumes: `MemoryRow` type, `KINDS`, `SCOPES` from `./memory-types` (Task 1); `MemoryFilters`, `matchesMemoryFilter` from `./memory-filters` (Task 1); `MemoryRow` component from `./MemoryRow` (Task 2); `MemoryFilterBar` from `./MemoryFilterBar` (Task 3); `MemoryHistoryView` from `./MemoryHistoryView` (Task 4).
-- Produces: `MemoryManager` component's external interface (`{ token: string }` prop) is unchanged — `dashboard/page.tsx` requires no modification.
 
-**Important wiring detail:** the spec requires `MemoryHistoryView` to fetch once per toggle-on and not refetch when the user toggles back and forth. A plain `{showHistory ? <MemoryHistoryView/> : <activeView/>}` ternary would **unmount** `MemoryHistoryView` every time the user switches back to "Active," discarding its internal `rows` state — the next toggle-on would remount it and refetch, violating the spec. The JSX below instead lazily mounts `MemoryHistoryView` the *first* time history is toggled on (via a `historyMounted` flag that, once `true`, never goes back to `false`) and thereafter only toggles its visibility with a `hidden` CSS class — so it fetches exactly once, stays mounted, and toggling is instant with no data loss.
+- Consumes: `MemoryRow` type, `KINDS`, `SCOPES` from `./memory-types` (Task 1);
+  `MemoryFilters`, `matchesMemoryFilter` from `./memory-filters` (Task 1);
+  `MemoryRow` component from `./MemoryRow` (Task 2); `MemoryFilterBar` from
+  `./MemoryFilterBar` (Task 3); `MemoryHistoryView` from `./MemoryHistoryView`
+  (Task 4).
+- Produces: `MemoryManager` component's external interface (`{ token: string }`
+  prop) is unchanged — `dashboard/page.tsx` requires no modification.
 
-The current full content of `apps/landing/src/components/dashboard/MemoryManager.tsx` (264 lines) is:
+**Important wiring detail:** the spec requires `MemoryHistoryView` to fetch once
+per toggle-on and not refetch when the user toggles back and forth. A plain
+`{showHistory ? <MemoryHistoryView/> : <activeView/>}` ternary would **unmount**
+`MemoryHistoryView` every time the user switches back to "Active," discarding
+its internal `rows` state — the next toggle-on would remount it and refetch,
+violating the spec. The JSX below instead lazily mounts `MemoryHistoryView` the
+_first_ time history is toggled on (via a `historyMounted` flag that, once
+`true`, never goes back to `false`) and thereafter only toggles its visibility
+with a `hidden` CSS class — so it fetches exactly once, stays mounted, and
+toggling is instant with no data loss.
+
+The current full content of
+`apps/landing/src/components/dashboard/MemoryManager.tsx` (264 lines) is:
 
 ```tsx
 "use client"
@@ -663,7 +840,13 @@ type MemoryRow = {
   updatedAt?: string | null
 }
 
-const KINDS = ["fact", "preference", "project", "decision", "open_thread"] as const
+const KINDS = [
+  "fact",
+  "preference",
+  "project",
+  "decision",
+  "open_thread",
+] as const
 const SCOPES = ["global", "project", "app", "session"] as const
 
 // Cloud memory management. Talks to the backend /api/memory/* endpoints (the same
@@ -679,7 +862,8 @@ export function MemoryManager({ token }: { token: string }) {
   const [draft, setDraft] = useState("")
   const [draftTopic, setDraftTopic] = useState("")
   const [draftKind, setDraftKind] = useState<(typeof KINDS)[number]>("fact")
-  const [draftScope, setDraftScope] = useState<(typeof SCOPES)[number]>("global")
+  const [draftScope, setDraftScope] =
+    useState<(typeof SCOPES)[number]>("global")
   const [saving, setSaving] = useState(false)
 
   const auth = { Authorization: `Bearer ${token}` }
@@ -751,7 +935,9 @@ export function MemoryManager({ token }: { token: string }) {
       if (!res.ok) throw new Error("Couldn't forget that memory")
       setMemories((prev) => prev.filter((m) => m.id !== id))
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't forget that memory")
+      setError(
+        err instanceof Error ? err.message : "Couldn't forget that memory",
+      )
     } finally {
       setForgetting(null)
     }
@@ -769,8 +955,8 @@ export function MemoryManager({ token }: { token: string }) {
               What Yomi <span className="italic">remembers</span>
             </h2>
             <p className="mt-1 max-w-md text-sm text-muted-foreground">
-              Durable facts Yomi keeps across your web app and Telegram. Add, search, or forget them
-              here.
+              Durable facts Yomi keeps across your web app and Telegram. Add,
+              search, or forget them here.
             </p>
           </div>
         </div>
@@ -801,7 +987,9 @@ export function MemoryManager({ token }: { token: string }) {
             />
             <select
               value={draftKind}
-              onChange={(e) => setDraftKind(e.target.value as (typeof KINDS)[number])}
+              onChange={(e) =>
+                setDraftKind(e.target.value as (typeof KINDS)[number])
+              }
               className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground outline-none focus:border-primary/50"
             >
               {KINDS.map((k) => (
@@ -812,7 +1000,9 @@ export function MemoryManager({ token }: { token: string }) {
             </select>
             <select
               value={draftScope}
-              onChange={(e) => setDraftScope(e.target.value as (typeof SCOPES)[number])}
+              onChange={(e) =>
+                setDraftScope(e.target.value as (typeof SCOPES)[number])
+              }
               className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground outline-none focus:border-primary/50"
             >
               {SCOPES.map((s) => (
@@ -826,7 +1016,11 @@ export function MemoryManager({ token }: { token: string }) {
               disabled={!draft.trim() || saving}
               className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
             >
-              {saving ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+              {saving ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : (
+                <Plus size={12} />
+              )}
               Save
             </button>
           </div>
@@ -873,7 +1067,9 @@ export function MemoryManager({ token }: { token: string }) {
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  {m.isStatic && <Pin size={11} className="shrink-0 text-primary" />}
+                  {m.isStatic && (
+                    <Pin size={11} className="shrink-0 text-primary" />
+                  )}
                   <span className="truncate text-sm font-medium text-foreground">
                     {m.topic || m.kind || "Memory"}
                   </span>
@@ -915,7 +1111,8 @@ export function MemoryManager({ token }: { token: string }) {
 
 - [ ] **Step 1: Replace the file with the wired-up version**
 
-Replace the full content of `apps/landing/src/components/dashboard/MemoryManager.tsx` with:
+Replace the full content of
+`apps/landing/src/components/dashboard/MemoryManager.tsx` with:
 
 ```tsx
 "use client"
@@ -949,7 +1146,8 @@ export function MemoryManager({ token }: { token: string }) {
   const [draft, setDraft] = useState("")
   const [draftTopic, setDraftTopic] = useState("")
   const [draftKind, setDraftKind] = useState<(typeof KINDS)[number]>("fact")
-  const [draftScope, setDraftScope] = useState<(typeof SCOPES)[number]>("global")
+  const [draftScope, setDraftScope] =
+    useState<(typeof SCOPES)[number]>("global")
   const [saving, setSaving] = useState(false)
 
   const auth = { Authorization: `Bearer ${token}` }
@@ -1021,7 +1219,9 @@ export function MemoryManager({ token }: { token: string }) {
       if (!res.ok) throw new Error("Couldn't forget that memory")
       setMemories((prev) => prev.filter((m) => m.id !== id))
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't forget that memory")
+      setError(
+        err instanceof Error ? err.message : "Couldn't forget that memory",
+      )
     } finally {
       setForgetting(null)
     }
@@ -1051,7 +1251,9 @@ export function MemoryManager({ token }: { token: string }) {
     }
   }
 
-  const visibleMemories = memories.filter((m) => matchesMemoryFilter(m, filters))
+  const visibleMemories = memories.filter((m) =>
+    matchesMemoryFilter(m, filters),
+  )
 
   function toggleHistory() {
     setShowHistory((v) => {
@@ -1073,8 +1275,8 @@ export function MemoryManager({ token }: { token: string }) {
               What Yomi <span className="italic">remembers</span>
             </h2>
             <p className="mt-1 max-w-md text-sm text-muted-foreground">
-              Durable facts Yomi keeps across your web app and Telegram. Add, search, edit, or
-              forget them here.
+              Durable facts Yomi keeps across your web app and Telegram. Add,
+              search, edit, or forget them here.
             </p>
           </div>
         </div>
@@ -1118,7 +1320,9 @@ export function MemoryManager({ token }: { token: string }) {
             />
             <select
               value={draftKind}
-              onChange={(e) => setDraftKind(e.target.value as (typeof KINDS)[number])}
+              onChange={(e) =>
+                setDraftKind(e.target.value as (typeof KINDS)[number])
+              }
               className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground outline-none focus:border-primary/50"
             >
               {KINDS.map((k) => (
@@ -1129,7 +1333,9 @@ export function MemoryManager({ token }: { token: string }) {
             </select>
             <select
               value={draftScope}
-              onChange={(e) => setDraftScope(e.target.value as (typeof SCOPES)[number])}
+              onChange={(e) =>
+                setDraftScope(e.target.value as (typeof SCOPES)[number])
+              }
               className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground outline-none focus:border-primary/50"
             >
               {SCOPES.map((s) => (
@@ -1143,7 +1349,11 @@ export function MemoryManager({ token }: { token: string }) {
               disabled={!draft.trim() || saving}
               className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
             >
-              {saving ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+              {saving ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : (
+                <Plus size={12} />
+              )}
               Save
             </button>
           </div>
@@ -1213,13 +1423,15 @@ export function MemoryManager({ token }: { token: string }) {
 
 - [ ] **Step 2: Typecheck**
 
-Run: `bun run typecheck`
-Expected: 0 errors.
+Run: `bun run typecheck` Expected: 0 errors.
 
-- [ ] **Step 3: Run the filter-predicate tests once more to confirm nothing broke**
+- [ ] **Step 3: Run the filter-predicate tests once more to confirm nothing
+      broke**
 
-Run: `bun test --isolate apps/landing/src/components/dashboard/memory-filters.test.ts`
-Expected: PASS — 9 tests, 0 fail (unchanged from Task 1, since this task doesn't touch `memory-filters.ts`).
+Run:
+`bun test --isolate apps/landing/src/components/dashboard/memory-filters.test.ts`
+Expected: PASS — 9 tests, 0 fail (unchanged from Task 1, since this task doesn't
+touch `memory-filters.ts`).
 
 - [ ] **Step 4: Commit**
 
@@ -1232,9 +1444,20 @@ git commit -m "feat(landing): wire edit/history/filters into the memory tab"
 
 ## Final Verification
 
-- [ ] Run `bun run format` proactively before pushing (every prior PR this session has needed this at least once), then re-verify tests still pass.
+- [ ] Run `bun run format` proactively before pushing (every prior PR this
+      session has needed this at least once), then re-verify tests still pass.
 - [ ] Run `bun run lint`.
 - [ ] Run `bun run typecheck` from repo root — 0 errors.
-- [ ] Run `bun test --isolate apps/landing/src/components/dashboard/memory-filters.test.ts` from repo root — 9/9 pass.
-- [ ] Re-read `docs/superpowers/specs/2026-08-03-landing-memory-viewer-design.md` and confirm every section (architecture, data flow, error handling, testing) has a corresponding implemented piece.
-- [ ] Manually verify in a browser if possible (`bun run dev` in `apps/landing`, sign in, open the dashboard's memory tab): add a memory, edit it (confirm it doesn't disappear/duplicate — the new-id splice is the trickiest part of this plan), toggle history, toggle filters, forget a memory. This is a UI-heavy feature with no component-rendering tests, so a manual smoke pass is the only way to catch a wiring mistake before merge.
+- [ ] Run
+      `bun test --isolate apps/landing/src/components/dashboard/memory-filters.test.ts`
+      from repo root — 9/9 pass.
+- [ ] Re-read
+      `docs/superpowers/specs/2026-08-03-landing-memory-viewer-design.md` and
+      confirm every section (architecture, data flow, error handling, testing)
+      has a corresponding implemented piece.
+- [ ] Manually verify in a browser if possible (`bun run dev` in `apps/landing`,
+      sign in, open the dashboard's memory tab): add a memory, edit it (confirm
+      it doesn't disappear/duplicate — the new-id splice is the trickiest part
+      of this plan), toggle history, toggle filters, forget a memory. This is a
+      UI-heavy feature with no component-rendering tests, so a manual smoke pass
+      is the only way to catch a wiring mistake before merge.

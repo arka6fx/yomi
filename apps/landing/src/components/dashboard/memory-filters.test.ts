@@ -55,12 +55,12 @@ describe("matchesMemoryFilter", () => {
 
   it("requires every active filter to match (combination)", () => {
     const memory = makeMemory({ kind: "fact", scope: "global", isStatic: true })
-    expect(
-      matchesMemoryFilter(memory, { kind: "fact", scope: "global", pinnedOnly: true }),
-    ).toBe(true)
-    expect(
-      matchesMemoryFilter(memory, { kind: "fact", scope: "project", pinnedOnly: true }),
-    ).toBe(false)
+    expect(matchesMemoryFilter(memory, { kind: "fact", scope: "global", pinnedOnly: true })).toBe(
+      true,
+    )
+    expect(matchesMemoryFilter(memory, { kind: "fact", scope: "project", pinnedOnly: true })).toBe(
+      false,
+    )
   })
 
   it("treats a memory with no kind as not matching a specific kind filter", () => {
