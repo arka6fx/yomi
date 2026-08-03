@@ -21,9 +21,12 @@ export function MemoryManager({ token }: { token: string }) {
   const [filters, setFilters] = useState<MemoryFilters>(NO_FILTERS)
   const [showHistory, setShowHistory] = useState(false)
   // Once true, stays true — MemoryHistoryView mounts lazily on first toggle-on and is
-  // never unmounted again, so its internal fetch runs exactly once per page load
-  // (see the Task 5 wiring note above for why a plain ternary would refetch every toggle).
+  // never unmounted again, so its internal fetch runs once per visit to this tab
+  // (MemoryManager itself unmounts when the user switches dashboard tabs, so "once per
+  // page load" would be inaccurate) — historyRefreshKey triggers an additional refetch
+  // after an edit, see handleSave below.
   const [historyMounted, setHistoryMounted] = useState(false)
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
 
   const [showAdd, setShowAdd] = useState(false)
   const [draft, setDraft] = useState("")
@@ -108,8 +111,9 @@ export function MemoryManager({ token }: { token: string }) {
   }
 
   // PATCH /:id always inserts a new versioned row (new id) and marks the old one
-  // superseded — so a successful save must splice in the whole returned memory
-  // object at the OLD id's position, not merge fields into the existing object.
+  // superseded — and its topic-equality sweep can supersede OTHER active rows too.
+  // So a successful save refetches the whole list (like handleAdd) rather than
+  // splicing in just the one edited row.
   async function handleSave(
     id: string,
     patch: { topic: string; content: string; kind: string; scope: string },
@@ -123,8 +127,8 @@ export function MemoryManager({ token }: { token: string }) {
       if (!res.ok) return false
       const data = (await res.json()) as { memory?: MemoryRowData }
       if (!data.memory) return false
-      const updated = data.memory
-      setMemories((prev) => prev.map((m) => (m.id === id ? updated : m)))
+      await load(query)
+      setHistoryRefreshKey((k) => k + 1)
       return true
     } catch {
       return false
@@ -230,9 +234,11 @@ export function MemoryManager({ token }: { token: string }) {
         </div>
       )}
 
+      {error && <p className="mb-3 text-xs text-destructive">{error}</p>}
+
       {historyMounted && (
         <div className={showHistory ? "" : "hidden"}>
-          <MemoryHistoryView token={token} />
+          <MemoryHistoryView token={token} refreshKey={historyRefreshKey} />
         </div>
       )}
 
@@ -251,8 +257,6 @@ export function MemoryManager({ token }: { token: string }) {
         </div>
 
         <MemoryFilterBar filters={filters} onChange={setFilters} />
-
-        {error && <p className="mb-3 text-xs text-destructive">{error}</p>}
 
         {loading ? (
           <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">

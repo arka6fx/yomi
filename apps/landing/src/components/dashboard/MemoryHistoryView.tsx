@@ -6,7 +6,7 @@ import type { MemoryRow } from "./memory-types"
 
 type SupersededRow = MemoryRow & { replacedBy: MemoryRow | null }
 
-export function MemoryHistoryView({ token }: { token: string }) {
+export function MemoryHistoryView({ token, refreshKey }: { token: string; refreshKey: number }) {
   const [rows, setRows] = useState<SupersededRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -29,8 +29,9 @@ export function MemoryHistoryView({ token }: { token: string }) {
   }
 
   useEffect(() => {
+    // load isn't memoized; refetch only on refreshKey change, not on every render
     void load()
-  }, [])
+  }, [refreshKey])
 
   if (loading) {
     return (
