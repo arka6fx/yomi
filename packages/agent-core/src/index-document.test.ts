@@ -36,4 +36,17 @@ describe("createIndexDocumentTool", () => {
 
     expect(result).toEqual({ error: "failed to index" })
   })
+
+  it("passes a warning field through unchanged when present", async () => {
+    const indexDocument: IndexDocumentFn = async () => ({
+      ok: true,
+      documentId: "doc-1",
+      warning: "possibly truncated",
+    })
+    const t = createIndexDocumentTool(indexDocument)
+
+    const result = await t.execute!({ title: "report.pdf", content: "text" }, {} as never)
+
+    expect(result).toEqual({ ok: true, documentId: "doc-1", warning: "possibly truncated" })
+  })
 })
