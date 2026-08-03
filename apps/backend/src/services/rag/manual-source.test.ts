@@ -1,49 +1,12 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test"
 
-let selectRows: { id: string; status?: string }[] = []
-// Returned by the second (fallback, post-conflict) select call, distinct from
-// the first (initial lookup) call so a test can drive them down different paths.
-let fallbackSelectRows: { id: string; status?: string }[] = []
-let selectCallCount = 0
-let insertedSources: Record<string, unknown>[] = []
-let nextSourceId = 1
-let insertConflicts = false
-let updateCalls: Record<string, unknown>[] = []
-
-mock.module("@yomi/db", () => ({
-  db: {
-    select: () => ({
-      from: () => ({
-        where: () => ({
-          limit: () => {
-            selectCallCount++
-            return Promise.resolve(selectCallCount === 1 ? selectRows : fallbackSelectRows)
-          },
-        }),
-      }),
-    }),
-    insert: () => ({
-      values: (v: Record<string, unknown>) => ({
-        onConflictDoNothing: () => ({
-          returning: () => {
-            if (insertConflicts) return Promise.resolve([])
-            const id = `source-${nextSourceId++}`
-            insertedSources.push({ id, ...v })
-            return Promise.resolve([{ id, ...v }])
-          },
-        }),
-      }),
-    }),
-    update: () => ({
-      set: (v: Record<string, unknown>) => ({
-        where: () => {
-          updateCalls.push(v)
-          return Promise.resolve()
-        },
-      }),
-    }),
+let ensureSourceCalls: { userId: string; opts: Record<string, unknown> }[] = []
+let ensureSourceResult = "source-1"
+mock.module("./source-lookup.js", () => ({
+  ensureSource: async (userId: string, opts: Record<string, unknown>) => {
+    ensureSourceCalls.push({ userId, opts })
+    return ensureSourceResult
   },
-  ragSources: { __name: "rag_sources" },
 }))
 
 let consentAllowed = true
@@ -74,13 +37,8 @@ const { MANUAL_SOURCE_TYPE, ensureManualSource, indexManualText } =
   await import("./manual-source.js")
 
 beforeEach(() => {
-  selectRows = []
-  fallbackSelectRows = []
-  selectCallCount = 0
-  insertedSources = []
-  nextSourceId = 1
-  insertConflicts = false
-  updateCalls = []
+  ensureSourceCalls = []
+  ensureSourceResult = "source-1"
   consentAllowed = true
   consentReason = "not granted"
   consentShouldThrow = false
@@ -90,50 +48,16 @@ beforeEach(() => {
 })
 
 describe("ensureManualSource", () => {
-  it("creates a source on first call", async () => {
+  it("calls ensureSource with the fixed Chat notes params", async () => {
     const id = await ensureManualSource("u1")
     expect(id).toBe("source-1")
-    expect(insertedSources).toHaveLength(1)
-    expect(insertedSources[0]!["sourceType"]).toBe(MANUAL_SOURCE_TYPE)
-    expect(insertedSources[0]!["userId"]).toBe("u1")
-  })
-
-  it("reuses the existing source on a later call", async () => {
-    selectRows = [{ id: "existing-source" }]
-    const id = await ensureManualSource("u1")
-    expect(id).toBe("existing-source")
-    expect(insertedSources).toHaveLength(0)
-  })
-
-  it("does not reuse a soft-deleted source", async () => {
-    // The real lookup filters on ne(status, "deleted"), so a soft-deleted row at this
-    // path never matches — modeled here by an empty select result, which drives
-    // ensureManualSource down the insert path instead of reusing the deleted row's id.
-    selectRows = []
-    const id = await ensureManualSource("u1")
-    expect(id).toBe("source-1")
-    expect(id).not.toBe("existing-deleted-source")
-    expect(insertedSources).toHaveLength(1)
-    expect(insertedSources[0]!["path"]).toBe("chat-notes")
-  })
-
-  it("resurrects a soft-deleted source when the insert conflicts on a deleted row's slot", async () => {
-    // Initial lookup excludes the deleted row (empty), so ensureManualSource attempts
-    // an insert. That insert loses the unique-constraint race because a soft-deleted
-    // row already occupies (userId, path) — the fallback re-select (unfiltered) finds
-    // it, and since it's "deleted" the function must resurrect rather than return it
-    // as-is or fail outright.
-    selectRows = []
-    fallbackSelectRows = [{ id: "deleted-source", status: "deleted" }]
-    insertConflicts = true
-
-    const id = await ensureManualSource("u1")
-
-    expect(id).toBe("deleted-source")
-    expect(insertedSources).toHaveLength(0)
-    expect(updateCalls).toHaveLength(1)
-    expect(updateCalls[0]!["status"]).toBe("ready")
-    expect(updateCalls[0]!["updatedAt"]).toBeInstanceOf(Date)
+    expect(ensureSourceCalls).toHaveLength(1)
+    expect(ensureSourceCalls[0]!.userId).toBe("u1")
+    expect(ensureSourceCalls[0]!.opts).toEqual({
+      path: "chat-notes",
+      name: "Chat notes",
+      sourceType: MANUAL_SOURCE_TYPE,
+    })
   })
 })
 
