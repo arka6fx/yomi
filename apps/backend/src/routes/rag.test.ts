@@ -356,12 +356,19 @@ describe("Cloud RAG routes", () => {
     expect(body.ok).toBe(true)
   })
 
-  it("hard-deletes the source's documents (and cascading chunks/embeddings) before marking it deleted", async () => {
+  it("hard-deletes only the source's own documents when it marks the source deleted", async () => {
     const res = await app().request("/api/rag/sources/source_1", { method: "DELETE" })
 
     expect(res.status).toBe(200)
     expect(deleteCalls).toHaveLength(1)
     expect(deleteCalls[0]!.table).toBe(mockRagDocuments)
+    // Guard against a type-valid but wrong substitution (e.g. filtering by userId
+    // instead of sourceId, which would delete every document the user owns across
+    // every source) by asserting the WHERE clause targets sourceId specifically,
+    // scoped to this source's id.
+    const chunks = (deleteCalls[0]!.condition as { queryChunks: unknown[] }).queryChunks
+    expect(chunks).toContain(mockRagDocuments.sourceId)
+    expect(chunks).toContain("source_1")
   })
 
   it("returns not found when deleting an unknown source", async () => {
