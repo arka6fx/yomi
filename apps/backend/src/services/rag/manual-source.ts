@@ -44,15 +44,23 @@ export async function ensureManualSource(userId: string): Promise<string> {
     .returning()
   if (created) return created.id
 
-  // Lost the insert race (or hit a stale deleted row's unique slot) — re-select.
-  // Note: if the only row at this path is soft-deleted, this still returns it —
-  // acceptable rare edge case, not solved here.
+  // Lost the insert race, or the (userId, path) slot is occupied by a row this
+  // user soft-deleted earlier (DELETE /rag/sources/:id doesn't free the path).
+  // Re-select without the status filter to find whichever row holds the slot,
+  // then resurrect it if it's the deleted one — the alternative (leaving it dead
+  // and permanently failing to create a fresh "Chat notes" source) is worse.
   const [row] = await db
-    .select({ id: ragSources.id })
+    .select({ id: ragSources.id, status: ragSources.status })
     .from(ragSources)
     .where(and(eq(ragSources.userId, userId), eq(ragSources.path, MANUAL_SOURCE_PATH)))
     .limit(1)
   if (!row) throw new Error("failed to create or find manual source")
+  if (row.status === "deleted") {
+    await db
+      .update(ragSources)
+      .set({ status: "ready", updatedAt: new Date() })
+      .where(eq(ragSources.id, row.id))
+  }
   return row.id
 }
 

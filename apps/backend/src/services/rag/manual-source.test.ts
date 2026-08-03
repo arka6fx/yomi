@@ -1,15 +1,25 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test"
 
-let selectRows: { id: string }[] = []
+let selectRows: { id: string; status?: string }[] = []
+// Returned by the second (fallback, post-conflict) select call, distinct from
+// the first (initial lookup) call so a test can drive them down different paths.
+let fallbackSelectRows: { id: string; status?: string }[] = []
+let selectCallCount = 0
 let insertedSources: Record<string, unknown>[] = []
 let nextSourceId = 1
 let insertConflicts = false
+let updateCalls: Record<string, unknown>[] = []
 
 mock.module("@yomi/db", () => ({
   db: {
     select: () => ({
       from: () => ({
-        where: () => ({ limit: () => Promise.resolve(selectRows) }),
+        where: () => ({
+          limit: () => {
+            selectCallCount++
+            return Promise.resolve(selectCallCount === 1 ? selectRows : fallbackSelectRows)
+          },
+        }),
       }),
     }),
     insert: () => ({
@@ -22,6 +32,14 @@ mock.module("@yomi/db", () => ({
             return Promise.resolve([{ id, ...v }])
           },
         }),
+      }),
+    }),
+    update: () => ({
+      set: (v: Record<string, unknown>) => ({
+        where: () => {
+          updateCalls.push(v)
+          return Promise.resolve()
+        },
       }),
     }),
   },
@@ -57,9 +75,12 @@ const { MANUAL_SOURCE_TYPE, ensureManualSource, indexManualText } =
 
 beforeEach(() => {
   selectRows = []
+  fallbackSelectRows = []
+  selectCallCount = 0
   insertedSources = []
   nextSourceId = 1
   insertConflicts = false
+  updateCalls = []
   consentAllowed = true
   consentReason = "not granted"
   consentShouldThrow = false
@@ -94,6 +115,25 @@ describe("ensureManualSource", () => {
     expect(id).not.toBe("existing-deleted-source")
     expect(insertedSources).toHaveLength(1)
     expect(insertedSources[0]!["path"]).toBe("chat-notes")
+  })
+
+  it("resurrects a soft-deleted source when the insert conflicts on a deleted row's slot", async () => {
+    // Initial lookup excludes the deleted row (empty), so ensureManualSource attempts
+    // an insert. That insert loses the unique-constraint race because a soft-deleted
+    // row already occupies (userId, path) — the fallback re-select (unfiltered) finds
+    // it, and since it's "deleted" the function must resurrect rather than return it
+    // as-is or fail outright.
+    selectRows = []
+    fallbackSelectRows = [{ id: "deleted-source", status: "deleted" }]
+    insertConflicts = true
+
+    const id = await ensureManualSource("u1")
+
+    expect(id).toBe("deleted-source")
+    expect(insertedSources).toHaveLength(0)
+    expect(updateCalls).toHaveLength(1)
+    expect(updateCalls[0]!["status"]).toBe("ready")
+    expect(updateCalls[0]!["updatedAt"]).toBeInstanceOf(Date)
   })
 })
 
