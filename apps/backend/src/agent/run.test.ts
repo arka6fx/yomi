@@ -352,6 +352,27 @@ describe("runAgent metering", () => {
     expect(lastAgentExtraTools!["index_url"]).toBeUndefined()
   })
 
+  it("wires an index_document tool into extraTools for a Pro-plan user", async () => {
+    mockUser = makeUser({ plan: "pro" })
+    const { runAgent } = await import("./run.js")
+    await runAgent({ userId: "user_1", text: "hi" })
+    expect(lastAgentExtraTools).toBeDefined()
+    const indexDocumentTool = lastAgentExtraTools!["index_document"] as {
+      execute?: unknown
+      description?: string
+    }
+    expect(typeof indexDocumentTool.execute).toBe("function")
+    expect(indexDocumentTool.description).toContain("document")
+  })
+
+  it("omits index_document from extraTools for an Explore-plan user", async () => {
+    mockUser = makeUser({ plan: "explore" })
+    const { runAgent } = await import("./run.js")
+    await runAgent({ userId: "user_1", text: "hi" })
+    expect(lastAgentExtraTools).toBeDefined()
+    expect(lastAgentExtraTools!["index_document"]).toBeUndefined()
+  })
+
   // deep_research's rag_search/memory_search must never become a side door around a
   // consent the user denied — passive injection (fetchMemoryContext/fetchRagContext)
   // already gates on this, and the active tools have to match it exactly.
