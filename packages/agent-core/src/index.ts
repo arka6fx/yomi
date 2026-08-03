@@ -346,6 +346,7 @@ export {
   type DeepResearchRunLoopFn,
 } from "./deep-research.js"
 export { createIndexTextTool, type IndexTextResult, type IndexTextFn } from "./index-text.js"
+export { createIndexUrlTool, type IndexUrlResult, type IndexUrlFn } from "./index-url.js"
 export {
   suggestIntegrationsFor,
   formatIntegrationSuggestions,
