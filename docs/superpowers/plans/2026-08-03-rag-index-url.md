@@ -1,67 +1,131 @@
 # RAG index_url Tool Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> superpowers:subagent-driven-development (recommended) or
+> superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add an `index_url` tool the backend agent can call to fetch a URL, extract its readable text, and index it into the user's cloud RAG archive — SSRF-safe, gated by the same consent/plan checks as `index_text`.
+**Goal:** Add an `index_url` tool the backend agent can call to fetch a URL,
+extract its readable text, and index it into the user's cloud RAG archive —
+SSRF-safe, gated by the same consent/plan checks as `index_text`.
 
-**Architecture:** Extract `manual-source.ts`'s hardened get-or-create logic into a shared `source-lookup.ts` (used by both `index_text` and this new tool); a new agent-core file (`index-url.ts`) exporting a `createIndexUrlTool` factory (same shape as `index-text.ts`); a new backend service file (`url-ingest.ts`) doing the SSRF-gated fetch, bounds checks, and HTML extraction, then reusing `indexDocument()` exactly like `index_text` does; wired into `apps/backend/src/agent/run.ts`'s `extraTools` alongside `index_text`, gated by the same plan check.
+**Architecture:** Extract `manual-source.ts`'s hardened get-or-create logic into
+a shared `source-lookup.ts` (used by both `index_text` and this new tool); a new
+agent-core file (`index-url.ts`) exporting a `createIndexUrlTool` factory (same
+shape as `index-text.ts`); a new backend service file (`url-ingest.ts`) doing
+the SSRF-gated fetch, bounds checks, and HTML extraction, then reusing
+`indexDocument()` exactly like `index_text` does; wired into
+`apps/backend/src/agent/run.ts`'s `extraTools` alongside `index_text`, gated by
+the same plan check.
 
-**Tech Stack:** Bun, `ai` SDK's `tool()`/`zod`, Drizzle ORM, TypeScript, `bun:test`, native `fetch`.
+**Tech Stack:** Bun, `ai` SDK's `tool()`/`zod`, Drizzle ORM, TypeScript,
+`bun:test`, native `fetch`.
 
 ## Global Constraints
 
-- Spec: `docs/superpowers/specs/2026-08-03-rag-index-url-design.md` — this plan implements it exactly; do not deviate without re-checking that file.
-- **SSRF:** every `http`/`https` URL's hostname is checked via `resolvesToDisallowedAddress` (from `@yomi/agent-core`, already used by `registry.ts` for custom MCP servers) before any fetch. Non-`http`/`https` schemes are rejected before that check even runs. The fetch itself uses `redirect: "manual"`; any 3xx response is a hard failure — no redirect is ever followed.
-- **Fetch bounds:** `AbortSignal.timeout(10_000)`. `Content-Length` header checked before buffering (reject over 2,000,000 bytes without downloading). Actual buffered body length checked as a backstop (reject over 2,000,000 bytes). `Content-Type` must start with `text/html` or `text/plain` — anything else is rejected.
-- **Extraction:** regex-based, same approach as `gateway-runner.ts`'s `parseDocument` — strip `<title>`/`<style>`/`<script>` content (title is stripped from the body text because it's extracted separately, below), strip remaining tags, collapse whitespace. `text/plain` used as-is. Title from `<title>...</title>` (regex `/<title[^>]*>([^<]*)<\/title>/i`), falling back to the URL itself when absent or for plain-text.
-- **Document keying — differs from `index_text`:** `externalId` is the normalized URL (fragment stripped), not a random UUID — re-indexing the same URL updates the existing document via `indexDocument()`'s content-hash check, rather than creating a duplicate.
-- **Source keying:** one shared per-user `ragSources` row via `ensureSource(userId, { path: "indexed-urls", name: "Indexed URLs", sourceType: "url" })`.
-- **Gating:** identical to `index_text` — `checkConsent(userId, "cloud_memory")` inside the service function (before any fetch); Pro/Max/owner plan check at tool-construction time in `run.ts` (tool absent from `extraTools`, not present-and-erroring, for Explore).
-- **Never throws:** both `fetchAndExtractUrl` and `indexUrl` degrade to `{ error: string }` on every failure path, including unexpected exceptions — `indexUrl` wraps its whole body in try/catch and `console.error`s before returning, same pattern `indexManualText` uses.
+- Spec: `docs/superpowers/specs/2026-08-03-rag-index-url-design.md` — this plan
+  implements it exactly; do not deviate without re-checking that file.
+- **SSRF:** every `http`/`https` URL's hostname is checked via
+  `resolvesToDisallowedAddress` (from `@yomi/agent-core`, already used by
+  `registry.ts` for custom MCP servers) before any fetch. Non-`http`/`https`
+  schemes are rejected before that check even runs. The fetch itself uses
+  `redirect: "manual"`; any 3xx response is a hard failure — no redirect is ever
+  followed.
+- **Fetch bounds:** `AbortSignal.timeout(10_000)`. `Content-Length` header
+  checked before buffering (reject over 2,000,000 bytes without downloading).
+  Actual buffered body length checked as a backstop (reject over 2,000,000
+  bytes). `Content-Type` must start with `text/html` or `text/plain` — anything
+  else is rejected.
+- **Extraction:** regex-based, same approach as `gateway-runner.ts`'s
+  `parseDocument` — strip `<title>`/`<style>`/`<script>` content (title is
+  stripped from the body text because it's extracted separately, below), strip
+  remaining tags, collapse whitespace. `text/plain` used as-is. Title from
+  `<title>...</title>` (regex `/<title[^>]*>([^<]*)<\/title>/i`), falling back
+  to the URL itself when absent or for plain-text.
+- **Document keying — differs from `index_text`:** `externalId` is the
+  normalized URL (fragment stripped), not a random UUID — re-indexing the same
+  URL updates the existing document via `indexDocument()`'s content-hash check,
+  rather than creating a duplicate.
+- **Source keying:** one shared per-user `ragSources` row via
+  `ensureSource(userId, { path: "indexed-urls", name: "Indexed URLs", sourceType: "url" })`.
+- **Gating:** identical to `index_text` — `checkConsent(userId, "cloud_memory")`
+  inside the service function (before any fetch); Pro/Max/owner plan check at
+  tool-construction time in `run.ts` (tool absent from `extraTools`, not
+  present-and-erroring, for Explore).
+- **Never throws:** both `fetchAndExtractUrl` and `indexUrl` degrade to
+  `{ error: string }` on every failure path, including unexpected exceptions —
+  `indexUrl` wraps its whole body in try/catch and `console.error`s before
+  returning, same pattern `indexManualText` uses.
 - **Exact error strings** `fetchAndExtractUrl` must return, one per case:
-  - Non-`http`/`https` scheme or unparseable URL: `"only http and https URLs can be indexed"`
+  - Non-`http`/`https` scheme or unparseable URL:
+    `"only http and https URLs can be indexed"`
   - SSRF-blocked hostname: `"that URL cannot be fetched"`
-  - Redirect response (any 3xx): `"that URL redirects, which isn't supported yet"`
+  - Redirect response (any 3xx):
+    `"that URL redirects, which isn't supported yet"`
   - Fetch throws (timeout/network): `"failed to fetch that URL"`
   - Non-2xx response: `` `fetch failed with status ${response.status}` ``
   - Wrong content-type: `"only HTML and plain-text pages can be indexed"`
-  - Oversized (`Content-Length` header or actual buffered body over 2,000,000 bytes): `"that page is too large to index"`
-- Conventional commit messages (`feat:`, `test:`, `refactor:`), lowercase, no full stop, max 72 chars, per `AGENTS.md`.
+  - Oversized (`Content-Length` header or actual buffered body over 2,000,000
+    bytes): `"that page is too large to index"`
+- Conventional commit messages (`feat:`, `test:`, `refactor:`), lowercase, no
+  full stop, max 72 chars, per `AGENTS.md`.
 - Test commands, run from repo root:
   - `bun test --isolate packages/agent-core/src/index-url.test.ts` (Task 2)
-  - `bun test --isolate apps/backend/src/services/rag/source-lookup.test.ts` (Task 1)
-  - `bun test --isolate apps/backend/src/services/rag/manual-source.test.ts` (Task 1)
-  - `bun test --isolate apps/backend/src/services/rag/url-ingest.test.ts` (Task 4)
+  - `bun test --isolate apps/backend/src/services/rag/source-lookup.test.ts`
+    (Task 1)
+  - `bun test --isolate apps/backend/src/services/rag/manual-source.test.ts`
+    (Task 1)
+  - `bun test --isolate apps/backend/src/services/rag/url-ingest.test.ts`
+    (Task 4)
   - `bun test --isolate apps/backend/src/agent/run.test.ts` (Task 5)
 
 ---
 
 ## File Structure
 
-- Create: `apps/backend/src/services/rag/source-lookup.ts` — `ensureSource(userId, { path, name, sourceType })`, extracted and generalized from `manual-source.ts`.
-- Create: `apps/backend/src/services/rag/source-lookup.test.ts` — the hardened get-or-create test coverage, moved from `manual-source.test.ts` and generalized.
-- Modify: `apps/backend/src/services/rag/manual-source.ts` — `ensureManualSource` becomes a thin wrapper around `ensureSource`; `indexManualText` unchanged.
-- Modify: `apps/backend/src/services/rag/manual-source.test.ts` — shrinks: `ensureManualSource` becomes one pass-through test (mocking `./source-lookup.js`); `indexManualText`'s 6 existing tests unchanged.
-- Create: `packages/agent-core/src/index-url.ts` — `createIndexUrlTool` factory, `IndexUrlResult`/`IndexUrlFn` types.
+- Create: `apps/backend/src/services/rag/source-lookup.ts` —
+  `ensureSource(userId, { path, name, sourceType })`, extracted and generalized
+  from `manual-source.ts`.
+- Create: `apps/backend/src/services/rag/source-lookup.test.ts` — the hardened
+  get-or-create test coverage, moved from `manual-source.test.ts` and
+  generalized.
+- Modify: `apps/backend/src/services/rag/manual-source.ts` —
+  `ensureManualSource` becomes a thin wrapper around `ensureSource`;
+  `indexManualText` unchanged.
+- Modify: `apps/backend/src/services/rag/manual-source.test.ts` — shrinks:
+  `ensureManualSource` becomes one pass-through test (mocking
+  `./source-lookup.js`); `indexManualText`'s 6 existing tests unchanged.
+- Create: `packages/agent-core/src/index-url.ts` — `createIndexUrlTool` factory,
+  `IndexUrlResult`/`IndexUrlFn` types.
 - Create: `packages/agent-core/src/index-url.test.ts` — tests for the factory.
 - Modify: `packages/agent-core/src/index.ts` — export the new symbols.
-- Create: `apps/backend/src/services/rag/url-ingest.ts` — `fetchAndExtractUrl(url)`, `indexUrl(userId, url)`.
-- Create: `apps/backend/src/services/rag/url-ingest.test.ts` — tests for both functions.
-- Modify: `apps/backend/src/agent/run.ts` — import `createIndexUrlTool`, `indexUrl`; construct `indexUrlTool` alongside `indexTextTool` (same `canUseRag` gate); add to `extraTools`.
-- Modify: `apps/backend/src/agent/run.test.ts` — wiring tests proving `index_url` is present for a Pro-plan user and absent for an Explore-plan user.
+- Create: `apps/backend/src/services/rag/url-ingest.ts` —
+  `fetchAndExtractUrl(url)`, `indexUrl(userId, url)`.
+- Create: `apps/backend/src/services/rag/url-ingest.test.ts` — tests for both
+  functions.
+- Modify: `apps/backend/src/agent/run.ts` — import `createIndexUrlTool`,
+  `indexUrl`; construct `indexUrlTool` alongside `indexTextTool` (same
+  `canUseRag` gate); add to `extraTools`.
+- Modify: `apps/backend/src/agent/run.test.ts` — wiring tests proving
+  `index_url` is present for a Pro-plan user and absent for an Explore-plan
+  user.
 
 ---
 
 ### Task 1: Extract `ensureSource` into `source-lookup.ts`
 
 **Files:**
+
 - Create: `apps/backend/src/services/rag/source-lookup.ts`
 - Create: `apps/backend/src/services/rag/source-lookup.test.ts`
 - Modify: `apps/backend/src/services/rag/manual-source.ts`
 - Modify: `apps/backend/src/services/rag/manual-source.test.ts`
 
 **Interfaces:**
-- Consumes: `db`, `ragSources` from `@yomi/db`; `and`, `eq`, `ne` from `drizzle-orm` (moving from `manual-source.ts`, which currently imports these directly).
+
+- Consumes: `db`, `ragSources` from `@yomi/db`; `and`, `eq`, `ne` from
+  `drizzle-orm` (moving from `manual-source.ts`, which currently imports these
+  directly).
 - Produces:
   ```ts
   export interface EnsureSourceOptions {
@@ -69,11 +133,16 @@
     name: string
     sourceType: string
   }
-  export async function ensureSource(userId: string, opts: EnsureSourceOptions): Promise<string>
+  export async function ensureSource(
+    userId: string,
+    opts: EnsureSourceOptions,
+  ): Promise<string>
   ```
-  Task 4 consumes `ensureSource` by this exact name and signature, imported from `./source-lookup.js`.
+  Task 4 consumes `ensureSource` by this exact name and signature, imported from
+  `./source-lookup.js`.
 
-This is a pure refactor — no behavior change to `index_text`. The current `apps/backend/src/services/rag/manual-source.ts` reads:
+This is a pure refactor — no behavior change to `index_text`. The current
+`apps/backend/src/services/rag/manual-source.ts` reads:
 
 ```ts
 import { and, eq, ne } from "drizzle-orm"
@@ -130,7 +199,12 @@ export async function ensureManualSource(userId: string): Promise<string> {
   const [row] = await db
     .select({ id: ragSources.id, status: ragSources.status })
     .from(ragSources)
-    .where(and(eq(ragSources.userId, userId), eq(ragSources.path, MANUAL_SOURCE_PATH)))
+    .where(
+      and(
+        eq(ragSources.userId, userId),
+        eq(ragSources.path, MANUAL_SOURCE_PATH),
+      ),
+    )
     .limit(1)
   if (!row) throw new Error("failed to create or find manual source")
   if (row.status === "deleted") {
@@ -186,7 +260,9 @@ export async function indexManualText(
 
 - [ ] **Step 1: Create `source-lookup.ts`**
 
-Create `apps/backend/src/services/rag/source-lookup.ts` with this content (the `ensureManualSource` body above, generalized to take `path`/`name`/`sourceType` as parameters):
+Create `apps/backend/src/services/rag/source-lookup.ts` with this content (the
+`ensureManualSource` body above, generalized to take `path`/`name`/`sourceType`
+as parameters):
 
 ```ts
 import { and, eq, ne } from "drizzle-orm"
@@ -201,7 +277,10 @@ export interface EnsureSourceOptions {
 // Idempotent get-or-create, path-keyed and race-safe via the (userId, path) unique
 // constraint. Resurrects a soft-deleted row rather than leaving it permanently dead
 // and re-insert-blocked — DELETE /rag/sources/:id doesn't free the path.
-export async function ensureSource(userId: string, opts: EnsureSourceOptions): Promise<string> {
+export async function ensureSource(
+  userId: string,
+  opts: EnsureSourceOptions,
+): Promise<string> {
   const existing = await db
     .select({ id: ragSources.id })
     .from(ragSources)
@@ -251,7 +330,9 @@ export async function ensureSource(userId: string, opts: EnsureSourceOptions): P
 
 - [ ] **Step 2: Create `source-lookup.test.ts`**
 
-Create `apps/backend/src/services/rag/source-lookup.test.ts` with this content (the get-or-create test coverage moved from `manual-source.test.ts`, generalized):
+Create `apps/backend/src/services/rag/source-lookup.test.ts` with this content
+(the get-or-create test coverage moved from `manual-source.test.ts`,
+generalized):
 
 ```ts
 import { beforeEach, describe, expect, it, mock } from "bun:test"
@@ -271,7 +352,9 @@ mock.module("@yomi/db", () => ({
         where: () => ({
           limit: () => {
             selectCallCount++
-            return Promise.resolve(selectCallCount === 1 ? selectRows : fallbackSelectRows)
+            return Promise.resolve(
+              selectCallCount === 1 ? selectRows : fallbackSelectRows,
+            )
           },
         }),
       }),
@@ -302,7 +385,11 @@ mock.module("@yomi/db", () => ({
 
 const { ensureSource } = await import("./source-lookup.js")
 
-const manualOpts = { path: "chat-notes", name: "Chat notes", sourceType: "manual" }
+const manualOpts = {
+  path: "chat-notes",
+  name: "Chat notes",
+  sourceType: "manual",
+}
 
 beforeEach(() => {
   selectRows = []
@@ -354,7 +441,11 @@ describe("ensureSource", () => {
   })
 
   it("works with a different path/name/sourceType for a different bucket", async () => {
-    const urlOpts = { path: "indexed-urls", name: "Indexed URLs", sourceType: "url" }
+    const urlOpts = {
+      path: "indexed-urls",
+      name: "Indexed URLs",
+      sourceType: "url",
+    }
     await ensureSource("u1", urlOpts)
     expect(insertedSources[0]!["path"]).toBe("indexed-urls")
     expect(insertedSources[0]!["name"]).toBe("Indexed URLs")
@@ -370,7 +461,8 @@ Expected: PASS — 5 tests, 0 fail.
 
 - [ ] **Step 4: Shrink `manual-source.ts` to use `ensureSource`**
 
-Replace the full content of `apps/backend/src/services/rag/manual-source.ts` with:
+Replace the full content of `apps/backend/src/services/rag/manual-source.ts`
+with:
 
 ```ts
 import { indexDocument } from "./index-document.js"
@@ -440,7 +532,8 @@ export async function indexManualText(
 
 - [ ] **Step 5: Shrink `manual-source.test.ts`**
 
-Replace the full content of `apps/backend/src/services/rag/manual-source.test.ts` with:
+Replace the full content of
+`apps/backend/src/services/rag/manual-source.test.ts` with:
 
 ```ts
 import { beforeEach, describe, expect, it, mock } from "bun:test"
@@ -464,7 +557,10 @@ mock.module("../privacy/checks.js", () => ({
   },
 }))
 
-let indexDocumentResult: { status: "indexed" | "unchanged"; documentId: string | null } = {
+let indexDocumentResult: {
+  status: "indexed" | "unchanged"
+  documentId: string | null
+} = {
   status: "indexed",
   documentId: "doc-1",
 }
@@ -512,7 +608,9 @@ describe("indexManualText", () => {
 
     const result = await indexManualText("u1", "Notes", "some content")
 
-    expect(result).toEqual({ error: "cloud memory consent not granted: not granted" })
+    expect(result).toEqual({
+      error: "cloud memory consent not granted: not granted",
+    })
     expect(indexDocumentCalls).toHaveLength(0)
   })
 
@@ -535,7 +633,9 @@ describe("indexManualText", () => {
     await indexManualText("u1", "Notes", "second paste")
 
     expect(indexDocumentCalls).toHaveLength(2)
-    expect(indexDocumentCalls[0]!["externalId"]).not.toBe(indexDocumentCalls[1]!["externalId"])
+    expect(indexDocumentCalls[0]!["externalId"]).not.toBe(
+      indexDocumentCalls[1]!["externalId"],
+    )
   })
 
   it("returns an error when indexDocument returns no documentId", async () => {
@@ -567,13 +667,13 @@ describe("indexManualText", () => {
 
 - [ ] **Step 6: Run both test files to verify everything passes**
 
-Run: `bun test --isolate apps/backend/src/services/rag/source-lookup.test.ts apps/backend/src/services/rag/manual-source.test.ts`
+Run:
+`bun test --isolate apps/backend/src/services/rag/source-lookup.test.ts apps/backend/src/services/rag/manual-source.test.ts`
 Expected: PASS — 5 + 7 = 12 tests, 0 fail.
 
 - [ ] **Step 7: Typecheck**
 
-Run: `bun run typecheck`
-Expected: 0 errors.
+Run: `bun run typecheck` Expected: 0 errors.
 
 - [ ] **Step 8: Commit**
 
@@ -587,18 +687,26 @@ git commit -m "refactor(rag): extract ensureSource for reuse across ingestion to
 ### Task 2: `createIndexUrlTool` in agent-core
 
 **Files:**
+
 - Create: `packages/agent-core/src/index-url.ts`
 - Create: `packages/agent-core/src/index-url.test.ts`
 
 **Interfaces:**
+
 - Consumes: `tool` from `ai`, `z` from `zod`.
 - Produces:
+
   ```ts
-  export type IndexUrlResult = { ok: true; documentId: string; title: string } | { error: string }
+  export type IndexUrlResult =
+    | { ok: true; documentId: string; title: string }
+    | { error: string }
   export type IndexUrlFn = (url: string) => Promise<IndexUrlResult>
   export function createIndexUrlTool(indexUrl: IndexUrlFn)
   ```
-  Task 5 consumes `createIndexUrlTool` by this exact name (imported via `@yomi/agent-core` after Task 3 exports it). This task does not depend on Task 1.
+
+  Task 5 consumes `createIndexUrlTool` by this exact name (imported via
+  `@yomi/agent-core` after Task 3 exports it). This task does not depend on
+  Task 1.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -630,14 +738,19 @@ describe("createIndexUrlTool", () => {
     }
     const t = createIndexUrlTool(indexUrl)
 
-    const result = await t.execute!({ url: "https://example.com/article" }, {} as never)
+    const result = await t.execute!(
+      { url: "https://example.com/article" },
+      {} as never,
+    )
 
     expect(calledUrl).toBe("https://example.com/article")
     expect(result).toEqual({ ok: true, documentId: "doc-1", title: "Article" })
   })
 
   it("passes an error result through unchanged", async () => {
-    const indexUrl: IndexUrlFn = async () => ({ error: "that URL cannot be fetched" })
+    const indexUrl: IndexUrlFn = async () => ({
+      error: "that URL cannot be fetched",
+    })
     const t = createIndexUrlTool(indexUrl)
 
     const result = await t.execute!({ url: "https://example.com" }, {} as never)
@@ -649,8 +762,8 @@ describe("createIndexUrlTool", () => {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `bun test --isolate packages/agent-core/src/index-url.test.ts`
-Expected: FAIL — `index-url.js` does not exist yet.
+Run: `bun test --isolate packages/agent-core/src/index-url.test.ts` Expected:
+FAIL — `index-url.js` does not exist yet.
 
 - [ ] **Step 3: Write the minimal implementation**
 
@@ -660,7 +773,9 @@ Create `packages/agent-core/src/index-url.ts` with this content:
 import { tool } from "ai"
 import { z } from "zod"
 
-export type IndexUrlResult = { ok: true; documentId: string; title: string } | { error: string }
+export type IndexUrlResult =
+  | { ok: true; documentId: string; title: string }
+  | { error: string }
 export type IndexUrlFn = (url: string) => Promise<IndexUrlResult>
 
 export function createIndexUrlTool(indexUrl: IndexUrlFn) {
@@ -679,8 +794,8 @@ export function createIndexUrlTool(indexUrl: IndexUrlFn) {
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `bun test --isolate packages/agent-core/src/index-url.test.ts`
-Expected: PASS — 3 tests, 0 fail.
+Run: `bun test --isolate packages/agent-core/src/index-url.test.ts` Expected:
+PASS — 3 tests, 0 fail.
 
 - [ ] **Step 5: Commit**
 
@@ -694,30 +809,41 @@ git commit -m "feat(agent-core): add index_url tool for cloud RAG"
 ### Task 3: Export from agent-core's public API
 
 **Files:**
+
 - Modify: `packages/agent-core/src/index.ts`
 
 **Interfaces:**
-- Consumes: `createIndexUrlTool`, `IndexUrlResult`, `IndexUrlFn` from `./index-url.js` (Task 2).
-- Produces: `@yomi/agent-core` now exports `createIndexUrlTool` — Task 5 imports it from there.
+
+- Consumes: `createIndexUrlTool`, `IndexUrlResult`, `IndexUrlFn` from
+  `./index-url.js` (Task 2).
+- Produces: `@yomi/agent-core` now exports `createIndexUrlTool` — Task 5 imports
+  it from there.
 
 - [ ] **Step 1: Add the export**
 
 In `packages/agent-core/src/index.ts`, immediately after the existing block:
 
 ```ts
-export { createIndexTextTool, type IndexTextResult, type IndexTextFn } from "./index-text.js"
+export {
+  createIndexTextTool,
+  type IndexTextResult,
+  type IndexTextFn,
+} from "./index-text.js"
 ```
 
 add:
 
 ```ts
-export { createIndexUrlTool, type IndexUrlResult, type IndexUrlFn } from "./index-url.js"
+export {
+  createIndexUrlTool,
+  type IndexUrlResult,
+  type IndexUrlFn,
+} from "./index-url.js"
 ```
 
 - [ ] **Step 2: Typecheck the package**
 
-Run: `bun run typecheck`
-Expected: no errors.
+Run: `bun run typecheck` Expected: no errors.
 
 - [ ] **Step 3: Commit**
 
@@ -731,21 +857,36 @@ git commit -m "feat(agent-core): export createIndexUrlTool"
 ### Task 4: `url-ingest.ts` backend service
 
 **Files:**
+
 - Create: `apps/backend/src/services/rag/url-ingest.ts`
 - Create: `apps/backend/src/services/rag/url-ingest.test.ts`
 
 **Interfaces:**
-- Consumes: `resolvesToDisallowedAddress` from `@yomi/agent-core` (already exported there — confirmed at `packages/agent-core/src/index.ts:27`); `indexDocument` from `./index-document.js` (existing); `checkConsent` from `../privacy/checks.js` (existing); `ensureSource` from `./source-lookup.js` (Task 1).
+
+- Consumes: `resolvesToDisallowedAddress` from `@yomi/agent-core` (already
+  exported there — confirmed at `packages/agent-core/src/index.ts:27`);
+  `indexDocument` from `./index-document.js` (existing); `checkConsent` from
+  `../privacy/checks.js` (existing); `ensureSource` from `./source-lookup.js`
+  (Task 1).
 - Produces:
+
   ```ts
-  export type UrlExtractResult = { title: string; text: string; normalizedUrl: string } | { error: string }
-  export async function fetchAndExtractUrl(rawUrl: string): Promise<UrlExtractResult>
+  export type UrlExtractResult =
+    | { title: string; text: string; normalizedUrl: string }
+    | { error: string }
+  export async function fetchAndExtractUrl(
+    rawUrl: string,
+  ): Promise<UrlExtractResult>
   export async function indexUrl(
     userId: string,
     rawUrl: string,
-  ): Promise<{ ok: true; documentId: string; title: string } | { error: string }>
+  ): Promise<
+    { ok: true; documentId: string; title: string } | { error: string }
+  >
   ```
-  Task 5 consumes `indexUrl` by this exact name and signature, imported from `../services/rag/url-ingest.js`.
+
+  Task 5 consumes `indexUrl` by this exact name and signature, imported from
+  `../services/rag/url-ingest.js`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -770,10 +911,16 @@ mock.module("./source-lookup.js", () => ({
 let consentAllowed = true
 let consentReason: string | null = "not granted"
 mock.module("../privacy/checks.js", () => ({
-  checkConsent: async () => ({ allowed: consentAllowed, reason: consentReason }),
+  checkConsent: async () => ({
+    allowed: consentAllowed,
+    reason: consentReason,
+  }),
 }))
 
-let indexDocumentResult: { status: "indexed" | "unchanged"; documentId: string | null } = {
+let indexDocumentResult: {
+  status: "indexed" | "unchanged"
+  documentId: string | null
+} = {
   status: "indexed",
   documentId: "doc-1",
 }
@@ -822,7 +969,9 @@ describe("fetchAndExtractUrl", () => {
 
   it("rejects a URL that resolves to a disallowed address", async () => {
     disallowedAddress = true
-    globalThis.fetch = mock(async () => htmlResponse("<html></html>")) as unknown as typeof fetch
+    globalThis.fetch = mock(async () =>
+      htmlResponse("<html></html>"),
+    ) as unknown as typeof fetch
 
     const result = await fetchAndExtractUrl("https://example.com")
 
@@ -837,7 +986,9 @@ describe("fetchAndExtractUrl", () => {
 
     const result = await fetchAndExtractUrl("https://example.com")
 
-    expect(result).toEqual({ error: "that URL redirects, which isn't supported yet" })
+    expect(result).toEqual({
+      error: "that URL redirects, which isn't supported yet",
+    })
   })
 
   it("rejects when fetch throws (timeout/network failure)", async () => {
@@ -867,7 +1018,9 @@ describe("fetchAndExtractUrl", () => {
 
     const result = await fetchAndExtractUrl("https://example.com/file.pdf")
 
-    expect(result).toEqual({ error: "only HTML and plain-text pages can be indexed" })
+    expect(result).toEqual({
+      error: "only HTML and plain-text pages can be indexed",
+    })
   })
 
   it("rejects an oversized page via Content-Length", async () => {
@@ -894,7 +1047,9 @@ describe("fetchAndExtractUrl", () => {
     const html =
       "<html><head><title>My Article</title><style>body{color:red}</style></head>" +
       "<body><script>alert(1)</script><h1>Hello</h1><p>World</p></body></html>"
-    globalThis.fetch = mock(async () => htmlResponse(html)) as unknown as typeof fetch
+    globalThis.fetch = mock(async () =>
+      htmlResponse(html),
+    ) as unknown as typeof fetch
 
     const result = await fetchAndExtractUrl("https://example.com/article")
 
@@ -938,7 +1093,9 @@ describe("fetchAndExtractUrl", () => {
       htmlResponse("<html><title>T</title><body>x</body></html>"),
     ) as unknown as typeof fetch
 
-    const result = await fetchAndExtractUrl("https://example.com/page#section-2")
+    const result = await fetchAndExtractUrl(
+      "https://example.com/page#section-2",
+    )
 
     expect(result).toEqual({
       title: "T",
@@ -951,11 +1108,15 @@ describe("fetchAndExtractUrl", () => {
 describe("indexUrl", () => {
   it("returns an error and does not fetch when consent is denied", async () => {
     consentAllowed = false
-    globalThis.fetch = mock(async () => htmlResponse("<html></html>")) as unknown as typeof fetch
+    globalThis.fetch = mock(async () =>
+      htmlResponse("<html></html>"),
+    ) as unknown as typeof fetch
 
     const result = await indexUrl("u1", "https://example.com")
 
-    expect(result).toEqual({ error: "cloud memory consent not granted: not granted" })
+    expect(result).toEqual({
+      error: "cloud memory consent not granted: not granted",
+    })
     expect(globalThis.fetch).not.toHaveBeenCalled()
   })
 
@@ -985,7 +1146,10 @@ describe("indexUrl", () => {
     expect(call["title"]).toBe("Article")
     expect(call["mimeType"]).toBe("text/html")
     expect(ensureSourceCalls).toEqual([
-      { userId: "u1", opts: { path: "indexed-urls", name: "Indexed URLs", sourceType: "url" } },
+      {
+        userId: "u1",
+        opts: { path: "indexed-urls", name: "Indexed URLs", sourceType: "url" },
+      },
     ])
   })
 
@@ -998,11 +1162,15 @@ describe("indexUrl", () => {
     await indexUrl("u1", "https://example.com/article")
 
     expect(indexDocumentCalls).toHaveLength(2)
-    expect(indexDocumentCalls[0]!["externalId"]).toBe(indexDocumentCalls[1]!["externalId"])
+    expect(indexDocumentCalls[0]!["externalId"]).toBe(
+      indexDocumentCalls[1]!["externalId"],
+    )
   })
 
   it("returns an error when indexDocument returns no documentId", async () => {
-    globalThis.fetch = mock(async () => htmlResponse("<html><body>x</body></html>")) as unknown as typeof fetch
+    globalThis.fetch = mock(async () =>
+      htmlResponse("<html><body>x</body></html>"),
+    ) as unknown as typeof fetch
     indexDocumentResult = { status: "unchanged", documentId: null }
 
     const result = await indexUrl("u1", "https://example.com")
@@ -1067,7 +1235,9 @@ function stripHtml(html: string): string {
 // Fetches a user-supplied URL and extracts its readable text. Never throws — every
 // failure path (invalid URL, SSRF-blocked address, redirect, timeout, non-2xx, wrong
 // content-type, oversized body) returns { error } with a specific, distinct message.
-export async function fetchAndExtractUrl(rawUrl: string): Promise<UrlExtractResult> {
+export async function fetchAndExtractUrl(
+  rawUrl: string,
+): Promise<UrlExtractResult> {
   let url: URL
   try {
     url = new URL(rawUrl)
@@ -1125,7 +1295,11 @@ export async function fetchAndExtractUrl(rawUrl: string): Promise<UrlExtractResu
 
   const raw = new TextDecoder().decode(buffer)
   if (isHtml) {
-    return { title: extractTitle(raw, normalizedUrl), text: stripHtml(raw), normalizedUrl }
+    return {
+      title: extractTitle(raw, normalizedUrl),
+      text: stripHtml(raw),
+      normalizedUrl,
+    }
   }
   return { title: normalizedUrl, text: raw.trim(), normalizedUrl }
 }
@@ -1136,7 +1310,9 @@ export async function fetchAndExtractUrl(rawUrl: string): Promise<UrlExtractResu
 export async function indexUrl(
   userId: string,
   rawUrl: string,
-): Promise<{ ok: true; documentId: string; title: string } | { error: string }> {
+): Promise<
+  { ok: true; documentId: string; title: string } | { error: string }
+> {
   try {
     const consent = await checkConsent(userId, "cloud_memory")
     if (!consent.allowed) {
@@ -1164,7 +1340,10 @@ export async function indexUrl(
     if (!result.documentId) return { error: "failed to index" }
     return { ok: true, documentId: result.documentId, title: extracted.title }
   } catch (err) {
-    console.error("[indexUrl] failed:", err instanceof Error ? (err.stack ?? err.message) : err)
+    console.error(
+      "[indexUrl] failed:",
+      err instanceof Error ? (err.stack ?? err.message) : err,
+    )
     return { error: "failed to index" }
   }
 }
@@ -1187,73 +1366,84 @@ git commit -m "feat(rag): add SSRF-safe URL fetch, extract, and index"
 ### Task 5: Wire `index_url` into the backend agent
 
 **Files:**
-- Modify: `apps/backend/src/agent/run.ts` — import block (~lines 4-21), `isOwnerUser`/`effectivePlanForUser` gate block (~lines 574-583), `extraTools` object (~lines 589-596)
+
+- Modify: `apps/backend/src/agent/run.ts` — import block (~lines 4-21),
+  `isOwnerUser`/`effectivePlanForUser` gate block (~lines 574-583), `extraTools`
+  object (~lines 589-596)
 - Modify: `apps/backend/src/agent/run.test.ts`
 
 **Interfaces:**
-- Consumes: `createIndexUrlTool` from `@yomi/agent-core` (Task 3); `indexUrl` from `../services/rag/url-ingest.js` (Task 4). The existing in-scope `canUseRag` boolean (already computed for `index_text`'s gate — reused as-is, not recomputed).
-- Produces: nothing new for later tasks — this is the final integration point for this plan.
+
+- Consumes: `createIndexUrlTool` from `@yomi/agent-core` (Task 3); `indexUrl`
+  from `../services/rag/url-ingest.js` (Task 4). The existing in-scope
+  `canUseRag` boolean (already computed for `index_text`'s gate — reused as-is,
+  not recomputed).
+- Produces: nothing new for later tasks — this is the final integration point
+  for this plan.
 
 - [ ] **Step 1: Write the failing tests**
 
-In `apps/backend/src/agent/run.test.ts`, find the existing `index_text` wiring tests:
+In `apps/backend/src/agent/run.test.ts`, find the existing `index_text` wiring
+tests:
 
 ```ts
-  it("wires an index_text tool into extraTools for a Pro-plan user", async () => {
-    mockUser = makeUser({ plan: "pro" })
-    const { runAgent } = await import("./run.js")
-    await runAgent({ userId: "user_1", text: "hi" })
-    expect(lastAgentExtraTools).toBeDefined()
-    const indexTextTool = lastAgentExtraTools!["index_text"] as {
-      execute?: unknown
-      description?: string
-    }
-    expect(typeof indexTextTool.execute).toBe("function")
-    expect(indexTextTool.description).toContain("index")
-  })
+it("wires an index_text tool into extraTools for a Pro-plan user", async () => {
+  mockUser = makeUser({ plan: "pro" })
+  const { runAgent } = await import("./run.js")
+  await runAgent({ userId: "user_1", text: "hi" })
+  expect(lastAgentExtraTools).toBeDefined()
+  const indexTextTool = lastAgentExtraTools!["index_text"] as {
+    execute?: unknown
+    description?: string
+  }
+  expect(typeof indexTextTool.execute).toBe("function")
+  expect(indexTextTool.description).toContain("index")
+})
 
-  it("omits index_text from extraTools for an Explore-plan user", async () => {
-    mockUser = makeUser({ plan: "explore" })
-    const { runAgent } = await import("./run.js")
-    await runAgent({ userId: "user_1", text: "hi" })
-    expect(lastAgentExtraTools).toBeDefined()
-    expect(lastAgentExtraTools!["index_text"]).toBeUndefined()
-  })
+it("omits index_text from extraTools for an Explore-plan user", async () => {
+  mockUser = makeUser({ plan: "explore" })
+  const { runAgent } = await import("./run.js")
+  await runAgent({ userId: "user_1", text: "hi" })
+  expect(lastAgentExtraTools).toBeDefined()
+  expect(lastAgentExtraTools!["index_text"]).toBeUndefined()
+})
 ```
 
 Add two new tests immediately after them:
 
 ```ts
-  it("wires an index_url tool into extraTools for a Pro-plan user", async () => {
-    mockUser = makeUser({ plan: "pro" })
-    const { runAgent } = await import("./run.js")
-    await runAgent({ userId: "user_1", text: "hi" })
-    expect(lastAgentExtraTools).toBeDefined()
-    const indexUrlTool = lastAgentExtraTools!["index_url"] as {
-      execute?: unknown
-      description?: string
-    }
-    expect(typeof indexUrlTool.execute).toBe("function")
-    expect(indexUrlTool.description).toContain("URL")
-  })
+it("wires an index_url tool into extraTools for a Pro-plan user", async () => {
+  mockUser = makeUser({ plan: "pro" })
+  const { runAgent } = await import("./run.js")
+  await runAgent({ userId: "user_1", text: "hi" })
+  expect(lastAgentExtraTools).toBeDefined()
+  const indexUrlTool = lastAgentExtraTools!["index_url"] as {
+    execute?: unknown
+    description?: string
+  }
+  expect(typeof indexUrlTool.execute).toBe("function")
+  expect(indexUrlTool.description).toContain("URL")
+})
 
-  it("omits index_url from extraTools for an Explore-plan user", async () => {
-    mockUser = makeUser({ plan: "explore" })
-    const { runAgent } = await import("./run.js")
-    await runAgent({ userId: "user_1", text: "hi" })
-    expect(lastAgentExtraTools).toBeDefined()
-    expect(lastAgentExtraTools!["index_url"]).toBeUndefined()
-  })
+it("omits index_url from extraTools for an Explore-plan user", async () => {
+  mockUser = makeUser({ plan: "explore" })
+  const { runAgent } = await import("./run.js")
+  await runAgent({ userId: "user_1", text: "hi" })
+  expect(lastAgentExtraTools).toBeDefined()
+  expect(lastAgentExtraTools!["index_url"]).toBeUndefined()
+})
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `bun test --isolate apps/backend/src/agent/run.test.ts -t "index_url"`
-Expected: FAIL — `lastAgentExtraTools!["index_url"]` is `undefined` in the first new test (the wiring doesn't exist yet).
+Expected: FAIL — `lastAgentExtraTools!["index_url"]` is `undefined` in the first
+new test (the wiring doesn't exist yet).
 
 - [ ] **Step 3: Add the imports**
 
-In `apps/backend/src/agent/run.ts`, the `@yomi/agent-core` import block currently reads:
+In `apps/backend/src/agent/run.ts`, the `@yomi/agent-core` import block
+currently reads:
 
 ```ts
 import {
@@ -1378,19 +1568,16 @@ Change it to:
 
 - [ ] **Step 5: Run the full test file to verify everything passes**
 
-Run: `bun test --isolate apps/backend/src/agent/run.test.ts`
-Expected: PASS — all existing tests plus the two new ones.
+Run: `bun test --isolate apps/backend/src/agent/run.test.ts` Expected: PASS —
+all existing tests plus the two new ones.
 
 - [ ] **Step 6: Typecheck and run the full backend + agent-core suites**
 
-Run: `bun run typecheck`
-Expected: 0 errors.
+Run: `bun run typecheck` Expected: 0 errors.
 
-Run: `bun test --isolate apps/backend/src`
-Expected: all pass.
+Run: `bun test --isolate apps/backend/src` Expected: all pass.
 
-Run: `bun test --isolate packages/agent-core/src`
-Expected: all pass.
+Run: `bun test --isolate packages/agent-core/src` Expected: all pass.
 
 - [ ] **Step 7: Commit**
 
@@ -1403,9 +1590,14 @@ git commit -m "feat(agent): wire index_url tool into the backend agent"
 
 ## Final Verification
 
-- [ ] Run `bun run format` proactively (every PR this session has needed this at least once — run it before pushing, then re-verify tests still pass).
+- [ ] Run `bun run format` proactively (every PR this session has needed this at
+      least once — run it before pushing, then re-verify tests still pass).
 - [ ] Run `bun run lint`.
 - [ ] Run `bun run typecheck` from repo root — 0 errors.
-- [ ] Run `bun test --isolate packages/agent-core/src` from repo root — all pass.
+- [ ] Run `bun test --isolate packages/agent-core/src` from repo root — all
+      pass.
 - [ ] Run `bun test --isolate apps/backend/src` from repo root — all pass.
-- [ ] Re-read `docs/superpowers/specs/2026-08-03-rag-index-url-design.md` and confirm every section (SSRF protection, fetch bounds, extraction, source/document keying, gating, interface, error handling) has a corresponding implemented piece.
+- [ ] Re-read `docs/superpowers/specs/2026-08-03-rag-index-url-design.md` and
+      confirm every section (SSRF protection, fetch bounds, extraction,
+      source/document keying, gating, interface, error handling) has a
+      corresponding implemented piece.

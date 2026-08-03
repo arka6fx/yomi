@@ -248,7 +248,9 @@ describe("indexUrl", () => {
   })
 
   it("returns an error when indexDocument returns no documentId", async () => {
-    globalThis.fetch = mock(async () => htmlResponse("<html><body>x</body></html>")) as unknown as typeof fetch
+    globalThis.fetch = mock(async () =>
+      htmlResponse("<html><body>x</body></html>"),
+    ) as unknown as typeof fetch
     indexDocumentResult = { status: "unchanged", documentId: null }
 
     const result = await indexUrl("u1", "https://example.com")
