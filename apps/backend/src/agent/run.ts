@@ -42,7 +42,11 @@ import { searchRagDocuments } from "../services/rag/search.js"
 import { searchMemoryEntries } from "../services/memory/search.js"
 import { indexManualText } from "../services/rag/manual-source.js"
 import { indexUrl } from "../services/rag/url-ingest.js"
-import { indexUploadedDocument } from "../services/rag/document-source.js"
+import {
+  resolvePendingDocumentIndex,
+  type ConsumePendingDocumentFn,
+  type RestorePendingDocumentFn,
+} from "./pending-document.js"
 import {
   buildExtractionPrompt,
   fetchTurnCandidates,
@@ -69,6 +73,11 @@ export interface RunAgentOptions {
   // the user's message. Only meaningful on platforms that support reactions
   // (Telegram) — omit on call sites that don't wire one up.
   onReact?: ReactFn
+  // When set, index_document consumes the turn's stashed upload through this pair
+  // instead of requiring the model to supply document content — only the gateway's
+  // normal-message path has a document to offer, so every other caller omits both.
+  consumePendingDocument?: ConsumePendingDocumentFn
+  restorePendingDocument?: RestorePendingDocumentFn
 }
 
 export interface RunAgentResult {
@@ -588,8 +597,13 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     : null
   const indexUrlTool = canUseRag ? createIndexUrlTool((url) => indexUrl(opts.userId, url)) : null
   const indexDocumentTool = canUseRag
-    ? createIndexDocumentTool((title, content) =>
-        indexUploadedDocument(opts.userId, title, content),
+    ? createIndexDocumentTool((title) =>
+        resolvePendingDocumentIndex(
+          opts.userId,
+          title,
+          opts.consumePendingDocument,
+          opts.restorePendingDocument,
+        ),
       )
     : null
   try {
