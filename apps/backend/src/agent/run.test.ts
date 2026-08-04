@@ -159,6 +159,24 @@ mock.module("../services/privacy/checks.js", () => ({
   },
 }))
 
+let resolvePendingDocumentIndexCalls: {
+  userId: string
+  title: string | undefined
+  consumePendingDocument: unknown
+  restorePendingDocument: unknown
+}[] = []
+mock.module("./pending-document.js", () => ({
+  resolvePendingDocumentIndex: async (
+    userId: string,
+    title: string | undefined,
+    consumePendingDocument: unknown,
+    restorePendingDocument: unknown,
+  ) => {
+    resolvePendingDocumentIndexCalls.push({ userId, title, consumePendingDocument, restorePendingDocument })
+    return { ok: true, documentId: "doc-1" }
+  },
+}))
+
 function makeUser(overrides: Record<string, unknown> = {}) {
   return {
     id: "user_1",
@@ -371,6 +389,29 @@ describe("runAgent metering", () => {
     await runAgent({ userId: "user_1", text: "hi" })
     expect(lastAgentExtraTools).toBeDefined()
     expect(lastAgentExtraTools!["index_document"]).toBeUndefined()
+  })
+
+  it("index_document's execute calls resolvePendingDocumentIndex with the turn's userId and callbacks", async () => {
+    mockUser = makeUser({ plan: "pro" })
+    const { runAgent } = await import("./run.js")
+    await runAgent({ userId: "user_1", text: "hi" })
+    expect(lastAgentExtraTools).toBeDefined()
+    const indexDocumentTool = lastAgentExtraTools!["index_document"] as {
+      execute: (args: { title?: string }, ctx: never) => Promise<unknown>
+    }
+
+    resolvePendingDocumentIndexCalls = []
+    const result = await indexDocumentTool.execute({ title: "custom.pdf" }, {} as never)
+
+    expect(resolvePendingDocumentIndexCalls).toEqual([
+      {
+        userId: "user_1",
+        title: "custom.pdf",
+        consumePendingDocument: undefined,
+        restorePendingDocument: undefined,
+      },
+    ])
+    expect(result).toEqual({ ok: true, documentId: "doc-1" })
   })
 
   // deep_research's rag_search/memory_search must never become a side door around a
