@@ -1033,8 +1033,7 @@ describe("GatewayRunner production routing", () => {
     const runner = new GatewayRunner()
     const adapter = new FakeAdapter()
     runner.registerAdapter(adapter)
-    globalThis.fetch = (async () =>
-      new Response("Old content", { status: 200 })) as typeof fetch
+    globalThis.fetch = (async () => new Response("Old content", { status: 200 })) as typeof fetch
 
     await incoming(runner, {
       platform: "telegram",
@@ -1061,8 +1060,7 @@ describe("GatewayRunner production routing", () => {
     const runner = new GatewayRunner()
     const adapter = new FakeAdapter()
     runner.registerAdapter(adapter)
-    globalThis.fetch = (async () =>
-      new Response("Retry me", { status: 200 })) as typeof fetch
+    globalThis.fetch = (async () => new Response("Retry me", { status: 200 })) as typeof fetch
 
     await incoming(runner, {
       platform: "telegram",
