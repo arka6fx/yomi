@@ -69,17 +69,19 @@ const expectedDocIds = new Set(connectors.map((c) => docId(c.id)))
   }
 }
 
-// 2. docs page CONNECTORS array must match the registered set (both directions).
+// 2. The shared connector catalog must match the registered set (both
+//    directions). The docs page renders this catalog via buildCatalog(), so
+//    keeping the catalog in sync keeps the user-facing connector list in sync.
 {
-  const doc = read("apps/landing/src/app/docs/page.tsx")
-  const block = doc.match(/const CONNECTORS[^=]*=\s*\[([\s\S]*?)\n\]/)?.[1] ?? ""
-  const docIds = new Set([...block.matchAll(/id:\s*"([^"]+)"/g)].map((m) => m[1]))
+  const catalog = read("packages/ui-connectors/src/catalog.ts")
+  const defs = catalog.match(/CATALOG_DEFS[^=]*=\s*\[([\s\S]*?)\n\]/)?.[1] ?? ""
+  const catalogIds = new Set([...defs.matchAll(/id:\s*"([^"]+)"/g)].map((m) => m[1]))
   for (const id of expectedDocIds) {
-    if (!docIds.has(id)) errors.push(`docs page CONNECTORS is missing connector "${id}"`)
+    if (!catalogIds.has(id)) errors.push(`connector catalog is missing connector "${id}"`)
   }
-  for (const id of docIds) {
+  for (const id of catalogIds) {
     if (!expectedDocIds.has(id)) {
-      errors.push(`docs page CONNECTORS lists "${id}", which is not a registered connector`)
+      errors.push(`connector catalog lists "${id}", which is not a registered connector`)
     }
   }
 }

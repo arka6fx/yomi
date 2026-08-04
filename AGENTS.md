@@ -86,9 +86,19 @@ LANDING/DASHBOARD  (Next.js)
 
 - Core: filesystem r/w, bash (sandboxed), web search/fetch, cron, messaging,
   memory
-- Connectors: Gmail, Google Calendar, Google Drive, Google Classroom, Google
-  Tasks, Google Meet, GitHub, Notion, Slack, Linear - loaded from
-  `ConnectorRegistry`
+- Connectors: loaded from `ConnectorRegistry`
+  - First-class (hand-written tool sets): Gmail, Google Calendar, Google Drive,
+    Google Classroom, Google Tasks, Google Meet, GitHub, Notion, Slack, Linear,
+    Swiggy
+  - Composio-backed (unified executor, approval-gated): Google Docs, Google
+    Sheets, Google Slides, Google Maps, Google Photos, Google Ads, Google
+    Analytics, Google Search Console, Google Cloud Vision, HubSpot, Salesforce,
+    Attio, Firecrawl, Discord, WhatsApp, LinkedIn, Outlook, Microsoft Teams,
+    OneDrive, Dropbox, Figma, YouTube, Zoom, Facebook, Instagram, Calendly,
+    Trello, PostHog, Miro, Dynamics 365, SerpApi, Exa, Mem0, Cloudflare, Vercel,
+    Supabase, Stripe, Neon, Zoho CRM, Zoho Invoice, Gumroad, Fireflies, Kaggle,
+    Context7, Todoist, Reddit, Jira, Asana - full list in
+    `specs/connectors/00-index.md`
 
 **Hooks:** `PreToolUse` (block dangerous), `PostToolUse` (log, trim tokens),
 `Stop` (flush scratchpad), `SessionEnd` (compact memory.md)
