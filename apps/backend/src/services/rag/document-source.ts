@@ -24,10 +24,6 @@ export async function ensureDocumentSource(userId: string): Promise<string> {
   })
 }
 
-const TRUNCATION_RISK_THRESHOLD_CHARS = 15_000
-const TRUNCATION_RISK_WARNING =
-  "This document may have been too large to index in full — the content indexed could be a partial capture of the original."
-
 // Consent-gated wrapper around indexDocument() for agent-triggered document uploads.
 // Never throws — a thrown error from checkConsent, ensureDocumentSource, or
 // indexDocument would otherwise propagate out of the index_document tool's execute
@@ -38,7 +34,7 @@ export async function indexUploadedDocument(
   userId: string,
   title: string,
   content: string,
-): Promise<{ ok: true; documentId: string; warning?: string } | { error: string }> {
+): Promise<{ ok: true; documentId: string } | { error: string }> {
   try {
     const consent = await checkConsent(userId, "cloud_memory")
     if (!consent.allowed) {
@@ -57,13 +53,7 @@ export async function indexUploadedDocument(
       text: content,
     })
     if (!result.documentId) return { error: "failed to index" }
-    return {
-      ok: true,
-      documentId: result.documentId,
-      ...(content.length >= TRUNCATION_RISK_THRESHOLD_CHARS
-        ? { warning: TRUNCATION_RISK_WARNING }
-        : {}),
-    }
+    return { ok: true, documentId: result.documentId }
   } catch (err) {
     console.error(
       "[indexUploadedDocument] failed:",

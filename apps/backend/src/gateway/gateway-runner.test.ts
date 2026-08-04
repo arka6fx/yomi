@@ -24,6 +24,10 @@ let approvedActions: string[] = []
 let deniedActions: string[] = []
 let soulCalls: { userId: string; text: string }[] = []
 let capturedOnReact: ((emoji: string) => Promise<void>) | undefined
+let capturedConsumePendingDocument: (() => { title: string; content: string } | null) | undefined
+let capturedRestorePendingDocument:
+  | ((document: { title: string; content: string }) => void)
+  | undefined
 // Overrides the fast path's fake model text for a single test; null falls back
 // to the default "NEED_AGENT" (forces the full agent loop) for non-image text.
 let fastReplyOverride: string | null = null
@@ -99,6 +103,8 @@ mock.module("../agent/run.js", () => ({
     signal,
     skipCharge,
     onReact,
+    consumePendingDocument,
+    restorePendingDocument,
   }: {
     userId: string
     text: string
@@ -106,9 +112,13 @@ mock.module("../agent/run.js", () => ({
     signal?: AbortSignal
     skipCharge?: boolean
     onReact?: (emoji: string) => Promise<void>
+    consumePendingDocument?: () => { title: string; content: string } | null
+    restorePendingDocument?: (document: { title: string; content: string }) => void
   }) => {
     agentCalls.push({ userId, text, history, signal, skipCharge })
     capturedOnReact = onReact
+    capturedConsumePendingDocument = consumePendingDocument
+    capturedRestorePendingDocument = restorePendingDocument
     if (agentHangs) {
       // Mimic the real runAgent: when the abort signal fires it stops and
       // returns (it does not throw), yielding no usable text.
@@ -291,6 +301,8 @@ beforeEach(() => {
   soulCalls = []
   soulOnboardingReply = null
   capturedOnReact = undefined
+  capturedConsumePendingDocument = undefined
+  capturedRestorePendingDocument = undefined
   fastReplyOverride = null
   imageAnalysisMode = "normal"
   uploadedAsset = null
@@ -958,5 +970,119 @@ describe("GatewayRunner production routing", () => {
     })
 
     expect(capturedUploadContentType).toBe("image/png")
+  })
+
+  it("stashes an uploaded document's extracted text so index_document can consume it once", async () => {
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+    globalThis.fetch = (async () =>
+      new Response("Hello world content", { status: 200 })) as typeof fetch
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "",
+      timestamp: new Date().toISOString(),
+      documentUrl: "https://example.com/notes.txt",
+      documentFileName: "notes.txt",
+      documentMimeType: "text/plain",
+    })
+
+    expect(capturedConsumePendingDocument).toBeDefined()
+    expect(capturedConsumePendingDocument!()).toEqual({
+      title: "notes.txt",
+      content: "Hello world content",
+    })
+    // Consumed once — a second call finds nothing left to return.
+    expect(capturedConsumePendingDocument!()).toBeNull()
+  })
+
+  it("keeps a stashed document scoped to its own conversation", async () => {
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+    globalThis.fetch = (async () =>
+      new Response("Chat 1's document", { status: 200 })) as typeof fetch
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "",
+      timestamp: new Date().toISOString(),
+      documentUrl: "https://example.com/notes.txt",
+      documentFileName: "notes.txt",
+      documentMimeType: "text/plain",
+    })
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_2",
+      userId: "tg_2",
+      text: "index the document",
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(capturedConsumePendingDocument).toBeDefined()
+    expect(capturedConsumePendingDocument!()).toBeNull()
+  })
+
+  it("expires a stashed document after PENDING_DOCUMENT_TTL_MS", async () => {
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+    globalThis.fetch = (async () =>
+      new Response("Old content", { status: 200 })) as typeof fetch
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "",
+      timestamp: new Date().toISOString(),
+      documentUrl: "https://example.com/notes.txt",
+      documentFileName: "notes.txt",
+      documentMimeType: "text/plain",
+    })
+
+    const consume = capturedConsumePendingDocument!
+    const realDateNow = Date.now
+    Date.now = () => realDateNow() + 16 * 60 * 1000
+    try {
+      expect(consume()).toBeNull()
+    } finally {
+      Date.now = realDateNow
+    }
+  })
+
+  it("makes a restored document consumable again", async () => {
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+    globalThis.fetch = (async () =>
+      new Response("Retry me", { status: 200 })) as typeof fetch
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "",
+      timestamp: new Date().toISOString(),
+      documentUrl: "https://example.com/notes.txt",
+      documentFileName: "notes.txt",
+      documentMimeType: "text/plain",
+    })
+
+    const consume = capturedConsumePendingDocument!
+    const restore = capturedRestorePendingDocument!
+    const consumed = consume()
+    expect(consumed).toEqual({ title: "notes.txt", content: "Retry me" })
+    expect(consume()).toBeNull()
+
+    restore(consumed!)
+
+    expect(consume()).toEqual({ title: "notes.txt", content: "Retry me" })
   })
 })

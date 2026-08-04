@@ -11,20 +11,38 @@ describe("createIndexDocumentTool", () => {
     expect(t.parameters).toBeDefined()
   })
 
-  it("calls the injected indexDocument callback with title and content", async () => {
-    let calledArgs: { title: string; content: string } | null = null
-    const indexDocument: IndexDocumentFn = async (title, content) => {
-      calledArgs = { title, content }
+  it("does not mention content or a size limit in the description, since the model never supplies content", () => {
+    const indexDocument: IndexDocumentFn = async () => ({ ok: true, documentId: "doc-1" })
+    const t = createIndexDocumentTool(indexDocument)
+    expect(t.description).not.toContain("content")
+    expect(t.description).not.toContain("5-page")
+  })
+
+  it("calls the injected indexDocument callback with a caller-supplied title", async () => {
+    let calledArgs: (string | undefined)[] = []
+    const indexDocument: IndexDocumentFn = async (title) => {
+      calledArgs.push(title)
       return { ok: true, documentId: "doc-1" }
     }
     const t = createIndexDocumentTool(indexDocument)
 
-    const result = await t.execute!(
-      { title: "report.pdf", content: "extracted document text" },
-      {} as never,
-    )
+    const result = await t.execute!({ title: "report.pdf" }, {} as never)
 
-    expect(calledArgs).toEqual({ title: "report.pdf", content: "extracted document text" })
+    expect(calledArgs).toEqual(["report.pdf"])
+    expect(result).toEqual({ ok: true, documentId: "doc-1" })
+  })
+
+  it("calls the injected indexDocument callback with no title when the model omits it", async () => {
+    let calledArgs: (string | undefined)[] = []
+    const indexDocument: IndexDocumentFn = async (title) => {
+      calledArgs.push(title)
+      return { ok: true, documentId: "doc-1" }
+    }
+    const t = createIndexDocumentTool(indexDocument)
+
+    const result = await t.execute!({}, {} as never)
+
+    expect(calledArgs).toEqual([undefined])
     expect(result).toEqual({ ok: true, documentId: "doc-1" })
   })
 
@@ -32,21 +50,8 @@ describe("createIndexDocumentTool", () => {
     const indexDocument: IndexDocumentFn = async () => ({ error: "failed to index" })
     const t = createIndexDocumentTool(indexDocument)
 
-    const result = await t.execute!({ title: "report.pdf", content: "text" }, {} as never)
+    const result = await t.execute!({ title: "report.pdf" }, {} as never)
 
     expect(result).toEqual({ error: "failed to index" })
-  })
-
-  it("passes a warning field through unchanged when present", async () => {
-    const indexDocument: IndexDocumentFn = async () => ({
-      ok: true,
-      documentId: "doc-1",
-      warning: "possibly truncated",
-    })
-    const t = createIndexDocumentTool(indexDocument)
-
-    const result = await t.execute!({ title: "report.pdf", content: "text" }, {} as never)
-
-    expect(result).toEqual({ ok: true, documentId: "doc-1", warning: "possibly truncated" })
   })
 })

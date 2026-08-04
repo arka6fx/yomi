@@ -28,6 +28,11 @@ const SESSION_CLEANUP_INTERVAL_MS = 5 * 60 * 1000
 const LINK_CODE_TTL_MS = 10 * 60 * 1000
 const HISTORY_MAX_TURNS = 8
 const HISTORY_TTL_MS = 60 * 60 * 1000
+// Short relative to HISTORY_TTL_MS: a stashed document's payload (up to 50,000 chars)
+// is much larger per-entry than a conversation turn, and 15 minutes comfortably
+// covers "upload, then ask to index in the same or next couple of messages" without
+// holding large payloads in memory indefinitely.
+const PENDING_DOCUMENT_TTL_MS = 15 * 60 * 1000
 const SHARED_SESSION_PLATFORM = "yomi"
 const SHARED_SESSION_CHAT_ID = "global"
 const AGENT_TIMEOUT_MESSAGE =
@@ -62,10 +67,17 @@ interface ConversationEntry {
   lastAt: number
 }
 
+interface PendingDocumentEntry {
+  title: string
+  content: string
+  storedAt: number
+}
+
 export class GatewayRunner {
   private adapters: Map<PlatformType, PlatformAdapter> = new Map()
   private sessions: Map<string, GatewaySession> = new Map()
   private conversationHistories: Map<string, ConversationEntry> = new Map()
+  private pendingDocuments: Map<string, PendingDocumentEntry> = new Map()
   private activeRuns: Map<string, AbortController> = new Map()
   // Uncharged resumes since the last charged turn, per chat. A resume can propose a
   // further gated write, so approving repeatedly would otherwise fund an unbounded
@@ -399,6 +411,36 @@ export class GatewayRunner {
 
   private runKey(platform: PlatformType, chatId: string): string {
     return `${platform}:${chatId}`
+  }
+
+  // Atomically returns and deletes the conversation's pending document — there is
+  // no separate "peek" path, so a repeated or concurrent call within the same turn
+  // can't observe and consume the same entry twice.
+  private consumePendingDocument(
+    platform: PlatformType,
+    chatId: string,
+  ): { title: string; content: string } | null {
+    const key = this.runKey(platform, chatId)
+    const entry = this.pendingDocuments.get(key)
+    if (!entry || Date.now() - entry.storedAt > PENDING_DOCUMENT_TTL_MS) return null
+    this.pendingDocuments.delete(key)
+    return { title: entry.title, content: entry.content }
+  }
+
+  // Re-inserts a previously-consumed document, used only after a failed index so a
+  // transient failure doesn't force the user to re-upload the file to retry. Resets
+  // storedAt so the retry gets a fresh TTL window rather than counting down from the
+  // original upload time.
+  private restorePendingDocument(
+    platform: PlatformType,
+    chatId: string,
+    document: { title: string; content: string },
+  ): void {
+    this.pendingDocuments.set(this.runKey(platform, chatId), {
+      title: document.title,
+      content: document.content,
+      storedAt: Date.now(),
+    })
   }
 
   // Cheap gpt-5.4-mini path for simple Q&A, greetings, knowledge questions.
@@ -1248,6 +1290,11 @@ export class GatewayRunner {
               docName,
             )
             if (contentPreview) {
+              this.pendingDocuments.set(this.runKey(msg.platform, msg.chatId), {
+                title: docName,
+                content: contentPreview,
+                storedAt: Date.now(),
+              })
               if (msg.text.trim()) {
                 msg = {
                   ...msg,
@@ -1466,6 +1513,9 @@ export class GatewayRunner {
             msg.messageId
               ? this.setReaction(msg.platform, msg.chatId, msg.messageId, emoji)
               : Promise.resolve(),
+          consumePendingDocument: () => this.consumePendingDocument(msg.platform, msg.chatId),
+          restorePendingDocument: (document) =>
+            this.restorePendingDocument(msg.platform, msg.chatId, document),
         })
         clearTimeout(runTimeout)
         clearInterval(typingInterval)
@@ -1673,6 +1723,11 @@ export class GatewayRunner {
     for (const [key, entry] of this.conversationHistories) {
       if (now - entry.lastAt > HISTORY_TTL_MS) {
         this.conversationHistories.delete(key)
+      }
+    }
+    for (const [key, entry] of this.pendingDocuments) {
+      if (now - entry.storedAt > PENDING_DOCUMENT_TTL_MS) {
+        this.pendingDocuments.delete(key)
       }
     }
   }
