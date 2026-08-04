@@ -1,58 +1,127 @@
 # `index_document` Reference-Based Redesign Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> superpowers:subagent-driven-development (recommended) or
+> superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Eliminate the root cause of GitHub issue #102 — `index_document` no longer requires the agent model to re-emit a document's content as a tool-call argument; the backend supplies it directly from what it already extracted server-side.
+**Goal:** Eliminate the root cause of GitHub issue #102 — `index_document` no
+longer requires the agent model to re-emit a document's content as a tool-call
+argument; the backend supplies it directly from what it already extracted
+server-side.
 
-**Architecture:** `GatewayRunner` stashes a just-extracted document's text in a new short-lived in-memory map (mirroring its existing `conversationHistories` map's key/TTL/cleanup pattern). Two callbacks (`consumePendingDocument`, `restorePendingDocument`) thread through `RunAgentOptions` into `run.ts`. A new, independently-testable helper (`resolvePendingDocumentIndex`) resolves `index_document`'s tool call against the stash. The agent-core tool's Zod schema drops `content` entirely.
+**Architecture:** `GatewayRunner` stashes a just-extracted document's text in a
+new short-lived in-memory map (mirroring its existing `conversationHistories`
+map's key/TTL/cleanup pattern). Two callbacks (`consumePendingDocument`,
+`restorePendingDocument`) thread through `RunAgentOptions` into `run.ts`. A new,
+independently-testable helper (`resolvePendingDocumentIndex`) resolves
+`index_document`'s tool call against the stash. The agent-core tool's Zod schema
+drops `content` entirely.
 
 **Tech Stack:** Bun, TypeScript, Hono, `ai` SDK's `tool()`/`zod`, `bun:test`.
 
 ## Global Constraints
 
-- Spec: `docs/superpowers/specs/2026-08-04-index-document-reference-redesign-design.md` — this plan implements it exactly; do not deviate without re-checking that file.
-- **TTL:** exactly `PENDING_DOCUMENT_TTL_MS = 15 * 60 * 1000` (15 minutes), a fixed constant, not configurable.
-- **Single slot per conversation:** the stash is keyed by `runKey(platform, chatId)` (same key scheme as `conversationHistories`) — a new upload overwrites any prior pending document for that conversation. No multi-document tracking.
-- **Consume-and-clear semantics:** `consumePendingDocument()` atomically returns the pending entry (or `null`) and deletes it from the map in the same call — no separate "peek" path.
-- **Restore-on-failure:** on a failed index (consent denial, `indexUploadedDocument` error), the consumed entry is re-inserted via `restorePendingDocument()` with a fresh `storedAt`, so a transient failure doesn't force a re-upload to retry. On success, nothing is restored — the entry stays consumed.
-- **Double expiry check, matching the existing `conversationHistories` precedent exactly:** both a periodic sweep (in `cleanupSessions()`, alongside the existing `conversationHistories` eviction loop) AND a read-time check inside `consumePendingDocument()` itself (mirroring `conversationHistories`'s own read-time check: `if (!entry || Date.now() - entry.lastAt > HISTORY_TTL_MS) return []`).
-- **No new callback fields visible to existing test assertions:** `apps/backend/src/gateway/gateway-runner.test.ts`'s existing `agentCalls` array and its `toEqual` assertions must not change shape — the two new callbacks are captured into separate module-level variables (mirroring exactly how `capturedOnReact` is already handled, not folded into `agentCalls`).
-- **`warning` field removed entirely:** `IndexDocumentResult`, `indexUploadedDocument`'s return type, and the tool description's truncation-warning copy are all removed — content always comes from the same 50,000-char-capped extraction pipeline now, so the heuristic has no failure mode left to detect.
-- **Never throws:** `resolvePendingDocumentIndex` and every function in its call chain degrade to `{ error: string }`, matching every other RAG tool's contract.
-- Conventional commit messages (`feat:`, `fix:`, `test:`, `refactor:`), lowercase, no full stop, max 72 chars, per `AGENTS.md`.
+- Spec:
+  `docs/superpowers/specs/2026-08-04-index-document-reference-redesign-design.md`
+  — this plan implements it exactly; do not deviate without re-checking that
+  file.
+- **TTL:** exactly `PENDING_DOCUMENT_TTL_MS = 15 * 60 * 1000` (15 minutes), a
+  fixed constant, not configurable.
+- **Single slot per conversation:** the stash is keyed by
+  `runKey(platform, chatId)` (same key scheme as `conversationHistories`) — a
+  new upload overwrites any prior pending document for that conversation. No
+  multi-document tracking.
+- **Consume-and-clear semantics:** `consumePendingDocument()` atomically returns
+  the pending entry (or `null`) and deletes it from the map in the same call —
+  no separate "peek" path.
+- **Restore-on-failure:** on a failed index (consent denial,
+  `indexUploadedDocument` error), the consumed entry is re-inserted via
+  `restorePendingDocument()` with a fresh `storedAt`, so a transient failure
+  doesn't force a re-upload to retry. On success, nothing is restored — the
+  entry stays consumed.
+- **Double expiry check, matching the existing `conversationHistories` precedent
+  exactly:** both a periodic sweep (in `cleanupSessions()`, alongside the
+  existing `conversationHistories` eviction loop) AND a read-time check inside
+  `consumePendingDocument()` itself (mirroring `conversationHistories`'s own
+  read-time check:
+  `if (!entry || Date.now() - entry.lastAt > HISTORY_TTL_MS) return []`).
+- **No new callback fields visible to existing test assertions:**
+  `apps/backend/src/gateway/gateway-runner.test.ts`'s existing `agentCalls`
+  array and its `toEqual` assertions must not change shape — the two new
+  callbacks are captured into separate module-level variables (mirroring exactly
+  how `capturedOnReact` is already handled, not folded into `agentCalls`).
+- **`warning` field removed entirely:** `IndexDocumentResult`,
+  `indexUploadedDocument`'s return type, and the tool description's
+  truncation-warning copy are all removed — content always comes from the same
+  50,000-char-capped extraction pipeline now, so the heuristic has no failure
+  mode left to detect.
+- **Never throws:** `resolvePendingDocumentIndex` and every function in its call
+  chain degrade to `{ error: string }`, matching every other RAG tool's
+  contract.
+- Conventional commit messages (`feat:`, `fix:`, `test:`, `refactor:`),
+  lowercase, no full stop, max 72 chars, per `AGENTS.md`.
 - Test commands, run from repo root:
-  - `bun test --isolate apps/backend/src/agent/pending-document.test.ts` (Task 1)
+  - `bun test --isolate apps/backend/src/agent/pending-document.test.ts`
+    (Task 1)
   - `bun test --isolate packages/agent-core/src/index-document.test.ts` (Task 2)
-  - `bun test --isolate apps/backend/src/services/rag/document-source.test.ts` (Task 3)
+  - `bun test --isolate apps/backend/src/services/rag/document-source.test.ts`
+    (Task 3)
   - `bun test --isolate apps/backend/src/agent/run.test.ts` (Task 4)
-  - `bun test --isolate apps/backend/src/gateway/gateway-runner.test.ts` (Task 5)
+  - `bun test --isolate apps/backend/src/gateway/gateway-runner.test.ts`
+    (Task 5)
 
 ---
 
 ## File Structure
 
-- Create: `apps/backend/src/agent/pending-document.ts` — `PendingDocument` type, `ConsumePendingDocumentFn`/`RestorePendingDocumentFn` types, `resolvePendingDocumentIndex()`.
-- Create: `apps/backend/src/agent/pending-document.test.ts` — tests for the above.
-- Modify: `packages/agent-core/src/index-document.ts` — drop `content` from the Zod schema and `IndexDocumentFn`; drop `warning` from `IndexDocumentResult`; update the tool description.
-- Modify: `packages/agent-core/src/index-document.test.ts` — update for the new signature; remove the obsolete warning-passthrough test.
-- Modify: `apps/backend/src/services/rag/document-source.ts` — remove the `warning`/threshold logic from `indexUploadedDocument`.
-- Modify: `apps/backend/src/services/rag/document-source.test.ts` — remove the two warning-threshold tests.
-- Modify: `apps/backend/src/agent/run.ts` — `RunAgentOptions` gains `consumePendingDocument`/`restorePendingDocument`; `indexDocumentTool` wiring calls `resolvePendingDocumentIndex` instead of `indexUploadedDocument` directly.
-- Modify: `apps/backend/src/agent/run.test.ts` — one new test verifying the wiring calls `resolvePendingDocumentIndex` with the right arguments.
-- Modify: `apps/backend/src/gateway/gateway-runner.ts` — new `pendingDocuments` map, `PENDING_DOCUMENT_TTL_MS` constant, stash-write in the document-handling block, `consumePendingDocument`/`restorePendingDocument` private methods, wiring into the `runAgent()` call, `cleanupSessions()` extended.
-- Modify: `apps/backend/src/gateway/gateway-runner.test.ts` — capture the two new callbacks; four new tests (stash populate + consume-once, per-conversation isolation, TTL expiry, restore-then-reconsume).
+- Create: `apps/backend/src/agent/pending-document.ts` — `PendingDocument` type,
+  `ConsumePendingDocumentFn`/`RestorePendingDocumentFn` types,
+  `resolvePendingDocumentIndex()`.
+- Create: `apps/backend/src/agent/pending-document.test.ts` — tests for the
+  above.
+- Modify: `packages/agent-core/src/index-document.ts` — drop `content` from the
+  Zod schema and `IndexDocumentFn`; drop `warning` from `IndexDocumentResult`;
+  update the tool description.
+- Modify: `packages/agent-core/src/index-document.test.ts` — update for the new
+  signature; remove the obsolete warning-passthrough test.
+- Modify: `apps/backend/src/services/rag/document-source.ts` — remove the
+  `warning`/threshold logic from `indexUploadedDocument`.
+- Modify: `apps/backend/src/services/rag/document-source.test.ts` — remove the
+  two warning-threshold tests.
+- Modify: `apps/backend/src/agent/run.ts` — `RunAgentOptions` gains
+  `consumePendingDocument`/`restorePendingDocument`; `indexDocumentTool` wiring
+  calls `resolvePendingDocumentIndex` instead of `indexUploadedDocument`
+  directly.
+- Modify: `apps/backend/src/agent/run.test.ts` — one new test verifying the
+  wiring calls `resolvePendingDocumentIndex` with the right arguments.
+- Modify: `apps/backend/src/gateway/gateway-runner.ts` — new `pendingDocuments`
+  map, `PENDING_DOCUMENT_TTL_MS` constant, stash-write in the document-handling
+  block, `consumePendingDocument`/`restorePendingDocument` private methods,
+  wiring into the `runAgent()` call, `cleanupSessions()` extended.
+- Modify: `apps/backend/src/gateway/gateway-runner.test.ts` — capture the two
+  new callbacks; four new tests (stash populate + consume-once, per-conversation
+  isolation, TTL expiry, restore-then-reconsume).
 
 ---
 
 ### Task 1: `pending-document.ts` — the resolver helper
 
 **Files:**
+
 - Create: `apps/backend/src/agent/pending-document.ts`
 - Create: `apps/backend/src/agent/pending-document.test.ts`
 
 **Interfaces:**
-- Consumes: `indexUploadedDocument` from `../services/rag/document-source.js` (existing, signature `(userId: string, title: string, content: string) => Promise<{ ok: true; documentId: string } | { error: string }>` — unchanged by this task, changed by Task 3, but Task 3's change only removes the `warning` field from the success case, which this task's code never references, so ordering between Task 1 and Task 3 doesn't matter).
+
+- Consumes: `indexUploadedDocument` from `../services/rag/document-source.js`
+  (existing, signature
+  `(userId: string, title: string, content: string) => Promise<{ ok: true; documentId: string } | { error: string }>`
+  — unchanged by this task, changed by Task 3, but Task 3's change only removes
+  the `warning` field from the success case, which this task's code never
+  references, so ordering between Task 1 and Task 3 doesn't matter).
 - Produces:
+
   ```ts
   export interface PendingDocument {
     title: string
@@ -67,7 +136,10 @@
     restorePendingDocument: RestorePendingDocumentFn | undefined,
   ): Promise<{ ok: true; documentId: string } | { error: string }>
   ```
-  Task 4 consumes `PendingDocument`, `ConsumePendingDocumentFn`, `RestorePendingDocumentFn`, and `resolvePendingDocumentIndex` by these exact names and signatures.
+
+  Task 4 consumes `PendingDocument`, `ConsumePendingDocumentFn`,
+  `RestorePendingDocumentFn`, and `resolvePendingDocumentIndex` by these exact
+  names and signatures.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -76,13 +148,23 @@ Create `apps/backend/src/agent/pending-document.test.ts` with this content:
 ```ts
 import { beforeEach, describe, expect, it, mock } from "bun:test"
 
-let indexUploadedDocumentResult: { ok: true; documentId: string } | { error: string } = {
+let indexUploadedDocumentResult:
+  | { ok: true; documentId: string }
+  | { error: string } = {
   ok: true,
   documentId: "doc-1",
 }
-let indexUploadedDocumentCalls: { userId: string; title: string; content: string }[] = []
+let indexUploadedDocumentCalls: {
+  userId: string
+  title: string
+  content: string
+}[] = []
 mock.module("../services/rag/document-source.js", () => ({
-  indexUploadedDocument: async (userId: string, title: string, content: string) => {
+  indexUploadedDocument: async (
+    userId: string,
+    title: string,
+    content: string,
+  ) => {
     indexUploadedDocumentCalls.push({ userId, title, content })
     return indexUploadedDocumentResult
   },
@@ -97,10 +179,16 @@ beforeEach(() => {
 
 describe("resolvePendingDocumentIndex", () => {
   it("returns an error and does not call indexUploadedDocument when consumePendingDocument is undefined", async () => {
-    const result = await resolvePendingDocumentIndex("u1", undefined, undefined, undefined)
+    const result = await resolvePendingDocumentIndex(
+      "u1",
+      undefined,
+      undefined,
+      undefined,
+    )
 
     expect(result).toEqual({
-      error: "No recently uploaded document found — ask the user to re-upload it.",
+      error:
+        "No recently uploaded document found — ask the user to re-upload it.",
     })
     expect(indexUploadedDocumentCalls).toHaveLength(0)
   })
@@ -108,10 +196,16 @@ describe("resolvePendingDocumentIndex", () => {
   it("returns an error and does not call indexUploadedDocument when consumePendingDocument returns null", async () => {
     const consume = () => null
 
-    const result = await resolvePendingDocumentIndex("u1", undefined, consume, undefined)
+    const result = await resolvePendingDocumentIndex(
+      "u1",
+      undefined,
+      consume,
+      undefined,
+    )
 
     expect(result).toEqual({
-      error: "No recently uploaded document found — ask the user to re-upload it.",
+      error:
+        "No recently uploaded document found — ask the user to re-upload it.",
     })
     expect(indexUploadedDocumentCalls).toHaveLength(0)
   })
@@ -119,7 +213,12 @@ describe("resolvePendingDocumentIndex", () => {
   it("calls indexUploadedDocument with the pending document's title/content when no title override is given", async () => {
     const consume = () => ({ title: "report.pdf", content: "extracted text" })
 
-    const result = await resolvePendingDocumentIndex("u1", undefined, consume, undefined)
+    const result = await resolvePendingDocumentIndex(
+      "u1",
+      undefined,
+      consume,
+      undefined,
+    )
 
     expect(result).toEqual({ ok: true, documentId: "doc-1" })
     expect(indexUploadedDocumentCalls).toEqual([
@@ -130,7 +229,12 @@ describe("resolvePendingDocumentIndex", () => {
   it("uses the caller-supplied title override instead of the pending document's title", async () => {
     const consume = () => ({ title: "report.pdf", content: "extracted text" })
 
-    await resolvePendingDocumentIndex("u1", "My Custom Title", consume, undefined)
+    await resolvePendingDocumentIndex(
+      "u1",
+      "My Custom Title",
+      consume,
+      undefined,
+    )
 
     expect(indexUploadedDocumentCalls).toEqual([
       { userId: "u1", title: "My Custom Title", content: "extracted text" },
@@ -157,17 +261,29 @@ describe("resolvePendingDocumentIndex", () => {
       restoreCalls.push(document)
     }
 
-    const result = await resolvePendingDocumentIndex("u1", undefined, consume, restore)
+    const result = await resolvePendingDocumentIndex(
+      "u1",
+      undefined,
+      consume,
+      restore,
+    )
 
     expect(result).toEqual({ error: "cloud memory consent not granted" })
-    expect(restoreCalls).toEqual([{ title: "report.pdf", content: "extracted text" }])
+    expect(restoreCalls).toEqual([
+      { title: "report.pdf", content: "extracted text" },
+    ])
   })
 
   it("does not throw when restorePendingDocument is undefined and the index fails", async () => {
     indexUploadedDocumentResult = { error: "failed to index" }
     const consume = () => ({ title: "report.pdf", content: "extracted text" })
 
-    const result = await resolvePendingDocumentIndex("u1", undefined, consume, undefined)
+    const result = await resolvePendingDocumentIndex(
+      "u1",
+      undefined,
+      consume,
+      undefined,
+    )
 
     expect(result).toEqual({ error: "failed to index" })
   })
@@ -207,10 +323,17 @@ export async function resolvePendingDocumentIndex(
 ): Promise<{ ok: true; documentId: string } | { error: string }> {
   const pending = consumePendingDocument?.()
   if (!pending) {
-    return { error: "No recently uploaded document found — ask the user to re-upload it." }
+    return {
+      error:
+        "No recently uploaded document found — ask the user to re-upload it.",
+    }
   }
 
-  const result = await indexUploadedDocument(userId, title ?? pending.title, pending.content)
+  const result = await indexUploadedDocument(
+    userId,
+    title ?? pending.title,
+    pending.content,
+  )
   if ("error" in result) {
     restorePendingDocument?.(pending)
   }
@@ -235,18 +358,24 @@ git commit -m "feat(agent): add resolvePendingDocumentIndex helper"
 ### Task 2: agent-core `index-document.ts` — drop `content`, drop `warning`
 
 **Files:**
+
 - Modify: `packages/agent-core/src/index-document.ts`
 - Modify: `packages/agent-core/src/index-document.test.ts`
 
 **Interfaces:**
+
 - Consumes: nothing new.
 - Produces:
   ```ts
-  export type IndexDocumentResult = { ok: true; documentId: string } | { error: string }
+  export type IndexDocumentResult =
+    | { ok: true; documentId: string }
+    | { error: string }
   export type IndexDocumentFn = (title?: string) => Promise<IndexDocumentResult>
   export function createIndexDocumentTool(indexDocument: IndexDocumentFn)
   ```
-  Task 4 consumes `IndexDocumentFn`'s new signature — `run.ts`'s injected callback must accept an optional `title` and return `Promise<IndexDocumentResult>` with no `warning` field.
+  Task 4 consumes `IndexDocumentFn`'s new signature — `run.ts`'s injected
+  callback must accept an optional `title` and return
+  `Promise<IndexDocumentResult>` with no `warning` field.
 
 The current file (`packages/agent-core/src/index-document.ts`) reads:
 
@@ -257,7 +386,10 @@ import { z } from "zod"
 export type IndexDocumentResult =
   | { ok: true; documentId: string; warning?: string }
   | { error: string }
-export type IndexDocumentFn = (title: string, content: string) => Promise<IndexDocumentResult>
+export type IndexDocumentFn = (
+  title: string,
+  content: string,
+) => Promise<IndexDocumentResult>
 
 export function createIndexDocumentTool(indexDocument: IndexDocumentFn) {
   return tool({
@@ -274,8 +406,14 @@ export function createIndexDocumentTool(indexDocument: IndexDocumentFn) {
         .string()
         .min(1)
         .max(200)
-        .describe("A short, descriptive title — typically the document's filename"),
-      content: z.string().min(1).max(100_000).describe("The document's extracted text content"),
+        .describe(
+          "A short, descriptive title — typically the document's filename",
+        ),
+      content: z
+        .string()
+        .min(1)
+        .max(100_000)
+        .describe("The document's extracted text content"),
     }),
     execute: async ({ title, content }) => indexDocument(title, content),
   })
@@ -284,15 +422,22 @@ export function createIndexDocumentTool(indexDocument: IndexDocumentFn) {
 
 - [ ] **Step 1: Write the failing tests**
 
-Replace the full content of `packages/agent-core/src/index-document.test.ts` with:
+Replace the full content of `packages/agent-core/src/index-document.test.ts`
+with:
 
 ```ts
 import { describe, expect, it } from "bun:test"
-import { createIndexDocumentTool, type IndexDocumentFn } from "./index-document.js"
+import {
+  createIndexDocumentTool,
+  type IndexDocumentFn,
+} from "./index-document.js"
 
 describe("createIndexDocumentTool", () => {
   it("returns a tool with the correct shape", () => {
-    const indexDocument: IndexDocumentFn = async () => ({ ok: true, documentId: "doc-1" })
+    const indexDocument: IndexDocumentFn = async () => ({
+      ok: true,
+      documentId: "doc-1",
+    })
     const t = createIndexDocumentTool(indexDocument)
     expect(t).toBeDefined()
     expect(typeof t.description).toBe("string")
@@ -301,7 +446,10 @@ describe("createIndexDocumentTool", () => {
   })
 
   it("does not mention content or a size limit in the description, since the model never supplies content", () => {
-    const indexDocument: IndexDocumentFn = async () => ({ ok: true, documentId: "doc-1" })
+    const indexDocument: IndexDocumentFn = async () => ({
+      ok: true,
+      documentId: "doc-1",
+    })
     const t = createIndexDocumentTool(indexDocument)
     expect(t.description).not.toContain("content")
     expect(t.description).not.toContain("5-page")
@@ -336,7 +484,9 @@ describe("createIndexDocumentTool", () => {
   })
 
   it("passes an error result through unchanged", async () => {
-    const indexDocument: IndexDocumentFn = async () => ({ error: "failed to index" })
+    const indexDocument: IndexDocumentFn = async () => ({
+      error: "failed to index",
+    })
     const t = createIndexDocumentTool(indexDocument)
 
     const result = await t.execute!({ title: "report.pdf" }, {} as never)
@@ -349,7 +499,8 @@ describe("createIndexDocumentTool", () => {
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `bun test --isolate packages/agent-core/src/index-document.test.ts`
-Expected: FAIL — the current `execute` still requires `content` in its parameters, and the description still mentions "content"/"5-page".
+Expected: FAIL — the current `execute` still requires `content` in its
+parameters, and the description still mentions "content"/"5-page".
 
 - [ ] **Step 3: Write the minimal implementation**
 
@@ -359,7 +510,9 @@ Replace the full content of `packages/agent-core/src/index-document.ts` with:
 import { tool } from "ai"
 import { z } from "zod"
 
-export type IndexDocumentResult = { ok: true; documentId: string } | { error: string }
+export type IndexDocumentResult =
+  | { ok: true; documentId: string }
+  | { error: string }
 export type IndexDocumentFn = (title?: string) => Promise<IndexDocumentResult>
 
 export function createIndexDocumentTool(indexDocument: IndexDocumentFn) {
@@ -377,7 +530,9 @@ export function createIndexDocumentTool(indexDocument: IndexDocumentFn) {
         .min(1)
         .max(200)
         .optional()
-        .describe("Optional short title to use instead of the document's filename"),
+        .describe(
+          "Optional short title to use instead of the document's filename",
+        ),
     }),
     execute: async ({ title }) => indexDocument(title),
   })
@@ -401,10 +556,12 @@ git commit -m "feat(agent-core): drop content parameter from index_document tool
 ### Task 3: `document-source.ts` — remove the `warning` heuristic
 
 **Files:**
+
 - Modify: `apps/backend/src/services/rag/document-source.ts`
 - Modify: `apps/backend/src/services/rag/document-source.test.ts`
 
 **Interfaces:**
+
 - Consumes: nothing new.
 - Produces:
   ```ts
@@ -414,7 +571,9 @@ git commit -m "feat(agent-core): drop content parameter from index_document tool
     content: string,
   ): Promise<{ ok: true; documentId: string } | { error: string }>
   ```
-  Signature unchanged from before this task — only the return type's success shape narrows (drops `warning?: string`). Task 1's `resolvePendingDocumentIndex` already expects exactly this narrowed shape.
+  Signature unchanged from before this task — only the return type's success
+  shape narrows (drops `warning?: string`). Task 1's
+  `resolvePendingDocumentIndex` already expects exactly this narrowed shape.
 
 The current file (`apps/backend/src/services/rag/document-source.ts`) reads:
 
@@ -451,7 +610,9 @@ export async function indexUploadedDocument(
   userId: string,
   title: string,
   content: string,
-): Promise<{ ok: true; documentId: string; warning?: string } | { error: string }> {
+): Promise<
+  { ok: true; documentId: string; warning?: string } | { error: string }
+> {
   try {
     const consent = await checkConsent(userId, "cloud_memory")
     if (!consent.allowed) {
@@ -489,42 +650,47 @@ export async function indexUploadedDocument(
 
 - [ ] **Step 1: Update the tests first**
 
-In `apps/backend/src/services/rag/document-source.test.ts`, remove these two tests entirely (they test behavior this task removes):
+In `apps/backend/src/services/rag/document-source.test.ts`, remove these two
+tests entirely (they test behavior this task removes):
 
 ```ts
-  it("includes a warning when content is at or above the truncation-risk threshold", async () => {
-    const longContent = "x".repeat(15_000)
+it("includes a warning when content is at or above the truncation-risk threshold", async () => {
+  const longContent = "x".repeat(15_000)
 
-    const result = await indexUploadedDocument("u1", "report.pdf", longContent)
+  const result = await indexUploadedDocument("u1", "report.pdf", longContent)
 
-    expect(result).toEqual({
-      ok: true,
-      documentId: "doc-1",
-      warning:
-        "This document may have been too large to index in full — the content indexed could be a partial capture of the original.",
-    })
+  expect(result).toEqual({
+    ok: true,
+    documentId: "doc-1",
+    warning:
+      "This document may have been too large to index in full — the content indexed could be a partial capture of the original.",
   })
+})
 
-  it("does not include a warning when content is below the truncation-risk threshold", async () => {
-    const shortContent = "x".repeat(14_999)
+it("does not include a warning when content is below the truncation-risk threshold", async () => {
+  const shortContent = "x".repeat(14_999)
 
-    const result = await indexUploadedDocument("u1", "report.pdf", shortContent)
+  const result = await indexUploadedDocument("u1", "report.pdf", shortContent)
 
-    expect(result).toEqual({ ok: true, documentId: "doc-1" })
-    expect("warning" in result).toBe(false)
-  })
+  expect(result).toEqual({ ok: true, documentId: "doc-1" })
+  expect("warning" in result).toBe(false)
+})
 ```
 
-Leave every other test in the file exactly as-is (they don't reference `warning` and remain valid).
+Leave every other test in the file exactly as-is (they don't reference `warning`
+and remain valid).
 
 - [ ] **Step 2: Run tests to verify the remaining ones still pass**
 
 Run: `bun test --isolate apps/backend/src/services/rag/document-source.test.ts`
-Expected: PASS — 8 tests remain (10 minus the 2 removed), 0 fail. (The implementation hasn't changed yet, so this just confirms the removed tests weren't load-bearing for anything else.)
+Expected: PASS — 8 tests remain (10 minus the 2 removed), 0 fail. (The
+implementation hasn't changed yet, so this just confirms the removed tests
+weren't load-bearing for anything else.)
 
 - [ ] **Step 3: Remove the warning logic from the implementation**
 
-Replace the full content of `apps/backend/src/services/rag/document-source.ts` with:
+Replace the full content of `apps/backend/src/services/rag/document-source.ts`
+with:
 
 ```ts
 import { indexDocument } from "./index-document.js"
@@ -600,8 +766,9 @@ Expected: PASS — 8 tests, 0 fail.
 
 - [ ] **Step 5: Typecheck**
 
-Run: `bun run typecheck`
-Expected: 0 errors. (This will surface any other file still referencing the now-removed `warning` field — there should be none outside `run.ts`, which Task 4 updates.)
+Run: `bun run typecheck` Expected: 0 errors. (This will surface any other file
+still referencing the now-removed `warning` field — there should be none outside
+`run.ts`, which Task 4 updates.)
 
 - [ ] **Step 6: Commit**
 
@@ -615,22 +782,38 @@ git commit -m "fix(rag): remove the truncation-warning heuristic from indexUploa
 ### Task 4: Wire `resolvePendingDocumentIndex` into `run.ts`
 
 **Files:**
+
 - Modify: `apps/backend/src/agent/run.ts`
 - Modify: `apps/backend/src/agent/run.test.ts`
 
 **Interfaces:**
-- Consumes: `PendingDocument`, `ConsumePendingDocumentFn`, `RestorePendingDocumentFn`, `resolvePendingDocumentIndex` from `./pending-document.js` (Task 1); `IndexDocumentFn`'s new `(title?: string) => Promise<IndexDocumentResult>` signature from `@yomi/agent-core` (Task 2, already exported from the package — confirmed `createIndexDocumentTool`/`IndexDocumentResult`/`IndexDocumentFn` are re-exported from `packages/agent-core/src/index.ts`, unchanged by this plan).
-- Produces: `RunAgentOptions` gains `consumePendingDocument?: ConsumePendingDocumentFn` and `restorePendingDocument?: RestorePendingDocumentFn`. Task 5 (`gateway-runner.ts`) consumes these two field names exactly when constructing its `runAgent()` call.
+
+- Consumes: `PendingDocument`, `ConsumePendingDocumentFn`,
+  `RestorePendingDocumentFn`, `resolvePendingDocumentIndex` from
+  `./pending-document.js` (Task 1); `IndexDocumentFn`'s new
+  `(title?: string) => Promise<IndexDocumentResult>` signature from
+  `@yomi/agent-core` (Task 2, already exported from the package — confirmed
+  `createIndexDocumentTool`/`IndexDocumentResult`/`IndexDocumentFn` are
+  re-exported from `packages/agent-core/src/index.ts`, unchanged by this plan).
+- Produces: `RunAgentOptions` gains
+  `consumePendingDocument?: ConsumePendingDocumentFn` and
+  `restorePendingDocument?: RestorePendingDocumentFn`. Task 5
+  (`gateway-runner.ts`) consumes these two field names exactly when constructing
+  its `runAgent()` call.
 
 The current relevant sections of `apps/backend/src/agent/run.ts`:
 
 Import block (lines 1-55), the two lines to change:
+
 ```ts
 import { indexUploadedDocument } from "../services/rag/document-source.js"
 ```
-(this import is removed — `run.ts` no longer calls `indexUploadedDocument` directly)
+
+(this import is removed — `run.ts` no longer calls `indexUploadedDocument`
+directly)
 
 `RunAgentOptions` (lines 57-72):
+
 ```ts
 export interface RunAgentOptions {
   userId: string
@@ -651,69 +834,79 @@ export interface RunAgentOptions {
 ```
 
 `indexDocumentTool` wiring (lines 590-594):
+
 ```ts
-  const indexDocumentTool = canUseRag
-    ? createIndexDocumentTool((title, content) =>
-        indexUploadedDocument(opts.userId, title, content),
-      )
-    : null
+const indexDocumentTool = canUseRag
+  ? createIndexDocumentTool((title, content) =>
+      indexUploadedDocument(opts.userId, title, content),
+    )
+  : null
 ```
 
 - [ ] **Step 1: Write the failing test**
 
-In `apps/backend/src/agent/run.test.ts`, find the existing two `index_document` tests (currently at lines 355-374):
+In `apps/backend/src/agent/run.test.ts`, find the existing two `index_document`
+tests (currently at lines 355-374):
 
 ```ts
-  it("wires an index_document tool into extraTools for a Pro-plan user", async () => {
-    mockUser = makeUser({ plan: "pro" })
-    const { runAgent } = await import("./run.js")
-    await runAgent({ userId: "user_1", text: "hi" })
-    expect(lastAgentExtraTools).toBeDefined()
-    const indexDocumentTool = lastAgentExtraTools!["index_document"] as {
-      execute?: unknown
-      description?: string
-    }
-    expect(typeof indexDocumentTool.execute).toBe("function")
-    expect(indexDocumentTool.description).toContain("document")
-  })
+it("wires an index_document tool into extraTools for a Pro-plan user", async () => {
+  mockUser = makeUser({ plan: "pro" })
+  const { runAgent } = await import("./run.js")
+  await runAgent({ userId: "user_1", text: "hi" })
+  expect(lastAgentExtraTools).toBeDefined()
+  const indexDocumentTool = lastAgentExtraTools!["index_document"] as {
+    execute?: unknown
+    description?: string
+  }
+  expect(typeof indexDocumentTool.execute).toBe("function")
+  expect(indexDocumentTool.description).toContain("document")
+})
 
-  it("omits index_document from extraTools for an Explore-plan user", async () => {
-    mockUser = makeUser({ plan: "explore" })
-    const { runAgent } = await import("./run.js")
-    await runAgent({ userId: "user_1", text: "hi" })
-    expect(lastAgentExtraTools).toBeDefined()
-    expect(lastAgentExtraTools!["index_document"]).toBeUndefined()
-  })
+it("omits index_document from extraTools for an Explore-plan user", async () => {
+  mockUser = makeUser({ plan: "explore" })
+  const { runAgent } = await import("./run.js")
+  await runAgent({ userId: "user_1", text: "hi" })
+  expect(lastAgentExtraTools).toBeDefined()
+  expect(lastAgentExtraTools!["index_document"]).toBeUndefined()
+})
 ```
 
-Leave both unchanged (they still pass under the new wiring — `execute` is still a function, the description still contains "document"). Add one new test immediately after them:
+Leave both unchanged (they still pass under the new wiring — `execute` is still
+a function, the description still contains "document"). Add one new test
+immediately after them:
 
 ```ts
-  it("index_document's execute calls resolvePendingDocumentIndex with the turn's userId and callbacks", async () => {
-    mockUser = makeUser({ plan: "pro" })
-    const { runAgent } = await import("./run.js")
-    await runAgent({ userId: "user_1", text: "hi" })
-    expect(lastAgentExtraTools).toBeDefined()
-    const indexDocumentTool = lastAgentExtraTools!["index_document"] as {
-      execute: (args: { title?: string }, ctx: never) => Promise<unknown>
-    }
+it("index_document's execute calls resolvePendingDocumentIndex with the turn's userId and callbacks", async () => {
+  mockUser = makeUser({ plan: "pro" })
+  const { runAgent } = await import("./run.js")
+  await runAgent({ userId: "user_1", text: "hi" })
+  expect(lastAgentExtraTools).toBeDefined()
+  const indexDocumentTool = lastAgentExtraTools!["index_document"] as {
+    execute: (args: { title?: string }, ctx: never) => Promise<unknown>
+  }
 
-    resolvePendingDocumentIndexCalls = []
-    const result = await indexDocumentTool.execute({ title: "custom.pdf" }, {} as never)
+  resolvePendingDocumentIndexCalls = []
+  const result = await indexDocumentTool.execute(
+    { title: "custom.pdf" },
+    {} as never,
+  )
 
-    expect(resolvePendingDocumentIndexCalls).toEqual([
-      {
-        userId: "user_1",
-        title: "custom.pdf",
-        consumePendingDocument: undefined,
-        restorePendingDocument: undefined,
-      },
-    ])
-    expect(result).toEqual({ ok: true, documentId: "doc-1" })
-  })
+  expect(resolvePendingDocumentIndexCalls).toEqual([
+    {
+      userId: "user_1",
+      title: "custom.pdf",
+      consumePendingDocument: undefined,
+      restorePendingDocument: undefined,
+    },
+  ])
+  expect(result).toEqual({ ok: true, documentId: "doc-1" })
+})
 ```
 
-This test needs a mock for `./pending-document.js`. Add it near the top of `run.test.ts`, alongside the other `mock.module(...)` calls (after the existing `mock.module("../services/privacy/checks.js", ...)` block, before `function makeUser(...)`):
+This test needs a mock for `./pending-document.js`. Add it near the top of
+`run.test.ts`, alongside the other `mock.module(...)` calls (after the existing
+`mock.module("../services/privacy/checks.js", ...)` block, before
+`function makeUser(...)`):
 
 ```ts
 let resolvePendingDocumentIndexCalls: {
@@ -729,7 +922,12 @@ mock.module("./pending-document.js", () => ({
     consumePendingDocument: unknown,
     restorePendingDocument: unknown,
   ) => {
-    resolvePendingDocumentIndexCalls.push({ userId, title, consumePendingDocument, restorePendingDocument })
+    resolvePendingDocumentIndexCalls.push({
+      userId,
+      title,
+      consumePendingDocument,
+      restorePendingDocument,
+    })
     return { ok: true, documentId: "doc-1" }
   },
 }))
@@ -737,16 +935,22 @@ mock.module("./pending-document.js", () => ({
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `bun test --isolate apps/backend/src/agent/run.test.ts -t "resolvePendingDocumentIndex"`
-Expected: FAIL — `run.ts` still imports and calls `indexUploadedDocument` directly, not `resolvePendingDocumentIndex`, so the mock is never hit and `resolvePendingDocumentIndexCalls` stays empty.
+Run:
+`bun test --isolate apps/backend/src/agent/run.test.ts -t "resolvePendingDocumentIndex"`
+Expected: FAIL — `run.ts` still imports and calls `indexUploadedDocument`
+directly, not `resolvePendingDocumentIndex`, so the mock is never hit and
+`resolvePendingDocumentIndexCalls` stays empty.
 
 - [ ] **Step 3: Update `run.ts`**
 
 Find this import line:
+
 ```ts
 import { indexUploadedDocument } from "../services/rag/document-source.js"
 ```
+
 Replace it with:
+
 ```ts
 import {
   resolvePendingDocumentIndex,
@@ -756,6 +960,7 @@ import {
 ```
 
 Find the `RunAgentOptions` interface and add the two new fields after `onReact`:
+
 ```ts
 export interface RunAgentOptions {
   userId: string
@@ -781,36 +986,38 @@ export interface RunAgentOptions {
 ```
 
 Find the `indexDocumentTool` wiring and replace it:
+
 ```ts
-  const indexDocumentTool = canUseRag
-    ? createIndexDocumentTool((title, content) =>
-        indexUploadedDocument(opts.userId, title, content),
-      )
-    : null
+const indexDocumentTool = canUseRag
+  ? createIndexDocumentTool((title, content) =>
+      indexUploadedDocument(opts.userId, title, content),
+    )
+  : null
 ```
+
 becomes:
+
 ```ts
-  const indexDocumentTool = canUseRag
-    ? createIndexDocumentTool((title) =>
-        resolvePendingDocumentIndex(
-          opts.userId,
-          title,
-          opts.consumePendingDocument,
-          opts.restorePendingDocument,
-        ),
-      )
-    : null
+const indexDocumentTool = canUseRag
+  ? createIndexDocumentTool((title) =>
+      resolvePendingDocumentIndex(
+        opts.userId,
+        title,
+        opts.consumePendingDocument,
+        opts.restorePendingDocument,
+      ),
+    )
+  : null
 ```
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `bun test --isolate apps/backend/src/agent/run.test.ts`
-Expected: PASS — all existing tests plus the 1 new one.
+Run: `bun test --isolate apps/backend/src/agent/run.test.ts` Expected: PASS —
+all existing tests plus the 1 new one.
 
 - [ ] **Step 5: Typecheck**
 
-Run: `bun run typecheck`
-Expected: 0 errors.
+Run: `bun run typecheck` Expected: 0 errors.
 
 - [ ] **Step 6: Commit**
 
@@ -824,16 +1031,22 @@ git commit -m "feat(agent): wire resolvePendingDocumentIndex into index_document
 ### Task 5: `gateway-runner.ts` — the stash itself
 
 **Files:**
+
 - Modify: `apps/backend/src/gateway/gateway-runner.ts`
 - Modify: `apps/backend/src/gateway/gateway-runner.test.ts`
 
 **Interfaces:**
-- Consumes: `ConsumePendingDocumentFn`, `RestorePendingDocumentFn`, `PendingDocument` type shapes from Task 1 (structural match, not imported — `gateway-runner.ts` doesn't import from `pending-document.ts`; its closures just happen to match the shape `RunAgentOptions` expects).
+
+- Consumes: `ConsumePendingDocumentFn`, `RestorePendingDocumentFn`,
+  `PendingDocument` type shapes from Task 1 (structural match, not imported —
+  `gateway-runner.ts` doesn't import from `pending-document.ts`; its closures
+  just happen to match the shape `RunAgentOptions` expects).
 - Produces: nothing new for later tasks — this is the final integration point.
 
 - [ ] **Step 1: Write the failing tests**
 
-In `apps/backend/src/gateway/gateway-runner.test.ts`, find the `runAgent` mock (currently at lines 94-123):
+In `apps/backend/src/gateway/gateway-runner.test.ts`, find the `runAgent` mock
+(currently at lines 94-123):
 
 ```ts
 mock.module("../agent/run.js", () => ({
@@ -868,7 +1081,10 @@ mock.module("../agent/run.js", () => ({
 }))
 ```
 
-Replace it with (adds the two new params to the destructured type, captures them into new module-level variables — `agentCalls`'s pushed object is unchanged, so no existing `toEqual` assertion breaks):
+Replace it with (adds the two new params to the destructured type, captures them
+into new module-level variables — `agentCalls`'s pushed object is unchanged, so
+no existing `toEqual` assertion breaks):
+
 ```ts
 mock.module("../agent/run.js", () => ({
   runAgent: async ({
@@ -888,7 +1104,10 @@ mock.module("../agent/run.js", () => ({
     skipCharge?: boolean
     onReact?: (emoji: string) => Promise<void>
     consumePendingDocument?: () => { title: string; content: string } | null
-    restorePendingDocument?: (document: { title: string; content: string }) => void
+    restorePendingDocument?: (document: {
+      title: string
+      content: string
+    }) => void
   }) => {
     agentCalls.push({ userId, text, history, signal, skipCharge })
     capturedOnReact = onReact
@@ -908,146 +1127,161 @@ mock.module("../agent/run.js", () => ({
 }))
 ```
 
-Add the two new module-level capture variables near the top of the file, alongside the existing `let capturedOnReact: ((emoji: string) => Promise<void>) | undefined` line:
+Add the two new module-level capture variables near the top of the file,
+alongside the existing
+`let capturedOnReact: ((emoji: string) => Promise<void>) | undefined` line:
+
 ```ts
-let capturedConsumePendingDocument: (() => { title: string; content: string } | null) | undefined
+let capturedConsumePendingDocument:
+  | (() => { title: string; content: string } | null)
+  | undefined
 let capturedRestorePendingDocument:
   | ((document: { title: string; content: string }) => void)
   | undefined
 ```
 
-Add both to the existing `beforeEach` reset block, alongside `capturedOnReact = undefined`:
+Add both to the existing `beforeEach` reset block, alongside
+`capturedOnReact = undefined`:
+
 ```ts
-  capturedConsumePendingDocument = undefined
-  capturedRestorePendingDocument = undefined
+capturedConsumePendingDocument = undefined
+capturedRestorePendingDocument = undefined
 ```
 
-Then add these four new tests inside the existing `describe("GatewayRunner production routing", ...)` block, after the last existing test in that block (find the block's closing — add before its final `})`):
+Then add these four new tests inside the existing
+`describe("GatewayRunner production routing", ...)` block, after the last
+existing test in that block (find the block's closing — add before its final
+`})`):
 
 ```ts
-  it("stashes an uploaded document's extracted text so index_document can consume it once", async () => {
-    const runner = new GatewayRunner()
-    const adapter = new FakeAdapter()
-    runner.registerAdapter(adapter)
-    globalThis.fetch = (async () =>
-      new Response("Hello world content", { status: 200 })) as typeof fetch
+it("stashes an uploaded document's extracted text so index_document can consume it once", async () => {
+  const runner = new GatewayRunner()
+  const adapter = new FakeAdapter()
+  runner.registerAdapter(adapter)
+  globalThis.fetch = (async () =>
+    new Response("Hello world content", { status: 200 })) as typeof fetch
 
-    await incoming(runner, {
-      platform: "telegram",
-      chatId: "chat_1",
-      userId: "tg_1",
-      text: "",
-      timestamp: new Date().toISOString(),
-      documentUrl: "https://example.com/notes.txt",
-      documentFileName: "notes.txt",
-      documentMimeType: "text/plain",
-    })
-
-    expect(capturedConsumePendingDocument).toBeDefined()
-    expect(capturedConsumePendingDocument!()).toEqual({
-      title: "notes.txt",
-      content: "Hello world content",
-    })
-    // Consumed once — a second call finds nothing left to return.
-    expect(capturedConsumePendingDocument!()).toBeNull()
+  await incoming(runner, {
+    platform: "telegram",
+    chatId: "chat_1",
+    userId: "tg_1",
+    text: "",
+    timestamp: new Date().toISOString(),
+    documentUrl: "https://example.com/notes.txt",
+    documentFileName: "notes.txt",
+    documentMimeType: "text/plain",
   })
 
-  it("keeps a stashed document scoped to its own conversation", async () => {
-    const runner = new GatewayRunner()
-    const adapter = new FakeAdapter()
-    runner.registerAdapter(adapter)
-    globalThis.fetch = (async () =>
-      new Response("Chat 1's document", { status: 200 })) as typeof fetch
+  expect(capturedConsumePendingDocument).toBeDefined()
+  expect(capturedConsumePendingDocument!()).toEqual({
+    title: "notes.txt",
+    content: "Hello world content",
+  })
+  // Consumed once — a second call finds nothing left to return.
+  expect(capturedConsumePendingDocument!()).toBeNull()
+})
 
-    await incoming(runner, {
-      platform: "telegram",
-      chatId: "chat_1",
-      userId: "tg_1",
-      text: "",
-      timestamp: new Date().toISOString(),
-      documentUrl: "https://example.com/notes.txt",
-      documentFileName: "notes.txt",
-      documentMimeType: "text/plain",
-    })
+it("keeps a stashed document scoped to its own conversation", async () => {
+  const runner = new GatewayRunner()
+  const adapter = new FakeAdapter()
+  runner.registerAdapter(adapter)
+  globalThis.fetch = (async () =>
+    new Response("Chat 1's document", { status: 200 })) as typeof fetch
 
-    await incoming(runner, {
-      platform: "telegram",
-      chatId: "chat_2",
-      userId: "tg_2",
-      text: "index the document",
-      timestamp: new Date().toISOString(),
-    })
-
-    expect(capturedConsumePendingDocument).toBeDefined()
-    expect(capturedConsumePendingDocument!()).toBeNull()
+  await incoming(runner, {
+    platform: "telegram",
+    chatId: "chat_1",
+    userId: "tg_1",
+    text: "",
+    timestamp: new Date().toISOString(),
+    documentUrl: "https://example.com/notes.txt",
+    documentFileName: "notes.txt",
+    documentMimeType: "text/plain",
   })
 
-  it("expires a stashed document after PENDING_DOCUMENT_TTL_MS", async () => {
-    const runner = new GatewayRunner()
-    const adapter = new FakeAdapter()
-    runner.registerAdapter(adapter)
-    globalThis.fetch = (async () =>
-      new Response("Old content", { status: 200 })) as typeof fetch
-
-    await incoming(runner, {
-      platform: "telegram",
-      chatId: "chat_1",
-      userId: "tg_1",
-      text: "",
-      timestamp: new Date().toISOString(),
-      documentUrl: "https://example.com/notes.txt",
-      documentFileName: "notes.txt",
-      documentMimeType: "text/plain",
-    })
-
-    const consume = capturedConsumePendingDocument!
-    const realDateNow = Date.now
-    Date.now = () => realDateNow() + 16 * 60 * 1000
-    try {
-      expect(consume()).toBeNull()
-    } finally {
-      Date.now = realDateNow
-    }
+  await incoming(runner, {
+    platform: "telegram",
+    chatId: "chat_2",
+    userId: "tg_2",
+    text: "index the document",
+    timestamp: new Date().toISOString(),
   })
 
-  it("makes a restored document consumable again", async () => {
-    const runner = new GatewayRunner()
-    const adapter = new FakeAdapter()
-    runner.registerAdapter(adapter)
-    globalThis.fetch = (async () =>
-      new Response("Retry me", { status: 200 })) as typeof fetch
+  expect(capturedConsumePendingDocument).toBeDefined()
+  expect(capturedConsumePendingDocument!()).toBeNull()
+})
 
-    await incoming(runner, {
-      platform: "telegram",
-      chatId: "chat_1",
-      userId: "tg_1",
-      text: "",
-      timestamp: new Date().toISOString(),
-      documentUrl: "https://example.com/notes.txt",
-      documentFileName: "notes.txt",
-      documentMimeType: "text/plain",
-    })
+it("expires a stashed document after PENDING_DOCUMENT_TTL_MS", async () => {
+  const runner = new GatewayRunner()
+  const adapter = new FakeAdapter()
+  runner.registerAdapter(adapter)
+  globalThis.fetch = (async () =>
+    new Response("Old content", { status: 200 })) as typeof fetch
 
-    const consume = capturedConsumePendingDocument!
-    const restore = capturedRestorePendingDocument!
-    const consumed = consume()
-    expect(consumed).toEqual({ title: "notes.txt", content: "Retry me" })
+  await incoming(runner, {
+    platform: "telegram",
+    chatId: "chat_1",
+    userId: "tg_1",
+    text: "",
+    timestamp: new Date().toISOString(),
+    documentUrl: "https://example.com/notes.txt",
+    documentFileName: "notes.txt",
+    documentMimeType: "text/plain",
+  })
+
+  const consume = capturedConsumePendingDocument!
+  const realDateNow = Date.now
+  Date.now = () => realDateNow() + 16 * 60 * 1000
+  try {
     expect(consume()).toBeNull()
+  } finally {
+    Date.now = realDateNow
+  }
+})
 
-    restore(consumed!)
+it("makes a restored document consumable again", async () => {
+  const runner = new GatewayRunner()
+  const adapter = new FakeAdapter()
+  runner.registerAdapter(adapter)
+  globalThis.fetch = (async () =>
+    new Response("Retry me", { status: 200 })) as typeof fetch
 
-    expect(consume()).toEqual({ title: "notes.txt", content: "Retry me" })
+  await incoming(runner, {
+    platform: "telegram",
+    chatId: "chat_1",
+    userId: "tg_1",
+    text: "",
+    timestamp: new Date().toISOString(),
+    documentUrl: "https://example.com/notes.txt",
+    documentFileName: "notes.txt",
+    documentMimeType: "text/plain",
   })
+
+  const consume = capturedConsumePendingDocument!
+  const restore = capturedRestorePendingDocument!
+  const consumed = consume()
+  expect(consumed).toEqual({ title: "notes.txt", content: "Retry me" })
+  expect(consume()).toBeNull()
+
+  restore(consumed!)
+
+  expect(consume()).toEqual({ title: "notes.txt", content: "Retry me" })
+})
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `bun test --isolate apps/backend/src/gateway/gateway-runner.test.ts -t "pending document|PENDING_DOCUMENT_TTL_MS|consume it once|own conversation|consumable again"`
-Expected: FAIL — `capturedConsumePendingDocument` is never set (`gateway-runner.ts` doesn't pass `consumePendingDocument`/`restorePendingDocument` to `runAgent()` yet), so `capturedConsumePendingDocument` stays `undefined` and calling it throws.
+Run:
+`bun test --isolate apps/backend/src/gateway/gateway-runner.test.ts -t "pending document|PENDING_DOCUMENT_TTL_MS|consume it once|own conversation|consumable again"`
+Expected: FAIL — `capturedConsumePendingDocument` is never set
+(`gateway-runner.ts` doesn't pass
+`consumePendingDocument`/`restorePendingDocument` to `runAgent()` yet), so
+`capturedConsumePendingDocument` stays `undefined` and calling it throws.
 
 - [ ] **Step 3: Implement the stash in `gateway-runner.ts`**
 
 Find the constants block near the top of the file:
+
 ```ts
 const SESSION_TTL_MS = 60 * 60 * 1000
 const SESSION_CLEANUP_INTERVAL_MS = 5 * 60 * 1000
@@ -1057,7 +1291,9 @@ const HISTORY_TTL_MS = 60 * 60 * 1000
 const SHARED_SESSION_PLATFORM = "yomi"
 const SHARED_SESSION_CHAT_ID = "global"
 ```
+
 Add one new constant after `HISTORY_TTL_MS`:
+
 ```ts
 const SESSION_TTL_MS = 60 * 60 * 1000
 const SESSION_CLEANUP_INTERVAL_MS = 5 * 60 * 1000
@@ -1074,6 +1310,7 @@ const SHARED_SESSION_CHAT_ID = "global"
 ```
 
 Add a new interface near `ConversationEntry`:
+
 ```ts
 interface ConversationEntry {
   turns: AgentMessage[]
@@ -1088,6 +1325,7 @@ interface PendingDocumentEntry {
 ```
 
 Add a new private field to the class, alongside `conversationHistories`:
+
 ```ts
 export class GatewayRunner {
   private adapters: Map<PlatformType, PlatformAdapter> = new Map()
@@ -1098,6 +1336,7 @@ export class GatewayRunner {
 ```
 
 Add two new private methods, near the existing `private runKey(...)` method:
+
 ```ts
   private runKey(platform: PlatformType, chatId: string): string {
     return `${platform}:${chatId}`
@@ -1135,6 +1374,7 @@ Add two new private methods, near the existing `private runKey(...)` method:
 ```
 
 Find the document-handling block's success path:
+
 ```ts
             if (contentPreview) {
               if (msg.text.trim()) {
@@ -1147,7 +1387,9 @@ Find the document-handling block's success path:
               }
             } else {
 ```
+
 Change it to also stash the extracted text:
+
 ```ts
             if (contentPreview) {
               this.pendingDocuments.set(this.runKey(msg.platform, msg.chatId), {
@@ -1167,40 +1409,45 @@ Change it to also stash the extracted text:
 ```
 
 Find the `runAgent()` call site:
+
 ```ts
-        const result = await runAgent({
-          userId: yomiUserId,
-          text: msg.text,
-          history,
-          signal: runController.signal,
-          sourcePlatform: msg.platform,
-          sourceChatId: msg.chatId,
-          onReact: (emoji) =>
-            msg.messageId
-              ? this.setReaction(msg.platform, msg.chatId, msg.messageId, emoji)
-              : Promise.resolve(),
-        })
+const result = await runAgent({
+  userId: yomiUserId,
+  text: msg.text,
+  history,
+  signal: runController.signal,
+  sourcePlatform: msg.platform,
+  sourceChatId: msg.chatId,
+  onReact: (emoji) =>
+    msg.messageId
+      ? this.setReaction(msg.platform, msg.chatId, msg.messageId, emoji)
+      : Promise.resolve(),
+})
 ```
+
 Add the two new options:
+
 ```ts
-        const result = await runAgent({
-          userId: yomiUserId,
-          text: msg.text,
-          history,
-          signal: runController.signal,
-          sourcePlatform: msg.platform,
-          sourceChatId: msg.chatId,
-          onReact: (emoji) =>
-            msg.messageId
-              ? this.setReaction(msg.platform, msg.chatId, msg.messageId, emoji)
-              : Promise.resolve(),
-          consumePendingDocument: () => this.consumePendingDocument(msg.platform, msg.chatId),
-          restorePendingDocument: (document) =>
-            this.restorePendingDocument(msg.platform, msg.chatId, document),
-        })
+const result = await runAgent({
+  userId: yomiUserId,
+  text: msg.text,
+  history,
+  signal: runController.signal,
+  sourcePlatform: msg.platform,
+  sourceChatId: msg.chatId,
+  onReact: (emoji) =>
+    msg.messageId
+      ? this.setReaction(msg.platform, msg.chatId, msg.messageId, emoji)
+      : Promise.resolve(),
+  consumePendingDocument: () =>
+    this.consumePendingDocument(msg.platform, msg.chatId),
+  restorePendingDocument: (document) =>
+    this.restorePendingDocument(msg.platform, msg.chatId, document),
+})
 ```
 
 Find `cleanupSessions()`:
+
 ```ts
   private cleanupSessions(): void {
     const now = Date.now()
@@ -1216,7 +1463,9 @@ Find `cleanupSessions()`:
     }
   }
 ```
+
 Extend it:
+
 ```ts
   private cleanupSessions(): void {
     const now = Date.now()
@@ -1245,14 +1494,11 @@ Expected: PASS — all existing tests plus the 4 new ones.
 
 - [ ] **Step 5: Typecheck and run the full backend + agent-core suites**
 
-Run: `bun run typecheck`
-Expected: 0 errors.
+Run: `bun run typecheck` Expected: 0 errors.
 
-Run: `bun test --isolate packages/agent-core/src`
-Expected: all pass.
+Run: `bun test --isolate packages/agent-core/src` Expected: all pass.
 
-Run: `bun test --isolate apps/backend/src`
-Expected: all pass.
+Run: `bun test --isolate apps/backend/src` Expected: all pass.
 
 - [ ] **Step 6: Commit**
 
@@ -1265,9 +1511,17 @@ git commit -m "feat(gateway): stash extracted document text for index_document"
 
 ## Final Verification
 
-- [ ] Run `bun run format` proactively before pushing (every PR this session has needed this at least once), then re-verify tests still pass.
+- [ ] Run `bun run format` proactively before pushing (every PR this session has
+      needed this at least once), then re-verify tests still pass.
 - [ ] Run `bun run lint`.
 - [ ] Run `bun run typecheck` from repo root — 0 errors.
 - [ ] Run `bun test --isolate` (full monorepo suite) from repo root — all pass.
-- [ ] Re-read `docs/superpowers/specs/2026-08-04-index-document-reference-redesign-design.md` and confirm every section (architecture, data flow, warning-field removal, error handling, testing) has a corresponding implemented piece.
-- [ ] Manually confirm: no remaining references to `warning` in `IndexDocumentResult`/`indexUploadedDocument`'s call sites anywhere in the codebase (`grep -rn "warning" packages/agent-core/src/index-document.ts apps/backend/src/services/rag/document-source.ts` should show nothing beyond what typecheck already caught).
+- [ ] Re-read
+      `docs/superpowers/specs/2026-08-04-index-document-reference-redesign-design.md`
+      and confirm every section (architecture, data flow, warning-field removal,
+      error handling, testing) has a corresponding implemented piece.
+- [ ] Manually confirm: no remaining references to `warning` in
+      `IndexDocumentResult`/`indexUploadedDocument`'s call sites anywhere in the
+      codebase
+      (`grep -rn "warning" packages/agent-core/src/index-document.ts apps/backend/src/services/rag/document-source.ts`
+      should show nothing beyond what typecheck already caught).
