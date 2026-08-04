@@ -41,6 +41,9 @@ jobs:
       - name: Lint
         run: bun run lint
 
+      - name: Docs sync
+        run: bun run docs:check
+
       - name: Build
         run: bun run build:ci
 

@@ -12,6 +12,7 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "docs:check": "bun scripts/check-docs-sync.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "clean": "turbo run clean",
