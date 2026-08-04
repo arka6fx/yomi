@@ -172,7 +172,12 @@ mock.module("./pending-document.js", () => ({
     consumePendingDocument: unknown,
     restorePendingDocument: unknown,
   ) => {
-    resolvePendingDocumentIndexCalls.push({ userId, title, consumePendingDocument, restorePendingDocument })
+    resolvePendingDocumentIndexCalls.push({
+      userId,
+      title,
+      consumePendingDocument,
+      restorePendingDocument,
+    })
     return { ok: true, documentId: "doc-1" }
   },
 }))
