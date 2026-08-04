@@ -32,6 +32,24 @@ the ranking path.
 Sources share one `index-document` path (chunk → embed → upsert, deduped by
 content hash). Manual push routes and automated sync both use it.
 
+### Agent-facing tools
+
+The backend agent can ingest and retrieve archive content mid-conversation
+(`packages/agent-core/src/index-{text,url,document}.ts`, `deep-research.ts`):
+
+- **`index_text`** — index a pasted snippet the user asks to remember.
+- **`index_url`** — fetch a link's readable content and index it; the backend
+  does the fetching, the model only passes the URL.
+- **`index_document`** — index the most recently uploaded PDF/Word file. The
+  tool takes only an optional title, not the content: the backend supplies the
+  text it already extracted server-side for that turn, so large documents are
+  never truncated through the model's output budget (see issue #102 and
+  `docs/superpowers/specs/2026-08-04-index-document-reference-redesign-design.md`).
+- **`deep_research`** — retrieval side of the loop: searches the user's indexed
+  documents for relevant passages via the shared `/api/rag/search` pipeline.
+
+All three ingestion tools write to the same archive `deep_research` reads from.
+
 ### Google Drive auto-sync
 
 Indexes user-selected Drive folders and keeps them fresh, entirely backend-side.
