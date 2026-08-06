@@ -169,7 +169,9 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
       .passthrough(),
     preview: (a) => ({
       title: `Create Notion page: ${String(a["title"] ?? "")}`,
-      preview: a["parent_id"] ? `Create page under ${notionUrl(String(a["parent_id"]))}` : "Create page",
+      preview: a["parent_id"]
+        ? `Create page under ${notionUrl(String(a["parent_id"]))}`
+        : "Create page",
       confirmText: "Create page",
     }),
   },
