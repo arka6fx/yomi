@@ -665,7 +665,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       text =
         `Authorization error: ${msg.slice(0, 300)}\n\n` +
         `Your integration token may have expired or been revoked. ` +
-        `Please reconnect at ${appUrl}/dashboard.`
+        `Please reconnect at [dashboard](${appUrl}/dashboard).`
     } else if (/\b(429|rate.limit|too many requests)\b/i.test(msg)) {
       text = "Rate limit hit, please wait a moment and try again."
     } else if (/\b(timeout|ETIMEDOUT|ECONNREFUSED|ENOTFOUND|network)\b/i.test(msg)) {
@@ -716,7 +716,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   // path, so real users could run to 0 credits with no warning at all.
   if (creditBalance !== null) {
     const warning = lowCreditWarning(user, creditBalance)
-    if (warning) text += `\n\n_${warning} Buy more or upgrade at ${appUrl}/dashboard._`
+    if (warning) text += `\n\n_${warning} Buy more or upgrade at [dashboard](${appUrl}/dashboard)._`
   }
 
   // Usage was already recorded and credits consumed by chargeUsage() up front.
