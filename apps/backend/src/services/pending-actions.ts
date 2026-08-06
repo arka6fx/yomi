@@ -376,6 +376,7 @@ export async function approvePendingAction(
       sourcePlatform: pendingActions.sourcePlatform,
       sourceChatId: pendingActions.sourceChatId,
       title: pendingActions.title,
+      preview: pendingActions.preview,
     })
   if (!approved) return null
 
@@ -547,7 +548,15 @@ export async function approvePendingAction(
     // completes — skipped when the approval came from that same chat and the
     // caller sends its own result reply.
     if (approved.sourcePlatform && approved.sourceChatId && !opts?.skipNotify) {
-      const resultText = formatActionResult(result, `Done: ${approved.title}`)
+      // Raw provider results often carry no human `message`/`link` field (e.g.
+      // Notion's block/page objects), so formatActionResult falls back to this —
+      // reusing the same preview text shown on the approval card (which for
+      // Notion actions is a real notion.so link, not just a bare ID) means the
+      // "Done" confirmation still surfaces it instead of going silent on it.
+      const fallback = approved.preview.trim()
+        ? `Done: ${approved.title}\n${approved.preview.trim()}`
+        : `Done: ${approved.title}`
+      const resultText = formatActionResult(result, fallback)
       import("../gateway/index.js")
         .then(({ getDefaultGateway }) => {
           const gateway = getDefaultGateway()

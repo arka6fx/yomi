@@ -4,6 +4,16 @@ import { createComposioTools, type ComposioExecutor, type ComposioToolSpec } fro
 
 export const NOTION_TOOLKIT = "notion"
 
+// Notion resolves a bare page/block ID to its page directly — title slug and
+// dashes are cosmetic — so a real, clickable link can always be built from an ID
+// alone, with no extra lookup. Used for approval-card previews (a raw ID like
+// "3b4561d5-2512-..." means nothing to the user; a link they can tap does) and
+// referenced in tool descriptions below so the model builds links itself instead
+// of telling the user it "can't generate the live link."
+function notionUrl(id: string): string {
+  return `https://www.notion.so/${id.replace(/-/g, "")}`
+}
+
 // Every slug and param below was checked against Composio's live catalog
 // (GET /api/v3/tools?toolkit_slug=notion) — 6 slugs were hallucinated
 // (RETRIEVE_PAGE, QUERY_DATABASE_WITH_FILTER, LIST_FILE_UPLOADS,
@@ -28,7 +38,8 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "NOTION_SEARCH_NOTION_PAGE",
     description:
-      "Search Notion pages or databases by title. Returns results with IDs, titles, and URLs. Read-only.",
+      "Search Notion pages or databases by title. Returns results with IDs, titles, and URLs. Read-only. " +
+      "Never show a raw page/block ID to the user — if a result's URL is missing, build one yourself as https://www.notion.so/<id with dashes removed>, which Notion resolves directly.",
     parameters: z
       .object({
         query: z.string().optional().describe("Search text. Omit to list everything accessible."),
@@ -51,7 +62,8 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
     slug: "NOTION_FETCH_DATA",
     description:
       "List or search pages and/or databases accessible to the integration. There is no separate 'get page by ID' " +
-      "action — use this to find a page/database ID, then NOTION_FETCH_BLOCK_CONTENTS for a page's body. Read-only.",
+      "action — use this to find a page/database ID, then NOTION_FETCH_BLOCK_CONTENTS for a page's body. Read-only. " +
+      "Never show a raw page/block ID to the user — if a result's URL is missing, build one yourself as https://www.notion.so/<id with dashes removed>, which Notion resolves directly.",
     parameters: z
       .object({
         query: z.string().optional().describe("Filter by title/content text"),
@@ -76,7 +88,8 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
   {
     slug: "NOTION_FETCH_BLOCK_CONTENTS",
     description:
-      "Get the content blocks of a Notion page or block. Returns rendered text from paragraphs, headings, lists, and other block types. Read-only.",
+      "Get the content blocks of a Notion page or block. Returns rendered text from paragraphs, headings, lists, and other block types. Read-only. " +
+      "If you only have a page name (even a partial one), call NOTION_SEARCH_NOTION_PAGE or NOTION_FETCH_DATA first to resolve it to an ID — don't ask the user for the exact name or a link unless search turns up no match.",
     parameters: z
       .object({
         block_id: z.string().describe("Block or page ID (pages are blocks in Notion's model)"),
@@ -87,7 +100,8 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "NOTION_FETCH_DATABASE",
-    description: "Get the schema (property definitions) of a Notion database. Read-only.",
+    description:
+      "Get the schema (property definitions) of a Notion database. Read-only. If you only have a name, resolve it to an ID via NOTION_SEARCH_NOTION_PAGE or NOTION_FETCH_DATA first — don't ask the user for the exact name or link unless search turns up no match.",
     parameters: z
       .object({
         database_id: z.string().describe("Notion database ID"),
@@ -98,7 +112,7 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
     slug: "NOTION_QUERY_DATABASE",
     description:
       "List rows in a Notion database, with optional sorting. There is no filter parameter — this always returns " +
-      "all rows (paginated); filter client-side if you only need some of them. Read-only.",
+      "all rows (paginated); filter client-side if you only need some of them. Read-only. If you only have a database name, resolve it to an ID via NOTION_SEARCH_NOTION_PAGE or NOTION_FETCH_DATA first — don't ask the user for the exact name or link unless search turns up no match.",
     parameters: z
       .object({
         database_id: z.string().describe("Notion database ID"),
@@ -128,7 +142,8 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
   },
   {
     slug: "NOTION_FETCH_COMMENTS",
-    description: "List comments on a Notion page or block. Read-only.",
+    description:
+      "List comments on a Notion page or block. Read-only. If you only have a page name, resolve it to an ID via NOTION_SEARCH_NOTION_PAGE or NOTION_FETCH_DATA first — don't ask the user for the exact name or link unless search turns up no match.",
     parameters: z
       .object({
         block_id: z.string().describe("Notion page or block ID"),
@@ -143,7 +158,7 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
     slug: "NOTION_CREATE_NOTION_PAGE",
     description:
       "Create a new, empty Notion page under a parent page or database (title only — there's no content param). " +
-      "To add body content, follow up with NOTION_ADD_MULTIPLE_PAGE_CONTENT using the new page's ID. Requires user approval before it runs.",
+      "To add body content, follow up with NOTION_ADD_MULTIPLE_PAGE_CONTENT using the new page's ID. If you only have the parent's name (even a partial one), resolve it to an ID via NOTION_SEARCH_NOTION_PAGE or NOTION_FETCH_DATA first — don't ask the user for the exact name or link unless search turns up no match. Requires user approval before it runs.",
     parameters: z
       .object({
         parent_id: z.string().describe("Parent page or database ID"),
@@ -154,7 +169,7 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
       .passthrough(),
     preview: (a) => ({
       title: `Create Notion page: ${String(a["title"] ?? "")}`,
-      preview: `Create page under ${String(a["parent_id"] ?? "?")}`,
+      preview: a["parent_id"] ? `Create page under ${notionUrl(String(a["parent_id"]))}` : "Create page",
       confirmText: "Create page",
     }),
   },
@@ -163,7 +178,7 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
     description:
       "Append content blocks to a Notion page or block — paragraphs, headings, bulleted/numbered lists, quotes, " +
       "callouts, to-dos. Each block's 'content' text auto-parses **bold**, *italic*, ~~strikethrough~~, `code`, and " +
-      "[links](url). Requires user approval before it runs.",
+      "[links](url). If you only have the page's name (even a partial one), resolve it to an ID via NOTION_SEARCH_NOTION_PAGE or NOTION_FETCH_DATA first — don't ask the user for the exact name or link unless search turns up no match. Requires user approval before it runs.",
     parameters: z
       .object({
         parent_block_id: z.string().describe("Page or block ID to append to"),
@@ -204,8 +219,8 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
       })
       .passthrough(),
     preview: (a) => ({
-      title: `Append content to Notion page ${String(a["parent_block_id"] ?? "").slice(0, 12)}`,
-      preview: `Add ${String((a["content_blocks"] as unknown[])?.length ?? 0)} block(s)`,
+      title: "Append content to Notion page",
+      preview: `Add ${String((a["content_blocks"] as unknown[])?.length ?? 0)} block(s) to ${notionUrl(String(a["parent_block_id"] ?? ""))}`,
       confirmText: "Append content",
     }),
   },
@@ -213,7 +228,7 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
     slug: "NOTION_UPDATE_PAGE",
     description:
       "Update a Notion page's icon, cover, archived state, or raw property values (title is a property — set it via " +
-      "properties, e.g. { Name: { title: [{ text: { content: 'New title' } }] } }). Requires user approval before it runs.",
+      "properties, e.g. { Name: { title: [{ text: { content: 'New title' } }] } }). If you only have the page's name, resolve it to an ID via NOTION_SEARCH_NOTION_PAGE or NOTION_FETCH_DATA first — don't ask the user for the exact name or link unless search turns up no match. Requires user approval before it runs.",
     parameters: z
       .object({
         page_id: z.string().describe("Notion page ID to update"),
@@ -232,20 +247,20 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
       })
       .passthrough(),
     preview: (a) => ({
-      title: `Update Notion page ${String(a["page_id"] ?? "").slice(0, 12)}`,
+      title: "Update Notion page",
       preview:
-        a["archived"] === true
-          ? "Archive (trash) this page"
+        (a["archived"] === true
+          ? "Archive (trash) "
           : a["archived"] === false
-            ? "Restore from trash"
-            : "Update page",
+            ? "Restore "
+            : "Update ") + notionUrl(String(a["page_id"] ?? "")),
       confirmText: a["archived"] === true ? "Archive page" : "Update page",
     }),
   },
   {
     slug: "NOTION_ARCHIVE_NOTION_PAGE",
     description:
-      "Archive (soft-delete, recoverable) or restore a Notion page. Requires user approval before it runs.",
+      "Archive (soft-delete, recoverable) or restore a Notion page. If you only have the page's name, resolve it to an ID via NOTION_SEARCH_NOTION_PAGE or NOTION_FETCH_DATA first — don't ask the user for the exact name or link unless search turns up no match. Requires user approval before it runs.",
     parameters: z
       .object({
         page_id: z.string().describe("Notion page ID"),
@@ -257,14 +272,14 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
       .passthrough(),
     preview: (a) => ({
       title: a["archive"] === false ? "Restore Notion page" : "Archive Notion page",
-      preview: `${a["archive"] === false ? "Restore" : "Archive"} page ${String(a["page_id"] ?? "").slice(0, 12)}`,
+      preview: `${a["archive"] === false ? "Restore" : "Archive"} ${notionUrl(String(a["page_id"] ?? ""))}`,
       confirmText: a["archive"] === false ? "Restore page" : "Archive page",
     }),
   },
   {
     slug: "NOTION_DUPLICATE_PAGE",
     description:
-      "Duplicate a Notion page under a chosen parent. Requires user approval before it runs.",
+      "Duplicate a Notion page under a chosen parent. If you only have the page's or parent's name, resolve it to an ID via NOTION_SEARCH_NOTION_PAGE or NOTION_FETCH_DATA first — don't ask the user for the exact name or link unless search turns up no match. Requires user approval before it runs.",
     parameters: z
       .object({
         page_id: z.string().describe("Notion page ID to duplicate"),
@@ -278,15 +293,15 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
       })
       .passthrough(),
     preview: (a) => ({
-      title: `Duplicate Notion page ${String(a["page_id"] ?? "").slice(0, 12)}`,
-      preview: `Create duplicate${a["title"] ? ` titled "${String(a["title"])}"` : ""}`,
+      title: "Duplicate Notion page",
+      preview: `Duplicate ${notionUrl(String(a["page_id"] ?? ""))}${a["title"] ? ` titled "${String(a["title"])}"` : ""}`,
       confirmText: "Duplicate page",
     }),
   },
   {
     slug: "NOTION_DELETE_BLOCK",
     description:
-      "Archive (soft-delete, recoverable) a block, page, or database. Requires user approval before it runs.",
+      "Archive (soft-delete, recoverable) a block, page, or database. If you only have its name, resolve it to an ID via NOTION_SEARCH_NOTION_PAGE or NOTION_FETCH_DATA first — don't ask the user for the exact name or link unless search turns up no match. Requires user approval before it runs.",
     parameters: z
       .object({
         block_id: z.string().describe("Block, page, or database ID to archive"),
@@ -294,7 +309,7 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
       .passthrough(),
     preview: (a) => ({
       title: "Archive Notion block",
-      preview: `Archive block ${String(a["block_id"] ?? "").slice(0, 12)} (recoverable from trash).`,
+      preview: `Archive ${notionUrl(String(a["block_id"] ?? ""))} (recoverable from trash).`,
       confirmText: "Archive block",
     }),
   },
@@ -302,7 +317,7 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
     slug: "NOTION_INSERT_ROW_DATABASE",
     description:
       "Insert a new row into a Notion database. Property values are a list, not an object — each entry needs name/" +
-      "type/value, e.g. [{ name: 'Status', type: 'select', value: 'In Progress' }]. Requires user approval before it runs.",
+      "type/value, e.g. [{ name: 'Status', type: 'select', value: 'In Progress' }]. If you only have the database's name, resolve it to an ID via NOTION_SEARCH_NOTION_PAGE or NOTION_FETCH_DATA first — don't ask the user for the exact name or link unless search turns up no match. Requires user approval before it runs.",
     parameters: z
       .object({
         database_id: z.string().describe("Notion database ID"),
@@ -314,8 +329,8 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
       })
       .passthrough(),
     preview: (a) => ({
-      title: `Insert row in Notion database ${String(a["database_id"] ?? "").slice(0, 12)}`,
-      preview: JSON.stringify(a["properties"] ?? []).slice(0, 500),
+      title: "Insert row in Notion database",
+      preview: `${notionUrl(String(a["database_id"] ?? ""))}\n${JSON.stringify(a["properties"] ?? []).slice(0, 450)}`,
       confirmText: "Insert row",
     }),
   },
@@ -323,7 +338,7 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
     slug: "NOTION_UPDATE_ROW_DATABASE",
     description:
       "Update or archive a row (page) in a Notion database. Uses row_id, not page_id. Set delete_row=true to archive " +
-      "the row instead of updating properties. Requires user approval before it runs.",
+      "the row instead of updating properties. If you only have the row's name/title, resolve it to an ID via NOTION_QUERY_DATABASE or NOTION_SEARCH_NOTION_PAGE first — don't ask the user for the exact name or link unless search turns up no match. Requires user approval before it runs.",
     parameters: z
       .object({
         row_id: z.string().describe("Database row (page) ID to update"),
@@ -340,12 +355,10 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
       })
       .passthrough(),
     preview: (a) => ({
-      title: a["delete_row"]
-        ? `Archive row ${String(a["row_id"] ?? "").slice(0, 12)}`
-        : `Update row ${String(a["row_id"] ?? "").slice(0, 12)}`,
+      title: a["delete_row"] ? "Archive database row" : "Update database row",
       preview: a["delete_row"]
-        ? "Archive this database row"
-        : JSON.stringify(a["properties"] ?? []).slice(0, 500),
+        ? `Archive ${notionUrl(String(a["row_id"] ?? ""))}`
+        : `${notionUrl(String(a["row_id"] ?? ""))}\n${JSON.stringify(a["properties"] ?? []).slice(0, 450)}`,
       confirmText: a["delete_row"] ? "Archive row" : "Update row",
     }),
   },
@@ -354,6 +367,7 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
     description:
       "Create a new Notion database under a parent page. Properties are a list of column definitions, e.g. " +
       "[{ name: 'Task Name', type: 'title' }, { name: 'Due Date', type: 'date' }] — at least one 'title' column is required. " +
+      "If you only have the parent page's name, resolve it to an ID via NOTION_SEARCH_NOTION_PAGE or NOTION_FETCH_DATA first — don't ask the user for the exact name or link unless search turns up no match. " +
       "Requires user approval before it runs.",
     parameters: z
       .object({
@@ -366,7 +380,9 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
       .passthrough(),
     preview: (a) => ({
       title: `Create Notion database: ${String(a["title"] ?? "")}`,
-      preview: `Create database under page ${String(a["parent_id"] ?? "").slice(0, 12)}`,
+      preview: a["parent_id"]
+        ? `Create database under ${notionUrl(String(a["parent_id"]))}`
+        : "Create database",
       confirmText: "Create database",
     }),
   },
@@ -374,7 +390,7 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
     slug: "NOTION_UPDATE_SCHEMA_DATABASE",
     description:
       "Change a Notion database's structure — rename/retype/remove columns, e.g. " +
-      "[{ name: 'Status', new_type: 'select' }, { name: 'Priority', remove: true }]. Requires user approval before it runs.",
+      "[{ name: 'Status', new_type: 'select' }, { name: 'Priority', remove: true }]. If you only have the database's name, resolve it to an ID via NOTION_SEARCH_NOTION_PAGE or NOTION_FETCH_DATA first — don't ask the user for the exact name or link unless search turns up no match. Requires user approval before it runs.",
     parameters: z
       .object({
         database_id: z.string().describe("Notion database ID"),
@@ -396,15 +412,15 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
       })
       .passthrough(),
     preview: (a) => ({
-      title: `Update schema of Notion database ${String(a["database_id"] ?? "").slice(0, 12)}`,
-      preview: "Modify database columns",
+      title: "Update schema of Notion database",
+      preview: `Modify columns on ${notionUrl(String(a["database_id"] ?? ""))}`,
       confirmText: "Update schema",
     }),
   },
   {
     slug: "NOTION_CREATE_COMMENT",
     description:
-      "Add a comment to a Notion page, or reply in an existing comment thread. Requires user approval before it runs.",
+      "Add a comment to a Notion page, or reply in an existing comment thread. If you only have the page's name, resolve it to an ID via NOTION_SEARCH_NOTION_PAGE or NOTION_FETCH_DATA first — don't ask the user for the exact name or link unless search turns up no match. Requires user approval before it runs.",
     parameters: z
       .object({
         comment: z.object({ content: z.string().describe("Comment text") }).passthrough(),
@@ -419,11 +435,10 @@ export const notionComposioSpecs: ComposioToolSpec[] = [
       })
       .passthrough(),
     preview: (a) => ({
-      title: `Comment on Notion page ${String(a["parent_page_id"] ?? "").slice(0, 12)}`,
-      preview: String((a["comment"] as { content?: string } | undefined)?.content ?? "").slice(
-        0,
-        500,
-      ),
+      title: "Comment on Notion page",
+      preview:
+        (a["parent_page_id"] ? `${notionUrl(String(a["parent_page_id"]))}\n` : "") +
+        String((a["comment"] as { content?: string } | undefined)?.content ?? "").slice(0, 450),
       confirmText: "Post comment",
     }),
   },
