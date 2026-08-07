@@ -31,7 +31,10 @@ export function BrandMark({ withText = true, size = "md", className = "" }: Bran
         height={48}
       />
       {withText && (
-        <span className="text-2xl font-bold leading-none text-foreground font-handwriting [-webkit-text-stroke:0.6px_currentColor]">
+        <span
+          className="text-2xl font-bold leading-none text-foreground font-handwriting"
+          style={{ WebkitTextStroke: "0.6px currentColor" }}
+        >
           Yomi
         </span>
       )}
