@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { Inter, Instrument_Serif, JetBrains_Mono } from "next/font/google"
+import { Caveat, Inter, Instrument_Serif, JetBrains_Mono } from "next/font/google"
 import { Providers } from "@/components/providers"
 import { SITE_DESC, SITE_NAME, SITE_TITLE, TITLE_TEMPLATE } from "@/lib/site"
 import { cn } from "@/lib/utils"
@@ -23,6 +23,13 @@ const mono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
   weight: ["400", "500"],
+})
+
+// Handwritten accent typeface — used for the "Yomi" brand-mark wordmark.
+const caveat = Caveat({
+  subsets: ["latin"],
+  variable: "--font-caveat",
+  weight: ["600", "700"],
 })
 
 export const metadata: Metadata = {
@@ -85,7 +92,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={cn("dark antialiased", inter.variable, instrumentSerif.variable, mono.variable)}
+      className={cn(
+        "dark antialiased",
+        inter.variable,
+        instrumentSerif.variable,
+        mono.variable,
+        caveat.variable,
+      )}
     >
       {/* warms the DNS/TLS handshake to the API host before the first fetch — react 19
           hoists link/meta tags rendered anywhere in the tree up into <head>.

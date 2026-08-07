@@ -46,6 +46,7 @@ const config: Config = {
         accent: ["var(--font-heading)", "Instrument Serif", "serif"],
         serif: ["var(--font-heading)", "Instrument Serif", "Georgia", "serif"],
         display: ["var(--font-heading)", "Instrument Serif", "serif"],
+        handwriting: ["var(--font-caveat)", "Caveat", "cursive"],
         mono: [
           "var(--font-mono)",
           "ui-monospace",

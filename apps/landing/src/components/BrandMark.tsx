@@ -31,7 +31,7 @@ export function BrandMark({ withText = true, size = "md", className = "" }: Bran
         height={48}
       />
       {withText && (
-        <span className="text-2xl font-bold leading-none text-foreground font-accent italic">
+        <span className="text-2xl font-bold leading-none text-foreground font-handwriting">
           Yomi
         </span>
       )}
