@@ -11,6 +11,12 @@ let agentCalls: {
   skipCharge?: boolean
 }[] = []
 let agentHangs = false
+// When true (only meaningful alongside agentHangs), the mock's abort listener
+// rejects instead of resolving — mirrors a runAgent() that throws on abort,
+// so tests can independently exercise onIncoming's catch-block abort path
+// rather than assuming it behaves like the try-block's post-await path just
+// because the code looks parallel.
+let agentRejectsOnAbort = false
 let loadedHistory: AgentMessage[] = []
 let appendedTurns: {
   sessionId: string
@@ -120,6 +126,16 @@ mock.module("../agent/run.js", () => ({
     capturedConsumePendingDocument = consumePendingDocument
     capturedRestorePendingDocument = restorePendingDocument
     if (agentHangs) {
+      if (agentRejectsOnAbort) {
+        // Exercises onIncoming's catch-block abort path independently of the
+        // try-block's post-await path, which the real runAgent() never hits
+        // (it always resolves) but which the code still has to handle.
+        await new Promise<void>((_resolve, reject) => {
+          if (signal?.aborted) return reject(new Error("aborted"))
+          signal?.addEventListener("abort", () => reject(new Error("aborted")))
+        })
+        return { text: "" }
+      }
       // Mimic the real runAgent: when the abort signal fires it stops and
       // returns (it does not throw), yielding no usable text.
       await new Promise<void>((resolve) => {
@@ -313,6 +329,7 @@ const originalFetch = globalThis.fetch
 beforeEach(() => {
   agentCalls = []
   agentHangs = false
+  agentRejectsOnAbort = false
   delete process.env.YOMI_AGENT_RUN_TIMEOUT_MS
   loadedHistory = []
   appendedTurns = []
@@ -523,6 +540,35 @@ describe("GatewayRunner production routing", () => {
     })
 
     expect(agentCalls[0]?.signal?.aborted).toBe(true)
+    // Status message ("1") is sent before the run and must be deleted once the
+    // timeout fires — this is the try-block's post-await timeout branch, which
+    // is distinct from the manual-Stop-tap path (that one leaves the status
+    // message alone because handleCallbackQuery already edited it in place).
+    expect(adapter.deletedMessageIds).toEqual(["1"])
+    expect(adapter.messages.at(-1)?.text).toMatch(/too long/i)
+  })
+
+  it("deletes the status message via the catch-block timeout path when runAgent rejects after timing out", async () => {
+    process.env.YOMI_AGENT_RUN_TIMEOUT_MS = "30"
+    agentHangs = true
+    agentRejectsOnAbort = true
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "do something very slow",
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(agentCalls[0]?.signal?.aborted).toBe(true)
+    // Proves the catch block's OWN `if (runTimedOut) { deleteMessage... }`
+    // branch independently — this run throws (agentRejectsOnAbort), landing
+    // in the catch block rather than the try block's post-await branch above.
+    expect(adapter.deletedMessageIds).toEqual(["1"])
     expect(adapter.messages.at(-1)?.text).toMatch(/too long/i)
   })
 
@@ -640,6 +686,53 @@ describe("GatewayRunner production routing", () => {
       buttons: undefined,
     })
     // The aborted run exits quietly — it must not also send a timeout/error message.
+    expect(adapter.messages).toHaveLength(1)
+  })
+
+  it("also exits quietly from the catch block's mirrored abort check when runAgent rejects after a Stop tap", async () => {
+    // Mirrors the test above, but forces runAgent to reject (rather than
+    // resolve) once aborted, so this exercises the catch block's own
+    // `if (runController?.signal.aborted) return` independently — proving it
+    // behaves the same as the try block's post-await path rather than just
+    // assuming so because the code looks parallel. The real runAgent()
+    // essentially never rejects, but the code still has to handle it.
+    agentHangs = true
+    agentRejectsOnAbort = true
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    const runPromise = incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "do something slow",
+      timestamp: new Date().toISOString(),
+    })
+
+    // Let the status message send and the runAgent mock start waiting on abort.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    await adapter.callbackHandler!({
+      chatId: "chat_1",
+      platformUserId: "tg_1",
+      messageId: "1",
+      data: "stop",
+      callbackId: "cbq_stop_reject",
+    })
+    await runPromise
+
+    expect(adapter.answeredCallbacks).toEqual(["cbq_stop_reject"])
+    expect(adapter.edits.at(-1)).toEqual({
+      chatId: "chat_1",
+      messageId: "1",
+      text: "Stopping the current operation.",
+      buttons: undefined,
+    })
+    // The catch block's abort branch must not delete the status message (it
+    // was already edited in place by handleCallbackQuery) and must not send
+    // any further message.
+    expect(adapter.deletedMessageIds).toEqual([])
     expect(adapter.messages).toHaveLength(1)
   })
 
