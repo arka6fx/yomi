@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "bun:test"
 import type { GatewayMessage } from "@yomi/shared"
 import { TelegramAdapter, type TelegramUpdate } from "./telegram.js"
+import type { PlatformCallbackEvent } from "../platform-adapter.js"
 
 function makeAdapter() {
   const adapter = new TelegramAdapter("dummy-token")
@@ -106,5 +107,243 @@ describe("TelegramAdapter.processUpdate — location", () => {
     await adapter.processUpdate(update)
 
     expect(received).toHaveLength(0)
+  })
+})
+
+describe("TelegramAdapter.connect", () => {
+  const originalFetch = globalThis.fetch
+  const originalEnv = process.env["CORS_ORIGIN"]
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+    if (originalEnv === undefined) delete process.env["CORS_ORIGIN"]
+    else process.env["CORS_ORIGIN"] = originalEnv
+  })
+
+  it("clears the command list and registers a web_app menu button pointing at /telegram-app", async () => {
+    process.env["CORS_ORIGIN"] = "https://getyomi.in"
+    const calls: { url: string; body: Record<string, unknown> | null }[] = []
+    globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+      const urlStr = String(url)
+      calls.push({ url: urlStr, body: init?.body ? JSON.parse(String(init.body)) : null })
+      if (urlStr.includes("/getMe")) {
+        return new Response(JSON.stringify({ ok: true, result: { username: "yomi_bot" } }), {
+          status: 200,
+        })
+      }
+      if (urlStr.includes("/getWebhookInfo")) {
+        return new Response(JSON.stringify({ ok: true, result: { url: "" } }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ ok: true, result: {} }), { status: 200 })
+    }) as typeof fetch
+
+    const adapter = new TelegramAdapter("dummy-token")
+    await adapter.connect()
+
+    const deleteCommandsCall = calls.find((c) => c.url.includes("/deleteMyCommands"))
+    expect(deleteCommandsCall).toBeDefined()
+
+    const menuButtonCall = calls.find((c) => c.url.includes("/setChatMenuButton"))
+    expect(menuButtonCall?.body).toEqual({
+      menu_button: {
+        type: "web_app",
+        text: "Dashboard",
+        web_app: { url: "https://getyomi.in/telegram-app" },
+      },
+    })
+
+    const setWebhookCall = calls.find((c) => c.url.includes("/setWebhook"))
+    expect(setWebhookCall?.body?.["allowed_updates"]).toEqual(["message", "callback_query"])
+  })
+})
+
+describe("TelegramAdapter.processUpdate — callback_query", () => {
+  it("dispatches a button tap to the callback handler with the message's own chat/message id", async () => {
+    const adapter = new TelegramAdapter("dummy-token")
+    const received: PlatformCallbackEvent[] = []
+    adapter.setCallbackHandler((event) => {
+      received.push(event)
+    })
+
+    await adapter.processUpdate({
+      update_id: 10,
+      callback_query: {
+        id: "cbq_1",
+        from: { id: 42 },
+        message: { message_id: 500, chat: { id: 99, type: "private" } },
+        data: "approve:11111111-1111-1111-1111-111111111111",
+      },
+    })
+
+    expect(received).toEqual([
+      {
+        chatId: "99",
+        platformUserId: "42",
+        messageId: "500",
+        data: "approve:11111111-1111-1111-1111-111111111111",
+        callbackId: "cbq_1",
+      },
+    ])
+  })
+
+  it("never calls the message handler for a callback_query update", async () => {
+    const { adapter, received } = makeAdapter()
+    adapter.setCallbackHandler(() => {})
+
+    await adapter.processUpdate({
+      update_id: 11,
+      callback_query: {
+        id: "cbq_2",
+        from: { id: 42 },
+        message: { message_id: 501, chat: { id: 99, type: "private" } },
+        data: "stop",
+      },
+    })
+
+    expect(received).toHaveLength(0)
+  })
+
+  it("does nothing when a callback_query has no message (e.g. an inline query result)", async () => {
+    const adapter = new TelegramAdapter("dummy-token")
+    const received: PlatformCallbackEvent[] = []
+    adapter.setCallbackHandler((event) => {
+      received.push(event)
+    })
+
+    await adapter.processUpdate({
+      update_id: 12,
+      callback_query: { id: "cbq_3", from: { id: 42 }, data: "stop" },
+    })
+
+    expect(received).toHaveLength(0)
+  })
+})
+
+describe("TelegramAdapter.sendMessage — buttons", () => {
+  const originalFetch = globalThis.fetch
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  it("maps buttons to Telegram's inline_keyboard/callback_data shape", async () => {
+    let capturedBody: Record<string, unknown> | null = null
+    globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
+      capturedBody = JSON.parse(String(init?.body))
+      return new Response(JSON.stringify({ ok: true, result: { message_id: 5 } }), { status: 200 })
+    }) as typeof fetch
+
+    const adapter = new TelegramAdapter("dummy-token")
+    const result = await adapter.sendMessage("42", "Working on it…", {
+      buttons: [[{ text: "⏹ Stop", callbackData: "stop" }]],
+    })
+
+    expect(capturedBody?.reply_markup).toEqual({
+      inline_keyboard: [[{ text: "⏹ Stop", callback_data: "stop" }]],
+    })
+    expect(result).toEqual({ ok: true, messageId: "5" })
+  })
+
+  it("omits reply_markup when no buttons are given", async () => {
+    let capturedBody: Record<string, unknown> | null = null
+    globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
+      capturedBody = JSON.parse(String(init?.body))
+      return new Response(JSON.stringify({ ok: true, result: { message_id: 6 } }), { status: 200 })
+    }) as typeof fetch
+
+    const adapter = new TelegramAdapter("dummy-token")
+    await adapter.sendMessage("42", "plain text")
+
+    expect(capturedBody?.reply_markup).toBeUndefined()
+  })
+})
+
+describe("TelegramAdapter.editMessageText", () => {
+  const originalFetch = globalThis.fetch
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  it("posts the new text and buttons to editMessageText", async () => {
+    let capturedUrl = ""
+    let capturedBody: Record<string, unknown> | null = null
+    globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+      capturedUrl = String(url)
+      capturedBody = JSON.parse(String(init?.body))
+      return new Response(JSON.stringify({ ok: true, result: {} }), { status: 200 })
+    }) as typeof fetch
+
+    const adapter = new TelegramAdapter("dummy-token")
+    const result = await adapter.editMessageText("42", "500", "Denied.", {
+      buttons: [[{ text: "🔄 New chat", callbackData: "new" }]],
+    })
+
+    expect(capturedUrl).toContain("/editMessageText")
+    expect(capturedBody?.chat_id).toBe("42")
+    expect(capturedBody?.message_id).toBe(500)
+    expect(capturedBody?.text).toBe("Denied.")
+    expect(capturedBody?.reply_markup).toEqual({
+      inline_keyboard: [[{ text: "🔄 New chat", callback_data: "new" }]],
+    })
+    expect(result).toEqual({ ok: true })
+  })
+
+  it("sends an empty inline_keyboard when no buttons are given, clearing any previous ones", async () => {
+    let capturedBody: Record<string, unknown> | null = null
+    globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
+      capturedBody = JSON.parse(String(init?.body))
+      return new Response(JSON.stringify({ ok: true, result: {} }), { status: 200 })
+    }) as typeof fetch
+
+    const adapter = new TelegramAdapter("dummy-token")
+    await adapter.editMessageText("42", "500", "Stopping the current operation.")
+
+    expect(capturedBody?.reply_markup).toEqual({ inline_keyboard: [] })
+  })
+
+  it("surfaces a non-ok Telegram response as ok: false", async () => {
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify({ ok: false, description: "message to edit not found" }), {
+        status: 400,
+      })) as typeof fetch
+
+    const adapter = new TelegramAdapter("dummy-token")
+    const result = await adapter.editMessageText("42", "999", "text")
+
+    expect(result).toEqual({ ok: false, error: "message to edit not found" })
+  })
+})
+
+describe("TelegramAdapter.answerCallbackQuery", () => {
+  const originalFetch = globalThis.fetch
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  it("posts the callback_query_id to answerCallbackQuery", async () => {
+    let capturedUrl = ""
+    let capturedBody: Record<string, unknown> | null = null
+    globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+      capturedUrl = String(url)
+      capturedBody = JSON.parse(String(init?.body))
+      return new Response(JSON.stringify({ ok: true, result: true }), { status: 200 })
+    }) as typeof fetch
+
+    const adapter = new TelegramAdapter("dummy-token")
+    await adapter.answerCallbackQuery("cbq_1")
+
+    expect(capturedUrl).toContain("/answerCallbackQuery")
+    expect(capturedBody?.callback_query_id).toBe("cbq_1")
+  })
+
+  it("never throws when the Telegram API call fails", async () => {
+    globalThis.fetch = (async () => {
+      throw new Error("network down")
+    }) as typeof fetch
+
+    const adapter = new TelegramAdapter("dummy-token")
+    await expect(adapter.answerCallbackQuery("cbq_1")).resolves.toBeUndefined()
   })
 })
