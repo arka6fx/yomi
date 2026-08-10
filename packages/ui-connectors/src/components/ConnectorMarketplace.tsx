@@ -94,7 +94,9 @@ export function ConnectorTile({
           </div>
           {info.starterPrompts.length > 0 && (
             <div className="border-t border-border pt-2">
-              <p className="text-[10px] font-semibold uppercase text-muted-foreground">Try asking Yomi</p>
+              <p className="text-[10px] font-semibold uppercase text-muted-foreground">
+                Try asking Yomi
+              </p>
               {info.starterPrompts.map((prompt) => (
                 <p key={prompt} className="text-xs text-muted-foreground">
                   &quot;{prompt}&quot;
