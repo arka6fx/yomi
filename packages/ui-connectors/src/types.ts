@@ -27,4 +27,6 @@ export interface ConnectorInfo {
   connected?: boolean
   displayName?: string
   lastSyncAt?: string | null
+  /** Example prompts to try once connected, phrased as outcomes. Empty if none authored. */
+  starterPrompts: string[]
 }

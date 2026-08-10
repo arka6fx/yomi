@@ -126,6 +126,9 @@
     "packages/ui-connectors": {
       "name": "@yomi/ui-connectors",
       "version": "0.0.0",
+      "dependencies": {
+        "@yomi/shared": "workspace:*",
+      },
       "devDependencies": {
         "@types/node": "^20.0.0",
         "@types/react": "^18.3.0",

@@ -1,4 +1,5 @@
 import type { ConnectorInfo, ConnectorCategory } from "./types.js"
+import { STARTER_PROMPTS } from "@yomi/shared/starter-prompts"
 
 // Static connector catalog — no Node.js dependencies, safe for browser bundles.
 // Mirrors ALL_CONNECTOR_DEFS from agent-core but contains only display metadata.
@@ -604,5 +605,6 @@ export function buildCatalog(
     available: def.available,
     connected: connectedSet.has(def.id),
     displayName: displayNames[def.id],
+    starterPrompts: STARTER_PROMPTS[def.id] ?? [],
   }))
 }
