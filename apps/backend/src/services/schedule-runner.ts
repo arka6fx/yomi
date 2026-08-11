@@ -1,39 +1,11 @@
 import { and, asc, eq, isNotNull, lte } from "drizzle-orm"
-import { db, schedules, platformConnections } from "@yomi/db"
+import { db, schedules } from "@yomi/db"
 import { runAgent } from "../agent/run.js"
 import { computeNextRun, type ScheduleType } from "./schedule-parser.js"
 import { summarizeUnsummarizedSessions } from "./agent-sessions.js"
+import { sendTelegram, telegramChatFor } from "./telegram-delivery.js"
 
 const MAX_PER_SWEEP = 25
-
-async function sendTelegram(chatId: string, text: string): Promise<boolean> {
-  const token = process.env["TELEGRAM_BOT_TOKEN"]
-  if (!token) return false
-  try {
-    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text: text.slice(0, 4000) }),
-    })
-    return res.ok
-  } catch {
-    return false
-  }
-}
-
-async function telegramChatFor(userId: string): Promise<string | null> {
-  const [row] = await db
-    .select({
-      chatId: platformConnections.platformChatId,
-      userId: platformConnections.platformUserId,
-    })
-    .from(platformConnections)
-    .where(
-      and(eq(platformConnections.userId, userId), eq(platformConnections.platform, "telegram")),
-    )
-    .limit(1)
-  return row?.chatId ?? row?.userId ?? null
-}
 
 // Scans for due schedules and runs each: execute the agent, deliver the result, then
 // reschedule (or disable one-shots). Called from the Worker cron trigger every minute.
