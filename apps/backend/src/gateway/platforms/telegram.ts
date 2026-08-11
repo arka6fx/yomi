@@ -1,9 +1,17 @@
 import type { GatewayMessage, PlatformType } from "@yomi/shared"
 import { humanizeDashes } from "@yomi/shared"
-import type { PlatformAdapter } from "../platform-adapter.js"
+import type { PlatformAdapter, InlineButton, PlatformCallbackEvent } from "../platform-adapter.js"
 import { markdownToTelegramHtml, truncateMessage } from "../platform-adapter.js"
 
 const API_BASE = "https://api.telegram.org/bot"
+
+function toInlineKeyboard(buttons: InlineButton[][]) {
+  return {
+    inline_keyboard: buttons.map((row) =>
+      row.map((b) => ({ text: b.text, callback_data: b.callbackData })),
+    ),
+  }
+}
 
 export interface TelegramUpdate {
   update_id: number
@@ -26,6 +34,12 @@ export interface TelegramUpdate {
     }
     location?: { latitude: number; longitude: number }
   }
+  callback_query?: {
+    id: string
+    from: { id: number }
+    message?: { message_id: number; chat: { id: number; type: string } }
+    data?: string
+  }
 }
 
 interface TelegramResponse {
@@ -38,6 +52,7 @@ export class TelegramAdapter implements PlatformAdapter {
   readonly platform: PlatformType = "telegram"
   readonly botToken: string
   private messageHandler: ((msg: GatewayMessage) => void | Promise<void>) | null = null
+  private callbackHandler: ((event: PlatformCallbackEvent) => void | Promise<void>) | null = null
   private connected = false
   botUsername: string | null = null
 
@@ -64,6 +79,33 @@ export class TelegramAdapter implements PlatformAdapter {
     this.botUsername = data.result?.username ?? null
     console.warn(`[gateway/telegram] connected as @${this.botUsername}`)
 
+    // Clears any command list registered previously (via BotFather or an
+    // earlier deploy) so the "/" autocomplete popup never reappears —
+    // Telegram has no per-source command lists, the last write wins, so this
+    // is self-healing on every boot rather than a one-time manual edit.
+    try {
+      await fetch(`${this.apiUrl}/deleteMyCommands`, { method: "POST" })
+    } catch (err) {
+      console.warn("[gateway/telegram] deleteMyCommands failed:", err)
+    }
+
+    const webAppBaseUrl = process.env["CORS_ORIGIN"] ?? "https://getyomi.in"
+    try {
+      await fetch(`${this.apiUrl}/setChatMenuButton`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          menu_button: {
+            type: "web_app",
+            text: "Dashboard",
+            web_app: { url: `${webAppBaseUrl}/telegram-app` },
+          },
+        }),
+      })
+    } catch (err) {
+      console.warn("[gateway/telegram] setChatMenuButton failed:", err)
+    }
+
     // Register webhook — Telegram will POST updates here instead of relying
     // on long-polling (which doesn't work reliably on Cloudflare Workers).
     // connect() runs on every isolate boot (stateless Workers), so only
@@ -88,7 +130,7 @@ export class TelegramAdapter implements PlatformAdapter {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           url: this.webhookUrl,
-          allowed_updates: ["message"],
+          allowed_updates: ["message", "callback_query"],
           secret_token: this.botToken.replace(/[^A-Za-z0-9_-]/g, ""),
         }),
       })
@@ -116,8 +158,26 @@ export class TelegramAdapter implements PlatformAdapter {
     this.messageHandler = handler
   }
 
+  setCallbackHandler(handler: (event: PlatformCallbackEvent) => void | Promise<void>): void {
+    this.callbackHandler = handler
+  }
+
   /** Convert a Telegram API update to a GatewayMessage and dispatch to the handler. */
   async processUpdate(update: TelegramUpdate): Promise<void> {
+    if (update.callback_query) {
+      const cq = update.callback_query
+      if (this.callbackHandler && cq.message) {
+        await this.callbackHandler({
+          chatId: String(cq.message.chat.id),
+          platformUserId: String(cq.from.id),
+          messageId: String(cq.message.message_id),
+          data: cq.data ?? "",
+          callbackId: cq.id,
+        })
+      }
+      return
+    }
+
     if (!this.messageHandler) return
 
     const msg = update.message
@@ -236,7 +296,7 @@ export class TelegramAdapter implements PlatformAdapter {
   async sendMessage(
     chatId: string,
     text: string,
-    options?: { replyTo?: string },
+    options?: { replyTo?: string; buttons?: InlineButton[][] },
   ): Promise<{ ok: boolean; messageId?: string; error?: string }> {
     try {
       // Truncate the plain markdown before converting to HTML tags, never after —
@@ -249,6 +309,7 @@ export class TelegramAdapter implements PlatformAdapter {
         parse_mode: "HTML",
       }
       if (options?.replyTo) body.reply_to_message_id = Number(options.replyTo)
+      if (options?.buttons) body.reply_markup = toInlineKeyboard(options.buttons)
 
       const res = await fetch(`${this.apiUrl}/sendMessage`, {
         method: "POST",
@@ -319,6 +380,46 @@ export class TelegramAdapter implements PlatformAdapter {
       return { ok: true }
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  async editMessageText(
+    chatId: string,
+    messageId: string,
+    text: string,
+    options?: { buttons?: InlineButton[][] },
+  ): Promise<{ ok: boolean; error?: string }> {
+    try {
+      const clean = markdownToTelegramHtml(truncateMessage(humanizeDashes(text)))
+      const res = await fetch(`${this.apiUrl}/editMessageText`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          message_id: Number(messageId),
+          text: clean,
+          parse_mode: "HTML",
+          reply_markup: toInlineKeyboard(options?.buttons ?? []),
+        }),
+      })
+      const data = (await res.json()) as TelegramResponse
+      if (!data.ok) return { ok: false, error: data.description ?? "edit failed" }
+      return { ok: true }
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  async answerCallbackQuery(callbackId: string, text?: string): Promise<void> {
+    try {
+      await fetch(`${this.apiUrl}/answerCallbackQuery`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ callback_query_id: callbackId, text }),
+      })
+    } catch {
+      // best-effort — a failed ack just leaves the client's tap spinner
+      // running a little longer, it doesn't block anything downstream
     }
   }
 

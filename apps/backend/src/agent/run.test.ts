@@ -72,6 +72,7 @@ mock.module("@yomi/db", () => ({
   privacyAuditEvents: {},
   paymentRecords: {},
   customMcpServers: {},
+  platformConnections: {},
 }))
 
 const realAgentCore = await import("@yomi/agent-core")
