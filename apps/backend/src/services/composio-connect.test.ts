@@ -1,9 +1,40 @@
-import { beforeEach, describe, expect, it } from "bun:test"
-import { encodeComposioRef, decodeComposioRef, isRowConnected } from "./composio-connect.js"
-import { encryptTokens } from "./token-encryption.js"
+import { beforeEach, describe, expect, it, mock } from "bun:test"
+import { encryptTokens, encryptString } from "./token-encryption.js"
+
+// mock.module must run before composio-connect.js is first imported anywhere in
+// this file (its top-level `import { db, mcpConnections } from "@yomi/db"` binds
+// eagerly) — so composio-connect.js is imported dynamically, once, below, rather
+// than via a static top-level import.
+const dbState = { existingOauthTokens: null as string | null, upserts: 0 }
+
+mock.module("@yomi/db", () => ({
+  mcpConnections: { userId: "user_id", provider: "provider" },
+  db: {
+    select: () => ({
+      from: () => ({
+        where: () => ({
+          limit: async () =>
+            dbState.existingOauthTokens ? [{ oauthTokens: dbState.existingOauthTokens }] : [],
+        }),
+      }),
+    }),
+    insert: () => ({
+      values: () => ({
+        onConflictDoUpdate: async () => {
+          dbState.upserts++
+        },
+      }),
+    }),
+  },
+}))
+
+const { encodeComposioRef, decodeComposioRef, isRowConnected, markComposioConnectionActive } =
+  await import("./composio-connect.js")
 
 beforeEach(() => {
   process.env.ENCRYPTION_KEY = "03f5c50ad7461b5172d57041fef789cc7297c9bfd806a52eecba14e03201d040"
+  dbState.existingOauthTokens = null
+  dbState.upserts = 0
 })
 
 describe("Composio connection reference", () => {
@@ -69,5 +100,31 @@ describe("isRowConnected", () => {
       status: "initiated",
     })
     expect(isRowConnected(blob)).toBe(false)
+  })
+})
+
+describe("markComposioConnectionActive — wasNewConnection", () => {
+  const def = { id: "notion", auth: { kind: "composio", toolkit: "notion" } } as any
+
+  it("is true when no row exists yet (first-ever connect)", async () => {
+    const { wasNewConnection } = await markComposioConnectionActive("user_1", def, "ca_1")
+    expect(wasNewConnection).toBe(true)
+    expect(dbState.upserts).toBe(1)
+  })
+
+  it("is true when the existing row was only 'initiated', never active", async () => {
+    dbState.existingOauthTokens = encryptString(
+      JSON.stringify({ kind: "composio", toolkit: "notion", connectedAccountId: null, status: "initiated" }),
+    )
+    const { wasNewConnection } = await markComposioConnectionActive("user_1", def, "ca_1")
+    expect(wasNewConnection).toBe(true)
+  })
+
+  it("is false when the existing row was already active (reconnect/re-auth)", async () => {
+    dbState.existingOauthTokens = encryptString(
+      JSON.stringify({ kind: "composio", toolkit: "notion", connectedAccountId: "ca_0", status: "active" }),
+    )
+    const { wasNewConnection } = await markComposioConnectionActive("user_1", def, "ca_1")
+    expect(wasNewConnection).toBe(false)
   })
 })
