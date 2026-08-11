@@ -36,7 +36,9 @@ export function verifyTelegramInitData(
   try {
     hashesMatch = timingSafeEqual(Buffer.from(computedHash, "hex"), Buffer.from(hash, "hex"))
   } catch {
-    // Buffer.from throws on a malformed (non-hex or wrong-length) hash — not a match.
+    // Buffer.from silently truncates malformed hex rather than throwing; it's
+    // timingSafeEqual that throws when the two buffers end up different
+    // lengths — either way, that means no match.
     hashesMatch = false
   }
   if (!hashesMatch) return null

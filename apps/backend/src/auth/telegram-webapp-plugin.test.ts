@@ -11,9 +11,8 @@ const fakeDb = {
 }
 mock.module("@yomi/db", () => ({ db: fakeDb, platformConnections: {} }))
 
-const { verifyTelegramInitData, resolveTelegramWebAppUserId } = await import(
-  "./telegram-webapp-plugin.js"
-)
+const { verifyTelegramInitData, resolveTelegramWebAppUserId } =
+  await import("./telegram-webapp-plugin.js")
 
 beforeEach(() => {
   selectResult = []
@@ -22,10 +21,7 @@ beforeEach(() => {
 // Builds a validly-signed initData string the way Telegram's client does,
 // so tests exercise the real verification algorithm end to end rather than
 // a shortcut.
-function signInitData(
-  fields: Record<string, string>,
-  botToken: string,
-): string {
+function signInitData(fields: Record<string, string>, botToken: string): string {
   const params = new URLSearchParams(fields)
   const dataCheckString = [...params.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
