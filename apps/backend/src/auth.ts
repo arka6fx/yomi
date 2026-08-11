@@ -3,6 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { organization } from "better-auth/plugins/organization"
 import { bearer } from "better-auth/plugins/bearer"
 import { customSession } from "better-auth/plugins/custom-session"
+import { telegramWebAppAuth } from "./auth/telegram-webapp-plugin.js"
 import { db } from "@yomi/db"
 import { eq } from "drizzle-orm"
 import type { Context, Next } from "hono"
@@ -153,6 +154,7 @@ function createAuth() {
     plugins: [
       organization(), // Team tier: orgs + members + roles
       bearer(), // Accept Authorization: Bearer <token> from landing proxy
+      telegramWebAppAuth(), // POST /api/auth/telegram-webapp-auth — Mini App auto-login
       customSession(async (session) => {
         const fields = await getUserFields(session.user.id)
         const mergedUser = { ...session.user, ...(fields ?? {}) }

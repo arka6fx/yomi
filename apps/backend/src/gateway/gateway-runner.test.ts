@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
 import type { GatewayMessage, PlatformType } from "@yomi/shared"
 import type { AgentMessage } from "@yomi/agent-core"
-import type { PlatformAdapter } from "./platform-adapter.js"
+import type { PlatformAdapter, InlineButton, PlatformCallbackEvent } from "./platform-adapter.js"
 
 let agentCalls: {
   userId: string
@@ -11,6 +11,12 @@ let agentCalls: {
   skipCharge?: boolean
 }[] = []
 let agentHangs = false
+// When true (only meaningful alongside agentHangs), the mock's abort listener
+// rejects instead of resolving — mirrors a runAgent() that throws on abort,
+// so tests can independently exercise onIncoming's catch-block abort path
+// rather than assuming it behaves like the try-block's post-await path just
+// because the code looks parallel.
+let agentRejectsOnAbort = false
 let loadedHistory: AgentMessage[] = []
 let appendedTurns: {
   sessionId: string
@@ -120,6 +126,16 @@ mock.module("../agent/run.js", () => ({
     capturedConsumePendingDocument = consumePendingDocument
     capturedRestorePendingDocument = restorePendingDocument
     if (agentHangs) {
+      if (agentRejectsOnAbort) {
+        // Exercises onIncoming's catch-block abort path independently of the
+        // try-block's post-await path, which the real runAgent() never hits
+        // (it always resolves) but which the code still has to handle.
+        await new Promise<void>((_resolve, reject) => {
+          if (signal?.aborted) return reject(new Error("aborted"))
+          signal?.addEventListener("abort", () => reject(new Error("aborted")))
+        })
+        return { text: "" }
+      }
       // Mimic the real runAgent: when the abort signal fires it stops and
       // returns (it does not throw), yielding no usable text.
       await new Promise<void>((resolve) => {
@@ -255,23 +271,45 @@ const { GatewayRunner } = await import("./gateway-runner.js")
 
 class FakeAdapter implements PlatformAdapter {
   readonly platform: PlatformType = "telegram"
-  messages: { chatId: string; text: string }[] = []
+  messages: { chatId: string; text: string; buttons?: InlineButton[][] }[] = []
   reactions: { chatId: string; messageId: string; emoji: string }[] = []
+  edits: { chatId: string; messageId: string; text: string; buttons?: InlineButton[][] }[] = []
+  deletedMessageIds: string[] = []
+  answeredCallbacks: string[] = []
   handler: ((msg: GatewayMessage) => void | Promise<void>) | null = null
+  callbackHandler: ((event: PlatformCallbackEvent) => void | Promise<void>) | null = null
+  private nextMessageId = 1
   async connect() {}
   async disconnect() {}
   setMessageHandler(handler: (msg: GatewayMessage) => void | Promise<void>): void {
     this.handler = handler
   }
-  async sendMessage(chatId: string, text: string) {
-    this.messages.push({ chatId, text })
-    return { ok: true }
+  setCallbackHandler(handler: (event: PlatformCallbackEvent) => void | Promise<void>): void {
+    this.callbackHandler = handler
+  }
+  async sendMessage(chatId: string, text: string, options?: { buttons?: InlineButton[][] }) {
+    const messageId = String(this.nextMessageId++)
+    this.messages.push({ chatId, text, buttons: options?.buttons })
+    return { ok: true, messageId }
   }
   async sendDocument() {
     return { ok: true }
   }
-  async deleteMessage() {
+  async deleteMessage(_chatId: string, messageId: string) {
+    this.deletedMessageIds.push(messageId)
     return { ok: true }
+  }
+  async editMessageText(
+    chatId: string,
+    messageId: string,
+    text: string,
+    options?: { buttons?: InlineButton[][] },
+  ) {
+    this.edits.push({ chatId, messageId, text, buttons: options?.buttons })
+    return { ok: true }
+  }
+  async answerCallbackQuery(callbackId: string) {
+    this.answeredCallbacks.push(callbackId)
   }
   async sendTyping() {}
   async setReaction(chatId: string, messageId: string, emoji: string) {
@@ -291,6 +329,7 @@ const originalFetch = globalThis.fetch
 beforeEach(() => {
   agentCalls = []
   agentHangs = false
+  agentRejectsOnAbort = false
   delete process.env.YOMI_AGENT_RUN_TIMEOUT_MS
   loadedHistory = []
   appendedTurns = []
@@ -348,6 +387,48 @@ describe("GatewayRunner production routing", () => {
         assistantText: "backend reply",
       },
     ])
+  })
+
+  it.each(["/stop", "/new", "/help", "/start"])(
+    "replies locally to bare %s without reaching the agent path",
+    async (command) => {
+      const runner = new GatewayRunner()
+      const adapter = new FakeAdapter()
+      runner.registerAdapter(adapter)
+
+      await incoming(runner, {
+        platform: "telegram",
+        chatId: "chat_1",
+        userId: "tg_1",
+        text: command,
+        timestamp: new Date().toISOString(),
+      })
+
+      expect(agentCalls).toEqual([])
+      expect(adapter.messages).toHaveLength(1)
+      expect(adapter.messages[0]?.text).toBe(
+        "Use the buttons on my messages — tap Stop, New chat, Approve, or Deny instead of typing commands.",
+      )
+    },
+  )
+
+  it("leaves the /start <TOKEN> deep-link form unaffected by the bare /start intercept", async () => {
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "/start aTokenThatIsLongEnough1234",
+      timestamp: new Date().toISOString(),
+    })
+
+    // Never reaches the paid agent path, and never gets the "use the buttons"
+    // local reply either — it's a wholly separate, already-preserved code path.
+    expect(agentCalls).toEqual([])
+    expect(adapter.messages.some((m) => m.text.includes("Use the buttons"))).toBe(false)
   })
 
   it("wires onReact through to the platform adapter's setReaction", async () => {
@@ -501,6 +582,35 @@ describe("GatewayRunner production routing", () => {
     })
 
     expect(agentCalls[0]?.signal?.aborted).toBe(true)
+    // Status message ("1") is sent before the run and must be deleted once the
+    // timeout fires — this is the try-block's post-await timeout branch, which
+    // is distinct from the manual-Stop-tap path (that one leaves the status
+    // message alone because handleCallbackQuery already edited it in place).
+    expect(adapter.deletedMessageIds).toEqual(["1"])
+    expect(adapter.messages.at(-1)?.text).toMatch(/too long/i)
+  })
+
+  it("deletes the status message via the catch-block timeout path when runAgent rejects after timing out", async () => {
+    process.env.YOMI_AGENT_RUN_TIMEOUT_MS = "30"
+    agentHangs = true
+    agentRejectsOnAbort = true
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "do something very slow",
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(agentCalls[0]?.signal?.aborted).toBe(true)
+    // Proves the catch block's OWN `if (runTimedOut) { deleteMessage... }`
+    // branch independently — this run throws (agentRejectsOnAbort), landing
+    // in the catch block rather than the try block's post-await branch above.
+    expect(adapter.deletedMessageIds).toEqual(["1"])
     expect(adapter.messages.at(-1)?.text).toMatch(/too long/i)
   })
 
@@ -524,7 +634,7 @@ describe("GatewayRunner production routing", () => {
     expect(agentCalls[0]?.history).toEqual(loadedHistory)
   })
 
-  it("closes the active persisted session for /new", async () => {
+  it("closes the active persisted session when the New-chat button is tapped", async () => {
     const runner = new GatewayRunner()
     const adapter = new FakeAdapter()
     runner.registerAdapter(adapter)
@@ -533,16 +643,242 @@ describe("GatewayRunner production routing", () => {
       platform: "telegram",
       chatId: "chat_1",
       userId: "tg_1",
-      text: "/new",
+      text: "hello",
       timestamp: new Date().toISOString(),
     })
+    expect(adapter.messages.at(-1)?.buttons).toEqual([
+      [{ text: "🔄 New chat", callbackData: "new" }],
+    ])
 
-    expect(agentCalls).toHaveLength(0)
+    // FakeAdapter's message ids are assigned in send order: "1" was the status
+    // placeholder (sent, then deleted once the run finished), "2" is the final
+    // reply the New-chat button is actually attached to.
+    await adapter.callbackHandler!({
+      chatId: "chat_1",
+      platformUserId: "tg_1",
+      messageId: "2",
+      data: "new",
+      callbackId: "cbq_1",
+    })
+
+    expect(adapter.answeredCallbacks).toEqual(["cbq_1"])
     expect(closedSessions).toEqual([
       { userId: "user_1", platform: "telegram", chatId: "chat_1" },
       { userId: "user_1", platform: "yomi", chatId: "global" },
     ])
-    expect(adapter.messages.at(-1)?.text).toBe("Started a new conversation. How can I help you?")
+    expect(adapter.edits.at(-1)?.text).toBe("Started a new conversation. How can I help you?")
+  })
+
+  it("sends a status message with a Stop button before running the agent, and deletes it once the reply is sent", async () => {
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "search my notion notes",
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(adapter.messages).toHaveLength(2)
+    expect(adapter.messages[0]).toEqual({
+      chatId: "chat_1",
+      text: "⏳ Working on it…",
+      buttons: [[{ text: "⏹ Stop", callbackData: "stop" }]],
+    })
+    expect(adapter.deletedMessageIds).toEqual(["1"])
+    expect(adapter.messages[1]).toEqual({
+      chatId: "chat_1",
+      text: "backend reply",
+      buttons: [[{ text: "🔄 New chat", callbackData: "new" }]],
+    })
+  })
+
+  it("aborts the run when the Stop button is tapped while it's in flight", async () => {
+    agentHangs = true
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    const runPromise = incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "do something slow",
+      timestamp: new Date().toISOString(),
+    })
+
+    // Let the status message send and the runAgent mock start waiting on abort.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    await adapter.callbackHandler!({
+      chatId: "chat_1",
+      platformUserId: "tg_1",
+      messageId: "1",
+      data: "stop",
+      callbackId: "cbq_stop",
+    })
+    await runPromise
+
+    expect(adapter.answeredCallbacks).toEqual(["cbq_stop"])
+    expect(adapter.edits.at(-1)).toEqual({
+      chatId: "chat_1",
+      messageId: "1",
+      text: "Stopping the current operation.",
+      buttons: undefined,
+    })
+    // The aborted run exits quietly — it must not also send a timeout/error message.
+    expect(adapter.messages).toHaveLength(1)
+  })
+
+  it("also exits quietly from the catch block's mirrored abort check when runAgent rejects after a Stop tap", async () => {
+    // Mirrors the test above, but forces runAgent to reject (rather than
+    // resolve) once aborted, so this exercises the catch block's own
+    // `if (runController?.signal.aborted) return` independently — proving it
+    // behaves the same as the try block's post-await path rather than just
+    // assuming so because the code looks parallel. The real runAgent()
+    // essentially never rejects, but the code still has to handle it.
+    agentHangs = true
+    agentRejectsOnAbort = true
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    const runPromise = incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "do something slow",
+      timestamp: new Date().toISOString(),
+    })
+
+    // Let the status message send and the runAgent mock start waiting on abort.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    await adapter.callbackHandler!({
+      chatId: "chat_1",
+      platformUserId: "tg_1",
+      messageId: "1",
+      data: "stop",
+      callbackId: "cbq_stop_reject",
+    })
+    await runPromise
+
+    expect(adapter.answeredCallbacks).toEqual(["cbq_stop_reject"])
+    expect(adapter.edits.at(-1)).toEqual({
+      chatId: "chat_1",
+      messageId: "1",
+      text: "Stopping the current operation.",
+      buttons: undefined,
+    })
+    // The catch block's abort branch must not delete the status message (it
+    // was already edited in place by handleCallbackQuery) and must not send
+    // any further message.
+    expect(adapter.deletedMessageIds).toEqual([])
+    expect(adapter.messages).toHaveLength(1)
+  })
+
+  it("deletes the in-flight run's status placeholder when New-chat is tapped mid-run", async () => {
+    // Regression: New-chat's button lives on a PREVIOUS turn's reply, not on the
+    // in-flight run's own "Working on it…" placeholder — unlike Stop (which edits
+    // its own message), New used to only abort the run and never touch that
+    // placeholder, leaving it dangling forever with a dead Stop button.
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    // First turn completes normally: id "1" is its status placeholder (sent then
+    // deleted), id "2" is the reply carrying the New-chat button.
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "hello",
+      timestamp: new Date().toISOString(),
+    })
+    expect(adapter.deletedMessageIds).toEqual(["1"])
+
+    // Second turn hangs: id "3" is ITS status placeholder, still in flight.
+    agentHangs = true
+    const runPromise = incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "do something slow",
+      timestamp: new Date().toISOString(),
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // Tap New-chat on the FIRST turn's reply (id "2") while the second run is
+    // still in flight — mirrors a user impatiently starting over mid-run.
+    await adapter.callbackHandler!({
+      chatId: "chat_1",
+      platformUserId: "tg_1",
+      messageId: "2",
+      data: "new",
+      callbackId: "cbq_new",
+    })
+    await runPromise
+
+    // The second run's own placeholder (id "3") must be cleaned up, not left
+    // dangling — not just id "1" from the unrelated first turn.
+    expect(adapter.deletedMessageIds).toEqual(["1", "3"])
+    expect(adapter.edits.at(-1)).toEqual({
+      chatId: "chat_1",
+      messageId: "2",
+      text: "Started a new conversation. How can I help you?",
+      buttons: undefined,
+    })
+  })
+
+  it("tells the user nothing is running when Stop is tapped with no active run", async () => {
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "hi",
+      timestamp: new Date().toISOString(),
+    })
+
+    await adapter.callbackHandler!({
+      chatId: "chat_1",
+      platformUserId: "tg_1",
+      messageId: "999",
+      data: "stop",
+      callbackId: "cbq_stop2",
+    })
+
+    expect(adapter.edits.at(-1)).toEqual({
+      chatId: "chat_1",
+      messageId: "999",
+      text: "No operation is currently running.",
+      buttons: undefined,
+    })
+  })
+
+  it("acks an unrecognized callback_data value without throwing or editing anything", async () => {
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await adapter.callbackHandler!({
+      chatId: "chat_1",
+      platformUserId: "tg_1",
+      messageId: "1",
+      data: "some-future-button-type",
+      callbackId: "cbq_unknown",
+    })
+
+    // Still acked (so the tap spinner clears), but nothing matches, so nothing else happens.
+    expect(adapter.answeredCallbacks).toEqual(["cbq_unknown"])
+    expect(adapter.edits).toHaveLength(0)
+    expect(closedSessions).toHaveLength(0)
   })
 
   it("approves the most recent pending action with /approve", async () => {

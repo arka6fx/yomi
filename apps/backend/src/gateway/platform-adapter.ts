@@ -1,5 +1,22 @@
 import type { PlatformType, GatewayMessage } from "@yomi/shared"
 
+export interface InlineButton {
+  text: string
+  callbackData: string
+}
+
+// A tap on an inline button — carries everything the handler needs without a
+// separate lookup: Telegram's callback_query payload always includes the
+// message the button was attached to, so there's nothing to store ahead of
+// time to know which message to edit in response.
+export interface PlatformCallbackEvent {
+  chatId: string
+  platformUserId: string
+  messageId: string
+  data: string
+  callbackId: string
+}
+
 export interface PlatformAdapter {
   readonly platform: PlatformType
   connect(): Promise<void>
@@ -7,7 +24,7 @@ export interface PlatformAdapter {
   sendMessage(
     chatId: string,
     text: string,
-    options?: { replyTo?: string },
+    options?: { replyTo?: string; buttons?: InlineButton[][] },
   ): Promise<{ ok: boolean; messageId?: string; error?: string }>
   sendDocument(
     chatId: string,
@@ -16,12 +33,20 @@ export interface PlatformAdapter {
   ): Promise<{ ok: boolean; messageId?: string; error?: string }>
   sendTyping(chatId: string): Promise<void>
   deleteMessage(chatId: string, messageId: string): Promise<{ ok: boolean; error?: string }>
+  editMessageText(
+    chatId: string,
+    messageId: string,
+    text: string,
+    options?: { buttons?: InlineButton[][] },
+  ): Promise<{ ok: boolean; error?: string }>
+  answerCallbackQuery(callbackId: string, text?: string): Promise<void>
   setReaction(
     chatId: string,
     messageId: string,
     emoji: string,
   ): Promise<{ ok: boolean; error?: string }>
   setMessageHandler(handler: (msg: GatewayMessage) => void | Promise<void>): void
+  setCallbackHandler(handler: (event: PlatformCallbackEvent) => void | Promise<void>): void
 }
 
 function escapeHtml(text: string): string {
