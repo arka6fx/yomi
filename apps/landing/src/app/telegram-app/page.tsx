@@ -46,6 +46,7 @@ export default function TelegramAppPage() {
         }
       })()
     }
+    script.onerror = () => setStatus("error")
     document.body.appendChild(script)
     return () => {
       document.body.removeChild(script)
