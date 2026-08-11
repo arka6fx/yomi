@@ -211,9 +211,8 @@ export class GatewayRunner {
       const { listPendingActions } = await import("../services/pending-actions.js")
       const actions = await listPendingActions(userId)
       if (actions.length === 0) return "No pending approvals."
-      return actions
-        .map((a) => `${a.id}\n${a.title}\n${a.preview}\nReply: approve ${a.id} or deny ${a.id}`)
-        .join("\n\n")
+      const list = actions.map((a) => `${a.title}\n${a.preview}`).join("\n\n")
+      return `${list}\n\nReply "yes" to approve the most recent one, or tap Approve/Deny on its message above.`
     } catch (err) {
       console.warn("[gateway] pending approvals unavailable:", err)
       return "Pending approvals are temporarily unavailable. Please try again in a moment."
@@ -229,7 +228,6 @@ export class GatewayRunner {
   ): Promise<{ reply: string; executed: boolean } | null> {
     const trimmed = text.trim()
     const command = trimmed.replace(/^\//, "").trim()
-    const isExplicitApprovalCommand = /^\/(approve|yes|deny|no)$/i.test(trimmed)
     // A trailing modifier means the user is amending, not approving
     // ("yes but change the time to 7") — those must reach the agent, not approve.
     const hasModifier =
@@ -272,10 +270,7 @@ export class GatewayRunner {
           executed: false,
         }
       }
-      if (actions.length === 0)
-        return isExplicitApprovalCommand
-          ? { reply: "No pending approvals.", executed: false }
-          : null
+      if (actions.length === 0) return null
       const id = actions[0]!.id
       if (wantsApprove) {
         try {
@@ -319,53 +314,7 @@ export class GatewayRunner {
       }
     }
 
-    const match = /^(?:\/)?(approve|confirm|send|deny|reject|cancel)\s+([0-9a-f-]{36})$/i.exec(
-      trimmed,
-    )
-    if (!match) return null
-    const actionCommand = match[1]?.toLowerCase()
-    const id = match[2]
-    if (!actionCommand || !id) return null
-
-    if (actionCommand === "approve" || actionCommand === "confirm" || actionCommand === "send") {
-      try {
-        const { approvePendingAction, formatActionResult } =
-          await import("../services/pending-actions.js")
-        const result = await approvePendingAction(userId, id, { skipNotify: true })
-        if (!result)
-          return {
-            reply:
-              "I couldn't find that pending action. It may have expired or already been handled.",
-            executed: false,
-          }
-        if (result.status !== "executed")
-          return { reply: `Approved: ${result.status}`, executed: false }
-        return {
-          reply: `Approved and executed.\n${formatActionResult(result.result, `Done: ${result.title ?? "action"}`)}`,
-          executed: true,
-        }
-      } catch (err) {
-        return {
-          reply: `Approval failed: ${err instanceof Error ? err.message : String(err)}`,
-          executed: false,
-        }
-      }
-    }
-
-    try {
-      const { denyPendingAction } = await import("../services/pending-actions.js")
-      const denied = await denyPendingAction(userId, id)
-      if (!denied)
-        return {
-          reply:
-            "I couldn't find that pending action. It may have expired or already been handled.",
-          executed: false,
-        }
-      return { reply: "Denied.", executed: false }
-    } catch (err) {
-      console.warn("[gateway] deny pending action failed:", err)
-      return { reply: "Deny failed. Please try again.", executed: false }
-    }
+    return null
   }
 
   // Continue the plan an approved write was only one step of. The user already paid

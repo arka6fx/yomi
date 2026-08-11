@@ -107,7 +107,7 @@ export async function createPendingAction(input: CreatePendingActionInput) {
   // body out of existence — the user was approving an email they could not see. An
   // approval gate that hides what it is approving is not a safety mechanism, so this
   // is awaited: the card IS the gate, not a nicety to fire and forget.
-  await sendApprovalCard(input.sourcePlatform, input.sourceChatId, input.title, input.preview)
+  await sendApprovalCard(input.sourcePlatform, input.sourceChatId, row.id, input.title, input.preview)
 
   return {
     id: row.id,
@@ -124,6 +124,7 @@ export function formatApprovalCard(title: string, preview?: string): string {
 async function sendApprovalCard(
   sourcePlatform: string | undefined,
   sourceChatId: string | undefined,
+  actionId: string,
   title: string,
   preview?: string,
 ): Promise<void> {
@@ -134,6 +135,14 @@ async function sendApprovalCard(
       sourcePlatform as "telegram",
       sourceChatId,
       formatApprovalCard(title, preview),
+      {
+        buttons: [
+          [
+            { text: "✅ Approve", callbackData: `approve:${actionId}` },
+            { text: "❌ Deny", callbackData: `deny:${actionId}` },
+          ],
+        ],
+      },
     )
   } catch (err) {
     // The action still exists and the tool result carries the details, but the user
