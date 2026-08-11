@@ -78,7 +78,11 @@ export class GatewayRunner {
   private sessions: Map<string, GatewaySession> = new Map()
   private conversationHistories: Map<string, ConversationEntry> = new Map()
   private pendingDocuments: Map<string, PendingDocumentEntry> = new Map()
-  private activeRuns: Map<string, AbortController> = new Map()
+  // statusMessageId (when known) lets a New-chat tap on a DIFFERENT message
+  // clean up this run's own "Working on it…" placeholder — see handleCallbackQuery's
+  // "new" branch, which (unlike "stop") edits the button's own message, not this one.
+  private activeRuns: Map<string, { controller: AbortController; statusMessageId?: string }> =
+    new Map()
   // Uncharged resumes since the last charged turn, per chat. A resume can propose a
   // further gated write, so approving repeatedly would otherwise fund an unbounded
   // chain of free agent runs off one charged message. Past the cap, resumes are
@@ -897,7 +901,7 @@ export class GatewayRunner {
     }
     this.adapters.clear()
     this.sessions.clear()
-    for (const controller of this.activeRuns.values()) controller.abort()
+    for (const entry of this.activeRuns.values()) entry.controller.abort()
     this.activeRuns.clear()
 
     if (this.cleanupTimer) {
@@ -1138,6 +1142,19 @@ export class GatewayRunner {
         if (approval.executed) {
           await this.resumeAfterApproval(msg, yomiUserId, approval.reply)
         }
+        return
+      }
+
+      // Typed control commands are replaced by inline buttons, but users who still
+      // type them by muscle memory (especially /new, and Telegram's own first-run
+      // flow which can send a bare /start) must not fall through to the paid agent
+      // path. /start <TOKEN> deep-links are handled above and never reach here.
+      if (/^\/(stop|new|help|start)$/i.test(msg.text.trim())) {
+        await this.sendMessage(
+          msg.platform,
+          msg.chatId,
+          "Use the buttons on my messages — tap Stop, New chat, Approve, or Deny instead of typing commands.",
+        ).catch(() => {})
         return
       }
 
@@ -1445,7 +1462,8 @@ export class GatewayRunner {
           `[gateway] backend agent start user=${yomiUserId} platform=${msg.platform} chat=${msg.chatId}`,
         )
         runController = new AbortController()
-        this.activeRuns.set(this.runKey(msg.platform, msg.chatId), runController)
+        const runKey = this.runKey(msg.platform, msg.chatId)
+        this.activeRuns.set(runKey, { controller: runController })
         // A visible placeholder with a Stop button — this is the one path a user
         // can meaningfully abort (fast/image/voice replies resolve in well under
         // a second, so they never get one). Deleted once the run settles, one way
@@ -1453,7 +1471,12 @@ export class GatewayRunner {
         const statusResult = await this.sendMessage(msg.platform, msg.chatId, "⏳ Working on it…", {
           buttons: [[{ text: "⏹ Stop", callbackData: "stop" }]],
         })
-        if (statusResult.ok && statusResult.messageId) statusMessageId = statusResult.messageId
+        if (statusResult.ok && statusResult.messageId) {
+          statusMessageId = statusResult.messageId
+          // Re-set with the status message id now known, so a New-chat tap that
+          // races in before runAgent settles can find and delete this placeholder.
+          this.activeRuns.set(runKey, { controller: runController, statusMessageId })
+        }
         // Hard cap on a single agent run. On a stateless Worker nothing else can
         // abort a hung run (the in-memory /stop and /new controllers live in other
         // isolates), so without this a stuck tool/model call would hang forever.
@@ -1483,10 +1506,11 @@ export class GatewayRunner {
         clearInterval(typingInterval)
         this.activeRuns.delete(this.runKey(msg.platform, msg.chatId))
         if (runController.signal.aborted) {
-          // A manual Stop tap already edited the status message itself (see
-          // handleCallbackQuery) and there's nothing further to send — only a
-          // timeout (which the tap could never have caused) still needs to
-          // delete the untouched status message and tell the user.
+          // A manual Stop tap already edited the status message itself, and a
+          // New-chat tap already deleted it (see handleCallbackQuery) — there's
+          // nothing further to send in either case. Only a timeout (which
+          // neither tap could have caused) still needs to delete the untouched
+          // status message and tell the user.
           if (runTimedOut) {
             if (statusMessageId) {
               await this.deleteMessage(msg.platform, msg.chatId, statusMessageId).catch(() => {})
@@ -1544,7 +1568,8 @@ export class GatewayRunner {
           )
           return
         }
-        // A manual Stop tap already edited the status message itself — stop quietly.
+        // A manual Stop tap already edited the status message itself, and a
+        // New-chat tap already deleted it — either way, stop quietly.
         if (runController?.signal.aborted) return
         if (statusMessageId) {
           await this.deleteMessage(msg.platform, msg.chatId, statusMessageId).catch(() => {})
@@ -1614,14 +1639,14 @@ export class GatewayRunner {
 
     if (event.data === "stop") {
       const key = this.runKey(platform, event.chatId)
-      const controller = this.activeRuns.get(key)
-      if (!controller) {
+      const entry = this.activeRuns.get(key)
+      if (!entry) {
         await adapter
           .editMessageText(event.chatId, event.messageId, "No operation is currently running.")
           .catch(() => {})
         return
       }
-      controller.abort()
+      entry.controller.abort()
       this.activeRuns.delete(key)
       await adapter
         .editMessageText(event.chatId, event.messageId, "Stopping the current operation.")
@@ -1631,10 +1656,17 @@ export class GatewayRunner {
 
     if (event.data === "new") {
       const key = this.runKey(platform, event.chatId)
-      const controller = this.activeRuns.get(key)
-      if (controller) {
-        controller.abort()
+      const entry = this.activeRuns.get(key)
+      if (entry) {
+        entry.controller.abort()
         this.activeRuns.delete(key)
+        // Unlike "stop" (which edits this same run's own status message), "new"'s
+        // button lives on a PREVIOUS turn's reply — the in-flight run's own
+        // "Working on it…" placeholder is a different message and would otherwise
+        // be left dangling with a dead Stop button forever.
+        if (entry.statusMessageId) {
+          await this.deleteMessage(platform, event.chatId, entry.statusMessageId).catch(() => {})
+        }
       }
       const session = this.sessions.get(`${platform}:${event.chatId}`)
       if (session) {
@@ -1703,9 +1735,8 @@ export class GatewayRunner {
   ): Promise<void> {
     const adapter = this.adapters.get(platform)
     if (!adapter) return
-    const { approvePendingAction, denyPendingAction, formatActionResult } = await import(
-      "../services/pending-actions.js"
-    )
+    const { approvePendingAction, denyPendingAction, formatActionResult } =
+      await import("../services/pending-actions.js")
 
     if (!approve) {
       try {

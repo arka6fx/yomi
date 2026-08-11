@@ -389,6 +389,48 @@ describe("GatewayRunner production routing", () => {
     ])
   })
 
+  it.each(["/stop", "/new", "/help", "/start"])(
+    "replies locally to bare %s without reaching the agent path",
+    async (command) => {
+      const runner = new GatewayRunner()
+      const adapter = new FakeAdapter()
+      runner.registerAdapter(adapter)
+
+      await incoming(runner, {
+        platform: "telegram",
+        chatId: "chat_1",
+        userId: "tg_1",
+        text: command,
+        timestamp: new Date().toISOString(),
+      })
+
+      expect(agentCalls).toEqual([])
+      expect(adapter.messages).toHaveLength(1)
+      expect(adapter.messages[0]?.text).toBe(
+        "Use the buttons on my messages — tap Stop, New chat, Approve, or Deny instead of typing commands.",
+      )
+    },
+  )
+
+  it("leaves the /start <TOKEN> deep-link form unaffected by the bare /start intercept", async () => {
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "/start aTokenThatIsLongEnough1234",
+      timestamp: new Date().toISOString(),
+    })
+
+    // Never reaches the paid agent path, and never gets the "use the buttons"
+    // local reply either — it's a wholly separate, already-preserved code path.
+    expect(agentCalls).toEqual([])
+    expect(adapter.messages.some((m) => m.text.includes("Use the buttons"))).toBe(false)
+  })
+
   it("wires onReact through to the platform adapter's setReaction", async () => {
     const runner = new GatewayRunner()
     const adapter = new FakeAdapter()
@@ -604,7 +646,9 @@ describe("GatewayRunner production routing", () => {
       text: "hello",
       timestamp: new Date().toISOString(),
     })
-    expect(adapter.messages.at(-1)?.buttons).toEqual([[{ text: "🔄 New chat", callbackData: "new" }]])
+    expect(adapter.messages.at(-1)?.buttons).toEqual([
+      [{ text: "🔄 New chat", callbackData: "new" }],
+    ])
 
     // FakeAdapter's message ids are assigned in send order: "1" was the status
     // placeholder (sent, then deleted once the run finished), "2" is the final
@@ -734,6 +778,59 @@ describe("GatewayRunner production routing", () => {
     // any further message.
     expect(adapter.deletedMessageIds).toEqual([])
     expect(adapter.messages).toHaveLength(1)
+  })
+
+  it("deletes the in-flight run's status placeholder when New-chat is tapped mid-run", async () => {
+    // Regression: New-chat's button lives on a PREVIOUS turn's reply, not on the
+    // in-flight run's own "Working on it…" placeholder — unlike Stop (which edits
+    // its own message), New used to only abort the run and never touch that
+    // placeholder, leaving it dangling forever with a dead Stop button.
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    // First turn completes normally: id "1" is its status placeholder (sent then
+    // deleted), id "2" is the reply carrying the New-chat button.
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "hello",
+      timestamp: new Date().toISOString(),
+    })
+    expect(adapter.deletedMessageIds).toEqual(["1"])
+
+    // Second turn hangs: id "3" is ITS status placeholder, still in flight.
+    agentHangs = true
+    const runPromise = incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "do something slow",
+      timestamp: new Date().toISOString(),
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // Tap New-chat on the FIRST turn's reply (id "2") while the second run is
+    // still in flight — mirrors a user impatiently starting over mid-run.
+    await adapter.callbackHandler!({
+      chatId: "chat_1",
+      platformUserId: "tg_1",
+      messageId: "2",
+      data: "new",
+      callbackId: "cbq_new",
+    })
+    await runPromise
+
+    // The second run's own placeholder (id "3") must be cleaned up, not left
+    // dangling — not just id "1" from the unrelated first turn.
+    expect(adapter.deletedMessageIds).toEqual(["1", "3"])
+    expect(adapter.edits.at(-1)).toEqual({
+      chatId: "chat_1",
+      messageId: "2",
+      text: "Started a new conversation. How can I help you?",
+      buttons: undefined,
+    })
   })
 
   it("tells the user nothing is running when Stop is tapped with no active run", async () => {
