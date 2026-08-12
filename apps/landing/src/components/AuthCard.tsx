@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 import { ArrowLeft, Loader2 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { BrandMark } from "@/components/BrandMark"
+import { isTelegramMiniApp, openExternal } from "@/lib/telegram-webapp"
 
 function mapAuthError(code: string): string {
   switch (code) {
@@ -65,13 +66,30 @@ export default function AuthCard({ defaultMode, plan, callbackURL, initialError 
   async function handleOAuth(provider: "github" | "google") {
     setError("")
     setLoading(provider)
+    const callbackURL = `${window.location.origin}${getRedirectTo()}`
+    // route oauth failures back to the styled signin page (reads ?error=)
+    const errorCallbackURL = `${window.location.origin}/signin`
     try {
-      await authClient.signIn.social({
-        provider,
-        callbackURL: `${window.location.origin}${getRedirectTo()}`,
-        // route oauth failures back to the styled signin page (reads ?error=)
-        errorCallbackURL: `${window.location.origin}/signin`,
-      })
+      if (isTelegramMiniApp()) {
+        // Google/GitHub refuse to complete OAuth inside an embedded webview,
+        // which is exactly what Telegram's Mini App surface is. Get the
+        // provider URL without letting Better Auth auto-redirect this frame,
+        // then escape to a real external browser via the Telegram SDK.
+        const { data } = await authClient.signIn.social({
+          provider,
+          callbackURL,
+          errorCallbackURL,
+          disableRedirect: true,
+        })
+        if (data?.url) {
+          openExternal(data.url)
+        } else {
+          setError("Something went wrong. Please try again.")
+          setLoading(null)
+        }
+        return
+      }
+      await authClient.signIn.social({ provider, callbackURL, errorCallbackURL })
     } catch {
       setError("Something went wrong. Please try again.")
       setLoading(null)
