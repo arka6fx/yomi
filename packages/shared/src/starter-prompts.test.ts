@@ -22,4 +22,12 @@ describe("STARTER_PROMPTS", () => {
       expect(new Set(prompts).size, `${id} has duplicate prompts`).toBe(prompts.length)
     }
   })
+
+  it("keeps every prompt short enough to avoid dashboard-card truncation", () => {
+    for (const [id, prompts] of Object.entries(STARTER_PROMPTS)) {
+      for (const p of prompts) {
+        expect(p.length, `${id} prompt "${p}" is longer than 90 chars`).toBeLessThanOrEqual(90)
+      }
+    }
+  })
 })

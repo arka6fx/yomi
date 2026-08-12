@@ -8,10 +8,10 @@
 // connector with available: true there (google-photos and swiggy are
 // available: false and excluded).
 export const STARTER_PROMPTS: Record<string, string[]> = {
-  google: ["Tell me when I get an email from my boss", "Draft a reply to the last email from Sam"],
+  google: ["Draft a reply to the last email from Sam", "Tell me when I get an email from my boss"],
   "google-calendar": [
-    "Let me know if I have back-to-back meetings tomorrow",
     "Find a 30-minute slot this week for a call with Sam",
+    "Let me know if I have back-to-back meetings tomorrow",
   ],
   "google-drive": [
     "Find the latest version of the Q3 budget spreadsheet",
@@ -45,11 +45,11 @@ export const STARTER_PROMPTS: Record<string, string[]> = {
     "Set up a meeting link for tomorrow's standup",
     "Summarize the transcript from yesterday's call",
   ],
-  notion: ["Tell me when the roadmap page changes", "Summarize this week's meeting notes"],
-  github: ["Tell me when a PR is opened against main", "Summarize open issues labeled bug"],
+  notion: ["Summarize this week's meeting notes", "Tell me when the roadmap page changes"],
+  github: ["Summarize open issues labeled bug", "Tell me when a PR is opened against main"],
   slack: ["Summarize unread messages in #general", "Notify me when someone mentions me"],
-  linear: ["Tell me when a P0 issue is created", "Summarize what's in progress on my team"],
-  hubspot: ["Tell me when a new deal moves to negotiation", "Summarize this week's new contacts"],
+  linear: ["Summarize what's in progress on my team", "Tell me when a P0 issue is created"],
+  hubspot: ["Summarize this week's new contacts", "Tell me when a new deal moves to negotiation"],
   discord: [
     "Tell me who joined my server this week",
     "Summarize the last 20 messages in #announcements",
@@ -59,12 +59,12 @@ export const STARTER_PROMPTS: Record<string, string[]> = {
     "Extract every article title from this blog's homepage",
   ],
   linkedin: ["Draft a post announcing our new feature", "Summarize the comments on my latest post"],
-  outlook: ["Tell me when I get an email from my manager", "Summarize my meetings for tomorrow"],
+  outlook: ["Summarize my meetings for tomorrow", "Tell me when I get an email from my manager"],
   whatsapp: [
-    "Notify me when a customer replies on WhatsApp",
     "Send today's order confirmation template to a customer",
+    "Notify me when a customer replies on WhatsApp",
   ],
-  jira: ["Tell me when a critical bug is filed", "Summarize what's in this sprint"],
+  jira: ["Summarize what's in this sprint", "Tell me when a critical bug is filed"],
   reddit: ["Find the top posts in r/technology today", "Notify me when someone replies to my post"],
   todoist: ["Add 'call the dentist' to my personal list", "Tell me what's overdue on my task list"],
   figma: [
@@ -76,8 +76,8 @@ export const STARTER_PROMPTS: Record<string, string[]> = {
     "Summarize the recording from yesterday's meeting",
   ],
   salesforce: [
-    "Tell me when an opportunity moves to Closed Won",
     "Summarize this week's new leads",
+    "Tell me when an opportunity moves to Closed Won",
   ],
   instagram: ["Draft a caption for my next product post", "Summarize comments on my latest post"],
   facebook: [
@@ -94,7 +94,7 @@ export const STARTER_PROMPTS: Record<string, string[]> = {
     "Tell me when a file is shared with me",
   ],
   posthog: ["Summarize this week's signup funnel", "Tell me if there's a spike in errors today"],
-  attio: ["Tell me when a deal moves stage", "Summarize notes on my last call with a lead"],
+  attio: ["Summarize notes on my last call with a lead", "Tell me when a deal moves stage"],
   dropbox: [
     "Find the latest file in my shared folder",
     "Tell me when someone uploads to my team folder",
@@ -109,12 +109,12 @@ export const STARTER_PROMPTS: Record<string, string[]> = {
     "Remember that I prefer async standups",
     "What do you remember about my project preferences?",
   ],
-  zoho: ["Tell me when a lead is assigned to me", "Summarize this week's new deals"],
+  zoho: ["Summarize this week's new deals", "Tell me when a lead is assigned to me"],
   serpapi: [
     "Search for the latest news on AI regulation",
     "Find the top 5 results for 'best CRM 2026'",
   ],
-  "dynamics-365": ["Tell me when an opportunity is updated", "Summarize this week's new accounts"],
+  "dynamics-365": ["Summarize this week's new accounts", "Tell me when an opportunity is updated"],
   exa: [
     "Find recent research papers on transformer efficiency",
     "Search for companies similar to mine",
@@ -122,20 +122,14 @@ export const STARTER_PROMPTS: Record<string, string[]> = {
   youtube: ["Summarize the top comments on my latest video", "Find trending videos in my niche"],
   asana: ["Add a task to my Sprint project", "Tell me what's overdue on my project"],
   stripe: ["Tell me about today's revenue", "Notify me when a payment fails"],
-  supabase: [
-    "Tell me how many new rows were added to my users table today",
-    "Check if my edge function is deployed",
-  ],
+  supabase: ["List the storage buckets in my project", "Check if my edge function is deployed"],
   vercel: [
-    "Tell me when my latest deployment finishes",
     "Check the status of my production deployment",
+    "Tell me when my latest deployment finishes",
   ],
-  cloudflare: ["Tell me if my zone's DNS records changed", "Check my site's current traffic stats"],
-  "zoho-invoice": ["Tell me when an invoice is overdue", "Summarize this week's paid invoices"],
-  neon: [
-    "Tell me when my database branch is ready",
-    "Check my Postgres connection usage this month",
-  ],
+  cloudflare: ["List the zones on my Cloudflare account", "Show me the firewall rules on my zone"],
+  "zoho-invoice": ["Summarize this week's paid invoices", "Tell me when an invoice is overdue"],
+  neon: ["List my project's branches", "Show me recent operations on my project"],
   fireflies: [
     "Summarize my last recorded meeting",
     "Tell me the action items from yesterday's call",

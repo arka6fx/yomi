@@ -15,14 +15,20 @@ describe("computeNextNudgeState", () => {
   })
 
   it("appends to an existing batch without moving dueAt", () => {
-    const existing = { connectorIds: ["notion"], dueAt: new Date("2026-08-09T12:03:00.000Z").toISOString() }
+    const existing = {
+      connectorIds: ["notion"],
+      dueAt: new Date("2026-08-09T12:03:00.000Z").toISOString(),
+    }
     const next = computeNextNudgeState(existing, "slack", now)
     expect(next.connectorIds).toEqual(["notion", "slack"])
     expect(next.dueAt).toBe(existing.dueAt)
   })
 
   it("dedupes if the same connector connects twice in one window", () => {
-    const existing = { connectorIds: ["notion"], dueAt: new Date("2026-08-09T12:03:00.000Z").toISOString() }
+    const existing = {
+      connectorIds: ["notion"],
+      dueAt: new Date("2026-08-09T12:03:00.000Z").toISOString(),
+    }
     const next = computeNextNudgeState(existing, "notion", now)
     expect(next.connectorIds).toEqual(["notion"])
   })
@@ -40,15 +46,15 @@ describe("buildNudgeMessage", () => {
   it("shows up to 2 prompts for a single connector", () => {
     const msg = buildNudgeMessage(["notion"])
     expect(msg).toContain("Notion")
-    expect(msg).toContain("Tell me when the roadmap page changes")
     expect(msg).toContain("Summarize this week's meeting notes")
+    expect(msg).toContain("Tell me when the roadmap page changes")
   })
 
   it("shows 1 prompt per connector, capped at 3, for a multi-connector batch", () => {
     const msg = buildNudgeMessage(["notion", "slack", "github", "linear"])
-    expect(msg).toContain("Tell me when the roadmap page changes") // notion's first prompt
+    expect(msg).toContain("Summarize this week's meeting notes") // notion's first prompt
     expect(msg).toContain("Summarize unread messages in #general") // slack's first prompt
-    expect(msg).toContain("Tell me when a PR is opened against main") // github's first prompt
-    expect(msg).not.toContain("Tell me when a P0 issue is created") // linear's — 4th connector, cut by the cap
+    expect(msg).toContain("Summarize open issues labeled bug") // github's first prompt
+    expect(msg).not.toContain("Summarize what's in progress on my team") // linear's — 4th connector, cut by the cap
   })
 })
