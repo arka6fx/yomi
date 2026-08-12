@@ -2,20 +2,43 @@ import { createHmac } from "node:crypto"
 import { beforeEach, describe, expect, it, mock } from "bun:test"
 
 let selectResult: { userId: string }[] = []
+let claimResult: { userId: string }[] = []
+let claimedTokens: string[] = []
 const fakeDb = {
   select: () => ({
     from: () => ({
       where: () => ({ limit: () => Promise.resolve(selectResult) }),
     }),
   }),
+  insert: () => ({
+    values: () => Promise.resolve(undefined),
+  }),
+  update: () => ({
+    set: () => ({
+      where: (whereArg: unknown) => {
+        // The real query filters on token = $1 AND used_at IS NULL AND
+        // expires_at > now() — the fake can't evaluate a drizzle where
+        // expression, so it just records that an update was attempted and
+        // returns whatever the test pre-set as the claim result.
+        claimedTokens.push(String(whereArg))
+        return { returning: () => Promise.resolve(claimResult) }
+      },
+    }),
+  }),
 }
-mock.module("@yomi/db", () => ({ db: fakeDb, platformConnections: {} }))
+mock.module("@yomi/db", () => ({
+  db: fakeDb,
+  platformConnections: {},
+  telegramMiniappLoginTokens: { token: "token", userId: "user_id", usedAt: "used_at", expiresAt: "expires_at" },
+}))
 
-const { verifyTelegramInitData, resolveTelegramWebAppUserId } =
+const { verifyTelegramInitData, resolveTelegramWebAppUserId, claimLoginToken } =
   await import("./telegram-webapp-plugin.js")
 
 beforeEach(() => {
   selectResult = []
+  claimResult = []
+  claimedTokens = []
 })
 
 // Builds a validly-signed initData string the way Telegram's client does,
@@ -108,5 +131,20 @@ describe("resolveTelegramWebAppUserId", () => {
     selectResult = []
 
     expect(await resolveTelegramWebAppUserId("42")).toBeNull()
+  })
+})
+
+describe("claimLoginToken", () => {
+  it("returns the userId when the atomic claim update returns a row", async () => {
+    claimResult = [{ userId: "user_1" }]
+
+    expect(await claimLoginToken("tok_valid")).toBe("user_1")
+    expect(claimedTokens).toHaveLength(1)
+  })
+
+  it("returns null when the claim update returns no rows (missing, expired, or already used)", async () => {
+    claimResult = []
+
+    expect(await claimLoginToken("tok_gone")).toBeNull()
   })
 })
