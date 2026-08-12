@@ -114,7 +114,12 @@ describe("markComposioConnectionActive — wasNewConnection", () => {
 
   it("is true when the existing row was only 'initiated', never active", async () => {
     dbState.existingOauthTokens = encryptString(
-      JSON.stringify({ kind: "composio", toolkit: "notion", connectedAccountId: null, status: "initiated" }),
+      JSON.stringify({
+        kind: "composio",
+        toolkit: "notion",
+        connectedAccountId: null,
+        status: "initiated",
+      }),
     )
     const { wasNewConnection } = await markComposioConnectionActive("user_1", def, "ca_1")
     expect(wasNewConnection).toBe(true)
@@ -122,7 +127,12 @@ describe("markComposioConnectionActive — wasNewConnection", () => {
 
   it("is false when the existing row was already active (reconnect/re-auth)", async () => {
     dbState.existingOauthTokens = encryptString(
-      JSON.stringify({ kind: "composio", toolkit: "notion", connectedAccountId: "ca_0", status: "active" }),
+      JSON.stringify({
+        kind: "composio",
+        toolkit: "notion",
+        connectedAccountId: "ca_0",
+        status: "active",
+      }),
     )
     const { wasNewConnection } = await markComposioConnectionActive("user_1", def, "ca_1")
     expect(wasNewConnection).toBe(false)

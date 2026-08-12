@@ -7,19 +7,19 @@
 
 **Goal:** Remove Telegram's `/` slash-command popup entirely, replace
 `/stop`/`/new`/`/approve`/`/deny` with tappable inline buttons on the bot's own
-messages, and add a Telegram Mini App menu button that opens Yomi's existing
-web dashboard, auto-signed-in.
+messages, and add a Telegram Mini App menu button that opens Yomi's existing web
+dashboard, auto-signed-in.
 
 **Architecture:** `PlatformAdapter` gains inline-keyboard support
 (`sendMessage`'s `buttons` option, `editMessageText`, `answerCallbackQuery`,
 `setCallbackHandler`); `TelegramAdapter` implements it and stops registering a
-command list on every boot. `GatewayRunner` wraps the one long-running
-operation (the full agent loop inside `onIncoming`) with a Stop-button status
-message, attaches a New-chat button to the final reply, and routes button taps
+command list on every boot. `GatewayRunner` wraps the one long-running operation
+(the full agent loop inside `onIncoming`) with a Stop-button status message,
+attaches a New-chat button to the final reply, and routes button taps
 (`callback_query` webhook updates) to the same approve/deny/stop/new logic the
 old text commands used. A new Better Auth plugin endpoint verifies Telegram's
-signed `initData`, looks up the linked account, and mints a real session so
-the mini-app's dashboard opens pre-authenticated.
+signed `initData`, looks up the linked account, and mints a real session so the
+mini-app's dashboard opens pre-authenticated.
 
 **Tech Stack:** Bun, TypeScript, Hono, Better Auth 1.6.11, `bun:test`, Next.js
 (landing).
@@ -31,39 +31,38 @@ the mini-app's dashboard opens pre-authenticated.
   — this plan implements it, with one refinement discovered during
   implementation planning (see below); do not deviate further without
   re-checking that file.
-- **Refinement over the spec:** the spec described a single placeholder
-  message edited through a turn's whole lifecycle, with `activeRuns`
-  widened to carry a `messageId`. Reading the actual code
-  (`gateway-runner.ts`'s `onIncoming`) showed the agent loop has 8+ early-exit
-  points (fast path, image, voice, document) that never touch `activeRuns` at
-  all — only the real `runAgent()` call (lines ~1486-1581, the one path
-  `/stop` was ever meaningful for) does. This plan scopes the Stop/New-chat
-  buttons to exactly that block: a status message is sent right before the run
-  starts and deleted right after it ends (success, timeout, or error), and the
-  final reply gets the New-chat button. `activeRuns` stays
-  `Map<string, AbortController>`, unchanged — Telegram's `callback_query`
-  payload always carries its own `message.message_id`/`chat.id`, so nothing
-  needs to be separately stored to know which message to edit on a button tap.
-  Fast-path/image/voice replies get no Stop button (they resolve in well under
-  a second; a flashing placeholder there would be worse UX, not better).
+- **Refinement over the spec:** the spec described a single placeholder message
+  edited through a turn's whole lifecycle, with `activeRuns` widened to carry a
+  `messageId`. Reading the actual code (`gateway-runner.ts`'s `onIncoming`)
+  showed the agent loop has 8+ early-exit points (fast path, image, voice,
+  document) that never touch `activeRuns` at all — only the real `runAgent()`
+  call (lines ~1486-1581, the one path `/stop` was ever meaningful for) does.
+  This plan scopes the Stop/New-chat buttons to exactly that block: a status
+  message is sent right before the run starts and deleted right after it ends
+  (success, timeout, or error), and the final reply gets the New-chat button.
+  `activeRuns` stays `Map<string, AbortController>`, unchanged — Telegram's
+  `callback_query` payload always carries its own
+  `message.message_id`/`chat.id`, so nothing needs to be separately stored to
+  know which message to edit on a button tap. Fast-path/image/voice replies get
+  no Stop button (they resolve in well under a second; a flashing placeholder
+  there would be worse UX, not better).
 - **Approval-card buttons are attached at creation, not at turn-completion.**
   Reading `pending-actions.ts` showed `createPendingAction` already sends the
   approval card itself, synchronously, via `sendApprovalCard` — independent of
   whatever the agent's own final turn reply says. This plan attaches
-  Approve/Deny buttons there directly (Task 3), not via a `RunAgentResult`
-  field as the spec's first draft of the idea implied. This removes the need
-  for any `RunAgentResult.newPendingActionId` field — deliberately not added.
+  Approve/Deny buttons there directly (Task 3), not via a `RunAgentResult` field
+  as the spec's first draft of the idea implied. This removes the need for any
+  `RunAgentResult.newPendingActionId` field — deliberately not added.
 - **Natural-language approve/deny/pending is untouched** (`gateway-runner.ts`
   lines 230-253) — only removed here: the `<id>`-suffixed explicit text form
   (`/approve <uuid>`, `deny <uuid>`, etc.) and its role in
   `formatPendingActions`'s user-facing copy. A bare `/approve`/`/deny` typed as
-  text still works exactly as today, because it already flows through the
-  same natural-language matcher (stripped of its leading `/` before matching)
-  — there is no separate code path for it to remove.
+  text still works exactly as today, because it already flows through the same
+  natural-language matcher (stripped of its leading `/` before matching) — there
+  is no separate code path for it to remove.
 - **`/start` and `/help` as text commands are removed**, matching the spec —
   first-contact users still get onboarded via the existing
-  `advanceSoulOnboarding` flow regardless of what their first message's text
-  is.
+  `advanceSoulOnboarding` flow regardless of what their first message's text is.
 - Conventional commit messages (`feat:`, `fix:`, `test:`, `refactor:`),
   lowercase, no full stop, max 72 chars, per `AGENTS.md`.
 - Run `bun run lint` and `bun run typecheck` before the final commit of each
@@ -72,8 +71,8 @@ the mini-app's dashboard opens pre-authenticated.
 - Test commands, run from repo root:
   - `bun test --isolate apps/backend/src/gateway/platforms/telegram.test.ts`
     (Task 1)
-  - `bun test --isolate apps/backend/src/gateway/gateway-runner.test.ts`
-    (Tasks 2, 3)
+  - `bun test --isolate apps/backend/src/gateway/gateway-runner.test.ts` (Tasks
+    2, 3)
   - `bun test --isolate apps/backend/src/services/pending-actions.test.ts`
     (Task 3)
   - `bun test --isolate apps/backend/src/auth/telegram-webapp-plugin.test.ts`
@@ -92,13 +91,13 @@ the mini-app's dashboard opens pre-authenticated.
   `callback_query`; `processUpdate` dispatches `callback_query` updates;
   `sendMessage` maps `buttons`; new `editMessageText`/`answerCallbackQuery`
   methods.
-- Modify: `apps/backend/src/gateway/platforms/telegram.test.ts` — tests for
-  all of the above.
-- Modify: `apps/backend/src/gateway/gateway-runner.ts` — `registerAdapter`
-  wires `setCallbackHandler`; new `deleteMessage` wrapper; `sendMessage`/
+- Modify: `apps/backend/src/gateway/platforms/telegram.test.ts` — tests for all
+  of the above.
+- Modify: `apps/backend/src/gateway/gateway-runner.ts` — `registerAdapter` wires
+  `setCallbackHandler`; new `deleteMessage` wrapper; `sendMessage`/
   `sendMessageAndLog` thread `buttons`; the agent-loop block gets a status
-  message with a Stop button, deleted on completion, final reply gets a
-  New-chat button; new `handleCallbackQuery`/`handleCallbackApproval` methods;
+  message with a Stop button, deleted on completion, final reply gets a New-chat
+  button; new `handleCallbackQuery`/`handleCallbackApproval` methods;
   `handleControlCommand` and its call site deleted; `handleApprovalCommand`'s
   `isExplicitApprovalCommand` and `<id>`-suffixed branch deleted;
   `formatPendingActions` copy updated.
@@ -116,8 +115,8 @@ the mini-app's dashboard opens pre-authenticated.
 - Create: `apps/backend/src/auth/telegram-webapp-plugin.ts` —
   `verifyTelegramInitData`, `resolveTelegramWebAppUserId`, and the
   `telegramWebAppAuth` Better Auth plugin.
-- Create: `apps/backend/src/auth/telegram-webapp-plugin.test.ts` — tests for
-  the two pure/DB-lookup functions above.
+- Create: `apps/backend/src/auth/telegram-webapp-plugin.test.ts` — tests for the
+  two pure/DB-lookup functions above.
 - Modify: `apps/backend/src/auth.ts` — registers `telegramWebAppAuth()` in
   `plugins`.
 - Create: `apps/landing/src/app/telegram-app/page.tsx` — the mini-app landing
@@ -163,7 +162,9 @@ the mini-app's dashboard opens pre-authenticated.
       options?: { buttons?: InlineButton[][] },
     ): Promise<{ ok: boolean; error?: string }>
     answerCallbackQuery(callbackId: string, text?: string): Promise<void>
-    setCallbackHandler(handler: (event: PlatformCallbackEvent) => void | Promise<void>): void
+    setCallbackHandler(
+      handler: (event: PlatformCallbackEvent) => void | Promise<void>,
+    ): void
   }
   ```
   Task 2 consumes `InlineButton`, `PlatformCallbackEvent`, and every new
@@ -189,13 +190,18 @@ export interface PlatformAdapter {
     options?: { replyTo?: string; caption?: string },
   ): Promise<{ ok: boolean; messageId?: string; error?: string }>
   sendTyping(chatId: string): Promise<void>
-  deleteMessage(chatId: string, messageId: string): Promise<{ ok: boolean; error?: string }>
+  deleteMessage(
+    chatId: string,
+    messageId: string,
+  ): Promise<{ ok: boolean; error?: string }>
   setReaction(
     chatId: string,
     messageId: string,
     emoji: string,
   ): Promise<{ ok: boolean; error?: string }>
-  setMessageHandler(handler: (msg: GatewayMessage) => void | Promise<void>): void
+  setMessageHandler(
+    handler: (msg: GatewayMessage) => void | Promise<void>,
+  ): void
 }
 ```
 
@@ -238,7 +244,10 @@ export interface PlatformAdapter {
     options?: { replyTo?: string; caption?: string },
   ): Promise<{ ok: boolean; messageId?: string; error?: string }>
   sendTyping(chatId: string): Promise<void>
-  deleteMessage(chatId: string, messageId: string): Promise<{ ok: boolean; error?: string }>
+  deleteMessage(
+    chatId: string,
+    messageId: string,
+  ): Promise<{ ok: boolean; error?: string }>
   editMessageText(
     chatId: string,
     messageId: string,
@@ -251,8 +260,12 @@ export interface PlatformAdapter {
     messageId: string,
     emoji: string,
   ): Promise<{ ok: boolean; error?: string }>
-  setMessageHandler(handler: (msg: GatewayMessage) => void | Promise<void>): void
-  setCallbackHandler(handler: (event: PlatformCallbackEvent) => void | Promise<void>): void
+  setMessageHandler(
+    handler: (msg: GatewayMessage) => void | Promise<void>,
+  ): void
+  setCallbackHandler(
+    handler: (event: PlatformCallbackEvent) => void | Promise<void>,
+  ): void
 }
 ```
 
@@ -278,25 +291,39 @@ describe("TelegramAdapter.connect", () => {
     const calls: { url: string; body: Record<string, unknown> | null }[] = []
     globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
       const urlStr = String(url)
-      calls.push({ url: urlStr, body: init?.body ? JSON.parse(String(init.body)) : null })
+      calls.push({
+        url: urlStr,
+        body: init?.body ? JSON.parse(String(init.body)) : null,
+      })
       if (urlStr.includes("/getMe")) {
-        return new Response(JSON.stringify({ ok: true, result: { username: "yomi_bot" } }), {
+        return new Response(
+          JSON.stringify({ ok: true, result: { username: "yomi_bot" } }),
+          {
+            status: 200,
+          },
+        )
+      }
+      if (urlStr.includes("/getWebhookInfo")) {
+        return new Response(JSON.stringify({ ok: true, result: { url: "" } }), {
           status: 200,
         })
       }
-      if (urlStr.includes("/getWebhookInfo")) {
-        return new Response(JSON.stringify({ ok: true, result: { url: "" } }), { status: 200 })
-      }
-      return new Response(JSON.stringify({ ok: true, result: {} }), { status: 200 })
+      return new Response(JSON.stringify({ ok: true, result: {} }), {
+        status: 200,
+      })
     }) as typeof fetch
 
     const adapter = new TelegramAdapter("dummy-token")
     await adapter.connect()
 
-    const deleteCommandsCall = calls.find((c) => c.url.includes("/deleteMyCommands"))
+    const deleteCommandsCall = calls.find((c) =>
+      c.url.includes("/deleteMyCommands"),
+    )
     expect(deleteCommandsCall).toBeDefined()
 
-    const menuButtonCall = calls.find((c) => c.url.includes("/setChatMenuButton"))
+    const menuButtonCall = calls.find((c) =>
+      c.url.includes("/setChatMenuButton"),
+    )
     expect(menuButtonCall?.body).toEqual({
       menu_button: {
         type: "web_app",
@@ -306,7 +333,10 @@ describe("TelegramAdapter.connect", () => {
     })
 
     const setWebhookCall = calls.find((c) => c.url.includes("/setWebhook"))
-    expect(setWebhookCall?.body?.["allowed_updates"]).toEqual(["message", "callback_query"])
+    expect(setWebhookCall?.body?.["allowed_updates"]).toEqual([
+      "message",
+      "callback_query",
+    ])
   })
 })
 
@@ -383,7 +413,10 @@ describe("TelegramAdapter.sendMessage — buttons", () => {
     let capturedBody: Record<string, unknown> | null = null
     globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
       capturedBody = JSON.parse(String(init?.body))
-      return new Response(JSON.stringify({ ok: true, result: { message_id: 5 } }), { status: 200 })
+      return new Response(
+        JSON.stringify({ ok: true, result: { message_id: 5 } }),
+        { status: 200 },
+      )
     }) as typeof fetch
 
     const adapter = new TelegramAdapter("dummy-token")
@@ -401,7 +434,10 @@ describe("TelegramAdapter.sendMessage — buttons", () => {
     let capturedBody: Record<string, unknown> | null = null
     globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
       capturedBody = JSON.parse(String(init?.body))
-      return new Response(JSON.stringify({ ok: true, result: { message_id: 6 } }), { status: 200 })
+      return new Response(
+        JSON.stringify({ ok: true, result: { message_id: 6 } }),
+        { status: 200 },
+      )
     }) as typeof fetch
 
     const adapter = new TelegramAdapter("dummy-token")
@@ -424,7 +460,9 @@ describe("TelegramAdapter.editMessageText", () => {
     globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
       capturedUrl = String(url)
       capturedBody = JSON.parse(String(init?.body))
-      return new Response(JSON.stringify({ ok: true, result: {} }), { status: 200 })
+      return new Response(JSON.stringify({ ok: true, result: {} }), {
+        status: 200,
+      })
     }) as typeof fetch
 
     const adapter = new TelegramAdapter("dummy-token")
@@ -446,20 +484,29 @@ describe("TelegramAdapter.editMessageText", () => {
     let capturedBody: Record<string, unknown> | null = null
     globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
       capturedBody = JSON.parse(String(init?.body))
-      return new Response(JSON.stringify({ ok: true, result: {} }), { status: 200 })
+      return new Response(JSON.stringify({ ok: true, result: {} }), {
+        status: 200,
+      })
     }) as typeof fetch
 
     const adapter = new TelegramAdapter("dummy-token")
-    await adapter.editMessageText("42", "500", "Stopping the current operation.")
+    await adapter.editMessageText(
+      "42",
+      "500",
+      "Stopping the current operation.",
+    )
 
     expect(capturedBody?.reply_markup).toEqual({ inline_keyboard: [] })
   })
 
   it("surfaces a non-ok Telegram response as ok: false", async () => {
     globalThis.fetch = (async () =>
-      new Response(JSON.stringify({ ok: false, description: "message to edit not found" }), {
-        status: 400,
-      })) as typeof fetch
+      new Response(
+        JSON.stringify({ ok: false, description: "message to edit not found" }),
+        {
+          status: 400,
+        },
+      )) as typeof fetch
 
     const adapter = new TelegramAdapter("dummy-token")
     const result = await adapter.editMessageText("42", "999", "text")
@@ -481,7 +528,9 @@ describe("TelegramAdapter.answerCallbackQuery", () => {
     globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
       capturedUrl = String(url)
       capturedBody = JSON.parse(String(init?.body))
-      return new Response(JSON.stringify({ ok: true, result: true }), { status: 200 })
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+      })
     }) as typeof fetch
 
     const adapter = new TelegramAdapter("dummy-token")
@@ -502,8 +551,7 @@ describe("TelegramAdapter.answerCallbackQuery", () => {
 })
 ```
 
-Add `PlatformCallbackEvent` to the existing import line at the top of the
-file:
+Add `PlatformCallbackEvent` to the existing import line at the top of the file:
 
 ```ts
 import { TelegramAdapter, type TelegramUpdate } from "./telegram.js"
@@ -548,7 +596,11 @@ Add the import at the top of the file:
 ```ts
 import type { GatewayMessage, PlatformType } from "@yomi/shared"
 import { humanizeDashes } from "@yomi/shared"
-import type { PlatformAdapter, InlineButton, PlatformCallbackEvent } from "../platform-adapter.js"
+import type {
+  PlatformAdapter,
+  InlineButton,
+  PlatformCallbackEvent,
+} from "../platform-adapter.js"
 import { markdownToTelegramHtml, truncateMessage } from "../platform-adapter.js"
 ```
 
@@ -577,64 +629,64 @@ export class TelegramAdapter implements PlatformAdapter {
 ```
 
 Find `connect()` (lines 57-105). After the `getMe` block
-(`console.warn(\`[gateway/telegram] connected as @${this.botUsername}\`)`) and
-before the `getWebhookInfo` block, insert:
+(`console.warn(\`[gateway/telegram] connected as
+@${this.botUsername}\`)`) and before the `getWebhookInfo` block, insert:
 
 ```ts
-    // Clears any command list registered previously (via BotFather or an
-    // earlier deploy) so the "/" autocomplete popup never reappears —
-    // Telegram has no per-source command lists, the last write wins, so this
-    // is self-healing on every boot rather than a one-time manual edit.
-    try {
-      await fetch(`${this.apiUrl}/deleteMyCommands`, { method: "POST" })
-    } catch (err) {
-      console.warn("[gateway/telegram] deleteMyCommands failed:", err)
-    }
+// Clears any command list registered previously (via BotFather or an
+// earlier deploy) so the "/" autocomplete popup never reappears —
+// Telegram has no per-source command lists, the last write wins, so this
+// is self-healing on every boot rather than a one-time manual edit.
+try {
+  await fetch(`${this.apiUrl}/deleteMyCommands`, { method: "POST" })
+} catch (err) {
+  console.warn("[gateway/telegram] deleteMyCommands failed:", err)
+}
 
-    const webAppBaseUrl = process.env["CORS_ORIGIN"] ?? "https://getyomi.in"
-    try {
-      await fetch(`${this.apiUrl}/setChatMenuButton`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          menu_button: {
-            type: "web_app",
-            text: "Dashboard",
-            web_app: { url: `${webAppBaseUrl}/telegram-app` },
-          },
-        }),
-      })
-    } catch (err) {
-      console.warn("[gateway/telegram] setChatMenuButton failed:", err)
-    }
+const webAppBaseUrl = process.env["CORS_ORIGIN"] ?? "https://getyomi.in"
+try {
+  await fetch(`${this.apiUrl}/setChatMenuButton`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      menu_button: {
+        type: "web_app",
+        text: "Dashboard",
+        web_app: { url: `${webAppBaseUrl}/telegram-app` },
+      },
+    }),
+  })
+} catch (err) {
+  console.warn("[gateway/telegram] setChatMenuButton failed:", err)
+}
 ```
 
 Find the `setWebhook` call inside `connect()`:
 
 ```ts
-      const whRes = await fetch(`${this.apiUrl}/setWebhook`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: this.webhookUrl,
-          allowed_updates: ["message"],
-          secret_token: this.botToken.replace(/[^A-Za-z0-9_-]/g, ""),
-        }),
-      })
+const whRes = await fetch(`${this.apiUrl}/setWebhook`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    url: this.webhookUrl,
+    allowed_updates: ["message"],
+    secret_token: this.botToken.replace(/[^A-Za-z0-9_-]/g, ""),
+  }),
+})
 ```
 
 Change `allowed_updates`:
 
 ```ts
-      const whRes = await fetch(`${this.apiUrl}/setWebhook`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: this.webhookUrl,
-          allowed_updates: ["message", "callback_query"],
-          secret_token: this.botToken.replace(/[^A-Za-z0-9_-]/g, ""),
-        }),
-      })
+const whRes = await fetch(`${this.apiUrl}/setWebhook`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    url: this.webhookUrl,
+    allowed_updates: ["message", "callback_query"],
+    secret_token: this.botToken.replace(/[^A-Za-z0-9_-]/g, ""),
+  }),
+})
 ```
 
 Add `setCallbackHandler` next to `setMessageHandler`:
@@ -746,8 +798,8 @@ Change the options type and add the `buttons` mapping:
   }
 ```
 
-Add two new methods after `deleteMessage` (which currently ends around line
-323, right before `setReaction`):
+Add two new methods after `deleteMessage` (which currently ends around line 323,
+right before `setReaction`):
 
 ```ts
   async editMessageText(
@@ -798,11 +850,10 @@ Expected: PASS — all existing tests plus the new ones.
 
 - [ ] **Step 6: Typecheck**
 
-Run: `bun run typecheck`
-Expected: errors in `gateway-runner.ts` and its test file (they implement
-`PlatformAdapter`/`FakeAdapter` and don't have the new members yet) — Task 2
-fixes those. No errors expected in `platform-adapter.ts` or `telegram.ts`
-themselves.
+Run: `bun run typecheck` Expected: errors in `gateway-runner.ts` and its test
+file (they implement `PlatformAdapter`/`FakeAdapter` and don't have the new
+members yet) — Task 2 fixes those. No errors expected in `platform-adapter.ts`
+or `telegram.ts` themselves.
 
 - [ ] **Step 7: Commit**
 
@@ -825,8 +876,8 @@ git commit -m "feat(gateway): add inline-button support and drop the command men
 - Consumes: `InlineButton`, `PlatformCallbackEvent`, and the extended
   `PlatformAdapter` from Task 1.
 - Produces: `deleteMessage(platform, chatId, messageId)` on `GatewayRunner`
-  (public, mirrors the existing `sendMessage`/`sendTyping` wrappers) — no
-  later task in this plan consumes it, but it's the natural counterpart to the
+  (public, mirrors the existing `sendMessage`/`sendTyping` wrappers) — no later
+  task in this plan consumes it, but it's the natural counterpart to the
   existing wrappers and keeps `onIncoming` from reaching into
   `this.adapters.get(...)` directly.
 
@@ -842,7 +893,11 @@ import type { PlatformAdapter } from "./platform-adapter.js"
 becomes:
 
 ```ts
-import type { PlatformAdapter, InlineButton, PlatformCallbackEvent } from "./platform-adapter.js"
+import type {
+  PlatformAdapter,
+  InlineButton,
+  PlatformCallbackEvent,
+} from "./platform-adapter.js"
 ```
 
 Replace the `FakeAdapter` class (lines 256-281) entirely:
@@ -852,21 +907,36 @@ class FakeAdapter implements PlatformAdapter {
   readonly platform: PlatformType = "telegram"
   messages: { chatId: string; text: string; buttons?: InlineButton[][] }[] = []
   reactions: { chatId: string; messageId: string; emoji: string }[] = []
-  edits: { chatId: string; messageId: string; text: string; buttons?: InlineButton[][] }[] = []
+  edits: {
+    chatId: string
+    messageId: string
+    text: string
+    buttons?: InlineButton[][]
+  }[] = []
   deletedMessageIds: string[] = []
   answeredCallbacks: string[] = []
   handler: ((msg: GatewayMessage) => void | Promise<void>) | null = null
-  callbackHandler: ((event: PlatformCallbackEvent) => void | Promise<void>) | null = null
+  callbackHandler:
+    | ((event: PlatformCallbackEvent) => void | Promise<void>)
+    | null = null
   private nextMessageId = 1
   async connect() {}
   async disconnect() {}
-  setMessageHandler(handler: (msg: GatewayMessage) => void | Promise<void>): void {
+  setMessageHandler(
+    handler: (msg: GatewayMessage) => void | Promise<void>,
+  ): void {
     this.handler = handler
   }
-  setCallbackHandler(handler: (event: PlatformCallbackEvent) => void | Promise<void>): void {
+  setCallbackHandler(
+    handler: (event: PlatformCallbackEvent) => void | Promise<void>,
+  ): void {
     this.callbackHandler = handler
   }
-  async sendMessage(chatId: string, text: string, options?: { buttons?: InlineButton[][] }) {
+  async sendMessage(
+    chatId: string,
+    text: string,
+    options?: { buttons?: InlineButton[][] },
+  ) {
     const messageId = String(this.nextMessageId++)
     this.messages.push({ chatId, text, buttons: options?.buttons })
     return { ok: true, messageId }
@@ -915,7 +985,9 @@ it("closes the active persisted session when the New-chat button is tapped", asy
     text: "hello",
     timestamp: new Date().toISOString(),
   })
-  expect(adapter.messages.at(-1)?.buttons).toEqual([[{ text: "🔄 New chat", callbackData: "new" }]])
+  expect(adapter.messages.at(-1)?.buttons).toEqual([
+    [{ text: "🔄 New chat", callbackData: "new" }],
+  ])
 
   // FakeAdapter's message ids are assigned in send order: "1" was the status
   // placeholder (sent, then deleted once the run finished), "2" is the final
@@ -933,7 +1005,9 @@ it("closes the active persisted session when the New-chat button is tapped", asy
     { userId: "user_1", platform: "telegram", chatId: "chat_1" },
     { userId: "user_1", platform: "yomi", chatId: "global" },
   ])
-  expect(adapter.edits.at(-1)?.text).toBe("Started a new conversation. How can I help you?")
+  expect(adapter.edits.at(-1)?.text).toBe(
+    "Started a new conversation. How can I help you?",
+  )
 })
 ```
 
@@ -1059,14 +1133,14 @@ it("acks an unrecognized callback_data value without throwing or editing anythin
 Run: `bun test --isolate apps/backend/src/gateway/gateway-runner.test.ts`
 Expected: FAIL to compile (`FakeAdapter` doesn't fully implement
 `PlatformAdapter` until the new methods are used correctly, and
-`adapter.callbackHandler` is never set because `registerAdapter` doesn't wire
-it yet), then FAIL at runtime once compiling (no status message, no
-New-chat button, `/new`-as-text no longer resets sessions).
+`adapter.callbackHandler` is never set because `registerAdapter` doesn't wire it
+yet), then FAIL at runtime once compiling (no status message, no New-chat
+button, `/new`-as-text no longer resets sessions).
 
 - [ ] **Step 3: Implement in `gateway-runner.ts`**
 
-Add the import for the new types at the top of the file, alongside the
-existing `PlatformAdapter` import:
+Add the import for the new types at the top of the file, alongside the existing
+`PlatformAdapter` import:
 
 ```ts
 import type { PlatformAdapter } from "./platform-adapter.js"
@@ -1075,7 +1149,11 @@ import type { PlatformAdapter } from "./platform-adapter.js"
 becomes:
 
 ```ts
-import type { PlatformAdapter, InlineButton, PlatformCallbackEvent } from "./platform-adapter.js"
+import type {
+  PlatformAdapter,
+  InlineButton,
+  PlatformCallbackEvent,
+} from "./platform-adapter.js"
 ```
 
 Find `registerAdapter` (lines 759-762):
@@ -1178,246 +1256,274 @@ Find the agent-loop block inside `onIncoming` (the `let runController` through
 the end of its `catch` block, currently lines 1486-1581). Replace it in full:
 
 ```ts
-      let runController: AbortController | null = null
-      let runTimedOut = false
-      let runTimeout: ReturnType<typeof setTimeout> | undefined
-      try {
-        console.warn(
-          `[gateway] backend agent start user=${yomiUserId} platform=${msg.platform} chat=${msg.chatId}`,
-        )
-        runController = new AbortController()
-        this.activeRuns.set(this.runKey(msg.platform, msg.chatId), runController)
-        // Hard cap on a single agent run. On a stateless Worker nothing else can
-        // abort a hung run (the in-memory /stop and /new controllers live in other
-        // isolates), so without this a stuck tool/model call would hang forever.
-        const timeoutMs = Number(process.env["YOMI_AGENT_RUN_TIMEOUT_MS"] ?? 60_000)
-        runTimeout = setTimeout(() => {
-          runTimedOut = true
-          runController?.abort()
-        }, timeoutMs)
-        // A real user turn is charged, so the free-resume allowance starts over.
-        this.freeResumes.delete(this.runKey(msg.platform, msg.chatId))
-        const result = await runAgent({
-          userId: yomiUserId,
-          text: msg.text,
-          history,
-          signal: runController.signal,
-          sourcePlatform: msg.platform,
-          sourceChatId: msg.chatId,
-          onReact: (emoji) =>
-            msg.messageId
-              ? this.setReaction(msg.platform, msg.chatId, msg.messageId, emoji)
-              : Promise.resolve(),
-          consumePendingDocument: () => this.consumePendingDocument(msg.platform, msg.chatId),
-          restorePendingDocument: (document) =>
-            this.restorePendingDocument(msg.platform, msg.chatId, document),
-        })
-        clearTimeout(runTimeout)
-        clearInterval(typingInterval)
-        this.activeRuns.delete(this.runKey(msg.platform, msg.chatId))
-        if (runController.signal.aborted) {
-          if (runTimedOut) {
-            await this.sendMessageAndLog(
-              msg.platform,
-              msg.chatId,
-              AGENT_TIMEOUT_MESSAGE,
-              "agent-timeout",
-            )
-          }
-          return
-        }
-        console.warn(
-          `[gateway] backend agent done user=${yomiUserId} platform=${msg.platform} chat=${msg.chatId} chars=${result.text.length}`,
-        )
-        // Deliver the reply BEFORE persisting history: both compete for the
-        // invocation's subrequest budget, and losing the user-visible reply
-        // is worse than losing a history write (which has an in-memory fallback).
-        const reply = result.text || "I couldn't produce a reply. Please try again."
-        await this.sendMessageAndLog(msg.platform, msg.chatId, reply, "backend-agent-reply")
-        if (result.text) {
-          if (conversationConsent.allowed && persistentSession) {
-            await appendAgentTurn({
-              sessionId: persistentSession.id,
-              userId: yomiUserId,
-              userText: msg.text,
-              assistantText: result.text,
-            }).catch((err) => {
-              console.warn("[gateway] append persistent session failed:", err)
-              this.appendHistory(msg.platform, msg.chatId, msg.text, result.text)
-            })
-          } else {
-            this.appendHistory(msg.platform, msg.chatId, msg.text, result.text)
-          }
-        }
-      } catch (err) {
-        if (runTimeout) clearTimeout(runTimeout)
-        clearInterval(typingInterval)
-        this.activeRuns.delete(this.runKey(msg.platform, msg.chatId))
-        if (runTimedOut) {
-          await this.sendMessageAndLog(
-            msg.platform,
-            msg.chatId,
-            AGENT_TIMEOUT_MESSAGE,
-            "agent-timeout",
-          )
-          return
-        }
-        if (runController?.signal.aborted) return
-        console.error(
-          `[gateway] runAgent error user=${yomiUserId} chat=${msg.chatId}:`,
-          err instanceof Error ? (err.stack ?? err.message) : err,
-        )
-        await this.sendMessageAndLog(
-          msg.platform,
-          msg.chatId,
-          "Sorry, I ran into an error. Please try again.",
-          "backend-agent-error",
-        )
-      }
+let runController: AbortController | null = null
+let runTimedOut = false
+let runTimeout: ReturnType<typeof setTimeout> | undefined
+try {
+  console.warn(
+    `[gateway] backend agent start user=${yomiUserId} platform=${msg.platform} chat=${msg.chatId}`,
+  )
+  runController = new AbortController()
+  this.activeRuns.set(this.runKey(msg.platform, msg.chatId), runController)
+  // Hard cap on a single agent run. On a stateless Worker nothing else can
+  // abort a hung run (the in-memory /stop and /new controllers live in other
+  // isolates), so without this a stuck tool/model call would hang forever.
+  const timeoutMs = Number(process.env["YOMI_AGENT_RUN_TIMEOUT_MS"] ?? 60_000)
+  runTimeout = setTimeout(() => {
+    runTimedOut = true
+    runController?.abort()
+  }, timeoutMs)
+  // A real user turn is charged, so the free-resume allowance starts over.
+  this.freeResumes.delete(this.runKey(msg.platform, msg.chatId))
+  const result = await runAgent({
+    userId: yomiUserId,
+    text: msg.text,
+    history,
+    signal: runController.signal,
+    sourcePlatform: msg.platform,
+    sourceChatId: msg.chatId,
+    onReact: (emoji) =>
+      msg.messageId
+        ? this.setReaction(msg.platform, msg.chatId, msg.messageId, emoji)
+        : Promise.resolve(),
+    consumePendingDocument: () =>
+      this.consumePendingDocument(msg.platform, msg.chatId),
+    restorePendingDocument: (document) =>
+      this.restorePendingDocument(msg.platform, msg.chatId, document),
+  })
+  clearTimeout(runTimeout)
+  clearInterval(typingInterval)
+  this.activeRuns.delete(this.runKey(msg.platform, msg.chatId))
+  if (runController.signal.aborted) {
+    if (runTimedOut) {
+      await this.sendMessageAndLog(
+        msg.platform,
+        msg.chatId,
+        AGENT_TIMEOUT_MESSAGE,
+        "agent-timeout",
+      )
+    }
+    return
+  }
+  console.warn(
+    `[gateway] backend agent done user=${yomiUserId} platform=${msg.platform} chat=${msg.chatId} chars=${result.text.length}`,
+  )
+  // Deliver the reply BEFORE persisting history: both compete for the
+  // invocation's subrequest budget, and losing the user-visible reply
+  // is worse than losing a history write (which has an in-memory fallback).
+  const reply = result.text || "I couldn't produce a reply. Please try again."
+  await this.sendMessageAndLog(
+    msg.platform,
+    msg.chatId,
+    reply,
+    "backend-agent-reply",
+  )
+  if (result.text) {
+    if (conversationConsent.allowed && persistentSession) {
+      await appendAgentTurn({
+        sessionId: persistentSession.id,
+        userId: yomiUserId,
+        userText: msg.text,
+        assistantText: result.text,
+      }).catch((err) => {
+        console.warn("[gateway] append persistent session failed:", err)
+        this.appendHistory(msg.platform, msg.chatId, msg.text, result.text)
+      })
+    } else {
+      this.appendHistory(msg.platform, msg.chatId, msg.text, result.text)
+    }
+  }
+} catch (err) {
+  if (runTimeout) clearTimeout(runTimeout)
+  clearInterval(typingInterval)
+  this.activeRuns.delete(this.runKey(msg.platform, msg.chatId))
+  if (runTimedOut) {
+    await this.sendMessageAndLog(
+      msg.platform,
+      msg.chatId,
+      AGENT_TIMEOUT_MESSAGE,
+      "agent-timeout",
+    )
+    return
+  }
+  if (runController?.signal.aborted) return
+  console.error(
+    `[gateway] runAgent error user=${yomiUserId} chat=${msg.chatId}:`,
+    err instanceof Error ? (err.stack ?? err.message) : err,
+  )
+  await this.sendMessageAndLog(
+    msg.platform,
+    msg.chatId,
+    "Sorry, I ran into an error. Please try again.",
+    "backend-agent-error",
+  )
+}
 ```
 
 becomes:
 
 ```ts
-      let runController: AbortController | null = null
-      let runTimedOut = false
-      let runTimeout: ReturnType<typeof setTimeout> | undefined
-      let statusMessageId: string | undefined
-      try {
-        console.warn(
-          `[gateway] backend agent start user=${yomiUserId} platform=${msg.platform} chat=${msg.chatId}`,
-        )
-        runController = new AbortController()
-        this.activeRuns.set(this.runKey(msg.platform, msg.chatId), runController)
-        // A visible placeholder with a Stop button — this is the one path a user
-        // can meaningfully abort (fast/image/voice replies resolve in well under
-        // a second, so they never get one). Deleted once the run settles, one way
-        // or another, below.
-        const statusResult = await this.sendMessage(msg.platform, msg.chatId, "⏳ Working on it…", {
-          buttons: [[{ text: "⏹ Stop", callbackData: "stop" }]],
-        })
-        if (statusResult.ok && statusResult.messageId) statusMessageId = statusResult.messageId
-        // Hard cap on a single agent run. On a stateless Worker nothing else can
-        // abort a hung run (the in-memory /stop and /new controllers live in other
-        // isolates), so without this a stuck tool/model call would hang forever.
-        const timeoutMs = Number(process.env["YOMI_AGENT_RUN_TIMEOUT_MS"] ?? 60_000)
-        runTimeout = setTimeout(() => {
-          runTimedOut = true
-          runController?.abort()
-        }, timeoutMs)
-        // A real user turn is charged, so the free-resume allowance starts over.
-        this.freeResumes.delete(this.runKey(msg.platform, msg.chatId))
-        const result = await runAgent({
-          userId: yomiUserId,
-          text: msg.text,
-          history,
-          signal: runController.signal,
-          sourcePlatform: msg.platform,
-          sourceChatId: msg.chatId,
-          onReact: (emoji) =>
-            msg.messageId
-              ? this.setReaction(msg.platform, msg.chatId, msg.messageId, emoji)
-              : Promise.resolve(),
-          consumePendingDocument: () => this.consumePendingDocument(msg.platform, msg.chatId),
-          restorePendingDocument: (document) =>
-            this.restorePendingDocument(msg.platform, msg.chatId, document),
-        })
-        clearTimeout(runTimeout)
-        clearInterval(typingInterval)
-        this.activeRuns.delete(this.runKey(msg.platform, msg.chatId))
-        if (runController.signal.aborted) {
-          // A manual Stop tap already edited the status message itself (see
-          // handleCallbackQuery) and there's nothing further to send — only a
-          // timeout (which the tap could never have caused) still needs to
-          // delete the untouched status message and tell the user.
-          if (runTimedOut) {
-            if (statusMessageId) {
-              await this.deleteMessage(msg.platform, msg.chatId, statusMessageId).catch(() => {})
-            }
-            await this.sendMessageAndLog(
-              msg.platform,
-              msg.chatId,
-              AGENT_TIMEOUT_MESSAGE,
-              "agent-timeout",
-            )
-          }
-          return
-        }
-        if (statusMessageId) {
-          await this.deleteMessage(msg.platform, msg.chatId, statusMessageId).catch(() => {})
-        }
-        console.warn(
-          `[gateway] backend agent done user=${yomiUserId} platform=${msg.platform} chat=${msg.chatId} chars=${result.text.length}`,
-        )
-        // Deliver the reply BEFORE persisting history: both compete for the
-        // invocation's subrequest budget, and losing the user-visible reply
-        // is worse than losing a history write (which has an in-memory fallback).
-        const reply = result.text || "I couldn't produce a reply. Please try again."
-        await this.sendMessageAndLog(msg.platform, msg.chatId, reply, "backend-agent-reply", {
-          buttons: [[{ text: "🔄 New chat", callbackData: "new" }]],
-        })
-        if (result.text) {
-          if (conversationConsent.allowed && persistentSession) {
-            await appendAgentTurn({
-              sessionId: persistentSession.id,
-              userId: yomiUserId,
-              userText: msg.text,
-              assistantText: result.text,
-            }).catch((err) => {
-              console.warn("[gateway] append persistent session failed:", err)
-              this.appendHistory(msg.platform, msg.chatId, msg.text, result.text)
-            })
-          } else {
-            this.appendHistory(msg.platform, msg.chatId, msg.text, result.text)
-          }
-        }
-      } catch (err) {
-        if (runTimeout) clearTimeout(runTimeout)
-        clearInterval(typingInterval)
-        this.activeRuns.delete(this.runKey(msg.platform, msg.chatId))
-        if (runTimedOut) {
-          if (statusMessageId) {
-            await this.deleteMessage(msg.platform, msg.chatId, statusMessageId).catch(() => {})
-          }
-          await this.sendMessageAndLog(
-            msg.platform,
-            msg.chatId,
-            AGENT_TIMEOUT_MESSAGE,
-            "agent-timeout",
-          )
-          return
-        }
-        // A manual Stop tap already edited the status message itself — stop quietly.
-        if (runController?.signal.aborted) return
-        if (statusMessageId) {
-          await this.deleteMessage(msg.platform, msg.chatId, statusMessageId).catch(() => {})
-        }
-        console.error(
-          `[gateway] runAgent error user=${yomiUserId} chat=${msg.chatId}:`,
-          err instanceof Error ? (err.stack ?? err.message) : err,
-        )
-        await this.sendMessageAndLog(
+let runController: AbortController | null = null
+let runTimedOut = false
+let runTimeout: ReturnType<typeof setTimeout> | undefined
+let statusMessageId: string | undefined
+try {
+  console.warn(
+    `[gateway] backend agent start user=${yomiUserId} platform=${msg.platform} chat=${msg.chatId}`,
+  )
+  runController = new AbortController()
+  this.activeRuns.set(this.runKey(msg.platform, msg.chatId), runController)
+  // A visible placeholder with a Stop button — this is the one path a user
+  // can meaningfully abort (fast/image/voice replies resolve in well under
+  // a second, so they never get one). Deleted once the run settles, one way
+  // or another, below.
+  const statusResult = await this.sendMessage(
+    msg.platform,
+    msg.chatId,
+    "⏳ Working on it…",
+    {
+      buttons: [[{ text: "⏹ Stop", callbackData: "stop" }]],
+    },
+  )
+  if (statusResult.ok && statusResult.messageId)
+    statusMessageId = statusResult.messageId
+  // Hard cap on a single agent run. On a stateless Worker nothing else can
+  // abort a hung run (the in-memory /stop and /new controllers live in other
+  // isolates), so without this a stuck tool/model call would hang forever.
+  const timeoutMs = Number(process.env["YOMI_AGENT_RUN_TIMEOUT_MS"] ?? 60_000)
+  runTimeout = setTimeout(() => {
+    runTimedOut = true
+    runController?.abort()
+  }, timeoutMs)
+  // A real user turn is charged, so the free-resume allowance starts over.
+  this.freeResumes.delete(this.runKey(msg.platform, msg.chatId))
+  const result = await runAgent({
+    userId: yomiUserId,
+    text: msg.text,
+    history,
+    signal: runController.signal,
+    sourcePlatform: msg.platform,
+    sourceChatId: msg.chatId,
+    onReact: (emoji) =>
+      msg.messageId
+        ? this.setReaction(msg.platform, msg.chatId, msg.messageId, emoji)
+        : Promise.resolve(),
+    consumePendingDocument: () =>
+      this.consumePendingDocument(msg.platform, msg.chatId),
+    restorePendingDocument: (document) =>
+      this.restorePendingDocument(msg.platform, msg.chatId, document),
+  })
+  clearTimeout(runTimeout)
+  clearInterval(typingInterval)
+  this.activeRuns.delete(this.runKey(msg.platform, msg.chatId))
+  if (runController.signal.aborted) {
+    // A manual Stop tap already edited the status message itself (see
+    // handleCallbackQuery) and there's nothing further to send — only a
+    // timeout (which the tap could never have caused) still needs to
+    // delete the untouched status message and tell the user.
+    if (runTimedOut) {
+      if (statusMessageId) {
+        await this.deleteMessage(
           msg.platform,
           msg.chatId,
-          "Sorry, I ran into an error. Please try again.",
-          "backend-agent-error",
-        )
+          statusMessageId,
+        ).catch(() => {})
       }
+      await this.sendMessageAndLog(
+        msg.platform,
+        msg.chatId,
+        AGENT_TIMEOUT_MESSAGE,
+        "agent-timeout",
+      )
+    }
+    return
+  }
+  if (statusMessageId) {
+    await this.deleteMessage(msg.platform, msg.chatId, statusMessageId).catch(
+      () => {},
+    )
+  }
+  console.warn(
+    `[gateway] backend agent done user=${yomiUserId} platform=${msg.platform} chat=${msg.chatId} chars=${result.text.length}`,
+  )
+  // Deliver the reply BEFORE persisting history: both compete for the
+  // invocation's subrequest budget, and losing the user-visible reply
+  // is worse than losing a history write (which has an in-memory fallback).
+  const reply = result.text || "I couldn't produce a reply. Please try again."
+  await this.sendMessageAndLog(
+    msg.platform,
+    msg.chatId,
+    reply,
+    "backend-agent-reply",
+    {
+      buttons: [[{ text: "🔄 New chat", callbackData: "new" }]],
+    },
+  )
+  if (result.text) {
+    if (conversationConsent.allowed && persistentSession) {
+      await appendAgentTurn({
+        sessionId: persistentSession.id,
+        userId: yomiUserId,
+        userText: msg.text,
+        assistantText: result.text,
+      }).catch((err) => {
+        console.warn("[gateway] append persistent session failed:", err)
+        this.appendHistory(msg.platform, msg.chatId, msg.text, result.text)
+      })
+    } else {
+      this.appendHistory(msg.platform, msg.chatId, msg.text, result.text)
+    }
+  }
+} catch (err) {
+  if (runTimeout) clearTimeout(runTimeout)
+  clearInterval(typingInterval)
+  this.activeRuns.delete(this.runKey(msg.platform, msg.chatId))
+  if (runTimedOut) {
+    if (statusMessageId) {
+      await this.deleteMessage(msg.platform, msg.chatId, statusMessageId).catch(
+        () => {},
+      )
+    }
+    await this.sendMessageAndLog(
+      msg.platform,
+      msg.chatId,
+      AGENT_TIMEOUT_MESSAGE,
+      "agent-timeout",
+    )
+    return
+  }
+  // A manual Stop tap already edited the status message itself — stop quietly.
+  if (runController?.signal.aborted) return
+  if (statusMessageId) {
+    await this.deleteMessage(msg.platform, msg.chatId, statusMessageId).catch(
+      () => {},
+    )
+  }
+  console.error(
+    `[gateway] runAgent error user=${yomiUserId} chat=${msg.chatId}:`,
+    err instanceof Error ? (err.stack ?? err.message) : err,
+  )
+  await this.sendMessageAndLog(
+    msg.platform,
+    msg.chatId,
+    "Sorry, I ran into an error. Please try again.",
+    "backend-agent-error",
+  )
+}
 ```
 
 Find the call site of `handleControlCommand` (lines 1184-1189):
 
 ```ts
-      // Control commands (/stop /new /help) are handled locally — no LLM needed.
-      const controlReply = await this.handleControlCommand(msg, session, yomiUserId)
-      if (controlReply) {
-        await this.sendMessage(msg.platform, msg.chatId, controlReply).catch(() => {})
-        return
-      }
+// Control commands (/stop /new /help) are handled locally — no LLM needed.
+const controlReply = await this.handleControlCommand(msg, session, yomiUserId)
+if (controlReply) {
+  await this.sendMessage(msg.platform, msg.chatId, controlReply).catch(() => {})
+  return
+}
 ```
 
-Delete it entirely (no replacement — nothing left calls
-`handleControlCommand`).
+Delete it entirely (no replacement — nothing left calls `handleControlCommand`).
 
 Find `handleControlCommand` itself (lines 1647-1706) and delete the whole
 method:
@@ -1609,14 +1715,13 @@ around line 1620, just before `private getOrCreateSession`):
 
 Run: `bun test --isolate apps/backend/src/gateway/gateway-runner.test.ts`
 Expected: PASS — all existing tests plus the new ones. (`approvePendingAction`
-in this test file's `mock.module("../services/pending-actions.js", ...)`
-already ignores its third argument, so passing `{ skipNotify: true }` from
+in this test file's `mock.module("../services/pending-actions.js", ...)` already
+ignores its third argument, so passing `{ skipNotify: true }` from
 `handleCallbackApproval` doesn't need a mock change.)
 
 - [ ] **Step 5: Typecheck**
 
-Run: `bun run typecheck`
-Expected: 0 errors.
+Run: `bun run typecheck` Expected: 0 errors.
 
 - [ ] **Step 6: Commit**
 
@@ -1659,7 +1764,10 @@ const fakeDb = {
   insert: () => ({
     values: (row: Record<string, unknown>) => {
       insertedRows.push(row)
-      return { returning: () => Promise.resolve([{ id: "action-1", status: "pending" }]) }
+      return {
+        returning: () =>
+          Promise.resolve([{ id: "action-1", status: "pending" }]),
+      }
     },
   }),
 }
@@ -1764,23 +1872,34 @@ Expected: FAIL — the first test's `options?.buttons` assertion fails, since
 Find `createPendingAction`'s call to `sendApprovalCard`:
 
 ```ts
-  // Send the card ourselves rather than trusting the model to relay it. The model was
-  // told to summarise "in one short line", so it compressed the recipient, subject and
-  // body out of existence — the user was approving an email they could not see. An
-  // approval gate that hides what it is approving is not a safety mechanism, so this
-  // is awaited: the card IS the gate, not a nicety to fire and forget.
-  await sendApprovalCard(input.sourcePlatform, input.sourceChatId, input.title, input.preview)
+// Send the card ourselves rather than trusting the model to relay it. The model was
+// told to summarise "in one short line", so it compressed the recipient, subject and
+// body out of existence — the user was approving an email they could not see. An
+// approval gate that hides what it is approving is not a safety mechanism, so this
+// is awaited: the card IS the gate, not a nicety to fire and forget.
+await sendApprovalCard(
+  input.sourcePlatform,
+  input.sourceChatId,
+  input.title,
+  input.preview,
+)
 ```
 
 Change it to pass the new row's id:
 
 ```ts
-  // Send the card ourselves rather than trusting the model to relay it. The model was
-  // told to summarise "in one short line", so it compressed the recipient, subject and
-  // body out of existence — the user was approving an email they could not see. An
-  // approval gate that hides what it is approving is not a safety mechanism, so this
-  // is awaited: the card IS the gate, not a nicety to fire and forget.
-  await sendApprovalCard(input.sourcePlatform, input.sourceChatId, row.id, input.title, input.preview)
+// Send the card ourselves rather than trusting the model to relay it. The model was
+// told to summarise "in one short line", so it compressed the recipient, subject and
+// body out of existence — the user was approving an email they could not see. An
+// approval gate that hides what it is approving is not a safety mechanism, so this
+// is awaited: the card IS the gate, not a nicety to fire and forget.
+await sendApprovalCard(
+  input.sourcePlatform,
+  input.sourceChatId,
+  row.id,
+  input.title,
+  input.preview,
+)
 ```
 
 Find `sendApprovalCard`:
@@ -1890,10 +2009,10 @@ Find where `isExplicitApprovalCommand` is used:
           : null
 ```
 
-Delete the now-unused `isExplicitApprovalCommand` declaration, and simplify
-its one use site to match the natural-language behavior it now shares with
-"yes"/"no" (nothing pending → fall through to the agent, don't special-case
-the empty-pending message):
+Delete the now-unused `isExplicitApprovalCommand` declaration, and simplify its
+one use site to match the natural-language behavior it now shares with
+"yes"/"no" (nothing pending → fall through to the agent, don't special-case the
+empty-pending message):
 
 ```ts
   private async handleApprovalCommand(
@@ -1911,7 +2030,7 @@ the empty-pending message):
 ```
 
 ```ts
-    if (actions.length === 0) return null
+if (actions.length === 0) return null
 ```
 
 Find the id-suffixed explicit-command branch — everything from the `match =`
@@ -1968,9 +2087,10 @@ line to the end of the method:
   }
 ```
 
-Delete all of it and close the function right after the `wantsApprove ||
-wantsDeny` block instead — equivalent logic now lives in `handleCallbackApproval`
-(Task 2), reachable via the Approve/Deny buttons this task just added:
+Delete all of it and close the function right after the
+`wantsApprove || wantsDeny` block instead — equivalent logic now lives in
+`handleCallbackApproval` (Task 2), reachable via the Approve/Deny buttons this
+task just added:
 
 ```ts
     return null
@@ -1996,8 +2116,8 @@ Find `formatPendingActions`:
 ```
 
 The `${a.id}\nReply: approve ${a.id} or deny ${a.id}` line described the
-now-deleted explicit-id command — each action already got its own
-Approve/Deny buttons when it was created (this task's Step 3). Replace with:
+now-deleted explicit-id command — each action already got its own Approve/Deny
+buttons when it was created (this task's Step 3). Replace with:
 
 ```ts
   private async formatPendingActions(userId: string): Promise<string> {
@@ -2017,14 +2137,13 @@ Approve/Deny buttons when it was created (this task's Step 3). Replace with:
 - [ ] **Step 6: Run the gateway-runner tests to verify they still pass**
 
 Run: `bun test --isolate apps/backend/src/gateway/gateway-runner.test.ts`
-Expected: PASS — the two existing `/approve` tests (bare text, no id suffix)
-are unaffected, since they were always routed through the natural-language
-matcher, not the deleted branch.
+Expected: PASS — the two existing `/approve` tests (bare text, no id suffix) are
+unaffected, since they were always routed through the natural-language matcher,
+not the deleted branch.
 
 - [ ] **Step 7: Typecheck**
 
-Run: `bun run typecheck`
-Expected: 0 errors.
+Run: `bun run typecheck` Expected: 0 errors.
 
 - [ ] **Step 8: Commit**
 
@@ -2057,31 +2176,39 @@ git commit -m "feat(gateway): attach approve/deny buttons to approval cards"
   `dist/oauth2/link-account.mjs`'s `handleOAuthUserInfo` and
   `dist/api/routes/callback.mjs` already do for social sign-in).
 - Produces:
+
   ```ts
   export function verifyTelegramInitData(
     initData: string,
     botToken: string,
   ): { telegramUserId: string } | null
-  export function resolveTelegramWebAppUserId(telegramUserId: string): Promise<string | null>
-  export function telegramWebAppAuth(): { id: string; endpoints: Record<string, unknown> }
+  export function resolveTelegramWebAppUserId(
+    telegramUserId: string,
+  ): Promise<string | null>
+  export function telegramWebAppAuth(): {
+    id: string
+    endpoints: Record<string, unknown>
+  }
   ```
+
   Task 5 (the landing page) consumes the resulting endpoint's URL,
   `POST /api/auth/telegram-webapp-auth`, and its JSON response shape
   `{ ok: true; linked: boolean }` (or a thrown `APIError` on an invalid
-  signature/misconfiguration) — not the TypeScript exports directly, since
-  Task 5 is a separate Next.js app that only ever talks to this over HTTP.
+  signature/misconfiguration) — not the TypeScript exports directly, since Task
+  5 is a separate Next.js app that only ever talks to this over HTTP.
 
 - [ ] **Step 1: Add `zod` as an explicit `apps/backend` dependency**
 
-`createAuthEndpoint`'s `body` option needs a Zod schema, and `better-auth@1.6.11`
-requires `zod@^4.3.6` internally (confirmed in its own `package.json`) — the
-workspace already has both `zod@3.25.76` (declared by `packages/agent-core`,
-used by `index_document`'s tool schema) and `zod@4.4.3` installed side by
-side. `apps/backend` currently declares no `zod` dependency of its own at
-all, so without an explicit entry, resolving `import { z } from "zod"` from
-inside `apps/backend/src` would be left to whatever the package manager
-happens to hoist — passing a v3 schema into a v4-expecting internal API risks
-a shape mismatch. Pin it explicitly to the version Better Auth itself needs.
+`createAuthEndpoint`'s `body` option needs a Zod schema, and
+`better-auth@1.6.11` requires `zod@^4.3.6` internally (confirmed in its own
+`package.json`) — the workspace already has both `zod@3.25.76` (declared by
+`packages/agent-core`, used by `index_document`'s tool schema) and `zod@4.4.3`
+installed side by side. `apps/backend` currently declares no `zod` dependency of
+its own at all, so without an explicit entry, resolving
+`import { z } from "zod"` from inside `apps/backend/src` would be left to
+whatever the package manager happens to hoist — passing a v3 schema into a
+v4-expecting internal API risks a shape mismatch. Pin it explicitly to the
+version Better Auth itself needs.
 
 In `apps/backend/package.json`, find the `dependencies` block:
 
@@ -2138,9 +2265,8 @@ const fakeDb = {
 }
 mock.module("@yomi/db", () => ({ db: fakeDb, platformConnections: {} }))
 
-const { verifyTelegramInitData, resolveTelegramWebAppUserId } = await import(
-  "./telegram-webapp-plugin.js"
-)
+const { verifyTelegramInitData, resolveTelegramWebAppUserId } =
+  await import("./telegram-webapp-plugin.js")
 
 beforeEach(() => {
   selectResult = []
@@ -2159,7 +2285,9 @@ function signInitData(
     .map(([key, value]) => `${key}=${value}`)
     .join("\n")
   const secretKey = createHmac("sha256", "WebAppData").update(botToken).digest()
-  const hash = createHmac("sha256", secretKey).update(dataCheckString).digest("hex")
+  const hash = createHmac("sha256", secretKey)
+    .update(dataCheckString)
+    .digest("hex")
   params.set("hash", hash)
   return params.toString()
 }
@@ -2176,7 +2304,9 @@ describe("verifyTelegramInitData", () => {
       botToken,
     )
 
-    expect(verifyTelegramInitData(initData, botToken)).toEqual({ telegramUserId: "42" })
+    expect(verifyTelegramInitData(initData, botToken)).toEqual({
+      telegramUserId: "42",
+    })
   })
 
   it("rejects a tampered hash", () => {
@@ -2187,7 +2317,10 @@ describe("verifyTelegramInitData", () => {
       },
       botToken,
     )
-    const tampered = initData.replace(/hash=[0-9a-f]+/, "hash=" + "0".repeat(64))
+    const tampered = initData.replace(
+      /hash=[0-9a-f]+/,
+      "hash=" + "0".repeat(64),
+    )
 
     expect(verifyTelegramInitData(tampered, botToken)).toBeNull()
   })
@@ -2222,7 +2355,10 @@ describe("verifyTelegramInitData", () => {
   })
 
   it("rejects initData with no user field", () => {
-    const initData = signInitData({ auth_date: String(Math.floor(Date.now() / 1000)) }, botToken)
+    const initData = signInitData(
+      { auth_date: String(Math.floor(Date.now() / 1000)) },
+      botToken,
+    )
 
     expect(verifyTelegramInitData(initData, botToken)).toBeNull()
   })
@@ -2245,8 +2381,7 @@ describe("resolveTelegramWebAppUserId", () => {
 
 - [ ] **Step 3: Run the tests to verify they fail**
 
-Run:
-`bun test --isolate apps/backend/src/auth/telegram-webapp-plugin.test.ts`
+Run: `bun test --isolate apps/backend/src/auth/telegram-webapp-plugin.test.ts`
 Expected: FAIL — `./telegram-webapp-plugin.js` does not exist yet.
 
 - [ ] **Step 4: Write the implementation**
@@ -2286,11 +2421,16 @@ export function verifyTelegramInitData(
     .join("\n")
 
   const secretKey = createHmac("sha256", "WebAppData").update(botToken).digest()
-  const computedHash = createHmac("sha256", secretKey).update(dataCheckString).digest("hex")
+  const computedHash = createHmac("sha256", secretKey)
+    .update(dataCheckString)
+    .digest("hex")
 
   let hashesMatch: boolean
   try {
-    hashesMatch = timingSafeEqual(Buffer.from(computedHash, "hex"), Buffer.from(hash, "hex"))
+    hashesMatch = timingSafeEqual(
+      Buffer.from(computedHash, "hex"),
+      Buffer.from(hash, "hex"),
+    )
   } catch {
     // Buffer.from throws on a malformed (non-hex or wrong-length) hash — not a match.
     hashesMatch = false
@@ -2298,7 +2438,8 @@ export function verifyTelegramInitData(
   if (!hashesMatch) return null
 
   const authDate = Number(params.get("auth_date"))
-  if (!authDate || Date.now() / 1000 - authDate > INIT_DATA_MAX_AGE_SECONDS) return null
+  if (!authDate || Date.now() / 1000 - authDate > INIT_DATA_MAX_AGE_SECONDS)
+    return null
 
   const userRaw = params.get("user")
   if (!userRaw) return null
@@ -2313,7 +2454,9 @@ export function verifyTelegramInitData(
 
 // Pulled out from the endpoint below so it's testable without spinning up a
 // full Better Auth request context — it's a plain DB lookup.
-export async function resolveTelegramWebAppUserId(telegramUserId: string): Promise<string | null> {
+export async function resolveTelegramWebAppUserId(
+  telegramUserId: string,
+): Promise<string | null> {
   const [connection] = await db
     .select({ userId: platformConnections.userId })
     .from(platformConnections)
@@ -2339,15 +2482,21 @@ export const telegramWebAppAuth = () => ({
       async (ctx) => {
         const botToken = process.env["TELEGRAM_BOT_TOKEN"]
         if (!botToken) {
-          throw new APIError("INTERNAL_SERVER_ERROR", { message: "Telegram not configured" })
+          throw new APIError("INTERNAL_SERVER_ERROR", {
+            message: "Telegram not configured",
+          })
         }
 
         const verified = verifyTelegramInitData(ctx.body.initData, botToken)
         if (!verified) {
-          throw new APIError("UNAUTHORIZED", { message: "Invalid Telegram signature" })
+          throw new APIError("UNAUTHORIZED", {
+            message: "Invalid Telegram signature",
+          })
         }
 
-        const userId = await resolveTelegramWebAppUserId(verified.telegramUserId)
+        const userId = await resolveTelegramWebAppUserId(
+          verified.telegramUserId,
+        )
         if (!userId) return ctx.json({ ok: true, linked: false })
 
         const user = await ctx.context.internalAdapter.findUserById(userId)
@@ -2355,7 +2504,9 @@ export const telegramWebAppAuth = () => ({
 
         const session = await ctx.context.internalAdapter.createSession(userId)
         if (!session) {
-          throw new APIError("INTERNAL_SERVER_ERROR", { message: "Failed to create session" })
+          throw new APIError("INTERNAL_SERVER_ERROR", {
+            message: "Failed to create session",
+          })
         }
 
         await setSessionCookie(ctx, { session, user })
@@ -2368,8 +2519,7 @@ export const telegramWebAppAuth = () => ({
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
-Run:
-`bun test --isolate apps/backend/src/auth/telegram-webapp-plugin.test.ts`
+Run: `bun test --isolate apps/backend/src/auth/telegram-webapp-plugin.test.ts`
 Expected: PASS — 8 tests, 0 fail.
 
 - [ ] **Step 6: Register the plugin**
@@ -2413,12 +2563,10 @@ Add the new plugin:
 
 - [ ] **Step 7: Typecheck and run the full backend suite**
 
-Run: `bun run typecheck`
-Expected: 0 errors.
+Run: `bun run typecheck` Expected: 0 errors.
 
-Run: `bun test --isolate apps/backend/src`
-Expected: all pass (confirms registering the plugin didn't break
-`getRuntimeAuthConfig`/existing auth tests).
+Run: `bun test --isolate apps/backend/src` Expected: all pass (confirms
+registering the plugin didn't break `getRuntimeAuthConfig`/existing auth tests).
 
 - [ ] **Step 8: Commit**
 
@@ -2432,13 +2580,13 @@ git commit -m "feat(auth): add telegram mini app auto-login endpoint"
 
 The session-minting half of the endpoint
 (`ctx.context.internalAdapter.createSession`/`findUserById` +
-`setSessionCookie`) calls into Better Auth's internal request-context
-machinery, which isn't meaningfully mockable without re-implementing Better
-Auth itself — Steps 1-4 above cover the security-critical and independently
-testable parts (signature verification, account lookup) with real unit tests.
-Once Task 5 ships, confirm by opening the bot's Dashboard menu button from a
-Telegram account already linked via `/link`: the mini-app should land
-directly on `/dashboard`, no login prompt.
+`setSessionCookie`) calls into Better Auth's internal request-context machinery,
+which isn't meaningfully mockable without re-implementing Better Auth itself —
+Steps 1-4 above cover the security-critical and independently testable parts
+(signature verification, account lookup) with real unit tests. Once Task 5
+ships, confirm by opening the bot's Dashboard menu button from a Telegram
+account already linked via `/link`: the mini-app should land directly on
+`/dashboard`, no login prompt.
 
 ---
 
@@ -2455,9 +2603,8 @@ directly on `/dashboard`, no login prompt.
   `process.env.NEXT_PUBLIC_BACKEND_URL`, the same env var
   `apps/landing/src/lib/auth-client.ts` already uses for the Better Auth base
   URL.
-- Produces: nothing consumed elsewhere in this plan — this is the page the
-  Task 1 menu button (`web_app: { url: "${webAppBaseUrl}/telegram-app" }`)
-  opens.
+- Produces: nothing consumed elsewhere in this plan — this is the page the Task
+  1 menu button (`web_app: { url: "${webAppBaseUrl}/telegram-app" }`) opens.
 
 - [ ] **Step 1: Write the page**
 
@@ -2495,12 +2642,15 @@ export default function TelegramAppPage() {
         }
         try {
           const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? ""
-          const res = await fetch(`${backendUrl}/api/auth/telegram-webapp-auth`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ initData }),
-          })
+          const res = await fetch(
+            `${backendUrl}/api/auth/telegram-webapp-auth`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ initData }),
+            },
+          )
           const data = (await res.json()) as { ok: boolean; linked?: boolean }
           if (data.ok && data.linked) {
             router.replace("/dashboard")
@@ -2551,8 +2701,7 @@ export default function TelegramAppPage() {
 
 - [ ] **Step 2: Typecheck and lint the landing app**
 
-Run: `cd apps/landing && bun run typecheck && bun run lint`
-Expected: 0 errors.
+Run: `cd apps/landing && bun run typecheck && bun run lint` Expected: 0 errors.
 
 - [ ] **Step 3: Commit**
 
@@ -2578,13 +2727,11 @@ the "isn't linked" fallback with a working link to `/link`.
       still pass.
 - [ ] Run `bun run lint` from repo root.
 - [ ] Run `bun run typecheck` from repo root — 0 errors.
-- [ ] Run `bun test --isolate` (full monorepo suite) from repo root — all
-      pass.
+- [ ] Run `bun test --isolate` (full monorepo suite) from repo root — all pass.
 - [ ] Re-read
       `docs/superpowers/specs/2026-08-09-telegram-inline-controls-and-mini-app-dashboard-design.md`
       and confirm every section has a corresponding implemented piece, noting
-      the one deliberate refinement recorded in this plan's Global
-      Constraints.
+      the one deliberate refinement recorded in this plan's Global Constraints.
 - [ ] Manually confirm no remaining references to the deleted
       `handleControlCommand` method or the `<id>`-suffixed approve/deny text
       regex anywhere in the codebase:

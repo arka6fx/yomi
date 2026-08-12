@@ -22,12 +22,12 @@ const REDIRECTS: Record<string, string> = {
 // narrows the attack surface: no third-party script host, no framing, no plugins.
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com",
+  "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com https://telegram.org",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https:",
   "font-src 'self'",
   "connect-src 'self' https://api.getyomi.in https://static.cloudflareinsights.com https://cloudflareinsights.com",
-  "frame-ancestors 'none'",
+  "frame-ancestors https://web.telegram.org",
   "base-uri 'self'",
   "form-action 'self'",
   "object-src 'none'",
