@@ -22,7 +22,10 @@ export function computeNextNudgeState(
   now: Date,
 ): PendingNudge {
   if (!existing) {
-    return { connectorIds: [connectorId], dueAt: new Date(now.getTime() + NUDGE_DEBOUNCE_MS).toISOString() }
+    return {
+      connectorIds: [connectorId],
+      dueAt: new Date(now.getTime() + NUDGE_DEBOUNCE_MS).toISOString(),
+    }
   }
   const connectorIds = existing.connectorIds.includes(connectorId)
     ? existing.connectorIds
@@ -58,7 +61,7 @@ export function buildNudgeMessage(connectorIds: string[]): string | null {
   const names = connectorIds
     .filter((id) => (STARTER_PROMPTS[id] ?? []).length > 0)
     .map((id) => getConnectorDef(id)?.name ?? id)
-  const suffix = names.length === 1 ? "'s" : " are"
+  const suffix = names.length === 1 ? " is" : " are"
   const header = `🔌 ${joinNames(names)}${suffix} connected. Try:`
   const body = prompts.length === 1 ? `"${prompts[0]}"` : prompts.map((p) => `• ${p}`).join("\n")
   return `${header}\n${body}`
@@ -73,6 +76,12 @@ function parsePendingNudge(value: unknown): PendingNudge | null {
 
 // Called after a genuinely new connector connection (never a reconnect) —
 // see Tasks 7-8 for the "was this new" check at each call site.
+// Known race (accepted, not fixed here): this is a SELECT-then-UPDATE, not
+// atomic. Two near-simultaneous connects for the same user can each read the
+// same pre-update row and one write can clobber the other, dropping a
+// connector id from the debounce batch. Blast radius is a missed prompt in
+// the nudge, not data corruption — a real fix needs a conditional/atomic
+// jsonb update, out of scope for this pass.
 export async function markConnectorConnected(userId: string, connectorId: string): Promise<void> {
   const [row] = await db
     .select({ pendingConnectorNudge: authSchema.user.pendingConnectorNudge })
@@ -91,16 +100,36 @@ export async function markConnectorConnected(userId: string, connectorId: string
 // fill, not an agent run. Called from the same 60s cron tick as
 // runDueSchedules (worker.ts, index.ts). Each user is isolated so one
 // failure doesn't block the rest.
+// Known race (accepted, not fixed here): the "not due yet" check below reads
+// pendingConnectorNudge, and a later markConnectorConnected() call from a
+// fresh connect can land between that read and this loop's clearing UPDATE —
+// the fresh connector id gets silently erased instead of debounced. Blast
+// radius is a missed onboarding nudge, not data corruption.
 export async function runDueConnectorNudges(now: Date = new Date()): Promise<{ ran: number }> {
   const rows = await db
-    .select({ id: authSchema.user.id, pendingConnectorNudge: authSchema.user.pendingConnectorNudge })
+    .select({
+      id: authSchema.user.id,
+      pendingConnectorNudge: authSchema.user.pendingConnectorNudge,
+    })
     .from(authSchema.user)
     .where(isNotNull(authSchema.user.pendingConnectorNudge))
 
   let ran = 0
   for (const row of rows) {
     const nudge = parsePendingNudge(row.pendingConnectorNudge)
-    if (!nudge || new Date(nudge.dueAt) > now) continue
+    if (!nudge) {
+      // Malformed nudge JSON can never become due — clear it so it doesn't
+      // get re-fetched by every future sweep tick forever.
+      await db
+        .update(authSchema.user)
+        .set({ pendingConnectorNudge: null })
+        .where(eq(authSchema.user.id, row.id))
+        .catch((err) =>
+          console.error(`[connector-nudge] clear malformed nudge failed for user ${row.id}:`, err),
+        )
+      continue
+    }
+    if (new Date(nudge.dueAt) > now) continue
 
     try {
       const chatId = await telegramChatFor(row.id)
@@ -108,11 +137,14 @@ export async function runDueConnectorNudges(now: Date = new Date()): Promise<{ r
         const text = buildNudgeMessage(nudge.connectorIds)
         if (text) await sendTelegram(chatId, text)
       }
+    } catch (err) {
+      console.error(`[connector-nudge] user ${row.id} failed:`, err)
     } finally {
       await db
         .update(authSchema.user)
         .set({ pendingConnectorNudge: null })
         .where(eq(authSchema.user.id, row.id))
+        .catch((err) => console.error(`[connector-nudge] clear failed for user ${row.id}:`, err))
       ran++
     }
   }
