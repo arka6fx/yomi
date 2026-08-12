@@ -113,19 +113,32 @@ export async function initiateComposioConnection(
 }
 
 // Mark a previously-initiated Composio connection active (called after Composio
-// redirects the user back). Idempotent upsert of the reference.
+// redirects the user back). Idempotent upsert of the reference. Reports
+// wasNewConnection = true only when the row didn't previously exist or was
+// never active (status "initiated"/"failed") — a row already active means this
+// is a reconnect/re-auth, not a first-time connect.
 export async function markComposioConnectionActive(
   userId: string,
   def: ConnectorDef,
   connectedAccountId: string | null,
-): Promise<void> {
+): Promise<{ wasNewConnection: boolean }> {
   if (def.auth.kind !== "composio") throw new Error("not a composio connector")
+
+  const [existingRow] = await db
+    .select({ oauthTokens: mcpConnections.oauthTokens })
+    .from(mcpConnections)
+    .where(and(eq(mcpConnections.userId, userId), eq(mcpConnections.provider, def.id)))
+    .limit(1)
+  const wasNewConnection = !existingRow || !isRowConnected(existingRow.oauthTokens)
+
   await upsertComposioConnection(userId, def.id, {
     kind: "composio",
     toolkit: def.auth.toolkit,
     connectedAccountId,
     status: "active",
   })
+
+  return { wasNewConnection }
 }
 
 // Whether a stored mcp_connections row represents a genuinely connected

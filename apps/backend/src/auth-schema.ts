@@ -33,6 +33,10 @@ export const user = pgTable("user", {
   agentSoul: text("agent_soul"),
   // Onboarding state machine: "unprompted" -> "awaiting" -> "done".
   soulOnboarding: text("soul_onboarding").notNull().default("unprompted"),
+  // Debounced Telegram nudge after a new connector connects. Shape when set:
+  // { connectorIds: string[]; dueAt: string (ISO) }. Null when no nudge is
+  // pending — cleared once services/connector-nudge.ts sends or skips it.
+  pendingConnectorNudge: jsonb("pending_connector_nudge"),
   deletedAt: timestamp("deleted_at"),
   privacyPreferences: jsonb("privacy_preferences").notNull().default({}),
   consentVersion: text("consent_version"),

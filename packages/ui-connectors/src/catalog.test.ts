@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test"
 import { buildCatalog } from "./catalog.js"
 import { accountLabel } from "./components/ConnectorMarketplace.js"
+import { STARTER_PROMPTS } from "@yomi/shared/starter-prompts"
 
 describe("accountLabel", () => {
   // The card title already says "Google Calendar", so "Calendar (arka@example.com)"
@@ -44,5 +45,26 @@ describe("buildCatalog", () => {
 
     expect(meet?.connected).toBe(false)
     expect(meet?.displayName).toBeUndefined()
+  })
+})
+
+describe("starterPrompts", () => {
+  it("every available connector in CATALOG_DEFS has a STARTER_PROMPTS entry", () => {
+    const catalog = buildCatalog()
+    const missing = catalog.filter((c) => c.available && (STARTER_PROMPTS[c.id] ?? []).length === 0)
+    expect(missing.map((c) => c.id)).toEqual([])
+  })
+
+  it("carries starter prompts through onto the connector info", () => {
+    const catalog = buildCatalog()
+    const notion = catalog.find((c) => c.id === "notion")
+    expect(notion?.starterPrompts).toEqual(STARTER_PROMPTS["notion"])
+  })
+
+  it("defaults to an empty array for an id with no catalog match", () => {
+    // available: false connectors are allowed to have no entry
+    const catalog = buildCatalog()
+    const swiggy = catalog.find((c) => c.id === "swiggy")
+    expect(swiggy?.starterPrompts).toEqual([])
   })
 })
