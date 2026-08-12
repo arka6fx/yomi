@@ -151,6 +151,7 @@ const PORT = Number(process.env["PORT"] ?? 3001)
 // enters this block since typeof Bun === "undefined" there.
 async function runCronSweeps(): Promise<void> {
   const { runDueSchedules } = await import("./services/schedule-runner.js")
+  const { runDueConnectorNudges } = await import("./services/connector-nudge.js")
   const { runPrivacyRetention } = await import("./services/privacy/retention.js")
   const { runDriveSyncSweep } = await import("./services/rag/drive-sync.js")
   const { summarizeUnsummarizedSessions } = await import("./services/agent-sessions.js")
@@ -162,6 +163,11 @@ async function runCronSweeps(): Promise<void> {
         if (ran > 0) console.warn(`[schedules] ran ${ran} due schedule(s)`)
       })
       .catch((err) => console.error("[schedules] sweep error:", err)),
+    runDueConnectorNudges()
+      .then(({ ran }) => {
+        if (ran > 0) console.warn(`[connector-nudge] ran ${ran} due nudge(s)`)
+      })
+      .catch((err) => console.error("[connector-nudge] sweep error:", err)),
     runPrivacyRetention()
       .then((r) => {
         const domainTotal = Object.values(r.domains).reduce((sum, n) => sum + n, 0)

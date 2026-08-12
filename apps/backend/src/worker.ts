@@ -1,5 +1,6 @@
 import { app, startGateway } from "./index.js"
 import { runDueSchedules } from "./services/schedule-runner.js"
+import { runDueConnectorNudges } from "./services/connector-nudge.js"
 import { runPrivacyRetention } from "./services/privacy/retention.js"
 import { runDriveSyncSweep } from "./services/rag/drive-sync.js"
 import { summarizeUnsummarizedSessions } from "./services/agent-sessions.js"
@@ -63,6 +64,11 @@ export default {
             if (ran > 0) console.warn(`[schedules] ran ${ran} due schedule(s)`)
           })
           .catch((err) => console.error("[schedules] sweep error:", err)),
+        runDueConnectorNudges()
+          .then(({ ran }) => {
+            if (ran > 0) console.warn(`[connector-nudge] ran ${ran} due nudge(s)`)
+          })
+          .catch((err) => console.error("[connector-nudge] sweep error:", err)),
         runPrivacyRetention()
           .then((r) => {
             const domainTotal = Object.values(r.domains).reduce((sum, n) => sum + n, 0)
