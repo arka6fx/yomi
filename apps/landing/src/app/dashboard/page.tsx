@@ -24,6 +24,7 @@ import {
   Home,
 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
+import { openExternal } from "@/lib/telegram-webapp"
 import { cn } from "@/lib/utils"
 import { formatUsd } from "@/lib/local-price"
 import { PLANS } from "@/lib/plans"
@@ -412,7 +413,7 @@ function DashboardContent() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? "Credit purchase failed")
-      window.location.href = data.short_url
+      openExternal(data.short_url)
     } catch (err) {
       setBillingError(err instanceof Error ? err.message : "Failed to start credit purchase")
       setCreditLoading(null)
@@ -454,7 +455,9 @@ function DashboardContent() {
     }
 
     // OAuth2 / Composio: navigate directly — backend authenticates via token query param
-    window.location.href = `${apiBase}/api/integrations/connect/${id}?session=${encodeURIComponent(session!.session.token)}`
+    openExternal(
+      `${apiBase}/api/integrations/connect/${id}?session=${encodeURIComponent(session!.session.token)}`,
+    )
   }
 
   async function handleSubmitApiKey() {

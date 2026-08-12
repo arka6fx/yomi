@@ -2,12 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-
-declare global {
-  interface Window {
-    Telegram?: { WebApp?: { initData?: string; ready?: () => void } }
-  }
-}
+import "@/lib/telegram-webapp"
 
 type Status = "loading" | "unlinked" | "error"
 
