@@ -17,6 +17,7 @@ export {
   isPrivacyConsentPurpose,
 } from "./privacy.js"
 export type { PrivacyConsentPurpose, PrivacyConsentStatus } from "./privacy.js"
+export { STARTER_PROMPTS } from "./starter-prompts.js"
 export {
   CAPABILITY_RESOURCES,
   CAPABILITY_ACTIONS,

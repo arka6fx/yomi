@@ -80,15 +80,29 @@ export function ConnectorTile({
       <p className="flex-1 text-xs text-muted-foreground line-clamp-2">{info.description}</p>
 
       {info.connected && (
-        <div className="flex items-center justify-between gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-400">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-            Connected
-          </span>
-          {account && (
-            <span className="truncate text-[11px] text-muted-foreground" title={account}>
-              {account}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              Connected
             </span>
+            {account && (
+              <span className="truncate text-[11px] text-muted-foreground" title={account}>
+                {account}
+              </span>
+            )}
+          </div>
+          {info.starterPrompts.length > 0 && (
+            <div className="border-t border-border pt-2">
+              <p className="text-[10px] font-semibold uppercase text-muted-foreground">
+                Try asking Yomi
+              </p>
+              {info.starterPrompts.map((prompt) => (
+                <p key={prompt} className="text-xs text-muted-foreground">
+                  &quot;{prompt}&quot;
+                </p>
+              ))}
+            </div>
           )}
         </div>
       )}

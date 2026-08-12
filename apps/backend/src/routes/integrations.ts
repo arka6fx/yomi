@@ -622,10 +622,16 @@ integrationsRouter.get("/composio/callback/:id", async (c) => {
 
   try {
     const { markComposioConnectionActive } = await import("../services/composio-connect.js")
-    await markComposioConnectionActive(userId, def, connectedAccountId)
+    const { wasNewConnection } = await markComposioConnectionActive(userId, def, connectedAccountId)
     await grantConsentIfUndecided(userId, ["connector_data"], "connector_composio").catch((err) =>
       console.warn("[yomi/integrations] connector consent grant failed:", err),
     )
+    if (wasNewConnection) {
+      const { markConnectorConnected } = await import("../services/connector-nudge.js")
+      markConnectorConnected(userId, id).catch((err) =>
+        console.warn("[yomi/integrations] connector nudge scheduling failed:", err),
+      )
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : "callback failed"
     console.error(`[integrations/composio/callback/${id}]`, msg)
@@ -669,10 +675,16 @@ integrationsRouter.post("/connect/api-key/:id", authenticate, async (c) => {
     }
   }
 
-  await storeApiKeyCredential(def, userId, fields)
+  const { wasNewConnection } = await storeApiKeyCredential(def, userId, fields)
   await grantConsentIfUndecided(userId, ["connector_data"], "connector_api_key").catch((err) =>
     console.warn("[yomi/integrations] connector consent grant failed:", err),
   )
+  if (wasNewConnection) {
+    const { markConnectorConnected } = await import("../services/connector-nudge.js")
+    markConnectorConnected(userId, id).catch((err) =>
+      console.warn("[yomi/integrations] connector nudge scheduling failed:", err),
+    )
+  }
   return c.json({ ok: true })
 })
 

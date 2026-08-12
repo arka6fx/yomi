@@ -242,8 +242,15 @@ export async function storeApiKeyCredential(
   def: BackendConnectorDef,
   userId: string,
   fields: Record<string, string>,
-): Promise<void> {
+): Promise<{ wasNewConnection: boolean }> {
   if (def.auth.kind !== "api_key") throw new Error(`${def.id} is not an api_key connector`)
+
+  const [existingRow] = await db
+    .select({ id: mcpConnections.id })
+    .from(mcpConnections)
+    .where(and(eq(mcpConnections.userId, userId), eq(mcpConnections.provider, def.id)))
+    .limit(1)
+  const wasNewConnection = !existingRow
 
   // The primary field value is stored as accessToken for compatibility with getAccessToken()
   const primaryField = def.auth.fields[0]?.name ?? "api_key"
@@ -273,6 +280,8 @@ export async function storeApiKeyCredential(
         updatedAt: new Date(),
       },
     })
+
+  return { wasNewConnection }
 }
 
 // Stores a connection string (DSN) encrypted in mcp_connections.
