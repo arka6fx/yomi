@@ -1,13 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { openExternal } from "@/lib/telegram-webapp"
+import { useRouter } from "next/navigation"
+import "@/lib/telegram-webapp"
 
-type Status = "loading" | "unlinked" | "error" | "ready"
+type Status = "loading" | "unlinked" | "error"
 
 export default function TelegramAppPage() {
+  const router = useRouter()
   const [status, setStatus] = useState<Status>("loading")
-  const [redeemUrl, setRedeemUrl] = useState<string | null>(null)
 
   useEffect(() => {
     const script = document.createElement("script")
@@ -29,22 +30,9 @@ export default function TelegramAppPage() {
             credentials: "include",
             body: JSON.stringify({ initData }),
           })
-          if (!res.ok) {
-            setStatus("error")
-            return
-          }
-          const data = (await res.json()) as { ok: boolean; linked?: boolean; redeemUrl?: string }
-          if (data.ok && data.linked && data.redeemUrl) {
-            // Telegram only treats openLink() as a trusted browser-escape
-            // when it's invoked synchronously from a direct tap — calling it
-            // automatically here, after the async auth round-trip above,
-            // gets silently ignored on mobile clients (iOS/Android) even
-            // though Telegram Web/Desktop are lenient about it. So this just
-            // stores the token and renders a real tappable link; the actual
-            // openExternal() call happens in that link's own onClick, where
-            // it's still inside the tap's call stack on every client.
-            setRedeemUrl(data.redeemUrl)
-            setStatus("ready")
+          const data = (await res.json()) as { ok: boolean; linked?: boolean }
+          if (data.ok && data.linked) {
+            router.replace("/dashboard")
           } else {
             setStatus("unlinked")
           }
@@ -58,29 +46,7 @@ export default function TelegramAppPage() {
     return () => {
       document.body.removeChild(script)
     }
-  }, [])
-
-  if (status === "ready") {
-    return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
-        <p className="text-sm text-muted-foreground">
-          Tap below to open your dashboard in the browser.
-        </p>
-        {redeemUrl && (
-          <a
-            href={redeemUrl}
-            onClick={(e) => {
-              e.preventDefault()
-              openExternal(redeemUrl)
-            }}
-            className="text-sm font-medium text-primary underline"
-          >
-            Open dashboard
-          </a>
-        )}
-      </main>
-    )
-  }
+  }, [router])
 
   if (status === "unlinked") {
     return (
