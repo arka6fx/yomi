@@ -17,6 +17,7 @@ export type CreditGrantSource =
   | "refund"
   | "migration"
   | "promo"
+  | "referral"
 
 export type CreditDebitType = "consume" | "refund" | "adjustment" | "expire"
 

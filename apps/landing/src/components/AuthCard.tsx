@@ -58,11 +58,14 @@ export default function AuthCard({ defaultMode, plan, callbackURL, initialError 
   function getRedirectTo() {
     const params = new URLSearchParams(window.location.search)
     const selectedPlan = plan ?? params.get("plan") ?? undefined
-    return (
+    const base =
       callbackURL ??
       params.get("redirect") ??
       (selectedPlan ? `/dashboard?plan=${selectedPlan}` : "/dashboard")
-    )
+    const ref = params.get("ref")
+    if (!ref) return base
+    const separator = base.includes("?") ? "&" : "?"
+    return `${base}${separator}ref=${encodeURIComponent(ref)}`
   }
 
   async function handleOAuth(provider: "github" | "google") {

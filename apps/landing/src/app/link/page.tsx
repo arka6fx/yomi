@@ -35,6 +35,22 @@ function LinkPageContent() {
   }, [session])
 
   useEffect(() => {
+    if (!session) return
+    const ref = new URLSearchParams(window.location.search).get("ref")
+    if (!ref) return
+    void fetch("/api/referrals/redeem", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.session.token}`,
+      },
+      body: JSON.stringify({ code: ref }),
+    }).catch(() => {
+      // best-effort — a stale/invalid/expired referral code must never block linking
+    })
+  }, [session])
+
+  useEffect(() => {
     if (!session || connected) return
     void fetchDeepLink()
       .then(setDeepLink)
