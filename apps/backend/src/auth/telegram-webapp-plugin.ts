@@ -83,6 +83,21 @@ export async function resolveTelegramWebAppUserId(telegramUserId: string): Promi
   return connection?.userId ?? null
 }
 
+// Pulled out from the endpoint below for the same reason as claimLoginToken:
+// mints a single-use token row and the redeem URL that wraps it, without
+// needing a full Better Auth request context to test against. baseURL is
+// threaded in explicitly (rather than read off ctx.context.baseURL) so this
+// stays a plain function of its inputs.
+export async function mintLoginToken(
+  userId: string,
+  baseURL: string,
+): Promise<{ redeemUrl: string; expiresAt: Date }> {
+  const token = randomBytes(32).toString("base64url")
+  const expiresAt = new Date(Date.now() + LOGIN_TOKEN_TTL_MS)
+  await db.insert(telegramMiniappLoginTokens).values({ token, userId, expiresAt })
+  return { redeemUrl: `${baseURL}/telegram-webapp-redeem?token=${token}`, expiresAt }
+}
+
 // Atomically claims a login token: a single UPDATE ... WHERE ... RETURNING,
 // not a separate read-then-write, so a raced double-redemption (e.g. a
 // double-tap that fires two requests) can't claim the same token twice.
@@ -135,18 +150,9 @@ export const telegramWebAppAuth = () => ({
         const userId = await resolveTelegramWebAppUserId(verified.telegramUserId)
         if (!userId) return ctx.json({ ok: true, linked: false })
 
-        const token = randomBytes(32).toString("base64url")
-        await db.insert(telegramMiniappLoginTokens).values({
-          token,
-          userId,
-          expiresAt: new Date(Date.now() + LOGIN_TOKEN_TTL_MS),
-        })
+        const { redeemUrl } = await mintLoginToken(userId, ctx.context.baseURL)
 
-        return ctx.json({
-          ok: true,
-          linked: true,
-          redeemUrl: `${ctx.context.baseURL}/telegram-webapp-redeem?token=${token}`,
-        })
+        return ctx.json({ ok: true, linked: true, redeemUrl })
       },
     ),
     telegramWebAppRedeem: createAuthEndpoint(
@@ -155,12 +161,12 @@ export const telegramWebAppAuth = () => ({
       async (ctx) => {
         const userId = await claimLoginToken(ctx.query.token)
         if (!userId) {
-          throw ctx.redirect(`${webOrigin()}/link?error=expired_link`)
+          throw ctx.redirect(`${webOrigin()}/signin?error=expired_link`)
         }
 
         const user = await ctx.context.internalAdapter.findUserById(userId)
         if (!user) {
-          throw ctx.redirect(`${webOrigin()}/link?error=expired_link`)
+          throw ctx.redirect(`${webOrigin()}/signin?error=expired_link`)
         }
 
         const session = await ctx.context.internalAdapter.createSession(userId)

@@ -15,6 +15,8 @@ function mapAuthError(code: string): string {
       return "This email is already registered with a different provider."
     case "provider_rejected":
       return "Sign-in was cancelled. Please try again."
+    case "expired_link":
+      return "That link expired. Please try again from Telegram."
     default:
       return "Sign-in failed. Please try again."
   }
