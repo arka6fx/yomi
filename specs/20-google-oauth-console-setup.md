@@ -4,11 +4,11 @@
 > existing Google connectors. Work through this in order; check each box before
 > moving on.
 >
-> **Covers today:** Gmail, Calendar, Drive, Classroom (what’s in the codebase
-> now).
+> **Covers today:** Gmail, Calendar, Drive, Classroom, Tasks, Meet (the native
+> Google connectors in the codebase now).
 >
-> **Deferred (not in this checklist):** Google Docs / Sheets / Slides connectors
-> and Drive binary upload/download tools. When those ship, see
+> **Not covered here:** Google Docs / Sheets / Slides — already implemented, but
+> through Composio's own OAuth flow rather than this Web client. See
 > [Future scopes](#future-scopes-docs--sheets--slides) at the bottom.
 
 ---
@@ -25,12 +25,14 @@ scopes at connect time.
 | Google Calendar  | `google-calendar`  | `/api/integrations/callback/google-calendar`  |
 | Google Drive     | `google-drive`     | `/api/integrations/callback/google-drive`     |
 | Google Classroom | `google-classroom` | `/api/integrations/callback/google-classroom` |
+| Google Tasks     | `google-tasks`     | `/api/integrations/callback/google-tasks`     |
+| Google Meet      | `google-meet`      | `/api/integrations/callback/google-meet`      |
 
 **Prod backend base URL:** `https://api.getyomi.in`  
 **Prod app / landing URL:** `https://getyomi.in`  
 **Local backend (dev):** `http://localhost:3001`
 
-**Env vars (Cloudflare Workers / backend):**
+**Env vars (backend — Hono/Bun on EC2, not Cloudflare):**
 
 - `GOOGLE_INTEGRATIONS_CLIENT_ID`
 - `GOOGLE_INTEGRATIONS_CLIENT_SECRET`
@@ -44,7 +46,7 @@ Source of truth for scopes:
 ## Scope reference (register all of these)
 
 Register **every unique scope once** on the OAuth consent screen → **Data
-access**. `userinfo.email` is shared by all four connectors but only needs to be
+access**. `userinfo.email` is shared by all six connectors but only needs to be
 added once.
 
 | Scope                                                              | Used by   | Google tier    | Notes                                                                |
@@ -56,9 +58,13 @@ added once.
 | `https://www.googleapis.com/auth/classroom.courses.readonly`       | Classroom | **Restricted** | Read enrolled classes.                                               |
 | `https://www.googleapis.com/auth/classroom.coursework.me`          | Classroom | **Restricted** | Read + manage your own assignments / submissions.                    |
 | `https://www.googleapis.com/auth/classroom.announcements.readonly` | Classroom | **Restricted** | Read class announcements.                                            |
-| `https://www.googleapis.com/auth/userinfo.email`                   | All four  | Non-sensitive  | Shows connected account email in dashboard.                          |
+| `https://www.googleapis.com/auth/tasks`                            | Tasks     | Sensitive      | Read + manage the user's task lists. Brand verification, no CASA.    |
+| `https://www.googleapis.com/auth/meetings.space.created`           | Meet      | Sensitive      | Create/manage Meet spaces this app created.                          |
+| `https://www.googleapis.com/auth/meetings.space.readonly`          | Meet      | Sensitive      | Read conference records, participants, transcripts.                  |
+| `https://www.googleapis.com/auth/meetings.space.settings`          | Meet      | Non-sensitive  | Read/set access settings on a Meet space this app created.           |
+| `https://www.googleapis.com/auth/userinfo.email`                   | All six   | Non-sensitive  | Shows connected account email in dashboard.                          |
 
-**Copy-paste list (8 scopes):**
+**Copy-paste list (12 scopes):**
 
 ```
 https://www.googleapis.com/auth/gmail.modify
@@ -68,6 +74,10 @@ https://www.googleapis.com/auth/calendar
 https://www.googleapis.com/auth/classroom.courses.readonly
 https://www.googleapis.com/auth/classroom.coursework.me
 https://www.googleapis.com/auth/classroom.announcements.readonly
+https://www.googleapis.com/auth/tasks
+https://www.googleapis.com/auth/meetings.space.created
+https://www.googleapis.com/auth/meetings.space.readonly
+https://www.googleapis.com/auth/meetings.space.settings
 https://www.googleapis.com/auth/userinfo.email
 ```
 
@@ -75,8 +85,8 @@ https://www.googleapis.com/auth/userinfo.email
 
 | Tier          | Scopes in Yomi today                        | Test with your account            | Launch to all users                                              |
 | ------------- | ------------------------------------------- | --------------------------------- | ---------------------------------------------------------------- |
-| Non-sensitive | `userinfo.email`                            | Works in Testing mode             | Works after publish                                              |
-| Sensitive     | `calendar`, `gmail.send`                    | Works in Testing mode + test user | Brand verification (~2–3 business days)                          |
+| Non-sensitive | `userinfo.email`, `meetings.space.settings` | Works in Testing mode             | Works after publish                                              |
+| Sensitive     | `calendar`, `gmail.send`, `tasks`, `meetings.space.created`/`.readonly` | Works in Testing mode + test user | Brand verification (~2–3 business days)                          |
 | Restricted    | `gmail.modify`, Drive, all Classroom scopes | Works in Testing mode + test user | Brand verification **+ annual CASA security assessment** (weeks) |
 
 **Testing mode shortcut:** While the app is in **Testing** publishing status,
@@ -109,8 +119,8 @@ immediately — no CASA yet. Refresh tokens for sensitive/restricted scopes
    - You should have **exactly one** production Web client. Delete or ignore
      extras before verification.
 5. Open the client → copy **Client ID** and **Client secret**.
-6. Compare Client ID to `GOOGLE_INTEGRATIONS_CLIENT_ID` in your Cloudflare
-   Worker secrets / backend env.
+6. Compare Client ID to `GOOGLE_INTEGRATIONS_CLIENT_ID` in your backend env
+   (Hono/Bun on EC2 — this is not the Cloudflare Worker, which is landing-only).
 
 **Checklist**
 
@@ -135,7 +145,6 @@ Go to **APIs & Services → Library** and enable each API:
 | Google Sheets API    | `Google Sheets API`    | `drive-readSheet` / `drive-appendSheetRows`                                |
 | Google Docs API      | `Google Docs API`      | `drive-appendToDoc` / `drive-replaceInDoc`                                 |
 | Google Tasks API     | `Google Tasks API`     | Tasks connector                                                            |
-| People API           | `People API`           | Contacts connector — **not** the legacy "Contacts API", which is shut down |
 | Google Meet API      | `Google Meet API`      | Meet connector                                                             |
 
 > Slides and Sheets creation runs through the **Drive scope** (no extra scope),
@@ -150,6 +159,9 @@ Go to **APIs & Services → Library** and enable each API:
 - [ ] Google Classroom API — Enabled
 - [ ] Google Slides API — Enabled
 - [ ] Google Sheets API — Enabled
+- [ ] Google Docs API — Enabled
+- [ ] Google Tasks API — Enabled
+- [ ] Google Meet API — Enabled
 
 ---
 
@@ -183,7 +195,7 @@ complete.
 
 1. OAuth consent screen → **Data access** (or **Scopes** on older UI).
 2. Click **Add or remove scopes**.
-3. Add all **8 scopes** from the
+3. Add all **12 scopes** from the
    [Scope reference](#scope-reference-register-all-of-these) section.
    - Restricted scopes may show a warning — that’s expected.
 4. Save.
@@ -197,6 +209,10 @@ complete.
 - [ ] `https://www.googleapis.com/auth/classroom.courses.readonly`
 - [ ] `https://www.googleapis.com/auth/classroom.coursework.me`
 - [ ] `https://www.googleapis.com/auth/classroom.announcements.readonly`
+- [ ] `https://www.googleapis.com/auth/tasks`
+- [ ] `https://www.googleapis.com/auth/meetings.space.created`
+- [ ] `https://www.googleapis.com/auth/meetings.space.readonly`
+- [ ] `https://www.googleapis.com/auth/meetings.space.settings`
 - [ ] `https://www.googleapis.com/auth/userinfo.email`
 
 ---
@@ -231,6 +247,8 @@ https://api.getyomi.in/api/integrations/callback/google
 https://api.getyomi.in/api/integrations/callback/google-calendar
 https://api.getyomi.in/api/integrations/callback/google-drive
 https://api.getyomi.in/api/integrations/callback/google-classroom
+https://api.getyomi.in/api/integrations/callback/google-tasks
+https://api.getyomi.in/api/integrations/callback/google-meet
 ```
 
 **Local dev (optional)**
@@ -240,13 +258,15 @@ http://localhost:3001/api/integrations/callback/google
 http://localhost:3001/api/integrations/callback/google-calendar
 http://localhost:3001/api/integrations/callback/google-drive
 http://localhost:3001/api/integrations/callback/google-classroom
+http://localhost:3001/api/integrations/callback/google-tasks
+http://localhost:3001/api/integrations/callback/google-meet
 ```
 
 Save. Google may take a few minutes to propagate URI changes.
 
 **Checklist**
 
-- [ ] All 4 prod redirect URIs added
+- [ ] All 6 prod redirect URIs added
 - [ ] Local URIs added (if needed)
 - [ ] No stale / duplicate OAuth Web clients left configured
 
@@ -254,7 +274,8 @@ Save. Google may take a few minutes to propagate URI changes.
 
 ## Step 7 — Backend secrets
 
-Set on your Cloudflare Worker (or local `.env`):
+Set on your backend (Hono/Bun on EC2, not the Cloudflare Worker — that's
+landing/dashboard only) or local `.env`:
 
 ```bash
 GOOGLE_INTEGRATIONS_CLIENT_ID=<from Step 1>
@@ -270,7 +291,7 @@ BETTER_AUTH_BASE_URL=http://localhost:3001
 
 **Checklist**
 
-- [ ] Client ID + secret deployed to prod Worker
+- [ ] Client ID + secret deployed to prod backend
 - [ ] `BETTER_AUTH_BASE_URL` matches the host used in redirect URIs
 
 ---
@@ -286,6 +307,8 @@ Telegram agent connect flow.
 | Calendar  | Connect Google Calendar  | Ask agent to list today’s events                                                                   |
 | Drive     | Connect Google Drive     | Ask agent to search Drive or read a Doc/Sheet                                                      |
 | Classroom | Connect Google Classroom | Ask agent to list classes (needs Workspace for Education for full data; personal Gmail is limited) |
+| Tasks     | Connect Google Tasks     | Ask agent to list to-do items or create a task                                                    |
+| Meet      | Connect Google Meet      | Ask agent to create a Meet link                                                                    |
 
 **Checklist**
 
@@ -294,6 +317,8 @@ Telegram agent connect flow.
 - [ ] Drive OAuth completes
 - [ ] Classroom OAuth completes (or expected limitation documented for personal
       Gmail)
+- [ ] Tasks OAuth completes
+- [ ] Meet OAuth completes
 
 ---
 
@@ -338,32 +363,29 @@ Do these when you’re ready for **external users**, not for solo testing.
 
 ## Future scopes (Docs / Sheets / Slides)
 
-When those three connectors are implemented (separate from Drive — native edit
-via each API, no extra Drive scope):
+Google Docs, Sheets, and Slides are already implemented as connectors, but they
+run through **Composio's own OAuth flow** (a separate Google OAuth app
+configured inside Composio, using this project's credentials), not through the
+Yomi Web client this spec sets up. There is nothing to add to this OAuth
+client's scopes or redirect URIs for them.
 
-| Connector     | Scope                                           | Tier      |
-| ------------- | ----------------------------------------------- | --------- |
-| Google Docs   | `https://www.googleapis.com/auth/documents`     | Sensitive |
-| Google Sheets | `https://www.googleapis.com/auth/spreadsheets`  | Sensitive |
-| Google Slides | `https://www.googleapis.com/auth/presentations` | Sensitive |
+Setup instead happens per-connector in Composio (`app.composio.dev`):
 
-Also enable in **Library**:
+- Configure a custom Google OAuth app in Composio using the existing Google
+  Cloud project credentials.
+- Set `COMPOSIO_API_KEY` and `COMPOSIO_DOCS_AUTH_CONFIG_ID` /
+  `COMPOSIO_SHEETS_AUTH_CONFIG_ID` / `COMPOSIO_SLIDES_AUTH_CONFIG_ID` on the
+  backend.
+- Set `COMPOSIO_CONNECTORS` to route each through Composio.
+
+Also enable in **Library** (same Google Cloud project):
 
 - Google Docs API
 - Google Sheets API
 - Google Slides API
 
-Add redirect URIs:
-
-```
-https://api.getyomi.in/api/integrations/callback/google-docs
-https://api.getyomi.in/api/integrations/callback/google-sheets
-https://api.getyomi.in/api/integrations/callback/google-slides
-```
-
-These are **sensitive, not restricted** — they do **not** add CASA burden beyond
-what Gmail/Drive already require. Discovery of existing files by name stays on
-the Drive connector; Docs/Sheets/Slides connectors edit by file ID.
+See `packages/agent-core/src/connectors/composio/google-docs.ts` (and
+`google-sheets.ts`, `google-slides.ts`) for the exact setup steps.
 
 ---
 
@@ -384,12 +406,12 @@ the Drive connector; Docs/Sheets/Slides connectors edit by file ID.
 
 ```
 [ ] Step 1  Project + OAuth Web client confirmed
-[ ] Step 2  10 APIs enabled (Gmail, Calendar, Drive, Classroom, Slides, Sheets,
-            Docs, Tasks, People, Meet)
+[ ] Step 2  9 APIs enabled (Gmail, Calendar, Drive, Classroom, Slides, Sheets,
+            Docs, Tasks, Meet)
 [ ] Step 3  Consent screen basics + authorized domain
-[ ] Step 4  15 scopes registered on Data access
+[ ] Step 4  12 scopes registered on Data access
 [ ] Step 5  Test users added
-[ ] Step 6  7 prod redirect URIs (+ local if needed)
-[ ] Step 7  GOOGLE_* secrets + BETTER_AUTH_BASE_URL in Worker
-[ ] Step 8  All 7 connectors smoke-tested
+[ ] Step 6  6 prod redirect URIs (+ local if needed)
+[ ] Step 7  GOOGLE_* secrets + BETTER_AUTH_BASE_URL on the backend
+[ ] Step 8  All 6 connectors smoke-tested
 ```

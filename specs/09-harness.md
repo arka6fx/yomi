@@ -4,13 +4,12 @@ Harness = system prompt, tools, connectors, memory, hooks, and loop guards.
 
 Prompt inputs:
 
-- User profile from `~/.yomi/yomi.md`.
-- Static and dynamic memory profiles.
-- Local retrieved memory.
+- User profile and static/dynamic memory profiles from backend-canonical
+  memory.
 - Cloud retrieved memory and RAG context.
 - Recent session turns.
 - Connected connector list.
-- Optional screenshot for the current local turn.
+- Image the user sent in the current Telegram turn, when present.
 
 Hooks:
 

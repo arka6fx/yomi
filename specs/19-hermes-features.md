@@ -2,7 +2,7 @@
 
 Current agent feature set:
 
-- AI SDK tool loop for sidecar and backend agent paths.
+- AI SDK tool loop for the backend agent path.
 - Connector registry for Gmail, Calendar, Drive, GitHub, Notion, Slack, Linear,
   databases, messaging, and the Composio-backed set (see
   `specs/connectors/00-index.md`).

@@ -3,6 +3,13 @@
 > Status: proposed implementation spec. This file is the source of truth for the
 > next architecture pass. Do not expose internal credit pricing rules in
 > frontend copy or public API contracts after this spec is implemented.
+>
+> Note: this doc predates the desktop/sidecar retirement (see
+> `docs/adr/0002-retire-desktop-telegram-only.md`). Content that was
+> fundamentally about `apps/desktop` (Electron) or the local `apps/sidecar`
+> server has been stripped since that architecture no longer exists; the doc
+> is intentionally incomplete relative to its original scope. See
+> `specs/archive/README.md` for archive status.
 
 ## Executive Summary
 
@@ -21,8 +28,8 @@ and friendly recent activity. Developer diagnostics move to a separate page.
 
 ## Goals
 
-- Trace every AI request through desktop, sidecar, backend, memory, RAG,
-  connectors, model calls, usage logging, credit deduction, and dashboard.
+- Trace every AI request through backend, memory, RAG, connectors, model
+  calls, usage logging, credit deduction, and dashboard.
 - Persist actual AI telemetry for every billable request.
 - Reduce average AI cost without reducing quality.
 - Introduce an internal request router that decides context, model, reasoning,
@@ -35,8 +42,8 @@ and friendly recent activity. Developer diagnostics move to a separate page.
 
 - Do not change Dodo product IDs or public plan prices in this pass.
 - Do not remove existing credit balances, grants, or transaction history.
-- Do not reduce quality-critical agent, coding, desktop automation, or
-  multi-step reasoning tasks to a smaller model by default.
+- Do not reduce quality-critical agent, coding, or multi-step reasoning tasks
+  to a smaller model by default.
 - Do not store raw prompt content in telemetry beyond existing message/session
   tables. Store counts, hashes, categories, and redacted metadata.
 
@@ -44,10 +51,6 @@ and friendly recent activity. Developer diagnostics move to a separate page.
 
 ### Monorepo Areas
 
-- `apps/desktop`: Electron shell and renderer. Captures user input, audio, and
-  screen context, then talks to the sidecar.
-- `apps/sidecar`: local Hono server, intent routing, fast pipeline, agent
-  pipeline, local connector registry, memory client, local usage insights.
 - `apps/backend`: Hono/Bun Cloudflare Worker backend for auth, billing,
   canonical credits, Telegram gateway, memory, RAG, integrations, and LLM proxy.
 - `apps/landing`: Next.js marketing, dashboard, account linking, billing UI.
@@ -92,59 +95,6 @@ and friendly recent activity. Developer diagnostics move to a separate page.
   `Voice input/output: +2 credits/min`.
 - `apps/landing/src/components/dashboard/StatusManager.tsx` shows status and
   diagnostics. This should become the basis for a developer/diagnostics page.
-
-## Complete Request Flow: Desktop Typed Message
-
-1. User types into the desktop app.
-2. Desktop sends a request to sidecar `/query`, `/query/fast`, or
-   `/query/agent`.
-3. `apps/sidecar/src/index.ts` parses the request.
-4. `/query` calls `resolveText()` from `apps/sidecar/src/pipeline/fast.ts` so
-   STT is not paid twice when audio is present.
-5. `/query` calls `classifyIntent()` from `apps/sidecar/src/router/intent.ts`.
-6. The LLM fallback classifier is `apps/sidecar/src/router/llm.ts`, using
-   `generateObject`, `gpt-5.4-mini`, `maxTokens: 80`, and a 250 ms timeout.
-7. Sidecar emits `router_decision` over SSE.
-8. Sidecar writes a local usage event via `logUsageEvent({ kind })`, but without
-   model, tokens, latency, or cost.
-9. Fast requests call `fastPipeline()` in `apps/sidecar/src/pipeline/fast.ts`.
-10. Agent requests call `runGraph()` in `apps/sidecar/src/graph/run.ts`, which
-    currently delegates to `agentPipeline()` in
-    `apps/sidecar/src/pipeline/agent.ts`.
-11. The selected pipeline calls `reserveInteraction("chat")` in
-    `apps/sidecar/src/usage/reserve.ts`, unless `skipReserve` is true.
-12. `reserveInteraction()` calls backend `/api/usage/interactions/reserve`.
-13. Backend `usageRouter` calls `chargeUsage()` in
-    `apps/backend/src/services/metering.ts`.
-14. `chargeUsage()` checks owner bypass, plan access, current credit balance,
-    and static cost from `creditsForUsage()`.
-15. `chargeUsage()` inserts a `usage_events` row with zero tokens and consumes
-    credits immediately through `consumeCredits()`.
-16. Sidecar continues only if the reservation succeeds.
-17. Fast path builds prompt via `buildFastPrompt()` in
-    `apps/sidecar/src/harness/prompt.ts`.
-18. Fast path conditionally includes screenshot images using
-    `needsScreenContext()`.
-19. Fast path loads memory for Pro/Max via `loadMemoryContext()` in
-    `apps/sidecar/src/memory/subsystem.ts`.
-20. `loadMemoryContext()` calls cloud memory, cloud RAG, and profile retrieval
-    in parallel, with fixed character budgets of 3500, 3000, and 2500.
-21. Fast path calls `streamText()` with `gpt-5.4-mini` and heuristic max tokens
-    of 800, 1100, 1200, or 1400.
-22. Agent path builds prompt via `buildAgentPrompt()` and always includes
-    connector info plus memory context for Pro/Max.
-23. Agent path builds all agent tools with `createAgentTools()` and calls
-    `streamText()` with `gpt-5.5`, `maxSteps` defaulting to 20, and no explicit
-    `maxTokens`.
-24. The provider adapter sends `/chat/completions` and streams back text, tool
-    calls, and final token usage.
-25. Sidecar streams chunks to desktop over SSE.
-26. TTS may synthesize chunks via ElevenLabs in fast mode and one merged
-    response in agent mode.
-27. Fast path writes session memory and triggers structured memory extraction.
-28. Actual model usage is not linked back to the backend reservation event.
-29. Dashboard later fetches `/api/billing/subscription` and shows the
-    pre-charged credits, not actual cost-derived credits.
 
 ## Complete Request Flow: Telegram Text Message
 
@@ -200,16 +150,11 @@ and friendly recent activity. Developer diagnostics move to a separate page.
 
 | Area                        | File                                           | API                           | Model                                             | Budget                  | Notes                                                                          |
 | --------------------------- | ---------------------------------------------- | ----------------------------- | ------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------ |
-| Sidecar fast answer         | `apps/sidecar/src/pipeline/fast.ts`            | `streamText`                  | `OPENAI_FAST_MODEL` or `gpt-5.4-mini`             | 800-1400                | Good model choice, context often too broad for Pro/Max.                        |
-| Sidecar agent               | `apps/sidecar/src/pipeline/agent.ts`           | `streamText`                  | `OPENAI_AGENT_MODEL` or `gpt-5.5`                 | none explicit           | Highest risk: full tools, memory/RAG, up to 20 steps.                          |
-| Sidecar router LLM fallback | `apps/sidecar/src/router/llm.ts`               | `generateObject`              | `gpt-5.4-mini`                                    | 80                      | Good, but should be avoided when heuristics are confident.                     |
-| Sidecar compressor          | `apps/sidecar/src/agent/compressor.ts`         | `generateText`                | `COMPRESSOR_MODEL`, fast model, or `gpt-5.4-mini` | none explicit           | Should add explicit budget.                                                    |
-| Sidecar cron agent          | `apps/sidecar/src/tools/cron/cron-executor.ts` | `generateText`                | job model or cron model                           | none explicit           | Needs max output and telemetry.                                                |
 | Backend Telegram agent      | `apps/backend/src/agent/run.ts`                | `runAgentLoop`/`generateText` | default `gpt-5.5`                                 | 450-900                 | Good cap, but always fetches memory/RAG/profile.                               |
 | Backend memory extraction   | `apps/backend/src/agent/run.ts`                | `generateText`                | `gpt-5.4-mini`                                    | none explicit           | Should be capped and skip for low-value turns.                                 |
 | Backend image analysis      | `apps/backend/src/gateway/gateway-runner.ts`   | `generateText`                | `gpt-5.5`                                         | 420                     | Consider mini for simple image Q&A.                                            |
 | Agent core loop             | `packages/agent-core/src/agent.ts`             | `generateText`                | `gpt-5.5` default                                 | caller-supplied         | Shared path, must emit telemetry.                                              |
-| Embeddings: sidecar/shared  | `packages/agent-core/src/model.ts`             | `/embeddings`                 | `text-embedding-3-small`                          | input sliced 8000 chars | Needs telemetry for embedding tokens/cost.                                     |
+| Embeddings: shared          | `packages/agent-core/src/model.ts`             | `/embeddings`                 | `text-embedding-3-small`                          | input sliced 8000 chars | Needs telemetry for embedding tokens/cost.                                     |
 | Embeddings: backend memory  | `apps/backend/src/routes/memory.ts`            | `/embeddings`                 | `text-embedding-3-small`                          | per memory/search       | Needs telemetry and cache awareness.                                           |
 | Embeddings: backend RAG     | `apps/backend/src/routes/rag.ts`               | `/embeddings`                 | `text-embedding-3-small`                          | per chunk/query         | Indexing can be expensive; batch/caching needed.                               |
 | Optional RAG rerank         | `apps/backend/src/lib/rerank.ts`               | likely LLM when enabled       | env-controlled                                    | unknown                 | Must be included in telemetry.                                                 |
@@ -219,28 +164,25 @@ and friendly recent activity. Developer diagnostics move to a separate page.
 
 ### Highest Cost Areas
 
-1. Sidecar agent `gpt-5.5` streaming with tools and no explicit output cap.
-2. Backend Telegram agent `gpt-5.5` with connector tools, memory, RAG, and
+1. Backend Telegram agent `gpt-5.5` with connector tools, memory, RAG, and
    follow-up memory extraction.
-3. Vision/image analysis using `gpt-5.5` for all Telegram images.
-4. Memory/RAG retrieval injection on every Pro/Max fast and agent request.
-5. RAG indexing, because each chunk is embedded one-by-one.
-6. Backend memory search, because query embeddings happen per search.
-7. TTS, especially agent mode synthesizing the full final text and Telegram
-   voice replies up to 1200 chars.
+2. Vision/image analysis using `gpt-5.5` for all Telegram images.
+3. Memory/RAG retrieval injection on every Pro/Max fast and agent request.
+4. RAG indexing, because each chunk is embedded one-by-one.
+5. Backend memory search, because query embeddings happen per search.
+6. TTS, especially Telegram voice replies up to 1200 chars.
 
 ### Token Inefficiencies
 
 - Fast prompts always include answer format rules, voice rules, examples,
-  connector catalog, screen rules, and full identity block.
+  connector catalog, and full identity block.
 - Agent prompts always include connector info and broad tool/capability rules.
 - Pro/Max memory context always loads memory, RAG, and profile together, even
   for greetings and simple factual questions.
 - Backend Telegram always loads memory, RAG, and profile before agent execution.
 - Connector info includes all available connectors plus connected connectors on
   every prompt.
-- Sidecar agent has no explicit response budget.
-- Compressor and memory extraction have no explicit `maxTokens`.
+- Memory extraction has no explicit `maxTokens`.
 - Conversation history is appended directly, with compression only when
   thresholds are crossed.
 
@@ -293,8 +235,6 @@ Request
   policy, versioned and not imported by frontend.
 - `apps/backend/src/services/request-router.ts`: shared request classification,
   complexity estimation, context policy, model selection, and output budget.
-- `apps/sidecar/src/router/request-plan.ts`: local mirror of non-pricing routing
-  policy, returning a serializable request plan.
 - `packages/shared/src/usage-contracts.ts`: public API response shapes without
   pricing formulas.
 - `packages/agent-core/src/telemetry.ts`: provider-level hooks for model usage,
@@ -315,17 +255,14 @@ type RequestPlan = {
     | "connector_lookup"
     | "connector_action"
     | "memory_query"
-    | "screen_qa"
     | "vision_analysis"
     | "voice"
     | "research"
-    | "desktop_automation"
   complexity: "trivial" | "simple" | "normal" | "complex" | "critical"
   context: {
     memory: "none" | "profile" | "relevant" | "full"
     rag: "none" | "keyword" | "hybrid"
     connectors: string[]
-    screen: boolean
     historyTurns: number
   }
   model: "gpt-5.4-mini" | "gpt-5.5"
@@ -337,8 +274,7 @@ type RequestPlan = {
 
 ### Routing Rules
 
-- Greeting: mini, no memory, no RAG, no connectors, no screenshot, 100-150
-  tokens.
+- Greeting: mini, no memory, no RAG, no connectors, 100-150 tokens.
 - Simple question: mini, no memory unless explicit prior-context language,
   200-300 tokens.
 - Normal assistant response: mini, relevant memory only when useful, 350-500
@@ -350,8 +286,6 @@ type RequestPlan = {
 - Connector action with side effects: full model when planning/approval is
   needed, only required connector, 800-1200 tokens.
 - Coding/debugging: full model for non-trivial tasks, 1000-1400 tokens.
-- Desktop automation: full model, screenshot only when required, 800-1200
-  tokens.
 - Multi-step research/planning: full model, relevant RAG/connectors, 1500+ with
   hard cap chosen by task.
 - Vision: mini for simple caption/summary; full model for detailed UI debugging,
@@ -369,13 +303,11 @@ Prompts should be assembled from modules instead of monolithic strings.
 - Answer formatting: only when the route requires copy-ready output, code, MCQ,
   or long-form writing.
 - Voice rules: only when `tts` is true.
-- Screen rules: only when an image is attached and selected by context plan.
 - Connector rules: only when connector intent exists or the user mentions an
   app.
 - Connector catalog: replace full catalog with connected providers plus a
   compact unavailable-provider policy.
 - Memory citation rule: only when memory or RAG snippets are injected.
-- Desktop automation rules: only in agent/desktop tasks.
 - Safety and approval rules: only when tools with side effects are available.
 
 ### Context Budgets
@@ -388,8 +320,6 @@ Prompts should be assembled from modules instead of monolithic strings.
 - Agent history: last 4 turns by default, summarize older turns before the
   model.
 - Telegram shared history: last 6 turns max, plus one compact session summary.
-- Screen: include only selected screenshots; omit screenshots for self-contained
-  knowledge, math, greeting, and writing tasks.
 
 ## Adaptive Output Budgets
 
@@ -405,7 +335,6 @@ Every model call must set an explicit max output budget.
 | Email/message draft      |                       800 |
 | Image analysis           |                       500 |
 | Coding/debugging         |                      1400 |
-| Desktop automation       |                      1200 |
 | Research/planning        |                      1800 |
 | Memory extraction        |                       250 |
 | Context compression      |                       400 |
@@ -429,7 +358,6 @@ No production model call may omit `maxTokens` or equivalent.
 
 ### Use `gpt-5.5` For
 
-- Desktop automation with tools.
 - Multi-step agent planning.
 - Risky connector actions requiring approval reasoning.
 - Non-trivial coding and debugging.
@@ -452,7 +380,7 @@ ai_usage_events
   conversation_id uuid null
   request_id text not null unique
   endpoint text not null
-  surface text not null -- desktop | telegram | dashboard | cron | backend
+  surface text not null -- telegram | dashboard | cron | backend
   route text null -- fast | agent | gateway | rag | memory | tts | stt
   intent text null
   complexity text null
@@ -490,7 +418,7 @@ ai_usage_events
   `packages/agent-core/src/model.ts`.
 - Capture model ID, endpoint, surface, request ID, latency, max output tokens,
   and status.
-- Capture tool call count in `runAgentLoop()` and `agentPipeline()`.
+- Capture tool call count in `runAgentLoop()`.
 - Capture connector IDs from connector registry/tools.
 - Capture image count and approximate input image bytes for vision.
 - Capture voice input seconds and TTS output chars.
@@ -565,8 +493,8 @@ be implemented as a new `/api/billing/usage-summary` route or as a v2 shape in
   "recentActivity": [
     {
       "id": "public-safe-id",
-      "label": "Desktop Chat",
-      "category": "desktop_chat",
+      "label": "Telegram Chat",
+      "category": "telegram_chat",
       "credits": 3,
       "createdAt": "2026-07-04T10:30:00.000Z"
     }
@@ -595,8 +523,8 @@ Frontend must not receive:
   countdown, and primary upgrade/buy credits action.
 - Usage section: monthly credit usage trend, daily trend, and friendly recent
   activity.
-- Recent activity labels: Desktop Chat, Voice Session, Notion Search, GitHub
-  Task, Image Analysis, Telegram Chat, Scheduled Task, Memory Update.
+- Recent activity labels: Voice Session, Notion Search, GitHub Task, Image
+  Analysis, Telegram Chat, Scheduled Task, Memory Update.
 - Integrations section: connected apps and health, no cost rules.
 - Credit packs: visible only to Pro/Max or when user needs to upgrade first.
 - Empty states should explain value, not mechanics.
@@ -608,14 +536,13 @@ Frontend must not receive:
   advanced toggle.
 - Show model distribution, token totals, estimated API cost, latency, tool
   calls, connector count, and error rates.
-- Reuse `StatusManager` and sidecar `insights` concepts, backed by canonical
-  backend telemetry.
+- Reuse `StatusManager`, backed by canonical backend telemetry.
 
 ### Copy To Remove
 
 - `AI chat = 1 credit`.
 - `Telegram text = 1 base credit`.
-- `Image/screen = +1 credit`.
+- `Image = +1 credit`.
 - `Voice input/output = +2 credits/min`.
 - Request ID snippets in user-facing recent activity.
 - Marketing FAQ lines that describe credits per action.
@@ -647,15 +574,14 @@ Frontend must not receive:
 - Add request planning service with heuristic-first classification.
 - Use LLM classifier only when confidence is low or route is ambiguous.
 - Return context plan, model, max output, reasoning level, and telemetry labels.
-- Add tests for greetings, simple QA, screen Q&A, connector lookup, connector
-  action, coding, desktop automation, and research.
+- Add tests for greetings, simple QA, connector lookup, connector action,
+  coding, and research.
 
 ### Phase 4: Prompt And Context Optimization
 
 - Replace monolithic prompt builders with modular prompt assembly.
 - Make voice rules conditional on TTS.
 - Make answer-format rules conditional on output type.
-- Make screen rules conditional on selected screenshots.
 - Load memory/RAG/profile according to context plan.
 - Restrict connector info to connected or explicitly referenced providers.
 - Add token-budget tests for prompt builders.
@@ -722,20 +648,6 @@ Frontend must not receive:
 - `apps/backend/src/routes/llm.ts`: require auth/policy or limit to internal
   clients before telemetry is considered complete.
 
-### Sidecar
-
-- `apps/sidecar/src/index.ts`: request plan before pipeline, pass telemetry IDs.
-- `apps/sidecar/src/pipeline/fast.ts`: modular prompt, conditional context,
-  adaptive model/output budget, usage finalization.
-- `apps/sidecar/src/pipeline/agent.ts`: explicit max output, conditional tools,
-  telemetry, dynamic settlement.
-- `apps/sidecar/src/router/llm.ts`: keep low budget and add telemetry.
-- `apps/sidecar/src/memory/subsystem.ts`: accept context plan and budgets.
-- `apps/sidecar/src/usage/reserve.ts`: replace `reserveInteraction(kind)` with
-  request authorization and settlement, keeping old API during migration.
-- `apps/sidecar/src/insights/*`: eventually read canonical telemetry or mark as
-  local developer-only.
-
 ### Agent Core
 
 - `packages/agent-core/src/model.ts`: expose usage and latency hooks, including
@@ -779,8 +691,6 @@ Frontend must not receive:
 
 Expected savings after routing and context optimization:
 
-- Fast desktop chat: 20-45 percent less prompt token cost by skipping
-  memory/RAG, connector catalog, screen rules, and voice rules when not needed.
 - Telegram text: 25-50 percent less average cost by skipping memory/RAG/profile
   on trivial/simple requests and routing simple tasks to mini.
 - Vision: 30-60 percent less cost for simple image analysis by using mini and
@@ -804,8 +714,6 @@ after rollout.
   depletes credits. Use pre-flight minimum authorization and clear depletion
   copy.
 - Telemetry must avoid prompt/content storage to preserve privacy commitments.
-- Sidecar offline/local-dev mode must degrade gracefully when backend telemetry
-  is unavailable.
 - Schema migration touches billing-critical tables; prefer additive tables and
   backward-compatible service changes.
 

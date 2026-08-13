@@ -6,10 +6,8 @@
 
 ## Goals
 
-- Improve Desktop and Telegram voice quality without requiring an ElevenLabs
-  upgrade.
-- Keep conversation context continuous across Telegram and Desktop until the
-  user runs `/new`.
+- Improve Telegram voice quality without requiring an ElevenLabs upgrade.
+- Keep Telegram conversation context continuous until the user runs `/new`.
 - Make Telegram linking truthful: the UI must only show connected after the
   backend has a connection row.
 - Support Telegram image analysis and voice-note replies.
@@ -37,18 +35,19 @@
 - Enable `apply_text_normalization: auto` for better pronunciation.
 - Use environment-driven voice settings with natural defaults: stability `0.45`,
   similarity `0.85`, style `0.15`, speaker boost on.
-- Acceptance: Desktop TTS and Telegram voice replies use the same backend
-  settings and are configurable via env.
+- Acceptance: Telegram voice replies use the same backend settings and are
+  configurable via env. (Superseded later: voice replies/TTS were removed
+  outright — Yomi now only transcribes inbound voice, every reply is text —
+  see the ADR-0002 addendum.)
 
 ## Phase 3: Shared Conversation Context
 
 - Backend Telegram sessions use one per-user shared thread: `platform=yomi`,
   `chatId=global`.
 - `/new` closes that shared thread.
-- Next step: Desktop sidecar should fetch and append the same cloud thread using
-  the authenticated session token, replacing process-local-only history.
-- Acceptance: A Telegram follow-up can refer to prior Telegram turns. After
-  Desktop cloud sync, Desktop and Telegram can refer to each other’s turns.
+- Acceptance: A Telegram follow-up can refer to prior Telegram turns. (The
+  planned desktop-sidecar cross-sync step was dropped when the desktop client
+  was retired — see `docs/adr/0002-retire-desktop-telegram-only.md`.)
 
 ## Phase 4: Telegram Media
 
@@ -77,7 +76,7 @@
   balance.
 - Keep credit packs visible only on Pro and Max.
 - Show a compact cost legend: AI chat 1 credit, Telegram bot 1 credit,
-  image/screen analysis 1 credit, voice 2 credits/minute.
+  image analysis 1 credit, voice 2 credits/minute.
 - Move detailed feature limits to a secondary or collapsed section so dashboard
   focuses on credits.
 - Acceptance: users understand what consumed credits without seeing multiple
