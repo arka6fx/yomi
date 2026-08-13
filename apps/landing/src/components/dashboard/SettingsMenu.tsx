@@ -12,6 +12,7 @@ import {
   WalletCards,
   Shield,
   BookOpen,
+  Gift,
 } from "lucide-react"
 
 export type DashboardTab =
@@ -25,6 +26,7 @@ export type DashboardTab =
   | "profile"
   | "writing-style"
   | "privacy"
+  | "referrals"
 
 interface MenuItem {
   label: string
@@ -66,6 +68,7 @@ export function SettingsMenu({ onNavigate }: { onNavigate: (tab: DashboardTab) =
 
   const accountItems: MenuItem[] = [
     { label: "Billing", icon: WalletCards, onClick: () => navigate("billing") },
+    { label: "Referrals", icon: Gift, onClick: () => navigate("referrals") },
     { label: "Privacy", icon: Shield, onClick: () => navigate("privacy") },
   ]
 

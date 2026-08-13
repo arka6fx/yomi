@@ -150,7 +150,7 @@ export const creditGrants = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     paymentId: uuid("payment_id").references(() => paymentRecords.id),
-    source: text("source").notNull(), // "subscription_cycle" | "credit_pack" | "admin_adjustment" | "refund" | "migration" | "promo"
+    source: text("source").notNull(), // "subscription_cycle" | "credit_pack" | "admin_adjustment" | "refund" | "migration" | "promo" | "referral"
     sourceId: text("source_id").notNull(),
     creditsGranted: integer("credits_granted").notNull(),
     creditsRemaining: integer("credits_remaining").notNull(),
@@ -186,6 +186,25 @@ export const creditTransactions = pgTable(
   (t) => ({
     userCreatedIdx: index("credit_transactions_user_created_idx").on(t.userId, t.createdAt),
     idempotencyUnique: unique("credit_transactions_idempotency_unique").on(t.idempotencyKey),
+  }),
+)
+
+export const referralEvents = pgTable(
+  "referral_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    referrerUserId: text("referrer_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    referredUserId: text("referred_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    creditsGranted: integer("credits_granted").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    referrerIdx: index("referral_events_referrer_user_id_idx").on(t.referrerUserId),
+    referredUnique: unique("referral_events_referred_user_id_unique").on(t.referredUserId),
   }),
 )
 

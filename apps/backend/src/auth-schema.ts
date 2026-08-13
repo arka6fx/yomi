@@ -37,6 +37,11 @@ export const user = pgTable("user", {
   // { connectorIds: string[]; dueAt: string (ISO) }. Null when no nudge is
   // pending — cleared once services/connector-nudge.ts sends or skips it.
   pendingConnectorNudge: jsonb("pending_connector_nudge"),
+  // Referral program: this user's own shareable code, surfaced at
+  // apps/landing's `/r/<code>` page. Generated lazily on first
+  // GET /api/referrals/me call (services/referrals.ts), then stable for
+  // life. Null until first generated.
+  referralCode: text("referral_code").unique(),
   deletedAt: timestamp("deleted_at"),
   privacyPreferences: jsonb("privacy_preferences").notNull().default({}),
   consentVersion: text("consent_version"),
