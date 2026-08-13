@@ -98,7 +98,29 @@ export async function redeemReferralCode(input: {
     if (!row) return { redeemed: false, reason: "insert_failed" }
     eventId = row.id
   } catch (err) {
-    if (isDuplicateReferredUserError(err)) return { redeemed: false, reason: "already_redeemed" }
+    if (isDuplicateReferredUserError(err)) {
+      // A prior attempt already inserted the referralEvents row (guaranteed unique by
+      // referred_user_id), but grantCredits may never have completed for it — e.g. a
+      // transient DB error between the insert and the grant call. Look up that row and
+      // retry the grant with the same sourceId/idempotencyKey; grantCredits is idempotent
+      // on idempotencyKey, so this is a safe no-op if the grant already landed.
+      const [existing] = await db
+        .select({ id: referralEvents.id })
+        .from(referralEvents)
+        .where(eq(referralEvents.referredUserId, input.referredUserId))
+        .limit(1)
+      if (existing) {
+        await grantCredits({
+          userId: referrer.id,
+          amount: REFERRAL_CREDIT_AMOUNT,
+          source: "referral",
+          sourceId: `referral:${existing.id}`,
+          idempotencyKey: `referral:${existing.id}:credit`,
+          reason: "referral_bonus",
+        })
+      }
+      return { redeemed: false, reason: "already_redeemed" }
+    }
     throw err
   }
 

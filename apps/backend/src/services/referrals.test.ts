@@ -186,4 +186,31 @@ describe("redeemReferralCode", () => {
     expect(result).toEqual({ redeemed: false, reason: "already_redeemed" })
     expect(grantCreditsCalls).toHaveLength(0)
   })
+
+  it("recovers a never-completed credit grant on a duplicate redemption", async () => {
+    // Simulates: a prior attempt already inserted the referralEvents row (hence the
+    // unique-constraint error on retry), but grantCredits never actually completed for
+    // it — e.g. a transient failure between the insert and the grant call. The retry
+    // must look up the existing event and re-issue the grant with the same
+    // sourceId/idempotencyKey the happy path would have used, so the referrer's credit
+    // is guaranteed to land even though this call still reports nothing new happened.
+    selectQueue = [[{ id: "referrer_1" }], [{ count: 0 }], [{ id: "existing_event_1" }]]
+    insertResult = new Error(
+      'duplicate key value violates unique constraint "referral_events_referred_user_id_unique"',
+    )
+    const result = await redeemReferralCode({
+      code: "abc12345",
+      referredUserId: "friend_1",
+      referredUserCreatedAt: freshDate,
+    })
+    expect(result).toEqual({ redeemed: false, reason: "already_redeemed" })
+    expect(grantCreditsCalls).toHaveLength(1)
+    expect(grantCreditsCalls[0]).toMatchObject({
+      userId: "referrer_1",
+      amount: 100,
+      source: "referral",
+      sourceId: "referral:existing_event_1",
+      idempotencyKey: "referral:existing_event_1:credit",
+    })
+  })
 })
