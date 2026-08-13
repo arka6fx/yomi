@@ -54,6 +54,25 @@ export const devices = pgTable("devices", {
   lastSeen: timestamp("last_seen").notNull().defaultNow(),
 })
 
+// Single-use, short-lived login tokens for the Telegram Mini App dashboard
+// handoff (see docs/superpowers/specs/2026-08-12-telegram-miniapp-dashboard-handoff-design.md).
+// A token minted here is claimed exactly once, by
+// GET /api/auth/telegram-webapp-redeem running in a real external browser —
+// a cookie minted inside Telegram's own embedded webview never reaches that
+// browser, so this table is the bridge between the two contexts.
+export const telegramMiniappLoginTokens = pgTable("telegram_miniapp_login_tokens", {
+  token: text("token").primaryKey(),
+  // Better Auth's real `user.id` column is `text`, not the `uuid` the local
+  // `users` stub above declares (see apps/backend/src/auth-schema.ts) — this
+  // column must match the live column type even though it makes the Drizzle
+  // FK type technically mismatched against the (mis-declared) stub.
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+})
+
 export const usageEvents = pgTable(
   "usage_events",
   {
