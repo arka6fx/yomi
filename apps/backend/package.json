@@ -9,13 +9,14 @@
     "build": "bun build src/index.ts --outdir dist --target bun",
     "build:ci": "bun build src/index.ts --outdir dist --target bun",
     "start": "bun run dist/index.js",
+    "clean": "rm -rf dist",
     "deploy:staging": "wrangler deploy --env staging",
     "deploy:production": "wrangler deploy --env production",
     "cf:check": "wrangler deploy --dry-run --env production",
     "test": "bun test --pass-with-no-tests --isolate",
     "lint": "eslint src",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format": "prettier --write --ignore-path ../../.prettierignore .",
+    "format:check": "prettier --check --ignore-path ../../.prettierignore .",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -6,6 +6,7 @@ bin/
 obj/
 .next/
 .open-next/
+.worker-assets/
 .turbo/
 .agents/
 .codex/

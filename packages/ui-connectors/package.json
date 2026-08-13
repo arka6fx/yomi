@@ -12,6 +12,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
+    "format": "prettier --write --ignore-path ../../.prettierignore .",
+    "format:check": "prettier --check --ignore-path ../../.prettierignore .",
     "test": "bun test --pass-with-no-tests"
   },
   "dependencies": {
