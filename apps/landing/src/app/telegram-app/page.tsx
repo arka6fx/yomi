@@ -63,7 +63,9 @@ export default function TelegramAppPage() {
   if (status === "ready") {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
-        <p className="text-sm text-muted-foreground">Tap below to open your dashboard in the browser.</p>
+        <p className="text-sm text-muted-foreground">
+          Tap below to open your dashboard in the browser.
+        </p>
         {redeemUrl && (
           <a
             href={redeemUrl}
