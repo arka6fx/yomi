@@ -51,9 +51,13 @@ export function ReferralsManager({ token }: { token: string }) {
   async function copyLink() {
     if (!stats) return
     const link = `${window.location.origin}/r/${stats.code}`
-    await navigator.clipboard.writeText(link)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    try {
+      await navigator.clipboard.writeText(link)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setError("Couldn't copy — try selecting the link manually")
+    }
   }
 
   if (loading) {

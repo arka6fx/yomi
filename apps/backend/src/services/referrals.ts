@@ -61,13 +61,30 @@ export async function getReferralStats(userId: string) {
   }
 }
 
+export type RedeemReferralReason =
+  | "not_new_account"
+  | "invalid_code"
+  | "self_referral"
+  | "cap_reached"
+  | "already_redeemed"
+  | "insert_failed"
+
 export async function redeemReferralCode(input: {
   code: string
   referredUserId: string
   referredUserCreatedAt: Date
-}): Promise<{ redeemed: boolean; reason?: string }> {
+}): Promise<{ redeemed: boolean; reason?: RedeemReferralReason }> {
+  const logResult = (result: { redeemed: boolean; reason?: RedeemReferralReason }) => {
+    console.log("[referral] redeem", {
+      redeemed: result.redeemed,
+      reason: result.reason,
+      referredUserId: input.referredUserId,
+    })
+    return result
+  }
+
   if (Date.now() - input.referredUserCreatedAt.getTime() > NEW_ACCOUNT_WINDOW_MS) {
-    return { redeemed: false, reason: "not_new_account" }
+    return logResult({ redeemed: false, reason: "not_new_account" })
   }
 
   const [referrer] = await db
@@ -75,15 +92,17 @@ export async function redeemReferralCode(input: {
     .from(authSchema.user)
     .where(eq(authSchema.user.referralCode, input.code))
     .limit(1)
-  if (!referrer) return { redeemed: false, reason: "invalid_code" }
-  if (referrer.id === input.referredUserId) return { redeemed: false, reason: "self_referral" }
+  if (!referrer) return logResult({ redeemed: false, reason: "invalid_code" })
+  if (referrer.id === input.referredUserId)
+    return logResult({ redeemed: false, reason: "self_referral" })
 
   const [countRow] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(referralEvents)
     .where(eq(referralEvents.referrerUserId, referrer.id))
     .limit(1)
-  if ((countRow?.count ?? 0) >= REFERRAL_CAP) return { redeemed: false, reason: "cap_reached" }
+  if ((countRow?.count ?? 0) >= REFERRAL_CAP)
+    return logResult({ redeemed: false, reason: "cap_reached" })
 
   let eventId: string
   try {
@@ -95,7 +114,7 @@ export async function redeemReferralCode(input: {
         creditsGranted: REFERRAL_CREDIT_AMOUNT,
       })
       .returning({ id: referralEvents.id })
-    if (!row) return { redeemed: false, reason: "insert_failed" }
+    if (!row) return logResult({ redeemed: false, reason: "insert_failed" })
     eventId = row.id
   } catch (err) {
     if (isDuplicateReferredUserError(err)) {
@@ -119,7 +138,7 @@ export async function redeemReferralCode(input: {
           reason: "referral_bonus",
         })
       }
-      return { redeemed: false, reason: "already_redeemed" }
+      return logResult({ redeemed: false, reason: "already_redeemed" })
     }
     throw err
   }
@@ -133,5 +152,5 @@ export async function redeemReferralCode(input: {
     reason: "referral_bonus",
   })
 
-  return { redeemed: true }
+  return logResult({ redeemed: true })
 }

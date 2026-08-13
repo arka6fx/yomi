@@ -19,6 +19,11 @@ referralsRouter.post("/redeem", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as RedeemBody
   const code = body.code?.trim()
   if (!code) return c.json({ error: "code is required", code: "invalid_code" }, 400)
+  if (!user.createdAt)
+    return c.json(
+      { error: "account creation time unavailable", code: "invalid_account_state" },
+      400,
+    )
 
   const result = await redeemReferralCode({
     code,

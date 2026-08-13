@@ -173,7 +173,14 @@ describe("redeemReferralCode", () => {
     expect(insertedValues).toHaveLength(0)
   })
 
-  it("rejects a duplicate redemption for the same referred user", async () => {
+  it("reports already_redeemed when the recovery lookup finds no matching event", async () => {
+    // Defensive/unreachable-in-practice edge case: the DB unique constraint guarantees a
+    // matching referralEvents row always exists once this error fires, so the recovery
+    // select below would never really come back empty in production. grantCreditsCalls is
+    // empty here purely because this fixture's selectQueue doesn't queue a result for that
+    // select (it falls back to [] by fixture starvation) — not because the scenario is
+    // realistic. The realistic path is covered by
+    // "recovers a never-completed credit grant on a duplicate redemption" below.
     selectQueue = [[{ id: "referrer_1" }], [{ count: 0 }]]
     insertResult = new Error(
       'duplicate key value violates unique constraint "referral_events_referred_user_id_unique"',

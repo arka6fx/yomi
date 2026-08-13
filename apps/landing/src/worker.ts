@@ -96,6 +96,21 @@ export default {
     if (redirect)
       return withSecurityHeaders(Response.redirect(new URL(redirect, url.origin).toString(), 301))
 
+    // Referral links carry a code as a URL segment. This worker only ever serves
+    // prebuilt static assets (see the REDIRECTS comment above) — the dynamic page at
+    // app/r/[code]/page.tsx has no prebuilt asset and 404s in production. This is
+    // the production path; the page still exists for `next dev` parity.
+    const referralMatch = url.pathname.match(/^\/r\/([A-Za-z0-9_-]{1,64})\/?$/)
+    if (referralMatch) {
+      const target = new URL(`/signup?ref=${encodeURIComponent(referralMatch[1]!)}`, url.origin)
+      return withSecurityHeaders(
+        new Response(null, {
+          status: 302,
+          headers: { location: target.toString(), "x-robots-tag": "noindex" },
+        }),
+      )
+    }
+
     // IP-based country for localized price display. Served here (not proxied):
     // Cloudflare stamps request.cf.country from the visitor's IP, which is far
     // more reliable than browser language.
