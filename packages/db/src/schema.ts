@@ -62,7 +62,11 @@ export const devices = pgTable("devices", {
 // browser, so this table is the bridge between the two contexts.
 export const telegramMiniappLoginTokens = pgTable("telegram_miniapp_login_tokens", {
   token: text("token").primaryKey(),
-  userId: uuid("user_id")
+  // Better Auth's real `user.id` column is `text`, not the `uuid` the local
+  // `users` stub above declares (see apps/backend/src/auth-schema.ts) — this
+  // column must match the live column type even though it makes the Drizzle
+  // FK type technically mismatched against the (mis-declared) stub.
+  userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   expiresAt: timestamp("expires_at").notNull(),
