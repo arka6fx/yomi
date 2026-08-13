@@ -47,9 +47,8 @@ mock.module("./credit-ledger.js", () => ({
   },
 }))
 
-const { getOrCreateReferralCode, getReferralStats, redeemReferralCode } = await import(
-  "./referrals.js"
-)
+const { getOrCreateReferralCode, getReferralStats, redeemReferralCode } =
+  await import("./referrals.js")
 
 beforeEach(() => {
   selectQueue = []
