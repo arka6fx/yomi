@@ -150,7 +150,7 @@ export const creditGrants = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     paymentId: uuid("payment_id").references(() => paymentRecords.id),
-    source: text("source").notNull(), // "subscription_cycle" | "credit_pack" | "admin_adjustment" | "refund" | "migration" | "promo"
+    source: text("source").notNull(), // "subscription_cycle" | "credit_pack" | "admin_adjustment" | "refund" | "migration" | "promo" | "referral"
     sourceId: text("source_id").notNull(),
     creditsGranted: integer("credits_granted").notNull(),
     creditsRemaining: integer("credits_remaining").notNull(),
