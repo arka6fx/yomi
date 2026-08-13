@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, mock } from "bun:test"
 let selectResult: { userId: string }[] = []
 let claimResult: { userId: string }[] = []
 let claimedTokens: string[] = []
+let insertedValues: Record<string, unknown>[] = []
 const fakeDb = {
   select: () => ({
     from: () => ({
@@ -11,7 +12,10 @@ const fakeDb = {
     }),
   }),
   insert: () => ({
-    values: () => Promise.resolve(undefined),
+    values: (values: Record<string, unknown>) => {
+      insertedValues.push(values)
+      return Promise.resolve(undefined)
+    },
   }),
   update: () => ({
     set: () => ({
@@ -29,16 +33,22 @@ const fakeDb = {
 mock.module("@yomi/db", () => ({
   db: fakeDb,
   platformConnections: {},
-  telegramMiniappLoginTokens: { token: "token", userId: "user_id", usedAt: "used_at", expiresAt: "expires_at" },
+  telegramMiniappLoginTokens: {
+    token: "token",
+    userId: "user_id",
+    usedAt: "used_at",
+    expiresAt: "expires_at",
+  },
 }))
 
-const { verifyTelegramInitData, resolveTelegramWebAppUserId, claimLoginToken } =
+const { verifyTelegramInitData, resolveTelegramWebAppUserId, claimLoginToken, mintLoginToken } =
   await import("./telegram-webapp-plugin.js")
 
 beforeEach(() => {
   selectResult = []
   claimResult = []
   claimedTokens = []
+  insertedValues = []
 })
 
 // Builds a validly-signed initData string the way Telegram's client does,
@@ -146,5 +156,37 @@ describe("claimLoginToken", () => {
     claimResult = []
 
     expect(await claimLoginToken("tok_gone")).toBeNull()
+  })
+})
+
+describe("mintLoginToken", () => {
+  it("builds a redeemUrl containing the minted token, from the given baseURL", async () => {
+    const { redeemUrl } = await mintLoginToken("user_1", "https://api.getyomi.in")
+
+    expect(redeemUrl).toMatch(/^https:\/\/api\.getyomi\.in\/telegram-webapp-redeem\?token=.+$/)
+    expect(insertedValues).toHaveLength(1)
+    const insertedToken = insertedValues[0]!["token"] as string
+    expect(redeemUrl).toContain(insertedToken)
+  })
+
+  it("sets a TTL of ~2 minutes from mint time", async () => {
+    const before = Date.now()
+    const { expiresAt } = await mintLoginToken("user_1", "https://api.getyomi.in")
+    const after = Date.now()
+
+    // expiresAt is computed as Date.now() + 2 minutes at some point between
+    // `before` and `after`, so its offset from "now" should land within
+    // 120_000ms plus however long the call itself took — bounded well under
+    // a second either way, so a few hundred ms of slack is generous.
+    expect(expiresAt.getTime() - before).toBeGreaterThanOrEqual(120_000)
+    expect(expiresAt.getTime() - after).toBeLessThanOrEqual(120_000 + 500)
+  })
+
+  it("persists the same expiresAt it returns", async () => {
+    const { expiresAt } = await mintLoginToken("user_1", "https://api.getyomi.in")
+
+    expect(insertedValues).toHaveLength(1)
+    expect(insertedValues[0]!["expiresAt"]).toEqual(expiresAt)
+    expect(insertedValues[0]!["userId"]).toBe("user_1")
   })
 })
