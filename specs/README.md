@@ -16,7 +16,7 @@ For the terse operational summary of the whole system, see the repo-root
 | [09](09-harness.md)                      | Harness — prompt, tools, hooks, loop guards   |
 | [10](10-memory.md)                       | Memory — backend canonical                    |
 | [11](11-database.md)                     | Database — PostgreSQL (AWS RDS) tables        |
-| [12](12-backend.md)                      | Backend — Hono Worker, auth, billing, gateway |
+| [12](12-backend.md)                      | Backend — Hono/Bun (EC2), auth, billing, gateway |
 | [13](13-pricing.md)                      | Pricing — pure-credit model                   |
 | [14](14-landing-page.md)                 | Landing page + dashboard                      |
 | [15](15-dashboard-credits-connectors.md) | Dashboard credits + connectors                |
@@ -31,8 +31,10 @@ live in `packages/agent-core/src/connectors/`.
 
 ## Runbooks
 
-- [`runbook-google-oauth.md`](runbook-google-oauth.md) — Google OAuth console
-  setup.
+- [`20-google-oauth-console-setup.md`](20-google-oauth-console-setup.md) —
+  Google OAuth console setup.
+- [`24-google-oauth-verification-video.md`](24-google-oauth-verification-video.md)
+  — Google OAuth verification scopes, justifications & demo video.
 
 ## Archive
 

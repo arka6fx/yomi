@@ -14,17 +14,16 @@ and, in most cases, a dedicated spec in this folder.
 
 | Connector        | Runtime id         | Spec                  | Tools | Status                                   |
 | ---------------- | ------------------ | --------------------- | ----: | ---------------------------------------- |
-| Google Gmail     | `google`           | `google-gmail.md`     |    18 | Implemented                              |
+| Google Gmail     | `google`           | `google-gmail.md`     |    20 | Implemented                              |
 | Google Calendar  | `google-calendar`  | `google-calendar.md`  |    10 | Implemented                              |
 | Google Drive     | `google-drive`     | `google-drive.md`     |    19 | Implemented                              |
-| Google Classroom | `google-classroom` | `google-classroom.md` |     6 | Implemented, read-write (gated writes)   |
+| Google Classroom | `google-classroom` | `google-classroom.md` |     7 | Implemented, read-write (gated writes)   |
 | Google Tasks     | `google-tasks`     | `google-tasks.md`     |     6 | Implemented                              |
 | Google Meet      | `google-meet`      | `google-meet.md`      |     7 | Implemented                              |
 | GitHub           | `github`           | `github.md`           |    23 | Implemented                              |
 | Notion           | `notion`           | `notion.md`           |    12 | Implemented                              |
 | Slack            | `slack`            | `slack.md`            |     9 | Implemented                              |
-| Linear OAuth     | `linear`           | `linear.md`           |    12 | Implemented                              |
-| Linear API Key   | `linear-api-key`   | `linear.md`           |    12 | Implemented, same tools as Linear OAuth  |
+| Linear           | `linear`           | `linear.md`           |    12 | Implemented                              |
 | Swiggy           | `swiggy`           | —                     |     — | Coming soon (blocked on OAuth allowlist) |
 
 ## Composio-backed connectors

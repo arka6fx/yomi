@@ -10,17 +10,18 @@ only a placeholder.
 
 | Connector        | Implemented tool count | Runtime notes                                                                |
 | ---------------- | ---------------------: | ---------------------------------------------------------------------------- |
-| Google Gmail     |                     18 | Real Gmail API-backed tools through `GoogleGmailConnector`.                  |
+| Google Gmail     |                     20 | Real Gmail API-backed tools through `GoogleGmailConnector`.                  |
 | Google Calendar  |                     10 | Real Calendar API-backed tools, including Google Meet creation.              |
-| Google Drive     |                     13 | Real Drive API-backed tools, including file export/read/convert and folders. |
-| Google Classroom |                      6 | Real Classroom API-backed tools; gated writes for attach + turn-in.          |
+| Google Drive     |                     19 | Real Drive API-backed tools, including file export/read/convert and folders. |
+| Google Classroom |                      7 | Real Classroom API-backed tools; gated writes for attach + turn-in.          |
+| Google Tasks     |                      6 | Real Tasks API-backed tools, including subtasks.                             |
+| Google Meet      |                      7 | Real Meet API-backed tools for spaces, conference records, and transcripts.  |
 | GitHub           |                     23 | Real GitHub REST API-backed tools, including account notifications.          |
 | Notion           |                     12 | Real Notion API-backed tools with database schema discovery.                 |
 | Slack            |                      9 | Real Slack API-backed tools including channel history threads.               |
-| Linear OAuth     |                     12 | Real Linear GraphQL API-backed tools with states and cycles.                 |
-| Linear API Key   |                     12 | Same tool surface as Linear OAuth.                                           |
+| Linear           |                     12 | Real Linear GraphQL API-backed tools with states and cycles.                 |
 
-**Total: 103 unique tools across 9 connector defs.**
+**Total: 125 unique tools across 10 connector defs.**
 
 ## Safety — all write/irreversible tools gated
 
@@ -35,11 +36,10 @@ lower-urgency or require additional scopes.
 
 ### Gmail
 
-| Tool                          | Type  | Notes                                                                  |
-| ----------------------------- | ----- | ---------------------------------------------------------------------- |
-| `gmail-searchThreads`         | Read  | Search threads and return thread-level summaries.                      |
-| `gmail-getAttachments`        | Read  | List attachments for a message with metadata.                          |
-| `gmail-saveAttachmentToDrive` | Write | Save an attachment into Drive when both Gmail and Drive are connected. |
+| Tool                   | Type | Notes                                               |
+| ---------------------- | ---- | ---------------------------------------------------- |
+| `gmail-searchThreads`  | Read | Search threads and return thread-level summaries.    |
+| `gmail-getAttachments` | Read | List attachments for a message with metadata.        |
 
 ### Google Calendar
 
@@ -62,7 +62,6 @@ lower-urgency or require additional scopes.
 | Tool                                  | Type | Notes                                       |
 | ------------------------------------- | ---- | ------------------------------------------- |
 | `classroom-getCourse`                 | Read | Read full course details.                   |
-| `classroom-getAssignment`             | Read | Read full coursework details and materials. |
 | `classroom-listTeachers`              | Read | Useful for "who teaches this class?".       |
 | `classroom-listClassmates`            | Read | Only if scopes and school policy allow it.  |
 | `classroom-listSubmissionAttachments` | Read | Helps users inspect what submitted.         |

@@ -2,7 +2,7 @@
 
 Backend-owned retrieval over the user's own documents. Two halves: ingestion
 (get content in) and retrieval (get the right chunks out). Both live in the
-backend so they work even when the desktop app is closed.
+backend, independent of the Telegram client being open.
 
 ## Data model
 

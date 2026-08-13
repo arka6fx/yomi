@@ -5,7 +5,7 @@ Cloud Backend (Hono/Bun)
   Better Auth, billing, Telegram gateway, LLM/STT proxy, usage metering, canonical memory
 
 Landing (Next.js)
-  marketing, dashboard, billing, downloads, integrations, bot linking
+  marketing, dashboard, billing, integrations, bot linking
 ```
 
 The backend is canonical for durable user state.

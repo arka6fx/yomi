@@ -5,10 +5,16 @@ Owner: Security and Privacy Architecture
 Created: 2026-07-04  
 Scope: DPDP Act 2023 readiness, with extensibility for GDPR and CCPA
 
+Note: This document predates the retirement of the desktop client and local
+sidecar (see `docs/adr/0002-retire-desktop-telegram-only.md`); all
+desktop/sidecar-specific content (device-code auth, local capture, sidecar file
+paths) has been stripped, since Telegram plus the backend is now the only
+architecture.
+
 ## 1. Executive Summary
 
-Yomi processes personal data across desktop, sidecar, backend, dashboard,
-Telegram, AI memory, RAG, connectors, authentication, and billing. The current
+Yomi processes personal data across backend, dashboard, Telegram, AI memory,
+RAG, connectors, authentication, and billing. The current
 codebase already has good foundations: user-scoped data models, encrypted
 connector tokens, Better Auth, plan-gated access, and deletion-by-cascade for
 several tables. It does not yet have a first-class privacy control plane.
@@ -30,9 +36,6 @@ privacy-relevant files:
 - `apps/backend/src/routes/*`
 - `apps/backend/src/services/*`
 - `apps/backend/src/gateway/*`
-- `apps/sidecar/src/memory/*`
-- `apps/sidecar/src/pipeline/*`
-- `apps/desktop/src/main/*`
 - `apps/landing/src/app/dashboard/page.tsx`
 - `apps/landing/src/components/dashboard/*`
 
@@ -42,9 +45,7 @@ privacy-relevant files:
 | ------------------------------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------- |
 | Postgres via Drizzle                  | Canonical app, auth, billing, memory, RAG, usage, connector data                     | Primary privacy surface                         |
 | Better Auth tables                    | User, sessions, OAuth accounts, verification, orgs                                   | Contains profile, sessions, provider tokens     |
-| Sidecar environment and local runtime | Session token, local pipeline, cloud memory calls                                    | Needs preference enforcement before cloud calls |
-| Desktop app runtime                   | Capture, auth, IPC, sidecar process                                                  | Needs consent and capture status integration    |
-| External providers                    | OpenAI-compatible, ElevenLabs, Dodo, Google, GitHub, Notion, Slack, Linear, Telegram | Requires disclosure and data flow tracking      |
+| External providers                    | OpenAI-compatible, Dodo, Google, GitHub, Notion, Slack, Linear, Telegram             | Requires disclosure and data flow tracking      |
 
 ### 2.2 Existing Privacy Controls
 
@@ -97,7 +98,7 @@ privacy-relevant files:
 Classification values:
 
 - Sensitive: credentials, tokens, secrets, financial identifiers, private
-  content, biometrics/voice, screenshots.
+  content, biometrics/voice.
 - Personal: directly identifying or user-owned content.
 - Temporary: short-lived operational data.
 - Derived: inferred, summarized, indexed, embedded, or analytics data.
@@ -115,22 +116,19 @@ Classification values:
 | Connector OAuth/API credentials | Sensitive                  | Integration routes             | `mcp_connections.oauth_tokens`                                               | Disconnect deletes row                       | AES-256-GCM                                                         | Until disconnect/account deletion                   |
 | Connector scopes/display names  | Personal/System            | Integration routes             | `mcp_connections.scopes`, `display_name`                                     | Disconnect deletes row                       | Not encrypted                                                       | Until disconnect/account deletion                   |
 | Telegram platform user/chat IDs | Personal                   | Gateway link/webhook           | `platform_connections`                                                       | Unlink deletes row                           | Not encrypted                                                       | Until unlink/account deletion                       |
-| Device sidecar URL              | Personal/System            | Desktop/backend                | `devices.sidecar_url`                                                        | Cascade on user delete                       | Not encrypted                                                       | 30 days since last seen                             |
-| Device OS/app version           | System                     | Desktop/backend                | `devices`                                                                    | Cascade on user delete                       | Not encrypted                                                       | 180 days since last seen                            |
-| Shared conversation history     | Personal/Sensitive         | Dashboard/sidecar/backend      | `agent_sessions`, `agent_messages`                                           | Reset closes session only, messages remain   | Not encrypted                                                       | 180 days default                                    |
+| Shared conversation history     | Personal/Sensitive         | Dashboard/backend              | `agent_sessions`, `agent_messages`                                           | Reset closes session only, messages remain   | Not encrypted                                                       | 180 days default                                    |
 | Telegram conversations          | Personal/Sensitive         | Telegram gateway/backend agent | `agent_sessions`, `agent_messages`                                           | No user-facing full delete                   | Not encrypted                                                       | 180 days default                                    |
 | Agent session summaries         | Derived/Personal           | Backend agent                  | `agent_sessions.summary`                                                     | No user-facing full delete                   | Not encrypted                                                       | 180 days default                                    |
-| AI memories                     | Derived/Personal/Sensitive | Sidecar extraction/backend     | `memory_entries`                                                             | View/edit/soft delete/hard delete per memory | Not encrypted                                                       | Until user delete, or `forget_after`                |
+| AI memories                     | Derived/Personal/Sensitive | Backend extraction (Telegram)  | `memory_entries`                                                             | View/edit/soft delete/hard delete per memory | Not encrypted                                                       | Until user delete, or `forget_after`                |
 | Memory embeddings               | Derived                    | Backend embeddings             | `memory_embeddings`                                                          | Cascade on memory hard delete                | Not encrypted                                                       | Same as memory                                      |
 | Memory provenance               | Personal/System            | Backend memory                 | `memory_sources`, `memory_relations`                                         | Cascade on memory delete                     | Not encrypted                                                       | Same as memory                                      |
-| RAG sources                     | Personal/System            | Dashboard/sidecar              | `rag_sources`                                                                | Soft delete source                           | Not encrypted                                                       | 180 days default unless user pins                   |
+| RAG sources                     | Personal/System            | Dashboard/backend              | `rag_sources`                                                                | Soft delete source                           | Not encrypted                                                       | 180 days default unless user pins                   |
 | RAG document metadata           | Personal                   | Backend RAG                    | `rag_documents.metadata`                                                     | Cascade when source documents deleted        | Not encrypted                                                       | Same as source                                      |
 | RAG chunks                      | Sensitive/Personal         | Backend RAG                    | `rag_chunks.content`                                                         | Cascade when document deleted                | Not encrypted                                                       | Same as source                                      |
 | RAG embeddings                  | Derived                    | Backend embeddings             | `rag_embeddings.embedding`                                                   | Cascade when chunk deleted                   | Not encrypted                                                       | Same as chunk                                       |
 | RAG retrieval logs              | Derived/System             | Backend RAG                    | `rag_retrieval_logs.query_hash`, `matched_chunk_ids`                         | No user-facing delete                        | Not encrypted                                                       | 30 days                                             |
-| Voice audio                     | Sensitive/Temporary        | Desktop/sidecar/STT            | Runtime/transit to ElevenLabs/backend STT                                    | Not stored in DB found                       | N/A                                                                 | No storage by default                               |
-| Voice transcripts               | Personal/Sensitive         | STT/sidecar                    | May be in conversations, memory, usage metadata                              | No unified delete                            | Not encrypted                                                       | 30 days if stored                                   |
-| Screenshots                     | Sensitive/Temporary        | Desktop capture/sidecar/LLM    | Runtime/transit; possible prompts/conversation/memory                        | No unified delete                            | N/A unless persisted                                                | 24 hours max if persisted                           |
+| Voice audio                     | Sensitive/Temporary        | Telegram/backend STT           | Runtime/transit to backend STT (OpenAI transcription)                       | Not stored in DB found                       | N/A                                                                 | No storage by default                               |
+| Voice transcripts               | Personal/Sensitive         | STT/backend                    | May be in conversations, memory, usage metadata                              | No unified delete                            | Not encrypted                                                       | 30 days if stored                                   |
 | Uploaded files/documents        | Sensitive/Personal         | RAG APIs                       | Stored as chunks, metadata, embeddings; original file storage not identified | Source soft delete                           | Not encrypted                                                       | 7 days raw temp, 180 days indexed default           |
 | Schedules/prompts               | Personal/Sensitive         | Dashboard/backend              | `schedules.prompt`, `deliver_to`, errors                                     | Delete/update routes exist                   | Not encrypted                                                       | Until disabled/deleted, max 180 days after disabled |
 | Pending actions                 | Sensitive/Personal         | Agent tools/backend            | `pending_actions.payload`, preview, result                                   | Expires but no cleanup confirmed             | Not encrypted                                                       | Until expiry plus 7 days                            |
@@ -150,9 +148,7 @@ Flow:
 1. User signs in on landing/dashboard with Google or GitHub through Better Auth.
 2. Better Auth writes `user`, `session`, and `account` records.
 3. Backend `authenticate` loads the session for API access.
-4. Desktop uses device-code auth through `/api/auth/device-code/*` and stores a
-   session token for sidecar calls.
-5. Dashboard proxies backend calls with the Bearer session token.
+4. Dashboard proxies backend calls with the Bearer session token.
 
 Controls required:
 
@@ -163,29 +159,11 @@ Controls required:
 - Privacy preference checks in all optional processing routes.
 - Session revocation on account deletion.
 
-### 4.2 Desktop Voice And Screen Understanding
+### 4.2 AI Chat And Conversation History
 
 Flow:
 
-1. Desktop captures microphone and optional screen context.
-2. Sidecar transcribes via local or ElevenLabs-backed STT.
-3. Sidecar sends distilled prompt/context to LLM provider through configured
-   model path.
-4. Result may be spoken through TTS and may be saved to conversation or memory.
-
-Controls required:
-
-- Voice consent before microphone processing.
-- Screenshot/screen-understanding consent before capture or upload.
-- Explicit UI indicator while listening/capturing.
-- Do not store raw audio or screenshots by default.
-- Prevent memory capture unless memory consent and preference are enabled.
-
-### 4.3 AI Chat And Conversation History
-
-Flow:
-
-1. User asks Yomi through desktop, dashboard, or Telegram.
+1. User asks Yomi through Telegram.
 2. Agent/fast pipeline sends request to AI provider.
 3. Backend may append turns to `agent_messages` through
    `/api/conversation/shared/turn` or backend agent sessions.
@@ -198,12 +176,12 @@ Controls required:
 - Export includes sessions and messages.
 - Delete my data hard-deletes sessions/messages.
 
-### 4.4 Cloud Memory
+### 4.3 Cloud Memory
 
 Flow:
 
-1. Sidecar extracts durable memories from user/assistant turns in
-   `captureCloudMemory`.
+1. Backend extracts durable memories from user/assistant turns in Telegram
+   conversations.
 2. Extracted JSON is sent to `/api/memory/sync`.
 3. Backend writes `memory_entries`, provenance, relations, and embeddings.
 4. Future queries call `/api/memory/search` and `/api/memory/profile`.
@@ -217,12 +195,11 @@ Controls required:
   unless explicitly requested for machine portability.
 - Delete all memories hard-deletes entries, embeddings, relations, and sources.
 
-### 4.5 Cloud RAG And Uploaded Documents
+### 4.4 Cloud RAG And Uploaded Documents
 
 Flow:
 
-1. User or sidecar syncs documents/sources to `/api/rag/sync` or
-   `/api/rag/documents`.
+1. User syncs documents/sources to `/api/rag/sync` or `/api/rag/documents`.
 2. Backend chunks content into `rag_chunks` and creates `rag_embeddings`.
 3. Queries call `/api/rag/search`; retrieval logs store query hash and matched
    chunk IDs.
@@ -235,13 +212,13 @@ Controls required:
 - Retention metadata on sources/documents/chunks.
 - Export includes source metadata, document metadata, and chunk content in JSON.
 
-### 4.6 Connectors
+### 4.5 Connectors
 
 Flow:
 
 1. User starts OAuth/API-key/DSN connection in dashboard.
 2. Backend stores encrypted credential blob in `mcp_connections`.
-3. Sidecar/internal token broker retrieves access tokens through
+3. Backend's internal token broker retrieves access tokens through
    `/api/integrations/token/:provider`.
 4. Connector tools call external provider APIs.
 5. Disconnect deletes `mcp_connections`, with Google token revoke as best
@@ -254,7 +231,7 @@ Controls required:
 - No connector sync after disconnect.
 - Audit log every connect/disconnect/reconnect and revocation result.
 
-### 4.7 Telegram
+### 4.6 Telegram
 
 Flow:
 
@@ -269,7 +246,7 @@ Controls required:
 - Unlink deletes `platform_connections` and stops future routing.
 - Delete my data removes Telegram sessions/messages and pending actions.
 
-### 4.8 Billing And Credits
+### 4.7 Billing And Credits
 
 Flow:
 
@@ -386,7 +363,6 @@ Columns:
 - `connectors_enabled boolean not null default false`
 - `analytics_enabled boolean not null default false`
 - `voice_processing_enabled boolean not null default false`
-- `screen_processing_enabled boolean not null default false`
 - `ai_improvement_enabled boolean not null default false`
 - `retention_overrides jsonb null`
 - `updated_at timestamp not null default now()`
@@ -455,7 +431,7 @@ Rules:
 - No update route.
 - No delete route.
 - Metadata must be redacted and must not contain prompts, tokens, emails,
-  attachments, screenshots, message content, or OAuth credentials.
+  attachments, message content, or OAuth credentials.
 
 ### 6.7 Retention Columns
 
@@ -475,10 +451,8 @@ Priority tables:
 - `memory_entries`
 - `pending_actions`
 - `usage_events`
-- `devices`
 - `linking_codes`
 - `telegram_link_tokens`
-- `device_codes`
 
 For high-churn child tables, it is acceptable to rely on parent
 `retention_until` plus cascade deletion if adding columns everywhere is too
@@ -496,7 +470,6 @@ Define constants in `packages/shared/src/privacy.ts`:
 - `connector_data`
 - `analytics`
 - `voice_processing`
-- `screen_processing`
 - `ai_improvement`
 - `telegram_processing`
 - `rag_processing`
@@ -507,7 +480,8 @@ Define constants in `packages/shared/src/privacy.ts`:
 - Revocation stops future processing immediately.
 - Revocation does not automatically delete historical data unless the user
   chooses delete-my-data or delete-account.
-- Consent checks must happen in backend services and sidecar preflight checks.
+- Consent checks must happen in backend services before optional processing
+  runs.
 - UI must show missing required consents before enabling features.
 
 ### 7.3 Consent APIs
@@ -581,8 +555,7 @@ Delete:
 - `schedules`
 - optional `usage_events` older than required metering window or all non-billing
   usage if allowed
-- expired `linking_codes`, `telegram_link_tokens`, `device_codes`
-- local sidecar/desktop caches through a desktop command where possible
+- expired `linking_codes`, `telegram_link_tokens`
 
 Preserve:
 
@@ -675,7 +648,6 @@ Sections:
 - `platform_connections.json`
 - `usage.json`
 - `billing.json`
-- `devices.json`
 - `audit_activity.json` privacy events only
 
 Never export OAuth tokens, refresh tokens, session tokens, API keys, encrypted
@@ -724,14 +696,12 @@ delegate to the privacy connector cleanup service and write audit events.
 | Conversations            | 180 days                                               |
 | Agent sessions summaries | 180 days                                               |
 | Voice transcripts        | 30 days                                                |
-| Screenshots              | 24 hours if persisted; do not persist by default       |
 | Raw uploaded temp files  | 7 days                                                 |
 | RAG indexed documents    | 180 days unless user pins source                       |
 | RAG retrieval logs       | 30 days                                                |
 | Usage events             | 90 days detailed, aggregate after                      |
 | Pending actions          | Expiry plus 7 days                                     |
 | Logs                     | 90 days max                                            |
-| Device records           | 180 days since last seen                               |
 | OAuth tokens             | Until disconnect/account deletion                      |
 | Memory                   | Until user deletes, disables memory, or `forget_after` |
 | Billing records          | Legal/accounting period                                |
@@ -759,7 +729,8 @@ delete. Enhance rather than replace.
 
 Required changes:
 
-- Gate `captureCloudMemory` in sidecar on privacy preferences and consent.
+- Gate backend memory extraction (during Telegram conversation turns) on
+  privacy preferences and consent.
 - Gate backend `/api/memory/add`, `/sync`, `/search`, and `/profile` on
   memory/cloud memory consent where appropriate.
 - Add `DELETE /api/memory` or `/api/privacy/memories` to delete all memories.
@@ -804,7 +775,6 @@ Never log:
 - Refresh tokens
 - Emails unless strictly owner/admin diagnostic and gated
 - Attachments
-- Screenshots
 - Voice transcripts
 - Dodo webhook payloads containing customer data
 
@@ -834,7 +804,6 @@ Required changes:
 - Avoid storing raw uploaded documents beyond indexing unless explicitly
   required.
 - Hash RAG queries as currently done; keep it.
-- Avoid storing `sidecar_url` longer than needed.
 - Limit `pending_actions.payload` to minimum executable payload and redact
   previews where possible.
 - Make usage metadata schema explicit and reject prompt/content fields.
@@ -1004,10 +973,10 @@ Create docs under `specs/privacy/` or a future `docs/privacy/` directory:
 
 ### Phase B: Consent Enforcement
 
-- Gate sidecar memory capture/retrieval.
-- Gate backend memory, RAG, conversation, voice, screen, connector, and
-  analytics writes.
-- Add first-run consent UI in dashboard/desktop path.
+- Gate backend memory capture/retrieval.
+- Gate backend memory, RAG, conversation, voice, connector, and analytics
+  writes.
+- Add first-run consent UI in the dashboard.
 - Add policy/terms/privacy version constants.
 
 ### Phase C: Privacy Center UI
@@ -1067,8 +1036,8 @@ Create docs under `specs/privacy/` or a future `docs/privacy/` directory:
 - Retention job enforces defaults.
 - Privacy audit events are append-only and content-free.
 - Sensitive tokens are encrypted and rotation is supported.
-- Logs do not contain conversations, prompts, OAuth tokens, emails, screenshots,
-  or attachments.
+- Logs do not contain conversations, prompts, OAuth tokens, emails, or
+  attachments.
 - Tests cover consent, export, deletion, retention, connector cleanup, memory
   deletion, preferences, and audit logs.
 

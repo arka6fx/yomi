@@ -13,7 +13,7 @@
 
 ---
 
-## 1. Final scope list (15 scopes)
+## 1. Final scope list (12 scopes)
 
 Register exactly these on **OAuth consent screen → Data access**. Tier drives
 how much review each needs — and these tiers are what the console **actually
@@ -25,9 +25,6 @@ reported**, not a prediction.
 | `https://www.googleapis.com/auth/drive`                            | Drive     | **Restricted** | Yes   |
 | `https://www.googleapis.com/auth/gmail.send`                       | Gmail     | Sensitive      | No    |
 | `https://www.googleapis.com/auth/calendar`                         | Calendar  | Sensitive      | No    |
-| `https://www.googleapis.com/auth/contacts`                         | Contacts  | Sensitive      | No    |
-| `https://www.googleapis.com/auth/contacts.other.readonly`          | Contacts  | Sensitive      | No    |
-| `https://www.googleapis.com/auth/directory.readonly`               | Contacts  | Sensitive      | No    |
 | `https://www.googleapis.com/auth/tasks`                            | Tasks     | Sensitive      | No    |
 | `https://www.googleapis.com/auth/meetings.space.created`           | Meet      | Sensitive      | No    |
 | `https://www.googleapis.com/auth/meetings.space.readonly`          | Meet      | Sensitive      | No    |
@@ -38,14 +35,17 @@ reported**, not a prediction.
 | `https://www.googleapis.com/auth/userinfo.email`                   | All       | Non-sensitive  | No    |
 
 **Only two scopes are restricted** — `gmail.modify` and `drive`. Everything else
-is sensitive or free. Adding Tasks, Contacts, and Meet therefore costs
-brand-review justification text and video scenes, but **no additional CASA
-burden**.
+is sensitive or free. Adding Tasks and Meet therefore costs brand-review
+justification text and video scenes, but **no additional CASA burden**.
 
 Scopes deliberately NOT requested: `https://mail.google.com/` (includes
-permanent delete — no Yomi tool needs it), `tasks.readonly` and
-`contacts.readonly` (Yomi writes to both),
-`classroom.student-submissions.me.readonly` (subsumed by `coursework.me`).
+permanent delete — no Yomi tool needs it), `tasks.readonly` (Yomi writes to
+tasks), `classroom.student-submissions.me.readonly` (subsumed by
+`coursework.me`).
+
+No Google Contacts / People API scopes are requested — Yomi has no Contacts
+connector (`packages/agent-core/src/connectors/all-defs.ts` has no
+google-contacts entry).
 
 ### Deltas from a console that was set up before this pass
 
@@ -62,17 +62,16 @@ If your **Data access** page currently shows `https://mail.google.com/` and
 **No scope changes are needed for Slides or Sheets.** The Slides and Sheets APIs
 both accept `auth/drive`, which is already requested. What they need is the API
 itself **enabled** in the Library — see
-[Spec 20](./20-google-oauth-console-setup.md) step 2 (6 APIs). Scope ≠ API
+[Spec 20](./20-google-oauth-console-setup.md) step 2 (9 APIs). Scope ≠ API
 enablement; without enabling, `drive-createFile` 403s on deck/spreadsheet
 creation even with a valid `drive` token.
 
 **What "verified" requires per tier**
 
 - **Non-sensitive** (`userinfo.email`): nothing beyond publishing.
-- **Sensitive** (`gmail.send`, `calendar`, `contacts`,
-  `contacts.other.readonly`, `directory.readonly`, `tasks`,
-  `meetings.space.created`, `meetings.space.readonly`): brand verification —
-  consent screen review + demo video. ~2–3 business days.
+- **Sensitive** (`gmail.send`, `calendar`, `tasks`, `meetings.space.created`,
+  `meetings.space.readonly`): brand verification — consent screen review +
+  demo video. ~2–3 business days.
 - **Restricted** (`gmail.modify`, `drive` — only these two): brand verification
   **plus** an annual **CASA** (Cloud Application Security Assessment) tier-2
   security review. Weeks, and it recurs yearly. This is the real gate; budget
@@ -138,28 +137,6 @@ actual tools and to
 > Read announcements in the user's classes so Yomi can surface them on request.
 > Read-only.
 
-**`contacts` (sensitive)**
-
-> Users refer to people by name ("email Alex about the invoice", "invite Priya
-> to the meeting"), so Yomi looks the person up in the user's own contacts to
-> find their email address before sending anything — it never guesses an
-> address, and when several people match it asks the user which one. On request
-> it also saves or updates a contact ("save Priya's number"). Contact data is
-> used only to fulfil the user's in-session request and is never sold,
-> transferred, or used for ads or model training.
-
-**`contacts.other.readonly` (sensitive)**
-
-> Read-only access to "other contacts" — people the user has emailed but never
-> saved. Without it, name lookup fails for most of the people a personal Gmail
-> user actually corresponds with, since `contacts` covers only explicitly saved
-> entries. Used solely to resolve a name the user typed into an email address.
-
-**`directory.readonly` (sensitive)**
-
-> Read-only access to the user's Google Workspace organisation directory, so
-> name lookup also resolves colleagues. Read-only; no directory data is stored.
-
 **`tasks` (sensitive)**
 
 > Yomi manages the user's own to-do list on request: listing what's due,
@@ -219,20 +196,15 @@ returns.
 | 6   | A sheet with a header row                       | "Add a ₹450 coffee expense to my budget sheet"    | `drive` + Sheets API      |
 | 7   | 2 upcoming events                               | "What's on my calendar this week?"                | `calendar`                |
 | 8   | One Classroom class w/ an assignment            | "What's my next assignment and what does it ask?" | `classroom.coursework.me` |
-| 9   | A saved contact **with an email address**       | "Email <name> and tell him the deck is ready"     | `contacts` (+ `.other`)   |
-| 10  | 2 tasks, one completable                        | "What's on my to-do list this week?"              | `tasks`                   |
-| 11  | —                                               | "Give me a Meet link"                             | `meetings.space.created`  |
-| 12  | Join + leave that Meet once, so a record exists | "Who was on my last call?"                        | `meetings.space.readonly` |
+| 9   | 2 tasks, one completable                        | "What's on my to-do list this week?"              | `tasks`                   |
+| 10  | —                                               | "Give me a Meet link"                             | `meetings.space.created`  |
+| 11  | Join + leave that Meet once, so a record exists | "Who was on my last call?"                        | `meetings.space.readonly` |
 
-**Known limits to narrate rather than fight** (all three are expected, not
-bugs):
+**Known limits to narrate rather than fight** (both are expected, not bugs):
 
 - **Meet transcripts** need a paid Workspace plan. On personal Gmail, Yomi says
-  so instead of failing — show that. The participants read-back (#12) is what
-  carries `meetings.space.readonly`, so #12 is the one that must work.
-- **`directory.readonly`** has nothing to resolve on a personal Gmail — no
-  Workspace directory exists. Narrate that it resolves colleagues the same way
-  contacts does.
+  so instead of failing — show that. The participants read-back (#11) is what
+  carries `meetings.space.readonly`, so #11 is the one that must work.
 - **Classroom turn-in / attach** only works on coursework _Yomi itself created_
   — a Google restriction, not a Yomi bug. Demo reading the assignment; don't
   attempt a turn-in on a teacher-created one, it will 403 on camera.
@@ -283,25 +255,14 @@ around it.
 - (If on a personal Gmail with no Education account, narrate that Classroom data
   is limited but the scope/flow is identical — still show the calls being made.)
 
-**Scene 6 — Contacts `contacts` + `contacts.other.readonly` (30s)**
-
-- Ask: "Email Alex and tell him the deck is ready." → show Yomi looking the name
-  up and returning **Alex's address from contacts** before composing (this is
-  the shot that justifies the contacts scopes — the reviewer must see the
-  lookup, not just the send).
-- Ask: "Save Priya's number — 555 0134." → approval → contact created; open
-  Google Contacts to show it.
-- (Narrate that `directory.readonly` resolves Workspace colleagues the same way;
-  on a personal account there is no directory to show.)
-
-**Scene 7 — Tasks `tasks` (25s)**
+**Scene 6 — Tasks `tasks` (25s)**
 
 - Ask: "What's on my to-do list this week?" → list tasks with due dates.
 - Ask: "Add 'renew passport' due Friday." → approval → task created; open Google
   Tasks to show it.
 - Ask: "Mark the laundry one done." → task completes.
 
-**Scene 8 — Meet `meetings.space.*` (25s)**
+**Scene 7 — Meet `meetings.space.*` (25s)**
 
 - Ask: "Give me a Meet link." → approval → link created; open it.
 - Ask: "Who was on my last call?" → show participants from the conference
@@ -311,24 +272,24 @@ around it.
   clearly explained limitation; they reject a scope with no visible use, so the
   participants read-back is what carries `meetings.space.readonly`.
 
-**Scene 9 — Sheets + Docs editing (20s, no extra scope — runs on `drive`)**
+**Scene 8 — Sheets + Docs editing (20s, no extra scope — runs on `drive`)**
 
 - Ask: "Add a ₹450 coffee expense to my budget sheet." → approval → open the
   sheet and show the appended row.
 - Ask: "Append today's notes to my journal doc." → approval → show the Doc.
 
-**Scene 10 — Close (10s)**
+**Scene 9 — Close (10s)**
 
-- Return to the dashboard showing all seven Google integrations connected.
+- Return to the dashboard showing all six Google integrations connected.
 - Say: "All access is used only to fulfil the user's request and follows
   Google's Limited Use policy."
 
-**Length target:** 4–6 minutes with all seven connectors. Upload **unlisted**,
+**Length target:** 4–6 minutes with all six connectors. Upload **unlisted**,
 paste the link into the verification form.
 
 > **Every requested scope needs a visible use.** A scope the reviewer cannot see
-> exercised is the single most common rejection cause — that is why Tasks,
-> Contacts, and Meet could not be registered before the connectors existed.
+> exercised is the single most common rejection cause — that is why Tasks and
+> Meet could not be registered before the connectors existed.
 
 ---
 
@@ -353,7 +314,7 @@ must match the scopes you submit.
 
 ## 5. Submission checklist
 
-- [ ] Spec 20 fully done (15 scopes registered, 10 APIs enabled, 7 redirect URI
+- [ ] Spec 20 fully done (12 scopes registered, 9 APIs enabled, 6 redirect URI
       pairs)
 - [ ] Privacy policy + ToS live on `getyomi.in`, both mention Google data +
       Limited Use
@@ -365,7 +326,7 @@ must match the scopes you submit.
       uploaded unlisted
 - [ ] Video link + justifications submitted; consent screen pushed for
       verification
-- [ ] Brand review (~2–3 days) for the eight sensitive scopes
+- [ ] Brand review (~2–3 days) for the five sensitive scopes
 - [ ] CASA engaged for the two restricted scopes (`gmail.modify`, `drive`) —
       start early
 - [ ] After approval: publishing status **Testing → In production**

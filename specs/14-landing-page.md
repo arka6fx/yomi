@@ -9,6 +9,5 @@ Dashboard requirements:
 - Show connected integrations and reconnect actions.
 - Show Telegram linking status and deep link.
 - Provide account/session management.
-- Link to the latest desktop installer via backend download endpoint.
 
 Auth uses Better Auth with backend callbacks on `api.getyomi.in`.

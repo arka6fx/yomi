@@ -47,7 +47,7 @@ Replaced per-feature usage bars with a single credit meter:
 - Progress bar: `creditsUsed / totalCredits`
 - Legend cards:
   - AI chat — 1 credit
-  - Telegram text — 1 base credit
+  - Telegram text — 3 base credits
   - Image/screen — +1 credit
   - Voice input/output — +2 credits/min
 - Credit consumption shown as a secondary grid (not competing meters).

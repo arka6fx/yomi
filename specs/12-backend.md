@@ -121,7 +121,7 @@ Routes in `apps/backend/src/routes/memory.ts`:
 | `GET /api/memory/entries` | List active durable memories             |
 | `POST /api/memory/search` | Retrieve memories by topic/content/scope |
 | `PATCH /api/memory/:id`   | Update and version a memory              |
-| `POST /api/memory/sync`   | Bulk sidecar-to-cloud memory sync        |
+| `POST /api/memory/sync`   | Bulk upsert/removal of memories          |
 | `POST /api/memory/forget` | Soft-forget or hard-delete memories      |
 | `DELETE /api/memory/:id`  | Forget or hard-delete one memory         |
 

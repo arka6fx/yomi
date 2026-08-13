@@ -1,11 +1,10 @@
 # Linear Connector
 
-Runtime definitions: `packages/agent-core/src/connectors/linear-def.ts`
+Runtime definition: `packages/agent-core/src/connectors/linear-def.ts`
 
-Runtime ids: `linear`, `linear-api-key`
+Runtime id: `linear`
 
-Auth: OAuth 2.0 with `read` and `write`, or a personal API key. Both variants
-expose the same tools.
+Auth: OAuth 2.0 with `read` and `write` scopes.
 
 ## Tools
 
