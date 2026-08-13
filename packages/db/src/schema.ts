@@ -189,6 +189,25 @@ export const creditTransactions = pgTable(
   }),
 )
 
+export const referralEvents = pgTable(
+  "referral_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    referrerUserId: text("referrer_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    referredUserId: text("referred_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    creditsGranted: integer("credits_granted").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    referrerIdx: index("referral_events_referrer_user_id_idx").on(t.referrerUserId),
+    referredUnique: unique("referral_events_referred_user_id_unique").on(t.referredUserId),
+  }),
+)
+
 export const processedPaymentEvents = pgTable(
   "processed_payment_events",
   {
