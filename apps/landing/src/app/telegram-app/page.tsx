@@ -1,13 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { openExternal } from "@/lib/telegram-webapp"
+import { isTelegramOpenLinkAvailable } from "@/lib/telegram-webapp"
 
 type Status = "loading" | "unlinked" | "error" | "opened"
 
 export default function TelegramAppPage() {
   const [status, setStatus] = useState<Status>("loading")
   const [redeemUrl, setRedeemUrl] = useState<string | null>(null)
+  const [openedAutomatically, setOpenedAutomatically] = useState(false)
 
   useEffect(() => {
     const script = document.createElement("script")
@@ -29,9 +30,24 @@ export default function TelegramAppPage() {
             credentials: "include",
             body: JSON.stringify({ initData }),
           })
+          if (!res.ok) {
+            setStatus("error")
+            return
+          }
           const data = (await res.json()) as { ok: boolean; linked?: boolean; redeemUrl?: string }
           if (data.ok && data.linked && data.redeemUrl) {
-            openExternal(data.redeemUrl)
+            // The token is single-use, so it must be consumed exactly once —
+            // by whichever browser context actually ends up with the
+            // session. If openLink() can escape to a real external browser,
+            // fire it there. If it can't, the ONLY safe move is to leave the
+            // token untouched and let the user tap the link themselves —
+            // falling back to a same-tab navigation here would burn the
+            // token inside this same embedded webview, which is the exact
+            // failure this flow exists to avoid.
+            if (isTelegramOpenLinkAvailable()) {
+              window.Telegram?.WebApp?.openLink?.(data.redeemUrl, { try_instant_view: false })
+              setOpenedAutomatically(true)
+            }
             setRedeemUrl(data.redeemUrl)
             setStatus("opened")
           } else {
@@ -53,11 +69,13 @@ export default function TelegramAppPage() {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
         <p className="text-sm text-muted-foreground">
-          Opened your dashboard in the browser — tap back to chat.
+          {openedAutomatically
+            ? "Opened your dashboard in the browser — tap back to chat."
+            : "Tap below to open your dashboard in the browser."}
         </p>
         {redeemUrl && (
           <a href={redeemUrl} className="text-sm font-medium text-primary underline">
-            Didn&apos;t open? Tap here
+            {openedAutomatically ? <>Didn&apos;t open? Tap here</> : "Open dashboard"}
           </a>
         )}
       </main>
