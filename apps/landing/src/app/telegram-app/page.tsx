@@ -1,14 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { isTelegramOpenLinkAvailable } from "@/lib/telegram-webapp"
+import { openExternal } from "@/lib/telegram-webapp"
 
-type Status = "loading" | "unlinked" | "error" | "opened"
+type Status = "loading" | "unlinked" | "error" | "ready"
 
 export default function TelegramAppPage() {
   const [status, setStatus] = useState<Status>("loading")
   const [redeemUrl, setRedeemUrl] = useState<string | null>(null)
-  const [openedAutomatically, setOpenedAutomatically] = useState(false)
 
   useEffect(() => {
     const script = document.createElement("script")
@@ -36,20 +35,16 @@ export default function TelegramAppPage() {
           }
           const data = (await res.json()) as { ok: boolean; linked?: boolean; redeemUrl?: string }
           if (data.ok && data.linked && data.redeemUrl) {
-            // The token is single-use, so it must be consumed exactly once —
-            // by whichever browser context actually ends up with the
-            // session. If openLink() can escape to a real external browser,
-            // fire it there. If it can't, the ONLY safe move is to leave the
-            // token untouched and let the user tap the link themselves —
-            // falling back to a same-tab navigation here would burn the
-            // token inside this same embedded webview, which is the exact
-            // failure this flow exists to avoid.
-            if (isTelegramOpenLinkAvailable()) {
-              window.Telegram?.WebApp?.openLink?.(data.redeemUrl, { try_instant_view: false })
-              setOpenedAutomatically(true)
-            }
+            // Telegram only treats openLink() as a trusted browser-escape
+            // when it's invoked synchronously from a direct tap — calling it
+            // automatically here, after the async auth round-trip above,
+            // gets silently ignored on mobile clients (iOS/Android) even
+            // though Telegram Web/Desktop are lenient about it. So this just
+            // stores the token and renders a real tappable link; the actual
+            // openExternal() call happens in that link's own onClick, where
+            // it's still inside the tap's call stack on every client.
             setRedeemUrl(data.redeemUrl)
-            setStatus("opened")
+            setStatus("ready")
           } else {
             setStatus("unlinked")
           }
@@ -65,17 +60,20 @@ export default function TelegramAppPage() {
     }
   }, [])
 
-  if (status === "opened") {
+  if (status === "ready") {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
-        <p className="text-sm text-muted-foreground">
-          {openedAutomatically
-            ? "Opened your dashboard in the browser — tap back to chat."
-            : "Tap below to open your dashboard in the browser."}
-        </p>
+        <p className="text-sm text-muted-foreground">Tap below to open your dashboard in the browser.</p>
         {redeemUrl && (
-          <a href={redeemUrl} className="text-sm font-medium text-primary underline">
-            {openedAutomatically ? <>Didn&apos;t open? Tap here</> : "Open dashboard"}
+          <a
+            href={redeemUrl}
+            onClick={(e) => {
+              e.preventDefault()
+              openExternal(redeemUrl)
+            }}
+            className="text-sm font-medium text-primary underline"
+          >
+            Open dashboard
           </a>
         )}
       </main>
