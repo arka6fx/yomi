@@ -36,7 +36,6 @@ export default [
       "node_modules/**",
       ".turbo/**",
       "tmp/**",
-      "apps/sidecar/.playwright-mcp/**",
     ],
   },
 ]
