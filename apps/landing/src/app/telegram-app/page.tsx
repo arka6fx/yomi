@@ -1,14 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import "@/lib/telegram-webapp"
+import { openExternal } from "@/lib/telegram-webapp"
 
-type Status = "loading" | "unlinked" | "error"
+type Status = "loading" | "unlinked" | "error" | "opened"
 
 export default function TelegramAppPage() {
-  const router = useRouter()
   const [status, setStatus] = useState<Status>("loading")
+  const [redeemUrl, setRedeemUrl] = useState<string | null>(null)
 
   useEffect(() => {
     const script = document.createElement("script")
@@ -30,9 +29,11 @@ export default function TelegramAppPage() {
             credentials: "include",
             body: JSON.stringify({ initData }),
           })
-          const data = (await res.json()) as { ok: boolean; linked?: boolean }
-          if (data.ok && data.linked) {
-            router.replace("/dashboard")
+          const data = (await res.json()) as { ok: boolean; linked?: boolean; redeemUrl?: string }
+          if (data.ok && data.linked && data.redeemUrl) {
+            openExternal(data.redeemUrl)
+            setRedeemUrl(data.redeemUrl)
+            setStatus("opened")
           } else {
             setStatus("unlinked")
           }
@@ -46,7 +47,22 @@ export default function TelegramAppPage() {
     return () => {
       document.body.removeChild(script)
     }
-  }, [router])
+  }, [])
+
+  if (status === "opened") {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
+        <p className="text-sm text-muted-foreground">
+          Opened your dashboard in the browser — tap back to chat.
+        </p>
+        {redeemUrl && (
+          <a href={redeemUrl} className="text-sm font-medium text-primary underline">
+            Didn&apos;t open? Tap here
+          </a>
+        )}
+      </main>
+    )
+  }
 
   if (status === "unlinked") {
     return (
