@@ -343,13 +343,37 @@ export function isErrorResult(result: unknown): boolean {
   return record["ok"] === false
 }
 
+// Connector errors sometimes carry the upstream API's raw response verbatim
+// (e.g. a native connector's `Notion API /pages → 400: {"object":"error",...}`,
+// or a Composio passthrough that never unwrapped the provider's JSON body) —
+// dumping that at the user reads as a broken bot. Pull out the human message
+// buried in it, if there is one, instead of surfacing the whole blob.
+function extractErrorMessage(raw: string): string {
+  const trimmed = raw.trim()
+  const jsonStart = trimmed.indexOf("{")
+  if (jsonStart !== -1) {
+    try {
+      const parsed = JSON.parse(trimmed.slice(jsonStart)) as Record<string, unknown>
+      const msg = parsed["message"] ?? parsed["error"]
+      if (typeof msg === "string" && msg.trim()) return msg
+    } catch {
+      // Not actually JSON (or truncated past a valid parse) — fall through to
+      // returning the raw text, capped below.
+    }
+  }
+  return trimmed.length > 200 ? `${trimmed.slice(0, 200)}…` : trimmed
+}
+
 export function formatActionResult(result: unknown, fallback: string): string {
   const record = (typeof result === "object" && result !== null ? result : {}) as Record<
     string,
     unknown
   >
   if (isErrorResult(record)) {
-    const err = typeof record["error"] === "string" ? record["error"] : "the action failed"
+    const err =
+      typeof record["error"] === "string"
+        ? extractErrorMessage(record["error"])
+        : "the action failed"
     const hint = typeof record["hint"] === "string" ? record["hint"] : null
     return [`That didn't work: ${err}`, hint].filter(Boolean).join("\n")
   }

@@ -242,6 +242,8 @@ export interface GatewayMessage {
   videoDurationSeconds?: number
   /** Coordinates when the user shared a location pin */
   location?: { latitude: number; longitude: number }
+  /** Set when the user sent a sticker instead of text */
+  sticker?: { emoji?: string; setName?: string }
 }
 
 export interface GatewaySessionInfo {

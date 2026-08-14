@@ -316,6 +316,11 @@ class FakeAdapter implements PlatformAdapter {
     this.edits.push({ chatId, messageId, text, buttons: options?.buttons })
     return { ok: true }
   }
+  markupClears: { chatId: string; messageId: string }[] = []
+  async editMessageReplyMarkup(chatId: string, messageId: string) {
+    this.markupClears.push({ chatId, messageId })
+    return { ok: true }
+  }
   async answerCallbackQuery(callbackId: string) {
     this.answeredCallbacks.push(callbackId)
   }
@@ -534,6 +539,44 @@ describe("GatewayRunner production routing", () => {
     expect(agentCalls[0]?.text).toBe("📍 _Location:_ 12.9716, 77.5946")
   })
 
+  it("reacts instantly with the sticker's own emoji and feeds it into the agent turn as context", async () => {
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      messageId: "msg_300",
+      text: "",
+      sticker: { emoji: "🔥", setName: "FunPack" },
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(adapter.reactions).toEqual([{ chatId: "chat_1", messageId: "msg_300", emoji: "🔥" }])
+    expect(agentCalls[0]?.text).toBe('🧩 _Sticker:_ 🔥 (from "FunPack")')
+  })
+
+  it("falls back to a default reaction emoji when the sticker's own emoji isn't in the allowed reaction set", async () => {
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      messageId: "msg_301",
+      text: "",
+      sticker: { emoji: "🍑" },
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(adapter.reactions).toEqual([{ chatId: "chat_1", messageId: "msg_301", emoji: "😁" }])
+    expect(agentCalls[0]?.text).toBe("🧩 _Sticker:_ 🍑")
+  })
+
   it("intercepts a first-contact message with the personality ask and skips the agent", async () => {
     soulOnboardingReply = "Hey, I'm Yomi. Define my personality?"
     const runner = new GatewayRunner()
@@ -674,7 +717,41 @@ describe("GatewayRunner production routing", () => {
       { userId: "user_1", platform: "telegram", chatId: "chat_1" },
       { userId: "user_1", platform: "yomi", chatId: "global" },
     ])
-    expect(adapter.edits.at(-1)?.text).toBe("Started a new conversation. How can I help you?")
+    // The tapped message is marked in place, but the real confirmation is a fresh
+    // message at the bottom of the chat — visible no matter which reply's button
+    // was actually tapped.
+    expect(adapter.edits.at(-1)?.text).toBe("✅ Started a new conversation.")
+    expect(adapter.messages.at(-1)?.text).toBe("Started a new conversation. How can I help you?")
+  })
+
+  it("strips the previous reply's New-chat button when a new reply's button is sent", async () => {
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "hello",
+      timestamp: new Date().toISOString(),
+    })
+    // FakeAdapter's message ids are assigned in send order: "1" is the status
+    // placeholder, "2" is the first reply carrying the New-chat button.
+    expect(adapter.markupClears).toEqual([])
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "hello again",
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(adapter.markupClears).toEqual([{ chatId: "chat_1", messageId: "2" }])
+    expect(adapter.messages.at(-1)?.buttons).toEqual([
+      [{ text: "🔄 New chat", callbackData: "new" }],
+    ])
   })
 
   it("sends a status message with a Stop button before running the agent, and deletes it once the reply is sent", async () => {
@@ -836,9 +913,10 @@ describe("GatewayRunner production routing", () => {
     expect(adapter.edits.at(-1)).toEqual({
       chatId: "chat_1",
       messageId: "2",
-      text: "Started a new conversation. How can I help you?",
+      text: "✅ Started a new conversation.",
       buttons: undefined,
     })
+    expect(adapter.messages.at(-1)?.text).toBe("Started a new conversation. How can I help you?")
   })
 
   it("tells the user nothing is running when Stop is tapped with no active run", async () => {
