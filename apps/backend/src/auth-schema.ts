@@ -53,7 +53,7 @@ export const user = pgTable("user", {
   // Opt-in, anonymous leaderboard. leaderboardHandle is generated once on first
   // opt-in (never derived from name/email) and stays stable across opt-out/back-in.
   leaderboardOptIn: boolean("leaderboard_opt_in").notNull().default(false),
-  leaderboardHandle: text("leaderboard_handle"),
+  leaderboardHandle: text("leaderboard_handle").unique(),
   deletedAt: timestamp("deleted_at"),
   privacyPreferences: jsonb("privacy_preferences").notNull().default({}),
   consentVersion: text("consent_version"),

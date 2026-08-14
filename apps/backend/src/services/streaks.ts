@@ -43,7 +43,7 @@ const HANDLE_NOUNS = [
 ]
 
 function isDuplicateHandleError(err: unknown): boolean {
-  return String(err).includes("leaderboard_handle")
+  return String(err).includes("user_leaderboard_handle_unique")
 }
 
 function generateHandle(): string {

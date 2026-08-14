@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it, mock } from "bun:test"
 
 let selectQueue: unknown[][] = []
 let updateSets: Record<string, unknown>[] = []
+// Queue of behaviors for successive db.update(...).set(...).where(...) calls. When empty,
+// updates resolve normally. Push an Error to make the next update call reject with it.
+let updateBehaviors: (Error | undefined)[] = []
 
 function selectChain() {
   const chain = {
@@ -18,7 +21,13 @@ const fakeDb = {
   update: () => ({
     set: (values: Record<string, unknown>) => {
       updateSets.push(values)
-      return { where: () => Promise.resolve() }
+      return {
+        where: () => {
+          const behavior = updateBehaviors.shift()
+          if (behavior) return Promise.reject(behavior)
+          return Promise.resolve()
+        },
+      }
     },
   }),
 }
@@ -33,6 +42,7 @@ const { recordDailyActivity, getStreakStats, setLeaderboardOptIn, getLeaderboard
 beforeEach(() => {
   selectQueue = []
   updateSets = []
+  updateBehaviors = []
 })
 
 function daysAgoUtc(n: number): string {
@@ -145,6 +155,23 @@ describe("setLeaderboardOptIn", () => {
     const result = await setLeaderboardOptIn("user_1", false)
     expect(result).toEqual({ leaderboardOptIn: false, leaderboardHandle: "quiet-falcon-3f2a" })
     expect(updateSets[0]).toEqual({ leaderboardOptIn: false })
+  })
+
+  it("retries with a freshly generated handle when the first candidate collides", async () => {
+    selectQueue = [[{ leaderboardHandle: null }]]
+    updateBehaviors = [
+      new Error(
+        'duplicate key value violates unique constraint "user_leaderboard_handle_unique"',
+      ),
+    ]
+    const result = await setLeaderboardOptIn("user_1", true)
+    expect(result.leaderboardOptIn).toBe(true)
+    expect(result.leaderboardHandle).toMatch(/^[a-z]+-[a-z]+-[0-9a-f]{4}$/)
+    expect(updateSets).toHaveLength(2)
+    const firstCandidate = updateSets[0]?.leaderboardHandle
+    const secondCandidate = updateSets[1]?.leaderboardHandle
+    expect(secondCandidate).toBe(result.leaderboardHandle)
+    expect(secondCandidate).not.toBe(firstCandidate)
   })
 })
 
