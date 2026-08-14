@@ -1,0 +1,35 @@
+name: Migrate Prod (temp)
+
+# Temporary one-off: applies pending Drizzle migrations on the EC2 box.
+# Remove after running — migrations stay manual per repo convention.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  migrate:
+    runs-on: [self-hosted, yomi-ec2]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync code into ~/yomi (preserve .env.production)
+        run: |
+          if ! command -v rsync >/dev/null; then sudo apt-get update -qq && sudo apt-get install -y -qq rsync; fi
+          rsync -a --delete \
+            --exclude '.git' --exclude 'node_modules' --exclude '.env.production*' \
+            "$GITHUB_WORKSPACE"/ /home/ubuntu/yomi/
+
+      - name: Rebuild and restart backend
+        run: |
+          cd /home/ubuntu/yomi
+          docker compose up -d --build backend
+          sleep 6
+
+      - name: Apply pending migrations
+        run: |
+          cd /home/ubuntu/yomi
+          docker compose exec -T backend bun run --cwd /app/packages/db db:migrate
+
+      - name: Report schema drift
+        run: |
+          curl -fsS -m 15 https://api.getyomi.in/health/db || echo "health/db not ok yet"
