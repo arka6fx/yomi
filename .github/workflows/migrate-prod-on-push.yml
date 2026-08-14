@@ -1,0 +1,39 @@
+name: Migrate Prod On Push
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/migrate-prod-on-push.yml"
+
+concurrency:
+  group: migrate-prod
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: [self-hosted, yomi-ec2]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync code into ~/yomi
+        run: |
+          if ! command -v rsync >/dev/null; then sudo apt-get update -qq && sudo apt-get install -y -qq rsync; fi
+          rsync -a --delete \
+            --exclude '.git' --exclude 'node_modules' --exclude '.env.production*' \
+            "$GITHUB_WORKSPACE"/ /home/ubuntu/yomi/
+
+      - name: Rebuild backend with latest migrations
+        run: |
+          cd /home/ubuntu/yomi
+          docker compose up -d --build backend
+          sleep 6
+
+      - name: Apply pending Drizzle migrations
+        run: |
+          cd /home/ubuntu/yomi
+          docker compose exec -T backend bun run --cwd /app/packages/db db:migrate
+
+      - name: Confirm database health
+        run: |
+          curl -fsS -m 20 https://api.getyomi.in/health/db
