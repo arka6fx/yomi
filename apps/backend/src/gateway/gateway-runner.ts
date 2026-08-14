@@ -18,6 +18,7 @@ import {
 import { transcribeAudioUrl } from "../services/transcription.js"
 import { recordAiUsage } from "../services/ai-telemetry.js"
 import { consumeCredits, getCreditSummary } from "../services/credit-ledger.js"
+import { recordDailyActivity } from "../services/streaks.js"
 import { advanceSoulOnboarding } from "../services/soul.js"
 import { creditsForUsage, type BillableUsageKind } from "../services/credit-pricing.js"
 import { hasBillablePlanAccess, isOwnerUser, getPlanConfig } from "../entitlements.js"
@@ -1060,6 +1061,13 @@ export class GatewayRunner {
         `[gateway] resolved yomiUserId=${yomiUserId ?? "unknown"} text="${msg.text.slice(0, 60)}"`,
       )
       if (!yomiUserId) return
+
+      // Streaks/leaderboard: counts every message from a linked user, independent
+      // of billing/metering — a resumed or skipped-charge turn should still count
+      // as "you talked to Yomi today." Best-effort: must never block a reply.
+      void recordDailyActivity(yomiUserId).catch((err) => {
+        console.error("[gateway] recordDailyActivity failed:", err)
+      })
 
       let conversationConsent = await checkConsent(yomiUserId, "conversation_history").catch(
         () => ({ allowed: true, reason: null, decided: true }),
