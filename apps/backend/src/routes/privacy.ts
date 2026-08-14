@@ -25,7 +25,6 @@ import {
   usageEvents,
 } from "@yomi/db"
 import { authenticate } from "../auth.js"
-import { isOwnerUser } from "../entitlements.js"
 import {
   clientIp,
   listPrivacyActivity,
@@ -49,7 +48,6 @@ import {
   getDeletionJob,
   listDeletionJobs,
 } from "../services/privacy/deletion.js"
-import { runPrivacyRetention } from "../services/privacy/retention.js"
 
 type ConsentBody = {
   purposes?: unknown
@@ -352,20 +350,6 @@ privacyRouter.patch("/retention", async (c) => {
     metadata: { domains: Object.keys(overrides) },
   })
   return c.json({ preferences })
-})
-
-privacyRouter.post("/admin/run-retention", async (c) => {
-  const user = c.get("user")
-  if (!isOwnerUser(user)) return c.json({ error: "Owner access required" }, 403)
-  const report = await runPrivacyRetention()
-  await recordPrivacyAuditEvent({
-    actorUserId: user.id,
-    eventType: "privacy.retention.manual_run",
-    ipAddress: clientIp(c),
-    userAgent: userAgent(c),
-    metadata: { ...report.domains },
-  })
-  return c.json({ report })
 })
 
 privacyRouter.post("/delete-data", async (c) => {

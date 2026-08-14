@@ -205,16 +205,6 @@ describe("POST /api/usage/interactions/reserve", () => {
     expect(body.creditsRemaining).toBe(46)
   })
 
-  it("lets owners through with 0 credits (bypass)", async () => {
-    currentUser = user({ email: "owner@example.com" })
-    mockCreditBalance = 0
-    const res = await reserve("chat")
-    const body = (await res.json()) as ReserveBody
-    expect(res.status).toBe(200)
-    expect(body.ok).toBe(true)
-    expect(body.paidBy).toBe("owner")
-  })
-
   it("rejects invalid kind", async () => {
     const res = await app().request("/api/usage/interactions/reserve", {
       method: "POST",

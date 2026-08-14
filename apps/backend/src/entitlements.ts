@@ -6,8 +6,6 @@ import {
   getPlan,
 } from "@yomi/shared/plans"
 
-const DEFAULT_OWNER_EMAILS = ["owner@example.com"]
-
 type EntitlementUser = {
   id?: string | null
   email?: string | null
@@ -21,7 +19,7 @@ type RenewalUser = EntitlementUser & {
   currentPeriodEnd?: Date | null
 }
 
-// "none" — owner (credits bypassed) or a paid plan with no billing period on record yet.
+// "none" — a paid plan with no billing period on record yet.
 export type CreditRenewal = {
   kind: "renewal" | "none"
   at: Date | null
@@ -29,43 +27,11 @@ export type CreditRenewal = {
 
 const TRIAL_MS = 30 * 24 * 60 * 60 * 1000
 
-function parseList(value: string | undefined): string[] {
-  return (
-    value
-      ?.split(",")
-      .map((item) => item.trim())
-      .filter(Boolean) ?? []
-  )
-}
-
-function ownerEmails(): Set<string> {
-  return new Set(
-    [
-      ...DEFAULT_OWNER_EMAILS,
-      ...parseList(process.env["OWNER_EMAIL"]),
-      ...parseList(process.env["OWNER_EMAILS"]),
-    ].map((email) => email.toLowerCase()),
-  )
-}
-
-function ownerUserIds(): Set<string> {
-  return new Set(parseList(process.env["OWNER_USER_IDS"]))
-}
-
-export function isOwnerUser(user: EntitlementUser): boolean {
-  if (user.role === "owner") return true
-  const email = user.email?.toLowerCase()
-  if (email && ownerEmails().has(email)) return true
-  const id = user.id ?? undefined
-  return !!id && ownerUserIds().has(id)
-}
-
 export function effectiveRoleForUser(user: EntitlementUser): string {
-  return isOwnerUser(user) ? "owner" : (user.role ?? "user")
+  return user.role ?? "user"
 }
 
 export function effectivePlanForUser(user: EntitlementUser): string {
-  if (isOwnerUser(user)) return "max"
   const plan = user.plan ?? "explore"
   return plan in PLANS ? plan : "explore"
 }
@@ -75,8 +41,6 @@ export function effectivePlanForUser(user: EntitlementUser): string {
 // "renewal" kind — trialEndDate is the recurring renewal date, not an end date.
 // Paid plans are re-granted by the Dodo cycle webhook at currentPeriodEnd (billing.ts).
 export function creditRenewal(user: RenewalUser): CreditRenewal {
-  if (isOwnerUser(user)) return { kind: "none", at: null }
-
   if (effectivePlanForUser(user) === "explore") {
     const trialEnd =
       user.trialEndDate ?? (user.createdAt ? new Date(user.createdAt.getTime() + TRIAL_MS) : null)
@@ -89,13 +53,11 @@ export function creditRenewal(user: RenewalUser): CreditRenewal {
 }
 
 export function requestLimitForUser(user: EntitlementUser): number | null {
-  if (isOwnerUser(user)) return null
   const plan = effectivePlanForUser(user) as PlanKey
   return planFeatureLimit(plan, "chat") as number
 }
 
 export function featureLimitForUser(user: EntitlementUser, feature: FeatureKey): number | null {
-  if (isOwnerUser(user)) return null
   const plan = effectivePlanForUser(user) as PlanKey
   return planFeatureLimit(plan, feature) as number
 }
@@ -112,7 +74,6 @@ export function hasBillablePlanAccess(
     trialEndDate?: Date | null
   },
 ): boolean {
-  if (isOwnerUser(user)) return true
   const plan = effectivePlanForUser(user)
 
   if (plan === "explore") {

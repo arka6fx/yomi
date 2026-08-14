@@ -2,7 +2,7 @@ import { Hono } from "hono"
 import { and, desc, eq } from "drizzle-orm"
 import { db, schedules } from "@yomi/db"
 import { authenticate } from "../auth.js"
-import { effectivePlanForUser, isOwnerUser } from "../entitlements.js"
+import { effectivePlanForUser } from "../entitlements.js"
 import {
   computeNextRun,
   scheduleLimitForPlan,
@@ -31,7 +31,7 @@ schedulesRouter.get("/", async (c) => {
     .limit(100)
   return c.json({
     schedules: rows,
-    limit: isOwnerUser(user) ? null : scheduleLimitForPlan(effectivePlanForUser(user)),
+    limit: scheduleLimitForPlan(effectivePlanForUser(user)),
   })
 })
 

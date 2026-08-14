@@ -52,10 +52,18 @@ const fakeDb = {
     from: () => ({
       where: () => ({
         limit: () => ({
-          then: (resolve: (rows: { id: string; userId: string; role: string }[]) => unknown) =>
-            // role: "owner" makes isOwnerUser()/hasBillablePlanAccess() short-circuit true for
+          then: (
+            resolve: (
+              rows: { id: string; userId: string; plan: string; subscriptionStatus: string }[],
+            ) => unknown,
+          ) =>
+            // plan: "max" + subscriptionStatus: "active" makes hasBillablePlanAccess() true for
             // featureQuotaBlock's user lookup — no test here exercises billing gate logic.
-            Promise.resolve(resolve([{ id: "conn_1", userId: "user_1", role: "owner" }])),
+            Promise.resolve(
+              resolve([
+                { id: "conn_1", userId: "user_1", plan: "max", subscriptionStatus: "active" },
+              ]),
+            ),
         }),
       }),
     }),
@@ -255,8 +263,8 @@ mock.module("../services/credit-ledger.js", () => ({
   consumeCredits: async () => ({ ok: true, charged: 1, balance: 99 }),
   createPaymentRecord: async () => "payment_1",
   getCreditSummary: async () => ({
-    balance: 0,
-    lifetimeGranted: 0,
+    balance: 100,
+    lifetimeGranted: 100,
     lifetimeConsumed: 0,
     lifetimeRefunded: 0,
     expiringSoon: 0,

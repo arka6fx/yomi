@@ -34,7 +34,7 @@ import {
   createCountingExecutor,
 } from "../connectors/composio-executor.js"
 import { composioCostMicros } from "@yomi/shared/ai-pricing"
-import { hasBillablePlanAccess, effectivePlanForUser, isOwnerUser } from "../entitlements.js"
+import { hasBillablePlanAccess, effectivePlanForUser } from "../entitlements.js"
 import { chargeUsage, lowCreditWarning } from "../services/metering.js"
 import { recordAiUsage } from "../services/ai-telemetry.js"
 import { checkConsent } from "../services/privacy/checks.js"
@@ -588,10 +588,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   // index_text/index_url/index_document must not be a side door around that for an
   // Explore user. Rather than add the tools and have them always error for Explore,
   // they're simply absent from extraTools.
-  const canUseRag =
-    isOwnerUser(user) ||
-    effectivePlanForUser(user) === "pro" ||
-    effectivePlanForUser(user) === "max"
+  const canUseRag = effectivePlanForUser(user) === "pro" || effectivePlanForUser(user) === "max"
   const indexTextTool = canUseRag
     ? createIndexTextTool((title, content) => indexManualText(opts.userId, title, content))
     : null

@@ -10,7 +10,7 @@ import type {
 } from "@yomi/shared"
 import { authenticate } from "../auth.js"
 import { requireConsent } from "../middleware/consent.js"
-import { effectivePlanForUser, isOwnerUser } from "../entitlements.js"
+import { effectivePlanForUser } from "../entitlements.js"
 import { llmRerank, mmrRerank, parseVector, type RerankCandidate } from "../lib/rerank.js"
 import { embedText, chunkText, DEFAULT_EMBEDDING_MODEL } from "../services/rag/embeddings.js"
 import { indexDocument } from "../services/rag/index-document.js"
@@ -53,7 +53,7 @@ function ragAllowed(user: {
   id?: string | null
 }): boolean {
   const plan = effectivePlanForUser(user)
-  return isOwnerUser(user) || plan === "pro" || plan === "max"
+  return plan === "pro" || plan === "max"
 }
 
 function hash(value: string): string {

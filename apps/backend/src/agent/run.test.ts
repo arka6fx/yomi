@@ -551,17 +551,6 @@ describe("runAgent metering", () => {
     expect(lastAgentSystem).toContain("7mo ago")
     expect(lastAgentSystem).not.toContain("confidence 95")
   })
-
-  it("owner bypasses all quota and credit checks", async () => {
-    mockUser = makeUser({ role: "owner", plan: "explore", subscriptionStatus: null })
-    mockBotMessageCount = 9999
-    mockCreditBalance = 0
-    const { runAgent } = await import("./run.js")
-    const result = await runAgent({ userId: "user_1", text: "hi" })
-    expect(result.quotaError).toBeUndefined()
-    expect(result.text).toBe("The answer is 42.")
-    expect(consumeCreditsCalled).toBe(false)
-  })
 })
 
 // A per-turn-variable block (clock time, integration nudges, memory) placed ahead of

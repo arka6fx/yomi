@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm"
 import { db, ragSources, ragDocuments } from "@yomi/db"
 import { authenticate } from "../auth.js"
 import { requireConsent } from "../middleware/consent.js"
-import { effectivePlanForUser, isOwnerUser } from "../entitlements.js"
+import { effectivePlanForUser } from "../entitlements.js"
 import {
   createDriveSource,
   syncSource,
@@ -14,7 +14,6 @@ import {
 export const ragDriveRouter = new Hono()
 
 function ragAllowed(user: { id: string; email?: string | null; plan?: string | null }): boolean {
-  if (isOwnerUser(user)) return true
   const plan = effectivePlanForUser(user)
   return plan === "pro" || plan === "max"
 }

@@ -10,20 +10,6 @@ mock.module("../auth.js", () => ({
   },
 }))
 
-mock.module("../entitlements.js", () => ({
-  isOwnerUser: (_u: { email: string }) => false,
-}))
-
-mock.module("../services/privacy/retention.js", () => ({
-  runPrivacyRetention: async () => ({
-    expiredExports: 0,
-    oldDeletionJobs: 0,
-    hardDeletedUsers: 0,
-    oldAuditEvents: 0,
-    domains: {},
-  }),
-}))
-
 mock.module("../services/privacy/preferences.js", () => ({
   getPrivacyPreferences: async () => ({ retentionOverrides: null }),
   updatePrivacyPreferences: async () => ({ retentionOverrides: null }),
