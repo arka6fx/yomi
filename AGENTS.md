@@ -157,8 +157,9 @@ charged separately). Tune from `ai_usage_events` telemetry; real API cost is
 recorded in `totalApiCostMicros` via `@yomi/shared/ai-pricing`.
 
 Single chokepoint: `apps/backend/src/services/metering.ts` -> `chargeUsage()`
-(owner bypass -> active-plan check -> `balance >= cost` -> record event +
-consume). Callers: `routes/usage.ts`, `agent/run.ts`, and
+(active-plan check -> `balance >= cost` -> record event + consume). No owner
+bypass — every account, including the operator's own, is metered against its
+plan like any other user. Callers: `routes/usage.ts`, `agent/run.ts`, and
 `gateway/gateway-runner.ts`. Ledger: `services/credit-ledger.ts` +
 `services/credit-pricing.ts`. Plan source of truth:
 `packages/shared/src/plans.ts`. Billing/webhooks:

@@ -20,7 +20,7 @@ import { recordAiUsage } from "../services/ai-telemetry.js"
 import { consumeCredits, getCreditSummary } from "../services/credit-ledger.js"
 import { advanceSoulOnboarding } from "../services/soul.js"
 import { creditsForUsage, type BillableUsageKind } from "../services/credit-pricing.js"
-import { hasBillablePlanAccess, isOwnerUser, getPlanConfig } from "../entitlements.js"
+import { hasBillablePlanAccess, getPlanConfig } from "../entitlements.js"
 import { user as userTable } from "../auth-schema.js"
 
 const SESSION_TTL_MS = 60 * 60 * 1000
@@ -682,7 +682,6 @@ export class GatewayRunner {
       .where(eq(userTable.id, yomiUserId))
       .limit(1)
     if (!user) return null
-    if (isOwnerUser(user)) return null
 
     if (!hasBillablePlanAccess(user)) {
       const status = user.subscriptionStatus ?? "inactive"

@@ -9,7 +9,6 @@ import {
   Check,
   Crown,
   Loader2,
-  Shield,
   Trash2,
   AlertTriangle,
   WalletCards,
@@ -88,7 +87,7 @@ type Sub = {
 }
 
 type UsageSummary = {
-  plan: { key: string; name: string; status: string; isOwner: boolean }
+  plan: { key: string; name: string; status: string }
   credits: {
     remaining: number
     included: number
@@ -117,13 +116,7 @@ function inDays(value: string) {
 }
 
 // Explore renews monthly just like a paid plan now (see explore-renewal.ts's cron).
-function creditsCaption(
-  included: number,
-  isOwner: boolean,
-  resetAt?: string | null,
-  resetKind?: ResetKind | null,
-) {
-  if (isOwner) return "Unlimited credits."
+function creditsCaption(included: number, resetAt?: string | null, resetKind?: ResetKind | null) {
   if (resetKind === "renewal" && resetAt) {
     return `${included.toLocaleString()} included monthly credits. Resets ${inDays(resetAt)}.`
   }
@@ -615,7 +608,6 @@ function DashboardContent() {
 
   if (isPending || !session) return null
 
-  const isOwner = sub?.role === "owner"
   const currentPlanKey = sub?.plan ?? "explore"
   const currentPlanIdx = PLANS.findIndex((p) => p.key === currentPlanKey)
   const creditRemaining = usageSummary?.credits.remaining ?? sub?.credits?.balance ?? 0
@@ -632,16 +624,10 @@ function DashboardContent() {
   const trendMax = Math.max(...trendDays.map((d) => d.credits), 1)
   const recentActivity = usageSummary?.recentActivity ?? []
 
-  const planStatusTone: PlanSummary["statusTone"] = isOwner
-    ? "owner"
-    : sub?.status === "active"
-      ? "active"
-      : sub?.status === "past_due"
-        ? "past_due"
-        : "trial"
-  const planStatusLabel = isOwner
-    ? "owner"
-    : sub?.status === "past_due"
+  const planStatusTone: PlanSummary["statusTone"] =
+    sub?.status === "active" ? "active" : sub?.status === "past_due" ? "past_due" : "trial"
+  const planStatusLabel =
+    sub?.status === "past_due"
       ? "past due"
       : sub?.plan === "explore"
         ? "free"
@@ -652,10 +638,9 @@ function DashboardContent() {
     planName: sub ? (PLANS.find((p) => p.key === currentPlanKey)?.name ?? currentPlanKey) : "",
     statusLabel: planStatusLabel,
     statusTone: planStatusTone,
-    isOwner,
     creditRemaining,
     creditTotal: creditTotal || creditIncluded,
-    caption: creditsCaption(creditIncluded, isOwner, resetAt, resetKind),
+    caption: creditsCaption(creditIncluded, resetAt, resetKind),
     renewsAt: sub?.currentPeriodEnd ?? null,
     billingWarning: sub?.billingWarning ?? null,
   }
@@ -675,12 +660,6 @@ function DashboardContent() {
             <span className="text-sm text-muted-foreground hidden sm:block truncate max-w-[200px]">
               {session.user.email}
             </span>
-            {isOwner && (
-              <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 font-medium">
-                <Shield size={11} />
-                Owner
-              </span>
-            )}
             <SettingsMenu onNavigate={setActiveTab} />
             <button
               onClick={handleSignOut}
@@ -753,7 +732,6 @@ function DashboardContent() {
               connectedProviders={connectedProviders}
               unhealthyCount={integrationHealth.filter((item) => !item.healthy).length}
               currentPlanKey={currentPlanKey}
-              isOwner={isOwner}
               creditPacks={sub?.creditPacks ?? []}
               billingLoading={billingLoading}
               creditLoading={creditLoading}
@@ -1077,22 +1055,18 @@ function DashboardContent() {
                         <span
                           className={cn(
                             "text-xs px-2 py-0.5 rounded-full font-medium",
-                            isOwner
-                              ? "bg-sky-500/10 text-sky-300"
-                              : sub.status === "active"
-                                ? "bg-emerald-500/10 text-emerald-400"
-                                : sub.status === "past_due"
-                                  ? "bg-red-500/10 text-red-400"
-                                  : "bg-sky-500/10 text-sky-300",
+                            sub.status === "active"
+                              ? "bg-emerald-500/10 text-emerald-400"
+                              : sub.status === "past_due"
+                                ? "bg-red-500/10 text-red-400"
+                                : "bg-sky-500/10 text-sky-300",
                           )}
                         >
-                          {isOwner
-                            ? "owner"
-                            : sub.status === "past_due"
-                              ? "past due"
-                              : sub.plan === "explore"
-                                ? "free"
-                                : sub.status}
+                          {sub.status === "past_due"
+                            ? "past due"
+                            : sub.plan === "explore"
+                              ? "free"
+                              : sub.status}
                         </span>
                       )}
                     </div>
@@ -1145,57 +1119,46 @@ function DashboardContent() {
                         </p>
                         <div className="flex items-baseline gap-2">
                           <span className="text-4xl font-light text-foreground tabular-nums">
-                            {isOwner ? "∞" : creditRemaining}
+                            {creditRemaining}
                           </span>
-                          {!isOwner && (
-                            <span className="text-sm text-muted-foreground">
-                              / {creditTotal || creditIncluded} available
-                            </span>
-                          )}
+                          <span className="text-sm text-muted-foreground">
+                            / {creditTotal || creditIncluded} available
+                          </span>
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {creditsCaption(creditIncluded, isOwner, resetAt, resetKind)}
+                          {creditsCaption(creditIncluded, resetAt, resetKind)}
                         </p>
                       </div>
-                      {!isOwner && (
-                        <button
-                          onClick={() =>
-                            sub?.plan === "explore"
-                              ? handleUpgrade("pro")
-                              : sub?.creditPacks?.[0] && handleBuyCredits(sub.creditPacks[0].key)
-                          }
-                          disabled={billingLoading !== null || creditLoading !== null}
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-                        >
-                          {sub?.plan === "explore" ? <Crown size={13} /> : <Zap size={13} />}
-                          {sub?.plan === "explore" ? "Upgrade" : "Add credits"}
-                        </button>
-                      )}
+                      <button
+                        onClick={() =>
+                          sub?.plan === "explore"
+                            ? handleUpgrade("pro")
+                            : sub?.creditPacks?.[0] && handleBuyCredits(sub.creditPacks[0].key)
+                        }
+                        disabled={billingLoading !== null || creditLoading !== null}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                      >
+                        {sub?.plan === "explore" ? <Crown size={13} /> : <Zap size={13} />}
+                        {sub?.plan === "explore" ? "Upgrade" : "Add credits"}
+                      </button>
                     </div>
 
                     {sub && (
                       <div className="space-y-5">
-                        {/* owners have no quota, so a usage bar would be measuring against nothing */}
-                        {isOwner ? (
-                          <div className="text-xs text-muted-foreground">
-                            {creditUsed} used this period · no limit
+                        <div className="space-y-2">
+                          <div className="h-3 rounded-full bg-muted overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-primary transition-all"
+                              style={{
+                                width: `${Math.min(100, (creditUsed / Math.max(creditTotal, 1)) * 100)}%`,
+                              }}
+                            />
                           </div>
-                        ) : (
-                          <div className="space-y-2">
-                            <div className="h-3 rounded-full bg-muted overflow-hidden">
-                              <div
-                                className="h-full rounded-full bg-primary transition-all"
-                                style={{
-                                  width: `${Math.min(100, (creditUsed / Math.max(creditTotal, 1)) * 100)}%`,
-                                }}
-                              />
-                            </div>
-                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                              <span>{creditUsed} used this period</span>
-                              <span>{creditRemaining} remaining</span>
-                            </div>
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>{creditUsed} used this period</span>
+                            <span>{creditRemaining} remaining</span>
                           </div>
-                        )}
+                        </div>
 
                         <div className="grid gap-3 sm:grid-cols-[1fr_1.2fr]">
                           <div className="rounded-xl border border-border bg-background/45 p-4">
@@ -1245,7 +1208,7 @@ function DashboardContent() {
                       </div>
                     )}
 
-                    {!isOwner && sub?.plan === "explore" && sub?.credits?.balance === 0 && (
+                    {sub?.plan === "explore" && sub?.credits?.balance === 0 && (
                       <div className="mt-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20">
                         <p className="text-sm text-destructive font-medium mb-1">
                           Out of free credits for this month
@@ -1266,7 +1229,7 @@ function DashboardContent() {
                       </div>
                     )}
 
-                    {!isOwner && sub?.plan !== "explore" && sub?.credits?.balance === 0 && (
+                    {sub?.plan !== "explore" && sub?.credits?.balance === 0 && (
                       <div className="mt-6 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
                         <p className="text-sm text-yellow-400 font-medium mb-1">
                           No credits remaining
@@ -1422,97 +1385,94 @@ function DashboardContent() {
                 </div>
               </motion.div>
 
-              {/* Plans — hidden for owner */}
-              {!isOwner && (
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.16 }}
-                >
-                  <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-4">
-                    Plans
-                  </p>
-                  {billingError && <p className="text-xs text-destructive mb-4">{billingError}</p>}
-                  <div className="grid sm:grid-cols-3 gap-3">
-                    {PLANS.map((plan, i) => {
-                      const isCurrent = plan.key === currentPlanKey
-                      const isUpgrade = i > currentPlanIdx
-                      const Icon = plan.icon
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.16 }}
+              >
+                <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-4">
+                  Plans
+                </p>
+                {billingError && <p className="text-xs text-destructive mb-4">{billingError}</p>}
+                <div className="grid sm:grid-cols-3 gap-3">
+                  {PLANS.map((plan, i) => {
+                    const isCurrent = plan.key === currentPlanKey
+                    const isUpgrade = i > currentPlanIdx
+                    const Icon = plan.icon
 
-                      return (
-                        <div
-                          key={plan.key}
-                          className={cn(
-                            "relative rounded-xl border p-5 flex flex-col gap-4 transition-colors",
-                            isCurrent ? "border-primary bg-primary/5" : "border-border bg-card",
-                            plan.key === "pro" && !isCurrent
-                              ? "border-primary/30 shadow-[0_0_30px_-12px_hsl(var(--primary)/0.25)]"
-                              : "",
-                          )}
-                        >
-                          {plan.key === "pro" && !isCurrent && (
-                            <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                              <span className="whitespace-nowrap rounded-full bg-primary px-3 py-0.5 text-[11px] font-medium text-primary-foreground">
-                                Most Popular
-                              </span>
-                            </div>
-                          )}
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-2">
-                                <Icon size={16} className="text-primary" />
-                                <span className="text-sm font-medium text-foreground">
-                                  {plan.name}
-                                </span>
-                              </div>
-                              {isCurrent && <Check size={13} className="text-primary" />}
-                            </div>
-                            <div className="flex items-baseline gap-1 mb-0.5">
-                              <span className="text-lg font-light text-foreground">
-                                {formatUsd(plan.priceUsd)}
-                              </span>
-                              <span className="text-xs text-muted-foreground">{plan.priceSub}</span>
-                            </div>
-                            <p className="text-xs text-muted-foreground mb-2.5 leading-relaxed">
-                              {plan.desc}
-                            </p>
-                            <ul className="space-y-1">
-                              {plan.features.map((f) => (
-                                <li
-                                  key={f}
-                                  className="text-xs text-muted-foreground flex items-start gap-1.5"
-                                >
-                                  <Check size={10} className="text-primary mt-0.5 shrink-0" />
-                                  {f}
-                                </li>
-                              ))}
-                            </ul>
+                    return (
+                      <div
+                        key={plan.key}
+                        className={cn(
+                          "relative rounded-xl border p-5 flex flex-col gap-4 transition-colors",
+                          isCurrent ? "border-primary bg-primary/5" : "border-border bg-card",
+                          plan.key === "pro" && !isCurrent
+                            ? "border-primary/30 shadow-[0_0_30px_-12px_hsl(var(--primary)/0.25)]"
+                            : "",
+                        )}
+                      >
+                        {plan.key === "pro" && !isCurrent && (
+                          <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                            <span className="whitespace-nowrap rounded-full bg-primary px-3 py-0.5 text-[11px] font-medium text-primary-foreground">
+                              Most Popular
+                            </span>
                           </div>
-
-                          {isCurrent ? (
-                            <span className="text-xs text-primary font-medium">Current plan</span>
-                          ) : isUpgrade ? (
-                            <button
-                              onClick={() => handleUpgrade(plan.key)}
-                              disabled={billingLoading !== null}
-                              className="flex items-center justify-center gap-1.5 bg-primary text-primary-foreground rounded-lg py-2 text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
-                            >
-                              {billingLoading === plan.key ? (
-                                <Loader2 size={12} className="animate-spin" />
-                              ) : (
-                                <Crown size={12} />
-                              )}
-                              Upgrade
-                            </button>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">Lower tier</span>
-                          )}
+                        )}
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <Icon size={16} className="text-primary" />
+                              <span className="text-sm font-medium text-foreground">
+                                {plan.name}
+                              </span>
+                            </div>
+                            {isCurrent && <Check size={13} className="text-primary" />}
+                          </div>
+                          <div className="flex items-baseline gap-1 mb-0.5">
+                            <span className="text-lg font-light text-foreground">
+                              {formatUsd(plan.priceUsd)}
+                            </span>
+                            <span className="text-xs text-muted-foreground">{plan.priceSub}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mb-2.5 leading-relaxed">
+                            {plan.desc}
+                          </p>
+                          <ul className="space-y-1">
+                            {plan.features.map((f) => (
+                              <li
+                                key={f}
+                                className="text-xs text-muted-foreground flex items-start gap-1.5"
+                              >
+                                <Check size={10} className="text-primary mt-0.5 shrink-0" />
+                                {f}
+                              </li>
+                            ))}
+                          </ul>
                         </div>
-                      )
-                    })}
-                  </div>
-                </motion.div>
-              )}
+
+                        {isCurrent ? (
+                          <span className="text-xs text-primary font-medium">Current plan</span>
+                        ) : isUpgrade ? (
+                          <button
+                            onClick={() => handleUpgrade(plan.key)}
+                            disabled={billingLoading !== null}
+                            className="flex items-center justify-center gap-1.5 bg-primary text-primary-foreground rounded-lg py-2 text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+                          >
+                            {billingLoading === plan.key ? (
+                              <Loader2 size={12} className="animate-spin" />
+                            ) : (
+                              <Crown size={12} />
+                            )}
+                            Upgrade
+                          </button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Lower tier</span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </motion.div>
             </>
           ) /* end billing tab */
         }

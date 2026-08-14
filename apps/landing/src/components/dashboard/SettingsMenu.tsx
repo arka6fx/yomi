@@ -8,7 +8,6 @@ import {
   Brain,
   User,
   PenLine,
-  Code2,
   WalletCards,
   Shield,
   BookOpen,
@@ -93,14 +92,6 @@ export function SettingsMenu({ onNavigate }: { onNavigate: (tab: DashboardTab) =
               {item.label}
             </button>
           ))}
-          <Link
-            href="/dashboard/developer"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-2.5 px-3.5 py-2 text-sm text-foreground hover:bg-muted/50 transition-colors"
-          >
-            <Code2 size={14} className="text-muted-foreground" />
-            Developer
-          </Link>
 
           <div className="my-1.5 border-t border-border" />
           <p className="px-3.5 py-1 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">

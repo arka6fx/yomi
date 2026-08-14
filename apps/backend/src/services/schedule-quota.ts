@@ -1,6 +1,6 @@
 import { eq, sql } from "drizzle-orm"
 import { db, schedules } from "@yomi/db"
-import { effectivePlanForUser, getPlanConfig, isOwnerUser } from "../entitlements.js"
+import { effectivePlanForUser, getPlanConfig } from "../entitlements.js"
 import { scheduleLimitForPlan } from "./schedule-parser.js"
 
 // Structurally matches entitlements' EntitlementUser plus the required id.
@@ -18,7 +18,6 @@ export type CapacityResult =
 // The single plan gate for creating a schedule — shared by POST /api/schedules
 // and suggestion accepts so the two paths can never drift.
 export async function ensureScheduleCapacity(user: QuotaUser): Promise<CapacityResult> {
-  if (isOwnerUser(user)) return { ok: true }
   const plan = effectivePlanForUser(user)
   const limit = scheduleLimitForPlan(plan)
   if (limit <= 0) {

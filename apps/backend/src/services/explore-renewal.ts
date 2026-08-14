@@ -1,7 +1,7 @@
 import { and, eq, isNull, lt } from "drizzle-orm"
 import { db, creditAccounts } from "@yomi/db"
 import { user } from "../auth-schema.js"
-import { effectivePlanForUser, isOwnerUser } from "../entitlements.js"
+import { effectivePlanForUser } from "../entitlements.js"
 import { grantCredits } from "./credit-ledger.js"
 import { getPlan } from "@yomi/shared/plans"
 
@@ -25,7 +25,6 @@ export async function renewExploreCredits(now: Date = new Date()): Promise<Explo
     .select({
       id: user.id,
       email: user.email,
-      role: user.role,
       plan: user.plan,
       trialEndDate: user.trialEndDate,
     })
@@ -41,7 +40,6 @@ export async function renewExploreCredits(now: Date = new Date()): Promise<Explo
   let creditsGranted = 0
 
   for (const u of candidates) {
-    if (isOwnerUser(u)) continue
     if (effectivePlanForUser(u) !== "explore") continue
 
     const balance = balanceByUser.get(u.id) ?? 0

@@ -12,9 +12,6 @@ const LIMITS: Record<string, number> = {
 
 export async function rateLimit(c: Context, next: Next) {
   const user = c.get("user")
-  // Owners have no rate limit
-  if (user.role === "owner") return next()
-
   const limit = LIMITS[user.plan] ?? 10
   const now = Date.now()
   const key = user.id

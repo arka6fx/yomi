@@ -8,7 +8,7 @@ import { db } from "@yomi/db"
 import { eq } from "drizzle-orm"
 import type { Context, Next } from "hono"
 import * as authSchema from "./auth-schema.js"
-import { effectivePlanForUser, effectiveRoleForUser, isOwnerUser } from "./entitlements.js"
+import { effectivePlanForUser, effectiveRoleForUser } from "./entitlements.js"
 import { grantCredits } from "./services/credit-ledger.js"
 import { recordConsentDecision } from "./services/privacy/consent.js"
 import { getPlan } from "@yomi/shared/plans"
@@ -99,39 +99,32 @@ function createAuth() {
         create: {
           // Set role and plan right after Better Auth inserts the user row.
           after: async (createdUser) => {
-            const isOwner = isOwnerUser(createdUser)
             const trialStartDate = new Date()
             const trialEndDate = new Date(trialStartDate.getTime() + 30 * 24 * 60 * 60 * 1000)
 
             await db
               .update(authSchema.user)
-              .set(
-                isOwner
-                  ? { role: "owner", plan: "max", subscriptionStatus: "active" }
-                  : {
-                      role: "user",
-                      plan: "explore",
-                      subscriptionStatus: "inactive",
-                      trialInteractionLimit: REGULAR_INTERACTION_LIMIT,
-                      trialStartDate,
-                      trialEndDate,
-                    },
-              )
+              .set({
+                role: "user",
+                plan: "explore",
+                subscriptionStatus: "inactive",
+                trialInteractionLimit: REGULAR_INTERACTION_LIMIT,
+                trialStartDate,
+                trialEndDate,
+              })
               .where(eq(authSchema.user.id, createdUser.id))
 
-            if (!isOwner) {
-              const plan = getPlan("explore")
-              await grantCredits({
-                userId: createdUser.id,
-                amount: plan.includedCredits,
-                source: "subscription_cycle",
-                sourceId: `signup:${createdUser.id}:explore`,
-                idempotencyKey: `signup:${createdUser.id}:explore_credits`,
-                expiresAt: trialEndDate,
-                reason: "Explore trial credits",
-                metadata: { plan: "explore", trialDays: 30 },
-              }).catch((err) => console.error("[signup] grantCredits failed:", createdUser.id, err))
-            }
+            const plan = getPlan("explore")
+            await grantCredits({
+              userId: createdUser.id,
+              amount: plan.includedCredits,
+              source: "subscription_cycle",
+              sourceId: `signup:${createdUser.id}:explore`,
+              idempotencyKey: `signup:${createdUser.id}:explore_credits`,
+              expiresAt: trialEndDate,
+              reason: "Explore trial credits",
+              metadata: { plan: "explore", trialDays: 30 },
+            }).catch((err) => console.error("[signup] grantCredits failed:", createdUser.id, err))
 
             // Seed the functional consent subset so chat/memory/connectors work
             // on first use. This records a real granted-consent decision (not a

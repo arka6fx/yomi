@@ -18,7 +18,6 @@ import { proxyRouter } from "./routes/proxy.js"
 import { gatewayRouter } from "./gateway/routes.js"
 import { integrationsRouter } from "./routes/integrations.js"
 import { customMcpRouter } from "./routes/custom-mcp.js"
-import { adminRouter } from "./routes/admin.js"
 import { conversationRouter } from "./routes/conversation.js"
 import { statusRouter } from "./routes/status.js"
 import { privacyRouter } from "./routes/privacy.js"
@@ -133,7 +132,6 @@ app.route("/api/v1", proxyRouter)
 app.route("/api/gateway", gatewayRouter)
 app.route("/api/integrations", integrationsRouter)
 app.route("/api/custom-mcp", customMcpRouter)
-app.route("/api/admin", adminRouter)
 app.route("/api/conversation", conversationRouter)
 app.route("/api/status", statusRouter)
 app.route("/api/privacy", privacyRouter)

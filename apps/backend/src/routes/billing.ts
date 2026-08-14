@@ -703,7 +703,6 @@ billingRouter.get("/usage-summary", authenticate, async (c) => {
       key: effectivePlan,
       name: planConfig.name,
       status: user.subscriptionStatus ?? "inactive",
-      isOwner: effectiveRoleForUser(user) === "owner",
     },
     credits: {
       remaining: creditSummary.balance,

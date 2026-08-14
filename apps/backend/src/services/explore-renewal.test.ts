@@ -6,7 +6,6 @@ const state = {
   users: [] as Array<{
     id: string
     email: string
-    role: string | null
     plan: string | null
     trialEndDate: Date | null
   }>,
@@ -50,13 +49,11 @@ const { renewExploreCredits } = await import("./explore-renewal.js")
 
 describe("renewExploreCredits", () => {
   beforeEach(() => {
-    process.env["OWNER_EMAIL"] = "owner@example.com"
     state.users = [
       // window ended, balance already at 0 — full top-up
       {
         id: "u_zero",
         email: "zero@example.com",
-        role: "user",
         plan: "explore",
         trialEndDate: new Date("2026-06-01T00:00:00Z"),
       },
@@ -64,7 +61,6 @@ describe("renewExploreCredits", () => {
       {
         id: "u_partial",
         email: "partial@example.com",
-        role: "user",
         plan: "explore",
         trialEndDate: new Date("2026-06-01T00:00:00Z"),
       },
@@ -72,16 +68,7 @@ describe("renewExploreCredits", () => {
       {
         id: "u_pro",
         email: "pro@example.com",
-        role: "user",
         plan: "pro",
-        trialEndDate: new Date("2020-01-01T00:00:00Z"),
-      },
-      // owner — must be skipped entirely
-      {
-        id: "owner_1",
-        email: "owner@example.com",
-        role: "owner",
-        plan: "explore",
         trialEndDate: new Date("2020-01-01T00:00:00Z"),
       },
     ]
@@ -89,7 +76,6 @@ describe("renewExploreCredits", () => {
       { userId: "u_zero", balance: 0 },
       { userId: "u_partial", balance: 40 },
       { userId: "u_pro", balance: 300 },
-      { userId: "owner_1", balance: 9000 },
     ]
     state.userUpdates = []
     state.grants = []
@@ -112,19 +98,18 @@ describe("renewExploreCredits", () => {
     await renewExploreCredits(now)
 
     const expectedEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).getTime()
-    // Only the 2 due explore accounts get their window restarted (owner + pro skipped).
+    // Only the 2 due explore accounts get their window restarted (pro skipped).
     expect(state.userUpdates).toHaveLength(2)
     for (const update of state.userUpdates) {
       expect((update["trialEndDate"] as Date).getTime()).toBe(expectedEnd)
     }
   })
 
-  it("skips the owner and paid plans even if their row comes back due", async () => {
+  it("skips paid plans even if their row comes back due", async () => {
     const now = new Date("2026-07-01T00:00:00Z")
     await renewExploreCredits(now)
 
     expect(state.grants.map((g) => g.userId)).not.toContain("u_pro")
-    expect(state.grants.map((g) => g.userId)).not.toContain("owner_1")
     expect(state.userUpdates).toHaveLength(2)
   })
 
