@@ -11,6 +11,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Temporary prod migration runner; remove after /health/db is green.
   migrate:
     runs-on: [self-hosted, yomi-ec2]
     steps:
