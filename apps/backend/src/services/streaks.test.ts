@@ -35,9 +35,14 @@ const fakeDb = {
 mock.module("@yomi/db", () => ({ db: fakeDb }))
 mock.module("../auth-schema.js", () => ({ user: {} }))
 
-const { recordDailyActivity, getStreakStats, setLeaderboardOptIn, getLeaderboard } = await import(
-  "./streaks.js"
-)
+const {
+  recordDailyActivity,
+  getStreakStats,
+  setLeaderboardOptIn,
+  updateLeaderboardHandle,
+  setLeaderboardShowPhoto,
+  getLeaderboard,
+} = await import("./streaks.js")
 
 beforeEach(() => {
   selectQueue = []
@@ -98,7 +103,7 @@ describe("recordDailyActivity", () => {
 })
 
 describe("getStreakStats", () => {
-  it("returns the persisted stats for a user", async () => {
+  it("returns the persisted stats for a user, including their avatar", async () => {
     selectQueue = [
       [
         {
@@ -107,6 +112,8 @@ describe("getStreakStats", () => {
           totalMessagesSent: 42,
           leaderboardOptIn: true,
           leaderboardHandle: "quiet-falcon-3f2a",
+          leaderboardShowPhoto: true,
+          image: "https://lh3.googleusercontent.com/a/photo.jpg",
         },
       ],
     ]
@@ -117,6 +124,8 @@ describe("getStreakStats", () => {
       totalMessagesSent: 42,
       leaderboardOptIn: true,
       leaderboardHandle: "quiet-falcon-3f2a",
+      leaderboardShowPhoto: true,
+      avatarUrl: "https://lh3.googleusercontent.com/a/photo.jpg",
     })
   })
 
@@ -129,6 +138,8 @@ describe("getStreakStats", () => {
       totalMessagesSent: 0,
       leaderboardOptIn: false,
       leaderboardHandle: null,
+      leaderboardShowPhoto: true,
+      avatarUrl: null,
     })
   })
 })
@@ -175,25 +186,91 @@ describe("setLeaderboardOptIn", () => {
   })
 })
 
+describe("updateLeaderboardHandle", () => {
+  it("accepts a valid custom handle", async () => {
+    const result = await updateLeaderboardHandle("user_1", "ArkaG")
+    expect(result).toEqual({ ok: true, leaderboardHandle: "arkag" })
+    expect(updateSets[0]).toEqual({ leaderboardHandle: "arkag" })
+  })
+
+  it("rejects a handle that's too short or has invalid characters", async () => {
+    const tooShort = await updateLeaderboardHandle("user_1", "ab")
+    expect(tooShort.ok).toBe(false)
+    const badChars = await updateLeaderboardHandle("user_1", "arka_garai!")
+    expect(badChars.ok).toBe(false)
+    expect(updateSets).toHaveLength(0)
+  })
+
+  it("returns a friendly error when the handle is already taken", async () => {
+    updateBehaviors = [
+      new Error(
+        'duplicate key value violates unique constraint "user_leaderboard_handle_unique"',
+      ),
+    ]
+    const result = await updateLeaderboardHandle("user_1", "taken-handle")
+    expect(result).toEqual({ ok: false, error: "That handle is already taken — try another." })
+  })
+})
+
+describe("setLeaderboardShowPhoto", () => {
+  it("persists the photo-visibility preference", async () => {
+    const result = await setLeaderboardShowPhoto("user_1", false)
+    expect(result).toEqual({ leaderboardShowPhoto: false })
+    expect(updateSets[0]).toEqual({ leaderboardShowPhoto: false })
+  })
+})
+
 describe("getLeaderboard", () => {
-  it("ranks opted-in users by totalMessagesSent descending and flags the viewer", async () => {
+  it("ranks opted-in users by totalMessagesSent descending, flags the viewer, and includes avatars", async () => {
     selectQueue = [
       [
-        { id: "user_2", handle: "swift-otter-11aa", totalMessagesSent: 50 },
-        { id: "user_1", handle: "quiet-falcon-3f2a", totalMessagesSent: 30 },
+        {
+          id: "user_2",
+          handle: "swift-otter-11aa",
+          totalMessagesSent: 50,
+          image: "https://lh3.googleusercontent.com/a/other.jpg",
+          leaderboardShowPhoto: true,
+        },
+        {
+          id: "user_1",
+          handle: "quiet-falcon-3f2a",
+          totalMessagesSent: 30,
+          image: "https://lh3.googleusercontent.com/a/mine.jpg",
+          leaderboardShowPhoto: false,
+        },
       ],
     ]
     const result = await getLeaderboard("user_1")
     expect(result.entries).toEqual([
-      { rank: 1, handle: "swift-otter-11aa", totalMessagesSent: 50, isYou: false },
-      { rank: 2, handle: "quiet-falcon-3f2a", totalMessagesSent: 30, isYou: true },
+      {
+        rank: 1,
+        handle: "swift-otter-11aa",
+        totalMessagesSent: 50,
+        isYou: false,
+        avatarUrl: "https://lh3.googleusercontent.com/a/other.jpg",
+      },
+      {
+        rank: 2,
+        handle: "quiet-falcon-3f2a",
+        totalMessagesSent: 30,
+        isYou: true,
+        avatarUrl: null,
+      },
     ])
     expect(result.yourRank).toBe(2)
   })
 
   it("computes yourRank for an opted-in viewer outside the visible top N", async () => {
     selectQueue = [
-      [{ id: "user_2", handle: "swift-otter-11aa", totalMessagesSent: 50 }],
+      [
+        {
+          id: "user_2",
+          handle: "swift-otter-11aa",
+          totalMessagesSent: 50,
+          image: null,
+          leaderboardShowPhoto: true,
+        },
+      ],
       [{ leaderboardOptIn: true, totalMessagesSent: 10 }],
       [{ count: 4 }],
     ]
@@ -204,7 +281,15 @@ describe("getLeaderboard", () => {
 
   it("returns yourRank null for a non-opted-in viewer outside the top N", async () => {
     selectQueue = [
-      [{ id: "user_2", handle: "swift-otter-11aa", totalMessagesSent: 50 }],
+      [
+        {
+          id: "user_2",
+          handle: "swift-otter-11aa",
+          totalMessagesSent: 50,
+          image: null,
+          leaderboardShowPhoto: true,
+        },
+      ],
       [{ leaderboardOptIn: false, totalMessagesSent: 0 }],
     ]
     const result = await getLeaderboard("user_1")

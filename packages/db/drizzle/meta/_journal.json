@@ -281,6 +281,13 @@
       "when": 1786752000000,
       "tag": "0039_leaderboard_handle_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1786838400000,
+      "tag": "0040_leaderboard_show_photo",
+      "breakpoints": true
     }
   ]
 }

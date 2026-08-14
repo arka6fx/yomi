@@ -50,10 +50,14 @@ export const user = pgTable("user", {
   longestStreak: integer("longest_streak").notNull().default(0),
   lastActiveDate: text("last_active_date"), // YYYY-MM-DD, UTC
   totalMessagesSent: integer("total_messages_sent").notNull().default(0),
-  // Opt-in, anonymous leaderboard. leaderboardHandle is generated once on first
-  // opt-in (never derived from name/email) and stays stable across opt-out/back-in.
+  // Opt-in leaderboard. leaderboardHandle is auto-generated on first opt-in
+  // (never derived from name/email), stays stable across opt-out/back-in, and
+  // can be overridden by the user with a custom handle afterward. Photo defaults
+  // to showing the account's OAuth avatar (`image` above); leaderboardShowPhoto
+  // lets the user hide it in favor of a generic avatar.
   leaderboardOptIn: boolean("leaderboard_opt_in").notNull().default(false),
   leaderboardHandle: text("leaderboard_handle").unique(),
+  leaderboardShowPhoto: boolean("leaderboard_show_photo").notNull().default(true),
   deletedAt: timestamp("deleted_at"),
   privacyPreferences: jsonb("privacy_preferences").notNull().default({}),
   consentVersion: text("consent_version"),
