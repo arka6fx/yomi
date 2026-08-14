@@ -156,6 +156,7 @@ async function runCronSweeps(): Promise<void> {
   const { runDriveSyncSweep } = await import("./services/rag/drive-sync.js")
   const { summarizeUnsummarizedSessions } = await import("./services/agent-sessions.js")
   const { renewExploreCredits } = await import("./services/explore-renewal.js")
+  const { renewNonBilledPaidCredits } = await import("./services/plan-renewal.js")
   const { sweepMemoryConsolidation } = await import("./services/memory/consolidation.js")
   await Promise.all([
     runDueSchedules()
@@ -191,6 +192,11 @@ async function runCronSweeps(): Promise<void> {
         if (renewed > 0) console.warn(`[explore-renewal] renewed ${renewed} account(s)`)
       })
       .catch((err) => console.error("[explore-renewal] sweep error:", err)),
+    renewNonBilledPaidCredits()
+      .then(({ renewed }) => {
+        if (renewed > 0) console.warn(`[plan-renewal] renewed ${renewed} non-billed account(s)`)
+      })
+      .catch((err) => console.error("[plan-renewal] sweep error:", err)),
     new Date().getMinutes() === 0
       ? sweepMemoryConsolidation()
           .then((count) => {
