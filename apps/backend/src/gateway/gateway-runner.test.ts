@@ -276,6 +276,13 @@ mock.module("../services/credit-ledger.js", () => ({
   expireCredits: async () => 0,
 }))
 
+let recordDailyActivityCalls: string[] = []
+mock.module("../services/streaks.js", () => ({
+  recordDailyActivity: async (userId: string) => {
+    recordDailyActivityCalls.push(userId)
+  },
+}))
+
 const { GatewayRunner } = await import("./gateway-runner.js")
 
 class FakeAdapter implements PlatformAdapter {
@@ -361,6 +368,7 @@ beforeEach(() => {
   uploadedAsset = null
   capturedUploadContentType = null
   recordedTelemetry.length = 0
+  recordDailyActivityCalls = []
   globalThis.fetch = (async () => {
     throw new Error("fetch should not run")
   }) as typeof fetch
@@ -401,6 +409,38 @@ describe("GatewayRunner production routing", () => {
         assistantText: "backend reply",
       },
     ])
+  })
+
+  it("records daily activity for the resolved user on every incoming message from a linked user", async () => {
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "search my notion notes",
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(recordDailyActivityCalls).toEqual(["user_1"])
+  })
+
+  it("still records daily activity for a bare command that short-circuits before the agent", async () => {
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "/help",
+      timestamp: new Date().toISOString(),
+    })
+
+    expect(recordDailyActivityCalls).toEqual(["user_1"])
   })
 
   it.each(["/stop", "/new", "/help", "/start"])(

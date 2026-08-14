@@ -12,6 +12,7 @@ import {
   Shield,
   BookOpen,
   Gift,
+  Flame,
 } from "lucide-react"
 
 export type DashboardTab =
@@ -26,6 +27,7 @@ export type DashboardTab =
   | "writing-style"
   | "privacy"
   | "referrals"
+  | "streaks"
 
 interface MenuItem {
   label: string
@@ -68,6 +70,7 @@ export function SettingsMenu({ onNavigate }: { onNavigate: (tab: DashboardTab) =
   const accountItems: MenuItem[] = [
     { label: "Billing", icon: WalletCards, onClick: () => navigate("billing") },
     { label: "Referrals", icon: Gift, onClick: () => navigate("referrals") },
+    { label: "Streaks", icon: Flame, onClick: () => navigate("streaks") },
     { label: "Privacy", icon: Shield, onClick: () => navigate("privacy") },
   ]
 

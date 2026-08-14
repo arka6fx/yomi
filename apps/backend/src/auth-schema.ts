@@ -42,6 +42,18 @@ export const user = pgTable("user", {
   // GET /api/referrals/me call (services/referrals.ts), then stable for
   // life. Null until first generated.
   referralCode: text("referral_code").unique(),
+  // Daily-streak + leaderboard tracking (services/streaks.ts). Updated once per
+  // incoming message from a linked user, in GatewayRunner.onIncoming — before
+  // any billing/metering logic runs, so it reflects real usage independent of
+  // credit-charging semantics.
+  currentStreak: integer("current_streak").notNull().default(0),
+  longestStreak: integer("longest_streak").notNull().default(0),
+  lastActiveDate: text("last_active_date"), // YYYY-MM-DD, UTC
+  totalMessagesSent: integer("total_messages_sent").notNull().default(0),
+  // Opt-in, anonymous leaderboard. leaderboardHandle is generated once on first
+  // opt-in (never derived from name/email) and stays stable across opt-out/back-in.
+  leaderboardOptIn: boolean("leaderboard_opt_in").notNull().default(false),
+  leaderboardHandle: text("leaderboard_handle").unique(),
   deletedAt: timestamp("deleted_at"),
   privacyPreferences: jsonb("privacy_preferences").notNull().default({}),
   consentVersion: text("consent_version"),
