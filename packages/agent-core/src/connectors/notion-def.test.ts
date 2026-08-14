@@ -87,4 +87,23 @@ describe("Notion connector", () => {
       properties: { Task: { title: [{ text: { content: "Ship Telegram fix" } }] } },
     })
   })
+
+  it("turns markdown image syntax into a Notion image block when appending content", async () => {
+    await executeTool("notion-appendContent", {
+      pageId: "page_1",
+      content: "![](https://example.com/photo.jpg)",
+      confirmed: true,
+    })
+
+    const append = requests.find((r) => r.url.includes("/blocks/page_1/children"))
+    expect(append?.body).toEqual({
+      children: [
+        {
+          object: "block",
+          type: "image",
+          image: { type: "external", external: { url: "https://example.com/photo.jpg" } },
+        },
+      ],
+    })
+  })
 })

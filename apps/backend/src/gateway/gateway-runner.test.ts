@@ -44,7 +44,8 @@ let soulOnboardingReply: string | null = null
 // "action" simulates the vision classifier deciding the caption is a task, not a question.
 let imageAnalysisMode: "normal" | "empty-length" | "action" = "normal"
 // null = asset storage not configured (default for most tests).
-let uploadedAsset: { key: string; url: string; contentType: string } | null = null
+let uploadedAsset: { key: string; url: string; publicUrl: string; contentType: string } | null =
+  null
 let capturedUploadContentType: string | null = null
 
 const fakeDb = {
@@ -1367,6 +1368,7 @@ describe("GatewayRunner production routing", () => {
     uploadedAsset = {
       key: "assets/user_1/abc.jpg",
       url: "https://getyomi-assets.s3.amazonaws.com/assets/user_1/abc.jpg?X-Amz-Signature=fake",
+      publicUrl: "https://api.getyomi.in/api/assets/YXNzZXRzL3VzZXJfMS9hYmMuanBn",
       contentType: "image/jpeg",
     }
     globalThis.fetch = (async (url: RequestInfo | URL) => {
@@ -1397,6 +1399,7 @@ describe("GatewayRunner production routing", () => {
     expect(agentCalls[0]!.text).toContain("post this as my new logo")
     expect(agentCalls[0]!.text).toContain("A blue cat mascot logo")
     expect(agentCalls[0]!.text).toContain(uploadedAsset.url)
+    expect(agentCalls[0]!.text).toContain(uploadedAsset.publicUrl)
     expect(adapter.messages.at(-1)?.text).toBe("backend reply")
   })
 
@@ -1405,6 +1408,7 @@ describe("GatewayRunner production routing", () => {
     uploadedAsset = {
       key: "assets/user_1/abc.png",
       url: "https://getyomi-assets.s3.amazonaws.com/assets/user_1/abc.png?X-Amz-Signature=fake",
+      publicUrl: "https://api.getyomi.in/api/assets/YXNzZXRzL3VzZXJfMS9hYmMucG5n",
       contentType: "image/png",
     }
     globalThis.fetch = (async (url: RequestInfo | URL) => {

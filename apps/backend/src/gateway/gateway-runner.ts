@@ -461,7 +461,7 @@ export class GatewayRunner {
     yomiUserId: string,
   ): Promise<
     | { kind: "describe"; text: string }
-    | { kind: "action"; description: string; assetUrl: string | null }
+    | { kind: "action"; description: string; assetUrl: string | null; publicAssetUrl: string | null }
   > {
     if (!msg.imageUrl)
       return { kind: "describe", text: "I couldn't access the image. Please send it again." }
@@ -542,7 +542,12 @@ export class GatewayRunner {
         console.warn("[gateway] asset upload failed:", err)
         return null
       })
-      return { kind: "action", description: rest || "an image", assetUrl: asset?.url ?? null }
+      return {
+        kind: "action",
+        description: rest || "an image",
+        assetUrl: asset?.url ?? null,
+        publicAssetUrl: asset?.publicUrl ?? null,
+      }
     }
 
     // Fire-and-forget: nothing downstream needs the upload for a DESCRIBE reply.
@@ -1422,7 +1427,12 @@ export class GatewayRunner {
               text:
                 `${msg.text.trim() ? `${msg.text.trim()}\n\n` : ""}` +
                 `[Attached image: ${result.description}. File available at ${result.assetUrl} ` +
-                `(expires in 1 hour, ${msg.imageMimeType ?? "image"}).]`,
+                `(expires in 1 hour, ${msg.imageMimeType ?? "image"}).` +
+                (result.publicAssetUrl
+                  ? ` Stable file URL for image embeds: ${result.publicAssetUrl} ` +
+                    `(use it as ![](${result.publicAssetUrl}) for Notion).`
+                  : "") +
+                `]`,
             }
             // No return — falls through to the fast-path/agent handling below.
           } else {

@@ -12,6 +12,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 export interface UploadedAsset {
   key: string
   url: string
+  publicUrl: string
   contentType: string
 }
 
@@ -48,6 +49,23 @@ function client(): { client: S3Client; bucket: string } | null {
 // discovering it mid-request.
 export function assetStorageConfigured(): boolean {
   return client() !== null
+}
+
+function publicAssetBaseUrl(): string {
+  return (
+    process.env["YOMI_APP_URL"] ??
+    process.env["BACKEND_URL"] ??
+    process.env["BETTER_AUTH_URL"] ??
+    "https://api.getyomi.in"
+  ).replace(/\/$/, "")
+}
+
+export function encodeAssetKey(key: string): string {
+  return Buffer.from(key, "utf8").toString("base64url")
+}
+
+export function decodeAssetKey(encodedKey: string): string {
+  return Buffer.from(encodedKey, "base64url").toString("utf8")
 }
 
 const KNOWN_EXTENSIONS: Record<string, string> = {
@@ -139,6 +157,24 @@ export async function uploadAsset(
     new GetObjectCommand({ Bucket: cfg.bucket, Key: key }),
     { expiresIn: 3600 },
   )
+  const publicUrl = `${publicAssetBaseUrl()}/api/assets/${encodeAssetKey(key)}`
 
-  return { key, url, contentType: resolved.contentType }
+  return { key, url, publicUrl, contentType: resolved.contentType }
+}
+
+export async function fetchAsset(
+  key: string,
+): Promise<{ bytes: Uint8Array; contentType: string } | null> {
+  const cfg = client()
+  if (!cfg) return null
+  const response = await cfg.client.send(
+    new GetObjectCommand({ Bucket: cfg.bucket, Key: key }),
+  )
+  const body = response.Body
+  if (!body) return null
+  const bytes = await body.transformToByteArray()
+  return {
+    bytes: new Uint8Array(bytes),
+    contentType: response.ContentType ?? "application/octet-stream",
+  }
 }
