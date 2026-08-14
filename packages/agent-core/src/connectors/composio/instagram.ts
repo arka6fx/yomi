@@ -299,7 +299,7 @@ export function makeComposioInstagramDef(executor: ComposioExecutor): ConnectorD
     category: "communication",
     icon: "instagram",
     description:
-      "Instagram — post photos/videos/carousels, reply to comments, and manage DMs (via Composio).",
+      "Instagram Professional — post photos/videos/carousels, reply to comments, and manage DMs via Composio. Requires a Business or Creator account linked to a Facebook Page.",
     readOnlyByDefault: true,
     auth: {
       kind: "composio",
@@ -309,6 +309,7 @@ export function makeComposioInstagramDef(executor: ComposioExecutor): ConnectorD
     setup: {
       providerConsoleUrl: "https://app.composio.dev",
       steps: [
+        "Use an Instagram Business or Creator account linked to a Facebook Page you manage",
         "Create an Instagram auth config in Composio (uses Meta OAuth)",
         "Set COMPOSIO_API_KEY and COMPOSIO_INSTAGRAM_AUTH_CONFIG_ID on the backend",
         "Set COMPOSIO_CONNECTORS=instagram to route Instagram through Composio",

@@ -256,7 +256,7 @@ const CATALOG_DEFS: Array<{
     id: "instagram",
     name: "Instagram",
     description:
-      "Instagram Business or Creator account only (not personal) — media, comments, DMs, analytics, and publishing.",
+      "Instagram Business or Creator account linked to a Facebook Page — media, comments, DMs, analytics, and publishing.",
     category: "communication",
     authKind: "composio",
     icon: "instagram",
