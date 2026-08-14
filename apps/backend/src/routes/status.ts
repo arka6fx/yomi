@@ -2,12 +2,7 @@ import { Hono } from "hono"
 import { and, desc, eq, sql } from "drizzle-orm"
 import { db, mcpConnections, platformConnections, schedules } from "@yomi/db"
 import { authenticate } from "../auth.js"
-import {
-  effectivePlanForUser,
-  getPlanConfig,
-  hasBillablePlanAccess,
-  isOwnerUser,
-} from "../entitlements.js"
+import { effectivePlanForUser, getPlanConfig, hasBillablePlanAccess } from "../entitlements.js"
 import { getCreditSummary } from "../services/credit-ledger.js"
 import { getDefaultGateway } from "../gateway/gateway-runner.js"
 import { getConnectorDef } from "../connectors/registry.js"
@@ -38,7 +33,6 @@ function displayName(provider: string): string {
 // section degrades to a warning rather than failing the whole response.
 statusRouter.get("/", async (c) => {
   const user = c.get("user")
-  const owner = isOwnerUser(user)
   const plan = effectivePlanForUser(user)
   const planName = getPlanConfig(user).name
   const checks: Check[] = []
@@ -73,14 +67,12 @@ statusRouter.get("/", async (c) => {
   checks.push({
     id: "plan",
     label: "Plan access",
-    level: owner ? "ok" : billingAccess ? "ok" : "down",
-    detail: owner
-      ? "Owner · unlimited"
-      : billingAccess
-        ? `${planName} · active`
-        : plan === "explore"
-          ? "Trial ended — subscribe to continue"
-          : "Billing inactive — payment needed",
+    level: billingAccess ? "ok" : "down",
+    detail: billingAccess
+      ? `${planName} · active`
+      : plan === "explore"
+        ? "Trial ended — subscribe to continue"
+        : "Billing inactive — payment needed",
   })
 
   // Credits
@@ -94,8 +86,8 @@ statusRouter.get("/", async (c) => {
   checks.push({
     id: "credits",
     label: "Credits",
-    level: owner ? "ok" : balance > 0 ? "ok" : "warn",
-    detail: owner ? "Unlimited" : `${balance} available`,
+    level: balance > 0 ? "ok" : "warn",
+    detail: `${balance} available`,
   })
 
   // Telegram link
@@ -204,7 +196,6 @@ statusRouter.get("/", async (c) => {
       plan,
       name: planName,
       status: user.subscriptionStatus ?? "inactive",
-      isOwner: owner,
       billingAccess,
     },
     credits: { balance },

@@ -48,11 +48,4 @@ describe("creditRenewal", () => {
     expect(renewal.kind).toBe("none")
     expect(renewal.at).toBeNull()
   })
-
-  it("reports no renewal for the owner, who bypasses credits entirely", () => {
-    const renewal = creditRenewal({ ...base, plan: "explore", role: "owner" })
-
-    expect(renewal.kind).toBe("none")
-    expect(renewal.at).toBeNull()
-  })
 })

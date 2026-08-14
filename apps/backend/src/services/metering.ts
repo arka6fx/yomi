@@ -1,12 +1,7 @@
 import { db, usageEvents } from "@yomi/db"
 import { eq } from "drizzle-orm"
 import { user as userTable } from "../auth-schema.js"
-import {
-  effectivePlanForUser,
-  hasBillablePlanAccess,
-  isOwnerUser,
-  getPlanConfig,
-} from "../entitlements.js"
+import { effectivePlanForUser, hasBillablePlanAccess, getPlanConfig } from "../entitlements.js"
 import { consumeCredits, getCreditSummary } from "./credit-ledger.js"
 import { creditsForUsage, type BillableUsageKind } from "./credit-pricing.js"
 
@@ -52,7 +47,7 @@ export type ChargeSuccess = {
   creditsCharged: number
   balance: number
   usageEventId: string | null
-  paidBy: "credits" | "owner"
+  paidBy: "credits"
 }
 
 export type ChargeFailure = {
@@ -82,10 +77,10 @@ function exploreRenewalLabel(user: MeteringUser): string {
   })
 }
 
-// Single chokepoint for charging a billable action. Credits are the only gate:
-// owners bypass, an active plan is required, and the action proceeds only when the
-// credit balance covers the cost — then exactly one usage event is recorded and the
-// credits are consumed. Callers must not do paid work before this returns ok.
+// Single chokepoint for charging a billable action. Credits are the only gate: an
+// active plan is required, and the action proceeds only when the credit balance
+// covers the cost — then exactly one usage event is recorded and the credits are
+// consumed. Callers must not do paid work before this returns ok.
 export async function chargeUsage(input: {
   user: MeteringUser
   kind: ChargeKind
@@ -96,33 +91,6 @@ export async function chargeUsage(input: {
 }): Promise<ChargeResult> {
   const { user, kind } = input
   const plan = effectivePlanForUser(user)
-
-  // Owners: record the event for analytics, never charge or block.
-  if (isOwnerUser(user)) {
-    const [event] = await db
-      .insert(usageEvents)
-      .values({
-        userId: user.id,
-        kind: EVENT_KIND[kind],
-        inputTokens: 0,
-        outputTokens: 0,
-        costCents: 0,
-        creditsCharged: 0,
-        status: "done",
-        metadata: { reserveKind: kind, ...(input.metadata ?? {}) },
-      })
-      .returning({ id: usageEvents.id })
-      .catch(() => [])
-    return {
-      ok: true,
-      plan,
-      creditsRequired: 0,
-      creditsCharged: 0,
-      balance: Number.POSITIVE_INFINITY,
-      usageEventId: event?.id ?? null,
-      paidBy: "owner",
-    }
-  }
 
   // Plan must be active (explore trial not expired, or paid sub active / in grace).
   if (!hasBillablePlanAccess(user)) {
@@ -250,7 +218,6 @@ export async function loadMeteringUser(userId: string): Promise<MeteringUser | n
 // Low-credit nudge: surfaced once remaining credits drop below 20% of the plan's
 // monthly allotment. Returns null when there's nothing to warn about.
 export function lowCreditWarning(user: MeteringUser, balance: number): string | null {
-  if (isOwnerUser(user)) return null
   const included = getPlanConfig(user).includedCredits
   if (included <= 0) return null
   if (balance > included * 0.2) return null

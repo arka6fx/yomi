@@ -20,7 +20,7 @@ type Check = { id: string; label: string; level: CheckLevel; detail: string }
 type StatusData = {
   overall: CheckLevel
   generatedAt: string
-  plan: { plan: string; name: string; status: string; isOwner: boolean; billingAccess: boolean }
+  plan: { plan: string; name: string; status: string; billingAccess: boolean }
   credits: { balance: number }
   gateway: {
     running: boolean
@@ -129,11 +129,7 @@ export function StatusManager({ token }: { token: string }) {
         <div className="space-y-5">
           {/* Quick stat tiles */}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <StatTile
-              Icon={WalletCards}
-              label="Credits"
-              value={data.plan.isOwner ? "∞" : String(data.credits.balance)}
-            />
+            <StatTile Icon={WalletCards} label="Credits" value={String(data.credits.balance)} />
             <StatTile Icon={Plug} label="Connectors" value={String(data.connectors.total)} />
             <StatTile
               Icon={Clock}

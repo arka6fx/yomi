@@ -66,8 +66,7 @@ export type PlanSummary = {
   available: boolean
   planName: string
   statusLabel: string
-  statusTone: "owner" | "active" | "past_due" | "trial"
-  isOwner: boolean
+  statusTone: "active" | "past_due" | "trial"
   creditRemaining: number
   creditTotal: number
   caption: string
@@ -76,7 +75,6 @@ export type PlanSummary = {
 }
 
 const PLAN_TONE_CLASSES: Record<PlanSummary["statusTone"], string> = {
-  owner: "bg-sky-500/10 text-sky-300",
   active: "bg-emerald-500/10 text-emerald-400",
   past_due: "bg-red-500/10 text-red-400",
   trial: "bg-sky-500/10 text-sky-300",
@@ -157,11 +155,9 @@ function PlanBanner({ plan, onClick }: { plan: PlanSummary; onClick: () => void 
           </p>
           <div className="flex items-baseline gap-2 sm:justify-end">
             <span className="text-3xl font-light text-foreground tabular-nums">
-              {plan.isOwner ? "∞" : plan.creditRemaining}
+              {plan.creditRemaining}
             </span>
-            {!plan.isOwner && (
-              <span className="text-sm text-muted-foreground">/ {plan.creditTotal} available</span>
-            )}
+            <span className="text-sm text-muted-foreground">/ {plan.creditTotal} available</span>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">{plan.caption}</p>
         </div>
@@ -216,7 +212,6 @@ export function DashboardHome({
   connectedProviders,
   unhealthyCount,
   currentPlanKey,
-  isOwner,
   creditPacks,
   billingLoading,
   creditLoading,
@@ -237,7 +232,6 @@ export function DashboardHome({
   connectedProviders: string[]
   unhealthyCount: number
   currentPlanKey: string
-  isOwner: boolean
   creditPacks: CreditPack[]
   billingLoading: string | null
   creditLoading: string | null
@@ -329,98 +323,96 @@ export function DashboardHome({
 
       <PlanBanner plan={plan} onClick={() => onNavigate("billing")} />
 
-      {!isOwner && (
-        <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10">
-                <Crown size={16} className="text-primary" />
-              </div>
-              <h2 className="text-sm font-medium text-foreground">Plans &amp; credits</h2>
+      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10">
+              <Crown size={16} className="text-primary" />
             </div>
-            <button
-              onClick={() => onNavigate("billing")}
-              className="text-xs font-medium text-primary hover:underline"
-            >
-              View all
-            </button>
+            <h2 className="text-sm font-medium text-foreground">Plans &amp; credits</h2>
           </div>
-
-          {billingError && <p className="mb-3 text-xs text-destructive">{billingError}</p>}
-
-          {(() => {
-            const currentIndex = PLANS.findIndex((x) => x.key === currentPlanKey)
-            const upgrades = PLANS.filter((_, i) => i > currentIndex)
-            if (upgrades.length === 0) {
-              return (
-                <p className="text-sm text-muted-foreground">
-                  You&apos;re on our top plan — thanks for being a power user.
-                </p>
-              )
-            }
-            return (
-              <div
-                className={cn(
-                  "grid grid-cols-1 gap-2.5",
-                  upgrades.length > 1 ? "sm:grid-cols-2" : "sm:max-w-xs",
-                )}
-              >
-                {upgrades.map((p) => {
-                  const Icon = p.icon
-                  return (
-                    <div
-                      key={p.key}
-                      className="flex flex-col gap-2 rounded-xl border border-border bg-background/40 p-3.5"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <Icon size={13} className="text-primary" />
-                        <span className="text-xs font-medium text-foreground">{p.name}</span>
-                      </div>
-                      <span className="text-base font-light text-foreground">
-                        {formatPlanPrice(p.priceUsd)}
-                        <span className="text-[10px] text-muted-foreground">{p.priceSub}</span>
-                      </span>
-                      <button
-                        onClick={() => onUpgrade(p.key)}
-                        disabled={billingLoading !== null}
-                        className="mt-0.5 flex items-center justify-center gap-1.5 rounded-lg bg-primary py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-                      >
-                        {billingLoading === p.key ? (
-                          <Loader2 size={11} className="animate-spin" />
-                        ) : (
-                          <Crown size={11} />
-                        )}
-                        Upgrade
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-            )
-          })()}
-
-          {currentPlanKey !== "explore" && creditPacks.length > 0 && (
-            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {creditPacks.map((pack) => (
-                <button
-                  key={pack.key}
-                  onClick={() => onBuyCredits(pack.key)}
-                  disabled={creditLoading !== null}
-                  className="rounded-lg border border-border bg-background px-3 py-2 text-left transition-colors hover:border-primary/60 disabled:opacity-50"
-                >
-                  <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-                    <Plus size={12} className="text-primary" />
-                    {pack.name}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {creditLoading === pack.key ? "Starting..." : formatPackPrice(pack)}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
+          <button
+            onClick={() => onNavigate("billing")}
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            View all
+          </button>
         </div>
-      )}
+
+        {billingError && <p className="mb-3 text-xs text-destructive">{billingError}</p>}
+
+        {(() => {
+          const currentIndex = PLANS.findIndex((x) => x.key === currentPlanKey)
+          const upgrades = PLANS.filter((_, i) => i > currentIndex)
+          if (upgrades.length === 0) {
+            return (
+              <p className="text-sm text-muted-foreground">
+                You&apos;re on our top plan — thanks for being a power user.
+              </p>
+            )
+          }
+          return (
+            <div
+              className={cn(
+                "grid grid-cols-1 gap-2.5",
+                upgrades.length > 1 ? "sm:grid-cols-2" : "sm:max-w-xs",
+              )}
+            >
+              {upgrades.map((p) => {
+                const Icon = p.icon
+                return (
+                  <div
+                    key={p.key}
+                    className="flex flex-col gap-2 rounded-xl border border-border bg-background/40 p-3.5"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <Icon size={13} className="text-primary" />
+                      <span className="text-xs font-medium text-foreground">{p.name}</span>
+                    </div>
+                    <span className="text-base font-light text-foreground">
+                      {formatPlanPrice(p.priceUsd)}
+                      <span className="text-[10px] text-muted-foreground">{p.priceSub}</span>
+                    </span>
+                    <button
+                      onClick={() => onUpgrade(p.key)}
+                      disabled={billingLoading !== null}
+                      className="mt-0.5 flex items-center justify-center gap-1.5 rounded-lg bg-primary py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                    >
+                      {billingLoading === p.key ? (
+                        <Loader2 size={11} className="animate-spin" />
+                      ) : (
+                        <Crown size={11} />
+                      )}
+                      Upgrade
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })()}
+
+        {currentPlanKey !== "explore" && creditPacks.length > 0 && (
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {creditPacks.map((pack) => (
+              <button
+                key={pack.key}
+                onClick={() => onBuyCredits(pack.key)}
+                disabled={creditLoading !== null}
+                className="rounded-lg border border-border bg-background px-3 py-2 text-left transition-colors hover:border-primary/60 disabled:opacity-50"
+              >
+                <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                  <Plus size={12} className="text-primary" />
+                  {pack.name}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {creditLoading === pack.key ? "Starting..." : formatPackPrice(pack)}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <StatCard

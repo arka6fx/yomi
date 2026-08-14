@@ -1,38 +1,12 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test"
 
 let currentUser = { id: "u1", email: "user@example.com", role: "user" }
-let ownerEmails = ["owner@example.com"]
-let retentionRunCount = 0
 let storedOverrides: Record<string, unknown> | null = null
 
 mock.module("../auth.js", () => ({
   authenticate: async (c: any, next: () => Promise<void>) => {
     c.set("user", currentUser)
     await next()
-  },
-}))
-
-mock.module("../entitlements.js", () => ({
-  isOwnerUser: (u: { email: string }) => ownerEmails.includes(u.email),
-}))
-
-mock.module("../services/privacy/retention.js", () => ({
-  runPrivacyRetention: async () => {
-    retentionRunCount++
-    return {
-      expiredExports: 0,
-      oldDeletionJobs: 0,
-      hardDeletedUsers: 0,
-      oldAuditEvents: 0,
-      domains: {
-        conversations: 0,
-        rag_retrieval_logs: 0,
-        usage_events: 0,
-        pending_actions: 0,
-        devices: 0,
-        expired_codes: 0,
-      },
-    }
   },
 }))
 
@@ -91,7 +65,6 @@ function req(path: string, init?: RequestInit) {
 }
 
 beforeEach(() => {
-  retentionRunCount = 0
   storedOverrides = null
   currentUser = { id: "u1", email: "user@example.com", role: "user" }
 })
@@ -148,15 +121,5 @@ describe("retention routes", () => {
     })
     expect(res.status).toBe(200)
     expect(storedOverrides).toEqual({ conversations: 30 })
-  })
-
-  it("POST /admin/run-retention is owner-only", async () => {
-    const denied = await req("/admin/run-retention", { method: "POST" })
-    expect(denied.status).toBe(403)
-    expect(retentionRunCount).toBe(0)
-    currentUser = { id: "u2", email: "owner@example.com", role: "user" }
-    const ok = await req("/admin/run-retention", { method: "POST" })
-    expect(ok.status).toBe(200)
-    expect(retentionRunCount).toBe(1)
   })
 })

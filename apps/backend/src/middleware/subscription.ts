@@ -3,7 +3,6 @@ import {
   effectivePlanForUser,
   hasBillablePlanAccess,
   featureLimitForUser,
-  isOwnerUser,
   getPlanConfig,
 } from "../entitlements.js"
 import type { FeatureKey } from "@yomi/shared/plans"
@@ -22,8 +21,6 @@ export function requireAccess(kind: AccessKind) {
   return async (c: Context, next: Next) => {
     const user = c.get("user")
     if (!user) return c.json({ error: "Unauthorized", code: "unauthorized" }, 401)
-
-    if (isOwnerUser(user)) return next()
 
     const plan = effectivePlanForUser(user)
 
