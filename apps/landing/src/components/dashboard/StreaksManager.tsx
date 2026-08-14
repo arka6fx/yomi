@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Flame, Loader2, Trophy } from "lucide-react"
+import { Check, Flame, Loader2, Trophy, User } from "lucide-react"
 
 type StreakStats = {
   currentStreak: number
@@ -9,6 +9,8 @@ type StreakStats = {
   totalMessagesSent: number
   leaderboardOptIn: boolean
   leaderboardHandle: string | null
+  leaderboardShowPhoto: boolean
+  avatarUrl: string | null
 }
 
 type LeaderboardEntry = {
@@ -16,11 +18,36 @@ type LeaderboardEntry = {
   handle: string
   totalMessagesSent: number
   isYou: boolean
+  avatarUrl: string | null
 }
 
 type Leaderboard = {
   entries: LeaderboardEntry[]
   yourRank: number | null
+}
+
+function Avatar({ url, size = 24 }: { url: string | null; size?: number }) {
+  const [broken, setBroken] = useState(false)
+  if (!url || broken) {
+    return (
+      <div
+        style={{ width: size, height: size }}
+        className="grid shrink-0 place-items-center rounded-full bg-muted text-muted-foreground"
+      >
+        <User size={size * 0.6} />
+      </div>
+    )
+  }
+  return (
+    <img
+      src={url}
+      alt=""
+      referrerPolicy="no-referrer"
+      onError={() => setBroken(true)}
+      style={{ width: size, height: size }}
+      className="shrink-0 rounded-full object-cover"
+    />
+  )
 }
 
 export function StreaksManager({ token }: { token: string }) {
@@ -30,6 +57,12 @@ export function StreaksManager({ token }: { token: string }) {
   const [error, setError] = useState("")
   const [actionError, setActionError] = useState("")
   const [toggling, setToggling] = useState(false)
+
+  const [handleInput, setHandleInput] = useState("")
+  const [savingHandle, setSavingHandle] = useState(false)
+  const [handleError, setHandleError] = useState("")
+  const [handleSaved, setHandleSaved] = useState(false)
+  const [savingPhoto, setSavingPhoto] = useState(false)
 
   const auth = { Authorization: `Bearer ${token}` }
 
@@ -44,7 +77,9 @@ export function StreaksManager({ token }: { token: string }) {
       if (!statsRes.ok) throw new Error(`Couldn't load streak stats (${statsRes.status})`)
       if (!leaderboardRes.ok)
         throw new Error(`Couldn't load leaderboard (${leaderboardRes.status})`)
-      setStats((await statsRes.json()) as StreakStats)
+      const statsData = (await statsRes.json()) as StreakStats
+      setStats(statsData)
+      setHandleInput(statsData.leaderboardHandle ?? "")
       setLeaderboard((await leaderboardRes.json()) as Leaderboard)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't load streaks")
@@ -76,6 +111,48 @@ export function StreaksManager({ token }: { token: string }) {
     }
   }
 
+  async function saveHandle() {
+    if (savingHandle || !handleInput.trim()) return
+    setSavingHandle(true)
+    setHandleError("")
+    setHandleSaved(false)
+    try {
+      const res = await fetch("/api/streaks/handle", {
+        method: "POST",
+        headers: { ...auth, "Content-Type": "application/json" },
+        body: JSON.stringify({ handle: handleInput }),
+      })
+      const data = (await res.json().catch(() => ({}))) as { error?: string }
+      if (!res.ok) throw new Error(data.error ?? "Couldn't save that handle")
+      await load()
+      setHandleSaved(true)
+      setTimeout(() => setHandleSaved(false), 2000)
+    } catch (err) {
+      setHandleError(err instanceof Error ? err.message : "Couldn't save that handle")
+    } finally {
+      setSavingHandle(false)
+    }
+  }
+
+  async function toggleShowPhoto() {
+    if (!stats || savingPhoto) return
+    setSavingPhoto(true)
+    setActionError("")
+    try {
+      const res = await fetch("/api/streaks/show-photo", {
+        method: "POST",
+        headers: { ...auth, "Content-Type": "application/json" },
+        body: JSON.stringify({ showPhoto: !stats.leaderboardShowPhoto }),
+      })
+      if (!res.ok) throw new Error(`Couldn't update photo setting (${res.status})`)
+      await load()
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Couldn't update photo setting")
+    } finally {
+      setSavingPhoto(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 flex justify-center">
@@ -91,6 +168,8 @@ export function StreaksManager({ token }: { token: string }) {
       </div>
     )
   }
+
+  const showProfileSettings = stats.leaderboardOptIn || !!stats.leaderboardHandle
 
   return (
     <div className="space-y-4">
@@ -123,13 +202,16 @@ export function StreaksManager({ token }: { token: string }) {
         </div>
 
         <div className="mt-5 flex items-center justify-between rounded-xl border border-border bg-muted/30 p-3">
-          <div>
-            <p className="text-sm text-foreground">Join the leaderboard</p>
-            <p className="text-xs text-muted-foreground">
-              {stats.leaderboardOptIn
-                ? `Visible as "${stats.leaderboardHandle}" — anonymous, no real name shown.`
-                : "Opt in to appear on the leaderboard below, anonymously."}
-            </p>
+          <div className="flex items-center gap-3">
+            <Avatar url={stats.leaderboardShowPhoto ? stats.avatarUrl : null} size={32} />
+            <div>
+              <p className="text-sm text-foreground">Join the leaderboard</p>
+              <p className="text-xs text-muted-foreground">
+                {stats.leaderboardOptIn
+                  ? `Visible as "${stats.leaderboardHandle}".`
+                  : "Opt in to appear on the leaderboard below."}
+              </p>
+            </div>
           </div>
           <button
             onClick={toggleOptIn}
@@ -140,6 +222,60 @@ export function StreaksManager({ token }: { token: string }) {
           </button>
         </div>
         {actionError && <p className="mt-2 text-xs text-destructive">{actionError}</p>}
+
+        {showProfileSettings && (
+          <div className="mt-4 space-y-3 border-t border-border pt-4">
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                Leaderboard username
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  value={handleInput}
+                  onChange={(e) => setHandleInput(e.target.value)}
+                  placeholder="pick a handle"
+                  className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground outline-none focus:border-primary/60"
+                  maxLength={24}
+                />
+                <button
+                  onClick={saveHandle}
+                  disabled={savingHandle || !handleInput.trim()}
+                  className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:border-primary/40 disabled:opacity-50"
+                >
+                  {savingHandle ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : handleSaved ? (
+                    <Check size={13} />
+                  ) : null}
+                  {handleSaved ? "Saved" : "Save"}
+                </button>
+              </div>
+              {handleError && <p className="mt-1.5 text-xs text-destructive">{handleError}</p>}
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Avatar url={stats.avatarUrl} size={24} />
+                <span className="text-sm text-foreground">Show my profile photo</span>
+              </div>
+              <button
+                onClick={toggleShowPhoto}
+                disabled={savingPhoto}
+                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
+                  stats.leaderboardShowPhoto ? "bg-primary" : "bg-muted"
+                }`}
+                aria-pressed={stats.leaderboardShowPhoto}
+                aria-label="Toggle showing your profile photo on the leaderboard"
+              >
+                <span
+                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-background transition-transform ${
+                    stats.leaderboardShowPhoto ? "translate-x-5" : "translate-x-0.5"
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
@@ -158,18 +294,22 @@ export function StreaksManager({ token }: { token: string }) {
                   entry.isYou ? "bg-primary/10" : ""
                 }`}
               >
-                <span className="text-muted-foreground">
-                  #{entry.rank} {entry.handle}
-                  {entry.isYou && <span className="text-foreground"> (you)</span>}
+                <span className="flex items-center gap-2.5 text-muted-foreground">
+                  <span className="w-5 text-right tabular-nums">{entry.rank}</span>
+                  <Avatar url={entry.avatarUrl} size={22} />
+                  {entry.handle}
+                  {entry.isYou && <span className="text-foreground">(you)</span>}
                 </span>
                 <span className="text-foreground">{entry.totalMessagesSent}</span>
               </div>
             ))}
             {leaderboard.yourRank !== null && !leaderboard.entries.some((e) => e.isYou) && (
               <div className="flex items-center justify-between rounded-lg bg-primary/10 px-2 py-1.5 text-sm">
-                <span className="text-muted-foreground">
-                  #{leaderboard.yourRank} {stats.leaderboardHandle}
-                  <span className="text-foreground"> (you)</span>
+                <span className="flex items-center gap-2.5 text-muted-foreground">
+                  <span className="w-5 text-right tabular-nums">{leaderboard.yourRank}</span>
+                  <Avatar url={stats.leaderboardShowPhoto ? stats.avatarUrl : null} size={22} />
+                  {stats.leaderboardHandle}
+                  <span className="text-foreground">(you)</span>
                 </span>
                 <span className="text-foreground">{stats.totalMessagesSent}</span>
               </div>
