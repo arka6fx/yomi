@@ -42,6 +42,8 @@ const HANDLE_NOUNS = [
   "orbit",
 ]
 
+const HANDLE_PATTERN = /^[a-z][a-z0-9-]{2,23}$/
+
 function isDuplicateHandleError(err: unknown): boolean {
   return String(err).includes("user_leaderboard_handle_unique")
 }
@@ -105,6 +107,8 @@ export async function getStreakStats(userId: string): Promise<{
   totalMessagesSent: number
   leaderboardOptIn: boolean
   leaderboardHandle: string | null
+  leaderboardShowPhoto: boolean
+  avatarUrl: string | null
 }> {
   const [row] = await db
     .select({
@@ -113,19 +117,32 @@ export async function getStreakStats(userId: string): Promise<{
       totalMessagesSent: authSchema.user.totalMessagesSent,
       leaderboardOptIn: authSchema.user.leaderboardOptIn,
       leaderboardHandle: authSchema.user.leaderboardHandle,
+      leaderboardShowPhoto: authSchema.user.leaderboardShowPhoto,
+      image: authSchema.user.image,
     })
     .from(authSchema.user)
     .where(eq(authSchema.user.id, userId))
     .limit(1)
-  return (
-    row ?? {
+  if (!row) {
+    return {
       currentStreak: 0,
       longestStreak: 0,
       totalMessagesSent: 0,
       leaderboardOptIn: false,
       leaderboardHandle: null,
+      leaderboardShowPhoto: true,
+      avatarUrl: null,
     }
-  )
+  }
+  return {
+    currentStreak: row.currentStreak,
+    longestStreak: row.longestStreak,
+    totalMessagesSent: row.totalMessagesSent,
+    leaderboardOptIn: row.leaderboardOptIn,
+    leaderboardHandle: row.leaderboardHandle,
+    leaderboardShowPhoto: row.leaderboardShowPhoto,
+    avatarUrl: row.image ?? null,
+  }
 }
 
 export async function setLeaderboardOptIn(
@@ -163,8 +180,51 @@ export async function setLeaderboardOptIn(
   return { leaderboardOptIn: optIn, leaderboardHandle: existingHandle }
 }
 
+export async function updateLeaderboardHandle(
+  userId: string,
+  handle: string,
+): Promise<{ ok: true; leaderboardHandle: string } | { ok: false; error: string }> {
+  const trimmed = handle.trim().toLowerCase()
+  if (!HANDLE_PATTERN.test(trimmed)) {
+    return {
+      ok: false,
+      error:
+        "Handle must be 3-24 characters: lowercase letters, numbers, and dashes, starting with a letter.",
+    }
+  }
+  try {
+    await db
+      .update(authSchema.user)
+      .set({ leaderboardHandle: trimmed })
+      .where(eq(authSchema.user.id, userId))
+    return { ok: true, leaderboardHandle: trimmed }
+  } catch (err) {
+    if (isDuplicateHandleError(err)) {
+      return { ok: false, error: "That handle is already taken — try another." }
+    }
+    throw err
+  }
+}
+
+export async function setLeaderboardShowPhoto(
+  userId: string,
+  showPhoto: boolean,
+): Promise<{ leaderboardShowPhoto: boolean }> {
+  await db
+    .update(authSchema.user)
+    .set({ leaderboardShowPhoto: showPhoto })
+    .where(eq(authSchema.user.id, userId))
+  return { leaderboardShowPhoto: showPhoto }
+}
+
 export async function getLeaderboard(userId: string): Promise<{
-  entries: { rank: number; handle: string; totalMessagesSent: number; isYou: boolean }[]
+  entries: {
+    rank: number
+    handle: string
+    totalMessagesSent: number
+    isYou: boolean
+    avatarUrl: string | null
+  }[]
   yourRank: number | null
 }> {
   const top = await db
@@ -172,6 +232,8 @@ export async function getLeaderboard(userId: string): Promise<{
       id: authSchema.user.id,
       handle: authSchema.user.leaderboardHandle,
       totalMessagesSent: authSchema.user.totalMessagesSent,
+      image: authSchema.user.image,
+      leaderboardShowPhoto: authSchema.user.leaderboardShowPhoto,
     })
     .from(authSchema.user)
     .where(and(eq(authSchema.user.leaderboardOptIn, true), isNull(authSchema.user.deletedAt)))
@@ -183,6 +245,7 @@ export async function getLeaderboard(userId: string): Promise<{
     handle: row.handle ?? "anonymous",
     totalMessagesSent: row.totalMessagesSent,
     isYou: row.id === userId,
+    avatarUrl: row.leaderboardShowPhoto ? (row.image ?? null) : null,
   }))
 
   const inTop = entries.find((e) => e.isYou)

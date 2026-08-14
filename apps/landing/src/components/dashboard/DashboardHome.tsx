@@ -9,10 +9,13 @@ import {
   Clock,
   Crown,
   ExternalLink,
+  Flame,
+  HeartPulse,
   Loader2,
   MessageSquare,
   Plug,
   Plus,
+  Share2,
 } from "lucide-react"
 import { buildCatalog, ConnectorIcon } from "@yomi/ui-connectors"
 import { cn } from "@/lib/utils"
@@ -51,6 +54,19 @@ type MemoryRow = {
   summary?: string | null
   isStatic?: boolean
   updatedAt?: string | null
+}
+
+type ReferralStats = {
+  code: string
+  count: number
+  cap: number
+  creditsEarned: number
+}
+
+type StreakStats = {
+  currentStreak: number
+  longestStreak: number
+  totalMessagesSent: number
 }
 
 export type ActivityItem = {
@@ -252,6 +268,12 @@ export function DashboardHome({
   const [schedulesLoading, setSchedulesLoading] = useState(true)
   const [memory, setMemory] = useState<MemoryRow[]>([])
   const [memoryLoading, setMemoryLoading] = useState(true)
+  const [referral, setReferral] = useState<ReferralStats | null>(null)
+  const [referralLoading, setReferralLoading] = useState(true)
+  const [referralCopied, setReferralCopied] = useState(false)
+  const [referralError, setReferralError] = useState("")
+  const [streak, setStreak] = useState<StreakStats | null>(null)
+  const [streakLoading, setStreakLoading] = useState(true)
 
   const auth = { Authorization: `Bearer ${token}` }
 
@@ -297,11 +319,65 @@ export function DashboardHome({
     }
   }, [token])
 
+  const loadReferral = useCallback(async () => {
+    setReferralLoading(true)
+    try {
+      const res = await fetch("/api/referrals/me", { headers: auth })
+      if (!res.ok) throw new Error("failed")
+      setReferral((await res.json()) as ReferralStats)
+    } catch {
+      setReferral(null)
+    } finally {
+      setReferralLoading(false)
+    }
+  }, [token])
+
+  const loadStreak = useCallback(async () => {
+    setStreakLoading(true)
+    try {
+      const res = await fetch("/api/streaks/me", { headers: auth })
+      if (!res.ok) throw new Error("failed")
+      setStreak((await res.json()) as StreakStats)
+    } catch {
+      setStreak(null)
+    } finally {
+      setStreakLoading(false)
+    }
+  }, [token])
+
   useEffect(() => {
     void loadHistory()
     void loadSchedules()
     void loadMemory()
-  }, [loadHistory, loadSchedules, loadMemory])
+    void loadReferral()
+    void loadStreak()
+  }, [loadHistory, loadSchedules, loadMemory, loadReferral, loadStreak])
+
+  async function copyReferralLink() {
+    if (!referral) return
+    const link = `${window.location.origin}/r/${referral.code}`
+    try {
+      await navigator.clipboard.writeText(link)
+      setReferralCopied(true)
+      setTimeout(() => setReferralCopied(false), 2000)
+    } catch {
+      setReferralError("Couldn't copy — try selecting the link manually")
+    }
+  }
+
+  async function shareReferralLink() {
+    if (!referral) return
+    const link = `${window.location.origin}/r/${referral.code}`
+    if (typeof navigator !== "undefined" && "share" in navigator) {
+      try {
+        await navigator.share({ title: "Join me on Yomi", url: link })
+        return
+      } catch {
+        // user cancelled the share sheet, or share failed — fall through to copy
+      }
+    }
+    await copyReferralLink()
+  }
 
   const connectedCatalog = buildCatalog(connectedProviders).filter((c) => c.connected)
   const lastUserTurn = [...history].reverse().find((t) => t.role === "user")
@@ -312,14 +388,79 @@ export function DashboardHome({
     .sort()[0]
   const latestActivity = recentActivity[0]
 
+  const referralLink = referral ? `${window.location.origin}/r/${referral.code}` : ""
+
   return (
     <div className="space-y-6">
+      {!streakLoading && streak && (
+        <div className="flex justify-end">
+          <button
+            onClick={() => onNavigate("streaks")}
+            className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-primary/40"
+          >
+            <Flame size={13} className="text-primary" />
+            {streak.currentStreak > 0 ? `${streak.currentStreak} day streak` : "Start a streak"}
+          </button>
+        </div>
+      )}
+
       <TelegramCard
         platformLinks={platformLinks}
         platformsLoading={platformsLoading}
         unlinking={unlinkingPlatform}
         onUnlink={onUnlinkPlatform}
       />
+
+      {!referralLoading && referral && (
+        <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/[0.02] p-5 sm:p-6">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
+                Referrals
+              </p>
+              <h2
+                className="text-2xl font-light text-foreground"
+                style={{ letterSpacing: "-0.02em" }}
+              >
+                Get 100 credits for every friend.
+              </h2>
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                Credits land as soon as they join Yomi through your link.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 sm:min-w-[280px]">
+              <div className="flex items-center gap-2 rounded-xl border border-border bg-background/60 p-2.5">
+                <code className="flex-1 truncate pl-1 text-xs text-foreground">{referralLink}</code>
+                <button
+                  onClick={copyReferralLink}
+                  className="shrink-0 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                >
+                  {referralCopied ? "Copied" : "Copy"}
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={shareReferralLink}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border bg-background/60 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-primary/40"
+                >
+                  <Share2 size={12} />
+                  Share
+                </button>
+                <button
+                  onClick={() => onNavigate("referrals")}
+                  className="flex-1 rounded-lg border border-border bg-background/60 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-primary/40"
+                >
+                  Track referrals
+                </button>
+              </div>
+              {referralError && <p className="text-xs text-destructive">{referralError}</p>}
+              <p className="text-xs text-muted-foreground">
+                {referral.count} of {referral.cap} used · {referral.creditsEarned} credits earned
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <PlanBanner plan={plan} onClick={() => onNavigate("billing")} />
 
@@ -414,7 +555,7 @@ export function DashboardHome({
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <StatCard
           icon={MessageSquare}
           title="History"
@@ -431,7 +572,7 @@ export function DashboardHome({
 
         <StatCard
           icon={Clock}
-          title="Automations"
+          title="Schedules"
           loading={schedulesLoading}
           empty={schedules.length === 0}
           emptyText="No automations yet"
@@ -444,6 +585,46 @@ export function DashboardHome({
             <p className="mt-1 text-xs text-muted-foreground">
               Next run {relativeFuture(soonestNextRunAt)}
             </p>
+          )}
+        </StatCard>
+
+        <StatCard
+          icon={Brain}
+          title="Memory"
+          loading={memoryLoading}
+          empty={memory.length === 0}
+          emptyText="Nothing remembered yet"
+          onClick={() => onNavigate("memory")}
+        >
+          <p>
+            {memory.length} memor{memory.length === 1 ? "y" : "ies"}
+          </p>
+        </StatCard>
+
+        <StatCard
+          icon={HeartPulse}
+          title="Status"
+          loading={false}
+          empty={false}
+          emptyText=""
+          onClick={() => onNavigate("status")}
+        >
+          <p>Agent &amp; connector health</p>
+        </StatCard>
+
+        <StatCard
+          icon={Flame}
+          title="Streak"
+          loading={streakLoading}
+          empty={!streak || (streak.currentStreak === 0 && streak.totalMessagesSent === 0)}
+          emptyText="Message Yomi to start one"
+          onClick={() => onNavigate("streaks")}
+        >
+          {streak && (
+            <>
+              <p>{streak.currentStreak} day streak</p>
+              <p className="mt-1 text-xs text-muted-foreground">Longest: {streak.longestStreak}</p>
+            </>
           )}
         </StatCard>
 
