@@ -5,6 +5,7 @@ import { runPrivacyRetention } from "./services/privacy/retention.js"
 import { runDriveSyncSweep } from "./services/rag/drive-sync.js"
 import { summarizeUnsummarizedSessions } from "./services/agent-sessions.js"
 import { renewExploreCredits } from "./services/explore-renewal.js"
+import { renewNonBilledPaidCredits } from "./services/plan-renewal.js"
 
 interface ExecutionContext {
   waitUntil(promise: Promise<unknown>): void
@@ -99,6 +100,11 @@ export default {
             if (renewed > 0) console.warn(`[explore-renewal] renewed ${renewed} account(s)`)
           })
           .catch((err) => console.error("[explore-renewal] sweep error:", err)),
+        renewNonBilledPaidCredits()
+          .then(({ renewed }) => {
+            if (renewed > 0) console.warn(`[plan-renewal] renewed ${renewed} non-billed account(s)`)
+          })
+          .catch((err) => console.error("[plan-renewal] sweep error:", err)),
       ]),
     )
   },
