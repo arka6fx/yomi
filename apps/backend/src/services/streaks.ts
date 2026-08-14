@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto"
-import { and, desc, eq, sql } from "drizzle-orm"
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm"
 import { db } from "@yomi/db"
 import * as authSchema from "../auth-schema.js"
 
@@ -174,8 +174,8 @@ export async function getLeaderboard(userId: string): Promise<{
       totalMessagesSent: authSchema.user.totalMessagesSent,
     })
     .from(authSchema.user)
-    .where(eq(authSchema.user.leaderboardOptIn, true))
-    .orderBy(desc(authSchema.user.totalMessagesSent))
+    .where(and(eq(authSchema.user.leaderboardOptIn, true), isNull(authSchema.user.deletedAt)))
+    .orderBy(desc(authSchema.user.totalMessagesSent), asc(authSchema.user.id))
     .limit(LEADERBOARD_LIMIT)
 
   const entries = top.map((row, index) => ({
@@ -205,6 +205,7 @@ export async function getLeaderboard(userId: string): Promise<{
     .where(
       and(
         eq(authSchema.user.leaderboardOptIn, true),
+        isNull(authSchema.user.deletedAt),
         sql`${authSchema.user.totalMessagesSent} > ${viewer.totalMessagesSent}`,
       ),
     )

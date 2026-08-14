@@ -164,7 +164,7 @@ export function StreaksManager({ token }: { token: string }) {
                 <span className="text-foreground">{entry.totalMessagesSent}</span>
               </div>
             ))}
-            {leaderboard.yourRank !== null && leaderboard.yourRank > leaderboard.entries.length && (
+            {leaderboard.yourRank !== null && !leaderboard.entries.some((e) => e.isYou) && (
               <div className="flex items-center justify-between rounded-lg bg-primary/10 px-2 py-1.5 text-sm">
                 <span className="text-muted-foreground">
                   #{leaderboard.yourRank} {stats.leaderboardHandle}
