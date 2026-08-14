@@ -298,8 +298,8 @@ export function StreaksManager({ token }: { token: string }) {
               {handleError && <p className="mt-1.5 text-xs text-destructive">{handleError}</p>}
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2.5">
                 <Avatar url={stats.leaderboardShowPhoto ? stats.avatarUrl : null} size={24} />
                 <span className="text-sm text-foreground">Show my profile photo</span>
               </div>
@@ -314,8 +314,8 @@ export function StreaksManager({ token }: { token: string }) {
                 aria-label="Toggle showing your profile photo on the leaderboard"
               >
                 <span
-                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-background transition-transform ${
-                    stats.leaderboardShowPhoto ? "translate-x-5" : "translate-x-0.5"
+                  className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-background transition-transform ${
+                    stats.leaderboardShowPhoto ? "translate-x-5" : "translate-x-0"
                   }`}
                 />
               </button>
