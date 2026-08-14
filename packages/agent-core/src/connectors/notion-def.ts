@@ -27,6 +27,10 @@ export function createNotionTools(ctx: ConnectorContext): ToolSet {
     return richText.map((r) => r.plain_text).join("")
   }
 
+  function notionPageUrl(pageId: string): string {
+    return `https://www.notion.so/${pageId.replace(/-/g, "")}`
+  }
+
   function requireConfirmed(
     confirmed?: boolean,
   ): { error: string; needsConfirmation: true } | null {
@@ -480,7 +484,7 @@ export function createNotionTools(ctx: ConnectorContext): ToolSet {
             method: "PATCH",
             body: JSON.stringify({ children }),
           })
-          return { ok: true, blocksAdded: children.length }
+          return { ok: true, blocksAdded: children.length, pageId, url: notionPageUrl(pageId) }
         } catch (err) {
           return connectorError(err)
         }
