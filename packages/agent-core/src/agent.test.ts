@@ -540,6 +540,31 @@ describe("runAgentLoop dynamic connector-tool selection", () => {
     ])
   })
 
+  it("keeps a connected connector named in the message even when the classifier says NONE", async () => {
+    const registry = fakeRegistry({
+      notion: manyTools(25, "notion"),
+      slack: manyTools(25, "slack"),
+    })
+    const bodies: Record<string, unknown>[] = []
+    let call = 0
+    globalThis.fetch = (async (_url: unknown, init?: RequestInit) => {
+      call++
+      bodies.push(JSON.parse(String(init?.body)))
+      return call === 1 ? classifyResponse("NONE") : okResponse()
+    }) as typeof fetch
+
+    await runAgentLoop({
+      registry,
+      text: "add this image to Quick Notes in Notion",
+      extraTools: { echo: echoTool },
+    })
+
+    const mainTools = bodies[1]?.["tools"] as Array<{ function?: { name?: string } }>
+    expect(mainTools.some((t) => t.function?.name?.startsWith("notion_"))).toBe(true)
+    expect(mainTools.some((t) => t.function?.name?.startsWith("slack_"))).toBe(false)
+    expect(mainTools.some((t) => t.function?.name === "echo")).toBe(true)
+  })
+
   it("fails open to loading everything when the classifier call itself fails", async () => {
     const registry = fakeRegistry({
       slack: manyTools(25, "slack"),

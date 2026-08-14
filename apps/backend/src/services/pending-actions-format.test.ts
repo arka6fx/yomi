@@ -60,4 +60,16 @@ describe("formatActionResult", () => {
   it("falls back only when there is no message and no error", () => {
     expect(formatActionResult({}, "Done: Archive email")).toBe("Done: Archive email")
   })
+
+  it("extracts nested links returned by Composio actions", () => {
+    const text = formatActionResult(
+      {
+        message: "Google Meet space created.",
+        space: { name: "spaces/abc123", meetingUri: "https://meet.google.com/abc-defg-hij" },
+      },
+      "Done: Create a new Google Meet space",
+    )
+
+    expect(text).toBe("Google Meet space created.\nhttps://meet.google.com/abc-defg-hij")
+  })
 })

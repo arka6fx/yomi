@@ -159,6 +159,47 @@ describe("TelegramAdapter.processUpdate — sticker", () => {
   })
 })
 
+describe("TelegramAdapter.processUpdate — replied photo", () => {
+  const originalFetch = globalThis.fetch
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  it("uses a replied-to photo as the image for a text command", async () => {
+    const { adapter, received } = makeAdapter()
+    globalThis.fetch = (async (url: RequestInfo | URL) => {
+      expect(String(url)).toContain("file_id=photo_large")
+      return Response.json({ ok: true, result: { file_path: "photos/replied.jpg" } })
+    }) as typeof fetch
+
+    await adapter.processUpdate({
+      update_id: 4,
+      message: {
+        message_id: 103,
+        from: { id: 42, first_name: "Ada" },
+        chat: { id: 42, type: "private" },
+        text: "add this image to quick notes",
+        reply_to_message: {
+          message_id: 102,
+          chat: { id: 42, type: "private" },
+          photo: [
+            { file_id: "photo_small", width: 100, height: 100, file_size: 1000 },
+            { file_id: "photo_large", width: 800, height: 800, file_size: 8000 },
+          ],
+        },
+      },
+    })
+
+    expect(received).toHaveLength(1)
+    expect(received[0]?.imageUrl).toBe(
+      "https://api.telegram.org/file/botdummy-token/photos/replied.jpg",
+    )
+    expect(received[0]?.imageMimeType).toBe("image/jpeg")
+    expect(received[0]?.text).toBe("add this image to quick notes")
+  })
+})
+
 describe("TelegramAdapter.connect", () => {
   const originalFetch = globalThis.fetch
   const originalEnv = process.env["CORS_ORIGIN"]

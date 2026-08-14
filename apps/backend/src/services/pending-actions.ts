@@ -378,16 +378,45 @@ export function formatActionResult(result: unknown, fallback: string): string {
     return [`That didn't work: ${err}`, hint].filter(Boolean).join("\n")
   }
   const message = typeof record["message"] === "string" ? record["message"] : fallback
-  const link =
-    typeof record["link"] === "string"
-      ? record["link"]
-      : typeof record["url"] === "string"
-        ? record["url"]
-        : typeof record["htmlLink"] === "string"
-          ? record["htmlLink"]
-          : null
-  const meetLink = typeof record["meetLink"] === "string" ? record["meetLink"] : null
-  return [message, link, meetLink].filter(Boolean).join("\n")
+  const links = findResultLinks(record)
+  return [message, ...links].join("\n")
+}
+
+function findResultLinks(value: unknown, seen = new Set<object>()): string[] {
+  if (!value || typeof value !== "object") return []
+  if (seen.has(value)) return []
+  seen.add(value)
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => findResultLinks(item, seen))
+  }
+
+  const record = value as Record<string, unknown>
+  const links: string[] = []
+  const linkKeys = new Set([
+    "link",
+    "url",
+    "htmlLink",
+    "html_link",
+    "meetLink",
+    "meetingUri",
+    "meeting_uri",
+    "webViewLink",
+    "web_view_link",
+    "uri",
+  ])
+  for (const [key, item] of Object.entries(record)) {
+    if (linkKeys.has(key) && typeof item === "string" && /^https?:\/\//i.test(item)) {
+      if (!links.includes(item)) links.push(item)
+      continue
+    }
+    if (item && typeof item === "object") {
+      for (const link of findResultLinks(item, seen)) {
+        if (!links.includes(link)) links.push(link)
+      }
+    }
+  }
+  return links
 }
 
 export async function approvePendingAction(
