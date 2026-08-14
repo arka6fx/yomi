@@ -60,6 +60,16 @@ describe("Notion connector", () => {
     expect(requests).toHaveLength(0)
   })
 
+  it("returns the page URL after appending content", async () => {
+    const result = (await executeTool("notion-appendContent", {
+      pageId: "1234-5678",
+      content: "hello",
+      confirmed: true,
+    })) as { url?: string }
+
+    expect(result.url).toBe("https://www.notion.so/12345678")
+  })
+
   it("discovers database title property instead of assuming Name", async () => {
     await executeTool("notion-queryDatabase", {
       databaseId: "db_1",
