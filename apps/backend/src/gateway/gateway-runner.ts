@@ -1323,7 +1323,29 @@ export class GatewayRunner {
           : ""
         console.warn(`[gateway] video received${dur}`)
         const note = `🎬 _Video received_`
-        msg = { ...msg, text: msg.text.trim() ? `${note}\n${msg.text}` : note }
+        let mediaNote = note
+        try {
+          const videoRes = await fetch(msg.videoUrl, { signal: AbortSignal.timeout(30_000) })
+          if (!videoRes.ok) throw new Error(`download failed: ${videoRes.status}`)
+          const bytes = await videoRes.arrayBuffer()
+          if (bytes.byteLength > 50 * 1024 * 1024) {
+            mediaNote = "Video received, but it is too large to upload (50 MB maximum)."
+          } else {
+            const { uploadAsset } = await import("../services/asset-storage.js")
+            const asset = await uploadAsset(
+              yomiUserId,
+              bytes,
+              msg.videoMimeType ?? videoRes.headers.get("content-type") ?? "video/mp4",
+            )
+            mediaNote = asset
+              ? `[Attached video: ${asset.url} (use this URL for the social media upload; content type ${asset.contentType}).]`
+              : "Video received, but media storage is not configured on this server."
+          }
+        } catch (err) {
+          console.warn("[gateway] video asset upload failed:", err)
+          mediaNote = "I couldn't prepare that video for upload. Please send it again."
+        }
+        msg = { ...msg, text: msg.text.trim() ? `${mediaNote}\n${msg.text}` : mediaNote }
       }
 
       // ── Location context ──────────────────────────────────────────────────
@@ -1436,6 +1458,9 @@ export class GatewayRunner {
                 (result.publicAssetUrl
                   ? ` Stable file URL for image embeds: ${result.publicAssetUrl} ` +
                     `(use it as ![](${result.publicAssetUrl}) for Notion).`
+                  : "") +
+                (/\bquick notes?\b/i.test(msg.text)
+                  ? " This is a Notion Quick Notes request. Use the connected Notion tools to append the image and return the Notion page URL."
                   : "") +
                 `]`,
             }

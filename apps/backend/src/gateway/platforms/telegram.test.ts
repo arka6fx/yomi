@@ -200,6 +200,43 @@ describe("TelegramAdapter.processUpdate — replied photo", () => {
   })
 })
 
+describe("TelegramAdapter.processUpdate — replied video", () => {
+  const originalFetch = globalThis.fetch
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  it("uses a replied-to video for a text command", async () => {
+    const { adapter, received } = makeAdapter()
+    globalThis.fetch = (async (url: RequestInfo | URL) => {
+      expect(String(url)).toContain("file_id=video_large")
+      return Response.json({ ok: true, result: { file_path: "videos/replied.mp4" } })
+    }) as typeof fetch
+
+    await adapter.processUpdate({
+      update_id: 5,
+      message: {
+        message_id: 104,
+        from: { id: 42, first_name: "Ada" },
+        chat: { id: 42, type: "private" },
+        text: "post this video",
+        reply_to_message: {
+          message_id: 103,
+          chat: { id: 42, type: "private" },
+          video: { file_id: "video_large", duration: 8, mime_type: "video/mp4" },
+        },
+      },
+    })
+
+    expect(received[0]?.videoUrl).toBe(
+      "https://api.telegram.org/file/botdummy-token/videos/replied.mp4",
+    )
+    expect(received[0]?.videoMimeType).toBe("video/mp4")
+    expect(received[0]?.text).toBe("post this video")
+  })
+})
+
 describe("TelegramAdapter.connect", () => {
   const originalFetch = globalThis.fetch
   const originalEnv = process.env["CORS_ORIGIN"]

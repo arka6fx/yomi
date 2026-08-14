@@ -272,14 +272,15 @@ export class TelegramAdapter implements PlatformAdapter {
     let videoUrl: string | undefined
     let videoMimeType: string | undefined
     let videoDurationSeconds: number | undefined
-    if (msg.video) {
+    const video = msg.video ?? msg.reply_to_message?.video
+    if (video) {
       try {
-        const fileRes = await fetch(`${this.apiUrl}/getFile?file_id=${msg.video.file_id}`)
+        const fileRes = await fetch(`${this.apiUrl}/getFile?file_id=${video.file_id}`)
         const fileData = (await fileRes.json()) as { ok: boolean; result?: { file_path?: string } }
         if (fileData.ok && fileData.result?.file_path) {
           videoUrl = `https://api.telegram.org/file/bot${this.botToken}/${fileData.result.file_path}`
-          videoMimeType = msg.video.mime_type
-          videoDurationSeconds = msg.video.duration
+          videoMimeType = video.mime_type
+          videoDurationSeconds = video.duration
         }
       } catch {
         /* best-effort */
