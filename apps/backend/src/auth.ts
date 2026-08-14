@@ -53,29 +53,39 @@ export function getRuntimeAuthConfig() {
 }
 
 async function getUserFields(userId: string) {
-  const [row] = await db
-    .select({
-      role: authSchema.user.role,
-      plan: authSchema.user.plan,
-      subscriptionStatus: authSchema.user.subscriptionStatus,
-      trialStartDate: authSchema.user.trialStartDate,
-      trialEndDate: authSchema.user.trialEndDate,
-      currentPeriodEnd: authSchema.user.currentPeriodEnd,
-      dodoCustomerId: authSchema.user.dodoCustomerId,
-      dodoSubscriptionId: authSchema.user.dodoSubscriptionId,
-      trialInteractionUsed: authSchema.user.trialInteractionUsed,
-      trialInteractionLimit: authSchema.user.trialInteractionLimit,
-      dailyChatCount: authSchema.user.dailyChatCount,
-      dailyVoiceCount: authSchema.user.dailyVoiceCount,
-      dailyImageCount: authSchema.user.dailyImageCount,
-      agentUsageCount: authSchema.user.agentUsageCount,
-      dailyResetDate: authSchema.user.dailyResetDate,
-      deletedAt: authSchema.user.deletedAt,
-    })
-    .from(authSchema.user)
-    .where(eq(authSchema.user.id, userId))
-    .limit(1)
-  return row ?? null
+  try {
+    const [row] = await db
+      .select({
+        role: authSchema.user.role,
+        plan: authSchema.user.plan,
+        subscriptionStatus: authSchema.user.subscriptionStatus,
+        trialStartDate: authSchema.user.trialStartDate,
+        trialEndDate: authSchema.user.trialEndDate,
+        currentPeriodEnd: authSchema.user.currentPeriodEnd,
+        dodoCustomerId: authSchema.user.dodoCustomerId,
+        dodoSubscriptionId: authSchema.user.dodoSubscriptionId,
+        trialInteractionUsed: authSchema.user.trialInteractionUsed,
+        trialInteractionLimit: authSchema.user.trialInteractionLimit,
+        dailyChatCount: authSchema.user.dailyChatCount,
+        dailyVoiceCount: authSchema.user.dailyVoiceCount,
+        dailyImageCount: authSchema.user.dailyImageCount,
+        agentUsageCount: authSchema.user.agentUsageCount,
+        dailyResetDate: authSchema.user.dailyResetDate,
+        deletedAt: authSchema.user.deletedAt,
+      })
+      .from(authSchema.user)
+      .where(eq(authSchema.user.id, userId))
+      .limit(1)
+    return row ?? null
+  } catch (err) {
+    // A code deploy can land before its migration is applied (deploys are
+    // automatic, migrations are manual) — a query for a not-yet-existing
+    // column throws 42703 here. That must not fail the whole session check:
+    // every field below already has a safe default, so degrade to those
+    // rather than 500ing getSession() and bouncing a validly-signed-in user.
+    console.error("[auth] getUserFields failed, degrading to defaults:", userId, err)
+    return null
+  }
 }
 
 function createAuth() {
