@@ -52,6 +52,20 @@ export function getRuntimeAuthConfig() {
   }
 }
 
+// Security-critical and deliberately NOT wrapped in the same degrade-to-defaults
+// try/catch as getUserFields() below. deletedAt is an old, stable column — this
+// single-column lookup won't hit the migration-drift 42703 that motivated that
+// fallback, and a soft-deleted account must stay locked out even during a real
+// DB error, not silently pass through because the field defaulted to "not deleted".
+async function isAccountDeleted(userId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ deletedAt: authSchema.user.deletedAt })
+    .from(authSchema.user)
+    .where(eq(authSchema.user.id, userId))
+    .limit(1)
+  return !!row?.deletedAt
+}
+
 async function getUserFields(userId: string) {
   try {
     const [row] = await db
@@ -234,7 +248,11 @@ export async function authenticate(c: Context, next: Next) {
   const user = session.user as SessionUser
   // Soft-deleted accounts must stay locked out even if the OAuth provider
   // mints a fresh session — deletion is one-way until retention hard-deletes.
-  if (user.deletedAt) {
+  // Checked fresh here (not via user.deletedAt from the session) because that
+  // field comes from getUserFields()'s degrade-to-defaults path and must not
+  // be trusted for this: a drift-triggered fallback defaults it to "not
+  // deleted", which would fail this check open.
+  if (await isAccountDeleted(user.id)) {
     return c.json({ error: "Account deleted", code: "account_deleted" }, 401)
   }
   c.set("user", user)
