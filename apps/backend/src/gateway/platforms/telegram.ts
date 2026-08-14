@@ -33,6 +33,7 @@ export interface TelegramUpdate {
       file_name?: string
     }
     location?: { latitude: number; longitude: number }
+    sticker?: { file_id: string; emoji?: string; set_name?: string }
   }
   callback_query?: {
     id: string
@@ -196,7 +197,16 @@ export class TelegramAdapter implements PlatformAdapter {
         : undefined
     const documentFile =
       msg.document && !msg.document.mime_type?.startsWith("image/") ? msg.document : undefined
-    if (!hasText && !voiceFile && !imageFile && !documentFile && !msg.video && !msg.location) return
+    if (
+      !hasText &&
+      !voiceFile &&
+      !imageFile &&
+      !documentFile &&
+      !msg.video &&
+      !msg.location &&
+      !msg.sticker
+    )
+      return
 
     let audioUrl: string | undefined
     let audioMimeType: string | undefined
@@ -289,6 +299,9 @@ export class TelegramAdapter implements PlatformAdapter {
       videoMimeType,
       videoDurationSeconds,
       location: msg.location,
+      sticker: msg.sticker
+        ? { emoji: msg.sticker.emoji, setName: msg.sticker.set_name }
+        : undefined,
     }
     await this.messageHandler(gatewayMsg)
   }
@@ -404,6 +417,29 @@ export class TelegramAdapter implements PlatformAdapter {
       })
       const data = (await res.json()) as TelegramResponse
       if (!data.ok) return { ok: false, error: data.description ?? "edit failed" }
+      return { ok: true }
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  async editMessageReplyMarkup(
+    chatId: string,
+    messageId: string,
+    buttons?: InlineButton[][],
+  ): Promise<{ ok: boolean; error?: string }> {
+    try {
+      const res = await fetch(`${this.apiUrl}/editMessageReplyMarkup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          message_id: Number(messageId),
+          reply_markup: toInlineKeyboard(buttons ?? []),
+        }),
+      })
+      const data = (await res.json()) as TelegramResponse
+      if (!data.ok) return { ok: false, error: data.description ?? "edit markup failed" }
       return { ok: true }
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) }

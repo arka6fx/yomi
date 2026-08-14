@@ -39,6 +39,13 @@ export interface PlatformAdapter {
     text: string,
     options?: { buttons?: InlineButton[][] },
   ): Promise<{ ok: boolean; error?: string }>
+  /** Swaps a message's inline keyboard without touching its text — used to strip a
+   * stale button (e.g. a superseded "New chat") off an older message. */
+  editMessageReplyMarkup(
+    chatId: string,
+    messageId: string,
+    buttons?: InlineButton[][],
+  ): Promise<{ ok: boolean; error?: string }>
   answerCallbackQuery(callbackId: string, text?: string): Promise<void>
   setReaction(
     chatId: string,

@@ -60,6 +60,10 @@ interface GatewaySession {
   lastActivityAt: number
   messageCount: number
   pendingMessages: GatewayMessage[]
+  // The id of the most recent reply still carrying a live "New chat" button, if
+  // any — tracked so the next reply can strip it before attaching its own, keeping
+  // exactly one live button in the chat at a time instead of one per reply ever sent.
+  lastButtonMessageId?: string
 }
 
 interface ConversationEntry {
@@ -946,7 +950,7 @@ export class GatewayRunner {
     text: string,
     context: string,
     options?: { replyTo?: string; buttons?: InlineButton[][] },
-  ): Promise<void> {
+  ): Promise<string | undefined> {
     const result = await this.sendMessage(platform, chatId, text, options).catch((err) => ({
       ok: false,
       error: err instanceof Error ? err.message : String(err),
@@ -956,12 +960,23 @@ export class GatewayRunner {
         `[gateway] sendMessage failed context=${context} platform=${platform} chat=${chatId}: ${result.error ?? "unknown"}`,
       )
     }
+    return "messageId" in result ? result.messageId : undefined
   }
 
   async sendTyping(platform: PlatformType, chatId: string): Promise<void> {
     const adapter = this.adapters.get(platform)
     if (!adapter) return
     await adapter.sendTyping(chatId)
+  }
+
+  private async clearButtons(
+    platform: PlatformType,
+    chatId: string,
+    messageId: string,
+  ): Promise<void> {
+    const adapter = this.adapters.get(platform)
+    if (!adapter) return
+    await adapter.editMessageReplyMarkup(chatId, messageId).catch(() => {})
   }
 
   async setReaction(
@@ -1305,6 +1320,25 @@ export class GatewayRunner {
         msg = { ...msg, text: msg.text.trim() ? `${note}\n${msg.text}` : note }
       }
 
+      // ── Sticker context ──────────────────────────────────────────────────
+      // React instantly (Telegram's own reaction API only takes emoji from a fixed
+      // set, so an off-list sticker emoji falls back to a friendly default), then
+      // let the sticker's own emoji/pack name feed into the normal agent turn so
+      // the reply itself is a fitting one-liner rather than a flat acknowledgment.
+      if (msg.sticker) {
+        const stickerEmoji = msg.sticker.emoji
+        const reactionEmoji =
+          stickerEmoji && (ALLOWED_REACTIONS as readonly string[]).includes(stickerEmoji)
+            ? stickerEmoji
+            : "😁"
+        if (msg.messageId) {
+          void this.setReaction(msg.platform, msg.chatId, msg.messageId, reactionEmoji)
+        }
+        console.warn(`[gateway] sticker received: emoji=${stickerEmoji ?? "?"}`)
+        const note = `🧩 _Sticker:_ ${stickerEmoji ?? "unknown"}${msg.sticker.setName ? ` (from "${msg.sticker.setName}")` : ""}`
+        msg = { ...msg, text: msg.text.trim() ? `${note}\n${msg.text}` : note }
+      }
+
       // Keep the typing indicator alive for ANY processing path —
       // Telegram clears it after ~5 s so refresh every 4 s. Capped: each ping
       // is a subrequest sharing the invocation budget with the agent's
@@ -1533,9 +1567,20 @@ export class GatewayRunner {
         // invocation's subrequest budget, and losing the user-visible reply
         // is worse than losing a history write (which has an in-memory fallback).
         const reply = result.text || "I couldn't produce a reply. Please try again."
-        await this.sendMessageAndLog(msg.platform, msg.chatId, reply, "backend-agent-reply", {
-          buttons: [[{ text: "🔄 New chat", callbackData: "new" }]],
-        })
+        // Only one "New chat" button should ever be live at a time — otherwise a tap
+        // on an older reply's button silently edits a message that's scrolled out of
+        // view, which reads as the button doing nothing. Strip the previous one first.
+        if (session.lastButtonMessageId) {
+          void this.clearButtons(msg.platform, msg.chatId, session.lastButtonMessageId)
+        }
+        const newReplyId = await this.sendMessageAndLog(
+          msg.platform,
+          msg.chatId,
+          reply,
+          "backend-agent-reply",
+          { buttons: [[{ text: "🔄 New chat", callbackData: "new" }]] },
+        )
+        session.lastButtonMessageId = newReplyId
         if (result.text) {
           if (conversationConsent.allowed && persistentSession) {
             await appendAgentTurn({
@@ -1672,6 +1717,8 @@ export class GatewayRunner {
         session.messageCount = 0
         session.createdAt = Date.now()
         session.lastActivityAt = Date.now()
+        // No button is live post-reset until the next reply sends one.
+        session.lastButtonMessageId = undefined
       }
       this.clearHistory(platform, event.chatId)
       await closeAgentSession({ userId: yomiUserId, platform, chatId: event.chatId }).catch(
@@ -1686,12 +1733,12 @@ export class GatewayRunner {
       }).catch((err) => {
         console.warn("[gateway] close shared session failed:", err)
       })
+      // Edit the tapped message in place (marks that spot, drops its button) AND
+      // send a fresh message — the edit alone is invisible whenever the tapped
+      // button lived on a reply that's since scrolled out of view.
+      await adapter.editMessageText(event.chatId, event.messageId, "✅ Started a new conversation.").catch(() => {})
       await adapter
-        .editMessageText(
-          event.chatId,
-          event.messageId,
-          "Started a new conversation. How can I help you?",
-        )
+        .sendMessage(event.chatId, "Started a new conversation. How can I help you?")
         .catch(() => {})
       return
     }
