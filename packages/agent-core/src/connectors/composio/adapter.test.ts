@@ -284,6 +284,16 @@ describe("composioCatalogToolToSpec", () => {
     expect(spec.parameters.safeParse({ input: 42 }).success).toBe(false)
   })
 
+  it("resolves Instagram catalog actions to the connected Business Account", () => {
+    const spec = composioCatalogToolToSpec({
+      slug: "INSTAGRAM_GET_IG_MEDIA",
+      input_parameters: { ig_user_id: { type: "string", required: true } },
+    })
+    expect(spec.resolvedParams).toEqual({
+      ig_user_id: { viaSlug: "INSTAGRAM_GET_USER_INFO" },
+    })
+  })
+
   it("supports nested objects, arrays, and enum parameters", () => {
     const spec = composioCatalogToolToSpec({
       slug: "TEST_TOOL",

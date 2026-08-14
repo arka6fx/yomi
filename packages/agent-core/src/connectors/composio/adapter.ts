@@ -131,6 +131,11 @@ export function composioCatalogToolToSpec(tool: ComposioCatalogTool): ComposioTo
     description: tool.description || tool.human_description || tool.slug,
     parameters: z.object(shape).passthrough(),
     ...(fileParams.length ? { fileParams } : {}),
+    ...(tool.slug.startsWith("INSTAGRAM_") &&
+    tool.slug !== "INSTAGRAM_GET_USER_INFO" &&
+    tool.input_parameters?.ig_user_id
+      ? { resolvedParams: { ig_user_id: { viaSlug: "INSTAGRAM_GET_USER_INFO" } } }
+      : {}),
   }
 }
 
