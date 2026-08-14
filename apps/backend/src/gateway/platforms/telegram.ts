@@ -14,28 +14,31 @@ function toInlineKeyboard(buttons: InlineButton[][]) {
   }
 }
 
+interface TelegramMessage {
+  message_id: number
+  from?: { id: number; first_name?: string; username?: string }
+  chat: { id: number; type: string }
+  text?: string
+  caption?: string
+  voice?: { file_id: string; duration: number; mime_type?: string }
+  audio?: { file_id: string; mime_type?: string }
+  photo?: Array<{ file_id: string; width: number; height: number; file_size?: number }>
+  document?: { file_id: string; mime_type?: string; file_name?: string; file_size?: number }
+  video?: {
+    file_id: string
+    mime_type?: string
+    duration: number
+    file_size?: number
+    file_name?: string
+  }
+  location?: { latitude: number; longitude: number }
+  sticker?: { file_id: string; emoji?: string; set_name?: string }
+  reply_to_message?: TelegramMessage
+}
+
 export interface TelegramUpdate {
   update_id: number
-  message?: {
-    message_id: number
-    from?: { id: number; first_name?: string; username?: string }
-    chat: { id: number; type: string }
-    text?: string
-    caption?: string
-    voice?: { file_id: string; duration: number; mime_type?: string }
-    audio?: { file_id: string; mime_type?: string }
-    photo?: Array<{ file_id: string; width: number; height: number; file_size?: number }>
-    document?: { file_id: string; mime_type?: string; file_name?: string; file_size?: number }
-    video?: {
-      file_id: string
-      mime_type?: string
-      duration: number
-      file_size?: number
-      file_name?: string
-    }
-    location?: { latitude: number; longitude: number }
-    sticker?: { file_id: string; emoji?: string; set_name?: string }
-  }
+  message?: TelegramMessage
   callback_query?: {
     id: string
     from: { id: number }
@@ -193,12 +196,16 @@ export class TelegramAdapter implements PlatformAdapter {
     const text = msg.text ?? msg.caption ?? ""
     const hasText = !!text
     const voiceFile = msg.voice ?? msg.audio
-    const imageFile = msg.photo?.length
-      ? [...msg.photo].sort(
+    const imageSource =
+      msg.photo?.length || msg.document?.mime_type?.startsWith("image/")
+        ? msg
+        : msg.reply_to_message
+    const imageFile = imageSource?.photo?.length
+      ? [...imageSource.photo].sort(
           (a, b) => (b.file_size ?? b.width * b.height) - (a.file_size ?? a.width * a.height),
         )[0]
-      : msg.document?.mime_type?.startsWith("image/")
-        ? msg.document
+      : imageSource?.document?.mime_type?.startsWith("image/")
+        ? imageSource.document
         : undefined
     const documentFile =
       msg.document && !msg.document.mime_type?.startsWith("image/") ? msg.document : undefined

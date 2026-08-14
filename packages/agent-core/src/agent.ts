@@ -240,6 +240,25 @@ async function selectRelevantConnectors(
   }
 }
 
+function explicitlyMentionedConnectorIds(
+  text: string,
+  connectors: { id: string; name: string; description: string }[],
+): string[] {
+  const lowerText = text.toLowerCase()
+  return connectors
+    .filter((connector) => {
+      const terms = [connector.id, connector.name]
+      if (/\bquick notes?\b/i.test(text) && /notion/i.test(`${connector.id} ${connector.name}`)) {
+        terms.push("quick notes")
+      }
+      return terms.some((term) => {
+        const escaped = term.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+        return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`).test(lowerText)
+      })
+    })
+    .map((connector) => connector.id)
+}
+
 async function resolveConnectorTools(
   registry: ConnectorRegistry,
   text: string,
@@ -255,7 +274,15 @@ async function resolveConnectorTools(
   try {
     const picked = await selectRelevantConnectors(text, registry.getConnectorSummaries(), fastModel)
     if (picked === null) return all // classifier unavailable/unparseable — fail open
-    if (picked.length === 0) return {} // confidently "none apply" — trust it, don't load everything
+    if (picked.length === 0) {
+      const explicitlyMentioned = explicitlyMentionedConnectorIds(
+        text,
+        registry.getConnectorSummaries(),
+      )
+      if (explicitlyMentioned.length === 0) return {}
+      const mentionedTools = registry.getToolsForConnectors(explicitlyMentioned)
+      return Object.keys(mentionedTools).length > 0 ? mentionedTools : all
+    }
     const narrowed = registry.getToolsForConnectors(picked)
     // Picked ids that mapped to nothing is a signal something's wrong (an id
     // mismatch, a registry that doesn't track what was asked for) rather than
