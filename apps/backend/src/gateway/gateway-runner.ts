@@ -1736,7 +1736,9 @@ export class GatewayRunner {
       // Edit the tapped message in place (marks that spot, drops its button) AND
       // send a fresh message — the edit alone is invisible whenever the tapped
       // button lived on a reply that's since scrolled out of view.
-      await adapter.editMessageText(event.chatId, event.messageId, "✅ Started a new conversation.").catch(() => {})
+      await adapter
+        .editMessageText(event.chatId, event.messageId, "✅ Started a new conversation.")
+        .catch(() => {})
       await adapter
         .sendMessage(event.chatId, "Started a new conversation. How can I help you?")
         .catch(() => {})
