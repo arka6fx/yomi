@@ -61,7 +61,7 @@ const CATALOG_DEFS: Array<{
     id: "google-photos",
     name: "Google Photos",
     description:
-      "Upload and organize photos Yomi creates. Existing Google Photos libraries are not browsable.",
+      "Unavailable: Google restricts the required Photos Library access for this connector.",
     category: "productivity",
     authKind: "composio",
     icon: "google-photos",
