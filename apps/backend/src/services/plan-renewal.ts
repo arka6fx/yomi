@@ -19,7 +19,9 @@ export type PlanRenewalResult = { renewed: number; creditsGranted: number }
 // (handleSubscriptionEnd) resets plan to explore and clears both
 // dodoSubscriptionId and currentPeriodEnd, so a cancelled real subscriber
 // never matches this query — only genuinely non-billed accounts do.
-export async function renewNonBilledPaidCredits(now: Date = new Date()): Promise<PlanRenewalResult> {
+export async function renewNonBilledPaidCredits(
+  now: Date = new Date(),
+): Promise<PlanRenewalResult> {
   const day = now.toISOString().slice(0, 10)
   const nextPeriodEnd = new Date(now.getTime() + CYCLE_DAYS * 24 * 60 * 60 * 1000)
 

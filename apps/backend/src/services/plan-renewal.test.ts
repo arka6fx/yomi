@@ -7,7 +7,12 @@ const state = {
   users: [] as Array<{ id: string; plan: string }>,
   balances: [] as Array<{ userId: string; balance: number }>,
   userUpdates: [] as Array<Record<string, unknown>>,
-  grants: [] as Array<{ userId: string; amount: number; expiresAt: Date | null; metadata: unknown }>,
+  grants: [] as Array<{
+    userId: string
+    amount: number
+    expiresAt: Date | null
+    metadata: unknown
+  }>,
 }
 
 mock.module("@yomi/db", () => ({
