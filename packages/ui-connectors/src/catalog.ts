@@ -58,6 +58,16 @@ const CATALOG_DEFS: Array<{
     available: true,
   },
   {
+    id: "google-photos",
+    name: "Google Photos",
+    description:
+      "Upload and organize photos Yomi creates. Existing Google Photos libraries are not browsable.",
+    category: "productivity",
+    authKind: "composio",
+    icon: "google-photos",
+    available: false,
+  },
+  {
     id: "google-sheets",
     name: "Google Sheets",
     description: "Read, create, and edit spreadsheets — rows, formulas, and charts.",
