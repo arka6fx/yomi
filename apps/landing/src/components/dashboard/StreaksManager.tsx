@@ -42,7 +42,8 @@ export function StreaksManager({ token }: { token: string }) {
         fetch("/api/streaks/leaderboard", { headers: auth }),
       ])
       if (!statsRes.ok) throw new Error(`Couldn't load streak stats (${statsRes.status})`)
-      if (!leaderboardRes.ok) throw new Error(`Couldn't load leaderboard (${leaderboardRes.status})`)
+      if (!leaderboardRes.ok)
+        throw new Error(`Couldn't load leaderboard (${leaderboardRes.status})`)
       setStats((await statsRes.json()) as StreakStats)
       setLeaderboard((await leaderboardRes.json()) as Leaderboard)
     } catch (err) {
