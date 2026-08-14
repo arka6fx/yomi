@@ -4,6 +4,7 @@ import type { PlatformAdapter, InlineButton, PlatformCallbackEvent } from "../pl
 import { markdownToTelegramHtml, truncateMessage } from "../platform-adapter.js"
 
 const API_BASE = "https://api.telegram.org/bot"
+const REQUIRED_WEBHOOK_UPDATES = ["message", "callback_query"] as const
 
 function toInlineKeyboard(buttons: InlineButton[][]) {
   return {
@@ -115,7 +116,7 @@ export class TelegramAdapter implements PlatformAdapter {
     // users' queued messages every time an isolate started.
     const infoRes = await fetch(`${this.apiUrl}/getWebhookInfo`)
     const info = (await infoRes.json()) as TelegramResponse & {
-      result?: { url?: string; last_error_message?: string }
+      result?: { url?: string; last_error_message?: string; allowed_updates?: string[] }
     }
     // Re-register when the URL is wrong OR when Telegram reports a delivery
     // error. getWebhookInfo never returns the stored secret_token, so a webhook
@@ -125,13 +126,17 @@ export class TelegramAdapter implements PlatformAdapter {
     // boots from churning delivery. We never drop_pending_updates so queued
     // messages survive.
     const hasDeliveryError = !!info.result?.last_error_message
-    if (info.result?.url !== this.webhookUrl || hasDeliveryError) {
+    const webhookUpdates = info.result?.allowed_updates
+    const isMissingRequiredUpdate =
+      Array.isArray(webhookUpdates) &&
+      REQUIRED_WEBHOOK_UPDATES.some((update) => !webhookUpdates.includes(update))
+    if (info.result?.url !== this.webhookUrl || hasDeliveryError || isMissingRequiredUpdate) {
       const whRes = await fetch(`${this.apiUrl}/setWebhook`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           url: this.webhookUrl,
-          allowed_updates: ["message", "callback_query"],
+          allowed_updates: [...REQUIRED_WEBHOOK_UPDATES],
           secret_token: this.botToken.replace(/[^A-Za-z0-9_-]/g, ""),
         }),
       })
