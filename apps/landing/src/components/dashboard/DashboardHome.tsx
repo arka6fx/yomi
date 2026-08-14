@@ -399,9 +399,7 @@ export function DashboardHome({
             className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-primary/40"
           >
             <Flame size={13} className="text-primary" />
-            {streak.currentStreak > 0
-              ? `${streak.currentStreak} day streak`
-              : "Start a streak"}
+            {streak.currentStreak > 0 ? `${streak.currentStreak} day streak` : "Start a streak"}
           </button>
         </div>
       )}
@@ -432,9 +430,7 @@ export function DashboardHome({
             </div>
             <div className="flex flex-col gap-2 sm:min-w-[280px]">
               <div className="flex items-center gap-2 rounded-xl border border-border bg-background/60 p-2.5">
-                <code className="flex-1 truncate pl-1 text-xs text-foreground">
-                  {referralLink}
-                </code>
+                <code className="flex-1 truncate pl-1 text-xs text-foreground">{referralLink}</code>
                 <button
                   onClick={copyReferralLink}
                   className="shrink-0 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
@@ -627,9 +623,7 @@ export function DashboardHome({
           {streak && (
             <>
               <p>{streak.currentStreak} day streak</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Longest: {streak.longestStreak}
-              </p>
+              <p className="mt-1 text-xs text-muted-foreground">Longest: {streak.longestStreak}</p>
             </>
           )}
         </StatCard>

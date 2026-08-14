@@ -188,7 +188,8 @@ export async function updateLeaderboardHandle(
   if (!HANDLE_PATTERN.test(trimmed)) {
     return {
       ok: false,
-      error: "Handle must be 3-24 characters: lowercase letters, numbers, and dashes, starting with a letter.",
+      error:
+        "Handle must be 3-24 characters: lowercase letters, numbers, and dashes, starting with a letter.",
     }
   }
   try {

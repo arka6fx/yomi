@@ -201,9 +201,7 @@ describe("updateLeaderboardHandle", () => {
 
   it("returns a friendly error when the handle is already taken", async () => {
     updateBehaviors = [
-      new Error(
-        'duplicate key value violates unique constraint "user_leaderboard_handle_unique"',
-      ),
+      new Error('duplicate key value violates unique constraint "user_leaderboard_handle_unique"'),
     ]
     const result = await updateLeaderboardHandle("user_1", "taken-handle")
     expect(result).toEqual({ ok: false, error: "That handle is already taken — try another." })
