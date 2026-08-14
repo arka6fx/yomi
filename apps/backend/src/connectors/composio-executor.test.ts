@@ -27,14 +27,29 @@ describe("createComposioRestExecutor", () => {
     })
 
     expect(result).toEqual({ issues: [] })
-    expect(calls[0]!.url).toBe("https://x.test/api/v3/tools/execute/LINEAR_LIST_LINEAR_ISSUES")
+    expect(calls[0]!.url).toBe("https://x.test/api/v3.1/tools/execute/LINEAR_LIST_LINEAR_ISSUES")
     const init = calls[0]!.init!
     expect(init.method).toBe("POST")
     expect((init.headers as Record<string, string>)["x-api-key"]).toBe("k1")
     expect(JSON.parse(init.body as string)).toEqual({
       user_id: "user_1",
+      version: "latest",
       arguments: { first: 5 },
     })
+  })
+
+  it("allows pinning a Composio toolkit version for structured integrations", async () => {
+    const { fn, calls } = capturingFetch(Response.json({ data: {}, successful: true }))
+    const exec = createComposioRestExecutor({
+      apiKey: "k1",
+      baseUrl: "https://x.test",
+      toolkitVersion: "20251027_00",
+      fetchImpl: fn,
+    })
+
+    await exec.execute({ userId: "u", slug: "S", arguments: {} })
+
+    expect(JSON.parse(calls[0]!.init!.body as string).version).toBe("20251027_00")
   })
 
   it("surfaces a Composio 200-but-failed response as an error result", async () => {

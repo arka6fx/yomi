@@ -5,9 +5,9 @@ import type { ComposioExecutor } from "@yomi/agent-core"
 // (no new npm dependency) and is the single place a Composio tool call leaves the
 // backend. Reads COMPOSIO_API_KEY; the base URL is overridable for tests.
 //
-// REST: POST {base}/api/v3/tools/execute/{slug}
+// REST: POST {base}/api/v3.1/tools/execute/{slug}
 //   headers: x-api-key
-//   body:    { user_id, arguments }
+//   body:    { user_id, version, arguments }
 // Composio resolves the user's connected account for the toolkit from user_id.
 
 const DEFAULT_BASE_URL = "https://backend.composio.dev"
@@ -40,6 +40,7 @@ export function createCountingExecutor(inner: ComposioExecutor): CountingComposi
 export interface ComposioRestConfig {
   apiKey: string
   baseUrl?: string
+  toolkitVersion?: string
   fetchImpl?: typeof fetch
 }
 
@@ -86,6 +87,8 @@ function errorDetail(errorField: unknown): string | null {
 export function createComposioRestExecutor(config?: Partial<ComposioRestConfig>): ComposioExecutor {
   const apiKey = config?.apiKey ?? process.env["COMPOSIO_API_KEY"] ?? ""
   const baseUrl = config?.baseUrl ?? composioBaseUrl()
+  const toolkitVersion =
+    config?.toolkitVersion ?? process.env["COMPOSIO_TOOLKIT_VERSION"] ?? "latest"
   const doFetch = config?.fetchImpl ?? fetch
 
   return {
@@ -140,13 +143,13 @@ export function createComposioRestExecutor(config?: Partial<ComposioRestConfig>)
 
     async execute({ userId, slug, arguments: args }) {
       if (!apiKey) throw new Error("COMPOSIO_API_KEY not set")
-      const res = await doFetch(`${baseUrl}/api/v3/tools/execute/${encodeURIComponent(slug)}`, {
+      const res = await doFetch(`${baseUrl}/api/v3.1/tools/execute/${encodeURIComponent(slug)}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-api-key": apiKey,
         },
-        body: JSON.stringify({ user_id: userId, arguments: args ?? {} }),
+        body: JSON.stringify({ user_id: userId, version: toolkitVersion, arguments: args ?? {} }),
       })
       const text = await res.text()
       let body: unknown
