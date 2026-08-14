@@ -73,6 +73,34 @@ describe("TelegramAdapter.setReaction", () => {
   })
 })
 
+describe("TelegramAdapter.editMessageReplyMarkup", () => {
+  const originalFetch = globalThis.fetch
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  it("clears the inline keyboard without touching message text", async () => {
+    let capturedUrl = ""
+    let capturedBody: Record<string, unknown> | null = null
+    globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+      capturedUrl = String(url)
+      capturedBody = JSON.parse(String(init?.body))
+      return new Response(JSON.stringify({ ok: true, result: {} }), { status: 200 })
+    }) as typeof fetch
+
+    const adapter = new TelegramAdapter("dummy-token")
+    const result = await adapter.editMessageReplyMarkup("42", "100")
+
+    expect(capturedUrl).toContain("/editMessageReplyMarkup")
+    expect(capturedBody?.chat_id).toBe("42")
+    expect(capturedBody?.message_id).toBe(100)
+    expect(capturedBody?.reply_markup).toEqual({ inline_keyboard: [] })
+    expect(capturedBody?.text).toBeUndefined()
+    expect(result).toEqual({ ok: true })
+  })
+})
+
 describe("TelegramAdapter.processUpdate — location", () => {
   it("surfaces a location-only update as a GatewayMessage with location set", async () => {
     const { adapter, received } = makeAdapter()
@@ -107,6 +135,27 @@ describe("TelegramAdapter.processUpdate — location", () => {
     await adapter.processUpdate(update)
 
     expect(received).toHaveLength(0)
+  })
+})
+
+describe("TelegramAdapter.processUpdate — sticker", () => {
+  it("surfaces a sticker-only update as a GatewayMessage with sticker set instead of dropping it", async () => {
+    const { adapter, received } = makeAdapter()
+    const update: TelegramUpdate = {
+      update_id: 3,
+      message: {
+        message_id: 102,
+        from: { id: 42, first_name: "Ada" },
+        chat: { id: 42, type: "private" },
+        sticker: { file_id: "sticker_file_1", emoji: "😂", set_name: "FunPack" },
+      },
+    }
+
+    await adapter.processUpdate(update)
+
+    expect(received).toHaveLength(1)
+    expect(received[0]?.sticker).toEqual({ emoji: "😂", setName: "FunPack" })
+    expect(received[0]?.text).toBe("")
   })
 })
 
