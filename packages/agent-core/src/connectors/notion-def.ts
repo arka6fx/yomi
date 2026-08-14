@@ -46,6 +46,26 @@ export function createNotionTools(ctx: ConnectorContext): ToolSet {
     return { object: "block", type, [type]: { rich_text: [{ type: "text", text: { content } }] } }
   }
 
+  function imageBlock(url: string): Record<string, unknown> {
+    return {
+      object: "block",
+      type: "image",
+      image: { type: "external", external: { url } },
+    }
+  }
+
+  function contentLineToBlock(line: string): Record<string, unknown> {
+    const trimmed = line.trim()
+    const imageMatch = /^!\[[^\]]*\]\((https?:\/\/[^\s)]+)\)$/.exec(trimmed)
+    if (imageMatch?.[1]) return imageBlock(imageMatch[1])
+    if (trimmed.startsWith("# ")) return textBlock("heading_1", trimmed.slice(2))
+    if (trimmed.startsWith("## ")) return textBlock("heading_2", trimmed.slice(3))
+    if (trimmed.startsWith("â€¢ ") || trimmed.startsWith("- ")) {
+      return textBlock("bulleted_list_item", trimmed.slice(2))
+    }
+    return textBlock("paragraph", trimmed)
+  }
+
   function blockToText(block: Record<string, unknown>): string {
     const type = block.type as string
     const data = block[type] as Record<string, unknown> | undefined
@@ -313,7 +333,9 @@ export function createNotionTools(ctx: ConnectorContext): ToolSet {
         content: z
           .string()
           .optional()
-          .describe("Optional plain-text content to add as a paragraph block"),
+          .describe(
+            "Optional body content. Supports lines like # heading, ## subheading, bullets, and ![](https://...) for an image block.",
+          ),
         titleProperty: z
           .string()
           .optional()
@@ -353,13 +375,11 @@ export function createNotionTools(ctx: ConnectorContext): ToolSet {
 
           const body: Record<string, unknown> = { parent, properties: props }
           if (content) {
-            body.children = [
-              {
-                object: "block",
-                type: "paragraph",
-                paragraph: { rich_text: [{ type: "text", text: { content } }] },
-              },
-            ]
+            const children = content
+              .split("\n")
+              .filter((line) => line.trim())
+              .map((line) => contentLineToBlock(line))
+            if (children.length > 0) body.children = children
           }
 
           const page = await notion<{ id: string; url: string }>("/pages", {
@@ -435,13 +455,14 @@ export function createNotionTools(ctx: ConnectorContext): ToolSet {
     }),
 
     "notion-appendContent": tool({
-      description: "Append text content (as paragraphs or headings) to an existing Notion page.",
+      description:
+        "Append content blocks to an existing Notion page. Supports headings, bullets, and ![](https://...) lines that become image blocks.",
       parameters: z.object({
         pageId: z.string().describe("Notion page ID to append to"),
         content: z
           .string()
           .describe(
-            "Text content to append (supports markdown-like: # for h1, ## for h2, • for bullets)",
+            "Text content to append (supports markdown-like: # for h1, ## for h2, • for bullets, ![](https://...) for images)",
           ),
         confirmed: z
           .boolean()
@@ -453,18 +474,7 @@ export function createNotionTools(ctx: ConnectorContext): ToolSet {
           const blocked = requireConfirmed(confirmed)
           if (blocked) return blocked
           const lines = content.split("\n").filter((l) => l.trim())
-          const children = lines.map((line) => {
-            if (line.startsWith("# ")) {
-              return textBlock("heading_1", line.slice(2))
-            }
-            if (line.startsWith("## ")) {
-              return textBlock("heading_2", line.slice(3))
-            }
-            if (line.startsWith("• ") || line.startsWith("- ")) {
-              return textBlock("bulleted_list_item", line.slice(2))
-            }
-            return textBlock("paragraph", line)
-          })
+          const children = lines.map((line) => contentLineToBlock(line))
 
           await notion<unknown>(`/blocks/${pageId}/children`, {
             method: "PATCH",
