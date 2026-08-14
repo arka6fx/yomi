@@ -12,6 +12,7 @@ import { ragDriveRouter } from "./routes/rag-drive.js"
 import { memoryRouter } from "./routes/memory.js"
 import { schedulesRouter } from "./routes/schedules.js"
 import { referralsRouter } from "./routes/referrals.js"
+import { streaksRouter } from "./routes/streaks.js"
 import { suggestionsRouter } from "./routes/suggestions.js"
 import { actionsRouter } from "./routes/actions.js"
 import { proxyRouter } from "./routes/proxy.js"
@@ -126,6 +127,7 @@ app.route("/api/rag/drive", ragDriveRouter)
 app.route("/api/memory", memoryRouter)
 app.route("/api/schedules", schedulesRouter)
 app.route("/api/referrals", referralsRouter)
+app.route("/api/streaks", streaksRouter)
 app.route("/api/suggestions", suggestionsRouter)
 app.route("/api/actions", actionsRouter)
 app.route("/api/v1", proxyRouter)

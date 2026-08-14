@@ -31,6 +31,7 @@ import { MemoryManager } from "@/components/dashboard/MemoryManager"
 import { PrivacyManager } from "@/components/dashboard/PrivacyManager"
 import { SchedulesManager } from "@/components/dashboard/SchedulesManager"
 import { ReferralsManager } from "@/components/dashboard/ReferralsManager"
+import { StreaksManager } from "@/components/dashboard/StreaksManager"
 import { ConversationManager } from "@/components/dashboard/ConversationManager"
 import { StatusManager } from "@/components/dashboard/StatusManager"
 import { SettingsMenu, type DashboardTab } from "@/components/dashboard/SettingsMenu"
@@ -904,6 +905,17 @@ function DashboardContent() {
             transition={{ duration: 0.3 }}
           >
             <ReferralsManager token={session.session.token} />
+          </motion.div>
+        )}
+
+        {/* Streaks tab */}
+        {activeTab === "streaks" && session && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <StreaksManager token={session.session.token} />
           </motion.div>
         )}
 
