@@ -35,9 +35,8 @@ const fakeDb = {
 mock.module("@yomi/db", () => ({ db: fakeDb }))
 mock.module("../auth-schema.js", () => ({ user: {} }))
 
-const { recordDailyActivity, getStreakStats, setLeaderboardOptIn, getLeaderboard } = await import(
-  "./streaks.js"
-)
+const { recordDailyActivity, getStreakStats, setLeaderboardOptIn, getLeaderboard } =
+  await import("./streaks.js")
 
 beforeEach(() => {
   selectQueue = []
@@ -160,9 +159,7 @@ describe("setLeaderboardOptIn", () => {
   it("retries with a freshly generated handle when the first candidate collides", async () => {
     selectQueue = [[{ leaderboardHandle: null }]]
     updateBehaviors = [
-      new Error(
-        'duplicate key value violates unique constraint "user_leaderboard_handle_unique"',
-      ),
+      new Error('duplicate key value violates unique constraint "user_leaderboard_handle_unique"'),
     ]
     const result = await setLeaderboardOptIn("user_1", true)
     expect(result.leaderboardOptIn).toBe(true)
