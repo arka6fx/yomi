@@ -462,6 +462,98 @@ export function DashboardHome({
         </div>
       )}
 
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <StatCard
+          icon={MessageSquare}
+          title="History"
+          loading={historyLoading}
+          empty={history.length === 0}
+          emptyText="No conversation yet"
+          onClick={() => onNavigate("conversation")}
+        >
+          {lastUserTurn && <p>{truncate(lastUserTurn.content, 80)}</p>}
+          <p className="mt-1 text-xs text-muted-foreground">
+            {history.length} message{history.length === 1 ? "" : "s"}
+          </p>
+        </StatCard>
+
+        <StatCard
+          icon={Clock}
+          title="Schedules"
+          loading={schedulesLoading}
+          empty={schedules.length === 0}
+          emptyText="No automations yet"
+          onClick={() => onNavigate("schedules")}
+        >
+          <p>
+            {enabledSchedules.length} of {schedules.length} active
+          </p>
+          {soonestNextRunAt && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Next run {relativeFuture(soonestNextRunAt)}
+            </p>
+          )}
+        </StatCard>
+
+        <StatCard
+          icon={Brain}
+          title="Memory"
+          loading={memoryLoading}
+          empty={memory.length === 0}
+          emptyText="Nothing remembered yet"
+          onClick={() => onNavigate("memory")}
+        >
+          <p>
+            {memory.length} memor{memory.length === 1 ? "y" : "ies"}
+          </p>
+        </StatCard>
+
+        <StatCard
+          icon={HeartPulse}
+          title="Status"
+          loading={false}
+          empty={false}
+          emptyText=""
+          onClick={() => onNavigate("status")}
+        >
+          <p>Agent &amp; connector health</p>
+        </StatCard>
+
+        <StatCard
+          icon={Flame}
+          title="Streak"
+          loading={streakLoading}
+          empty={!streak || (streak.currentStreak === 0 && streak.totalMessagesSent === 0)}
+          emptyText="Message Yomi to start one"
+          onClick={() => onNavigate("streaks")}
+        >
+          {streak && (
+            <>
+              <p>{streak.currentStreak} day streak</p>
+              <p className="mt-1 text-xs text-muted-foreground">Longest: {streak.longestStreak}</p>
+            </>
+          )}
+        </StatCard>
+
+        <StatCard
+          icon={Activity}
+          title="Activity"
+          loading={false}
+          empty={!latestActivity}
+          emptyText="No activity yet"
+          onClick={() => onNavigate("billing")}
+        >
+          {latestActivity && (
+            <>
+              <p>{latestActivity.label}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {relativePast(latestActivity.createdAt)}
+              </p>
+            </>
+          )}
+        </StatCard>
+      </div>
+
       <PlanBanner plan={plan} onClick={() => onNavigate("billing")} />
 
       <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
@@ -553,98 +645,6 @@ export function DashboardHome({
             ))}
           </div>
         )}
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <StatCard
-          icon={MessageSquare}
-          title="History"
-          loading={historyLoading}
-          empty={history.length === 0}
-          emptyText="No conversation yet"
-          onClick={() => onNavigate("conversation")}
-        >
-          {lastUserTurn && <p>{truncate(lastUserTurn.content, 80)}</p>}
-          <p className="mt-1 text-xs text-muted-foreground">
-            {history.length} message{history.length === 1 ? "" : "s"}
-          </p>
-        </StatCard>
-
-        <StatCard
-          icon={Clock}
-          title="Schedules"
-          loading={schedulesLoading}
-          empty={schedules.length === 0}
-          emptyText="No automations yet"
-          onClick={() => onNavigate("schedules")}
-        >
-          <p>
-            {enabledSchedules.length} of {schedules.length} active
-          </p>
-          {soonestNextRunAt && (
-            <p className="mt-1 text-xs text-muted-foreground">
-              Next run {relativeFuture(soonestNextRunAt)}
-            </p>
-          )}
-        </StatCard>
-
-        <StatCard
-          icon={Brain}
-          title="Memory"
-          loading={memoryLoading}
-          empty={memory.length === 0}
-          emptyText="Nothing remembered yet"
-          onClick={() => onNavigate("memory")}
-        >
-          <p>
-            {memory.length} memor{memory.length === 1 ? "y" : "ies"}
-          </p>
-        </StatCard>
-
-        <StatCard
-          icon={HeartPulse}
-          title="Status"
-          loading={false}
-          empty={false}
-          emptyText=""
-          onClick={() => onNavigate("status")}
-        >
-          <p>Agent &amp; connector health</p>
-        </StatCard>
-
-        <StatCard
-          icon={Flame}
-          title="Streak"
-          loading={streakLoading}
-          empty={!streak || (streak.currentStreak === 0 && streak.totalMessagesSent === 0)}
-          emptyText="Message Yomi to start one"
-          onClick={() => onNavigate("streaks")}
-        >
-          {streak && (
-            <>
-              <p>{streak.currentStreak} day streak</p>
-              <p className="mt-1 text-xs text-muted-foreground">Longest: {streak.longestStreak}</p>
-            </>
-          )}
-        </StatCard>
-
-        <StatCard
-          icon={Activity}
-          title="Activity"
-          loading={false}
-          empty={!latestActivity}
-          emptyText="No activity yet"
-          onClick={() => onNavigate("billing")}
-        >
-          {latestActivity && (
-            <>
-              <p>{latestActivity.label}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {relativePast(latestActivity.createdAt)}
-              </p>
-            </>
-          )}
-        </StatCard>
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
