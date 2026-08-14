@@ -66,6 +66,19 @@ export function StreaksManager({ token }: { token: string }) {
 
   const auth = { Authorization: `Bearer ${token}` }
 
+  // Refetches only the leaderboard list, without touching `loading` — used after an
+  // action so the ranked list catches up without the whole widget flashing to a
+  // full-page spinner. Best-effort: a failure here just leaves the stale list up.
+  const refreshLeaderboard = useCallback(async () => {
+    try {
+      const res = await fetch("/api/streaks/leaderboard", { headers: auth })
+      if (!res.ok) return
+      setLeaderboard((await res.json()) as Leaderboard)
+    } catch {
+      // best-effort — the action itself already succeeded
+    }
+  }, [token])
+
   const load = useCallback(async () => {
     setLoading(true)
     setError("")
@@ -103,7 +116,21 @@ export function StreaksManager({ token }: { token: string }) {
         body: JSON.stringify({ optIn: !stats.leaderboardOptIn }),
       })
       if (!res.ok) throw new Error(`Couldn't update leaderboard setting (${res.status})`)
-      await load()
+      const result = (await res.json()) as {
+        leaderboardOptIn: boolean
+        leaderboardHandle: string | null
+      }
+      setStats((prev) =>
+        prev
+          ? {
+              ...prev,
+              leaderboardOptIn: result.leaderboardOptIn,
+              leaderboardHandle: result.leaderboardHandle,
+            }
+          : prev,
+      )
+      setHandleInput((prev) => prev || result.leaderboardHandle || "")
+      void refreshLeaderboard()
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Couldn't update leaderboard setting")
     } finally {
@@ -122,11 +149,19 @@ export function StreaksManager({ token }: { token: string }) {
         headers: { ...auth, "Content-Type": "application/json" },
         body: JSON.stringify({ handle: handleInput }),
       })
-      const data = (await res.json().catch(() => ({}))) as { error?: string }
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string
+        leaderboardHandle?: string
+      }
       if (!res.ok) throw new Error(data.error ?? "Couldn't save that handle")
-      await load()
+      setStats((prev) =>
+        prev
+          ? { ...prev, leaderboardHandle: data.leaderboardHandle ?? prev.leaderboardHandle }
+          : prev,
+      )
       setHandleSaved(true)
       setTimeout(() => setHandleSaved(false), 2000)
+      void refreshLeaderboard()
     } catch (err) {
       setHandleError(err instanceof Error ? err.message : "Couldn't save that handle")
     } finally {
@@ -145,7 +180,11 @@ export function StreaksManager({ token }: { token: string }) {
         body: JSON.stringify({ showPhoto: !stats.leaderboardShowPhoto }),
       })
       if (!res.ok) throw new Error(`Couldn't update photo setting (${res.status})`)
-      await load()
+      const result = (await res.json()) as { leaderboardShowPhoto: boolean }
+      setStats((prev) =>
+        prev ? { ...prev, leaderboardShowPhoto: result.leaderboardShowPhoto } : prev,
+      )
+      void refreshLeaderboard()
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Couldn't update photo setting")
     } finally {
@@ -218,7 +257,13 @@ export function StreaksManager({ token }: { token: string }) {
             disabled={toggling}
             className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
-            {stats.leaderboardOptIn ? "Opted in" : "Opt in"}
+            {toggling ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : stats.leaderboardOptIn ? (
+              "Opted in"
+            ) : (
+              "Opt in"
+            )}
           </button>
         </div>
         {actionError && <p className="mt-2 text-xs text-destructive">{actionError}</p>}
@@ -255,10 +300,11 @@ export function StreaksManager({ token }: { token: string }) {
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <Avatar url={stats.avatarUrl} size={24} />
+                <Avatar url={stats.leaderboardShowPhoto ? stats.avatarUrl : null} size={24} />
                 <span className="text-sm text-foreground">Show my profile photo</span>
               </div>
               <button
+                type="button"
                 onClick={toggleShowPhoto}
                 disabled={savingPhoto}
                 className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${

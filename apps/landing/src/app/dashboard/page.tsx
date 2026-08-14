@@ -14,12 +14,8 @@ import {
   WalletCards,
   ReceiptText,
   Plug,
-  MessageSquare,
   ExternalLink,
   Zap,
-  Brain,
-  Clock,
-  Activity,
   Home,
 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
@@ -689,9 +685,7 @@ function DashboardContent() {
         {/* Tab switcher — horizontally scrollable on small screens */}
         <div className="-mx-4 sm:mx-0 overflow-x-auto no-scrollbar border-b border-border">
           <div className="flex gap-1 px-4 sm:px-0 min-w-max">
-            {(
-              ["home", "integrations", "memory", "schedules", "conversation", "status"] as const
-            ).map((tab) => (
+            {(["home", "integrations"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -704,10 +698,6 @@ function DashboardContent() {
               >
                 {tab === "home" && <Home size={13} />}
                 {tab === "integrations" && <Plug size={13} />}
-                {tab === "memory" && <Brain size={13} />}
-                {tab === "schedules" && <Clock size={13} />}
-                {tab === "conversation" && <MessageSquare size={13} />}
-                {tab === "status" && <Activity size={13} />}
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
                 {tab === "integrations" && connectedProviders.length > 0 && (
                   <span className="ml-1 bg-primary/20 text-primary text-xs px-1.5 py-0.5 rounded-full leading-none">
