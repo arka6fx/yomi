@@ -29,6 +29,7 @@ import { searchSessions } from "../services/agent-sessions.js"
 import { getAccessToken, listConnectedProviders } from "../services/integration-tokens.js"
 import { decryptString } from "../services/token-encryption.js"
 import { buildComposioDefs } from "../connectors/composio-defs.js"
+import { loadComposioCatalog } from "../connectors/composio-catalog.js"
 import {
   createComposioRestExecutor,
   createCountingExecutor,
@@ -415,9 +416,10 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
 
   // Per-turn counting executor so Composio tool calls can be metered after the loop.
   const composioMeter = createCountingExecutor(createComposioRestExecutor())
+  const catalogSpecs = await loadComposioCatalog()
   const registry = new ConnectorRegistry({
     excludeNodeOnly: true,
-    composioDefs: buildComposioDefs(composioMeter),
+    composioDefs: buildComposioDefs(composioMeter, catalogSpecs),
     getAccessToken,
     createPendingAction: async (input) => {
       const { createPendingAction } = await import("../services/pending-actions.js")

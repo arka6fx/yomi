@@ -1,7 +1,7 @@
 import { describe, expect, it, mock } from "bun:test"
 import { z } from "zod"
 import type { ConnectorContext } from "../connector-def.js"
-import { createComposioTools } from "./adapter.js"
+import { composioCatalogToolToSpec, createComposioTools } from "./adapter.js"
 import type { ComposioExecutor, ComposioToolSpec } from "./adapter.js"
 
 const specs: ComposioToolSpec[] = [
@@ -263,6 +263,43 @@ describe("createComposioTools — approval-wrap adapter", () => {
     }
     expect(result.error).toContain("401")
     expect(result.hint).toContain("reconnect")
+  })
+})
+
+describe("composioCatalogToolToSpec", () => {
+  it("converts the latest catalog metadata into a validated spec", () => {
+    const spec = composioCatalogToolToSpec({
+      slug: "GOOGLE_MAPS_AUTOCOMPLETE",
+      description: "Autocomplete places",
+      input_parameters: {
+        input: { type: "string", required: true, description: "Text" },
+        languageCode: { type: "string", required: false },
+        photo: { type: "string", required: false, file_uploadable: true },
+      },
+    })
+
+    expect(spec.fileParams).toEqual(["photo"])
+    expect(spec.parameters.safeParse({ input: "coffee" }).success).toBe(true)
+    expect(spec.parameters.safeParse({}).success).toBe(false)
+    expect(spec.parameters.safeParse({ input: 42 }).success).toBe(false)
+  })
+
+  it("supports nested objects, arrays, and enum parameters", () => {
+    const spec = composioCatalogToolToSpec({
+      slug: "TEST_TOOL",
+      input_parameters: {
+        modes: { type: "array", items: { type: "string", enum: ["fast", "safe"] } },
+        options: {
+          type: "object",
+          properties: { enabled: { type: "boolean", required: true } },
+        },
+      },
+    })
+
+    expect(spec.parameters.safeParse({ modes: ["fast"], options: { enabled: true } }).success).toBe(
+      true,
+    )
+    expect(spec.parameters.safeParse({ modes: ["unknown"] }).success).toBe(false)
   })
 })
 

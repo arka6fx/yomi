@@ -58,6 +58,8 @@ import {
   makeComposioZohoInvoiceDef,
   type ConnectorDef,
   type ComposioExecutor,
+  createComposioTools,
+  type ComposioToolSpec,
 } from "@yomi/agent-core"
 import { createComposioRestExecutor } from "./composio-executor.js"
 
@@ -68,9 +70,12 @@ import { createComposioRestExecutor } from "./composio-executor.js"
 //
 // The executor is injectable so agent/run.ts can pass a per-turn counting executor
 // for metering; defaults to a fresh REST executor otherwise.
-export function buildComposioDefs(executor?: ComposioExecutor): Record<string, ConnectorDef> {
+export function buildComposioDefs(
+  executor?: ComposioExecutor,
+  catalogSpecs: ComposioToolSpec[] = [],
+): Record<string, ConnectorDef> {
   const exec = executor ?? createComposioRestExecutor()
-  return {
+  const defs: Record<string, ConnectorDef> = {
     linear: makeComposioLinearDef(exec),
     github: makeComposioGitHubDef(exec),
     slack: makeComposioSlackDef(exec),
@@ -129,4 +134,31 @@ export function buildComposioDefs(executor?: ComposioExecutor): Record<string, C
     stripe: makeComposioStripeDef(exec),
     "zoho-invoice": makeComposioZohoInvoiceDef(exec),
   }
+
+  // Keep hand-written specs authoritative for custom previews, file staging, and
+  // account-id resolution. Catalog-only tools are additive and use the same
+  // approval-wrapped adapter, so new Composio actions cannot bypass the guard.
+  if (catalogSpecs.length) {
+    for (const def of Object.values(defs)) {
+      if (def.auth.kind !== "composio") continue
+      const auth = def.auth
+      const existing = new Set(
+        Object.keys(def.tools({ userId: "catalog", getAccessToken: async () => "" })),
+      )
+      const extras = catalogSpecs.filter(
+        (spec) =>
+          !existing.has(spec.slug) && spec.slug.startsWith(`${auth.toolkit.toUpperCase()}_`),
+      )
+      if (!extras.length) continue
+      const catalogTools = createComposioTools({
+        provider: def.id,
+        toolkit: auth.toolkit,
+        specs: extras,
+        executor: exec,
+      })
+      const originalTools = def.tools
+      def.tools = (ctx) => ({ ...originalTools(ctx), ...catalogTools(ctx) })
+    }
+  }
+  return defs
 }

@@ -33,6 +33,9 @@ export {
   type ComposioExecutor,
   type ComposioToolSpec,
   type CreateComposioToolsOptions,
+  type ComposioCatalogTool,
+  type ComposioCatalogParameter,
+  composioCatalogToolToSpec,
 } from "./connectors/composio/adapter.js"
 export {
   classifyAction,

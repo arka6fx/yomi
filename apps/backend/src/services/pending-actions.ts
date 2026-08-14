@@ -311,7 +311,21 @@ async function replayConnectorTool(row: {
     string,
     { execute?: (args: unknown, opts: unknown) => Promise<unknown> }
   >
-  const t = tools[row.action]
+  let t = tools[row.action]
+  // Catalog-discovered actions are additive at agent-run time. Load the same
+  // catalog for approval replay so a newly surfaced tool cannot disappear when
+  // the user taps Approve in Telegram.
+  if (!t?.execute && def.auth.kind === "composio") {
+    const [{ buildComposioDefs }, { loadComposioCatalog }] = await Promise.all([
+      import("../connectors/composio-defs.js"),
+      import("../connectors/composio-catalog.js"),
+    ])
+    const expanded = buildComposioDefs(undefined, await loadComposioCatalog())[row.connector]
+    if (expanded) {
+      const expandedTools = expanded.tools({ userId: row.userId, getAccessToken }) as typeof tools
+      t = expandedTools[row.action]
+    }
+  }
   if (!t?.execute) return undefined
   return t.execute(row.payload, { toolCallId: row.action, messages: [] })
 }

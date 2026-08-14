@@ -1,5 +1,5 @@
 import { tool, type ToolSet } from "ai"
-import type { z } from "zod"
+import { z } from "zod"
 import type { ConnectorContext, ToolFactory } from "../connector-def.js"
 import { connectorError, gateWrite } from "../connector-def.js"
 
@@ -67,6 +67,71 @@ export interface ComposioToolSpec {
   // the wrong page/number instead of erroring), so 0 or 2+ items leaves the
   // model's original value untouched.
   resolvedParams?: Record<string, { viaSlug: string; list?: boolean }>
+}
+
+export interface ComposioCatalogParameter {
+  type?: string
+  description?: string
+  required?: boolean
+  enum?: unknown[]
+  items?: ComposioCatalogParameter
+  properties?: Record<string, ComposioCatalogParameter>
+  additionalProperties?: boolean
+  file_uploadable?: boolean
+}
+
+export interface ComposioCatalogTool {
+  slug: string
+  description?: string
+  human_description?: string
+  input_parameters?: Record<string, ComposioCatalogParameter>
+}
+
+function catalogParameterSchema(parameter: ComposioCatalogParameter): z.ZodTypeAny {
+  let schema: z.ZodTypeAny
+  if (parameter.enum?.length) {
+    const values = parameter.enum.filter((value): value is string => typeof value === "string")
+    schema = values.length ? z.enum(values as [string, ...string[]]) : z.unknown()
+  } else if (parameter.type === "array") {
+    schema = z.array(catalogParameterSchema(parameter.items ?? { type: "string" }))
+  } else if (parameter.type === "object" || parameter.properties) {
+    const shape: Record<string, z.ZodTypeAny> = {}
+    for (const [key, child] of Object.entries(parameter.properties ?? {})) {
+      shape[key] = catalogParameterSchema(child)
+    }
+    schema = z.object(shape).passthrough()
+  } else {
+    schema =
+      parameter.type === "number"
+        ? z.number()
+        : parameter.type === "integer"
+          ? z.number().int()
+          : parameter.type === "boolean"
+            ? z.boolean()
+            : parameter.type === "null"
+              ? z.null()
+              : z.string()
+  }
+  return parameter.description ? schema.describe(parameter.description) : schema
+}
+
+// Converts Composio's catalog metadata to the same guarded spec used by the
+// hand-written connectors. Unknown catalog actions intentionally receive no
+// special risk or file resolver metadata: the default classifier gates them.
+export function composioCatalogToolToSpec(tool: ComposioCatalogTool): ComposioToolSpec {
+  const shape: Record<string, z.ZodTypeAny> = {}
+  const fileParams: string[] = []
+  for (const [name, parameter] of Object.entries(tool.input_parameters ?? {})) {
+    const schema = catalogParameterSchema(parameter)
+    shape[name] = parameter.required === false ? schema.optional() : schema
+    if (parameter.file_uploadable) fileParams.push(name)
+  }
+  return {
+    slug: tool.slug,
+    description: tool.description || tool.human_description || tool.slug,
+    parameters: z.object(shape).passthrough(),
+    ...(fileParams.length ? { fileParams } : {}),
+  }
 }
 
 export interface CreateComposioToolsOptions {
