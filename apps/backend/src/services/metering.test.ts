@@ -34,6 +34,7 @@ mock.module("./credit-ledger.js", () => ({
     consumeAmount = amount
     return { ok: true, charged: amount, balance: mockBalance - amount }
   },
+  expireCredits: async () => 0,
 }))
 
 const { chargeUsage } = await import("./metering.js")

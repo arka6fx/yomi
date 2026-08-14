@@ -43,6 +43,7 @@ mock.module("../services/credit-ledger.js", () => ({
     state.grants.push({ userId: input.userId, amount: input.amount, expiresAt: input.expiresAt })
     return { granted: true, balance: input.amount }
   },
+  expireCredits: async () => 0,
 }))
 
 const { renewExploreCredits } = await import("./explore-renewal.js")

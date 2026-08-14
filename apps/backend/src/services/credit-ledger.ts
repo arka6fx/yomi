@@ -396,7 +396,7 @@ export async function expireUserCredits(
   return totalExpired
 }
 
-export async function expireCredits(now = new Date()): Promise<number> {
+export async function expireCredits(now = new Date(), userId?: string): Promise<number> {
   const expired = await db
     .select({
       id: creditGrants.id,
@@ -410,6 +410,7 @@ export async function expireCredits(now = new Date()): Promise<number> {
         gt(creditGrants.creditsRemaining, 0),
         sql`${creditGrants.expiresAt} is not null`,
         sql`${creditGrants.expiresAt} <= ${now}`,
+        userId ? eq(creditGrants.userId, userId) : sql`1=1`,
       ),
     )
 

@@ -273,6 +273,7 @@ mock.module("../services/credit-ledger.js", () => ({
   grantCredits: async () => ({ granted: true, balance: 100 }),
   recentCreditTransactions: async () => [],
   expireUserCredits: async () => 0,
+  expireCredits: async () => 0,
 }))
 
 const { GatewayRunner } = await import("./gateway-runner.js")

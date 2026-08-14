@@ -2,7 +2,7 @@ import { db, usageEvents } from "@yomi/db"
 import { eq } from "drizzle-orm"
 import { user as userTable } from "../auth-schema.js"
 import { effectivePlanForUser, hasBillablePlanAccess, getPlanConfig } from "../entitlements.js"
-import { consumeCredits, getCreditSummary } from "./credit-ledger.js"
+import { consumeCredits, expireCredits, getCreditSummary } from "./credit-ledger.js"
 import { creditsForUsage, type BillableUsageKind } from "./credit-pricing.js"
 
 // The four billable surfaces. Each maps to a credit cost (BillableUsageKind) and to
@@ -103,6 +103,17 @@ export async function chargeUsage(input: {
           : "Subscription isn't active. Head to the dashboard to sort it out."
     return { ok: false, status: 402, code: "subscription_inactive", message, plan }
   }
+
+  // Sweep this user's own expired-but-still-active grants before checking
+  // balance, so a stale grant never counts toward what's spendable. This was
+  // previously only wired into the (now-unused, desktop-era) /interactions/reserve
+  // route — chargeUsage is the actual single chokepoint per AGENTS.md, and every
+  // real call site (agent/run.ts, pending-actions.ts) went through here without
+  // ever sweeping, so stale grants could sit active indefinitely. Scoped to this
+  // user (not the global expireCredits() sweep) to keep the per-request cost O(1).
+  await expireCredits(new Date(), user.id).catch((err) =>
+    console.error("[chargeUsage] expireCredits failed:", user.id, err),
+  )
 
   const creditsRequired = creditsForUsage(CREDIT_KIND[kind], {
     durationSeconds: input.durationSeconds,
