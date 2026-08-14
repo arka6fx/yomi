@@ -5,8 +5,8 @@
 // that only makes sense in the abstract reads as marketing, not something the
 // user can run right now. Keyed by connector id, matching
 // packages/ui-connectors/src/catalog.ts's CATALOG_DEFS ids. Covers every
-// connector with available: true there (google-photos and swiggy are
-// available: false and excluded).
+// connector with available: true there (swiggy is available: false and
+// excluded).
 export const STARTER_PROMPTS: Record<string, string[]> = {
   google: ["Draft a reply to the last email from Sam", "Tell me when I get an email from my boss"],
   "google-calendar": [

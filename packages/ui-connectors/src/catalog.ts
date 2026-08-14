@@ -500,22 +500,6 @@ const CATALOG_DEFS: Array<{
     available: true,
   },
   {
-    id: "google-photos",
-    name: "Google Photos",
-    description:
-      "Upload photos and organize them into albums. Google restricts library access, so Yomi only sees media it uploaded itself — it can't browse or search your existing library.",
-    category: "file-management",
-    authKind: "composio",
-    icon: "google-photos",
-    // Tools are wired (13/13 against the live catalog), but nothing can be
-    // created: albums.create and uploads need photoslibrary.appendonly, a
-    // Google-restricted scope Composio's managed OAuth client is not verified
-    // for — adding it makes Google block the consent screen outright. Since the
-    // reads only ever see app-created media, and none can exist, the connector
-    // is a no-op until it moves to a BYO auth config on a verified client.
-    available: false,
-  },
-  {
     id: "google-ads",
     name: "Google Ads",
     description: "Manage and analyze ad campaigns, keywords, ad groups, and performance metrics.",
