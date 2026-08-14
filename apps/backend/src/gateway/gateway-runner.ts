@@ -461,7 +461,12 @@ export class GatewayRunner {
     yomiUserId: string,
   ): Promise<
     | { kind: "describe"; text: string }
-    | { kind: "action"; description: string; assetUrl: string | null; publicAssetUrl: string | null }
+    | {
+        kind: "action"
+        description: string
+        assetUrl: string | null
+        publicAssetUrl: string | null
+      }
   > {
     if (!msg.imageUrl)
       return { kind: "describe", text: "I couldn't access the image. Please send it again." }

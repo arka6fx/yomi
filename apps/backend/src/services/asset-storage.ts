@@ -167,9 +167,7 @@ export async function fetchAsset(
 ): Promise<{ bytes: Uint8Array; contentType: string } | null> {
   const cfg = client()
   if (!cfg) return null
-  const response = await cfg.client.send(
-    new GetObjectCommand({ Bucket: cfg.bucket, Key: key }),
-  )
+  const response = await cfg.client.send(new GetObjectCommand({ Bucket: cfg.bucket, Key: key }))
   const body = response.Body
   if (!body) return null
   const bytes = await body.transformToByteArray()
