@@ -274,16 +274,17 @@ async function resolveConnectorTools(
   try {
     const picked = await selectRelevantConnectors(text, registry.getConnectorSummaries(), fastModel)
     if (picked === null) return all // classifier unavailable/unparseable — fail open
+    const explicitlyMentioned = explicitlyMentionedConnectorIds(
+      text,
+      registry.getConnectorSummaries(),
+    )
     if (picked.length === 0) {
-      const explicitlyMentioned = explicitlyMentionedConnectorIds(
-        text,
-        registry.getConnectorSummaries(),
-      )
       if (explicitlyMentioned.length === 0) return {}
       const mentionedTools = registry.getToolsForConnectors(explicitlyMentioned)
       return Object.keys(mentionedTools).length > 0 ? mentionedTools : all
     }
-    const narrowed = registry.getToolsForConnectors(picked)
+    const selectedIds = [...new Set([...picked, ...explicitlyMentioned])]
+    const narrowed = registry.getToolsForConnectors(selectedIds)
     // Picked ids that mapped to nothing is a signal something's wrong (an id
     // mismatch, a registry that doesn't track what was asked for) rather than
     // a legitimate "nothing relevant" — that case already returned above.
