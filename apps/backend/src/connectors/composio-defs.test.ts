@@ -11,7 +11,8 @@ function fakeExecutor(): ComposioExecutor {
 // live catalog, unfiltered.
 const unvettedMapsCatalogSpec: ComposioToolSpec = {
   slug: "GOOGLE_MAPS_COMPUTE_ROUTE_MATRIX",
-  description: "Calculates travel distance and duration matrix between multiple origins/destinations.",
+  description:
+    "Calculates travel distance and duration matrix between multiple origins/destinations.",
   parameters: { safeParse: () => ({ success: true, data: {} }) } as ComposioToolSpec["parameters"],
 }
 

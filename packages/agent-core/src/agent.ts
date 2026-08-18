@@ -294,7 +294,11 @@ async function resolveConnectorTools(
   // recoverable as the classifier itself being unavailable.
   try {
     const context = formatClassifierContext(history, text)
-    const picked = await selectRelevantConnectors(context, registry.getConnectorSummaries(), fastModel)
+    const picked = await selectRelevantConnectors(
+      context,
+      registry.getConnectorSummaries(),
+      fastModel,
+    )
     if (picked === null) return all // classifier unavailable/unparseable — fail open
     const explicitlyMentioned = explicitlyMentionedConnectorIds(
       context,
