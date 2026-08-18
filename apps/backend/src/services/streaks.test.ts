@@ -42,6 +42,8 @@ const {
   updateLeaderboardHandle,
   setLeaderboardShowPhoto,
   getLeaderboard,
+  ensureLeaderboardHandle,
+  getAvatarKey,
 } = await import("./streaks.js")
 
 beforeEach(() => {
@@ -57,7 +59,7 @@ function daysAgoUtc(n: number): string {
 
 describe("recordDailyActivity", () => {
   it("starts the streak at 1 on a user's first-ever message", async () => {
-    selectQueue = [[{ currentStreak: 0, longestStreak: 0, lastActiveDate: null }]]
+    selectQueue = [[{ currentStreak: 0, longestStreak: 0, lastActiveDate: null, leaderboardHandle: "existing-handle" }]]
     await recordDailyActivity("user_1")
     expect(updateSets).toHaveLength(1)
     expect(updateSets[0]).toMatchObject({ currentStreak: 1, longestStreak: 1 })
@@ -65,7 +67,7 @@ describe("recordDailyActivity", () => {
   })
 
   it("increments the streak for a message the day after the last one", async () => {
-    selectQueue = [[{ currentStreak: 3, longestStreak: 5, lastActiveDate: daysAgoUtc(1) }]]
+    selectQueue = [[{ currentStreak: 3, longestStreak: 5, lastActiveDate: daysAgoUtc(1), leaderboardHandle: "existing-handle" }]]
     await recordDailyActivity("user_1")
     expect(updateSets[0]).toMatchObject({
       currentStreak: 4,
@@ -75,19 +77,19 @@ describe("recordDailyActivity", () => {
   })
 
   it("raises longestStreak when the current streak surpasses it", async () => {
-    selectQueue = [[{ currentStreak: 5, longestStreak: 5, lastActiveDate: daysAgoUtc(1) }]]
+    selectQueue = [[{ currentStreak: 5, longestStreak: 5, lastActiveDate: daysAgoUtc(1), leaderboardHandle: "existing-handle" }]]
     await recordDailyActivity("user_1")
     expect(updateSets[0]).toMatchObject({ currentStreak: 6, longestStreak: 6 })
   })
 
   it("resets the streak to 1 after a gap of 2+ days", async () => {
-    selectQueue = [[{ currentStreak: 10, longestStreak: 10, lastActiveDate: daysAgoUtc(2) }]]
+    selectQueue = [[{ currentStreak: 10, longestStreak: 10, lastActiveDate: daysAgoUtc(2), leaderboardHandle: "existing-handle" }]]
     await recordDailyActivity("user_1")
     expect(updateSets[0]).toMatchObject({ currentStreak: 1, longestStreak: 10 })
   })
 
   it("leaves the streak fields untouched for a second message the same UTC day, but still records the message", async () => {
-    selectQueue = [[{ currentStreak: 4, longestStreak: 4, lastActiveDate: daysAgoUtc(0) }]]
+    selectQueue = [[{ currentStreak: 4, longestStreak: 4, lastActiveDate: daysAgoUtc(0), leaderboardHandle: "existing-handle" }]]
     await recordDailyActivity("user_1")
     expect(updateSets).toHaveLength(1)
     expect(updateSets[0]).not.toHaveProperty("currentStreak")
@@ -100,10 +102,18 @@ describe("recordDailyActivity", () => {
     await recordDailyActivity("user_missing")
     expect(updateSets).toHaveLength(0)
   })
+
+  it("generates a leaderboard handle on a user's first-ever message when none exists yet", async () => {
+    selectQueue = [[{ currentStreak: 0, longestStreak: 0, lastActiveDate: null, leaderboardHandle: null }]]
+    await recordDailyActivity("user_1")
+    expect(updateSets).toHaveLength(2)
+    expect(updateSets[0]?.leaderboardHandle).toMatch(/^[a-z]+-[a-z]+-[0-9a-f]{4}$/)
+    expect(updateSets[1]).toMatchObject({ currentStreak: 1, longestStreak: 1 })
+  })
 })
 
 describe("getStreakStats", () => {
-  it("returns the persisted stats for a user, including their avatar", async () => {
+  it("returns the persisted stats for a user, preferring the Google photo when there's no custom avatar", async () => {
     selectQueue = [
       [
         {
@@ -114,6 +124,8 @@ describe("getStreakStats", () => {
           leaderboardHandle: "quiet-falcon-3f2a",
           leaderboardShowPhoto: true,
           image: "https://lh3.googleusercontent.com/a/photo.jpg",
+          customAvatarKey: null,
+          plan: "pro",
         },
       ],
     ]
@@ -126,7 +138,28 @@ describe("getStreakStats", () => {
       leaderboardHandle: "quiet-falcon-3f2a",
       leaderboardShowPhoto: true,
       avatarUrl: "https://lh3.googleusercontent.com/a/photo.jpg",
+      plan: "pro",
     })
+  })
+
+  it("prefers the custom avatar over the Google photo when one's been uploaded", async () => {
+    selectQueue = [
+      [
+        {
+          currentStreak: 0,
+          longestStreak: 0,
+          totalMessagesSent: 0,
+          leaderboardOptIn: true,
+          leaderboardHandle: "quiet-falcon-3f2a",
+          leaderboardShowPhoto: true,
+          image: "https://lh3.googleusercontent.com/a/photo.jpg",
+          customAvatarKey: "avatars/user_1/abc.png",
+          plan: "explore",
+        },
+      ],
+    ]
+    const result = await getStreakStats("user_1")
+    expect(result.avatarUrl).toBe("/api/user/avatar/user_1")
   })
 
   it("returns zeroed defaults if the user row can't be found", async () => {
@@ -140,47 +173,62 @@ describe("getStreakStats", () => {
       leaderboardHandle: null,
       leaderboardShowPhoto: true,
       avatarUrl: null,
+      plan: "explore",
     })
   })
 })
 
 describe("setLeaderboardOptIn", () => {
-  it("generates and persists a handle on first opt-in", async () => {
-    selectQueue = [[{ leaderboardHandle: null }]]
-    const result = await setLeaderboardOptIn("user_1", true)
-    expect(result.leaderboardOptIn).toBe(true)
-    expect(result.leaderboardHandle).toMatch(/^[a-z]+-[a-z]+-[0-9a-f]{4}$/)
-    expect(updateSets[0]).toMatchObject({ leaderboardOptIn: true })
-    expect(updateSets[0]?.leaderboardHandle).toBe(result.leaderboardHandle)
-  })
-
-  it("reuses the existing handle when opting back in after an opt-out", async () => {
+  it("flips leaderboardOptIn to true and returns the existing handle untouched", async () => {
     selectQueue = [[{ leaderboardHandle: "quiet-falcon-3f2a" }]]
     const result = await setLeaderboardOptIn("user_1", true)
     expect(result).toEqual({ leaderboardOptIn: true, leaderboardHandle: "quiet-falcon-3f2a" })
-    expect(updateSets[0]).toEqual({ leaderboardOptIn: true })
+    expect(updateSets).toEqual([{ leaderboardOptIn: true }])
   })
 
-  it("opting out clears leaderboardOptIn but leaves the handle untouched", async () => {
+  it("flips leaderboardOptIn to false (hides the user) and leaves the handle untouched", async () => {
     selectQueue = [[{ leaderboardHandle: "quiet-falcon-3f2a" }]]
     const result = await setLeaderboardOptIn("user_1", false)
     expect(result).toEqual({ leaderboardOptIn: false, leaderboardHandle: "quiet-falcon-3f2a" })
-    expect(updateSets[0]).toEqual({ leaderboardOptIn: false })
+    expect(updateSets).toEqual([{ leaderboardOptIn: false }])
+  })
+
+  it("returns a null handle if the user somehow doesn't have one yet", async () => {
+    selectQueue = [[{ leaderboardHandle: null }]]
+    const result = await setLeaderboardOptIn("user_1", true)
+    expect(result).toEqual({ leaderboardOptIn: true, leaderboardHandle: null })
+  })
+})
+
+describe("ensureLeaderboardHandle", () => {
+  it("generates and persists a handle", async () => {
+    const handle = await ensureLeaderboardHandle("user_1")
+    expect(handle).toMatch(/^[a-z]+-[a-z]+-[0-9a-f]{4}$/)
+    expect(updateSets[0]?.leaderboardHandle).toBe(handle)
   })
 
   it("retries with a freshly generated handle when the first candidate collides", async () => {
-    selectQueue = [[{ leaderboardHandle: null }]]
     updateBehaviors = [
       new Error('duplicate key value violates unique constraint "user_leaderboard_handle_unique"'),
     ]
-    const result = await setLeaderboardOptIn("user_1", true)
-    expect(result.leaderboardOptIn).toBe(true)
-    expect(result.leaderboardHandle).toMatch(/^[a-z]+-[a-z]+-[0-9a-f]{4}$/)
+    const handle = await ensureLeaderboardHandle("user_1")
     expect(updateSets).toHaveLength(2)
-    const firstCandidate = updateSets[0]?.leaderboardHandle
-    const secondCandidate = updateSets[1]?.leaderboardHandle
-    expect(secondCandidate).toBe(result.leaderboardHandle)
-    expect(secondCandidate).not.toBe(firstCandidate)
+    expect(updateSets[1]?.leaderboardHandle).toBe(handle)
+    expect(updateSets[0]?.leaderboardHandle).not.toBe(handle)
+  })
+})
+
+describe("getAvatarKey", () => {
+  it("returns the user's custom avatar key", async () => {
+    selectQueue = [[{ customAvatarKey: "avatars/user_1/abc.png" }]]
+    expect(await getAvatarKey("user_1")).toBe("avatars/user_1/abc.png")
+  })
+
+  it("returns null when the user has no custom avatar or doesn't exist", async () => {
+    selectQueue = [[{ customAvatarKey: null }]]
+    expect(await getAvatarKey("user_1")).toBeNull()
+    selectQueue = [[]]
+    expect(await getAvatarKey("user_missing")).toBeNull()
   })
 })
 
@@ -217,7 +265,7 @@ describe("setLeaderboardShowPhoto", () => {
 })
 
 describe("getLeaderboard", () => {
-  it("ranks opted-in users by totalMessagesSent descending, flags the viewer, and includes avatars", async () => {
+  it("ranks visible users by totalMessagesSent descending, flags the viewer, and includes avatars and plans", async () => {
     selectQueue = [
       [
         {
@@ -225,14 +273,18 @@ describe("getLeaderboard", () => {
           handle: "swift-otter-11aa",
           totalMessagesSent: 50,
           image: "https://lh3.googleusercontent.com/a/other.jpg",
+          customAvatarKey: null,
           leaderboardShowPhoto: true,
+          plan: "max",
         },
         {
           id: "user_1",
           handle: "quiet-falcon-3f2a",
           totalMessagesSent: 30,
           image: "https://lh3.googleusercontent.com/a/mine.jpg",
+          customAvatarKey: "avatars/user_1/abc.png",
           leaderboardShowPhoto: false,
+          plan: "explore",
         },
       ],
     ]
@@ -244,6 +296,7 @@ describe("getLeaderboard", () => {
         totalMessagesSent: 50,
         isYou: false,
         avatarUrl: "https://lh3.googleusercontent.com/a/other.jpg",
+        plan: "max",
       },
       {
         rank: 2,
@@ -251,12 +304,13 @@ describe("getLeaderboard", () => {
         totalMessagesSent: 30,
         isYou: true,
         avatarUrl: null,
+        plan: "explore",
       },
     ])
     expect(result.yourRank).toBe(2)
   })
 
-  it("computes yourRank for an opted-in viewer outside the visible top N", async () => {
+  it("computes yourRank for a visible viewer outside the visible top N", async () => {
     selectQueue = [
       [
         {
@@ -264,7 +318,9 @@ describe("getLeaderboard", () => {
           handle: "swift-otter-11aa",
           totalMessagesSent: 50,
           image: null,
+          customAvatarKey: null,
           leaderboardShowPhoto: true,
+          plan: "explore",
         },
       ],
       [{ leaderboardOptIn: true, totalMessagesSent: 10 }],
@@ -275,7 +331,7 @@ describe("getLeaderboard", () => {
     expect(result.yourRank).toBe(5)
   })
 
-  it("returns yourRank null for a non-opted-in viewer outside the top N", async () => {
+  it("returns yourRank null for a hidden viewer outside the top N", async () => {
     selectQueue = [
       [
         {
@@ -283,7 +339,9 @@ describe("getLeaderboard", () => {
           handle: "swift-otter-11aa",
           totalMessagesSent: 50,
           image: null,
+          customAvatarKey: null,
           leaderboardShowPhoto: true,
+          plan: "explore",
         },
       ],
       [{ leaderboardOptIn: false, totalMessagesSent: 0 }],
@@ -292,7 +350,7 @@ describe("getLeaderboard", () => {
     expect(result.yourRank).toBeNull()
   })
 
-  it("returns an empty leaderboard cleanly when nobody has opted in", async () => {
+  it("returns an empty leaderboard cleanly when nobody's visible", async () => {
     selectQueue = [[], [{ leaderboardOptIn: false, totalMessagesSent: 0 }]]
     const result = await getLeaderboard("user_1")
     expect(result.entries).toEqual([])

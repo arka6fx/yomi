@@ -55,6 +55,11 @@ function generateHandle(): string {
   return `${adjective}-${noun}-${suffix}`
 }
 
+function avatarUrlFor(row: { id: string; image: string | null; customAvatarKey: string | null }) {
+  if (row.customAvatarKey) return `/api/user/avatar/${row.id}`
+  return row.image ?? null
+}
+
 function todayUtc(): string {
   return new Date().toISOString().slice(0, 10)
 }
@@ -65,17 +70,50 @@ function yesterdayUtc(from: string): string {
   return d.toISOString().slice(0, 10)
 }
 
+// Generates and persists a unique leaderboard handle for a user who doesn't
+// have one yet. Called both from recordDailyActivity (a user's first-ever
+// message) and the one-off backfill script for pre-existing users.
+export async function ensureLeaderboardHandle(userId: string): Promise<string> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const candidate = generateHandle()
+    try {
+      await db
+        .update(authSchema.user)
+        .set({ leaderboardHandle: candidate })
+        .where(eq(authSchema.user.id, userId))
+      return candidate
+    } catch (err) {
+      if (!isDuplicateHandleError(err)) throw err
+    }
+  }
+  throw new Error("failed to generate a unique leaderboard handle after 3 attempts")
+}
+
+export async function getAvatarKey(userId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ customAvatarKey: authSchema.user.customAvatarKey })
+    .from(authSchema.user)
+    .where(eq(authSchema.user.id, userId))
+    .limit(1)
+  return row?.customAvatarKey ?? null
+}
+
 export async function recordDailyActivity(userId: string): Promise<void> {
   const [row] = await db
     .select({
       currentStreak: authSchema.user.currentStreak,
       longestStreak: authSchema.user.longestStreak,
       lastActiveDate: authSchema.user.lastActiveDate,
+      leaderboardHandle: authSchema.user.leaderboardHandle,
     })
     .from(authSchema.user)
     .where(eq(authSchema.user.id, userId))
     .limit(1)
   if (!row) return
+
+  if (!row.leaderboardHandle) {
+    await ensureLeaderboardHandle(userId)
+  }
 
   const today = todayUtc()
   if (row.lastActiveDate === today) {
@@ -109,6 +147,7 @@ export async function getStreakStats(userId: string): Promise<{
   leaderboardHandle: string | null
   leaderboardShowPhoto: boolean
   avatarUrl: string | null
+  plan: string
 }> {
   const [row] = await db
     .select({
@@ -119,6 +158,8 @@ export async function getStreakStats(userId: string): Promise<{
       leaderboardHandle: authSchema.user.leaderboardHandle,
       leaderboardShowPhoto: authSchema.user.leaderboardShowPhoto,
       image: authSchema.user.image,
+      customAvatarKey: authSchema.user.customAvatarKey,
+      plan: authSchema.user.plan,
     })
     .from(authSchema.user)
     .where(eq(authSchema.user.id, userId))
@@ -132,6 +173,7 @@ export async function getStreakStats(userId: string): Promise<{
       leaderboardHandle: null,
       leaderboardShowPhoto: true,
       avatarUrl: null,
+      plan: "explore",
     }
   }
   return {
@@ -141,7 +183,8 @@ export async function getStreakStats(userId: string): Promise<{
     leaderboardOptIn: row.leaderboardOptIn,
     leaderboardHandle: row.leaderboardHandle,
     leaderboardShowPhoto: row.leaderboardShowPhoto,
-    avatarUrl: row.image ?? null,
+    avatarUrl: avatarUrlFor({ id: userId, image: row.image, customAvatarKey: row.customAvatarKey }),
+    plan: row.plan,
   }
 }
 
@@ -155,29 +198,12 @@ export async function setLeaderboardOptIn(
     .where(eq(authSchema.user.id, userId))
     .limit(1)
 
-  const existingHandle = row?.leaderboardHandle ?? null
-
-  if (optIn && !existingHandle) {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const candidate = generateHandle()
-      try {
-        await db
-          .update(authSchema.user)
-          .set({ leaderboardHandle: candidate, leaderboardOptIn: true })
-          .where(eq(authSchema.user.id, userId))
-        return { leaderboardOptIn: true, leaderboardHandle: candidate }
-      } catch (err) {
-        if (!isDuplicateHandleError(err)) throw err
-      }
-    }
-    throw new Error("failed to generate a unique leaderboard handle after 3 attempts")
-  }
-
   await db
     .update(authSchema.user)
     .set({ leaderboardOptIn: optIn })
     .where(eq(authSchema.user.id, userId))
-  return { leaderboardOptIn: optIn, leaderboardHandle: existingHandle }
+
+  return { leaderboardOptIn: optIn, leaderboardHandle: row?.leaderboardHandle ?? null }
 }
 
 export async function updateLeaderboardHandle(
@@ -224,6 +250,7 @@ export async function getLeaderboard(userId: string): Promise<{
     totalMessagesSent: number
     isYou: boolean
     avatarUrl: string | null
+    plan: string
   }[]
   yourRank: number | null
 }> {
@@ -233,7 +260,9 @@ export async function getLeaderboard(userId: string): Promise<{
       handle: authSchema.user.leaderboardHandle,
       totalMessagesSent: authSchema.user.totalMessagesSent,
       image: authSchema.user.image,
+      customAvatarKey: authSchema.user.customAvatarKey,
       leaderboardShowPhoto: authSchema.user.leaderboardShowPhoto,
+      plan: authSchema.user.plan,
     })
     .from(authSchema.user)
     .where(and(eq(authSchema.user.leaderboardOptIn, true), isNull(authSchema.user.deletedAt)))
@@ -245,7 +274,10 @@ export async function getLeaderboard(userId: string): Promise<{
     handle: row.handle ?? "anonymous",
     totalMessagesSent: row.totalMessagesSent,
     isYou: row.id === userId,
-    avatarUrl: row.leaderboardShowPhoto ? (row.image ?? null) : null,
+    avatarUrl: row.leaderboardShowPhoto
+      ? avatarUrlFor({ id: row.id, image: row.image, customAvatarKey: row.customAvatarKey })
+      : null,
+    plan: row.plan,
   }))
 
   const inTop = entries.find((e) => e.isYou)
