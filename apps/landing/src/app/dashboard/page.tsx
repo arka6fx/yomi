@@ -28,6 +28,7 @@ import { PrivacyManager } from "@/components/dashboard/PrivacyManager"
 import { SchedulesManager } from "@/components/dashboard/SchedulesManager"
 import { ReferralsManager } from "@/components/dashboard/ReferralsManager"
 import { StreaksManager } from "@/components/dashboard/StreaksManager"
+import { ProfileManager } from "@/components/dashboard/ProfileManager"
 import { ConversationManager } from "@/components/dashboard/ConversationManager"
 import { StatusManager } from "@/components/dashboard/StatusManager"
 import { SettingsMenu, type DashboardTab } from "@/components/dashboard/SettingsMenu"
@@ -905,7 +906,7 @@ function DashboardContent() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <StreaksManager token={session.session.token} />
+            <StreaksManager token={session.session.token} onNavigate={setActiveTab} />
           </motion.div>
         )}
 
@@ -945,12 +946,7 @@ function DashboardContent() {
         {/* Profile tab content */}
         {activeTab === "profile" && (
           <>
-            <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium text-foreground">{session.user.name || "—"}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{session.user.email}</p>
-              </div>
-            </div>
+            <ProfileManager token={session.session.token} />
 
             {/* Welcome banner — shown once after signup */}
             {showWelcome && (
