@@ -162,6 +162,38 @@ export async function uploadAsset(
   return { key, url, publicUrl, contentType: resolved.contentType }
 }
 
+// Uploads an avatar under a dedicated `avatars/` prefix, distinct from the
+// `assets/` prefix used for transient Telegram attachments — this prefix must
+// be excluded from the bucket's 30-day lifecycle deletion rule (an AWS
+// console/IaC change outside this repo). Unlike uploadAsset, this doesn't
+// return a presigned URL: avatars are served through the stable
+// GET /api/user/avatar/:userId proxy route instead, since a presigned URL's
+// hour-long expiry doesn't work for an image referenced from many viewers'
+// leaderboard rows over time.
+export async function uploadAvatar(
+  userId: string,
+  bytes: ArrayBuffer,
+  contentType: string,
+): Promise<{ key: string; contentType: string } | null> {
+  const cfg = client()
+  if (!cfg) return null
+
+  const body = new Uint8Array(bytes)
+  const resolved = resolveAssetType(contentType, body)
+  const key = `avatars/${userId}/${crypto.randomUUID()}.${resolved.extension}`
+
+  await cfg.client.send(
+    new PutObjectCommand({
+      Bucket: cfg.bucket,
+      Key: key,
+      Body: body,
+      ContentType: resolved.contentType,
+    }),
+  )
+
+  return { key, contentType: resolved.contentType }
+}
+
 export async function fetchAsset(
   key: string,
 ): Promise<{ bytes: Uint8Array; contentType: string } | null> {
