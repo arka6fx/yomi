@@ -141,6 +141,7 @@ export function buildComposioDefs(
   if (catalogSpecs.length) {
     for (const def of Object.values(defs)) {
       if (def.auth.kind !== "composio") continue
+      if (def.disableCatalogMerge) continue
       const auth = def.auth
       const existing = new Set(
         Object.keys(def.tools({ userId: "catalog", getAccessToken: async () => "" })),
