@@ -50,14 +50,22 @@ export const user = pgTable("user", {
   longestStreak: integer("longest_streak").notNull().default(0),
   lastActiveDate: text("last_active_date"), // YYYY-MM-DD, UTC
   totalMessagesSent: integer("total_messages_sent").notNull().default(0),
-  // Opt-in leaderboard. leaderboardHandle is auto-generated on first opt-in
-  // (never derived from name/email), stays stable across opt-out/back-in, and
-  // can be overridden by the user with a custom handle afterward. Photo defaults
-  // to showing the account's OAuth avatar (`image` above); leaderboardShowPhoto
-  // lets the user hide it in favor of a generic avatar.
-  leaderboardOptIn: boolean("leaderboard_opt_in").notNull().default(false),
+  // Leaderboard visibility (default: visible). leaderboardHandle is generated
+  // the first time a user sends a message (see services/streaks.ts) if they
+  // don't already have one, never derived from name/email, and stays stable
+  // for the account's lifetime once generated. leaderboardOptIn now means
+  // "visible on the leaderboard" — flipping it off hides the user without
+  // clearing their handle. customAvatarKey is a separate S3 object key for an
+  // uploaded avatar; kept apart from `image` (above) because Better Auth
+  // overwrites `image` from the Google profile photo on every sign-in, which
+  // would silently wipe out a custom upload if it lived in the same column.
+  // Display precedence: customAvatarKey -> image -> generic icon.
+  // leaderboardShowPhoto lets the user hide their photo (whichever one is
+  // active) in favor of a generic avatar.
+  leaderboardOptIn: boolean("leaderboard_opt_in").notNull().default(true),
   leaderboardHandle: text("leaderboard_handle").unique(),
   leaderboardShowPhoto: boolean("leaderboard_show_photo").notNull().default(true),
+  customAvatarKey: text("custom_avatar_key"),
   deletedAt: timestamp("deleted_at"),
   privacyPreferences: jsonb("privacy_preferences").notNull().default({}),
   consentVersion: text("consent_version"),

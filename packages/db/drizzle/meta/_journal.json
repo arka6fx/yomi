@@ -288,6 +288,13 @@
       "when": 1786838400000,
       "tag": "0040_leaderboard_show_photo",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1786924800000,
+      "tag": "0041_leaderboard_default_visible",
+      "breakpoints": true
     }
   ]
 }
