@@ -28,6 +28,7 @@ import { getDefaultGateway } from "./gateway/gateway-runner.js"
 import { sql } from "drizzle-orm"
 import { db, EXPECTED_MIGRATIONS } from "@yomi/db"
 import { decodeAssetKey, fetchAsset } from "./services/asset-storage.js"
+import { getAvatarKey } from "./services/streaks.js"
 
 const app = new Hono()
 
@@ -123,6 +124,25 @@ app.get("/api/assets/:encodedKey", async (c) => {
     })
   } catch (err) {
     console.error("[assets] fetch failed:", err instanceof Error ? err.message : err)
+    return c.notFound()
+  }
+})
+
+app.get("/api/user/avatar/:userId", async (c) => {
+  try {
+    const key = await getAvatarKey(c.req.param("userId"))
+    if (!key) return c.notFound()
+    const asset = await fetchAsset(key)
+    if (!asset) return c.notFound()
+    return new Response(asset.bytes, {
+      status: 200,
+      headers: {
+        "Content-Type": asset.contentType,
+        "Cache-Control": "public, max-age=31536000, immutable",
+      },
+    })
+  } catch (err) {
+    console.error("[avatar] fetch failed:", err instanceof Error ? err.message : err)
     return c.notFound()
   }
 })

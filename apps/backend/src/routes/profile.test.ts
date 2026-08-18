@@ -36,6 +36,24 @@ mock.module("../auth.js", () => ({
   },
 }))
 
+let uploadAvatarResult: { key: string; contentType: string } | null = {
+  key: "avatars/user_1/abc.png",
+  contentType: "image/png",
+}
+mock.module("../services/asset-storage.js", () => ({
+  uploadAvatar: async () => uploadAvatarResult,
+}))
+
+let handleResult: { ok: true; leaderboardHandle: string } | { ok: false; error: string } = {
+  ok: true,
+  leaderboardHandle: "arka",
+}
+let showPhotoResult = { leaderboardShowPhoto: true }
+mock.module("../services/streaks.js", () => ({
+  updateLeaderboardHandle: async () => handleResult,
+  setLeaderboardShowPhoto: async () => showPhotoResult,
+}))
+
 const { profileRouter } = await import("./profile.js")
 
 function app() {
@@ -57,6 +75,30 @@ function updateProfile(body: Record<string, unknown>) {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+  })
+}
+
+function postAvatar(bytes: Uint8Array, contentType: string) {
+  return app().request("/api/user/avatar", {
+    method: "POST",
+    headers: { "Content-Type": contentType },
+    body: bytes,
+  })
+}
+
+function postHandle(handle: unknown) {
+  return app().request("/api/user/handle", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ handle }),
+  })
+}
+
+function postShowPhoto(showPhoto: unknown) {
+  return app().request("/api/user/show-photo", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ showPhoto }),
   })
 }
 
@@ -140,5 +182,107 @@ describe("GET /api/user/me", () => {
 
     expect(res.status).toBe(200)
     expect(body.agentSoul).toBe("be terse")
+  })
+})
+
+describe("POST /api/user/avatar", () => {
+  beforeEach(() => {
+    currentUser = { id: "user_1" }
+    uploadAvatarResult = { key: "avatars/user_1/abc.png", contentType: "image/png" }
+    updateCalls = 0
+  })
+
+  it("uploads a valid image and returns the avatar URL", async () => {
+    const res = await postAvatar(new Uint8Array([0x89, 0x50, 0x4e, 0x47]), "image/png")
+    const body = (await res.json()) as { avatarUrl?: string }
+
+    expect(res.status).toBe(200)
+    expect(body.avatarUrl).toBe("/api/user/avatar/user_1")
+    expect(updatePayload).toEqual({ customAvatarKey: "avatars/user_1/abc.png" })
+  })
+
+  it("rejects a non-image content type", async () => {
+    const res = await postAvatar(new Uint8Array([1, 2, 3]), "application/pdf")
+    const body = (await res.json()) as { code?: string }
+
+    expect(res.status).toBe(400)
+    expect(body.code).toBe("invalid_avatar_type")
+    expect(updateCalls).toBe(0)
+  })
+
+  it("rejects a payload over the 5MB size cap", async () => {
+    const bytes = new Uint8Array(5 * 1024 * 1024 + 1)
+    const res = await postAvatar(bytes, "image/png")
+    const body = (await res.json()) as { code?: string }
+
+    expect(res.status).toBe(400)
+    expect(body.code).toBe("avatar_too_large")
+    expect(updateCalls).toBe(0)
+  })
+
+  it("returns 503 when avatar storage isn't configured", async () => {
+    uploadAvatarResult = null
+    const res = await postAvatar(new Uint8Array([1, 2, 3]), "image/png")
+    const body = (await res.json()) as { code?: string }
+
+    expect(res.status).toBe(503)
+    expect(body.code).toBe("avatar_storage_unavailable")
+    expect(updateCalls).toBe(0)
+  })
+})
+
+describe("POST /api/user/handle", () => {
+  beforeEach(() => {
+    currentUser = { id: "user_1" }
+    handleResult = { ok: true, leaderboardHandle: "arka" }
+  })
+
+  it("saves a valid handle", async () => {
+    const res = await postHandle("Arka")
+    const body = (await res.json()) as { leaderboardHandle?: string }
+
+    expect(res.status).toBe(200)
+    expect(body.leaderboardHandle).toBe("arka")
+  })
+
+  it("rejects a missing handle", async () => {
+    const res = await postHandle(undefined)
+    const body = (await res.json()) as { code?: string }
+
+    expect(res.status).toBe(400)
+    expect(body.code).toBe("invalid_handle")
+  })
+
+  it("surfaces a taken-handle error from the service", async () => {
+    handleResult = { ok: false, error: "That handle is already taken — try another." }
+    const res = await postHandle("taken")
+    const body = (await res.json()) as { error?: string; code?: string }
+
+    expect(res.status).toBe(400)
+    expect(body.error).toBe("That handle is already taken — try another.")
+    expect(body.code).toBe("invalid_handle")
+  })
+})
+
+describe("POST /api/user/show-photo", () => {
+  beforeEach(() => {
+    currentUser = { id: "user_1" }
+    showPhotoResult = { leaderboardShowPhoto: false }
+  })
+
+  it("updates the photo-visibility preference", async () => {
+    const res = await postShowPhoto(false)
+    const body = (await res.json()) as { leaderboardShowPhoto?: boolean }
+
+    expect(res.status).toBe(200)
+    expect(body.leaderboardShowPhoto).toBe(false)
+  })
+
+  it("rejects a non-boolean showPhoto", async () => {
+    const res = await postShowPhoto("yes")
+    const body = (await res.json()) as { code?: string }
+
+    expect(res.status).toBe(400)
+    expect(body.code).toBe("invalid_show_photo")
   })
 })
