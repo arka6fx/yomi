@@ -1100,16 +1100,9 @@ streaksRouter.get("/leaderboard", async (c) => {
 
 - [ ] **Step 6: Add the public avatar-serving route to `index.ts`**
 
-In `apps/backend/src/index.ts`, update the `drizzle-orm` import to include `eq`:
+In `apps/backend/src/index.ts`, add an import for `getAvatarKey` (no `authSchema` or `eq` needed — `getAvatarKey` already encapsulates the DB query):
 
 ```ts
-import { eq, sql } from "drizzle-orm"
-```
-
-Add an import for `authSchema` and `getAvatarKey`:
-
-```ts
-import * as authSchema from "./auth-schema.js"
 import { getAvatarKey } from "./services/streaks.js"
 ```
 
@@ -1136,7 +1129,6 @@ app.get("/api/user/avatar/:userId", async (c) => {
 })
 ```
 
-(`db` is not needed directly in `index.ts` for this route since `getAvatarKey` encapsulates the query — the `authSchema` import above is unused by this route specifically; skip adding it if nothing else in `index.ts` needs it, to avoid an unused-import lint error.)
 
 - [ ] **Step 7: Verify everything compiles and the full backend test suite passes**
 
