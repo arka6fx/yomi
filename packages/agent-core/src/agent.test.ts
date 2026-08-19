@@ -565,6 +565,34 @@ describe("runAgentLoop dynamic connector-tool selection", () => {
     expect(mainTools.some((t) => t.function?.name === "echo")).toBe(true)
   })
 
+  it("keeps a connector named only in earlier history when the current message just says 'do it'", async () => {
+    const registry = fakeRegistry({
+      notion: manyTools(25, "notion"),
+      slack: manyTools(25, "slack"),
+    })
+    const bodies: Record<string, unknown>[] = []
+    let call = 0
+    globalThis.fetch = (async (_url: unknown, init?: RequestInit) => {
+      call++
+      bodies.push(JSON.parse(String(init?.body)))
+      return call === 1 ? classifyResponse("NONE") : okResponse()
+    }) as typeof fetch
+
+    await runAgentLoop({
+      registry,
+      text: "do it",
+      history: [
+        { role: "user", content: "add what is ML description to my Notion page" },
+        { role: "assistant", content: "Here's the description — want me to add it?" },
+      ],
+      extraTools: { echo: echoTool },
+    })
+
+    const mainTools = bodies[1]?.["tools"] as Array<{ function?: { name?: string } }>
+    expect(mainTools.some((t) => t.function?.name?.startsWith("notion_"))).toBe(true)
+    expect(mainTools.some((t) => t.function?.name?.startsWith("slack_"))).toBe(false)
+  })
+
   it("adds an explicitly named connector when the classifier picks the wrong one", async () => {
     const registry = fakeRegistry({
       notion: manyTools(20, "notion"),

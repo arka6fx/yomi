@@ -202,6 +202,23 @@ function capToolSet(connectorTools: ToolSet, extraTools: ToolSet, text: string):
 // connectors' worth. Above it, selectRelevantConnectors decides what's loaded.
 const CLASSIFY_THRESHOLD_TOOLS = 40
 
+// How many trailing history messages to show the classifier. A follow-up like
+// "do it" or "add that there" names no service at all — it refers back to a
+// connector mentioned a turn or two earlier — so the classifier needs some
+// trailing context, not just the isolated new message.
+const CLASSIFIER_HISTORY_MESSAGES = 6
+
+// Builds the text the classifier (and the explicit-mention regex fallback)
+// see: recent history plus the new message, so a connector named earlier in
+// the conversation still counts for a message that only references it
+// implicitly ("do it", "add that there").
+function formatClassifierContext(history: AgentMessage[], text: string): string {
+  const trailing = history.slice(-CLASSIFIER_HISTORY_MESSAGES)
+  if (trailing.length === 0) return `Message: ${text}`
+  const recent = trailing.map((m) => `${m.role}: ${m.content.slice(0, 300)}`).join("\n")
+  return `Recent conversation:\n${recent}\n\nLatest message: ${text}`
+}
+
 // Cheap pre-step, same shape as gateway-runner.ts's fastTelegramRespond: ask a
 // fast model which of the user's CONNECTED connectors (by name/description
 // only — no tool schemas) this turn plausibly needs, so the real call only
@@ -210,7 +227,7 @@ const CLASSIFY_THRESHOLD_TOOLS = 40
 // to loading everything, today's behavior, rather than a turn silently having
 // no tools at all because the classifier hiccuped.
 async function selectRelevantConnectors(
-  text: string,
+  context: string,
   connectors: { id: string; name: string; description: string }[],
   fastModel: string,
 ): Promise<string[] | null> {
@@ -220,10 +237,13 @@ async function selectRelevantConnectors(
       model: createModel(fastModel),
       system:
         "Pick which of the user's connected services (if any) this message plausibly needs. " +
+        "Recent conversation is included for context — a message like 'do it' or 'add that " +
+        "there' can refer to a service named earlier in the conversation, not in the latest " +
+        "message itself. " +
         "Reply with ONLY a comma-separated list of ids from the list below, nothing else, or " +
         "NONE if the message doesn't need any of them. When in doubt, include it — a missed " +
         "connector breaks the turn, an extra one is cheap.",
-      messages: [{ role: "user", content: `Connected services:\n${listing}\n\nMessage: ${text}` }],
+      messages: [{ role: "user", content: `Connected services:\n${listing}\n\n${context}` }],
       maxTokens: 200,
       abortSignal: AbortSignal.timeout(5_000),
     })
@@ -263,6 +283,7 @@ async function resolveConnectorTools(
   registry: ConnectorRegistry,
   text: string,
   fastModel: string,
+  history: AgentMessage[] = [],
 ): Promise<ToolSet> {
   const all = createConnectorTools(registry)
   if (Object.keys(all).length <= CLASSIFY_THRESHOLD_TOOLS) return all
@@ -272,10 +293,15 @@ async function resolveConnectorTools(
   // per-connector methods (an older host, a test double) is exactly as
   // recoverable as the classifier itself being unavailable.
   try {
-    const picked = await selectRelevantConnectors(text, registry.getConnectorSummaries(), fastModel)
+    const context = formatClassifierContext(history, text)
+    const picked = await selectRelevantConnectors(
+      context,
+      registry.getConnectorSummaries(),
+      fastModel,
+    )
     if (picked === null) return all // classifier unavailable/unparseable — fail open
     const explicitlyMentioned = explicitlyMentionedConnectorIds(
-      text,
+      context,
       registry.getConnectorSummaries(),
     )
     if (picked.length === 0) {
@@ -302,7 +328,7 @@ async function resolveConnectorTools(
 export async function runAgentLoop(opts: RunAgentLoopOptions): Promise<string> {
   const fastModel = process.env["OPENAI_FAST_MODEL"] || "gpt-5.4-mini"
   const tools: ToolSet = capToolSet(
-    await resolveConnectorTools(opts.registry, opts.text, fastModel),
+    await resolveConnectorTools(opts.registry, opts.text, fastModel, opts.history ?? []),
     opts.extraTools ?? {},
     opts.text,
   )

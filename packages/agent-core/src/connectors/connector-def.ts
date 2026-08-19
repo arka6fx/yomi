@@ -204,4 +204,13 @@ export interface ConnectorDef {
   // a userId for auth header resolution. Returns the merged ToolSet from all
   // configured MCP servers. Only present when isMCPBased is true.
   connectMCP?: (ctx: ConnectorContext) => Promise<ToolSet>
+  // Composio-backed connectors only: opts this def out of composio-defs.ts's
+  // catalog auto-merge, which otherwise adds every live Composio catalog tool
+  // for the toolkit that isn't already hand-written here. Most connectors want
+  // that — it's how new Composio actions reach the agent with no code change.
+  // Set this when the toolkit has actions that are broken, need a capability
+  // Yomi doesn't have (e.g. an API key OAuth2 can't provide), or are simply
+  // irrelevant, and letting the catalog silently re-add them defeats a
+  // deliberate exclusion (see google-maps.ts for the case that motivated this).
+  disableCatalogMerge?: boolean
 }

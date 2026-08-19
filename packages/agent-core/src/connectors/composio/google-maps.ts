@@ -14,6 +14,19 @@ export const MAPS_TOOLKIT = "google_maps"
 // GEOCODING_API failed with "missing: key", GET_DIRECTION failed with "You must
 // use an API key to authenticate each request to Google Maps Platform APIs".
 // The two tools below both succeeded live via OAuth2 alone, no key needed.
+//
+// This toolkit has `disableCatalogMerge: true` (see below) — composio-defs.ts's
+// generic "auto-add any new catalog tool" behavior is OFF here on purpose. As of
+// 2026-08-18 the live catalog has grown to 20 google_maps tools (routing,
+// geocoding variants, 3D tiles, aerial video render/lookup, tile sessions...),
+// none of them vetted the way the two below were. One of them —
+// GOOGLE_MAPS_COMPUTE_ROUTE_MATRIX — leaked in through the catalog merge before
+// this flag existed and broke on a malformed-args error in production (the
+// generic catalog→zod converter has no oneOf/anyOf support, so it can't express
+// the Routes API's waypoint union correctly). A future routing tool (e.g.
+// GOOGLE_MAPS_GET_ROUTE, which Composio's description claims supports OAuth2)
+// is a real product opportunity, but needs a hand-written spec and live test
+// the same way NEARBY_SEARCH/TEXT_SEARCH got theirs — not a silent catalog add.
 // Neither tool below returns a route, distance, ETA, or resolved "you are here"
 // location — GEOCODING_API and GET_DIRECTION are excluded entirely (see above),
 // so there is no tool result to ground any of that in. Without this stated
@@ -111,6 +124,7 @@ export function makeComposioMapsDef(executor: ComposioExecutor): ConnectorDef {
     description:
       "Search for places and businesses near a location (via Composio). Place search only — cannot provide directions, routes, distances, or ETAs; no such capability exists.",
     readOnlyByDefault: true,
+    disableCatalogMerge: true,
     auth: {
       kind: "composio",
       toolkit: MAPS_TOOLKIT,
