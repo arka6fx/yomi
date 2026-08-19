@@ -328,7 +328,9 @@ export function ProfileManager({ token }: { token: string }) {
         <div className="flex items-center gap-3">
           {PlanIcon && <PlanIcon size={20} className="text-primary" />}
           <div>
-            <p className="text-sm font-medium text-foreground">{currentPlan?.name ?? profile.plan}</p>
+            <p className="text-sm font-medium text-foreground">
+              {currentPlan?.name ?? profile.plan}
+            </p>
             <p className="text-xs text-muted-foreground">{currentPlan?.desc}</p>
           </div>
         </div>
