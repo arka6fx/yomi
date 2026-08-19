@@ -59,7 +59,16 @@ function daysAgoUtc(n: number): string {
 
 describe("recordDailyActivity", () => {
   it("starts the streak at 1 on a user's first-ever message", async () => {
-    selectQueue = [[{ currentStreak: 0, longestStreak: 0, lastActiveDate: null, leaderboardHandle: "existing-handle" }]]
+    selectQueue = [
+      [
+        {
+          currentStreak: 0,
+          longestStreak: 0,
+          lastActiveDate: null,
+          leaderboardHandle: "existing-handle",
+        },
+      ],
+    ]
     await recordDailyActivity("user_1")
     expect(updateSets).toHaveLength(1)
     expect(updateSets[0]).toMatchObject({ currentStreak: 1, longestStreak: 1 })
@@ -67,7 +76,16 @@ describe("recordDailyActivity", () => {
   })
 
   it("increments the streak for a message the day after the last one", async () => {
-    selectQueue = [[{ currentStreak: 3, longestStreak: 5, lastActiveDate: daysAgoUtc(1), leaderboardHandle: "existing-handle" }]]
+    selectQueue = [
+      [
+        {
+          currentStreak: 3,
+          longestStreak: 5,
+          lastActiveDate: daysAgoUtc(1),
+          leaderboardHandle: "existing-handle",
+        },
+      ],
+    ]
     await recordDailyActivity("user_1")
     expect(updateSets[0]).toMatchObject({
       currentStreak: 4,
@@ -77,19 +95,46 @@ describe("recordDailyActivity", () => {
   })
 
   it("raises longestStreak when the current streak surpasses it", async () => {
-    selectQueue = [[{ currentStreak: 5, longestStreak: 5, lastActiveDate: daysAgoUtc(1), leaderboardHandle: "existing-handle" }]]
+    selectQueue = [
+      [
+        {
+          currentStreak: 5,
+          longestStreak: 5,
+          lastActiveDate: daysAgoUtc(1),
+          leaderboardHandle: "existing-handle",
+        },
+      ],
+    ]
     await recordDailyActivity("user_1")
     expect(updateSets[0]).toMatchObject({ currentStreak: 6, longestStreak: 6 })
   })
 
   it("resets the streak to 1 after a gap of 2+ days", async () => {
-    selectQueue = [[{ currentStreak: 10, longestStreak: 10, lastActiveDate: daysAgoUtc(2), leaderboardHandle: "existing-handle" }]]
+    selectQueue = [
+      [
+        {
+          currentStreak: 10,
+          longestStreak: 10,
+          lastActiveDate: daysAgoUtc(2),
+          leaderboardHandle: "existing-handle",
+        },
+      ],
+    ]
     await recordDailyActivity("user_1")
     expect(updateSets[0]).toMatchObject({ currentStreak: 1, longestStreak: 10 })
   })
 
   it("leaves the streak fields untouched for a second message the same UTC day, but still records the message", async () => {
-    selectQueue = [[{ currentStreak: 4, longestStreak: 4, lastActiveDate: daysAgoUtc(0), leaderboardHandle: "existing-handle" }]]
+    selectQueue = [
+      [
+        {
+          currentStreak: 4,
+          longestStreak: 4,
+          lastActiveDate: daysAgoUtc(0),
+          leaderboardHandle: "existing-handle",
+        },
+      ],
+    ]
     await recordDailyActivity("user_1")
     expect(updateSets).toHaveLength(1)
     expect(updateSets[0]).not.toHaveProperty("currentStreak")
@@ -104,7 +149,9 @@ describe("recordDailyActivity", () => {
   })
 
   it("generates a leaderboard handle on a user's first-ever message when none exists yet", async () => {
-    selectQueue = [[{ currentStreak: 0, longestStreak: 0, lastActiveDate: null, leaderboardHandle: null }]]
+    selectQueue = [
+      [{ currentStreak: 0, longestStreak: 0, lastActiveDate: null, leaderboardHandle: null }],
+    ]
     await recordDailyActivity("user_1")
     expect(updateSets).toHaveLength(2)
     expect(updateSets[0]?.leaderboardHandle).toMatch(/^[a-z]+-[a-z]+-[0-9a-f]{4}$/)
