@@ -30,6 +30,7 @@ import { ReferralsManager } from "@/components/dashboard/ReferralsManager"
 import { StreaksManager } from "@/components/dashboard/StreaksManager"
 import { ProfileManager } from "@/components/dashboard/ProfileManager"
 import { ConversationManager } from "@/components/dashboard/ConversationManager"
+import { HistoryManager } from "@/components/dashboard/HistoryManager"
 import { StatusManager } from "@/components/dashboard/StatusManager"
 import { SettingsMenu, type DashboardTab } from "@/components/dashboard/SettingsMenu"
 import { DashboardHome, type PlanSummary } from "@/components/dashboard/DashboardHome"
@@ -863,6 +864,17 @@ function DashboardContent() {
             transition={{ duration: 0.3 }}
           >
             <ConversationManager token={session.session.token} />
+          </motion.div>
+        )}
+
+        {/* History tab */}
+        {activeTab === "history" && session && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <HistoryManager token={session.session.token} />
           </motion.div>
         )}
 

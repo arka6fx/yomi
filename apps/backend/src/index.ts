@@ -20,6 +20,7 @@ import { gatewayRouter } from "./gateway/routes.js"
 import { integrationsRouter } from "./routes/integrations.js"
 import { customMcpRouter } from "./routes/custom-mcp.js"
 import { conversationRouter } from "./routes/conversation.js"
+import { historyRouter } from "./routes/history.js"
 import { statusRouter } from "./routes/status.js"
 import { privacyRouter } from "./routes/privacy.js"
 import { mcpRouter } from "./routes/mcp.js"
@@ -174,6 +175,7 @@ app.route("/api/gateway", gatewayRouter)
 app.route("/api/integrations", integrationsRouter)
 app.route("/api/custom-mcp", customMcpRouter)
 app.route("/api/conversation", conversationRouter)
+app.route("/api/history", historyRouter)
 app.route("/api/status", statusRouter)
 app.route("/api/privacy", privacyRouter)
 app.route("/api/mcp", mcpRouter)

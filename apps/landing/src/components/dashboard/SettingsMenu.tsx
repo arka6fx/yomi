@@ -21,6 +21,7 @@ export type DashboardTab =
   | "memory"
   | "schedules"
   | "conversation"
+  | "history"
   | "status"
   | "billing"
   | "profile"

@@ -280,6 +280,132 @@ export async function searchSessions(
   return results
 }
 
+export interface HistorySessionSummary {
+  id: string
+  title: string | null
+  summary: string | null
+  messageCount: number
+  platform: string
+  lastMessageAt: string
+  closedAt: string | null
+  lastMessage: { role: string; content: string } | null
+}
+
+// Closed sessions for the dashboard's history list, newest first, each paired
+// with its last message for the card preview. cursor is the lastMessageAt of
+// the last row already shown, for "load more" pagination.
+export async function listAgentSessions(
+  userId: string,
+  { limit = 20, cursor }: { limit?: number; cursor?: string | null } = {},
+): Promise<HistorySessionSummary[]> {
+  type Row = {
+    id: string
+    title: string | null
+    summary: string | null
+    messageCount: number
+    platform: string
+    lastMessageAt: string
+    closedAt: string | null
+    lastRole: string | null
+    lastContent: string | null
+  }
+
+  const result = await db.execute(sql`
+    SELECT s.id, s.title, s.summary, s.message_count AS "messageCount", s.platform,
+           s.last_message_at::text AS "lastMessageAt", s.closed_at::text AS "closedAt",
+           lm.role AS "lastRole", lm.content AS "lastContent"
+    FROM ${agentSessions} s
+    LEFT JOIN LATERAL (
+      SELECT role, content FROM ${agentMessages} m
+      WHERE m.session_id = s.id
+      ORDER BY m.created_at DESC
+      LIMIT 1
+    ) lm ON true
+    WHERE s.user_id = ${userId}
+      AND s.status = 'closed'
+      ${cursor ? sql`AND s.last_message_at < ${cursor}` : sql``}
+    ORDER BY s.last_message_at DESC
+    LIMIT ${limit}
+  `)
+
+  const rows = (
+    Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? [])
+  ) as Row[]
+
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    summary: row.summary,
+    messageCount: row.messageCount,
+    platform: row.platform,
+    lastMessageAt: row.lastMessageAt,
+    closedAt: row.closedAt,
+    lastMessage:
+      row.lastRole && row.lastContent ? { role: row.lastRole, content: row.lastContent } : null,
+  }))
+}
+
+export interface SessionDetail {
+  id: string
+  title: string | null
+  summary: string | null
+  platform: string
+  closedAt: string | null
+  messages: { role: string; content: string; createdAt: string }[]
+}
+
+// Full transcript for the history detail view. Ownership-checked: returns
+// null when the session doesn't exist or doesn't belong to this user, rather
+// than distinguishing "not found" from "not yours" — that distinction isn't
+// meaningful to the caller and would leak whether an id exists.
+export async function getSessionDetail(
+  userId: string,
+  sessionId: string,
+  { limit = 500 }: { limit?: number } = {},
+): Promise<SessionDetail | null> {
+  type HeaderRow = {
+    id: string
+    title: string | null
+    summary: string | null
+    platform: string
+    closedAt: string | null
+  }
+  const headerResult = await db.execute(sql`
+    SELECT id, title, summary, platform, closed_at::text AS "closedAt"
+    FROM ${agentSessions}
+    WHERE id = ${sessionId} AND user_id = ${userId}
+    LIMIT 1
+  `)
+  const headerRows = (
+    Array.isArray(headerResult) ? headerResult : ((headerResult as { rows?: unknown[] }).rows ?? [])
+  ) as HeaderRow[]
+  const header = headerRows[0]
+  if (!header) return null
+
+  type MessageRow = { role: string; content: string; createdAt: string }
+  const messagesResult = await db.execute(sql`
+    SELECT role, content, created_at::text AS "createdAt"
+    FROM ${agentMessages}
+    WHERE session_id = ${sessionId} AND user_id = ${userId}
+    ORDER BY created_at ASC
+    LIMIT ${limit}
+  `)
+  const messages = (
+    Array.isArray(messagesResult)
+      ? messagesResult
+      : ((messagesResult as { rows?: unknown[] }).rows ?? [])
+  ) as MessageRow[]
+
+  return {
+    id: header.id,
+    title: header.title,
+    summary: header.summary,
+    platform: header.platform,
+    closedAt: header.closedAt,
+    messages,
+  }
+}
+
 export async function loadAgentHistory(
   sessionId: string,
   maxTurns = DEFAULT_HISTORY_TURNS,

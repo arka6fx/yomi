@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import { buildCatalog, ConnectorIcon } from "@yomi/ui-connectors"
 import { cn } from "@/lib/utils"
+import { relativePast, truncate } from "@/lib/format"
 import { PLANS } from "@/lib/plans"
 import type { DashboardTab } from "./SettingsMenu"
 import { TelegramCard, type PlatformLink } from "./TelegramCard"
@@ -30,7 +31,12 @@ export type CreditPack = {
   priceDisplay: string
 }
 
-type ConversationTurn = { role: "user" | "assistant" | "system"; content: string }
+type HistorySessionCard = {
+  id: string
+  title: string | null
+  lastMessageAt: string | null
+  lastMessage: { role: string; content: string } | null
+}
 
 type ScheduleRow = {
   id: string
@@ -94,20 +100,6 @@ const PLAN_TONE_CLASSES: Record<PlanSummary["statusTone"], string> = {
   active: "bg-emerald-500/10 text-emerald-400",
   past_due: "bg-red-500/10 text-red-400",
   trial: "bg-sky-500/10 text-sky-300",
-}
-
-function truncate(text: string, max: number) {
-  const trimmed = text.trim()
-  return trimmed.length > max ? `${trimmed.slice(0, max).trim()}…` : trimmed
-}
-
-function relativePast(value: string) {
-  const minutes = Math.round((Date.now() - new Date(value).getTime()) / 60_000)
-  if (minutes < 1) return "just now"
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.round(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  return `${Math.round(hours / 24)}d ago`
 }
 
 function relativeFuture(value: string) {
@@ -262,7 +254,7 @@ export function DashboardHome({
   unlinkingPlatform: string | null
   onUnlinkPlatform: (platform: string) => void
 }) {
-  const [history, setHistory] = useState<ConversationTurn[]>([])
+  const [history, setHistory] = useState<HistorySessionCard[]>([])
   const [historyLoading, setHistoryLoading] = useState(true)
   const [schedules, setSchedules] = useState<ScheduleRow[]>([])
   const [schedulesLoading, setSchedulesLoading] = useState(true)
@@ -280,10 +272,10 @@ export function DashboardHome({
   const loadHistory = useCallback(async () => {
     setHistoryLoading(true)
     try {
-      const res = await fetch("/api/conversation/shared", { headers: auth })
+      const res = await fetch("/api/history/sessions?limit=1", { headers: auth })
       if (!res.ok) throw new Error("failed")
-      const data = (await res.json()) as { history?: ConversationTurn[] }
-      setHistory((data.history ?? []).filter((t) => t.role !== "system"))
+      const data = (await res.json()) as { sessions?: HistorySessionCard[] }
+      setHistory(data.sessions ?? [])
     } catch {
       setHistory([])
     } finally {
@@ -380,7 +372,7 @@ export function DashboardHome({
   }
 
   const connectedCatalog = buildCatalog(connectedProviders).filter((c) => c.connected)
-  const lastUserTurn = [...history].reverse().find((t) => t.role === "user")
+  const latestSession = history[0] ?? null
   const enabledSchedules = schedules.filter((s) => s.enabled)
   const soonestNextRunAt = enabledSchedules
     .map((s) => s.nextRunAt)
@@ -467,14 +459,16 @@ export function DashboardHome({
           icon={MessageSquare}
           title="History"
           loading={historyLoading}
-          empty={history.length === 0}
-          emptyText="No conversation yet"
-          onClick={() => onNavigate("conversation")}
+          empty={!latestSession}
+          emptyText="No conversations yet"
+          onClick={() => onNavigate("history")}
         >
-          {lastUserTurn && <p>{truncate(lastUserTurn.content, 80)}</p>}
-          <p className="mt-1 text-xs text-muted-foreground">
-            {history.length} message{history.length === 1 ? "" : "s"}
-          </p>
+          {latestSession?.lastMessage && <p>{truncate(latestSession.lastMessage.content, 80)}</p>}
+          {latestSession?.lastMessageAt && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              {relativePast(latestSession.lastMessageAt)}
+            </p>
+          )}
         </StatCard>
 
         <StatCard
