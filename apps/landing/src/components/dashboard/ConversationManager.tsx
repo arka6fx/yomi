@@ -110,7 +110,7 @@ export function ConversationManager({ token }: { token: string }) {
                     : "max-w-[80%] rounded-2xl rounded-bl-sm border border-border bg-background/40 px-3.5 py-2 text-sm text-foreground"
                 }
               >
-                <p className="whitespace-pre-wrap leading-relaxed">{turn.content}</p>
+                <p className="whitespace-pre-wrap break-words leading-relaxed">{turn.content}</p>
               </div>
             </li>
           ))}
