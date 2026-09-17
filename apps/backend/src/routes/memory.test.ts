@@ -63,28 +63,20 @@ function nextRows(): Promise<unknown[]> {
   return Promise.resolve(rowQueue.shift() ?? [])
 }
 
+// Statements are descriptors, not side effects: db.batch executes them, so the
+// recorded writes only happen once the (single) transaction actually runs.
 const writer = {
   insert: (table: { __name: string }) => ({
-    values: (values: Record<string, unknown>) => {
-      if (table.__name === "memory_relations") {
-        if (relationInsertFails) return Promise.reject(new Error("relation insert failed"))
-        writeLog.push("insert:relation")
-        relationInserts.push(values as unknown as RelationInsert)
-        return Promise.resolve(undefined)
-      }
-      if (table.__name !== "memory_entries") return Promise.resolve(undefined)
-      writeLog.push("insert:entry")
-      entryInserts.push(values)
-      return { returning: () => Promise.resolve([{ ...values, id: `saved_${nextId++}` }]) }
-    },
+    values: (values: Record<string, unknown>) => ({
+      __kind: "insert" as const,
+      table,
+      values,
+      returning: () => ({ __kind: "insert-returning" as const, table, values }),
+    }),
   }),
   update: () => ({
     set: (set: Record<string, unknown>) => ({
-      where: (where: Condition) => {
-        writeLog.push("update:entry")
-        updates.push({ set, where })
-        return Promise.resolve([])
-      },
+      where: (where: Condition) => ({ __kind: "update" as const, set, where }),
     }),
   }),
 }
@@ -106,20 +98,61 @@ const fakeDb = {
   }),
   delete: () => ({ where: () => Promise.resolve([]) }),
   execute: () => Promise.resolve([]),
-  // Rolls back the recorded writes on throw, so a test can tell "the call failed" from
-  // "the call failed and left a half-written supersession behind".
-  transaction: async <T>(fn: (tx: typeof writer) => Promise<T>): Promise<T> => {
+  // neon-http has no interactive transaction. upsertMemory builds every statement up
+  // front and hands them to db.batch, which runs them sequentially in one transaction.
+  // The mock executes the descriptors in order and rolls back the recorded writes on
+  // throw, so a test can tell "the call failed" from "the call failed and left a
+  // half-written supersession behind".
+  batch: async (statements: unknown[]): Promise<unknown[]> => {
     const snapshot = {
       entryInserts: [...entryInserts],
       relationInserts: [...relationInserts],
       updates: [...updates],
+      writeLog: [...writeLog],
     }
     try {
-      return await fn(writer)
+      const results: unknown[] = []
+      for (const raw of statements) {
+        const statement = raw as {
+          __kind?: string
+          table?: { __name: string }
+          values?: Record<string, unknown>
+          set?: Record<string, unknown>
+          where?: Condition
+        }
+        if (statement.__kind === "update") {
+          writeLog.push("update:entry")
+          updates.push({ set: statement.set!, where: statement.where! })
+          results.push([])
+        } else if (statement.__kind === "insert" || statement.__kind === "insert-returning") {
+          const table = statement.table!.__name
+          const values = statement.values!
+          if (table === "memory_relations") {
+            if (relationInsertFails) throw new Error("relation insert failed")
+            writeLog.push("insert:relation")
+            relationInserts.push(values as unknown as RelationInsert)
+            results.push(undefined)
+          } else if (table === "memory_entries") {
+            writeLog.push("insert:entry")
+            entryInserts.push(values)
+            results.push(
+              statement.__kind === "insert-returning"
+                ? [{ ...values, id: (values["id"] as string | undefined) ?? `saved_${nextId++}` }]
+                : undefined,
+            )
+          } else {
+            results.push(undefined)
+          }
+        } else {
+          results.push(await raw)
+        }
+      }
+      return results
     } catch (error) {
       entryInserts = snapshot.entryInserts
       relationInserts = snapshot.relationInserts
       updates = snapshot.updates
+      writeLog = snapshot.writeLog
       throw error
     }
   },

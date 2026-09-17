@@ -26,7 +26,7 @@ describe("pickNextStep", () => {
   })
 
   it("ignores connected ids that aren't on the priority list", () => {
-    const result = pickNextStep(["gmail", "swiggy", "figma"])
+    const result = pickNextStep(["gmail", "trello", "figma"])
     expect(result?.id).toBe("google-calendar")
   })
 })

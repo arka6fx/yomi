@@ -1,15 +1,15 @@
 name: Deploy Backend
 
-# Backend runs on EC2 (Docker + Caddy), reachable only from the owner IP, so this
-# runs on a self-hosted runner installed ON the box — no inbound SSH, no SG change.
+# Backend deploys as a Cloudflare Worker (yomi-backend, production env) served
+# at api.getyomi.in via a Workers custom domain. Secrets live in Cloudflare
+# (wrangler secret), NEVER in vars or this file. This replaced the old EC2
+# self-hosted runner path when the AWS infrastructure was retired.
 on:
   push:
     branches: [main]
     paths:
       - "apps/backend/**"
       - "packages/**"
-      - "docker-compose.yml"
-      - "Caddyfile"
       - "package.json"
       - "bun.lock"
       - ".github/workflows/deploy-backend.yml"
@@ -21,25 +21,55 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: [self-hosted, yomi-ec2]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
-      - name: Sync code into ~/yomi (preserve .env.production)
+      # cancel-in-progress is false so runs queue instead of racing, but a run
+      # that was queued behind another can still be for a commit main has
+      # since moved past. Bail here so only the run for the current tip deploys.
+      - name: Skip if main has moved past this commit
+        id: staleness
         run: |
-          if ! command -v rsync >/dev/null; then sudo apt-get update -qq && sudo apt-get install -y -qq rsync; fi
-          rsync -a --delete \
-            --exclude '.git' --exclude 'node_modules' --exclude '.env.production*' \
-            "$GITHUB_WORKSPACE"/ /home/ubuntu/yomi/
+          latest_sha="$(git ls-remote origin refs/heads/main | cut -f1)"
+          if [ "$latest_sha" != "${{ github.sha }}" ]; then
+            echo "main is now at $latest_sha, this run was queued for ${{ github.sha }} — skipping deploy."
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Rebuild and restart backend
-        run: |
-          cd /home/ubuntu/yomi
-          docker compose up -d --build backend
-          sleep 6
-          docker compose logs backend --tail 10 | grep -iE 'listening|error' || true
+      - name: Setup Bun
+        if: steps.staleness.outputs.stale != 'true'
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        if: steps.staleness.outputs.stale != 'true'
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        if: steps.staleness.outputs.stale != 'true'
+        run: bun run typecheck
+
+      - name: Test
+        if: steps.staleness.outputs.stale != 'true'
+        run: bun run test
+
+      - name: Docs sync check
+        if: steps.staleness.outputs.stale != 'true'
+        run: bun run docs:check
+
+      - name: Deploy backend Worker
+        if: steps.staleness.outputs.stale != 'true'
+        working-directory: apps/backend
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: bun run deploy:production
 
       - name: Health check
+        if: steps.staleness.outputs.stale != 'true'
         run: |
           for i in 1 2 3 4 5; do
             curl -fsS -m 15 https://api.getyomi.in/health && exit 0

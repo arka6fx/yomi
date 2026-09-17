@@ -1,8 +1,8 @@
 # Spec 11 - Database
 
-Database: PostgreSQL (AWS RDS) through Drizzle and
-`pg`/`drizzle-orm/node-postgres`. RDS is private (no public IP) — admin access
-goes through `scripts/rds-tunnel.sh`.
+Database: PostgreSQL (Neon) through Drizzle and `@neondatabase/serverless`
+(`drizzle-orm/neon-http`). The HTTP connection is stateless per query, so there
+are no interactive transactions — multi-write atomicity uses `db.batch([...])`.
 
 Core tables:
 

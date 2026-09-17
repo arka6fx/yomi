@@ -24,7 +24,6 @@ and, in most cases, a dedicated spec in this folder.
 | Notion           | `notion`           | `notion.md`           |    12 | Implemented                              |
 | Slack            | `slack`            | `slack.md`            |     9 | Implemented                              |
 | Linear           | `linear`           | `linear.md`           |    12 | Implemented                              |
-| Swiggy           | `swiggy`           | —                     |     — | Coming soon (blocked on OAuth allowlist) |
 
 ## Composio-backed connectors
 

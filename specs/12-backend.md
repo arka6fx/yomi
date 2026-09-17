@@ -7,7 +7,8 @@ and cloud archive mirroring/search.
 
 ## Invariants
 
-- Hono is the backend framework.
+- Hono on Cloudflare Workers is the backend runtime; Neon PostgreSQL is the
+  datastore (`@neondatabase/serverless`).
 - LLM and speech provider keys live only in backend/server environments.
 - Dodo Payments is the payment processor.
 - Usage is gated by a single credit balance (pure-credit model) at backend API
@@ -55,16 +56,18 @@ Current self-serve launch plans:
 there are no per-feature monthly caps. Every billable action goes through
 `services/metering.ts` `chargeUsage({ user, kind, durationSeconds? })`:
 
-1. Owner email → record event, no charge, bypass.
-2. `hasBillablePlanAccess` (Explore trial active / paid sub active / past_due
+1. `hasBillablePlanAccess` (Explore trial active / paid sub active / past_due
    grace).
-3. `balance >= creditsForUsage(kind)` else block — Explore →
+2. `balance >= creditsForUsage(kind)` else block — Explore →
    `subscription_required`, Pro/Max → `credits_exhausted`.
-4. Insert `usage_events` row, `consumeCredits`, write back `creditsCharged`.
+3. Insert `usage_events` row, `consumeCredits`, write back `creditsCharged`.
 
-Credit costs: chat 1 · image/screen analyze 1 · voice 2/min · Telegram
-message 1. Monthly allotments: Explore 100, Pro 2,500, Max 10,000. See spec 13.
-Callers: `routes/usage.ts` (`POST /interactions/reserve`), `agent/run.ts`
+There is no owner bypass — every account, including the operator's, is metered
+against its plan.
+
+Credit costs: fast chat 1 · image analyze 1 · voice 2/min · Telegram bot message
+3 · agent run 3 base (+1 per Composio tool call). Monthly allotments: Explore
+100, Pro 300, Max 750. See spec 13. Callers: `routes/usage.ts`, `agent/run.ts`
 (Telegram bot_message), `gateway/gateway-runner.ts` (telegram voice/image).
 
 ## LLM Proxy

@@ -20,15 +20,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1094.0",
-    "@aws-sdk/s3-request-presigner": "^3.1094.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@yomi/agent-core": "workspace:*",
     "@yomi/db": "workspace:*",
     "@yomi/shared": "workspace:*",
     "ai": "^4.0.0",
     "better-auth": "1.6.11",
-    "drizzle-orm": "^0.31.0",
+    "drizzle-orm": "^0.45.2",
     "hono": "^4.5.0",
     "zod": "^4.3.6"
   },
@@ -36,7 +34,7 @@
     "@types/bun": "^1.1.0",
     "@yomi/eslint-config": "workspace:*",
     "@yomi/typescript-config": "workspace:*",
-    "drizzle-kit": "^0.22.0",
+    "drizzle-kit": "^0.31.10",
     "wrangler": "^4.0.0",
     "typescript": "^5.5.0"
   }

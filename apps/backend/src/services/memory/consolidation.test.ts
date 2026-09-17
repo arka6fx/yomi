@@ -41,7 +41,15 @@ mock.module("@yomi/db", () => ({
       if (executeFails) throw new Error("query failed")
       return executeRows
     },
-    transaction: async <T>(fn: (tx: typeof writer) => Promise<T>): Promise<T> => fn(writer),
+    update: (...args: unknown[]) => (writer.update as (...a: unknown[]) => unknown)(...args),
+    insert: (...args: unknown[]) => (writer.insert as (...a: unknown[]) => unknown)(...args),
+    // neon-http has no interactive transaction — mergePair runs its two writes
+    // through db.batch, which executes them sequentially in one transaction.
+    batch: async (statements: unknown[]): Promise<unknown[]> => {
+      const results: unknown[] = []
+      for (const statement of statements) results.push(await statement)
+      return results
+    },
   },
   memoryEntries: { id: { name: "id" }, status: { name: "status" } },
   memoryRelations: { __name: "memory_relations" },

@@ -31,11 +31,6 @@ describe("suggestIntegrationsFor", () => {
     expect(result.some((s) => s.id === "trello")).toBe(false)
   })
 
-  it("excludes swiggy even when named and unconnected", () => {
-    const result = suggestIntegrationsFor("order food from Swiggy", [])
-    expect(result.some((s) => s.id === "swiggy")).toBe(false)
-  })
-
   it("caps results at 3 when the message names more than 3 unconnected connectors", () => {
     const result = suggestIntegrationsFor("connect this to Trello, Jira, Asana, and Notion", [])
     expect(result.length).toBe(3)

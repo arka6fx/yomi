@@ -1,13 +1,19 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3"
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
-
 // Re-hosts a Telegram attachment (photo, video, document) somewhere a connector's
 // API can actually fetch it from. Telegram's own file URLs require the bot token,
 // so third-party APIs (Instagram, YouTube, ...) can't reach them directly — this
-// gives the agent a plain HTTPS URL instead. Objects expire after 30 days (bucket
-// lifecycle rule); these are transient assets for a single agent turn, not
-// permanent storage. Returns null when S3 isn't configured so callers can degrade
-// gracefully, same pattern as extractTextViaDrive()'s null-on-unavailable.
+// gives the agent a plain HTTPS URL instead. Assets are transient for a single
+// agent turn; avatars persist and are served through a stable proxy route.
+//
+// Storage is a Cloudflare R2 binding (YOMI_ASSETS), wired in worker.ts. Until the
+// bucket is created and bound, `setAssetBucket` is never called and every entry
+// point returns null / false so callers degrade gracefully — same pattern as
+// extractTextViaDrive()'s null-on-unavailable.
+//
+// R2 objects are privately writable and served only through the Worker's
+// GET /api/assets/:encodedKey (and /api/user/avatar/:userId) proxy routes. There
+// is no presigned-URL path anymore: `url` and `publicUrl` are the same stable
+// proxy URL, which is fine for connector APIs and for avatar rows referenced by
+// many viewers.
 
 export interface UploadedAsset {
   key: string
@@ -16,46 +22,40 @@ export interface UploadedAsset {
   contentType: string
 }
 
-function s3Config() {
-  const bucket = process.env["YOMI_ASSETS_BUCKET"]
-  const region = process.env["YOMI_ASSETS_AWS_REGION"]
-  const accessKeyId = process.env["YOMI_ASSETS_AWS_ACCESS_KEY_ID"]
-  const secretAccessKey = process.env["YOMI_ASSETS_AWS_SECRET_ACCESS_KEY"]
-  if (!bucket || !region || !accessKeyId || !secretAccessKey) return null
-  return { bucket, region, accessKeyId, secretAccessKey }
+// Structural subset of the Workers R2Bucket binding we actually use, declared
+// locally so @yomi/backend doesn't need @cloudflare/workers-types to compile.
+export interface R2ObjectBodyLike {
+  arrayBuffer(): Promise<ArrayBuffer>
+  httpMetadata?: { contentType?: string }
 }
 
-let cachedClient: { client: S3Client; bucket: string } | null | undefined
-
-function client(): { client: S3Client; bucket: string } | null {
-  if (cachedClient !== undefined) return cachedClient
-  const config = s3Config()
-  if (!config) {
-    cachedClient = null
-    return null
-  }
-  cachedClient = {
-    bucket: config.bucket,
-    client: new S3Client({
-      region: config.region,
-      credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey },
-    }),
-  }
-  return cachedClient
+export interface R2BucketLike {
+  put(
+    key: string,
+    value: ArrayBuffer,
+    options?: { httpMetadata?: { contentType?: string } },
+  ): Promise<unknown>
+  get(key: string): Promise<R2ObjectBodyLike | null>
 }
 
-// True when asset storage is configured — lets callers skip the upload attempt
+let bucket: R2BucketLike | null = null
+
+export function setAssetBucket(next: R2BucketLike | null): void {
+  bucket = next
+}
+
+// True when asset storage is bound — lets callers skip the upload attempt
 // entirely (and give the user a clear "not set up yet" message) instead of
 // discovering it mid-request.
 export function assetStorageConfigured(): boolean {
-  return client() !== null
+  return bucket !== null
 }
 
 function publicAssetBaseUrl(): string {
   return (
-    process.env["YOMI_APP_URL"] ??
+    process.env["BETTER_AUTH_BASE_URL"] ??
     process.env["BACKEND_URL"] ??
-    process.env["BETTER_AUTH_URL"] ??
+    process.env["YOMI_APP_URL"] ??
     "https://api.getyomi.in"
   ).replace(/\/$/, "")
 }
@@ -127,69 +127,46 @@ export function resolveAssetType(
   return { extension: "bin", contentType }
 }
 
-// Uploads bytes under the user's namespace and returns a short-lived presigned
-// GET URL. The bucket is fully private (no public-read) — the presigned URL is
-// the only way to fetch the object, and it's scoped to expire well before the
-// bucket's own 30-day object lifecycle would.
+// Uploads bytes under the user's namespace and returns the stable proxy URL the
+// agent can hand to a connector API.
 export async function uploadAsset(
   userId: string,
   bytes: ArrayBuffer,
   contentType: string,
 ): Promise<UploadedAsset | null> {
-  const cfg = client()
-  if (!cfg) return null
+  if (!bucket) return null
 
   const body = new Uint8Array(bytes)
   const resolved = resolveAssetType(contentType, body)
   const key = `assets/${userId}/${crypto.randomUUID()}.${resolved.extension}`
 
-  await cfg.client.send(
-    new PutObjectCommand({
-      Bucket: cfg.bucket,
-      Key: key,
-      Body: body,
-      ContentType: resolved.contentType,
-    }),
-  )
+  await bucket.put(key, bytes, {
+    httpMetadata: { contentType: resolved.contentType },
+  })
 
-  const url = await getSignedUrl(
-    cfg.client,
-    new GetObjectCommand({ Bucket: cfg.bucket, Key: key }),
-    { expiresIn: 3600 },
-  )
   const publicUrl = `${publicAssetBaseUrl()}/api/assets/${encodeAssetKey(key)}`
-
-  return { key, url, publicUrl, contentType: resolved.contentType }
+  return { key, url: publicUrl, publicUrl, contentType: resolved.contentType }
 }
 
 // Uploads an avatar under a dedicated `avatars/` prefix, distinct from the
-// `assets/` prefix used for transient Telegram attachments — this prefix must
-// be excluded from the bucket's 30-day lifecycle deletion rule (an AWS
-// console/IaC change outside this repo). Unlike uploadAsset, this doesn't
-// return a presigned URL: avatars are served through the stable
-// GET /api/user/avatar/:userId proxy route instead, since a presigned URL's
-// hour-long expiry doesn't work for an image referenced from many viewers'
+// `assets/` prefix used for transient Telegram attachments. Avatars are served
+// through the stable GET /api/user/avatar/:userId proxy route, since a short-lived
+// URL's expiry doesn't work for an image referenced from many viewers'
 // leaderboard rows over time.
 export async function uploadAvatar(
   userId: string,
   bytes: ArrayBuffer,
   contentType: string,
 ): Promise<{ key: string; contentType: string } | null> {
-  const cfg = client()
-  if (!cfg) return null
+  if (!bucket) return null
 
   const body = new Uint8Array(bytes)
   const resolved = resolveAssetType(contentType, body)
   const key = `avatars/${userId}/${crypto.randomUUID()}.${resolved.extension}`
 
-  await cfg.client.send(
-    new PutObjectCommand({
-      Bucket: cfg.bucket,
-      Key: key,
-      Body: body,
-      ContentType: resolved.contentType,
-    }),
-  )
+  await bucket.put(key, bytes, {
+    httpMetadata: { contentType: resolved.contentType },
+  })
 
   return { key, contentType: resolved.contentType }
 }
@@ -197,14 +174,11 @@ export async function uploadAvatar(
 export async function fetchAsset(
   key: string,
 ): Promise<{ bytes: Uint8Array; contentType: string } | null> {
-  const cfg = client()
-  if (!cfg) return null
-  const response = await cfg.client.send(new GetObjectCommand({ Bucket: cfg.bucket, Key: key }))
-  const body = response.Body
-  if (!body) return null
-  const bytes = await body.transformToByteArray()
+  if (!bucket) return null
+  const object = await bucket.get(key)
+  if (!object) return null
   return {
-    bytes: new Uint8Array(bytes),
-    contentType: response.ContentType ?? "application/octet-stream",
+    bytes: new Uint8Array(await object.arrayBuffer()),
+    contentType: object.httpMetadata?.contentType ?? "application/octet-stream",
   }
 }

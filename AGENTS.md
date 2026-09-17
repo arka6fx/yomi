@@ -42,7 +42,7 @@ Choose the highest, least-footprint rung that solves the problem:
 apps/backend/        Hono/Bun - auth, billing, LLM proxy, metering
 apps/landing/        Next.js  - marketing, dashboard, account linking
 packages/agent-core/ ConnectorDef, ConnectorRegistry, agent tools
-packages/db/         Drizzle schema + PostgreSQL (AWS RDS)
+packages/db/         Drizzle schema + PostgreSQL (Neon)
 packages/shared/     TypeScript contracts
 packages/ui-connectors/ Connector UI components
 ```
@@ -58,8 +58,10 @@ bun install && bun run dev
 - **LLM:** Vercel AI SDK (`ai`) -> OpenAI (standard `OPENAI_*` env vars)
 - **STT:** OpenAI (`gpt-4o-mini-transcribe`) — transcribes incoming voice notes;
   replies are always text
-- **Backend:** Hono on Bun (EC2 + Docker + Caddy), Better Auth (Google + GitHub
-  OAuth), Drizzle + PostgreSQL (AWS RDS)
+- **Backend:** Hono on Cloudflare Workers, Better Auth (Google + GitHub OAuth),
+  Drizzle + Neon PostgreSQL (`@neondatabase/serverless`, stateless HTTP driver)
+- **Assets:** Cloudflare R2 (optional `YOMI_ASSETS` binding; degrades when
+  unbound)
 - **Billing:** Dodo Payments
 - **Agent orchestration:** AI SDK agent loop with connector tools; backend agent
   for Telegram
@@ -69,11 +71,14 @@ bun install && bun run dev
 ## Architecture
 
 ```text
-CLOUD BACKEND  (Hono/Bun)
+CLOUD BACKEND  (Hono on Cloudflare Workers)
   Better Auth - Dodo webhooks - LLM proxy - usage metering - Telegram - canonical memory
 
-LANDING/DASHBOARD  (Next.js)
+LANDING/DASHBOARD  (Next.js on Cloudflare Workers)
   Marketing - auth pages - dashboard - account linking
+
+POSTGRES (Neon)   stateless HTTP driver, pgvector
+ASSETS (R2)       optional - presigned URLs for attachments + avatars
 ```
 
 ---
@@ -88,8 +93,7 @@ LANDING/DASHBOARD  (Next.js)
   memory
 - Connectors: loaded from `ConnectorRegistry`
   - First-class (hand-written tool sets): Gmail, Google Calendar, Google Drive,
-    Google Classroom, Google Tasks, Google Meet, GitHub, Notion, Slack, Linear,
-    Swiggy
+    Google Classroom, Google Tasks, Google Meet, GitHub, Notion, Slack, Linear
   - Composio-backed (unified executor, approval-gated): Google Docs, Google
     Sheets, Google Slides, Google Maps, Google Photos, Google Ads, Google
     Analytics, Google Search Console, Google Cloud Vision, HubSpot, Salesforce,
@@ -129,6 +133,11 @@ Schema: `packages/db/src/schema.ts`. Better Auth owns
 with the plan/subscription/trial columns. `usage_events` is append-only.
 `mcp_connections.oauth_tokens` and `hook_logs` are encrypted / PII-redacted
 respectively.
+
+Driver: `@neondatabase/serverless` over HTTP (`drizzle-orm/neon-http`). The
+connection is stateless per query, so **there are no interactive transactions**
+— `db.transaction()` throws. Multi-write atomicity uses `db.batch([...])`, which
+runs the statements sequentially in one real HTTP transaction.
 
 `apps/landing` deploys as a Cloudflare Worker and has its own I/O rules - see
 `apps/landing/CLAUDE.md`.
@@ -193,10 +202,17 @@ env vars.
 
 The backend deploys itself on push to `main`
 (`.github/workflows/deploy-backend.yml`, paths `apps/backend/**` /
-`packages/**`), via a self-hosted runner on the EC2 box. Do not also run
-`scripts/deploy-backend.sh` or `docker compose up` on the box for the same
-commit; the manual deploy races the workflow and both die on a container-name
-conflict. That script is the break-glass path for when the runner is down.
+`packages/**`), via a GitHub-hosted runner. The workflow runs `bun run test`
+first and blocks the deploy if it fails, then `bun run deploy:production`
+(`wrangler deploy --env production`). Manual deploy is the break-glass path for
+when CI is down:
+
+```bash
+cd apps/backend && bun run deploy:production
+```
+
+Secrets live as Worker secrets (`wrangler secret put`), not in the repo.
+`DATABASE_URL` must point at the Neon connection string.
 
 The frontend (Cloudflare Worker) also deploys itself on push to `main`
 (`.github/workflows/deploy-landing.yml`, paths `apps/landing/**` / `packages/**`

@@ -32,7 +32,7 @@ scopes at connect time.
 **Prod app / landing URL:** `https://getyomi.in`  
 **Local backend (dev):** `http://localhost:3001`
 
-**Env vars (backend — Hono/Bun on EC2, not Cloudflare):**
+**Env vars (backend — Hono on Cloudflare Workers):**
 
 - `GOOGLE_INTEGRATIONS_CLIENT_ID`
 - `GOOGLE_INTEGRATIONS_CLIENT_SECRET`
@@ -83,11 +83,11 @@ https://www.googleapis.com/auth/userinfo.email
 
 ### Restricted vs sensitive (what it means for you)
 
-| Tier          | Scopes in Yomi today                        | Test with your account            | Launch to all users                                              |
-| ------------- | ------------------------------------------- | --------------------------------- | ---------------------------------------------------------------- |
-| Non-sensitive | `userinfo.email`, `meetings.space.settings` | Works in Testing mode             | Works after publish                                              |
+| Tier          | Scopes in Yomi today                                                    | Test with your account            | Launch to all users                                              |
+| ------------- | ----------------------------------------------------------------------- | --------------------------------- | ---------------------------------------------------------------- |
+| Non-sensitive | `userinfo.email`, `meetings.space.settings`                             | Works in Testing mode             | Works after publish                                              |
 | Sensitive     | `calendar`, `gmail.send`, `tasks`, `meetings.space.created`/`.readonly` | Works in Testing mode + test user | Brand verification (~2–3 business days)                          |
-| Restricted    | `gmail.modify`, Drive, all Classroom scopes | Works in Testing mode + test user | Brand verification **+ annual CASA security assessment** (weeks) |
+| Restricted    | `gmail.modify`, Drive, all Classroom scopes                             | Works in Testing mode + test user | Brand verification **+ annual CASA security assessment** (weeks) |
 
 **Testing mode shortcut:** While the app is in **Testing** publishing status,
 add your Google account under **Test users**. You can use restricted scopes
@@ -119,8 +119,9 @@ immediately — no CASA yet. Refresh tokens for sensitive/restricted scopes
    - You should have **exactly one** production Web client. Delete or ignore
      extras before verification.
 5. Open the client → copy **Client ID** and **Client secret**.
-6. Compare Client ID to `GOOGLE_INTEGRATIONS_CLIENT_ID` in your backend env
-   (Hono/Bun on EC2 — this is not the Cloudflare Worker, which is landing-only).
+6. Compare Client ID to `GOOGLE_INTEGRATIONS_CLIENT_ID` in your backend secrets
+   (Worker secrets on Cloudflare — the backend and landing are both Workers
+   now).
 
 **Checklist**
 
@@ -135,17 +136,17 @@ immediately — no CASA yet. Refresh tokens for sensitive/restricted scopes
 
 Go to **APIs & Services → Library** and enable each API:
 
-| API                  | Search name            | Required for                                                               |
-| -------------------- | ---------------------- | -------------------------------------------------------------------------- |
-| Gmail API            | `Gmail API`            | Gmail connector                                                            |
-| Google Calendar API  | `Google Calendar API`  | Calendar connector                                                         |
-| Google Drive API     | `Google Drive API`     | Drive connector                                                            |
-| Google Classroom API | `Google Classroom API` | Classroom connector                                                        |
-| Google Slides API    | `Google Slides API`    | `drive-createFile` building multi-slide decks                              |
-| Google Sheets API    | `Google Sheets API`    | `drive-readSheet` / `drive-appendSheetRows`                                |
-| Google Docs API      | `Google Docs API`      | `drive-appendToDoc` / `drive-replaceInDoc`                                 |
-| Google Tasks API     | `Google Tasks API`     | Tasks connector                                                            |
-| Google Meet API      | `Google Meet API`      | Meet connector                                                             |
+| API                  | Search name            | Required for                                  |
+| -------------------- | ---------------------- | --------------------------------------------- |
+| Gmail API            | `Gmail API`            | Gmail connector                               |
+| Google Calendar API  | `Google Calendar API`  | Calendar connector                            |
+| Google Drive API     | `Google Drive API`     | Drive connector                               |
+| Google Classroom API | `Google Classroom API` | Classroom connector                           |
+| Google Slides API    | `Google Slides API`    | `drive-createFile` building multi-slide decks |
+| Google Sheets API    | `Google Sheets API`    | `drive-readSheet` / `drive-appendSheetRows`   |
+| Google Docs API      | `Google Docs API`      | `drive-appendToDoc` / `drive-replaceInDoc`    |
+| Google Tasks API     | `Google Tasks API`     | Tasks connector                               |
+| Google Meet API      | `Google Meet API`      | Meet connector                                |
 
 > Slides and Sheets creation runs through the **Drive scope** (no extra scope),
 > but the Slides API and Sheets API themselves must be enabled or those
@@ -274,8 +275,7 @@ Save. Google may take a few minutes to propagate URI changes.
 
 ## Step 7 — Backend secrets
 
-Set on your backend (Hono/Bun on EC2, not the Cloudflare Worker — that's
-landing/dashboard only) or local `.env`:
+Set on your backend (Cloudflare Worker secrets, or local `.env` for dev):
 
 ```bash
 GOOGLE_INTEGRATIONS_CLIENT_ID=<from Step 1>
@@ -307,7 +307,7 @@ Telegram agent connect flow.
 | Calendar  | Connect Google Calendar  | Ask agent to list today’s events                                                                   |
 | Drive     | Connect Google Drive     | Ask agent to search Drive or read a Doc/Sheet                                                      |
 | Classroom | Connect Google Classroom | Ask agent to list classes (needs Workspace for Education for full data; personal Gmail is limited) |
-| Tasks     | Connect Google Tasks     | Ask agent to list to-do items or create a task                                                    |
+| Tasks     | Connect Google Tasks     | Ask agent to list to-do items or create a task                                                     |
 | Meet      | Connect Google Meet      | Ask agent to create a Meet link                                                                    |
 
 **Checklist**

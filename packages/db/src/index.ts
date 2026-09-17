@@ -1,14 +1,11 @@
-import { readFileSync } from "node:fs"
-import { fileURLToPath } from "node:url"
-import { Pool } from "pg"
-import { drizzle } from "drizzle-orm/node-postgres"
+import { neon } from "@neondatabase/serverless"
+import { drizzle } from "drizzle-orm/neon-http"
 import * as schema from "./schema.js"
 import journal from "../drizzle/meta/_journal.json" with { type: "json" }
 
 type Db = ReturnType<typeof drizzle>
 
 let dbInstance: Db | null = null
-let pool: Pool | null = null
 
 function getDatabaseUrl() {
   const url = typeof process !== "undefined" ? process.env["DATABASE_URL"] : undefined
@@ -18,19 +15,15 @@ function getDatabaseUrl() {
   return url
 }
 
-// RDS presents an AWS-issued cert; verify it against AWS's own CA bundle
-// rather than disabling verification, since app<->DB traffic carries auth tokens.
-const rdsCaBundle = readFileSync(
-  fileURLToPath(new URL("../certs/rds-global-bundle.pem", import.meta.url)),
-)
-
+// The Neon HTTP driver is stateless — every query is its own fetch, so nothing
+// is held across requests. That is what makes it safe on Workers, where a
+// pooled TCP connection created for one request cannot be reused by the next
+// ("Cannot perform I/O on behalf of a different request"). Interactive
+// transactions are the one thing it can't do; use `db.batch([...])` instead,
+// which Neon runs as a single sequential transaction.
 function getDb() {
   if (dbInstance) return dbInstance
-  pool = new Pool({
-    connectionString: getDatabaseUrl(),
-    ssl: { ca: rdsCaBundle },
-  })
-  dbInstance = drizzle(pool, { schema })
+  dbInstance = drizzle(neon(getDatabaseUrl()), { schema })
   return dbInstance
 }
 

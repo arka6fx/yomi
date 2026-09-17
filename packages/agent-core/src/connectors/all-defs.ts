@@ -9,7 +9,6 @@ import { githubDef } from "./github-def.js"
 import { notionDef } from "./notion-def.js"
 import { slackDef } from "./slack-def.js"
 import { linearDef } from "./linear-def.js"
-import { swiggyDef } from "./swiggy-def.js"
 import { makeComposioDocsDef } from "./composio/google-docs.js"
 import { makeComposioSheetsDef } from "./composio/google-sheets.js"
 import { makeComposioSlidesDef } from "./composio/google-slides.js"
@@ -137,5 +136,4 @@ export const ALL_CONNECTOR_DEFS: ConnectorDef[] = [
   makeComposioGoogleCloudVisionDef(unconfiguredComposioExecutor),
   makeComposioKaggleDef(unconfiguredComposioExecutor),
   context7Def,
-  swiggyDef,
 ]

@@ -1,5 +1,0 @@
-# Caddy fetches and renews a Let's Encrypt cert for this hostname automatically.
-# Requires: api.getyomi.in resolves to this box, and ports 80/443 are open.
-api.getyomi.in {
-	reverse_proxy backend:3001
-}

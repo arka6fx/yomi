@@ -17,6 +17,7 @@ build/
 .open-next/
 .worker-assets/
 .wrangler/
+.wrangler-dry-run/
 .dev.vars
 
 # Turbo cache

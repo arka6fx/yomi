@@ -93,7 +93,7 @@ describe("GET /api/history/sessions", () => {
       {
         sessionId: "session_2",
         title: "Order chole bhature",
-        summary: "Ordered food via Swiggy.",
+        summary: "Ordered chole bhature.",
         messageCount: 6,
         closedAt: "2026-08-09T12:00:00.000Z",
         relevance: 0.8,
@@ -114,7 +114,7 @@ describe("GET /api/history/sessions", () => {
       {
         id: "session_2",
         title: "Order chole bhature",
-        summary: "Ordered food via Swiggy.",
+        summary: "Ordered chole bhature.",
         messageCount: 6,
         platform: null,
         lastMessageAt: "2026-08-09T11:59:00.000Z",

@@ -87,12 +87,7 @@ export async function getAccessToken(userId: string, provider: string): Promise<
   }
 
   // Skip refresh for non-expiring credentials (api_key, connection_string, GitHub OAuth).
-  // Swiggy uses MCP OAuth with no refresh token in v1.0 — if expired, surface
-  // a reconnect error immediately instead of returning a dead token.
   const expiresAt = tokens.expiresAt ?? null
-  if (provider === "swiggy" && expiresAt !== null && expiresAt < Date.now()) {
-    throw new Error("Swiggy session expired. Reconnect from the dashboard.")
-  }
 
   const needsRefresh =
     expiresAt !== null && tokens.refreshToken !== null && expiresAt - Date.now() < 5 * 60 * 1000

@@ -58,6 +58,18 @@ jobs:
         if: steps.staleness.outputs.stale != 'true'
         run: bun install --frozen-lockfile
 
+      - name: Typecheck
+        if: steps.staleness.outputs.stale != 'true'
+        run: bun run typecheck
+
+      - name: Test
+        if: steps.staleness.outputs.stale != 'true'
+        run: bun run test
+
+      - name: Docs sync check
+        if: steps.staleness.outputs.stale != 'true'
+        run: bun run docs:check
+
       # CLOUDFLARE_API_TOKEN/ACCOUNT_ID are scoped to this step only, not the
       # job-level env, so earlier steps (checkout, setup-bun, install) never
       # have them in their process environment.

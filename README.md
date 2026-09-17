@@ -1,47 +1,116 @@
 # Yomi
 
-AI agent. Connects to Google Workspace (Gmail, Calendar, Drive, Classroom),
-GitHub, Slack, Notion, Linear, and more so you can query, draft, summarize, and
-schedule in natural language from the web app and Telegram without copy-pasting
-context.
+An AI productivity assistant that connects to the tools you already use. You
+talk to Yomi on **Telegram** — text, voice notes, or images — and it reads,
+drafts, summarizes, schedules, and acts across Google Workspace (Gmail,
+Calendar, Drive, Classroom, Tasks, Meet), GitHub, Slack, Notion, Linear,
+and dozens more. The web app is a management dashboard (account linking,
+schedules, memory, billing), not a chat surface.
+
+## Contents
+
+- [Architecture](#architecture)
+- [Stack](#stack)
+- [Monorepo Layout](#monorepo-layout)
+- [Local Development](#local-development)
+- [Configuration](#configuration)
+- [Plans & Credits](#plans--credits)
+- [Models](#models)
+- [Connectors](#connectors)
+- [Commands](#commands)
+- [Testing](#testing)
+- [Deployment](#deployment)
+- [Privacy](#privacy)
+- [Docs & Specs](#docs--specs)
 
 ## Architecture
 
-Yomi is split into a cloud backend and a landing/dashboard app.
+Yomi is backend-first. Durable memory, connector credentials, and agent
+execution live in the cloud backend; clients are thin.
 
 ```text
-apps/backend/           Hono on Bun    auth, billing, LLM proxy, usage metering (EC2 + Docker)
-apps/landing/           Next.js 16     landing, auth pages, dashboard
-
-packages/agent-core/    Connector definitions, registry, agent tools
-packages/db/            Drizzle schema and PostgreSQL client
-packages/shared/        Shared backend and frontend contracts
-packages/ui-connectors/ Connector UI components
-packages/*-config/      Shared TypeScript and ESLint config
+                    Telegram
+                       |
+             CLOUD BACKEND  (Hono)
+   auth - billing - LLM proxy - metering - agent loop - canonical memory
+                       |
+        +--------------+--------------+
+        |              |              |
+   Connectors      Postgres        Asset storage
+   (first-class    (Neon,          (R2, optional;
+    + Composio)     pgvector)       presigned URLs)
+                       |
+             LANDING / DASHBOARD  (Next.js)
+     marketing - auth - account linking - credits - memory
 ```
 
-The backend is canonical for account auth, billing, Telegram, connectors, and
-durable memory. The desktop client has been retired — Yomi's only interaction
-surface is Telegram, managed via the web dashboard (see
-`docs/adr/0002-retire-desktop-telegram-only.md`).
+### Design Principle
 
-## Request Paths
+Every request is one of two shapes. Yomi never switches models mid-turn — that
+would drop the prompt cache and mismatch the tool vocabulary.
 
-| Request         | Path                                                                | Target  |
-| --------------- | ------------------------------------------------------------------- | ------- |
-| Connector query | backend agent -> connector tools -> response                        | seconds |
-| Telegram query  | backend gateway -> backend agent -> connector/memory tools -> reply | seconds |
+| Request type   | Path                                | Budget          |
+| -------------- | ----------------------------------- | --------------- |
+| Connector task | Agent loop + connector tools        | seconds–minutes |
+| Telegram task  | Backend agent + memory/tool harness | seconds–minutes |
 
-The backend routes connector and Telegram work through the server-side agent.
+### Harness
+
+`harness = system prompt + tools + connectors + memory + hooks`
+
+- **Core tools:** filesystem r/w, sandboxed bash, web search/fetch, cron,
+  messaging, memory.
+- **Connectors:** loaded from `ConnectorRegistry` (first-class, hand-written
+  tool sets) plus a Composio-backed unified executor for long-tail services.
+- **Hooks:** `PreToolUse` (block dangerous), `PostToolUse` (log, trim tokens),
+  `Stop` (flush scratchpad), `SessionEnd` (compact memory).
+- **Loop guard:** `AGENT_MAX_STEPS` cap with a backend grace-call wrap-up.
+
+### Notepad (`~/.yomi/`)
+
+```text
+yomi.md        ALWAYS preloaded - identity, prefs, standing instructions
+memory.md      Long-term memory (curated, compacted)
+projects/<p>/  context.md, scratchpad.md
+sessions/      YYYY-MM-DD-topic.md summaries
+```
+
+`yomi.md` is always preloaded; everything else is JIT-loaded. Backend memory is
+canonical for durable facts, document provenance, Telegram, and connector
+agents.
+
+## Stack
+
+| Layer          | Choice                                                          |
+| -------------- | --------------------------------------------------------------- |
+| LLM            | Vercel AI SDK (`ai`) → OpenAI (`api.openai.com`)                |
+| Speech-to-text | OpenAI `gpt-4o-mini-transcribe` (replies are always text)       |
+| Backend        | Hono on Cloudflare Workers                                      |
+| Frontend       | Next.js on Cloudflare Workers                                   |
+| Database       | PostgreSQL (Neon) via Drizzle ORM + `@neondatabase/serverless`  |
+| Auth           | Better Auth (Google + GitHub OAuth)                             |
+| Billing        | Dodo Payments                                                   |
+| Orchestration  | AI SDK agent loop with connector tools + backend Telegram agent |
+
+## Monorepo Layout
+
+```text
+apps/backend/            Hono/Bun — auth, billing, LLM proxy, metering, Telegram, memory
+apps/landing/            Next.js — marketing, dashboard, account linking
+packages/agent-core/     ConnectorDef, ConnectorRegistry, agent tools
+packages/db/             Drizzle schema + Postgres client (Neon HTTP driver)
+packages/shared/         TypeScript contracts shared across apps
+packages/ui-connectors/  Connector UI components
+
+docs/adr/                Architecture decision records
+docs/agents/             Agent workflows (issue tracker, triage, domain docs)
+specs/                   Product specifications and connector references
+```
 
 ## Local Development
 
-Prerequisites:
-
-- Bun 1.3.x
-- Node 20+
-- A PostgreSQL database
-- An OpenAI API key
+Prerequisites: Bun 1.3.x, Node 20+, a PostgreSQL database (local Postgres or
+Neon), and an OpenAI API key.
 
 ```bash
 git clone https://github.com/arka6fx/yomi.git
@@ -51,19 +120,19 @@ cp .env.example .env
 bun run dev
 ```
 
-Common dev targets:
+Dev targets:
 
 | App     | Command                          | URL                     |
 | ------- | -------------------------------- | ----------------------- |
 | Landing | `cd apps/landing && bun run dev` | `http://localhost:3000` |
 | Backend | `cd apps/backend && bun run dev` | `http://localhost:3001` |
 
-## Environment
+## Configuration
 
 [`.env.example`](./.env.example) is the source of truth for every variable:
 database, Better Auth, Google/GitHub OAuth, the OpenAI endpoint, encryption
-keys, and Dodo Payments. The LLM/speech env vars use the standard `OPENAI_*`
-names and point at OpenAI (`api.openai.com`).
+keys, and Dodo Payments. Secrets are never committed — real values live in
+`.env.production` (gitignored) and in Worker secrets.
 
 Production uses split hostnames:
 
@@ -71,26 +140,60 @@ Production uses split hostnames:
 BETTER_AUTH_URL=https://getyomi.in
 BETTER_AUTH_BASE_URL=https://api.getyomi.in
 BACKEND_URL=https://api.getyomi.in
-# NEXT_PUBLIC_BACKEND_URL is not set in production; auth uses the same-origin proxy.
 NEXT_PUBLIC_APP_URL=https://getyomi.in
 YOMI_BACKEND_URL=https://api.getyomi.in
 CORS_ORIGIN=https://getyomi.in
 ```
 
-## Billing
+> `ENCRYPTION_KEY` must match across environments — a different key makes every
+> stored connector token undecryptable. Rotate via `ENCRYPTION_KEY_FALLBACKS`.
 
-Plans are configured in `apps/backend/src/routes/billing.ts` with canonical USD
-pricing. Dodo products must be pre-created in the dashboard; the backend
-references them by ID through the `DODO_*_PRODUCT_*` variables. Set
-`DODO_ENV=test` locally and `DODO_ENV=live` in production.
+## Plans & Credits
 
-Key design decisions:
+Billing is pure credits: a single credit balance is the only usage gate.
+Connectors are unlimited on every plan.
 
-- USD is the canonical billing currency. Local equivalents are estimated using
-  the `GET /api/billing/plans` endpoint with the `CF-IPCountry` header.
-- Subscriptions and credit packs use Dodo Checkout Sessions.
-- There is a 7-day grace period after payment failure before access is cut off.
-- Webhooks are idempotent and deduplicated by event ID.
+| Plan    | Price  | Monthly credits         | Model        |
+| ------- | ------ | ----------------------- | ------------ |
+| Explore | $0/mo  | 100 (perpetual, renews) | gpt-5.4-mini |
+| Pro     | $5/mo  | 300                     | gpt-5.4-mini |
+| Max     | $40/mo | 750                     | gpt-5.5      |
+
+Credit packs (any plan): 85 credits/$5, 250 credits/$15, 750 credits/$40.
+
+Single chokepoint: `apps/backend/src/services/metering.ts` → `chargeUsage()`
+(active-plan check → `balance >= cost` → record event + consume). Every account,
+including the operator's, is metered. Plan source of truth lives in
+`packages/shared/src/plans.ts`; webhooks in
+`apps/backend/src/routes/billing.ts`.
+
+## Models
+
+| Capability | Provider / default              |
+| ---------- | ------------------------------- |
+| Fast path  | OpenAI `gpt-5.4-mini`           |
+| Agent path | OpenAI `gpt-5.5`                |
+| Embeddings | OpenAI `text-embedding-3-small` |
+| Speech     | OpenAI `gpt-4o-mini-transcribe` |
+
+STT transcribes incoming Telegram voice notes; Yomi never replies with
+synthesized voice — every reply is text.
+
+## Connectors
+
+- **First-class (hand-written tool sets):** Gmail, Google Calendar, Google
+  Drive, Google Classroom, Google Tasks, Google Meet, GitHub, Notion, Slack,
+  Linear.
+- **Composio-backed (unified executor, approval-gated):** Docs, Sheets, Slides,
+  Maps, Photos, Ads, Analytics, Search Console, Vision, HubSpot, Salesforce,
+  Attio, Firecrawl, Discord, WhatsApp, LinkedIn, Outlook, Teams, OneDrive,
+  Dropbox, Figma, YouTube, Zoom, Facebook, Instagram, Calendly, Trello, PostHog,
+  Miro, Dynamics 365, SerpApi, Exa, Mem0, Cloudflare, Vercel, Supabase, Stripe,
+  Neon, Zoho, Gumroad, Fireflies, Kaggle, Context7, Todoist, Reddit, Jira,
+  Asana.
+
+The full list lives in
+[`specs/connectors/00-index.md`](specs/connectors/00-index.md).
 
 ## Commands
 
@@ -111,7 +214,7 @@ bun run db:migrate
 bun run db:studio
 ```
 
-## Test Layout
+## Testing
 
 Tests are package-local and colocated next to the code they exercise
 (`apps/backend/src/routes/usage.test.ts`, not a root `tests/` folder). Turborepo
@@ -119,54 +222,44 @@ schedules and caches by package, so colocated tests let
 `turbo run test --filter ...` and `--affected` run only the packages that
 changed.
 
-## Production
+## Deployment
 
-- Backend: AWS EC2 + Docker + Caddy from `apps/backend`, at `api.getyomi.in`.
-  Backend deploys from the GitHub workflow on pushes to `main`.
-  `worker.ts`/`wrangler.jsonc` are a kept-but-unused Cloudflare fallback.
-- Frontend/dashboard: Cloudflare Worker (`yomi-landing`) from `apps/landing`, at
-  `getyomi.in` and `www.getyomi.in`. Deploy with
-  `wrangler deploy --env production`.
-- Database: AWS RDS PostgreSQL.
-- LLM and speech: OpenAI.
-- Billing: Dodo Payments.
+Both apps deploy from GitHub Actions on pushes to `main`.
 
-See [SETUP_GUIDE.md](./SETUP_GUIDE.md) for the current runbook.
+| Component | Target                     | Domain           | Workflow                 |
+| --------- | -------------------------- | ---------------- | ------------------------ |
+| Backend   | Cloudflare Worker          | `api.getyomi.in` | `deploy-backend.yml`     |
+| Landing   | Cloudflare Worker          | `getyomi.in`     | `deploy-landing.yml`     |
+| Database  | Neon PostgreSQL (pgvector) | —                | `packages/db` migrations |
+| Assets    | Cloudflare R2 (optional)   | presigned URLs   | `YOMI_ASSETS` binding    |
 
-## OAuth
+Backend break-glass when the runner is unavailable:
 
-Configure OAuth callbacks:
-
-```text
-https://api.getyomi.in/api/auth/callback/github
-https://api.getyomi.in/api/auth/callback/google
-
-http://localhost:3001/api/auth/callback/github
-http://localhost:3001/api/auth/callback/google
+```bash
+cd apps/backend && bun run deploy:production
 ```
 
-## Speech And Models
+Frontend break-glass:
 
-| Capability | Provider / default              |
-| ---------- | ------------------------------- |
-| Fast LLM   | OpenAI `gpt-5.4-mini`           |
-| Agent LLM  | OpenAI `gpt-5.5`                |
-| Embeddings | OpenAI `text-embedding-3-small` |
-| STT        | OpenAI `gpt-4o-mini-transcribe` |
+```bash
+cd apps/landing && bun run deploy:production
+```
 
-STT transcribes incoming Telegram voice notes to text via the standard
-`OPENAI_*` env vars (`api.openai.com`). Yomi never replies with synthesized
-voice — every reply is text.
-
-## Specs
-
-Implementation references live in [`specs/`](specs/README.md): system specs,
-per-connector docs, and runbooks. Start with the [index](specs/README.md), then
-[00-overview](specs/00-overview.md). The terse operational summary agents load
-is [`AGENTS.md`](./AGENTS.md).
+Asset storage is **optional**: when the `YOMI_ASSETS` R2 binding is unbound,
+attachment re-hosting and avatars degrade gracefully instead of failing.
 
 ## Privacy
 
 - No silent recording.
-- Memory is user-owned and export/delete must remain possible.
+- Memory is user-owned; export and delete always remain possible.
 - OAuth tokens are encrypted at rest.
+- Hook logs are PII-redacted.
+
+## Docs & Specs
+
+- [`AGENTS.md`](./AGENTS.md) — terse operational summary agents load first.
+- [`CONTEXT.md`](./CONTEXT.md) — single-context domain overview.
+- [`docs/adr/`](docs/adr) — architecture decision records.
+- [`specs/`](specs/README.md) — system specs and per-connector references. Start
+  with [`specs/00-overview.md`](specs/00-overview.md).
+- [`SETUP_GUIDE.md`](./SETUP_GUIDE.md) — environment runbook.

@@ -568,17 +568,6 @@ const CATALOG_DEFS: Array<{
     icon: "context7",
     available: true,
   },
-  {
-    id: "swiggy",
-    name: "Swiggy",
-    description: "Order food, groceries, and book restaurant tables via Telegram.",
-    category: "food",
-    authKind: "oauth2",
-    icon: "swiggy",
-    // Code is done, but blocked on Swiggy's OAuth client allowlist (whitelist
-    // request filed as an issue on their manifest repo) — not connectable yet.
-    available: false,
-  },
 ]
 
 // displayNames maps connector id → the account it is bound to (usually an email).

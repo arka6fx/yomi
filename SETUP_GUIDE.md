@@ -1,46 +1,40 @@
 # Yomi Production Runbook
 
-Production topology (two providers):
+Production topology:
 
 ```text
 Frontend / dashboard  https://getyomi.in        Cloudflare Worker (apps/landing)
-Backend API           https://api.getyomi.in    AWS EC2 + Docker + Caddy (apps/backend)
-Database              AWS RDS PostgreSQL (private, no public IP — see scripts/rds-tunnel.sh)
+Backend API           https://api.getyomi.in    Cloudflare Worker (apps/backend)
+Database              Neon PostgreSQL (pgvector, HTTP driver)
+Asset storage         Cloudflare R2 (optional YOMI_ASSETS binding)
 LLM + speech          OpenAI (STT for incoming voice notes; replies are text)
 Billing               Dodo Payments
 ```
 
 - **Domain** `getyomi.in` is registered at Hostinger; DNS is managed by
-  Cloudflare (nameservers point at Cloudflare). `api.getyomi.in` is an **A
-  record → the EC2 Elastic IP, DNS-only (grey cloud)** so Caddy can obtain a
-  Let's Encrypt cert.
-- **Backend is NOT on Cloudflare Workers.** It runs as a container on EC2.
-  `apps/backend/src/worker.ts` + `wrangler.jsonc` are kept only as a fallback
-  and are not deployed.
+  Cloudflare. Both `getyomi.in` and `api.getyomi.in` are Cloudflare Workers
+  custom domains, so TLS and proxying are handled by Cloudflare.
+- **Both the backend and the landing app run on Cloudflare Workers.** The
+  backend entry is `apps/backend/src/worker.ts` with
+  `apps/backend/wrangler.jsonc`.
 
 ---
 
-## Backend — EC2 + Docker
+## Backend — Cloudflare Worker
 
-The backend is a Bun/Hono server (`apps/backend/src/index.ts`, port 3001) behind
-Caddy, which terminates TLS for `api.getyomi.in`. Compose file:
-`docker-compose.yml` (services `backend` + `caddy`), Dockerfile:
-`apps/backend/Dockerfile`, TLS config: `Caddyfile`.
+The backend is a Hono app (`apps/backend/src/index.ts`) served by the Worker
+entry `apps/backend/src/worker.ts`. It runs on Workers with `nodejs_compat` and
+talks to Neon over the stateless HTTP driver (`@neondatabase/serverless`). It is
+not a container and there is no server to SSH into.
 
-### One-time box setup
+Migrations are **not** run by deploy. After a migration lands, run
+`bun run db:migrate` from `packages/db` against the Neon `DATABASE_URL`.
 
-- EC2 Ubuntu 24.04 LTS, Elastic IP associated, security group `yomi-backend-sg`:
-  SSH 22 from your IP only, HTTP 80 + HTTPS 443 from anywhere.
-- `curl -fsSL https://get.docker.com | sudo sh && sudo usermod -aG docker ubuntu`
-- Code lives in `~/yomi` on the box; secrets live in `~/yomi/.env.production`
-  (chmod 600, never committed).
-
-### Secrets — `~/yomi/.env.production` on the box
+### Secrets — Worker secrets (`wrangler secret put`)
 
 ```bash
 ENVIRONMENT=production
-PORT=3001
-DATABASE_URL=postgresql://...            # AWS RDS — private, admin access via scripts/rds-tunnel.sh
+DATABASE_URL=postgresql://...             # Neon connection string (pooler)
 ENCRYPTION_KEY=<hex32>                    # MUST match the value tokens were encrypted with
 ENCRYPTION_KEY_FALLBACKS=                 # old key(s) if rotating, comma-separated
 BETTER_AUTH_SECRET=...
@@ -57,7 +51,7 @@ GITHUB_CLIENT_ID=...            GITHUB_CLIENT_SECRET=...
 GITHUB_INTEGRATIONS_CLIENT_ID=...  GITHUB_INTEGRATIONS_CLIENT_SECRET=...
 
 # LLM + speech via OpenAI (standard OPENAI_* env vars, api.openai.com);
-# the backend proxies LLM calls and injects the key.
+# the backend injects the key.
 OPENAI_API_KEY=sk-proj-...
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_FAST_MODEL=gpt-5.4-mini
@@ -67,32 +61,37 @@ OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 # transcribed to text; Yomi always replies in text, never with synthesized voice.
 
 TELEGRAM_BOT_TOKEN=...          TELEGRAM_BOT_USERNAME=yomi_assistant_bot
+TELEGRAM_DEEP_LINK_ENABLED=true
 
 DODO_ENV=live
-DODO_API_KEY=... or DODO_LIVE_API_KEY=...
-DODO_LIVE_WEBHOOK_SECRET=whsec_...
+DODO_API_KEY=...
+DODO_LIVE_API_BASE=https://live.dodopayments.com
 DODO_LIVE_PRODUCT_PRO=pdt_...   DODO_LIVE_PRODUCT_MAX=pdt_...
 DODO_LIVE_PRODUCT_CREDITS_85=pdt_...  DODO_LIVE_PRODUCT_CREDITS_250=pdt_...  DODO_LIVE_PRODUCT_CREDITS_750=pdt_...
-
-OWNER_EMAIL=you@example.com    # bypasses all credit checks
 ```
+
+Secrets are never committed. `.env.production` (gitignored) is only the local
+source you copy values from.
+
+### Asset storage (optional)
+
+Attachment re-hosting and avatar uploads use the optional `YOMI_ASSETS` R2
+binding declared in `apps/backend/wrangler.jsonc`. When the binding is unbound,
+those features degrade gracefully instead of failing. There are no AWS S3
+credentials to configure.
 
 ### Deploy
 
-From a machine whose IP is allowed in the SSH rule:
+The backend deploys itself on push to `main`
+(`.github/workflows/deploy-backend.yml`). The workflow runs `bun run test` first
+and blocks the deploy if it fails, then runs `bun run deploy:production`
+(`wrangler deploy --env production`) on a GitHub-hosted runner.
+
+Break-glass / on-demand deploy when CI is unavailable:
 
 ```bash
-KEY=path/to/yomi-key.pem HOST=ubuntu@<elastic-ip> scripts/deploy-backend.sh
+cd apps/backend && bun run deploy:production
 ```
-
-This ships the committed tree (`git archive`), rebuilds the image, restarts, and
-curls `/health`. `.env.production` on the box is preserved. **There is no GitHub
-CD for the backend** — the SG locks SSH to the owner IP, so hosted runners can't
-reach the box. To automate later, install a self-hosted runner on the EC2 box or
-use AWS SSM Run Command.
-
-Migrations are **not** run by deploy. After a migration lands, run
-`bun run db:migrate` from `packages/db` against `DATABASE_URL`.
 
 ---
 
@@ -149,8 +148,8 @@ curl https://api.getyomi.in/health/db       # -> {"status":"ok"} (schema in sync
    credit-pack one-time products.
 2. Add a webhook `https://api.getyomi.in/api/billing/webhook`; copy its signing
    secret.
-3. Put `DODO_ENV=live`, the API key, webhook secret, and product IDs in
-   `~/yomi/.env.production`, then redeploy the backend.
+3. Set `DODO_ENV=live`, the API key, webhook secret, and product IDs as Worker
+   secrets, then redeploy the backend.
 
 ---
 
@@ -160,5 +159,6 @@ curl https://api.getyomi.in/health/db       # -> {"status":"ok"} (schema in sync
 - `ENCRYPTION_KEY` must match what connector tokens were encrypted with — a
   mismatch makes every stored token undecryptable. Use
   `ENCRYPTION_KEY_FALLBACKS` to rotate safely.
-- The Elastic IP incurs a small hourly charge; release it if you tear the box
-  down. Set an AWS Budget alert.
+- `DATABASE_URL` uses Neon's HTTP driver, which is stateless per query: there
+  are no interactive transactions. Multi-write atomicity goes through
+  `db.batch`.

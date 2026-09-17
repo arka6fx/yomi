@@ -82,18 +82,20 @@ export function pickSurvivor(pair: DuplicatePair): { survivorId: string; retired
 // duplicate is not a content evolution of the survivor.
 export async function mergePair(pair: DuplicatePair): Promise<void> {
   const { survivorId, retiredId } = pickSurvivor(pair)
-  await db.transaction(async (tx) => {
-    await tx
+  // db.batch runs both statements sequentially inside one HTTP transaction (the
+  // neon-http driver has no interactive db.transaction).
+  await db.batch([
+    db
       .update(memoryEntries)
       .set({ status: "merged", isLatest: false, customId: null, updatedAt: new Date() })
-      .where(and(eq(memoryEntries.id, retiredId), eq(memoryEntries.status, "active")))
-    await tx.insert(memoryRelations).values({
+      .where(and(eq(memoryEntries.id, retiredId), eq(memoryEntries.status, "active"))),
+    db.insert(memoryRelations).values({
       userId: pair.userId,
       fromMemoryId: survivorId,
       toMemoryId: retiredId,
       relationType: "merges",
-    })
-  })
+    }),
+  ])
 }
 
 // Best-effort per pair: one failure (e.g. a row deleted concurrently) doesn't abort the batch —

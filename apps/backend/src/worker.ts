@@ -6,6 +6,7 @@ import { runDriveSyncSweep } from "./services/rag/drive-sync.js"
 import { summarizeUnsummarizedSessions } from "./services/agent-sessions.js"
 import { renewExploreCredits } from "./services/explore-renewal.js"
 import { renewNonBilledPaidCredits } from "./services/plan-renewal.js"
+import { setAssetBucket, type R2BucketLike } from "./services/asset-storage.js"
 
 interface ExecutionContext {
   waitUntil(promise: Promise<unknown>): void
@@ -28,6 +29,10 @@ export default {
   async fetch(request: Request, env: Record<string, unknown>, ctx: ExecutionContext) {
     try {
       propagateEnv(env)
+
+      // R2 bindings are objects, not strings, so propagateEnv skips them — wire
+      // the asset bucket through explicitly. Absent binding = storage off.
+      setAssetBucket((env["YOMI_ASSETS"] as R2BucketLike | undefined) ?? null)
 
       // Start gateway once — each request gets its own isolated waitUntil
       // so the promise is properly bound to the current request context.

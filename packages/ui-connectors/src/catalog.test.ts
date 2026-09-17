@@ -64,7 +64,7 @@ describe("starterPrompts", () => {
   it("defaults to an empty array for an id with no catalog match", () => {
     // available: false connectors are allowed to have no entry
     const catalog = buildCatalog()
-    const swiggy = catalog.find((c) => c.id === "swiggy")
-    expect(swiggy?.starterPrompts).toEqual([])
+    const googlePhotos = catalog.find((c) => c.id === "google-photos")
+    expect(googlePhotos?.starterPrompts).toEqual([])
   })
 })

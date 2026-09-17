@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 import { Hono } from "hono"
 import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm"
+import type { BatchItem } from "drizzle-orm/batch"
 import { db, memoryEmbeddings, memoryEntries, memoryRelations, memorySources } from "@yomi/db"
 import { authenticate } from "../auth.js"
 import { requireConsent } from "../middleware/consent.js"
@@ -235,41 +236,56 @@ export async function upsertMemory(userId: string, input: MemoryInput) {
   }
 
   // One transaction: a supersession must never land without the `updates` edge and the
-  // parent/root chain that make it undoable (ADR 0006).
-  const entry = await db.transaction(async (tx) => {
+  // parent/root chain that make it undoable (ADR 0006). The neon-http driver has no
+  // interactive db.transaction, so the id is generated here (the insert needs to know
+  // its own id for the relation edges) and every statement runs in one db.batch
+  // transaction, sequentially: freeing the custom id first, then the insert, then
+  // the supersede + edge pairs.
+  const insertedId = crypto.randomUUID()
+  const statements: BatchItem<"pg">[] = []
+  if (existing?.customId) {
     // Free the custom id first — (user_id, custom_id) is uniquely indexed where it is not null,
     // so the insert below would collide with the row it is versioning over.
-    if (existing?.customId) {
-      await tx
+    statements.push(
+      db
         .update(memoryEntries)
         .set({ customId: null })
-        .where(eq(memoryEntries.id, existing.id))
-    }
-    const [inserted] = await tx
+        .where(eq(memoryEntries.id, existing.id)),
+    )
+  }
+  const insertIndex = statements.length
+  statements.push(
+    db
       .insert(memoryEntries)
       .values({
+        id: insertedId,
         ...values,
         version: parent ? parent.version + 1 : 1,
         rootMemoryId: parent?.rootMemoryId ?? parent?.id ?? null,
         parentMemoryId: parent?.id ?? null,
         isLatest: true,
       })
-      .returning()
-    if (!inserted) throw new Error("memory insert returned no row")
-    for (const replaced of superseded) {
-      await tx
+      .returning(),
+  )
+  for (const replaced of superseded) {
+    statements.push(
+      db
         .update(memoryEntries)
         .set({ status: "superseded", isLatest: false, updatedAt: new Date() })
-        .where(eq(memoryEntries.id, replaced.id))
-      await tx.insert(memoryRelations).values({
+        .where(eq(memoryEntries.id, replaced.id)),
+    )
+    statements.push(
+      db.insert(memoryRelations).values({
         userId,
-        fromMemoryId: inserted.id,
+        fromMemoryId: insertedId,
         toMemoryId: replaced.id,
         relationType: "updates",
-      })
-    }
-    return inserted
-  })
+      }),
+    )
+  }
+  const results = await db.batch(statements as [BatchItem<"pg">, ...BatchItem<"pg">[]])
+  const entry = (results[insertIndex] as (typeof memoryEntries.$inferSelect)[] | undefined)?.[0]
+  if (!entry) throw new Error("memory insert returned no row")
 
   if (input.sourcePath) {
     await db

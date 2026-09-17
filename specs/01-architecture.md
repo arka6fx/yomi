@@ -1,11 +1,14 @@
 # Spec 01 - Architecture
 
 ```text
-Cloud Backend (Hono/Bun)
+Cloud Backend (Hono on Cloudflare Workers)
   Better Auth, billing, Telegram gateway, LLM/STT proxy, usage metering, canonical memory
 
-Landing (Next.js)
+Landing (Next.js on Cloudflare Workers)
   marketing, dashboard, billing, integrations, bot linking
+
+Postgres (Neon) - stateless HTTP driver, pgvector
+Assets (R2, optional) - presigned URLs for attachments and avatars
 ```
 
 The backend is canonical for durable user state.
