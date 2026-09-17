@@ -102,14 +102,27 @@ async function getUserFields(userId: string) {
   }
 }
 
+// Cloudflare overwrites cf-connecting-ip at the edge and drops any client-supplied
+// value, so it is the one header here that can't be spoofed. Better Auth otherwise
+// looks at x-forwarded-for, which Cloudflare *appends* to — leaving the leftmost
+// token client-controlled, so trusting it would let a caller rotate the value and
+// slip past auth rate limiting entirely. With no resolvable IP Better Auth skips
+// rate limiting outright and logs "could not determine client IP address".
+export function buildAdvancedConfig(cookieDomain: string | null): Record<string, unknown> {
+  const advanced: Record<string, unknown> = {
+    ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
+  }
+  if (cookieDomain) {
+    advanced.crossSubDomainCookies = { enabled: true, domain: cookieDomain }
+  }
+  return advanced
+}
+
 function createAuth() {
   const { webOrigin, authBaseUrl, cookieDomain, googleRedirectUri, githubRedirectUri } =
     getRuntimeAuthConfig()
 
-  const advanced: Record<string, unknown> = {}
-  if (cookieDomain) {
-    advanced.crossSubDomainCookies = { enabled: true, domain: cookieDomain }
-  }
+  const advanced = buildAdvancedConfig(cookieDomain)
 
   return betterAuth({
     database: drizzleAdapter(db, { provider: "pg", schema: authSchema }),

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test"
-import { getRuntimeAuthConfig } from "./auth.js"
+import { buildAdvancedConfig, getRuntimeAuthConfig } from "./auth.js"
 
 const saved = {
   CORS_ORIGIN: process.env["CORS_ORIGIN"],
@@ -53,5 +53,22 @@ describe("auth cookie domain", () => {
     const cfg = getRuntimeAuthConfig()
     expect(cfg.googleRedirectUri).toBe("https://api.getyomi.in/api/auth/callback/google")
     expect(cfg.isSplitDomain).toBe(true)
+  })
+})
+
+describe("auth advanced config", () => {
+  it("resolves the client IP from Cloudflare's unspoofable header so rate limiting runs", () => {
+    // x-forwarded-for is deliberately absent: Cloudflare appends to it, so its
+    // leftmost token is caller-controlled and trusting it would disable rate limiting.
+    expect(buildAdvancedConfig(null).ipAddress).toEqual({
+      ipAddressHeaders: ["cf-connecting-ip"],
+    })
+  })
+
+  it("shares the cross-subdomain cookie alongside the IP config", () => {
+    expect(buildAdvancedConfig(".getyomi.in")).toEqual({
+      ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
+      crossSubDomainCookies: { enabled: true, domain: ".getyomi.in" },
+    })
   })
 })
