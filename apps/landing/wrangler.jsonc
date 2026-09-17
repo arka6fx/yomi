@@ -28,11 +28,10 @@
       },
     },
     "production": {
+      // Custom domains are bound in the Cloudflare dashboard, not declared here:
+      // the deploy token is an Account API token, which cannot manage the
+      // zone-scoped Workers routes API.
       "name": "yomi-landing",
-      "routes": [
-        { "pattern": "getyomi.in", "custom_domain": true },
-        { "pattern": "www.getyomi.in", "custom_domain": true },
-      ],
       "vars": {
         "ENVIRONMENT": "production",
       },

@@ -6,7 +6,6 @@ Production topology:
 Frontend / dashboard  https://getyomi.in        Cloudflare Worker (apps/landing)
 Backend API           https://api.getyomi.in    Cloudflare Worker (apps/backend)
 Database              Neon PostgreSQL (pgvector, HTTP driver)
-Asset storage         Cloudflare R2 (optional YOMI_ASSETS binding)
 LLM + speech          OpenAI (STT for incoming voice notes; replies are text)
 Billing               Dodo Payments
 ```
@@ -20,7 +19,7 @@ Billing               Dodo Payments
 
 ---
 
-## Backend — Cloudflare Worker
+## Backend on Cloudflare Workers
 
 The backend is a Hono app (`apps/backend/src/index.ts`) served by the Worker
 entry `apps/backend/src/worker.ts`. It runs on Workers with `nodejs_compat` and
@@ -30,7 +29,7 @@ not a container and there is no server to SSH into.
 Migrations are **not** run by deploy. After a migration lands, run
 `bun run db:migrate` from `packages/db` against the Neon `DATABASE_URL`.
 
-### Secrets — Worker secrets (`wrangler secret put`)
+### Secrets (Worker secrets)
 
 ```bash
 ENVIRONMENT=production
@@ -73,13 +72,6 @@ DODO_LIVE_PRODUCT_CREDITS_85=pdt_...  DODO_LIVE_PRODUCT_CREDITS_250=pdt_...  DOD
 Secrets are never committed. `.env.production` (gitignored) is only the local
 source you copy values from.
 
-### Asset storage (optional)
-
-Attachment re-hosting and avatar uploads use the optional `YOMI_ASSETS` R2
-binding declared in `apps/backend/wrangler.jsonc`. When the binding is unbound,
-those features degrade gracefully instead of failing. There are no AWS S3
-credentials to configure.
-
 ### Deploy
 
 The backend deploys itself on push to `main`
@@ -95,7 +87,7 @@ cd apps/backend && bun run deploy:production
 
 ---
 
-## Frontend — Cloudflare Worker
+## Frontend on Cloudflare Workers
 
 `apps/landing` (Next.js 16) deploys as a static-assets Worker named
 `yomi-landing`, with `getyomi.in` and `www.getyomi.in` as custom domains
@@ -111,8 +103,8 @@ NEXT_PUBLIC_APP_URL=https://getyomi.in \
 bunx wrangler deploy --env production
 ```
 
-`NEXT_PUBLIC_*` are baked at build time — rebuild + redeploy after changing any
-public URL or SEO metadata.
+`NEXT_PUBLIC_*` are baked at build time, so rebuild and redeploy after changing
+any public URL or SEO metadata.
 
 ---
 
@@ -127,7 +119,7 @@ https://api.getyomi.in/api/auth/callback/github
 ```
 
 GitHub/Google/Slack/Notion/Linear connectors route exclusively through Composio
-now — there are no native `/api/integrations/callback/*` OAuth apps to register
+now: there are no native `/api/integrations/callback/*` OAuth apps to register
 for them anymore (see `COMPOSIO_CONNECTORS` in `.env.example`).
 
 ---
@@ -156,7 +148,7 @@ curl https://api.getyomi.in/health/db       # -> {"status":"ok"} (schema in sync
 ## Security notes
 
 - Keep every `.env*` (except `*.example`) out of git.
-- `ENCRYPTION_KEY` must match what connector tokens were encrypted with — a
+- `ENCRYPTION_KEY` must match what connector tokens were encrypted with. A
   mismatch makes every stored token undecryptable. Use
   `ENCRYPTION_KEY_FALLBACKS` to rotate safely.
 - `DATABASE_URL` uses Neon's HTTP driver, which is stateless per query: there

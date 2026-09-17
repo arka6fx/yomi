@@ -247,10 +247,7 @@ export async function upsertMemory(userId: string, input: MemoryInput) {
     // Free the custom id first — (user_id, custom_id) is uniquely indexed where it is not null,
     // so the insert below would collide with the row it is versioning over.
     statements.push(
-      db
-        .update(memoryEntries)
-        .set({ customId: null })
-        .where(eq(memoryEntries.id, existing.id)),
+      db.update(memoryEntries).set({ customId: null }).where(eq(memoryEntries.id, existing.id)),
     )
   }
   const insertIndex = statements.length

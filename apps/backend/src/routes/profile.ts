@@ -3,7 +3,6 @@ import { eq } from "drizzle-orm"
 import { db } from "@yomi/db"
 import { authenticate } from "../auth.js"
 import * as authSchema from "../auth-schema.js"
-import { uploadAvatar } from "../services/asset-storage.js"
 import { setLeaderboardShowPhoto, updateLeaderboardHandle } from "../services/streaks.js"
 
 export const profileRouter = new Hono()
@@ -71,40 +70,6 @@ profileRouter.patch("/profile", authenticate, async (c) => {
   if (!updated) return c.json({ error: "User not found" }, 404)
 
   return c.json(updated)
-})
-
-const ALLOWED_AVATAR_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"])
-const MAX_AVATAR_BYTES = 5 * 1024 * 1024
-
-profileRouter.post("/avatar", authenticate, async (c) => {
-  const user = c.get("user")
-  const contentType = c.req.header("content-type") ?? ""
-  if (!ALLOWED_AVATAR_TYPES.has(contentType)) {
-    return c.json(
-      { error: "Avatar must be a JPEG, PNG, GIF, or WEBP image", code: "invalid_avatar_type" },
-      400,
-    )
-  }
-
-  const bytes = await c.req.arrayBuffer()
-  if (bytes.byteLength > MAX_AVATAR_BYTES) {
-    return c.json({ error: "Avatar must be 5MB or smaller", code: "avatar_too_large" }, 400)
-  }
-
-  const uploaded = await uploadAvatar(user.id, bytes, contentType)
-  if (!uploaded) {
-    return c.json(
-      { error: "Avatar storage isn't configured", code: "avatar_storage_unavailable" },
-      503,
-    )
-  }
-
-  await db
-    .update(authSchema.user)
-    .set({ customAvatarKey: uploaded.key })
-    .where(eq(authSchema.user.id, user.id))
-
-  return c.json({ avatarUrl: `/api/user/avatar/${user.id}` })
 })
 
 type HandleBody = { handle?: string }

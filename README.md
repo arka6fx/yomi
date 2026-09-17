@@ -1,15 +1,19 @@
 # Yomi
 
-An AI productivity assistant that connects to the tools you already use. You
-talk to Yomi on **Telegram** — text, voice notes, or images — and it reads,
-drafts, summarizes, schedules, and acts across Google Workspace (Gmail,
-Calendar, Drive, Classroom, Tasks, Meet), GitHub, Slack, Notion, Linear,
-and dozens more. The web app is a management dashboard (account linking,
-schedules, memory, billing), not a chat surface.
+Yomi is a personal AI assistant on Telegram. Send it a text, a voice note, or a
+photo, and it reads and drafts email, summarizes threads, schedules meetings,
+searches your files, files tasks, and acts across the tools you already use.
+
+There is no desktop app. Telegram is the whole interface. The website is a
+dashboard for linking services, setting schedules, reviewing memory, and
+checking credits.
+
+Yomi connects Google Workspace (Gmail, Calendar, Drive, Classroom, Tasks, Meet),
+GitHub, Slack, Notion, Linear, and dozens more.
 
 ## Contents
 
-- [Architecture](#architecture)
+- [How it works](#how-it-works)
 - [Stack](#stack)
 - [Monorepo Layout](#monorepo-layout)
 - [Local Development](#local-development)
@@ -23,40 +27,37 @@ schedules, memory, billing), not a chat surface.
 - [Privacy](#privacy)
 - [Docs & Specs](#docs--specs)
 
-## Architecture
+## How it works
 
-Yomi is backend-first. Durable memory, connector credentials, and agent
-execution live in the cloud backend; clients are thin.
+Yomi is backend-first. Durable memory, connector credentials, and the agent loop
+all live in the cloud backend, so the client stays thin. Telegram sends your
+message to the backend; the backend thinks, uses tools, and replies.
 
 ```text
                     Telegram
                        |
              CLOUD BACKEND  (Hono)
-   auth - billing - LLM proxy - metering - agent loop - canonical memory
+   auth, billing, LLM proxy, metering, agent loop, canonical memory
                        |
         +--------------+--------------+
-        |              |              |
-   Connectors      Postgres        Asset storage
-   (first-class    (Neon,          (R2, optional;
-    + Composio)     pgvector)       presigned URLs)
+        |              |
+   Connectors      Postgres
+   (first-class    (Neon,
+    + Composio)     pgvector)
                        |
              LANDING / DASHBOARD  (Next.js)
-     marketing - auth - account linking - credits - memory
+    marketing, auth, account linking, credits, memory
 ```
 
-### Design Principle
+Every request is one of two shapes. Yomi never switches models mid-turn, since
+that would drop the prompt cache and mismatch the tool vocabulary.
 
-Every request is one of two shapes. Yomi never switches models mid-turn — that
-would drop the prompt cache and mismatch the tool vocabulary.
+| Request type   | Path                                | Budget             |
+| -------------- | ----------------------------------- | ------------------ |
+| Connector task | Agent loop + connector tools        | seconds to minutes |
+| Telegram task  | Backend agent + memory/tool harness | seconds to minutes |
 
-| Request type   | Path                                | Budget          |
-| -------------- | ----------------------------------- | --------------- |
-| Connector task | Agent loop + connector tools        | seconds–minutes |
-| Telegram task  | Backend agent + memory/tool harness | seconds–minutes |
-
-### Harness
-
-`harness = system prompt + tools + connectors + memory + hooks`
+The harness is the system prompt, plus tools, connectors, memory, and hooks:
 
 - **Core tools:** filesystem r/w, sandboxed bash, web search/fetch, cron,
   messaging, memory.
@@ -64,20 +65,20 @@ would drop the prompt cache and mismatch the tool vocabulary.
   tool sets) plus a Composio-backed unified executor for long-tail services.
 - **Hooks:** `PreToolUse` (block dangerous), `PostToolUse` (log, trim tokens),
   `Stop` (flush scratchpad), `SessionEnd` (compact memory).
-- **Loop guard:** `AGENT_MAX_STEPS` cap with a backend grace-call wrap-up.
+- **Loop guard:** an `AGENT_MAX_STEPS` cap with a backend grace-call wrap-up.
 
-### Notepad (`~/.yomi/`)
+Yomi also keeps a small notepad in `~/.yomi/`:
 
 ```text
-yomi.md        ALWAYS preloaded - identity, prefs, standing instructions
+yomi.md        ALWAYS preloaded: identity, prefs, standing instructions
 memory.md      Long-term memory (curated, compacted)
 projects/<p>/  context.md, scratchpad.md
 sessions/      YYYY-MM-DD-topic.md summaries
 ```
 
-`yomi.md` is always preloaded; everything else is JIT-loaded. Backend memory is
-canonical for durable facts, document provenance, Telegram, and connector
-agents.
+`yomi.md` is always preloaded; everything else is loaded just in time. Backend
+memory stays canonical for durable facts, document provenance, Telegram, and
+connector agents.
 
 ## Stack
 
@@ -95,8 +96,8 @@ agents.
 ## Monorepo Layout
 
 ```text
-apps/backend/            Hono/Bun — auth, billing, LLM proxy, metering, Telegram, memory
-apps/landing/            Next.js — marketing, dashboard, account linking
+apps/backend/            Hono on Workers: auth, billing, LLM proxy, metering, Telegram, memory
+apps/landing/            Next.js on Workers: marketing, dashboard, account linking
 packages/agent-core/     ConnectorDef, ConnectorRegistry, agent tools
 packages/db/             Drizzle schema + Postgres client (Neon HTTP driver)
 packages/shared/         TypeScript contracts shared across apps
@@ -131,7 +132,7 @@ Dev targets:
 
 [`.env.example`](./.env.example) is the source of truth for every variable:
 database, Better Auth, Google/GitHub OAuth, the OpenAI endpoint, encryption
-keys, and Dodo Payments. Secrets are never committed — real values live in
+keys, and Dodo Payments. Secrets are never committed. Real values live in
 `.env.production` (gitignored) and in Worker secrets.
 
 Production uses split hostnames:
@@ -145,7 +146,7 @@ YOMI_BACKEND_URL=https://api.getyomi.in
 CORS_ORIGIN=https://getyomi.in
 ```
 
-> `ENCRYPTION_KEY` must match across environments — a different key makes every
+> `ENCRYPTION_KEY` must match across environments. A different key makes every
 > stored connector token undecryptable. Rotate via `ENCRYPTION_KEY_FALLBACKS`.
 
 ## Plans & Credits
@@ -161,10 +162,11 @@ Connectors are unlimited on every plan.
 
 Credit packs (any plan): 85 credits/$5, 250 credits/$15, 750 credits/$40.
 
-Single chokepoint: `apps/backend/src/services/metering.ts` → `chargeUsage()`
-(active-plan check → `balance >= cost` → record event + consume). Every account,
-including the operator's, is metered. Plan source of truth lives in
-`packages/shared/src/plans.ts`; webhooks in
+There is one chokepoint: `apps/backend/src/services/metering.ts` →
+`chargeUsage()`, which checks the active plan, checks `balance >= cost`, then
+records the event and consumes the credit. Every account is metered, including
+the operator's. The plan source of truth lives in
+`packages/shared/src/plans.ts`; webhooks live in
 `apps/backend/src/routes/billing.ts`.
 
 ## Models
@@ -176,8 +178,8 @@ including the operator's, is metered. Plan source of truth lives in
 | Embeddings | OpenAI `text-embedding-3-small` |
 | Speech     | OpenAI `gpt-4o-mini-transcribe` |
 
-STT transcribes incoming Telegram voice notes; Yomi never replies with
-synthesized voice — every reply is text.
+Speech-to-text handles incoming Telegram voice notes. Yomi always replies with
+text, never synthesized voice.
 
 ## Connectors
 
@@ -216,7 +218,7 @@ bun run db:studio
 
 ## Testing
 
-Tests are package-local and colocated next to the code they exercise
+Tests are package-local and sit next to the code they exercise
 (`apps/backend/src/routes/usage.test.ts`, not a root `tests/` folder). Turborepo
 schedules and caches by package, so colocated tests let
 `turbo run test --filter ...` and `--affected` run only the packages that
@@ -224,14 +226,19 @@ changed.
 
 ## Deployment
 
-Both apps deploy from GitHub Actions on pushes to `main`.
+Both apps deploy from GitHub Actions on pushes to `main`. Each workflow runs
+typecheck, tests, and the docs sync check before it deploys, so a red build
+never ships.
 
 | Component | Target                     | Domain           | Workflow                 |
 | --------- | -------------------------- | ---------------- | ------------------------ |
 | Backend   | Cloudflare Worker          | `api.getyomi.in` | `deploy-backend.yml`     |
 | Landing   | Cloudflare Worker          | `getyomi.in`     | `deploy-landing.yml`     |
-| Database  | Neon PostgreSQL (pgvector) | —                | `packages/db` migrations |
-| Assets    | Cloudflare R2 (optional)   | presigned URLs   | `YOMI_ASSETS` binding    |
+| Database  | Neon PostgreSQL (pgvector) | n/a              | `packages/db` migrations |
+
+Custom domains are bound in the Cloudflare dashboard. The deploy token is an
+Account API token, which cannot manage the zone-scoped Workers routes API, so
+the domains are not declared in `wrangler.jsonc`.
 
 Backend break-glass when the runner is unavailable:
 
@@ -245,21 +252,18 @@ Frontend break-glass:
 cd apps/landing && bun run deploy:production
 ```
 
-Asset storage is **optional**: when the `YOMI_ASSETS` R2 binding is unbound,
-attachment re-hosting and avatars degrade gracefully instead of failing.
-
 ## Privacy
 
 - No silent recording.
-- Memory is user-owned; export and delete always remain possible.
+- Memory is user-owned. Export and delete always remain possible.
 - OAuth tokens are encrypted at rest.
 - Hook logs are PII-redacted.
 
 ## Docs & Specs
 
-- [`AGENTS.md`](./AGENTS.md) — terse operational summary agents load first.
-- [`CONTEXT.md`](./CONTEXT.md) — single-context domain overview.
-- [`docs/adr/`](docs/adr) — architecture decision records.
-- [`specs/`](specs/README.md) — system specs and per-connector references. Start
+- [`AGENTS.md`](./AGENTS.md): terse operational summary agents load first.
+- [`CONTEXT.md`](./CONTEXT.md): single-context domain overview.
+- [`docs/adr/`](docs/adr): architecture decision records.
+- [`specs/`](specs/README.md): system specs and per-connector references. Start
   with [`specs/00-overview.md`](specs/00-overview.md).
-- [`SETUP_GUIDE.md`](./SETUP_GUIDE.md) — environment runbook.
+- [`SETUP_GUIDE.md`](./SETUP_GUIDE.md): environment runbook.

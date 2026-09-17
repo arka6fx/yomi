@@ -1,7 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
-import { Camera, Check, Loader2, User } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+import { Check, Loader2, User } from "lucide-react"
 import { PLANS } from "@/lib/plans"
 
 type ProfileData = {
@@ -57,9 +57,6 @@ export function ProfileManager({ token }: { token: string }) {
   const [handleError, setHandleError] = useState("")
 
   const [savingPhoto, setSavingPhoto] = useState(false)
-  const [uploadingAvatar, setUploadingAvatar] = useState(false)
-  const [avatarError, setAvatarError] = useState("")
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const auth = { Authorization: `Bearer ${token}` }
 
@@ -164,27 +161,6 @@ export function ProfileManager({ token }: { token: string }) {
     }
   }
 
-  async function uploadAvatar(file: File) {
-    setUploadingAvatar(true)
-    setAvatarError("")
-    try {
-      const res = await fetch("/api/user/avatar", {
-        method: "POST",
-        headers: { ...auth, "Content-Type": file.type },
-        body: file,
-      })
-      const data = (await res.json().catch(() => ({}))) as { error?: string; avatarUrl?: string }
-      if (!res.ok) throw new Error(data.error ?? "Couldn't upload that image")
-      setStreakFields((prev) =>
-        prev ? { ...prev, avatarUrl: data.avatarUrl ?? prev.avatarUrl } : prev,
-      )
-    } catch (err) {
-      setAvatarError(err instanceof Error ? err.message : "Couldn't upload that image")
-    } finally {
-      setUploadingAvatar(false)
-    }
-  }
-
   if (loading) {
     return (
       <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 flex justify-center">
@@ -208,39 +184,12 @@ export function ProfileManager({ token }: { token: string }) {
     <div className="space-y-4">
       <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
         <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploadingAvatar}
-            className="relative shrink-0 rounded-full disabled:opacity-50"
-            aria-label="Upload profile photo"
-          >
-            <Avatar url={streakFields.avatarUrl} size={64} />
-            <span className="absolute -bottom-1 -right-1 grid h-6 w-6 place-items-center rounded-full bg-primary text-primary-foreground">
-              {uploadingAvatar ? (
-                <Loader2 size={12} className="animate-spin" />
-              ) : (
-                <Camera size={12} />
-              )}
-            </span>
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/gif,image/webp"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (file) void uploadAvatar(file)
-              e.target.value = ""
-            }}
-          />
+          <Avatar url={streakFields.avatarUrl} size={64} />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-foreground">{profile.name}</p>
             <p className="text-xs text-muted-foreground mt-0.5">{profile.email}</p>
           </div>
         </div>
-        {avatarError && <p className="mt-2 text-xs text-destructive">{avatarError}</p>}
 
         <div className="mt-5 space-y-3 border-t border-border pt-4">
           <div>

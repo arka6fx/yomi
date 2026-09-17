@@ -8,7 +8,6 @@ Landing (Next.js on Cloudflare Workers)
   marketing, dashboard, billing, integrations, bot linking
 
 Postgres (Neon) - stateless HTTP driver, pgvector
-Assets (R2, optional) - presigned URLs for attachments and avatars
 ```
 
 The backend is canonical for durable user state.

@@ -3,8 +3,8 @@
 AI productivity assistant. Connects to Google Workspace (Gmail, Calendar, Drive,
 Classroom, Tasks, Meet) and GitHub, Slack, Notion, Linear, and more. You talk to
 Yomi on Telegram (text, voice, images); the web app is a management dashboard
-(account linking, schedules, memory, billing) — not a chat surface.
-Backend-first for durable memory and connector agents.
+(account linking, schedules, memory, billing), not a chat surface. Backend-first
+for durable memory and connector agents.
 
 ---
 
@@ -56,12 +56,10 @@ bun install && bun run dev
 ## Stack
 
 - **LLM:** Vercel AI SDK (`ai`) -> OpenAI (standard `OPENAI_*` env vars)
-- **STT:** OpenAI (`gpt-4o-mini-transcribe`) — transcribes incoming voice notes;
-  replies are always text
+- **STT:** OpenAI (`gpt-4o-mini-transcribe`), which transcribes incoming voice
+  notes; replies are always text
 - **Backend:** Hono on Cloudflare Workers, Better Auth (Google + GitHub OAuth),
   Drizzle + Neon PostgreSQL (`@neondatabase/serverless`, stateless HTTP driver)
-- **Assets:** Cloudflare R2 (optional `YOMI_ASSETS` binding; degrades when
-  unbound)
 - **Billing:** Dodo Payments
 - **Agent orchestration:** AI SDK agent loop with connector tools; backend agent
   for Telegram
@@ -78,7 +76,6 @@ LANDING/DASHBOARD  (Next.js on Cloudflare Workers)
   Marketing - auth pages - dashboard - account linking
 
 POSTGRES (Neon)   stateless HTTP driver, pgvector
-ASSETS (R2)       optional - presigned URLs for attachments + avatars
 ```
 
 ---
@@ -136,8 +133,8 @@ respectively.
 
 Driver: `@neondatabase/serverless` over HTTP (`drizzle-orm/neon-http`). The
 connection is stateless per query, so **there are no interactive transactions**
-— `db.transaction()` throws. Multi-write atomicity uses `db.batch([...])`, which
-runs the statements sequentially in one real HTTP transaction.
+so `db.transaction()` throws. Multi-write atomicity uses `db.batch([...])`,
+which runs the statements sequentially in one real HTTP transaction.
 
 `apps/landing` deploys as a Cloudflare Worker and has its own I/O rules - see
 `apps/landing/CLAUDE.md`.
@@ -167,8 +164,8 @@ recorded in `totalApiCostMicros` via `@yomi/shared/ai-pricing`.
 
 Single chokepoint: `apps/backend/src/services/metering.ts` -> `chargeUsage()`
 (active-plan check -> `balance >= cost` -> record event + consume). No owner
-bypass — every account, including the operator's own, is metered against its
-plan like any other user. Callers: `routes/usage.ts`, `agent/run.ts`, and
+bypass: every account, including the operator's own, is metered against its plan
+like any other user. Callers: `routes/usage.ts`, `agent/run.ts`, and
 `gateway/gateway-runner.ts`. Ledger: `services/credit-ledger.ts` +
 `services/credit-pricing.ts`. Plan source of truth:
 `packages/shared/src/plans.ts`. Billing/webhooks:
@@ -190,7 +187,7 @@ plan like any other user. Callers: `routes/usage.ts`, `agent/run.ts`, and
 Fast path:  gpt-5.4-mini (OpenAI)
 Agent path: gpt-5.5 (OpenAI)
 Embeddings: text-embedding-3-small (OpenAI)
-Speech:     OpenAI gpt-4o-mini-transcribe (STT only — replies are always text)
+Speech:     OpenAI gpt-4o-mini-transcribe (STT only; replies are always text)
 ```
 
 LLM calls go direct to OpenAI (`api.openai.com`) using the standard `OPENAI_*`

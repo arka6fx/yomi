@@ -452,30 +452,21 @@ export class GatewayRunner {
 
   // Photos get one vision call that does double duty: describe the image, and
   // decide whether the caption is a question (DESCRIBE) or a task ("post this",
-  // "send it", "save it" — ACTION). ACTION replies get handed to the real agent
-  // loop with the uploaded asset's URL, since this method has no connector tools
-  // of its own and can only ever describe, never act.
+  // "send it", "save it" — ACTION). This method has no connector tools of its
+  // own, so an ACTION caption can't be carried out here: the caller replies that
+  // image actions aren't supported.
   private async analyzeImage(
     msg: GatewayMessage,
     history: AgentMessage[],
     yomiUserId: string,
-  ): Promise<
-    | { kind: "describe"; text: string }
-    | {
-        kind: "action"
-        description: string
-        assetUrl: string | null
-        publicAssetUrl: string | null
-      }
-  > {
+  ): Promise<{ kind: "describe"; text: string } | { kind: "action" }> {
     if (!msg.imageUrl)
       return { kind: "describe", text: "I couldn't access the image. Please send it again." }
     const imageRes = await fetch(msg.imageUrl, { signal: AbortSignal.timeout(10_000) })
     if (!imageRes.ok) throw new Error(`Failed to download image: ${imageRes.status}`)
     // Telegram's own file metadata is authoritative; its file-download CDN often
     // serves a generic content-type (e.g. application/octet-stream) regardless of
-    // the file's real type, which would otherwise corrupt the re-hosted asset's
-    // extension/content-type and break connectors (e.g. Instagram) that fetch it.
+    // the file's real type, which would mislabel the inline data URL.
     const contentType = msg.imageMimeType || imageRes.headers.get("content-type") || "image/jpeg"
     const bytes = await imageRes.arrayBuffer()
     if (bytes.byteLength > 8 * 1024 * 1024)
@@ -487,14 +478,6 @@ export class GatewayRunner {
     const prompt = msg.text.trim() || "Analyze this image. Keep the answer concise and useful."
     const model = process.env["OPENAI_AGENT_MODEL"] || "gpt-5.5"
     const startedAt = Date.now()
-
-    // Upload happens in parallel with the vision call — it's wasted work on a
-    // DESCRIBE caption, but that's cheaper than serializing the two for the
-    // common case, and it's a no-op (null) when asset storage isn't configured.
-    const assetUploadPromise = (async () => {
-      const { uploadAsset } = await import("../services/asset-storage.js")
-      return uploadAsset(yomiUserId, bytes, contentType)
-    })()
 
     // Flat budget, not proportional to image byte size — a bigger PNG doesn't need a
     // longer answer, and gpt-5.x's hidden reasoning tokens draw from this same cap
@@ -542,21 +525,8 @@ export class GatewayRunner {
     const isAction = /^ACTION\b/.test(raw)
     const rest = raw.replace(/^(ACTION|DESCRIBE)\s*/, "").trim()
 
-    if (isAction) {
-      const asset = await assetUploadPromise.catch((err) => {
-        console.warn("[gateway] asset upload failed:", err)
-        return null
-      })
-      return {
-        kind: "action",
-        description: rest || "an image",
-        assetUrl: asset?.url ?? null,
-        publicAssetUrl: asset?.publicUrl ?? null,
-      }
-    }
+    if (isAction) return { kind: "action" }
 
-    // Fire-and-forget: nothing downstream needs the upload for a DESCRIBE reply.
-    assetUploadPromise.catch(() => {})
     if (rest) return { kind: "describe", text: rest }
     return {
       kind: "describe",
@@ -1323,29 +1293,7 @@ export class GatewayRunner {
           : ""
         console.warn(`[gateway] video received${dur}`)
         const note = `🎬 _Video received_`
-        let mediaNote = note
-        try {
-          const videoRes = await fetch(msg.videoUrl, { signal: AbortSignal.timeout(30_000) })
-          if (!videoRes.ok) throw new Error(`download failed: ${videoRes.status}`)
-          const bytes = await videoRes.arrayBuffer()
-          if (bytes.byteLength > 50 * 1024 * 1024) {
-            mediaNote = "Video received, but it is too large to upload (50 MB maximum)."
-          } else {
-            const { uploadAsset } = await import("../services/asset-storage.js")
-            const asset = await uploadAsset(
-              yomiUserId,
-              bytes,
-              msg.videoMimeType ?? videoRes.headers.get("content-type") ?? "video/mp4",
-            )
-            mediaNote = asset
-              ? `[Attached video: ${asset.url} (use this URL for the social media upload; content type ${asset.contentType}).]`
-              : "Video received, but media storage is not configured on this server."
-          }
-        } catch (err) {
-          console.warn("[gateway] video asset upload failed:", err)
-          mediaNote = "I couldn't prepare that video for upload. Please send it again."
-        }
-        msg = { ...msg, text: msg.text.trim() ? `${mediaNote}\n${msg.text}` : mediaNote }
+        msg = { ...msg, text: msg.text.trim() ? `${note}\n${msg.text}` : note }
       }
 
       // ── Location context ──────────────────────────────────────────────────
@@ -1433,38 +1381,15 @@ export class GatewayRunner {
           })
 
           if (result.kind === "action") {
-            if (!result.assetUrl) {
-              clearInterval(typingInterval)
-              await this.sendMessageAndLog(
-                msg.platform,
-                msg.chatId,
-                "I can't act on attachments yet — attachment uploads aren't set up on this " +
-                  `server. (I can see it's ${result.description}, but can't do anything with it.)`,
-                "telegram-image-action-unconfigured",
-                { replyTo: msg.messageId },
-              )
-              return
-            }
-            // Hand off to the real agent loop below instead of replying here: this
-            // method only describes images, it has no connector tools. Rewriting
-            // msg.text lets the existing fast-path/agent routing pick this up like
-            // any other turn, now with the asset it needs to actually act on.
-            msg = {
-              ...msg,
-              text:
-                `${msg.text.trim() ? `${msg.text.trim()}\n\n` : ""}` +
-                `[Attached image: ${result.description}. File available at ${result.assetUrl} ` +
-                `(expires in 1 hour, ${msg.imageMimeType ?? "image"}).` +
-                (result.publicAssetUrl
-                  ? ` Stable file URL for image embeds: ${result.publicAssetUrl} ` +
-                    `(use it as ![](${result.publicAssetUrl}) for Notion).`
-                  : "") +
-                (/\bquick notes?\b/i.test(msg.text)
-                  ? " This is a Notion Quick Notes request. Use the connected Notion tools to append the image and return the Notion page URL."
-                  : "") +
-                `]`,
-            }
-            // No return — falls through to the fast-path/agent handling below.
+            clearInterval(typingInterval)
+            await this.sendMessageAndLog(
+              msg.platform,
+              msg.chatId,
+              "I can't act on images or attachments yet — I can only describe them.",
+              "telegram-image-action-unsupported",
+              { replyTo: msg.messageId },
+            )
+            return
           } else {
             if (conversationConsent.allowed && persistentSession) {
               await appendAgentTurn({

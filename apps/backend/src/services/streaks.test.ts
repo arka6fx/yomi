@@ -43,7 +43,6 @@ const {
   setLeaderboardShowPhoto,
   getLeaderboard,
   ensureLeaderboardHandle,
-  getAvatarKey,
 } = await import("./streaks.js")
 
 beforeEach(() => {
@@ -171,7 +170,6 @@ describe("getStreakStats", () => {
           leaderboardHandle: "quiet-falcon-3f2a",
           leaderboardShowPhoto: true,
           image: "https://lh3.googleusercontent.com/a/photo.jpg",
-          customAvatarKey: null,
           plan: "pro",
         },
       ],
@@ -187,26 +185,6 @@ describe("getStreakStats", () => {
       avatarUrl: "https://lh3.googleusercontent.com/a/photo.jpg",
       plan: "pro",
     })
-  })
-
-  it("prefers the custom avatar over the Google photo when one's been uploaded", async () => {
-    selectQueue = [
-      [
-        {
-          currentStreak: 0,
-          longestStreak: 0,
-          totalMessagesSent: 0,
-          leaderboardOptIn: true,
-          leaderboardHandle: "quiet-falcon-3f2a",
-          leaderboardShowPhoto: true,
-          image: "https://lh3.googleusercontent.com/a/photo.jpg",
-          customAvatarKey: "avatars/user_1/abc.png",
-          plan: "explore",
-        },
-      ],
-    ]
-    const result = await getStreakStats("user_1")
-    expect(result.avatarUrl).toBe("/api/user/avatar/user_1")
   })
 
   it("returns zeroed defaults if the user row can't be found", async () => {
@@ -265,20 +243,6 @@ describe("ensureLeaderboardHandle", () => {
   })
 })
 
-describe("getAvatarKey", () => {
-  it("returns the user's custom avatar key", async () => {
-    selectQueue = [[{ customAvatarKey: "avatars/user_1/abc.png" }]]
-    expect(await getAvatarKey("user_1")).toBe("avatars/user_1/abc.png")
-  })
-
-  it("returns null when the user has no custom avatar or doesn't exist", async () => {
-    selectQueue = [[{ customAvatarKey: null }]]
-    expect(await getAvatarKey("user_1")).toBeNull()
-    selectQueue = [[]]
-    expect(await getAvatarKey("user_missing")).toBeNull()
-  })
-})
-
 describe("updateLeaderboardHandle", () => {
   it("accepts a valid custom handle", async () => {
     const result = await updateLeaderboardHandle("user_1", "ArkaG")
@@ -320,7 +284,6 @@ describe("getLeaderboard", () => {
           handle: "swift-otter-11aa",
           totalMessagesSent: 50,
           image: "https://lh3.googleusercontent.com/a/other.jpg",
-          customAvatarKey: null,
           leaderboardShowPhoto: true,
           plan: "max",
         },
@@ -329,7 +292,6 @@ describe("getLeaderboard", () => {
           handle: "quiet-falcon-3f2a",
           totalMessagesSent: 30,
           image: "https://lh3.googleusercontent.com/a/mine.jpg",
-          customAvatarKey: "avatars/user_1/abc.png",
           leaderboardShowPhoto: false,
           plan: "explore",
         },
@@ -365,7 +327,6 @@ describe("getLeaderboard", () => {
           handle: "swift-otter-11aa",
           totalMessagesSent: 50,
           image: null,
-          customAvatarKey: null,
           leaderboardShowPhoto: true,
           plan: "explore",
         },
@@ -386,7 +347,6 @@ describe("getLeaderboard", () => {
           handle: "swift-otter-11aa",
           totalMessagesSent: 50,
           image: null,
-          customAvatarKey: null,
           leaderboardShowPhoto: true,
           plan: "explore",
         },

@@ -55,11 +55,6 @@ function generateHandle(): string {
   return `${adjective}-${noun}-${suffix}`
 }
 
-function avatarUrlFor(row: { id: string; image: string | null; customAvatarKey: string | null }) {
-  if (row.customAvatarKey) return `/api/user/avatar/${row.id}`
-  return row.image ?? null
-}
-
 function todayUtc(): string {
   return new Date().toISOString().slice(0, 10)
 }
@@ -87,15 +82,6 @@ export async function ensureLeaderboardHandle(userId: string): Promise<string> {
     }
   }
   throw new Error("failed to generate a unique leaderboard handle after 3 attempts")
-}
-
-export async function getAvatarKey(userId: string): Promise<string | null> {
-  const [row] = await db
-    .select({ customAvatarKey: authSchema.user.customAvatarKey })
-    .from(authSchema.user)
-    .where(eq(authSchema.user.id, userId))
-    .limit(1)
-  return row?.customAvatarKey ?? null
 }
 
 export async function recordDailyActivity(userId: string): Promise<void> {
@@ -158,7 +144,6 @@ export async function getStreakStats(userId: string): Promise<{
       leaderboardHandle: authSchema.user.leaderboardHandle,
       leaderboardShowPhoto: authSchema.user.leaderboardShowPhoto,
       image: authSchema.user.image,
-      customAvatarKey: authSchema.user.customAvatarKey,
       plan: authSchema.user.plan,
     })
     .from(authSchema.user)
@@ -183,7 +168,7 @@ export async function getStreakStats(userId: string): Promise<{
     leaderboardOptIn: row.leaderboardOptIn,
     leaderboardHandle: row.leaderboardHandle,
     leaderboardShowPhoto: row.leaderboardShowPhoto,
-    avatarUrl: avatarUrlFor({ id: userId, image: row.image, customAvatarKey: row.customAvatarKey }),
+    avatarUrl: row.image ?? null,
     plan: row.plan,
   }
 }
@@ -260,7 +245,6 @@ export async function getLeaderboard(userId: string): Promise<{
       handle: authSchema.user.leaderboardHandle,
       totalMessagesSent: authSchema.user.totalMessagesSent,
       image: authSchema.user.image,
-      customAvatarKey: authSchema.user.customAvatarKey,
       leaderboardShowPhoto: authSchema.user.leaderboardShowPhoto,
       plan: authSchema.user.plan,
     })
@@ -274,9 +258,7 @@ export async function getLeaderboard(userId: string): Promise<{
     handle: row.handle ?? "anonymous",
     totalMessagesSent: row.totalMessagesSent,
     isYou: row.id === userId,
-    avatarUrl: row.leaderboardShowPhoto
-      ? avatarUrlFor({ id: row.id, image: row.image, customAvatarKey: row.customAvatarKey })
-      : null,
+    avatarUrl: row.leaderboardShowPhoto ? (row.image ?? null) : null,
     plan: row.plan,
   }))
 
