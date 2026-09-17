@@ -17,9 +17,18 @@ export interface PlatformCallbackEvent {
   callbackId: string
 }
 
+// A webhook-driven surface boots a fresh Worker isolate per update, and one-time
+// bot setup costs several billed subrequests against a hard per-invocation cap.
+// The webhook path passes `minimal` so connect() only guarantees the adapter can
+// send and receive, leaving the setup chores to a real start (cron/standalone
+// boot). Adapters must treat connect() as idempotent either way.
+export interface ConnectOptions {
+  minimal?: boolean
+}
+
 export interface PlatformAdapter {
   readonly platform: PlatformType
-  connect(): Promise<void>
+  connect(options?: ConnectOptions): Promise<void>
   disconnect(): Promise<void>
   sendMessage(
     chatId: string,

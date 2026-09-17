@@ -8,7 +8,12 @@ import {
 } from "@yomi/shared/privacy"
 import { db, privacyConsents } from "@yomi/db"
 import * as authSchema from "../../auth-schema.js"
-import { updatePrivacyPreferences, type PrivacyPreferencePatch } from "./preferences.js"
+import {
+  invalidatePrivacyReadCache,
+  memoPrivacyRead,
+  updatePrivacyPreferences,
+  type PrivacyPreferencePatch,
+} from "./preferences.js"
 
 type BooleanPreferenceKey = Exclude<keyof PrivacyPreferencePatch, "retentionOverrides">
 
@@ -58,22 +63,24 @@ export async function listConsentHistory(userId: string) {
 }
 
 export async function getConsentSnapshot(userId: string): Promise<ConsentSnapshot[]> {
-  const rows = await listConsentHistory(userId)
-  const latest = new Map<PrivacyConsentPurpose, ConsentSnapshot>()
-  for (const row of rows) {
-    const purpose = row.purpose as PrivacyConsentPurpose
-    if (latest.has(purpose)) continue
-    latest.set(purpose, {
-      purpose,
-      status: row.status as PrivacyConsentStatus,
-      consentVersion: row.consentVersion,
-      privacyPolicyVersion: row.privacyPolicyVersion,
-      termsVersion: row.termsVersion,
-      appVersion: row.appVersion,
-      createdAt: row.createdAt,
-    })
-  }
-  return Array.from(latest.values())
+  return memoPrivacyRead(`consents:${userId}`, async () => {
+    const rows = await listConsentHistory(userId)
+    const latest = new Map<PrivacyConsentPurpose, ConsentSnapshot>()
+    for (const row of rows) {
+      const purpose = row.purpose as PrivacyConsentPurpose
+      if (latest.has(purpose)) continue
+      latest.set(purpose, {
+        purpose,
+        status: row.status as PrivacyConsentStatus,
+        consentVersion: row.consentVersion,
+        privacyPolicyVersion: row.privacyPolicyVersion,
+        termsVersion: row.termsVersion,
+        appVersion: row.appVersion,
+        createdAt: row.createdAt,
+      })
+    }
+    return Array.from(latest.values())
+  })
 }
 
 export async function recordConsentDecision(input: {
@@ -83,6 +90,8 @@ export async function recordConsentDecision(input: {
   context: ConsentContext
 }): Promise<ConsentSnapshot[]> {
   if (!input.purposes.length) return await getConsentSnapshot(input.userId)
+
+  invalidatePrivacyReadCache(input.userId)
 
   await db.insert(privacyConsents).values(
     input.purposes.map((purpose) => ({

@@ -6,7 +6,12 @@ import type { PlatformType, GatewayMessage, GatewaySessionInfo } from "@yomi/sha
 import { checkConsent } from "../services/privacy/checks.js"
 import { recordConsentDecision } from "../services/privacy/consent.js"
 import { ALLOWED_REACTIONS, createModel, type AgentMessage } from "@yomi/agent-core"
-import type { PlatformAdapter, InlineButton, PlatformCallbackEvent } from "./platform-adapter.js"
+import type {
+  PlatformAdapter,
+  InlineButton,
+  PlatformCallbackEvent,
+  ConnectOptions,
+} from "./platform-adapter.js"
 import { TelegramAdapter } from "./platforms/telegram.js"
 import { runAgent } from "../agent/run.js"
 import {
@@ -163,10 +168,16 @@ export class GatewayRunner {
     )
   }
 
-  private async isUserLinked(platform: PlatformType, platformUserId: string): Promise<boolean> {
+  // One query answers both "is this user linked?" and "to which Yomi account?".
+  // onIncoming used to ask those as two separate calls, running the identical
+  // platform_connections lookup twice on every single message.
+  private async lookupPlatformConnection(
+    platform: PlatformType,
+    platformUserId: string,
+  ): Promise<{ linked: boolean; userId?: string }> {
     try {
       const row = await db
-        .select({ id: platformConnections.id })
+        .select({ userId: platformConnections.userId })
         .from(platformConnections)
         .where(
           and(
@@ -176,11 +187,15 @@ export class GatewayRunner {
         )
         .limit(1)
         .then((r) => r[0])
-      return !!row
+      return { linked: !!row, userId: row?.userId }
     } catch (err) {
-      console.warn(`[gateway] isUserLinked DB error:`, err)
-      return false
+      console.warn(`[gateway] platform connection lookup error:`, err)
+      return { linked: false }
     }
+  }
+
+  private async isUserLinked(platform: PlatformType, platformUserId: string): Promise<boolean> {
+    return (await this.lookupPlatformConnection(platform, platformUserId)).linked
   }
 
   private historyKey(platform: PlatformType, chatId: string): string {
@@ -699,8 +714,16 @@ export class GatewayRunner {
     adapter.setCallbackHandler((event) => this.handleCallbackQuery(adapter.platform, event))
   }
 
-  async start(_plan?: string): Promise<void> {
-    if (this.running) return
+  async start(_plan?: string, options?: ConnectOptions): Promise<void> {
+    if (this.running) {
+      // A minimal (webhook) boot can register the adapter first; a later full
+      // start still owes the one-time setup that path skips. connect() is
+      // idempotent, so re-invoking it is safe.
+      if (!options?.minimal) {
+        await Promise.allSettled([...this.adapters.values()].map((a) => a.connect(options)))
+      }
+      return
+    }
 
     this.running = true
     console.warn("[gateway] starting")
@@ -713,7 +736,7 @@ export class GatewayRunner {
     }
 
     const adapterList = Array.from(this.adapters.entries())
-    const results = await Promise.allSettled(adapterList.map(([, a]) => a.connect()))
+    const results = await Promise.allSettled(adapterList.map(([, a]) => a.connect(options)))
     for (let i = 0; i < results.length; i++) {
       const r = results[i]!
       if (r.status === "rejected") {
@@ -1037,9 +1060,9 @@ export class GatewayRunner {
 
       // Prompt unlinked users to connect their account
       if (!msg.userId || msg.userId === "unknown") return
-      const linked = await this.isUserLinked(msg.platform, msg.userId)
-      console.warn(`[gateway] isUserLinked(${msg.platform}, ${msg.userId}) = ${linked}`)
-      if (!linked) {
+      const connection = await this.lookupPlatformConnection(msg.platform, msg.userId)
+      console.warn(`[gateway] isUserLinked(${msg.platform}, ${msg.userId}) = ${connection.linked}`)
+      if (!connection.linked) {
         const code = await this.generateLinkingCode(msg)
         const adapter = this.adapters.get(msg.platform)
         console.warn(
@@ -1050,7 +1073,7 @@ export class GatewayRunner {
         return
       }
 
-      const yomiUserId = await this.resolveYomiUserId(msg.platform, msg.userId)
+      const yomiUserId = connection.userId
       console.warn(
         `[gateway] resolved yomiUserId=${yomiUserId ?? "unknown"} text="${msg.text.slice(0, 60)}"`,
       )
@@ -1625,22 +1648,7 @@ export class GatewayRunner {
     platform: PlatformType,
     platformUserId: string,
   ): Promise<string | undefined> {
-    try {
-      const row = await db
-        .select({ userId: platformConnections.userId })
-        .from(platformConnections)
-        .where(
-          and(
-            eq(platformConnections.platform, platform),
-            eq(platformConnections.platformUserId, platformUserId),
-          ),
-        )
-        .limit(1)
-        .then((r) => r[0])
-      return row?.userId
-    } catch {
-      return undefined
-    }
+    return (await this.lookupPlatformConnection(platform, platformUserId)).userId
   }
 
   private async handleCallbackQuery(

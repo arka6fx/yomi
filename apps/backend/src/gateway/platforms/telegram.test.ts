@@ -342,6 +342,80 @@ describe("TelegramAdapter.connect", () => {
 
     expect(calls.some((c) => c.url.includes("/setWebhook"))).toBe(false)
   })
+
+  it("minimal connect skips the one-time setup but still registers the webhook", async () => {
+    process.env["BETTER_AUTH_BASE_URL"] = "https://api.getyomi.in"
+    const calls: string[] = []
+    globalThis.fetch = (async (url: RequestInfo | URL) => {
+      const urlStr = String(url)
+      calls.push(urlStr)
+      if (urlStr.includes("/getWebhookInfo")) {
+        return new Response(JSON.stringify({ ok: true, result: { url: "" } }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ ok: true, result: {} }), { status: 200 })
+    }) as typeof fetch
+
+    const adapter = new TelegramAdapter("dummy-token")
+    await adapter.connect({ minimal: true })
+
+    expect(calls.some((u) => u.includes("/getMe"))).toBe(false)
+    expect(calls.some((u) => u.includes("/deleteMyCommands"))).toBe(false)
+    expect(calls.some((u) => u.includes("/setChatMenuButton"))).toBe(false)
+    expect(calls.some((u) => u.includes("/setWebhook"))).toBe(true)
+  })
+
+  it("minimal connect is a no-op on a second call in the same isolate", async () => {
+    process.env["BETTER_AUTH_BASE_URL"] = "https://api.getyomi.in"
+    const calls: string[] = []
+    globalThis.fetch = (async (url: RequestInfo | URL) => {
+      const urlStr = String(url)
+      calls.push(urlStr)
+      if (urlStr.includes("/getWebhookInfo")) {
+        return new Response(JSON.stringify({ ok: true, result: { url: "" } }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ ok: true, result: {} }), { status: 200 })
+    }) as typeof fetch
+
+    const adapter = new TelegramAdapter("dummy-token")
+    await adapter.connect({ minimal: true })
+    const afterFirst = calls.length
+    await adapter.connect({ minimal: true })
+
+    expect(calls.length).toBe(afterFirst)
+  })
+
+  it("a later full connect still runs the setup a minimal boot skipped", async () => {
+    process.env["BETTER_AUTH_BASE_URL"] = "https://api.getyomi.in"
+    const webhookUrl = "https://api.getyomi.in/api/gateway/telegram/webhook/dummy-token"
+    const calls: string[] = []
+    globalThis.fetch = (async (url: RequestInfo | URL) => {
+      const urlStr = String(url)
+      calls.push(urlStr)
+      if (urlStr.includes("/getMe")) {
+        return new Response(JSON.stringify({ ok: true, result: { username: "yomi_bot" } }), {
+          status: 200,
+        })
+      }
+      if (urlStr.includes("/getWebhookInfo")) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            result: { url: webhookUrl, allowed_updates: ["message", "callback_query"] },
+          }),
+          { status: 200 },
+        )
+      }
+      return new Response(JSON.stringify({ ok: true, result: {} }), { status: 200 })
+    }) as typeof fetch
+
+    const adapter = new TelegramAdapter("dummy-token")
+    await adapter.connect({ minimal: true })
+    await adapter.connect()
+
+    expect(calls.some((u) => u.includes("/getMe"))).toBe(true)
+    expect(calls.some((u) => u.includes("/deleteMyCommands"))).toBe(true)
+    expect(calls.some((u) => u.includes("/setChatMenuButton"))).toBe(true)
+  })
 })
 
 describe("TelegramAdapter.processUpdate — callback_query", () => {

@@ -201,7 +201,7 @@ gatewayRouter.post("/telegram/webhook/:token", async (c) => {
   const adapter = gateway.getAdapter("telegram")
   if (!(adapter instanceof TelegramAdapter)) {
     console.warn("[gateway/telegram] adapter missing, attempting lazy gateway start")
-    await gateway.start()
+    await gateway.start(undefined, { minimal: true })
   }
 
   const readyAdapter = gateway.getAdapter("telegram")

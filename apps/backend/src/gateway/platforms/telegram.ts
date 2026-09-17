@@ -1,6 +1,11 @@
 import type { GatewayMessage, PlatformType } from "@yomi/shared"
 import { humanizeDashes } from "@yomi/shared"
-import type { PlatformAdapter, InlineButton, PlatformCallbackEvent } from "../platform-adapter.js"
+import type {
+  PlatformAdapter,
+  InlineButton,
+  PlatformCallbackEvent,
+  ConnectOptions,
+} from "../platform-adapter.js"
 import { markdownToTelegramHtml, truncateMessage } from "../platform-adapter.js"
 
 const API_BASE = "https://api.telegram.org/bot"
@@ -59,6 +64,7 @@ export class TelegramAdapter implements PlatformAdapter {
   private messageHandler: ((msg: GatewayMessage) => void | Promise<void>) | null = null
   private callbackHandler: ((event: PlatformCallbackEvent) => void | Promise<void>) | null = null
   private connected = false
+  private setupComplete = false
   botUsername: string | null = null
 
   constructor(token: string) {
@@ -74,43 +80,58 @@ export class TelegramAdapter implements PlatformAdapter {
     return `${base}/api/gateway/telegram/webhook/${this.botToken}`
   }
 
-  async connect(): Promise<void> {
-    if (this.connected) return
+  async connect(options?: ConnectOptions): Promise<void> {
+    // The webhook path (minimal) may run repeatedly in one isolate; a full boot
+    // must still finish the one-time setup even if a minimal connect ran first.
+    if (this.connected && (options?.minimal || this.setupComplete)) return
 
-    // Verify token and get bot info
-    const res = await fetch(`${this.apiUrl}/getMe`)
-    const data = (await res.json()) as TelegramResponse & { result?: { username?: string } }
-    if (!data.ok) throw new Error(`Telegram API error: ${data.description ?? "unknown"}`)
-    this.botUsername = data.result?.username ?? null
-    console.warn(`[gateway/telegram] connected as @${this.botUsername}`)
+    // Bot identity, command list, and menu button are one-time arrangements. The
+    // webhook path boots a fresh isolate per update, so it skips this block (each
+    // call is a billed subrequest against the Worker's per-invocation cap) and
+    // leaves it to a real start — the cron sweep or the standalone server boot.
+    if (!options?.minimal && !this.setupComplete) {
+      // Verify token and get bot info
+      const res = await fetch(`${this.apiUrl}/getMe`)
+      const data = (await res.json()) as TelegramResponse & { result?: { username?: string } }
+      if (!data.ok) throw new Error(`Telegram API error: ${data.description ?? "unknown"}`)
+      this.botUsername = data.result?.username ?? null
+      console.warn(`[gateway/telegram] connected as @${this.botUsername}`)
 
-    // Clears any command list registered previously (via BotFather or an
-    // earlier deploy) so the "/" autocomplete popup never reappears —
-    // Telegram has no per-source command lists, the last write wins, so this
-    // is self-healing on every boot rather than a one-time manual edit.
-    try {
-      await fetch(`${this.apiUrl}/deleteMyCommands`, { method: "POST" })
-    } catch (err) {
-      console.warn("[gateway/telegram] deleteMyCommands failed:", err)
+      // Clears any command list registered previously (via BotFather or an
+      // earlier deploy) so the "/" autocomplete popup never reappears —
+      // Telegram has no per-source command lists, the last write wins, so this
+      // is self-healing on every boot rather than a one-time manual edit.
+      try {
+        await fetch(`${this.apiUrl}/deleteMyCommands`, { method: "POST" })
+      } catch (err) {
+        console.warn("[gateway/telegram] deleteMyCommands failed:", err)
+      }
+
+      const webAppBaseUrl = process.env["CORS_ORIGIN"] ?? "https://getyomi.in"
+      try {
+        await fetch(`${this.apiUrl}/setChatMenuButton`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            menu_button: {
+              type: "web_app",
+              text: "Dashboard",
+              web_app: { url: `${webAppBaseUrl}/telegram-app` },
+            },
+          }),
+        })
+      } catch (err) {
+        console.warn("[gateway/telegram] setChatMenuButton failed:", err)
+      }
+
+      this.setupComplete = true
     }
 
-    const webAppBaseUrl = process.env["CORS_ORIGIN"] ?? "https://getyomi.in"
-    try {
-      await fetch(`${this.apiUrl}/setChatMenuButton`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          menu_button: {
-            type: "web_app",
-            text: "Dashboard",
-            web_app: { url: `${webAppBaseUrl}/telegram-app` },
-          },
-        }),
-      })
-    } catch (err) {
-      console.warn("[gateway/telegram] setChatMenuButton failed:", err)
-    }
+    await this.ensureWebhook()
+    this.connected = true
+  }
 
+  private async ensureWebhook(): Promise<void> {
     // Register webhook — Telegram will POST updates here instead of relying
     // on long-polling (which doesn't work reliably on Cloudflare Workers).
     // connect() runs on every isolate boot (stateless Workers), so only
@@ -151,8 +172,6 @@ export class TelegramAdapter implements PlatformAdapter {
         `[gateway/telegram] webhook set to ${this.webhookUrl}${hasDeliveryError ? ` (recovering from: ${info.result?.last_error_message})` : ""}`,
       )
     }
-
-    this.connected = true
   }
 
   async disconnect(): Promise<void> {
