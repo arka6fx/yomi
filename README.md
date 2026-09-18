@@ -60,20 +60,29 @@ all live in the cloud backend, so the client stays thin. Telegram sends your
 message to the backend; the backend thinks, uses tools, and replies.
 
 ```text
-                    Telegram
-                       |
-             CLOUD BACKEND  (Hono)
-   auth, billing, LLM proxy, metering, agent loop, canonical memory
-                       |
-        +--------------+--------------+
-        |              |
-   Connectors      Postgres
-   (first-class    (Neon,
-    + Composio)     pgvector)
-                       |
-             LANDING / DASHBOARD  (Next.js)
-    marketing, auth, account linking, credits, memory
+                       Telegram
+                  text / voice / images
+                        |
+                        v
+       +-------------------------------+
+       |         CLOUD BACKEND         |
+       |     Hono on Cloudflare Workers|
+       |                               |
+       | auth, billing, LLM proxy,     |
+       | metering, agent loop,         |
+       | Telegram, canonical memory    |
+       +-------------------------------+
+           |             |             |
+           v             v             v
+      Connectors     Postgres     Landing / Dashboard
+      (first-class   (Neon,       (Next.js on Workers)
+       + Composio)    pgvector)   marketing, auth,
+                                  account linking,
+                                  credits, memory view
 ```
+
+The backend is the only thing that talks to Postgres; the dashboard reaches the
+database, connectors, and memory through the backend API.
 
 Every request is one of two shapes. Yomi never switches models mid-turn, since
 that would drop the prompt cache and mismatch the tool vocabulary.
