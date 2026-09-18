@@ -1,6 +1,8 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "instructions": ["AGENTS.md"],
+  "instructions": [
+    "AGENTS.md"
+  ],
   "references": {
     "specs": {
       "path": "./specs",
@@ -10,7 +12,11 @@
   "mcp": {
     "github": {
       "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-github"],
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
       "enabled": true,
       "env": {
         "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}",
@@ -18,12 +24,20 @@
     },
     "playwright": {
       "type": "local",
-      "command": ["npx", "-y", "@playwright/mcp@latest"],
+      "command": [
+        "npx",
+        "-y",
+        "@playwright/mcp@latest"
+      ],
       "enabled": true,
     },
     "context7": {
       "type": "local",
-      "command": ["npx", "-y", "@upstash/context7-mcp"],
+      "command": [
+        "npx",
+        "-y",
+        "@upstash/context7-mcp"
+      ],
       "enabled": true,
       "env": {
         "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}",
@@ -31,7 +45,11 @@
     },
     "dodo-payments": {
       "type": "local",
-      "command": ["npx", "-y", "dodopayments-mcp"],
+      "command": [
+        "npx",
+        "-y",
+        "dodopayments-mcp"
+      ],
       "enabled": true,
       "env": {
         "DODO_PAYMENTS_API_KEY": "${DODO_PAYMENTS_API_KEY}",
@@ -41,7 +59,11 @@
     },
     "better-auth": {
       "type": "local",
-      "command": ["npx", "-y", "@better-auth/mcp@latest"],
+      "command": [
+        "npx",
+        "-y",
+        "@better-auth/mcp@latest"
+      ],
       "enabled": true,
     },
   },
