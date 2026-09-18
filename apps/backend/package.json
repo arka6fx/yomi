@@ -26,8 +26,8 @@
     "@yomi/agent-core": "workspace:*",
     "@yomi/db": "workspace:*",
     "@yomi/shared": "workspace:*",
-    "ai": "^4.0.0",
-    "better-auth": "1.6.11",
+    "ai": "^7.0.101",
+    "better-auth": "1.7.5",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.5.0",
     "zod": "^4.3.6"
