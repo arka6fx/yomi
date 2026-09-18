@@ -305,7 +305,9 @@ async function replayConnectorTool(row: {
       import("../connectors/composio-defs.js"),
       import("../connectors/composio-catalog.js"),
     ])
-    const expanded = buildComposioDefs(undefined, await loadComposioCatalog())[row.connector]
+    const expanded = buildComposioDefs(undefined, await loadComposioCatalog([row.connector]))[
+      row.connector
+    ]
     if (expanded) {
       const expandedTools = expanded.tools({ userId: row.userId, getAccessToken }) as typeof tools
       t = expandedTools[row.action]

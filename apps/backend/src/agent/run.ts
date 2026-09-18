@@ -29,7 +29,7 @@ import { searchSessions } from "../services/agent-sessions.js"
 import { getAccessToken, listConnectedProviders } from "../services/integration-tokens.js"
 import { decryptString } from "../services/token-encryption.js"
 import { buildComposioDefs } from "../connectors/composio-defs.js"
-import { loadComposioCatalog } from "../connectors/composio-catalog.js"
+import { loadComposioCatalog, toolkitsForProviders } from "../connectors/composio-catalog.js"
 import {
   createComposioRestExecutor,
   createCountingExecutor,
@@ -442,7 +442,10 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
 
   // Per-turn counting executor so Composio tool calls can be metered after the loop.
   const composioMeter = createCountingExecutor(createComposioRestExecutor())
-  const catalogSpecs = await loadComposioCatalog()
+  // Resolve connected providers once: the registry below and the catalog subset
+  // both need them, and each extra listConnectedProviders call is another DB read.
+  const connectedProviders = await listConnectedProviders(opts.userId)
+  const catalogSpecs = await loadComposioCatalog(toolkitsForProviders(connectedProviders))
   const getCachedAccessToken = memoizeTokenProvider(getAccessToken)
   const registry = new ConnectorRegistry({
     excludeNodeOnly: true,
@@ -457,9 +460,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
         ...input,
       })
     },
-    listConnectedProviders: async (userId: string) => {
-      return listConnectedProviders(userId)
-    },
+    listConnectedProviders: async () => connectedProviders,
     listCustomMcpServers: async (userId: string) => {
       const rows = await db
         .select()
