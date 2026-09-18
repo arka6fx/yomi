@@ -79,6 +79,13 @@ export interface RunAgentOptions {
   // normal-message path has a document to offer, so every other caller omits both.
   consumePendingDocument?: ConsumePendingDocumentFn
   restorePendingDocument?: RestorePendingDocumentFn
+  // Called with the finalized reply as soon as the agent loop finishes, before any
+  // post-turn bookkeeping (Composio metering, memory extraction). Those steps each
+  // spend subrequests, and a Worker invocation that hits the 50-subrequest cap
+  // during them used to lose the reply send itself — the user saw "Working on
+  // it..." forever despite the agent having an answer. Delivering first guarantees
+  // the reply goes out. Optional so non-gateway callers keep returning text.
+  onReply?: (text: string) => Promise<void> | void
 }
 
 export interface RunAgentResult {
@@ -705,6 +712,17 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     }
   }
 
+  // Finalize the reply — including the low-credit nudge — and hand it to the
+  // caller BEFORE any post-turn bookkeeping. Metering Composio calls and extracting
+  // memories both spend subrequests, and when an invocation is near the 50-cap
+  // those were eating the budget the reply send needed. The reply is the one thing
+  // that must always get out; these are reconciliations that can fail silently.
+  if (creditBalance !== null) {
+    const warning = lowCreditWarning(user, creditBalance)
+    if (warning) text += `\n\n_${warning} Buy more or upgrade at [dashboard](${appUrl}/dashboard)._`
+  }
+  await opts.onReply?.(text)
+
   // Meter Composio tool calls made this turn: an incremental, per-call charge on
   // top of the flat bot_message. Charged post-turn (the work already ran) so a
   // credit shortfall never blocks a reply mid-flight — the next turn's up-front
@@ -739,14 +757,5 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     await captureBackendMemory(opts.userId, opts.text, text).catch(() => {})
   }
 
-  // Nudge once balance drops below 20% of the plan's allotment — this was
-  // wired into the dashboard's reserve/finalize path but never the Telegram
-  // path, so real users could run to 0 credits with no warning at all.
-  if (creditBalance !== null) {
-    const warning = lowCreditWarning(user, creditBalance)
-    if (warning) text += `\n\n_${warning} Buy more or upgrade at [dashboard](${appUrl}/dashboard)._`
-  }
-
-  // Usage was already recorded and credits consumed by chargeUsage() up front.
   return { text }
 }

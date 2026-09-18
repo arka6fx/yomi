@@ -1528,6 +1528,22 @@ export class GatewayRunner {
       let runTimedOut = false
       let runTimeout: ReturnType<typeof setTimeout> | undefined
       let statusMessageId: string | undefined
+      let replyDelivered = false
+      // Delete the placeholder and send the reply. runAgent calls this as soon as
+      // the loop finishes — before its subrequest-heavy post-turn work — so a turn
+      // that later hits the Worker's 50-subrequest cap still delivers its answer
+      // (previously the reply send was the casualty). The fallback call below
+      // covers callers/tests whose runAgent never invokes onReply.
+      const deliverReply = async (text: string) => {
+        if (replyDelivered) return
+        if (statusMessageId) {
+          await this.deleteMessage(msg.platform, msg.chatId, statusMessageId).catch(() => {})
+          statusMessageId = undefined
+        }
+        clearInterval(typingInterval)
+        await this.sendMessageAndLog(msg.platform, msg.chatId, text, "backend-agent-reply")
+        replyDelivered = true
+      }
       try {
         console.warn(
           `[gateway] backend agent start user=${yomiUserId} platform=${msg.platform} chat=${msg.chatId}`,
@@ -1562,6 +1578,7 @@ export class GatewayRunner {
           consumePendingDocument: () => this.consumePendingDocument(msg.platform, msg.chatId),
           restorePendingDocument: (document) =>
             this.restorePendingDocument(msg.platform, msg.chatId, document),
+          onReply: deliverReply,
         })
         // If the timeout wins the race below, the orphaned run may still settle
         // later — swallow its outcome here so it never surfaces as an unhandled
@@ -1605,6 +1622,7 @@ export class GatewayRunner {
         }
         if (statusMessageId) {
           await this.deleteMessage(msg.platform, msg.chatId, statusMessageId).catch(() => {})
+          statusMessageId = undefined
         }
         console.warn(
           `[gateway] backend agent done user=${yomiUserId} platform=${msg.platform} chat=${msg.chatId} chars=${result.text.length}`,
@@ -1612,8 +1630,12 @@ export class GatewayRunner {
         // Deliver the reply BEFORE persisting history: both compete for the
         // invocation's subrequest budget, and losing the user-visible reply
         // is worse than losing a history write (which has an in-memory fallback).
+        // Normally runAgent already delivered via onReply before its post-turn
+        // bookkeeping; this fallback covers a runAgent that didn't call back.
         const reply = result.text || "I couldn't produce a reply. Please try again."
-        await this.sendMessageAndLog(msg.platform, msg.chatId, reply, "backend-agent-reply")
+        if (!replyDelivered) {
+          await this.sendMessageAndLog(msg.platform, msg.chatId, reply, "backend-agent-reply")
+        }
         if (result.text) {
           if (conversationConsent.allowed && persistentSession) {
             await appendAgentTurn({
