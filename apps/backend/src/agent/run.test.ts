@@ -622,3 +622,58 @@ describe("buildSystemWithContext cache stability", () => {
     expect(system).toContain("Google Gmail: google")
   })
 })
+
+// Every connector API call resolves its token via getAccessToken (one Neon read
+// = one Worker subrequest), so without memoization a 10-mail Gmail turn burns
+// 10+ token reads alone — enough to blow the 50-subrequest cap and kill the
+// reply send itself.
+describe("memoizeTokenProvider", () => {
+  it("resolves the same user+provider once no matter how many calls", async () => {
+    const { memoizeTokenProvider } = await import("./run.js")
+    let underlying = 0
+    const inner = async (_userId: string, _provider: string) => {
+      underlying++
+      return "tok"
+    }
+    const cached = memoizeTokenProvider(inner)
+
+    const results = await Promise.all([
+      cached("u1", "google"),
+      cached("u1", "google"),
+      cached("u1", "google"),
+    ])
+
+    expect(results).toEqual(["tok", "tok", "tok"])
+    expect(underlying).toBe(1)
+  })
+
+  it("caches per user+provider pair, not globally", async () => {
+    const { memoizeTokenProvider } = await import("./run.js")
+    let underlying = 0
+    const inner = async (userId: string, provider: string) => {
+      underlying++
+      return `${userId}:${provider}`
+    }
+    const cached = memoizeTokenProvider(inner)
+
+    expect(await cached("u1", "google")).toBe("u1:google")
+    expect(await cached("u1", "google-calendar")).toBe("u1:google-calendar")
+    expect(await cached("u2", "google")).toBe("u2:google")
+    expect(underlying).toBe(3)
+  })
+
+  it("does not cache rejections, so a failed refresh is retried", async () => {
+    const { memoizeTokenProvider } = await import("./run.js")
+    let underlying = 0
+    const inner = async () => {
+      underlying++
+      if (underlying === 1) throw new Error("refresh down")
+      return "tok"
+    }
+    const cached = memoizeTokenProvider(inner)
+
+    await expect(cached("u1", "google")).rejects.toThrow("refresh down")
+    await expect(cached("u1", "google")).resolves.toBe("tok")
+    expect(underlying).toBe(2)
+  })
+})

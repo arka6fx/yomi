@@ -86,6 +86,30 @@ export interface RunAgentResult {
   quotaError?: boolean
 }
 
+// Per-turn access-token memo. Every connector API call resolves its token via
+// getAccessToken (one Neon read = one Cloudflare subrequest), so a Gmail turn
+// fetching 10 message bodies used to burn 10+ token reads alone — enough, with
+// the rest of the turn, to blow the 50-subrequest Worker cap and kill the reply
+// send itself ("Working on it…" forever). Tokens live ~1h, so sharing one
+// resolution across a single runAgent call is always safe. Rejections are never
+// cached: a failed refresh must be retried, not frozen in.
+export function memoizeTokenProvider(
+  provider: (userId: string, provider: string) => Promise<string>,
+): (userId: string, provider: string) => Promise<string> {
+  const cache = new Map<string, Promise<string>>()
+  return (userId: string, providerName: string) => {
+    const key = `${userId}:${providerName}`
+    const hit = cache.get(key)
+    if (hit) return hit
+    const pending = provider(userId, providerName)
+    cache.set(key, pending)
+    pending.catch(() => {
+      if (cache.get(key) === pending) cache.delete(key)
+    })
+    return pending
+  }
+}
+
 async function fetchUser(userId: string) {
   const [row] = await db
     .select({
@@ -256,13 +280,16 @@ async function captureBackendMemory(userId: string, input: string, output: strin
 const TZ_CACHE_MS = 15 * 60 * 1000
 const timeZoneCache = new Map<string, { tz: string | null; at: number }>()
 
-async function resolveUserTimeZone(userId: string): Promise<string | null> {
+async function resolveUserTimeZone(
+  userId: string,
+  getToken: (userId: string, provider: string) => Promise<string> = getAccessToken,
+): Promise<string | null> {
   const hit = timeZoneCache.get(userId)
   if (hit && Date.now() - hit.at < TZ_CACHE_MS) return hit.tz
 
   let tz: string | null = null
   try {
-    const token = await getAccessToken(userId, "google-calendar")
+    const token = await getToken(userId, "google-calendar")
     if (token) {
       const res = await fetch("https://www.googleapis.com/calendar/v3/users/me/settings/timezone", {
         headers: { Authorization: `Bearer ${token}` },
@@ -416,10 +443,11 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   // Per-turn counting executor so Composio tool calls can be metered after the loop.
   const composioMeter = createCountingExecutor(createComposioRestExecutor())
   const catalogSpecs = await loadComposioCatalog()
+  const getCachedAccessToken = memoizeTokenProvider(getAccessToken)
   const registry = new ConnectorRegistry({
     excludeNodeOnly: true,
     composioDefs: buildComposioDefs(composioMeter, catalogSpecs),
-    getAccessToken,
+    getAccessToken: getCachedAccessToken,
     createPendingAction: async (input) => {
       const { createPendingAction } = await import("../services/pending-actions.js")
       return createPendingAction({
@@ -503,7 +531,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
 
   let text: string
   const startedAt = Date.now()
-  const userTimeZone = await resolveUserTimeZone(opts.userId)
+  const userTimeZone = await resolveUserTimeZone(opts.userId, getCachedAccessToken)
   // Explore and Pro run the agent loop on gpt-5.4-mini (~3.75x cheaper than gpt-5.5
   // on both input and output) so their credit allotments stay generous at 70%
   // margin; Max keeps the flagship model as its differentiator. Reassess if mini's

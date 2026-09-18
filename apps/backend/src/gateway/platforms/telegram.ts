@@ -149,7 +149,8 @@ export class TelegramAdapter implements PlatformAdapter {
         throw new Error(`Telegram setWebhook error: ${whData.description ?? "unknown"}`)
       }
       console.warn(
-        `[gateway/telegram] webhook set to ${this.webhookUrl}${hasDeliveryError ? ` (recovering from: ${info.result?.last_error_message})` : ""}`,
+        // The webhook URL carries the bot token in its path — never log it whole.
+        `[gateway/telegram] webhook set to ${this.webhookUrl.replace(/\/webhook\/[^/]+$/, "/webhook/<redacted>")}${hasDeliveryError ? ` (recovering from: ${info.result?.last_error_message})` : ""}`,
       )
     }
   }
