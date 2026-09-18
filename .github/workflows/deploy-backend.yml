@@ -69,7 +69,7 @@ jobs:
         # The Worker binds to this queue as both producer and consumer, so it
         # must exist on the account before the deploy references it. The create
         # is idempotent-guarded: a pre-existing queue is fine (|| true).
-        run: bunx wrangler queue create yomi-telegram-inbox || echo "queue already exists"
+        run: bunx wrangler queues create yomi-telegram-inbox || echo "queue already exists"
 
       - name: Deploy backend Worker
         if: steps.staleness.outputs.stale != 'true'
