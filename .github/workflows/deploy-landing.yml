@@ -28,7 +28,7 @@ jobs:
       NEXT_PUBLIC_API_URL: https://api.getyomi.in
       NEXT_PUBLIC_APP_URL: https://getyomi.in
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # cancel-in-progress is false so runs queue instead of racing, but a run
       # that was queued behind another can still be for a commit main has
