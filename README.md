@@ -41,7 +41,7 @@ Yomi connects the tools you already use — first-class integrations, plus
   [![Google Tasks](https://img.shields.io/badge/Tasks-26A69A?style=flat-square&logo=googletasks&logoColor=white)](https://tasks.google.com)
   [![Google Meet](https://img.shields.io/badge/Meet-00897B?style=flat-square&logo=googlemeet&logoColor=white)](https://meet.google.com)
   [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com)
-  [![Slack](https://img.shields.io/badge/Slack-4A154B?style=flat-square&logo=slack&logoColor=white)](https://slack.com)
+  [![Slack](https://img.shields.io/badge/Slack-4A154B?style=flat-square&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU%2BU2xhY2s8L3RpdGxlPjxwYXRoIGQ9Ik01LjA0MiAxNS4xNjVhMi41MjggMi41MjggMCAwIDEtMi41MiAyLjUyM0EyLjUyOCAyLjUyOCAwIDAgMSAwIDE1LjE2NWEyLjUyNyAyLjUyNyAwIDAgMSAyLjUyMi0yLjUyaDIuNTJ2Mi41MnpNNi4zMTMgMTUuMTY1YTIuNTI3IDIuNTI3IDAgMCAxIDIuNTIxLTIuNTIgMi41MjcgMi41MjcgMCAwIDEgMi41MjEgMi41MnY2LjMxM0EyLjUyOCAyLjUyOCAwIDAgMSA4LjgzNCAyNGEyLjUyOCAyLjUyOCAwIDAgMS0yLjUyMS0yLjUyMnYtNi4zMTN6TTguODM0IDUuMDQyYTIuNTI4IDIuNTI4IDAgMCAxLTIuNTIxLTIuNTJBMi41MjggMi41MjggMCAwIDEgOC44MzQgMGEyLjUyOCAyLjUyOCAwIDAgMSAyLjUyMSAyLjUyMnYyLjUySDguODM0ek04LjgzNCA2LjMxM2EyLjUyOCAyLjUyOCAwIDAgMSAyLjUyMSAyLjUyMSAyLjUyOCAyLjUyOCAwIDAgMS0yLjUyMSAyLjUyMUgyLjUyMkEyLjUyOCAyLjUyOCAwIDAgMSAwIDguODM0YTIuNTI4IDIuNTI4IDAgMCAxIDIuNTIyLTIuNTIxaDYuMzEyek0xOC45NTYgOC44MzRhMi41MjggMi41MjggMCAwIDEgMi41MjItMi41MjFBMi41MjggMi41MjggMCAwIDEgMjQgOC44MzRhMi41MjggMi41MjggMCAwIDEtMi41MjIgMi41MjFoLTIuNTIyVjguODM0ek0xNy42ODggOC44MzRhMi41MjggMi41MjggMCAwIDEtMi41MjMgMi41MjEgMi41MjcgMi41MjcgMCAwIDEtMi41Mi0yLjUyMVYyLjUyMkEyLjUyNyAyLjUyNyAwIDAgMSAxNS4xNjUgMGEyLjUyOCAyLjUyOCAwIDAgMSAyLjUyMyAyLjUyMnY2LjMxMnpNMTUuMTY1IDE4Ljk1NmEyLjUyOCAyLjUyOCAwIDAgMSAyLjUyMyAyLjUyMkEyLjUyOCAyLjUyOCAwIDAgMSAxNS4xNjUgMjRhMi41MjcgMi41MjcgMCAwIDEtMi41Mi0yLjUyMnYtMi41MjJoMi41MnpNMTUuMTY1IDE3LjY4OGEyLjUyNyAyLjUyNyAwIDAgMS0yLjUyLTIuNTIzIDIuNTI2IDIuNTI2IDAgMCAxIDIuNTItMi41Mmg2LjMxM0EyLjUyNyAyLjUyNyAwIDAgMSAyNCAxNS4xNjVhMi41MjggMi41MjggMCAwIDEtMi41MjIgMi41MjNoLTYuMzEzeiIvPjwvc3ZnPg%3D%3D&logoColor=white)](https://slack.com)
   [![Notion](https://img.shields.io/badge/Notion-000000?style=flat-square&logo=notion&logoColor=white)](https://www.notion.so)
   [![Linear](https://img.shields.io/badge/Linear-5E6AD2?style=flat-square&logo=linear&logoColor=white)](https://linear.app)
 </p>
@@ -52,7 +52,7 @@ Yomi connects the tools you already use — first-class integrations, plus
   [![Google Slides](https://img.shields.io/badge/Slides-FBBC04?style=flat-square&logo=googleslides&logoColor=white)](https://slides.google.com)
   [![Discord](https://img.shields.io/badge/Discord-5865F2?style=flat-square&logo=discord&logoColor=white)](https://discord.com)
   [![WhatsApp](https://img.shields.io/badge/WhatsApp-25D366?style=flat-square&logo=whatsapp&logoColor=white)](https://www.whatsapp.com)
-  [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=flat-square&logo=linkedin&logoColor=white)](https://www.linkedin.com)
+  [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=flat-square&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU%2BTGlua2VkSW48L3RpdGxlPjxwYXRoIGQ9Ik0yMC40NDcgMjAuNDUyaC0zLjU1NHYtNS41NjljMC0xLjMyOC0uMDI3LTMuMDM3LTEuODUyLTMuMDM3LTEuODUzIDAtMi4xMzYgMS40NDUtMi4xMzYgMi45Mzl2NS42NjdIOS4zNTFWOWgzLjQxNHYxLjU2MWguMDQ2Yy40NzctLjkgMS42MzctMS44NSAzLjM3LTEuODUgMy42MDEgMCA0LjI2NyAyLjM3IDQuMjY3IDUuNDU1djYuMjg2ek01LjMzNyA3LjQzM2MtMS4xNDQgMC0yLjA2My0uOTI2LTIuMDYzLTIuMDY1IDAtMS4xMzguOTItMi4wNjMgMi4wNjMtMi4wNjMgMS4xNCAwIDIuMDY0LjkyNSAyLjA2NCAyLjA2MyAwIDEuMTM5LS45MjUgMi4wNjUtMi4wNjQgMi4wNjV6bTEuNzgyIDEzLjAxOUgzLjU1NVY5aDMuNTY0djExLjQ1MnpNMjIuMjI1IDBIMS43NzFDLjc5MiAwIDAgLjc3NCAwIDEuNzI5djIwLjU0MkMwIDIzLjIyNy43OTIgMjQgMS43NzEgMjRoMjAuNDUxQzIzLjIgMjQgMjQgMjMuMjI3IDI0IDIyLjI3MVYxLjcyOUMyNCAuNzc0IDIzLjIgMCAyMi4yMjIgMGguMDAzeiIvPjwvc3ZnPg%3D%3D&logoColor=white)](https://www.linkedin.com)
   [![YouTube](https://img.shields.io/badge/YouTube-FF0000?style=flat-square&logo=youtube&logoColor=white)](https://www.youtube.com)
   [![Zoom](https://img.shields.io/badge/Zoom-2D8CFF?style=flat-square&logo=zoom&logoColor=white)](https://zoom.us)
   [![Jira](https://img.shields.io/badge/Jira-0052CC?style=flat-square&logo=jira&logoColor=white)](https://www.atlassian.com/software/jira)
@@ -60,7 +60,7 @@ Yomi connects the tools you already use — first-class integrations, plus
 </p>
 
 <p align="center">
-  …and 40+ more — see the
+…and 40+ more — see the
   [connector catalog](specs/connectors/00-index.md).
 </p>
 
@@ -91,7 +91,7 @@ Telegram and send a text, voice note, or photo:
                     │
                     └── Landing / Dashboard (Next.js on Workers)
                         marketing, auth, account linking, credits,
-                        memory view — all data via the backend API
+                        memory view, all data via the backend API
 ```
 
 You can also see the web dashboard at [getyomi.in](https://getyomi.in) — that's
@@ -148,7 +148,7 @@ message to the backend; the backend thinks, uses tools, and replies.
                    │
                    └── Landing / Dashboard (Next.js on Workers)
                        marketing, auth, account linking, credits,
-                       memory view — all data via the backend API
+                       memory view, all data via the backend API
 ```
 
 The backend is the only thing that talks to Postgres; the dashboard reaches the

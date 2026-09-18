@@ -56,9 +56,9 @@ Choose the highest, least-footprint rung that solves the problem:
         ┌──────┴──────┐
         │             │
         ▼             ▼
-        Connectors     Postgres
+        Connectors    Postgres
         first-class   Neon +
-        + Composio     pgvector
+        + Composio    pgvector
                │
                └── Landing / Dashboard (Next.js)
                    marketing, account linking, credits,
