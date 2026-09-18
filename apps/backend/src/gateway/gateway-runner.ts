@@ -6,12 +6,7 @@ import type { PlatformType, GatewayMessage, GatewaySessionInfo } from "@yomi/sha
 import { checkConsent } from "../services/privacy/checks.js"
 import { recordConsentDecision } from "../services/privacy/consent.js"
 import { ALLOWED_REACTIONS, createModel, type AgentMessage } from "@yomi/agent-core"
-import type {
-  PlatformAdapter,
-  InlineButton,
-  PlatformCallbackEvent,
-  ConnectOptions,
-} from "./platform-adapter.js"
+import type { PlatformAdapter, ConnectOptions } from "./platform-adapter.js"
 import { TelegramAdapter } from "./platforms/telegram.js"
 import { runAgent } from "../agent/run.js"
 import {
@@ -25,6 +20,7 @@ import { recordAiUsage } from "../services/ai-telemetry.js"
 import { consumeCredits, getCreditSummary } from "../services/credit-ledger.js"
 import { recordDailyActivity } from "../services/streaks.js"
 import { advanceSoulOnboarding } from "../services/soul.js"
+import { estimateTokens } from "../agent/compressor.js"
 import { creditsForUsage, type BillableUsageKind } from "../services/credit-pricing.js"
 import { hasBillablePlanAccess, getPlanConfig } from "../entitlements.js"
 import { user as userTable } from "../auth-schema.js"
@@ -43,6 +39,18 @@ const SHARED_SESSION_PLATFORM = "yomi"
 const SHARED_SESSION_CHAT_ID = "global"
 const AGENT_TIMEOUT_MESSAGE =
   "That took too long, so I stopped. Please try again, or rephrase your request to make it simpler."
+// The conversation is rolled over to a fresh session (a "new chat") internally —
+// there are no user-visible Stop/New-chat controls. The gate sits on the shared
+// persistent session's recorded message count (one row per user/assistant
+// message), which spans the WHOLE thread across isolates and grows far beyond
+// the DEFAULT_HISTORY_TURNS window the agent gets to read: once a session has
+// carried ~60 messages the model has effectively churned through the window's
+// worth of conversation, so closed-session summarization preserves the thread's
+// memory and a fresh one keeps the agent's working window clean.
+const SESSION_ROTATE_MIN_MESSAGES = 60
+// Belt-and-braces: never let a single turn's history (e.g. one enormous pasted
+// blob) blow the context window before the message gate gets a say.
+const SESSION_ROTATE_LOADED_TOKENS = 60_000
 
 interface LinkingCode {
   platform: PlatformType
@@ -66,10 +74,6 @@ interface GatewaySession {
   lastActivityAt: number
   messageCount: number
   pendingMessages: GatewayMessage[]
-  // The id of the most recent reply still carrying a live "New chat" button, if
-  // any — tracked so the next reply can strip it before attaching its own, keeping
-  // exactly one live button in the chat at a time instead of one per reply ever sent.
-  lastButtonMessageId?: string
 }
 
 interface ConversationEntry {
@@ -88,9 +92,6 @@ export class GatewayRunner {
   private sessions: Map<string, GatewaySession> = new Map()
   private conversationHistories: Map<string, ConversationEntry> = new Map()
   private pendingDocuments: Map<string, PendingDocumentEntry> = new Map()
-  // statusMessageId (when known) lets a New-chat tap on a DIFFERENT message
-  // clean up this run's own "Working on it…" placeholder — see handleCallbackQuery's
-  // "new" branch, which (unlike "stop") edits the button's own message, not this one.
   private activeRuns: Map<string, { controller: AbortController; statusMessageId?: string }> =
     new Map()
   // Uncharged resumes since the last charged turn, per chat. A resume can propose a
@@ -228,6 +229,52 @@ export class GatewayRunner {
 
   private clearHistory(platform: PlatformType, chatId: string): void {
     this.conversationHistories.delete(this.historyKey(platform, chatId))
+  }
+
+  // Backend-side "new chat": drops the in-memory history and closes the persisted
+  // sessions (both the per-chat thread and the shared yomi:global one, which is
+  // what the agent actually reads), so the next getOrCreateAgentSession call
+  // starts a fresh thread. Runs automatically from rotateSessionIfFull.
+  private async resetConversation(input: {
+    platform: PlatformType
+    chatId: string
+    yomiUserId: string
+  }): Promise<void> {
+    this.clearHistory(input.platform, input.chatId)
+    this.sessions.delete(this.runKey(input.platform, input.chatId))
+    await closeAgentSession({
+      userId: input.yomiUserId,
+      platform: input.platform,
+      chatId: input.chatId,
+    }).catch((err: unknown) => {
+      console.warn("[gateway] rollover close per-chat session failed:", err)
+    })
+    await closeAgentSession({
+      userId: input.yomiUserId,
+      platform: SHARED_SESSION_PLATFORM,
+      chatId: SHARED_SESSION_CHAT_ID,
+    }).catch((err: unknown) => {
+      console.warn("[gateway] rollover close shared session failed:", err)
+    })
+  }
+
+  // Decide whether the shared persistent session has carried enough conversation
+  // to rotate into a fresh one. Returns true when a rollover was started. `count`
+  // is the persistent session's recorded message count (falling back to the
+  // in-memory session's for a consent-denied user); the loaded-history token
+  // check catches the single-huge-turn edge the count can't see.
+  private async rotateSessionIfFull(input: {
+    platform: PlatformType
+    chatId: string
+    yomiUserId: string
+    history: AgentMessage[]
+    messageCount: number
+  }): Promise<boolean> {
+    const eligibleByCount = input.messageCount >= SESSION_ROTATE_MIN_MESSAGES
+    const eligibleByTokens = estimateTokens(input.history) >= SESSION_ROTATE_LOADED_TOKENS
+    if (!eligibleByCount && !eligibleByTokens) return false
+    await this.resetConversation(input)
+    return true
   }
 
   private async formatPendingActions(userId: string): Promise<string> {
@@ -711,7 +758,6 @@ export class GatewayRunner {
   registerAdapter(adapter: PlatformAdapter): void {
     this.adapters.set(adapter.platform, adapter)
     adapter.setMessageHandler((msg) => this.onIncoming(msg))
-    adapter.setCallbackHandler((event) => this.handleCallbackQuery(adapter.platform, event))
   }
 
   async start(_plan?: string, options?: ConnectOptions): Promise<void> {
@@ -931,7 +977,7 @@ export class GatewayRunner {
     platform: PlatformType,
     chatId: string,
     text: string,
-    options?: { replyTo?: string; buttons?: InlineButton[][] },
+    options?: { replyTo?: string },
   ): Promise<{ ok: boolean; messageId?: string; error?: string }> {
     const adapter = this.adapters.get(platform)
     if (!adapter) return { ok: false, error: `platform "${platform}" not connected` }
@@ -953,7 +999,7 @@ export class GatewayRunner {
     chatId: string,
     text: string,
     context: string,
-    options?: { replyTo?: string; buttons?: InlineButton[][] },
+    options?: { replyTo?: string },
   ): Promise<string | undefined> {
     const result = await this.sendMessage(platform, chatId, text, options).catch((err) => ({
       ok: false,
@@ -971,16 +1017,6 @@ export class GatewayRunner {
     const adapter = this.adapters.get(platform)
     if (!adapter) return
     await adapter.sendTyping(chatId)
-  }
-
-  private async clearButtons(
-    platform: PlatformType,
-    chatId: string,
-    messageId: string,
-  ): Promise<void> {
-    const adapter = this.adapters.get(platform)
-    if (!adapter) return
-    await adapter.editMessageReplyMarkup(chatId, messageId).catch(() => {})
   }
 
   async setReaction(
@@ -1119,7 +1155,7 @@ export class GatewayRunner {
         }
       }
 
-      const session = this.getOrCreateSession(msg)
+      let session = this.getOrCreateSession(msg)
       const isFirstMessage = session.messageCount === 0
       session.messageCount++
       session.lastActivityAt = Date.now()
@@ -1167,19 +1203,6 @@ export class GatewayRunner {
         if (approval.executed) {
           await this.resumeAfterApproval(msg, yomiUserId, approval.reply)
         }
-        return
-      }
-
-      // Typed control commands are replaced by inline buttons, but users who still
-      // type them by muscle memory (especially /new, and Telegram's own first-run
-      // flow which can send a bare /start) must not fall through to the paid agent
-      // path. /start <TOKEN> deep-links are handled above and never reach here.
-      if (/^\/(stop|new|help|start)$/i.test(msg.text.trim())) {
-        await this.sendMessage(
-          msg.platform,
-          msg.chatId,
-          "Use the buttons on my messages — tap Stop, New chat, Approve, or Deny instead of typing commands.",
-        ).catch(() => {})
         return
       }
 
@@ -1366,7 +1389,7 @@ export class GatewayRunner {
 
       // ── Backend agent path ───────────────────────────────────────────────────
 
-      let persistentSession: { id: string } | null = null
+      let persistentSession: { id: string; messageCount: number } | null = null
       let history = this.getHistory(msg.platform, msg.chatId)
 
       // Gate the DB read to match the write path: when conversation_history
@@ -1384,6 +1407,25 @@ export class GatewayRunner {
         } catch (err) {
           console.warn("[gateway] persistent session unavailable, using in-memory history:", err)
         }
+      }
+
+      // Roll the conversation over to a fresh session automatically once the
+      // shared persistent thread carries enough messages — no Stop/New-chat UI.
+      const rotated = await this.rotateSessionIfFull({
+        platform: msg.platform,
+        chatId: msg.chatId,
+        yomiUserId,
+        history,
+        messageCount: persistentSession?.messageCount ?? session.messageCount,
+      })
+      if (rotated) history = this.getHistory(msg.platform, msg.chatId)
+
+      if (rotated) {
+        await this.sendMessage(
+          msg.platform,
+          msg.chatId,
+          "💬 Starting a fresh thread — I'll pick up your full context from memory.",
+        ).catch(() => {})
       }
 
       if (msg.imageUrl) {
@@ -1493,22 +1535,16 @@ export class GatewayRunner {
         runController = new AbortController()
         const runKey = this.runKey(msg.platform, msg.chatId)
         this.activeRuns.set(runKey, { controller: runController })
-        // A visible placeholder with a Stop button — this is the one path a user
-        // can meaningfully abort (fast/image/voice replies resolve in well under
-        // a second, so they never get one). Deleted once the run settles, one way
-        // or another, below.
-        const statusResult = await this.sendMessage(msg.platform, msg.chatId, "⏳ Working on it…", {
-          buttons: [[{ text: "⏹ Stop", callbackData: "stop" }]],
-        })
+        // A visible placeholder — deleted once the run settles, one way or
+        // another, below.
+        const statusResult = await this.sendMessage(msg.platform, msg.chatId, "⏳ Working on it…")
         if (statusResult.ok && statusResult.messageId) {
           statusMessageId = statusResult.messageId
-          // Re-set with the status message id now known, so a New-chat tap that
-          // races in before runAgent settles can find and delete this placeholder.
           this.activeRuns.set(runKey, { controller: runController, statusMessageId })
         }
         // Hard cap on a single agent run. On a stateless Worker nothing else can
-        // abort a hung run (the in-memory /stop and /new controllers live in other
-        // isolates), so without this a stuck tool/model call would hang forever.
+        // abort a hung run (the in-memory controller lives in this isolate), so
+        // without this a stuck tool/model call would hang forever.
         const timeoutMs = Number(process.env["YOMI_AGENT_RUN_TIMEOUT_MS"] ?? 60_000)
         runTimeout = setTimeout(() => {
           runTimedOut = true
@@ -1535,11 +1571,8 @@ export class GatewayRunner {
         clearInterval(typingInterval)
         this.activeRuns.delete(this.runKey(msg.platform, msg.chatId))
         if (runController.signal.aborted) {
-          // A manual Stop tap already edited the status message itself, and a
-          // New-chat tap already deleted it (see handleCallbackQuery) — there's
-          // nothing further to send in either case. Only a timeout (which
-          // neither tap could have caused) still needs to delete the untouched
-          // status message and tell the user.
+          // The run was aborted (timeout, or the gateway stopping) — the status
+          // placeholder, if any, still needs deleting and the user needs told.
           if (runTimedOut) {
             if (statusMessageId) {
               await this.deleteMessage(msg.platform, msg.chatId, statusMessageId).catch(() => {})
@@ -1563,20 +1596,7 @@ export class GatewayRunner {
         // invocation's subrequest budget, and losing the user-visible reply
         // is worse than losing a history write (which has an in-memory fallback).
         const reply = result.text || "I couldn't produce a reply. Please try again."
-        // Only one "New chat" button should ever be live at a time — otherwise a tap
-        // on an older reply's button silently edits a message that's scrolled out of
-        // view, which reads as the button doing nothing. Strip the previous one first.
-        if (session.lastButtonMessageId) {
-          void this.clearButtons(msg.platform, msg.chatId, session.lastButtonMessageId)
-        }
-        const newReplyId = await this.sendMessageAndLog(
-          msg.platform,
-          msg.chatId,
-          reply,
-          "backend-agent-reply",
-          { buttons: [[{ text: "🔄 New chat", callbackData: "new" }]] },
-        )
-        session.lastButtonMessageId = newReplyId
+        await this.sendMessageAndLog(msg.platform, msg.chatId, reply, "backend-agent-reply")
         if (result.text) {
           if (conversationConsent.allowed && persistentSession) {
             await appendAgentTurn({
@@ -1608,8 +1628,8 @@ export class GatewayRunner {
           )
           return
         }
-        // A manual Stop tap already edited the status message itself, and a
-        // New-chat tap already deleted it — either way, stop quietly.
+        // The run was aborted out-of-band (timeout, gateway stop) — leave the
+        // status placeholder to that path and stop quietly.
         if (runController?.signal.aborted) return
         if (statusMessageId) {
           await this.deleteMessage(msg.platform, msg.chatId, statusMessageId).catch(() => {})
@@ -1640,192 +1660,6 @@ export class GatewayRunner {
       } catch {
         /* ignore — best-effort */
       }
-    }
-  }
-
-  // Resolve the Yomi user ID from a platform user ID
-  async resolveYomiUserId(
-    platform: PlatformType,
-    platformUserId: string,
-  ): Promise<string | undefined> {
-    return (await this.lookupPlatformConnection(platform, platformUserId)).userId
-  }
-
-  private async handleCallbackQuery(
-    platform: PlatformType,
-    event: PlatformCallbackEvent,
-  ): Promise<void> {
-    const adapter = this.adapters.get(platform)
-    if (!adapter) return
-
-    const yomiUserId = await this.resolveYomiUserId(platform, event.platformUserId)
-    await adapter.answerCallbackQuery(event.callbackId).catch(() => {})
-    if (!yomiUserId) return
-
-    if (event.data === "stop") {
-      const key = this.runKey(platform, event.chatId)
-      const entry = this.activeRuns.get(key)
-      if (!entry) {
-        await adapter
-          .editMessageText(event.chatId, event.messageId, "No operation is currently running.")
-          .catch(() => {})
-        return
-      }
-      entry.controller.abort()
-      this.activeRuns.delete(key)
-      await adapter
-        .editMessageText(event.chatId, event.messageId, "Stopping the current operation.")
-        .catch(() => {})
-      return
-    }
-
-    if (event.data === "new") {
-      const key = this.runKey(platform, event.chatId)
-      const entry = this.activeRuns.get(key)
-      if (entry) {
-        entry.controller.abort()
-        this.activeRuns.delete(key)
-        // Unlike "stop" (which edits this same run's own status message), "new"'s
-        // button lives on a PREVIOUS turn's reply — the in-flight run's own
-        // "Working on it…" placeholder is a different message and would otherwise
-        // be left dangling with a dead Stop button forever.
-        if (entry.statusMessageId) {
-          await this.deleteMessage(platform, event.chatId, entry.statusMessageId).catch(() => {})
-        }
-      }
-      const session = this.sessions.get(`${platform}:${event.chatId}`)
-      if (session) {
-        session.messageCount = 0
-        session.createdAt = Date.now()
-        session.lastActivityAt = Date.now()
-        // No button is live post-reset until the next reply sends one.
-        session.lastButtonMessageId = undefined
-      }
-      this.clearHistory(platform, event.chatId)
-      await closeAgentSession({ userId: yomiUserId, platform, chatId: event.chatId }).catch(
-        (err) => {
-          console.warn("[gateway] close persistent session failed:", err)
-        },
-      )
-      await closeAgentSession({
-        userId: yomiUserId,
-        platform: SHARED_SESSION_PLATFORM,
-        chatId: SHARED_SESSION_CHAT_ID,
-      }).catch((err) => {
-        console.warn("[gateway] close shared session failed:", err)
-      })
-      // Edit the tapped message in place (marks that spot, drops its button) AND
-      // send a fresh message — the edit alone is invisible whenever the tapped
-      // button lived on a reply that's since scrolled out of view.
-      await adapter
-        .editMessageText(event.chatId, event.messageId, "✅ Started a new conversation.")
-        .catch(() => {})
-      await adapter
-        .sendMessage(event.chatId, "Started a new conversation. How can I help you?")
-        .catch(() => {})
-      return
-    }
-
-    const approveMatch = /^approve:([0-9a-f-]{36})$/i.exec(event.data)
-    if (approveMatch?.[1]) {
-      await this.handleCallbackApproval(
-        platform,
-        event.chatId,
-        event.messageId,
-        yomiUserId,
-        approveMatch[1],
-        true,
-      )
-      return
-    }
-    const denyMatch = /^deny:([0-9a-f-]{36})$/i.exec(event.data)
-    if (denyMatch?.[1]) {
-      await this.handleCallbackApproval(
-        platform,
-        event.chatId,
-        event.messageId,
-        yomiUserId,
-        denyMatch[1],
-        false,
-      )
-    }
-  }
-
-  // `executed` drives the resume the same way handleApprovalCommand's text path
-  // does: an approved write is one step of the agent's plan, so the loop is
-  // re-entered afterwards or everything the agent meant to do next is lost.
-  private async handleCallbackApproval(
-    platform: PlatformType,
-    chatId: string,
-    messageId: string,
-    yomiUserId: string,
-    actionId: string,
-    approve: boolean,
-  ): Promise<void> {
-    const adapter = this.adapters.get(platform)
-    if (!adapter) return
-    const { approvePendingAction, denyPendingAction, formatActionResult } =
-      await import("../services/pending-actions.js")
-
-    if (!approve) {
-      try {
-        const denied = await denyPendingAction(yomiUserId, actionId)
-        const text = denied
-          ? "Denied."
-          : "I couldn't find that pending action. It may have expired or already been handled."
-        await adapter.editMessageText(chatId, messageId, text).catch(() => {})
-      } catch (err) {
-        console.warn("[gateway] deny pending action failed:", err)
-        await adapter
-          .editMessageText(chatId, messageId, "Deny failed. Please try again.")
-          .catch(() => {})
-      }
-      return
-    }
-
-    try {
-      const result = await approvePendingAction(yomiUserId, actionId, { skipNotify: true })
-      if (!result) {
-        await adapter
-          .editMessageText(
-            chatId,
-            messageId,
-            "I couldn't find that pending action. It may have expired or already been handled.",
-          )
-          .catch(() => {})
-        return
-      }
-      if (result.status !== "executed") {
-        await adapter
-          .editMessageText(
-            chatId,
-            messageId,
-            formatActionResult(result.result, `That didn't work: ${result.status}`),
-          )
-          .catch(() => {})
-        return
-      }
-      const reply = `Approved and executed.\n${formatActionResult(result.result, `Done: ${result.title ?? "action"}`)}`
-      await adapter.editMessageText(chatId, messageId, reply).catch(() => {})
-      await this.resumeAfterApproval(
-        {
-          platform,
-          chatId,
-          userId: "",
-          text: "approve",
-          timestamp: new Date().toISOString(),
-        },
-        yomiUserId,
-        reply,
-      )
-    } catch (err) {
-      await adapter
-        .editMessageText(
-          chatId,
-          messageId,
-          `Approval failed: ${err instanceof Error ? err.message : String(err)}`,
-        )
-        .catch(() => {})
     }
   }
 

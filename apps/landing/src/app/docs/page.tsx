@@ -78,15 +78,6 @@ const CONNECTORS_BY_CATEGORY = CATEGORY_ORDER.map((category) => ({
   connectors: CONNECTED_CATALOG.filter((c) => c.category === category),
 })).filter((group) => group.connectors.length > 0)
 
-const TELEGRAM_COMMANDS: { cmd: string; what: string }[] = [
-  { cmd: "/new", what: "Start a fresh conversation (clears the current chat context)" },
-  { cmd: "/stop", what: "Stop whatever Yomi is currently doing" },
-  { cmd: "/pending", what: "Show actions waiting for your approval" },
-  { cmd: "/approve", what: "Approve the pending action (or pick one if several)" },
-  { cmd: "/deny", what: "Reject the pending action" },
-  { cmd: "/help", what: "List the available commands" },
-]
-
 type Tone =
   | "primary"
   | "emerald"
@@ -308,20 +299,10 @@ export default function DocsPage() {
             Connect Telegram from the dashboard&apos;s secure link flow, then message Yomi like any
             chat. It handles text, <strong className="text-foreground">voice notes</strong>{" "}
             (transcribed automatically), and{" "}
-            <strong className="text-foreground">images/screenshots</strong> for analysis.
+            <strong className="text-foreground">images/screenshots</strong> for analysis. It
+            connects to the apps you use, and asks you to approve sensitive actions inline in the
+            chat before anything is sent or changed.
           </p>
-          <div className="overflow-hidden rounded-2xl border border-border">
-            <table className="w-full text-sm">
-              <tbody className="divide-y divide-border">
-                {TELEGRAM_COMMANDS.map((c) => (
-                  <tr key={c.cmd} className="hover:bg-muted/40">
-                    <td className="w-28 px-4 py-2.5 font-mono text-primary">{c.cmd}</td>
-                    <td className="px-4 py-2.5 text-muted-foreground">{c.what}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </Section>
 
         <Section
@@ -411,10 +392,8 @@ export default function DocsPage() {
         >
           <p>
             Actions that send or change things, like sending an email, pause for your approval
-            first. Review the preview, then approve or deny (on Telegram, use{" "}
-            <span className="font-mono text-primary">/approve</span> and{" "}
-            <span className="font-mono text-primary">/deny</span>). Yomi never sends on your behalf
-            without a confirmation.
+            first. Review the preview in the chat, then reply to approve or deny. Yomi never sends
+            on your behalf without a confirmation.
           </p>
         </Section>
 

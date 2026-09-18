@@ -17,21 +17,11 @@ const fakeDb = {
 }
 mock.module("@yomi/db", () => ({ db: fakeDb, pendingActions: {} }))
 
-let sentMessages: {
-  platform: string
-  chatId: string
-  text: string
-  options?: { buttons?: { text: string; callbackData: string }[][] }
-}[] = []
+let sentMessages: { platform: string; chatId: string; text: string }[] = []
 mock.module("../gateway/index.js", () => ({
   getDefaultGateway: () => ({
-    sendMessage: async (
-      platform: string,
-      chatId: string,
-      text: string,
-      options?: { buttons?: { text: string; callbackData: string }[][] },
-    ) => {
-      sentMessages.push({ platform, chatId, text, options })
+    sendMessage: async (platform: string, chatId: string, text: string) => {
+      sentMessages.push({ platform, chatId, text })
       return { ok: true }
     },
   }),
@@ -46,7 +36,7 @@ beforeEach(() => {
 })
 
 describe("createPendingAction", () => {
-  it("attaches Approve/Deny inline buttons carrying the new action's id", async () => {
+  it("sends an approval card telling the user to reply yes or no", async () => {
     await createPendingAction({
       userId: "user_1",
       connector: "google",
@@ -62,12 +52,7 @@ describe("createPendingAction", () => {
     expect(sentMessages).toHaveLength(1)
     expect(sentMessages[0]?.platform).toBe("telegram")
     expect(sentMessages[0]?.chatId).toBe("chat_1")
-    expect(sentMessages[0]?.options?.buttons).toEqual([
-      [
-        { text: "✅ Approve", callbackData: "approve:action-1" },
-        { text: "❌ Deny", callbackData: "deny:action-1" },
-      ],
-    ])
+    expect(sentMessages[0]?.text).toContain('Reply "yes" to approve')
   })
 
   it("sends no card when sourcePlatform/sourceChatId are missing", async () => {

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
 import type { GatewayMessage, PlatformType } from "@yomi/shared"
 import type { AgentMessage } from "@yomi/agent-core"
-import type { PlatformAdapter, InlineButton, PlatformCallbackEvent } from "./platform-adapter.js"
+import type { PlatformAdapter } from "./platform-adapter.js"
 
 let agentCalls: {
   userId: string
@@ -18,6 +18,7 @@ let agentHangs = false
 // because the code looks parallel.
 let agentRejectsOnAbort = false
 let loadedHistory: AgentMessage[] = []
+let persistentMessageCount = 0
 let appendedTurns: {
   sessionId: string
   userId: string
@@ -154,7 +155,7 @@ mock.module("../agent/run.js", () => ({
 }))
 
 mock.module("../services/agent-sessions.js", () => ({
-  getOrCreateAgentSession: async () => ({ id: "session_1", messageCount: 0 }),
+  getOrCreateAgentSession: async () => ({ id: "session_1", messageCount: persistentMessageCount }),
   loadAgentHistory: async () => loadedHistory,
   appendAgentTurn: async (input: {
     sessionId: string
@@ -276,25 +277,19 @@ const { GatewayRunner } = await import("./gateway-runner.js")
 
 class FakeAdapter implements PlatformAdapter {
   readonly platform: PlatformType = "telegram"
-  messages: { chatId: string; text: string; buttons?: InlineButton[][] }[] = []
+  messages: { chatId: string; text: string }[] = []
   reactions: { chatId: string; messageId: string; emoji: string }[] = []
-  edits: { chatId: string; messageId: string; text: string; buttons?: InlineButton[][] }[] = []
   deletedMessageIds: string[] = []
-  answeredCallbacks: string[] = []
   handler: ((msg: GatewayMessage) => void | Promise<void>) | null = null
-  callbackHandler: ((event: PlatformCallbackEvent) => void | Promise<void>) | null = null
   private nextMessageId = 1
   async connect() {}
   async disconnect() {}
   setMessageHandler(handler: (msg: GatewayMessage) => void | Promise<void>): void {
     this.handler = handler
   }
-  setCallbackHandler(handler: (event: PlatformCallbackEvent) => void | Promise<void>): void {
-    this.callbackHandler = handler
-  }
-  async sendMessage(chatId: string, text: string, options?: { buttons?: InlineButton[][] }) {
+  async sendMessage(chatId: string, text: string) {
     const messageId = String(this.nextMessageId++)
-    this.messages.push({ chatId, text, buttons: options?.buttons })
+    this.messages.push({ chatId, text })
     return { ok: true, messageId }
   }
   async sendDocument() {
@@ -303,23 +298,6 @@ class FakeAdapter implements PlatformAdapter {
   async deleteMessage(_chatId: string, messageId: string) {
     this.deletedMessageIds.push(messageId)
     return { ok: true }
-  }
-  async editMessageText(
-    chatId: string,
-    messageId: string,
-    text: string,
-    options?: { buttons?: InlineButton[][] },
-  ) {
-    this.edits.push({ chatId, messageId, text, buttons: options?.buttons })
-    return { ok: true }
-  }
-  markupClears: { chatId: string; messageId: string }[] = []
-  async editMessageReplyMarkup(chatId: string, messageId: string) {
-    this.markupClears.push({ chatId, messageId })
-    return { ok: true }
-  }
-  async answerCallbackQuery(callbackId: string) {
-    this.answeredCallbacks.push(callbackId)
   }
   async sendTyping() {}
   async setReaction(chatId: string, messageId: string, emoji: string) {
@@ -342,6 +320,7 @@ beforeEach(() => {
   agentRejectsOnAbort = false
   delete process.env.YOMI_AGENT_RUN_TIMEOUT_MS
   loadedHistory = []
+  persistentMessageCount = 0
   appendedTurns = []
   closedSessions = []
   pendingActions = []
@@ -430,8 +409,8 @@ describe("GatewayRunner production routing", () => {
     expect(recordDailyActivityCalls).toEqual(["user_1"])
   })
 
-  it.each(["/stop", "/new", "/help", "/start"])(
-    "replies locally to bare %s without reaching the agent path",
+  it.each(["/stop", "/new", "/help"])(
+    "passes bare %s through to the agent path like a normal message",
     async (command) => {
       const runner = new GatewayRunner()
       const adapter = new FakeAdapter()
@@ -445,15 +424,13 @@ describe("GatewayRunner production routing", () => {
         timestamp: new Date().toISOString(),
       })
 
-      expect(agentCalls).toEqual([])
-      expect(adapter.messages).toHaveLength(1)
-      expect(adapter.messages[0]?.text).toBe(
-        "Use the buttons on my messages — tap Stop, New chat, Approve, or Deny instead of typing commands.",
-      )
+      expect(agentCalls[0]?.text).toBe(command)
+      // No deflection message — the old "use the buttons" nudge is gone.
+      expect(adapter.messages.some((m) => m.text?.includes("buttons"))).toBe(false)
     },
   )
 
-  it("leaves the /start <TOKEN> deep-link form unaffected by the bare /start intercept", async () => {
+  it("leaves the /start <TOKEN> deep-link form unaffected by the removed bare /start intercept", async () => {
     const runner = new GatewayRunner()
     const adapter = new FakeAdapter()
     runner.registerAdapter(adapter)
@@ -469,7 +446,7 @@ describe("GatewayRunner production routing", () => {
     // Never reaches the paid agent path, and never gets the "use the buttons"
     // local reply either — it's a wholly separate, already-preserved code path.
     expect(agentCalls).toEqual([])
-    expect(adapter.messages.some((m) => m.text.includes("Use the buttons"))).toBe(false)
+    expect(adapter.messages.some((m) => m.text.includes("buttons"))).toBe(false)
   })
 
   it("wires onReact through to the platform adapter's setReaction", async () => {
@@ -713,7 +690,10 @@ describe("GatewayRunner production routing", () => {
     expect(agentCalls[0]?.history).toEqual(loadedHistory)
   })
 
-  it("closes the active persisted session when the New-chat button is tapped", async () => {
+  it("rolls the conversation over to a fresh session when the persistent thread is long enough", async () => {
+    // The shared persistent session reports 60 recorded messages — the point at
+    // which the agent's working window has churned through a full conversation.
+    persistentMessageCount = 60
     const runner = new GatewayRunner()
     const adapter = new FakeAdapter()
     runner.registerAdapter(adapter)
@@ -722,37 +702,30 @@ describe("GatewayRunner production routing", () => {
       platform: "telegram",
       chatId: "chat_1",
       userId: "tg_1",
-      text: "hello",
+      text: "continue",
       timestamp: new Date().toISOString(),
     })
-    expect(adapter.messages.at(-1)?.buttons).toEqual([
-      [{ text: "🔄 New chat", callbackData: "new" }],
-    ])
 
-    // FakeAdapter's message ids are assigned in send order: "1" was the status
-    // placeholder (sent, then deleted once the run finished), "2" is the final
-    // reply the New-chat button is actually attached to.
-    await adapter.callbackHandler!({
+    // The old per-chat and shared yomi:global sessions are closed and a fresh
+    // thread is started internally — the user-facing "new chat" is gone.
+    expect(closedSessions).toContainEqual({
+      userId: "user_1",
+      platform: "telegram",
       chatId: "chat_1",
-      platformUserId: "tg_1",
-      messageId: "2",
-      data: "new",
-      callbackId: "cbq_1",
     })
-
-    expect(adapter.answeredCallbacks).toEqual(["cbq_1"])
-    expect(closedSessions).toEqual([
-      { userId: "user_1", platform: "telegram", chatId: "chat_1" },
-      { userId: "user_1", platform: "yomi", chatId: "global" },
-    ])
-    // The tapped message is marked in place, but the real confirmation is a fresh
-    // message at the bottom of the chat — visible no matter which reply's button
-    // was actually tapped.
-    expect(adapter.edits.at(-1)?.text).toBe("✅ Started a new conversation.")
-    expect(adapter.messages.at(-1)?.text).toBe("Started a new conversation. How can I help you?")
+    expect(closedSessions).toContainEqual({
+      userId: "user_1",
+      platform: "yomi",
+      chatId: "global",
+    })
+    expect(adapter.messages.some((m) => m.text?.includes("Starting a fresh thread"))).toBe(true)
+    // The agent still runs this turn.
+    expect(agentCalls).toHaveLength(1)
   })
 
-  it("strips the previous reply's New-chat button when a new reply's button is sent", async () => {
+  it("rolls over on a single oversized history even when the session count is low", async () => {
+    // ~64k tokens of loaded history: the count gate can't see this, the token gate must.
+    loadedHistory = [{ role: "user", content: "x".repeat(260_000) }]
     const runner = new GatewayRunner()
     const adapter = new FakeAdapter()
     runner.registerAdapter(adapter)
@@ -761,28 +734,40 @@ describe("GatewayRunner production routing", () => {
       platform: "telegram",
       chatId: "chat_1",
       userId: "tg_1",
-      text: "hello",
+      text: "continue",
       timestamp: new Date().toISOString(),
     })
-    // FakeAdapter's message ids are assigned in send order: "1" is the status
-    // placeholder, "2" is the first reply carrying the New-chat button.
-    expect(adapter.markupClears).toEqual([])
+
+    expect(closedSessions).toContainEqual({
+      userId: "user_1",
+      platform: "yomi",
+      chatId: "global",
+    })
+  })
+
+  it("does not rotate a short session with a light history", async () => {
+    persistentMessageCount = 8
+    loadedHistory = [
+      { role: "user", content: "hello" },
+      { role: "assistant", content: "hi there" },
+    ]
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
 
     await incoming(runner, {
       platform: "telegram",
       chatId: "chat_1",
       userId: "tg_1",
-      text: "hello again",
+      text: "continue",
       timestamp: new Date().toISOString(),
     })
 
-    expect(adapter.markupClears).toEqual([{ chatId: "chat_1", messageId: "2" }])
-    expect(adapter.messages.at(-1)?.buttons).toEqual([
-      [{ text: "🔄 New chat", callbackData: "new" }],
-    ])
+    expect(closedSessions).toHaveLength(0)
+    expect(adapter.messages.some((m) => m.text?.includes("Starting a fresh thread"))).toBe(false)
   })
 
-  it("sends a status message with a Stop button before running the agent, and deletes it once the reply is sent", async () => {
+  it("sends a status message before running the agent, and deletes it once the reply is sent", async () => {
     const runner = new GatewayRunner()
     const adapter = new FakeAdapter()
     runner.registerAdapter(adapter)
@@ -799,200 +784,12 @@ describe("GatewayRunner production routing", () => {
     expect(adapter.messages[0]).toEqual({
       chatId: "chat_1",
       text: "⏳ Working on it…",
-      buttons: [[{ text: "⏹ Stop", callbackData: "stop" }]],
     })
     expect(adapter.deletedMessageIds).toEqual(["1"])
     expect(adapter.messages[1]).toEqual({
       chatId: "chat_1",
       text: "backend reply",
-      buttons: [[{ text: "🔄 New chat", callbackData: "new" }]],
     })
-  })
-
-  it("aborts the run when the Stop button is tapped while it's in flight", async () => {
-    agentHangs = true
-    const runner = new GatewayRunner()
-    const adapter = new FakeAdapter()
-    runner.registerAdapter(adapter)
-
-    const runPromise = incoming(runner, {
-      platform: "telegram",
-      chatId: "chat_1",
-      userId: "tg_1",
-      text: "do something slow",
-      timestamp: new Date().toISOString(),
-    })
-
-    // Let the status message send and the runAgent mock start waiting on abort.
-    await new Promise((resolve) => setTimeout(resolve, 0))
-
-    await adapter.callbackHandler!({
-      chatId: "chat_1",
-      platformUserId: "tg_1",
-      messageId: "1",
-      data: "stop",
-      callbackId: "cbq_stop",
-    })
-    await runPromise
-
-    expect(adapter.answeredCallbacks).toEqual(["cbq_stop"])
-    expect(adapter.edits.at(-1)).toEqual({
-      chatId: "chat_1",
-      messageId: "1",
-      text: "Stopping the current operation.",
-      buttons: undefined,
-    })
-    // The aborted run exits quietly — it must not also send a timeout/error message.
-    expect(adapter.messages).toHaveLength(1)
-  })
-
-  it("also exits quietly from the catch block's mirrored abort check when runAgent rejects after a Stop tap", async () => {
-    // Mirrors the test above, but forces runAgent to reject (rather than
-    // resolve) once aborted, so this exercises the catch block's own
-    // `if (runController?.signal.aborted) return` independently — proving it
-    // behaves the same as the try block's post-await path rather than just
-    // assuming so because the code looks parallel. The real runAgent()
-    // essentially never rejects, but the code still has to handle it.
-    agentHangs = true
-    agentRejectsOnAbort = true
-    const runner = new GatewayRunner()
-    const adapter = new FakeAdapter()
-    runner.registerAdapter(adapter)
-
-    const runPromise = incoming(runner, {
-      platform: "telegram",
-      chatId: "chat_1",
-      userId: "tg_1",
-      text: "do something slow",
-      timestamp: new Date().toISOString(),
-    })
-
-    // Let the status message send and the runAgent mock start waiting on abort.
-    await new Promise((resolve) => setTimeout(resolve, 0))
-
-    await adapter.callbackHandler!({
-      chatId: "chat_1",
-      platformUserId: "tg_1",
-      messageId: "1",
-      data: "stop",
-      callbackId: "cbq_stop_reject",
-    })
-    await runPromise
-
-    expect(adapter.answeredCallbacks).toEqual(["cbq_stop_reject"])
-    expect(adapter.edits.at(-1)).toEqual({
-      chatId: "chat_1",
-      messageId: "1",
-      text: "Stopping the current operation.",
-      buttons: undefined,
-    })
-    // The catch block's abort branch must not delete the status message (it
-    // was already edited in place by handleCallbackQuery) and must not send
-    // any further message.
-    expect(adapter.deletedMessageIds).toEqual([])
-    expect(adapter.messages).toHaveLength(1)
-  })
-
-  it("deletes the in-flight run's status placeholder when New-chat is tapped mid-run", async () => {
-    // Regression: New-chat's button lives on a PREVIOUS turn's reply, not on the
-    // in-flight run's own "Working on it…" placeholder — unlike Stop (which edits
-    // its own message), New used to only abort the run and never touch that
-    // placeholder, leaving it dangling forever with a dead Stop button.
-    const runner = new GatewayRunner()
-    const adapter = new FakeAdapter()
-    runner.registerAdapter(adapter)
-
-    // First turn completes normally: id "1" is its status placeholder (sent then
-    // deleted), id "2" is the reply carrying the New-chat button.
-    await incoming(runner, {
-      platform: "telegram",
-      chatId: "chat_1",
-      userId: "tg_1",
-      text: "hello",
-      timestamp: new Date().toISOString(),
-    })
-    expect(adapter.deletedMessageIds).toEqual(["1"])
-
-    // Second turn hangs: id "3" is ITS status placeholder, still in flight.
-    agentHangs = true
-    const runPromise = incoming(runner, {
-      platform: "telegram",
-      chatId: "chat_1",
-      userId: "tg_1",
-      text: "do something slow",
-      timestamp: new Date().toISOString(),
-    })
-    await new Promise((resolve) => setTimeout(resolve, 0))
-
-    // Tap New-chat on the FIRST turn's reply (id "2") while the second run is
-    // still in flight — mirrors a user impatiently starting over mid-run.
-    await adapter.callbackHandler!({
-      chatId: "chat_1",
-      platformUserId: "tg_1",
-      messageId: "2",
-      data: "new",
-      callbackId: "cbq_new",
-    })
-    await runPromise
-
-    // The second run's own placeholder (id "3") must be cleaned up, not left
-    // dangling — not just id "1" from the unrelated first turn.
-    expect(adapter.deletedMessageIds).toEqual(["1", "3"])
-    expect(adapter.edits.at(-1)).toEqual({
-      chatId: "chat_1",
-      messageId: "2",
-      text: "✅ Started a new conversation.",
-      buttons: undefined,
-    })
-    expect(adapter.messages.at(-1)?.text).toBe("Started a new conversation. How can I help you?")
-  })
-
-  it("tells the user nothing is running when Stop is tapped with no active run", async () => {
-    const runner = new GatewayRunner()
-    const adapter = new FakeAdapter()
-    runner.registerAdapter(adapter)
-
-    await incoming(runner, {
-      platform: "telegram",
-      chatId: "chat_1",
-      userId: "tg_1",
-      text: "hi",
-      timestamp: new Date().toISOString(),
-    })
-
-    await adapter.callbackHandler!({
-      chatId: "chat_1",
-      platformUserId: "tg_1",
-      messageId: "999",
-      data: "stop",
-      callbackId: "cbq_stop2",
-    })
-
-    expect(adapter.edits.at(-1)).toEqual({
-      chatId: "chat_1",
-      messageId: "999",
-      text: "No operation is currently running.",
-      buttons: undefined,
-    })
-  })
-
-  it("acks an unrecognized callback_data value without throwing or editing anything", async () => {
-    const runner = new GatewayRunner()
-    const adapter = new FakeAdapter()
-    runner.registerAdapter(adapter)
-
-    await adapter.callbackHandler!({
-      chatId: "chat_1",
-      platformUserId: "tg_1",
-      messageId: "1",
-      data: "some-future-button-type",
-      callbackId: "cbq_unknown",
-    })
-
-    // Still acked (so the tap spinner clears), but nothing matches, so nothing else happens.
-    expect(adapter.answeredCallbacks).toEqual(["cbq_unknown"])
-    expect(adapter.edits).toHaveLength(0)
-    expect(closedSessions).toHaveLength(0)
   })
 
   it("approves the most recent pending action with /approve", async () => {

@@ -1,23 +1,10 @@
 import type { GatewayMessage, PlatformType } from "@yomi/shared"
 import { humanizeDashes } from "@yomi/shared"
-import type {
-  PlatformAdapter,
-  InlineButton,
-  PlatformCallbackEvent,
-  ConnectOptions,
-} from "../platform-adapter.js"
+import type { PlatformAdapter, ConnectOptions } from "../platform-adapter.js"
 import { markdownToTelegramHtml, truncateMessage } from "../platform-adapter.js"
 
 const API_BASE = "https://api.telegram.org/bot"
-const REQUIRED_WEBHOOK_UPDATES = ["message", "callback_query"] as const
-
-function toInlineKeyboard(buttons: InlineButton[][]) {
-  return {
-    inline_keyboard: buttons.map((row) =>
-      row.map((b) => ({ text: b.text, callback_data: b.callbackData })),
-    ),
-  }
-}
+const REQUIRED_WEBHOOK_UPDATES = ["message"] as const
 
 interface TelegramMessage {
   message_id: number
@@ -44,12 +31,6 @@ interface TelegramMessage {
 export interface TelegramUpdate {
   update_id: number
   message?: TelegramMessage
-  callback_query?: {
-    id: string
-    from: { id: number }
-    message?: { message_id: number; chat: { id: number; type: string } }
-    data?: string
-  }
 }
 
 interface TelegramResponse {
@@ -62,7 +43,6 @@ export class TelegramAdapter implements PlatformAdapter {
   readonly platform: PlatformType = "telegram"
   readonly botToken: string
   private messageHandler: ((msg: GatewayMessage) => void | Promise<void>) | null = null
-  private callbackHandler: ((event: PlatformCallbackEvent) => void | Promise<void>) | null = null
   private connected = false
   private setupComplete = false
   botUsername: string | null = null
@@ -186,26 +166,8 @@ export class TelegramAdapter implements PlatformAdapter {
     this.messageHandler = handler
   }
 
-  setCallbackHandler(handler: (event: PlatformCallbackEvent) => void | Promise<void>): void {
-    this.callbackHandler = handler
-  }
-
   /** Convert a Telegram API update to a GatewayMessage and dispatch to the handler. */
   async processUpdate(update: TelegramUpdate): Promise<void> {
-    if (update.callback_query) {
-      const cq = update.callback_query
-      if (this.callbackHandler && cq.message) {
-        await this.callbackHandler({
-          chatId: String(cq.message.chat.id),
-          platformUserId: String(cq.from.id),
-          messageId: String(cq.message.message_id),
-          data: cq.data ?? "",
-          callbackId: cq.id,
-        })
-      }
-      return
-    }
-
     if (!this.messageHandler) return
 
     const msg = update.message
@@ -341,7 +303,7 @@ export class TelegramAdapter implements PlatformAdapter {
   async sendMessage(
     chatId: string,
     text: string,
-    options?: { replyTo?: string; buttons?: InlineButton[][] },
+    options?: { replyTo?: string },
   ): Promise<{ ok: boolean; messageId?: string; error?: string }> {
     try {
       // Truncate the plain markdown before converting to HTML tags, never after —
@@ -354,7 +316,6 @@ export class TelegramAdapter implements PlatformAdapter {
         parse_mode: "HTML",
       }
       if (options?.replyTo) body.reply_to_message_id = Number(options.replyTo)
-      if (options?.buttons) body.reply_markup = toInlineKeyboard(options.buttons)
 
       const res = await fetch(`${this.apiUrl}/sendMessage`, {
         method: "POST",
@@ -425,69 +386,6 @@ export class TelegramAdapter implements PlatformAdapter {
       return { ok: true }
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) }
-    }
-  }
-
-  async editMessageText(
-    chatId: string,
-    messageId: string,
-    text: string,
-    options?: { buttons?: InlineButton[][] },
-  ): Promise<{ ok: boolean; error?: string }> {
-    try {
-      const clean = markdownToTelegramHtml(truncateMessage(humanizeDashes(text)))
-      const res = await fetch(`${this.apiUrl}/editMessageText`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          message_id: Number(messageId),
-          text: clean,
-          parse_mode: "HTML",
-          reply_markup: toInlineKeyboard(options?.buttons ?? []),
-        }),
-      })
-      const data = (await res.json()) as TelegramResponse
-      if (!data.ok) return { ok: false, error: data.description ?? "edit failed" }
-      return { ok: true }
-    } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message : String(err) }
-    }
-  }
-
-  async editMessageReplyMarkup(
-    chatId: string,
-    messageId: string,
-    buttons?: InlineButton[][],
-  ): Promise<{ ok: boolean; error?: string }> {
-    try {
-      const res = await fetch(`${this.apiUrl}/editMessageReplyMarkup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          message_id: Number(messageId),
-          reply_markup: toInlineKeyboard(buttons ?? []),
-        }),
-      })
-      const data = (await res.json()) as TelegramResponse
-      if (!data.ok) return { ok: false, error: data.description ?? "edit markup failed" }
-      return { ok: true }
-    } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message : String(err) }
-    }
-  }
-
-  async answerCallbackQuery(callbackId: string, text?: string): Promise<void> {
-    try {
-      await fetch(`${this.apiUrl}/answerCallbackQuery`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ callback_query_id: callbackId, text }),
-      })
-    } catch {
-      // best-effort — a failed ack just leaves the client's tap spinner
-      // running a little longer, it doesn't block anything downstream
     }
   }
 
