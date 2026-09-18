@@ -52,8 +52,7 @@ export function denialMessage(required: Scope): string {
 }
 
 export type CapabilityCheck =
-  | { allowed: true }
-  | { allowed: false; missing: Scope; message: string }
+  { allowed: true } | { allowed: false; missing: Scope; message: string }
 
 // What a plugin (or any registered caller) declares it needs to operate.
 // `required` must all be granted or the caller cannot run; `optional` degrade

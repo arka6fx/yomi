@@ -79,16 +79,7 @@ const CONNECTORS_BY_CATEGORY = CATEGORY_ORDER.map((category) => ({
 })).filter((group) => group.connectors.length > 0)
 
 type Tone =
-  | "primary"
-  | "emerald"
-  | "sky"
-  | "blue"
-  | "violet"
-  | "amber"
-  | "rose"
-  | "teal"
-  | "yellow"
-  | "cyan"
+  "primary" | "emerald" | "sky" | "blue" | "violet" | "amber" | "rose" | "teal" | "yellow" | "cyan"
 
 const TONE_CLASSES: Record<Tone, { badge: string; icon: string }> = {
   primary: {

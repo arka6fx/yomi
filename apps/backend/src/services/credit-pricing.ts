@@ -1,10 +1,5 @@
 export type UsageCreditKind =
-  | "chat"
-  | "voice"
-  | "analyze"
-  | "bot_message"
-  | "agent"
-  | "composio_tool"
+  "chat" | "voice" | "analyze" | "bot_message" | "agent" | "composio_tool"
 
 export type BillableUsageKind = UsageCreditKind
 

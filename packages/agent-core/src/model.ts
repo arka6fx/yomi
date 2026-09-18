@@ -197,8 +197,7 @@ function messageText(message: LanguageModelV1Message): string {
 }
 
 type UserContent =
-  | string
-  | Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }>
+  string | Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }>
 
 function userContent(message: Exclude<LanguageModelV1Message, { role: "system" }>): UserContent {
   const parts: Array<

@@ -334,8 +334,7 @@ describe("Cloud RAG routes", () => {
     expect(body.snippets![0]!.content).toContain("widgets")
     // Retrieval is logged with the reranked chunk ids.
     const log = insertValues.find((v) => v && typeof v === "object" && "matchedChunkIds" in v) as
-      | { matchedChunkIds: string[] }
-      | undefined
+      { matchedChunkIds: string[] } | undefined
     expect(log?.matchedChunkIds).toContain("c1")
 
     // Drive sources are only ever backfilling/active — never 'ready' — so the

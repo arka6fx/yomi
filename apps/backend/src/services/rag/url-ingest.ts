@@ -11,8 +11,7 @@ const MAX_BODY_BYTES = 2_000_000
 const FETCH_TIMEOUT_MS = 10_000
 
 export type UrlExtractResult =
-  | { title: string; text: string; normalizedUrl: string }
-  | { error: string }
+  { title: string; text: string; normalizedUrl: string } | { error: string }
 
 function extractTitle(html: string, fallback: string): string {
   const match = html.match(/<title[^>]*>([^<]*)<\/title>/i)

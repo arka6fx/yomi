@@ -38,8 +38,7 @@ let soulCalls: { userId: string; text: string }[] = []
 let capturedOnReact: ((emoji: string) => Promise<void>) | undefined
 let capturedConsumePendingDocument: (() => { title: string; content: string } | null) | undefined
 let capturedRestorePendingDocument:
-  | ((document: { title: string; content: string }) => void)
-  | undefined
+  ((document: { title: string; content: string }) => void) | undefined
 // Overrides the fast path's fake model text for a single test; null falls back
 // to the default "NEED_AGENT" (forces the full agent loop) for non-image text.
 let fastReplyOverride: string | null = null

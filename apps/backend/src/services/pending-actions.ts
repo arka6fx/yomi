@@ -3,12 +3,7 @@ import { db, pendingActions } from "@yomi/db"
 
 export type PendingActionRisk = "write" | "send" | "paid" | "irreversible"
 export type PendingActionStatus =
-  | "pending"
-  | "approved"
-  | "denied"
-  | "executed"
-  | "failed"
-  | "expired"
+  "pending" | "approved" | "denied" | "executed" | "failed" | "expired"
 
 export interface CreatePendingActionInput {
   userId: string
@@ -286,8 +281,7 @@ async function replayConnectorTool(row: {
       getAccessToken,
     })
     const t = tools[row.action] as
-      | { execute?: (args: unknown, opts: unknown) => Promise<unknown> }
-      | undefined
+      { execute?: (args: unknown, opts: unknown) => Promise<unknown> } | undefined
     if (!t?.execute) return undefined
     return t.execute(row.payload, { toolCallId: row.action, messages: [] })
   }

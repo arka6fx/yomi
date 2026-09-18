@@ -64,5 +64,4 @@ export interface Connector {
 }
 
 export type ConnectorStatus =
-  | { connected: true; displayName: string; lastSyncAt: string | null }
-  | { connected: false }
+  { connected: true; displayName: string; lastSyncAt: string | null } | { connected: false }

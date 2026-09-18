@@ -85,8 +85,7 @@ app.get("/health/db", async (c) => {
     const result = (await db.execute(
       sql`select coalesce(max(created_at), 0)::bigint as latest, count(*)::int as count from drizzle.__drizzle_migrations`,
     )) as unknown as
-      | { rows?: { latest: string; count: number }[] }
-      | { latest: string; count: number }[]
+      { rows?: { latest: string; count: number }[] } | { latest: string; count: number }[]
     const row = Array.isArray(result) ? result[0] : result.rows?.[0]
     const latestApplied = Number(row?.latest ?? 0)
     const applied = Number(row?.count ?? 0)
