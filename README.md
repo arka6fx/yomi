@@ -259,6 +259,14 @@ cd apps/landing && bun run deploy:production
 - OAuth tokens are encrypted at rest.
 - Hook logs are PII-redacted.
 
+## Contributing
+
+Yomi is open source under the [MIT License](./LICENSE). We welcome
+contributors — see [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the workflow,
+code style, and test conventions, [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md)
+for community standards, and [`SECURITY.md`](./SECURITY.md) for how to report
+a vulnerability.
+
 ## Docs & Specs
 
 - [`AGENTS.md`](./AGENTS.md): terse operational summary agents load first.
