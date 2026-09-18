@@ -1061,7 +1061,7 @@ const { markComposioConnectionActive } = await import("./composio-connect.js")
 
 beforeEach(() => {
   process.env.ENCRYPTION_KEY =
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "a".repeat(64)
   dbState.existingOauthTokens = null
   dbState.upserts = 0
 })
@@ -1271,7 +1271,7 @@ const { storeApiKeyCredential } = await import("./oauth2-executor.js")
 
 beforeEach(() => {
   process.env.ENCRYPTION_KEY =
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "a".repeat(64)
   dbState.existingRow = null
   dbState.upserts = 0
 })

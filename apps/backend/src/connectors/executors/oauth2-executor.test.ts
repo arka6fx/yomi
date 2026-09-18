@@ -25,7 +25,7 @@ mock.module("@yomi/db", () => ({
 const { storeApiKeyCredential } = await import("./oauth2-executor.js")
 
 beforeEach(() => {
-  process.env.ENCRYPTION_KEY = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  process.env.ENCRYPTION_KEY = "a".repeat(64)
   dbState.existingRow = null
   dbState.upserts = 0
 })

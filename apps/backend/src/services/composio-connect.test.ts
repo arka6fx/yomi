@@ -32,7 +32,7 @@ const { encodeComposioRef, decodeComposioRef, isRowConnected, markComposioConnec
   await import("./composio-connect.js")
 
 beforeEach(() => {
-  process.env.ENCRYPTION_KEY = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  process.env.ENCRYPTION_KEY = "a".repeat(64)
   dbState.existingOauthTokens = null
   dbState.upserts = 0
 })

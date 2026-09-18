@@ -67,11 +67,9 @@ async function run() {
   // 2. Fetch or create a test user
   console.log("Connecting to database...")
 
-  let [testUser] = await db
-    .select()
-    .from(user)
-    .where(eq(user.email, "owner@example.com"))
-    .limit(1)
+  const testEmail = requiredEnv("TEST_USER_EMAIL")
+
+  let [testUser] = await db.select().from(user).where(eq(user.email, testEmail)).limit(1)
 
   if (!testUser) {
     const usersList = await db.select().from(user).limit(1)

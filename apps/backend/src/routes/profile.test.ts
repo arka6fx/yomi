@@ -95,14 +95,14 @@ describe("PATCH /api/user/profile", () => {
   })
 
   it("updates the authenticated user's trimmed display name", async () => {
-    updateRows = [{ name: "Arka", email: "arka@example.com" }]
+    updateRows = [{ name: "Ada", email: "ada@example.com" }]
 
-    const res = await updateName("  Arka  ")
+    const res = await updateName("  Ada  ")
     const body = (await res.json()) as { name?: string; email?: string }
 
     expect(res.status).toBe(200)
-    expect(updatePayload).toEqual({ name: "Arka" })
-    expect(body).toEqual({ name: "Arka", email: "arka@example.com" })
+    expect(updatePayload).toEqual({ name: "Ada" })
+    expect(body).toEqual({ name: "Ada", email: "ada@example.com" })
     expect(updateCalls).toBe(1)
   })
 
@@ -116,7 +116,7 @@ describe("PATCH /api/user/profile", () => {
   })
 
   it("updates agentSoul alone, without requiring name", async () => {
-    updateRows = [{ name: "Arka", email: "arka@example.com", agentSoul: "be terse" }]
+    updateRows = [{ name: "Ada", email: "ada@example.com", agentSoul: "be terse" }]
 
     const res = await updateProfile({ agentSoul: "be terse" })
     const body = (await res.json()) as { agentSoul?: string }
@@ -127,11 +127,11 @@ describe("PATCH /api/user/profile", () => {
   })
 
   it("updates name and agentSoul together", async () => {
-    updateRows = [{ name: "Arka", email: "arka@example.com", agentSoul: "be terse" }]
+    updateRows = [{ name: "Ada", email: "ada@example.com", agentSoul: "be terse" }]
 
-    await updateProfile({ name: "Arka", agentSoul: "be terse" })
+    await updateProfile({ name: "Ada", agentSoul: "be terse" })
 
-    expect(updatePayload).toEqual({ name: "Arka", agentSoul: "be terse" })
+    expect(updatePayload).toEqual({ name: "Ada", agentSoul: "be terse" })
   })
 
   it("rejects a request with neither name nor agentSoul", async () => {
@@ -172,15 +172,15 @@ describe("GET /api/user/me", () => {
 describe("POST /api/user/handle", () => {
   beforeEach(() => {
     currentUser = { id: "user_1" }
-    handleResult = { ok: true, leaderboardHandle: "arka" }
+    handleResult = { ok: true, leaderboardHandle: "ada" }
   })
 
   it("saves a valid handle", async () => {
-    const res = await postHandle("Arka")
+    const res = await postHandle("Ada")
     const body = (await res.json()) as { leaderboardHandle?: string }
 
     expect(res.status).toBe(200)
-    expect(body.leaderboardHandle).toBe("arka")
+    expect(body.leaderboardHandle).toBe("ada")
   })
 
   it("rejects a missing handle", async () => {

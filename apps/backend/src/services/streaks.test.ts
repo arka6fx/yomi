@@ -245,15 +245,15 @@ describe("ensureLeaderboardHandle", () => {
 
 describe("updateLeaderboardHandle", () => {
   it("accepts a valid custom handle", async () => {
-    const result = await updateLeaderboardHandle("user_1", "ArkaG")
-    expect(result).toEqual({ ok: true, leaderboardHandle: "arkag" })
-    expect(updateSets[0]).toEqual({ leaderboardHandle: "arkag" })
+    const result = await updateLeaderboardHandle("user_1", "AdaG")
+    expect(result).toEqual({ ok: true, leaderboardHandle: "adag" })
+    expect(updateSets[0]).toEqual({ leaderboardHandle: "adag" })
   })
 
   it("rejects a handle that's too short or has invalid characters", async () => {
     const tooShort = await updateLeaderboardHandle("user_1", "ab")
     expect(tooShort.ok).toBe(false)
-    const badChars = await updateLeaderboardHandle("user_1", "arka_garai!")
+    const badChars = await updateLeaderboardHandle("user_1", "ada_garai!")
     expect(badChars.ok).toBe(false)
     expect(updateSets).toHaveLength(0)
   })

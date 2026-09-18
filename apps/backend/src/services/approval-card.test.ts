@@ -51,9 +51,8 @@ describe("approval card", () => {
       connector: "google",
       action: "gmail-replyToThread",
       risk: "send",
-      title: "Send reply to Alex <contact.arkagarai@gmail.com>",
-      preview:
-        "Reply to: Alex <contact.arkagarai@gmail.com>\n\nHi Alex, the slides will be ready by Sunday.",
+      title: "Send reply to Alex <alex@example.com>",
+      preview: "Reply to: Alex <alex@example.com>\n\nHi Alex, the slides will be ready by Sunday.",
       confirmText: "Send reply",
       payload: {},
       sourcePlatform: "telegram",
@@ -63,7 +62,7 @@ describe("approval card", () => {
     expect(sent).toHaveLength(1)
     const card = sent[0]!.text
     // The user must be able to see WHO it goes to and WHAT it says, before approving.
-    expect(card).toContain("contact.arkagarai@gmail.com")
+    expect(card).toContain("alex@example.com")
     expect(card).toContain("the slides will be ready by Sunday")
     expect(card).toContain('Reply "yes" to approve')
   })

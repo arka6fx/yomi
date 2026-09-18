@@ -1,0 +1,30 @@
+name: Feature request
+description: A new capability, connector, or refinement for Yomi
+labels: [needs-triage]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: The job the user is trying to do, not the implementation you're imagining.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed approach
+      description: Optional — how you'd see it built. Connector? Agent tool? Web dashboard?
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Where does this belong?
+      options:
+        - Connector (new or existing)
+        - Agent core / memory
+        - Backend / API
+        - Web dashboard / account linking
+        - Tele entry
+        - Billing / plans
+        - Unsure
+    validations:
+      required: true

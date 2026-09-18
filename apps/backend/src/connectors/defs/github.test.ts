@@ -9,7 +9,7 @@ beforeAll(() => {
   process.env.GITHUB_CLIENT_SECRET = "temp_test_client_secret_2"
   process.env.BETTER_AUTH_BASE_URL = "http://localhost:3001"
   process.env.BETTER_AUTH_URL = "http://localhost:3000"
-  process.env.ENCRYPTION_KEY = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  process.env.ENCRYPTION_KEY = "a".repeat(64)
   delete process.env["COMPOSIO_CONNECTORS"]
 })
 

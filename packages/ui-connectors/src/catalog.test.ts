@@ -4,15 +4,15 @@ import { accountLabel } from "./components/ConnectorMarketplace.js"
 import { STARTER_PROMPTS } from "@yomi/shared/starter-prompts"
 
 describe("accountLabel", () => {
-  // The card title already says "Google Calendar", so "Calendar (arka@example.com)"
+  // The card title already says "Google Calendar", so "Calendar (me@gmail.com)"
   // spent its width repeating that and ellipsised the only part that mattered.
   it("keeps only the account from a name-wrapped display name", () => {
-    expect(accountLabel("Calendar (owner@example.com)")).toBe("owner@example.com")
+    expect(accountLabel("Calendar (me@gmail.com)")).toBe("me@gmail.com")
     expect(accountLabel("Classroom (me@college.edu)")).toBe("me@college.edu")
   })
 
   it("passes through a name that is already bare", () => {
-    expect(accountLabel("owner@example.com")).toBe("owner@example.com")
+    expect(accountLabel("me@gmail.com")).toBe("me@gmail.com")
     expect(accountLabel("Google Meet")).toBe("Google Meet")
   })
 

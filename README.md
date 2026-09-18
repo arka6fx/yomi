@@ -1,5 +1,9 @@
 # Yomi
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org/)
+[![Bun](https://img.shields.io/badge/Bun-1.4-f5f5f5)](https://bun.sh)
+
 Yomi is a personal AI assistant on Telegram. Send it a text, a voice note, or a
 photo, and it reads and drafts email, summarizes threads, schedules meetings,
 searches your files, files tasks, and acts across the tools you already use.
@@ -25,6 +29,7 @@ GitHub, Slack, Notion, Linear, and dozens more.
 - [Testing](#testing)
 - [Deployment](#deployment)
 - [Privacy](#privacy)
+- [Contributing](#contributing)
 - [Docs & Specs](#docs--specs)
 
 ## How it works
@@ -263,9 +268,10 @@ cd apps/landing && bun run deploy:production
 
 Yomi is open source under the [MIT License](./LICENSE). We welcome
 contributors — see [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the workflow,
-code style, and test conventions, [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md)
-for community standards, and [`SECURITY.md`](./SECURITY.md) for how to report
-a vulnerability.
+code style, and test conventions. Bug reports and feature requests use the
+[issue templates](./.github/ISSUE_TEMPLATE). [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md)
+sets community standards, and [`SECURITY.md`](./SECURITY.md) explains how to
+report a vulnerability.
 
 ## Docs & Specs
 

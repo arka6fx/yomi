@@ -44,9 +44,7 @@ describe("markdownToTelegramHtml", () => {
   })
 
   it("keeps underscores inside a filename outside any url", () => {
-    expect(markdownToTelegramHtml("Created Arka_Garai_29_PS2.pdf")).toContain(
-      "Arka_Garai_29_PS2.pdf",
-    )
+    expect(markdownToTelegramHtml("Created Ada_29_PS2.pdf")).toContain("Ada_29_PS2.pdf")
   })
 
   it("escapes & in a bare url's query string", () => {

@@ -7,7 +7,7 @@ beforeEach(() => {
   process.env.SLACK_CLIENT_SECRET = "slack_test_secret"
   process.env.BETTER_AUTH_BASE_URL = "http://localhost:3001"
   process.env.BETTER_AUTH_URL = "http://localhost:3000"
-  process.env.ENCRYPTION_KEY = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  process.env.ENCRYPTION_KEY = "a".repeat(64)
 })
 
 afterAll(() => {

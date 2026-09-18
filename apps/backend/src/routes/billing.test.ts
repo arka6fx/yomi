@@ -280,7 +280,7 @@ describe("Dodo billing — configuration", () => {
   beforeEach(() => {
     currentUser = {
       id: "user_1",
-      name: "Arka",
+      name: "Ada",
       email: "arka@example.com",
       plan: "explore",
       subscriptionStatus: "inactive",
@@ -380,7 +380,7 @@ describe("Dodo billing — plan catalog", () => {
     resetMockState()
     currentUser = {
       id: "user_1",
-      name: "Arka",
+      name: "Ada",
       email: "arka@example.com",
       plan: "explore",
       subscriptionStatus: "inactive",
@@ -423,7 +423,7 @@ describe("Dodo billing — webhook verification", () => {
     resetMockState()
     currentUser = {
       id: "user_1",
-      name: "Arka",
+      name: "Ada",
       email: "arka@example.com",
       plan: "explore",
       subscriptionStatus: "inactive",
@@ -498,7 +498,7 @@ describe("Dodo billing — subscription checkout", () => {
     }) as typeof fetch
     currentUser = {
       id: "user_1",
-      name: "Arka",
+      name: "Ada",
       email: "arka@example.com",
       plan: "explore",
       subscriptionStatus: "inactive",
@@ -600,7 +600,7 @@ describe("Dodo billing — credit pack checkout", () => {
     }) as typeof fetch
     currentUser = {
       id: "user_1",
-      name: "Arka",
+      name: "Ada",
       email: "arka@example.com",
       plan: "pro",
       subscriptionStatus: "active",
@@ -679,7 +679,7 @@ describe("Dodo billing — cancel subscription", () => {
     }) as typeof fetch
     currentUser = {
       id: "user_1",
-      name: "Arka",
+      name: "Ada",
       email: "arka@example.com",
       plan: "pro",
       subscriptionStatus: "active",
@@ -722,7 +722,7 @@ describe("Dodo billing — subscription summary", () => {
     resetMockState()
     currentUser = {
       id: "user_1",
-      name: "Arka",
+      name: "Ada",
       email: "arka@example.com",
       plan: "pro",
       subscriptionStatus: "active",
@@ -771,7 +771,7 @@ describe("Dodo billing — subscription summary", () => {
       [
         {
           id: "user_1",
-          name: "Arka",
+          name: "Ada",
           email: "arka@example.com",
           createdAt: new Date("2026-06-01T00:00:00Z"),
           role: "user",
@@ -912,7 +912,7 @@ describe("Dodo billing — webhook processing", () => {
     resetMockState()
     currentUser = {
       id: "user_1",
-      name: "Arka",
+      name: "Ada",
       email: "arka@example.com",
       plan: "explore",
       subscriptionStatus: "inactive",

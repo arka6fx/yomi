@@ -87,4 +87,4 @@
 - Run package typechecks and targeted tests.
 - Deploy backend first, then landing.
 - Verify `/api/gateway/status`, Telegram webhook, `/link`, and `/dashboard`.
-- Reconnect Telegram for `contact.arkagarai@gmail.com` and verify the DB row.
+- Reconnect Telegram for the owner account and verify the DB row.
