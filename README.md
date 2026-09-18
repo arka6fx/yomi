@@ -1,10 +1,24 @@
-# Yomi
+<p align="center">
+  <img src="assets/yomi-mark.png" alt="Yomi" width="96" height="96" />
+</p>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org/)
-[![Bun](https://img.shields.io/badge/Bun-1.4-f5f5f5)](https://bun.sh)
-[![CI](https://img.shields.io/github/actions/workflow/status/arka6fx/yomi/ci.yml?branch=main&label=CI&style=flat-square)](https://github.com/arka6fx/yomi/actions/workflows/ci.yml)
-[![Telegram](https://img.shields.io/badge/Telegram-%40yomi_assistant_bot-2CA5E0.svg)](https://t.me/yomi_assistant_bot)
+<h1 align="center">Yomi</h1>
+
+<p align="center">
+  <em>The AI assistant that lives in your Telegram. Text it, talk to it, or send
+  a photo — Yomi drafts email, summarizes threads, schedules meetings, and keeps
+  your tools in sync. It asks before it acts.</em>
+</p>
+
+<p align="center">
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org/)
+  [![Bun](https://img.shields.io/badge/Bun-1.4-f5f5f5)](https://bun.sh)
+  [![CI](https://img.shields.io/github/actions/workflow/status/arka6fx/yomi/ci.yml?branch=main&label=CI&style=flat-square)](https://github.com/arka6fx/yomi/actions/workflows/ci.yml)
+  [![Telegram](https://img.shields.io/badge/Telegram-%40yomi_assistant_bot-2CA5E0.svg)](https://t.me/yomi_assistant_bot)
+</p>
+
+---
 
 Yomi is a personal AI assistant on Telegram. Send it a text, a voice note, or a
 photo, and it reads and drafts email, summarizes threads, schedules meetings,
@@ -14,19 +28,70 @@ There is no desktop app. Telegram is the whole interface. The website is a
 dashboard for linking services, setting schedules, reviewing memory, and
 checking credits.
 
-Yomi connects Google Workspace (Gmail, Calendar, Drive, Classroom, Tasks, Meet),
-GitHub, Slack, Notion, Linear, and dozens more.
+## Works with
+
+Yomi connects the tools you already use — first-class integrations, plus
+40+ more through Composio:
+
+<p align="center">
+  [![Gmail](https://img.shields.io/badge/Gmail-D14836?style=flat-square&logo=gmail&logoColor=white)](https://mail.google.com)
+  [![Google Calendar](https://img.shields.io/badge/Calendar-4285F4?style=flat-square&logo=googlecalendar&logoColor=white)](https://calendar.google.com)
+  [![Google Drive](https://img.shields.io/badge/Drive-EA4335?style=flat-square&logo=googledrive&logoColor=white)](https://drive.google.com)
+  [![Google Classroom](https://img.shields.io/badge/Classroom-0F9D58?style=flat-square&logo=googleclassroom&logoColor=white)](https://classroom.google.com)
+  [![Google Tasks](https://img.shields.io/badge/Tasks-26A69A?style=flat-square&logo=googletasks&logoColor=white)](https://tasks.google.com)
+  [![Google Meet](https://img.shields.io/badge/Meet-00897B?style=flat-square&logo=googlemeet&logoColor=white)](https://meet.google.com)
+  [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com)
+  [![Slack](https://img.shields.io/badge/Slack-4A154B?style=flat-square&logo=slack&logoColor=white)](https://slack.com)
+  [![Notion](https://img.shields.io/badge/Notion-000000?style=flat-square&logo=notion&logoColor=white)](https://www.notion.so)
+  [![Linear](https://img.shields.io/badge/Linear-5E6AD2?style=flat-square&logo=linear&logoColor=white)](https://linear.app)
+</p>
+
+<p align="center">
+  [![Google Docs](https://img.shields.io/badge/Docs-4285F4?style=flat-square&logo=googledocs&logoColor=white)](https://docs.google.com)
+  [![Google Sheets](https://img.shields.io/badge/Sheets-0F9D58?style=flat-square&logo=googlesheets&logoColor=white)](https://sheets.google.com)
+  [![Google Slides](https://img.shields.io/badge/Slides-FBBC04?style=flat-square&logo=googleslides&logoColor=white)](https://slides.google.com)
+  [![Discord](https://img.shields.io/badge/Discord-5865F2?style=flat-square&logo=discord&logoColor=white)](https://discord.com)
+  [![WhatsApp](https://img.shields.io/badge/WhatsApp-25D366?style=flat-square&logo=whatsapp&logoColor=white)](https://www.whatsapp.com)
+  [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=flat-square&logo=linkedin&logoColor=white)](https://www.linkedin.com)
+  [![YouTube](https://img.shields.io/badge/YouTube-FF0000?style=flat-square&logo=youtube&logoColor=white)](https://www.youtube.com)
+  [![Zoom](https://img.shields.io/badge/Zoom-2D8CFF?style=flat-square&logo=zoom&logoColor=white)](https://zoom.us)
+  [![Jira](https://img.shields.io/badge/Jira-0052CC?style=flat-square&logo=jira&logoColor=white)](https://www.atlassian.com/software/jira)
+  [![Stripe](https://img.shields.io/badge/Stripe-635BFF?style=flat-square&logo=stripe&logoColor=white)](https://stripe.com)
+</p>
+
+<p align="center">
+  …and 40+ more — see the
+  [connector catalog](specs/connectors/00-index.md).
+</p>
 
 ## Try Yomi
 
 Open a chat with [**@yomi_assistant_bot**](https://t.me/yomi_assistant_bot) on
 Telegram and send a text, voice note, or photo:
 
-```text
-"summarize the email thread about the launch"
-"draft a reply and put the call on my calendar"
-"what's on that Notion doc I shared last week?"
-[🎙️ voice note]
+                 Telegram
+          text / voice / images
+                    │
+                    ▼
+      ┌────────────────────────────┐
+      │       CLOUD BACKEND        │
+      │ Hono on Cloudflare Workers │
+      │                            │
+      │auth, billing, LLM proxy,   │
+      │metering, agent loop,       │
+      │ Telegram, canonical memory │
+      └─────────────┬──────────────┘
+                    │
+              ┌─────┴─────┐
+              │           │
+              ▼           ▼
+              Connectors  Postgres
+              first-class Neon +
+              + Composio  pgvector
+                    │
+                    └── Landing / Dashboard (Next.js on Workers)
+                        marketing, auth, account linking, credits,
+                        memory view — all data via the backend API
 ```
 
 You can also see the web dashboard at [getyomi.in](https://getyomi.in) — that's
@@ -35,6 +100,7 @@ where you link accounts, set schedules, review memory, and buy credits.
 ## Contents
 
 - [Try Yomi](#try-yomi)
+- [Works with](#works-with)
 - [How it works](#how-it-works)
 - [Stack](#stack)
 - [Monorepo Layout](#monorepo-layout)
@@ -60,25 +126,29 @@ all live in the cloud backend, so the client stays thin. Telegram sends your
 message to the backend; the backend thinks, uses tools, and replies.
 
 ```text
-                       Telegram
-                  text / voice / images
-                        |
-                        v
-       +-------------------------------+
-       |         CLOUD BACKEND         |
-       |     Hono on Cloudflare Workers|
-       |                               |
-       | auth, billing, LLM proxy,     |
-       | metering, agent loop,         |
-       | Telegram, canonical memory    |
-       +-------------------------------+
-           |             |             |
-           v             v             v
-      Connectors     Postgres     Landing / Dashboard
-      (first-class   (Neon,       (Next.js on Workers)
-       + Composio)    pgvector)   marketing, auth,
-                                  account linking,
-                                  credits, memory view
+                 Telegram
+          text / voice / images
+                     │
+                     ▼
+      ┌────────────────────────────┐
+      │       CLOUD BACKEND        │
+      │ Hono on Cloudflare Workers │
+      │                            │
+      │ auth, billing, LLM proxy,  │
+      │ metering, agent loop,      │
+      │ Telegram, canonical memory │
+      └────────────┬───────────────┘
+                   │
+              ┌─────┴─────┐
+              │           │
+              ▼           ▼
+              Connectors  Postgres
+              first-class Neon +
+              + Composio  pgvector
+                   │
+                   └── Landing / Dashboard (Next.js on Workers)
+                       marketing, auth, account linking, credits,
+                       memory view — all data via the backend API
 ```
 
 The backend is the only thing that talks to Postgres; the dashboard reaches the
