@@ -21,7 +21,7 @@ For the terse operational summary of the whole system, see the repo-root
 | [14](14-landing-page.md)                 | Landing page + dashboard                          |
 | [15](15-dashboard-credits-connectors.md) | Dashboard credits + connectors                    |
 | [16](16-rag.md)                          | RAG — retrieval + Drive auto-sync                 |
-| [19](19-hermes-features.md)              | Agent features                                    |
+| [19](19-agent-features.md)               | Agent features                                    |
 
 ## Connectors
 
