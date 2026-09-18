@@ -29,6 +29,6 @@
     "@yomi/eslint-config": "workspace:*",
     "@yomi/typescript-config": "workspace:*",
     "drizzle-kit": "^0.31.10",
-    "typescript": "^5.5.0"
+    "typescript": "^7.0.2"
   }
 }
