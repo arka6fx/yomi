@@ -17,6 +17,11 @@ let agentHangs = false
 // rather than assuming it behaves like the try-block's post-await path just
 // because the code looks parallel.
 let agentRejectsOnAbort = false
+// When true (alongside agentHangs), the mock never settles at all — not even on
+// abort. Mirrors a hung tool call that ignores the abort signal, which used to
+// leave "Working on it…" up forever with no reply because the timeout only
+// aborted without settling the await.
+let agentNeverSettles = false
 let loadedHistory: AgentMessage[] = []
 let persistentMessageCount = 0
 let appendedTurns: {
@@ -132,6 +137,10 @@ mock.module("../agent/run.js", () => ({
     capturedConsumePendingDocument = consumePendingDocument
     capturedRestorePendingDocument = restorePendingDocument
     if (agentHangs) {
+      if (agentNeverSettles) {
+        await new Promise<void>(() => {})
+        return { text: "" }
+      }
       if (agentRejectsOnAbort) {
         // Exercises onIncoming's catch-block abort path independently of the
         // try-block's post-await path, which the real runAgent() never hits
@@ -318,6 +327,7 @@ beforeEach(() => {
   agentCalls = []
   agentHangs = false
   agentRejectsOnAbort = false
+  agentNeverSettles = false
   delete process.env.YOMI_AGENT_RUN_TIMEOUT_MS
   loadedHistory = []
   persistentMessageCount = 0
@@ -666,6 +676,28 @@ describe("GatewayRunner production routing", () => {
     // Proves the catch block's OWN `if (runTimedOut) { deleteMessage... }`
     // branch independently — this run throws (agentRejectsOnAbort), landing
     // in the catch block rather than the try block's post-await branch above.
+    expect(adapter.deletedMessageIds).toEqual(["1"])
+    expect(adapter.messages.at(-1)?.text).toMatch(/too long/i)
+  })
+
+  it("still tells the user when the hung run ignores the abort signal entirely", async () => {
+    process.env.YOMI_AGENT_RUN_TIMEOUT_MS = "30"
+    agentHangs = true
+    agentNeverSettles = true
+    const runner = new GatewayRunner()
+    const adapter = new FakeAdapter()
+    runner.registerAdapter(adapter)
+
+    // Without the timeout race this await would hang forever: the abort fires
+    // but the run never settles, so "Working on it…" stays up with no reply.
+    await incoming(runner, {
+      platform: "telegram",
+      chatId: "chat_1",
+      userId: "tg_1",
+      text: "do something very slow",
+      timestamp: new Date().toISOString(),
+    })
+
     expect(adapter.deletedMessageIds).toEqual(["1"])
     expect(adapter.messages.at(-1)?.text).toMatch(/too long/i)
   })

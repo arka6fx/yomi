@@ -1546,13 +1546,9 @@ export class GatewayRunner {
         // abort a hung run (the in-memory controller lives in this isolate), so
         // without this a stuck tool/model call would hang forever.
         const timeoutMs = Number(process.env["YOMI_AGENT_RUN_TIMEOUT_MS"] ?? 60_000)
-        runTimeout = setTimeout(() => {
-          runTimedOut = true
-          runController?.abort()
-        }, timeoutMs)
         // A real user turn is charged, so the free-resume allowance starts over.
         this.freeResumes.delete(this.runKey(msg.platform, msg.chatId))
-        const result = await runAgent({
+        const runPromise = runAgent({
           userId: yomiUserId,
           text: msg.text,
           history,
@@ -1567,6 +1563,27 @@ export class GatewayRunner {
           restorePendingDocument: (document) =>
             this.restorePendingDocument(msg.platform, msg.chatId, document),
         })
+        // If the timeout wins the race below, the orphaned run may still settle
+        // later — swallow its outcome here so it never surfaces as an unhandled
+        // rejection. (When the run wins, this branch is a harmless no-op.)
+        void runPromise.then(
+          () => {},
+          () => {},
+        )
+        const result = await Promise.race([
+          runPromise,
+          new Promise<never>((_resolve, reject) => {
+            runTimeout = setTimeout(() => {
+              runTimedOut = true
+              runController?.abort()
+              // The abort above only helps if the run respects the signal — a
+              // hung tool call that ignores it would otherwise leave the
+              // "Working on it…" placeholder up forever with no reply, so the
+              // timeout settles the race independently.
+              reject(new Error("agent run timed out"))
+            }, timeoutMs)
+          }),
+        ])
         clearTimeout(runTimeout)
         clearInterval(typingInterval)
         this.activeRuns.delete(this.runKey(msg.platform, msg.chatId))
