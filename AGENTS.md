@@ -38,13 +38,31 @@ Choose the highest, least-footprint rung that solves the problem:
 
 ## Monorepo
 
-```text
-apps/backend/        Hono/Bun - auth, billing, LLM proxy, metering
-apps/landing/        Next.js  - marketing, dashboard, account linking
-packages/agent-core/ ConnectorDef, ConnectorRegistry, agent tools
-packages/db/         Drizzle schema + PostgreSQL (Neon)
-packages/shared/     TypeScript contracts
-packages/ui-connectors/ Connector UI components
+         Telegram
+     text / voice / images
+               │
+               ▼
+   ┌────────────────────────┐
+   │     CLOUD BACKEND      │
+   │   Hono on Cloudflare   │
+   │   Workers              │
+   │                        │
+   │ auth, billing, LLM     │
+   │ proxy, metering,       │
+   │ agent loop, Telegram,  │
+   │ canonical memory       │
+   └───────────┬────────────┘
+               │
+        ┌──────┴──────┐
+        │             │
+        ▼             ▼
+        Connectors     Postgres
+        first-class   Neon +
+        + Composio     pgvector
+               │
+               └── Landing / Dashboard (Next.js)
+                   marketing, account linking, credits,
+                   memory view — all data via backend API
 ```
 
 ```bash
@@ -69,13 +87,32 @@ bun install && bun run dev
 ## Architecture
 
 ```text
-CLOUD BACKEND  (Hono on Cloudflare Workers)
-  Better Auth - Dodo webhooks - LLM proxy - usage metering - Telegram - canonical memory
-
-LANDING/DASHBOARD  (Next.js on Cloudflare Workers)
-  Marketing - auth pages - dashboard - account linking
-
-POSTGRES (Neon)   stateless HTTP driver, pgvector
+          Telegram
+        text / voice / images
+                 │
+                 ▼
+     ┌──────────────────────┐
+     │       CLOUD BACKEND  │
+     │  Hono on Cloudflare  │
+     │  Workers             │
+     │                      │
+     │ auth · billing · LLM │
+     │ proxy · metering     │
+     │  agent loop·Telegram │
+     │  · canonical memory  │
+     └───────────┬──────────┘
+                 │
+         ┌───────┴───────┐
+         │               │
+         ▼               ▼
+      Connectors      Postgres
+      first-class      Neon +
+      + Composio       pgvector
+                 │
+                 └── Landing / Dashboard (Next.js)
+                    marketing · auth · account
+                    linking · credits · memory view
+                    (all data via backend API)
 ```
 
 ---
