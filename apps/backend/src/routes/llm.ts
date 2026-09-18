@@ -46,12 +46,14 @@ llmRouter.all("/proxy/*", authenticate, async (c) => {
     )
   }
 
-  // Forward streaming SSE responses as-is
+  // Forward streaming SSE responses as-is. Use the global Response, not
+  // c.newResponse, so the stream type matches across Node/Bun/Workers runtimes.
   const ct = res.headers.get("content-type") || ""
   if (ct.includes("text/event-stream") || ct.includes("application/json")) {
-    c.header("Content-Type", ct)
-    c.header("Cache-Control", "no-store")
-    return c.newResponse(res.body)
+    return new Response(res.body, {
+      status: res.status,
+      headers: { "Content-Type": ct, "Cache-Control": "no-store" },
+    })
   }
 
   return new Response(res.body, { status: res.status, headers: { "Content-Type": ct } })
