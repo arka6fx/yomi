@@ -1,0 +1,33 @@
+name: Close stale issues and PRs
+
+on:
+  schedule:
+    - cron: "30 1 * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      # Pinned to an immutable commit SHA, not the mutable `v9` tag. See
+      # deploy-landing.yml for the pinning policy rationale.
+      - uses: actions/stale@5bef64f19d7facfb25b37b414482c7164d639639 # v9
+        with:
+          stale-issue-message: >-
+            This issue has been automatically marked as stale because it has had
+            no activity for 30 days. It will be closed in 7 days unless it receives
+            attention. If it is still relevant, add a comment to keep it open.
+          stale-pr-message: >-
+            This PR has been automatically marked as stale because it has had no
+            activity for 30 days. It will be closed in 7 days unless it receives
+            attention.
+          days-before-stale: 30
+          days-before-close: 7
+          stale-issue-label: stale
+          stale-pr-label: stale
+          exempt-issue-labels: needs-triage,ready-for-agent
+          operations-per-run: 100

@@ -2,6 +2,7 @@
   "name": "@yomi/agent-core",
   "version": "0.0.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
@@ -10,6 +11,7 @@
   "scripts": {
     "build:ci": "exit 0",
     "test": "bun test --pass-with-no-tests",
+    "test:coverage": "bun test --pass-with-no-tests --coverage --coverage-reporter=lcov --coverage-dir=coverage",
     "lint": "eslint src",
     "format": "prettier --write --ignore-path ../../.prettierignore .",
     "format:check": "prettier --check --ignore-path ../../.prettierignore .",

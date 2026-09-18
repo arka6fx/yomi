@@ -1,0 +1,26 @@
+name: Release
+
+# Cuts a release PR (and later a tagged GitHub Release + CHANGELOG update) from
+# conventional commits whenever a commit lands on main. Release-please
+# maintains the version drift; the release PR is the manual gate before a tag
+# is pushed. There is no npm publication - releases exist so contributors get
+# versioned milestones and diffable changelogs.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      # Pinned to an immutable commit SHA, not the mutable `v4` tag. See
+      # deploy-landing.yml for the pinning policy rationale.
+      - uses: google-github-actions/release-please-action@e4dc86ba9405554aeba3c6bb2d169500e7d3b4ee # v4
+        id: release
+        with:
+          release-type: node
+          default-branch: main

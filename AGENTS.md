@@ -84,6 +84,10 @@ POSTGRES (Neon)   stateless HTTP driver, pgvector
 
 `harness = system prompt + tools + connectors + memory + hooks`
 
+`SOUL.md` (repo root) is always part of the system prompt: it is the voice
+contract — terse-by-default replies, no narrating tool calls, plain claims,
+conversational approval, never a model mid-turn switch.
+
 **Agent path:** AI SDK loop + full tool set:
 
 - Core: filesystem r/w, bash (sandboxed), web search/fetch, cron, messaging,

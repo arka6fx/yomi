@@ -36,6 +36,21 @@
       ],
       "cache": true
     },
+    "coverage": {
+      "dependsOn": ["^build:ci"],
+      "inputs": [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "**/*.test.ts",
+        "**/*.spec.ts",
+        "**/*.test.tsx",
+        "**/*.spec.tsx",
+        "package.json",
+        "bunfig.toml"
+      ],
+      "outputs": ["coverage/**"],
+      "cache": true
+    },
     "format": {
       "cache": false
     },

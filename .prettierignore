@@ -24,3 +24,7 @@ bun.lockb
 *.enc
 *.plist
 drizzle/
+
+# Env templates are validated by content, not formatted
+.env*
+!.env.example

@@ -1,5 +1,31 @@
 {
   "name": "yomi",
+  "version": "0.1.0",
+  "description": "A personal AI assistant on Telegram. Send text, voice, or photos; it reads and drafts email, schedules meetings, searches files, and acts across Google Workspace, GitHub, Slack, Notion, Linear, and more.",
+  "license": "MIT",
+  "author": "Arka Garai <arkagarai292@gmail.com>",
+  "homepage": "https://getyomi.in",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arka6fx/yomi.git"
+  },
+  "bugs": {
+    "url": "https://github.com/arka6fx/yomi/issues"
+  },
+  "keywords": [
+    "telegram",
+    "ai",
+    "assistant",
+    "agent",
+    "gmail",
+    "google-calendar",
+    "google-workspace",
+    "github",
+    "slack",
+    "notion",
+    "linear",
+    "automation"
+  ],
   "private": true,
   "workspaces": [
     "apps/*",
@@ -12,6 +38,7 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "coverage": "turbo run coverage",
     "docs:check": "bun scripts/check-docs-sync.ts",
     "format": "turbo run format",
     "format:check": "turbo run format:check",

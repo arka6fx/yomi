@@ -3,6 +3,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org/)
 [![Bun](https://img.shields.io/badge/Bun-1.4-f5f5f5)](https://bun.sh)
+[![CI](https://img.shields.io/github/actions/workflow/status/arka6fx/yomi/ci.yml?branch=main&label=CI&style=flat-square)](https://github.com/arka6fx/yomi/actions/workflows/ci.yml)
+[![Telegram](https://img.shields.io/badge/Telegram-%40yomi_assistant_bot-2CA5E0.svg)](https://t.me/yomi_assistant_bot)
 
 Yomi is a personal AI assistant on Telegram. Send it a text, a voice note, or a
 photo, and it reads and drafts email, summarizes threads, schedules meetings,
@@ -15,8 +17,24 @@ checking credits.
 Yomi connects Google Workspace (Gmail, Calendar, Drive, Classroom, Tasks, Meet),
 GitHub, Slack, Notion, Linear, and dozens more.
 
+## Try Yomi
+
+Open a chat with [**@yomi_assistant_bot**](https://t.me/yomi_assistant_bot) on
+Telegram and send a text, voice note, or photo:
+
+```text
+"summarize the email thread about the launch"
+"draft a reply and put the call on my calendar"
+"what's on that Notion doc I shared last week?"
+[🎙️ voice note]
+```
+
+You can also see the web dashboard at [getyomi.in](https://getyomi.in) — that's
+where you link accounts, set schedules, review memory, and buy credits.
+
 ## Contents
 
+- [Try Yomi](#try-yomi)
 - [How it works](#how-it-works)
 - [Stack](#stack)
 - [Monorepo Layout](#monorepo-layout)
@@ -29,6 +47,9 @@ GitHub, Slack, Notion, Linear, and dozens more.
 - [Testing](#testing)
 - [Deployment](#deployment)
 - [Privacy](#privacy)
+- [FAQ](#faq)
+- [Roadmap](#roadmap)
+- [Community](#community)
 - [Contributing](#contributing)
 - [Docs & Specs](#docs--specs)
 
@@ -71,6 +92,19 @@ The harness is the system prompt, plus tools, connectors, memory, and hooks:
 - **Hooks:** `PreToolUse` (block dangerous), `PostToolUse` (log, trim tokens),
   `Stop` (flush scratchpad), `SessionEnd` (compact memory).
 - **Loop guard:** an `AGENT_MAX_STEPS` cap with a backend grace-call wrap-up.
+
+### Capabilities at a glance
+
+| Capability            | What it does                                                                                      |
+| --------------------- | ------------------------------------------------------------------------------------------------- |
+| Voice & images        | Incoming Telegram voice notes are transcribed; photos are analyzed. Replies are always text.      |
+| Email & calendar      | Reads, drafts, and summarizes Gmail; schedules and manages Google Calendar.                       |
+| Files, tasks, code    | Searches Google Drive, files tasks, and drives GitHub, Notion, Slack, and Linear.                 |
+| Memory that compounds | Canonical durable memory with contradiction resolution and a consolidation sweep.                 |
+| RAG                   | `index_text` / `index_url` / `index_document` write to your archive; `deep_research` searches it. |
+| Scheduled automations | Cron tools (plan-gated) for daily briefings, reports, and recurring checks.                       |
+| Subagents             | Isolated `delegate` loops that fold a synthesized result back for big multi-step tasks.           |
+| Connectors            | 10 first-class tool sets plus 40+ Composio-backed services, approval-gated.                       |
 
 Yomi also keeps a small notepad in `~/.yomi/`:
 
@@ -264,20 +298,57 @@ cd apps/landing && bun run deploy:production
 - OAuth tokens are encrypted at rest.
 - Hook logs are PII-redacted.
 
+## FAQ
+
+**Is there a desktop or web chat app?** No. Telegram is the whole interface, by
+design. The website is only a dashboard for linking accounts, schedules, memory,
+and credits.
+
+**What does it cost?** There is a free Explore plan (100 credits that renew) and
+paid Pro/Max plans. See [Plans & Credits](#plans--credits).
+
+**Which services does it work with?** Google Workspace (Gmail, Calendar, Drive,
+Classroom, Tasks, Meet), GitHub, Slack, Notion, Linear, and dozens more through
+Composio. See [Connectors](#connectors).
+
+**Can it call me or record audio?** No. Incoming voice notes are transcribed to
+text; Yomi always replies in text and never silently records anything.
+
+**What happens to my data?** Memory is user-owned with export and delete always
+available. OAuth tokens are encrypted at rest. See [Privacy](#privacy).
+
+## Roadmap
+
+Upstream priorities live in
+[`specs/connectors/roadmap.md`](specs/connectors/roadmap.md). For what anyone
+can pick up next, look for the `ready-for-agent` and `needs-triage` labels in
+the [issues](https://github.com/arka6fx/yomi/issues).
+
+## Community
+
+- Chat with [**@yomi_assistant_bot**](https://t.me/yomi_assistant_bot).
+- Report bugs and request features via
+  [issues](https://github.com/arka6fx/yomi/issues).
+- For vulnerabilities, follow [`SECURITY.md`](./SECURITY.md) — don't file a
+  public issue.
+
 ## Contributing
 
-Yomi is open source under the [MIT License](./LICENSE). We welcome
-contributors — see [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the workflow,
-code style, and test conventions. Bug reports and feature requests use the
-[issue templates](./.github/ISSUE_TEMPLATE). [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md)
-sets community standards, and [`SECURITY.md`](./SECURITY.md) explains how to
-report a vulnerability.
+Yomi is open source under the [MIT License](./LICENSE). We welcome contributors
+— see [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the workflow, code style, and
+test conventions. Bug reports and feature requests use the
+[issue templates](./.github/ISSUE_TEMPLATE).
+[`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) sets community standards, and
+[`SECURITY.md`](./SECURITY.md) explains how to report a vulnerability.
 
 ## Docs & Specs
 
 - [`AGENTS.md`](./AGENTS.md): terse operational summary agents load first.
 - [`CONTEXT.md`](./CONTEXT.md): single-context domain overview.
+- [`SOUL.md`](./SOUL.md): Yomi's voice contract — the reply-style the agent is
+  held to.
+- [`CHANGELOG.md`](./CHANGELOG.md): versioned release notes.
 - [`docs/adr/`](docs/adr): architecture decision records.
 - [`specs/`](specs/README.md): system specs and per-connector references. Start
   with [`specs/00-overview.md`](specs/00-overview.md).
-- [`SETUP_GUIDE.md`](./SETUP_GUIDE.md): environment runbook.
+- [`RUNBOOK.md`](./RUNBOOK.md): production deployment runbook.

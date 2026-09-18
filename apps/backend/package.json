@@ -2,6 +2,7 @@
   "name": "@yomi/backend",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "bun run --env-file ../../.env --watch src/index.ts",
@@ -14,6 +15,7 @@
     "deploy:production": "wrangler deploy --env production",
     "cf:check": "wrangler deploy --dry-run --env production",
     "test": "bun test --pass-with-no-tests --isolate",
+    "test:coverage": "bun test --pass-with-no-tests --isolate --coverage --coverage-reporter=lcov --coverage-dir=coverage",
     "lint": "eslint src",
     "format": "prettier --write --ignore-path ../../.prettierignore .",
     "format:check": "prettier --check --ignore-path ../../.prettierignore .",

@@ -1,0 +1,42 @@
+name: OSV-Scanner
+
+# Scans bun.lock against the OSV vulnerability database. Runs on a weekly
+# schedule against main (and on manual dispatch); it is deliberately NOT part
+# of per-PR CI — the findings are the repo-wide baseline of pinned-dep CVEs,
+# identical for every PR, and belong in the Security tab, not in each PR's
+# review comment.
+#
+# This is detection-only — OSV-Scanner does NOT open PRs or modify pins.
+# It reports known CVEs in currently-pinned dependency versions so we can
+# decide when and how to patch on our own schedule. Our pinning strategy
+# (full SHA / exact version) is preserved; only the notification signal
+# is added.
+#
+# Uses Google's officially-recommended reusable workflow, pinned by SHA.
+# Findings land in the repo's Security tab (Code Scanning > OSV-Scanner).
+# fail-on-vuln is disabled so the job does not block merges on pre-existing
+# vulnerabilities in pinned deps that we may need to patch deliberately.
+on:
+  schedule:
+    # Weekly scan against main — catches CVEs published after merge for
+    # deps that haven't changed since.
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  # Required to upload SARIF file to CodeQL. See: https://github.com/github/codeql-action/issues/2117
+  actions: read
+  contents: read
+  security-events: write
+
+jobs:
+  scan:
+    name: Scan lockfiles
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@9a498708959aeaef5ef730655706c5a1df1edbc2 # v2.3.8
+    with:
+      # Scan the single source of truth (bun.lock at the monorepo root) rather
+      # than recursing, so we skip vendored / test / node_modules dirs.
+      scan-args: |-
+        --lockfile=bun.lock
+      results-file-name: osv-results.sarif
+      fail-on-vuln: false

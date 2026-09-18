@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Telegram bot
+    url: https://t.me/yomi_assistant_bot
+    about: Chat with Yomi directly on Telegram.
+  - name: Report a security vulnerability
+    url: https://github.com/arka6fx/yomi/blob/main/SECURITY.md
+    about: Do not file a public issue for security bugs - use the private channel in SECURITY.md.
