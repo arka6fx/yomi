@@ -84,7 +84,9 @@
       // the 30 s HTTP waitUntil budget. max_batch_size 1 keeps per-chat order
       // (the same guarantee Telegram's sequential webhook delivery gave us).
       "queues": {
-        "producers": [{ "binding": "TELEGRAM_INBOX", "queue": "yomi-telegram-inbox" }],
+        "producers": [
+          { "binding": "TELEGRAM_INBOX", "queue": "yomi-telegram-inbox" },
+        ],
         "consumers": [
           {
             "queue": "yomi-telegram-inbox",

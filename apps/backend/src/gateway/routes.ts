@@ -4,10 +4,7 @@ import { db, platformConnections } from "@yomi/db"
 import { getDefaultGateway } from "./gateway-runner.js"
 import { authenticate } from "../auth.js"
 import { TelegramUpdate } from "./platforms/telegram.js"
-import {
-  isDuplicateTelegramUpdate,
-  processTelegramUpdate,
-} from "./telegram-processor.js"
+import { isDuplicateTelegramUpdate, processTelegramUpdate } from "./telegram-processor.js"
 import type { PlatformType } from "@yomi/shared"
 
 export const gatewayRouter = new Hono()
@@ -18,9 +15,7 @@ interface TelegramQueueProducer {
 
 function isTelegramQueueProducer(q: unknown): q is TelegramQueueProducer {
   return (
-    typeof q === "object" &&
-    q !== null &&
-    typeof (q as TelegramQueueProducer).send === "function"
+    typeof q === "object" && q !== null && typeof (q as TelegramQueueProducer).send === "function"
   )
 }
 

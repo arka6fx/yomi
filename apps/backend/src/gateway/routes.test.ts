@@ -100,7 +100,12 @@ describe("Telegram webhook", () => {
     "enqueues the update to the TELEGRAM_INBOX queue when the binding exists",
     async () => {
       const sent: unknown[] = []
-      const queue = { send: (u: unknown) => { sent.push(u); return Promise.resolve() } }
+      const queue = {
+        send: (u: unknown) => {
+          sent.push(u)
+          return Promise.resolve()
+        },
+      }
       const execCtx = { waitUntil: () => {}, passThroughOnException: () => {} }
 
       // update_id 50 is distinct from the seen set used above.
@@ -140,7 +145,12 @@ describe("Telegram webhook", () => {
     "does not enqueue a duplicate update_id twice",
     async () => {
       const sent: unknown[] = []
-      const queue = { send: (u: unknown) => { sent.push(u); return Promise.resolve() } }
+      const queue = {
+        send: (u: unknown) => {
+          sent.push(u)
+          return Promise.resolve()
+        },
+      }
       const execCtx = { waitUntil: () => {}, passThroughOnException: () => {} }
 
       const first = await gatewayRouter.fetch(
