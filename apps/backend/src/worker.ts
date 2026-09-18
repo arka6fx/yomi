@@ -6,6 +6,8 @@ import { runDriveSyncSweep } from "./services/rag/drive-sync.js"
 import { summarizeUnsummarizedSessions } from "./services/agent-sessions.js"
 import { renewExploreCredits } from "./services/explore-renewal.js"
 import { renewNonBilledPaidCredits } from "./services/plan-renewal.js"
+import { processTelegramUpdate } from "./gateway/telegram-processor.js"
+import type { TelegramUpdate } from "./gateway/platforms/telegram.js"
 
 interface ExecutionContext {
   waitUntil(promise: Promise<unknown>): void
@@ -14,6 +16,18 @@ interface ExecutionContext {
 interface ScheduledEvent {
   cron: string
   scheduledTime: number
+}
+
+interface QueueMessage {
+  id: string
+  timestamp: Date
+  attempts: number
+  body: unknown
+}
+
+interface QueueBatch {
+  queue: string
+  messages: QueueMessage[]
 }
 
 let gatewayStarted = false
@@ -107,5 +121,30 @@ export default {
           .catch((err) => console.error("[plan-renewal] sweep error:", err)),
       ]),
     )
+  },
+
+  // Queue consumer (wrangler.jsonc env.production queues). Telegram updates land
+  // here from the webhook instead of a waitUntil — a consumer invocation gets a
+  // 15-minute wall clock, plenty for a 60 s + agent run that routinely blows
+  // the 30 s HTTP waitUntil budget. Run messages sequentially; Telegram delivers
+  // a chat's updates in order and reordering them would scramble replies.
+  async queue(batch: QueueBatch, env: Record<string, unknown>, _ctx: ExecutionContext) {
+    try {
+      propagateEnv(env)
+      for (const message of batch.messages) {
+        const update = message.body as TelegramUpdate
+        if (!update || typeof update.update_id !== "number") {
+          console.warn("[worker/queues] dropping malformed telegram update")
+          continue
+        }
+        try {
+          await processTelegramUpdate(update)
+        } catch (err) {
+          console.warn("[worker/queues] update processing error:", err)
+        }
+      }
+    } catch (err) {
+      console.error("[worker/queues] batch error:", err)
+    }
   },
 }

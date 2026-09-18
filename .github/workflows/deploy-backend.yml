@@ -60,6 +60,17 @@ jobs:
         if: steps.staleness.outputs.stale != 'true'
         run: bun run docs:check
 
+      - name: Ensure Telegram queue exists
+        if: steps.staleness.outputs.stale != 'true'
+        working-directory: apps/backend
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        # The Worker binds to this queue as both producer and consumer, so it
+        # must exist on the account before the deploy references it. The create
+        # is idempotent-guarded: a pre-existing queue is fine (|| true).
+        run: bunx wrangler queue create yomi-telegram-inbox || echo "queue already exists"
+
       - name: Deploy backend Worker
         if: steps.staleness.outputs.stale != 'true'
         working-directory: apps/backend

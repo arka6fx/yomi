@@ -95,4 +95,69 @@ describe("Telegram webhook", () => {
     },
     { timeout: 1500 },
   )
+
+  it(
+    "enqueues the update to the TELEGRAM_INBOX queue when the binding exists",
+    async () => {
+      const sent: unknown[] = []
+      const queue = { send: (u: unknown) => { sent.push(u); return Promise.resolve() } }
+      const execCtx = { waitUntil: () => {}, passThroughOnException: () => {} }
+
+      // update_id 50 is distinct from the seen set used above.
+      const res = await gatewayRouter.fetch(
+        webhookRequest(50),
+        { TELEGRAM_INBOX: queue },
+        execCtx as never,
+      )
+
+      expect(res.status).toBe(200)
+      expect(sent).toHaveLength(1)
+      // Queue present -> nothing handed to the in-isolate background path.
+      expect(processedUpdates).toHaveLength(0)
+    },
+    { timeout: 1500 },
+  )
+
+  it(
+    "falls back to background processing when the queue send fails",
+    async () => {
+      const queue = { send: () => Promise.reject(new Error("queue down")) }
+      const execCtx = { waitUntil: () => {}, passThroughOnException: () => {} }
+
+      const res = await gatewayRouter.fetch(
+        webhookRequest(51),
+        { TELEGRAM_INBOX: queue },
+        execCtx as never,
+      )
+
+      expect(res.status).toBe(200)
+      expect(processedUpdates).toHaveLength(1)
+    },
+    { timeout: 1500 },
+  )
+
+  it(
+    "does not enqueue a duplicate update_id twice",
+    async () => {
+      const sent: unknown[] = []
+      const queue = { send: (u: unknown) => { sent.push(u); return Promise.resolve() } }
+      const execCtx = { waitUntil: () => {}, passThroughOnException: () => {} }
+
+      const first = await gatewayRouter.fetch(
+        webhookRequest(60),
+        { TELEGRAM_INBOX: queue },
+        execCtx as never,
+      )
+      const second = await gatewayRouter.fetch(
+        webhookRequest(60),
+        { TELEGRAM_INBOX: queue },
+        execCtx as never,
+      )
+
+      expect(first.status).toBe(200)
+      expect(second.status).toBe(200)
+      expect(sent).toHaveLength(1)
+    },
+    { timeout: 1500 },
+  )
 })

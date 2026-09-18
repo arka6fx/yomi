@@ -77,6 +77,23 @@
         "TELEGRAM_BOT_USERNAME": "yomi_assistant_bot",
         "TELEGRAM_DEEP_LINK_ENABLED": "true",
       },
+      // queues is non-inheritable: it must be declared per-env, so it lives only
+      // in production. Telegram webhooks enqueue into yomi-telegram-inbox; this
+      // worker's queue() consumer processes them with a 15-minute wall clock,
+      // which reliably finishes the 60 s agent run that used to be cut off by
+      // the 30 s HTTP waitUntil budget. max_batch_size 1 keeps per-chat order
+      // (the same guarantee Telegram's sequential webhook delivery gave us).
+      "queues": {
+        "producers": [{ "binding": "TELEGRAM_INBOX", "queue": "yomi-telegram-inbox" }],
+        "consumers": [
+          {
+            "queue": "yomi-telegram-inbox",
+            "max_batch_size": 1,
+            "max_batch_timeout": 5,
+            "max_retries": 1,
+          },
+        ],
+      },
     },
   },
 }

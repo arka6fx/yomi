@@ -3,28 +3,25 @@ import { eq, and } from "drizzle-orm"
 import { db, platformConnections } from "@yomi/db"
 import { getDefaultGateway } from "./gateway-runner.js"
 import { authenticate } from "../auth.js"
-import { TelegramAdapter, type TelegramUpdate } from "./platforms/telegram.js"
+import { TelegramUpdate } from "./platforms/telegram.js"
+import {
+  isDuplicateTelegramUpdate,
+  processTelegramUpdate,
+} from "./telegram-processor.js"
 import type { PlatformType } from "@yomi/shared"
 
 export const gatewayRouter = new Hono()
 
-// Telegram redelivers an update (e.g. after a slow/lost 2xx during a deploy
-// restart, or its own retry) if it doesn't get acked fast enough — without this
-// a redelivered update runs the agent turn twice, and the second run (with
-// nothing left to approve/act on) produces a confusing stray reply. update_id
-// is per-bot monotonically increasing, so a bounded, time-evicted set is
-// enough; no DB needed since this runs as a single process.
-const SEEN_UPDATE_ID_TTL_MS = 10 * 60 * 1000
-const seenUpdateIds = new Map<number, number>()
+interface TelegramQueueProducer {
+  send(body: unknown): Promise<unknown>
+}
 
-function isDuplicateTelegramUpdate(updateId: number): boolean {
-  const now = Date.now()
-  for (const [id, seenAt] of seenUpdateIds) {
-    if (now - seenAt > SEEN_UPDATE_ID_TTL_MS) seenUpdateIds.delete(id)
-  }
-  if (seenUpdateIds.has(updateId)) return true
-  seenUpdateIds.set(updateId, now)
-  return false
+function isTelegramQueueProducer(q: unknown): q is TelegramQueueProducer {
+  return (
+    typeof q === "object" &&
+    q !== null &&
+    typeof (q as TelegramQueueProducer).send === "function"
+  )
 }
 
 // Run async work after the response is sent. On Cloudflare Workers this uses
@@ -197,25 +194,28 @@ gatewayRouter.post("/telegram/webhook/:token", async (c) => {
     return c.json({ ok: true })
   }
 
-  const gateway = getDefaultGateway()
-  const adapter = gateway.getAdapter("telegram")
-  if (!(adapter instanceof TelegramAdapter)) {
-    console.warn("[gateway/telegram] adapter missing, attempting lazy gateway start")
-    await gateway.start(undefined, { minimal: true })
+  // Acknowledge Telegram immediately and process the update in a background
+  // context. The full agent run can take well over the 30 s HTTP waitUntil
+  // budget on a stateless Worker (the run timeout alone is 60 s), which is why
+  // the update never made it back to the human. When a Cloudflare Queue binding
+  // is present (production) the update is handed to the queue consumer instead,
+  // which gets a 15-minute wall clock and finishes the turn reliably. Falls
+  // back to waitUntil-style background processing when the binding is absent
+  // (local bun dev), where waitUntil semantics don't apply and time is free.
+  const queue = (c.env as Record<string, unknown>)["TELEGRAM_INBOX"]
+  if (isTelegramQueueProducer(queue)) {
+    try {
+      await queue.send(update)
+      return c.json({ ok: true })
+    } catch (err) {
+      console.warn("[gateway/telegram] queue send failed, falling back to background:", err)
+    }
   }
 
-  const readyAdapter = gateway.getAdapter("telegram")
-  if (!(readyAdapter instanceof TelegramAdapter)) return c.text("No Telegram adapter", 503)
-
-  // Acknowledge Telegram immediately and process in the background. Telegram
-  // delivers a chat's updates sequentially and waits for a 2xx before sending
-  // the next one, so awaiting the full agent run here would stall delivery and
-  // pile up pending updates (the bot appears to stop replying). On a stateless
-  // Worker a slow run also risks hitting CPU/time limits and webhook retries.
   runInBackground(
     c,
-    readyAdapter.processUpdate(update).catch((err) => {
-      console.warn("[gateway/telegram] background processUpdate error:", err)
+    processTelegramUpdate(update, { alreadyDeduped: true }).catch((err) => {
+      console.warn("[gateway/telegram] background update processing error:", err)
     }),
   )
   return c.json({ ok: true })
