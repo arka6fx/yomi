@@ -1,6 +1,6 @@
 {
   "name": "yomi",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "A personal AI assistant on Telegram. Send text, voice, or photos; it reads and drafts email, schedules meetings, searches files, and acts across Google Workspace, GitHub, Slack, Notion, Linear, and more.",
   "license": "MIT",
   "author": "Arka Garai <arkagarai292@gmail.com>",
