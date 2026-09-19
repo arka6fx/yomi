@@ -396,7 +396,7 @@ function maxOutputTokensFor(text: string): number {
   // visible text ("I couldn't produce a reply") on every confirmation.
   let base: number
   if (
-    /\b(gmail|email|inbox|calendar|schedule|drive|file|files|doc|docs|sheet|sheets|slide|slides|document|spreadsheet|classroom|github|slack|notion|linear)\b/.test(
+    /\b(gmail|email|inbox|calendar|cal|schedule|meeting|drive|file|files|doc|docs|sheet|sheets|slide|slides|document|spreadsheet|classroom|github|pr|prs|repo|issue|slack|dm|msg|notion|linear|task|tasks)\b/.test(
       q,
     ) ||
     /\b(write|draft|compose|essay|article|report|code|program|function|debug|detailed|step by step)\b/.test(
@@ -405,9 +405,12 @@ function maxOutputTokensFor(text: string): number {
   ) {
     base = 4000
   } else {
-    base = 2500
+    base = 3000
   }
-  const scale = Math.min(1.5, Math.max(1, text.length / 500))
+  // Short text (e.g. a voice transcript) should not get fewer tokens — a
+  // 10-word voice command can trigger multi-step tool work just as easily as
+  // a paragraph. A higher floor prevents reasoning-model token starvation.
+  const scale = Math.min(1.5, Math.max(1.2, text.length / 400))
   return Math.round(base * scale)
 }
 
