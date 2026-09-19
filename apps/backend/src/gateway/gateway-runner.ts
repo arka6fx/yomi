@@ -492,7 +492,7 @@ export class GatewayRunner {
           })),
           { role: "user", content: text },
         ],
-        maxTokens: Math.min(400, Math.max(100, text.length * 1.5)),
+        maxTokens: Math.min(600, Math.max(300, text.length * 2)),
         abortSignal: AbortSignal.timeout(5_000),
       })
       let reply = result.text.trim()
@@ -1282,7 +1282,9 @@ export class GatewayRunner {
               "Sorry, I couldn't transcribe the audio. Please type your message.",
             ).catch(() => {})
           }
-          return
+          // Only hard-return when there is no fallback text. Voice messages
+          // with a caption still carry usable text that the agent can answer.
+          if (!msg.text.trim()) return
         }
       }
 
