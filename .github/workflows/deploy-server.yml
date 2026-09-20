@@ -90,13 +90,35 @@ jobs:
         working-directory: server/containers
         run: bun run typecheck
 
+      # GitHub Actions does not allow the `secrets` context in a step-level
+      # `if:` expression (available contexts are env, github, inputs, matrix,
+      # needs, runner, steps, strategy, vars). Detect secret presence in a
+      # `run:` step instead and gate on its outputs, so the job stays green
+      # until the Cloudflare secrets are configured. Secrets flow in via
+      # `env:` (never interpolated into the shell) to defuse injection.
+      - name: Check deploy secrets
+        id: creds
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          YOMI_SERVER_URL: ${{ secrets.YOMI_SERVER_URL }}
+        run: |
+          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "cf_available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "cf_available=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -n "$YOMI_SERVER_URL" ]; then
+            echo "url_available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "url_available=false" >> "$GITHUB_OUTPUT"
+          fi
+
       # wrangler builds server/Dockerfile (linux/amd64) with the runner's Docker
       # and pushes to the Cloudflare Registry, then rolls out container
       # instances. First deploy can take a few minutes to provision.
-      # Runs only once CLOUDFLARE_API_TOKEN/CLOUDFLARE_ACCOUNT_ID secrets are
-      # configured in the repo; until then the job passes via skip.
       - name: Deploy to Cloudflare Containers
-        if: ${{ steps.staleness.outputs.stale != 'true' && secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+        if: ${{ steps.staleness.outputs.stale != 'true' && steps.creds.outputs.cf_available == 'true' }}
         working-directory: server
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -106,7 +128,7 @@ jobs:
       # Health check only runs when YOMI_SERVER_URL is configured (set once the
       # Workers domain / custom domain for the server Worker is known).
       - name: Health check
-        if: ${{ steps.staleness.outputs.stale != 'true' && secrets.YOMI_SERVER_URL != '' }}
+        if: ${{ steps.staleness.outputs.stale != 'true' && steps.creds.outputs.url_available == 'true' }}
         env:
           YOMI_SERVER_URL: ${{ secrets.YOMI_SERVER_URL }}
         run: |

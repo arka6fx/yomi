@@ -9,6 +9,10 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: release-please
+  cancel-in-progress: true
+
 permissions:
   contents: write
   pull-requests: write
@@ -17,10 +21,12 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      # Pinned to an immutable commit SHA, not the mutable `v4` tag. See
-      # deploy-landing.yml for the pinning policy rationale.
-      - uses: google-github-actions/release-please-action@e4dc86ba9405554aeba3c6bb2d169500e7d3b4ee # v4
+      # Pinned to an immutable commit SHA, not the mutable tag. See
+      # deploy-landing.yml for the pinning policy rationale. The canonical
+      # action moved from google-github-actions to googleapis; `default-branch`
+      # was never a valid input (the old action ignores it, the new one rejects
+      # it), the branch is implied by release-type/config-file = main.
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
         with:
           release-type: node
-          default-branch: main
