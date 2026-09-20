@@ -1,0 +1,1 @@
+"""Internal helpers — ports of apps/backend/src/lib/*."""

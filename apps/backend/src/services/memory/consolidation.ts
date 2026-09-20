@@ -4,7 +4,7 @@ import { db, memoryEntries, memoryRelations } from "@yomi/db"
 // Deliberately much stricter than TURN_CANDIDATE_LIMIT's unbounded shortlist (contradiction.ts)
 // — there is no LLM double-check here to catch an elaboration being wrongly merged, so detection
 // must be conservative by default. See design:
-// docs/superpowers/specs/2026-08-02-memory-consolidation-sweep-design.md
+// specs/archive/superpowers/specs/2026-08-02-memory-consolidation-sweep-design.md
 const DEFAULT_MAX_DISTANCE = 0.03
 
 function maxDistance(): number {

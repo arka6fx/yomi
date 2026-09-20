@@ -5,7 +5,7 @@ import type { ConnectorRegistry } from "./connectors/registry.js"
 
 // Fixed, small, and non-configurable — this sub-loop is meant to be cheap and
 // bounded by construction, not tuned. See design:
-// docs/superpowers/specs/2026-08-02-subagent-delegation-design.md
+// specs/archive/superpowers/specs/2026-08-02-subagent-delegation-design.md
 const DELEGATE_MAX_STEPS = 8
 const DELEGATE_MAX_OUTPUT_TOKENS = 4096
 const MAX_DELEGATIONS_PER_TURN = 3

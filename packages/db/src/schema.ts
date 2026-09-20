@@ -55,7 +55,7 @@ export const devices = pgTable("devices", {
 })
 
 // Single-use, short-lived login tokens for the Telegram Mini App dashboard
-// handoff (see docs/superpowers/specs/2026-08-12-telegram-miniapp-dashboard-handoff-design.md).
+// handoff (see specs/archive/superpowers/specs/2026-08-12-telegram-miniapp-dashboard-handoff-design.md).
 // A token minted here is claimed exactly once, by
 // GET /api/auth/telegram-webapp-redeem running in a real external browser —
 // a cookie minted inside Telegram's own embedded webview never reaches that

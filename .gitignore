@@ -49,6 +49,15 @@ Thumbs.db
 *.log
 npm-debug.log*
 
+# Python (server/ backend port)
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+htmlcov/
+
 # Yomi runtime data (lives in user home, not repo)
 .yomi/
 

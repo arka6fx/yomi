@@ -5,7 +5,7 @@ import type { ConnectorRegistry } from "./connectors/registry.js"
 
 // Fixed, non-configurable — more room than delegate's generic budget to cover
 // 3 search tools x possible refinement + a synthesis pass. See design:
-// docs/superpowers/specs/2026-08-02-deep-research-tool-design.md
+// specs/archive/superpowers/specs/2026-08-02-deep-research-tool-design.md
 const RESEARCH_MAX_STEPS = 12
 const RESEARCH_MAX_OUTPUT_TOKENS = 6144
 const MAX_RESEARCH_CALLS_PER_TURN = 2

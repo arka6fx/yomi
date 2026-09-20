@@ -1,32 +1,50 @@
 # Contributing to Yomi
 
-Thanks for contributing! Yomi is a personal AI assistant on Telegram: a Hono
-backend on Cloudflare Workers, a Next.js dashboard, and a Bun monorepo. This
-guide keeps changes reviewable and CI green.
+Thanks for contributing! Yomi is a personal AI assistant on Telegram: a FastAPI
+backend (Python, `server/` — canonical for everything it covers), a Next.js
+dashboard, and a Bun workspace. The legacy Hono backend (`apps/backend`) still
+runs production surfaces the Python port hasn't covered yet. This guide keeps
+changes reviewable and CI green.
 
 ## Getting started
 
 ```bash
 git clone https://github.com/arka6fx/yomi.git
 cd yomi
-bun install
+
+# Python backend (canonical for new backend work)
+cd server
+uv sync --dev
 cp .env.example .env     # fill in at minimum the OpenAI + Postgres values
+uv run uvicorn yomi.app.main:app --reload --port 3001
+
+# Dashboard
+cd ../apps/landing
+bun install
 bun run dev
 ```
 
-Dev targets: backend on `http://localhost:3001` (`cd apps/backend && bun run dev`),
-dashboard on `http://localhost:3000` (`cd apps/landing && bun run dev`).
+Dev targets: backend on `http://localhost:3001`, dashboard on
+`http://localhost:3000`.
 
 ## Repo layout
 
 ```text
-apps/backend/            Hono on Workers: auth, billing, LLM proxy, metering, Telegram, memory
+server/                  FastAPI backend (Python): models, services, routers,
+                         alembic migrations, tests
+apps/backend/            TypeScript backend (Hono on Workers) — production until
+                         the Python port completes
 apps/landing/            Next.js on Workers: marketing, dashboard, account linking
-packages/agent-core/     ConnectorDef, ConnectorRegistry, agent tools
-packages/db/             Drizzle schema + Postgres client (Neon HTTP driver)
-packages/shared/         TypeScript contracts shared across apps
-packages/ui-connectors/  Connector UI components
+packages/agent-core/     (TS) ConnectorDef, ConnectorRegistry, agent tools
+packages/db/             (TS) Drizzle schema + Postgres client (Neon HTTP driver)
+packages/shared/         (TS) TypeScript contracts shared across apps
+packages/ui-connectors/  (TS) Connector UI components
 ```
+
+New backend work goes into `server/` (FastAPI + SQLAlchemy 2 async). Python
+code is linted with `ruff` (line length 100) and tested with `pytest`;
+TypeScript as described below. The `server/` CI job is
+`.github/workflows/python-ci.yml`.
 
 ## What to work on
 
@@ -50,21 +68,26 @@ makes a structural decision, add an ADR ([`docs/adr/0000-template.md`](docs/adr/
 3. Before pushing, make sure your package is clean:
 
    ```bash
+   # TypeScript workspace
    bun run typecheck   # all packages, via turbo
    bun run lint
    bun run test
    bun run format      # prettier; CI runs format:check, so match it
+
+   # Python backend (server/)
+   cd server && uv run ruff check .
+   cd server && uv run pytest -q
    ```
 
    CI runs the same checks plus a docs sync check — a red build won't deploy.
 
 ## Test conventions
 
-- Tests are colocated next to the code they exercise
-  (`apps/backend/src/routes/usage.test.ts`, no root `tests/` dir) and run under
-  `bun test`.
-- Skip real network/LLM calls in tests; mock `fetch` or module dependencies
-  (see `mock.module` usage in `apps/backend/src/gateway/routes.test.ts`).
+- Python tests live in `server/tests/` (pytest, async-oriented; no real
+  network/LLM calls — mock httpx/DB as the `tests/test_memory_*` suites do).
+- TypeScript tests are colocated next to the code they exercise
+  (`apps/backend/src/routes/usage.test.ts`) and run under `bun test`.
+- Skip real network/LLM calls in tests; mock `fetch` or module dependencies.
 - Don't assert on private implementation details; test behavior.
 
 ## Code style

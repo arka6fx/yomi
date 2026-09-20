@@ -9,3 +9,4 @@ up. Do not treat anything here as authoritative.
 | `21-telegram-voice-connectors-credits-plan.md` | Shipped plan                             |
 | `22-credit-ai-cost-dashboard-redesign.md`      | Credit/telemetry redesign design + audit |
 | `23-dpdp-privacy-compliance.md`                | DPDP privacy compliance design + audit   |
+| `superpowers/`                                 | Internal feature plans/specs (shipped)   |

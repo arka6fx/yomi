@@ -44,7 +44,7 @@ The backend agent can ingest and retrieve archive content mid-conversation
   tool takes only an optional title, not the content: the backend supplies the
   text it already extracted server-side for that turn, so large documents are
   never truncated through the model's output budget (see issue #102 and
-  `docs/superpowers/specs/2026-08-04-index-document-reference-redesign-design.md`).
+  `specs/archive/superpowers/specs/2026-08-04-index-document-reference-redesign-design.md`).
 - **`deep_research`** — retrieval side of the loop: searches the user's indexed
   documents for relevant passages via the shared `/api/rag/search` pipeline.
 
@@ -65,4 +65,4 @@ Indexes user-selected Drive folders and keeps them fresh, entirely backend-side.
 - **File types:** Google-native (Docs/Sheets/Slides) plus `txt`, `md`, `csv`,
   `json`. PDFs and Office files are skipped and counted in `filesSkipped`.
 
-Design detail: `docs/superpowers/specs/2026-07-06-drive-rag-autosync-design.md`.
+Design detail: `specs/archive/superpowers/specs/2026-07-06-drive-rag-autosync-design.md`.

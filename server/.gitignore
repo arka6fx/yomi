@@ -1,0 +1,15 @@
+# Environment — never commit real secrets
+.env
+.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Local databases
+*.db
+*.sqlite3

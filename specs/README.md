@@ -5,7 +5,7 @@ describe the intended system; they are kept in sync as features land. Read
 `00-overview.md` first.
 
 For the terse operational summary of the whole system, see the repo-root
-`AGENTS.md`. For per-feature design/plan artifacts, see `docs/superpowers/`.
+`AGENTS.md`. For old per-feature design/plan artifacts, see `archive/`.
 
 ## System
 

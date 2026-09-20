@@ -82,6 +82,16 @@ bun install && bun run dev
 - **Agent orchestration:** AI SDK agent loop with connector tools; backend agent
   for Telegram
 
+## Backend Status
+
+The backend is being ported to Python (`server/`, FastAPI + SQLAlchemy 2 async
++ Alembic). `server/` is canonical for everything it already covers — privacy,
+schedules, memory, RAG, metering/billing, LLM, referrals, streaks. The agent
+loop, Telegram gateway, and connector executors remain in TypeScript
+(`apps/backend`, Hono on Workers) and run production until the port completes.
+Same Postgres schema and data either way. Python CI:
+`.github/workflows/python-ci.yml`.
+
 ---
 
 ## Architecture
