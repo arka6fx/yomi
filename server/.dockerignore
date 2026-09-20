@@ -1,0 +1,8 @@
+.venv
+.env
+*.pyc
+__pycache__
+.pytest_cache
+.ruff_cache
+README.md
+containers

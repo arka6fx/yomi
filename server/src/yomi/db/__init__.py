@@ -133,6 +133,9 @@ def _ensure_engine() -> None:
         return
     if not settings.database_url:
         raise RuntimeError("DATABASE_URL not set (see server/.env)")
+    # Point DATABASE_URL at Neon's DIRECT host, not the -pooler host: asyncpg
+    # uses server-side prepared statements, which pgbouncer transaction-mode
+    # probing rejects (statement_cache_size=0 would be required otherwise).
     engine = create_async_engine(
         settings.database_url,
         pool_pre_ping=True,

@@ -92,6 +92,17 @@ loop, Telegram gateway, and connector executors remain in TypeScript
 Same Postgres schema and data either way. Python CI:
 `.github/workflows/python-ci.yml`.
 
+`server/` deploys as a **Cloudflare Container** (`.github/workflows/
+deploy-server.yml`): asyncpg needs a real TCP socket, so it cannot run as a
+Python Worker (Pyodide). The thin Containers Worker in `server/containers`
+routes to the FastAPI image built from `server/Dockerfile` (uvicorn :8080,
+health `/health`); config is `server/wrangler.toml`. Secrets are Worker
+Secrets forwarded through `envVars`; the schema stays drizzle-owned (Alembic
+is stamp/parity tooling only). Remaining TS-only surface — `/api/auth/*` OAuth
+(the Python app only *validates* Better Auth session cookies), `proxy`,
+`conversation/history/suggestions`, `integrations`, `mcp`/`custom-mcp`,
+`rag-drive` — keeps hitting `api.getyomi.in` until the cutover.
+
 ---
 
 ## Architecture
