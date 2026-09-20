@@ -4,9 +4,10 @@ Last updated: 2026-07-07
 
 ## Implementation status
 
-All registered connectors in `packages/agent-core/src/connectors/all-defs.ts`
-have concrete tool factories and execute handlers. No registered connector is
-only a placeholder.
+All registered connectors (cataloged in `packages/ui-connectors/src/catalog.ts`,
+runtime port in progress at `apps/backend/src/yomi/connectors/`) have concrete
+tool factories and execute handlers. No registered connector is only a
+placeholder.
 
 | Connector        | Implemented tool count | Runtime notes                                                                |
 | ---------------- | ---------------------: | ---------------------------------------------------------------------------- |

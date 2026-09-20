@@ -78,9 +78,9 @@ Canonical vocabulary for how a new memory relates to what is already stored.
 Full design in
 [ADR-0006](docs/adr/0006-contradiction-resolution-at-extraction.md). These three
 definitions are the ones the extraction prompt uses
-(`apps/backend/src/services/memory/contradiction.ts`), so keep them in sync;
-`apps/backend/scripts/eval-memory-contradiction.ts` is the opt-in eval that
-catches drift.
+(`apps/backend/src/yomi/services/memory/contradiction.py`), so keep them in
+sync; its test suite (`apps/backend/tests/test_memory_contradiction.py`) is the
+canary that catches drift.
 
 **Contradiction**: A new memory asserting something **incompatible** with an
 existing active memory on the same subject ("uses vim" becomes "switched to VS

@@ -1,6 +1,6 @@
 # GitHub Connector
 
-Runtime definition: `packages/agent-core/src/connectors/github-def.ts`
+Runtime definition: Python port in progress (`apps/backend/src/yomi/connectors/`)
 
 Runtime id: `github`
 

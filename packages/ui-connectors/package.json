@@ -15,11 +15,11 @@
     "lint": "eslint src",
     "format": "prettier --write --ignore-path ../../.prettierignore .",
     "format:check": "prettier --check --ignore-path ../../.prettierignore .",
-    "test": "bun test --pass-with-no-tests",
-    "test:coverage": "bun test --pass-with-no-tests --coverage --coverage-reporter=lcov --coverage-dir=coverage"
+    "test": "vitest run --passWithNoTests",
+    "test:coverage": "vitest run --passWithNoTests --coverage"
   },
   "dependencies": {
-    "@yomi/shared": "workspace:*"
+    "@yomi/shared": "0.0.0"
   },
   "peerDependencies": {
     "react": ">=18.0.0"
@@ -27,8 +27,12 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/react": "^18.3.0",
-    "@yomi/eslint-config": "workspace:*",
-    "@yomi/typescript-config": "workspace:*",
+    "@vitest/coverage-v8": "^2.1.8",
+    "@yomi/eslint-config": "0.0.0",
+    "@yomi/typescript-config": "0.0.0",
     "typescript": "^5.5.0"
   }
 }
+
+
+

@@ -4,85 +4,108 @@ Production topology:
 
 ```text
 Frontend / dashboard  https://getyomi.in        Cloudflare Worker (apps/landing)
-Backend API           https://api.getyomi.in    Cloudflare Worker (apps/backend)
-Database              Neon PostgreSQL (pgvector, HTTP driver)
+Backend API           https://api.getyomi.in    Cloudflare Container (apps/backend)
+Database              Neon PostgreSQL (pgvector, asyncpg over TCP)
 LLM + speech          OpenAI (STT for incoming voice notes; replies are text)
 Billing               Dodo Payments
 ```
 
 - **Domain** `getyomi.in` is registered at Hostinger; DNS is managed by
-  Cloudflare. Both `getyomi.in` and `api.getyomi.in` are Cloudflare Workers
-  custom domains, so TLS and proxying are handled by Cloudflare.
-- **Both the backend and the landing app run on Cloudflare Workers.** The
-  backend entry is `apps/backend/src/worker.ts` with
-  `apps/backend/wrangler.jsonc`.
+  Cloudflare. `getyomi.in` is a Workers custom domain on the landing app;
+  `api.getyomi.in` is a custom domain on the thin Containers Worker that routes
+  to the Python backend container, so TLS and proxying are handled by
+  Cloudflare.
+- **The backend is a Cloudflare Container**, not a Worker: `asyncpg` needs a
+  real TCP socket, which the Pyodide-based Workers Python runtime can't provide.
 
 ---
 
-## Backend on Cloudflare Workers
+## Backend on Cloudflare Containers
 
-The backend is a Hono app (`apps/backend/src/index.ts`) served by the Worker
-entry `apps/backend/src/worker.ts`. It runs on Workers with `nodejs_compat` and
-talks to Neon over the stateless HTTP driver (`@neondatabase/serverless`). It is
-not a container and there is no server to SSH into.
+The backend is a Python FastAPI app (`apps/backend/src/yomi/`, entrypoint
+`yomi.run:app`, uvicorn on `:8080`) built from `apps/backend/Dockerfile`. It is
+a single instance per frame served by the thin Worker
+`apps/backend/containers/worker.ts` (config in `apps/backend/wrangler.toml`),
+which forwards every request plus Worker Secrets (via `envVars`) to the
+container. `ENVIRONMENT=production` is the only value in `wrangler.toml`
+`[vars]`; everything else arrives as a Worker Secret.
 
-Migrations are **not** run by deploy. After a migration lands, run
-`bun run db:migrate` from `packages/db` against the Neon `DATABASE_URL`.
+### Migrations
+
+Migrations are **not** run by deploy. After a schema change lands, run Alembic
+against the Neon `DATABASE_URL` (direct host, not the pooler):
+
+```bash
+cd apps/backend && uv sync --frozen --no-dev
+uv run alembic upgrade head
+```
+
+The schema itself is owned by `packages/db` (`yomi-db`, SQLAlchemy 2 async
+models); `apps/backend/migrations` holds the Alembic migration scripts.
 
 ### Secrets (Worker secrets)
 
 ```bash
-ENVIRONMENT=production
-DATABASE_URL=postgresql://...             # Neon connection string (pooler)
-ENCRYPTION_KEY=<hex32>                    # MUST match the value tokens were encrypted with
-ENCRYPTION_KEY_FALLBACKS=                 # old key(s) if rotating, comma-separated
-BETTER_AUTH_SECRET=...
-OAUTH_STATE_SECRET=...
-
-BETTER_AUTH_URL=https://getyomi.in
-BETTER_AUTH_BASE_URL=https://api.getyomi.in
+ENVIRONMENT=production                       # the only [vars] value
+DATABASE_URL=postgresql://...                # Neon DIRECT host (asyncpg + pgbouncer
+                                             # transaction pooling are incompatible)
+APP_URL=https://getyomi.in
+BACKEND_URL=https://api.getyomi.in
+WEB_ORIGIN=https://getyomi.in
 CORS_ORIGIN=https://getyomi.in
-NEXT_PUBLIC_APP_URL=https://getyomi.in
-YOMI_APP_URL=https://getyomi.in
+BETTER_AUTH_SECRET=...
 
-GOOGLE_CLIENT_ID=...            GOOGLE_CLIENT_SECRET=...
-GITHUB_CLIENT_ID=...            GITHUB_CLIENT_SECRET=...
-GITHUB_INTEGRATIONS_CLIENT_ID=...  GITHUB_INTEGRATIONS_CLIENT_SECRET=...
-
-# LLM + speech via OpenAI (standard OPENAI_* env vars, api.openai.com);
-# the backend injects the key.
-OPENAI_API_KEY=sk-proj-...
-OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_FAST_MODEL=gpt-5.4-mini
-OPENAI_AGENT_MODEL=gpt-5.5
+INTERNAL_API_KEY=...
+OPENAI_API_KEY=...                    OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_FAST_MODEL=gpt-5.4-mini        OPENAI_AGENT_MODEL=gpt-5.5
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
-# STT: OpenAI (gpt-4o-mini-transcribe). Incoming Telegram voice notes are
-# transcribed to text; Yomi always replies in text, never with synthesized voice.
 
-TELEGRAM_BOT_TOKEN=...          TELEGRAM_BOT_USERNAME=yomi_assistant_bot
-TELEGRAM_DEEP_LINK_ENABLED=true
+# Telegram
+TELEGRAM_BOT_TOKEN=...                TELEGRAM_BOT_USERNAME=yomi_assistant_bot
+TELEGRAM_DEEP_LINK_ENABLED=true       TELEGRAM_WEBHOOK_SECRET=...
 
-DODO_ENV=live
-DODO_API_KEY=...
-DODO_LIVE_API_BASE=https://live.dodopayments.com
-DODO_LIVE_PRODUCT_PRO=pdt_...   DODO_LIVE_PRODUCT_MAX=pdt_...
-DODO_LIVE_PRODUCT_CREDITS_85=pdt_...  DODO_LIVE_PRODUCT_CREDITS_250=pdt_...  DODO_LIVE_PRODUCT_CREDITS_750=pdt_...
+# Token encryption (MUST match the key tokens were encrypted with; fallbacks rotate)
+ENCRYPTION_KEY=<hex32>                ENCRYPTION_KEY_FALLBACKS=
+
+# Google OAuth (connectors) + Composio
+GOOGLE_INTEGRATIONS_CLIENT_ID=...     GOOGLE_INTEGRATIONS_CLIENT_SECRET=...
+COMPOSIO_API_KEY=...                  COMPOSIO_CONNECTORS=...
+
+# Agent tuning
+AGENT_MAX_STEPS=25                    AGENT_MAX_OUTPUT_TOKENS=16384
+
+# Dodo Payments
+DODO_ENV=live                         DODO_API_KEY=...
+
+# Cloudflare REST APIs (Browser Run, Workers AI, Vectorize) + R2
+CLOUDFLARE_API_TOKEN=...              CLOUDFLARE_ACCOUNT_ID=...
+R2_ACCESS_KEY_ID=...                  R2_SECRET_ACCESS_KEY=...
+R2_ENDPOINT=...                       R2_BUCKET=yomi-assets
 ```
 
 Secrets are never committed. `.env.production` (gitignored) is only the local
-source you copy values from.
+source you copy values from. Set them with `bunx wrangler secret put <NAME>`
+from `apps/backend`.
 
 ### Deploy
 
 The backend deploys itself on push to `main`
-(`.github/workflows/deploy-backend.yml`). The workflow runs `bun run test` first
-and blocks the deploy if it fails, then runs `bun run deploy:production`
-(`wrangler deploy --env production`) on a GitHub-hosted runner.
+(`.github/workflows/deploy-backend.yml`). The workflow runs lint + tests first
+and blocks the deploy if they fail, then builds `apps/backend/Dockerfile`,
+pushes it to the Cloudflare registry, and deploys the Containers Worker. A
+post-deploy `/health` check runs when the `YOMI_SERVER_URL` secret is set.
 
 Break-glass / on-demand deploy when CI is unavailable:
 
 ```bash
-cd apps/backend && bun run deploy:production
+cd apps/backend && npx wrangler deploy
+```
+
+Verify provisioning:
+
+```bash
+bunx wrangler containers list
+curl https://yomi-server.<subdomain>.workers.dev/health
 ```
 
 ---
@@ -99,7 +122,7 @@ cd apps/landing
 NEXT_PUBLIC_BACKEND_URL=https://api.getyomi.in \
 NEXT_PUBLIC_API_URL=https://api.getyomi.in \
 NEXT_PUBLIC_APP_URL=https://getyomi.in \
-  bun run build:cloudflare
+  npm run build:cloudflare
 bunx wrangler deploy --env production
 ```
 
@@ -110,7 +133,7 @@ any public URL or SEO metadata.
 
 ## OAuth callback URLs
 
-Add these (alongside `http://localhost:3001/...` for dev) in the Google Cloud
+Add these (alongside `http://localhost:8080/...` for dev) in the Google Cloud
 and GitHub OAuth apps used for **sign-in**:
 
 ```text
@@ -151,6 +174,5 @@ curl https://api.getyomi.in/health/db       # -> {"status":"ok"} (schema in sync
 - `ENCRYPTION_KEY` must match what connector tokens were encrypted with. A
   mismatch makes every stored token undecryptable. Use
   `ENCRYPTION_KEY_FALLBACKS` to rotate safely.
-- `DATABASE_URL` uses Neon's HTTP driver, which is stateless per query: there
-  are no interactive transactions. Multi-write atomicity goes through
-  `db.batch`.
+- `DATABASE_URL` must point at Neon's **direct** host, not the `-pooler` host:
+  asyncpg doesn't work with PgBouncer-style transaction pooling.

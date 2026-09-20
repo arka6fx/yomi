@@ -1,12 +1,12 @@
 # apps/landing: Cloudflare Workers I/O rules
 
-The landing app deploys as a Cloudflare Worker. The **backend also runs on
-Cloudflare Workers** (`apps/backend/src/worker.ts`, stateless Neon HTTP driver),
-so these rules are landing-only. CF Workers bind native I/O to the originating
-request context:
+The landing app deploys as a Cloudflare Worker. The backend is a **Python
+FastAPI Cloudflare Container** (`apps/backend`), not a Worker — so these
+boundary rules concern the landing app itself. CF Workers bind native I/O to
+the originating request context:
 
 - **Landing never touches Postgres directly.** All DB access goes through the
-  backend API (Workers, `@neondatabase/serverless`). Don't import `@yomi/db` or
+  backend API. Don't import `@yomi/db` (the Python schema in `packages/db`) or
   any Postgres driver here.
 - **Never pass a cached promise to `ctx.waitUntil()` from a different request.**
 - **Never store Request, Response, ReadableStream, or body references in

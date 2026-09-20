@@ -1,6 +1,6 @@
 # Linear Connector
 
-Runtime definition: `packages/agent-core/src/connectors/linear-def.ts`
+Runtime definition: Python port in progress (`apps/backend/src/yomi/connectors/`)
 
 Runtime id: `linear`
 

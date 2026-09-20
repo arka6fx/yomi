@@ -1,6 +1,6 @@
 # Slack Connector
 
-Runtime definition: `packages/agent-core/src/connectors/slack-def.ts`
+Runtime definition: Python port in progress (`apps/backend/src/yomi/connectors/`)
 
 Runtime id: `slack`
 

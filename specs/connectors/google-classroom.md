@@ -1,6 +1,6 @@
 # Google Classroom Connector
 
-Runtime definition: `packages/agent-core/src/connectors/google-classroom-def.ts`
+Runtime definition: Python port in progress (`apps/backend/src/yomi/connectors/`)
 
 Runtime id: `google-classroom`
 

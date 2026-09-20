@@ -1,0 +1,28 @@
+name = "yomi-server"
+main = "containers/worker.ts"
+compatibility_date = "2026-08-01"
+workers_dev = true
+
+# Only non-secret config here. Every secret lives as a Worker Secret
+# (see README.md "Deploying to Cloudflare Containers") and is forwarded
+# to the container through the envVars mapping in containers/worker.ts.
+[vars]
+ENVIRONMENT = "production"
+APP_URL = "https://getyomi.in"
+BACKEND_URL = "https://api.getyomi.in"
+WEB_ORIGIN = "https://getyomi.in"
+CORS_ORIGIN = "https://getyomi.in"
+
+[[containers]]
+max_instances = 2
+class_name = "YomiContainer"
+image = "./Dockerfile"
+image_build_context = "../../"
+
+[[durable_objects.bindings]]
+name = "YOMI_CONTAINER"
+class_name = "YomiContainer"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["YomiContainer"]

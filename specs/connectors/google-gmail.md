@@ -1,6 +1,6 @@
 # Google Gmail Connector
 
-Runtime definition: `packages/agent-core/src/connectors/google-gmail-def.ts`
+Runtime definition: Python port in progress (`apps/backend/src/yomi/connectors/`)
 
 Runtime id: `google`
 

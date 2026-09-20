@@ -1,6 +1,6 @@
 # Notion Connector
 
-Runtime definition: `packages/agent-core/src/connectors/notion-def.ts`
+Runtime definition: Python port in progress (`apps/backend/src/yomi/connectors/`)
 
 Runtime id: `notion`
 

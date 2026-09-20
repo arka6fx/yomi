@@ -27,7 +27,7 @@ For the terse operational summary of the whole system, see the repo-root
 
 Per-connector tool surface, auth, and gaps — see [`connectors/`](connectors/),
 starting with [`connectors/00-index.md`](connectors/00-index.md). Runtime defs
-live in `packages/agent-core/src/connectors/`.
+live in `apps/backend/src/yomi/connectors/` (Python port in progress).
 
 ## Runbooks
 

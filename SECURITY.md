@@ -8,8 +8,8 @@ Please report it privately by emailing
 **[contact.arkagarai@gmail.com](mailto:contact.arkagarai@gmail.com)**. If
 possible include:
 
-- The affected component (`server`, `apps/backend`, `apps/landing`,
-  `packages/agent-core`, etc.)
+- The affected component (`apps/backend`, `apps/landing`, `packages/db`,
+  `packages/shared`, etc.)
 - Steps to reproduce, or a minimal proof of concept
 - Any impact you've observed
 
@@ -21,9 +21,9 @@ release notes (if you want to be named).
 
 In scope:
 
-- The backend: `server/**` (Python) and `apps/backend/**` (TypeScript)
+- The backend: `apps/backend/**` (Python FastAPI container) and `packages/db/**`
 - The dashboard/web app: `apps/landing/**`
-- Shared packages: `packages/**`
+- Shared packages: `packages/shared/**`, `packages/ui-connectors/**`
 
 Out of scope (not vulnerabilities in this repository):
 

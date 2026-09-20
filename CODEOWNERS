@@ -1,8 +1,9 @@
 # Default owners — the maintainer is responsible for all paths not listed below.
 * @arka6fx
 
-# Connectors
-packages/agent-core/src/connectors/ @arka6fx
+# Connectors (dashboard catalog + Python port)
+packages/ui-connectors/ @arka6fx
+apps/backend/src/yomi/connectors/ @arka6fx
 
 # Backend
 apps/backend/src/ @arka6fx

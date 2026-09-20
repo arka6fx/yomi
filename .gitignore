@@ -49,7 +49,7 @@ Thumbs.db
 *.log
 npm-debug.log*
 
-# Python (server/ backend port)
+# Python (apps/backend backend)
 __pycache__/
 *.py[cod]
 .venv/

@@ -4,13 +4,15 @@ This folder tracks the connector surface area that Yomi exposes to the agent
 loop. Each connector spec lists the current tool names, read/write behavior,
 auth requirements, and known gaps.
 
-Runtime definitions live in `packages/agent-core/src/connectors/*-def.ts` and
-are registered through `packages/agent-core/src/connectors/all-defs.ts`.
+Runtime definitions live in the Python backend under
+`apps/backend/src/yomi/connectors/` (first-class tool sets; port in progress).
+Dashboard display metadata is cataloged in
+`packages/ui-connectors/src/catalog.ts`.
 
 ## First-class connectors
 
-These have hand-written runtime definitions (`*-def.ts`) with curated tool sets
-and, in most cases, a dedicated spec in this folder.
+These have hand-written runtime definitions with curated tool sets and, in most
+cases, a dedicated spec in this folder.
 
 | Connector        | Runtime id         | Spec                  | Tools | Status                                   |
 | ---------------- | ------------------ | --------------------- | ----: | ---------------------------------------- |
@@ -30,8 +32,8 @@ and, in most cases, a dedicated spec in this folder.
 These share a single integration pattern: tools are resolved through Composio's
 unified executor and wrapped by the same approval gate as first-class writes.
 They have no per-connector spec — the Composio toolkit is the source of truth
-for their action list. Runtime definitions live under
-`packages/agent-core/src/connectors/composio/`.
+for their action list. The Python port wraps the same Composio toolkit under
+`apps/backend/src/yomi/connectors/`.
 
 | Connector             | Runtime id              | Connector    | Runtime id     |
 | --------------------- | ----------------------- | ------------ | -------------- |

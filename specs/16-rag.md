@@ -35,7 +35,8 @@ content hash). Manual push routes and automated sync both use it.
 ### Agent-facing tools
 
 The backend agent can ingest and retrieve archive content mid-conversation
-(`packages/agent-core/src/index-{text,url,document}.ts`, `deep-research.ts`):
+(Python port in progress at `apps/backend/src/yomi/services/rag/`, originally
+`packages/agent-core/src/index-{text,url,document}.ts` / `deep-research.ts`):
 
 - **`index_text`** — index a pasted snippet the user asks to remember.
 - **`index_url`** — fetch a link's readable content and index it; the backend

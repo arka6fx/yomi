@@ -1,7 +1,7 @@
 {
   "name": "yomi",
   "version": "1.0.0",
-  "description": "A personal AI assistant on Telegram. Send text, voice, or photos; it reads and drafts email, schedules meetings, searches files, and acts across Google Workspace, GitHub, Slack, Notion, Linear, and more.",
+  "description": "A personal AI assistant on Telegram. Python FastAPI backend on Cloudflare Containers, Next.js dashboard on Cloudflare Workers.",
   "license": "MIT",
   "author": "Arka Garai <arkagarai292@gmail.com>",
   "homepage": "https://getyomi.in",
@@ -13,18 +13,8 @@
     "url": "https://github.com/arka6fx/yomi/issues"
   },
   "keywords": [
-    "telegram",
-    "ai",
-    "assistant",
-    "agent",
-    "gmail",
-    "google-calendar",
-    "google-workspace",
-    "github",
-    "slack",
-    "notion",
-    "linear",
-    "automation"
+    "telegram", "ai", "assistant", "agent", "gmail",
+    "google-calendar", "google-workspace", "github", "slack", "notion", "linear", "automation"
   ],
   "private": true,
   "workspaces": [
@@ -39,23 +29,31 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "coverage": "turbo run coverage",
-    "docs:check": "bun scripts/check-docs-sync.ts",
+    "docs:check": "tsx scripts/check-docs-sync.ts",
     "format": "turbo run format",
     "format:check": "turbo run format:check",
     "clean": "turbo run clean",
-    "clean:all": "turbo run clean && find . -name 'node_modules' -type d -prune -exec rm -rf '{}' +"
+    "clean:all": "turbo run clean && find . -name 'node_modules' -type d -prune -exec rm -rf '{}' +",
+"python:test": "cd apps/backend && uv run pytest -q",
+    "python:lint": "cd apps/backend && uv run ruff check .",
+    "python:dev": "cd apps/backend && uv run uvicorn yomi.run:app --reload --port 8080",
+    "python:typecheck": "cd apps/backend && uv run pyright src/"
   },
   "devDependencies": {
-    "@yomi/eslint-config": "workspace:*",
-    "@yomi/typescript-config": "workspace:*",
+    "@yomi/eslint-config": "0.0.0",
+    "@yomi/typescript-config": "0.0.0",
     "eslint": "^10.10.0",
     "prettier": "^3.9.8",
+    "tsx": "^4.19.2",
     "turbo": "^2.10.13",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^2.1.8"
   },
   "engines": {
-    "node": ">=20",
-    "bun": ">=1.1.0"
+    "node": ">=20"
   },
-  "packageManager": "bun@1.3.14"
+  "packageManager": "npm@10.9.2"
 }
+
+
+

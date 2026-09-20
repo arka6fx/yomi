@@ -39,7 +39,8 @@ scopes at connect time.
 - `BETTER_AUTH_BASE_URL` (used to build redirect URIs)
 
 Source of truth for scopes:
-`packages/agent-core/src/connectors/google-*-def.ts`.
+the Google connector runtime defs (Python port in progress at
+`apps/backend/src/yomi/connectors/`).
 
 ---
 
@@ -384,8 +385,8 @@ Also enable in **Library** (same Google Cloud project):
 - Google Sheets API
 - Google Slides API
 
-See `packages/agent-core/src/connectors/composio/google-docs.ts` (and
-`google-sheets.ts`, `google-slides.ts`) for the exact setup steps.
+See the Composio-backed Google connectors (Docs, Sheets, Slides) in the
+connector port (`apps/backend/src/yomi/connectors/`) for the exact setup steps.
 
 ---
 

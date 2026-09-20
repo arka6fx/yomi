@@ -2,7 +2,8 @@ import type { ConnectorInfo, ConnectorCategory } from "./types.js"
 import { STARTER_PROMPTS } from "@yomi/shared/starter-prompts"
 
 // Static connector catalog — no Node.js dependencies, safe for browser bundles.
-// Mirrors ALL_CONNECTOR_DEFS from agent-core but contains only display metadata.
+// The only in-tree connector registry; runtime defs are being ported to Python
+// (apps/backend/src/yomi/connectors).
 const CATALOG_DEFS: Array<{
   id: string
   name: string

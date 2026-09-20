@@ -31,8 +31,7 @@
         "**/*.spec.ts",
         "**/*.test.tsx",
         "**/*.spec.tsx",
-        "package.json",
-        "bunfig.toml"
+        "package.json"
       ],
       "cache": true
     },
@@ -45,8 +44,7 @@
         "**/*.spec.ts",
         "**/*.test.tsx",
         "**/*.spec.tsx",
-        "package.json",
-        "bunfig.toml"
+        "package.json"
       ],
       "outputs": ["coverage/**"],
       "cache": true

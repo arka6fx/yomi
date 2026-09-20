@@ -9,7 +9,8 @@
 > submission step.
 >
 > Source of truth for scopes:
-> `packages/agent-core/src/connectors/google-*-def.ts`.
+> the Google connector runtime defs (Python port in progress at
+> `apps/backend/src/yomi/connectors/`).
 
 ---
 
@@ -44,7 +45,7 @@ tasks), `classroom.student-submissions.me.readonly` (subsumed by
 `coursework.me`).
 
 No Google Contacts / People API scopes are requested — Yomi has no Contacts
-connector (`packages/agent-core/src/connectors/all-defs.ts` has no
+connector (the catalog at `packages/ui-connectors/src/catalog.ts` has no
 google-contacts entry).
 
 ### Deltas from a console that was set up before this pass

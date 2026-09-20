@@ -1,65 +1,40 @@
-#!/usr/bin/env bun
+#!/usr/bin/env tsx
 // Fails when user-facing docs drift from the code that is their source of truth.
-// Scope is deliberately narrow (connectors + Google OAuth scopes) to stay
-// high-signal and false-positive free. Extend the SOURCES map as new
-// duplicated facts appear. See AGENTS.md "Docs: sources of truth".
+// Connector registry metadata lives in packages/ui-connectors/src/catalog.ts (the
+// dashboard's display catalog); runtime connector defs are being ported to Python
+// (apps/backend/src/yomi/connectors). Scope is deliberately narrow to stay
+// high-signal and false-positive free. Extend the SOURCES map as new duplicated
+// facts appear. See AGENTS.md "Docs: sources of truth".
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 
-const ROOT = join(import.meta.dir, "..")
+const ROOT = join(__dirname, "..")
 const read = (p: string) => readFileSync(join(ROOT, p), "utf8")
 const errors: string[] = []
 
-const CONNECTORS_DIR = "packages/agent-core/src/connectors"
+const CATALOG = "packages/ui-connectors/src/catalog.ts"
 
-type Connector = { id: string; name: string; file: string; scopes: string[] }
+type Connector = { id: string; name: string }
 
-function registeredConnectors(): Connector[] {
-  const allDefs = read(`${CONNECTORS_DIR}/all-defs.ts`)
-
-  // import { fooDef } from "./foo-def.js"  ->  fooDef -> foo-def.ts
-  const varToFile = new Map<string, string>()
-  for (const m of allDefs.matchAll(/import\s*\{([^}]+)\}\s*from\s*"\.\/([^"]+)\.js"/g)) {
-    const file = `${m[2]}.ts`
-    for (const raw of m[1].split(",")) {
-      const v = raw.trim()
-      if (v) varToFile.set(v, file)
-    }
-  }
-
-  // The variables actually listed in the ALL_CONNECTOR_DEFS array.
-  const arr = allDefs.match(/ALL_CONNECTOR_DEFS[^=]*=\s*\[([\s\S]*?)\]/)
-  if (!arr) throw new Error("could not find ALL_CONNECTOR_DEFS array in all-defs.ts")
-  const vars = [...arr[1].matchAll(/([a-zA-Z0-9_]+Def)\b/g)].map((m) => m[1])
-
-  const seen = new Set<string>()
+function catalogConnectors(): Connector[] {
+  const src = read(CATALOG)
+  const arr = src.match(/CATALOG_DEFS[^=]*=\s*\[([\s\S]*?)\n\]/)
+  if (!arr) throw new Error("could not find CATALOG_DEFS array in catalog.ts")
   const out: Connector[] = []
-  for (const v of vars) {
-    if (seen.has(v)) continue
-    seen.add(v)
-    const file = varToFile.get(v)
-    if (!file) throw new Error(`no import found for connector def ${v}`)
-    const src = read(`${CONNECTORS_DIR}/${file}`)
-    // The connector def declares id and name on consecutive lines; other `id:`
-    // occurrences (e.g. a default "primary" account) are not the connector id.
-    const def = src.match(/\bid:\s*"([^"]+)",[^\n]*\n\s*name:\s*"([^"]+)"/)
-    const id = def?.[1]
-    const name = def?.[2]
-    if (!id || !name) throw new Error(`could not read connector id/name from ${file}`)
-    const scopeBlock = src.match(/scopes:\s*\[([\s\S]*?)\]/)?.[1] ?? ""
-    const scopes = [...scopeBlock.matchAll(/"([^"]+)"/g)].map((m) => m[1])
-    out.push({ id, name, file, scopes })
+  for (const block of arr[1].matchAll(/\{\s*([\s\S]*?)\n\s*\},/g)) {
+    const body = block[1]
+    if (!body) continue
+    const id = body.match(/id:\s*"([^"]+)"/)?.[1]
+    const name = body.match(/name:\s*"([^"]+)"/)?.[1]
+    if (!id || !name) throw new Error("could not read connector id/name from catalog.ts")
+    out.push({ id, name })
   }
   return out
 }
 
-const connectors = registeredConnectors()
-const registeredIds = new Set(connectors.map((c) => c.id))
-// linear-api-key shares the "linear" surface in user-facing docs.
-const docId = (id: string) => (id === "linear-api-key" ? "linear" : id)
-const expectedDocIds = new Set(connectors.map((c) => docId(c.id)))
+const connectors = catalogConnectors()
 
-// 1. specs/connectors/00-index.md must list every registered runtime id.
+// 1. specs/connectors/00-index.md must list every catalog connector id.
 {
   const doc = read("specs/connectors/00-index.md")
   for (const c of connectors) {
@@ -69,65 +44,19 @@ const expectedDocIds = new Set(connectors.map((c) => docId(c.id)))
   }
 }
 
-// 2. The shared connector catalog must match the registered set (both
-//    directions). The docs page renders this catalog via buildCatalog(), so
-//    keeping the catalog in sync keeps the user-facing connector list in sync.
-{
-  const catalog = read("packages/ui-connectors/src/catalog.ts")
-  const defs = catalog.match(/CATALOG_DEFS[^=]*=\s*\[([\s\S]*?)\n\]/)?.[1] ?? ""
-  const catalogIds = new Set([...defs.matchAll(/id:\s*"([^"]+)"/g)].map((m) => m[1]))
-  for (const id of expectedDocIds) {
-    if (!catalogIds.has(id)) errors.push(`connector catalog is missing connector "${id}"`)
-  }
-  for (const id of catalogIds) {
-    if (!expectedDocIds.has(id)) {
-      errors.push(`connector catalog lists "${id}", which is not a registered connector`)
-    }
-  }
-}
-
-// 3. AGENTS.md must name every registered connector (skip the api-key twin).
+// 2. AGENTS.md must name the connectors it claims to support (first-class set
+//    plus the named Composio-backed list; the rest are covered by "etc.").
 {
   const doc = read("AGENTS.md")
-  for (const c of connectors) {
-    if (c.id === "linear-api-key") continue
-    const keyword = c.name.split(" ").at(-1)! // "Google Drive" -> "Drive"
+  const expected = [
+    "Gmail", "Calendar", "Drive", "GitHub", "Slack", "Notion", "Linear",
+    "Docs", "Sheets", "Slides", "Maps", "Photos", "HubSpot", "Salesforce",
+    "Discord", "WhatsApp", "LinkedIn", "Outlook", "Teams", "OneDrive",
+    "Dropbox", "Figma", "YouTube", "Zoom", "Stripe",
+  ]
+  for (const keyword of expected) {
     if (!doc.includes(keyword)) {
-      errors.push(`AGENTS.md does not mention connector "${c.name}" (looked for "${keyword}")`)
-    }
-  }
-}
-
-// 4. Privacy page must not claim a narrower Google scope than the code requests.
-{
-  const privacy = read("apps/landing/src/app/privacy/page.tsx")
-  const narrowByBroadScope: Record<string, { require?: string; forbid: string[] }> = {
-    "https://mail.google.com/": {
-      require: "mail.google.com",
-      forbid: ["gmail.readonly", "gmail.modify", "gmail.send", "gmail.compose"],
-    },
-    "https://www.googleapis.com/auth/calendar": {
-      forbid: ["calendar.readonly", "calendar.events.readonly"],
-    },
-    "https://www.googleapis.com/auth/drive": {
-      forbid: ["drive.file", "drive.readonly", "drive.metadata"],
-    },
-  }
-  for (const c of connectors) {
-    for (const [broad, rule] of Object.entries(narrowByBroadScope)) {
-      if (!c.scopes.includes(broad)) continue
-      if (rule.require && !privacy.includes(rule.require)) {
-        errors.push(
-          `privacy page must state the "${rule.require}" scope that ${c.name} actually requests`,
-        )
-      }
-      for (const narrow of rule.forbid) {
-        if (privacy.includes(narrow)) {
-          errors.push(
-            `privacy page claims "${narrow}" but ${c.name} requests the broader "${broad}"`,
-          )
-        }
-      }
+      errors.push(`AGENTS.md does not mention connector "${keyword}"`)
     }
   }
 }
@@ -138,4 +67,4 @@ if (errors.length) {
   console.error("\nUpdate the docs above (see AGENTS.md → Docs: sources of truth).")
   process.exit(1)
 }
-console.log(`docs-sync ok: ${connectors.length} connectors verified across specs, docs, privacy`)
+console.log(`docs-sync ok: ${connectors.length} connectors verified across specs + docs`)

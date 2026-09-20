@@ -1,6 +1,6 @@
 # Google Tasks Connector
 
-Runtime definition: `packages/agent-core/src/connectors/google-tasks-def.ts`
+Runtime definition: Python port in progress (`apps/backend/src/yomi/connectors/`)
 
 Runtime id: `google-tasks`
 

@@ -13,7 +13,7 @@ Current agent feature set:
   JSON.
 - Bounded subagent delegation (`delegate`): hand a self-contained sub-task to an
   isolated tool-calling loop and fold its synthesized result back into the
-  transcript (`packages/agent-core/src/delegate.ts`).
+  transcript (ported to `apps/backend/src/yomi/services/agent/`).
 - RAG ingestion and retrieval from chat: `index_text` / `index_url` /
   `index_document` write to the user's archive, `deep_research` searches it (see
   `specs/16-rag.md`).

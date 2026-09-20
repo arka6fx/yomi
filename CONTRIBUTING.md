@@ -1,10 +1,9 @@
 # Contributing to Yomi
 
 Thanks for contributing! Yomi is a personal AI assistant on Telegram: a FastAPI
-backend (Python, `server/` — canonical for everything it covers), a Next.js
-dashboard, and a Bun workspace. The legacy Hono backend (`apps/backend`) still
-runs production surfaces the Python port hasn't covered yet. This guide keeps
-changes reviewable and CI green.
+backend (Python, `apps/backend/` — canonical), a Next.js dashboard
+(`apps/landing`), an npm workspace, and a shared Python schema
+(`packages/db`, `yomi-db`). This guide keeps changes reviewable and CI green.
 
 ## Getting started
 
@@ -13,38 +12,35 @@ git clone https://github.com/arka6fx/yomi.git
 cd yomi
 
 # Python backend (canonical for new backend work)
-cd server
+cd apps/backend
 uv sync --dev
 cp .env.example .env     # fill in at minimum the OpenAI + Postgres values
-uv run uvicorn yomi.app.main:app --reload --port 3001
+uv run uvicorn yomi.run:app --reload --port 8080
 
 # Dashboard
 cd ../apps/landing
-bun install
-bun run dev
+npm install
+npm run dev
 ```
 
-Dev targets: backend on `http://localhost:3001`, dashboard on
+Dev targets: backend on `http://localhost:8080`, dashboard on
 `http://localhost:3000`.
 
 ## Repo layout
 
 ```text
-server/                  FastAPI backend (Python): models, services, routers,
-                         alembic migrations, tests
-apps/backend/            TypeScript backend (Hono on Workers) — production until
-                         the Python port completes
+apps/backend/            FastAPI backend (Python): models, services, routers,
+                         alembic migrations, containers worker, tests
 apps/landing/            Next.js on Workers: marketing, dashboard, account linking
-packages/agent-core/     (TS) ConnectorDef, ConnectorRegistry, agent tools
-packages/db/             (TS) Drizzle schema + Postgres client (Neon HTTP driver)
+packages/db/             (Python) `yomi-db` — shared SQLAlchemy 2 async schema
 packages/shared/         (TS) TypeScript contracts shared across apps
 packages/ui-connectors/  (TS) Connector UI components
 ```
 
-New backend work goes into `server/` (FastAPI + SQLAlchemy 2 async). Python
-code is linted with `ruff` (line length 100) and tested with `pytest`;
-TypeScript as described below. The `server/` CI job is
-`.github/workflows/python-ci.yml`.
+New backend work goes into `apps/backend/` (FastAPI + SQLAlchemy 2 async; the
+schema lives in `packages/db`). Python code is linted with `ruff` (line length
+100) and tested with `pytest`; TypeScript as described below. The backend CI
+job is `.github/workflows/python-ci.yml` (also covered by `ci.yml`).
 
 ## What to work on
 
@@ -69,24 +65,24 @@ makes a structural decision, add an ADR ([`docs/adr/0000-template.md`](docs/adr/
 
    ```bash
    # TypeScript workspace
-   bun run typecheck   # all packages, via turbo
-   bun run lint
-   bun run test
-   bun run format      # prettier; CI runs format:check, so match it
+   npm run typecheck   # all packages, via turbo
+   npm run lint
+   npm run test
+   npm run format      # prettier; CI runs format:check, so match it
 
-   # Python backend (server/)
-   cd server && uv run ruff check .
-   cd server && uv run pytest -q
+   # Python backend (apps/backend/)
+   cd apps/backend && uv run ruff check .
+   cd apps/backend && uv run pytest -q
    ```
 
    CI runs the same checks plus a docs sync check — a red build won't deploy.
 
 ## Test conventions
 
-- Python tests live in `server/tests/` (pytest, async-oriented; no real
+- Python tests live in `apps/backend/tests/` (pytest, async-oriented; no real
   network/LLM calls — mock httpx/DB as the `tests/test_memory_*` suites do).
 - TypeScript tests are colocated next to the code they exercise
-  (`apps/backend/src/routes/usage.test.ts`) and run under `bun test`.
+  (`packages/shared/src/*.test.ts`) and run under `vitest`.
 - Skip real network/LLM calls in tests; mock `fetch` or module dependencies.
 - Don't assert on private implementation details; test behavior.
 
