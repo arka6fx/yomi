@@ -14,8 +14,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "0002_composio_connections"
@@ -28,7 +28,12 @@ def upgrade() -> None:
     op.create_table(
         "composio_connections",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("user_id", sa.String(), sa.ForeignKey("user.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "user_id",
+            sa.String(),
+            sa.ForeignKey("user.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("entity_id", sa.String(), nullable=False),
         sa.Column("toolkit", sa.String(), nullable=False),
         sa.Column("connected_account_id", sa.String(), nullable=True),
