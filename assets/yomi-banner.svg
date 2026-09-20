@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-labelledby="title desc">
+  <title id="title">Yomi</title>
+  <desc id="desc">The AI assistant that lives in your Telegram</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b0a14"/>
+      <stop offset="1" stop-color="#150f27"/>
+    </linearGradient>
+    <linearGradient id="word" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a5b4fc"/>
+      <stop offset="0.5" stop-color="#c4b5fd"/>
+      <stop offset="1" stop-color="#f9a8d4"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6366f1"/>
+      <stop offset="1" stop-color="#a855f7"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="300" fill="url(#bg)"/>
+  <circle cx="150" cy="150" r="190" fill="none" stroke="#312e81" stroke-width="44" opacity="0.35"/>
+  <circle cx="1050" cy="150" r="190" fill="none" stroke="#581c87" stroke-width="44" opacity="0.35"/>
+  <text x="600" y="152" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="128" font-weight="700" fill="url(#word)" letter-spacing="3">Yomi</text>
+  <rect x="515" y="176" width="170" height="4" rx="2" fill="url(#accent)"/>
+  <text x="600" y="228" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="27" letter-spacing="1" fill="#a1a1aa">The AI assistant that lives in your Telegram</text>
+</svg>

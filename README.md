@@ -1,41 +1,94 @@
 <div align="center">
-  <img src="assets/yomi-mark.png" alt="Yomi" width="96" height="96" />
+  <img src="assets/yomi-banner.svg" alt="Yomi" width="100%" />
 </div>
 
 # Yomi
 
-*The AI assistant that lives in your Telegram. Text it, talk to it, or send a
-photo — Yomi drafts email, summarizes threads, schedules meetings, and keeps
-your tools in sync. It asks before it acts.*
+**The AI assistant that lives in your Telegram.** Text it, talk to it, or send
+a photo — Yomi drafts email, summarizes threads, schedules meetings, searches
+your files, files tasks, and acts across your Google Workspace, GitHub, Slack,
+Notion, and Linear. It asks before it acts.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE) [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org/) [![Bun](https://img.shields.io/badge/Bun-1.4-f5f5f5)](https://bun.sh) [![CI](https://img.shields.io/github/actions/workflow/status/arka6fx/yomi/ci.yml?branch=main&label=CI&style=flat-square)](https://github.com/arka6fx/yomi/actions/workflows/ci.yml) [![Telegram](https://img.shields.io/badge/Telegram-%40yomi_assistant_bot-2CA5E0.svg)](https://t.me/yomi_assistant_bot)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](./LICENSE)
+[![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?style=flat-square&logo=python&logoColor=white)](./server)
+[![Frontend](https://img.shields.io/badge/Frontend-Next.js-000000?style=flat-square&logo=nextdotjs&logoColor=white)](./apps/landing)
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)](./server/pyproject.toml)
+[![CI](https://img.shields.io/github/actions/workflow/status/arka6fx/yomi/ci.yml?branch=main&label=TS%20CI&style=flat-square)](https://github.com/arka6fx/yomi/actions/workflows/ci.yml)
+[![Python CI](https://img.shields.io/github/actions/workflow/status/arka6fx/yomi/python-ci.yml?branch=main&label=Python%20CI&style=flat-square)](https://github.com/arka6fx/yomi/actions/workflows/python-ci.yml)
+[![Telegram](https://img.shields.io/badge/Telegram-%40yomi_assistant_bot-2CA5E0?style=flat-square&logo=telegram&logoColor=white)](https://t.me/yomi_assistant_bot)
 
 ---
 
-Yomi is a personal AI assistant on Telegram. Send it a text, a voice note, or a
-photo, and it reads and drafts email, summarizes threads, schedules meetings,
-searches your files, files tasks, and acts across the tools you already use.
+Yomi is a personal AI assistant on Telegram. There is no desktop app and no web
+chat — Telegram *is* the interface. Send a text, a voice note, or a photo, and
+the backend reads and drafts email, summarizes threads, schedules meetings,
+files tasks, and keeps your tools in sync. The website is only a dashboard for
+linking services, setting schedules, reviewing memory, and checking credits.
 
-There is no desktop app. Telegram is the whole interface. The website is a
-dashboard for linking services, setting schedules, reviewing memory, and
-checking credits.
+## What makes it cool
+
+**Lives where you already work.** No new app to install. Open a Telegram chat,
+record a voice note, snap a photo, and Yomi goes to work across the tools you
+use every day — with explicit approval before anything irreversible happens.
+
+**A closed learning loop.** Yomi keeps canonical, user-owned memory in
+Postgres with pgvector. New facts are cross-checked against what it already
+knows (contradiction resolution at extraction), duplicates are merged by a
+consolidation sweep, and session summaries compound into a deepening model of
+who you are — across chats, days, and projects.
+
+**First-class connectors, plus 40+ more.** Hand-written tool sets for Gmail,
+Google Calendar, Drive, Classroom, Tasks, Meet, GitHub, Slack, Notion, and
+Linear — and dozens of long-tail services through Composio, all approval-gated
+and metered.
+
+**Backend-first, client-thin.** Durable memory, connector credentials, and the
+agent loop live in the cloud backend, not on your laptop. The Telegram client
+stays dumb; the backend thinks, uses tools, and replies.
+
+**Scheduled automations.** Built-in cron for daily briefings, reports, and
+recurring checks — planned on a credit budget, delivered to Telegram.
+
+**A growing RAG archive.** `index_text`, `index_url`, and `index_document`
+write into your searchable archive; `deep_research` answers from it. Your
+notes, links, and documents compound instead of rotting in folders.
+
+**Fair metering.** A single credit balance is the only usage gate — one
+balance, all connectors, no per-feature caps. There's a free Explore plan and
+unlimited connectors on every plan.
 
 ## Works with
 
-Yomi connects the tools you already use — first-class integrations, plus
-40+ more through Composio:
+[![Gmail](https://img.shields.io/badge/Gmail-D14836?style=flat-square&logo=gmail&logoColor=white)](https://mail.google.com)
+[![Google Calendar](https://img.shields.io/badge/Calendar-4285F4?style=flat-square&logo=googlecalendar&logoColor=white)](https://calendar.google.com)
+[![Google Drive](https://img.shields.io/badge/Drive-EA4335?style=flat-square&logo=googledrive&logoColor=white)](https://drive.google.com)
+[![Google Classroom](https://img.shields.io/badge/Classroom-0F9D58?style=flat-square&logo=googleclassroom&logoColor=white)](https://classroom.google.com)
+[![Google Tasks](https://img.shields.io/badge/Tasks-26A69A?style=flat-square&logo=googletasks&logoColor=white)](https://tasks.google.com)
+[![Google Meet](https://img.shields.io/badge/Meet-00897B?style=flat-square&logo=googlemeet&logoColor=white)](https://meet.google.com)
+[![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com)
+[![Slack](https://img.shields.io/badge/Slack-4A154B?style=flat-square&logo=slack&logoColor=white)](https://slack.com)
+[![Notion](https://img.shields.io/badge/Notion-000000?style=flat-square&logo=notion&logoColor=white)](https://www.notion.so)
+[![Linear](https://img.shields.io/badge/Linear-5E6AD2?style=flat-square&logo=linear&logoColor=white)](https://linear.app)
 
-[![Gmail](https://img.shields.io/badge/Gmail-D14836?style=flat-square&logo=gmail&logoColor=white)](https://mail.google.com) [![Google Calendar](https://img.shields.io/badge/Calendar-4285F4?style=flat-square&logo=googlecalendar&logoColor=white)](https://calendar.google.com) [![Google Drive](https://img.shields.io/badge/Drive-EA4335?style=flat-square&logo=googledrive&logoColor=white)](https://drive.google.com) [![Google Classroom](https://img.shields.io/badge/Classroom-0F9D58?style=flat-square&logo=googleclassroom&logoColor=white)](https://classroom.google.com) [![Google Tasks](https://img.shields.io/badge/Tasks-26A69A?style=flat-square&logo=googletasks&logoColor=white)](https://tasks.google.com) [![Google Meet](https://img.shields.io/badge/Meet-00897B?style=flat-square&logo=googlemeet&logoColor=white)](https://meet.google.com) [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com) [![Slack](https://img.shields.io/badge/Slack-4A154B?style=flat-square&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU%2BU2xhY2s8L3RpdGxlPjxwYXRoIGQ9Ik01LjA0MiAxNS4xNjVhMi41MjggMi41MjggMCAwIDEtMi41MiAyLjUyM0EyLjUyOCAyLjUyOCAwIDAgMSAwIDE1LjE2NWEyLjUyNyAyLjUyNyAwIDAgMSAyLjUyMi0yLjUyaDIuNTJ2Mi41MnpNNi4zMTMgMTUuMTY1YTIuNTI3IDIuNTI3IDAgMCAxIDIuNTIxLTIuNTIgMi41MjcgMi41MjcgMCAwIDEgMi41MjEgMi41MnY2LjMxM0EyLjUyOCAyLjUyOCAwIDAgMSA4LjgzNCAyNGEyLjUyOCAyLjUyOCAwIDAgMS0yLjUyMS0yLjUyMnYtNi4zMTN6TTguODM0IDUuMDQyYTIuNTI4IDIuNTI4IDAgMCAxLTIuNTIxLTIuNTJBMi41MjggMi41MjggMCAwIDEgOC44MzQgMGEyLjUyOCAyLjUyOCAwIDAgMSAyLjUyMSAyLjUyMnYyLjUySDguODM0ek04LjgzNCA2LjMxM2EyLjUyOCAyLjUyOCAwIDAgMSAyLjUyMSAyLjUyMSAyLjUyOCAyLjUyOCAwIDAgMS0yLjUyMSAyLjUyMUgyLjUyMkEyLjUyOCAyLjUyOCAwIDAgMSAwIDguODM0YTIuNTI4IDIuNTI4IDAgMCAxIDIuNTIyLTIuNTIxaDYuMzEyek0xOC45NTYgOC44MzRhMi41MjggMi41MjggMCAwIDEgMi41MjItMi41MjFBMi41MjggMi41MjggMCAwIDEgMjQgOC44MzRhMi41MjggMi41MjggMCAwIDEtMi41MjIgMi41MjFoLTIuNTIyVjguODM0ek0xNy42ODggOC44MzRhMi41MjggMi41MjggMCAwIDEtMi41MjMgMi41MjEgMi41MjcgMi41MjcgMCAwIDEtMi41Mi0yLjUyMVYyLjUyMkEyLjUyNyAyLjUyNyAwIDAgMSAxNS4xNjUgMGEyLjUyOCAyLjUyOCAwIDAgMSAyLjUyMyAyLjUyMnY2LjMxMnpNMTUuMTY1IDE4Ljk1NmEyLjUyOCAyLjUyOCAwIDAgMSAyLjUyMyAyLjUyMkEyLjUyOCAyLjUyOCAwIDAgMSAxNS4xNjUgMjRhMi41MjcgMi41MjcgMCAwIDEtMi41Mi0yLjUyMnYtMi41MjJoMi41MnpNMTUuMTY1IDE3LjY4OGEyLjUyNyAyLjUyNyAwIDAgMS0yLjUyLTIuNTIzIDIuNTI2IDIuNTI2IDAgMCAxIDIuNTItMi41Mmg2LjMxM0EyLjUyNyAyLjUyNyAwIDAgMSAyNCAxNS4xNjVhMi41MjggMi41MjggMCAwIDEtMi41MjIgMi41MjNoLTYuMzEzeiIvPjwvc3ZnPg%3D%3D&logoColor=white)](https://slack.com) [![Notion](https://img.shields.io/badge/Notion-000000?style=flat-square&logo=notion&logoColor=white)](https://www.notion.so) [![Linear](https://img.shields.io/badge/Linear-5E6AD2?style=flat-square&logo=linear&logoColor=white)](https://linear.app)
-
-[![Google Docs](https://img.shields.io/badge/Docs-4285F4?style=flat-square&logo=googledocs&logoColor=white)](https://docs.google.com) [![Google Sheets](https://img.shields.io/badge/Sheets-0F9D58?style=flat-square&logo=googlesheets&logoColor=white)](https://sheets.google.com) [![Google Slides](https://img.shields.io/badge/Slides-FBBC04?style=flat-square&logo=googleslides&logoColor=white)](https://slides.google.com) [![Discord](https://img.shields.io/badge/Discord-5865F2?style=flat-square&logo=discord&logoColor=white)](https://discord.com) [![WhatsApp](https://img.shields.io/badge/WhatsApp-25D366?style=flat-square&logo=whatsapp&logoColor=white)](https://www.whatsapp.com) [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=flat-square&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU%2BTGlua2VkSW48L3RpdGxlPjxwYXRoIGQ9Ik0yMC40NDcgMjAuNDUyaC0zLjU1NHYtNS41NjljMC0xLjMyOC0uMDI3LTMuMDM3LTEuODUyLTMuMDM3LTEuODUzIDAtMi4xMzYgMS40NDUtMi4xMzYgMi45Mzl2NS42NjdIOS4zNTFWOWgzLjQxNHYxLjU2MWguMDQ2Yy40NzctLjkgMS42MzctMS44NSAzLjM3LTEuODUgMy42MDEgMCA0LjI2NyAyLjM3IDQuMjY3IDUuNDU1djYuMjg2ek01LjMzNyA3LjQzM2MtMS4xNDQgMC0yLjA2My0uOTI2LTIuMDYzLTIuMDY1IDAtMS4xMzguOTItMi4wNjMgMi4wNjMtMi4wNjMgMS4xNCAwIDIuMDY0LjkyNSAyLjA2NCAyLjA2MyAwIDEuMTM5LS45MjUgMi4wNjUtMi4wNjQgMi4wNjV6bTEuNzgyIDEzLjAxOUgzLjU1NVY5aDMuNTY0djExLjQ1MnpNMjIuMjI1IDBIMS43NzFDLjc5MiAwIDAgLjc3NCAwIDEuNzI5djIwLjU0MkMwIDIzLjIyNy43OTIgMjQgMS43NzEgMjRoMjAuNDUxQzIzLjIgMjQgMjQgMjMuMjI3IDI0IDIyLjI3MVYxLjcyOUMyNCAuNzc0IDIzLjIgMCAyMi4yMjIgMGguMDAzeiIvPjwvc3ZnPg%3D%3D&logoColor=white)](https://www.linkedin.com) [![YouTube](https://img.shields.io/badge/YouTube-FF0000?style=flat-square&logo=youtube&logoColor=white)](https://www.youtube.com) [![Zoom](https://img.shields.io/badge/Zoom-2D8CFF?style=flat-square&logo=zoom&logoColor=white)](https://zoom.us) [![Jira](https://img.shields.io/badge/Jira-0052CC?style=flat-square&logo=jira&logoColor=white)](https://www.atlassian.com/software/jira) [![Stripe](https://img.shields.io/badge/Stripe-635BFF?style=flat-square&logo=stripe&logoColor=white)](https://stripe.com)
-
-…and 40+ more — see the
-[connector catalog](specs/connectors/00-index.md).
+…plus Docs, Sheets, Slides, Discord, WhatsApp, LinkedIn, Outlook, Teams,
+OneDrive, Dropbox, Figma, YouTube, Zoom, Jira, Trello, Asana, Todoist, Reddit,
+Stripe, Salesforce, HubSpot, Microsoft 365, and more — the full catalog lives in
+[`specs/connectors/00-index.md`](specs/connectors/00-index.md).
 
 ## Try Yomi
 
-Open a chat with [**@yomi_assistant_bot**](https://t.me/yomi_assistant_bot) on
-Telegram and send a text, voice note, or photo:
+The fastest way to feel it: send a message to
+[**@yomi_assistant_bot**](https://t.me/yomi_assistant_bot) on Telegram — text,
+voice note, or a photo.
+
+Prefer to run it yourself? Skip to
+[Local Development](#local-development).
+
+## How it works
+
+Yomi is backend-first. Durable memory, connector credentials, and the agent
+loop all live in the cloud backend, so the client stays thin. Telegram sends
+your message to the backend; the backend thinks, uses tools, and replies.
 
 ```text
                  Telegram
@@ -43,87 +96,40 @@ Telegram and send a text, voice note, or photo:
                     │
                     ▼
       ┌────────────────────────────┐
-      │       CLOUD BACKEND        │
-      │ Hono on Cloudflare Workers │
+      │         BACKEND           │
+      │  FastAPI (Python, server/) │
+      │  SQLAlchemy 2 async        │
       │                            │
       │auth, billing, LLM proxy,   │
-      │metering, agent loop,       │
-      │ Telegram, canonical memory │
-      └─────────────┬──────────────┘
-                    │
-              ┌─────┴─────┐
-              │           │
-              ▼           ▼
-              Connectors  Postgres
-              first-class Neon +
-              + Composio  pgvector
-                    │
-                    └── Landing / Dashboard (Next.js on Workers)
-                        marketing, auth, account linking, credits,
-                        memory view, all data via the backend API
-```
-
-You can also see the web dashboard at [getyomi.in](https://getyomi.in) — that's
-where you link accounts, set schedules, review memory, and buy credits.
-
-## Contents
-
-- [Try Yomi](#try-yomi)
-- [Works with](#works-with)
-- [How it works](#how-it-works)
-- [Stack](#stack)
-- [Monorepo Layout](#monorepo-layout)
-- [Local Development](#local-development)
-- [Configuration](#configuration)
-- [Plans & Credits](#plans--credits)
-- [Models](#models)
-- [Connectors](#connectors)
-- [Commands](#commands)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Privacy](#privacy)
-- [FAQ](#faq)
-- [Roadmap](#roadmap)
-- [Community](#community)
-- [Contributing](#contributing)
-- [Docs & Specs](#docs--specs)
-
-## How it works
-
-Yomi is backend-first. Durable memory, connector credentials, and the agent loop
-all live in the cloud backend, so the client stays thin. Telegram sends your
-message to the backend; the backend thinks, uses tools, and replies.
-
-```text
-                 Telegram
-          text / voice / images
-                     │
-                     ▼
-      ┌────────────────────────────┐
-      │       CLOUD BACKEND        │
-      │ Hono on Cloudflare Workers │
-      │                            │
-      │ auth, billing, LLM proxy,  │
-      │ metering, agent loop,      │
-      │ Telegram, canonical memory │
+      │metering, scheduler,        │
+      │memory (pgvector)           │
       └────────────┬───────────────┘
                    │
-              ┌─────┴─────┐
-              │           │
-              ▼           ▼
-              Connectors  Postgres
-              first-class Neon +
-              + Composio  pgvector
-                   │
-                   └── Landing / Dashboard (Next.js on Workers)
-                       marketing, auth, account linking, credits,
-                       memory view, all data via the backend API
+             ┌─────┴─────┐
+             │           │
+             ▼           ▼
+             Connectors  Postgres (Neon)
+             first-class pgvector
+             + Composio
+                  │
+                  └── Dashboard (Next.js on Workers)
+                      account linking, schedules, memory,
+                      credits — all data via the backend API
 ```
 
 The backend is the only thing that talks to Postgres; the dashboard reaches the
 database, connectors, and memory through the backend API.
 
-Every request is one of two shapes. Yomi never switches models mid-turn, since
+> **Port in progress.** The backend is being rewritten from TypeScript (Hono on
+> Cloudflare Workers, `apps/backend`) to Python (FastAPI, `server/`). `server/`
+> is canonical for everything it covers — privacy, schedules, memory, RAG,
+> metering, billing, LLM, referrals, streaks. The agent loop, Telegram gateway,
+> and connector executors are still TypeScript and run in production until the
+> port completes. Same Postgres schema, same data, same API shape.
+
+### Request model
+
+Every request is one of two shapes, and the model never switches mid-turn —
 that would drop the prompt cache and mismatch the tool vocabulary.
 
 | Request type   | Path                                | Budget             |
@@ -131,30 +137,9 @@ that would drop the prompt cache and mismatch the tool vocabulary.
 | Connector task | Agent loop + connector tools        | seconds to minutes |
 | Telegram task  | Backend agent + memory/tool harness | seconds to minutes |
 
-The harness is the system prompt, plus tools, connectors, memory, and hooks:
+### Memory
 
-- **Core tools:** filesystem r/w, sandboxed bash, web search/fetch, cron,
-  messaging, memory.
-- **Connectors:** loaded from `ConnectorRegistry` (first-class, hand-written
-  tool sets) plus a Composio-backed unified executor for long-tail services.
-- **Hooks:** `PreToolUse` (block dangerous), `PostToolUse` (log, trim tokens),
-  `Stop` (flush scratchpad), `SessionEnd` (compact memory).
-- **Loop guard:** an `AGENT_MAX_STEPS` cap with a backend grace-call wrap-up.
-
-### Capabilities at a glance
-
-| Capability            | What it does                                                                                      |
-| --------------------- | ------------------------------------------------------------------------------------------------- |
-| Voice & images        | Incoming Telegram voice notes are transcribed; photos are analyzed. Replies are always text.      |
-| Email & calendar      | Reads, drafts, and summarizes Gmail; schedules and manages Google Calendar.                       |
-| Files, tasks, code    | Searches Google Drive, files tasks, and drives GitHub, Notion, Slack, and Linear.                 |
-| Memory that compounds | Canonical durable memory with contradiction resolution and a consolidation sweep.                 |
-| RAG                   | `index_text` / `index_url` / `index_document` write to your archive; `deep_research` searches it. |
-| Scheduled automations | Cron tools (plan-gated) for daily briefings, reports, and recurring checks.                       |
-| Subagents             | Isolated `delegate` loops that fold a synthesized result back for big multi-step tasks.           |
-| Connectors            | 10 first-class tool sets plus 40+ Composio-backed services, approval-gated.                       |
-
-Yomi also keeps a small notepad in `~/.yomi/`:
+Yomi keeps a small notepad in `~/.yomi/`, loaded just-in-time:
 
 ```text
 yomi.md        ALWAYS preloaded: identity, prefs, standing instructions
@@ -163,75 +148,87 @@ projects/<p>/  context.md, scratchpad.md
 sessions/      YYYY-MM-DD-topic.md summaries
 ```
 
-`yomi.md` is always preloaded; everything else is loaded just in time. Backend
-memory stays canonical for durable facts, document provenance, Telegram, and
-connector agents.
+Backend memory stays canonical for durable facts, document provenance,
+Telegram, and connector agents — encrypted at rest, user-owned, always
+exportable and deletable.
 
 ## Stack
 
-| Layer          | Choice                                                          |
-| -------------- | --------------------------------------------------------------- |
-| LLM            | Vercel AI SDK (`ai`) → OpenAI (`api.openai.com`)                |
-| Speech-to-text | OpenAI `gpt-4o-mini-transcribe` (replies are always text)       |
-| Backend        | Hono on Cloudflare Workers                                      |
-| Frontend       | Next.js on Cloudflare Workers                                   |
-| Database       | PostgreSQL (Neon) via Drizzle ORM + `@neondatabase/serverless`  |
-| Auth           | Better Auth (Google + GitHub OAuth)                             |
-| Billing        | Dodo Payments                                                   |
-| Orchestration  | AI SDK agent loop with connector tools + backend Telegram agent |
+| Layer          | Choice                                                   |
+| -------------- | -------------------------------------------------------- |
+| Backend        | FastAPI + SQLAlchemy 2 async + Alembic (`server/`)       |
+| LLM            | OpenAI (`gpt-5.4-mini` fast, `gpt-5.5` agent)            |
+| Speech-to-text | OpenAI `gpt-4o-mini-transcribe` (replies are always text) |
+| Embeddings     | OpenAI `text-embedding-3-small`                          |
+| Database       | PostgreSQL (Neon), pgvector, SQLAlchemy async            |
+| Frontend       | Next.js on Cloudflare Workers                            |
+| Billing        | Dodo Payments                                            |
 
-## Monorepo Layout
+## Monorepo layout
 
 ```text
-apps/backend/            Hono on Workers: auth, billing, LLM proxy, metering, Telegram, memory
-apps/landing/            Next.js on Workers: marketing, dashboard, account linking
-packages/agent-core/     ConnectorDef, ConnectorRegistry, agent tools
-packages/db/             Drizzle schema + Postgres client (Neon HTTP driver)
-packages/shared/         TypeScript contracts shared across apps
-packages/ui-connectors/  Connector UI components
+server/                  FastAPI backend (canonical, Python) — models, services,
+                         routers, alembic migrations, tests
+apps/backend/            TypeScript backend (Hono on Workers) — still runs in
+                         production until the Python port completes
+apps/landing/            Next.js on Workers: marketing, dashboard, linking
+packages/agent-core/     (TS) ConnectorDef, ConnectorRegistry, agent tools
+packages/db/             (TS) Drizzle schema + Postgres client
+packages/shared/         (TS) contracts shared across apps
+packages/ui-connectors/  (TS) connector UI components
 
 docs/adr/                Architecture decision records
 docs/agents/             Agent workflows (issue tracker, triage, domain docs)
 specs/                   Product specifications and connector references
 ```
 
-## Local Development
+## Local development
 
-Prerequisites: Bun 1.3.x, Node 20+, a PostgreSQL database (local Postgres or
-Neon), and an OpenAI API key.
+### Backend (Python)
 
 ```bash
-git clone https://github.com/arka6fx/yomi.git
-cd yomi
-bun install
-cp .env.example .env
-bun run dev
+cd server
+uv sync --dev
+cp .env.example .env          # fill in at minimum OpenAI + Postgres
+uv run uvicorn yomi.app.main:app --reload --port 3001
 ```
 
-Dev targets:
+Lint and test:
+
+```bash
+uv run ruff check .
+uv run pytest -q
+```
+
+Migrations use Alembic against the same `DATABASE_URL` (no data changes needed
+— the schema is shared with the TypeScript backend):
+
+```bash
+uv run alembic upgrade head
+```
+
+### Dashboard (Next.js)
+
+Prerequisites: Bun 1.3.x, Node 20+.
+
+```bash
+bun install
+cp .env.example .env
+cd apps/landing && bun run dev    # http://localhost:3000
+```
 
 | App     | Command                          | URL                     |
 | ------- | -------------------------------- | ----------------------- |
 | Landing | `cd apps/landing && bun run dev` | `http://localhost:3000` |
-| Backend | `cd apps/backend && bun run dev` | `http://localhost:3001` |
+| Backend | `cd server && uv run uvicorn ...` | `http://localhost:3001` |
 
 ## Configuration
 
-[`.env.example`](./.env.example) is the source of truth for every variable:
-database, Better Auth, Google/GitHub OAuth, the OpenAI endpoint, encryption
-keys, and Dodo Payments. Secrets are never committed. Real values live in
-`.env.production` (gitignored) and in Worker secrets.
-
-Production uses split hostnames:
-
-```bash
-BETTER_AUTH_URL=https://getyomi.in
-BETTER_AUTH_BASE_URL=https://api.getyomi.in
-BACKEND_URL=https://api.getyomi.in
-NEXT_PUBLIC_APP_URL=https://getyomi.in
-YOMI_BACKEND_URL=https://api.getyomi.in
-CORS_ORIGIN=https://getyomi.in
-```
+[`.env.example`](./.env.example) documents every TS app variable;
+[`server/.env.example`](./server/.env.example) is the Python backend equivalent
+(see [`server/src/yomi/conf.py`](./server/src/yomi/conf.py)). Secrets are never
+committed — real values live in gitignored `.env*` files and Cloudflare Worker
+secrets.
 
 > `ENCRYPTION_KEY` must match across environments. A different key makes every
 > stored connector token undecryptable. Rotate via `ENCRYPTION_KEY_FALLBACKS`.
@@ -249,12 +246,9 @@ Connectors are unlimited on every plan.
 
 Credit packs (any plan): 85 credits/$5, 250 credits/$15, 750 credits/$40.
 
-There is one chokepoint: `apps/backend/src/services/metering.ts` →
-`chargeUsage()`, which checks the active plan, checks `balance >= cost`, then
-records the event and consumes the credit. Every account is metered, including
-the operator's. The plan source of truth lives in
-`packages/shared/src/plans.ts`; webhooks live in
-`apps/backend/src/routes/billing.ts`.
+There is one chokepoint — `server/src/yomi/services/metering.py`
+(`charge_usage`): check the active plan, check `balance >= cost`, record the
+event, consume the credit. Every account is metered, including the operator's.
 
 ## Models
 
@@ -287,61 +281,37 @@ The full list lives in
 ## Commands
 
 ```bash
+# TypeScript workspace
 bun run lint
 bun run typecheck
 bun run test
-bun run build:ci
-bun run build
+
+# Python backend
+cd server && uv run ruff check . && uv run pytest -q
 ```
-
-Database commands live in `packages/db`:
-
-```bash
-cd packages/db
-bun run db:generate
-bun run db:migrate
-bun run db:studio
-```
-
-## Testing
-
-Tests are package-local and sit next to the code they exercise
-(`apps/backend/src/routes/usage.test.ts`, not a root `tests/` folder). Turborepo
-schedules and caches by package, so colocated tests let
-`turbo run test --filter ...` and `--affected` run only the packages that
-changed.
 
 ## Deployment
 
-Both apps deploy from GitHub Actions on pushes to `main`. Each workflow runs
-typecheck, tests, and the docs sync check before it deploys, so a red build
-never ships.
+Both production apps are Cloudflare Workers deployed from GitHub Actions on
+pushes to `main`; each workflow runs typecheck, tests, and the docs sync check
+before it deploys.
 
-| Component | Target                     | Domain           | Workflow                 |
-| --------- | -------------------------- | ---------------- | ------------------------ |
-| Backend   | Cloudflare Worker          | `api.getyomi.in` | `deploy-backend.yml`     |
-| Landing   | Cloudflare Worker          | `getyomi.in`     | `deploy-landing.yml`     |
-| Database  | Neon PostgreSQL (pgvector) | n/a              | `packages/db` migrations |
+| Component | Target            | Domain           | Workflow             |
+| --------- | ----------------- | ---------------- | -------------------- |
+| Backend   | Cloudflare Worker | `api.getyomi.in` | `deploy-backend.yml` |
+| Landing   | Cloudflare Worker | `getyomi.in`     | `deploy-landing.yml` |
+| Database  | Neon (pgvector)   | n/a              | `packages/db` + Alembic migrations in `server/` |
 
-Custom domains are bound in the Cloudflare dashboard. The deploy token is an
-Account API token, which cannot manage the zone-scoped Workers routes API, so
-the domains are not declared in `wrangler.jsonc`.
-
-Backend break-glass when the runner is unavailable:
+Break-glass commands:
 
 ```bash
-cd apps/backend && bun run deploy:production
-```
-
-Frontend break-glass:
-
-```bash
-cd apps/landing && bun run deploy:production
+cd apps/backend && bun run deploy:production    # backend
+cd apps/landing && bun run deploy:production    # frontend
 ```
 
 ## Privacy
 
-- No silent recording.
+- No silent recording. Voice notes are transcribed; replies are always text.
 - Memory is user-owned. Export and delete always remain possible.
 - OAuth tokens are encrypted at rest.
 - Hook logs are PII-redacted.
