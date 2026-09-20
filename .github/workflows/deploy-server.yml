@@ -93,8 +93,10 @@ jobs:
       # wrangler builds server/Dockerfile (linux/amd64) with the runner's Docker
       # and pushes to the Cloudflare Registry, then rolls out container
       # instances. First deploy can take a few minutes to provision.
+      # Runs only once CLOUDFLARE_API_TOKEN/CLOUDFLARE_ACCOUNT_ID secrets are
+      # configured in the repo; until then the job passes via skip.
       - name: Deploy to Cloudflare Containers
-        if: steps.staleness.outputs.stale != 'true'
+        if: ${{ steps.staleness.outputs.stale != 'true' && secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
         working-directory: server
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
