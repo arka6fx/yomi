@@ -33,7 +33,16 @@ def _extract_session_token(request: Request) -> str | None:
 
 
 def _recover_session_token(value: str) -> str | None:
-    """Recover the DB lookup key for a signed cookie value (current or legacy scheme)."""
+    """Recover the DB lookup key for a Bearer token or signed cookie value.
+
+    Accepts the raw `session.token` (what better-auth returns to clients and
+    what the dashboard sends as `Authorization: Bearer <token>`) directly, or
+    recovers the raw token from a signed cookie value (current or legacy
+    scheme). Signed cookies always contain a `.` separator, so the two forms
+    are unambiguous.
+    """
+    if "." not in value:
+        return value or None
     return recover_token(settings.better_auth_secret, value)
 
 

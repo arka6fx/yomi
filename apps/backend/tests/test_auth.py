@@ -86,6 +86,19 @@ def test_recover_no_secret_returns_raw():
     assert sc.recover_token("", f"{raw}.ignored") == raw
 
 
+def test_recover_session_token_accepts_raw_bearer(monkeypatch):
+    # The dashboard sends `Authorization: Bearer <session.token>` (the raw DB
+    # key, per better-auth). It must be accepted as-is, not only in signed form.
+    from yomi.app.deps import _recover_session_token
+
+    monkeypatch.setattr(settings, "better_auth_secret", "s3cret")
+    raw = _gen_id(32)
+    signed = sc.sign_token("s3cret", raw)
+    assert _recover_session_token(raw) == raw
+    assert _recover_session_token(signed) == raw
+    assert _recover_session_token("") is None
+
+
 def test_cookie_name_secure_prefix(prod_origins):
     assert sc.use_secure_cookies() is True
     assert sc.session_cookie_name() == "__Secure-yomi.session_token"
