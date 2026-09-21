@@ -28,7 +28,7 @@ jobs:
       NEXT_PUBLIC_API_URL: https://api.getyomi.in
       NEXT_PUBLIC_APP_URL: https://getyomi.in
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # cancel-in-progress is false so runs queue instead of racing, but a run
       # that was queued behind another can still be for a commit main has
@@ -50,7 +50,7 @@ jobs:
       # third-party actions is the general rule regardless of what runs after.
       - name: Setup Node
         if: steps.staleness.outputs.stale != 'true'
-        uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
           cache: npm
