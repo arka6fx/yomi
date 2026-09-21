@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import traceback
 from collections import deque
 from datetime import UTC, datetime
 
@@ -30,8 +31,9 @@ _gateway_errors: deque[tuple[str, str, str]] = deque(maxlen=20)
 
 
 def _record_error(kind: str, message: str) -> None:
-    _gateway_errors.append((datetime.now(UTC).isoformat(), kind, message))
-    logger.error("[telegram] %s: %s", kind, message)
+    detail = f"{message}\n{traceback.format_exc(limit=12)}"
+    _gateway_errors.append((datetime.now(UTC).isoformat(), kind, detail))
+    logger.error("[telegram] %s: %s", kind, detail)
 
 
 def recent_gateway_errors() -> list[tuple[str, str, str]]:
