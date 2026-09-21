@@ -39,6 +39,11 @@ CreditGrantSource = Literal[
 CreditDebitType = Literal["consume", "refund", "adjustment", "expire"]
 
 
+def _utc_naive(dt: datetime | None) -> datetime | None:
+    """Strip tzinfo for naive TIMESTAMP columns; asyncpg rejects aware values."""
+    return dt.replace(tzinfo=None) if dt is not None and dt.tzinfo else dt
+
+
 @dataclass
 class CreditSummary:
     balance: int
@@ -89,7 +94,8 @@ async def get_credit_summary(session: AsyncSession, user_id: str) -> CreditSumma
         )
     ).scalar_one_or_none()
 
-    now = datetime.now(UTC)
+    now = _utc_naive(datetime.now(UTC))
+    assert now is not None
     soon = now + timedelta(days=7)
 
     expiring = (
@@ -173,7 +179,7 @@ async def create_payment_record(
             amount_cents=amount_cents,
             currency=currency,
             status=status,
-            metadata=metadata,
+            metadata_=metadata,
         )
         .on_conflict_do_nothing()
         .returning(PaymentRecord.id)
@@ -196,6 +202,7 @@ async def grant_credits(
 ) -> GrantResult:
     if amount <= 0:
         raise ValueError("credit grant amount must be positive")
+    expires_at = _utc_naive(expires_at)
 
     existing = await transaction_by_key(session, idempotency_key)
     if existing:
@@ -214,7 +221,7 @@ async def grant_credits(
                 credits_granted=amount,
                 credits_remaining=amount,
                 expires_at=expires_at,
-                metadata=metadata,
+                metadata_=metadata,
             )
             .on_conflict_do_nothing()
             .returning(CreditGrant.id)
@@ -238,7 +245,7 @@ async def grant_credits(
             .values(
                 available_credits=CreditAccount.available_credits + amount,
                 lifetime_granted=CreditAccount.lifetime_granted + amount,
-                updated_at=datetime.now(UTC),
+                updated_at=_utc_naive(datetime.now(UTC)),
             )
             .returning(CreditAccount.available_credits)
         )
@@ -256,7 +263,7 @@ async def grant_credits(
             balance_after=balance,
             idempotency_key=idempotency_key,
             reason=reason,
-            metadata=metadata,
+            metadata_=metadata,
         )
     )
 
@@ -297,7 +304,8 @@ async def debit_credits(
     if balance_before < amount:
         return DebitResult(ok=False, charged=0, balance=balance_before, insufficient=True)
 
-    now = datetime.now(UTC)
+    now = _utc_naive(datetime.now(UTC))
+    assert now is not None
     grants = (
         await session.execute(
             select(CreditGrant.id, CreditGrant.credits_remaining)
@@ -367,7 +375,7 @@ async def debit_credits(
             balance_after=int(updated_balance),
             idempotency_key=idempotency_key,
             reason=reason,
-            metadata={**(metadata or {}), "grantBreakdown": grant_breakdown},
+            metadata_={**(metadata or {}), "grantBreakdown": grant_breakdown},
         )
     )
 
@@ -461,7 +469,8 @@ async def expire_user_credits(
 async def expire_credits(
     session: AsyncSession, now: datetime | None = None, user_id: str | None = None
 ) -> int:
-    now = now or datetime.now(UTC)
+    now = _utc_naive(now or datetime.now(UTC))
+    assert now is not None
     stmt = select(CreditGrant.id, CreditGrant.user_id, CreditGrant.credits_remaining).where(
         and_(
             CreditGrant.status == "active",
