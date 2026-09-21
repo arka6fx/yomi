@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -77,6 +78,15 @@ class Settings(BaseSettings):
 
     # telegram webhook secret (optional; set to verify Telegram requests)
     telegram_webhook_secret: str = ""
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def _strip_bom_and_whitespace(cls, value: object) -> object:
+        # Worker secrets written from PowerShell on Windows can carry a leading
+        # UTF-8 BOM; Composio's HTTP client fails with ascii UnicodeEncodeError.
+        if isinstance(value, str):
+            return value.lstrip("\ufeff\u200b \t\r\n")
+        return value
 
     def composio_connector_ids(self) -> set[str]:
         return {c.strip() for c in self.composio_connectors.split(",") if c.strip()}
