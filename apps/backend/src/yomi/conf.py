@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     openai_fast_model: str = "gpt-5.4-mini"
     openai_agent_model: str = "gpt-5.5"
     openai_web_search_model: str = "gpt-5.4-mini"
+    openai_stt_model: str = "gpt-4o-mini-transcribe"
 
     # telegram
     telegram_bot_token: str = ""
