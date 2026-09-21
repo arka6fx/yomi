@@ -24,9 +24,8 @@
     "test:coverage": "vitest run --passWithNoTests --coverage"
   },
   "dependencies": {
-    "@yomi/shared": "0.0.0",
+"@yomi/shared": "0.0.0",
     "@yomi/ui-connectors": "0.0.0",
-    "better-auth": "^1.2.0",
     "clsx": "^2.1.1",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.16.0",
