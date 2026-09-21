@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -29,6 +29,22 @@ class Settings(BaseSettings):
     # auth
     better_auth_secret: str = ""
     internal_api_key: str = ""  # x-yomi-internal shared internal-secret header
+    # Better Auth OAuth client creds (dashboard web login). Read under the same
+    # names the legacy TS backend used (Worker Secrets GOOGLE_CLIENT_ID, etc.).
+    google_auth_client_id: str = Field(
+        default="", validation_alias=AliasChoices("GOOGLE_AUTH_CLIENT_ID", "GOOGLE_CLIENT_ID")
+    )
+    google_auth_client_secret: str = Field(
+        default="",
+        validation_alias=AliasChoices("GOOGLE_AUTH_CLIENT_SECRET", "GOOGLE_CLIENT_SECRET"),
+    )
+    github_auth_client_id: str = Field(
+        default="", validation_alias=AliasChoices("GITHUB_AUTH_CLIENT_ID", "GITHUB_CLIENT_ID")
+    )
+    github_auth_client_secret: str = Field(
+        default="",
+        validation_alias=AliasChoices("GITHUB_AUTH_CLIENT_SECRET", "GITHUB_CLIENT_SECRET"),
+    )
 
     # openai
     openai_api_key: str = ""

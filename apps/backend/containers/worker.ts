@@ -33,6 +33,11 @@ export class YomiContainer extends Container {
     WEB_ORIGIN: workerEnv.WEB_ORIGIN ?? "",
     CORS_ORIGIN: workerEnv.CORS_ORIGIN ?? "",
     BETTER_AUTH_SECRET: workerEnv.BETTER_AUTH_SECRET ?? "",
+    // Better Auth OAuth client creds for dashboard web login (Google/GitHub)
+    GOOGLE_CLIENT_ID: workerEnv.GOOGLE_CLIENT_ID ?? "",
+    GOOGLE_CLIENT_SECRET: workerEnv.GOOGLE_CLIENT_SECRET ?? "",
+    GITHUB_CLIENT_ID: workerEnv.GITHUB_CLIENT_ID ?? "",
+    GITHUB_CLIENT_SECRET: workerEnv.GITHUB_CLIENT_SECRET ?? "",
     INTERNAL_API_KEY: workerEnv.INTERNAL_API_KEY ?? "",
     OPENAI_API_KEY: workerEnv.OPENAI_API_KEY ?? "",
     OPENAI_BASE_URL: workerEnv.OPENAI_BASE_URL ?? "https://api.openai.com/v1",
@@ -122,6 +127,10 @@ declare global {
     WEB_ORIGIN: string;
     CORS_ORIGIN: string;
     BETTER_AUTH_SECRET: string;
+    GOOGLE_CLIENT_ID: string;
+    GOOGLE_CLIENT_SECRET: string;
+    GITHUB_CLIENT_ID: string;
+    GITHUB_CLIENT_SECRET: string;
     INTERNAL_API_KEY: string;
     OPENAI_API_KEY: string;
     OPENAI_BASE_URL: string;

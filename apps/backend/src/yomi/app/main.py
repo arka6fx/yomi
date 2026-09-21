@@ -1,8 +1,9 @@
 """FastAPI entry point — mirrors apps/backend/src/index.ts mounts.
 
 Serves /health, /health/db, robots.txt, and the /api/* routers. Auth (/api/auth/*)
-is Better Auth in the TS backend; a Python session-auth seam lives in
-yomi/app/deps but the OAuth handler itself is a later-phase port.
+is a Python port of the retired Better Auth TS config (OAuth Google/GitHub +
+sessions), wire-compatible with the @better-auth/react dashboard client; the
+session seam lives in yomi/app/deps + yomi/services/session_cookie.
 """
 
 from __future__ import annotations
@@ -80,6 +81,9 @@ def create_app() -> FastAPI:
     app.include_router(privacy_router)
     app.include_router(schedules_router)
     app.include_router(memory_router)
+
+    from yomi.app.routes.auth import router as auth_router
+    app.include_router(auth_router, prefix="/api/auth")
 
     from yomi.app.routes.integrations import integrations_router
     app.include_router(integrations_router)
