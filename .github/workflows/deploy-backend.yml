@@ -78,7 +78,7 @@ jobs:
         if: steps.staleness.outputs.stale != 'true'
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install containers worker deps
         if: steps.staleness.outputs.stale != 'true'
