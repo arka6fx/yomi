@@ -207,8 +207,43 @@ declare global {
   }
 }
 
+// When the container is hibernated (scale-to-zero, `sleepAfter`) the runtime
+// fails the request that wakes it with a transient 500 like "The container is
+// not listening in the TCP address 10.0.0.1:8080" until the instance finishes
+// booting. Retry those wake-up failures with backoff; pass every other
+// response (including real app 500s) through untouched.
+const WAKE_RETRY_DELAYS_MS = [1000, 2500, 5000, 10000, 15000];
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function containerIsNotServed(response: Response): Promise<boolean> {
+  if (response.status < 500 || response.status > 599) {
+    return false;
+  }
+  const status = response.headers.get("cf-container-status") ?? "";
+  if (/warming|cold|boot/i.test(status)) {
+    return true;
+  }
+  const text = await response.text();
+  return /not listening|tcp address|warming up|starting/i.test(text);
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    return getContainer(env.YOMI_CONTAINER).fetch(request);
+    const container = getContainer(env.YOMI_CONTAINER);
+    let lastResponse: Response | undefined;
+    for (const delay of WAKE_RETRY_DELAYS_MS) {
+      const response = await container
+        .fetch(request.clone())
+        .catch(() => undefined);
+      if (response && !(await containerIsNotServed(response))) {
+        return response;
+      }
+      lastResponse = response ?? lastResponse;
+      await sleep(delay);
+    }
+    return lastResponse ?? new Response("Container unavailable", { status: 502 });
   },
 };
