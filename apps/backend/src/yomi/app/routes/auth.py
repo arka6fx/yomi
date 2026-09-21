@@ -306,21 +306,14 @@ async def _resolve_session(
     return sess, user, value
 
 
-@router.post("/sign-in/social/{provider}")
-async def sign_in_social(
-    provider: str, request: Request, db: AsyncSession = Depends(get_db_session)
+async def _create_social_state(
+    db: AsyncSession, provider: str, body: dict[str, Any]
 ) -> JSONResponse:
     if provider not in ("google", "github"):
         return JSONResponse(
             {"error": {"message": "Provider not found", "status": 404}},
             status_code=404,
         )
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
-    if not isinstance(body, dict):
-        body = {}
     callback_url = body.get("callbackURL") or settings.web_origin.rstrip("/")
     code_verifier = _gen_id(128)
     state = _gen_id(32)
@@ -346,6 +339,31 @@ async def sign_in_social(
     )
     url = _authorize_url(provider, state, code_verifier)
     return JSONResponse({"url": url, "redirect": not bool(body.get("disableRedirect"))})
+
+
+async def _json_body(request: Request) -> dict[str, Any]:
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    return body if isinstance(body, dict) else {}
+
+
+@router.post("/sign-in/social")
+async def sign_in_social(
+    request: Request, db: AsyncSession = Depends(get_db_session)
+) -> JSONResponse:
+    body = await _json_body(request)
+    provider = body.get("provider") or ""
+    return await _create_social_state(db, str(provider), body)
+
+
+@router.post("/sign-in/social/{provider}")
+async def sign_in_social_for_provider(
+    provider: str, request: Request, db: AsyncSession = Depends(get_db_session)
+) -> JSONResponse:
+    body = await _json_body(request)
+    return await _create_social_state(db, provider, body)
 
 
 async def _callback_params(request: Request) -> dict[str, Any]:

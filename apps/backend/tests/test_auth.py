@@ -243,6 +243,19 @@ def test_sign_in_social_unknown_provider(no_db_client):
     assert resp.status_code == 404
 
 
+def test_sign_in_social_provider_in_body(no_db_client):
+    # the @better-auth/react client POSTs /sign-in/social with provider in the body
+    resp = no_db_client.post(
+        "/api/auth/sign-in/social",
+        json={
+            "provider": "discord",
+            "callbackURL": "https://getyomi.in/dashboard",
+            "errorCallbackURL": "https://getyomi.in/signin",
+        },
+    )
+    assert resp.status_code == 404
+
+
 def test_callback_missing_state_redirects(no_db_client):
     resp = no_db_client.get("/api/auth/callback/google", follow_redirects=False)
     assert resp.status_code == 302
