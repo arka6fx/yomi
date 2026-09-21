@@ -585,11 +585,11 @@ async def build_composio_tools(
     if not configured:
         return {}, _noop_counter
 
-    session = client.create(user_id=resolve_entity_id(user_id))
     try:
+        session = client.create(user_id=resolve_entity_id(user_id))
         states = await fetch_toolkit_states(session)
     except Exception as err:
-        logger.warning("composio connection lookup failed for %s: %s", user_id, err)
+        logger.warning("composio session lookup failed for %s: %s", user_id, err)
         return {}, _noop_counter
     connected = {slug for slug, state in states.items() if state["active"]} & configured
     if db is not None:
