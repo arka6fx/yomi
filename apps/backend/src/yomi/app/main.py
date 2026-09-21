@@ -44,6 +44,11 @@ async def _lifespan(app: FastAPI):
             async with get_db_session() as s:
                 ok = await check_connection(s)
             logger.warning("[startup] db connection %s", "ok" if ok else "FAILED")
+            if ok:
+                from yomi.db_session import create_missing_tables
+
+                await create_missing_tables()
+                logger.warning("[startup] missing tables ensured")
         except Exception as exc:  # noqa: BLE001 — startup must not crash on a bad DB
             logger.warning("[startup] db connection failed: %s", exc)
 

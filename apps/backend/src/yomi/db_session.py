@@ -99,3 +99,23 @@ async def check_connection(db: AsyncSession) -> bool:
         return True
     except Exception:
         return False
+
+
+async def create_missing_tables() -> None:
+    """Idempotently create any tables the python schema owns that prod is missing.
+
+    The shared ``platform_connections`` / ``composio_connections`` tables are
+    owned by the retired TS drizzle rollup and already exist in Neon, but newer
+    python-only models (``telegram_link_tokens``) ship with no alembic/drizzle
+    migration. ``Base.metadata.create_all(checkfirst=True)`` creates only tables
+    that are absent and never alters or drops existing ones — safe to run on the
+    shared schema at every boot and a no-op once all tables exist.
+    """
+    from yomi.db_session import SessionLocal
+
+    if SessionLocal is None:
+        raise RuntimeError("cannot bootstrap schema: db session not initialised")
+    from yomi.db import Base  # noqa: PLC0415 — module-level import would create app/conf coupling
+
+    async with SessionLocal() as session:
+        await session.run_sync(Base.metadata.create_all)
