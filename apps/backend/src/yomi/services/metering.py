@@ -175,7 +175,7 @@ async def charge_usage(session: AsyncSession, input_: ChargeInput) -> ChargeSucc
                 cost_cents=input_.duration_seconds or 0,
                 credits_charged=0,
                 status="done",
-                metadata={**(dict(input_.metadata or {})), "reserveKind": kind},
+                metadata_={**(dict(input_.metadata or {})), "reserveKind": kind},
             )
             .returning(UsageEvent.id)
         )

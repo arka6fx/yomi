@@ -132,7 +132,7 @@ async def record_ai_usage(session: AsyncSession, input_: AiUsageRecord) -> None:
                 credits_charged=_clamp(input_.credits_charged),
                 status=input_.status,
                 error_code=input_.error_code,
-                metadata=sanitize_telemetry_metadata(input_.metadata),
+                metadata_=sanitize_telemetry_metadata(input_.metadata),
                 completed_at=datetime.now(UTC),
             )
             .on_conflict_do_nothing(index_elements=[AiUsageEvent.request_id])

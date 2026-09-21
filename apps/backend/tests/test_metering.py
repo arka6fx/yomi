@@ -1,5 +1,9 @@
+import uuid
 from datetime import datetime
 
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+from yomi.db.models_app import UsageEvent
 from yomi.services.metering import (
     CREDIT_KIND,
     EVENT_KIND,
@@ -53,3 +57,27 @@ def test_low_credit_warning_explore_fallback():
     # Unknown plans fall back to explore (included 100), so there's always a warning.
     user: MeteringUser = {"plan": "enterprise"}
     assert low_credit_warning(user, 0) == "You have 0 credits left."
+
+
+def test_usage_event_insert_uses_metadata_key():
+    # The DB column is `metadata`, but the ORM attribute is `metadata_`. Passing
+    # `metadata=` collides with Table.metadata and crashes ORM bulk persistence
+    # with "MetaData object has no attribute '_bulk_update_tuples'".
+    stmt = (
+        pg_insert(UsageEvent)
+        .values(
+            user_id=uuid.UUID(int=1),
+            kind="request_chat",
+            model=None,
+            input_tokens=0,
+            output_tokens=0,
+            cost_cents=0,
+            credits_charged=0,
+            status="done",
+            metadata_={"reserveKind": "chat"},
+        )
+        .returning(UsageEvent.id)
+    )
+    compiled = stmt.compile()
+    assert "metadata" in compiled.string
+    assert compiled.params["metadata"] == {"reserveKind": "chat"}
