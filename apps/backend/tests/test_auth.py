@@ -17,6 +17,7 @@ from fastapi.testclient import TestClient
 from yomi.app.main import create_app
 from yomi.app.routes.auth import (
     ID_CHARACTERS,
+    _account_tokens_payload,
     _authorize_url,
     _b64url_sha256,
     _decode_id_token,
@@ -165,6 +166,42 @@ def test_decode_id_token_payload():
     data = _decode_id_token(f"{header}.{payload}.ignoredsig")
     assert data["sub"] == "123"
     assert data["email_verified"] is True
+
+
+def test_account_tokens_payload_uses_model_columns():
+    # regression: keys must map onto Account's snake_case columns (camelCase
+    # keys previously made the OAuth callback 500 with an invalid-kwarg error)
+    from yomi.db.models_auth import Account
+
+    payload = _account_tokens_payload(
+        {
+            "accessToken": "at",
+            "idToken": "it",
+            "refreshToken": "rt",
+            "accessTokenExpiresAt": NOW,
+            "scopes": ["email", "profile"],
+        }
+    )
+    expected = {
+        "access_token",
+        "id_token",
+        "refresh_token",
+        "access_token_expires_at",
+        "refresh_token_expires_at",
+        "scope",
+    }
+    assert set(payload) == expected
+    for key in payload:
+        assert key in Account.__table__.columns, key
+    Account(
+        id="a",
+        account_id="acc",
+        provider_id="google",
+        user_id="u",
+        created_at=NOW,
+        updated_at=NOW,
+        **payload,
+    )
 
 
 # --- response payload shapes ---

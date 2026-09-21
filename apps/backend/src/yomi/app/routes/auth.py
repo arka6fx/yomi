@@ -178,6 +178,18 @@ def _decode_id_token(id_token: str) -> dict[str, Any] | None:
         return None
 
 
+def _account_tokens_payload(tokens: dict[str, Any]) -> dict[str, Any]:
+    """Map exchanged provider tokens onto the Account model's snake_case columns."""
+    return {
+        "access_token": tokens.get("accessToken"),
+        "id_token": tokens.get("idToken"),
+        "refresh_token": tokens.get("refreshToken"),
+        "access_token_expires_at": tokens.get("accessTokenExpiresAt"),
+        "refresh_token_expires_at": None,
+        "scope": " ".join(tokens.get("scopes") or []),
+    }
+
+
 async def _provider_user(provider: str, tokens: dict[str, Any]) -> dict[str, Any] | None:
     """Map provider profile to the better-auth userInfo shape."""
     if provider == "google":
@@ -466,14 +478,7 @@ async def oauth_callback(
     ).scalar_one_or_none()
 
     is_register = db_user is None
-    account_tokens = {
-        "accessToken": tokens.get("accessToken"),
-        "idToken": tokens.get("idToken"),
-        "refreshToken": tokens.get("refreshToken"),
-        "accessTokenExpiresAt": tokens.get("accessTokenExpiresAt"),
-        "refreshTokenExpiresAt": None,
-        "scope": " ".join(tokens.get("scopes") or []),
-    }
+    account_tokens = _account_tokens_payload(tokens)
 
     if db_user is not None:
         existing_account = (
