@@ -1,6 +1,6 @@
 name: Deploy Backend (Python Container)
 
-# The FastAPI Python backend deploys as a Cloudflare Container (yomi-server).
+# The FastAPI Python backend deploys as a Cloudflare Container (yomi-backend).
 # This is the sole backend — the TS Hono Worker has been retired.
 # The image in apps/backend/Dockerfile (uvicorn on :8080) is built on the
 # runner, pushed to the Cloudflare Registry, and routed through the thin Worker

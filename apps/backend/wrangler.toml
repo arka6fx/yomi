@@ -1,4 +1,4 @@
-name = "yomi-server"
+name = "yomi-backend"
 main = "containers/worker.ts"
 compatibility_date = "2026-08-01"
 workers_dev = true
@@ -12,6 +12,7 @@ APP_URL = "https://getyomi.in"
 BACKEND_URL = "https://api.getyomi.in"
 WEB_ORIGIN = "https://getyomi.in"
 CORS_ORIGIN = "https://getyomi.in"
+CLOUDFLARE_ACCOUNT_ID = "fd75a1445f24dfdad463df40c093f667"
 
 [[containers]]
 max_instances = 2
