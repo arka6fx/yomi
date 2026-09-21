@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "bun:test"
+import { afterEach, describe, expect, it } from "vitest"
 import { isTelegramMiniApp, openExternal } from "./telegram-webapp.js"
 
 // bun test has no DOM by default, so `window` doesn't exist unless a test

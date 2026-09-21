@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, it } from "vitest"
 import { STARTER_PROMPTS } from "./starter-prompts.js"
 
 describe("STARTER_PROMPTS", () => {

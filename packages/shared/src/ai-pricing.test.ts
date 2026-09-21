@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, it } from "vitest"
 import { costMicros, microsToCents, microsToUsd, resolveModelPrice } from "./ai-pricing.js"
 
 describe("resolveModelPrice", () => {

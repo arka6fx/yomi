@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, it } from "vitest"
 import { buildCatalog } from "./catalog.js"
 import { accountLabel } from "./components/ConnectorMarketplace.js"
 import { STARTER_PROMPTS } from "@yomi/shared/starter-prompts"
