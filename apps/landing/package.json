@@ -38,7 +38,7 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
+    "@types/node": "^26.6.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitest/coverage-v8": "^2.1.8",
