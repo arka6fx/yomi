@@ -105,7 +105,7 @@ Verify provisioning:
 
 ```bash
 bunx wrangler containers list
-curl https://yomi-server.<subdomain>.workers.dev/health
+curl https://yomi-backend.<subdomain>.workers.dev/health
 ```
 
 ---

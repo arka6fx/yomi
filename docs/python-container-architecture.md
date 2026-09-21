@@ -40,8 +40,8 @@
 cd server && npx wrangler deploy
 
 # Verify
-curl https://yomi-server.<subdomain>.workers.dev/health
-curl https://yomi-server.<subdomain>.workers.dev/health/db
+curl https://yomi-backend.<subdomain>.workers.dev/health
+curl https://yomi-backend.<subdomain>.workers.dev/health/db
 
 # Manage secrets
 cd server && npx wrangler secret list

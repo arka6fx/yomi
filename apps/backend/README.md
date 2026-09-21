@@ -45,9 +45,10 @@ Container** — not a Worker — because asyncpg needs a real socket; Workers'
 Python runtime is Pyodide-based and can't run it. Cloudflare Containers builds
 `Dockerfile` (linux/amd64, non-root, HEALTHCHECK on `/health`), and
 `wrangler.toml` + `containers/worker.ts` route every request to one named
-instance. `ENVIRONMENT=production` is the only value in `wrangler.toml`
-`[vars]`; everything else arrives as a Worker Secret, forwarded to the
-container through `envVars` in `worker.ts`.
+instance (the Worker is named `yomi-backend`, same as the counter-domain it
+serves). `ENVIRONMENT=production` and `CLOUDFLARE_ACCOUNT_ID` are the only
+values in `wrangler.toml` `[vars]`; everything else arrives as a Worker
+Secret, forwarded to the container through `envVars` in `worker.ts`.
 
 First-time setup (manual):
 
@@ -55,7 +56,7 @@ First-time setup (manual):
 cd apps/backend
 npm install --prefix containers
 bunx wrangler login
-bunx wrangler deploy                                     # creates yomi-server Worker
+bunx wrangler deploy                                     # creates yomi-backend Worker
 bunx wrangler secret put DATABASE_URL                    # use the DIRECT Neon host
 bunx wrangler secret put OPENAI_API_KEY                  # (not the -pooler host;
 bunx wrangler secret put BETTER_AUTH_SECRET              #  asyncpg + pgbouncer
@@ -76,13 +77,12 @@ After the first deploy, wait a few minutes for provisioning, then verify:
 
 ```bash
 bunx wrangler containers list
-curl https://yomi-server.<subdomain>.workers.dev/health
+curl https://yomi-backend.<subdomain>.workers.dev/health
 ```
 
-Production cutover is a DNS step, not a code step: attach a custom domain to
-the server Worker and repoint the `api.getyomi.in` record (or flip
-`BACKEND_URL` on the landing app) once `/health/db` shows `status: ok`. The
-`/health/db` endpoint is the schema-drift canary against `packages/db`.
+Production is already cut over: `api.getyomi.in` is a custom domain bound
+to the `yomi-backend` Worker, which routes every request to the container.
+`/health/db` doubles as the schema-drift canary against `packages/db`.
 
 ## In progress
 
