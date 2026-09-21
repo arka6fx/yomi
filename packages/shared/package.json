@@ -20,7 +20,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^2.1.8",
+    "@vitest/coverage-v8": "^5.0.1",
     "@yomi/eslint-config": "0.0.0",
     "@yomi/typescript-config": "0.0.0",
     "typescript": "^5.5.0"
