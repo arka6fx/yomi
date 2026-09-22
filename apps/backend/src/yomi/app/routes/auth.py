@@ -41,6 +41,8 @@ from yomi.db.models_auth import Session as AuthSession
 from yomi.db.models_auth import User as AuthUser
 from yomi.db.models_auth import Verification
 from yomi.db_session import get_db_session
+from yomi.services import auth_d1, billing_d1
+from yomi.services.cloudflare_storage.deps import D1Backend, get_d1_backend
 from yomi.services.credit_ledger import grant_credits
 from yomi.services.entitlements import effective_plan_for_user
 from yomi.services.privacy.consent import ConsentContext, record_consent_decision
@@ -319,7 +321,8 @@ async def _resolve_session(
 
 
 async def _create_social_state(
-    db: AsyncSession, provider: str, body: dict[str, Any]
+    db: AsyncSession, provider: str, body: dict[str, Any],
+    d1: D1Backend | None = None,
 ) -> JSONResponse:
     if provider not in ("google", "github"):
         return JSONResponse(
@@ -339,16 +342,25 @@ async def _create_social_state(
         "requestSignUp": bool(body.get("requestSignUp")),
     }
     now = _now_naive()
-    db.add(
-        Verification(
-            id=_gen_id(),
+    if d1 is not None:
+        await auth_d1.create_verification(
+            d1,
             identifier=state,
             value=json.dumps(state_payload),
-            expires_at=now + STATE_LIFETIME,
-            created_at=now,
-            updated_at=now,
+            expires_at=(datetime.now(UTC) + STATE_LIFETIME).isoformat(),
+            now=datetime.now(UTC).isoformat(),
         )
-    )
+    else:
+        db.add(
+            Verification(
+                id=_gen_id(),
+                identifier=state,
+                value=json.dumps(state_payload),
+                expires_at=now + STATE_LIFETIME,
+                created_at=now,
+                updated_at=now,
+            )
+        )
     url = _authorize_url(provider, state, code_verifier)
     return JSONResponse({"url": url, "redirect": not bool(body.get("disableRedirect"))})
 
@@ -363,19 +375,24 @@ async def _json_body(request: Request) -> dict[str, Any]:
 
 @router.post("/sign-in/social")
 async def sign_in_social(
-    request: Request, db: AsyncSession = Depends(get_db_session)
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ) -> JSONResponse:
     body = await _json_body(request)
     provider = body.get("provider") or ""
-    return await _create_social_state(db, str(provider), body)
+    return await _create_social_state(db, str(provider), body, d1)
 
 
 @router.post("/sign-in/social/{provider}")
 async def sign_in_social_for_provider(
-    provider: str, request: Request, db: AsyncSession = Depends(get_db_session)
+    provider: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ) -> JSONResponse:
     body = await _json_body(request)
-    return await _create_social_state(db, provider, body)
+    return await _create_social_state(db, provider, body, d1)
 
 
 async def _callback_params(request: Request) -> dict[str, Any]:
@@ -398,7 +415,10 @@ async def _callback_params(request: Request) -> dict[str, Any]:
 @router.get("/callback/{provider}", response_model=None)
 @router.post("/callback/{provider}", response_model=None)
 async def oauth_callback(
-    provider: str, request: Request, db: AsyncSession = Depends(get_db_session)
+    provider: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ) -> RedirectResponse | JSONResponse:
     fields = await _callback_params(request)
     default_error = _default_error_url()
@@ -414,6 +434,9 @@ async def oauth_callback(
     state = fields.get("state")
     if not state:
         return RedirectResponse(f"{default_error}?error=state_not_found", status_code=302)
+
+    if d1 is not None:
+        return await _oauth_callback_d1(provider, request, d1, fields, str(state))
 
     verification = (
         await db.execute(
@@ -560,6 +583,129 @@ async def oauth_callback(
     return response
 
 
+async def _oauth_callback_d1(
+    provider: str, request: Request, backend: D1Backend, fields: dict[str, Any], state: str
+) -> RedirectResponse | JSONResponse:
+    """D1 counterpart of ``oauth_callback``: same redirects and linking rules."""
+    default_error = _default_error_url()
+    verification = await auth_d1.consume_verification(backend, state)
+
+    def restart_process() -> RedirectResponse:
+        url = f"{default_error}?error=please_restart_the_process"
+        return RedirectResponse(url, status_code=302)
+
+    if verification is None:
+        return restart_process()
+    try:
+        state_data = json.loads(str(verification["value"]))
+    except Exception:
+        return restart_process()
+    expires_at = state_data.get("expiresAt")
+    if not isinstance(expires_at, int) or expires_at < _now_ms():
+        return restart_process()
+
+    error_url = state_data.get("errorURL") or default_error
+    new_user_url = state_data.get("newUserURL")
+    callback_url = state_data.get("callbackURL")
+    code_verifier = state_data.get("codeVerifier")
+    if not isinstance(callback_url, str) or not callback_url:
+        callback_url = None
+
+    def redirect_on_error(code: str) -> RedirectResponse:
+        sep = "&" if "?" in error_url else "?"
+        return RedirectResponse(f"{error_url}{sep}error={code}", status_code=302)
+
+    code = fields.get("code")
+    if not code:
+        return redirect_on_error("no_code")
+    if provider not in ("google", "github"):
+        return redirect_on_error("oauth_provider_not_found")
+
+    redirect_uri = _provider_redirect_uri(provider)
+    try:
+        tokens = await _exchange_code(provider, str(code), code_verifier or "", redirect_uri)
+    except Exception as exc:
+        logger.warning("[auth] token exchange failed for %s: %s", provider, exc)
+        return redirect_on_error("invalid_code")
+
+    user_info = await _provider_user(provider, tokens)
+    if not user_info:
+        return redirect_on_error("unable_to_get_user_info")
+    if not user_info.get("email"):
+        return redirect_on_error("email_not_found")
+    if not callback_url:
+        return redirect_on_error("no_callback_url")
+
+    email = str(user_info["email"]).lower()
+    account_id = str(user_info["id"])
+    now = _now_naive()
+    db_user = await auth_d1.find_user_by_email(backend, email)
+
+    is_register = db_user is None
+    account_tokens = _account_tokens_payload(tokens)
+
+    if db_user is not None:
+        existing_account = await auth_d1.find_account(backend, db_user.id, provider, account_id)
+        if existing_account is None:
+            if not user_info.get("emailVerified"):
+                return redirect_on_error("account_not_linked")
+            await auth_d1.link_account(backend, {
+                "id": _gen_id(),
+                "account_id": account_id,
+                "provider_id": provider,
+                "user_id": db_user.id,
+                "created_at": now,
+                "updated_at": now,
+                **account_tokens,
+            })
+        else:
+            await auth_d1.touch_account(
+                backend, str(existing_account["id"]), {"updated_at": now, **account_tokens}
+            )
+        user_id = db_user.id
+    else:
+        user_id = _base_user_id()
+        await auth_d1.create_user(backend, {
+            "id": user_id,
+            "name": (user_info.get("name") or email) or "",
+            "email": email,
+            "email_verified": bool(user_info.get("emailVerified")),
+            "image": user_info.get("image"),
+            "created_at": now,
+            "updated_at": now,
+            "plan": "explore",
+            "role": "user",
+            "subscription_status": "inactive",
+            "trial_interaction_limit": REGULAR_INTERACTION_LIMIT,
+            "trial_start_date": now,
+            "trial_end_date": now + TRIAL_LIFETIME,
+        })
+        await auth_d1.link_account(backend, {
+            "id": _gen_id(),
+            "account_id": account_id,
+            "provider_id": provider,
+            "user_id": user_id,
+            "created_at": now,
+            "updated_at": now,
+            **account_tokens,
+        })
+        await _apply_signup_side_effects_d1(backend, user_id, now)
+
+    session_row = await auth_d1.create_session(
+        backend,
+        user_id=user_id,
+        token=_gen_id(32),
+        expires_at=(now + SESSION_LIFETIME).isoformat(),
+        ip_address=_client_ip(request),
+        user_agent=request.headers.get("user-agent") or "",
+    )
+
+    target = new_user_url if (is_register and new_user_url) else callback_url
+    response = RedirectResponse(target, status_code=302)
+    set_session_cookie(response, session_row.token)
+    return response
+
+
 async def _apply_signup_side_effects(db: AsyncSession, user: AuthUser, now: datetime) -> None:
     trial_end = now + TRIAL_LIFETIME
     plan = get_plan("explore")
@@ -589,6 +735,35 @@ async def _apply_signup_side_effects(db: AsyncSession, user: AuthUser, now: date
         logger.error("[auth] signup consent seed failed for %s: %s", user.id, exc)
 
 
+async def _apply_signup_side_effects_d1(backend: D1Backend, user_id: str, now: datetime) -> None:
+    trial_end = now + TRIAL_LIFETIME
+    plan = get_plan("explore")
+    try:
+        await billing_d1.grant_credits(
+            backend,
+            user_id=user_id,
+            amount=plan["includedCredits"],
+            source="subscription_cycle",
+            source_id=f"signup:{user_id}:explore",
+            idempotency_key=f"signup:{user_id}:explore_credits",
+            expires_at=trial_end.replace(tzinfo=UTC) if trial_end.tzinfo is None else trial_end,
+            reason="Explore trial credits",
+            metadata={"plan": "explore", "trialDays": 30},
+        )
+    except Exception as exc:
+        logger.error("[auth] signup grantCredits failed for %s: %s", user_id, exc)
+    try:
+        await auth_d1.record_consent_decision(
+            backend,
+            user_id=user_id,
+            purposes=list(SIGNUP_DEFAULT_CONSENT_PURPOSES),
+            status="granted",
+            context=ConsentContext(metadata={"source": "signup_default"}),
+        )
+    except Exception as exc:
+        logger.error("[auth] signup consent seed failed for %s: %s", user_id, exc)
+
+
 def _client_ip(request: Request) -> str:
     forwarded = request.headers.get("cf-connecting-ip")
     if forwarded:
@@ -598,8 +773,25 @@ def _client_ip(request: Request) -> str:
 
 @router.get("/get-session")
 async def get_session(
-    request: Request, db: AsyncSession = Depends(get_db_session)
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ) -> JSONResponse:
+    if d1 is not None:
+        sess, user, cookie_value = await auth_d1.resolve_session(
+            d1, read_session_cookie(request), settings.better_auth_secret
+        )
+        if sess is None:
+            response = JSONResponse(None)
+            if cookie_value:
+                clear_session_cookie(response)
+            return response
+        if user is None or user.deleted_at is not None:
+            await auth_d1.delete_session_by_id(d1, sess.id)
+            response = JSONResponse(None)
+            clear_session_cookie(response)
+            return response
+        return JSONResponse({"session": _session_payload(sess), "user": _user_payload(user)})
     sess, user, cookie_value = await _resolve_session(request, db)
     if sess is None:
         response = JSONResponse(None)
@@ -615,7 +807,11 @@ async def get_session(
 
 
 @router.post("/sign-out")
-async def sign_out(request: Request, db: AsyncSession = Depends(get_db_session)) -> JSONResponse:
+async def sign_out(
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+    d1: D1Backend | None = Depends(get_d1_backend),
+) -> JSONResponse:
     value = read_session_cookie(request)
     if not value:
         response = JSONResponse(
@@ -625,7 +821,10 @@ async def sign_out(request: Request, db: AsyncSession = Depends(get_db_session))
         return response
     token = recover_token(settings.better_auth_secret, value)
     if token:
-        await db.execute(delete(AuthSession).where(AuthSession.token == token))
+        if d1 is not None:
+            await auth_d1.delete_session_by_token(d1, token)
+        else:
+            await db.execute(delete(AuthSession).where(AuthSession.token == token))
     response = JSONResponse({"success": True})
     clear_session_cookie(response)
     return response
@@ -633,8 +832,20 @@ async def sign_out(request: Request, db: AsyncSession = Depends(get_db_session))
 
 @router.post("/revoke-sessions")
 async def revoke_sessions(
-    request: Request, db: AsyncSession = Depends(get_db_session)
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ) -> JSONResponse:
+    if d1 is not None:
+        sess, user, _ = await auth_d1.resolve_session(
+            d1, read_session_cookie(request), settings.better_auth_secret
+        )
+        if sess is None or user is None:
+            return JSONResponse(
+                {"error": {"message": "Unauthorized", "status": 401}}, status_code=401
+            )
+        await auth_d1.delete_user_sessions(d1, sess.user_id)
+        return JSONResponse({"status": True})
     sess, user, _ = await _resolve_session(request, db)
     if sess is None or user is None:
         return JSONResponse({"error": {"message": "Unauthorized", "status": 401}}, status_code=401)

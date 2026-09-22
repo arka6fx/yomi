@@ -15,8 +15,10 @@ from yomi.connectors.pending import create_pending_action
 from yomi.db.models_app2 import PlatformConnection, TelegramLinkToken
 from yomi.db.models_auth import User
 from yomi.db_session import get_db_session
+from yomi.services import billing_d1
 from yomi.services.agent.loop import run_agent_loop
 from yomi.services.agent.sessions import append_turn, load_history
+from yomi.services.cloudflare_storage.deps import D1Backend, get_d1_backend
 from yomi.services.metering import ChargeInput, MeteringUser, charge_usage
 from yomi.services.transcription import transcribe_audio
 
@@ -80,8 +82,19 @@ def _telegram_request_authentic(request: Request) -> bool:
     return not secret or request.headers.get("X-Telegram-Bot-Api-Secret-Token") == secret
 
 
-async def _resolve_yomi_user(db_session: AsyncSession, tg_user_id: str, chat_id: str) -> User | None:
+async def _resolve_yomi_user(
+    db_session: AsyncSession, tg_user_id: str, chat_id: str,
+    d1: D1Backend | None = None,
+) -> User | None:
     """Map a Telegram identity to the linked Yomi account via platform_connections."""
+    if d1 is not None:
+        from yomi.services import auth_d1 as _auth_d1
+        from yomi.services import connectors_d1 as _connectors_d1
+
+        user_id = await _connectors_d1.resolve_platform_user(d1, "telegram", tg_user_id, chat_id)
+        if user_id is None:
+            return None
+        return await _auth_d1.find_user_by_id(d1, user_id)
     connection = (
         await db_session.execute(
             select(PlatformConnection).where(
@@ -113,8 +126,16 @@ def _metering_user(row: User) -> MeteringUser:
     }
 
 
-async def _link_with_code(db_session: AsyncSession, tg_user_id: str, chat_id: str, code: str) -> None:
+async def _link_with_code(
+    db_session: AsyncSession, tg_user_id: str, chat_id: str, code: str,
+    d1: D1Backend | None = None,
+) -> None:
     """Consume a TelegramLinkToken code and persist the platform connection."""
+    if d1 is not None:
+        from yomi.services import connectors_d1 as _connectors_d1
+
+        await _connectors_d1.link_with_code(d1, "telegram", tg_user_id, chat_id, code)
+        return
     token = (
         await db_session.execute(select(TelegramLinkToken).where(TelegramLinkToken.token == code))
     ).scalar_one_or_none()
@@ -139,7 +160,9 @@ async def _link_with_code(db_session: AsyncSession, tg_user_id: str, chat_id: st
     await db_session.commit()
 
 
-async def _handle_update(update: dict, db_session: AsyncSession) -> dict:
+async def _handle_update(
+    update: dict, db_session: AsyncSession, d1: D1Backend | None = None
+) -> dict:
     message = update.get("message")
     if not message:
         return {"status": "ignored"}
@@ -180,7 +203,7 @@ async def _handle_update(update: dict, db_session: AsyncSession) -> dict:
     elif text.startswith("/start "):
         code = text.split(" ")[1]
         try:
-            await _link_with_code(db_session, tg_user_id, chat_id, code)
+            await _link_with_code(db_session, tg_user_id, chat_id, code, d1)
             await send_message(chat_id, "Account linked. Send me a message or voice note to get started.")
         except ValueError as exc:
             await send_message(chat_id, str(exc))
@@ -197,7 +220,7 @@ async def _handle_update(update: dict, db_session: AsyncSession) -> dict:
         await send_message(chat_id, "History cleared.")
         return {"status": "ok"}
 
-    row = await _resolve_yomi_user(db_session, tg_user_id, chat_id)
+    row = await _resolve_yomi_user(db_session, tg_user_id, chat_id, d1)
     if row is None:
         await send_message(
             chat_id,
@@ -219,7 +242,10 @@ async def _handle_update(update: dict, db_session: AsyncSession) -> dict:
                 if voice
                 else ChargeInput(user=user, kind="chat", units=1)
             )
-            charge_res = await charge_usage(db_session, charge)
+            if d1 is not None:
+                charge_res = await billing_d1.charge_usage(d1, charge)
+            else:
+                charge_res = await charge_usage(db_session, charge)
 
             if not charge_res.ok:
                 await send_message(chat_id, charge_res.message)
@@ -229,14 +255,28 @@ async def _handle_update(update: dict, db_session: AsyncSession) -> dict:
             history = load_history(chat_id)
 
             async def run_with_timeout():
+                # Canonical user id (not the chat id): connector lookup, the
+                # Composio entity, and usage metering all key on the Yomi user.
+                # History stays chat-scoped via the messages payload.
+                if d1 is not None:
+                    from yomi.services import connectors_d1 as _connectors_d1
+
+                    pending_hook = _connectors_d1.create_pending_action(
+                        d1, user_id=user["id"],
+                        source_platform="telegram", source_chat_id=chat_id,
+                    )
+                else:
+                    pending_hook = create_pending_action(
+                        db_session, user_id=user["id"],
+                        source_platform="telegram", source_chat_id=chat_id,
+                    )
                 return await run_agent_loop(
                     history,
-                    chat_id,
+                    user["id"],
                     user["plan"] or "explore",
                     db_session=db_session,
-                    create_pending_action=create_pending_action(
-                        db_session, user_id=user["id"], source_platform="telegram", source_chat_id=chat_id
-                    ),
+                    create_pending_action=pending_hook,
+                    d1=d1,
                 )
 
             reply = await asyncio.wait_for(run_with_timeout(), timeout=120.0)
@@ -260,18 +300,25 @@ async def _handle_update(update: dict, db_session: AsyncSession) -> dict:
 
 
 @router.post("/telegram")
-async def telegram_webhook(request: Request, db_session: AsyncSession = Depends(get_db_session)):
+async def telegram_webhook(
+    request: Request,
+    db_session: AsyncSession = Depends(get_db_session),
+    d1: D1Backend | None = Depends(get_d1_backend),
+):
     if not _telegram_request_authentic(request):
         raise HTTPException(status_code=403, detail="invalid secret token")
-    return await _handle_update(await request.json(), db_session)
+    return await _handle_update(await request.json(), db_session, d1)
 
 
 @router.post("/telegram/webhook/{token}")
 async def telegram_webhook_with_token(
-    token: str, request: Request, db_session: AsyncSession = Depends(get_db_session)
+    token: str,
+    request: Request,
+    db_session: AsyncSession = Depends(get_db_session),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     if token != settings.telegram_bot_token:
         raise HTTPException(status_code=404, detail="not found")
     if not _telegram_request_authentic(request):
         raise HTTPException(status_code=403, detail="invalid secret token")
-    return await _handle_update(await request.json(), db_session)
+    return await _handle_update(await request.json(), db_session, d1)

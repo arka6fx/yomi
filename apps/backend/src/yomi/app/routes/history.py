@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -9,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from yomi.app.deps import get_current_user, get_db_session
 from yomi.db.models_app import AgentMessage, AgentSession
 from yomi.db.models_auth import User
+from yomi.services.cloudflare_storage.deps import D1Backend, get_d1_backend
 
 logger = logging.getLogger(__name__)
 
@@ -19,11 +21,50 @@ async def get_history(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     session_id = request.query_params.get("sessionId")
     limit = int(request.query_params.get("limit", "50"))
     limit = min(limit, 100)
-    
+
+    if d1 is not None:
+        if session_id:
+            valid = await d1.store.fetch_one(
+                "SELECT id FROM agent_sessions WHERE id = ? AND user_id = ? LIMIT 1",
+                [session_id, user.id],
+            )
+            if valid is None:
+                raise HTTPException(status_code=404, detail="Session not found")
+            rows = await d1.store.fetch_all(
+                "SELECT * FROM agent_messages WHERE session_id = ? AND user_id = ? "
+                "ORDER BY created_at DESC LIMIT ?",
+                [session_id, user.id, limit],
+            )
+        else:
+            rows = await d1.store.fetch_all(
+                "SELECT * FROM agent_messages WHERE user_id = ? "
+                "ORDER BY created_at DESC LIMIT ?",
+                [user.id, limit],
+            )
+        messages = []
+        for r in rows:
+            metadata = r.get("metadata")
+            if isinstance(metadata, str) and metadata:
+                try:
+                    metadata = json.loads(metadata)
+                except ValueError:
+                    metadata = None
+            messages.append(
+                {
+                    "id": str(r["id"]),
+                    "sessionId": str(r["session_id"]),
+                    "role": r["role"],
+                    "content": r["content"],
+                    "metadata": metadata,
+                    "createdAt": r.get("created_at"),
+                }
+            )
+        return {"messages": messages}
     if session_id:
         # Validate session belongs to user
         session_valid = (

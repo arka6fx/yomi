@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from sqlalchemy import text
@@ -80,7 +81,22 @@ async def session_scope() -> AsyncIterator[AsyncSession]:
             raise
 
 
+class _UnavailableSession:
+    """Dependency placeholder when Postgres is unconfigured in D1 mode.
+
+    Routes in D1 mode never touch the Postgres session; resolving the
+    dependency must not fail. Any actual use raises loudly instead of
+    silently misbehaving.
+    """
+
+    def __getattr__(self, name: str) -> Any:
+        raise RuntimeError(f"Postgres session is unavailable (storage_backend=d1): {name}")
+
+
 async def get_db_session() -> AsyncIterator[AsyncSession]:
+    if not settings.database_url and settings.storage_backend == "d1":
+        yield _UnavailableSession()  # type: ignore[misc]
+        return
     _ensure_engine()
     assert SessionLocal is not None
     async with SessionLocal() as session:

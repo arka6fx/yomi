@@ -21,6 +21,12 @@ class Settings(BaseSettings):
     # core
     environment: str = "development"  # development | staging | production
     database_url: str = ""
+    # postgres (Neon via asyncpg) or d1 (Cloudflare D1 + Vectorize via gateway).
+    # Memory routes honor this; other route groups migrate one at a time.
+    storage_backend: str = "postgres"
+    # Staged native D1 + Vectorize path; does not redirect existing ORM routes.
+    storage_gateway_url: str = ""
+    storage_gateway_secret: str = ""
     app_url: str = "https://getyomi.in"  # was YOMI_APP_URL / NEXT_PUBLIC_APP_URL
     backend_url: str = "https://api.getyomi.in"  # was BETTER_AUTH_BASE_URL
     web_origin: str = "https://getyomi.in"  # was BETTER_AUTH_URL

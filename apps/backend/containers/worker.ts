@@ -28,6 +28,9 @@ export class YomiContainer extends Container {
   envVars = {
     ENVIRONMENT: workerEnv.ENVIRONMENT ?? "production",
     DATABASE_URL: workerEnv.DATABASE_URL ?? "",
+    STORAGE_BACKEND: workerEnv.STORAGE_BACKEND ?? "postgres",
+    STORAGE_GATEWAY_URL: workerEnv.STORAGE_GATEWAY_URL ?? "",
+    STORAGE_GATEWAY_SECRET: workerEnv.STORAGE_GATEWAY_SECRET ?? "",
     APP_URL: workerEnv.APP_URL ?? "",
     BACKEND_URL: workerEnv.BACKEND_URL ?? "",
     WEB_ORIGIN: workerEnv.WEB_ORIGIN ?? "",
@@ -122,6 +125,9 @@ declare global {
     YOMI_CONTAINER: DurableObjectNamespace<YomiContainer>;
     ENVIRONMENT: string;
     DATABASE_URL: string;
+    STORAGE_BACKEND: string;
+    STORAGE_GATEWAY_URL: string;
+    STORAGE_GATEWAY_SECRET: string;
     APP_URL: string;
     BACKEND_URL: string;
     WEB_ORIGIN: string;
@@ -226,7 +232,9 @@ async function containerIsNotServed(response: Response): Promise<boolean> {
   if (/warming|cold|boot/i.test(status)) {
     return true;
   }
-  const text = await response.text();
+  // Clone before reading: the original body must stay untouched so the
+  // response remains returnable when this is a real app error, not a wake-up.
+  const text = await response.clone().text();
   return /not listening|tcp address|warming up|starting/i.test(text);
 }
 

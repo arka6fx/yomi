@@ -3,9 +3,8 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, Request
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from yomi.app.deps import get_current_user, get_db_session
+from yomi.app.deps import get_current_user
 from yomi.db.models_auth import User
 
 logger = logging.getLogger(__name__)
@@ -15,7 +14,6 @@ suggestions_router = APIRouter(prefix="/api/suggestions")
 @suggestions_router.get("")
 async def get_suggestions(
     request: Request,
-    db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
 ):
     # Port of apps/backend/src/routes/suggestions.ts

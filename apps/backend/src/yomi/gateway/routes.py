@@ -12,6 +12,9 @@ from yomi.db.models_auth import User
 from yomi.db_session import get_db_session
 from yomi.gateway.telegram import recent_gateway_errors
 from yomi.gateway.telegram import router as telegram_router
+from yomi.services import connectors_d1
+from yomi.services.cloudflare_storage.client import Statement
+from yomi.services.cloudflare_storage.deps import D1Backend, get_d1_backend
 
 router = APIRouter()
 router.include_router(telegram_router, prefix="")
@@ -33,7 +36,16 @@ async def gateway_debug_errors():
 async def list_connections(
     db_session: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
+    if d1 is not None:
+        rows = await d1.store.fetch_all(
+            "SELECT platform, connected_at FROM platform_connections WHERE user_id = ?",
+            [user.id],
+        )
+        return [
+            {"platform": row["platform"], "connectedAt": row["connected_at"]} for row in rows
+        ]
     rows = (
         await db_session.execute(
             select(PlatformConnection).where(PlatformConnection.user_id == user.id)
@@ -49,7 +61,19 @@ async def unlink_connection(
     platform: str,
     db_session: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
+    if d1 is not None:
+        results = await d1.store.atomic([
+            Statement(
+                "DELETE FROM platform_connections WHERE user_id = ? AND platform = ? "
+                "RETURNING id",
+                [user.id, platform],
+            )
+        ])
+        if not results[0].get("results"):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="connection not found")
+        return {"ok": True}
     result = await db_session.execute(
         delete(PlatformConnection).where(
             PlatformConnection.user_id == user.id,
@@ -66,11 +90,16 @@ async def unlink_connection(
 async def create_telegram_link_token(
     db_session: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     if not settings.telegram_deep_link_enabled:
         raise HTTPException(status_code=404, detail="telegram linking disabled")
     if not settings.telegram_bot_username:
         raise HTTPException(status_code=500, detail="telegram bot username not configured")
+    if d1 is not None:
+        token = await connectors_d1.create_link_token(d1, user.id)
+        deep_link = f"https://t.me/{settings.telegram_bot_username}?start={token}"
+        return {"deepLink": deep_link}
 
     now = datetime.now(UTC).replace(tzinfo=None)
     token = secrets.token_urlsafe(24)

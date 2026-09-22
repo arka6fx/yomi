@@ -6,6 +6,7 @@ Port of apps/backend/src/routes/usage.ts.
 from __future__ import annotations
 
 import logging
+import uuid
 from datetime import datetime
 from typing import Any
 
@@ -19,7 +20,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from yomi.app.deps import get_current_user, get_db_session
 from yomi.db.models_app import UsageEvent
 from yomi.db.models_auth import User
+from yomi.services import billing_d1
 from yomi.services.ai_telemetry import AiUsageRecord, record_ai_usage
+from yomi.services.cloudflare_storage.client import Statement
+from yomi.services.cloudflare_storage.deps import D1Backend, get_d1_backend
+from yomi.services.cloudflare_storage.store import utcnow_iso
 from yomi.services.entitlements import credit_renewal
 from yomi.services.metering import (
     ChargeInput,
@@ -107,6 +112,7 @@ async def reserve(
     body: ReserveBody,
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ) -> Any:
     kind = body.kind
     if kind not in VALID_KINDS:
@@ -118,14 +124,15 @@ async def reserve(
             status_code=400,
         )
 
-    result = await charge_usage(
-        session,
-        ChargeInput(
-            user=_metering_user(user),
-            kind=kind,
-            duration_seconds=body.duration,
-        ),
+    charge = ChargeInput(
+        user=_metering_user(user),
+        kind=kind,
+        duration_seconds=body.duration,
     )
+    if d1 is not None:
+        result = await billing_d1.charge_usage(d1, charge)
+    else:
+        result = await charge_usage(session, charge)
 
     if not result.ok:
         renewal = credit_renewal(_metering_user(user))[1]
@@ -174,6 +181,7 @@ async def finalize(
     body: FinalizeBody,
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ) -> Any:
     usage_event_id = body.usage_event_id
     if not usage_event_id:
@@ -186,53 +194,65 @@ async def finalize(
     output_tokens = max(0, int(body.output_tokens or 0))
     cost_cents = max(0, int(body.cost_cents or 0))
 
-    await session.execute(
-        update(UsageEvent)
-        .where(UsageEvent.id == usage_event_id, UsageEvent.user_id == user.id)
-        .values(
-            model=body.model,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            cost_cents=cost_cents,
-            status=body.status or "done",
-            metadata=body.metadata,
-        )
-    )
-
-    t = body.telemetry
-    if t and t.request_id and t.endpoint and t.surface:
-        await record_ai_usage(
-            session,
-            AiUsageRecord(
-                user_id=user.id,
-                request_id=t.request_id,
-                usage_event_id=usage_event_id,
-                endpoint=t.endpoint,
-                surface=t.surface,
-                route=t.route,
-                intent=t.intent,
+    if d1 is not None:
+        await d1.store.atomic([
+            Statement(
+                "UPDATE usage_events SET model = ?, input_tokens = ?, output_tokens = ?, "
+                "cost_cents = ?, status = ?, metadata = ? "
+                "WHERE id = ? AND user_id = ?",
+                [body.model, input_tokens, output_tokens, cost_cents,
+                 body.status or "done", body.metadata, usage_event_id, user.id],
+            )
+        ])
+    else:
+        await session.execute(
+            update(UsageEvent)
+            .where(UsageEvent.id == usage_event_id, UsageEvent.user_id == user.id)
+            .values(
                 model=body.model,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
-                total_api_cost_micros=cost_cents * 10_000,
-                tool_calls=t.tool_calls,
-                connector_ids=t.connector_ids,
-                vision_images=t.vision_images,
-                tts_chars=t.tts_chars,
-                stt_audio_seconds=t.stt_audio_seconds,
-                max_output_tokens=t.max_output_tokens,
-                latency_ms=t.latency_ms,
-                first_token_latency_ms=t.first_token_latency_ms,
-                status=(
-                    "error"
-                    if body.status == "error"
-                    else "cancelled"
-                    if body.status == "cancelled"
-                    else "done"
-                ),
+                cost_cents=cost_cents,
+                status=body.status or "done",
                 metadata=body.metadata,
-            ),
+            )
         )
+
+    t = body.telemetry
+    if t and t.request_id and t.endpoint and t.surface:
+        record = AiUsageRecord(
+            user_id=user.id,
+            request_id=t.request_id,
+            usage_event_id=usage_event_id,
+            endpoint=t.endpoint,
+            surface=t.surface,
+            route=t.route,
+            intent=t.intent,
+            model=body.model,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            total_api_cost_micros=cost_cents * 10_000,
+            tool_calls=t.tool_calls,
+            connector_ids=t.connector_ids,
+            vision_images=t.vision_images,
+            tts_chars=t.tts_chars,
+            stt_audio_seconds=t.stt_audio_seconds,
+            max_output_tokens=t.max_output_tokens,
+            latency_ms=t.latency_ms,
+            first_token_latency_ms=t.first_token_latency_ms,
+            status=(
+                "error"
+                if body.status == "error"
+                else "cancelled"
+                if body.status == "cancelled"
+                else "done"
+            ),
+            metadata=body.metadata,
+        )
+        if d1 is not None:
+            await billing_d1.record_ai_usage(d1, record)
+        else:
+            await record_ai_usage(session, record)
     return {"ok": True}
 
 
@@ -242,7 +262,26 @@ async def report_usage(
     body: UsageEventBody,
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ) -> Any:
+    if d1 is not None:
+        await d1.store.atomic([
+            d1.store.insert("usage_events", {
+                "id": str(uuid.uuid4()),
+                "user_id": user.id,
+                "device_id": body.device_id,
+                "kind": body.kind,
+                "model": body.model,
+                "input_tokens": body.input_tokens or 0,
+                "output_tokens": body.output_tokens or 0,
+                "cost_cents": body.cost_cents or 0,
+                "credits_charged": 0,
+                "status": "done",
+                "metadata": None,
+                "created_at": utcnow_iso(),
+            })
+        ])
+        return {"ok": True}
     await session.execute(
         pg_insert(UsageEvent).values(
             user_id=user.id,

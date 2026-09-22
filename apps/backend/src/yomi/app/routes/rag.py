@@ -5,10 +5,8 @@ Port of apps/backend/src/routes/rag.ts.
 
 from __future__ import annotations
 
-import hashlib
 import math
 import os
-import re
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
@@ -23,43 +21,27 @@ from yomi.conf import settings
 from yomi.db.models_app import RagChunk, RagDocument, RagEmbedding, RagRetrievalLog, RagSource
 from yomi.db.models_auth import User
 from yomi.lib.rerank import RerankCandidate, llm_rerank, mmr_rerank, parse_vector
+from yomi.services.cloudflare_storage.deps import D1Backend, get_d1_backend
 from yomi.services.entitlements import effective_plan_for_user
+from yomi.services.rag import d1_backend
+from yomi.services.rag.common import (
+    MAX_DOCUMENT_CHARS,
+    MIRROR_SOURCE_TYPE,
+    RAG_CANDIDATES,
+    RAG_MMR_LAMBDA,
+    RAG_RRF_K,
+    _clean,
+    _hash,
+    _source_hash,
+)
 from yomi.services.rag.embeddings import DEFAULT_EMBEDDING_MODEL, chunk_text, embed_text
 from yomi.services.rag.index_document import IndexDocumentInput, index_document
 
 rag_router = APIRouter(prefix="/api/rag")
 
-MAX_DOCUMENT_CHARS = 120_000
-MIRROR_SOURCE_TYPE = "mirror"
-
-# Hybrid retrieval knobs (safe defaults so unset env never breaks search).
-RAG_CANDIDATES = max(5, int(os.environ.get("RAG_CANDIDATES", "30") or 30))
-RAG_RRF_K = max(1, int(os.environ.get("RAG_RRF_K", "60") or 60))
-try:
-    RAG_MMR_LAMBDA = float(os.environ.get("RAG_MMR_LAMBDA", "") or "")
-    if not math.isfinite(RAG_MMR_LAMBDA):
-        raise ValueError
-except ValueError:
-    RAG_MMR_LAMBDA = 0.7
-
-_REDACT_IMAGE = re.compile(r"data:image/[a-zA-Z]+;base64,[A-Za-z0-9+/=]+")
-_REDACT_BASE64 = re.compile(r"[A-Za-z0-9+/=]{400,}")
-_COLLAPSE_NEWLINES = re.compile(r"\n{3,}")
-
 
 def _rag_allowed(user: User) -> bool:
     return effective_plan_for_user({"plan": user.plan}) in ("pro", "max")
-
-
-def _hash(value: str) -> str:
-    return hashlib.sha256(value.encode()).hexdigest()
-
-
-def _clean(value: str, max_len: int) -> str:
-    text = _REDACT_IMAGE.sub("[redacted image]", value.replace("\r", ""))
-    text = _REDACT_BASE64.sub("[redacted base64]", text)
-    text = _COLLAPSE_NEWLINES.sub("\n\n", text)
-    return text[:max_len].strip()
 
 
 def _vector_literal(values: list[float]) -> str:
@@ -70,10 +52,6 @@ def _vector_literal(values: list[float]) -> str:
         else:
             parts.append("0")
     return "[" + ",".join(parts) + "]"
-
-
-def _source_hash(path: str, content: str) -> str:
-    return _hash(f"{path}\0{content}")
 
 
 async def _find_source(
@@ -170,6 +148,7 @@ async def create_source(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     if not _rag_allowed(user):
         return JSONResponse({"error": "Cloud RAG requires Pro", "code": "upgrade_required"}, 403)
@@ -184,6 +163,8 @@ async def create_source(
     source_type = _clean(str(body.get("sourceType", "manual")), 40)
     if not name:
         return JSONResponse({"error": "name is required", "code": "invalid_name"}, 400)
+    if d1 is not None:
+        return await d1_backend.create_source(d1, user.id, name, source_type)
 
     source = RagSource(user_id=user.id, name=name, source_type=source_type, status="ready")
     session.add(source)
@@ -195,9 +176,12 @@ async def create_source(
 async def list_sources(
     session: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     if not _rag_allowed(user):
         return JSONResponse({"error": "Cloud RAG requires Pro", "code": "upgrade_required"}, 403)
+    if d1 is not None:
+        return {"sources": await d1_backend.list_sources(d1, user.id)}
 
     result = await session.execute(
         text(
@@ -232,6 +216,7 @@ async def sync_sources(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     if not _rag_allowed(user):
         return JSONResponse({"error": "Cloud RAG requires Pro", "code": "upgrade_required"}, 403)
@@ -244,6 +229,23 @@ async def sync_sources(
         body = {}
     sources = body.get("sources") if isinstance(body.get("sources"), list) else []
     removed_paths = body.get("removedPaths") if isinstance(body.get("removedPaths"), list) else []
+
+    if d1 is not None:
+        synced = 0
+        for source in sources:
+            if not isinstance(source, dict):
+                continue
+            path = _clean(str(source.get("path", "")), 500)
+            content = _clean(str(source.get("content", "")), MAX_DOCUMENT_CHARS)
+            if not path or not content:
+                continue
+            if await d1_backend.upsert_mirror_source(d1, user.id, source):
+                synced += 1
+        removed = 0
+        for path in removed_paths:
+            if await d1_backend.delete_mirror_source(d1, user.id, _clean(str(path), 500)):
+                removed += 1
+        return {"synced": synced, "removed": removed}
 
     synced = 0
     for source in sources:
@@ -271,6 +273,7 @@ async def create_document(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     if not _rag_allowed(user):
         return JSONResponse({"error": "Cloud RAG requires Pro", "code": "upgrade_required"}, 403)
@@ -288,6 +291,16 @@ async def create_document(
         return JSONResponse({"error": "sourceId is required", "code": "invalid_source"}, 400)
     if not content:
         return JSONResponse({"error": "content is required", "code": "invalid_content"}, 400)
+    if d1 is not None:
+        metadata_value = body.get("metadata") if isinstance(body.get("metadata"), dict) else None
+        mime_type = body.get("mimeType") if isinstance(body.get("mimeType"), str) else "text/plain"
+        try:
+            document, chunks = await d1_backend.push_document(
+                d1, user.id, source_id, title, mime_type, content, metadata_value
+            )
+        except LookupError:
+            return JSONResponse({"error": "Source not found", "code": "source_not_found"}, 404)
+        return {"document": document, "chunks": chunks}
 
     source = (
         await session.execute(
@@ -359,6 +372,7 @@ async def search(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     if not _rag_allowed(user):
         return JSONResponse({"error": "Cloud RAG requires Pro", "code": "upgrade_required"}, 403)
@@ -380,6 +394,10 @@ async def search(
         max_chars = max(500, min(int(body.get("maxChars", 3000)), 8000))
     except (TypeError, ValueError):
         max_chars = 3000
+    if d1 is not None:
+        return {
+            "snippets": await d1_backend.search(d1, user.id, query, limit, max_chars)
+        }
 
     query_vec = await embed_text(query)
     embedding = _vector_literal(query_vec)
@@ -500,9 +518,14 @@ async def delete_source(
     source_id: str,
     session: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     if not _rag_allowed(user):
         return JSONResponse({"error": "Cloud RAG requires Pro", "code": "upgrade_required"}, 403)
+    if d1 is not None:
+        if not await d1_backend.delete_source(d1, user.id, source_id):
+            return JSONResponse({"error": "Source not found", "code": "source_not_found"}, 404)
+        return {"ok": True}
 
     deleted = (
         await session.execute(

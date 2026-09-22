@@ -13,6 +13,8 @@ from yomi.app.deps import get_current_user, get_db_session
 from yomi.crypto import decrypt_tokens, encrypt_tokens, refresh_google_access_token
 from yomi.db.models_app2 import McpConnection
 from yomi.db.models_auth import User
+from yomi.services import connectors_d1
+from yomi.services.cloudflare_storage.deps import D1Backend, get_d1_backend
 from yomi.services.oauth import build_auth_url, handle_callback
 
 logger = logging.getLogger(__name__)
@@ -24,7 +26,10 @@ async def list_integrations(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
+    if d1 is not None:
+        return {"integrations": await connectors_d1.list_connections(d1, str(user.id))}
     rows = (
         await db.execute(
             select(McpConnection).where(McpConnection.user_id == user.id)
@@ -50,8 +55,29 @@ async def list_integrations(
 async def composio_status(
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     from yomi.connectors.composio import configured_toolkit_ids
+
+    if d1 is not None:
+        rows = await connectors_d1.composio_connection_rows(d1, str(user.id))
+        by_toolkit = {str(row["toolkit"]): row for row in rows}
+        return {
+            "configured": sorted(configured_toolkit_ids()),
+            "connections": [
+                {
+                    "toolkit": row["toolkit"],
+                    "status": row["status"],
+                    "statusReason": row.get("status_reason"),
+                    "connectedAccountId": row.get("connected_account_id"),
+                    "alias": row.get("alias"),
+                    "connectedAt": row.get("connected_at"),
+                    "lastTriggerEventAt": row.get("last_trigger_event_at"),
+                }
+                for row in rows
+            ],
+            "lastSyncedToolkits": list(by_toolkit),
+        }
     from yomi.db.models_app2 import ComposioConnection
 
     rows = (
@@ -127,10 +153,13 @@ async def disconnect_composio(
     toolkit: str,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     from yomi.connectors.composio import ConnectorError, disconnect_connection
 
     try:
+        if d1 is not None:
+            return await connectors_d1.disconnect_composio_connection(d1, str(user.id), toolkit)
         return await disconnect_connection(db, str(user.id), toolkit)
     except ConnectorError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -162,6 +191,7 @@ async def oauth_callback(
     code: str,
     state: str,
     db: AsyncSession = Depends(get_db_session),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     try:
         state_data = json.loads(state)
@@ -187,7 +217,14 @@ async def oauth_callback(
         raise HTTPException(status_code=400, detail="OAuth exchange failed")
 
     encrypted = encrypt_tokens(tokens)
-    
+
+    if d1 is not None:
+        await connectors_d1.upsert_connection(
+            d1, str(user_id), provider, encrypted,
+            scopes=tokens.scope.split() if tokens.scope else [],
+        )
+        return {"message": "Integration connected successfully", "close_window": True}
+
     existing = (
         await db.execute(
             select(McpConnection).where(
@@ -224,7 +261,11 @@ async def revoke_integration(
     provider: str,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
+    if d1 is not None:
+        await connectors_d1.delete_connection(d1, str(user.id), provider)
+        return {"success": True}
     await db.execute(
         delete(McpConnection).where(
             McpConnection.user_id == user.id,
@@ -240,7 +281,36 @@ async def integration_health(
     provider: str,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
+    if d1 is not None:
+        conn = await connectors_d1.find_connection(d1, str(user.id), provider)
+        if conn is None:
+            return {"status": "unconfigured"}
+        try:
+            tokens = decrypt_tokens(str(conn["oauth_tokens"]))
+        except Exception:
+            return {"status": "invalid_tokens"}
+        if provider != "google":
+            logger.warning(f"Health check not fully implemented for {provider}")
+            return {"status": "ok"}
+        async with httpx.AsyncClient() as client:
+            res = await client.get(
+                "https://www.googleapis.com/oauth2/v3/userinfo",
+                headers={"Authorization": f"Bearer {tokens.access_token}"},
+            )
+            if res.status_code == 200:
+                return {"status": "ok"}
+            if res.status_code == 401 and tokens.refresh_token:
+                try:
+                    new_tokens = await refresh_google_access_token(tokens.refresh_token)
+                    await connectors_d1.upsert_connection(
+                        d1, str(user.id), provider, encrypt_tokens(new_tokens),
+                    )
+                    return {"status": "ok"}
+                except Exception:
+                    return {"status": "error"}
+        return {"status": "error"}
     conn = (
         await db.execute(
             select(McpConnection).where(

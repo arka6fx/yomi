@@ -101,18 +101,39 @@ async def build_user_registry(
     db: AsyncSession,
     user_id: str,
     create_pending_action: Callable[[dict], Any] | None = None,
+    d1: Any = None,
 ) -> ToolRegistry:
     """Global browser/search tools plus the connector tool set for `user_id`.
 
     Connector tools resolve live tokens through `db` and queue writes through
-    `create_pending_action` when provided.
+    `create_pending_action` when provided. In D1 mode (`d1` given) tokens and
+    the Composio mirror resolve through the storage gateway instead.
     """
+    from yomi.connectors.base import ConnectorContext
+
     tool_registry = ToolRegistry()
     tool_registry._tools = dict(registry._tools)
     tool_registry._callables = dict(registry._callables)
-    connector_tools = await default_registry.tools_for_user(
-        db, user_id, create_pending_action=create_pending_action
-    )
+
+    if d1 is not None:
+        from yomi.services import connectors_d1 as _connectors_d1
+
+        connected = await _connectors_d1.connected_providers(d1, user_id)
+        ctx = ConnectorContext(
+            user_id=user_id,
+            get_access_token=_connectors_d1.token_provider(d1),
+            create_pending_action=create_pending_action,
+        )
+        connector_tools = {}
+        for connector_id in connected:
+            definition = default_registry.def_for(connector_id)
+            if definition is None:
+                continue
+            connector_tools.update(definition.tools(ctx))
+    else:
+        connector_tools = await default_registry.tools_for_user(
+            db, user_id, create_pending_action=create_pending_action
+        )
     for name, tool in connector_tools.items():
 
         async def _run(_tool=tool, **_kwargs):
@@ -120,11 +141,18 @@ async def build_user_registry(
 
         tool_registry.register(name, tool.description, tool.parameters, _run)
 
-    from yomi.connectors.composio import build_composio_tools
+    if d1 is not None:
+        from yomi.services import connectors_d1 as _connectors_d1
 
-    composio_tools, composio_counter = await build_composio_tools(
-        user_id, create_pending_action, db
-    )
+        composio_tools, composio_counter = await _connectors_d1.build_composio_tools_d1(
+            d1, user_id, create_pending_action
+        )
+    else:
+        from yomi.connectors.composio import build_composio_tools
+
+        composio_tools, composio_counter = await build_composio_tools(
+            user_id, create_pending_action, db
+        )
     for name, tool in composio_tools.items():
 
         async def _run_composio(_tool=tool, **_kwargs):

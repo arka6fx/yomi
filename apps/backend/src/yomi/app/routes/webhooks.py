@@ -21,6 +21,8 @@ from yomi.connectors.composio import (
     parse_webhook,
 )
 from yomi.db_session import get_db_session
+from yomi.services import connectors_d1
+from yomi.services.cloudflare_storage.deps import D1Backend, get_d1_backend
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +33,7 @@ webhooks_router = APIRouter(prefix="/api/webhooks")
 async def composio_webhook(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     raw_body = await request.body()
     if get_composio() is None:
@@ -52,6 +55,9 @@ async def composio_webhook(
     normalized = parsed.get("payload")
     if raw is None:
         raise HTTPException(status_code=400, detail="Malformed webhook payload")
-    result = await handle_webhook_event(db, raw, normalized)
+    if d1 is not None:
+        result = await connectors_d1.handle_composio_webhook_event(d1, raw, normalized)
+    else:
+        result = await handle_webhook_event(db, raw, normalized)
     logger.info("composio webhook handled: %s", result)
     return {"status": "ok", **result}

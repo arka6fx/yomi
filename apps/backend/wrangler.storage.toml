@@ -1,0 +1,17 @@
+# Migration/staging storage gateway. Production API traffic still uses wrangler.toml.
+name = "yomi-storage-staging"
+main = "containers/storage-worker.ts"
+compatibility_date = "2026-09-22"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "yomi-staging"
+database_id = "5c610197-ddfd-43e6-830c-efe89521185b"
+migrations_dir = "migrations-d1"
+
+[[vectorize]]
+binding = "VECTORS"
+index_name = "yomi-vectors-staging"
+
+# Configure with wrangler secret put STORAGE_GATEWAY_SECRET --config ../wrangler.storage.toml

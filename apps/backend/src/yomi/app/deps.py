@@ -20,6 +20,7 @@ from yomi.conf import settings
 from yomi.db.models_auth import Session as AuthSession
 from yomi.db.models_auth import User
 from yomi.db_session import get_db_session
+from yomi.services.cloudflare_storage.deps import use_d1
 from yomi.services.session_cookie import read_session_cookie, recover_token
 
 logger = logging.getLogger(__name__)
@@ -56,6 +57,25 @@ async def get_current_user(
     lookup = _recover_session_token(token)
     if not lookup:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
+
+    if use_d1():
+        import httpx as _httpx
+
+        from yomi.services import auth_d1 as _auth_d1
+        from yomi.services.cloudflare_storage.client import StorageClient as _StorageClient
+        from yomi.services.cloudflare_storage.deps import D1Backend as _D1Backend
+        from yomi.services.cloudflare_storage.store import D1Store as _D1Store
+
+        try:
+            async with _httpx.AsyncClient() as http:
+                client = _StorageClient.configured(http)
+                user = await _auth_d1.load_request_user(
+                    _D1Backend(store=_D1Store(client), client=client), lookup, request=request
+                )
+        except ValueError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        request.state.user = user
+        return user
 
     auth_session = (
         await session.execute(select(AuthSession).where(AuthSession.token == lookup).limit(1))

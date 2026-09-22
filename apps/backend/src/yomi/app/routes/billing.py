@@ -28,6 +28,11 @@ from yomi.app.deps import get_current_user, get_db_session
 from yomi.conf import settings
 from yomi.db.models_app import PaymentRecord, UsageEvent
 from yomi.db.models_auth import User
+from yomi.services import billing_d1
+from yomi.services.cloudflare_storage.client import Statement
+from yomi.services.cloudflare_storage.deps import D1Backend, get_d1_backend
+from yomi.services.cloudflare_storage.store import parse_dt as _parse_dt
+from yomi.services.cloudflare_storage.store import utcnow_iso
 from yomi.services.credit_ledger import (
     create_payment_record,
     expire_user_credits,
@@ -425,6 +430,7 @@ async def create_subscription(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     try:
         body = await request.json()
@@ -469,22 +475,25 @@ async def create_subscription(
         if not url:
             raise RuntimeError("Dodo checkout response did not include a checkout URL")
 
-        await create_payment_record(
-            session,
-            user_id=user.id,
-            provider="dodo",
-            kind="subscription",
-            product_key=plan,
-            provider_order_id=checkout_id or None,
-            amount_cents=config["priceCents"],
-            currency="USD",
-            status="created",
-            metadata={
+        record_kwargs = {
+            "user_id": user.id,
+            "provider": "dodo",
+            "kind": "subscription",
+            "product_key": plan,
+            "provider_order_id": checkout_id or None,
+            "amount_cents": config["priceCents"],
+            "currency": "USD",
+            "status": "created",
+            "metadata": {
                 "checkout": checkout,
                 "isUpgrade": is_upgrade,
                 "previousPlan": user.plan if is_upgrade else None,
             },
-        )
+        }
+        if d1 is not None:
+            await billing_d1.create_payment_record(d1, **record_kwargs)
+        else:
+            await create_payment_record(session, **record_kwargs)
         return {"id": checkout_id, "short_url": url}
     except Exception as err:  # noqa: BLE001 — mirror TS 502 envelope
         logger.error("[yomi/billing] create-subscription failed: %s", err)
@@ -506,6 +515,7 @@ async def create_credit_pack(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     try:
         body = await request.json()
@@ -540,13 +550,12 @@ async def create_credit_pack(
         if not url:
             raise RuntimeError("Dodo checkout response did not include a checkout URL")
 
-        await create_payment_record(
-            session,
-            user_id=user.id,
-            provider="dodo",
-            kind="credit_pack",
-            product_key=config["key"],
-            provider_order_id=(
+        record_kwargs = {
+            "user_id": user.id,
+            "provider": "dodo",
+            "kind": "credit_pack",
+            "product_key": config["key"],
+            "provider_order_id": (
                 str(
                     checkout.get("session_id")
                     or checkout.get("id")
@@ -555,11 +564,15 @@ async def create_credit_pack(
                 )
                 or None
             ),
-            amount_cents=config["priceCents"],
-            currency=config["currency"],
-            status="created",
-            metadata={"checkout": checkout},
-        )
+            "amount_cents": config["priceCents"],
+            "currency": config["currency"],
+            "status": "created",
+            "metadata": {"checkout": checkout},
+        }
+        if d1 is not None:
+            await billing_d1.create_payment_record(d1, **record_kwargs)
+        else:
+            await create_payment_record(session, **record_kwargs)
         return {
             "id": str(checkout.get("id") or checkout.get("checkout_id") or ""),
             "short_url": url,
@@ -611,7 +624,9 @@ async def cancel_subscription(
 
 @billing_router.post("/webhook")
 async def billing_webhook(
-    request: Request, session: AsyncSession = Depends(get_db_session)
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     body = (await request.body()).decode("utf-8", errors="replace")
     if not verify_dodo_webhook(body, request.headers):
@@ -628,19 +643,31 @@ async def billing_webhook(
         or string_field(event, ["id", "event_id"])
         or f"{type_}:{payload_hash(body)}"
     )
-    recorded = await record_payment_event(
-        session,
-        provider="dodo",
-        event_id=event_id,
-        event_type=type_,
-        payload_hash_value=payload_hash(body),
-    )
+    if d1 is not None:
+        recorded = await billing_d1.record_payment_event(
+            d1,
+            provider="dodo",
+            event_id=event_id,
+            event_type=type_,
+            payload_hash_value=payload_hash(body),
+        )
+    else:
+        recorded = await record_payment_event(
+            session,
+            provider="dodo",
+            event_id=event_id,
+            event_type=type_,
+            payload_hash_value=payload_hash(body),
+        )
     if recorded["duplicate"]:
         return {"ok": True, "deduplicated": True}
 
     entity = event_data(event)
     try:
-        await handle_dodo_event(session, type_, entity, event_id)
+        if d1 is not None:
+            await handle_dodo_event_d1(d1, type_, entity, event_id)
+        else:
+            await handle_dodo_event(session, type_, entity, event_id)
     except Exception as err:  # noqa: BLE001 — mirror TS 500 envelope
         logger.error("[yomi/billing] webhook handler error: %s", err)
         return JSONResponse({"error": "Handler error"}, 500)
@@ -652,7 +679,10 @@ async def billing_webhook(
 async def subscription_info(
     session: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
+    if d1 is not None:
+        return await subscription_info_d1(d1, user.id)
     row = (
         await session.execute(
             select(
@@ -751,7 +781,10 @@ async def subscription_info(
 async def usage_summary(
     session: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
+    if d1 is not None:
+        return await usage_summary_d1(d1, user)
     effective_plan = effective_plan_for_user(
         {"plan": user.plan, "trial_start_date": user.trial_start_date}
     )
@@ -843,6 +876,165 @@ async def usage_summary(
         },
         "monthlyUsage": {
             "days": [{"date": r.date, "credits": int(r.credits or 0)} for r in daily_rows]
+        },
+        "recentActivity": recent_activity,
+        "actions": {
+            "canBuyCredits": effective_plan != "explore",
+            "canUpgrade": effective_plan != "max",
+            "upgradeUrl": "/dashboard?upgrade=true",
+        },
+    }
+
+
+async def subscription_info_d1(backend: D1Backend, user_id: str) -> dict | JSONResponse:
+    row = await backend.store.fetch_one(
+        "SELECT name, email, role, plan, subscription_status, created_at, "
+        "trial_start_date, trial_end_date, current_period_end, dodo_subscription_id "
+        "FROM user WHERE id = ? LIMIT 1",
+        [user_id],
+    )
+    if row is None:
+        return JSONResponse({"error": "User not found"}, 404)
+    created_at = _parse_dt(row["created_at"])
+    trial_end = _parse_dt(row.get("trial_end_date"))
+    period_end = _parse_dt(row.get("current_period_end"))
+
+    effective_plan = effective_plan_for_user({"plan": row["plan"], "trial_end_date": trial_end})
+    now = datetime.now(UTC)
+    request_period_start = datetime(now.year, now.month, 1, tzinfo=UTC)
+    renewal = credit_renewal({
+        "plan": row["plan"],
+        "trial_end_date": trial_end,
+        "created_at": created_at,
+        "current_period_end": period_end,
+    })
+    consumption = await backend.store.fetch_all(
+        "SELECT kind, SUM(credits_charged) AS credits FROM usage_events "
+        "WHERE user_id = ? AND created_at >= ? AND credits_charged > 0 GROUP BY kind",
+        [user_id, request_period_start.isoformat()],
+    )
+    credit_consumption = {str(r["kind"]): int(r["credits"] or 0) for r in consumption}
+    total_credits_used = sum(credit_consumption.values())
+    credit_summary = await billing_d1.get_credit_summary(backend, user_id)
+    total_credits = credit_summary.balance + total_credits_used
+
+    trial_expired = False
+    if effective_plan == "explore":
+        end = trial_end or (
+            created_at + timedelta(days=30) if created_at else now
+        )
+        if end.tzinfo is None:
+            end = end.replace(tzinfo=UTC)
+        trial_expired = now >= end
+
+    return {
+        "name": row["name"],
+        "email": row["email"],
+        "role": effective_role_for_user({"role": row["role"]}),
+        "plan": effective_plan,
+        "status": row["subscription_status"],
+        "trialExpired": trial_expired,
+        "currentPeriodEnd": row["current_period_end"],
+        "dodoSubscriptionId": row["dodo_subscription_id"],
+        "resetAt": renewal[1],
+        "resetKind": renewal[0],
+        "credits": {
+            "balance": credit_summary.balance,
+            "lifetimeGranted": credit_summary.lifetime_granted,
+            "lifetimeConsumed": credit_summary.lifetime_consumed,
+            "lifetimeRefunded": credit_summary.lifetime_refunded,
+            "expiringSoon": credit_summary.expiring_soon,
+            "expiringSoonAt": credit_summary.expiring_soon_at,
+        },
+        "creditsUsed": total_credits_used,
+        "totalCredits": total_credits,
+        "creditPacks": list(CREDIT_PACKS.values()) if effective_plan != "explore" else [],
+        "billingWarning": (
+            "Your payment is past due. Please update your payment method."
+            if row["subscription_status"] == "past_due"
+            else None
+        ),
+    }
+
+
+async def usage_summary_d1(backend: D1Backend, user: User) -> dict:
+    effective_plan = effective_plan_for_user(
+        {"plan": user.plan, "trial_start_date": user.trial_start_date}
+    )
+    plan_config = get_plan(effective_plan)
+    now = datetime.now(UTC)
+    if effective_plan == "explore" and user.trial_start_date:
+        request_period_start = user.trial_start_date
+    else:
+        request_period_start = datetime(now.year, now.month, 1, tzinfo=UTC)
+    if request_period_start.tzinfo is None:
+        request_period_start = request_period_start.replace(tzinfo=UTC)
+    renewal = credit_renewal(
+        {
+            "plan": user.plan,
+            "trial_start_date": user.trial_start_date,
+            "trial_end_date": user.trial_end_date,
+            "created_at": user.created_at,
+            "current_period_end": user.current_period_end,
+        }
+    )
+    period_iso = request_period_start.isoformat()
+    consumption = await backend.store.fetch_one(
+        "SELECT COALESCE(SUM(credits_charged), 0) AS credits FROM usage_events "
+        "WHERE user_id = ? AND created_at >= ? AND credits_charged > 0",
+        [user.id, period_iso],
+    )
+    daily_rows = await backend.store.fetch_all(
+        "SELECT SUBSTR(created_at, 1, 10) AS date, "
+        "COALESCE(SUM(credits_charged), 0) AS credits FROM usage_events "
+        "WHERE user_id = ? AND created_at >= ? GROUP BY SUBSTR(created_at, 1, 10)",
+        [user.id, period_iso],
+    )
+    transactions = await billing_d1.recent_credit_transactions(backend, user.id, 10)
+    credit_summary = await billing_d1.get_credit_summary(backend, user.id)
+    credits_used = int((consumption or {}).get("credits") or 0)
+    total_available = credit_summary.balance + credits_used
+
+    recent_activity = []
+    for index, tx in enumerate(transactions):
+        created = _parse_dt(tx["created_at"]) or datetime.now(UTC)
+        created_ms = int(created.timestamp() * 1000)
+        recent_activity.append(
+            {
+                "id": f"activity-{index}-{created_ms}",
+                "label": (
+                    "Credits Added"
+                    if tx["type"] == "grant"
+                    else activity_label(tx.get("usage_kind"), tx.get("reason"))
+                ),
+                "category": (
+                    "credits_added"
+                    if tx["type"] == "grant"
+                    else category_for_activity(tx.get("usage_kind"), tx.get("reason"))
+                ),
+                "credits": abs(int(tx["amount"])),
+                "createdAt": tx.get("usage_created_at") or created.isoformat(),
+            }
+        )
+
+    return {
+        "plan": {
+            "key": effective_plan,
+            "name": plan_config["name"],
+            "status": user.subscription_status or "inactive",
+        },
+        "credits": {
+            "remaining": credit_summary.balance,
+            "included": plan_config["includedCredits"],
+            "used": credits_used,
+            "totalAvailableThisPeriod": total_available,
+            "resetAt": renewal[1],
+            "resetKind": renewal[0],
+            "expiringSoon": credit_summary.expiring_soon,
+            "expiringSoonAt": credit_summary.expiring_soon_at,
+        },
+        "monthlyUsage": {
+            "days": [{"date": r["date"], "credits": int(r["credits"] or 0)} for r in daily_rows]
         },
         "recentActivity": recent_activity,
         "actions": {
@@ -1098,6 +1290,273 @@ async def handle_payment_succeeded(
     try:
         await grant_credits(
             session,
+            user_id=meta["userId"],
+            amount=pack["credits"],
+            source="credit_pack",
+            source_id=string_field(entity, ["payment_id", "id", "checkout_id"]) or event_id,
+            idempotency_key=f"dodo:{event_id}:credit_pack:{pack['key']}",
+            payment_id=payment_id,
+            expires_at=expires_at,
+            reason=f"{pack['name']} purchase",
+            metadata={"provider": "dodo", "productKey": pack["key"]},
+        )
+    except Exception as err:  # noqa: BLE001 — best-effort
+        logger.error("[yomi/billing] grantCredits failed for payment %s: %s", event_id, err)
+
+
+# ---------------------------------------------------------------------------
+# D1 counterparts: same webhook chain and read shapes on the storage gateway.
+# ---------------------------------------------------------------------------
+
+def _iso_or_none(value: datetime | None) -> str | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
+    return value.isoformat()
+
+
+async def _update_user_d1(backend: D1Backend, user_id: str, values: dict[str, Any]) -> None:
+    encoded = {
+        key: (_iso_or_none(value) if isinstance(value, datetime) else value)
+        for key, value in values.items()
+    }
+    assignments = ", ".join(f"{key} = ?" for key in encoded)
+    await backend.store.atomic([
+        Statement(
+            f"UPDATE user SET {assignments} WHERE id = ?",
+            [*encoded.values(), user_id],
+        )
+    ])
+
+
+async def find_user_by_subscription_d1(backend: D1Backend, sub_id: str) -> str | None:
+    row = await backend.store.fetch_one(
+        "SELECT id FROM user WHERE dodo_subscription_id = ? LIMIT 1", [sub_id]
+    )
+    return str(row["id"]) if row else None
+
+
+async def handle_dodo_event_d1(
+    backend: D1Backend, type_: str, entity: DodoEntity, event_id: str
+) -> None:
+    normalized = type_.lower()
+    if "subscription" in normalized and re.search(r"active|renew|paid|success|charge", normalized):
+        await handle_subscription_active_d1(backend, entity, event_id)
+        return
+    if "subscription" in normalized and re.search(r"cancel|expire|complete", normalized):
+        await handle_subscription_end_d1(backend, entity)
+        return
+    if "subscription" in normalized and re.search(r"fail|past_due|halt", normalized):
+        await handle_payment_failed_d1(backend, entity)
+        return
+    if "payment" in normalized and re.search(r"success|succeed|paid|captured", normalized):
+        await handle_payment_succeeded_d1(backend, entity, event_id)
+
+
+async def handle_subscription_active_d1(
+    backend: D1Backend, entity: DodoEntity, event_id: str
+) -> None:
+    meta = metadata_of(entity)
+    sub_id = string_field(entity, ["subscription_id", "id"])
+    user_id = meta.get("userId")
+    plan = meta.get("plan")
+
+    if not user_id and sub_id:
+        user_id = await find_user_by_subscription_d1(backend, sub_id)
+    if not user_id or not plan:
+        return
+
+    config = PLANS.get(plan)
+    if not config:
+        return
+
+    customer_id = string_field(entity, ["customer_id", "customerId"])
+    period_end = date_field(entity, ["current_period_end", "currentPeriodEnd", "next_billing_date"])
+
+    existing = await backend.store.fetch_one(
+        "SELECT plan, dodo_subscription_id FROM user WHERE id = ? LIMIT 1", [user_id]
+    )
+    existing_plan = existing["plan"] if existing else None
+    existing_sub = existing["dodo_subscription_id"] if existing else None
+    is_renewal = existing_plan == plan
+    is_upgrade = (
+        existing_plan is not None
+        and existing_plan != "explore"
+        and existing_plan != plan
+    )
+
+    if is_upgrade and existing_sub and existing_sub != sub_id:
+        try:
+            logger.warning(
+                "[yomi/billing] cancelling old subscription %s for upgrade to %s",
+                existing_sub,
+                plan,
+            )
+            await dodo_request(
+                f"/subscriptions/{existing_sub}", {"cancel_at_next_billing_date": True}, "PATCH"
+            )
+        except Exception as err:  # noqa: BLE001 — best-effort
+            logger.warning("[yomi/billing] failed to cancel old subscription on upgrade: %s", err)
+
+    payment_id = await billing_d1.upsert_payment_record(
+        backend,
+        user_id=user_id,
+        provider="dodo",
+        kind="subscription",
+        product_key=plan,
+        provider_customer_id=customer_id,
+        provider_order_id=sub_id,
+        provider_subscription_id=sub_id,
+        amount_cents=config["priceCents"],
+        currency="USD",
+        status="paid",
+        metadata={
+            "providerEvent": {"type": "subscription_active", "eventId": event_id},
+            "plan": plan,
+            "isRenewal": is_renewal,
+            "previousPlan": existing_plan,
+        },
+    )
+
+    await _update_user_d1(backend, user_id, {
+        "plan": plan,
+        "subscription_status": "active",
+        "dodo_customer_id": customer_id,
+        "dodo_subscription_id": sub_id,
+        "current_period_end": period_end,
+    })
+
+    if existing_plan == "explore" and plan != "explore":
+        now = datetime.now(UTC)
+        month_start = datetime(now.year, now.month, 1, tzinfo=UTC).isoformat()
+        await backend.store.atomic([
+            Statement(
+                "DELETE FROM usage_events WHERE user_id = ? AND created_at >= ?",
+                [user_id, month_start],
+            )
+        ])
+        try:
+            expired = await billing_d1.expire_user_credits(
+                backend,
+                user_id,
+                sources=["subscription_cycle", "promo"],
+                reason="credits expired on upgrade from Explore",
+            )
+            if expired > 0:
+                logger.info(
+                    "[yomi/billing] expired %d credits on upgrade from Explore to %s",
+                    expired,
+                    plan,
+                )
+        except Exception as err:  # noqa: BLE001 — best-effort
+            logger.error("[yomi/billing] failed to expire credits on upgrade: %s", err)
+
+    if config["includedCredits"] <= 0:
+        return
+
+    try:
+        await billing_d1.grant_credits(
+            backend,
+            user_id=user_id,
+            amount=config["includedCredits"],
+            source="subscription_cycle",
+            source_id=(
+                f"{sub_id or 'subscription'}:"
+                f"{period_end.isoformat() if period_end else event_id}"
+            ),
+            idempotency_key=f"dodo:{event_id}:subscription_credits",
+            payment_id=payment_id,
+            expires_at=subscription_credit_expiry(period_end),
+            reason=f"{config['name']} monthly credits",
+            metadata={
+                "provider": "dodo",
+                "subscriptionId": sub_id,
+                "plan": plan,
+                "isRenewal": is_renewal,
+            },
+        )
+    except Exception as err:  # noqa: BLE001 — best-effort
+        logger.error("[yomi/billing] grantCredits failed for subscription %s: %s", event_id, err)
+
+
+async def handle_subscription_end_d1(backend: D1Backend, entity: DodoEntity) -> None:
+    meta = metadata_of(entity)
+    sub_id = string_field(entity, ["subscription_id", "id"])
+    user_id = meta.get("userId")
+
+    if not user_id and sub_id:
+        user_id = await find_user_by_subscription_d1(backend, sub_id)
+    if not user_id:
+        return
+
+    if sub_id:
+        rec = await backend.store.fetch_one(
+            "SELECT id FROM payment_records WHERE provider = 'dodo' AND provider_order_id = ? "
+            "LIMIT 1",
+            [sub_id],
+        )
+        if rec:
+            now = utcnow_iso()
+            await backend.store.atomic([
+                Statement(
+                    "UPDATE payment_records SET status = 'cancelled', updated_at = ?, "
+                    "metadata = ? WHERE id = ?",
+                    [now, {"cancelledAt": now}, rec["id"]],
+                )
+            ])
+
+    await _update_user_d1(backend, user_id, {
+        "plan": "explore",
+        "subscription_status": "inactive",
+        "dodo_subscription_id": None,
+        "current_period_end": None,
+    })
+
+
+async def handle_payment_failed_d1(backend: D1Backend, entity: DodoEntity) -> None:
+    meta = metadata_of(entity)
+    sub_id = string_field(entity, ["subscription_id", "id"])
+    user_id = meta.get("userId")
+
+    if not user_id and sub_id:
+        user_id = await find_user_by_subscription_d1(backend, sub_id)
+    if not user_id:
+        return
+
+    await _update_user_d1(backend, user_id, {"subscription_status": "past_due"})
+
+
+async def handle_payment_succeeded_d1(
+    backend: D1Backend, entity: DodoEntity, event_id: str
+) -> None:
+    meta = metadata_of(entity)
+    if meta.get("kind") != "credit_pack" or not meta.get("userId") or not meta.get("productKey"):
+        return
+
+    pack = get_credit_pack(meta["productKey"])
+    if not pack:
+        return
+
+    payment_id = await billing_d1.upsert_payment_record(
+        backend,
+        user_id=meta["userId"],
+        provider="dodo",
+        kind="credit_pack",
+        product_key=pack["key"],
+        provider_customer_id=string_field(entity, ["customer_id", "customerId"]),
+        provider_order_id=string_field(entity, ["checkout_id", "payment_link_id", "order_id"]),
+        provider_payment_id=string_field(entity, ["payment_id", "id"]),
+        amount_cents=int(number_field(entity, ["amount", "total_amount"]) or pack["priceCents"]),
+        currency=string_field(entity, ["currency"]) or pack["currency"],
+        status="paid",
+        metadata={"providerEvent": {"eventId": event_id, "type": "payment_succeeded"}},
+    )
+
+    expires_at = datetime.now(UTC) + timedelta(days=365)
+    try:
+        await billing_d1.grant_credits(
+            backend,
             user_id=meta["userId"],
             amount=pack["credits"],
             source="credit_pack",

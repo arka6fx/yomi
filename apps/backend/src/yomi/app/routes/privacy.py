@@ -6,6 +6,7 @@ Port of apps/backend/src/routes/privacy.ts.
 from __future__ import annotations
 
 import math
+import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
@@ -27,6 +28,10 @@ from yomi.db.models_app import (
 )
 from yomi.db.models_app2 import McpConnection, PlatformConnection, PrivacyAuditEvent
 from yomi.db.models_auth import User
+from yomi.services import auth_d1, privacy_d1
+from yomi.services.cloudflare_storage.client import Statement
+from yomi.services.cloudflare_storage.deps import D1Backend, get_d1_backend
+from yomi.services.cloudflare_storage.store import utcnow_iso
 from yomi.services.privacy.audit import (
     client_ip,
     list_privacy_activity,
@@ -93,12 +98,23 @@ def _normalize_purposes(value: Any) -> list[str]:
 
 
 def _consent_context(body: dict[str, Any], request: Request):
+    from yomi.services.privacy.consent import ConsentContext as _ConsentContext
+
     app_version = body.get("appVersion") if isinstance(body.get("appVersion"), str) else None
+    return _ConsentContext(
+        app_version=app_version,
+        ip_address=client_ip(request),
+        user_agent=user_agent(request),
+        metadata={"source": "dashboard"},
+    )
+
+
+def _audit_kwargs(request: Request, event_type: str, metadata: dict | None = None) -> dict:
     return {
-        "app_version": app_version,
+        "event_type": event_type,
         "ip_address": client_ip(request),
-        "user_agent": user_agent(request),
-        "metadata": {"source": "dashboard"},
+        "ua": user_agent(request),
+        **({"metadata": metadata} if metadata is not None else {}),
     }
 
 
@@ -130,9 +146,14 @@ async def privacy_consents(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
-    current = await get_consent_snapshot(db, user.id)
-    history = await list_consent_history(db, user.id)
+    if d1 is not None:
+        current = await auth_d1.get_consent_snapshot(d1, user.id)
+        history = await auth_d1.list_consent_history(d1, user.id)
+    else:
+        current = await get_consent_snapshot(db, user.id)
+        history = await list_consent_history(db, user.id)
     return {
         "versions": {
             "privacyPolicyVersion": PRIVACY_POLICY_VERSION,
@@ -149,6 +170,7 @@ async def privacy_grant_consents(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     body = await _json_body(request)
     purposes = _normalize_purposes(body.get("purposes"))
@@ -156,6 +178,19 @@ async def privacy_grant_consents(
         return JSONResponse(
             {"error": "At least one valid consent purpose is required"}, status_code=400
         )
+    if d1 is not None:
+        current = await auth_d1.record_consent_decision(
+            d1,
+            user_id=user.id,
+            purposes=purposes,
+            status="granted",
+            context=_consent_context(body, request),
+        )
+        await privacy_d1.record_privacy_audit_event(
+            d1, actor_user_id=user.id, target_user_id=user.id,
+            **_audit_kwargs(request, "privacy.consent.granted", {"purposes": purposes}),
+        )
+        return {"current": [snapshot_to_dict(s) for s in current]}
     current = await record_consent_decision(
         db,
         user_id=user.id,
@@ -181,6 +216,7 @@ async def privacy_revoke_consents(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     body = await _json_body(request)
     purposes = _normalize_purposes(body.get("purposes"))
@@ -188,6 +224,16 @@ async def privacy_revoke_consents(
         return JSONResponse(
             {"error": "At least one valid consent purpose is required"}, status_code=400
         )
+    if d1 is not None:
+        current = await auth_d1.record_consent_decision(
+            d1, user_id=user.id, purposes=purposes, status="revoked",
+            context=_consent_context(body, request),
+        )
+        await privacy_d1.record_privacy_audit_event(
+            d1, actor_user_id=user.id, target_user_id=user.id,
+            **_audit_kwargs(request, "privacy.consent.revoked", {"purposes": purposes}),
+        )
+        return {"current": [snapshot_to_dict(s) for s in current]}
     current = await record_consent_decision(
         db,
         user_id=user.id,
@@ -213,8 +259,12 @@ async def privacy_get_preferences(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
-    preferences = await get_privacy_preferences(db, user.id)
+    if d1 is not None:
+        preferences = await auth_d1.get_privacy_preferences(d1, user.id)
+    else:
+        preferences = await get_privacy_preferences(db, user.id)
     return {"preferences": shape_to_dict(preferences)}
 
 
@@ -223,11 +273,21 @@ async def privacy_patch_preferences(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     body = await _json_body(request)
     patch = _bool_patch(body)
     if not patch:
         return JSONResponse({"error": "No valid privacy preferences provided"}, status_code=400)
+    if d1 is not None:
+        preferences = await auth_d1.update_privacy_preferences(d1, user.id, patch)
+        await privacy_d1.record_privacy_audit_event(
+            d1, actor_user_id=user.id, target_user_id=user.id,
+            **_audit_kwargs(
+                request, "privacy.preferences.updated", {"changed": list(patch.keys())}
+            ),
+        )
+        return {"preferences": shape_to_dict(preferences)}
     preferences = await update_privacy_preferences(db, user.id, patch)
     await record_privacy_audit_event(
         db,
@@ -247,7 +307,27 @@ async def privacy_overview(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
+    if d1 is not None:
+        preferences = await auth_d1.get_privacy_preferences(d1, user.id)
+        current = await auth_d1.get_consent_snapshot(d1, user.id)
+        activity = await privacy_d1.list_privacy_activity(d1, user.id, 8)
+        counts = await privacy_d1.overview_counts(d1, user.id)
+        return {
+            "preferences": shape_to_dict(preferences),
+            "consents": [snapshot_to_dict(s) for s in current],
+            "dataStored": {
+                "conversations": {"sessions": counts["sessions"], "messages": counts["messages"]},
+                "memories": counts["memories"],
+                "rag": {"sources": counts["rag_sources"], "chunks": counts["rag_chunks"]},
+                "connectors": counts["connectors"],
+                "platforms": counts["platforms"],
+                "schedules": counts["schedules"],
+                "usageEvents": counts["usage"],
+            },
+            "recentActivity": activity,
+        }
     preferences = await get_privacy_preferences(db, user.id)
     current = await get_consent_snapshot(db, user.id)
     activity = await list_privacy_activity(db, user.id, 8)
@@ -287,7 +367,15 @@ async def privacy_create_export(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
+    if d1 is not None:
+        result = await privacy_d1.request_export(d1, user.id)
+        await privacy_d1.record_privacy_audit_event(
+            d1, actor_user_id=user.id, target_user_id=user.id,
+            **_audit_kwargs(request, "privacy.export.requested"),
+        )
+        return {"export": result}
     result = await request_export(db, user.id)
     await record_privacy_audit_event(
         db,
@@ -306,7 +394,10 @@ async def privacy_list_exports(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
+    if d1 is not None:
+        return {"exports": await privacy_d1.list_exports(d1, user.id)}
     exports = await list_exports(db, user.id)
     return {"exports": exports}
 
@@ -317,8 +408,12 @@ async def privacy_get_export(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
-    export_row = await get_export(db, user.id, export_id)
+    if d1 is not None:
+        export_row = await privacy_d1.get_export(d1, user.id, export_id)
+    else:
+        export_row = await get_export(db, user.id, export_id)
     if export_row is None:
         return JSONResponse({"error": "Export not found"}, status_code=404)
     return {"export": export_row}
@@ -329,8 +424,11 @@ async def privacy_activity(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     limit = _clamp_limit(request.query_params.get("limit"), 25, 100)
+    if d1 is not None:
+        return {"activity": await privacy_d1.list_privacy_activity(d1, user.id, limit)}
     rows = (
         await db.execute(
             select(
@@ -354,8 +452,12 @@ async def privacy_get_retention(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
-    preferences = await get_privacy_preferences(db, user.id)
+    if d1 is not None:
+        preferences = await auth_d1.get_privacy_preferences(d1, user.id)
+    else:
+        preferences = await get_privacy_preferences(db, user.id)
     return {
         "defaults": RETENTION_DEFAULTS,
         "overrides": preferences.retention_overrides or {},
@@ -367,6 +469,7 @@ async def privacy_patch_retention(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     body = await _json_body(request)
     overrides_in = body.get("overrides")
@@ -397,6 +500,17 @@ async def privacy_patch_retention(
             )
         overrides[key] = days
 
+    if d1 is not None:
+        preferences = await auth_d1.update_privacy_preferences(
+            d1, user.id, {"retention_overrides": overrides}
+        )
+        await privacy_d1.record_privacy_audit_event(
+            d1, actor_user_id=user.id, target_user_id=user.id,
+            **_audit_kwargs(
+                request, "privacy.retention.updated", {"domains": list(overrides.keys())}
+            ),
+        )
+        return {"preferences": shape_to_dict(preferences)}
     preferences = await update_privacy_preferences(
         db, user.id, {"retention_overrides": overrides}
     )
@@ -418,7 +532,17 @@ async def privacy_delete_data(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
+    if d1 is not None:
+        job = await privacy_d1.delete_my_data(d1, user.id)
+        await privacy_d1.record_privacy_audit_event(
+            d1, actor_user_id=user.id, target_user_id=user.id,
+            **_audit_kwargs(request, "privacy.delete_data.requested"),
+        )
+        if job is None:
+            return JSONResponse({"error": "Failed to create deletion job"}, status_code=500)
+        return {"job": job}
     job = await delete_my_data(db, user.id)
     await record_privacy_audit_event(
         db,
@@ -439,7 +563,10 @@ async def privacy_list_deletion_jobs(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
+    if d1 is not None:
+        return {"jobs": await privacy_d1.list_deletion_jobs(d1, user.id)}
     jobs = await list_deletion_jobs(db, user.id)
     return {"jobs": jobs}
 
@@ -450,8 +577,12 @@ async def privacy_get_deletion_job(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
-    job = await get_deletion_job(db, user.id, job_id)
+    if d1 is not None:
+        job = await privacy_d1.get_deletion_job(d1, user.id, job_id)
+    else:
+        job = await get_deletion_job(db, user.id, job_id)
     if job is None:
         return JSONResponse({"error": "Deletion job not found"}, status_code=404)
     return {"job": job}
@@ -462,7 +593,17 @@ async def privacy_delete_account(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
+    if d1 is not None:
+        await privacy_d1.record_privacy_audit_event(
+            d1, actor_user_id=user.id, target_user_id=user.id,
+            **_audit_kwargs(request, "privacy.delete_account.requested"),
+        )
+        job = await privacy_d1.delete_account(d1, user.id)
+        if job is None:
+            return JSONResponse({"error": "Failed to create deletion job"}, status_code=500)
+        return {"job": job}
     await record_privacy_audit_event(
         db,
         actor_user_id=user.id,
@@ -482,7 +623,43 @@ async def privacy_delete_memories(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
+    if d1 is not None:
+        memories = await d1.store.fetch_all(
+            "SELECT id FROM memory_entries WHERE user_id = ?", [user.id]
+        )
+        now = utcnow_iso()
+        statements: list[Statement] = []
+        for row in memories:
+            statements.append(
+                d1.store.insert("vector_sync_outbox", {
+                    "id": str(uuid.uuid4()),
+                    "user_id": user.id,
+                    "kind": "memory",
+                    "record_id": str(row["id"]),
+                    "revision": "v1",
+                    "operation": "delete",
+                    "payload": None,
+                    "attempts": 0,
+                    "last_error": None,
+                    "created_at": now,
+                    "processed_at": None,
+                })
+            )
+        statements.append(
+            Statement("DELETE FROM memory_relations WHERE user_id = ?", [user.id])
+        )
+        statements.append(
+            Statement("DELETE FROM memory_entries WHERE user_id = ? RETURNING id", [user.id])
+        )
+        results = await d1.store.atomic(statements)
+        deleted = len(results[-1].get("results") or [])
+        await privacy_d1.record_privacy_audit_event(
+            d1, actor_user_id=user.id, target_user_id=user.id,
+            **_audit_kwargs(request, "privacy.memories.deleted_all", {"count": deleted}),
+        )
+        return {"deleted": deleted}
     # memory_sources has no user_id column — it cascades from memory_entries.id
     # (onDelete: "cascade"), same as deletion.ts relies on for that table.
     await db.execute(
@@ -513,7 +690,26 @@ async def privacy_export_memories(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
+    if d1 is not None:
+        rows = await d1.store.fetch_all(
+            "SELECT id, topic, content, created_at FROM memory_entries "
+            "WHERE user_id = ? ORDER BY created_at DESC",
+            [user.id],
+        )
+        memories = [
+            {
+                "id": r["id"], "topic": r["topic"], "content": r["content"],
+                "createdAt": r.get("created_at"),
+            }
+            for r in rows
+        ]
+        await privacy_d1.record_privacy_audit_event(
+            d1, actor_user_id=user.id, target_user_id=user.id,
+            **_audit_kwargs(request, "privacy.memories.exported", {"count": len(memories)}),
+        )
+        return {"memories": memories}
     rows = (
         await db.execute(
             select(

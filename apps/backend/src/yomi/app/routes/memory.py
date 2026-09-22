@@ -7,8 +7,6 @@ upsert's supersession writes stay atomic.
 
 from __future__ import annotations
 
-import hashlib
-import re
 import uuid
 from contextlib import suppress
 from datetime import UTC, datetime
@@ -23,27 +21,24 @@ from yomi.app.deps import get_current_user, get_db_session
 from yomi.app.middleware.consent import require_consent
 from yomi.db.models_app import MemoryEmbedding, MemoryEntry, MemoryRelation, MemorySource
 from yomi.db.models_auth import User
+from yomi.services.cloudflare_storage.deps import D1Backend, get_d1_backend
+from yomi.services.memory import d1_backend
+from yomi.services.memory.common import (
+    MAX_MEMORY_CHARS,
+    UUID_PATTERN,
+    _clamp_confidence,
+    _clamp_limit,
+    _clean,
+    _forget_after_date,
+    _from_api_body,
+    _hash,
+    _normalize_topic,  # noqa: F401 — re-exported; tests import helpers from this module
+    relation_for_memory,
+)
 from yomi.services.memory.embeddings import embed_memory_text, memory_embedding_model
 from yomi.services.memory.search import FULL_META_COLUMNS, build_recall_cte, memory_search_knobs
 
 memory_router = APIRouter(prefix="/api/memory")
-
-MAX_MEMORY_CHARS = 8_000
-UUID_PATTERN = re.compile(
-    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE
-)
-
-
-def _clean(value: Any, max_len: int) -> str:
-    text = str(value or "").replace("\r", "")
-    text = re.sub(r"data:image/[a-zA-Z]+;base64,[A-Za-z0-9+/=]+", "[redacted image]", text)
-    text = re.sub(r"[A-Za-z0-9+/=]{400,}", "[redacted base64]", text)
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    return text[:max_len].strip()
-
-
-def _hash(value: str) -> str:
-    return hashlib.sha256(value.encode()).hexdigest()
 
 
 async def store_memory_embedding(
@@ -61,53 +56,6 @@ async def store_memory_embedding(
             embedding=embedding,
         )
     )
-
-
-def _clamp_limit(value: Any, fallback: int, max_value: int) -> int:
-    try:
-        n = int(str(value or ""))
-    except (TypeError, ValueError):
-        return fallback
-    if n <= 0:
-        return fallback
-    return min(n, max_value)
-
-
-def _clamp_confidence(value: Any) -> int:
-    try:
-        n = int(str(value if value is not None else "70"))
-    except (TypeError, ValueError):
-        return 70
-    return max(0, min(100, n))
-
-
-def _forget_after_date(value: Any) -> datetime | None:
-    if not value:
-        return None
-    try:
-        return datetime.fromisoformat(str(value).replace("Z", "+00:00")).astimezone(UTC)
-    except (TypeError, ValueError):
-        return None
-
-
-# Supersession by id is judged against candidates a model was shown. A request
-# body carries no such judgment, so the API path keeps the conservative topic
-# rule (ADR 0006).
-def _from_api_body(input_data: dict[str, Any]) -> dict[str, Any]:
-    return {k: v for k, v in input_data.items() if k not in ("replacesId", "modelJudged")}
-
-
-def _normalize_topic(value: str) -> str:
-    return re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
-
-
-# Topic equality only — the conservative path for writers with no conversational context (ADR 0006).
-def relation_for_memory(input_data: dict[str, Any], candidate: dict[str, Any]) -> str | None:
-    topic = _normalize_topic(str(input_data.get("topic") or input_data.get("summary") or ""))
-    candidate_topic = _normalize_topic(str(candidate.get("topic") or ""))
-    if topic and candidate_topic == topic:
-        return "updates"
-    return None
 
 
 async def _prune_expired(session: AsyncSession, user_id: str) -> None:
@@ -364,8 +312,16 @@ async def memory_add(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     body = await _json_body(request)
+    if d1 is not None:
+        memory = await d1_backend.upsert(d1, user.id, _from_api_body(body))
+        if memory is None:
+            return JSONResponse(
+                {"error": "content is required", "code": "invalid_content"}, status_code=400
+            )
+        return {"memory": memory}
     memory = await upsert_memory(db, user.id, _from_api_body(body))
     if memory is None:
         return JSONResponse(
@@ -379,9 +335,13 @@ async def memory_entries(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
-    await _prune_expired(db, user.id)
     limit = _clamp_limit(request.query_params.get("limit"), 50, 200)
+    if d1 is not None:
+        await d1_backend.prune_expired(d1, user.id)
+        return {"memories": await d1_backend.list_entries(d1, user.id, limit)}
+    await _prune_expired(db, user.id)
     rows = (
         await db.execute(
             select(MemoryEntry)
@@ -405,8 +365,11 @@ async def memory_superseded(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     limit = _clamp_limit(request.query_params.get("limit"), 50, 200)
+    if d1 is not None:
+        return {"memories": await d1_backend.list_superseded(d1, user.id, limit)}
     rows = (
         await db.execute(
             select(MemoryEntry)
@@ -471,11 +434,17 @@ async def memory_search(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     body = await _json_body(request)
     query = _clean(body.get("query"), 400)
     limit = _clamp_limit(body.get("limit"), 8, 25)
     max_chars = _clamp_limit(body.get("maxChars"), 4000, 20_000)
+    if d1 is not None:
+        await d1_backend.prune_expired(d1, user.id)
+        return {
+            "memories": await d1_backend.search(d1, user.id, query, limit, max_chars)
+        }
     await _prune_expired(db, user.id)
 
     if not query:
@@ -576,10 +545,14 @@ async def memory_profile(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     body = await _json_body(request)
     query = _clean(body.get("query"), 400)
     limit = _clamp_limit(body.get("limit"), 24, 80)
+    if d1 is not None:
+        await d1_backend.prune_expired(d1, user.id)
+        return await d1_backend.profile(d1, user.id, query, limit)
     await _prune_expired(db, user.id)
 
     base_where = (
@@ -641,9 +614,34 @@ async def memory_patch(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     item_id = _clean(item_id, 80)
     body = await _json_body(request)
+    if d1 is not None:
+        existing = await d1_backend.fetch_entry(d1, user.id, item_id)
+        if existing is None:
+            return JSONResponse({"error": "memory not found", "code": "not_found"}, status_code=404)
+        memory = await d1_backend.upsert(
+            d1,
+            user.id,
+            {
+                "customId": existing["customId"],
+                "id": existing["id"],
+                "kind": body.get("kind", existing["kind"]),
+                "scope": body.get("scope", existing["scope"]),
+                "topic": body.get("topic", existing["topic"]),
+                "summary": body.get("summary", existing["summary"]),
+                "content": body.get("content", existing["content"]),
+                "confidence": body.get("confidence", existing["confidence"]),
+                "sourceType": body.get("sourceType", existing["sourceType"]),
+                "sourcePath": body.get("sourcePath", existing["sourcePath"]),
+                "isStatic": body.get("isStatic", existing["isStatic"]),
+                "forgetAfter": body.get("forgetAfter", existing["forgetAfter"]),
+                "metadata": body.get("metadata", existing["metadata"]),
+            },
+        )
+        return {"memory": memory}
     existing = (
         await db.execute(
             select(MemoryEntry)
@@ -684,8 +682,22 @@ async def memory_sync(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     body = await _json_body(request)
+    removed_ids = [_clean(item, 80) for item in (body.get("removedIds") or []) if _clean(item, 80)]
+    removed_custom_ids = [
+        _clean(item, 200) for item in (body.get("removedCustomIds") or []) if _clean(item, 200)
+    ]
+    if d1 is not None:
+        synced: list[str] = []
+        for item in body.get("memories") or []:
+            if isinstance(item, dict):
+                memory = await d1_backend.upsert(d1, user.id, _from_api_body(item))
+                if memory:
+                    synced.append(str(memory["id"]))
+        removed = await d1_backend.sync_remove(d1, user.id, removed_ids, removed_custom_ids)
+        return {"synced": len(synced), "ids": synced, "removed": removed}
     synced: list[str] = []
     for item in body.get("memories") or []:
         if isinstance(item, dict):
@@ -693,10 +705,6 @@ async def memory_sync(
             if memory:
                 synced.append(str(memory.id))
 
-    removed_ids = [_clean(item, 80) for item in (body.get("removedIds") or []) if _clean(item, 80)]
-    removed_custom_ids = [
-        _clean(item, 200) for item in (body.get("removedCustomIds") or []) if _clean(item, 200)
-    ]
     removed = 0
 
     for item_id in removed_ids:
@@ -731,6 +739,7 @@ async def memory_forget(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     body = await _json_body(request)
     item_id = _clean(body.get("id"), 80)
@@ -740,6 +749,12 @@ async def memory_forget(
         return JSONResponse(
             {"error": "id, customId, or query is required", "code": "invalid_target"},
             status_code=400,
+        )
+    if d1 is not None:
+        return await d1_backend.forget(
+            d1, user.id,
+            item_id=item_id, custom_id=custom_id, query=query,
+            hard=body.get("hard") is True,
         )
 
     if item_id:
@@ -775,6 +790,7 @@ async def memory_graph_walk(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     body = await _json_body(request)
     root_id = _clean(body.get("rootId"), 80)
@@ -785,6 +801,8 @@ async def memory_graph_walk(
         max_nodes = min(max(int(body.get("maxNodes") or 16), 1), 48)
     except (TypeError, ValueError):
         max_depth, max_nodes = 3, 16
+    if d1 is not None:
+        return await d1_backend.graph_walk(d1, user.id, root_id, max_depth, max_nodes)
 
     visited: set[str] = set()
     chain: list[dict[str, Any]] = []
@@ -844,9 +862,12 @@ async def memory_delete(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     item_id = _clean(item_id, 80)
     hard = request.query_params.get("hard") == "1"
+    if d1 is not None:
+        return await d1_backend.forget(d1, user.id, item_id=item_id, hard=hard)
     if hard:
         res = await db.execute(
             delete(MemoryEntry)

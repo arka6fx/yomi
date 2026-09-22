@@ -18,6 +18,9 @@ from yomi.app.deps import get_current_user, get_db_session
 from yomi.db.models_app import Schedule
 from yomi.db.models_app2 import McpConnection, PlatformConnection
 from yomi.db.models_auth import User
+from yomi.services import billing_d1
+from yomi.services.cloudflare_storage.deps import D1Backend, get_d1_backend
+from yomi.services.cloudflare_storage.store import parse_dt as _parse_dt
 from yomi.services.credit_ledger import get_credit_summary
 from yomi.services.entitlements import (
     effective_plan_for_user,
@@ -49,6 +52,7 @@ def _to_datetime(value: datetime | None) -> datetime | None:
 async def status_panel(
     session: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ) -> dict:
     ctx = vars_dict(user)
     plan = effective_plan_for_user(ctx)
@@ -88,7 +92,10 @@ async def status_panel(
     # Credits
     balance = 0
     try:
-        summary = await get_credit_summary(session, user.id)
+        if d1 is not None:
+            summary = await billing_d1.get_credit_summary(d1, user.id)
+        else:
+            summary = await get_credit_summary(session, user.id)
         balance = summary.balance
     except Exception:  # noqa: BLE001 — best-effort, leave balance at 0
         pass
@@ -104,20 +111,30 @@ async def status_panel(
     # Telegram link
     telegram: dict[str, object] = {"connected": False, "linkedAt": None}
     try:
-        link = (
-            await session.execute(
-                select(PlatformConnection.connected_at)
-                .where(
-                    PlatformConnection.user_id == user.id,
-                    PlatformConnection.platform == "telegram",
-                )
-                .order_by(PlatformConnection.connected_at.desc())
-                .limit(1)
+        if d1 is not None:
+            link = await d1.store.fetch_one(
+                "SELECT connected_at FROM platform_connections "
+                "WHERE user_id = ? AND platform = 'telegram' "
+                "ORDER BY connected_at DESC LIMIT 1",
+                [user.id],
             )
-        ).scalar_one_or_none()
+            linked_at = (link or {}).get("connected_at")
+        else:
+            link = (
+                await session.execute(
+                    select(PlatformConnection.connected_at)
+                    .where(
+                        PlatformConnection.user_id == user.id,
+                        PlatformConnection.platform == "telegram",
+                    )
+                    .order_by(PlatformConnection.connected_at.desc())
+                    .limit(1)
+                )
+            ).scalar_one_or_none()
+            linked_at = link.isoformat() if link else None
         telegram = {
-            "connected": bool(link),
-            "linkedAt": link.isoformat() if link else None,
+            "connected": bool(linked_at),
+            "linkedAt": linked_at,
         }
     except Exception:  # noqa: BLE001 — best-effort
         pass
@@ -134,20 +151,37 @@ async def status_panel(
     # registry is ported).
     connectors: dict[str, object] = {"total": 0, "needsReconnect": []}
     try:
-        rows = (
-            await session.execute(
-                select(McpConnection.provider, McpConnection.expires_at).where(
-                    McpConnection.user_id == user.id
-                )
+        if d1 is not None:
+            conn_rows = await d1.store.fetch_all(
+                "SELECT provider, expires_at FROM mcp_connections WHERE user_id = ?",
+                [user.id],
             )
-        ).all()
-        now = datetime.now(UTC)
-        needs_reconnect = [
-            {"provider": r.provider, "displayName": r.provider}
-            for r in rows
-            if r.expires_at is not None and _to_datetime(r.expires_at) < now
-        ]
-        connectors = {"total": len(rows), "needsReconnect": needs_reconnect}
+            now = datetime.now(UTC)
+            needs_reconnect = []
+            for row in conn_rows:
+                expires_at = row.get("expires_at")
+                if expires_at is not None:
+                    moment = _parse_dt(expires_at)
+                    if moment is not None and moment < now:
+                        needs_reconnect.append(
+                            {"provider": row["provider"], "displayName": row["provider"]}
+                        )
+            connectors = {"total": len(conn_rows), "needsReconnect": needs_reconnect}
+        else:
+            rows = (
+                await session.execute(
+                    select(McpConnection.provider, McpConnection.expires_at).where(
+                        McpConnection.user_id == user.id
+                    )
+                )
+            ).all()
+            now = datetime.now(UTC)
+            needs_reconnect = [
+                {"provider": r.provider, "displayName": r.provider}
+                for r in rows
+                if r.expires_at is not None and _to_datetime(r.expires_at) < now
+            ]
+            connectors = {"total": len(rows), "needsReconnect": needs_reconnect}
     except Exception:  # noqa: BLE001 — best-effort
         pass
     needs = connectors["needsReconnect"]
@@ -168,23 +202,37 @@ async def status_panel(
     # Schedules
     schedule_info: dict[str, object] = {"total": 0, "enabled": 0, "nextRunAt": None}
     try:
-        row = (
-            await session.execute(
-                select(
-                    func.count().label("total"),
-                    func.count().filter(Schedule.enabled).label("enabled"),
-                    func.min(Schedule.next_run_at)
-                    .filter(Schedule.enabled)
-                    .label("next_run_at"),
-                ).where(Schedule.user_id == user.id)
+        if d1 is not None:
+            sched_rows = await d1.store.fetch_all(
+                "SELECT enabled, next_run_at FROM schedules WHERE user_id = ?", [user.id]
             )
-        ).one()
-        next_run = row.next_run_at
-        schedule_info = {
-            "total": int(row.total or 0),
-            "enabled": int(row.enabled or 0),
-            "nextRunAt": next_run.isoformat() if next_run else None,
-        }
+            enabled_rows = [r for r in sched_rows if r.get("enabled")]
+            next_runs = sorted(
+                str(r["next_run_at"]) for r in enabled_rows if r.get("next_run_at")
+            )
+            schedule_info = {
+                "total": len(sched_rows),
+                "enabled": len(enabled_rows),
+                "nextRunAt": next_runs[0] if next_runs else None,
+            }
+        else:
+            row = (
+                await session.execute(
+                    select(
+                        func.count().label("total"),
+                        func.count().filter(Schedule.enabled).label("enabled"),
+                        func.min(Schedule.next_run_at)
+                        .filter(Schedule.enabled)
+                        .label("next_run_at"),
+                    ).where(Schedule.user_id == user.id)
+                )
+            ).one()
+            next_run = row.next_run_at
+            schedule_info = {
+                "total": int(row.total or 0),
+                "enabled": int(row.enabled or 0),
+                "nextRunAt": next_run.isoformat() if next_run else None,
+            }
     except Exception:  # noqa: BLE001 — table may be empty
         pass
     checks.append(

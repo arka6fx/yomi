@@ -18,6 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from yomi.app.deps import get_current_user, get_db_session
 from yomi.db.models_app import Schedule
 from yomi.db.models_auth import User
+from yomi.services import schedules_d1
+from yomi.services.cloudflare_storage.deps import D1Backend, get_d1_backend
 from yomi.services.entitlements import effective_plan_for_user
 from yomi.services.schedule_parser import (
     compute_next_run,
@@ -62,7 +64,13 @@ async def list_schedules(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
+    if d1 is not None:
+        return {
+            "schedules": await schedules_d1.list_schedules(d1, user.id),
+            "limit": schedule_limit_for_plan(effective_plan_for_user({"plan": user.plan})),
+        }
     rows = (
         await db.execute(
             select(Schedule)
@@ -82,12 +90,18 @@ async def create_schedule(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     body = await _json_body(request)
 
-    capacity = await ensure_schedule_capacity(
-        db, {"id": user.id, "email": user.email, "role": user.role, "plan": user.plan}
-    )
+    if d1 is not None:
+        capacity = await schedules_d1.ensure_schedule_capacity(
+            d1, {"id": user.id, "email": user.email, "role": user.role, "plan": user.plan}
+        )
+    else:
+        capacity = await ensure_schedule_capacity(
+            db, {"id": user.id, "email": user.email, "role": user.role, "plan": user.plan}
+        )
     if not capacity.get("ok"):
         denied = capacity
         return JSONResponse(
@@ -123,6 +137,18 @@ async def create_schedule(
     if not isinstance(enabled, bool):
         enabled = True
 
+    if d1 is not None:
+        return {
+            "schedule": await schedules_d1.create_schedule(
+                d1, user.id,
+                schedule=schedule,
+                schedule_type=schedule_type,
+                prompt=prompt.strip(),
+                deliver_to=deliver_to,
+                enabled=enabled,
+                next_run_at=next_run_at,
+            )
+        }
     row = (
         await db.execute(
             pg_insert(Schedule)
@@ -150,8 +176,65 @@ async def update_schedule(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     body = await _json_body(request)
+
+    if d1 is not None:
+        existing = await schedules_d1.get_schedule(d1, user.id, schedule_id)
+        if existing is None:
+            return JSONResponse(
+                {"error": "schedule not found", "code": "not_found"}, status_code=404
+            )
+        updates: dict[str, Any] = {}
+        schedule_str = str(existing["schedule"])
+        schedule_type: str = str(existing["schedule_type"])
+
+        new_schedule = body.get("schedule")
+        if (
+            isinstance(new_schedule, str)
+            and new_schedule.strip()
+            and new_schedule.strip() != existing["schedule"]
+        ):
+            valid = validate_schedule_input(new_schedule.strip())
+            if not valid.get("ok") or not valid.get("scheduleType"):
+                error = valid.get("error", "invalid schedule")
+                return JSONResponse(
+                    {"error": error, "code": "invalid_schedule"}, status_code=400
+                )
+            schedule_str = body["schedule"].strip()
+            schedule_type = valid["scheduleType"]
+            updates["schedule"] = schedule_str
+            updates["schedule_type"] = schedule_type
+            updates["one_shot"] = 1 if schedule_type == "iso" else 0
+        if isinstance(body.get("prompt"), str) and body["prompt"].strip():
+            updates["prompt"] = body["prompt"].strip()
+        if isinstance(body.get("deliverTo"), list):
+            updates["deliver_to"] = body["deliverTo"]
+        if isinstance(body.get("enabled"), bool):
+            updates["enabled"] = 1 if body["enabled"] else 0
+
+        enabled_now = bool(updates.get("enabled", existing["enabled"]))
+        if "schedule" in updates or (updates.get("enabled") == 1 and not existing["enabled"]):
+            from yomi.services.cloudflare_storage.store import parse_dt as _parse_dt
+
+            updates["next_run_at"] = (
+                compute_next_run(
+                    schedule_type, schedule_str,
+                    last_run_at=_parse_dt(existing["last_run_at"]),
+                )
+                if enabled_now and schedule_type
+                else None
+            )
+        elif updates.get("enabled") == 0:
+            updates["next_run_at"] = None
+
+        row = await schedules_d1.update_schedule(d1, user.id, schedule_id, updates)
+        if row is None:
+            return JSONResponse(
+                {"error": "schedule not found", "code": "not_found"}, status_code=404
+            )
+        return {"schedule": row}
 
     existing = (
         await db.execute(
@@ -221,7 +304,11 @@ async def delete_schedule(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
+    if d1 is not None:
+        deleted = await schedules_d1.delete_schedule(d1, user.id, schedule_id)
+        return {"ok": True, "deleted": deleted}
     from sqlalchemy import delete
 
     result = await db.execute(

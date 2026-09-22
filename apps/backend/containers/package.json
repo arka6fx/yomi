@@ -3,7 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "deploy": "wrangler deploy",
+    "deploy": "wrangler deploy --config ../wrangler.toml",
+    "deploy:storage": "wrangler deploy --config ../wrangler.storage.toml",
+    "deploy:storage:prod": "wrangler deploy --config ../wrangler.storage-prod.toml",
+    "test": "node --experimental-strip-types --test *.test.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

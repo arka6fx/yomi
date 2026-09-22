@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 async def _charge_composio_usage(
-    db_session: AsyncSession, active: Any, user_id: str, plan: str
+    db_session: AsyncSession, active: Any, user_id: str, plan: str,
+    d1: Any = None,
 ) -> None:
     """Meter Composio tool calls (kind=composio_tool, 1 credit per execution)."""
     counter = getattr(active, "composio_calls", None)
@@ -24,10 +25,13 @@ async def _charge_composio_usage(
         return
     try:
         user = {"id": user_id, "plan": plan, "subscription_status": "active"}
-        await charge_usage(
-            db_session,
-            ChargeInput(user=user, kind="composio_tool", units=count),  # type: ignore[arg-type]
-        )
+        charge = ChargeInput(user=user, kind="composio_tool", units=count)  # type: ignore[arg-type]
+        if d1 is not None:
+            from yomi.services import billing_d1 as _billing_d1
+
+            await _billing_d1.charge_usage(d1, charge)
+        else:
+            await charge_usage(db_session, charge)
     except Exception as e:
         logger.warning("failed to charge composio usage for %s: %s", user_id, e)
 
@@ -39,13 +43,14 @@ async def run_agent_loop(
     max_steps: int | None = None,
     db_session: AsyncSession | None = None,
     create_pending_action=None,
+    d1: Any = None,
 ) -> str:
     max_steps = max_steps or settings.agent_max_steps
     client = openai.AsyncOpenAI(api_key=settings.openai_api_key)
 
     model = settings.openai_agent_model if plan == "max" else settings.openai_fast_model
     if db_session is not None:
-        active = await build_user_registry(db_session, user_id, create_pending_action)
+        active = await build_user_registry(db_session, user_id, create_pending_action, d1)
         tools = active.get_openai_tools()
     else:
         active = registry
@@ -100,5 +105,5 @@ async def run_agent_loop(
     messages = list(messages)
     result = await _run()
     if db_session is not None:
-        await _charge_composio_usage(db_session, active, user_id, plan)
+        await _charge_composio_usage(db_session, active, user_id, plan, d1)
     return result

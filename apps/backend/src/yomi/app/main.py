@@ -35,13 +35,20 @@ logger = get_logger(__name__)
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
-    from yomi.db_session import check_connection, get_db_session
+    from yomi.services.cloudflare_storage.deps import use_d1
 
-    if not settings.database_url:
+    if use_d1():
+        if not settings.storage_gateway_url or not settings.storage_gateway_secret:
+            logger.warning("Storage gateway is not configured — D1 routes will fail.")
+        else:
+            logger.warning("[startup] storage backend: d1 (%s)", settings.storage_gateway_url)
+    elif not settings.database_url:
         logger.warning("DATABASE_URL not set — DB-dependent routes will fail.")
     else:
+        from yomi.db_session import check_connection, session_scope
+
         try:
-            async with get_db_session() as s:
+            async with session_scope() as s:
                 ok = await check_connection(s)
             logger.warning("[startup] db connection %s", "ok" if ok else "FAILED")
             if ok:
@@ -97,6 +104,9 @@ def create_app() -> FastAPI:
 
     from yomi.gateway.routes import router as gateway_router
     app.include_router(gateway_router, prefix="/api/gateway")
+
+    from yomi.app.routes.custom_mcp import custom_mcp_router
+    app.include_router(custom_mcp_router)
 
     # Assuming these exist or will exist later as per instructions
     try:

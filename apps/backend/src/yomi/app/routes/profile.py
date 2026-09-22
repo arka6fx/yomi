@@ -12,6 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from yomi.app.deps import get_current_user, get_db_session
 from yomi.db.models_auth import User
+from yomi.services import streaks_d1
+from yomi.services.auth_d1 import update_user_fields
+from yomi.services.cloudflare_storage.deps import D1Backend, get_d1_backend
 from yomi.services.streaks import set_leaderboard_show_photo, update_leaderboard_handle
 
 profile_router = APIRouter(prefix="/api/user")
@@ -34,6 +37,7 @@ async def update_profile(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     try:
         body = await request.json()
@@ -72,6 +76,15 @@ async def update_profile(
             )
         update_values["agent_soul"] = trimmed
 
+    if d1 is not None:
+        updated = await update_user_fields(d1, user.id, update_values)
+        if updated is None:
+            return JSONResponse({"error": "User not found"}, 404)
+        return {
+            "name": updated["name"],
+            "email": updated["email"],
+            "agentSoul": updated.get("agent_soul"),
+        }
     await session.execute(update(User).where(User.id == user.id).values(**update_values))
     updated = (
         await session.execute(
@@ -90,6 +103,7 @@ async def set_handle(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     try:
         body = await request.json()
@@ -99,7 +113,10 @@ async def set_handle(
     if not isinstance(handle, str) or not handle.strip():
         return JSONResponse({"error": "handle is required", "code": "invalid_handle"}, 400)
 
-    result = await update_leaderboard_handle(session, user.id, handle)
+    if d1 is not None:
+        result = await streaks_d1.update_leaderboard_handle(d1, user.id, handle)
+    else:
+        result = await update_leaderboard_handle(session, user.id, handle)
     if not result["ok"]:
         return JSONResponse({"error": result["error"], "code": "invalid_handle"}, 400)
     return {"leaderboardHandle": result["leaderboardHandle"]}
@@ -110,6 +127,7 @@ async def set_show_photo(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
     user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
 ):
     try:
         body = await request.json()
@@ -120,5 +138,7 @@ async def set_show_photo(
         return JSONResponse(
             {"error": "showPhoto must be a boolean", "code": "invalid_show_photo"}, 400
         )
+    if d1 is not None:
+        return await streaks_d1.set_leaderboard_show_photo(d1, user.id, show_photo)
     result = await set_leaderboard_show_photo(session, user.id, show_photo)
     return result
