@@ -4,18 +4,7 @@
 // genuinely need the browser are client islands (HeroActions, PlanButton,
 // OauthErrorRedirect) and the entrance animations are now CSS.
 import Link from "next/link"
-import {
-  ArrowUpRight,
-  CalendarDays,
-  Check,
-  ChevronRight,
-  FileText,
-  Layers,
-  MessageSquare,
-  Shield,
-  Sparkles,
-  Zap,
-} from "lucide-react"
+import { Check, ChevronRight, Layers, MessageSquare, Shield, Zap } from "lucide-react"
 import { formatUsd } from "@/lib/local-price"
 
 import LandingFooter from "@/components/landing/LandingFooter"
@@ -28,73 +17,43 @@ import Nav from "@/components/Nav"
 // points and ships all ~50 connector SVGs (116 KiB) to the browser for a server-only page.
 import { ConnectorIcon } from "@yomi/ui/icons"
 
-function WorkspacePreview() {
+// Plays out once on load: user's message lands, Yomi "types," then replies
+// with the approve chip — a small proof of the approval-before-action promise
+// instead of a static screenshot.
+function TelegramHeroCard() {
   return (
-    <div className="relative mx-auto w-full max-w-[520px] lg:ml-auto">
-      <div className="absolute -inset-8 rounded-[3rem] bg-primary/10 blur-3xl" aria-hidden="true" />
-      <div className="relative overflow-hidden rounded-[2rem] border border-white/50 bg-slate-950 p-3 shadow-2xl shadow-blue-950/20">
-        <div className="rounded-[1.4rem] border border-white/10 bg-slate-900/90 p-4 text-white sm:p-5">
-          <div className="mb-5 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="grid size-8 place-items-center rounded-xl bg-blue-500/15 text-blue-300">
-                <Sparkles size={16} />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Yomi workspace</p>
-                <p className="text-[11px] text-white/45">Your context, connected</p>
-              </div>
-            </div>
-            <span className="flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-medium text-emerald-300">
-              <span className="size-1.5 rounded-full bg-emerald-400" /> Ready
-            </span>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
-            <div className="mb-3 flex items-center gap-2 text-[11px] text-white/45">
-              <ConnectorIcon id="telegram" size={13} /> Telegram · just now
-            </div>
-            <p className="text-base leading-relaxed text-white/90 sm:text-lg">
-              “Pull together everything I need for tomorrow&apos;s client call.”
-            </p>
-            <div className="mt-4 flex items-center gap-2 text-xs text-blue-200">
-              <span className="grid size-5 place-items-center rounded-full bg-blue-400/15">
-                <Check size={12} />
-              </span>
-              Searching your connected context
-            </div>
-          </div>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            {[
-              {
-                icon: CalendarDays,
-                label: "Calendar",
-                value: "Client sync",
-                detail: "Tomorrow · 3:00 PM",
-              },
-              {
-                icon: FileText,
-                label: "Briefing",
-                value: "5 key takeaways",
-                detail: "From Drive + Gmail",
-              },
-            ].map(({ icon: Icon, label, value, detail }) => (
-              <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
-                <div className="mb-3 flex items-center justify-between text-white/45">
-                  <span className="flex items-center gap-2 text-[11px]">
-                    <Icon size={14} /> {label}
-                  </span>
-                  <ArrowUpRight size={14} />
-                </div>
-                <p className="text-sm font-medium">{value}</p>
-                <p className="mt-1 text-xs text-white/45">{detail}</p>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-4 text-[11px] text-white/45">
-            <span>Actions wait for your approval</span>
-            <span className="flex items-center gap-1.5 text-emerald-300">
-              <Shield size={12} /> Private by default
-            </span>
-          </div>
+    <div className="glass-card mb-6 max-w-md rounded-2xl p-4">
+      <div className="mb-3 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        <ConnectorIcon id="telegram" size={13} />
+        Yomi on Telegram
+      </div>
+
+      <div className="animate-msg-in flex justify-end">
+        <p className="max-w-[80%] rounded-2xl rounded-tr-sm bg-foreground/[0.06] px-3.5 py-2 text-sm text-foreground">
+          Move my 3pm to Thursday and tell Sarah
+        </p>
+      </div>
+
+      {/* grid stacking (not absolute) so the card grows to fit whichever
+          overlapping child — indicator or reply — is tallest right now */}
+      <div className="relative mt-2 grid">
+        <div className="hero-typing col-start-1 row-start-1 flex h-fit items-center gap-1 rounded-2xl rounded-tl-sm bg-primary/10 px-4 py-3">
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              // staggered to match the indicator's own 1.5s start
+              style={{ animationDelay: `${1.5 + i * 0.15}s` }}
+              className="hero-typing-dot h-1.5 w-1.5 rounded-full bg-primary/50"
+            />
+          ))}
+        </div>
+
+        <div className="animate-reply-in col-start-1 row-start-1 h-fit max-w-[85%] rounded-2xl rounded-tl-sm bg-primary/10 px-3.5 py-2.5 text-sm text-foreground">
+          <p>Done — moved to Thursday 3pm. Drafted a note to Sarah.</p>
+          <p className="animate-chip-in mt-2 inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground">
+            <Check size={12} />
+            Approve to send
+          </p>
         </div>
       </div>
     </div>
@@ -229,17 +188,16 @@ export function LandingPage() {
         <section
           id="hero"
           style={{ marginTop: "-74px" }}
-          className="relative flex min-h-[760px] flex-col overflow-hidden"
+          className="relative flex min-h-screen flex-col overflow-hidden"
         >
           <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 flex-col justify-between px-5 pb-8 pt-28 sm:px-8 sm:pb-10 lg:px-10">
             <div className="animate-rise-in mb-6 flex flex-wrap items-center gap-3 text-xs font-medium text-muted-foreground">
-              <span className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-primary">
-                <span className="size-1.5 rounded-full bg-primary" />
+              <span className="rounded-full border border-border bg-card/70 px-3 py-1.5 backdrop-blur-md">
                 Early access
               </span>
               <span className="flex items-center gap-1.5">
                 <Zap size={14} className="fill-primary/30 text-primary" />
-                Under 2s fast path
+                &lt; 2s fast path
               </span>
               <span className="hidden h-1 w-1 rounded-full bg-border sm:block" />
               <span>On Telegram · text, voice, or photo</span>
@@ -248,8 +206,8 @@ export function LandingPage() {
             {/* big centered tagline — the heart of the hero */}
             <div className="animate-hero-rise-delayed mx-auto flex max-w-5xl flex-col items-center px-2 text-center">
               <p className="font-serif text-5xl leading-[1.04] tracking-tight text-foreground sm:text-6xl lg:text-7xl xl:text-[5.5rem]">
-                Your <span className="text-primary">work,</span> in one{" "}
-                <em className="italic">conversation</em>.
+                Your <span className="text-primary">AI companion</span> for work{" "}
+                <em className="italic">and life</em>.
               </p>
             </div>
 
@@ -259,8 +217,8 @@ export function LandingPage() {
                   against the CTA panel — that pairing only exists at lg+
                   (grid-cols-[1fr_360px]), so below that it stays a normal
                   heading instead of an orphaned oversized word */}
-                <h1 className="animate-hero-rise-delayed font-accent text-5xl leading-[0.95] tracking-tight text-foreground sm:text-7xl lg:text-[8.5rem] lg:leading-[0.84]">
-                  Yomi, without the busywork.
+                <h1 className="animate-hero-rise-delayed font-accent text-4xl leading-tight tracking-normal text-foreground lg:text-[11.2rem] lg:leading-[0.82]">
+                  Yomi
                   {/* the visible wordmark alone is a poor heading for search and screen readers */}
                   <span className="sr-only"> — AI productivity assistant on Telegram</span>
                 </h1>
@@ -269,11 +227,11 @@ export function LandingPage() {
                   {/* the hero's one visual: a real exchange, not a stock photo —
                     plays out as Yomi actually replies, doubling as proof of
                     the approval-before-action promise */}
-                  <WorkspacePreview />
+                  <TelegramHeroCard />
 
                   <div className="mb-7 max-w-md">
                     <div className="flex flex-wrap gap-2">
-                      {["Telegram", "Connected context", "Approval-first"].map((tag) => (
+                      {["Telegram", "Web dashboard", "No copy-paste"].map((tag) => (
                         <span
                           key={tag}
                           className="rounded-full border border-border bg-card/50 px-3 py-1 text-xs font-medium tracking-wide text-muted-foreground backdrop-blur-sm"
