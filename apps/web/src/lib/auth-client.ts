@@ -57,16 +57,32 @@ export type SessionResult = { session: AuthSession; user: AuthUser } | null
 // Module-level cache so several components mounting on the same page share one
 // get-session round trip. Invalidated on sign-out so a navigated-to page
 // refetches instead of reusing a stale session.
-let sessionPromise: Promise<SessionResult | null> | null = null
+type SessionFetch = { data: SessionResult | null; transientError: boolean }
 
-function fetchSession(): Promise<SessionResult | null> {
-  return fetch("/api/auth/get-session", { credentials: "same-origin" })
-    .then((res) => (res.ok ? res.json() : null))
-    .then((body: SessionResult | null) => (body?.session ? body : null))
-    .catch(() => null)
+let sessionPromise: Promise<SessionFetch> | null = null
+
+async function fetchSession(): Promise<SessionFetch> {
+  // Deploys briefly return 502/503 while the new container starts. Treat that
+  // as an unavailable session endpoint, not as a signed-out user.
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const res = await fetch("/api/auth/get-session", { credentials: "same-origin" })
+      if (res.ok) {
+        const body = (await res.json()) as SessionResult | null
+        return { data: body?.session ? body : null, transientError: false }
+      }
+      if (![408, 425, 429, 500, 502, 503, 504].includes(res.status)) {
+        return { data: null, transientError: false }
+      }
+    } catch {
+      // Network handover during a Worker/container rollout is retryable.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250 * 2 ** attempt))
+  }
+  return { data: null, transientError: true }
 }
 
-function getSession(): Promise<SessionResult | null> {
+function getSession(): Promise<SessionFetch> {
   if (!sessionPromise) sessionPromise = fetchSession()
   return sessionPromise
 }
@@ -78,13 +94,15 @@ function invalidateSession(): void {
 export function useSession() {
   const [data, setData] = useState<SessionResult | undefined>(undefined)
   const [isPending, setIsPending] = useState(true)
+  const [isError, setIsError] = useState(false)
 
   useEffect(() => {
     let alive = true
     setIsPending(true)
-    getSession().then((value) => {
+    getSession().then(({ data: value, transientError }) => {
       if (!alive) return
       setData(value)
+      setIsError(transientError)
       setIsPending(false)
     })
     return () => {
@@ -92,7 +110,7 @@ export function useSession() {
     }
   }, [])
 
-  return { data, isPending }
+  return { data, isPending, isError }
 }
 
 export async function signInSocial(opts: {

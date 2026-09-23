@@ -14,7 +14,7 @@ const POLL_INTERVAL_MS = 2_000
 const POLL_TIMEOUT_MS = 90_000
 
 function LinkPageContent() {
-  const { data: session, isPending } = authClient.useSession()
+  const { data: session, isPending, isError: sessionError } = authClient.useSession()
   const router = useRouter()
 
   const [connecting, setConnecting] = useState(false)
@@ -24,8 +24,8 @@ function LinkPageContent() {
   const [error, setError] = useState("")
 
   useEffect(() => {
-    if (!isPending && !session) router.push("/signin")
-  }, [session, isPending, router])
+    if (!isPending && !session && !sessionError) router.push("/signin")
+  }, [session, isPending, sessionError, router])
 
   useEffect(() => {
     if (!session) return

@@ -1,8 +1,8 @@
 # apps/web: Cloudflare Workers I/O rules
 
 The landing app deploys as a Cloudflare Worker. The backend is a **Python
-FastAPI Cloudflare Container** (`apps/api`), not a Worker — so these
-boundary rules concern the landing app itself. CF Workers bind native I/O to the
+FastAPI Cloudflare Container** (`apps/api`), not a Worker — so these boundary
+rules concern the landing app itself. CF Workers bind native I/O to the
 originating request context:
 
 - **Web never touches Postgres directly.** All DB access goes through the

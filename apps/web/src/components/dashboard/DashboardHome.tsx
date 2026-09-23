@@ -405,7 +405,9 @@ export function DashboardHome({
       />
 
       <MorningBriefCard
-        enabled={enabledSchedules.some((schedule) => /morning|weather|brief/i.test(schedule.prompt))}
+        enabled={enabledSchedules.some((schedule) =>
+          /morning|weather|brief/i.test(schedule.prompt),
+        )}
         onOpenSchedules={() => onNavigate("schedules")}
       />
 
@@ -762,25 +764,44 @@ function MorningBriefCard({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-sm font-semibold text-foreground">Your morning brief</h2>
-              <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase", enabled ? "bg-emerald-500/10 text-emerald-400" : "bg-muted text-muted-foreground")}>
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase",
+                  enabled ? "bg-emerald-500/10 text-emerald-400" : "bg-muted text-muted-foreground",
+                )}
+              >
                 {enabled ? "Active" : "Ready to set up"}
               </span>
             </div>
             <p className="mt-1.5 max-w-xl text-sm leading-5 text-muted-foreground">
-              Say “Good morning, darling” in Telegram and Yomi can bring weather, today&apos;s calendar, priorities, and a gentle first step together.
+              Say “Good morning, darling” in Telegram and Yomi can bring weather, today&apos;s
+              calendar, priorities, and a gentle first step together.
             </p>
             <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
               {["Weather", "Calendar", "Tasks", "Inbox signals"].map((item) => (
-                <span key={item} className="rounded-full border border-border bg-background/50 px-2.5 py-1">{item}</span>
+                <span
+                  key={item}
+                  className="rounded-full border border-border bg-background/50 px-2.5 py-1"
+                >
+                  {item}
+                </span>
               ))}
             </div>
           </div>
         </div>
-        <button onClick={onOpenSchedules} className="shrink-0 rounded-xl border border-primary/30 px-3 py-2 text-xs font-medium text-primary transition hover:bg-primary/10">
+        <button
+          onClick={onOpenSchedules}
+          className="shrink-0 rounded-xl border border-primary/30 px-3 py-2 text-xs font-medium text-primary transition hover:bg-primary/10"
+        >
           {enabled ? "Tune the brief" : "Set up the brief"}
         </button>
       </div>
-      {!enabled && <p className="mt-4 border-t border-border/70 pt-3 text-xs text-muted-foreground">Yomi will ask for the missing details, like your weather location, preferred time, and what should never be disturbed.</p>}
+      {!enabled && (
+        <p className="mt-4 border-t border-border/70 pt-3 text-xs text-muted-foreground">
+          Yomi will ask for the missing details, like your weather location, preferred time, and
+          what should never be disturbed.
+        </p>
+      )}
     </section>
   )
 }

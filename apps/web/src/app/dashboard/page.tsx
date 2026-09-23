@@ -129,7 +129,7 @@ function creditsCaption(included: number, resetAt?: string | null, resetKind?: R
 type PlatformLink = { platform: string; connectedAt: string }
 
 function DashboardContent() {
-  const { data: session, isPending } = authClient.useSession()
+  const { data: session, isPending, isError: sessionError } = authClient.useSession()
   const router = useRouter()
 
   const [sub, setSub] = useState<Sub | null>(null)
@@ -181,8 +181,8 @@ function DashboardContent() {
   const [unlinking, setUnlinking] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!isPending && !session) router.push("/signin")
-  }, [session, isPending, router])
+    if (!isPending && !session && !sessionError) router.push("/signin")
+  }, [session, isPending, sessionError, router])
 
   useEffect(() => {
     if (!session) return
@@ -859,13 +859,21 @@ function DashboardContent() {
         )}
 
         {activeTab === "activity" && session && (
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
             <AgentActivityManager token={session.session.token} />
           </motion.div>
         )}
 
         {activeTab === "approvals" && session && (
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
             <ApprovalManager token={session.session.token} />
           </motion.div>
         )}

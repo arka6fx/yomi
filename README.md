@@ -4,9 +4,9 @@
 
 # Yomi
 
-**The AI assistant that lives in your Telegram.** Text it, talk to it, or send
-a photo — Yomi drafts email, summarizes threads, schedules meetings, searches
-your files, files tasks, and acts across your Google Workspace, GitHub, Slack,
+**The AI assistant that lives in your Telegram.** Text it, talk to it, or send a
+photo — Yomi drafts email, summarizes threads, schedules meetings, searches your
+files, files tasks, and acts across your Google Workspace, GitHub, Slack,
 Notion, and Linear. It asks before it acts.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](./LICENSE)
@@ -20,7 +20,7 @@ Notion, and Linear. It asks before it acts.
 ---
 
 Yomi is a personal AI assistant on Telegram. There is no desktop app and no web
-chat — Telegram *is* the interface. Send a text, a voice note, or a photo, and
+chat — Telegram _is_ the interface. Send a text, a voice note, or a photo, and
 the backend reads and drafts email, summarizes threads, schedules meetings,
 files tasks, and keeps your tools in sync. The website is only a dashboard for
 linking services, setting schedules, reviewing memory, and checking credits.
@@ -31,9 +31,9 @@ linking services, setting schedules, reviewing memory, and checking credits.
 record a voice note, snap a photo, and Yomi goes to work across the tools you
 use every day — with explicit approval before anything irreversible happens.
 
-**A closed learning loop.** Yomi keeps canonical, user-owned memory in
-Postgres with pgvector. New facts are cross-checked against what it already
-knows (contradiction resolution at extraction), duplicates are merged by a
+**A closed learning loop.** Yomi keeps canonical, user-owned memory in Postgres
+with pgvector. New facts are cross-checked against what it already knows
+(contradiction resolution at extraction), duplicates are merged by a
 consolidation sweep, and session summaries compound into a deepening model of
 who you are — across chats, days, and projects.
 
@@ -49,13 +49,13 @@ stays dumb; the backend thinks, uses tools, and replies.
 **Scheduled automations.** Built-in cron for daily briefings, reports, and
 recurring checks — planned on a credit budget, delivered to Telegram.
 
-**A growing RAG archive.** `index_text`, `index_url`, and `index_document`
-write into your searchable archive; `deep_research` answers from it. Your
-notes, links, and documents compound instead of rotting in folders.
+**A growing RAG archive.** `index_text`, `index_url`, and `index_document` write
+into your searchable archive; `deep_research` answers from it. Your notes,
+links, and documents compound instead of rotting in folders.
 
-**Fair metering.** A single credit balance is the only usage gate — one
-balance, all connectors, no per-feature caps. There's a free Explore plan and
-unlimited connectors on every plan.
+**Fair metering.** A single credit balance is the only usage gate — one balance,
+all connectors, no per-feature caps. There's a free Explore plan and unlimited
+connectors on every plan.
 
 ## Works with
 
@@ -81,56 +81,54 @@ The fastest way to feel it: send a message to
 [**@yomi_assistant_bot**](https://t.me/yomi_assistant_bot) on Telegram — text,
 voice note, or a photo.
 
-Prefer to run it yourself? Skip to
-[Local Development](#local-development).
+Prefer to run it yourself? Skip to [Local Development](#local-development).
 
 ## How it works
 
-Yomi is backend-first. Durable memory, connector credentials, and the agent
-loop all live in the cloud backend, so the client stays thin. Telegram sends
-your message to the backend; the backend thinks, uses tools, and replies.
+Yomi is backend-first. Durable memory, connector credentials, and the agent loop
+all live in the cloud backend, so the client stays thin. Telegram sends your
+message to the backend; the backend thinks, uses tools, and replies.
 
 ```text
                  Telegram
           text / voice / images
                     │
                     ▼
-      ┌────────────────────────────┐
-│       BACKEND           │
-      │  FastAPI (Python, apps/api/) │
-      │  SQLAlchemy 2 async        │
-      │                            │
-      │auth, billing, LLM proxy,   │
-      │metering, scheduler,        │
-      │memory (pgvector)           │
-      └────────────┬───────────────┘
-                   │
-             ┌─────┴─────┐
-             │           │
-             ▼           ▼
-             Connectors  Postgres (Neon)
-             first-class pgvector
-             + Composio
-                  │
-                  └── Dashboard (Next.js on Workers)
-                      account linking, schedules, memory,
-                      credits — all data via the backend API
+      ┌────────────────────────────────┐
+      │          BACKEND               │
+      │  FastAPI (Python, apps/api/)   │
+      │  SQLAlchemy 2 async            │
+      │                                │
+      │  auth, billing, LLM proxy,     │
+      │  metering, scheduler, memory  │
+      └───────────────┬────────────────┘
+                      │
+                ┌─────┴─────┐
+                │           │
+                ▼           ▼
+         Connectors     Postgres (Neon)
+         first-class       + pgvector
+         + Composio
+                │
+                └── Dashboard (Next.js on Workers)
+                    account linking, schedules, memory,
+                    credits — all data via the backend API
 ```
 
 The backend is the only thing that talks to Postgres; the dashboard reaches the
 database, connectors, and memory through the backend API.
 
 > **Port complete.** The backend was rewritten from TypeScript (Hono on
-> Cloudflare Workers) to Python (FastAPI in a Cloudflare Container).
-> `apps/api/` is canonical for everything it covers — privacy, schedules,
-> memory, RAG, metering, billing, LLM, referrals, streaks, the agent loop, and
-> the Telegram gateway. Shared schema lives in `packages/db` (`yomi-db`,
-> SQLAlchemy 2 async). Same Postgres schema, same data, same API shape.
+> Cloudflare Workers) to Python (FastAPI in a Cloudflare Container). `apps/api/`
+> is canonical for everything it covers — privacy, schedules, memory, RAG,
+> metering, billing, LLM, referrals, streaks, the agent loop, and the Telegram
+> gateway. Shared schema lives in `packages/db` (`yomi-db`, SQLAlchemy 2 async).
+> Same Postgres schema, same data, same API shape.
 
 ### Request model
 
-Every request is one of two shapes, and the model never switches mid-turn —
-that would drop the prompt cache and mismatch the tool vocabulary.
+Every request is one of two shapes, and the model never switches mid-turn — that
+would drop the prompt cache and mismatch the tool vocabulary.
 
 | Request type   | Path                                | Budget             |
 | -------------- | ----------------------------------- | ------------------ |
@@ -148,21 +146,21 @@ projects/<p>/  context.md, scratchpad.md
 sessions/      YYYY-MM-DD-topic.md summaries
 ```
 
-Backend memory stays canonical for durable facts, document provenance,
-Telegram, and connector agents — encrypted at rest, user-owned, always
-exportable and deletable.
+Backend memory stays canonical for durable facts, document provenance, Telegram,
+and connector agents — encrypted at rest, user-owned, always exportable and
+deletable.
 
 ## Stack
 
-| Layer          | Choice                                                   |
-| -------------- | -------------------------------------------------------- |
-| Backend        | FastAPI + SQLAlchemy 2 async + Alembic (`apps/api/`)   |
-| LLM            | Cloudflare Workers AI (`qwen3.8-27b` fast + agent)       |
-| Speech-to-text | Workers AI `whisper` (replies are always text)            |
-| Embeddings     | Workers AI `bge-base-en-v1.5` (768-dim) → Vectorize      |
-| Database       | Neon PostgreSQL + pgvector                               |
-| Frontend       | Next.js on Cloudflare Workers                            |
-| Billing        | Dodo Payments                                            |
+| Layer          | Choice                                               |
+| -------------- | ---------------------------------------------------- |
+| Backend        | FastAPI + SQLAlchemy 2 async + Alembic (`apps/api/`) |
+| LLM            | Cloudflare Workers AI (`qwen3.8-27b` fast + agent)   |
+| Speech-to-text | Workers AI `whisper` (replies are always text)       |
+| Embeddings     | Workers AI `bge-base-en-v1.5` (768-dim) → Vectorize  |
+| Database       | Neon PostgreSQL + pgvector                           |
+| Frontend       | Next.js on Cloudflare Workers                        |
+| Billing        | Dodo Payments                                        |
 
 ## Monorepo layout
 
@@ -214,19 +212,18 @@ cp .env.example .env
 npm run dev --workspace @yomi/web    # http://localhost:3000
 ```
 
-| App     | Command                          | URL                      |
-| ------- | -------------------------------- | ------------------------ |
+| App | Command                             | URL                     |
+| --- | ----------------------------------- | ----------------------- |
 | Web | `npm run dev --workspace @yomi/web` | `http://localhost:3000` |
-| API | `npm run python:dev` | `http://localhost:8080` |
+| API | `npm run python:dev`                | `http://localhost:8080` |
 
 ## Configuration
 
 [`.env.example`](./.env.example) documents every TS app variable;
-[`apps/api/.env.example`](./apps/api/.env.example) is the Python
-backend equivalent (see
-[`apps/api/src/yomi/conf.py`](./apps/api/src/yomi/conf.py)). Secrets are
-never committed — real values live in gitignored `.env*` files and Cloudflare
-Worker secrets.
+[`apps/api/.env.example`](./apps/api/.env.example) is the Python backend
+equivalent (see [`apps/api/src/yomi/conf.py`](./apps/api/src/yomi/conf.py)).
+Secrets are never committed — real values live in gitignored `.env*` files and
+Cloudflare Worker secrets.
 
 > `ENCRYPTION_KEY` must match across environments. A different key makes every
 > stored connector token undecryptable. Rotate via `ENCRYPTION_KEY_FALLBACKS`.
@@ -236,11 +233,11 @@ Worker secrets.
 Billing is pure credits: a single credit balance is the only usage gate.
 Connectors are unlimited on every plan.
 
-| Plan    | Price  | Monthly credits         | Model         |
-| ------- | ------ | ----------------------- | ------------- |
-| Explore | $0/mo  | 100 (perpetual, renews) | qwen3.8-27b   |
-| Pro     | $5/mo  | 300                     | qwen3.8-27b   |
-| Max     | $40/mo | 750                     | qwen3.8-27b   |
+| Plan    | Price  | Monthly credits         | Model       |
+| ------- | ------ | ----------------------- | ----------- |
+| Explore | $0/mo  | 100 (perpetual, renews) | qwen3.8-27b |
+| Pro     | $5/mo  | 300                     | qwen3.8-27b |
+| Max     | $40/mo | 750                     | qwen3.8-27b |
 
 Credit packs (any plan): 85 credits/$5, 250 credits/$15, 750 credits/$40.
 
@@ -250,12 +247,12 @@ event, consume the credit. Every account is metered, including the operator's.
 
 ## Models
 
-| Capability | Provider / default              |
-| ---------- | ------------------------------- |
-| Fast path  | Workers AI `qwen3.8-27b`        |
-| Agent path | Workers AI `qwen3.8-27b`        |
-| Embeddings | Workers AI `bge-base-en-v1.5`   |
-| Speech     | Workers AI `whisper`            |
+| Capability | Provider / default            |
+| ---------- | ----------------------------- |
+| Fast path  | Workers AI `qwen3.8-27b`      |
+| Agent path | Workers AI `qwen3.8-27b`      |
+| Embeddings | Workers AI `bge-base-en-v1.5` |
+| Speech     | Workers AI `whisper`          |
 
 Speech-to-text handles incoming Telegram voice notes. Yomi always replies with
 text, never synthesized voice.
@@ -294,11 +291,11 @@ Both production apps are Cloudflare Workers deployed from GitHub Actions on
 pushes to `main`; each workflow runs typecheck, tests, and the docs sync check
 before it deploys.
 
-| Component | Target              | Domain           | Workflow             |
-| --------- | ------------------- | ---------------- | -------------------- |
-| Backend   | Cloudflare Container | `api.getyomi.in` | `deploy-backend.yml` |
-| Web       | Cloudflare Worker   | `getyomi.in`     | `deploy-landing.yml` |
-| Database  | Neon PostgreSQL     | n/a              | `packages/db` schema + Alembic migrations in `apps/api/` |
+| Component | Target               | Domain           | Workflow                                                 |
+| --------- | -------------------- | ---------------- | -------------------------------------------------------- |
+| Backend   | Cloudflare Container | `api.getyomi.in` | `deploy-backend.yml`                                     |
+| Web       | Cloudflare Worker    | `getyomi.in`     | `deploy-landing.yml`                                     |
+| Database  | Neon PostgreSQL      | n/a              | `packages/db` schema + Alembic migrations in `apps/api/` |
 
 Break-glass commands:
 
