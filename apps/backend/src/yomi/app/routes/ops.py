@@ -17,10 +17,12 @@ from yomi.app.deps import get_db_session
 from yomi.conf import settings
 from yomi.services import billing_d1, runs_d1
 from yomi.services.cloudflare_storage.deps import D1Backend, get_d1_backend, use_d1
+from yomi.services.rag import d1_backend
 
 ops_router = APIRouter()
 
 SWEEP_LIMIT = 3
+DRIVE_SWEEP_LIMIT = 5
 
 
 def _authorized(request: Request) -> bool:
@@ -65,3 +67,42 @@ async def dispatch_sweep(
         except Exception as exc:  # noqa: BLE001 — one bad run must not sink the sweep
             await runs_d1.fail_run(d1, str(run["id"]), f"{type(exc).__name__}: {exc}")
     return {"claimed": len(claimed), "processed": processed}
+
+
+@ops_router.post("/internal/rag/drive-sync")
+async def drive_sync_sweep(
+    request: Request,
+    d1: D1Backend | None = Depends(get_d1_backend),
+):
+    """Advance every drive source in flight (backfill batches, then change sync)."""
+    if not _authorized(request):
+        raise HTTPException(status_code=403, detail="forbidden")
+    if not use_d1() or d1 is None:
+        return JSONResponse({"error": "drive sync requires the d1 backend"}, 501)
+    from yomi.services.rag import drive as drive_rag
+
+    sources = await d1_backend.drive_sources_for_ops(d1, limit=DRIVE_SWEEP_LIMIT)
+    results: list[dict] = []
+    for source in sources:
+        user_id = str(source.get("user_id") or "")
+        source_id = str(source.get("id") or "")
+        entry: dict = {"sourceId": source_id}
+        if not user_id:
+            entry["skipped"] = "missing_user"
+            results.append(entry)
+            continue
+        session, connected = await drive_rag.build_drive_session(user_id)
+        if not connected:
+            entry["skipped"] = "drive_not_connected"
+            results.append(entry)
+            continue
+        try:
+            if source.get("status") == "backfilling":
+                outcome = await drive_rag.backfill_tick(d1, user_id, session, dict(source))
+            else:
+                outcome = await drive_rag.incremental_sync(d1, user_id, session, dict(source))
+            entry.update(outcome)
+        except Exception as exc:  # noqa: BLE001 — one source must not sink the sweep
+            entry["error"] = f"{type(exc).__name__}: {exc}"
+        results.append(entry)
+    return {"processed": len(sources), "results": results}

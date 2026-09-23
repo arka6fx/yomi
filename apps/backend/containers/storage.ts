@@ -2,11 +2,19 @@
 export interface StorageEnv {
   DB: D1Database;
   VECTORS: VectorizeIndex;
+  R2_INGEST: R2Bucket;
   STORAGE_GATEWAY_SECRET: string;
 }
 
 const DIMENSIONS = 768;
 const MAX_BODY_BYTES = 1_000_000;
+// Drive-sync content passes through R2 as a short-lived temp object: the
+// worker fetches the composio presigned URL so the Python container never
+// touches Amazon S3 directly. Objects older than this are garbage-collected
+// opportunistically on each put.
+const MAX_INGEST_BYTES = 8 * 1024 * 1024;
+const INGEST_TTL_MS = 24 * 60 * 60 * 1000;
+const INGEST_KEY_RE = /^ingest\/[a-zA-Z0-9._/-]+$/;
 type RecordType = "memory" | "rag";
 type JsonObject = Record<string, unknown>;
 
@@ -131,6 +139,9 @@ export async function storageFetch(request: Request, env: StorageEnv): Promise<R
   try {
     const path = new URL(request.url).pathname;
     const input = await body(request);
+    if (path === "/ingest/put") return await ingestPut(env, input);
+    if (path === "/ingest/read") return await ingestRead(env, input);
+    if (path === "/ingest/delete") return await ingestDelete(env, input);
     if (path === "/d1/query" || path === "/d1/batch") {
       // Primary reads avoid stale balances/auth during and after the migration.
       const session = env.DB.withSession("first-primary");
@@ -184,4 +195,88 @@ export async function storageFetch(request: Request, env: StorageEnv): Promise<R
     console.error("storage operation failed", { errorType: error instanceof Error ? error.name : "unknown" });
     return json({ error: "Storage operation failed" }, 502);
   }
+}
+
+async function ingestKey(input: JsonObject): Promise<string> {
+  const full = string(input.key, 300);
+  if (!INGEST_KEY_RE.test(full)) throw new InvalidRequest("Invalid key");
+  return full;
+}
+
+async function fetchBytes(url: string): Promise<[Uint8Array, string]> {
+  let target: URL;
+  try {
+    target = new URL(url);
+  } catch {
+    throw new InvalidRequest("Invalid url");
+  }
+  if (target.protocol !== "https:") throw new InvalidRequest("url must be https");
+  let upstream: Response;
+  try {
+    upstream = await fetch(target, { redirect: "follow" });
+  } catch {
+    throw new InvalidRequest("Upstream fetch failed");
+  }
+  if (!upstream.ok || !upstream.body) throw new InvalidRequest(`Upstream HTTP ${upstream.status}`);
+  const reader = upstream.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  while (true) {
+    const result = await reader.read();
+    if (result.done) break;
+    size += result.value.byteLength;
+    if (size > MAX_INGEST_BYTES) {
+      await reader.cancel();
+      throw new InvalidRequest("Upstream content too large");
+    }
+    chunks.push(result.value);
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return [bytes, upstream.headers.get("content-type") ?? "application/octet-stream"];
+}
+
+async function garbageCollect(bucket: R2Bucket): Promise<void> {
+  // Best-effort: drop temp objects older than INGEST_TTL_MS on each put.
+  const cutoff = Date.now() - INGEST_TTL_MS;
+  const listed = await bucket.list({ prefix: "ingest/", limit: 100 });
+  await Promise.all(listed.objects.filter((o) => o.uploaded.getTime() < cutoff).map((o) => bucket.delete(o.key)));
+}
+
+async function ingestPut(env: StorageEnv, input: JsonObject): Promise<Response> {
+  const url = string(input.url, 4_000);
+  const rawPrefix = typeof input.prefix === "string" && input.prefix.length ? input.prefix : "drive";
+  if (!/^[a-zA-Z0-9._-]+$/.test(rawPrefix) || rawPrefix.length > 128) {
+    throw new InvalidRequest("Invalid prefix");
+  }
+  const [bytes, contentType] = await fetchBytes(url);
+  const key = `ingest/${rawPrefix}/${crypto.randomUUID()}`;
+  await env.R2_INGEST.put(key, bytes, {
+    httpMetadata: { contentType },
+    customMetadata: { fetchedAtMs: String(Date.now()) },
+  });
+  await garbageCollect(env.R2_INGEST);
+  return json({ key, size: bytes.byteLength, contentType });
+}
+
+async function ingestRead(env: StorageEnv, input: JsonObject): Promise<Response> {
+  const key = await ingestKey(input);
+  const stored = await env.R2_INGEST.get(key);
+  if (!stored) return json({ error: "Not found" }, 404);
+  return new Response(stored.body, {
+    headers: {
+      "content-type": stored.httpMetadata?.contentType ?? "application/octet-stream",
+      "Cache-Control": "no-store",
+    },
+  });
+}
+
+async function ingestDelete(env: StorageEnv, input: JsonObject): Promise<Response> {
+  const key = await ingestKey(input);
+  await env.R2_INGEST.delete(key);
+  return json({ ok: true });
 }

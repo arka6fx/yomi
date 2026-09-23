@@ -15,4 +15,9 @@ migrations_dir = "migrations-d1"
 binding = "VECTORS"
 index_name = "yomi-vectors-768"
 
+# Temp Drive-sync content (R2; Workers Paid).
+[[r2_buckets]]
+binding = "R2_INGEST"
+bucket_name = "yomi-ingest"
+
 # Configure with: npx wrangler secret put STORAGE_GATEWAY_SECRET -c ../wrangler.storage-prod.toml

@@ -123,3 +123,37 @@ class StorageClient:
         if not isinstance(matches, list):
             raise StorageError("Invalid Vectorize response")
         return matches
+
+    async def ingest_put(self, url: str, prefix: str = "drive") -> dict[str, Any]:
+        """Ask the storage gateway to fetch an external URL and hold the bytes
+        in R2 as a short-lived temp object. Keeps composio's presigned S3 URL
+        traffic inside Cloudflare; never touches Amazon S3 from the container."""
+        if not isinstance(url, str) or not url or len(url) > 4096 or not url.startswith("https://"):
+            raise ValueError("ingest_put requires an https URL")
+        data = await self.post("/ingest/put", {"url": url, "prefix": prefix})
+        key = data.get("key")
+        if not isinstance(key, str) or not key:
+            raise StorageError("Invalid ingest key")
+        return {
+            "key": key,
+            "size": int(data.get("size", 0)),
+            "contentType": data.get("contentType"),
+        }
+
+    async def ingest_read(self, key: str) -> bytes:
+        try:
+            response = await self.http.post(
+                f"{self.url}/ingest/read",
+                headers={"Authorization": f"Bearer {self.secret}"},
+                json={"key": key},
+                timeout=35.0,
+                follow_redirects=False,
+            )
+        except httpx.HTTPError:
+            raise StorageError("Storage transport failed; ingest read aborted") from None
+        if response.status_code != 200:
+            raise StorageError(f"Storage ingest read failed (HTTP {response.status_code})")
+        return response.content
+
+    async def ingest_delete(self, key: str) -> None:
+        await self.post("/ingest/delete", {"key": key})

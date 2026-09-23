@@ -5,6 +5,7 @@ Port of apps/backend/src/routes/rag.ts.
 
 from __future__ import annotations
 
+import logging
 import math
 import os
 from typing import Any
@@ -34,10 +35,25 @@ from yomi.services.rag.common import (
     _hash,
     _source_hash,
 )
+from yomi.services.rag.drive import (
+    GOOGLE_DRIVE_SOURCE_TYPE,
+    DriveToolError,
+    backfill_tick,
+    build_drive_session,
+    incremental_sync,
+)
+from yomi.services.rag.drive import (
+    create_source as create_drive_source,
+)
+from yomi.services.rag.drive import (
+    find_source as find_drive_source,
+)
 from yomi.services.rag.embeddings import DEFAULT_EMBEDDING_MODEL, chunk_text, embed_text
 from yomi.services.rag.index_document import IndexDocumentInput, index_document
 
 rag_router = APIRouter(prefix="/api/rag")
+
+logger = logging.getLogger(__name__)
 
 
 def _rag_allowed(user: User) -> bool:
@@ -266,6 +282,126 @@ async def sync_sources(
             removed += 1
 
     return {"synced": synced, "removed": removed}
+
+
+async def _load_drive_source(d1: D1Backend, user_id: str, source_id: str) -> dict[str, Any] | None:
+    row = await d1_backend.get_source(d1, user_id, source_id)
+    if row is None or row.get("source_type") != GOOGLE_DRIVE_SOURCE_TYPE:
+        return None
+    if row.get("status") == "deleted":
+        return None
+    return dict(row)
+
+
+@rag_router.post("/drive/sources", dependencies=[Depends(require_consent("cloud_memory"))])
+async def drive_create_source(
+    request: Request,
+    user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
+):
+    """Pin a Drive folder as an auto-sync RAG source (starts backfilling)."""
+    if not _rag_allowed(user):
+        return JSONResponse({"error": "Cloud RAG requires Pro", "code": "upgrade_required"}, 403)
+    if d1 is None:
+        return JSONResponse({"error": "Drive sources require the d1 backend"}, 501)
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        body = {}
+    if not isinstance(body, dict):
+        body = {}
+    folder_id = _clean(str(body.get("folderId", "")), 500)
+    if not folder_id:
+        return JSONResponse({"error": "folderId is required", "code": "invalid_folder"}, 400)
+    folder_name = _clean(str(body.get("name", "")), 120) or folder_id
+
+    _, connected = await build_drive_session(user.id)
+    if not connected:
+        return JSONResponse(
+            {"error": "Connect Google Drive first", "code": "connect_drive_required"}, 400
+        )
+
+    existing = await find_drive_source(d1, user.id, folder_id)
+    if existing is not None:
+        return {"source": d1_backend.source_json(existing), "exists": True}
+    source = await create_drive_source(d1, user.id, folder_id, folder_name)
+    return {"source": source, "exists": False}
+
+
+@rag_router.post("/drive/backfill", dependencies=[Depends(require_consent("cloud_memory"))])
+async def drive_backfill(
+    request: Request,
+    user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
+):
+    """Index the next batch (≤20) of a drive source's folder children."""
+    if not _rag_allowed(user):
+        return JSONResponse({"error": "Cloud RAG requires Pro", "code": "upgrade_required"}, 403)
+    if d1 is None:
+        return JSONResponse({"error": "Drive sources require the d1 backend"}, 501)
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        body = {}
+    if not isinstance(body, dict):
+        body = {}
+    source_id = _clean(str(body.get("sourceId", "")), 64)
+    if not source_id:
+        return JSONResponse({"error": "sourceId is required", "code": "invalid_source"}, 400)
+    source = await _load_drive_source(d1, user.id, source_id)
+    if source is None:
+        return JSONResponse({"error": "Source not found", "code": "source_not_found"}, 404)
+
+    session, connected = await build_drive_session(user.id)
+    if not connected:
+        return JSONResponse(
+            {"error": "Connect Google Drive first", "code": "connect_drive_required"}, 400
+        )
+    try:
+        return await backfill_tick(d1, user.id, session, source)
+    except DriveToolError as exc:
+        logger.warning("drive backfill failed for %s: %s", source_id, exc)
+        return JSONResponse({"error": str(exc), "code": "drive_error"}, 502)
+
+
+@rag_router.post("/drive/sync", dependencies=[Depends(require_consent("cloud_memory"))])
+async def drive_sync(
+    request: Request,
+    user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
+):
+    """Reconcile an active drive source against Google's Changes API."""
+    if not _rag_allowed(user):
+        return JSONResponse({"error": "Cloud RAG requires Pro", "code": "upgrade_required"}, 403)
+    if d1 is None:
+        return JSONResponse({"error": "Drive sources require the d1 backend"}, 501)
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        body = {}
+    if not isinstance(body, dict):
+        body = {}
+    source_id = _clean(str(body.get("sourceId", "")), 64)
+    if not source_id:
+        return JSONResponse({"error": "sourceId is required", "code": "invalid_source"}, 400)
+    source = await _load_drive_source(d1, user.id, source_id)
+    if source is None:
+        return JSONResponse({"error": "Source not found", "code": "source_not_found"}, 404)
+    if source.get("status") != "active":
+        return JSONResponse(
+            {"error": "Source is still backfilling", "code": "backfill_pending"}, 409
+        )
+
+    session, connected = await build_drive_session(user.id)
+    if not connected:
+        return JSONResponse(
+            {"error": "Connect Google Drive first", "code": "connect_drive_required"}, 400
+        )
+    try:
+        return await incremental_sync(d1, user.id, session, source)
+    except DriveToolError as exc:
+        logger.warning("drive sync failed for %s: %s", source_id, exc)
+        return JSONResponse({"error": str(exc), "code": "drive_error"}, 502)
 
 
 @rag_router.post("/documents", dependencies=[Depends(require_consent("cloud_memory"))])

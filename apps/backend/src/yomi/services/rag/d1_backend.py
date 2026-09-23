@@ -14,6 +14,7 @@ Embeddings stay provider-backed via ``embed_text`` (injectable for tests).
 
 from __future__ import annotations
 
+import json
 import math
 import os
 import uuid
@@ -384,6 +385,54 @@ async def delete_document_by_external_id(
         return False
     await _delete_single_document(backend, user_id, str(existing["id"]))
     return True
+
+
+async def get_source(
+    backend: D1Backend, user_id: str, source_id: str
+) -> dict[str, Any] | None:
+    """Full rag_sources row (includes ``sync_state``)."""
+    return await backend.store.fetch_one(
+        "SELECT * FROM rag_sources WHERE id = ? AND user_id = ? LIMIT 1",
+        [source_id, user_id],
+    )
+
+
+async def update_source_state(
+    backend: D1Backend,
+    source_id: str,
+    *,
+    status: str | None = None,
+    sync_state: dict[str, Any] | None = None,
+    name: str | None = None,
+) -> None:
+    """D1 rows have no JSON type — ``sync_state`` must be serialized explicitly
+    (``Statement`` only accepts scalar params)."""
+    clauses: list[str] = []
+    params: list[Any] = [utcnow_iso()]
+    if status is not None:
+        clauses.append("status = ?")
+        params.append(status)
+    if sync_state is not None:
+        clauses.append("sync_state = ?")
+        params.append(json.dumps(sync_state, separators=(",", ":"), sort_keys=True))
+    if name is not None:
+        clauses.append("name = ?")
+        params.append(name)
+    if not clauses:
+        return
+    params.append(source_id)
+    sql = f"UPDATE rag_sources SET {', '.join(clauses)}, updated_at = ? WHERE id = ?"
+    await backend.store.atomic([Statement(sql, params)])
+
+
+async def drive_sources_for_ops(backend: D1Backend, limit: int = 10) -> list[dict[str, Any]]:
+    """Active or backfilling google-drive sources across all users (ops sweep)."""
+    rows = await backend.store.fetch_all(
+        "SELECT * FROM rag_sources "
+        "WHERE source_type = ? AND status IN ('active', 'backfilling') LIMIT ?",
+        ["google-drive", max(1, min(limit, 100))],
+    )
+    return rows
 
 
 async def push_document(
