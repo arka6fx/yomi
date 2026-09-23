@@ -1,6 +1,6 @@
 {
   "name": "yomi",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A personal AI assistant on Telegram. Python FastAPI backend on Cloudflare Containers, Next.js dashboard on Cloudflare Workers.",
   "license": "MIT",
   "author": "Arka Garai <arkagarai292@gmail.com>",
@@ -13,8 +13,18 @@
     "url": "https://github.com/arka6fx/yomi/issues"
   },
   "keywords": [
-    "telegram", "ai", "assistant", "agent", "gmail",
-    "google-calendar", "google-workspace", "github", "slack", "notion", "linear", "automation"
+    "telegram",
+    "ai",
+    "assistant",
+    "agent",
+    "gmail",
+    "google-calendar",
+    "google-workspace",
+    "github",
+    "slack",
+    "notion",
+    "linear",
+    "automation"
   ],
   "private": true,
   "workspaces": [
