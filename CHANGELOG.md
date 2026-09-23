@@ -5,6 +5,52 @@ All notable changes to Yomi are documented here. The format follows
 from conventional commits via
 [release-please](https://github.com/googleapis/release-please).
 
+## [1.1.0](https://github.com/arka6fx/yomi/compare/v1.0.0...v1.1.0) (2026-09-23)
+
+
+### Features
+
+* add python oauth auth port for dashboard login ([913f460](https://github.com/arka6fx/yomi/commit/913f4602e13ba48e8f7e9501ab7c41b505e464ab))
+* **backend:** add telegram link token and connections endpoints ([a71e037](https://github.com/arka6fx/yomi/commit/a71e0372ba72a3c52261f7ed845dcefdde7002d3))
+* composio e2e + tools caps, sandbox worker, d1 runs/sessions ([724b363](https://github.com/arka6fx/yomi/commit/724b363e9b0c568e2242004cdc3a7385075f8a24))
+* google drive auto-sync rag sources via composio + r2 ingest ([01e7830](https://github.com/arka6fx/yomi/commit/01e783064b9f6623a3b096167fc2a482d8741bf9))
+* migrate backend storage from neon to cloudflare d1 and vectorize ([ee98230](https://github.com/arka6fx/yomi/commit/ee982306460b30ad8b87b20638c478bdc10e62c3))
+* migrate backend to Python FastAPI containers ([86a5bb1](https://github.com/arka6fx/yomi/commit/86a5bb1ce08018c57ad8884be2d8f6adf593d1aa))
+* port memory consolidation sweep + contradiction tests ([9eef4e3](https://github.com/arka6fx/yomi/commit/9eef4e38f740e9915b710b81d3b54e4bbbbd134c))
+* promote python backend, archive superpowers plans ([fd6c4dd](https://github.com/arka6fx/yomi/commit/fd6c4dd687e57ce60684c11727f3e011c85d33c4))
+* ship agent observability and dashboard controls ([214c318](https://github.com/arka6fx/yomi/commit/214c318d51bb00d8dd5ee3ae90a52003368da844))
+* ship python backend on cloudflare containers ([8ba5981](https://github.com/arka6fx/yomi/commit/8ba598114bccca94d5aaaf2de29c7e229237f864))
+* transcribe telegram voice notes and fix webhook path ([7ad5800](https://github.com/arka6fx/yomi/commit/7ad5800bc804e26a36fe45ec81a1273824e53349))
+
+
+### Bug Fixes
+
+* accept social sign-in provider in request body ([a67b146](https://github.com/arka6fx/yomi/commit/a67b14613d0cf3a35c5c74ff83305ec58271b7fa))
+* **backend:** accept raw session token as bearer and add telegram link endpoints ([55cdb1d](https://github.com/arka6fx/yomi/commit/55cdb1d4370aac559c901ddd942237d3c6afb3f6))
+* **backend:** create python-only tables at startup bootstrap ([df22a08](https://github.com/arka6fx/yomi/commit/df22a0821e69597c7b7696985303910756d9877a))
+* **backend:** snake_case oauth account token fields on sign-in callback ([cd919cd](https://github.com/arka6fx/yomi/commit/cd919cdcdcc472897b3e67f1c51b5aaf1c31321f))
+* **ci:** use node 22 for wrangler deploys ([5410fd8](https://github.com/arka6fx/yomi/commit/5410fd819b41e90299fcf5488a17c9f89ed9ad04))
+* **containers:** retry proxying requests that wake a hibernated container ([8a35b9c](https://github.com/arka6fx/yomi/commit/8a35b9caa788cd0ae3cb8ceda7eb7200a080c147))
+* credit ledger metadata key and naive utc timestamps ([8ea787e](https://github.com/arka6fx/yomi/commit/8ea787ecd2f4d2bca99ade91ea59deea13febb72))
+* encode datetime and json params in d1 auth writes ([531bb69](https://github.com/arka6fx/yomi/commit/531bb691923e0fd9ff67fd208b992676d4de24d1))
+* lint in composio migration ([dd32b71](https://github.com/arka6fx/yomi/commit/dd32b711af9de714edee00b3353c518abe623472))
+* meter linked telegram users and add stt retry ([0a9b3dd](https://github.com/arka6fx/yomi/commit/0a9b3ddd65d50b20b9c48616486a0b78a11c6255))
+* preserve sessions through deploys and polish dashboard ([030caaf](https://github.com/arka6fx/yomi/commit/030caaf74ed530f37a045e7e9f3d9080dd031a42))
+* record full gateway error tracebacks ([e0f230a](https://github.com/arka6fx/yomi/commit/e0f230ab71f26cc8d426d78173d734c8bd4e874a))
+* render telegram replies and chunk messages ([b8656e2](https://github.com/arka6fx/yomi/commit/b8656e2f463b5f16af69ac4d3d30334a58731824))
+* sanitize telegram markdown output ([232c428](https://github.com/arka6fx/yomi/commit/232c4289da37dd5b4905d2e64711a9f3173b4b8d))
+* strip BOM from worker secret env values ([8299b87](https://github.com/arka6fx/yomi/commit/8299b875b11314806f34209d731eb48f74055827))
+* sync billing telegram and agent flows ([f846dfc](https://github.com/arka6fx/yomi/commit/f846dfcfd6ad8ca62d5c70db1cdb068e04b7633c))
+* sync credits and clarify dodo checkout errors ([bae0a15](https://github.com/arka6fx/yomi/commit/bae0a152b8b14f23fe9ad9f9056410daab2252f1))
+* tolerate composio session failures in agent bootstrap ([1960a5b](https://github.com/arka6fx/yomi/commit/1960a5b5ab95f538cf8553386840a34e89720993))
+* use asyncpg dialect and direct neon host for db engine ([c11382c](https://github.com/arka6fx/yomi/commit/c11382c866a52928643f7b429857352a3379021d))
+* use metadata_ key on usage-event inserts ([eab7c55](https://github.com/arka6fx/yomi/commit/eab7c55d4ffa1425f1f0291b37847741c3f2503f))
+
+
+### Reverts
+
+* restore previous landing page ([403d69c](https://github.com/arka6fx/yomi/commit/403d69cf1645c2e2c4904e647b4ddb4131d76aa3))
+
 ## 1.0.0 (2026-09-18)
 
 
