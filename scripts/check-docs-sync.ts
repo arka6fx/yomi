@@ -1,8 +1,8 @@
 #!/usr/bin/env tsx
 // Fails when user-facing docs drift from the code that is their source of truth.
-// Connector registry metadata lives in packages/ui-connectors/src/catalog.ts (the
+// Connector registry metadata lives in packages/ui/src/catalog.ts (the
 // dashboard's display catalog); runtime connector defs are being ported to Python
-// (apps/backend/src/yomi/connectors). Scope is deliberately narrow to stay
+// (apps/api/src/yomi/connectors). Scope is deliberately narrow to stay
 // high-signal and false-positive free. Extend the SOURCES map as new duplicated
 // facts appear. See AGENTS.md "Docs: sources of truth".
 import { readFileSync } from "node:fs"
@@ -12,7 +12,7 @@ const ROOT = join(__dirname, "..")
 const read = (p: string) => readFileSync(join(ROOT, p), "utf8")
 const errors: string[] = []
 
-const CATALOG = "packages/ui-connectors/src/catalog.ts"
+const CATALOG = "packages/ui/src/catalog.ts"
 
 type Connector = { id: string; name: string }
 

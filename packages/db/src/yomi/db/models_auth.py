@@ -1,4 +1,4 @@
-"""Better Auth-owned tables (apps/backend/src/auth-schema.ts). Text PKs."""
+"""Better Auth-owned tables (apps/api/src/auth-schema.ts). Text PKs."""
 
 from __future__ import annotations
 

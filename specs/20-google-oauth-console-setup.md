@@ -40,7 +40,7 @@ scopes at connect time.
 
 Source of truth for scopes:
 the Google connector runtime defs (Python port in progress at
-`apps/backend/src/yomi/connectors/`).
+`apps/api/src/yomi/connectors/`).
 
 ---
 
@@ -386,7 +386,7 @@ Also enable in **Library** (same Google Cloud project):
 - Google Slides API
 
 See the Composio-backed Google connectors (Docs, Sheets, Slides) in the
-connector port (`apps/backend/src/yomi/connectors/`) for the exact setup steps.
+connector port (`apps/api/src/yomi/connectors/`) for the exact setup steps.
 
 ---
 

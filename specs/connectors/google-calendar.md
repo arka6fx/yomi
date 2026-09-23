@@ -1,6 +1,6 @@
 # Google Calendar Connector
 
-Runtime definition: Python port in progress (`apps/backend/src/yomi/connectors/`)
+Runtime definition: Python port in progress (`apps/api/src/yomi/connectors/`)
 
 Runtime id: `google-calendar`
 

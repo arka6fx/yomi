@@ -1,10 +1,10 @@
 // Per-connector example prompts shown once a connector is connected — on its
-// dashboard card (packages/ui-connectors) and in the proactive Telegram nudge
-// (apps/backend/src/services/connector-nudge.ts). Phrased as outcomes the user
+// dashboard card (packages/ui) and in the proactive Telegram nudge
+// (apps/api/src/services/connector-nudge.ts). Phrased as outcomes the user
 // can paste verbatim into Telegram, never as feature descriptions — an example
 // that only makes sense in the abstract reads as marketing, not something the
 // user can run right now. Keyed by connector id, matching
-// packages/ui-connectors/src/catalog.ts's CATALOG_DEFS ids. Covers every
+// packages/ui/src/catalog.ts's CATALOG_DEFS ids. Covers every
 // connector with available: true there (unavailable connectors are excluded).
 export const STARTER_PROMPTS: Record<string, string[]> = {
   google: ["Draft a reply to the last email from Sam", "Tell me when I get an email from my boss"],

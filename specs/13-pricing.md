@@ -32,7 +32,7 @@ plan.
 
 ## Enforcement
 
-- Single chokepoint: `apps/backend/src/services/metering.ts` → `chargeUsage()` —
+- Single chokepoint: `apps/api/src/services/metering.ts` → `chargeUsage()` —
   `hasBillablePlanAccess` (trial active / sub active / past_due grace) →
   `balance >= cost` else block → record `usage_events` row + `consumeCredits`.
   There is no owner bypass: every account, including the operator's, is metered
@@ -40,10 +40,10 @@ plan.
 - Out of credits: Explore → `subscription_required` (must subscribe); Pro/Max →
   `credits_exhausted` (buy a credit pack).
 - Credits expire monthly (subscription cycle) and on upgrade from Explore; packs
-  are added on top. Ledger: `apps/backend/src/services/credit-ledger.ts`.
+  are added on top. Ledger: `apps/api/src/services/credit-ledger.ts`.
 - Plan/cost source of truth: `packages/shared/src/plans.ts` (`PLANS`,
   `CREDIT_COSTS`, `CREDIT_PACKS`). Metering through backend `usage_events` +
   `credit_transactions`.
 
 Billing provider: Dodo Payments. USD is canonical (Pro 500¢, Max 4000¢). Billing
-routes: `apps/backend/src/routes/billing.ts`; reserve: `routes/usage.ts`.
+routes: `apps/api/src/routes/billing.ts`; reserve: `routes/usage.ts`.

@@ -34,10 +34,10 @@
     "format:check": "turbo run format:check",
     "clean": "turbo run clean",
     "clean:all": "turbo run clean && find . -name 'node_modules' -type d -prune -exec rm -rf '{}' +",
-"python:test": "cd apps/backend && uv run pytest -q",
-    "python:lint": "cd apps/backend && uv run ruff check .",
-    "python:dev": "cd apps/backend && uv run uvicorn yomi.run:app --reload --port 8080",
-    "python:typecheck": "cd apps/backend && uv run pyright src/"
+    "python:test": "cd apps/api && uv run pytest -q",
+    "python:lint": "cd apps/api && uv run ruff check .",
+    "python:dev": "cd apps/api && uv run uvicorn yomi.run:app --reload --port 8080",
+    "python:typecheck": "cd apps/api && uv run pyright src/"
   },
   "devDependencies": {
     "@yomi/eslint-config": "0.0.0",

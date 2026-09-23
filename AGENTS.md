@@ -41,7 +41,7 @@ Choose the highest, least-footprint rung that solves the problem:
                │
                ▼
    ┌──────────────────────────────────────────────┐
-   │   THIN WORKER (apps/backend/containers/)     │
+   │   THIN WORKER (apps/api/containers/)     │
    │   TypeScript, Cloudflare Containers API      │
    │   Routes all traffic → Python container      │
    │   Forwards secrets via envVars               │
@@ -49,7 +49,7 @@ Choose the highest, least-footprint rung that solves the problem:
                       │
                       ▼
    ┌──────────────────────────────────────────────┐
-   │       PYTHON CONTAINER (apps/backend/)       │
+   │       PYTHON CONTAINER (apps/api/)       │
    │   FastAPI + uvicorn on Cloudflare Containers │
    │                                              │
    │   auth, billing, LLM proxy, metering,        │
@@ -67,7 +67,7 @@ Choose the highest, least-footprint rung that solves the problem:
          first-class           Neon +
          + Composio            pgvector
               │
-              └── Dashboard (apps/landing, Next.js)
+              └── Dashboard (apps/web, Next.js)
                   marketing, auth, account linking,
                   credits, memory view
                   (all data via Python API)
@@ -78,7 +78,7 @@ Choose the highest, least-footprint rung that solves the problem:
 npm install && npm run dev
 
 # Python: install + run backend
-cd apps/backend && uv sync && uv run uvicorn yomi.run:app --reload --port 8080
+cd apps/api && uv sync && uv run uvicorn yomi.run:app --reload --port 8080
 
 # Shortcut from root:
 npm run python:dev
@@ -100,10 +100,10 @@ npm run python:dev
 
 ## Retired (do not reference)
 
-- Legacy Hono/TypeScript backend — **deleted**. `apps/backend`, once that
+- Legacy Hono/TypeScript backend — **deleted**. `apps/api`, once that
   Worker's home, now hosts the canonical **Python FastAPI** backend.
 - `packages/agent-core` — TypeScript AI SDK agent — **deleted**. Python
-  `apps/backend/src/yomi/services/agent/` is canonical.
+  `apps/api/src/yomi/services/agent/` is canonical.
 - `packages/db` (Drizzle/TS) — **deleted**. `packages/db` now ships the shared
   Python schema (`yomi-db`, SQLAlchemy 2 async) at `packages/db/src/yomi/db/`.
 
@@ -117,13 +117,13 @@ npm run python:dev
                │
                ▼
    ┌──────────────────────────────────────────────┐
-   │   Thin Worker (apps/backend/containers/worker.ts) │
+   │   Thin Worker (apps/api/containers/worker.ts) │
    │   Forwards all traffic + secrets to Python   │
    └──────────────────┬───────────────────────────┘
                       │ envVars (secrets)
                       ▼
    ┌──────────────────────────────────────────────┐
-   │   Python Container (apps/backend/src/yomi/)  │
+   │   Python Container (apps/api/src/yomi/)  │
    │   FastAPI + uvicorn on :8080                 │
    │                                              │
    │ Routes:                                      │
@@ -151,7 +151,7 @@ npm run python:dev
 
 ## Backend Status
 
-`apps/backend/` is **canonical and sole backend**. The legacy TS Hono Worker has been retired and deleted.
+`apps/api/` is **canonical and sole backend**. The legacy TS Hono Worker has been retired and deleted.
 
 ### Python Coverage
 
@@ -185,7 +185,7 @@ as `yomi.db.*` via the PEP 420 namespace). Better Auth owns `user / session / ac
 (session cookies validated by Python via JWT; OAuth handler still hits `api.getyomi.in` until cutover).
 
 Driver: `asyncpg` over TCP to Neon (this is why a Container, not a Worker, is required —
-asyncpg needs a real TCP socket). SQLAlchemy 2 async + Alembic migrations in `apps/backend/migrations`.
+asyncpg needs a real TCP socket). SQLAlchemy 2 async + Alembic migrations in `apps/api/migrations`.
 The Drizzle schema (`packages/db`) is retired, but the SQLAlchemy models mirror it one-for-one.
 
 ---
@@ -241,23 +241,23 @@ Browser AI: Workers AI (see above — no OpenAI anywhere)
 
 ## Deploys
 
-**Python backend** deploys itself on push to `main` when `apps/backend/**` or
+**Python backend** deploys itself on push to `main` when `apps/api/**` or
 `packages/db/**` changes (`.github/workflows/deploy-backend.yml`). Triggers `uv pytest`,
 then `wrangler deploy` which builds the Docker image and pushes to Cloudflare Containers.
 
-**Dashboard** deploys itself on push to `main` when `apps/landing/**` changes
+**Dashboard** deploys itself on push to `main` when `apps/web/**` changes
 (`.github/workflows/deploy-landing.yml`). Uses npm + `next build` + `wrangler deploy`.
 
 Secrets live as Worker Secrets (`wrangler secret put`), forwarded to the container
-via `envVars` in `apps/backend/containers/worker.ts`. See `apps/backend/README.md` for the full list.
+via `envVars` in `apps/api/containers/worker.ts`. See `apps/api/README.md` for the full list.
 
 Manual deploy (break-glass):
 ```bash
 # Python container
-cd apps/backend && npx wrangler deploy
+cd apps/api && npx wrangler deploy
 
 # Dashboard
-cd apps/landing && npm run deploy:production
+cd apps/web && npm run deploy:production
 ```
 
 ---
@@ -269,7 +269,7 @@ cd apps/landing && npm run deploy:production
 Conventional commits: `feat:`, `fix:`, `refactor:`, `perf:`, `style:`, `test:`, `chore:`, `docs:`.
 Lowercase, no full stop, max 72 chars.
 
-Before pushing: `npm run python:test && npm run python:lint` or `cd apps/backend && uv run pytest -q`.
+Before pushing: `npm run python:test && npm run python:lint` or `cd apps/api && uv run pytest -q`.
 
 ---
 

@@ -1,10 +1,10 @@
 # Spec 01 - Architecture
 
 ```text
-Cloud Backend (Hono on Cloudflare Workers)
+Cloud Backend (FastAPI on Cloudflare Containers)
   Better Auth, billing, Telegram gateway, LLM/STT proxy, usage metering, canonical memory
 
-Landing (Next.js on Cloudflare Workers)
+Web (Next.js on Cloudflare Workers)
   marketing, dashboard, billing, integrations, bot linking
 
 Postgres (Neon) - stateless HTTP driver, pgvector

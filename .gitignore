@@ -49,7 +49,7 @@ Thumbs.db
 *.log
 npm-debug.log*
 
-# Python (apps/backend backend)
+# Python (apps/api)
 __pycache__/
 *.py[cod]
 .venv/
@@ -75,7 +75,7 @@ test-results/
 .eslintcache
 
 # Auto-generated Next.js type reference
-apps/landing/next-env.d.ts
+apps/web/next-env.d.ts
 
 # Vendored examples (not part of Yomi workspace)
 examples/

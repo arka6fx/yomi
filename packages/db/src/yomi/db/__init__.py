@@ -1,7 +1,7 @@
 """Shared Yomi Postgres schema: SQLAlchemy 2 async models owned by packages/db.
 
 Engine/session wiring is NOT here — it needs app config (DATABASE_URL), so it
-lives in the backend at `yomi.db_session` (apps/backend). This package only
+lives in the backend at `yomi.db_session` (apps/api). This package only
 declares the schema so any consumer (backend, alembic, tooling) can import the
 same models.
 

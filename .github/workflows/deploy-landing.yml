@@ -1,6 +1,6 @@
 name: Deploy Landing
 
-# apps/landing deploys as a Cloudflare Worker (yomi-landing). NEXT_PUBLIC_* are
+# apps/web deploys as a Cloudflare Worker (yomi-landing). NEXT_PUBLIC_* are
 # baked in at build time, so they're set here rather than in wrangler.jsonc's
 # vars (which only apply at runtime). Values match RUNBOOK.md's documented
 # manual deploy — public URLs, not secrets.
@@ -8,7 +8,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "apps/landing/**"
+      - "apps/web/**"
       - "packages/**"
       - "package.json"
       - "package-lock.json"
@@ -76,7 +76,7 @@ jobs:
       # have them in their process environment.
       - name: Build, deploy, and smoke-test
         if: steps.staleness.outputs.stale != 'true'
-        working-directory: apps/landing
+        working-directory: apps/web
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

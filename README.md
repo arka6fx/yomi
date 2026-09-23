@@ -10,9 +10,9 @@ your files, files tasks, and acts across your Google Workspace, GitHub, Slack,
 Notion, and Linear. It asks before it acts.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](./LICENSE)
-[![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?style=flat-square&logo=python&logoColor=white)](./apps/backend)
-[![Frontend](https://img.shields.io/badge/Frontend-Next.js-000000?style=flat-square&logo=nextdotjs&logoColor=white)](./apps/landing)
-[![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)](./apps/backend/pyproject.toml)
+[![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?style=flat-square&logo=python&logoColor=white)](./apps/api)
+[![Frontend](https://img.shields.io/badge/Frontend-Next.js-000000?style=flat-square&logo=nextdotjs&logoColor=white)](./apps/web)
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)](./apps/api/pyproject.toml)
 [![CI](https://img.shields.io/github/actions/workflow/status/arka6fx/yomi/ci.yml?branch=main&label=TS%20CI&style=flat-square)](https://github.com/arka6fx/yomi/actions/workflows/ci.yml)
 [![Python CI](https://img.shields.io/github/actions/workflow/status/arka6fx/yomi/python-ci.yml?branch=main&label=Python%20CI&style=flat-square)](https://github.com/arka6fx/yomi/actions/workflows/python-ci.yml)
 [![Telegram](https://img.shields.io/badge/Telegram-%40yomi_assistant_bot-2CA5E0?style=flat-square&logo=telegram&logoColor=white)](https://t.me/yomi_assistant_bot)
@@ -97,7 +97,7 @@ your message to the backend; the backend thinks, uses tools, and replies.
                     ▼
       ┌────────────────────────────┐
 │       BACKEND           │
-      │  FastAPI (Python, apps/backend/) │
+      │  FastAPI (Python, apps/api/) │
       │  SQLAlchemy 2 async        │
       │                            │
       │auth, billing, LLM proxy,   │
@@ -122,7 +122,7 @@ database, connectors, and memory through the backend API.
 
 > **Port complete.** The backend was rewritten from TypeScript (Hono on
 > Cloudflare Workers) to Python (FastAPI in a Cloudflare Container).
-> `apps/backend/` is canonical for everything it covers — privacy, schedules,
+> `apps/api/` is canonical for everything it covers — privacy, schedules,
 > memory, RAG, metering, billing, LLM, referrals, streaks, the agent loop, and
 > the Telegram gateway. Shared schema lives in `packages/db` (`yomi-db`,
 > SQLAlchemy 2 async). Same Postgres schema, same data, same API shape.
@@ -156,23 +156,23 @@ exportable and deletable.
 
 | Layer          | Choice                                                   |
 | -------------- | -------------------------------------------------------- |
-| Backend        | FastAPI + SQLAlchemy 2 async + Alembic (`apps/backend/`)   |
+| Backend        | FastAPI + SQLAlchemy 2 async + Alembic (`apps/api/`)   |
 | LLM            | Cloudflare Workers AI (`qwen3.8-27b` fast + agent)       |
 | Speech-to-text | Workers AI `whisper` (replies are always text)            |
 | Embeddings     | Workers AI `bge-base-en-v1.5` (768-dim) → Vectorize      |
-| Database       | Cloudflare D1 + Vectorize (Neon retired)                 |
+| Database       | Neon PostgreSQL + pgvector                               |
 | Frontend       | Next.js on Cloudflare Workers                            |
 | Billing        | Dodo Payments                                            |
 
 ## Monorepo layout
 
 ```text
-apps/backend/            FastAPI backend (canonical, Python) — models, services,
-                         routers, alembic migrations, containers worker, tests
-apps/landing/            Next.js on Workers: marketing, dashboard, linking
-packages/db/             (Python) `yomi-db` — shared SQLAlchemy 2 async schema
-packages/shared/         (TS) contracts shared across apps
-packages/ui-connectors/  (TS) connector UI components
+apps/api/            FastAPI backend — services, routers, migrations, worker, tests
+apps/web/            Next.js dashboard and marketing site
+apps/sandbox/        Cloudflare Browser Run sandbox worker
+packages/db/         Python `yomi-db` shared SQLAlchemy schema
+packages/shared/     TypeScript contracts shared across apps
+packages/ui/         TypeScript connector UI components
 
 docs/adr/                Architecture decision records
 docs/agents/             Agent workflows (issue tracker, triage, domain docs)
@@ -184,7 +184,7 @@ specs/                   Product specifications and connector references
 ### Backend (Python)
 
 ```bash
-cd apps/backend
+cd apps/api
 uv sync --dev
 cp .env.example .env          # fill in Cloudflare credentials + secrets
 uv run uvicorn yomi.run:app --reload --port 8080
@@ -198,7 +198,7 @@ uv run pytest -q
 ```
 
 Migrations use Alembic against the same `DATABASE_URL` used by the container
-(`apps/backend/migrations`, schema owned by `packages/db`):
+(`apps/api/migrations`, schema owned by `packages/db`):
 
 ```bash
 uv run alembic upgrade head
@@ -206,25 +206,25 @@ uv run alembic upgrade head
 
 ### Dashboard (Next.js)
 
-Prerequisites: Bun 1.3.x, Node 20+.
+Prerequisites: Node 22+ and uv.
 
 ```bash
-bun install
+npm install
 cp .env.example .env
-cd apps/landing && bun run dev    # http://localhost:3000
+npm run dev --workspace @yomi/web    # http://localhost:3000
 ```
 
 | App     | Command                          | URL                      |
 | ------- | -------------------------------- | ------------------------ |
-| Landing | `cd apps/landing && bun run dev` | `http://localhost:3000` |
-| Backend | `cd apps/backend && uv run uvicorn ...` | `http://localhost:8080` |
+| Web | `npm run dev --workspace @yomi/web` | `http://localhost:3000` |
+| API | `npm run python:dev` | `http://localhost:8080` |
 
 ## Configuration
 
 [`.env.example`](./.env.example) documents every TS app variable;
-[`apps/backend/.env.example`](./apps/backend/.env.example) is the Python
+[`apps/api/.env.example`](./apps/api/.env.example) is the Python
 backend equivalent (see
-[`apps/backend/src/yomi/conf.py`](./apps/backend/src/yomi/conf.py)). Secrets are
+[`apps/api/src/yomi/conf.py`](./apps/api/src/yomi/conf.py)). Secrets are
 never committed — real values live in gitignored `.env*` files and Cloudflare
 Worker secrets.
 
@@ -244,7 +244,7 @@ Connectors are unlimited on every plan.
 
 Credit packs (any plan): 85 credits/$5, 250 credits/$15, 750 credits/$40.
 
-There is one chokepoint — `apps/backend/src/yomi/services/metering.py`
+There is one chokepoint — `apps/api/src/yomi/services/metering.py`
 (`charge_usage`): check the active plan, check `balance >= cost`, record the
 event, consume the credit. Every account is metered, including the operator's.
 
@@ -279,13 +279,13 @@ The full list lives in
 ## Commands
 
 ```bash
-# TypeScript workspace
-bun run lint
-bun run typecheck
-bun run test
+# TypeScript workspace (Turbo)
+npm run lint
+npm run typecheck
+npm run test
 
 # Python backend
-cd apps/backend && uv run ruff check . && uv run pytest -q
+cd apps/api && uv run ruff check . && uv run pytest -q
 ```
 
 ## Deployment
@@ -297,14 +297,14 @@ before it deploys.
 | Component | Target              | Domain           | Workflow             |
 | --------- | ------------------- | ---------------- | -------------------- |
 | Backend   | Cloudflare Container | `api.getyomi.in` | `deploy-backend.yml` |
-| Landing   | Cloudflare Worker   | `getyomi.in`     | `deploy-landing.yml` |
-| Database  | Neon (pgvector)     | n/a              | `packages/db` schema + Alembic migrations in `apps/backend/` |
+| Web       | Cloudflare Worker   | `getyomi.in`     | `deploy-landing.yml` |
+| Database  | Neon PostgreSQL     | n/a              | `packages/db` schema + Alembic migrations in `apps/api/` |
 
 Break-glass commands:
 
 ```bash
-cd apps/backend && npx wrangler deploy    # backend container
-cd apps/landing && bun run deploy:production   # frontend
+cd apps/api && npx wrangler deploy    # backend container
+npm run deploy:production --workspace @yomi/web
 ```
 
 ## Privacy

@@ -1,4 +1,4 @@
-# Spec 14 - Landing Page
+# Spec 14 - Web Site and Dashboard
 
 The landing app handles marketing, auth pages, dashboard, integrations, billing,
 bot linking, and downloads.

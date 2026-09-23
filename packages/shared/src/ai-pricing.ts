@@ -1,7 +1,7 @@
 // Single source of truth for model API pricing and cost computation.
 // Money is integer micro-USD (1 USD = 1_000_000 micros) to avoid float drift.
 // Rates are micro-USD per 1M tokens. Previously these numbers were duplicated
-// as cents-per-1K in apps/backend/routes/admin.ts and
+// as cents-per-1K in apps/api/routes/admin.ts and
 // Both backend and frontend derive from here.
 
 export interface ModelPrice {

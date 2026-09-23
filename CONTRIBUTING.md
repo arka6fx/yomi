@@ -1,8 +1,8 @@
 # Contributing to Yomi
 
 Thanks for contributing! Yomi is a personal AI assistant on Telegram: a FastAPI
-backend (Python, `apps/backend/` — canonical), a Next.js dashboard
-(`apps/landing`), an npm workspace, and a shared Python schema
+backend (Python, `apps/api/` — canonical), a Next.js dashboard
+(`apps/web`), an npm workspace, and a shared Python schema
 (`packages/db`, `yomi-db`). This guide keeps changes reviewable and CI green.
 
 ## Getting started
@@ -12,13 +12,13 @@ git clone https://github.com/arka6fx/yomi.git
 cd yomi
 
 # Python backend (canonical for new backend work)
-cd apps/backend
+cd apps/api
 uv sync --dev
 cp .env.example .env     # fill in at minimum the Cloudflare credentials
 uv run uvicorn yomi.run:app --reload --port 8080
 
 # Dashboard
-cd ../apps/landing
+cd ../../apps/web
 npm install
 npm run dev
 ```
@@ -29,15 +29,15 @@ Dev targets: backend on `http://localhost:8080`, dashboard on
 ## Repo layout
 
 ```text
-apps/backend/            FastAPI backend (Python): models, services, routers,
+apps/api/            FastAPI backend (Python): models, services, routers,
                          alembic migrations, containers worker, tests
-apps/landing/            Next.js on Workers: marketing, dashboard, account linking
+apps/web/            Next.js on Workers: marketing, dashboard, account linking
 packages/db/             (Python) `yomi-db` — shared SQLAlchemy 2 async schema
 packages/shared/         (TS) TypeScript contracts shared across apps
-packages/ui-connectors/  (TS) Connector UI components
+packages/ui/  (TS) Connector UI components
 ```
 
-New backend work goes into `apps/backend/` (FastAPI + SQLAlchemy 2 async; the
+New backend work goes into `apps/api/` (FastAPI + SQLAlchemy 2 async; the
 schema lives in `packages/db`). Python code is linted with `ruff` (line length
 100) and tested with `pytest`; TypeScript as described below. The backend CI
 job is `.github/workflows/python-ci.yml` (also covered by `ci.yml`).
@@ -65,21 +65,21 @@ makes a structural decision, add an ADR ([`docs/adr/0000-template.md`](docs/adr/
 
    ```bash
    # TypeScript workspace
-   npm run typecheck   # all packages, via turbo
+   npm run typecheck   # all packages, via Turbo
    npm run lint
    npm run test
    npm run format      # prettier; CI runs format:check, so match it
 
-   # Python backend (apps/backend/)
-   cd apps/backend && uv run ruff check .
-   cd apps/backend && uv run pytest -q
+   # Python backend (apps/api/)
+   cd apps/api && uv run ruff check .
+   cd apps/api && uv run pytest -q
    ```
 
    CI runs the same checks plus a docs sync check — a red build won't deploy.
 
 ## Test conventions
 
-- Python tests live in `apps/backend/tests/` (pytest, async-oriented; no real
+- Python tests live in `apps/api/tests/` (pytest, async-oriented; no real
   network/LLM calls — mock httpx/DB as the `tests/test_memory_*` suites do).
 - TypeScript tests are colocated next to the code they exercise
   (`packages/shared/src/*.test.ts`) and run under `vitest`.

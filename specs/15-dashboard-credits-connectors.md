@@ -30,17 +30,17 @@ reflect the nullable return.
 
 ### Connector enforcement removed
 
-- `apps/backend/src/routes/integrations.ts`: removed `checkConnectorLimit()`
+- `apps/api/src/routes/integrations.ts`: removed `checkConnectorLimit()`
   call and connector-count enforcement.
-- `apps/backend/src/agent/run.ts`: no longer slices connected providers by
+- `apps/api/src/agent/run.ts`: no longer slices connected providers by
   connector limit.
-- `apps/backend/src/routes/billing.ts`: plan feature copy uses "App connectors"
+- `apps/api/src/routes/billing.ts`: plan feature copy uses "App connectors"
   without a cap number.
-- `apps/landing/src/app/dashboard/page.tsx`: removed `limitReached` prop from
+- `apps/web/src/app/dashboard/page.tsx`: removed `limitReached` prop from
   `<ConnectorMarketplace>`; connector count displayed as `N connected`
   (unlimited style).
 
-### Dashboard credit meter (`apps/landing/src/app/dashboard/page.tsx`)
+### Dashboard credit meter (`apps/web/src/app/dashboard/page.tsx`)
 
 Replaced per-feature usage bars with a single credit meter:
 
@@ -65,33 +65,33 @@ Includes link/unlink/manage and loading states.
   - Dashboard plan feature arrays
   - Dashboard `CREDIT_USAGE_LABELS`
   - Landing page plan cards
-    (`apps/landing/src/components/landing/landing-page.tsx`)
-  - Backend billing plan features (`apps/backend/src/routes/billing.ts`)
-  - Backend usage route label (`apps/backend/src/routes/usage.ts`)
+    (`apps/web/src/components/landing/landing-page.tsx`)
+  - Backend billing plan features (`apps/api/src/routes/billing.ts`)
+  - Backend usage route label (`apps/api/src/routes/usage.ts`)
 
 ### Test fixes
 
-- `apps/backend/src/routes/billing.test.ts`: connector limit expectation changed
+- `apps/api/src/routes/billing.test.ts`: connector limit expectation changed
   from `{ limit: 8 }` to `{ limit: null }`.
-- `apps/backend/src/gateway/gateway-runner.test.ts`: DB mock includes
+- `apps/api/src/gateway/gateway-runner.test.ts`: DB mock includes
   `usageEvents`, `creditAccounts`, `creditGrants`, `creditTransactions`,
   `paymentRecords` for new credit-ledger imports; credit-ledger mock includes
   all exported functions.
-- `apps/backend/src/routes/billing.test.ts`: auth mock exports `getAuth`.
+- `apps/api/src/routes/billing.test.ts`: auth mock exports `getAuth`.
 
 ## Files Changed
 
 ```
 packages/shared/src/plans.ts
-apps/backend/src/routes/integrations.ts
-apps/backend/src/agent/run.ts
-apps/backend/src/routes/billing.ts
-apps/backend/src/routes/usage.ts
-apps/backend/src/routes/billing.test.ts
-apps/backend/src/gateway/gateway-runner.test.ts
-apps/landing/src/app/dashboard/page.tsx
-apps/landing/src/app/page.tsx
-apps/landing/src/components/landing/landing-page.tsx
+apps/api/src/routes/integrations.ts
+apps/api/src/agent/run.ts
+apps/api/src/routes/billing.ts
+apps/api/src/routes/usage.ts
+apps/api/src/routes/billing.test.ts
+apps/api/src/gateway/gateway-runner.test.ts
+apps/web/src/app/dashboard/page.tsx
+apps/web/src/app/page.tsx
+apps/web/src/components/landing/landing-page.tsx
 ```
 
 ## Out of Scope

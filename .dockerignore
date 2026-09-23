@@ -11,11 +11,11 @@ node_modules
 **/.pytest_cache
 **/.ruff_cache
 **/.mypy_cache
-apps/landing
-apps/backend/tests
-apps/backend/migrations
-apps/backend/containers
-apps/backend/README.md
+apps/web
+apps/api/tests
+apps/api/migrations
+apps/api/containers
+apps/api/README.md
 docs
 specs
 scripts

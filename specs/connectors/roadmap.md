@@ -4,8 +4,8 @@ Last updated: 2026-07-07
 
 ## Implementation status
 
-All registered connectors (cataloged in `packages/ui-connectors/src/catalog.ts`,
-runtime port in progress at `apps/backend/src/yomi/connectors/`) have concrete
+All registered connectors (cataloged in `packages/ui/src/catalog.ts`,
+runtime port in progress at `apps/api/src/yomi/connectors/`) have concrete
 tool factories and execute handlers. No registered connector is only a
 placeholder.
 

@@ -16,7 +16,7 @@ backend, independent of the Telegram client being open.
 
 ## Retrieval (`/api/rag/search`)
 
-`apps/backend/src/routes/rag.ts`. Hybrid pipeline:
+`apps/api/src/routes/rag.ts`. Hybrid pipeline:
 
 - Embed the query with OpenAI `text-embedding-3-small`.
 - Vector similarity + keyword candidates fused by Reciprocal Rank Fusion
@@ -35,7 +35,7 @@ content hash). Manual push routes and automated sync both use it.
 ### Agent-facing tools
 
 The backend agent can ingest and retrieve archive content mid-conversation
-(Python port in progress at `apps/backend/src/yomi/services/rag/`, originally
+(Python port in progress at `apps/api/src/yomi/services/rag/`, originally
 `packages/agent-core/src/index-{text,url,document}.ts` / `deep-research.ts`):
 
 - **`index_text`** — index a pasted snippet the user asks to remember.

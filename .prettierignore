@@ -11,7 +11,7 @@ obj/
 .agents/
 .codex/
 tmp/
-apps/landing/next-env.d.ts
+apps/web/next-env.d.ts
 
 # Vendored examples (not part of Yomi workspace)
 examples/

@@ -94,7 +94,7 @@ replies with synthesized voice — every reply is text.
 Cloud RAG indexes Yomi-generated archive material and exposes search over the
 corpus.
 
-Routes in `apps/backend/src/routes/rag.ts`:
+Routes in `apps/api/src/routes/rag.ts`:
 
 | Route                         | Purpose                                                 |
 | ----------------------------- | ------------------------------------------------------- |
@@ -116,7 +116,7 @@ Cloud search returns compact snippets with source metadata.
 
 ## Memory API
 
-Routes in `apps/backend/src/routes/memory.ts`:
+Routes in `apps/api/src/routes/memory.ts`:
 
 | Route                     | Purpose                                  |
 | ------------------------- | ---------------------------------------- |
@@ -130,15 +130,15 @@ Routes in `apps/backend/src/routes/memory.ts`:
 
 ## Implemented Files
 
-- `apps/backend/src/index.ts`
-- `apps/backend/src/routes/billing.ts`
-- `apps/backend/src/routes/usage.ts`
-- `apps/backend/src/services/transcription.ts`
-- `apps/backend/src/routes/llm.ts`
-- `apps/backend/src/routes/rag.ts`
-- `apps/backend/src/routes/memory.ts`
-- `apps/backend/src/services/metering.ts` (`chargeUsage` chokepoint)
-- `apps/backend/src/services/credit-ledger.ts`,
-  `apps/backend/src/services/credit-pricing.ts`
-- `apps/backend/src/gateway/gateway-runner.ts`, `apps/backend/src/agent/run.ts`
-- `apps/backend/src/auth.ts`
+- `apps/api/src/index.ts`
+- `apps/api/src/routes/billing.ts`
+- `apps/api/src/routes/usage.ts`
+- `apps/api/src/services/transcription.ts`
+- `apps/api/src/routes/llm.ts`
+- `apps/api/src/routes/rag.ts`
+- `apps/api/src/routes/memory.ts`
+- `apps/api/src/services/metering.ts` (`chargeUsage` chokepoint)
+- `apps/api/src/services/credit-ledger.ts`,
+  `apps/api/src/services/credit-pricing.ts`
+- `apps/api/src/gateway/gateway-runner.ts`, `apps/api/src/agent/run.ts`
+- `apps/api/src/auth.ts`

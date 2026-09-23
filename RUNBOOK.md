@@ -3,9 +3,9 @@
 Production topology:
 
 ```text
-Frontend / dashboard  https://getyomi.in        Cloudflare Worker (apps/landing)
-Backend API           https://api.getyomi.in    Cloudflare Container (apps/backend)
-Database              Cloudflare D1 + Vectorize (Neon retired)
+Frontend / dashboard  https://getyomi.in        Cloudflare Worker (apps/web)
+Backend API           https://api.getyomi.in    Cloudflare Container (apps/api)
+Database              Neon PostgreSQL + pgvector
 LLM + speech          Cloudflare Workers AI (qwen3.8-27b, whisper; replies are text)
 Billing               Dodo Payments
 ```
@@ -22,10 +22,10 @@ Billing               Dodo Payments
 
 ## Backend on Cloudflare Containers
 
-The backend is a Python FastAPI app (`apps/backend/src/yomi/`, entrypoint
-`yomi.run:app`, uvicorn on `:8080`) built from `apps/backend/Dockerfile`. It is
+The backend is a Python FastAPI app (`apps/api/src/yomi/`, entrypoint
+`yomi.run:app`, uvicorn on `:8080`) built from `apps/api/Dockerfile`. It is
 a single instance per frame served by the thin Worker
-`apps/backend/containers/worker.ts` (config in `apps/backend/wrangler.toml`),
+`apps/api/containers/worker.ts` (config in `apps/api/wrangler.toml`),
 which forwards every request plus Worker Secrets (via `envVars`) to the
 container. `ENVIRONMENT=production` is the only value in `wrangler.toml`
 `[vars]`; everything else arrives as a Worker Secret.
@@ -36,12 +36,12 @@ Migrations are **not** run by deploy. After a schema change lands, run Alembic
 against the Neon `DATABASE_URL` (direct host, not the pooler):
 
 ```bash
-cd apps/backend && uv sync --frozen --no-dev
+cd apps/api && uv sync --frozen --no-dev
 uv run alembic upgrade head
 ```
 
 The schema itself is owned by `packages/db` (`yomi-db`, SQLAlchemy 2 async
-models); `apps/backend/migrations` holds the Alembic migration scripts.
+models); `apps/api/migrations` holds the Alembic migration scripts.
 
 ### Secrets (Worker secrets)
 
@@ -85,27 +85,27 @@ R2_ENDPOINT=...                       R2_BUCKET=yomi-assets
 ```
 
 Secrets are never committed. `.env.production` (gitignored) is only the local
-source you copy values from. Set them with `bunx wrangler secret put <NAME>`
-from `apps/backend`.
+source you copy values from. Set them with `npx wrangler secret put <NAME>`
+from `apps/api`.
 
 ### Deploy
 
 The backend deploys itself on push to `main`
 (`.github/workflows/deploy-backend.yml`). The workflow runs lint + tests first
-and blocks the deploy if they fail, then builds `apps/backend/Dockerfile`,
+and blocks the deploy if they fail, then builds `apps/api/Dockerfile`,
 pushes it to the Cloudflare registry, and deploys the Containers Worker. A
 post-deploy `/health` check runs when the `YOMI_SERVER_URL` secret is set.
 
 Break-glass / on-demand deploy when CI is unavailable:
 
 ```bash
-cd apps/backend && npx wrangler deploy
+cd apps/api && npx wrangler deploy
 ```
 
 Verify provisioning:
 
 ```bash
-bunx wrangler containers list
+npx wrangler containers list
 curl https://yomi-backend.<subdomain>.workers.dev/health
 ```
 
@@ -113,18 +113,18 @@ curl https://yomi-backend.<subdomain>.workers.dev/health
 
 ## Frontend on Cloudflare Workers
 
-`apps/landing` (Next.js 16) deploys as a static-assets Worker named
+`apps/web` (Next.js 16) deploys as a static-assets Worker named
 `yomi-landing`, with `getyomi.in` and `www.getyomi.in` as custom domains
-(declared in `apps/landing/wrangler.jsonc`).
+(declared in `apps/web/wrangler.jsonc`).
 
 ```bash
-bunx wrangler login   # needs Workers Scripts + Routes write
-cd apps/landing
+npx wrangler login   # needs Workers Scripts + Routes write
+cd apps/web
 NEXT_PUBLIC_BACKEND_URL=https://api.getyomi.in \
 NEXT_PUBLIC_API_URL=https://api.getyomi.in \
 NEXT_PUBLIC_APP_URL=https://getyomi.in \
   npm run build:cloudflare
-bunx wrangler deploy --env production
+npx wrangler deploy --env production
 ```
 
 `NEXT_PUBLIC_*` are baked at build time, so rebuild and redeploy after changing

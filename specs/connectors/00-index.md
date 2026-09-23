@@ -5,9 +5,9 @@ loop. Each connector spec lists the current tool names, read/write behavior,
 auth requirements, and known gaps.
 
 Runtime definitions live in the Python backend under
-`apps/backend/src/yomi/connectors/` (first-class tool sets; port in progress).
+`apps/api/src/yomi/connectors/` (first-class tool sets; port in progress).
 Dashboard display metadata is cataloged in
-`packages/ui-connectors/src/catalog.ts`.
+`packages/ui/src/catalog.ts`.
 
 ## First-class connectors
 
@@ -33,7 +33,7 @@ These share a single integration pattern: tools are resolved through Composio's
 unified executor and wrapped by the same approval gate as first-class writes.
 They have no per-connector spec — the Composio toolkit is the source of truth
 for their action list. The Python port wraps the same Composio toolkit under
-`apps/backend/src/yomi/connectors/`.
+`apps/api/src/yomi/connectors/`.
 
 | Connector             | Runtime id              | Connector    | Runtime id     |
 | --------------------- | ----------------------- | ------------ | -------------- |
@@ -72,6 +72,6 @@ explicit confirmation argument is supplied.
 The desktop client and its sidecar are retired (see
 `docs/adr/0002-retire-desktop-telegram-only.md`) — Telegram is the only
 interaction surface now. `gateWrite()` gates writes backend-side via
-`apps/backend/src/services/pending-actions.ts`. Approval synonyms ("yes",
+`apps/api/src/services/pending-actions.ts`. Approval synonyms ("yes",
 "/approve", …) are intercepted before intent routing and replay the stored tool
 call.

@@ -10,7 +10,7 @@
 >
 > Source of truth for scopes:
 > the Google connector runtime defs (Python port in progress at
-> `apps/backend/src/yomi/connectors/`).
+> `apps/api/src/yomi/connectors/`).
 
 ---
 
@@ -45,7 +45,7 @@ tasks), `classroom.student-submissions.me.readonly` (subsumed by
 `coursework.me`).
 
 No Google Contacts / People API scopes are requested — Yomi has no Contacts
-connector (the catalog at `packages/ui-connectors/src/catalog.ts` has no
+connector (the catalog at `packages/ui/src/catalog.ts` has no
 google-contacts entry).
 
 ### Deltas from a console that was set up before this pass

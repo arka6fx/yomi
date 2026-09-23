@@ -4,8 +4,8 @@ Two surfaces, two runtimes:
 
 | Surface | Runtime | Auth |
 | ------- | ------- | ---- |
-| Agent-loop tools | First-class port (`apps/backend/src/yomi/connectors/drive.py`) | OAuth 2.0, `https://www.googleapis.com/auth/drive` |
-| RAG auto-sync sources | Composio `googledrive` toolkit (`apps/backend/src/yomi/services/rag/drive.py`) | Composio connection for connector `google-drive` |
+| Agent-loop tools | First-class port (`apps/api/src/yomi/connectors/drive.py`) | OAuth 2.0, `https://www.googleapis.com/auth/drive` |
+| RAG auto-sync sources | Composio `googledrive` toolkit (`apps/api/src/yomi/services/rag/drive.py`) | Composio connection for connector `google-drive` |
 
 The `drive` scope also authorizes the **Slides**, **Sheets**, and **Docs** APIs
 — no extra consent. But each of those APIs must be separately **enabled** in the
@@ -67,7 +67,7 @@ use `gateWrite`.
 ## RAG auto-sync (drive sources)
 
 Full design: [ADR-0007](../../docs/adr/0007-google-drive-auto-sync-rag-r2.md).
-Runtime: `apps/backend/src/yomi/services/rag/drive.py`. Sync runs through the
+Runtime: `apps/api/src/yomi/services/rag/drive.py`. Sync runs through the
 Composio `googledrive` toolkit (`GOOGLEDRIVE_LIST_FILES`,
 `GOOGLEDRIVE_GET_CHANGES_START_PAGE_TOKEN`, `GOOGLEDRIVE_LIST_CHANGES`,
 `GOOGLEDRIVE_PARSE_FILE`); content is staged through the storage Worker into

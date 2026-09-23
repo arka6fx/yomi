@@ -7,14 +7,14 @@
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│  Thin Worker (apps/backend/containers/worker.ts)           │
+│  Thin Worker (apps/api/containers/worker.ts)           │
 │  Has bindings: BROWSER, AI, VECTORIZE, R2, KV       │
 │  Forwards requests + secrets to Python container     │
 └──────────────────┬───────────────────────────────────┘
                    │ envVars (secrets forwarded)
                    ▼
 ┌──────────────────────────────────────────────────────┐
-│  Python Container (apps/backend/src/yomi/)                 │
+│  Python Container (apps/api/src/yomi/)                 │
 │  FastAPI + uvicorn                                   │
 │                                                      │
 │  Accesses Cloudflare via REST API:                   │
@@ -60,7 +60,7 @@ cd server && npx wrangler secret put CLOUDFLARE_API_TOKEN
 cd server && npx wrangler secret put CLOUDFLARE_ACCOUNT_ID
 ```
 
-Create `apps/backend/src/yomi/services/browser.py`:
+Create `apps/api/src/yomi/services/browser.py`:
 
 ```python
 import httpx
@@ -129,9 +129,9 @@ See: <https://developers.cloudflare.com/browser-run/cdp/>
 > Do NOT replace gpt-5.5 for the main agent loop. Workers AI is for pre-classification,
 > post-processing summarization, and free embeddings (if adopting Vectorize).
 
-Add to `apps/backend/pyproject.toml` if not already present: `httpx` (already there).
+Add to `apps/api/pyproject.toml` if not already present: `httpx` (already there).
 
-Create `apps/backend/src/yomi/services/cloudflare_ai.py`:
+Create `apps/api/src/yomi/services/cloudflare_ai.py`:
 
 ```python
 import httpx
@@ -182,7 +182,7 @@ async def classify(text: str) -> str:
 npx wrangler vectorize create yomi-memory --dimensions=1536 --metric=cosine
 ```
 
-Create `apps/backend/src/yomi/services/vectorize.py`:
+Create `apps/api/src/yomi/services/vectorize.py`:
 
 ```python
 import httpx
@@ -228,9 +228,9 @@ cd server && npx wrangler secret put R2_SECRET_ACCESS_KEY
 cd server && npx wrangler secret put R2_ENDPOINT
 ```
 
-Add to `apps/backend/pyproject.toml`: `aiobotocore`
+Add to `apps/api/pyproject.toml`: `aiobotocore`
 
-Create `apps/backend/src/yomi/services/storage.py`:
+Create `apps/api/src/yomi/services/storage.py`:
 
 ```python
 import aiobotocore.session
@@ -268,7 +268,7 @@ async def get_file(key: str) -> bytes:
 ## Task 6 — Python Agent Loop
 
 Port the TS agent loop (the deleted `packages/agent-core/src/agent.ts`, AI SDK
-`ToolLoopAgent`) to Python. Completed at `apps/backend/src/yomi/services/agent/loop.py`:
+`ToolLoopAgent`) to Python. Completed at `apps/api/src/yomi/services/agent/loop.py`:
 
 ```python
 import json
@@ -340,7 +340,7 @@ Port these from TS:
 > **Key difference from TS**: the Python container has no 30-second request limit.
 > You don't need the queue consumer pattern — process inline. This SIMPLIFIES the architecture.
 
-Create `apps/backend/src/yomi/gateway/telegram.py`:
+Create `apps/api/src/yomi/gateway/telegram.py`:
 
 ```python
 from fastapi import APIRouter, Request
