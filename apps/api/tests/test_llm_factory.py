@@ -203,4 +203,5 @@ class TestComputerRegistration:
         names = {tool["function"]["name"] for tool in registry.get_openai_tools()}
         assert names == {
             "computer_screenshot", "computer_input", "computer_open", "computer_windows",
+            "computer_exec",
         }

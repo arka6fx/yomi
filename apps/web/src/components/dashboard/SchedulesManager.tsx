@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Clock, Loader2, Pause, Play, Plus, Trash2, X } from "lucide-react"
+import { CalendarDays, Clock, Loader2, Pause, Play, Plus, Trash2, X } from "lucide-react"
 
 type ScheduleRow = {
   id: string
@@ -17,6 +17,12 @@ type ScheduleRow = {
 }
 
 const EXAMPLES = ["every day 9am", "every monday 9am", "every weekday 8am", "every 2h", "30m"]
+
+const TEMPLATES = [
+  { name: "Morning brief", schedule: "every weekday 8am", prompt: "Check today's weather, calendar, tasks, and important inbox signals. Send me a concise morning brief on Telegram." },
+  { name: "Inbox follow-up", schedule: "every weekday 4pm", prompt: "Find important unanswered emails from the last 3 days and give me a short follow-up list. Do not send anything." },
+  { name: "Weekly reset", schedule: "every sunday 6pm", prompt: "Review my upcoming calendar and open tasks. Suggest three priorities and flag conflicts for next week." },
+]
 
 function when(value?: string | null) {
   if (!value) return null
@@ -156,6 +162,17 @@ export function SchedulesManager({ token }: { token: string }) {
 
       {showAdd && !locked && (
         <div className="mb-5 rounded-xl border border-border bg-background/40 p-4">
+          <div className="mb-4">
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><CalendarDays size={13} /> Start from a template</p>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {TEMPLATES.map((template) => (
+                <button key={template.name} onClick={() => { setSchedule(template.schedule); setPrompt(template.prompt) }} className="rounded-lg border border-border bg-card px-2.5 py-2 text-left text-xs text-foreground transition hover:border-primary/50">
+                  <span className="font-medium">{template.name}</span>
+                  <span className="mt-1 block line-clamp-2 text-[11px] leading-4 text-muted-foreground">{template.prompt}</span>
+                </button>
+              ))}
+            </div>
+          </div>
           <label className="mb-1 block text-xs font-medium text-muted-foreground">When</label>
           <input
             value={schedule}

@@ -8,6 +8,8 @@ keeping the container warm between ticks.
 from __future__ import annotations
 
 import hmac
+import logging
+import time
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -23,6 +25,7 @@ ops_router = APIRouter()
 
 SWEEP_LIMIT = 3
 DRIVE_SWEEP_LIMIT = 5
+logger = logging.getLogger(__name__)
 
 
 def _authorized(request: Request) -> bool:
@@ -67,6 +70,33 @@ async def dispatch_sweep(
         except Exception as exc:  # noqa: BLE001 — one bad run must not sink the sweep
             await runs_d1.fail_run(d1, str(run["id"]), f"{type(exc).__name__}: {exc}")
     return {"claimed": len(claimed), "processed": processed}
+
+
+@ops_router.post("/internal/ai/probe")
+async def workers_ai_probe(request: Request):
+    """Authenticated, low-cost Workers AI probe for paid-plan operations checks."""
+    if not _authorized(request):
+        raise HTTPException(status_code=403, detail="forbidden")
+    started = time.perf_counter()
+    from yomi.services.llm import chat_completion, model_for
+
+    try:
+        data = await chat_completion(
+            "fast",
+            [{"role": "user", "content": "Reply with exactly YOMI_WORKERS_AI_OK"}],
+            timeout=30,
+        )
+        content = str((data.get("choices") or [{}])[0].get("message", {}).get("content", ""))
+        return {
+            "status": "ok" if "YOMI_WORKERS_AI_OK" in content else "unexpected_response",
+            "model": model_for("fast"),
+            "latencyMs": int((time.perf_counter() - started) * 1000),
+        }
+    except Exception as exc:  # noqa: BLE001 — never return provider details
+        logger.warning("workers AI probe failed: %s", type(exc).__name__)
+        return JSONResponse(
+            {"status": "error", "error": type(exc).__name__}, status_code=503
+        )
 
 
 @ops_router.post("/internal/rag/drive-sync")

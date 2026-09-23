@@ -14,11 +14,15 @@ import {
   Gift,
   Flame,
   Sparkles,
+  Activity,
+  ShieldCheck,
 } from "lucide-react"
 
 export type DashboardTab =
   | "home"
   | "command-center"
+  | "activity"
+  | "approvals"
   | "integrations"
   | "memory"
   | "schedules"
@@ -65,6 +69,8 @@ export function SettingsMenu({ onNavigate }: { onNavigate: (tab: DashboardTab) =
 
   const topItems: MenuItem[] = [
     { label: "Command center", icon: Sparkles, onClick: () => navigate("command-center") },
+    { label: "Agent activity", icon: Activity, onClick: () => navigate("activity") },
+    { label: "Approvals", icon: ShieldCheck, onClick: () => navigate("approvals") },
     { label: "Connections", icon: Plug, onClick: () => navigate("integrations") },
     { label: "Memory", icon: Brain, onClick: () => navigate("memory") },
     { label: "Profile", icon: User, onClick: () => navigate("profile") },

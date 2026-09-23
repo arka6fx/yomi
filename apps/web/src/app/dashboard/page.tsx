@@ -37,6 +37,8 @@ import { SettingsMenu, type DashboardTab } from "@/components/dashboard/Settings
 import { DashboardHome, type PlanSummary } from "@/components/dashboard/DashboardHome"
 import { TelegramCard } from "@/components/dashboard/TelegramCard"
 import { CommandCenter } from "@/components/dashboard/CommandCenter"
+import { AgentActivityManager } from "@/components/dashboard/AgentActivityManager"
+import { ApprovalManager } from "@/components/dashboard/ApprovalManager"
 import {
   ConnectorMarketplace,
   CustomMcpServers,
@@ -853,6 +855,18 @@ function DashboardContent() {
               }))}
               onOpenConnections={() => setActiveTab("integrations")}
             />
+          </motion.div>
+        )}
+
+        {activeTab === "activity" && session && (
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+            <AgentActivityManager token={session.session.token} />
+          </motion.div>
+        )}
+
+        {activeTab === "approvals" && session && (
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+            <ApprovalManager token={session.session.token} />
           </motion.div>
         )}
 

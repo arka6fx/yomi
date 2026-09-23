@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 
 from yomi.app import __version__
+from yomi.app.routes.agent_runs import agent_runs_router
 from yomi.app.routes.billing import billing_router
 from yomi.app.routes.health import health_router
 from yomi.app.routes.llm import llm_router
@@ -83,6 +84,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(usage_router)
+    app.include_router(agent_runs_router)
     app.include_router(status_router)
     app.include_router(profile_router)
     app.include_router(billing_router)

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from yomi.conf import settings
 from yomi.services.agent.tools import build_user_registry, registry
+from yomi.services.evals import evaluate_reply
 from yomi.services.llm import chat_completion, first_message, model_for
 from yomi.services.metering import ChargeInput, charge_usage
 from yomi.shared.text import format_agent_soul
@@ -141,7 +142,10 @@ async def run_agent_loop(
             compression_prompt = [
                 {"role": "system", "content": "Compress this conversation history concisely; preserve decisions, user preferences, and pending tasks."},
             ] + messages
-            compressed_data = await chat_completion("fast", compression_prompt)
+            compressed_data = await chat_completion(
+                "fast", compression_prompt, user_id=user_id, db_session=db_session,
+                endpoint="agent.compaction", d1=d1,
+            )
             compressed = first_message(compressed_data).get("content") or ""
             messages = [
                 {"role": "system", "content": f"{base_prompt}\n\n<previous_context>\n{compressed}\n</previous_context>"},
@@ -153,6 +157,10 @@ async def run_agent_loop(
             data = await chat_completion(
                 purpose, messages, tools=tools if tools and not is_last_step else None,
                 model=model,
+                user_id=user_id,
+                db_session=db_session,
+                endpoint="agent.loop",
+                d1=d1,
             )
             msg = first_message(data)
 
@@ -184,6 +192,9 @@ async def run_agent_loop(
 
     messages = list(messages)
     result = await _run()
+    evaluation = evaluate_reply(result)
+    if not evaluation.passed:
+        logger.warning("agent_reply_eval_failed user_id=%s checks=%s", user_id, evaluation.checks)
     if db_session is not None or d1 is not None:
         await _charge_composio_usage(db_session, active, user_id, plan, d1)
     return result

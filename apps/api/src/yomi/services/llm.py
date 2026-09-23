@@ -8,11 +8,17 @@ httpx.HTTPError for the caller to map.
 
 from __future__ import annotations
 
+import logging
+import time
+import uuid
 from typing import Any, Literal
 
 import httpx
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from yomi.conf import settings
+
+logger = logging.getLogger(__name__)
 
 Purpose = Literal["fast", "agent", "search"]
 
@@ -53,26 +59,101 @@ async def chat_completion(
     tools: list[dict[str, Any]] | None = None,
     model: str | None = None,
     timeout: float = 120.0,
+    user_id: str | None = None,
+    db_session: AsyncSession | None = None,
+    d1: Any = None,
+    endpoint: str = "agent",
 ) -> dict[str, Any]:
     """POST a chat completion; returns the decoded response JSON."""
     url, token, _ = chat_endpoint()
+    request_id = str(uuid.uuid4())
+    started = time.perf_counter()
+    selected_model = model or model_for(purpose)
     payload: dict[str, Any] = {
-        "model": model or model_for(purpose),
+        "model": selected_model,
         "messages": messages,
     }
     if tools:
         payload["tools"] = tools
-    async with httpx.AsyncClient(timeout=httpx.Timeout(timeout)) as client:
-        response = await client.post(
-            url,
-            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-            json=payload,
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(timeout)) as client:
+            response = await client.post(
+                url,
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+                json=payload,
+            )
+            response.raise_for_status()
+            data = response.json()
+    except Exception as exc:
+        logger.warning(
+            "workers_ai_completion_failed request_id=%s purpose=%s model=%s latency_ms=%d error=%s",
+            request_id, purpose, selected_model, int((time.perf_counter() - started) * 1000),
+            type(exc).__name__,
         )
-        response.raise_for_status()
-        data = response.json()
+        if user_id and (db_session or d1):
+            await _record_completion_telemetry(
+                db_session, user_id, request_id, endpoint, purpose, selected_model,
+                int((time.perf_counter() - started) * 1000), None, type(exc).__name__, d1,
+            )
+        raise
     if not isinstance(data, dict):
         raise RuntimeError("Invalid Workers AI response")
+    latency_ms = int((time.perf_counter() - started) * 1000)
+    usage = data.get("usage") if isinstance(data.get("usage"), dict) else {}
+    logger.info(
+        "workers_ai_completion request_id=%s purpose=%s model=%s latency_ms=%d "
+        "input_tokens=%s output_tokens=%s",
+        request_id, purpose, selected_model, latency_ms,
+        usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0),
+    )
+    if user_id and (db_session or d1):
+        await _record_completion_telemetry(
+            db_session, user_id, request_id, endpoint, purpose, selected_model,
+            latency_ms, usage, None, d1,
+        )
     return data
+
+
+async def _record_completion_telemetry(
+    session: AsyncSession | None,
+    user_id: str,
+    request_id: str,
+    endpoint: str,
+    purpose: Purpose,
+    model: str,
+    latency_ms: int,
+    usage: dict[str, Any] | None,
+    error_code: str | None,
+    d1: Any = None,
+) -> None:
+    """Persist only numeric/provider metadata; never conversation content."""
+    from yomi.services.ai_telemetry import AiUsageRecord, record_ai_usage
+
+    usage = usage or {}
+    try:
+        record = AiUsageRecord(
+            user_id=user_id,
+            request_id=request_id,
+            endpoint=endpoint,
+            surface="agent",
+            status="error" if error_code else "done",
+            route=purpose,
+            model=model,
+            provider="workers-ai",
+            input_tokens=int(usage.get("prompt_tokens") or 0),
+            output_tokens=int(usage.get("completion_tokens") or 0),
+            latency_ms=latency_ms,
+            error_code=error_code,
+            metadata={"purpose": purpose},
+        )
+        if d1 is not None:
+            from yomi.services import billing_d1
+
+            await billing_d1.record_ai_usage(d1, record)
+        elif session is not None:
+            await record_ai_usage(session, record)
+    except Exception:  # telemetry is strictly best-effort
+        logger.debug("workers ai telemetry persistence failed", exc_info=True)
 
 
 def first_message(data: dict[str, Any]) -> dict[str, Any]:
