@@ -286,13 +286,10 @@ class TestConnect:
             "yomi.connectors.composio.get_composio",
             lambda: _FakeClient(fake_session),
         )
-        res = client.get("/api/integrations/connect/google?session=abc")
-        assert res.status_code == 200
-        body = res.json()
-        assert body["kind"] == "composio"
-        assert body["id"] == "google"
-        assert body["status"] == "needs_connection"
-        assert body["url"] == "https://composio.example/flow/gmail"
+        res = client.get("/api/integrations/connect/google?session=abc", follow_redirects=False)
+        assert res.status_code == 302
+        assert res.headers["location"] == "https://composio.example/flow/gmail"
+        assert res.headers["referrer-policy"] == "no-referrer"
         assert fake_session.callback_urls == ["https://getyomi.in/dashboard?connect=google"]
 
     def test_google_connector_maps_calendar_slug(self, client, monkeypatch):
@@ -328,12 +325,10 @@ class TestConnect:
             "yomi.connectors.composio.get_composio",
             lambda: _FakeClient(fake_session),
         )
-        res = client.get("/api/integrations/connect/github?session=abc")
-        assert res.status_code == 200
-        body = res.json()
-        assert body["kind"] == "composio"
-        assert body["status"] == "needs_connection"
-        assert body["url"] == "https://composio.example/flow/github"
+        res = client.get("/api/integrations/connect/github?session=abc", follow_redirects=False)
+        assert res.status_code == 302
+        assert res.headers["location"] == "https://composio.example/flow/github"
+        assert res.headers["referrer-policy"] == "no-referrer"
         assert fake_session.callback_urls == ["https://getyomi.in/dashboard?connect=github"]
 
     def test_composio_already_connected(self, client, monkeypatch):

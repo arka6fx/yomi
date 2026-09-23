@@ -116,3 +116,25 @@ class TestDodoAuth:
         monkeypatch.setenv("DODO_TEST_API_KEY", "test-key")
         monkeypatch.delenv("DODO_ENV", raising=False)
         assert billing_routes.dodo_auth() == "Bearer test-key"
+
+
+class TestCreateCheckout:
+    async def test_omits_blank_customer_name(self, monkeypatch) -> None:
+        captured: dict = {}
+
+        async def fake_dodo_request(path: str, body=None, method: str | None = None):
+            captured.update(path=path, body=body, method=method)
+            return {"checkout_url": "https://checkout.example/session"}
+
+        monkeypatch.setattr(billing_routes, "dodo_request", fake_dodo_request)
+        result = await billing_routes.create_dodo_checkout(
+            {
+                "productId": "p-1",
+                "user": {"id": "u-1", "email": "me@example.com", "name": None},
+                "metadata": {"userId": "u-1"},
+            }
+        )
+
+        assert result["checkout_url"] == "https://checkout.example/session"
+        assert captured["path"] == "/checkouts"
+        assert captured["body"]["customer"] == {"email": "me@example.com"}

@@ -88,7 +88,7 @@ npm run python:dev
 
 ## Stack
 
-- **LLM:** Cloudflare Workers AI via OpenAI-compatible endpoint (`@cf/qwen/qwen3.8-27b` chat/agent, `@cf/meta/llama-3.1-8b-instruct` search) — no OpenAI dependency
+- **LLM:** Cloudflare Workers AI via OpenAI-compatible endpoint (`@cf/qwen/qwen3.8-27b` chat/agent, `@cf/qwen/qwen3.8-27b` search) — no OpenAI dependency
 - **STT:** Workers AI `@cf/openai/whisper` — transcribes incoming voice notes; replies are always text
 - **Backend:** Python FastAPI + uvicorn on **Cloudflare Containers** (TCP socket → asyncpg works)
 - **Auth:** Better Auth (Google + GitHub OAuth) — session cookie validated by Python via JWT

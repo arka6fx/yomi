@@ -249,14 +249,17 @@ def checkout_url(data: dict[str, Any]) -> str | None:
 
 async def create_dodo_checkout(input_: dict[str, Any]) -> dict[str, Any]:
     logger.info("[yomi/billing] creating Dodo checkout for productId: %s", input_["productId"])
+    user = input_["user"]
+    # Dodo validates customer fields strictly. Better Auth permits a user with
+    # no display name, so do not serialise ``name: null`` into a checkout.
+    customer = {"email": user["email"]}
+    if isinstance(user.get("name"), str) and user["name"].strip():
+        customer["name"] = user["name"].strip()
     result = await dodo_request(
         "/checkouts",
         {
             "product_cart": [{"product_id": input_["productId"], "quantity": 1}],
-            "customer": {
-                "email": input_["user"]["email"],
-                "name": input_["user"]["name"],
-            },
+            "customer": customer,
             "metadata": input_["metadata"],
             "return_url": app_url("/dashboard"),
         },

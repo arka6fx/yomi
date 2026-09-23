@@ -8,8 +8,11 @@ verified against production after deploy.
 from __future__ import annotations
 
 import base64
+import hashlib
+import hmac
 import json
 from datetime import datetime
+from urllib.parse import urlencode
 
 import pytest
 from fastapi.testclient import TestClient
@@ -240,6 +243,21 @@ def test_session_payload_shape():
     assert payload["token"] == "rawtoken"
     assert payload["expiresAt"] is not None
     assert payload["createdAt"] is not None
+
+
+def test_telegram_webapp_init_data_requires_a_valid_bot_signature(monkeypatch):
+    from yomi.app.routes.auth import _telegram_webapp_user_id
+
+    token = "telegram-token"
+    monkeypatch.setattr("yomi.app.routes.auth.settings.telegram_bot_token", token)
+    values = {"auth_date": "1710000000", "query_id": "q-1", "user": json.dumps({"id": 42})}
+    check = "\n".join(f"{key}={values[key]}" for key in sorted(values))
+    secret = hmac.new(b"WebAppData", token.encode(), hashlib.sha256).digest()
+    values["hash"] = hmac.new(secret, check.encode(), hashlib.sha256).hexdigest()
+    init_data = urlencode(values)
+
+    assert _telegram_webapp_user_id(init_data) == "42"
+    assert _telegram_webapp_user_id(init_data + "tampered") is None
 
 
 def test_user_payload_shape():

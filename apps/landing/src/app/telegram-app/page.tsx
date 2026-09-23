@@ -23,8 +23,10 @@ export default function TelegramAppPage() {
           return
         }
         try {
-          const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? ""
-          const res = await fetch(`${backendUrl}/api/auth/telegram-webapp-auth`, {
+          // Keep auth on the landing origin. The /api proxy forwards it to the
+          // backend and returns the cookie to this same origin, so the ensuing
+          // dashboard session is immediately visible to the web app.
+          const res = await fetch("/api/auth/telegram-webapp-auth", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",

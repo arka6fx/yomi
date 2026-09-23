@@ -59,7 +59,7 @@ class Settings(BaseSettings):
     # Embeddings are 768-dimensional (bge-base); the Vectorize indexes match.
     workers_ai_fast_model: str = "@cf/qwen/qwen3.8-27b"
     workers_ai_agent_model: str = "@cf/qwen/qwen3.8-27b"
-    workers_ai_search_model: str = "@cf/meta/llama-3.1-8b-instruct"
+    workers_ai_search_model: str = "@cf/qwen/qwen3.8-27b"
     workers_ai_embedding_model: str = "@cf/baai/bge-base-en-v1.5"
     workers_ai_stt_model: str = "@cf/openai/whisper"
 

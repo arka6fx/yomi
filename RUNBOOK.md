@@ -57,7 +57,7 @@ BETTER_AUTH_SECRET=...
 
 INTERNAL_API_KEY=...
 WORKERS_AI_FAST_MODEL=@cf/qwen/qwen3.8-27b    WORKERS_AI_AGENT_MODEL=@cf/qwen/qwen3.8-27b
-WORKERS_AI_SEARCH_MODEL=@cf/meta/llama-3.1-8b-instruct
+WORKERS_AI_SEARCH_MODEL=@cf/qwen/qwen3.8-27b
 WORKERS_AI_EMBEDDING_MODEL=@cf/baai/bge-base-en-v1.5
 WORKERS_AI_STT_MODEL=@cf/openai/whisper
 

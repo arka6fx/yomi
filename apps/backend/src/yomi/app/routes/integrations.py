@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import RedirectResponse
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -541,4 +542,16 @@ async def connect_connector(
         url = await get_connection_url(str(user.id), toolkit, callback_url)
     except ConnectorError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+
+    # The dashboard opens this endpoint in a new tab because Telegram's webview
+    # cannot reliably complete third-party OAuth in-place.  Returning the link
+    # as JSON leaves that tab on an API response instead of taking the user to
+    # Composio.  Keep the JSON contract for programmatic callers, but follow the
+    # browser flow when the short-lived query-token authentication is used.
+    if request.query_params.get("session"):
+        response = RedirectResponse(url=url, status_code=302)
+        # Do not allow the session-bearing request URL to become the referrer of
+        # the third-party authorization page.
+        response.headers["Referrer-Policy"] = "no-referrer"
+        return response
     return {"kind": "composio", "id": connector_id, "status": "needs_connection", "url": url}

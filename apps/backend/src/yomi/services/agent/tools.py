@@ -74,11 +74,9 @@ registry.register(
 )
 
 async def _web_search(query: str) -> str:
-    from yomi.services.llm import chat_completion, first_message
+    from yomi.services.browser import search_results
 
-    data = await chat_completion("search", [{"role": "user", "content": query}])
-    content = first_message(data).get("content")
-    return content if isinstance(content, str) else ""
+    return await search_results(query)
 
 registry.register(
     name="web_search",

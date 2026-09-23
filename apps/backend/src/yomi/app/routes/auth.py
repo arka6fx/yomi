@@ -22,12 +22,13 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import hmac
 import json
 import logging
 import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import parse_qsl, urlencode
 
 import httpx
 from fastapi import APIRouter, Depends, Request
@@ -36,6 +37,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from yomi.conf import settings
+from yomi.db.models_app2 import PlatformConnection
 from yomi.db.models_auth import Account as AuthAccount
 from yomi.db.models_auth import Session as AuthSession
 from yomi.db.models_auth import User as AuthUser
@@ -88,6 +90,32 @@ def _gen_id(size: int = 32) -> str:
 
 def _base_user_id() -> str:
     return _gen_id()
+
+
+def _telegram_webapp_user_id(init_data: str) -> str | None:
+    """Validate Telegram Mini App init data and return its Telegram user id.
+
+    Telegram signs the newline-joined query fields (except ``hash``) with a
+    secret derived from the bot token.  Do this server-side: the browser's
+    ``initDataUnsafe`` object is explicitly not an authentication credential.
+    """
+    if not init_data or not settings.telegram_bot_token:
+        return None
+    try:
+        values = dict(parse_qsl(init_data, keep_blank_values=True, strict_parsing=True))
+        received_hash = values.pop("hash")
+        user = json.loads(values.get("user") or "{}")
+        user_id = user.get("id")
+        if not user_id:
+            return None
+        data_check_string = "\n".join(f"{key}={values[key]}" for key in sorted(values))
+        secret = hmac.new(
+            b"WebAppData", settings.telegram_bot_token.encode(), hashlib.sha256
+        ).digest()
+        expected_hash = hmac.new(secret, data_check_string.encode(), hashlib.sha256).hexdigest()
+        return str(user_id) if hmac.compare_digest(received_hash, expected_hash) else None
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+        return None
 
 
 def _default_error_url() -> str:
@@ -762,6 +790,81 @@ async def _apply_signup_side_effects_d1(backend: D1Backend, user_id: str, now: d
         )
     except Exception as exc:
         logger.error("[auth] signup consent seed failed for %s: %s", user_id, exc)
+
+
+@router.post("/telegram-webapp-auth")
+async def telegram_webapp_auth(
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+    d1: D1Backend | None = Depends(get_d1_backend),
+) -> JSONResponse:
+    """Turn verified Mini App init data into the normal Yomi web session.
+
+    A Telegram identity must already have been linked through ``/start``; the
+    endpoint deliberately never creates an account or link from browser input.
+    """
+    try:
+        body = await request.json()
+    except (json.JSONDecodeError, ValueError):
+        body = {}
+    init_data = body.get("initData") if isinstance(body, dict) else None
+    telegram_user_id = _telegram_webapp_user_id(init_data) if isinstance(init_data, str) else None
+    if telegram_user_id is None:
+        return JSONResponse(
+            {"ok": False, "linked": False, "error": "Invalid Telegram session"}, 401
+        )
+
+    if d1 is not None:
+        from yomi.services import connectors_d1
+
+        user_id = await connectors_d1.resolve_platform_user(
+            d1, "telegram", telegram_user_id, telegram_user_id
+        )
+        if user_id is None:
+            return JSONResponse({"ok": True, "linked": False})
+        user = await auth_d1.find_user_by_id(d1, user_id)
+        if user is None or user.deleted_at is not None:
+            return JSONResponse({"ok": True, "linked": False})
+        session_row = await auth_d1.create_session(
+            d1,
+            user_id=user_id,
+            token=_gen_id(32),
+            expires_at=(datetime.now(UTC) + SESSION_LIFETIME).isoformat(),
+            ip_address=_client_ip(request),
+            user_agent=request.headers.get("user-agent") or "",
+        )
+    else:
+        user_id = (
+            await db.execute(
+                select(PlatformConnection.user_id)
+                .where(
+                    PlatformConnection.platform == "telegram",
+                    PlatformConnection.platform_user_id == telegram_user_id,
+                )
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if user_id is None:
+            return JSONResponse({"ok": True, "linked": False})
+        user = (
+            await db.execute(select(AuthUser).where(AuthUser.id == user_id).limit(1))
+        ).scalar_one_or_none()
+        if user is None or user.deleted_at is not None:
+            return JSONResponse({"ok": True, "linked": False})
+        session_row = AuthSession(
+            id=_gen_id(),
+            user_id=user.id,
+            token=_gen_id(32),
+            expires_at=_now_naive() + SESSION_LIFETIME,
+            ip_address=_client_ip(request),
+            user_agent=request.headers.get("user-agent") or "",
+        )
+        db.add(session_row)
+        await db.flush()
+
+    response = JSONResponse({"ok": True, "linked": True})
+    set_session_cookie(response, session_row.token)
+    return response
 
 
 def _client_ip(request: Request) -> str:

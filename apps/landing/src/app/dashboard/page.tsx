@@ -359,8 +359,10 @@ function DashboardContent() {
         body: JSON.stringify({ plan: planKey }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? "Billing failed")
-      window.location.href = data.short_url
+      if (!res.ok) throw new Error(data.cause ?? data.error ?? "Billing failed")
+      // Dodo's hosted checkout must leave the Telegram webview.  In-place
+      // navigation is frequently blocked by its payment/OAuth providers.
+      openExternal(data.short_url)
     } catch (err) {
       setBillingError(err instanceof Error ? err.message : "Failed to start billing")
       setBillingLoading(null)
@@ -405,7 +407,7 @@ function DashboardContent() {
         body: JSON.stringify({ pack }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? "Credit purchase failed")
+      if (!res.ok) throw new Error(data.cause ?? data.error ?? "Credit purchase failed")
       openExternal(data.short_url)
     } catch (err) {
       setBillingError(err instanceof Error ? err.message : "Failed to start credit purchase")

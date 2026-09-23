@@ -44,7 +44,7 @@ export class YomiContainer extends Container {
     INTERNAL_API_KEY: workerEnv.INTERNAL_API_KEY ?? "",
     WORKERS_AI_FAST_MODEL: workerEnv.WORKERS_AI_FAST_MODEL ?? "@cf/qwen/qwen3.8-27b",
     WORKERS_AI_AGENT_MODEL: workerEnv.WORKERS_AI_AGENT_MODEL ?? "@cf/qwen/qwen3.8-27b",
-    WORKERS_AI_SEARCH_MODEL: workerEnv.WORKERS_AI_SEARCH_MODEL ?? "@cf/meta/llama-3.1-8b-instruct",
+    WORKERS_AI_SEARCH_MODEL: workerEnv.WORKERS_AI_SEARCH_MODEL ?? "@cf/qwen/qwen3.8-27b",
     WORKERS_AI_EMBEDDING_MODEL: workerEnv.WORKERS_AI_EMBEDDING_MODEL ?? "@cf/baai/bge-base-en-v1.5",
     WORKERS_AI_STT_MODEL: workerEnv.WORKERS_AI_STT_MODEL ?? "@cf/openai/whisper",
     TELEGRAM_BOT_TOKEN: workerEnv.TELEGRAM_BOT_TOKEN ?? "",
