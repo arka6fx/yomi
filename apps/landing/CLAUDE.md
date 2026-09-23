@@ -2,8 +2,8 @@
 
 The landing app deploys as a Cloudflare Worker. The backend is a **Python
 FastAPI Cloudflare Container** (`apps/backend`), not a Worker — so these
-boundary rules concern the landing app itself. CF Workers bind native I/O to
-the originating request context:
+boundary rules concern the landing app itself. CF Workers bind native I/O to the
+originating request context:
 
 - **Landing never touches Postgres directly.** All DB access goes through the
   backend API. Don't import `@yomi/db` (the Python schema in `packages/db`) or
