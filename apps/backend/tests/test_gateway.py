@@ -36,6 +36,19 @@ def test_telegram_token_requires_auth(no_db_client: TestClient):
     assert res.status_code == 401
 
 
+def test_telegram_markdown_is_rendered_as_html():
+    from yomi.gateway.telegram import _markdown_to_telegram_html
+
+    rendered = _markdown_to_telegram_html(
+        "## Hello\n\n**bold** and *italic* with [a link](https://example.com)"
+    )
+    assert "<b>Hello</b>" in rendered
+    assert "<b>bold</b>" in rendered
+    assert "<i>italic</i>" in rendered
+    assert '<a href="https://example.com">a link</a>' in rendered
+    assert "**" not in rendered
+
+
 def test_unlink_requires_auth(no_db_client: TestClient):
     res = no_db_client.delete("/api/gateway/connections/telegram")
     assert res.status_code == 401

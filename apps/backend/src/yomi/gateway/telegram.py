@@ -1,5 +1,7 @@
 import asyncio
+import html
 import logging
+import re
 import traceback
 from collections import deque
 from datetime import UTC, datetime
@@ -51,7 +53,49 @@ def get_lock(chat_id: str) -> asyncio.Lock:
 async def send_message(chat_id: str | int, text: str) -> None:
     url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage"
     async with httpx.AsyncClient() as client:
-        await client.post(url, json={"chat_id": chat_id, "text": text})
+        # Workers AI answers are Markdown, while Telegram otherwise renders
+        # the asterisks literally. Convert the common Markdown subset to HTML
+        # and fall back to plain text if malformed model output is rejected.
+        for chunk in _message_chunks(text):
+            rendered = _markdown_to_telegram_html(chunk)
+            response = await client.post(
+                url,
+                json={"chat_id": chat_id, "text": rendered, "parse_mode": "HTML"},
+            )
+            if response.status_code >= 400:
+                await client.post(url, json={"chat_id": chat_id, "text": chunk})
+
+
+def _message_chunks(text: str, limit: int = 3900) -> list[str]:
+    """Keep Telegram's 4096-character limit without dropping the tail."""
+    if not text:
+        return [""]
+    return [text[index : index + limit] for index in range(0, len(text), limit)]
+
+
+def _markdown_to_telegram_html(text: str) -> str:
+    """Render safe, common LLM Markdown without exposing arbitrary HTML."""
+    escaped = html.escape(text, quote=False)
+    code_blocks: list[str] = []
+
+    def stash_code(match: re.Match[str]) -> str:
+        code_blocks.append(f"<pre><code>{match.group(1).strip()}</code></pre>")
+        return f"\x00CODE{len(code_blocks) - 1}\x00"
+
+    escaped = re.sub(r"```(?:[A-Za-z0-9_+-]+)?\n?(.*?)```", stash_code, escaped, flags=re.DOTALL)
+    escaped = re.sub(
+        r"\[([^\]]+)\]\((https?://[^\s)]+)\)",
+        r'<a href="\2">\1</a>',
+        escaped,
+    )
+    escaped = re.sub(r"`([^`\n]+)`", r"<code>\1</code>", escaped)
+    escaped = re.sub(r"\*\*(.+?)\*\*|__(.+?)__", lambda m: f"<b>{m.group(1) or m.group(2)}</b>", escaped)
+    escaped = re.sub(r"(?<!\*)\*([^*\n]+)\*(?!\*)|(?<!_)_([^_\n]+)_(?!_)", lambda m: f"<i>{m.group(1) or m.group(2)}</i>", escaped)
+    escaped = re.sub(r"^#{1,6}\s+(.+)$", r"<b>\1</b>", escaped, flags=re.MULTILINE)
+    escaped = re.sub(r"^\s*[-*]\s+", "• ", escaped, flags=re.MULTILINE)
+    for index, block in enumerate(code_blocks):
+        escaped = escaped.replace(f"\x00CODE{index}\x00", block)
+    return escaped
 
 
 async def download_file(file_id: str) -> bytes:
