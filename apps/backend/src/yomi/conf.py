@@ -20,13 +20,16 @@ class Settings(BaseSettings):
 
     # core
     environment: str = "development"  # development | staging | production
-    database_url: str = ""
-    # postgres (Neon via asyncpg) or d1 (Cloudflare D1 + Vectorize via gateway).
-    # Memory routes honor this; other route groups migrate one at a time.
-    storage_backend: str = "postgres"
+    database_url: str = ""  # legacy postgres (Neon/RDS) — archived tooling only
+    # d1 (Cloudflare D1 + Vectorize via gateway) is the default; "postgres" is
+    # the legacy fallback for environments that never cut over.
+    storage_backend: str = "d1"
     # Staged native D1 + Vectorize path; does not redirect existing ORM routes.
     storage_gateway_url: str = ""
     storage_gateway_secret: str = ""
+    # Personal computer gateway (sandbox worker); unset until provisioned.
+    computer_gateway_url: str = ""
+    computer_gateway_secret: str = ""
     app_url: str = "https://getyomi.in"  # was YOMI_APP_URL / NEXT_PUBLIC_APP_URL
     backend_url: str = "https://api.getyomi.in"  # was BETTER_AUTH_BASE_URL
     web_origin: str = "https://getyomi.in"  # was BETTER_AUTH_URL
@@ -52,14 +55,13 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("GITHUB_AUTH_CLIENT_SECRET", "GITHUB_CLIENT_SECRET"),
     )
 
-    # openai
-    openai_api_key: str = ""
-    openai_base_url: str = "https://api.openai.com/v1"
-    openai_embedding_model: str = "text-embedding-3-small"
-    openai_fast_model: str = "gpt-5.4-mini"
-    openai_agent_model: str = "gpt-5.5"
-    openai_web_search_model: str = "gpt-5.4-mini"
-    openai_stt_model: str = "gpt-4o-mini-transcribe"
+    # llm: Cloudflare Workers AI for everything (chat, embeddings, STT).
+    # Embeddings are 768-dimensional (bge-base); the Vectorize indexes match.
+    workers_ai_fast_model: str = "@cf/qwen/qwen3.8-27b"
+    workers_ai_agent_model: str = "@cf/qwen/qwen3.8-27b"
+    workers_ai_search_model: str = "@cf/meta/llama-3.1-8b-instruct"
+    workers_ai_embedding_model: str = "@cf/baai/bge-base-en-v1.5"
+    workers_ai_stt_model: str = "@cf/openai/whisper"
 
     # telegram
     telegram_bot_token: str = ""
@@ -79,6 +81,11 @@ class Settings(BaseSettings):
     composio_connectors: str = ""  # comma-separated connector ids backed by Composio
     composio_webhook_secret: str = ""  # HMAC secret that signs POST /api/webhooks/composio
     composio_webhook_url: str = ""  # override; default = {backend_url}/api/webhooks/composio
+    # Cap the Composio tool surface handed to the agent: reads/diagnostics are
+    # ranked first, then the rest alphabetically, truncated per connected app
+    # and in total so the model context never floods (GitHub alone exposes ~900).
+    composio_max_tools_per_app: int = 40
+    composio_max_tools: int = 200
 
     # agent loop
     agent_max_steps: int = 25

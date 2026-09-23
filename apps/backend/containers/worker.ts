@@ -28,7 +28,7 @@ export class YomiContainer extends Container {
   envVars = {
     ENVIRONMENT: workerEnv.ENVIRONMENT ?? "production",
     DATABASE_URL: workerEnv.DATABASE_URL ?? "",
-    STORAGE_BACKEND: workerEnv.STORAGE_BACKEND ?? "postgres",
+    STORAGE_BACKEND: workerEnv.STORAGE_BACKEND ?? "d1",
     STORAGE_GATEWAY_URL: workerEnv.STORAGE_GATEWAY_URL ?? "",
     STORAGE_GATEWAY_SECRET: workerEnv.STORAGE_GATEWAY_SECRET ?? "",
     APP_URL: workerEnv.APP_URL ?? "",
@@ -42,12 +42,11 @@ export class YomiContainer extends Container {
     GITHUB_CLIENT_ID: workerEnv.GITHUB_CLIENT_ID ?? "",
     GITHUB_CLIENT_SECRET: workerEnv.GITHUB_CLIENT_SECRET ?? "",
     INTERNAL_API_KEY: workerEnv.INTERNAL_API_KEY ?? "",
-    OPENAI_API_KEY: workerEnv.OPENAI_API_KEY ?? "",
-    OPENAI_BASE_URL: workerEnv.OPENAI_BASE_URL ?? "https://api.openai.com/v1",
-    OPENAI_EMBEDDING_MODEL: workerEnv.OPENAI_EMBEDDING_MODEL ?? "text-embedding-3-small",
-    OPENAI_FAST_MODEL: workerEnv.OPENAI_FAST_MODEL ?? "gpt-5.4-mini",
-    OPENAI_AGENT_MODEL: workerEnv.OPENAI_AGENT_MODEL ?? "gpt-5.5",
-    OPENAI_WEB_SEARCH_MODEL: workerEnv.OPENAI_WEB_SEARCH_MODEL ?? "gpt-5.4-mini",
+    WORKERS_AI_FAST_MODEL: workerEnv.WORKERS_AI_FAST_MODEL ?? "@cf/qwen/qwen3.8-27b",
+    WORKERS_AI_AGENT_MODEL: workerEnv.WORKERS_AI_AGENT_MODEL ?? "@cf/qwen/qwen3.8-27b",
+    WORKERS_AI_SEARCH_MODEL: workerEnv.WORKERS_AI_SEARCH_MODEL ?? "@cf/meta/llama-3.1-8b-instruct",
+    WORKERS_AI_EMBEDDING_MODEL: workerEnv.WORKERS_AI_EMBEDDING_MODEL ?? "@cf/baai/bge-base-en-v1.5",
+    WORKERS_AI_STT_MODEL: workerEnv.WORKERS_AI_STT_MODEL ?? "@cf/openai/whisper",
     TELEGRAM_BOT_TOKEN: workerEnv.TELEGRAM_BOT_TOKEN ?? "",
     TELEGRAM_BOT_USERNAME: workerEnv.TELEGRAM_BOT_USERNAME ?? "",
     TELEGRAM_DEEP_LINK_ENABLED: workerEnv.TELEGRAM_DEEP_LINK_ENABLED ?? "true",
@@ -138,12 +137,11 @@ declare global {
     GITHUB_CLIENT_ID: string;
     GITHUB_CLIENT_SECRET: string;
     INTERNAL_API_KEY: string;
-    OPENAI_API_KEY: string;
-    OPENAI_BASE_URL: string;
-    OPENAI_EMBEDDING_MODEL: string;
-    OPENAI_FAST_MODEL: string;
-    OPENAI_AGENT_MODEL: string;
-    OPENAI_WEB_SEARCH_MODEL: string;
+    WORKERS_AI_FAST_MODEL: string;
+    WORKERS_AI_AGENT_MODEL: string;
+    WORKERS_AI_SEARCH_MODEL: string;
+    WORKERS_AI_EMBEDDING_MODEL: string;
+    WORKERS_AI_STT_MODEL: string;
     TELEGRAM_BOT_TOKEN: string;
     TELEGRAM_BOT_USERNAME: string;
     TELEGRAM_DEEP_LINK_ENABLED: string;
@@ -224,6 +222,25 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function runDispatch(env: Env): Promise<void> {
+  // Orphan sweeper: recover agent runs whose executor died mid-run. Runs at
+  // most every 10 minutes (see crons in wrangler.toml) and exits fast when
+  // there is nothing to do, so idle containers still sleep.
+  const key = (env as unknown as Record<string, string | undefined>).INTERNAL_API_KEY ?? "";
+  if (!key) return;
+  try {
+    const container = getContainer(env.YOMI_CONTAINER);
+    await container.fetch(
+      new Request("http://localhost/internal/dispatch", {
+        method: "POST",
+        headers: { "x-yomi-internal": key },
+      }),
+    );
+  } catch (error) {
+    console.error("dispatch sweep failed", error);
+  }
+}
+
 async function containerIsNotServed(response: Response): Promise<boolean> {
   if (response.status < 500 || response.status > 599) {
     return false;
@@ -253,5 +270,8 @@ export default {
       await sleep(delay);
     }
     return lastResponse ?? new Response("Container unavailable", { status: 502 });
+  },
+  async scheduled(_event: ScheduledEvent, env: Env): Promise<void> {
+    await runDispatch(env);
   },
 };

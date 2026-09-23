@@ -212,11 +212,21 @@ async def _handle_update(
         await send_message(chat_id, "I'm the Yomi agent. Send me a message or voice note!")
         return {"status": "ok"}
     elif text == "/reset":
-        # clear history
-        from yomi.services.agent.sessions import _sessions
+        if d1 is not None:
+            # Resolve via the connector identity (same lookup as normal messages).
+            from yomi.services import connectors_d1 as _connectors_d1
+            from yomi.services.agent import sessions_d1
 
-        if chat_id in _sessions:
-            del _sessions[chat_id]
+            user_id = await _connectors_d1.resolve_platform_user(
+                d1, "telegram", tg_user_id, chat_id
+            )
+            if user_id is not None:
+                await sessions_d1.clear_history(d1, user_id, "telegram", chat_id)
+        else:
+            from yomi.services.agent.sessions import _sessions
+
+            if chat_id in _sessions:
+                del _sessions[chat_id]
         await send_message(chat_id, "History cleared.")
         return {"status": "ok"}
 
@@ -229,6 +239,12 @@ async def _handle_update(
         )
         return {"status": "ok"}
     user = _metering_user(row)
+
+    if d1 is not None:
+        return await _enqueue_telegram_run(
+            update, d1, user, chat_id, message_id, text,
+            kind="voice" if voice else "chat", duration_seconds=duration_seconds,
+        )
 
     lock = get_lock(chat_id)
     if lock.locked():
@@ -297,6 +313,157 @@ async def _handle_update(
                 await set_reaction(chat_id, message_id, "❌")
 
     return {"status": "ok"}
+
+
+async def _enqueue_telegram_run(
+    update: dict,
+    d1: D1Backend,
+    user: MeteringUser,
+    chat_id: str,
+    message_id: int | None,
+    text: str,
+    kind: str,
+    duration_seconds: int | None,
+) -> dict:
+    """Durable path: persist the run (redeliveries dedupe on update_id) and
+    process it in a background task so the webhook returns immediately."""
+    from yomi.services import runs_d1
+
+    update_id = update.get("update_id")
+    run, created = await runs_d1.create_run(
+        d1,
+        user_id=str(user["id"]),
+        platform="telegram",
+        chat_id=chat_id,
+        message_id=message_id if isinstance(message_id, int) else None,
+        update_id=str(update_id) if update_id is not None else None,
+        kind=kind,
+        input_text=text,
+        duration_seconds=duration_seconds,
+        plan=user.get("plan") or "explore",
+    )
+    if not created:
+        return {"status": "ok", "deduplicated": True}
+    asyncio.create_task(_background_telegram_run(
+        str(run["id"]), dict(user), chat_id, message_id, text, kind, duration_seconds,
+    ))
+    return {"status": "queued", "runId": str(run["id"])}
+
+
+async def _background_telegram_run(
+    run_id: str,
+    user: dict,
+    chat_id: str,
+    message_id: int | None,
+    text: str,
+    kind: str,
+    duration_seconds: int | None,
+) -> None:
+    """Execute one enqueued run with self-owned backends (the request scope,
+    including its Postgres session and HTTP client, is long gone)."""
+    from yomi.services import runs_d1
+    from yomi.services.cloudflare_storage.deps import open_d1_backend
+
+    try:
+        async with open_d1_backend() as backend:
+            claimed = await runs_d1.claim_run(backend, run_id, f"webhook-{run_id[:8]}")
+            if claimed is None:
+                return
+            await _execute_telegram_run(
+                backend, user, chat_id, message_id, text, kind,
+                duration_seconds, run_id, user.get("plan") or "explore",
+            )
+    except Exception as exc:
+        _record_error("agent", f"background run {run_id} crashed: {type(exc).__name__}: {exc}")
+
+
+async def execute_telegram_run(
+    backend: D1Backend,
+    user: dict,
+    chat_id: str,
+    message_id: int | None,
+    text: str,
+    kind: str,
+    duration_seconds: int | None,
+    run_id: str,
+    plan: str,
+) -> None:
+    """Shared execution core for webhook tasks and the dispatch sweeper."""
+    await _execute_telegram_run(
+        backend, user, chat_id, message_id, text, kind, duration_seconds, run_id, plan
+    )
+
+
+async def _execute_telegram_run(
+    backend: D1Backend,
+    user: dict,
+    chat_id: str,
+    message_id: int | None,
+    text: str,
+    kind: str,
+    duration_seconds: int | None,
+    run_id: str,
+    plan: str,
+) -> None:
+    from yomi.services import connectors_d1, runs_d1
+    from yomi.services.agent import sessions_d1
+
+    lock = get_lock(chat_id)
+    async with lock:
+        try:
+            from yomi.services import runs_d1
+
+            await runs_d1.heartbeat(backend, run_id)
+            charge = (
+                ChargeInput(user=user, kind="voice", duration_seconds=duration_seconds)
+                if kind == "voice"
+                else ChargeInput(user=user, kind="chat", units=1)
+            )
+            # Run-scoped idempotency: a crash retry replays the recorded
+            # outcome instead of charging twice.
+            charge_res = await billing_d1.charge_usage(
+                backend, charge, idempotency_key=f"run:{run_id}:charge"
+            )
+            if not charge_res.ok:
+                await send_message(chat_id, charge_res.message)
+                await runs_d1.complete_run(backend, run_id, charge_res.message)
+                return
+
+            user_id = str(user["id"])
+            await sessions_d1.append_turn(backend, user_id, "telegram", chat_id, "user", text)
+            history = await sessions_d1.load_history(backend, user_id, "telegram", chat_id)
+            pending_hook = connectors_d1.create_pending_action(
+                backend, user_id=user_id,
+                source_platform="telegram", source_chat_id=chat_id,
+            )
+            reply = await asyncio.wait_for(
+                run_agent_loop(
+                    history,
+                    user_id,
+                    plan,
+                    db_session=None,
+                    create_pending_action=pending_hook,
+                    d1=backend,
+                ),
+                timeout=120.0,
+            )
+            await sessions_d1.append_turn(backend, user_id, "telegram", chat_id, "assistant", reply)
+            await send_message(chat_id, reply)
+            if message_id is not None:
+                await set_reaction(chat_id, message_id, "👍")
+            await runs_d1.complete_run(backend, run_id, reply[:500])
+        except TimeoutError:
+            _record_error("agent", f"run {run_id} timed out after 120s")
+            outcome = await runs_d1.fail_run(backend, run_id, "timed out after 120s")
+            if outcome == "failed" and message_id is not None:
+                await set_reaction(chat_id, message_id, "❌")
+        except Exception as exc:
+            _record_error("agent", f"run {run_id}: {type(exc).__name__}: {exc}")
+            outcome = await runs_d1.fail_run(backend, run_id, f"{type(exc).__name__}: {exc}")
+            if outcome == "failed":
+                await send_message(chat_id, "That hit an error after retries — try again shortly.")
+                if message_id is not None:
+                    await set_reaction(chat_id, message_id, "❌")
 
 
 @router.post("/telegram")

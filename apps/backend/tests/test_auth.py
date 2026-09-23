@@ -36,7 +36,10 @@ NOW = datetime(2026, 1, 1, 12, 0, 0)
 
 
 @pytest.fixture
-def no_db_client():
+def no_db_client(monkeypatch):
+    # D1 is the storage default; these DB-free auth tests exercise the legacy
+    # postgres-branch route paths, so pin the backend explicitly.
+    monkeypatch.setattr(settings, "storage_backend", "postgres")
     app = create_app()
 
     async def _fake_db():

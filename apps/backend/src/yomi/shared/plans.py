@@ -32,7 +32,7 @@ class PlanConfig(TypedDict, total=False):
 
 PLANS: dict[str, PlanConfig] = {
     # Free, renews every month (not a one-time trial) — see the Explore
-    # auto-renewal cron. gpt-5.4-mini keeps the free tier's cost bounded.
+    # auto-renewal cron. Workers AI neurons keep the free tier's cost bounded.
     "explore": {
         "key": "explore",
         "name": "Explore",
@@ -40,7 +40,7 @@ PLANS: dict[str, PlanConfig] = {
         "priceDisplay": "$0",
         "interval": "month",
         "includedCredits": 100,
-        "model": "gpt-5.4-mini",
+        "model": "@cf/qwen/qwen3.8-27b",
         "limits": {
             "chat": 100,
             "voiceMinutes": 20,
@@ -56,7 +56,7 @@ PLANS: dict[str, PlanConfig] = {
         "priceDisplay": "$5",
         "interval": "month",
         "includedCredits": 300,
-        "model": "gpt-5.4-mini",
+        "model": "@cf/qwen/qwen3.8-27b",
         "limits": {
             "chat": 250,
             "voiceMinutes": 60,
@@ -72,7 +72,7 @@ PLANS: dict[str, PlanConfig] = {
         "priceDisplay": "$40",
         "interval": "month",
         "includedCredits": 750,
-        "model": "gpt-5.5",
+        "model": "@cf/qwen/qwen3.8-27b",
         "limits": {
             "chat": 600,
             "voiceMinutes": 150,
@@ -93,8 +93,8 @@ class CreditPackConfig(TypedDict):
     currency: Literal["USD"]
 
 
-# Keys stay stable since they map to fixed Dodo product IDs; pricing safe
-# against gpt-5.5 worst-case cost (Max users can buy packs too).
+# Keys stay stable since they map to fixed Dodo product IDs; credit costs are
+# denominated in internal credits, independent of the underlying model vendor.
 CREDIT_PACKS: dict[str, CreditPackConfig] = {
     "credits_500": {
         "key": "credits_500",

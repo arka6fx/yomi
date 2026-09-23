@@ -74,16 +74,11 @@ registry.register(
 )
 
 async def _web_search(query: str) -> str:
-    import openai
+    from yomi.services.llm import chat_completion, first_message
 
-    from yomi.conf import settings
-    client = openai.AsyncOpenAI(api_key=settings.openai_api_key)
-    # Using the search model, but maybe it requires a special endpoint or system prompt
-    res = await client.chat.completions.create(
-        model=settings.openai_web_search_model,
-        messages=[{"role": "user", "content": query}]
-    )
-    return res.choices[0].message.content or ""
+    data = await chat_completion("search", [{"role": "user", "content": query}])
+    content = first_message(data).get("content")
+    return content if isinstance(content, str) else ""
 
 registry.register(
     name="web_search",
@@ -95,6 +90,117 @@ registry.register(
     },
     func=_web_search,
 )
+
+
+def computer_configured() -> bool:
+    from yomi.conf import settings
+
+    return bool(settings.computer_gateway_url and settings.computer_gateway_secret)
+
+
+def register_computer_tools(tool_registry: ToolRegistry, user_id: str) -> None:
+    """Personal-computer tools for the user's isolated desktop.
+
+    Registered only when the computer gateway is configured. Screenshot
+    results carry raw PNG bytes so the agent loop can forward them to the
+    vision model as image parts.
+    """
+    import httpx
+
+    from yomi.services.computer.client import ComputerClient
+
+    def _client() -> tuple[ComputerClient, httpx.AsyncClient]:
+        http = httpx.AsyncClient()
+        return ComputerClient.for_user(http, user_id), http
+
+    async def computer_screenshot() -> dict:
+        client, http = _client()
+        try:
+            shot = await client.screenshot()
+        finally:
+            await http.aclose()
+        return {
+            "text": "Screenshot of the user's desktop (1280x800). Ground element coordinates in pixels.",
+            "images": [shot],
+        }
+
+    async def computer_input(**kwargs) -> str:
+        import json as _json
+
+        client, http = _client()
+        try:
+            result = await client.input(dict(kwargs))
+        finally:
+            await http.aclose()
+        return _json.dumps(result)
+
+    async def computer_open(url: str) -> str:
+        import json as _json
+
+        client, http = _client()
+        try:
+            result = await client.open_url(url)
+        finally:
+            await http.aclose()
+        return _json.dumps(result)
+
+    async def computer_windows() -> str:
+        import json as _json
+
+        client, http = _client()
+        try:
+            result = await client.windows()
+        finally:
+            await http.aclose()
+        return _json.dumps(result)
+
+    tool_registry.register(
+        name="computer_screenshot",
+        description="Take a screenshot of the user's personal desktop. Returns an image you can see.",
+        parameters={"type": "object", "properties": {}},
+        func=computer_screenshot,
+    )
+    tool_registry.register(
+        name="computer_input",
+        description=(
+            "Control the user's desktop: click/double_click (x, y, button), "
+            "move (x, y), drag (x, y, path), scroll (x, y, dx, dy), "
+            "type (text), key (keys list), wait (seconds). Coordinates are pixels in 1280x800."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "action": {"type": "string"},
+                "x": {"type": "number"},
+                "y": {"type": "number"},
+                "button": {"type": "string"},
+                "path": {"type": "array"},
+                "dx": {"type": "number"},
+                "dy": {"type": "number"},
+                "text": {"type": "string"},
+                "keys": {"type": "array"},
+                "seconds": {"type": "number"},
+            },
+            "required": ["action"],
+        },
+        func=computer_input,
+    )
+    tool_registry.register(
+        name="computer_open",
+        description="Open an http(s) URL in a new tab on the user's desktop browser.",
+        parameters={
+            "type": "object",
+            "properties": {"url": {"type": "string"}},
+            "required": ["url"],
+        },
+        func=computer_open,
+    )
+    tool_registry.register(
+        name="computer_windows",
+        description="List open window titles on the user's desktop.",
+        parameters={"type": "object", "properties": {}},
+        func=computer_windows,
+    )
 
 
 async def build_user_registry(
@@ -160,4 +266,6 @@ async def build_user_registry(
 
         tool_registry.register(name, tool.description, tool.parameters, _run_composio)
     tool_registry.composio_calls = composio_counter
+    if computer_configured():
+        register_computer_tools(tool_registry, user_id)
     return tool_registry

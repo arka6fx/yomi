@@ -341,7 +341,7 @@ async def create_document(
     await session.execute(delete(RagChunk).where(RagChunk.document_id == document.id))
     await session.flush()
 
-    model = settings.openai_embedding_model or DEFAULT_EMBEDDING_MODEL
+    model = settings.workers_ai_embedding_model or DEFAULT_EMBEDDING_MODEL
     chunks = chunk_text(content)
     for chunk_index, chunk in enumerate(chunks):
         created = RagChunk(

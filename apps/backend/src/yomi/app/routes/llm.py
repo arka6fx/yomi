@@ -1,9 +1,9 @@
-"""/api/llm — OpenAI-compatible proxy (apps/backend/src/routes/llm.ts).
+"""/api/llm — Workers AI relay (apps/backend/src/routes/llm.ts).
 
-The sidecar sends chat-completion requests here when OPENAI_API_KEY is
-unavailable in the packaged env; the backend injects the real key server-side.
-Authenticated — without it this route is an open relay. Usage is charged by the
-caller up front via /interactions/reserve; nothing is charged here.
+The sidecar sends chat-completion requests here when it has no direct model
+access; the backend injects server-side credentials. Authenticated — without
+it this route is an open relay. Usage is charged by the caller up front via
+/interactions/reserve; nothing is charged here.
 """
 
 from __future__ import annotations
@@ -15,19 +15,13 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 
 from yomi.app.deps import get_current_user
-from yomi.conf import settings
+from yomi.services.llm import chat_endpoint
 
 logger = logging.getLogger(__name__)
 
 llm_router = APIRouter(prefix="/api/llm")
 
-DEFAULT_OPENAI_BASE = "https://api.openai.com/v1"
-
 MIRRORED_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]
-
-
-def ai_credits_base() -> str:
-    return (settings.openai_base_url or DEFAULT_OPENAI_BASE).rstrip("/")
 
 
 async def _proxy_handler(
@@ -35,9 +29,10 @@ async def _proxy_handler(
     upstream_path: str,
     user=Depends(get_current_user),  # noqa: B008
 ):
-    api_key = settings.openai_api_key
-    if not api_key:
-        return JSONResponse({"error": "OPENAI_API_KEY not configured"}, 500)
+    try:
+        base_url, api_key, _ = chat_endpoint()
+    except RuntimeError as exc:
+        return JSONResponse({"error": str(exc)}, 500)
 
     body = await request.body()
 
@@ -50,18 +45,18 @@ async def _proxy_handler(
         async with httpx.AsyncClient(timeout=120) as client:
             upstream = await client.request(
                 request.method,
-                f"{ai_credits_base()}/{upstream_path}",
+                f"{base_url}/{upstream_path}",
                 headers=headers,
                 content=body or None,
             )
     except httpx.HTTPError as err:
         logger.error("[yomi/llm] upstream request failed: %s", err)
-        return JSONResponse({"error": f"OpenAI upstream failed ({err})", "detail": ""}, 502)
+        return JSONResponse({"error": f"Workers AI upstream failed ({err})", "detail": ""}, 502)
 
     if upstream.status_code >= 400:
         detail = upstream.text
         return JSONResponse(
-            {"error": f"OpenAI upstream failed ({upstream.status_code})", "detail": detail},
+            {"error": f"Workers AI upstream failed ({upstream.status_code})", "detail": detail},
             upstream.status_code,
         )
 

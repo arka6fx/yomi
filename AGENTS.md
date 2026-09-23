@@ -52,15 +52,15 @@ Choose the highest, least-footprint rung that solves the problem:
    │       PYTHON CONTAINER (apps/backend/)       │
    │   FastAPI + uvicorn on Cloudflare Containers │
    │                                              │
-   │   auth, billing, LLM proxy, metering,       │
+   │   auth, billing, LLM proxy, metering,        │
    │   agent loop, Telegram gateway,              │
    │   canonical memory, RAG, connectors          │
    │                                              │
    │   Cloudflare services via REST:              │
-   │   • Browser Run → computer use              │
-   │   • R2 → voice/image storage               │
-   │   • Workers AI → embeddings (optional)      │
-   └──────────┬────────────────────┬─────────────┘
+   │   • Browser Run → computer use               │
+   │   • R2 → voice/image storage                 │
+   │   • Workers AI → embeddings (optional)       │
+   └──────────┬────────────────────┬──────────────┘
               │                    │
               ▼                    ▼
          Connectors            Postgres
@@ -88,15 +88,15 @@ npm run python:dev
 
 ## Stack
 
-- **LLM:** OpenAI SDK (Python) → `OPENAI_*` env vars
-- **STT:** OpenAI `gpt-4o-mini-transcribe` — transcribes incoming voice notes; replies are always text
+- **LLM:** Cloudflare Workers AI via OpenAI-compatible endpoint (`@cf/qwen/qwen3.8-27b` chat/agent, `@cf/meta/llama-3.1-8b-instruct` search) — no OpenAI dependency
+- **STT:** Workers AI `@cf/openai/whisper` — transcribes incoming voice notes; replies are always text
 - **Backend:** Python FastAPI + uvicorn on **Cloudflare Containers** (TCP socket → asyncpg works)
 - **Auth:** Better Auth (Google + GitHub OAuth) — session cookie validated by Python via JWT
 - **Database:** asyncpg → Neon PostgreSQL + pgvector (SQLAlchemy 2 async, Alembic migrations)
 - **Billing:** Dodo Payments
 - **Computer use:** Cloudflare Browser Run REST API (scrape, screenshot, extract, CDP)
 - **File storage:** Cloudflare R2 via S3-compatible API (aiobotocore)
-- **Embeddings:** OpenAI `text-embedding-3-small` (1536-dim) → pgvector; Workers AI optional
+- **Embeddings:** Workers AI `@cf/baai/bge-base-en-v1.5` (768-dim) → Vectorize
 
 ## Retired (do not reference)
 
@@ -138,7 +138,7 @@ npm run python:dev
    │   /health, /health/db    ← probes            │
    │                                              │
    │ Services:                                    │
-   │   agent/loop.py          ← OpenAI tool loop  │
+   │   agent/loop.py          ← OpenAI-compatible tool loop (Workers AI)  │
    │   agent/tools.py         ← tool registry    │
    │   browser.py             ← Browser Run REST  │
    │   memory/                ← memory engine     │
@@ -192,11 +192,11 @@ The Drizzle schema (`packages/db`) is retired, but the SQLAlchemy models mirror 
 
 ## Plans & Credits
 
-| Plan    | Price  | Monthly credits         | Model        |
-| ------- | ------ | ----------------------- | ------------ |
-| Explore | $0/mo  | 100 (perpetual, renews) | gpt-5.4-mini |
-| Pro     | $5/mo  | 300                     | gpt-5.4-mini |
-| Max     | $40/mo | 750                     | gpt-5.5      |
+| Plan    | Price  | Monthly credits         | Model              |
+| ------- | ------ | ----------------------- | ------------------ |
+| Explore | $0/mo  | 100 (perpetual, renews) | qwen3.8-27b        |
+| Pro     | $5/mo  | 300                     | qwen3.8-27b        |
+| Max     | $40/mo | 750                     | qwen3.8-27b        |
 
 Credit costs: fast chat 1, image analyze 1, voice 2/min, bot message 3, agent run 3 base
 (+1 per Composio tool call). Single chokepoint: `services/metering.py → charge_usage()`.
@@ -230,11 +230,11 @@ Credit costs: fast chat 1, image analyze 1, voice 2/min, bot message 3, agent ru
 ## Models
 
 ```
-Fast path:  gpt-5.4-mini (Explore, Pro)
-Agent path: gpt-5.5      (Max)
-Embeddings: text-embedding-3-small (OpenAI, 1536-dim)
-Speech:     gpt-4o-mini-transcribe (STT only; replies are always text)
-Browser AI: Workers AI @cf/baai/bge-base-en-v1.5 (optional free embeddings)
+Fast path:  qwen3.8-27b (Explore, Pro)
+Agent path: qwen3.8-27b (Max)
+Embeddings: bge-base-en-v1.5 (Workers AI, 768-dim)
+Speech:     whisper (Workers AI STT only; replies are always text)
+Browser AI: Workers AI (see above — no OpenAI anywhere)
 ```
 
 ---

@@ -19,7 +19,6 @@ dependencies = [
     "alembic>=1.14.0",
     "python-dotenv>=1.0.1",
     "orjson>=3.10.0",
-    "openai>=1.60.0",
     "aiobotocore>=2.15.0",   # R2 / S3-compatible object storage
     "python-multipart>=0.0.9", # file upload support (voice, images)
     "yomi-db",              # shared schema (packages/db) — see [tool.uv.sources]

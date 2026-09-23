@@ -361,6 +361,16 @@ async def sync_connections(
         await backend.store.atomic(statements)
 
 
+async def delete_composio_mirror(backend: D1Backend, user_id: str, toolkit: str) -> None:
+    """Drop the local ``composio_connections`` mirror row without calling Composio."""
+    await backend.store.atomic([
+        Statement(
+            "DELETE FROM composio_connections WHERE user_id = ? AND toolkit = ?",
+            [user_id, toolkit],
+        )
+    ])
+
+
 async def disconnect_composio_connection(
     backend: D1Backend, user_id: str, toolkit: str
 ) -> dict[str, Any]:

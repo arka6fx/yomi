@@ -32,7 +32,7 @@ from yomi.services.cloudflare_storage.store import D1Store, new_id, utcnow_iso
 logger = logging.getLogger(__name__)
 
 Operation = Literal["upsert", "delete"]
-VECTOR_DIMS = 1536
+VECTOR_DIMS = 768
 MAX_ATTEMPTS = 25
 
 

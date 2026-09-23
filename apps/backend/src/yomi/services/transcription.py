@@ -1,27 +1,18 @@
 """Inbound voice transcription for the Telegram gateway (STT).
 
-Transcribes Telegram voice notes to text via OpenAI's `gpt-4o-mini-transcribe`.
+Transcribes Telegram voice notes to text via Cloudflare Workers AI Whisper.
 Replies are always text; we never synthesize audio back to the user.
 """
 
 import logging
 
-import openai
+import httpx
 
 from yomi.conf import settings
 
 logger = logging.getLogger(__name__)
 
-_MIME_EXTENSION = {
-    "audio/ogg": "voice.ogg",
-    "audio/oga": "voice.oga",
-    "audio/opus": "voice.opus",
-    "audio/mpeg": "voice.mp3",
-    "audio/mp4": "voice.m4a",
-    "audio/wav": "voice.wav",
-    "audio/x-wav": "voice.wav",
-    "audio/x-m4a": "voice.m4a",
-}
+_transcribe_timeout = httpx.Timeout(120.0)
 
 
 async def transcribe_audio(data: bytes, mime_type: str | None = None) -> str:
@@ -29,13 +20,23 @@ async def transcribe_audio(data: bytes, mime_type: str | None = None) -> str:
 
     Raises on any transcription failure; the caller decides how to surface it.
     """
-    mime = (mime_type or "audio/ogg").lower()
-    filename = _MIME_EXTENSION.get(mime, "voice.ogg")
-    client = openai.AsyncOpenAI(api_key=settings.openai_api_key)
-    transcript = await client.audio.transcriptions.create(
-        model=settings.openai_stt_model,
-        file=(filename, data, mime),
+    account = (settings.cloudflare_account_id or "").strip()
+    token = (settings.cloudflare_api_token or "").strip()
+    if not account or not token:
+        raise RuntimeError("Workers AI is not configured")
+    url = (
+        f"https://api.cloudflare.com/client/v4/accounts/{account}/ai/run/"
+        f"{settings.workers_ai_stt_model}"
     )
-    if isinstance(transcript, str):
-        return transcript.strip()
-    return transcript.text.strip()
+    async with httpx.AsyncClient(timeout=_transcribe_timeout) as client:
+        res = await client.post(
+            url,
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json={"audio": list(data)},
+        )
+    if res.status_code != 200:
+        raise RuntimeError(f"Workers AI transcription failed: {res.status_code}")
+    text = res.json().get("result", {}).get("text", "")
+    if not isinstance(text, str) or not text.strip():
+        raise RuntimeError("Workers AI returned an empty transcript")
+    return text.strip()

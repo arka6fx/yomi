@@ -567,7 +567,7 @@ const CATALOG_DEFS: Array<{
     category: "developer",
     authKind: "api_key",
     icon: "context7",
-    available: true,
+    available: false,
   },
 ]
 

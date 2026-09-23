@@ -190,7 +190,10 @@ def dodo_auth() -> str:
     config = get_dodo_config()
     api_key = config["api_key"]
     if not api_key:
-        raise RuntimeError(f"DODO_API_KEY is not configured for {config['mode']} mode")
+        raise RuntimeError(
+            f"DODO_{config['mode'].upper()}_API_KEY is not configured for "
+            f"{config['mode']} mode"
+        )
     return f"Bearer {api_key}"
 
 
@@ -601,7 +604,9 @@ async def cancel_subscription(
         return JSONResponse({"error": "No active subscription"}, 404)
     try:
         await dodo_request(
-            f"/subscriptions/{user.dodo_subscription_id}/cancel", None, "POST"
+            f"/subscriptions/{user.dodo_subscription_id}",
+            {"cancel_at_next_billing_date": True},
+            "PATCH",
         )
         return {
             "ok": True,
@@ -1055,7 +1060,9 @@ async def handle_dodo_event(
     if "subscription" in normalized and re.search(r"cancel|expire|complete", normalized):
         await handle_subscription_end(session, entity)
         return
-    if "subscription" in normalized and re.search(r"fail|past_due|halt", normalized):
+    if "subscription" in normalized and re.search(
+        r"fail|past_due|halt|on_hold|(^|\.)paused$", normalized
+    ):
         await handle_payment_failed(session, entity)
         return
     if "payment" in normalized and re.search(r"success|succeed|paid|captured", normalized):
@@ -1347,7 +1354,9 @@ async def handle_dodo_event_d1(
     if "subscription" in normalized and re.search(r"cancel|expire|complete", normalized):
         await handle_subscription_end_d1(backend, entity)
         return
-    if "subscription" in normalized and re.search(r"fail|past_due|halt", normalized):
+    if "subscription" in normalized and re.search(
+        r"fail|past_due|halt|on_hold|(^|\.)paused$", normalized
+    ):
         await handle_payment_failed_d1(backend, entity)
         return
     if "payment" in normalized and re.search(r"success|succeed|paid|captured", normalized):

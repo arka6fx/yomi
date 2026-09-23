@@ -9,7 +9,7 @@ Mirrors ``yomi.app.routes.rag`` and ``yomi.services.rag.index_document``:
 - search fuses Vectorize candidates (with values for MMR) + keyword
   word-OR candidates with RRF, then applies the same MMR rerank
 
-Embeddings stay OpenAI-backed via ``embed_text`` (injectable for tests).
+Embeddings stay provider-backed via ``embed_text`` (injectable for tests).
 """
 
 from __future__ import annotations

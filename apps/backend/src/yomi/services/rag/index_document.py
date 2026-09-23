@@ -91,7 +91,7 @@ async def index_document(
     session.add(document)
     await session.flush()
 
-    model = settings.openai_embedding_model or DEFAULT_EMBEDDING_MODEL
+    model = settings.workers_ai_embedding_model or DEFAULT_EMBEDDING_MODEL
     for chunk_index, chunk in enumerate(chunk_text(text)):
         created_chunk = RagChunk(
             user_id=input_.user_id,

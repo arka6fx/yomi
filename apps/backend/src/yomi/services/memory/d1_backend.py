@@ -11,7 +11,7 @@ supersession, version chains, best-effort embeddings) on ``D1Store``:
 - recall fuses Vectorize candidates + keyword LIKE + metadata ranking with
   reciprocal-rank fusion in Python (D1 has no pgvector/tsvector)
 
-Embeddings stay OpenAI-backed via ``embed_memory_text`` (injectable for tests).
+Embeddings stay provider-backed via ``embed_memory_text`` (injectable for tests).
 """
 
 from __future__ import annotations

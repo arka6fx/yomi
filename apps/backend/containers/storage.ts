@@ -5,7 +5,7 @@ export interface StorageEnv {
   STORAGE_GATEWAY_SECRET: string;
 }
 
-const DIMENSIONS = 1536;
+const DIMENSIONS = 768;
 const MAX_BODY_BYTES = 1_000_000;
 type RecordType = "memory" | "rag";
 type JsonObject = Record<string, unknown>;

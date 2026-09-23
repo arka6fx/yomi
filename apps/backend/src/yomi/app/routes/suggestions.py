@@ -17,7 +17,7 @@ async def get_suggestions(
     user: User = Depends(get_current_user),
 ):
     # Port of apps/backend/src/routes/suggestions.ts
-    # In a full implementation, this might call an LLM (e.g. OPENAI_FAST_MODEL)
+    # In a full implementation, this might call an LLM
     # or query the database for dynamic suggestions based on user context.
     
     # Returning a static list of suggestions for now.

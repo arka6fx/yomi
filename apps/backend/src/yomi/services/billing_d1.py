@@ -64,6 +64,7 @@ logger = logging.getLogger(__name__)
 class FoundTransaction:
     amount: int
     balance_after: int
+    usage_event_id: str | None = None
 
 
 def _utc_iso(dt: datetime | None) -> str | None:
@@ -95,13 +96,17 @@ async def transaction_by_key(
     backend: D1Backend, idempotency_key: str
 ) -> FoundTransaction | None:
     row = await backend.store.fetch_one(
-        "SELECT amount, balance_after FROM credit_transactions "
+        "SELECT amount, balance_after, usage_event_id FROM credit_transactions "
         "WHERE idempotency_key = ? LIMIT 1",
         [idempotency_key],
     )
     if row is None:
         return None
-    return FoundTransaction(amount=int(row["amount"]), balance_after=int(row["balance_after"]))
+    return FoundTransaction(
+        amount=int(row["amount"]),
+        balance_after=int(row["balance_after"]),
+        usage_event_id=str(row["usage_event_id"]) if row.get("usage_event_id") else None,
+    )
 
 
 async def get_credit_summary(backend: D1Backend, user_id: str) -> CreditSummary:
@@ -470,9 +475,17 @@ async def expire_credits(
     return total_expired
 
 
-async def charge_usage(backend: D1Backend, input_: ChargeInput) -> ChargeSuccess | ChargeFailure:
+async def charge_usage(
+    backend: D1Backend, input_: ChargeInput, idempotency_key: str | None = None
+) -> ChargeSuccess | ChargeFailure:
     """D1 counterpart of the metering chokepoint: identical gating, messages,
-    and debit semantics."""
+    and debit semantics.
+
+    With ``idempotency_key`` the charge becomes replay-safe: a prior
+    transaction under the same key returns its recorded outcome without
+    touching the balance again. Executors pass one key per run so crash
+    retries never double-charge.
+    """
     user = input_.user
     kind = input_.kind
     plan = effective_plan_for_user(user)
@@ -502,6 +515,17 @@ async def charge_usage(backend: D1Backend, input_: ChargeInput) -> ChargeSuccess
         CREDIT_KIND[kind],
         UsagePricingInput(duration_seconds=input_.duration_seconds, units=input_.units),
     )
+    if idempotency_key is not None:
+        replay = await transaction_by_key(backend, idempotency_key)
+        if replay is not None:
+            return ChargeSuccess(
+                plan=plan,
+                credits_required=credits_required,
+                credits_charged=abs(replay.amount),
+                balance=replay.balance_after,
+                usage_event_id=replay.usage_event_id,
+                paid_by="credits",
+            )
     summary = await get_credit_summary(backend, user["id"])
     if summary.balance < credits_required:
         if plan == "explore":
@@ -546,7 +570,7 @@ async def charge_usage(backend: D1Backend, input_: ChargeInput) -> ChargeSuccess
 
     debit = await consume_credits(
         backend, user_id=user["id"], amount=credits_required,
-        usage_event_id=event_id, idempotency_key=f"usage:{event_id}:consume",
+        usage_event_id=event_id, idempotency_key=idempotency_key or f"usage:{event_id}:consume",
         reason=f"{kind} usage", metadata={**(dict(input_.metadata or {})), "kind": kind},
     )
     if not debit.ok:
@@ -621,7 +645,7 @@ async def record_ai_usage(backend: D1Backend, input_: AiUsageRecord) -> None:
                 "intent": input_.intent,
                 "complexity": input_.complexity,
                 "model": input_.model,
-                "provider": input_.provider or "openai",
+                "provider": input_.provider or "workers-ai",
                 "input_tokens": _telemetry_clamp(input_.input_tokens),
                 "output_tokens": _telemetry_clamp(input_.output_tokens),
                 "reasoning_tokens": _telemetry_clamp(input_.reasoning_tokens),

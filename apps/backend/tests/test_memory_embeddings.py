@@ -1,4 +1,4 @@
-"""Port of apps/backend/src/services/memory/embeddings.test.ts (pure logic, mocked HTTP)."""
+"""Memory embeddings via Workers AI (mocked HTTP)."""
 
 from types import SimpleNamespace
 
@@ -12,7 +12,7 @@ class FakeResponse:
         self._data = data
 
     def json(self):
-        return self._data or {"data": []}
+        return self._data or {"result": {}}
 
 
 class FakeClient:
@@ -33,7 +33,7 @@ class FakeClient:
 
 
 def _embedding_response(embedding: list[float]) -> FakeResponse:
-    return FakeResponse(status_code=200, data={"data": [{"embedding": embedding}]})
+    return FakeResponse(status_code=200, data={"result": {"data": [embedding]}})
 
 
 def _patch_httpx(monkeypatch):
@@ -49,21 +49,25 @@ def _set(monkeypatch, **kwargs):
         monkeypatch.setattr(settings, key, value)
 
 
+def _creds(monkeypatch):
+    _set(monkeypatch, cloudflare_account_id="acct-1", cloudflare_api_token="tok-1")
+
+
 def test_memory_embedding_model_defaults(monkeypatch):
-    _set(monkeypatch, openai_embedding_model="text-embedding-3-small")
-    assert embeddings_mod.memory_embedding_model() == "text-embedding-3-small"
+    _set(monkeypatch, workers_ai_embedding_model="@cf/baai/bge-base-en-v1.5")
+    assert embeddings_mod.memory_embedding_model() == "@cf/baai/bge-base-en-v1.5"
 
 
 def test_memory_embedding_model_honours_override(monkeypatch):
-    _set(monkeypatch, openai_embedding_model="text-embedding-3-large")
-    assert embeddings_mod.memory_embedding_model() == "text-embedding-3-large"
+    _set(monkeypatch, workers_ai_embedding_model="@cf/baai/bge-large-en-v1.5")
+    assert embeddings_mod.memory_embedding_model() == "@cf/baai/bge-large-en-v1.5"
 
 
 async def test_embed_memory_text_returns_embedding(monkeypatch):
     _patch_httpx(monkeypatch)
-    _set(monkeypatch, openai_api_key="test-key")
+    _creds(monkeypatch)
     client = FakeClient()
-    embedding = [i / 10000 for i in range(1536)]
+    embedding = [i / 10000 for i in range(768)]
     client.responses.append(_embedding_response(embedding))
     monkeypatch.setattr(embeddings_mod.httpx, "AsyncClient", lambda timeout=None: client)
 
@@ -73,28 +77,24 @@ async def test_embed_memory_text_returns_embedding(monkeypatch):
 
 async def test_embed_memory_text_posts_resolved_model_and_url(monkeypatch):
     _patch_httpx(monkeypatch)
-    _set(
-        monkeypatch,
-        openai_api_key="test-key",
-        openai_base_url="https://proxy.example.com/v1///",
-        openai_embedding_model="text-embedding-3-large",
-    )
+    _creds(monkeypatch)
+    _set(monkeypatch, workers_ai_embedding_model="@cf/baai/bge-large-en-v1.5")
     client = FakeClient()
-    client.responses.append(_embedding_response([0.1] * 1536))
+    client.responses.append(_embedding_response([0.1] * 768))
     monkeypatch.setattr(embeddings_mod.httpx, "AsyncClient", lambda timeout=None: client)
 
     await embeddings_mod.embed_memory_text("remember this")
 
-    assert client.posts[0][0] == "https://proxy.example.com/v1/embeddings"
-    assert client.posts[0][1]["json"] == {
-        "model": "text-embedding-3-large",
-        "input": "remember this",
-    }
+    assert client.posts[0][0] == (
+        "https://api.cloudflare.com/client/v4/accounts/acct-1/ai/run/"
+        "@cf/baai/bge-large-en-v1.5"
+    )
+    assert client.posts[0][1]["json"] == {"text": "remember this"}
 
 
 async def test_embed_memory_text_blank_input_no_call(monkeypatch):
     _patch_httpx(monkeypatch)
-    _set(monkeypatch, openai_api_key="test-key")
+    _creds(monkeypatch)
     client = FakeClient()
     monkeypatch.setattr(embeddings_mod.httpx, "AsyncClient", lambda timeout=None: client)
 
@@ -103,9 +103,9 @@ async def test_embed_memory_text_blank_input_no_call(monkeypatch):
     assert client.posts == []
 
 
-async def test_embed_memory_text_no_api_key_no_call(monkeypatch):
+async def test_embed_memory_text_no_credentials_no_call(monkeypatch):
     _patch_httpx(monkeypatch)
-    _set(monkeypatch, openai_api_key="")
+    _set(monkeypatch, cloudflare_account_id="", cloudflare_api_token="")
     client = FakeClient()
     monkeypatch.setattr(embeddings_mod.httpx, "AsyncClient", lambda timeout=None: client)
 
@@ -116,7 +116,7 @@ async def test_embed_memory_text_no_api_key_no_call(monkeypatch):
 
 async def test_embed_memory_text_error_response(monkeypatch):
     _patch_httpx(monkeypatch)
-    _set(monkeypatch, openai_api_key="test-key")
+    _creds(monkeypatch)
     client = FakeClient()
     client.responses.append(FakeResponse(status_code=500))
     monkeypatch.setattr(embeddings_mod.httpx, "AsyncClient", lambda timeout=None: client)
@@ -126,9 +126,9 @@ async def test_embed_memory_text_error_response(monkeypatch):
 
 async def test_embed_memory_text_wrong_dimensions(monkeypatch):
     _patch_httpx(monkeypatch)
-    _set(monkeypatch, openai_api_key="test-key")
+    _creds(monkeypatch)
     client = FakeClient()
-    client.responses.append(_embedding_response([0.1] * 768))
+    client.responses.append(_embedding_response([0.1] * 1536))
     monkeypatch.setattr(embeddings_mod.httpx, "AsyncClient", lambda timeout=None: client)
 
     assert await embeddings_mod.embed_memory_text("remember this") == []
@@ -148,4 +148,4 @@ def test_memory_vector_literal_empty():
 
 
 def test_embeddings_dimensions_constant():
-    assert embeddings_mod.MEMORY_EMBEDDING_DIMENSIONS == 1536
+    assert embeddings_mod.MEMORY_EMBEDDING_DIMENSIONS == 768

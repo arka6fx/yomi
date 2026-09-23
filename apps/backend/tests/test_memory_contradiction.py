@@ -6,7 +6,7 @@ from yomi.conf import settings
 from yomi.services.memory import contradiction as contradiction_mod
 from yomi.services.memory import embeddings as embeddings_mod
 
-MEMORY_EMBEDDING_DIMENSIONS = 1536
+MEMORY_EMBEDDING_DIMENSIONS = 768
 
 
 class FakeResponse:
@@ -67,7 +67,7 @@ def _row(mid, kind="preference", topic="editor", content="uses vim", summary=Non
 
 
 def _embedding_response(embedding):
-    return FakeResponse(status_code=200, data={"data": [{"embedding": embedding}]})
+    return FakeResponse(status_code=200, data={"result": {"data": [embedding]}})
 
 
 def _patch_httpx(monkeypatch):
@@ -85,7 +85,7 @@ def _set(monkeypatch, **kwargs):
 
 def _fake_embeddings(monkeypatch, client):
     _patch_httpx(monkeypatch)
-    _set(monkeypatch, openai_api_key="test-key")
+    _set(monkeypatch, cloudflare_account_id="acct-1", cloudflare_api_token="tok-1")
     client.responses.append(_embedding_response([0.01] * MEMORY_EMBEDDING_DIMENSIONS))
     monkeypatch.setattr(embeddings_mod.httpx, "AsyncClient", lambda timeout=None: client)
 
@@ -117,7 +117,7 @@ async def test_fetch_turn_candidates_embeds_whole_turn(monkeypatch):
 
     await contradiction_mod.fetch_turn_candidates(session, "u1", turn)
 
-    assert client.posts[0][1]["json"]["input"] == turn
+    assert client.posts[0][1]["json"]["text"] == turn
 
 
 async def test_fetch_turn_candidates_reads_only_callers_active_latest(monkeypatch):
@@ -156,7 +156,7 @@ async def test_fetch_turn_candidates_empty_turn_no_call(monkeypatch):
 
 async def test_fetch_turn_candidates_no_api_key_no_call(monkeypatch):
     _patch_httpx(monkeypatch)
-    _set(monkeypatch, openai_api_key="")
+    _set(monkeypatch, cloudflare_account_id="", cloudflare_api_token="")
     client = FakeClient()
     monkeypatch.setattr(embeddings_mod.httpx, "AsyncClient", lambda timeout=None: client)
     session = FakeSession()

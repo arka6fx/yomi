@@ -9,7 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from yomi.app.deps import get_current_user, get_db_session
+from yomi.app.deps import get_current_user, get_current_user_query, get_db_session
+from yomi.conf import settings
 from yomi.crypto import decrypt_tokens, encrypt_tokens, refresh_google_access_token
 from yomi.db.models_app2 import McpConnection
 from yomi.db.models_auth import User
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 integrations_router = APIRouter(prefix="/api/integrations")
 
+
 @integrations_router.get("")
 async def list_integrations(
     request: Request,
@@ -31,11 +33,11 @@ async def list_integrations(
     if d1 is not None:
         return {"integrations": await connectors_d1.list_connections(d1, str(user.id))}
     rows = (
-        await db.execute(
-            select(McpConnection).where(McpConnection.user_id == user.id)
-        )
-    ).scalars().all()
-    
+        (await db.execute(select(McpConnection).where(McpConnection.user_id == user.id)))
+        .scalars()
+        .all()
+    )
+
     # We shouldn't return the raw tokens to the client
     integrations = [
         {
@@ -49,6 +51,113 @@ async def list_integrations(
         for r in rows
     ]
     return {"integrations": integrations}
+
+
+def _health_entry(
+    provider: str,
+    *,
+    display_name: str | None,
+    healthy: bool,
+    updated_at: str | None,
+) -> dict:
+    return {
+        "provider": provider,
+        "displayName": display_name,
+        "connected": True,
+        "healthy": healthy,
+        "status": "connected" if healthy else "needs_reconnect",
+        "message": None if healthy else "Token expired or revoked — reconnect in Integrations",
+        "updatedAt": updated_at,
+    }
+
+
+@integrations_router.get("/status")
+async def integrations_status(
+    health: str | None = None,
+    db: AsyncSession = Depends(get_db_session),
+    user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
+):
+    """Dashboard connections status: `connected` ids + per-provider health.
+
+    Local state only (no network probes) — `?health=1` is accepted for shape
+    compatibility with the dashboard's integrations tab. `connected` mirrors the
+    catalog ids: native connectors from `mcp_connections` plus active Composio
+    toolkits (slugs mapped back to catalog ids).
+    """
+    from yomi.connectors.composio import connector_id_for_toolkit
+
+    entries: dict[str, dict] = {}
+
+    if d1 is not None:
+        uid = str(user.id)
+        for row in await connectors_d1.list_connections(d1, uid):
+            provider = str(row["provider"])
+            healthy = False
+            full = await connectors_d1.find_connection(d1, uid, provider)
+            if full and full.get("oauth_tokens"):
+                try:
+                    decrypt_tokens(str(full["oauth_tokens"]))
+                    healthy = True
+                except Exception:
+                    healthy = False
+            entries[provider] = _health_entry(
+                provider,
+                display_name=row.get("displayName"),
+                healthy=healthy,
+                updated_at=(full or {}).get("updated_at") or row.get("lastSyncAt"),
+            )
+        for row in await connectors_d1.composio_connection_rows(d1, uid):
+            if str(row.get("status", "")).upper() != "ACTIVE":
+                continue
+            provider = connector_id_for_toolkit(str(row.get("toolkit")))
+            entries[provider] = _health_entry(
+                provider,
+                display_name=row.get("alias"),
+                healthy=True,
+                updated_at=row.get("connected_at") or row.get("updated_at"),
+            )
+    else:
+        for r in (
+            (await db.execute(select(McpConnection).where(McpConnection.user_id == user.id)))
+            .scalars()
+            .all()
+        ):
+            provider = str(r.provider)
+            healthy = False
+            if r.oauth_tokens:
+                try:
+                    decrypt_tokens(r.oauth_tokens)
+                    healthy = True
+                except Exception:
+                    healthy = False
+            updated = r.updated_at.isoformat() if getattr(r, "updated_at", None) else None
+            entries[provider] = _health_entry(
+                provider, display_name=r.display_name, healthy=healthy, updated_at=updated
+            )
+        from yomi.db.models_app2 import ComposioConnection
+
+        for r in (
+            (
+                await db.execute(
+                    select(ComposioConnection).where(ComposioConnection.user_id == user.id)
+                )
+            )
+            .scalars()
+            .all()
+        ):
+            if str(r.status).upper() != "ACTIVE":
+                continue
+            provider = connector_id_for_toolkit(r.toolkit)
+            updated = r.connected_at.isoformat() if r.connected_at else None
+            entries[provider] = _health_entry(
+                provider, display_name=r.alias, healthy=True, updated_at=updated
+            )
+
+    return {
+        "connected": sorted(entries),
+        "integrations": [entries[key] for key in sorted(entries)],
+    }
 
 
 @integrations_router.get("/composio/status")
@@ -81,10 +190,10 @@ async def composio_status(
     from yomi.db.models_app2 import ComposioConnection
 
     rows = (
-        await db.execute(
-            select(ComposioConnection).where(ComposioConnection.user_id == user.id)
-        )
-    ).scalars().all()
+        (await db.execute(select(ComposioConnection).where(ComposioConnection.user_id == user.id)))
+        .scalars()
+        .all()
+    )
     by_toolkit = {row.toolkit: row for row in rows}
     return {
         "configured": sorted(configured_toolkit_ids()),
@@ -176,7 +285,7 @@ async def connect_integration(
     host = request.headers.get("host", "localhost:8000")
     scheme = request.headers.get("x-forwarded-proto", "http")
     redirect_uri = f"{scheme}://{host}/api/integrations/callback"
-    
+
     try:
         url = build_auth_url(provider, str(user.id), redirect_uri)
         return {"url": url}
@@ -205,7 +314,7 @@ async def oauth_callback(
     # In a real app we'd probably have the provider in the state or the redirect path
     # For now, default to google or parse from context. Let's assume google for now.
     provider = "google"
-    
+
     host = request.headers.get("host", "localhost:8000")
     scheme = request.headers.get("x-forwarded-proto", "http")
     redirect_uri = f"{scheme}://{host}/api/integrations/callback"
@@ -220,7 +329,10 @@ async def oauth_callback(
 
     if d1 is not None:
         await connectors_d1.upsert_connection(
-            d1, str(user_id), provider, encrypted,
+            d1,
+            str(user_id),
+            provider,
+            encrypted,
             scopes=tokens.scope.split() if tokens.scope else [],
         )
         return {"message": "Integration connected successfully", "close_window": True}
@@ -228,8 +340,7 @@ async def oauth_callback(
     existing = (
         await db.execute(
             select(McpConnection).where(
-                McpConnection.user_id == user_id,
-                McpConnection.provider == provider
+                McpConnection.user_id == user_id, McpConnection.provider == provider
             )
         )
     ).scalar_one_or_none()
@@ -244,13 +355,15 @@ async def oauth_callback(
             )
         )
     else:
-        db.add(McpConnection(
-            user_id=user_id,
-            provider=provider,
-            oauth_tokens=encrypted,
-            scopes=tokens.scope.split() if tokens.scope else [],
-        ))
-    
+        db.add(
+            McpConnection(
+                user_id=user_id,
+                provider=provider,
+                oauth_tokens=encrypted,
+                scopes=tokens.scope.split() if tokens.scope else [],
+            )
+        )
+
     await db.commit()
     # Redirect to frontend success page
     return {"message": "Integration connected successfully", "close_window": True}
@@ -263,13 +376,37 @@ async def revoke_integration(
     user: User = Depends(get_current_user),
     d1: D1Backend | None = Depends(get_d1_backend),
 ):
+    from yomi.connectors.composio import (
+        ConnectorError,
+        configured_toolkit_ids,
+        toolkit_slug_for_connector,
+    )
+
+    toolkit = toolkit_slug_for_connector(provider)
+    if toolkit in configured_toolkit_ids():
+        try:
+            if d1 is not None:
+                try:
+                    return await connectors_d1.disconnect_composio_connection(
+                        d1, str(user.id), toolkit
+                    )
+                except ConnectorError:
+                    # Composio unreachable / unconfigured — still drop the mirror
+                    # so the dashboard's connected flag clears.
+                    await connectors_d1.delete_composio_mirror(d1, str(user.id), toolkit)
+                    return {"success": True, "disconnected": True, "toolkit": toolkit}
+            from yomi.connectors.composio import disconnect_connection
+
+            return await disconnect_connection(db, str(user.id), toolkit)
+        except ConnectorError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
     if d1 is not None:
         await connectors_d1.delete_connection(d1, str(user.id), provider)
         return {"success": True}
     await db.execute(
         delete(McpConnection).where(
-            McpConnection.user_id == user.id,
-            McpConnection.provider == provider
+            McpConnection.user_id == user.id, McpConnection.provider == provider
         )
     )
     await db.commit()
@@ -305,7 +442,10 @@ async def integration_health(
                 try:
                     new_tokens = await refresh_google_access_token(tokens.refresh_token)
                     await connectors_d1.upsert_connection(
-                        d1, str(user.id), provider, encrypt_tokens(new_tokens),
+                        d1,
+                        str(user.id),
+                        provider,
+                        encrypt_tokens(new_tokens),
                     )
                     return {"status": "ok"}
                 except Exception:
@@ -314,8 +454,7 @@ async def integration_health(
     conn = (
         await db.execute(
             select(McpConnection).where(
-                McpConnection.user_id == user.id,
-                McpConnection.provider == provider
+                McpConnection.user_id == user.id, McpConnection.provider == provider
             )
         )
     ).scalar_one_or_none()
@@ -327,15 +466,15 @@ async def integration_health(
         tokens = decrypt_tokens(conn.oauth_tokens)
     except Exception:
         return {"status": "invalid_tokens"}
-        
+
     healthy = False
-    
+
     async with httpx.AsyncClient() as client:
         if provider == "google":
             # Check userinfo
             res = await client.get(
                 "https://www.googleapis.com/oauth2/v3/userinfo",
-                headers={"Authorization": f"Bearer {tokens.access_token}"}
+                headers={"Authorization": f"Bearer {tokens.access_token}"},
             )
             if res.status_code == 200:
                 healthy = True
@@ -354,6 +493,52 @@ async def integration_health(
                     healthy = False
         else:
             logger.warning(f"Health check not fully implemented for {provider}")
-            healthy = True # optimistic stub
+            healthy = True  # optimistic stub
 
     return {"status": "ok" if healthy else "error"}
+
+
+@integrations_router.get("/connect/{connector_id}")
+async def connect_connector(
+    connector_id: str,
+    request: Request,
+    user: User = Depends(get_current_user_query),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Dashboard connector connect (opened as a new tab, `?session=` auth).
+
+    Routes by catalog id: every configured connector goes through Composio
+    (Google's catalog ids map to their Composio toolkit slugs). Anything else
+    (unconfigured / unknown ids, api-key and connection-string kinds the backend
+    does not implement) is a 404.
+    """
+    from yomi.connectors.composio import (
+        ConnectorError,
+        configured_toolkit_ids,
+        connected_toolkit_ids,
+        get_composio,
+        get_connection_url,
+        resolve_entity_id,
+        toolkit_slug_for_connector,
+    )
+
+    configured = configured_toolkit_ids()
+    toolkit = toolkit_slug_for_connector(connector_id)
+    if toolkit not in configured:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Connector '{connector_id}' is not available on this server",
+        )
+    client = get_composio()
+    if client is None:
+        raise HTTPException(status_code=503, detail="Composio is not configured on this server")
+    callback_url = f"{settings.app_url.rstrip('/')}/dashboard?connect={connector_id}"
+    session = client.create(user_id=resolve_entity_id(str(user.id)))
+    try:
+        connected = await connected_toolkit_ids(session, configured)
+        if toolkit in connected:
+            return {"kind": "composio", "id": connector_id, "status": "connected", "url": None}
+        url = await get_connection_url(str(user.id), toolkit, callback_url)
+    except ConnectorError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return {"kind": "composio", "id": connector_id, "status": "needs_connection", "url": url}

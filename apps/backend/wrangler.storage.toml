@@ -12,6 +12,6 @@ migrations_dir = "migrations-d1"
 
 [[vectorize]]
 binding = "VECTORS"
-index_name = "yomi-vectors-staging"
+index_name = "yomi-vectors-staging-768"
 
 # Configure with wrangler secret put STORAGE_GATEWAY_SECRET --config ../wrangler.storage.toml

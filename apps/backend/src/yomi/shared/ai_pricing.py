@@ -21,11 +21,13 @@ class ModelPrice:
         return self.input_per_m_tokens
 
 
-# micro-USD per 1M tokens. gpt-5.x cached input is ~10% of the input rate.
+# Workers AI bills in neurons ($0.011 / 1K past the daily free allocation),
+# not per token, so telemetry cost estimates read 0 by design — they are
+# informational only and never drive charging (see credit_ledger).
 _MODEL_PRICES: dict[str, ModelPrice] = {
-    "gpt-5.5": ModelPrice(1_500_000, 6_000_000, 150_000),
-    "gpt-5.4-mini": ModelPrice(400_000, 1_600_000, 40_000),
-    "text-embedding-3-small": ModelPrice(20_000, 0),
+    "@cf/qwen/qwen3.8-27b": ModelPrice(0, 0, 0),
+    "@cf/meta/llama-3.1-8b-instruct": ModelPrice(0, 0, 0),
+    "@cf/baai/bge-base-en-v1.5": ModelPrice(0, 0),
     # Catch-all for unknown models — deliberately conservative (never under-bills).
     "*": ModelPrice(10_000_000, 40_000_000),
 }

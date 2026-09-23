@@ -157,10 +157,10 @@ exportable and deletable.
 | Layer          | Choice                                                   |
 | -------------- | -------------------------------------------------------- |
 | Backend        | FastAPI + SQLAlchemy 2 async + Alembic (`apps/backend/`)   |
-| LLM            | OpenAI (`gpt-5.4-mini` fast, `gpt-5.5` agent)            |
-| Speech-to-text | OpenAI `gpt-4o-mini-transcribe` (replies are always text) |
-| Embeddings     | OpenAI `text-embedding-3-small`                          |
-| Database       | PostgreSQL (Neon), pgvector, SQLAlchemy async            |
+| LLM            | Cloudflare Workers AI (`qwen3.8-27b` fast + agent)       |
+| Speech-to-text | Workers AI `whisper` (replies are always text)            |
+| Embeddings     | Workers AI `bge-base-en-v1.5` (768-dim) → Vectorize      |
+| Database       | Cloudflare D1 + Vectorize (Neon retired)                 |
 | Frontend       | Next.js on Cloudflare Workers                            |
 | Billing        | Dodo Payments                                            |
 
@@ -186,7 +186,7 @@ specs/                   Product specifications and connector references
 ```bash
 cd apps/backend
 uv sync --dev
-cp .env.example .env          # fill in at minimum OpenAI + Postgres
+cp .env.example .env          # fill in Cloudflare credentials + secrets
 uv run uvicorn yomi.run:app --reload --port 8080
 ```
 
@@ -236,11 +236,11 @@ Worker secrets.
 Billing is pure credits: a single credit balance is the only usage gate.
 Connectors are unlimited on every plan.
 
-| Plan    | Price  | Monthly credits         | Model        |
-| ------- | ------ | ----------------------- | ------------ |
-| Explore | $0/mo  | 100 (perpetual, renews) | gpt-5.4-mini |
-| Pro     | $5/mo  | 300                     | gpt-5.4-mini |
-| Max     | $40/mo | 750                     | gpt-5.5      |
+| Plan    | Price  | Monthly credits         | Model         |
+| ------- | ------ | ----------------------- | ------------- |
+| Explore | $0/mo  | 100 (perpetual, renews) | qwen3.8-27b   |
+| Pro     | $5/mo  | 300                     | qwen3.8-27b   |
+| Max     | $40/mo | 750                     | qwen3.8-27b   |
 
 Credit packs (any plan): 85 credits/$5, 250 credits/$15, 750 credits/$40.
 
@@ -252,10 +252,10 @@ event, consume the credit. Every account is metered, including the operator's.
 
 | Capability | Provider / default              |
 | ---------- | ------------------------------- |
-| Fast path  | OpenAI `gpt-5.4-mini`           |
-| Agent path | OpenAI `gpt-5.5`                |
-| Embeddings | OpenAI `text-embedding-3-small` |
-| Speech     | OpenAI `gpt-4o-mini-transcribe` |
+| Fast path  | Workers AI `qwen3.8-27b`        |
+| Agent path | Workers AI `qwen3.8-27b`        |
+| Embeddings | Workers AI `bge-base-en-v1.5`   |
+| Speech     | Workers AI `whisper`            |
 
 Speech-to-text handles incoming Telegram voice notes. Yomi always replies with
 text, never synthesized voice.

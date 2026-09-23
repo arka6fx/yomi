@@ -47,13 +47,7 @@ def _recover_session_token(value: str) -> str | None:
     return recover_token(settings.better_auth_secret, value)
 
 
-async def get_current_user(
-    request: Request, session: AsyncSession = Depends(get_db_session)
-) -> User:
-    token = _extract_session_token(request)
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
-
+async def _load_user(token: str, request: Request, session: AsyncSession) -> User:
     lookup = _recover_session_token(token)
     if not lookup:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
@@ -97,3 +91,28 @@ async def get_current_user(
 
     request.state.user = user
     return user
+
+
+async def get_current_user(
+    request: Request, session: AsyncSession = Depends(get_db_session)
+) -> User:
+    token = _extract_session_token(request)
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    return await _load_user(token, request, session)
+
+
+async def get_current_user_query(
+    request: Request, session: AsyncSession = Depends(get_db_session)
+) -> User:
+    """Same as :func:`get_current_user` but accepts ``?session=<token>``.
+
+    Dashboard connector connects open in a new tab (no Authorization header is
+    sent), so the session token arrives as a query parameter. Header/cookie are
+    still honoured as fallbacks.
+    """
+    query_token = request.query_params.get("session")
+    token = query_token or _extract_session_token(request)
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    return await _load_user(token, request, session)

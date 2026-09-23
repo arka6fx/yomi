@@ -105,6 +105,9 @@ def create_app() -> FastAPI:
     from yomi.gateway.routes import router as gateway_router
     app.include_router(gateway_router, prefix="/api/gateway")
 
+    from yomi.app.routes.ops import ops_router
+    app.include_router(ops_router)
+
     from yomi.app.routes.custom_mcp import custom_mcp_router
     app.include_router(custom_mcp_router)
 

@@ -12,6 +12,7 @@ from yomi.connectors.composio import (
     classify_webhook_event,
     configured_toolkit_ids,
     connection_event_fields,
+    connector_id_for_toolkit,
     disconnect_connection,
     ensure_webhook_subscription,
     get_composio,
@@ -21,6 +22,7 @@ from yomi.connectors.composio import (
     resolve_entity_id,
     sync_composio_connections,
     sync_connections,
+    toolkit_slug_for_connector,
     trigger_event_fields,
     user_from_entity_id,
     webhook_url,
@@ -73,10 +75,22 @@ class FakeSession:
         return SimpleNamespace(redirect_url=f"https://composio.example/flow/{toolkit}")
 
 
+class FakeTools:
+    def __init__(self, tools=None):
+        self._tools = list(tools or [])
+
+    def get_raw_composio_tools(self, toolkits=None, limit=None):
+        if toolkits is None:
+            return list(self._tools)
+        selected = [t for t in self._tools if t.toolkit.slug in toolkits]
+        return selected[:limit] if limit else selected
+
+
 class FakeClient:
-    def __init__(self, session=None):
+    def __init__(self, session=None, tools=None):
         self.sessions = []
         self.session = session or FakeSession()
+        self.tools = FakeTools(tools)
 
     def create(self, **kwargs):
         self.sessions.append(kwargs)
@@ -94,9 +108,9 @@ def configured(monkeypatch):
 def _toolkit_state(slug, status):
     return SimpleNamespace(
         slug=slug,
-        connection=None if status is None else SimpleNamespace(
-            connectedAccount=SimpleNamespace(status=status)
-        ),
+        connection=None
+        if status is None
+        else SimpleNamespace(connectedAccount=SimpleNamespace(status=status)),
     )
 
 
@@ -110,12 +124,20 @@ class TestConfig:
     def test_entity_is_namespaced(self):
         assert resolve_entity_id("u-42") == "yomi:u-42"
 
-    def test_configured_drops_first_class(self, configured, monkeypatch):
+    def test_configured_maps_google_ids_to_slugs(self, configured, monkeypatch):
         monkeypatch.setattr(
             "yomi.connectors.composio.settings.composio_connectors",
             "google,slack,gitlab,google-drive",
         )
-        assert configured_toolkit_ids() == {"slack", "gitlab"}
+        assert configured_toolkit_ids() == {"slack", "gitlab", "gmail", "googledrive"}
+
+    def test_slug_catalog_roundtrip(self):
+        assert toolkit_slug_for_connector("google") == "gmail"
+        assert toolkit_slug_for_connector("google-calendar") == "googlecalendar"
+        assert connector_id_for_toolkit("gmail") == "google"
+        assert connector_id_for_toolkit("googlecalendar") == "google-calendar"
+        assert toolkit_slug_for_connector("github") == "github"
+        assert connector_id_for_toolkit("github") == "github"
 
     def test_unconfigured_server_returns_no_composio(self, monkeypatch):
         monkeypatch.setattr("yomi.connectors.composio.settings.composio_api_key", "")
@@ -150,8 +172,8 @@ class TestBuildTools:
             FakeTool("slack_postMessage", "Post message"),
             FakeTool("github_getRepo", "Get repo", toolkit="github"),
         ]
-        session = FakeSession(tools=tools, toolkit_states=states)
-        client = FakeClient(session)
+        session = FakeSession(toolkit_states=states)
+        client = FakeClient(session, tools=tools)
         monkeypatch.setattr("yomi.connectors.composio.get_composio", lambda: client)
 
         registry, counter = await build_composio_tools("u-1")
@@ -160,15 +182,71 @@ class TestBuildTools:
         assert counter() == 0
 
     @pytest.mark.asyncio
+    async def test_deprecated_tools_are_skipped(self, configured, monkeypatch):
+        read_tool = FakeTool("SLACK_READ_CHANNEL", "Read channel")
+        deprecated = FakeTool("SLACK_DEPRECATED_ACTION", "Old action")
+        deprecated.is_deprecated = True
+        session = FakeSession(toolkit_states=[_toolkit_state("slack", "ACTIVE")])
+        client = FakeClient(session, tools=[read_tool, deprecated])
+        monkeypatch.setattr("yomi.connectors.composio.get_composio", lambda: client)
+
+        registry, _counter = await build_composio_tools("u-1")
+        assert set(registry) == {"SLACK_READ_CHANNEL"}
+
+    @pytest.mark.asyncio
+    async def test_tool_caps_limited_per_app_and_global(self, configured, monkeypatch):
+        toolbar = [
+            FakeTool(
+                f"{prefix}_{i:03d}READ",
+                f"{prefix} tool {i}",
+                toolkit=prefix.lower(),
+            )
+            for prefix in ("GITHUB", "SLACK")
+            for i in range(60)
+        ]
+        session = FakeSession(
+            toolkit_states=[
+                _toolkit_state("github", "ACTIVE"),
+                _toolkit_state("slack", "ACTIVE"),
+            ]
+        )
+        client = FakeClient(session, tools=toolbar)
+        monkeypatch.setattr("yomi.connectors.composio.get_composio", lambda: client)
+        monkeypatch.setattr("yomi.connectors.composio.settings.composio_max_tools_per_app", 10)
+        monkeypatch.setattr("yomi.connectors.composio.settings.composio_max_tools", 25)
+
+        registry, _counter = await build_composio_tools("u-1")
+        # sorted(connected) == [github, slack]; github takes 10, slack 10 (global cap 25).
+        assert len(registry) == 20
+        assert sum(n.startswith("GITHUB_") for n in registry) == 10
+        assert sum(n.startswith("SLACK_") for n in registry) == 10
+
+    @pytest.mark.asyncio
+    async def test_reads_ranked_before_writes_under_cap(self, configured, monkeypatch):
+        tools = [
+            FakeTool("SLACK_POST_MESSAGE", "Post message"),
+            FakeTool("SLACK_LIST_CHANNELS", "List channels"),
+        ]
+        session = FakeSession(toolkit_states=[_toolkit_state("slack", "ACTIVE")])
+        client = FakeClient(session, tools=tools)
+        monkeypatch.setattr("yomi.connectors.composio.get_composio", lambda: client)
+        monkeypatch.setattr("yomi.connectors.composio.settings.composio_max_tools_per_app", 1)
+
+        registry, _counter = await build_composio_tools("u-1")
+        assert set(registry) == {"SLACK_LIST_CHANNELS"}
+
+    @pytest.mark.asyncio
     async def test_execute_returns_data_and_counts(self, configured, monkeypatch):
         session = FakeSession(
+            toolkit_states=[_toolkit_state("slack", "ACTIVE")],
+        )
+        client = FakeClient(
+            session,
             tools=[
                 FakeTool("slack_fooReadSync", "Read foo"),
                 FakeTool("slack_barRead", "Read bar"),
             ],
-            toolkit_states=[_toolkit_state("slack", "ACTIVE")],
         )
-        client = FakeClient(session)
         monkeypatch.setattr("yomi.connectors.composio.get_composio", lambda: client)
 
         registry, counter = await build_composio_tools("u-1")
@@ -187,10 +265,11 @@ class TestBuildTools:
             return {"status": "pending", "id": "p-1"}
 
         session = FakeSession(
-            tools=[FakeTool("slack_postMessage", "Post message")],
             toolkit_states=[_toolkit_state("slack", "ACTIVE")],
         )
-        client = FakeClient(session)
+        client = FakeClient(
+            session, tools=[FakeTool("slack_postMessage", "Post message")]
+        )
         monkeypatch.setattr("yomi.connectors.composio.get_composio", lambda: client)
 
         registry, counter = await build_composio_tools("u-1", hook)
@@ -206,10 +285,11 @@ class TestBuildTools:
     @pytest.mark.asyncio
     async def test_read_slug_runs_without_hook(self, configured, monkeypatch):
         session = FakeSession(
-            tools=[FakeTool("slack_listChannels", "List channels")],
             toolkit_states=[_toolkit_state("slack", "ACTIVE")],
         )
-        client = FakeClient(session)
+        client = FakeClient(
+            session, tools=[FakeTool("slack_listChannels", "List channels")]
+        )
         monkeypatch.setattr("yomi.connectors.composio.get_composio", lambda: client)
 
         registry, counter = await build_composio_tools("u-1", None)
@@ -238,10 +318,11 @@ class TestBuildTools:
     @pytest.mark.asyncio
     async def test_error_is_mapped_to_reconnect_hint(self, configured, monkeypatch):
         session = FakeSession(
-            tools=[FakeTool("fail_madeUpSync", "Explode")],
             toolkit_states=[_toolkit_state("slack", "ACTIVE")],
         )
-        client = FakeClient(session)
+        client = FakeClient(
+            session, tools=[FakeTool("fail_madeUpSync", "Explode")]
+        )
         monkeypatch.setattr("yomi.connectors.composio.get_composio", lambda: client)
 
         registry, counter = await build_composio_tools("u-1")
@@ -467,11 +548,7 @@ class TestWebhookClassification:
         assert out == {"user_id": "yomi:u-1", "toolkit": "slack", "trigger_slug": "msg"}
 
         out = trigger_event_fields(
-            {
-                "metadata": {
-                    "connected_account": {"user_id": "yomi:u-2", "toolkit_slug": "github"}
-                }
-            }
+            {"metadata": {"connected_account": {"user_id": "yomi:u-2", "toolkit_slug": "github"}}}
         )
         assert out["user_id"] == "yomi:u-2"
 
@@ -512,9 +589,7 @@ class TestSyncConnections:
     @pytest.mark.asyncio
     async def test_updates_existing_rows_in_place(self):
         db = FakeDB()
-        db.rows.append(
-            ComposioConnection(user_id="u-1", entity_id="yomi:u-1", toolkit="slack")
-        )
+        db.rows.append(ComposioConnection(user_id="u-1", entity_id="yomi:u-1", toolkit="slack"))
         states = {
             "slack": {
                 "slug": "slack",
@@ -532,9 +607,7 @@ class TestSyncConnections:
     @pytest.mark.asyncio
     async def test_prunes_unconfigured_toolkits(self):
         db = FakeDB()
-        db.rows.append(
-            ComposioConnection(user_id="u-1", entity_id="yomi:u-1", toolkit="stale")
-        )
+        db.rows.append(ComposioConnection(user_id="u-1", entity_id="yomi:u-1", toolkit="stale"))
         await sync_connections(db, "u-1", {}, {"slack"})
         assert db.rows == []
 
@@ -574,9 +647,7 @@ class TestWebhookHandler:
     @pytest.mark.asyncio
     async def test_connection_event_updates_row(self):
         db = FakeDB()
-        db.rows.append(
-            ComposioConnection(user_id="u-1", entity_id="yomi:u-1", toolkit="slack")
-        )
+        db.rows.append(ComposioConnection(user_id="u-1", entity_id="yomi:u-1", toolkit="slack"))
         result = await handle_webhook_event(db, self._expired_raw())
         assert result["kind"] == "connection"
         assert result["status"] == "EXPIRED"
@@ -666,9 +737,7 @@ class TestDisconnect:
         client.connected_accounts = conn_accounts
         monkeypatch.setattr("yomi.connectors.composio.get_composio", lambda: client)
         db = FakeDB()
-        db.rows.append(
-            ComposioConnection(user_id="u-1", entity_id="yomi:u-1", toolkit="slack")
-        )
+        db.rows.append(ComposioConnection(user_id="u-1", entity_id="yomi:u-1", toolkit="slack"))
 
         result = await disconnect_connection(db, "u-1", "slack")
         assert result == {"disconnected": True, "toolkit": "slack"}
@@ -682,9 +751,7 @@ class TestDisconnect:
         client.connected_accounts = FakeConnAccounts(accounts=[])
         monkeypatch.setattr("yomi.connectors.composio.get_composio", lambda: client)
         db = FakeDB()
-        db.rows.append(
-            ComposioConnection(user_id="u-1", entity_id="yomi:u-1", toolkit="slack")
-        )
+        db.rows.append(ComposioConnection(user_id="u-1", entity_id="yomi:u-1", toolkit="slack"))
 
         result = await disconnect_connection(db, "u-1", "slack")
         assert result["disconnected"] is True
@@ -693,7 +760,9 @@ class TestDisconnect:
 
 class TestWebhookSubscription:
     def test_webhook_url_default(self, monkeypatch):
-        monkeypatch.setattr("yomi.connectors.composio.settings.backend_url", "https://api.example.com")
+        monkeypatch.setattr(
+            "yomi.connectors.composio.settings.backend_url", "https://api.example.com"
+        )
         assert webhook_url() == "https://api.example.com/api/webhooks/composio"
 
     def test_webhook_url_override(self, monkeypatch):
@@ -708,7 +777,9 @@ class TestWebhookSubscription:
         client = FakeClient()
         client.triggers = triggers
         monkeypatch.setattr("yomi.connectors.composio.get_composio", lambda: client)
-        monkeypatch.setattr("yomi.connectors.composio.settings.backend_url", "https://api.example.com")
+        monkeypatch.setattr(
+            "yomi.connectors.composio.settings.backend_url", "https://api.example.com"
+        )
 
         result = await ensure_webhook_subscription()
         assert result["webhook_url"] == "https://api.example.com/api/webhooks/composio"

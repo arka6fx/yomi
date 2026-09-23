@@ -22,9 +22,9 @@ def test_plan_facts():
 
 
 def test_plan_models():
-    assert PLANS["explore"]["model"] == "gpt-5.4-mini"
-    assert PLANS["pro"]["model"] == "gpt-5.4-mini"
-    assert PLANS["max"]["model"] == "gpt-5.5"
+    assert PLANS["explore"]["model"] == "@cf/qwen/qwen3.8-27b"
+    assert PLANS["pro"]["model"] == "@cf/qwen/qwen3.8-27b"
+    assert PLANS["max"]["model"] == "@cf/qwen/qwen3.8-27b"
 
 
 def test_get_plan_unknown_falls_back_to_explore():

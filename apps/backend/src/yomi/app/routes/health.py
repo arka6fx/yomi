@@ -30,7 +30,14 @@ EXPECTED_LATEST_TAG = "0042_drop_custom_avatar_key"
 
 # D1 migration journal table + a core table that must exist past migration 0001.
 D1_MIGRATIONS_TABLE = "d1_migrations"
-D1_CORE_TABLES = ("user", "memory_entries", "credit_accounts", "vector_sync_outbox")
+D1_CORE_TABLES = (
+    "user",
+    "memory_entries",
+    "credit_accounts",
+    "vector_sync_outbox",
+    "agent_runs",
+    "agent_run_steps",
+)
 
 
 @health_router.get("/health")

@@ -1,0 +1,22 @@
+# Staging computer gateway. Production config: wrangler.toml (same shape,
+# yomi-computer name + yomi-vectors-prod-style prod resources when created).
+name = "yomi-computer-staging"
+main = "worker/computer.ts"
+compatibility_date = "2026-09-22"
+workers_dev = true
+
+[[containers]]
+class_name = "Computer"
+image = "./image/Dockerfile"
+instance_type = "standard-1"
+max_instances = 2
+
+[[durable_objects.bindings]]
+name = "Computer"
+class_name = "Computer"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Computer"]
+
+# Configure with: wrangler secret put COMPUTER_GATEWAY_SECRET --config wrangler.staging.toml

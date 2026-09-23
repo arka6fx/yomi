@@ -249,6 +249,21 @@ class TestWebhookChain:
         await billing_routes.handle_dodo_event_d1(backend, "subscription.past_due", entity, "ev-5")
         assert backend.store.tables["user"][0]["subscription_status"] == "past_due"
 
+    async def test_on_hold_and_paused_mark_past_due(self) -> None:
+        for type_ in ("subscription.on_hold", "subscription.paused"):
+            backend = Backend()
+            seed_user(backend)
+            entity = {"subscription_id": "sub-1", "metadata": {"userId": "u-1"}}
+            await billing_routes.handle_dodo_event_d1(backend, type_, entity, f"ev-{type_}")
+            assert backend.store.tables["user"][0]["subscription_status"] == "past_due"
+
+    async def test_unpaused_is_not_marked_past_due(self) -> None:
+        backend = Backend()
+        seed_user(backend)
+        entity = {"subscription_id": "sub-1", "metadata": {"userId": "u-1"}}
+        await billing_routes.handle_dodo_event_d1(backend, "subscription.unpaused", entity, "ev-u")
+        assert backend.store.tables["user"][0]["subscription_status"] == "inactive"
+
     async def test_unknown_user_is_ignored(self) -> None:
         backend = Backend()
         entity = {"metadata": {"kind": "subscription", "plan": "pro"}}

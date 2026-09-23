@@ -57,21 +57,23 @@ cd apps/backend
 npm install --prefix containers
 bunx wrangler login
 bunx wrangler deploy                                     # creates yomi-backend Worker
-bunx wrangler secret put DATABASE_URL                    # use the DIRECT Neon host
-bunx wrangler secret put OPENAI_API_KEY                  # (not the -pooler host;
-bunx wrangler secret put BETTER_AUTH_SECRET              #  asyncpg + pgbouncer
-bunx wrangler secret put ENCRYPTION_KEY                  #  transaction pooling are
-bunx wrangler secret put INTERNAL_API_KEY                #  incompatible — see
-bunx wrangler secret put DODO_API_KEY                    #  db/__init__.py notes)
+bunx wrangler secret put STORAGE_BACKEND                # d1
+bunx wrangler secret put STORAGE_GATEWAY_URL
+bunx wrangler secret put STORAGE_GATEWAY_SECRET
+bunx wrangler secret put BETTER_AUTH_SECRET
+bunx wrangler secret put ENCRYPTION_KEY
+bunx wrangler secret put INTERNAL_API_KEY
+bunx wrangler secret put DODO_API_KEY
 ```
 
-Secrets needed: `DATABASE_URL`, `OPENAI_API_KEY`, `OPENAI_BASE_URL`
-(if proxied), `BETTER_AUTH_SECRET`, `INTERNAL_API_KEY`, `ENCRYPTION_KEY`,
-`ENCRYPTION_KEY_FALLBACKS`, `DODO_API_KEY`, `DODO_ENV`, and any connector
+Secrets needed: `STORAGE_BACKEND`, `STORAGE_GATEWAY_URL`,
+`STORAGE_GATEWAY_SECRET`, `BETTER_AUTH_SECRET`, `INTERNAL_API_KEY`,
+`ENCRYPTION_KEY`, `ENCRYPTION_KEY_FALLBACKS`, `DODO_API_KEY`, `DODO_ENV`,
+`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, and any connector
 credentials (Google integrations, Composio) the ported routes touch. Repo
 secrets used by the deploy workflow: `CLOUDFLARE_API_TOKEN`,
 `CLOUDFLARE_ACCOUNT_ID`, and optional `YOMI_SERVER_URL` (enables the post-
-deploy `/health` check).
+deploy `/health` check). Retired: `DATABASE_URL` (Neon), `OPENAI_*`.
 
 After the first deploy, wait a few minutes for provisioning, then verify:
 

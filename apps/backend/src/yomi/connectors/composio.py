@@ -9,7 +9,7 @@ are per end user (a Composio "entity") and resolve through `COMPOSIO_API_KEY`.
 Current SDK pattern (generation B) — confirmed against composio 0.21.x:
     composio = Composio(api_key=settings.composio_api_key)
     session  = composio.create(user_id=entity_id, toolkits=[...])
-    tool_items      = session.tools()          # items expose slug/name/input_parameters
+    tool_items      = composio.tools.get_raw_composio_tools(toolkits=[...])  # slug/name/input_parameters
     toolkit_states  = session.toolkits()       # per-toolkit connection status
     result          = session.execute(slug, arguments=...)  # SessionExecuteResponse(data, error, log_id)
     request         = session.authorize(toolkit, callback_url=...)  # -> redirect_url
@@ -60,9 +60,39 @@ from yomi.db.models_app2 import ComposioConnection
 
 logger = logging.getLogger(__name__)
 
-# Providers implemented natively in-repo; never route these through Composio even
-# if they end up listed in COMPOSIO_CONNECTORS.
-_FIRST_CLASS_IDS = frozenset({"google", "google-calendar", "google-drive"})
+# Composio toolkit slugs differ from the ui-connectors catalog ids for the
+# Google family (hyphenated catalog ids vs Composio's concatenated/underscored
+# slugs). Everything else maps id -> slug unchanged.
+_TOOLKIT_SLUG_BY_ID: dict[str, str] = {
+    "google": "gmail",
+    "google-calendar": "googlecalendar",
+    "google-drive": "googledrive",
+    "google-docs": "googledocs",
+    "google-sheets": "googlesheets",
+    "google-slides": "googleslides",
+    "google-meet": "googlemeet",
+    "google-maps": "google_maps",
+    "google-classroom": "google_classroom",
+    "google-tasks": "googletasks",
+    "google-ads": "googleads",
+    "google-analytics": "google_analytics",
+    "google-search-console": "google_search_console",
+    "google-cloud-vision": "google_cloud_vision",
+}
+_SLUG_TO_CATALOG_ID: dict[str, str] = {
+    slug: connector_id for connector_id, slug in _TOOLKIT_SLUG_BY_ID.items()
+}
+
+
+def toolkit_slug_for_connector(connector_id: str) -> str:
+    """Composio toolkit slug for a ui-connectors catalog id (identity otherwise)."""
+    return _TOOLKIT_SLUG_BY_ID.get(connector_id, connector_id)
+
+
+def connector_id_for_toolkit(toolkit_slug: str) -> str:
+    """ui-connectors catalog id for a Composio toolkit slug (identity otherwise)."""
+    return _SLUG_TO_CATALOG_ID.get(toolkit_slug, toolkit_slug)
+
 
 # Composio webhook event types we subscribe to (WebhookEventType values).
 _WEBHOOK_CONNECTION_EVENT = "composio.connected_account.expired"
@@ -100,8 +130,8 @@ async def _never_tokens(user_id: str, provider: str) -> str:
 
 
 def configured_toolkit_ids() -> set[str]:
-    """Composio-backed connector ids from config, minus first-class providers."""
-    return settings.composio_connector_ids() - _FIRST_CLASS_IDS
+    """Composio toolkit slugs for every configured connector id."""
+    return {toolkit_slug_for_connector(c) for c in settings.composio_connector_ids()}
 
 
 def resolve_entity_id(user_id: str) -> str:
@@ -236,10 +266,48 @@ def _risk_for_slug(slug: str) -> str | None:
     return None
 
 
+def _item_slug(item: Any) -> str:
+    return str(_attr(item, "slug", None) or _attr(item, "name", "") or "")
+
+
+def _is_deprecated(item: Any) -> bool:
+    if _attr(item, "is_deprecated", None) is True:
+        return True
+    deprecated = _attr(item, "deprecated", None)
+    return _attr(deprecated, "is_deprecated", None) is True
+
+
+# Tool-selection priority for the per-app cap: reads and diagnostics first, then
+# everything else alphabetically. Tokens are matched on word boundaries so
+# ``MESSAGE`` never reads as ``ME``. Earlier = preferred.
+_READ_TOKENS: tuple[str, ...] = (
+    "ME",
+    "PROFILE",
+    "SEARCH",
+    "LIST",
+    "READ",
+    "GET",
+    "VIEW",
+    "EXPORT",
+)
+
+
+def _tool_priority(slug: str) -> tuple[int, str]:
+    """Sort key; lower tuple = surfaced first under a trimmed tool budget."""
+    upper = slug.upper()
+    for rank, token in enumerate(_READ_TOKENS):
+        if re.search(rf"\b{token}\b", upper):
+            return rank, upper
+    return len(_READ_TOKENS), upper
+
+
 def _composio_error(err: Any) -> dict[str, str]:
     msg = str(err)
     low = msg.lower()
-    if re.search(r"connection.{0,12}expired|not connected|no connected account|401|unauthenticated|invalid.?grant|revoked", low):
+    if re.search(
+        r"connection.{0,12}expired|not connected|no connected account|401|unauthenticated|invalid.?grant|revoked",
+        low,
+    ):
         return {
             "error": msg,
             "hint": (
@@ -248,7 +316,10 @@ def _composio_error(err: Any) -> dict[str, str]:
             ),
         }
     if re.search(r"rate.?limit|429|too many requests", low):
-        return {"error": msg, "hint": "Composio is rate-limiting this app — wait a bit before retrying."}
+        return {
+            "error": msg,
+            "hint": "Composio is rate-limiting this app — wait a bit before retrying.",
+        }
     if re.search(r"invalid.?parameter|argument|schema|required", low):
         return {
             "error": msg,
@@ -277,9 +348,7 @@ async def fetch_toolkit_states(session: Any) -> dict[str, dict[str, Any]]:
     return _toolkit_state_map(details)
 
 
-async def connected_toolkit_ids(
-    session: Any, configured: set[str] | None = None
-) -> set[str]:
+async def connected_toolkit_ids(session: Any, configured: set[str] | None = None) -> set[str]:
     """Toolkits on the session with an ACTIVE connected account."""
     states = await fetch_toolkit_states(session)
     connected = {slug for slug, state in states.items() if state["active"]}
@@ -288,13 +357,27 @@ async def connected_toolkit_ids(
     return connected
 
 
-async def fetch_tool_items(session: Any) -> list[Any]:
-    """Tool schemas available on the session, with slug + input_parameters."""
-    collection = await asyncio.to_thread(session.tools)
-    items = _attr(_attr(collection, "items", None), "items", None)
-    if items is None and isinstance(collection, list):
-        items = collection
-    return list(items or [])
+async def fetch_tool_items(client: Any, toolkits: list[str]) -> list[Any]:
+    """Tool schemas for the given toolkit slugs (raw Composio `Item` objects).
+
+    NOTE: `session.tools()` returns only the six ToolServer meta tools in this
+    SDK generation — real app tools come from
+    ``client.tools.get_raw_composio_tools(toolkits=...)``. Each `Item` exposes
+    ``slug`` (e.g. ``GMAIL_SEND_EMAIL``), ``name``, ``human_description``,
+    ``input_parameters`` and ``toolkit.slug``.
+    """
+    if not toolkits:
+        return []
+    items: list[Any] = []
+    # The SDK's `get_raw_composio_tools` filters reliably only when asked for a
+    # single toolkit at a time; a multi-toolkit call returns just one page of the
+    # union (e.g. the first app's tools) and silently drops the rest.
+    for toolkit in sorted(toolkits):
+        collection = await asyncio.to_thread(
+            client.tools.get_raw_composio_tools, toolkits=[toolkit], limit=1000
+        )
+        items.extend(list(collection or []))
+    return items
 
 
 async def sync_connections(
@@ -310,11 +393,7 @@ async def sync_connections(
         scope &= configured
 
     rows = (
-        (
-            await db.execute(
-                select(ComposioConnection).where(ComposioConnection.user_id == user_id)
-            )
-        )
+        (await db.execute(select(ComposioConnection).where(ComposioConnection.user_id == user_id)))
         .scalars()
         .all()
     )
@@ -353,9 +432,7 @@ async def sync_composio_connections(db: AsyncSession, user_id: str) -> dict[str,
     return states
 
 
-async def get_connection_url(
-    user_id: str, toolkit: str, callback_url: str | None = None
-) -> str:
+async def get_connection_url(user_id: str, toolkit: str, callback_url: str | None = None) -> str:
     """Start a Composio connect flow and return the OAuth redirect URL for the user."""
     client = get_composio()
     if client is None:
@@ -371,9 +448,7 @@ async def get_connection_url(
     return redirect_url
 
 
-async def disconnect_connection(
-    db: AsyncSession, user_id: str, toolkit: str
-) -> dict[str, Any]:
+async def disconnect_connection(db: AsyncSession, user_id: str, toolkit: str) -> dict[str, Any]:
     """Delete the user's Composio connected account and its local mirror row."""
     client = get_composio()
     if client is None:
@@ -606,7 +681,9 @@ async def build_composio_tools(
         create_pending_action=create_pending_action,
     )
 
-    def _make_execute(slug: str, display: str, risk: str | None) -> Callable[[dict], Awaitable[Any]]:
+    def _make_execute(
+        slug: str, display: str, risk: str | None
+    ) -> Callable[[dict], Awaitable[Any]]:
         async def _run_tool(_args: dict) -> Any:
             tally["n"] += 1
             try:
@@ -634,19 +711,35 @@ async def build_composio_tools(
         return _execute
 
     async def _discover() -> None:
-        items = await fetch_tool_items(session)
+        if not connected:
+            return
+        items = await fetch_tool_items(client, sorted(connected))
         by_toolkit: dict[str, list[Any]] = {}
         for item in items:
+            if _is_deprecated(item):
+                continue
             by_toolkit.setdefault(_toolkit_slug(item) or "", []).append(item)
-        for toolkit in connected:
-            for item in by_toolkit.get(toolkit, []):
-                slug = _attr(item, "slug", None) or _attr(item, "name", None)
+        per_app_limit = settings.composio_max_tools_per_app
+        remaining = settings.composio_max_tools
+        for toolkit in sorted(connected):
+            if remaining <= 0:
+                break
+            pool = sorted(
+                by_toolkit.get(toolkit, []),
+                key=lambda it: _tool_priority(_item_slug(it)),
+            )
+            kept = pool[: min(per_app_limit, remaining)]
+            remaining -= len(kept)
+            for item in kept:
+                slug = _item_slug(item)
                 if not slug:
                     continue
                 display = _attr(item, "name", None) or slug
-                description = _attr(item, "human_description", None) or _attr(
-                    item, "description", None
-                ) or f"Composio tool {slug}"
+                description = (
+                    _attr(item, "human_description", None)
+                    or _attr(item, "description", None)
+                    or f"Composio tool {slug}"
+                )
                 parameters = _compiled_parameters(_attr(item, "input_parameters", None))
                 risk = _risk_for_slug(str(slug))
                 tools[slug] = ConnectorTool(

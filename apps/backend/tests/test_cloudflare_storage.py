@@ -93,7 +93,7 @@ class FakeStore(D1Store):
 
 def test_enqueue_validates_vector_dimensions() -> None:
     store = FakeStore()
-    with pytest.raises(ValueError, match="1536"):
+    with pytest.raises(ValueError, match="768"):
         enqueue_ops(store, [{
             "user_id": "u", "kind": "memory", "record_id": "m",
             "revision": "r", "operation": "upsert", "payload": {"values": [1.0]},

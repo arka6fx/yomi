@@ -107,7 +107,7 @@ async def record_ai_usage(session: AsyncSession, input_: AiUsageRecord) -> None:
                 intent=input_.intent,
                 complexity=input_.complexity,
                 model=input_.model,
-                provider=(input_.provider or "openai"),
+                provider=(input_.provider or "workers-ai"),
                 input_tokens=_clamp(input_.input_tokens),
                 output_tokens=_clamp(input_.output_tokens),
                 reasoning_tokens=_clamp(input_.reasoning_tokens),

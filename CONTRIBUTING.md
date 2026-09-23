@@ -14,7 +14,7 @@ cd yomi
 # Python backend (canonical for new backend work)
 cd apps/backend
 uv sync --dev
-cp .env.example .env     # fill in at minimum the OpenAI + Postgres values
+cp .env.example .env     # fill in at minimum the Cloudflare credentials
 uv run uvicorn yomi.run:app --reload --port 8080
 
 # Dashboard
