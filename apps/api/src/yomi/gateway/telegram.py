@@ -93,6 +93,10 @@ def _markdown_to_telegram_html(text: str) -> str:
     escaped = re.sub(r"(?<!\*)\*([^*\n]+)\*(?!\*)|(?<!_)_([^_\n]+)_(?!_)", lambda m: f"<i>{m.group(1) or m.group(2)}</i>", escaped)
     escaped = re.sub(r"^#{1,6}\s+(.+)$", r"<b>\1</b>", escaped, flags=re.MULTILINE)
     escaped = re.sub(r"^\s*[-*]\s+", "• ", escaped, flags=re.MULTILINE)
+    # Models occasionally emit an unmatched emphasis marker (for example a
+    # response beginning with ``**``). Never leak Markdown control characters
+    # into Telegram's user-facing HTML fallback.
+    escaped = escaped.replace("**", "").replace("__", "")
     for index, block in enumerate(code_blocks):
         escaped = escaped.replace(f"\x00CODE{index}\x00", block)
     return escaped

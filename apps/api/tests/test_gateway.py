@@ -49,6 +49,14 @@ def test_telegram_markdown_is_rendered_as_html():
     assert "**" not in rendered
 
 
+def test_telegram_markdown_drops_unmatched_emphasis_markers():
+    from yomi.gateway.telegram import _markdown_to_telegram_html
+
+    rendered = _markdown_to_telegram_html("**Starting now\nA clean reply")
+    assert "**" not in rendered
+    assert "Starting now" in rendered
+
+
 def test_unlink_requires_auth(no_db_client: TestClient):
     res = no_db_client.delete("/api/gateway/connections/telegram")
     assert res.status_code == 401
