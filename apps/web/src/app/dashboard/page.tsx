@@ -234,6 +234,36 @@ function DashboardContent() {
     return () => clearInterval(interval)
   }, [session])
 
+  // Checkout/webhook updates can finish in another tab or in Telegram. Refresh
+  // immediately when the dashboard becomes visible so the balance never looks
+  // stuck at the old monthly amount while the user is actively viewing it.
+  useEffect(() => {
+    if (!session) return
+    const refresh = async () => {
+      const headers = { Authorization: `Bearer ${session.session.token}` }
+      try {
+        const [subRes, summaryRes] = await Promise.all([
+          fetch("/api/billing/subscription", { headers }),
+          fetch("/api/billing/usage-summary", { headers }),
+        ])
+        if (subRes.ok) setSub((await subRes.json()) as Sub)
+        if (summaryRes.ok) setUsageSummary((await summaryRes.json()) as UsageSummary)
+      } catch {
+        // Keep the last known balance during a transient network handoff.
+      }
+    }
+    const onFocus = () => void refresh()
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refresh()
+    }
+    window.addEventListener("focus", onFocus)
+    document.addEventListener("visibilitychange", onVisible)
+    return () => {
+      window.removeEventListener("focus", onFocus)
+      document.removeEventListener("visibilitychange", onVisible)
+    }
+  }, [session])
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     setDesiredPlan(params.get("plan"))
@@ -350,7 +380,7 @@ function DashboardContent() {
   }, [desiredPlan, session, subPending, sub])
 
   async function handleUpgrade(planKey: string) {
-    if (planKey === "explore") return
+    if (planKey === "explore" || billingLoading !== null || creditLoading !== null) return
     setBillingError("")
     setBillingLoading(planKey)
     try {
@@ -367,6 +397,7 @@ function DashboardContent() {
       // Dodo's hosted checkout must leave the Telegram webview.  In-place
       // navigation is frequently blocked by its payment/OAuth providers.
       openExternal(data.short_url)
+      setBillingLoading(null)
     } catch (err) {
       setBillingError(err instanceof Error ? err.message : "Failed to start billing")
       setBillingLoading(null)
@@ -399,6 +430,7 @@ function DashboardContent() {
   }
 
   async function handleBuyCredits(pack: string) {
+    if (creditLoading !== null || billingLoading !== null) return
     setBillingError("")
     setCreditLoading(pack)
     try {
@@ -413,6 +445,7 @@ function DashboardContent() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.cause ?? data.error ?? "Credit purchase failed")
       openExternal(data.short_url)
+      setCreditLoading(null)
     } catch (err) {
       setBillingError(err instanceof Error ? err.message : "Failed to start credit purchase")
       setCreditLoading(null)

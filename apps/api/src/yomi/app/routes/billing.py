@@ -234,6 +234,12 @@ async def dodo_request(path: str, body: Any = None, method: str | None = None) -
 
     text = res.text
     if res.status_code >= 400:
+        if res.status_code == 422 and "product" in text.lower() and "exist" in text.lower():
+            raise RuntimeError(
+                "Dodo product is not available in the configured "
+                f"{config['mode']} catalog; update the matching DODO_{config['mode'].upper()}_"
+                "PRODUCT_* Worker secret"
+            )
         raise RuntimeError(f"Dodo {path} -> {res.status_code}: {text}")
     try:
         return res.json()
