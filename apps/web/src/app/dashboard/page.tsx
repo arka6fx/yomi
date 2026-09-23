@@ -17,7 +17,7 @@ import {
   ExternalLink,
   Zap,
   Home,
-  Sparkles,
+  Command,
 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { openExternal } from "@/lib/telegram-webapp"
@@ -738,7 +738,7 @@ function DashboardContent() {
                 )}
               >
                 {tab === "home" && <Home size={13} />}
-                {tab === "command-center" && <Sparkles size={13} />}
+                {tab === "command-center" && <Command size={13} />}
                 {tab === "integrations" && <Plug size={13} />}
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
                 {tab === "integrations" && connectedProviders.length > 0 && (

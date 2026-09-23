@@ -412,7 +412,7 @@ export function DashboardHome({
       />
 
       {!referralLoading && referral && (
-        <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/[0.02] p-5 sm:p-6">
+        <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
@@ -441,14 +441,14 @@ export function DashboardHome({
               <div className="flex items-center gap-2">
                 <button
                   onClick={shareReferralLink}
-                  className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border bg-background/60 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-primary/40"
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border bg-background py-1.5 text-xs font-medium text-foreground transition-colors hover:border-primary/40"
                 >
                   <Share2 size={12} />
                   Share
                 </button>
                 <button
                   onClick={() => onNavigate("referrals")}
-                  className="flex-1 rounded-lg border border-border bg-background/60 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-primary/40"
+                  className="flex-1 rounded-lg border border-border bg-background py-1.5 text-xs font-medium text-foreground transition-colors hover:border-primary/40"
                 >
                   Track referrals
                 </button>
@@ -755,7 +755,7 @@ function MorningBriefCard({
   onOpenSchedules: () => void
 }) {
   return (
-    <section className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-card to-card p-5 sm:p-6">
+    <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex gap-3">
           <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">

@@ -4,12 +4,12 @@ import { useMemo, useState, type ReactNode } from "react"
 import {
   ArrowUpRight,
   CheckCircle2,
+  Command,
   Copy,
+  ListChecks,
   MonitorCog,
   ShieldCheck,
-  Sparkles,
   Terminal,
-  WandSparkles,
   Workflow,
 } from "lucide-react"
 
@@ -50,12 +50,11 @@ export function CommandCenter({ connections, onOpenConnections }: CommandCenterP
 
   return (
     <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/15 via-card to-card p-6 sm:p-8">
-        <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-primary/15 blur-3xl" />
+      <section className="relative overflow-hidden rounded-3xl border border-border bg-card p-6 sm:p-8">
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl space-y-3">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-              <Sparkles size={13} /> Personal command center
+              <Command size={13} /> Personal command center
             </div>
             <h2 className="text-2xl font-medium tracking-tight text-foreground sm:text-3xl">
               Give Yomi the whole mission.
@@ -94,7 +93,7 @@ export function CommandCenter({ connections, onOpenConnections }: CommandCenterP
       </div>
 
       <section className="grid gap-4 lg:grid-cols-[1.2fr_.8fr]">
-        <div className="rounded-2xl border border-white/10 bg-card/80 p-5 shadow-[0_12px_40px_-24px_hsl(var(--primary)/.45)] backdrop-blur-sm">
+        <div className="rounded-2xl border border-border bg-card p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold text-foreground">Your tool shelf</h3>
@@ -138,7 +137,7 @@ export function CommandCenter({ connections, onOpenConnections }: CommandCenterP
           )}
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-card/80 p-5 shadow-[0_12px_40px_-24px_hsl(var(--primary)/.45)] backdrop-blur-sm">
+        <div className="rounded-2xl border border-border bg-card p-5">
           <div className="mb-4 flex items-center gap-2">
             <Terminal size={17} className="text-primary" />
             <div>
@@ -158,7 +157,7 @@ export function CommandCenter({ connections, onOpenConnections }: CommandCenterP
 
       <section>
         <div className="mb-3 flex items-center gap-2">
-          <WandSparkles size={16} className="text-primary" />
+          <ListChecks size={16} className="text-primary" />
           <h3 className="text-sm font-semibold text-foreground">Start with a mission</h3>
         </div>
         <div className="grid gap-3 md:grid-cols-3">
@@ -166,7 +165,7 @@ export function CommandCenter({ connections, onOpenConnections }: CommandCenterP
             <button
               key={recipe.title}
               onClick={() => void copyPrompt(recipe.prompt)}
-              className="group rounded-2xl border border-white/10 bg-card/80 p-4 text-left shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_14px_36px_-24px_hsl(var(--primary)/.7)]"
+              className="group rounded-2xl border border-border bg-card p-4 text-left shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_14px_36px_-24px_hsl(var(--primary)/.7)]"
             >
               <div className="flex items-start justify-between gap-3">
                 <span className="text-sm font-medium text-foreground">{recipe.title}</span>
@@ -190,7 +189,7 @@ export function CommandCenter({ connections, onOpenConnections }: CommandCenterP
 
 function Capability({ icon, title, copy }: { icon: ReactNode; title: string; copy: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-card/80 p-4 shadow-[0_12px_30px_-24px_hsl(var(--primary)/.6)] backdrop-blur-sm">
+    <div className="rounded-2xl border border-border bg-card p-4">
       <div className="mb-3 grid h-10 w-10 place-items-center rounded-xl border border-primary/20 bg-gradient-to-br from-primary/20 to-primary/5 text-primary shadow-inner">
         {icon}
       </div>
