@@ -138,6 +138,47 @@ of the query. Reserved for that: it is deliberately _not_ derived from `kind`,
 because marking every extracted preference and fact static makes a stale memory
 permanently resident in the prompt. _Avoid_: durable, permanent, important.
 
+## Drive sync sources
+
+Canonical vocabulary for how Google Drive folders become searchable RAG
+content. Full design in
+[ADR-0007](docs/adr/0007-google-drive-auto-sync-rag-r2.md).
+
+**Drive sync source**: A `rag_sources` row with `sourceType = "google-drive"`
+that continuously indexes one Google Drive folder. Identity is
+`(userId, folderId)` — the immutable Drive id, never a path — stored in
+`path`. Deleting it deletes the source's documents and chunks.
+_Avoid_: drive source, folder source.
+
+**Backfill**: The first population pass. Lists the folder statically
+(`GOOGLEDRIVE_LIST_FILES`, paged, 20 files per tick, max 1000 children) until
+drained, then flips the source `backfilling → active`. _Avoid_: sync (backfill
+is static; sync is a delta on it).
+
+**Incremental sync**: The ongoing delta pass, valid only while the source is
+`active`. Drives the Google Drive **Changes API** from a persisted
+`startPageToken` and removes documents that were trashed or moved outside the
+folder. Refused (`409 backfill_pending`) before backfill completes.
+
+**Sync state**: The versioned JSON blob in `rag_sources.sync_state`
+(`{version: 1, startPageToken, pending, pendingIndex, filesSkipped,
+filesIndexed, lastSync}`) that makes a page-token walk resume across deploys.
+The column is `TEXT`; it is stored JSON-dumped, never a typed column,
+because the storage prepared-statement layer only binds scalars.
+_Avoid_: cursor, checkpoint (checkpoint already means a session summary).
+
+**Ingest staging**: The short-lived R2 object that carries composio
+`GOOGLEDRIVE_PARSE_FILE` output into the container. The Worker fetches the
+tool's presigned S3 URL into R2 (max 8 MB, 24 h TTL), the container reads it
+back and deletes it. The container **never touches Amazon S3**.
+_Avoid_: s3 staging, transient object.
+
+**Indexable export**: A file the pipeline can turn into text: Google Docs and
+Slides → `text/plain`, Sheets → `text/csv`, and native
+`txt`/`md`/`csv`/`tsv`/`html`/`xml`/`json` → `text/plain`. Anything else
+(notably PDFs and images) is **skipped**, counted in `filesSkipped`, never
+fatal. _Avoid_: parseable, convertible.
+
 ## Capability model
 
 Canonical vocabulary for what plugin, MCP, and automation code is allowed to do.
