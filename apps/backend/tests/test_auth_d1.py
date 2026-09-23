@@ -238,6 +238,21 @@ class TestUsersVerificationAccounts:
         assert found and found["access_token"] == "t2"
         assert await auth_d1.find_account(backend, "u-1", "github", "nope") is None
 
+    async def test_touch_account_encodes_datetimes(self) -> None:
+        backend = Backend()
+        now = datetime.now(UTC).isoformat()
+        await auth_d1.link_account(backend, {
+            "id": "a-1", "account_id": "gh-1", "provider_id": "github", "user_id": "u-1",
+            "access_token": "t1", "created_at": now, "updated_at": now,
+        })
+        expires = datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=1)
+        await auth_d1.touch_account(backend, "a-1", {
+            "access_token": "t2", "access_token_expires_at": expires, "updated_at": now,
+        })
+        found = await auth_d1.find_account(backend, "u-1", "github", "gh-1")
+        assert found and found["access_token"] == "t2"
+        assert found["access_token_expires_at"] == expires.replace(tzinfo=UTC).isoformat()
+
 
 class TestConsent:
     async def test_check_consent_defaults_to_denied(self) -> None:
@@ -288,3 +303,15 @@ class TestConsent:
         )
         assert updated.memory_enabled is True
         assert (await auth_d1.get_privacy_preferences(backend, "u-9")).memory_enabled is True
+
+    async def test_update_privacy_preferences_encodes_json(self) -> None:
+        backend = Backend()
+        await auth_d1.update_privacy_preferences(
+            backend, "u-9", {"retention_overrides": {"voice": "p1y"}}
+        )
+        row = backend.store.tables["privacy_preferences"][0]
+        assert row["retention_overrides"] == '{"voice":"p1y"}'
+        updated = await auth_d1.update_privacy_preferences(
+            backend, "u-9", {"memory_enabled": True, "retention_overrides": {"memory": "p6m"}}
+        )
+        assert updated.retention_overrides == {"memory": "p6m"}

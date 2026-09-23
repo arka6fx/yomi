@@ -277,11 +277,14 @@ async def link_account(backend: D1Backend, values: dict[str, Any]) -> None:
 
 
 async def touch_account(backend: D1Backend, account_id: str, values: dict[str, Any]) -> None:
-    assignments = ", ".join(f"{key} = ?" for key in values)
+    from yomi.services.cloudflare_storage.store import encode as _encode
+
+    encoded = {key: _encode(value) for key, value in values.items()}
+    assignments = ", ".join(f"{key} = ?" for key in encoded)
     await backend.store.atomic([
         Statement(
             f"UPDATE account SET {assignments} WHERE id = ?",
-            [*values.values(), account_id],
+            [*encoded.values(), account_id],
         )
     ])
 
@@ -320,6 +323,8 @@ async def update_privacy_preferences(
             row["retention_overrides"] = patch["retention_overrides"]
         await backend.store.atomic([backend.store.insert("privacy_preferences", row)])
     else:
+        from yomi.services.cloudflare_storage.store import encode as _encode
+
         assignments = ", ".join(
             ["updated_at = ?"] + [f"{key} = ?" for key in patch if key != "updated_at"]
         )
@@ -327,7 +332,7 @@ async def update_privacy_preferences(
         for key, value in patch.items():
             if key == "updated_at":
                 continue
-            params.append(value)
+            params.append(_encode(value))
         params.append(user_id)
         await backend.store.atomic([
             Statement(
