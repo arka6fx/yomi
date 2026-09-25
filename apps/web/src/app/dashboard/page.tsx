@@ -23,7 +23,6 @@ import { formatUsd } from "@/lib/local-price"
 import { PLANS } from "@/lib/plans"
 import { MemoryManager } from "@/components/dashboard/MemoryManager"
 import { PrivacyManager } from "@/components/dashboard/PrivacyManager"
-import { SchedulesManager } from "@/components/dashboard/SchedulesManager"
 import { ReferralsManager } from "@/components/dashboard/ReferralsManager"
 import { StreaksManager } from "@/components/dashboard/StreaksManager"
 import { ProfileManager } from "@/components/dashboard/ProfileManager"
@@ -37,6 +36,7 @@ import { CommandCenter } from "@/components/dashboard/CommandCenter"
 import { AppShell } from "@/components/dashboard/shell/AppShell"
 import { HomeView } from "@/components/dashboard/shell/HomeView"
 import { SkillsView } from "@/components/dashboard/shell/SkillsView"
+import { RoutinesView } from "@/components/dashboard/shell/RoutinesView"
 import { AgentActivityManager } from "@/components/dashboard/AgentActivityManager"
 import { ApprovalManager } from "@/components/dashboard/ApprovalManager"
 import { VaultManager } from "@/components/dashboard/VaultManager"
@@ -922,7 +922,7 @@ function DashboardContent() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <SchedulesManager token={session.session.token} />
+            <RoutinesView token={session.session.token} onNavigate={setActiveTab} />
           </motion.div>
         )}
 
