@@ -162,6 +162,40 @@ async def list_entries(backend: D1Backend, user_id: str, limit: int) -> list[dic
     return [row_dict(row) for row in rows]
 
 
+async def graph(backend: D1Backend, user_id: str, limit: int) -> dict[str, Any]:
+    """Active memories as nodes and the relations between them as edges."""
+    rows = await backend.store.fetch_all(
+        f"SELECT id, topic, kind, summary, content, is_static FROM memory_entries "
+        f"WHERE user_id = ? AND {_ACTIVE_LATEST} ORDER BY updated_at DESC LIMIT ?",
+        [user_id, limit],
+    )
+    nodes = [
+        {
+            "id": str(row["id"]),
+            "topic": row.get("topic"),
+            "kind": row.get("kind"),
+            "label": str(row.get("summary") or row.get("content") or "")[:80],
+            "isStatic": bool(row.get("is_static")),
+        }
+        for row in rows
+    ]
+    ids = {node["id"] for node in nodes}
+    edges = [
+        {
+            "from": str(edge["from_memory_id"]),
+            "to": str(edge["to_memory_id"]),
+            "type": edge["relation_type"],
+        }
+        for edge in await backend.store.fetch_all(
+            "SELECT from_memory_id, to_memory_id, relation_type FROM memory_relations "
+            "WHERE user_id = ?",
+            [user_id],
+        )
+        if str(edge["from_memory_id"]) in ids and str(edge["to_memory_id"]) in ids
+    ]
+    return {"nodes": nodes, "edges": edges}
+
+
 async def list_superseded(backend: D1Backend, user_id: str, limit: int) -> list[dict[str, Any]]:
     rows = await backend.store.fetch_all(
         "SELECT * FROM memory_entries WHERE user_id = ? AND status = 'superseded' "

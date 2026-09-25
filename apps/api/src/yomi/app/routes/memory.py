@@ -360,6 +360,19 @@ async def memory_entries(
 # Superseded memories are gone from every other read path, so this is the only
 # way back to one that was replaced by mistake — the data contract the memory
 # viewer's undo will read.
+@memory_router.get("/graph", dependencies=[Depends(require_consent("memory"))])
+async def memory_graph(
+    request: Request,
+    user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
+):
+    """Nodes and edges for the memory graph view (D1 only)."""
+    if d1 is None:
+        return JSONResponse({"error": "graph view requires the d1 backend"}, status_code=501)
+    limit = _clamp_limit(request.query_params.get("limit"), 150, 300)
+    return await d1_backend.graph(d1, user.id, limit)
+
+
 @memory_router.get("/superseded", dependencies=[Depends(require_consent("memory"))])
 async def memory_superseded(
     request: Request,

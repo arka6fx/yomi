@@ -21,7 +21,6 @@ import { openExternal } from "@/lib/telegram-webapp"
 import { cn } from "@/lib/utils"
 import { formatUsd } from "@/lib/local-price"
 import { PLANS } from "@/lib/plans"
-import { MemoryManager } from "@/components/dashboard/MemoryManager"
 import { PrivacyManager } from "@/components/dashboard/PrivacyManager"
 import { ReferralsManager } from "@/components/dashboard/ReferralsManager"
 import { StreaksManager } from "@/components/dashboard/StreaksManager"
@@ -37,6 +36,7 @@ import { AppShell } from "@/components/dashboard/shell/AppShell"
 import { HomeView } from "@/components/dashboard/shell/HomeView"
 import { SkillsView } from "@/components/dashboard/shell/SkillsView"
 import { RoutinesView } from "@/components/dashboard/shell/RoutinesView"
+import { MemoryView } from "@/components/dashboard/shell/MemoryView"
 import { AgentActivityManager } from "@/components/dashboard/AgentActivityManager"
 import { ApprovalManager } from "@/components/dashboard/ApprovalManager"
 import { VaultManager } from "@/components/dashboard/VaultManager"
@@ -911,7 +911,7 @@ function DashboardContent() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <MemoryManager token={session.session.token} />
+            <MemoryView token={session.session.token} onNavigate={setActiveTab} />
           </motion.div>
         )}
 
