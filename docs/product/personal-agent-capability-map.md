@@ -39,7 +39,7 @@ after browser work. [OpenInstinct repository](https://github.com/Merit-Systems/O
 | Billing/credits | Implemented; Dodo, ledger and usage summary | Keep one ledger path across Telegram, web, Composio, browser and computer |
 | Vault | Implemented (D1): logins, cards, addresses, phones, agent items; secrets typed into the sandbox, never shown to the model | Add TOTP/2FA handoff and per-site login autofill |
 | Money | Card payments need approval, then a 15-minute typing window; per-card monthly limits and a spend ledger | Add receipts from Gmail and budgets per category |
-| Trusted people | Not implemented | Add allowlist and channel/contact permissions before delegated messaging |
+| Trusted people | Implemented (D1): email-based requests, mutual trust, silent blocks, pause; agent-to-agent messages delivered on Telegram after approval | Let a trusted person's Yomi answer availability questions from Calendar without a human hop |
 | Observability | D1 `agent_runs` and privacy audit exist | Expose a redacted run timeline to the user |
 | Dashboard | Implemented; integrations, memory, schedules, billing and Command Center | Add Vault, Agents and Activity navigation using the same visual language |
 

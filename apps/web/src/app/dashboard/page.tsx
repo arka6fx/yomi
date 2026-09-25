@@ -40,6 +40,7 @@ import { CommandCenter } from "@/components/dashboard/CommandCenter"
 import { AgentActivityManager } from "@/components/dashboard/AgentActivityManager"
 import { ApprovalManager } from "@/components/dashboard/ApprovalManager"
 import { VaultManager } from "@/components/dashboard/VaultManager"
+import { TrustedPeopleManager } from "@/components/dashboard/TrustedPeopleManager"
 import {
   ConnectorMarketplace,
   CustomMcpServers,
@@ -919,6 +920,16 @@ function DashboardContent() {
             transition={{ duration: 0.3 }}
           >
             <VaultManager token={session.session.token} />
+          </motion.div>
+        )}
+
+        {activeTab === "trusted" && session && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <TrustedPeopleManager token={session.session.token} />
           </motion.div>
         )}
 

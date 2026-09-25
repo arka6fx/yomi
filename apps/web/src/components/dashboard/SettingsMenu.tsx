@@ -17,6 +17,7 @@ import {
   Activity,
   ShieldCheck,
   Lock,
+  Users,
 } from "lucide-react"
 
 export type DashboardTab =
@@ -25,6 +26,7 @@ export type DashboardTab =
   | "activity"
   | "approvals"
   | "vault"
+  | "trusted"
   | "integrations"
   | "memory"
   | "schedules"
@@ -74,6 +76,7 @@ export function SettingsMenu({ onNavigate }: { onNavigate: (tab: DashboardTab) =
     { label: "Agent activity", icon: Activity, onClick: () => navigate("activity") },
     { label: "Approvals", icon: ShieldCheck, onClick: () => navigate("approvals") },
     { label: "Vault", icon: Lock, onClick: () => navigate("vault") },
+    { label: "Trusted people", icon: Users, onClick: () => navigate("trusted") },
     { label: "Connections", icon: Plug, onClick: () => navigate("integrations") },
     { label: "Memory", icon: Brain, onClick: () => navigate("memory") },
     { label: "Profile", icon: User, onClick: () => navigate("profile") },

@@ -7,53 +7,24 @@ in-memory database instead of pattern-matching SQL.
 from __future__ import annotations
 
 import json
-import sqlite3
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from typing import Any
 
 import pytest
+from d1_sqlite import sqlite_backend
 
 from yomi.services import actions_d1, vault_d1
-from yomi.services.cloudflare_storage.client import Statement
 from yomi.services.cloudflare_storage.deps import D1Backend
-from yomi.services.cloudflare_storage.store import D1Store, _params
 
-MIGRATIONS = Path(__file__).resolve().parents[1] / "migrations-d1"
 USER = "user-1"
 VISA = "4111 1111 1111 1111"
-
-
-class SqliteStore(D1Store):
-    def __init__(self) -> None:
-        self.db = sqlite3.connect(":memory:")
-        self.db.row_factory = sqlite3.Row
-        for path in sorted(MIGRATIONS.glob("*.sql")):
-            self.db.executescript(path.read_text(encoding="utf-8"))
-        for user_id in (USER, "someone-else"):
-            self.db.execute(
-                'INSERT INTO "user" (id, name, email, created_at, updated_at) '
-                "VALUES (?, 'U', ?, 'now', 'now')",
-                [user_id, f"{user_id}@example.com"],
-            )
-
-    async def fetch_all(self, sql: str, params: list[Any] | None = None) -> list[dict]:
-        return [dict(r) for r in self.db.execute(sql, _params(params)).fetchall()]
-
-    async def atomic(self, statements: list[Statement]) -> list[dict]:
-        out = []
-        with self.db:
-            for stmt in statements:
-                rows = self.db.execute(stmt.sql, stmt.payload()["params"]).fetchall()
-                out.append({"success": True, "results": [dict(r) for r in rows]})
-        return out
 
 
 @pytest.fixture
 def backend(monkeypatch) -> D1Backend:
     monkeypatch.setattr("yomi.crypto.settings.encryption_key", "a" * 64)
     monkeypatch.setattr("yomi.crypto.settings.encryption_key_fallbacks", "")
-    return D1Backend(store=SqliteStore(), client=None)  # type: ignore[arg-type]
+    return sqlite_backend(USER, "someone-else")
 
 
 def _pending_hook(backend: D1Backend, captured: list[dict]):

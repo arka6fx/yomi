@@ -27,6 +27,7 @@ from yomi.app.routes.referrals import referrals_router
 from yomi.app.routes.schedules import schedules_router
 from yomi.app.routes.status import status_router
 from yomi.app.routes.streaks import streaks_router
+from yomi.app.routes.trust import trust_router
 from yomi.app.routes.usage import usage_router
 from yomi.app.routes.vault import vault_router
 from yomi.conf import settings
@@ -97,6 +98,7 @@ def create_app() -> FastAPI:
     app.include_router(schedules_router)
     app.include_router(memory_router)
     app.include_router(vault_router)
+    app.include_router(trust_router)
 
     from yomi.app.routes.auth import router as auth_router
     app.include_router(auth_router, prefix="/api/auth")

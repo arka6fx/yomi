@@ -14,7 +14,7 @@ import json
 import logging
 from typing import Any
 
-from yomi.services import vault_d1
+from yomi.services import trust_d1, vault_d1
 from yomi.services.cloudflare_storage.client import Statement
 from yomi.services.cloudflare_storage.deps import D1Backend
 from yomi.services.cloudflare_storage.store import utcnow_iso
@@ -47,6 +47,11 @@ async def _replay(backend: D1Backend, row: dict) -> Any:
     payload = _payload(row)
     if row["connector"] == "vault" and row["action"] == "vault-authorizePayment":
         return await vault_d1.authorize_payment(backend, user_id, str(payload["payment_id"]))
+    if row["connector"] == "trust" and row["action"] == "trust-sendMessage":
+        return await trust_d1.send_message(
+            backend, user_id, str(payload["recipient_id"]), str(payload.get("body") or ""),
+            payload.get("reply_to"),
+        )
 
     from yomi.services.agent.tools import build_user_registry
 

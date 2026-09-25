@@ -326,12 +326,22 @@ async def _existing_job(
     )
 
 
+# Tables owned by two users; a row goes when either side deletes their data.
+_PAIR_OWNER_COLUMNS: dict[str, tuple[str, str]] = {
+    "trust_links": ("requester_id", "target_id"),
+    "trust_messages": ("sender_id", "recipient_id"),
+}
+
+
 async def _delete_where(
     backend: D1Backend, table: str, user_id: str
 ) -> int:
-    results = await backend.store.atomic([
-        Statement(f"DELETE FROM {table} WHERE user_id = ?", [user_id])
-    ])
+    if table in _PAIR_OWNER_COLUMNS:
+        a, b = _PAIR_OWNER_COLUMNS[table]
+        stmt = Statement(f"DELETE FROM {table} WHERE {a} = ? OR {b} = ?", [user_id, user_id])
+    else:
+        stmt = Statement(f"DELETE FROM {table} WHERE user_id = ?", [user_id])
+    results = await backend.store.atomic([stmt])
     return _changes(results[0])
 
 
@@ -404,6 +414,9 @@ _DELETE_DATA_TABLES = (
     "pending_actions",
     "vault_payments",
     "vault_items",
+    "trust_messages",
+    "trust_links",
+    "trust_settings",
     "schedules",
     "suggestion_decisions",
     "usage_events",
@@ -424,6 +437,9 @@ _DELETE_ACCOUNT_TABLES = (
     "pending_actions",
     "vault_payments",
     "vault_items",
+    "trust_messages",
+    "trust_links",
+    "trust_settings",
     "schedules",
     "usage_events",
     "linking_codes",

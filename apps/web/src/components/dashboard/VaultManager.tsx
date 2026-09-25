@@ -1,7 +1,18 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { CreditCard, KeyRound, Loader2, Lock, MapPin, Phone, Plus, Bot, Trash2, X } from "lucide-react"
+import {
+  CreditCard,
+  KeyRound,
+  Loader2,
+  Lock,
+  MapPin,
+  Phone,
+  Plus,
+  Bot,
+  Trash2,
+  X,
+} from "lucide-react"
 
 type Kind = "login" | "card" | "address" | "phone" | "agent_item"
 
@@ -26,9 +37,18 @@ type Payment = {
   createdAt: string
 }
 
-type Field = { key: string; label: string; secret?: boolean; placeholder?: string; optional?: boolean }
+type Field = {
+  key: string
+  label: string
+  secret?: boolean
+  placeholder?: string
+  optional?: boolean
+}
 
-const FORMS: Record<Exclude<Kind, "agent_item">, { title: string; namePlaceholder: string; fields: Field[] }> = {
+const FORMS: Record<
+  Exclude<Kind, "agent_item">,
+  { title: string; namePlaceholder: string; fields: Field[] }
+> = {
   login: {
     title: "Add login",
     namePlaceholder: "e.g. “Gmail”, “GitHub”",
@@ -49,7 +69,12 @@ const FORMS: Record<Exclude<Kind, "agent_item">, { title: string; namePlaceholde
       { key: "cardholder", label: "Name on card", optional: true },
       { key: "billing_zip", label: "Billing ZIP / PIN", optional: true },
       { key: "currency", label: "Currency", placeholder: "INR", optional: true },
-      { key: "monthly_limit", label: "Monthly agent spend limit", placeholder: "e.g. 5000", optional: true },
+      {
+        key: "monthly_limit",
+        label: "Monthly agent spend limit",
+        placeholder: "e.g. 5000",
+        optional: true,
+      },
     ],
   },
   address: {
@@ -82,7 +107,9 @@ function describe(item: VaultItem): string {
         f.monthly_limit ? ` · limit ${f.monthly_limit} ${f.currency ?? ""}/mo` : ""
       }`
     case "address":
-      return [f.line1, f.line2, f.city, f.state, f.postal_code, f.country].filter(Boolean).join(", ")
+      return [f.line1, f.line2, f.city, f.state, f.postal_code, f.country]
+        .filter(Boolean)
+        .join(", ")
     case "phone":
       return String(f.number ?? "")
   }
@@ -178,12 +205,7 @@ export function VaultManager({ token }: { token: string }) {
     else setError("Couldn’t delete that item")
   }
 
-  const section = (
-    title: string,
-    kinds: Kind[],
-    empty: string,
-    add: React.ReactNode,
-  ) => {
+  const section = (title: string, kinds: Kind[], empty: string, add: React.ReactNode) => {
     const rows = items.filter((item) => kinds.includes(item.kind))
     return (
       <div className="border-b border-border pb-5">
@@ -213,7 +235,9 @@ export function VaultManager({ token }: { token: string }) {
                     <p className="text-sm font-medium text-foreground">{item.label}</p>
                     <p className="truncate text-xs text-muted-foreground">{describe(item)}</p>
                   </div>
-                  {item.hasSecret && <Lock size={12} className="text-muted-foreground" aria-label="Encrypted" />}
+                  {item.hasSecret && (
+                    <Lock size={12} className="text-muted-foreground" aria-label="Encrypted" />
+                  )}
                   <button
                     onClick={() => void remove(item.id)}
                     className="rounded-lg p-1.5 text-muted-foreground hover:text-destructive"
@@ -247,9 +271,8 @@ export function VaultManager({ token }: { token: string }) {
       <div className="mb-2">
         <h2 className="text-lg font-medium text-foreground">Vault</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Encrypted details Yomi can use for you. Passwords and card numbers are typed straight
-          into your private computer and never shown to the AI. Every card payment needs your
-          approval.
+          Encrypted details Yomi can use for you. Passwords and card numbers are typed straight into
+          your private computer and never shown to the AI. Every card payment needs your approval.
         </p>
       </div>
       {error && <p className="mb-2 text-xs text-destructive">{error}</p>}
@@ -288,12 +311,16 @@ export function VaultManager({ token }: { token: string }) {
               className="flex w-full items-center justify-between py-3 text-left"
             >
               <div>
-                <h3 className="text-base font-medium text-foreground">Agent items ({agentItems.length})</h3>
+                <h3 className="text-base font-medium text-foreground">
+                  Agent items ({agentItems.length})
+                </h3>
                 <p className="text-xs text-muted-foreground">
                   Accounts Yomi created for you. They stay in your vault and under your control.
                 </p>
               </div>
-              <span className="text-xs text-muted-foreground">{showAgentItems ? "Hide" : "Show"}</span>
+              <span className="text-xs text-muted-foreground">
+                {showAgentItems ? "Hide" : "Show"}
+              </span>
             </button>
             {showAgentItems && section("", ["agent_item"], "No agent items yet", null)}
           </div>
@@ -315,7 +342,9 @@ export function VaultManager({ token }: { token: string }) {
                     <div className="min-w-0">
                       <p className="truncate text-foreground">{p.merchant}</p>
                       <p className="truncate text-xs text-muted-foreground">
-                        {[p.card, p.purpose, new Date(p.createdAt).toLocaleDateString()].filter(Boolean).join(" · ")}
+                        {[p.card, p.purpose, new Date(p.createdAt).toLocaleDateString()]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </p>
                     </div>
                     <div className="text-right">
@@ -340,30 +369,35 @@ export function VaultManager({ token }: { token: string }) {
           <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-6">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-medium text-foreground">{form.title}</h3>
-              <button onClick={() => setAdding(null)} aria-label="Close" className="text-muted-foreground">
+              <button
+                onClick={() => setAdding(null)}
+                aria-label="Close"
+                className="text-muted-foreground"
+              >
                 <X size={16} />
               </button>
             </div>
             <div className="space-y-3">
-              {[{ key: "label", label: "Name", placeholder: form.namePlaceholder } as Field, ...form.fields].map(
-                (field) => (
-                  <label key={field.key} className="block">
-                    <span className="mb-1 flex items-center gap-1 text-xs text-muted-foreground">
-                      {field.secret && <Lock size={11} />}
-                      {field.label}
-                      {field.optional && " (optional)"}
-                    </span>
-                    <input
-                      type={field.secret ? "password" : "text"}
-                      autoComplete="off"
-                      value={draft[field.key] ?? ""}
-                      placeholder={field.placeholder}
-                      onChange={(e) => setDraft((d) => ({ ...d, [field.key]: e.target.value }))}
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-                    />
-                  </label>
-                ),
-              )}
+              {[
+                { key: "label", label: "Name", placeholder: form.namePlaceholder } as Field,
+                ...form.fields,
+              ].map((field) => (
+                <label key={field.key} className="block">
+                  <span className="mb-1 flex items-center gap-1 text-xs text-muted-foreground">
+                    {field.secret && <Lock size={11} />}
+                    {field.label}
+                    {field.optional && " (optional)"}
+                  </span>
+                  <input
+                    type={field.secret ? "password" : "text"}
+                    autoComplete="off"
+                    value={draft[field.key] ?? ""}
+                    placeholder={field.placeholder}
+                    onChange={(e) => setDraft((d) => ({ ...d, [field.key]: e.target.value }))}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+                  />
+                </label>
+              ))}
             </div>
             <div className="mt-5 flex justify-end gap-2">
               <button

@@ -301,4 +301,7 @@ async def build_user_registry(
         register_vault_tools(
             tool_registry, d1, user_id, create_pending_action, computer_configured()
         )
+        from yomi.services.agent.trust_tools import register_trust_tools
+
+        register_trust_tools(tool_registry, d1, user_id, create_pending_action)
     return tool_registry

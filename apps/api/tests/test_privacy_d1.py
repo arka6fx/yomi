@@ -18,6 +18,7 @@ class FakePrivacy(D1Store):
             "memory_entries", "memory_relations", "memory_sources", "rag_sources",
             "rag_documents", "rag_chunks", "rag_retrieval_logs", "mcp_connections",
             "platform_connections", "pending_actions", "vault_payments", "vault_items",
+            "trust_messages", "trust_links", "trust_settings",
             "schedules", "suggestion_decisions",
             "usage_events", "linking_codes", "telegram_link_tokens", "privacy_consents",
             "privacy_preferences", "privacy_exports", "privacy_deletion_jobs",
