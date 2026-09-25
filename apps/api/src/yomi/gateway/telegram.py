@@ -529,11 +529,12 @@ async def _execute_telegram_run(
             from yomi.services import runs_d1
 
             await runs_d1.heartbeat(backend, run_id)
-            charge = (
-                ChargeInput(user=user, kind="voice", duration_seconds=duration_seconds)
-                if kind == "voice"
-                else ChargeInput(user=user, kind="chat", units=1)
-            )
+            if kind == "voice":
+                charge = ChargeInput(user=user, kind="voice", duration_seconds=duration_seconds)
+            elif kind == "schedule":
+                charge = ChargeInput(user=user, kind="agent", units=1)
+            else:
+                charge = ChargeInput(user=user, kind="chat", units=1)
             # Run-scoped idempotency: a crash retry replays the recorded
             # outcome instead of charging twice.
             charge_res = await billing_d1.charge_usage(

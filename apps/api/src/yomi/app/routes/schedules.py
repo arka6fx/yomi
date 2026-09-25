@@ -28,6 +28,8 @@ from yomi.services.schedule_parser import (
 )
 from yomi.services.schedule_quota import ensure_schedule_capacity
 
+DEFAULT_TIMEZONE = "Asia/Kolkata"
+
 schedules_router = APIRouter(prefix="/api/schedules")
 
 
@@ -85,6 +87,15 @@ async def list_schedules(
     }
 
 
+def _timezone(value: Any) -> str:
+    """A valid IANA zone name from the request, else the product default."""
+    from yomi.services.schedule_parser import zone
+
+    if isinstance(value, str) and value.strip() and zone(value.strip()).key == value.strip():
+        return value.strip()
+    return DEFAULT_TIMEZONE
+
+
 @schedules_router.post("/")
 async def create_schedule(
     request: Request,
@@ -129,7 +140,8 @@ async def create_schedule(
         )
     schedule_type = valid["scheduleType"]
 
-    next_run_at = compute_next_run(schedule_type, schedule)
+    timezone = _timezone(body.get("timezone"))
+    next_run_at = compute_next_run(schedule_type, schedule, tz=timezone)
     deliver_to = body.get("deliverTo")
     if not isinstance(deliver_to, list) or not deliver_to:
         deliver_to = ["telegram"]
@@ -147,6 +159,7 @@ async def create_schedule(
                 deliver_to=deliver_to,
                 enabled=enabled,
                 next_run_at=next_run_at,
+                timezone=timezone,
             )
         }
     row = (
@@ -213,15 +226,24 @@ async def update_schedule(
             updates["deliver_to"] = body["deliverTo"]
         if isinstance(body.get("enabled"), bool):
             updates["enabled"] = 1 if body["enabled"] else 0
+        timezone = str(existing.get("timezone") or "UTC")
+        if isinstance(body.get("timezone"), str) and body["timezone"] != timezone:
+            timezone = _timezone(body["timezone"])
+            updates["timezone"] = timezone
 
         enabled_now = bool(updates.get("enabled", existing["enabled"]))
-        if "schedule" in updates or (updates.get("enabled") == 1 and not existing["enabled"]):
+        if (
+            "schedule" in updates
+            or "timezone" in updates
+            or (updates.get("enabled") == 1 and not existing["enabled"])
+        ):
             from yomi.services.cloudflare_storage.store import parse_dt as _parse_dt
 
             updates["next_run_at"] = (
                 compute_next_run(
                     schedule_type, schedule_str,
                     last_run_at=_parse_dt(existing["last_run_at"]),
+                    tz=timezone,
                 )
                 if enabled_now and schedule_type
                 else None

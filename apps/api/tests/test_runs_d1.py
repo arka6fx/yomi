@@ -23,6 +23,7 @@ class FakeRuns(D1Store):
             "credit_accounts": [],
             "credit_grants": [],
             "usage_events": [],
+            "schedules": [],
         }
 
     def _insert(self, stmt: Statement) -> dict:
@@ -360,10 +361,10 @@ class TestDispatch:
             assert denied2.status_code == 403
             ok = client.post("/internal/dispatch", headers={"x-yomi-internal": "test-key"})
             assert ok.status_code == 200, ok.text
-            assert ok.json() == {"claimed": 1, "processed": 1}
+            assert ok.json() == {"scheduled": 0, "claimed": 1, "processed": 1}
             assert executed == [run["id"]]
             again = client.post("/internal/dispatch", headers={"x-yomi-internal": "test-key"})
-            assert again.json() == {"claimed": 0, "processed": 0}
+            assert again.json() == {"scheduled": 0, "claimed": 0, "processed": 0}
 
 
 class TestSessions:

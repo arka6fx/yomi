@@ -307,4 +307,7 @@ async def build_user_registry(
         from yomi.services.agent.email_tools import register_email_tools
 
         register_email_tools(tool_registry, d1, user_id)
+        from yomi.services.agent.schedule_tools import register_schedule_tools
+
+        register_schedule_tools(tool_registry, d1, user_id)
     return tool_registry

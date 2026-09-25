@@ -1,7 +1,8 @@
 """Schedule parsing for cloud-managed schedules.
 
 Port of apps/api/src/services/schedule-parser.ts. Self-contained (no cron
-lib) since the accepted formats are a known, limited set. All evaluation is UTC.
+lib) since the accepted formats are a known, limited set. Cron and phrase schedules
+are evaluated in the schedule's IANA timezone; returned instants are UTC.
 Supported: duration ("30m", "2h", "1d"), phrase ("every day 9am"), 5-field cron
 ("0 9 * * 1-5"), and ISO timestamp.
 """
@@ -10,6 +11,7 @@ from __future__ import annotations
 
 import re
 from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 ScheduleType = str
 
@@ -85,7 +87,7 @@ def parse_duration_ms(schedule: str) -> int | None:
 def phrase_to_cron(phrase: str) -> str | None:
     p = phrase.lower().strip()
     day_match = re.match(
-        r"^every\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+"
+        r"^every\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+(?:at\s+)?"
         r"(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$",
         p,
     )
@@ -99,14 +101,14 @@ def phrase_to_cron(phrase: str) -> str | None:
         n = int(every_n.group(1), 10)
         if n >= 1:
             return f"0 */{n} * * *"
-    day_at = re.match(r"^every\s+day\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$", p)
+    day_at = re.match(r"^every\s+day\s+(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$", p)
     if day_at:
         hour, minute = _to24h(day_at.group(1), day_at.group(2), day_at.group(3))
         if hour is not None:
             return f"{minute} {hour} * * *"
     if re.match(r"^every\s*(hour|1h|1\s*hour)$", p):
         return "0 * * * *"
-    weekday = re.match(r"^every\s+weekday\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$", p)
+    weekday = re.match(r"^every\s+weekday\s+(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$", p)
     if weekday:
         hour, minute = _to24h(weekday.group(1), weekday.group(2), weekday.group(3))
         if hour is not None:
@@ -182,14 +184,23 @@ def _matches_cron(dt: datetime, cron_expr: str) -> bool:
     )
 
 
-def _next_cron_run(cron_expr: str, after: datetime) -> datetime | None:
+def zone(tz: str | None) -> ZoneInfo:
+    """IANA zone for ``tz``; unknown or empty names fall back to UTC."""
+    try:
+        return ZoneInfo(tz) if tz else ZoneInfo("UTC")
+    except (ZoneInfoNotFoundError, ValueError):
+        return ZoneInfo("UTC")
+
+
+def _next_cron_run(cron_expr: str, after: datetime, tz: str | None = None) -> datetime | None:
     start = after.replace(second=0, microsecond=0)
     start = start + timedelta(minutes=1)  # strictly after
     base = start.timestamp()
+    local = zone(tz)
     for i in range(_MAX_SCAN_MINUTES):
-        candidate = datetime.fromtimestamp(base + i * 60, tz=UTC)
+        candidate = datetime.fromtimestamp(base + i * 60, tz=local)
         if _matches_cron(candidate, cron_expr):
-            return candidate
+            return candidate.astimezone(UTC)
     return None
 
 
@@ -198,6 +209,7 @@ def compute_next_run(
     schedule: str,
     last_run_at: datetime | None = None,
     now: datetime | None = None,
+    tz: str | None = None,
 ) -> datetime | None:
     now = now if now is not None else datetime.now(UTC)
     if schedule_type == "duration":
@@ -217,11 +229,11 @@ def compute_next_run(
         return target
     if schedule_type == "cron":
         after = last_run_at if last_run_at and last_run_at > now else now
-        return _next_cron_run(schedule, after)
+        return _next_cron_run(schedule, after, tz)
     if schedule_type == "phrase":
         expr = phrase_to_cron(schedule)
         if not expr:
             return None
         after = last_run_at if last_run_at and last_run_at > now else now
-        return _next_cron_run(expr, after)
+        return _next_cron_run(expr, after, tz)
     return None

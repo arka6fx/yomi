@@ -47,7 +47,9 @@ async def dispatch_sweep(
     if not use_d1() or d1 is None:
         return JSONResponse({"error": "run ledger requires the d1 backend"}, 501)
     from yomi.gateway.telegram import execute_telegram_run
+    from yomi.services.scheduler_d1 import fire_due_schedules
 
+    scheduled = await fire_due_schedules(d1)
     owner = f"sweep-{id(request):x}"
     claimed = await runs_d1.claim_due_runs(d1, owner, limit=SWEEP_LIMIT)
     processed = 0
@@ -69,7 +71,7 @@ async def dispatch_sweep(
             processed += 1
         except Exception as exc:  # noqa: BLE001 — one bad run must not sink the sweep
             await runs_d1.fail_run(d1, str(run["id"]), f"{type(exc).__name__}: {exc}")
-    return {"claimed": len(claimed), "processed": processed}
+    return {"scheduled": scheduled, "claimed": len(claimed), "processed": processed}
 
 
 @ops_router.post("/internal/ai/probe")

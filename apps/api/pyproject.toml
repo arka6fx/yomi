@@ -23,6 +23,7 @@ dependencies = [
     "python-multipart>=0.0.9", # file upload support (voice, images)
     "yomi-db",              # shared schema (packages/db) — see [tool.uv.sources]
     "composio>=0.21.1",
+    "tzdata>=2026.4",
 ]
 
 

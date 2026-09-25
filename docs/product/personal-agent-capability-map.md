@@ -36,7 +36,7 @@ after browser work. [OpenInstinct repository](https://github.com/Merit-Systems/O
 | Approval | Implemented; approving replays the gated tool once (D1), Telegram shows inline Approve/Reject | Extend the same gate to computer clicks and terminal writes |
 | Browser | Implemented as HTTP scrape/search/extract; computer sandbox exists separately | Add browser session state, screenshot evidence and verification loop |
 | Computer | Implemented per-user sandbox with screenshot/input/open/windows/exec | Add semantic DOM/accessibility actions and explicit action risk classification |
-| Scheduling | Implemented; schedules and dispatch sweeper exist | Add agent templates, pause/resume, retries, delivery preferences and run history |
+| Scheduling | Implemented: the 10-minute Worker cron fires due schedules (timezone-aware, default Asia/Kolkata) into the durable run ledger and delivers results on Telegram; the agent creates schedules from chat | Per-schedule run history in the dashboard; finer than 10-minute timing |
 | Billing/credits | Implemented; Dodo, ledger and usage summary | Keep one ledger path across Telegram, web, Composio, browser and computer |
 | Vault | Implemented (D1): logins, cards, addresses, phones, agent items; secrets typed into the sandbox, never shown to the model | Add TOTP/2FA handoff and per-site login autofill |
 | Money | Card payments need approval, then a 15-minute typing window; per-card monthly limits and a spend ledger | Add receipts from Gmail and budgets per category |

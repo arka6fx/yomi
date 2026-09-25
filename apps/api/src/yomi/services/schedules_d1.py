@@ -30,6 +30,7 @@ def schedule_dict(row: dict[str, Any]) -> dict[str, Any]:
         "enabled": bool(row.get("enabled")),
         "oneShot": bool(row.get("one_shot")),
         "nextRunAt": row.get("next_run_at"),
+        "timezone": row.get("timezone") or "UTC",
         "lastRunAt": row.get("last_run_at"),
         "lastRunStatus": row.get("last_run_status"),
         "lastRunError": row.get("last_run_error"),
@@ -112,6 +113,7 @@ async def create_schedule(
     deliver_to: list,
     enabled: bool,
     next_run_at: datetime | None,
+    timezone: str = "UTC",
 ) -> dict[str, Any]:
     now = utcnow_iso()
     schedule_id = str(uuid.uuid4())
@@ -126,6 +128,7 @@ async def create_schedule(
             "enabled": 1 if enabled else 0,
             "one_shot": 1 if schedule_type == "iso" else 0,
             "next_run_at": _iso(next_run_at),
+            "timezone": timezone,
             "last_run_at": None,
             "last_run_status": None,
             "last_run_error": None,

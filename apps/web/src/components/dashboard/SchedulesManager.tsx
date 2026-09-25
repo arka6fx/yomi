@@ -92,7 +92,11 @@ export function SchedulesManager({ token }: { token: string }) {
       const res = await fetch("/api/schedules", {
         method: "POST",
         headers: { ...auth, "Content-Type": "application/json" },
-        body: JSON.stringify({ schedule: schedule.trim(), prompt: prompt.trim() }),
+        body: JSON.stringify({
+          schedule: schedule.trim(),
+          prompt: prompt.trim(),
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        }),
       })
       const data = (await res.json().catch(() => ({}))) as { error?: string; code?: string }
       if (!res.ok) {
