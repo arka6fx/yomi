@@ -15,6 +15,7 @@ Differences from the Postgres versions, all D1-motivated:
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 import uuid
 from collections.abc import Awaitable, Callable
@@ -33,6 +34,8 @@ from yomi.crypto import decrypt_tokens, encrypt_tokens, refresh_google_access_to
 from yomi.services.cloudflare_storage.client import Statement
 from yomi.services.cloudflare_storage.deps import D1Backend
 from yomi.services.cloudflare_storage.store import parse_dt, utcnow_iso
+
+logger = logging.getLogger(__name__)
 
 _REFRESH_MARGIN_MS = 60_000
 _GOOGLE_PROVIDERS = frozenset({"google", "google-calendar", "google-drive"})
@@ -242,6 +245,7 @@ async def link_with_code(
         raise ValueError("invalid or expired link code")
     now = utcnow_iso()
     user_id = str(token["user_id"])
+    previous_owner = await resolve_platform_user(backend, platform, platform_user_id, chat_id)
     await backend.store.atomic([
         Statement(
             "UPDATE telegram_link_tokens SET used = 1, telegram_user_id = ? WHERE token = ?",
@@ -270,6 +274,13 @@ async def link_with_code(
                 "updated_at": now,
             })
         ])
+    if previous_owner is not None and previous_owner != user_id:
+        from yomi.services import account_merge_d1
+
+        try:
+            await account_merge_d1.merge_placeholder(backend, previous_owner, user_id)
+        except Exception:  # linking already succeeded; a failed merge leaves both accounts
+            logger.exception("could not merge %s into %s", previous_owner, user_id)
 
 
 async def create_link_token(backend: D1Backend, user_id: str) -> str:
