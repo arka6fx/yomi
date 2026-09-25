@@ -105,7 +105,8 @@ class TestChatCompletion:
         assert llm_mod.first_message(data) == {"content": "hi"}
         url, payload = client.posts[0][0], client.posts[0][1]["json"]
         assert url.endswith("/ai/v1/chat/completions")
-        assert payload["model"] == "@cf/qwen/qwen3.8-27b"
+        assert payload["model"] == "@cf/zai-org/glm-5.3-flash"
+        assert payload["reasoning_effort"] == "low"
         assert payload["messages"] == [{"role": "user", "content": "hi"}]
         assert "tools" not in payload
 
@@ -163,7 +164,7 @@ class TestRagEmbeddings:
 
 
 class TestTranscription:
-    async def test_transcribe_posts_audio_ints(self, monkeypatch):
+    async def test_transcribe_posts_base64_audio(self, monkeypatch):
         from yomi.services import transcription as transcription_mod
 
         _creds(monkeypatch)
@@ -171,8 +172,18 @@ class TestTranscription:
         client.response = FakeResponse(200, {"result": {"text": "  hello there  "}})
         assert await transcription_mod.transcribe_audio(b"\x00\x01", "audio/ogg") == "hello there"
         url, kwargs = client.posts[0]
-        assert url.endswith("/ai/run/@cf/openai/whisper")
-        assert kwargs["json"] == {"audio": [0, 1]}
+        assert url.endswith("/ai/run/@cf/openai/whisper-large-v3-turbo")
+        assert kwargs["json"] == {"audio": "AAE=", "vad_filter": True}
+
+    async def test_legacy_whisper_posts_audio_ints(self, monkeypatch):
+        from yomi.services import transcription as transcription_mod
+
+        _creds(monkeypatch)
+        _set(monkeypatch, workers_ai_stt_model="@cf/openai/whisper")
+        client = _patch_httpx(monkeypatch, transcription_mod)
+        client.response = FakeResponse(200, {"result": {"text": "hi"}})
+        await transcription_mod.transcribe_audio(b"\x00\x01", "audio/ogg")
+        assert client.posts[0][1]["json"] == {"audio": [0, 1]}
 
     async def test_transcribe_empty_transcript_raises(self, monkeypatch):
         from yomi.services import transcription as transcription_mod

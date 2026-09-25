@@ -88,8 +88,8 @@ npm run python:dev
 
 ## Stack
 
-- **LLM:** Cloudflare Workers AI via OpenAI-compatible endpoint (`@cf/qwen/qwen3.8-27b` chat/agent, `@cf/qwen/qwen3.8-27b` search) — no OpenAI dependency
-- **STT:** Workers AI `@cf/openai/whisper` — transcribes incoming voice notes; replies are always text
+- **LLM:** Cloudflare Workers AI via OpenAI-compatible endpoint (`@cf/zai-org/glm-5.3-flash` for chat, agent, search and vision; reasoning effort low for chat, high for agent runs) — no OpenAI dependency
+- **STT:** Workers AI `@cf/openai/whisper-large-v3-turbo` — transcribes incoming voice notes; replies are always text
 - **Backend:** Python FastAPI + uvicorn on **Cloudflare Containers** (TCP socket → asyncpg works)
 - **Auth:** Better Auth (Google + GitHub OAuth) — session cookie validated by Python via JWT
 - **Database:** asyncpg → Neon PostgreSQL + pgvector (SQLAlchemy 2 async, Alembic migrations)
@@ -194,9 +194,9 @@ The Drizzle schema (`packages/db`) is retired, but the SQLAlchemy models mirror 
 
 | Plan    | Price  | Monthly credits         | Model              |
 | ------- | ------ | ----------------------- | ------------------ |
-| Explore | $0/mo  | 100 (perpetual, renews) | qwen3.8-27b        |
-| Pro     | $5/mo  | 300                     | qwen3.8-27b        |
-| Max     | $40/mo | 750                     | qwen3.8-27b        |
+| Explore | $0/mo  | 100 (perpetual, renews) | glm-5.3-flash      |
+| Pro     | $5/mo  | 300                     | glm-5.3-flash      |
+| Max     | $40/mo | 750                     | glm-5.3-flash      |
 
 Credit costs: fast chat 1, image analyze 1, voice 2/min, bot message 3, agent run 3 base
 (+1 per Composio tool call). Single chokepoint: `services/metering.py → charge_usage()`.
@@ -215,7 +215,7 @@ Credit costs: fast chat 1, image analyze 1, voice 2/min, bot message 3, agent ru
 - Connectors: loaded from connector registry
   - First-class (Python tool sets): Gmail, Google Calendar, Google Drive, GitHub, Slack, Notion, Linear
   - Composio-backed: Google Docs, Sheets, Slides, Maps, Photos, HubSpot, Salesforce, Discord,
-    WhatsApp, LinkedIn, Outlook, Teams, OneDrive, Dropbox, Figma, YouTube, Zoom, Stripe, etc.
+    LinkedIn, Outlook, Teams, OneDrive, Dropbox, Figma, YouTube, Zoom, Stripe, etc.
 
 ---
 
@@ -230,10 +230,10 @@ Credit costs: fast chat 1, image analyze 1, voice 2/min, bot message 3, agent ru
 ## Models
 
 ```
-Fast path:  qwen3.8-27b (Explore, Pro)
-Agent path: qwen3.8-27b (Max)
+Fast path:  glm-5.3-flash, reasoning low (Explore, Pro)
+Agent path: glm-5.3-flash, reasoning high (Max)
 Embeddings: bge-base-en-v1.5 (Workers AI, 768-dim)
-Speech:     whisper (Workers AI STT only; replies are always text)
+Speech:     whisper-large-v3-turbo (Workers AI STT only; replies are always text)
 Browser AI: Workers AI (see above — no OpenAI anywhere)
 ```
 

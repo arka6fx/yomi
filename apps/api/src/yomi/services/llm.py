@@ -28,6 +28,11 @@ _PURPOSE_MODELS = {
     "search": "workers_ai_search_model",
 }
 
+# Reasoning models on Workers AI bill thinking as output tokens. Quick chat and
+# search think briefly; agent runs (Max plan) think harder. Models that don't
+# reason ignore the field.
+_PURPOSE_EFFORT: dict[str, str] = {"fast": "low", "agent": "high", "search": "low"}
+
 _REQUEST_TIMEOUT = httpx.Timeout(120.0)
 
 
@@ -75,6 +80,9 @@ async def chat_completion(
     }
     if tools:
         payload["tools"] = tools
+    effort = _PURPOSE_EFFORT.get(purpose)
+    if effort:
+        payload["reasoning_effort"] = effort
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(timeout)) as client:
             response = await client.post(

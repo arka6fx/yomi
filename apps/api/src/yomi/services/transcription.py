@@ -4,6 +4,7 @@ Transcribes Telegram voice notes to text via Cloudflare Workers AI Whisper.
 Replies are always text; we never synthesize audio back to the user.
 """
 
+import base64
 import logging
 
 import httpx
@@ -13,6 +14,13 @@ from yomi.conf import settings
 logger = logging.getLogger(__name__)
 
 _transcribe_timeout = httpx.Timeout(120.0)
+
+
+def _stt_payload(model: str, data: bytes) -> dict:
+    """whisper-large-v3-turbo takes base64 audio; legacy whisper takes a byte list."""
+    if "whisper-large-v3" in model:
+        return {"audio": base64.b64encode(data).decode("ascii"), "vad_filter": True}
+    return {"audio": list(data)}
 
 
 async def transcribe_audio(data: bytes, mime_type: str | None = None) -> str:
@@ -32,7 +40,7 @@ async def transcribe_audio(data: bytes, mime_type: str | None = None) -> str:
         res = await client.post(
             url,
             headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-            json={"audio": list(data)},
+            json=_stt_payload(settings.workers_ai_stt_model, data),
         )
     if res.status_code != 200:
         raise RuntimeError(f"Workers AI transcription failed: {res.status_code}")

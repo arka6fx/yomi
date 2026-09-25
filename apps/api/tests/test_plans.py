@@ -22,9 +22,9 @@ def test_plan_facts():
 
 
 def test_plan_models():
-    assert PLANS["explore"]["model"] == "@cf/qwen/qwen3.8-27b"
-    assert PLANS["pro"]["model"] == "@cf/qwen/qwen3.8-27b"
-    assert PLANS["max"]["model"] == "@cf/qwen/qwen3.8-27b"
+    assert PLANS["explore"]["model"] == "@cf/zai-org/glm-5.3-flash"
+    assert PLANS["pro"]["model"] == "@cf/zai-org/glm-5.3-flash"
+    assert PLANS["max"]["model"] == "@cf/zai-org/glm-5.3-flash"
 
 
 def test_get_plan_unknown_falls_back_to_explore():

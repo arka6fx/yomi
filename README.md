@@ -54,7 +54,7 @@ dashboard never accesses Postgres directly.
 | Backend | FastAPI, SQLAlchemy 2 async, Alembic |
 | Runtime | Cloudflare Containers and Workers |
 | Database | Neon PostgreSQL with pgvector |
-| Models | Cloudflare Workers AI (`qwen3.8-27b`, `whisper`, `bge-base-en-v1.5`) |
+| Models | Cloudflare Workers AI (`glm-5.3-flash`, `whisper-large-v3-turbo`, `bge-base-en-v1.5`) |
 | Dashboard | Next.js and React |
 | Billing | Dodo Payments |
 | Storage | Cloudflare R2 |

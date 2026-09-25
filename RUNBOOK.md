@@ -6,7 +6,7 @@ Production topology:
 Frontend / dashboard  https://getyomi.in        Cloudflare Worker (apps/web)
 Backend API           https://api.getyomi.in    Cloudflare Container (apps/api)
 Database              Neon PostgreSQL + pgvector
-LLM + speech          Cloudflare Workers AI (qwen3.8-27b, whisper; replies are text)
+LLM + speech          Cloudflare Workers AI (glm-5.3-flash, whisper-large-v3-turbo; replies are text)
 Billing               Dodo Payments
 ```
 
@@ -56,10 +56,10 @@ CORS_ORIGIN=https://getyomi.in
 BETTER_AUTH_SECRET=...
 
 INTERNAL_API_KEY=...
-WORKERS_AI_FAST_MODEL=@cf/qwen/qwen3.8-27b    WORKERS_AI_AGENT_MODEL=@cf/qwen/qwen3.8-27b
-WORKERS_AI_SEARCH_MODEL=@cf/qwen/qwen3.8-27b
+WORKERS_AI_FAST_MODEL=@cf/zai-org/glm-5.3-flash    WORKERS_AI_AGENT_MODEL=@cf/zai-org/glm-5.3-flash
+WORKERS_AI_SEARCH_MODEL=@cf/zai-org/glm-5.3-flash
 WORKERS_AI_EMBEDDING_MODEL=@cf/baai/bge-base-en-v1.5
-WORKERS_AI_STT_MODEL=@cf/openai/whisper
+WORKERS_AI_STT_MODEL=@cf/openai/whisper-large-v3-turbo
 
 # Telegram
 TELEGRAM_BOT_TOKEN=...                TELEGRAM_BOT_USERNAME=yomi_assistant_bot

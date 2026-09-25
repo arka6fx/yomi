@@ -16,6 +16,13 @@ def test_model_price_exact():
     assert p.cached_rate() == 0
 
 
+def test_glm_flash_price_is_published_rate():
+    p = resolve_model_price("@cf/zai-org/glm-5.3-flash")
+    assert (p.input_per_m_tokens, p.output_per_m_tokens, p.cached_rate()) == (
+        150_000, 500_000, 30_000,
+    )
+
+
 def test_model_price_prefix():
     p = resolve_model_price("@cf/qwen/qwen3.8-27b-extra")
     assert p.input_per_m_tokens == 0

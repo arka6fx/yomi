@@ -57,11 +57,11 @@ class Settings(BaseSettings):
 
     # llm: Cloudflare Workers AI for everything (chat, embeddings, STT).
     # Embeddings are 768-dimensional (bge-base); the Vectorize indexes match.
-    workers_ai_fast_model: str = "@cf/qwen/qwen3.8-27b"
-    workers_ai_agent_model: str = "@cf/qwen/qwen3.8-27b"
-    workers_ai_search_model: str = "@cf/qwen/qwen3.8-27b"
+    workers_ai_fast_model: str = "@cf/zai-org/glm-5.3-flash"
+    workers_ai_agent_model: str = "@cf/zai-org/glm-5.3-flash"
+    workers_ai_search_model: str = "@cf/zai-org/glm-5.3-flash"
     workers_ai_embedding_model: str = "@cf/baai/bge-base-en-v1.5"
-    workers_ai_stt_model: str = "@cf/openai/whisper"
+    workers_ai_stt_model: str = "@cf/openai/whisper-large-v3-turbo"
 
     # telegram
     telegram_bot_token: str = ""

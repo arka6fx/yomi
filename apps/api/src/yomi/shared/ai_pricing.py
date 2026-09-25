@@ -21,10 +21,12 @@ class ModelPrice:
         return self.input_per_m_tokens
 
 
-# Workers AI bills in neurons ($0.011 / 1K past the daily free allocation),
-# not per token, so telemetry cost estimates read 0 by design — they are
-# informational only and never drive charging (see credit_ledger).
+# Workers AI bills in neurons ($0.011 / 1K past the daily free allocation).
+# Current models publish per-token equivalents, used here for informational
+# cost estimates only; they never drive charging (see credit_ledger). Legacy
+# rows read 0.
 _MODEL_PRICES: dict[str, ModelPrice] = {
+    "@cf/zai-org/glm-5.3-flash": ModelPrice(150_000, 500_000, 30_000),
     "@cf/qwen/qwen3.8-27b": ModelPrice(0, 0, 0),
     "@cf/meta/llama-3.1-8b-instruct": ModelPrice(0, 0, 0),
     "@cf/baai/bge-base-en-v1.5": ModelPrice(0, 0),

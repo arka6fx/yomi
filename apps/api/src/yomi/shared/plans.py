@@ -40,7 +40,7 @@ PLANS: dict[str, PlanConfig] = {
         "priceDisplay": "$0",
         "interval": "month",
         "includedCredits": 100,
-        "model": "@cf/qwen/qwen3.8-27b",
+        "model": "@cf/zai-org/glm-5.3-flash",
         "limits": {
             "chat": 100,
             "voiceMinutes": 20,
@@ -56,7 +56,7 @@ PLANS: dict[str, PlanConfig] = {
         "priceDisplay": "$5",
         "interval": "month",
         "includedCredits": 300,
-        "model": "@cf/qwen/qwen3.8-27b",
+        "model": "@cf/zai-org/glm-5.3-flash",
         "limits": {
             "chat": 250,
             "voiceMinutes": 60,
@@ -72,7 +72,7 @@ PLANS: dict[str, PlanConfig] = {
         "priceDisplay": "$40",
         "interval": "month",
         "includedCredits": 750,
-        "model": "@cf/qwen/qwen3.8-27b",
+        "model": "@cf/zai-org/glm-5.3-flash",
         "limits": {
             "chat": 600,
             "voiceMinutes": 150,
