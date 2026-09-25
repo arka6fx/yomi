@@ -199,10 +199,18 @@ def create_pending_action(
                 "updated_at": utcnow_iso(),
             })
         ])
+        if source_platform == "telegram" and source_chat_id:
+            from yomi.gateway.telegram import send_approval_prompt
+
+            with suppress(Exception):
+                await send_approval_prompt(source_chat_id, action_id, meta)
         return {
             "id": action_id,
             "status": "pending",
-            "message": f"{meta['title']} — waiting for your approval.",
+            "message": (
+                f"{meta['title']} — waiting for the user's approval. They have been sent "
+                "Approve/Reject buttons; don't ask them to confirm again in text."
+            ),
         }
 
     return creator

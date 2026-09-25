@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from yomi.app.deps import get_current_user, get_db_session
 from yomi.db.models_app2 import PendingAction
 from yomi.db.models_auth import User
-from yomi.services.cloudflare_storage.client import Statement
+from yomi.services import actions_d1
 from yomi.services.cloudflare_storage.deps import D1Backend, get_d1_backend
 from yomi.services.cloudflare_storage.store import utcnow_iso
 
@@ -94,24 +94,12 @@ async def approve_action(
     d1: D1Backend | None = Depends(get_d1_backend),
 ):
     if d1 is not None:
-        action = await d1.store.fetch_one(
-            "SELECT id FROM pending_actions WHERE id = ? AND user_id = ? "
-            "AND status = 'pending' LIMIT 1",
-            [action_id, user.id],
-        )
-        if not action:
-            raise HTTPException(
-                status_code=404, detail="Pending action not found or already decided"
-            )
-        now = utcnow_iso()
-        await d1.store.atomic([
-            Statement(
-                "UPDATE pending_actions SET status = 'approved', decided_at = ?, "
-                "updated_at = ? WHERE id = ?",
-                [now, now, action["id"]],
-            )
-        ])
-        return {"status": "approved", "id": str(action["id"])}
+        try:
+            outcome = await actions_d1.decide(d1, user.id, action_id, "approve")
+        except actions_d1.ActionNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        await actions_d1.notify_source(outcome)
+        return outcome
     action = (
         await db.execute(
             select(PendingAction)
@@ -149,24 +137,12 @@ async def reject_action(
     d1: D1Backend | None = Depends(get_d1_backend),
 ):
     if d1 is not None:
-        action = await d1.store.fetch_one(
-            "SELECT id FROM pending_actions WHERE id = ? AND user_id = ? "
-            "AND status = 'pending' LIMIT 1",
-            [action_id, user.id],
-        )
-        if not action:
-            raise HTTPException(
-                status_code=404, detail="Pending action not found or already decided"
-            )
-        now = utcnow_iso()
-        await d1.store.atomic([
-            Statement(
-                "UPDATE pending_actions SET status = 'rejected', decided_at = ?, "
-                "updated_at = ? WHERE id = ?",
-                [now, now, action["id"]],
-            )
-        ])
-        return {"status": "rejected", "id": str(action["id"])}
+        try:
+            outcome = await actions_d1.decide(d1, user.id, action_id, "reject")
+        except actions_d1.ActionNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        await actions_d1.notify_source(outcome)
+        return outcome
     action = (
         await db.execute(
             select(PendingAction)

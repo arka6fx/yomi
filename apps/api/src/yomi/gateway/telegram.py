@@ -66,6 +66,71 @@ async def send_message(chat_id: str | int, text: str) -> None:
                 await client.post(url, json={"chat_id": chat_id, "text": chunk})
 
 
+async def send_approval_prompt(chat_id: str | int, action_id: str, meta: dict) -> None:
+    """Show a gated action with inline Approve/Reject buttons."""
+    url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage"
+    title = html.escape(str(meta.get("title", "")))
+    preview = html.escape(str(meta.get("preview", ""))[:1500])
+    text = f"<b>Approval needed</b>\n{title}\n\n{preview}"
+    keyboard = {
+        "inline_keyboard": [[
+            {"text": f"✅ {meta.get('confirm_text') or 'Approve'}", "callback_data": f"act:a:{action_id}"},
+            {"text": "✖️ Reject", "callback_data": f"act:r:{action_id}"},
+        ]]
+    }
+    async with httpx.AsyncClient() as client:
+        await client.post(
+            url,
+            json={"chat_id": chat_id, "text": text, "parse_mode": "HTML", "reply_markup": keyboard},
+        )
+
+
+async def _telegram_call(method: str, payload: dict) -> None:
+    url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/{method}"
+    async with httpx.AsyncClient() as client:
+        await client.post(url, json=payload)
+
+
+async def _handle_callback(callback: dict, d1: D1Backend | None) -> dict:
+    """Inline Approve/Reject taps on approval prompts."""
+    data = str(callback.get("data") or "")
+    message = callback.get("message") or {}
+    chat_id = str((message.get("chat") or {}).get("id") or "")
+    tg_user_id = str((callback.get("from") or {}).get("id") or "")
+    parts = data.split(":", 2)
+    if len(parts) != 3 or parts[0] != "act" or parts[1] not in ("a", "r") or d1 is None:
+        await _telegram_call("answerCallbackQuery", {"callback_query_id": callback.get("id")})
+        return {"status": "ignored"}
+
+    from yomi.services import actions_d1
+    from yomi.services import connectors_d1 as _connectors_d1
+
+    user_id = await _connectors_d1.resolve_platform_user(d1, "telegram", tg_user_id, chat_id)
+    if user_id is None:
+        await _telegram_call(
+            "answerCallbackQuery",
+            {"callback_query_id": callback.get("id"), "text": "This chat isn't linked."},
+        )
+        return {"status": "ok"}
+    decision = "approve" if parts[1] == "a" else "reject"
+    await _telegram_call(
+        "answerCallbackQuery",
+        {"callback_query_id": callback.get("id"), "text": "Working on it…" if decision == "approve" else "Cancelled"},
+    )
+    try:
+        outcome = await actions_d1.decide(d1, user_id, parts[2], decision)
+        summary = actions_d1.summarize(outcome)
+    except actions_d1.ActionNotFound as exc:
+        summary = str(exc)
+    if message.get("message_id") is not None:
+        await _telegram_call(
+            "editMessageReplyMarkup",
+            {"chat_id": chat_id, "message_id": message["message_id"], "reply_markup": {"inline_keyboard": []}},
+        )
+    await send_message(chat_id, summary)
+    return {"status": "ok"}
+
+
 def _message_chunks(text: str, limit: int = 3900) -> list[str]:
     """Keep Telegram's 4096-character limit without dropping the tail."""
     if not text:
@@ -211,6 +276,8 @@ async def _link_with_code(
 async def _handle_update(
     update: dict, db_session: AsyncSession, d1: D1Backend | None = None
 ) -> dict:
+    if update.get("callback_query"):
+        return await _handle_callback(update["callback_query"], d1)
     message = update.get("message")
     if not message:
         return {"status": "ignored"}

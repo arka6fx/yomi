@@ -532,7 +532,7 @@ def create_gmail_tools(ctx: ConnectorContext) -> dict[str, ConnectorTool]:
             )
             return await ctx.create_pending_action(
                 _gate_meta(
-                    action="gmail.sendEmail",
+                    action="gmail-sendEmail",
                     risk=SEND,
                     title=f"Send email to {recipients}",
                     preview=preview,

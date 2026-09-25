@@ -1,6 +1,6 @@
 # Yomi personal-agent capability map
 
-Updated: 2026-09-24
+Updated: 2026-09-25
 
 This is the product decision log for evolving Yomi into a personal operator. It is
 grounded in the current repository and in public product material; it is not a claim
@@ -32,12 +32,13 @@ after browser work. [OpenInstinct repository](https://github.com/Merit-Systems/O
 | Agent loop | Implemented; tool loop, compaction, saved soul, Composio metering | Add structured plans, step events, cancellation and resumable runs |
 | Memory | Implemented; memory CRUD, search, embeddings and privacy export/delete | Add provenance, confidence, correction and relationship/project entities |
 | Connectors | Implemented; native Google/GitHub/Slack/etc. plus Composio and custom MCP | Add capability/risk display and per-tool permission settings |
-| Approval | Implemented for connector writes through pending actions | Extend the same gate to computer clicks, terminal writes and checkout flows |
+| Approval | Implemented; approving replays the gated tool once (D1), Telegram shows inline Approve/Reject | Extend the same gate to computer clicks and terminal writes |
 | Browser | Implemented as HTTP scrape/search/extract; computer sandbox exists separately | Add browser session state, screenshot evidence and verification loop |
 | Computer | Implemented per-user sandbox with screenshot/input/open/windows/exec | Add semantic DOM/accessibility actions and explicit action risk classification |
 | Scheduling | Implemented; schedules and dispatch sweeper exist | Add agent templates, pause/resume, retries, delivery preferences and run history |
 | Billing/credits | Implemented; Dodo, ledger and usage summary | Keep one ledger path across Telegram, web, Composio, browser and computer |
-| Vault | Tokens are encrypted at rest, but there is no user-facing vault | Add a scoped secret vault; models receive handles, never raw credentials |
+| Vault | Implemented (D1): logins, cards, addresses, phones, agent items; secrets typed into the sandbox, never shown to the model | Add TOTP/2FA handoff and per-site login autofill |
+| Money | Card payments need approval, then a 15-minute typing window; per-card monthly limits and a spend ledger | Add receipts from Gmail and budgets per category |
 | Trusted people | Not implemented | Add allowlist and channel/contact permissions before delegated messaging |
 | Observability | D1 `agent_runs` and privacy audit exist | Expose a redacted run timeline to the user |
 | Dashboard | Implemented; integrations, memory, schedules, billing and Command Center | Add Vault, Agents and Activity navigation using the same visual language |

@@ -48,7 +48,11 @@ export function ApprovalManager({ token }: { token: string }) {
         headers: auth,
       })
       if (!response.ok) throw new Error("Couldn’t update approval")
+      const outcome = (await response.json()) as { status?: string; result?: { error?: string } }
       setActions((current) => current.filter((action) => action.id !== id))
+      if (outcome.status === "failed") {
+        setError(`Approved, but it failed: ${outcome.result?.error ?? "unknown error"}`)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn’t update approval")
     } finally {

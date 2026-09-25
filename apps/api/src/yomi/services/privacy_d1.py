@@ -402,6 +402,8 @@ _DELETE_DATA_TABLES = (
     "mcp_connections",
     "platform_connections",
     "pending_actions",
+    "vault_payments",
+    "vault_items",
     "schedules",
     "suggestion_decisions",
     "usage_events",
@@ -420,6 +422,8 @@ _DELETE_ACCOUNT_TABLES = (
     "mcp_connections",
     "platform_connections",
     "pending_actions",
+    "vault_payments",
+    "vault_items",
     "schedules",
     "usage_events",
     "linking_codes",
@@ -442,7 +446,8 @@ async def delete_my_data(backend: D1Backend, user_id: str) -> dict[str, Any] | N
             for name in (
                 "memory_entries", "memory_relations",
                 "rag_retrieval_logs", "rag_chunks", "rag_documents", "rag_sources",
-                "mcp_connections", "platform_connections", "pending_actions", "schedules",
+                "mcp_connections", "platform_connections", "pending_actions",
+                "vault_payments", "vault_items", "schedules",
                 "suggestion_decisions", "usage_events", "linking_codes",
                 "agent_messages", "agent_sessions",
             )

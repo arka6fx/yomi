@@ -295,4 +295,10 @@ async def build_user_registry(
     tool_registry.composio_calls = composio_counter
     if computer_configured():
         register_computer_tools(tool_registry, user_id)
+    if d1 is not None:
+        from yomi.services.agent.vault_tools import register_vault_tools
+
+        register_vault_tools(
+            tool_registry, d1, user_id, create_pending_action, computer_configured()
+        )
     return tool_registry

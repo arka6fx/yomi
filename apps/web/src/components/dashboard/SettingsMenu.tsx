@@ -16,6 +16,7 @@ import {
   Sparkles,
   Activity,
   ShieldCheck,
+  Lock,
 } from "lucide-react"
 
 export type DashboardTab =
@@ -23,6 +24,7 @@ export type DashboardTab =
   | "command-center"
   | "activity"
   | "approvals"
+  | "vault"
   | "integrations"
   | "memory"
   | "schedules"
@@ -71,6 +73,7 @@ export function SettingsMenu({ onNavigate }: { onNavigate: (tab: DashboardTab) =
     { label: "Command center", icon: Sparkles, onClick: () => navigate("command-center") },
     { label: "Agent activity", icon: Activity, onClick: () => navigate("activity") },
     { label: "Approvals", icon: ShieldCheck, onClick: () => navigate("approvals") },
+    { label: "Vault", icon: Lock, onClick: () => navigate("vault") },
     { label: "Connections", icon: Plug, onClick: () => navigate("integrations") },
     { label: "Memory", icon: Brain, onClick: () => navigate("memory") },
     { label: "Profile", icon: User, onClick: () => navigate("profile") },
