@@ -66,9 +66,7 @@ export function TelegramCard({
                   {label}
                 </span>
               ))}
-              <span className="text-muted-foreground/60">
-                · usage draws from your credit balance
-              </span>
+              <span className="text-muted-foreground/60">· unlimited on every plan</span>
             </div>
           </div>
         </div>

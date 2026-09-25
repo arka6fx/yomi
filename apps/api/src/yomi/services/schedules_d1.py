@@ -73,14 +73,14 @@ async def ensure_schedule_capacity(backend: D1Backend, user: QuotaUser) -> dict[
             "body": {
                 "error": (
                     f"Scheduling isn't on your {get_plan_config(user)['name']} plan. "
-                    "Upgrade to Pro or Max to schedule tasks."
+                    "Upgrade to Pro to schedule tasks."
                 ),
                 "code": "feature_not_available",
                 "upgradeUrl": "/dashboard?upgrade=true",
             },
         }
     rows = await backend.store.fetch_all(
-        "SELECT COUNT(*) AS n FROM schedules WHERE user_id = ?", [user_id]
+        "SELECT COUNT(*) AS n FROM schedules WHERE user_id = ? AND enabled = 1", [user_id]
     )
     count = int(rows[0]["n"])
     if count >= limit:
@@ -88,7 +88,10 @@ async def ensure_schedule_capacity(backend: D1Backend, user: QuotaUser) -> dict[
             "ok": False,
             "status": 402,
             "body": {
-                "error": f"You've hit your schedule limit ({count}/{limit}). Upgrade for more.",
+                "error": (
+                    f"Free includes {limit} active routines ({count}/{limit} on). Pause one, "
+                    "or upgrade to Pro for unlimited routines."
+                ),
                 "code": "schedule_limit",
                 "upgradeUrl": "/dashboard?upgrade=true",
             },

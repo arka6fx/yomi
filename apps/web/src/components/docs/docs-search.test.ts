@@ -15,7 +15,7 @@ describe("matchesQuery", () => {
 
   it("matches a case-insensitive substring of the summary", () => {
     const entry = DOCS_INDEX.find((e) => e.id === "plans")!
-    expect(matchesQuery(entry, "credit balances")).toBe(true)
+    expect(matchesQuery(entry, "SMARTER engine")).toBe(true)
   })
 
   it("returns false when nothing matches", () => {

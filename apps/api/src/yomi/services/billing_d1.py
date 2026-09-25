@@ -490,6 +490,39 @@ async def charge_usage(
     kind = input_.kind
     plan = effective_plan_for_user(user)
 
+    # Credits are retired: chat is unlimited on every plan. Keep logging the
+    # event for cost visibility, but never debit or block.
+    event_id = str(uuid.uuid4())
+    await backend.store.atomic([
+        backend.store.insert("usage_events", {
+            "id": event_id,
+            "user_id": user["id"],
+            "device_id": None,
+            "kind": EVENT_KIND[kind],
+            "model": None,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "cost_cents": input_.duration_seconds or 0,
+            "credits_charged": 0,
+            "status": "done",
+            "metadata": {**(dict(input_.metadata or {})), "reserveKind": kind},
+            "created_at": _now(),
+        })
+    ])
+    return ChargeSuccess(
+        plan=plan, credits_required=0, credits_charged=0, balance=0,
+        usage_event_id=event_id, paid_by="plan",
+    )
+
+
+async def _legacy_charge_usage(
+    backend: D1Backend, input_: ChargeInput, idempotency_key: str | None = None
+) -> ChargeSuccess | ChargeFailure:
+    """Pre-retirement credit charging, kept only for reference until the ledger is dropped."""
+    user = input_.user
+    kind = input_.kind
+    plan = effective_plan_for_user(user)
+
     if not has_billable_plan_access(user):
         status = user.get("subscription_status") or "inactive"
         if status == "past_due":
@@ -746,3 +779,66 @@ async def upsert_payment_record(
         provider_subscription_id=provider_subscription_id, amount_cents=amount_cents,
         currency=currency, status=status, metadata=metadata,
     )
+
+
+PAYING_STATUSES = ("active", "trialing", "past_due")
+PAST_DUE_GRACE = timedelta(days=7)
+
+
+async def grant_pro_days(backend: D1Backend, user_id: str, days: int) -> bool:
+    """Give ``days`` of Pro (referral rewards). Paying subscribers are left alone."""
+    row = await backend.store.fetch_one(
+        "SELECT plan, subscription_status, current_period_end FROM user WHERE id = ? LIMIT 1",
+        [user_id],
+    )
+    if row is None:
+        return False
+    status = row.get("subscription_status")
+    if row.get("plan") in ("pro", "max") and status in PAYING_STATUSES:
+        return False
+    now = datetime.now(UTC)
+    start = now
+    current_end = parse_dt(row.get("current_period_end"))
+    if status == "referral" and current_end is not None:
+        current_end = current_end if current_end.tzinfo else current_end.replace(tzinfo=UTC)
+        start = max(now, current_end)
+    await backend.store.atomic([
+        Statement(
+            "UPDATE user SET plan = 'pro', subscription_status = 'referral', "
+            "current_period_end = ?, updated_at = ? WHERE id = ?",
+            [(start + timedelta(days=days)).isoformat(), now.isoformat(), user_id],
+        )
+    ])
+    return True
+
+
+async def expire_lapsed_pro(backend: D1Backend) -> int:
+    """Move ended Pro access back to free: finished referral months, and failed
+    payments past their grace period. Runs on the scheduler cron."""
+    rows = await backend.store.fetch_all(
+        "SELECT id, subscription_status, current_period_end FROM user "
+        "WHERE plan IN ('pro', 'max') AND subscription_status IN ('referral', 'past_due') "
+        "LIMIT 500",
+    )
+    now = datetime.now(UTC)
+    lapsed: list[str] = []
+    for row in rows:
+        end = parse_dt(row.get("current_period_end"))
+        if end is None:
+            if row.get("subscription_status") == "referral":
+                lapsed.append(str(row["id"]))
+            continue
+        end = end if end.tzinfo else end.replace(tzinfo=UTC)
+        grace = PAST_DUE_GRACE if row.get("subscription_status") == "past_due" else timedelta(0)
+        if now >= end + grace:
+            lapsed.append(str(row["id"]))
+    if lapsed:
+        await backend.store.atomic([
+            Statement(
+                "UPDATE user SET plan = 'explore', subscription_status = 'inactive', "
+                "current_period_end = NULL, updated_at = ? WHERE id = ?",
+                [now.isoformat(), user_id],
+            )
+            for user_id in lapsed
+        ])
+    return len(lapsed)

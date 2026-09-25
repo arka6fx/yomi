@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Literal, TypedDict
 
-PlanKey = Literal["explore", "pro", "max"]
+PlanKey = Literal["explore", "pro"]
 FeatureKey = Literal["chat", "voiceMinutes", "analyze", "connectors", "botMessages"]
 
 
@@ -31,11 +31,11 @@ class PlanConfig(TypedDict, total=False):
 
 
 PLANS: dict[str, PlanConfig] = {
-    # Free, renews every month (not a one-time trial) — see the Explore
-    # auto-renewal cron. Workers AI neurons keep the free tier's cost bounded.
+    # Free forever with unlimited chat; the only gate is active routines.
+    # Credits are retired: ``includedCredits`` only feeds the dormant ledger.
     "explore": {
         "key": "explore",
-        "name": "Explore",
+        "name": "Free",
         "priceCents": 0,
         "priceDisplay": "$0",
         "interval": "month",
@@ -65,22 +65,6 @@ PLANS: dict[str, PlanConfig] = {
             "botMessages": 100,
         },
     },
-    "max": {
-        "key": "max",
-        "name": "Max",
-        "priceCents": 4000,
-        "priceDisplay": "$40",
-        "interval": "month",
-        "includedCredits": 750,
-        "model": "@cf/zai-org/glm-5.3-flash",
-        "limits": {
-            "chat": 600,
-            "voiceMinutes": 150,
-            "analyze": 400,
-            "connectors": None,
-            "botMessages": 250,
-        },
-    },
 }
 
 
@@ -93,34 +77,9 @@ class CreditPackConfig(TypedDict):
     currency: Literal["USD"]
 
 
-# Keys stay stable since they map to fixed Dodo product IDs; credit costs are
-# denominated in internal credits, independent of the underlying model vendor.
-CREDIT_PACKS: dict[str, CreditPackConfig] = {
-    "credits_500": {
-        "key": "credits_500",
-        "name": "85 credits",
-        "credits": 85,
-        "priceCents": 500,
-        "priceDisplay": "$5",
-        "currency": "USD",
-    },
-    "credits_2000": {
-        "key": "credits_2000",
-        "name": "250 credits",
-        "credits": 250,
-        "priceCents": 1500,
-        "priceDisplay": "$15",
-        "currency": "USD",
-    },
-    "credits_6000": {
-        "key": "credits_6000",
-        "name": "750 credits",
-        "credits": 750,
-        "priceCents": 4000,
-        "priceDisplay": "$40",
-        "currency": "USD",
-    },
-}
+# Credit packs are retired (free chat is unlimited); kept empty so historical
+# webhook payloads still resolve to nothing instead of erroring.
+CREDIT_PACKS: dict[str, CreditPackConfig] = {}
 
 
 def get_plan(key: str) -> PlanConfig:

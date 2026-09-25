@@ -12,11 +12,14 @@ import uuid
 from datetime import UTC, datetime
 
 from yomi.logging import get_logger
-from yomi.services.billing_d1 import grant_credits
+from yomi.services.billing_d1 import grant_pro_days
 from yomi.services.cloudflare_storage.client import Statement
 from yomi.services.cloudflare_storage.deps import D1Backend
 from yomi.services.cloudflare_storage.store import parse_dt, utcnow_iso
-from yomi.services.referrals import NEW_ACCOUNT_WINDOW_S, REFERRAL_CAP, REFERRAL_CREDIT_AMOUNT
+from yomi.services.referrals import NEW_ACCOUNT_WINDOW_S, REFERRAL_CAP
+
+# Both people get a month of Pro when an invite is redeemed.
+REFERRAL_PRO_DAYS = 30
 
 logger = get_logger(__name__)
 
@@ -59,7 +62,8 @@ async def get_referral_stats(backend: D1Backend, user_id: str) -> dict:
         "code": code,
         "count": len(events),
         "cap": REFERRAL_CAP,
-        "creditsEarned": sum(e["creditsGranted"] for e in events),
+        "proDaysPerInvite": REFERRAL_PRO_DAYS,
+        "proDaysEarned": len(events) * REFERRAL_PRO_DAYS,
         "events": events,
     }
 
@@ -111,7 +115,7 @@ async def redeem_referral_code(
             "id": event_id,
             "referrer_user_id": referrer_id,
             "referred_user_id": referred_user_id,
-            "credits_granted": REFERRAL_CREDIT_AMOUNT,
+            "credits_granted": 0,
             "created_at": utcnow_iso(),
         })
     ])
@@ -120,20 +124,10 @@ async def redeem_referral_code(
         [referred_user_id],
     )
     if existing is None or str(existing["id"]) != event_id:
-        # Another attempt won the unique slot: retry the grant with the same
-        # idempotency key (safe no-op if it already landed).
-        if existing is not None:
-            await grant_credits(
-                backend, user_id=referrer_id, amount=REFERRAL_CREDIT_AMOUNT,
-                source="referral", source_id=f"referral:{existing['id']}",
-                idempotency_key=f"referral:{existing['id']}:credit",
-                reason="referral_bonus",
-            )
+        # Another attempt won the unique slot, and that attempt grants the Pro
+        # month; granting here too would double it.
         return await log_result(redeemed=False, reason="already_redeemed")
 
-    await grant_credits(
-        backend, user_id=referrer_id, amount=REFERRAL_CREDIT_AMOUNT,
-        source="referral", source_id=f"referral:{event_id}",
-        idempotency_key=f"referral:{event_id}:credit", reason="referral_bonus",
-    )
+    for user_id in (referrer_id, referred_user_id):
+        await grant_pro_days(backend, user_id, REFERRAL_PRO_DAYS)
     return await log_result(redeemed=True)

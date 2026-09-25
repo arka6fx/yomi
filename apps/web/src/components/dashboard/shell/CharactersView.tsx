@@ -678,7 +678,7 @@ export function CharactersView({ token }: { token: string }) {
                     ))}
                   </div>
                   <p className="mt-1.5 text-xs text-muted-foreground">
-                    write for me uses 1 credit.
+                    write for me drafts it with AI; edit anything after.
                   </p>
                 </div>
               </>

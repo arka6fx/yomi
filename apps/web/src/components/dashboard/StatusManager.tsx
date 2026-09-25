@@ -22,7 +22,6 @@ type StatusData = {
   overall: CheckLevel
   generatedAt: string
   plan: { plan: string; name: string; status: string; billingAccess: boolean }
-  credits: { balance: number }
   gateway: {
     running: boolean
     activeSessions: number
@@ -64,7 +63,7 @@ function when(value?: string | null) {
 }
 
 // Cloud "Status" panel.
-// of the gateway, plan/billing, credits, Telegram, connectors, and schedules.
+// of the gateway, plan/billing, Telegram, connectors, and schedules.
 export function StatusManager({ token }: { token: string }) {
   const [data, setData] = useState<StatusData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -127,7 +126,7 @@ export function StatusManager({ token }: { token: string }) {
           <div className="space-y-5">
             {/* Quick stat tiles */}
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <StatTile Icon={WalletCards} label="Credits" value={String(data.credits.balance)} />
+              <StatTile Icon={WalletCards} label="Chat" value="Unlimited" />
               <StatTile Icon={Plug} label="Connectors" value={String(data.connectors.total)} />
               <StatTile
                 Icon={Clock}

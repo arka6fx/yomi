@@ -50,6 +50,12 @@ async def dispatch_sweep(
     from yomi.services.scheduler_d1 import fire_due_schedules
 
     scheduled = await fire_due_schedules(d1)
+    from yomi.services.billing_d1 import expire_lapsed_pro
+
+    try:
+        await expire_lapsed_pro(d1)
+    except Exception:  # never block the scheduler
+        logger.warning("expire_lapsed_pro failed", exc_info=True)
     owner = f"sweep-{id(request):x}"
     claimed = await runs_d1.claim_due_runs(d1, owner, limit=SWEEP_LIMIT)
     processed = 0

@@ -1,20 +1,24 @@
-import { Sparkles, Crown, Cuboid } from "lucide-react"
+import { Sparkles, Crown } from "lucide-react"
+
+// Free and Pro only. There are no credits: chatting is unlimited on both plans.
+// Keep in step with apps/api/src/yomi/shared/plans.py.
+export const FREE_ROUTINES = 3
 
 export const PLANS = [
   {
     key: "explore",
-    name: "Explore",
+    name: "Free",
     priceUsd: 0,
     priceSub: "/ month",
     badge: "Free forever",
-    desc: "Text, voice, and memory on Telegram, free every month. No card needed.",
+    desc: "Yomi on Telegram, free for good. No card, no clock, no message cap.",
     icon: Sparkles,
     features: [
-      "100 credits every month",
-      "Text, voice & photo on Telegram",
-      "Durable memory",
-      "Unlimited app connectors",
-      "Web dashboard",
+      "Unlimited chatting",
+      "Every feature: apps, memory, browsing, research, characters",
+      "Connect Gmail, Calendar, GitHub & more",
+      `${FREE_ROUTINES} routines running in the background`,
+      "Remembers everything",
     ],
   },
   {
@@ -22,31 +26,14 @@ export const PLANS = [
     name: "Pro",
     priceUsd: 5,
     priceSub: "/ month",
-    badge: "Most Popular",
-    desc: "Text, voice, photos, and memory for everyday work.",
+    badge: "Recommended",
+    desc: "Everything in Free, on the smarter engine, with as many routines as you want.",
     icon: Crown,
     features: [
-      "300 credits / month",
-      "Buy extra credit packs anytime",
-      "Text, voice, photos & memory",
-      "Unlimited app connectors",
-      "Web dashboard",
-    ],
-  },
-  {
-    key: "max",
-    name: "Max",
-    priceUsd: 40,
-    priceSub: "/ month",
-    badge: "Power users",
-    desc: "High-volume credits for power users.",
-    icon: Cuboid,
-    features: [
-      "Everything in Pro",
-      "750 credits / month",
-      "Buy extra credit packs anytime",
-      "Unlimited app connectors",
-      "Experimental features first",
+      "Everything in Free",
+      "The smarter engine: thinks longer on hard tasks",
+      "Unlimited routines, briefings & reminders",
+      "Priority support",
     ],
   },
 ]

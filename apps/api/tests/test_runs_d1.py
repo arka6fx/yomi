@@ -400,7 +400,7 @@ class TestSessions:
 
 
 class TestIdempotentCharge:
-    async def test_replay_returns_recorded_outcome_without_recharge(self) -> None:
+    async def test_retried_run_is_never_charged(self) -> None:
         from yomi.services import billing_d1
         from yomi.services.metering import ChargeInput
 
@@ -420,9 +420,6 @@ class TestIdempotentCharge:
             backend, ChargeInput(user=user, kind="chat", units=1),
             idempotency_key="run:run-1:charge",
         )
-        assert res.ok is True
-        assert res.credits_charged == 1 and res.balance == 49
-        assert res.usage_event_id == "e-1"
-        # no new transaction or usage event was written
+        # credits are retired: a retried run is never charged again
+        assert res.ok is True and res.credits_charged == 0
         assert len(backend.store.tables["credit_transactions"]) == 1
-        assert backend.store.tables["usage_events"] == []

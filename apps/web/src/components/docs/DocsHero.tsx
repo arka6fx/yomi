@@ -45,7 +45,7 @@ export function DocsHero() {
           className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground"
         >
           A complete, honest map of what&apos;s shipped: the Telegram bot, every app connector,
-          memory, voice, and how plans and credits work.
+          memory, voice, and how the free and Pro plans work.
         </motion.p>
       </div>
     </header>

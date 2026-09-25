@@ -1,25 +1,19 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { AlertTriangle, Crown, ExternalLink, Loader2, Plug, Plus, Share2 } from "lucide-react"
+import { AlertTriangle, Crown, ExternalLink, Loader2, Plug, Share2 } from "lucide-react"
 import { buildCatalog, ConnectorIcon } from "@yomi/ui"
 import { cn } from "@/lib/utils"
 import { PLANS } from "@/lib/plans"
 import type { DashboardTab } from "./tabs"
 import { TelegramCard, type PlatformLink } from "./TelegramCard"
 
-export type CreditPack = {
-  key: string
-  name: string
-  priceCents: number
-  priceDisplay: string
-}
-
 type ReferralStats = {
   code: string
   count: number
   cap: number
-  creditsEarned: number
+  proDaysPerInvite: number
+  proDaysEarned: number
 }
 
 export type ActivityItem = {
@@ -36,10 +30,9 @@ export type PlanSummary = {
   planName: string
   statusLabel: string
   statusTone: "active" | "past_due" | "trial"
-  creditRemaining: number
-  creditTotal: number
-  caption: string
+  perks: string
   renewsAt: string | null
+  renewsLabel: string
   billingWarning: string | null
 }
 
@@ -86,7 +79,7 @@ function PlanBanner({ plan, onClick }: { plan: PlanSummary; onClick: () => void 
           </div>
           {plan.renewsAt && (
             <p className="mt-1 text-xs text-muted-foreground">
-              Renews{" "}
+              {plan.renewsLabel}{" "}
               {new Date(plan.renewsAt).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
@@ -97,22 +90,16 @@ function PlanBanner({ plan, onClick }: { plan: PlanSummary; onClick: () => void 
         </div>
         <div className="sm:text-right">
           <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
-            Credits remaining
+            Included
           </p>
-          <div className="flex items-baseline gap-2 sm:justify-end">
-            <span className="text-3xl font-light text-foreground tabular-nums">
-              {plan.creditRemaining}
-            </span>
-            <span className="text-sm text-muted-foreground">/ {plan.creditTotal} available</span>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">{plan.caption}</p>
+          <p className="text-sm text-foreground">{plan.perks}</p>
         </div>
       </div>
     </button>
   )
 }
 
-// Account section under the Home view: Telegram link, referrals, plan and credits,
+// Account section under the Home view: Telegram link, referrals, plan,
 // and connected apps. The at-a-glance tiles live in shell/HomeView.
 export function DashboardHome({
   token,
@@ -120,14 +107,10 @@ export function DashboardHome({
   connectedProviders,
   unhealthyCount,
   currentPlanKey,
-  creditPacks,
   billingLoading,
-  creditLoading,
   billingError,
   formatPlanPrice,
-  formatPackPrice,
   onUpgrade,
-  onBuyCredits,
   onNavigate,
   platformLinks,
   platformsLoading,
@@ -139,14 +122,10 @@ export function DashboardHome({
   connectedProviders: string[]
   unhealthyCount: number
   currentPlanKey: string
-  creditPacks: CreditPack[]
   billingLoading: string | null
-  creditLoading: string | null
   billingError: string
   formatPlanPrice: (usd: number) => string
-  formatPackPrice: (pack: CreditPack) => string
   onUpgrade: (planKey: string) => void
-  onBuyCredits: (packKey: string) => void
   onNavigate: (tab: DashboardTab) => void
   platformLinks: PlatformLink[]
   platformsLoading: boolean
@@ -227,10 +206,11 @@ export function DashboardHome({
                 className="text-2xl font-light text-foreground"
                 style={{ letterSpacing: "-0.02em" }}
               >
-                Get 100 credits for every friend.
+                Get a month of Pro for every friend.
               </h2>
               <p className="mt-1.5 text-sm text-muted-foreground">
-                Credits land as soon as they join Yomi through your link.
+                You both get {referral.proDaysPerInvite} days of Pro when they join Yomi through
+                your link.
               </p>
             </div>
             <div className="flex flex-col gap-2 sm:min-w-[280px]">
@@ -260,7 +240,8 @@ export function DashboardHome({
               </div>
               {referralError && <p className="text-xs text-destructive">{referralError}</p>}
               <p className="text-xs text-muted-foreground">
-                {referral.count} of {referral.cap} used · {referral.creditsEarned} credits earned
+                {referral.count} of {referral.cap} used · {referral.proDaysEarned} days of Pro
+                earned
               </p>
             </div>
           </div>
@@ -275,7 +256,7 @@ export function DashboardHome({
             <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10">
               <Crown size={16} className="text-primary" />
             </div>
-            <h2 className="text-sm font-medium text-foreground">Plans &amp; credits</h2>
+            <h2 className="text-sm font-medium text-foreground">Plans</h2>
           </div>
           <button
             onClick={() => onNavigate("billing")}
@@ -293,7 +274,7 @@ export function DashboardHome({
           if (upgrades.length === 0) {
             return (
               <p className="text-sm text-muted-foreground">
-                You&apos;re on our top plan — thanks for being a power user.
+                You&apos;re on Pro: unlimited routines and the smarter engine. Thank you!
               </p>
             )
           }
@@ -337,27 +318,6 @@ export function DashboardHome({
             </div>
           )
         })()}
-
-        {currentPlanKey !== "explore" && creditPacks.length > 0 && (
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {creditPacks.map((pack) => (
-              <button
-                key={pack.key}
-                onClick={() => onBuyCredits(pack.key)}
-                disabled={creditLoading !== null}
-                className="rounded-lg border border-border bg-background px-3 py-2 text-left transition-colors hover:border-primary/60 disabled:opacity-50"
-              >
-                <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-                  <Plus size={12} className="text-primary" />
-                  {pack.name}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {creditLoading === pack.key ? "Starting..." : formatPackPrice(pack)}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">

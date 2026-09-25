@@ -6,7 +6,6 @@ import {
   Check,
   CircleDot,
   Crown,
-  Cuboid,
   Globe,
   Image as ImageIcon,
   Keyboard,
@@ -28,7 +27,7 @@ import { DocsHero } from "@/components/docs/DocsHero"
 export const metadata: Metadata = pageMetadata({
   title: "Docs",
   description:
-    "Everything Yomi can do today: Telegram bot, app connectors, memory, voice, and how plans and credits work.",
+    "Everything Yomi can do today: Telegram bot, app connectors, memory, voice, and how the free and Pro plans work.",
   path: "/docs",
 })
 
@@ -389,39 +388,31 @@ export default function DocsPage() {
         <Section
           id="plans"
           eyebrow="Billing"
-          title="Plans & credits"
+          title="Plans"
           tone="yellow"
           icon={<Sparkles size={11} />}
         >
           <p>
-            Every interaction draws from a single credit balance. Each plan includes a monthly
-            credit allowance, and your dashboard shows remaining credits, recent activity, and the
-            next reset date. When you run out, Explore upgrades to a paid plan and Pro/Max can top
-            up with credit packs.
+            There are no credits and no message cap. Both plans chat without limits and get every
+            feature; Pro adds the smarter engine and unlimited routines. Invite a friend and you
+            both get a month of Pro.
           </p>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             {[
               {
-                name: "Explore",
-                price: "Free",
-                credits: "100 credits",
-                note: "Renews every month, forever.",
+                name: "Free",
+                price: "$0",
+                credits: "Unlimited chat",
+                note: "Every feature, 3 active routines. Free forever.",
                 icon: Sparkles,
               },
               {
                 name: "Pro",
                 price: "$5/mo",
-                credits: "300 credits",
-                note: "Higher limits + credit packs.",
+                credits: "Smarter engine",
+                note: "Unlimited routines, priority support.",
                 icon: Crown,
                 featured: true,
-              },
-              {
-                name: "Max",
-                price: "$40/mo",
-                credits: "750 credits",
-                note: "Highest limits for heavy use.",
-                icon: Cuboid,
               },
             ].map((p) => (
               <div
@@ -444,10 +435,6 @@ export default function DocsPage() {
               </div>
             ))}
           </div>
-          <p className="text-sm">
-            Credits abstract away the underlying model, voice, vision, memory, and connector costs
-            so Yomi can improve routing without changing the dashboard experience.
-          </p>
         </Section>
 
         <Section id="privacy" eyebrow="Trust" title="Privacy" tone="cyan" icon={<Lock size={11} />}>

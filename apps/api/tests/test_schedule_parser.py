@@ -100,8 +100,7 @@ def test_compute_next_run_phrase_matches_cron():
 
 
 def test_schedule_limits():
-    assert schedule_limit_for_plan("explore") == 0
-    assert schedule_limit_for_plan("pro") == 5
-    assert schedule_limit_for_plan("MAX") == 20
+    assert schedule_limit_for_plan("explore") == 3
+    assert schedule_limit_for_plan("pro") >= 1000
     assert schedule_limit_for_plan("nope") == 0
     assert schedule_limit_for_plan(None) == 0

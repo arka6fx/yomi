@@ -58,19 +58,19 @@ export default function TermsPage() {
             </ul>
           </Section>
 
-          <Section title="Subscriptions, credits, and billing">
+          <Section title="Subscriptions and billing">
             <ul>
               <li>
                 Paid plans are billed monthly via Dodo Payments. Prices are listed at
                 getyomi.in/pricing.
               </li>
               <li>
-                Usage is metered in credits. Each plan includes a monthly credit allowance that
-                resets each billing cycle; unused monthly credits do not roll over.
+                Chatting is unlimited on every plan; there are no credits. Pro adds the smarter
+                engine and unlimited routines.
               </li>
               <li>
-                Pro and Max may purchase one-time credit packs. Credit packs and consumed credits
-                are non-refundable.
+                Pro earned through referrals lasts for the stated period and then returns to the
+                free plan automatically.
               </li>
               <li>
                 Monthly plans can be cancelled at any time from your Yomi dashboard. Access
@@ -83,12 +83,12 @@ export default function TermsPage() {
             </ul>
           </Section>
 
-          <Section title="Explore plan and limits">
+          <Section title="Free plan and fair use">
             <p>
-              Explore is a free plan with a monthly credit allowance that renews automatically,
-              provided as-is. We may adjust its limits at any time. Sustained abuse (for example,
-              creating multiple accounts to circumvent the credit allowance) may result in
-              suspension.
+              The free plan is provided as-is and includes up to 3 active routines. Unlimited
+              chatting is meant for personal use: automated or abusive traffic (for example,
+              scripting the bot or creating multiple accounts to farm referral rewards) may be
+              slowed or suspended. We may adjust free plan limits at any time.
             </p>
           </Section>
 

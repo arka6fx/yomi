@@ -33,7 +33,8 @@ _DAYMAP = {
 }
 
 # Plan limits. Explore has no scheduling.
-SCHEDULE_LIMITS: dict[str, int] = {"explore": 0, "pro": 5, "max": 20}
+# Active (enabled) routines. Pro is effectively unlimited.
+SCHEDULE_LIMITS: dict[str, int] = {"explore": 3, "pro": 1000, "max": 1000}
 
 
 def schedule_limit_for_plan(plan: str | None) -> int:

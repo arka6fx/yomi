@@ -59,12 +59,12 @@ def test_add_list_and_remove_a_routine(client):
     assert http.delete("/api/skills/morning-brief").status_code == 404
 
 
-def test_chat_skills_and_free_plan_cannot_be_scheduled(client):
+def test_chat_skills_and_free_plan_can_schedule(client):
     http, _, user = client
     assert http.post("/api/skills/meal-log", json={}).status_code == 404
     user.plan = "explore"
-    assert http.get("/api/skills").json()["canSchedule"] is False
-    assert http.post("/api/skills/morning-brief", json={}).status_code == 403
+    assert http.get("/api/skills").json()["canSchedule"] is True
+    assert http.post("/api/skills/morning-brief", json={}).status_code == 200
 
 
 async def test_bot_deep_link_runs_the_skill_prompt(monkeypatch):

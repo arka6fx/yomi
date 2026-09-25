@@ -226,6 +226,12 @@ async def update_schedule(
             updates["deliver_to"] = body["deliverTo"]
         if isinstance(body.get("enabled"), bool):
             updates["enabled"] = 1 if body["enabled"] else 0
+        if updates.get("enabled") == 1 and not existing["enabled"]:
+            capacity = await schedules_d1.ensure_schedule_capacity(
+                d1, {"id": user.id, "email": user.email, "role": user.role, "plan": user.plan}
+            )
+            if not capacity.get("ok"):
+                return JSONResponse(capacity["body"], status_code=int(capacity["status"]))
         timezone = str(existing.get("timezone") or "UTC")
         if isinstance(body.get("timezone"), str) and body["timezone"] != timezone:
             timezone = _timezone(body["timezone"])

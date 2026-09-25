@@ -171,7 +171,8 @@ async def run_agent_loop(
     d1: Any = None,
 ) -> str:
     max_steps = max_steps or settings.agent_max_steps
-    purpose = "agent" if plan == "max" else "fast"
+    # Pro runs on the smarter engine (same model, deeper reasoning).
+    purpose = "agent" if plan in ("pro", "max") else "fast"
     model = model_for(purpose)
     # d1 alone suffices for the user registry (tokens resolve via gateway);
     # db_session=None simply means "no Postgres", not "no user tools".

@@ -74,19 +74,14 @@ def seed_user(backend: Backend, user_id: str, code: str | None = None) -> None:
 
 
 class TestRedeem:
-    async def test_happy_path_grants_referrer(self, monkeypatch) -> None:
-        from yomi.services import billing_d1 as _billing
+    async def test_happy_path_gives_both_a_pro_month(self, monkeypatch) -> None:
+        calls: list[tuple[str, int]] = []
 
-        calls: list[dict] = []
+        async def fake_grant(backend, user_id, days):
+            calls.append((user_id, days))
+            return True
 
-        async def fake_grant(backend, **kwargs):
-            calls.append(kwargs)
-            from yomi.services.credit_ledger import GrantResult
-
-            return GrantResult(granted=True, balance=100)
-
-        monkeypatch.setattr(referrals_d1, "grant_credits", fake_grant)
-        monkeypatch.setattr(_billing, "grant_credits", fake_grant)
+        monkeypatch.setattr(referrals_d1, "grant_pro_days", fake_grant)
         backend = Backend()
         seed_user(backend, "referrer", code="ABCD1234")
         seed_user(backend, "newbie")
@@ -95,8 +90,7 @@ class TestRedeem:
             referred_user_created_at=datetime.now(UTC),
         )
         assert res == {"redeemed": True}
-        assert calls and calls[0]["user_id"] == "referrer"
-        assert calls[0]["idempotency_key"].startswith("referral:")
+        assert calls == [("referrer", 30), ("newbie", 30)]
 
     async def test_invalid_self_old_and_cap(self) -> None:
         backend = Backend()
@@ -113,28 +107,26 @@ class TestRedeem:
             backend, code="CODE1", referred_user_id="oldie", referred_user_created_at=old
         ))["reason"] == "not_new_account"
 
-    async def test_duplicate_recovery_regrants(self, monkeypatch) -> None:
-        calls: list[dict] = []
+    async def test_duplicate_redeem_does_not_grant_twice(self, monkeypatch) -> None:
+        calls: list[str] = []
 
-        async def fake_grant(backend, **kwargs):
-            calls.append(kwargs)
-            from yomi.services.credit_ledger import GrantResult
+        async def fake_grant(backend, user_id, days):
+            calls.append(user_id)
+            return True
 
-            return GrantResult(granted=False, balance=100)
-
-        monkeypatch.setattr(referrals_d1, "grant_credits", fake_grant)
+        monkeypatch.setattr(referrals_d1, "grant_pro_days", fake_grant)
         backend = Backend()
         seed_user(backend, "referrer", code="CODE1")
         backend.store.tables["referral_events"].append({
             "id": "evt-1", "referrer_user_id": "referrer", "referred_user_id": "newbie",
-            "credits_granted": 100, "created_at": datetime.now(UTC).isoformat(),
+            "credits_granted": 0, "created_at": datetime.now(UTC).isoformat(),
         })
         res = await referrals_d1.redeem_referral_code(
             backend, code="CODE1", referred_user_id="newbie",
             referred_user_created_at=datetime.now(UTC),
         )
         assert res == {"redeemed": False, "reason": "already_redeemed"}
-        assert calls and calls[0]["idempotency_key"] == "referral:evt-1:credit"
+        assert calls == []
 
     async def test_stats_and_code_gen(self) -> None:
         backend = Backend()

@@ -219,7 +219,7 @@ class TestWebhookChain:
         await billing_routes.handle_dodo_event_d1(backend, "subscription.renewed", entity, "ev-2")
         assert backend.store.tables["user"][0]["subscription_status"] == "active"
 
-    async def test_payment_succeeded_grants_pack(self) -> None:
+    async def test_retired_credit_pack_payment_grants_nothing(self) -> None:
         backend = Backend()
         seed_user(backend)
         entity = {
@@ -227,8 +227,7 @@ class TestWebhookChain:
             "metadata": {"kind": "credit_pack", "userId": "u-1", "productKey": "credits_500"},
         }
         await billing_routes.handle_dodo_event_d1(backend, "payment.succeeded", entity, "ev-3")
-        grants = backend.store.tables["credit_grants"]
-        assert len(grants) == 1 and grants[0]["source"] == "credit_pack"
+        assert not backend.store.tables.get("credit_grants")
 
     async def test_subscription_end_downgrades(self) -> None:
         backend = Backend()

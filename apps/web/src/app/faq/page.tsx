@@ -9,7 +9,7 @@ export const dynamic = "force-static"
 export const metadata: Metadata = pageMetadata({
   title: "FAQ",
   description:
-    "Answers about Yomi: how it works on Telegram, which apps it connects to, how your data is handled, and how plans and credits work.",
+    "Answers about Yomi: how it works on Telegram, which apps it connects to, how your data is handled, and how the free and Pro plans work.",
   path: "/faq",
 })
 
@@ -89,28 +89,28 @@ const SECTIONS: { title: string; items: QA[] }[] = [
     ],
   },
   {
-    title: "plans & credits",
+    title: "plans",
     items: [
       {
         q: "is yomi free?",
-        a: "Yes. The Explore plan is free every month, forever, with 100 credits and unlimited app connectors. Pro is $5/month for 300 credits and Max is $40/month for 750.",
+        a: "Yes, free forever: unlimited chatting, every feature and unlimited app connectors, with 3 routines running in the background. Pro is $5/month for the smarter engine and unlimited routines.",
       },
       {
-        q: "what is a credit?",
+        q: "is there a message limit?",
         a: (
           <>
-            A simple usage balance. A message to Yomi costs 3 credits, a voice note 2 per minute and
-            a photo 1. See{" "}
+            No. There are no credits and no message cap on either plan. Pro adds the smarter engine
+            and unlimited routines. See{" "}
             <Link href="/pricing" className="font-medium text-foreground underline">
               pricing
             </Link>{" "}
-            for the full list.
+            for the comparison.
           </>
         ),
       },
       {
-        q: "what happens when i run out?",
-        a: "Free credits renew every month. On Pro and Max you can also buy extra credit packs anytime from the dashboard.",
+        q: "how do i get pro for free?",
+        a: "Invite a friend from your dashboard. When they join through your link, you both get a month of Pro.",
       },
       {
         q: "how do i cancel?",

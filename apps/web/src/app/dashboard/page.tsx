@@ -4,23 +4,12 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import {
-  Check,
-  Crown,
-  Loader2,
-  Trash2,
-  AlertTriangle,
-  WalletCards,
-  ReceiptText,
-  Plug,
-  ExternalLink,
-  Zap,
-} from "lucide-react"
+import { Check, Crown, Loader2, Trash2, AlertTriangle, ExternalLink } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { openExternal } from "@/lib/telegram-webapp"
 import { cn } from "@/lib/utils"
 import { formatUsd } from "@/lib/local-price"
-import { PLANS } from "@/lib/plans"
+import { FREE_ROUTINES, PLANS } from "@/lib/plans"
 import { PrivacyManager } from "@/components/dashboard/PrivacyManager"
 import { ReferralsManager } from "@/components/dashboard/ReferralsManager"
 import { StreaksManager } from "@/components/dashboard/StreaksManager"
@@ -94,41 +83,11 @@ type Sub = {
   }>
 }
 
-type UsageSummary = {
-  plan: { key: string; name: string; status: string }
-  credits: {
-    remaining: number
-    included: number
-    used: number
-    totalAvailableThisPeriod: number
-    resetAt: string | null
-    resetKind: ResetKind
-    expiringSoon: number
-    expiringSoonAt: string | null
-  }
-  monthlyUsage: { days: Array<{ date: string; credits: number }> }
-  recentActivity: Array<{
-    id: string
-    label: string
-    category: string
-    credits: number
-    createdAt: string
-  }>
-  actions: { canBuyCredits: boolean; canUpgrade: boolean; upgradeUrl: string }
-}
-
-function inDays(value: string) {
-  const days = Math.max(0, Math.ceil((new Date(value).getTime() - Date.now()) / 86_400_000))
-  if (days === 0) return "today"
-  return `in ${days} day${days === 1 ? "" : "s"}`
-}
-
-// Explore renews monthly just like a paid plan now (see explore-renewal.ts's cron).
-function creditsCaption(included: number, resetAt?: string | null, resetKind?: ResetKind | null) {
-  if (resetKind === "renewal" && resetAt) {
-    return `${included.toLocaleString()} included monthly credits. Resets ${inDays(resetAt)}.`
-  }
-  return `${included.toLocaleString()} included monthly credits.`
+// No credits: both plans chat without limits. What differs is routines and engine.
+function planPerks(planKey: string) {
+  return planKey === "explore"
+    ? `Unlimited chat · ${FREE_ROUTINES} active routines`
+    : "Unlimited chat · unlimited routines · smarter engine"
 }
 
 type PlatformLink = { platform: string; connectedAt: string }
@@ -143,12 +102,10 @@ function DashboardContent() {
   const router = useRouter()
 
   const [sub, setSub] = useState<Sub | null>(null)
-  const [usageSummary, setUsageSummary] = useState<UsageSummary | null>(null)
   const [subPending, setSubPending] = useState(true)
   const [subLoadError, setSubLoadError] = useState("")
   const [billingLoading, setBillingLoading] = useState<string | null>(null)
   const [billingError, setBillingError] = useState("")
-  const [creditLoading, setCreditLoading] = useState<string | null>(null)
   const [desiredPlan, setDesiredPlan] = useState<string | null>(null)
   const [cancelling, setCancelling] = useState(false)
 
@@ -212,16 +169,9 @@ function DashboardContent() {
         setSubLoadError("Couldn't load billing and usage data. Please retry in a moment.")
       })
       .finally(() => setSubPending(false))
-
-    fetch("/api/billing/usage-summary", {
-      headers: { Authorization: `Bearer ${session.session.token}` },
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: UsageSummary | null) => setUsageSummary(d))
-      .catch(() => setUsageSummary(null))
   }, [session])
 
-  // Poll billing data every 30s to keep usage meters current
+  // Poll billing data every 30s so a finished checkout shows up
   useEffect(() => {
     if (!session) return
     const interval = setInterval(async () => {
@@ -233,10 +183,6 @@ function DashboardContent() {
           const d: Sub = await r.json()
           setSub(d)
         }
-        const summaryRes = await fetch("/api/billing/usage-summary", {
-          headers: { Authorization: `Bearer ${session.session.token}` },
-        })
-        if (summaryRes.ok) setUsageSummary((await summaryRes.json()) as UsageSummary)
       } catch {
         /* ignore polling errors */
       }
@@ -245,21 +191,16 @@ function DashboardContent() {
   }, [session])
 
   // Checkout/webhook updates can finish in another tab or in Telegram. Refresh
-  // immediately when the dashboard becomes visible so the balance never looks
-  // stuck at the old monthly amount while the user is actively viewing it.
+  // immediately when the dashboard becomes visible so a new plan shows at once.
   useEffect(() => {
     if (!session) return
     const refresh = async () => {
       const headers = { Authorization: `Bearer ${session.session.token}` }
       try {
-        const [subRes, summaryRes] = await Promise.all([
-          fetch("/api/billing/subscription", { headers }),
-          fetch("/api/billing/usage-summary", { headers }),
-        ])
+        const subRes = await fetch("/api/billing/subscription", { headers })
         if (subRes.ok) setSub((await subRes.json()) as Sub)
-        if (summaryRes.ok) setUsageSummary((await summaryRes.json()) as UsageSummary)
       } catch {
-        // Keep the last known balance during a transient network handoff.
+        // Keep the last known plan during a transient network handoff.
       }
     }
     const onFocus = () => void refresh()
@@ -390,7 +331,7 @@ function DashboardContent() {
   }, [desiredPlan, session, subPending, sub])
 
   async function handleUpgrade(planKey: string) {
-    if (planKey === "explore" || billingLoading !== null || creditLoading !== null) return
+    if (planKey === "explore" || billingLoading !== null) return
     setBillingError("")
     setBillingLoading(planKey)
     try {
@@ -436,29 +377,6 @@ function DashboardContent() {
       setBillingError(err instanceof Error ? err.message : "Failed to cancel")
     } finally {
       setCancelling(false)
-    }
-  }
-
-  async function handleBuyCredits(pack: string) {
-    if (creditLoading !== null || billingLoading !== null) return
-    setBillingError("")
-    setCreditLoading(pack)
-    try {
-      const res = await fetch("/api/billing/create-credit-pack", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session!.session.token}`,
-        },
-        body: JSON.stringify({ pack }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.cause ?? data.error ?? "Credit purchase failed")
-      openExternal(data.short_url)
-      setCreditLoading(null)
-    } catch (err) {
-      setBillingError(err instanceof Error ? err.message : "Failed to start credit purchase")
-      setCreditLoading(null)
     }
   }
 
@@ -658,20 +576,6 @@ function DashboardContent() {
 
   const currentPlanKey = sub?.plan ?? "explore"
   const currentPlanIdx = PLANS.findIndex((p) => p.key === currentPlanKey)
-  const creditRemaining = usageSummary?.credits.remaining ?? sub?.credits?.balance ?? 0
-  const creditUsed = usageSummary?.credits.used ?? sub?.creditsUsed ?? 0
-  const creditTotal =
-    usageSummary?.credits.totalAvailableThisPeriod ?? sub?.totalCredits ?? creditRemaining
-  const creditIncluded =
-    usageSummary?.credits.included ??
-    ({ explore: 100, pro: 300, max: 750 } as Record<string, number>)[currentPlanKey] ??
-    0
-  const resetAt = usageSummary?.credits.resetAt ?? sub?.resetAt
-  const resetKind = usageSummary?.credits.resetKind ?? sub?.resetKind
-  const trendDays = usageSummary?.monthlyUsage.days.slice(-14) ?? []
-  const trendMax = Math.max(...trendDays.map((d) => d.credits), 1)
-  const recentActivity = usageSummary?.recentActivity ?? []
-
   const planStatusTone: PlanSummary["statusTone"] =
     sub?.status === "active" ? "active" : sub?.status === "past_due" ? "past_due" : "trial"
   const planStatusLabel =
@@ -686,10 +590,9 @@ function DashboardContent() {
     planName: sub ? (PLANS.find((p) => p.key === currentPlanKey)?.name ?? currentPlanKey) : "",
     statusLabel: planStatusLabel,
     statusTone: planStatusTone,
-    creditRemaining,
-    creditTotal: creditTotal || creditIncluded,
-    caption: creditsCaption(creditIncluded, resetAt, resetKind),
+    perks: planPerks(currentPlanKey),
     renewsAt: sub?.currentPeriodEnd ?? null,
+    renewsLabel: sub?.status === "referral" ? "Pro from invites until" : "Renews",
     billingWarning: sub?.billingWarning ?? null,
   }
 
@@ -721,14 +624,10 @@ function DashboardContent() {
               connectedProviders={connectedProviders}
               unhealthyCount={integrationHealth.filter((item) => !item.healthy).length}
               currentPlanKey={currentPlanKey}
-              creditPacks={sub?.creditPacks ?? []}
               billingLoading={billingLoading}
-              creditLoading={creditLoading}
               billingError={billingError}
               formatPlanPrice={formatUsd}
-              formatPackPrice={(pack) => pack.priceDisplay}
               onUpgrade={handleUpgrade}
-              onBuyCredits={handleBuyCredits}
               onNavigate={setActiveTab}
               platformLinks={platformLinks}
               platformsLoading={platformsLoading}
@@ -1136,7 +1035,7 @@ function DashboardContent() {
               <div className="pt-6">
                 <PageHeader
                   title="plan & billing"
-                  subtitle="your plan, credits and payments. prices are in US dollars and checkout is handled by Dodo Payments."
+                  subtitle="your plan and payments. chatting is unlimited on every plan. prices are in US dollars and checkout is handled by Dodo Payments."
                 />
               </div>
               {/* Billing warnings */}
@@ -1204,15 +1103,22 @@ function DashboardContent() {
                           {sub.status === "past_due"
                             ? "past due"
                             : sub.plan === "explore"
-                              ? "free"
-                              : sub.status}
+                              ? "free forever"
+                              : sub.status === "referral"
+                                ? "from invites"
+                                : sub.status}
                         </span>
                       )}
                     </div>
                     {/* Renewal date */}
+                    {sub && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {planPerks(currentPlanKey)}
+                      </p>
+                    )}
                     {sub?.currentPeriodEnd && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        Renews{" "}
+                        {sub.status === "referral" ? "Pro from invites until" : "Renews"}{" "}
                         {new Date(sub.currentPeriodEnd).toLocaleDateString("en-US", {
                           month: "short",
                           day: "numeric",
@@ -1220,7 +1126,7 @@ function DashboardContent() {
                         })}
                       </p>
                     )}
-                    {sub && sub.plan !== "explore" && (
+                    {sub && sub.plan !== "explore" && sub.status !== "referral" && (
                       <p className="text-[11px] text-muted-foreground/60 mt-1">
                         Charged in USD. Your bank may convert the amount automatically.
                       </p>
@@ -1243,287 +1149,6 @@ function DashboardContent() {
                 </div>
               </motion.div>
 
-              {/* Usage section — public credit abstraction */}
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.12 }}
-              >
-                <div className="overflow-hidden rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)]">
-                  <div className="p-5 sm:p-6">
-                    <div className="flex flex-wrap items-start justify-between gap-6 mb-6">
-                      <div>
-                        <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
-                          Credits remaining
-                        </p>
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-4xl font-light text-foreground tabular-nums">
-                            {creditRemaining}
-                          </span>
-                          <span className="text-sm text-muted-foreground">
-                            / {creditTotal || creditIncluded} available
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {creditsCaption(creditIncluded, resetAt, resetKind)}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() =>
-                          sub?.plan === "explore"
-                            ? handleUpgrade("pro")
-                            : sub?.creditPacks?.[0] && handleBuyCredits(sub.creditPacks[0].key)
-                        }
-                        disabled={billingLoading !== null || creditLoading !== null}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-                      >
-                        {sub?.plan === "explore" ? <Crown size={13} /> : <Zap size={13} />}
-                        {sub?.plan === "explore" ? "Upgrade" : "Add credits"}
-                      </button>
-                    </div>
-
-                    {sub && (
-                      <div className="space-y-5">
-                        <div className="space-y-2">
-                          <div className="h-3 rounded-full bg-muted overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-primary transition-all"
-                              style={{
-                                width: `${Math.min(100, (creditUsed / Math.max(creditTotal, 1)) * 100)}%`,
-                              }}
-                            />
-                          </div>
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>{creditUsed} used this period</span>
-                            <span>{creditRemaining} remaining</span>
-                          </div>
-                        </div>
-
-                        <div className="grid gap-3 sm:grid-cols-[1fr_1.2fr]">
-                          <div className="rounded-xl border border-border bg-background/45 p-4">
-                            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-                              Monthly usage
-                            </p>
-                            <p className="mt-2 text-2xl font-light tabular-nums text-foreground">
-                              {creditUsed}
-                            </p>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              Credits used since the current period began.
-                            </p>
-                          </div>
-                          <div className="rounded-xl border border-border bg-background/45 p-4">
-                            <div className="mb-3 flex items-center justify-between gap-3">
-                              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-                                Daily trend
-                              </p>
-                              <span className="text-xs text-muted-foreground">
-                                Last {trendDays.length || 0} days
-                              </span>
-                            </div>
-                            {trendDays.length > 0 ? (
-                              <div className="flex h-16 items-end gap-1.5">
-                                {trendDays.map((day) => (
-                                  <div
-                                    key={day.date}
-                                    className="flex min-w-0 flex-1 flex-col items-center gap-1"
-                                  >
-                                    <div
-                                      className="w-full rounded-t bg-primary/80"
-                                      style={{
-                                        height: `${Math.max(4, (day.credits / trendMax) * 56)}px`,
-                                      }}
-                                      title={`${day.date}: ${day.credits} credits`}
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-sm text-muted-foreground">
-                                No usage yet this period.
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {sub?.plan === "explore" && sub?.credits?.balance === 0 && (
-                      <div className="mt-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20">
-                        <p className="text-sm text-destructive font-medium mb-1">
-                          Out of free credits for this month
-                        </p>
-                        <p className="text-xs text-destructive/80 mb-3">
-                          {sub.trialExpired
-                            ? "Your free credits are renewing — check back in a moment, or upgrade to Pro or Max to skip the wait."
-                            : "You've used all your free credits for this month. They renew automatically, or upgrade to Pro or Max for more right now."}
-                        </p>
-                        <button
-                          onClick={() => handleUpgrade("pro")}
-                          disabled={billingLoading !== null}
-                          className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
-                        >
-                          <Crown size={12} />
-                          Subscribe to Pro · $5/mo
-                        </button>
-                      </div>
-                    )}
-
-                    {sub?.plan !== "explore" && sub?.credits?.balance === 0 && (
-                      <div className="mt-6 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
-                        <p className="text-sm text-yellow-400 font-medium mb-1">
-                          No credits remaining
-                        </p>
-                        <p className="text-xs text-yellow-400/80 mb-3">
-                          You've used all your credits for this period. Buy a credit pack below to
-                          keep going
-                          {sub?.resetAt
-                            ? `, or they reset on ${new Date(sub.resetAt).toLocaleDateString("en-US", { month: "long", day: "numeric" })}`
-                            : ""}
-                          .
-                        </p>
-                        <button
-                          onClick={() =>
-                            sub?.creditPacks?.[0] && handleBuyCredits(sub.creditPacks[0].key)
-                          }
-                          disabled={creditLoading !== null || !sub?.creditPacks?.length}
-                          className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
-                        >
-                          <Zap size={12} />
-                          Buy {sub?.creditPacks?.[0]?.name ?? "credits"}
-                        </button>
-                      </div>
-                    )}
-
-                    {connectedProviders.length > 0 && (
-                      <div className="mt-5 flex items-center justify-between rounded-xl border border-border bg-background/40 px-4 py-3 text-sm">
-                        <span className="flex items-center gap-2 text-muted-foreground">
-                          <Plug size={15} />
-                          App connectors
-                        </span>
-                        <span className="text-foreground tabular-nums">
-                          {connectedProviders.length} connected
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Credit packs and activity */}
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.14 }}
-              >
-                <div className="rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)] p-5 sm:p-6">
-                  <div className="flex flex-wrap items-start justify-between gap-6 mb-6">
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
-                        Credits and activity
-                      </p>
-                      <div className="flex items-center gap-3">
-                        <WalletCards size={24} className="text-primary" />
-                        <div>
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-3xl font-light text-foreground tabular-nums">
-                              {sub?.credits?.balance ?? 0}
-                            </span>
-                            <span className="text-sm text-muted-foreground">available</span>
-                          </div>
-                          {sub?.credits?.expiringSoon ? (
-                            <p className="text-xs text-yellow-400 mt-1">
-                              {sub.credits.expiringSoon} expire soon
-                              {sub.credits.expiringSoonAt
-                                ? ` on ${new Date(sub.credits.expiringSoonAt).toLocaleDateString(
-                                    "en-US",
-                                    {
-                                      month: "short",
-                                      day: "numeric",
-                                    },
-                                  )}`
-                                : ""}
-                            </p>
-                          ) : (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Purchase packs on Pro or Max. Usage is tracked in the meter above.
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {sub?.plan !== "explore" ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full sm:w-auto">
-                        {(sub?.creditPacks ?? []).map((pack) => (
-                          <button
-                            key={pack.key}
-                            onClick={() => handleBuyCredits(pack.key)}
-                            disabled={creditLoading !== null}
-                            className="rounded-xl border border-border bg-background px-3 py-2 text-left hover:border-primary/60 transition-colors disabled:opacity-50"
-                          >
-                            <span className="block text-sm font-medium text-foreground">
-                              {pack.name}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {creditLoading === pack.key ? "Starting..." : pack.priceDisplay}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="w-full sm:w-auto">
-                        <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-center">
-                          <p className="text-xs text-muted-foreground mb-2">
-                            Add credits on Pro or Max
-                          </p>
-                          <a
-                            href="/dashboard?plan=pro"
-                            className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
-                          >
-                            <Crown size={11} />
-                            Upgrade to Pro
-                          </a>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {recentActivity.length > 0 && (
-                    <div className="border-t border-border pt-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <ReceiptText size={14} className="text-muted-foreground" />
-                        <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-                          Recent activity
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        {recentActivity.map((item) => (
-                          <div
-                            key={item.id}
-                            className="flex items-center justify-between gap-4 text-sm"
-                          >
-                            <div className="min-w-0">
-                              <p className="text-foreground">{item.label}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {new Date(item.createdAt).toLocaleString("en-US", {
-                                  month: "short",
-                                  day: "numeric",
-                                  hour: "numeric",
-                                  minute: "2-digit",
-                                })}
-                              </p>
-                            </div>
-                            <p className="shrink-0 tabular-nums text-muted-foreground">
-                              {item.credits} credits
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1533,7 +1158,7 @@ function DashboardContent() {
                   Plans
                 </p>
                 {billingError && <p className="text-xs text-destructive mb-4">{billingError}</p>}
-                <div className="grid sm:grid-cols-3 gap-3">
+                <div className="grid sm:grid-cols-2 gap-3">
                   {PLANS.map((plan, i) => {
                     const isCurrent = plan.key === currentPlanKey
                     const isUpgrade = i > currentPlanIdx
@@ -1553,7 +1178,7 @@ function DashboardContent() {
                         {plan.key === "pro" && !isCurrent && (
                           <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                             <span className="whitespace-nowrap rounded-full bg-primary px-3 py-0.5 text-[11px] font-medium text-primary-foreground">
-                              Most Popular
+                              Recommended
                             </span>
                           </div>
                         )}
@@ -1605,7 +1230,7 @@ function DashboardContent() {
                             Upgrade
                           </button>
                         ) : (
-                          <span className="text-xs text-muted-foreground">Lower tier</span>
+                          <span className="text-xs text-muted-foreground">Free forever</span>
                         )}
                       </div>
                     )

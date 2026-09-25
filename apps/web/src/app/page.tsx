@@ -54,11 +54,11 @@ const jsonLd = {
       offers: [
         {
           "@type": "Offer",
-          name: "Explore",
+          name: "Free",
           price: "0",
           priceCurrency: "USD",
           description:
-            "Free every month, forever, with 100 monthly credits and unlimited app connectors",
+            "Free forever: unlimited chatting, every feature, unlimited app connectors, 3 routines",
         },
         {
           "@type": "Offer",
@@ -66,15 +66,7 @@ const jsonLd = {
           price: "5",
           priceCurrency: "USD",
           billingDuration: "P1M",
-          description: "300 monthly credits, unlimited app connectors, Telegram bot",
-        },
-        {
-          "@type": "Offer",
-          name: "Max",
-          price: "40",
-          priceCurrency: "USD",
-          billingDuration: "P1M",
-          description: "750 monthly credits, unlimited app connectors, early access",
+          description: "Everything in Free on the smarter engine, with unlimited routines",
         },
       ],
       author: {
@@ -114,7 +106,7 @@ const jsonLd = {
           name: "Is Yomi free?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yes. Yomi's Explore plan is free every month, forever, with 100 credits and unlimited app connectors. Paid plans start at $5/month (Pro: 300 credits/mo). Credits are a simple usage balance; the dashboard shows remaining credits, monthly usage, and reset date.",
+            text: "Yes. Yomi is free forever with unlimited chatting, every feature and unlimited app connectors, plus 3 routines running in the background. Pro is $5/month for the smarter engine and unlimited routines. There are no credits or message caps.",
           },
         },
         {

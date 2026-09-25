@@ -103,7 +103,6 @@ def get_dodo_config() -> DodoConfig:
         "product_ids": {
             "explore": None,
             "pro": read("PRODUCT_PRO"),
-            "max": read("PRODUCT_MAX"),
             "credits_500": read("PRODUCT_CREDITS_85"),
             "credits_2000": read("PRODUCT_CREDITS_250"),
             "credits_6000": read("PRODUCT_CREDITS_750"),
@@ -542,6 +541,13 @@ async def create_credit_pack(
     except Exception:  # noqa: BLE001
         body = {}
     pack_key = body.get("pack") if isinstance(body, dict) else None
+    # Credit packs are retired: chat is unlimited on every plan.
+    if not CREDIT_PACKS:
+        return JSONResponse(
+            {"error": "Credit packs are gone. Chat is unlimited on every plan.",
+             "code": "credit_packs_retired"},
+            410,
+        )
     if effective_plan_for_user({"plan": user.plan}) == "explore":
         return JSONResponse(
             {"error": "Credit packs are only available on Pro and Max plans"}, 403
@@ -902,7 +908,7 @@ async def usage_summary(
         "recentActivity": recent_activity,
         "actions": {
             "canBuyCredits": effective_plan != "explore",
-            "canUpgrade": effective_plan != "max",
+            "canUpgrade": effective_plan != "pro",
             "upgradeUrl": "/dashboard?upgrade=true",
         },
     }
@@ -1061,7 +1067,7 @@ async def usage_summary_d1(backend: D1Backend, user: User) -> dict:
         "recentActivity": recent_activity,
         "actions": {
             "canBuyCredits": effective_plan != "explore",
-            "canUpgrade": effective_plan != "max",
+            "canUpgrade": effective_plan != "pro",
             "upgradeUrl": "/dashboard?upgrade=true",
         },
     }

@@ -10,7 +10,7 @@ from yomi.services.entitlements import (
 def test_effective_plan_user_defaults_explore():
     assert effective_plan_for_user({}) == "explore"
     assert effective_plan_for_user({"plan": "junk"}) == "explore"
-    assert effective_plan_for_user({"plan": "max"}) == "max"
+    assert effective_plan_for_user({"plan": "max"}) == "pro"  # retired tier keeps Pro
 
 
 def test_explore_renewal_uses_trial_end():
@@ -45,10 +45,10 @@ def test_access_explore_active_within_trial():
     assert has_billable_plan_access({"plan": "explore", "trial_end_date": end})
 
 
-def test_access_explore_expired_without_trial():
-    assert not has_billable_plan_access({"plan": "explore"})
-    past = datetime.now(UTC) - timedelta(minutes=1)
-    assert not has_billable_plan_access({"plan": "explore", "trial_end_date": past})
+def test_free_is_forever():
+    assert has_billable_plan_access({"plan": "explore"})
+    past = datetime.now(UTC) - timedelta(days=90)
+    assert has_billable_plan_access({"plan": "explore", "trial_end_date": past})
 
 
 def test_access_paid_active_and_trialing():
@@ -56,16 +56,10 @@ def test_access_paid_active_and_trialing():
     assert has_billable_plan_access({"plan": "max", "subscription_status": "trialing"})
 
 
-def test_access_past_due_grace_window():
-    ref = datetime.now(UTC) - timedelta(days=3)
-    assert has_billable_plan_access(
-        {"plan": "pro", "subscription_status": "past_due", "current_period_end": ref}
-    )
+def test_lapsed_paid_plans_still_have_access():
+    # Pro ending is handled by moving the plan back to free, never by blocking.
     too_old = datetime.now(UTC) - timedelta(days=10)
-    assert not has_billable_plan_access(
+    assert has_billable_plan_access(
         {"plan": "pro", "subscription_status": "past_due", "current_period_end": too_old}
     )
-
-
-def test_access_inactive_rejected():
-    assert not has_billable_plan_access({"plan": "pro", "subscription_status": "inactive"})
+    assert has_billable_plan_access({"plan": "pro", "subscription_status": "inactive"})

@@ -31,6 +31,8 @@ def effective_role_for_user(user: EntitlementUser) -> str:
 
 def effective_plan_for_user(user: EntitlementUser) -> str:
     plan = user.get("plan") or "explore"
+    if plan == "max":  # retired tier; anyone still on it keeps Pro
+        return "pro"
     return plan if plan in PLANS else "explore"
 
 
@@ -66,7 +68,16 @@ def credit_renewal(user: EntitlementUser) -> tuple[str, datetime | None]:
 
 
 def has_billable_plan_access(user: EntitlementUser) -> bool:
-    """Explore: trialEndDate not reached. Paid: active/trialing, or past_due within 7-day grace."""
+    """Free is forever, so every account can use Yomi.
+
+    Pro access ending (a lapsed referral month, a payment failure past its grace
+    period) is handled by ``billing_d1.expire_lapsed_pro`` moving the plan back to
+    free, not by blocking usage here.
+    """
+    return True
+
+
+def _legacy_billable_access(user: EntitlementUser) -> bool:
     plan = effective_plan_for_user(user)
     now = _now()
 

@@ -60,9 +60,9 @@ export const DOCS_INDEX: DocsEntry[] = [
   },
   {
     id: "plans",
-    title: "Plans & credits",
+    title: "Plans",
     group: "Account",
-    summary: "Explore, Pro, and Max plans and how credit balances work.",
+    summary: "The free and Pro plans: unlimited chat, routines and the smarter engine.",
   },
   {
     id: "privacy",

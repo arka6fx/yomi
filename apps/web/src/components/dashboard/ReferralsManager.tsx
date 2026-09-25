@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils"
 
 type ReferralEvent = {
   id: string
-  creditsGranted: number
   createdAt: string
 }
 
@@ -15,7 +14,8 @@ type ReferralStats = {
   code: string
   count: number
   cap: number
-  creditsEarned: number
+  proDaysPerInvite: number
+  proDaysEarned: number
   events: ReferralEvent[]
 }
 
@@ -84,7 +84,7 @@ export function ReferralsManager({ token }: { token: string }) {
     <section className="space-y-6 pt-6">
       <PageHeader
         title="invite a friend"
-        subtitle="get 100 credits for every friend who joins yomi through your link."
+        subtitle="you and your friend both get a month of pro when they join yomi through your link."
       />
       <div className={cn(SURFACE, "p-5 sm:p-6")}>
         <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/30 p-3">
@@ -106,8 +106,10 @@ export function ReferralsManager({ token }: { token: string }) {
             </p>
           </div>
           <div className="rounded-xl border border-border p-3">
-            <p className="text-xs text-muted-foreground">Credits earned</p>
-            <p className="text-lg font-medium text-foreground">{stats.creditsEarned}</p>
+            <p className="text-xs text-muted-foreground">Pro earned</p>
+            <p className="text-lg font-medium text-foreground">
+              {stats.proDaysEarned} <span className="text-sm text-muted-foreground">days</span>
+            </p>
           </div>
         </div>
 
@@ -120,7 +122,7 @@ export function ReferralsManager({ token }: { token: string }) {
               {stats.events.map((e) => (
                 <div key={e.id} className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">{when(e.createdAt)}</span>
-                  <span className="text-foreground">+{e.creditsGranted} credits</span>
+                  <span className="text-foreground">+{stats.proDaysPerInvite} days of Pro</span>
                 </div>
               ))}
             </div>

@@ -383,44 +383,17 @@ class TestLedger:
 
 
 class TestCharge:
-    async def test_chat_charge_and_usage_event(self) -> None:
-        backend = Backend()
-        await grant_credits(
-            backend, user_id="u-1", amount=100, source="promo", source_id="p-1",
-            idempotency_key="k-1",
-        )
-        res = await charge_usage(backend, ChargeInput(user=pro_user(), kind="chat", units=1))
-        assert res.ok is True
-        assert res.credits_required == CHAT_COST and res.balance == 100 - CHAT_COST
+    async def test_chat_is_unlimited_and_still_logged(self) -> None:
+        backend = Backend()  # no credits granted at all
+        for plan, status in (("pro", "active"), ("explore", "inactive"), ("pro", "past_due")):
+            user = pro_user()
+            user["plan"] = plan
+            user["subscription_status"] = status
+            res = await charge_usage(backend, ChargeInput(user=user, kind="chat", units=1))
+            assert res.ok is True and res.credits_charged == 0
         events = backend.store.tables["usage_events"]
-        assert len(events) == 1 and events[0]["kind"] == "request_chat"
-        assert events[0]["credits_charged"] == CHAT_COST
-
-    async def test_inactive_subscription_rejected(self) -> None:
-        from datetime import UTC, datetime, timedelta
-
-        backend = Backend()
-        user = pro_user()
-        # past_due outside the 7-day grace window loses billable access.
-        user["subscription_status"] = "past_due"
-        user["current_period_end"] = datetime.now(UTC) - timedelta(days=30)
-        res = await charge_usage(backend, ChargeInput(user=user, kind="chat", units=1))
-        assert res.ok is False and res.code == "subscription_inactive"
-        assert "paused" in res.message
-
-    async def test_out_of_credits_pro(self) -> None:
-        backend = Backend()
-        res = await charge_usage(backend, ChargeInput(user=pro_user(), kind="chat", units=1))
-        assert res.ok is False and res.code == "credits_exhausted"
-
-    async def test_out_of_credits_explore(self) -> None:
-        backend = Backend()
-        user = pro_user()
-        user["plan"] = "explore"
-        user["subscription_status"] = "inactive"
-        # explore with inactive status is treated as renewing, not charged
-        res = await charge_usage(backend, ChargeInput(user=user, kind="chat", units=1))
-        assert res.ok is False and res.code == "subscription_inactive"
+        assert len(events) == 3 and events[0]["kind"] == "request_chat"
+        assert all(e["credits_charged"] == 0 for e in events)
 
     async def test_load_metering_user(self) -> None:
         backend = Backend()
