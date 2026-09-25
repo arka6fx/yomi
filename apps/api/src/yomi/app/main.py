@@ -62,6 +62,15 @@ async def _lifespan(app: FastAPI):
         except Exception as exc:  # noqa: BLE001 — startup must not crash on a bad DB
             logger.warning("[startup] db connection failed: %s", exc)
 
+    from yomi.gateway.telegram import ensure_webhook_updates
+
+    try:
+        fixed = await ensure_webhook_updates()
+        if fixed:
+            logger.warning("[startup] telegram webhook now receives %s", fixed)
+    except Exception as exc:  # noqa: BLE001 — startup must not crash on Telegram
+        logger.warning("[startup] telegram webhook check skipped: %s", exc)
+
     from yomi.connectors.composio import ensure_webhook_subscription
 
     try:

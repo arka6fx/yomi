@@ -138,6 +138,35 @@ async def _finish_web_login(callback: dict, approve: bool, token: str, d1: D1Bac
     return {"status": "ok"}
 
 
+REQUIRED_UPDATES = ("message", "callback_query")
+
+
+async def ensure_webhook_updates() -> list[str] | None:
+    """Make sure the webhook receives button taps as well as messages.
+
+    Approve/Reject and web sign-in are inline buttons, delivered as
+    ``callback_query`` updates; a webhook registered with only ``message``
+    silently drops every tap. Keeps the registered URL and adds what's missing.
+    Returns the new update list when it had to change, else None.
+    """
+    if not settings.telegram_bot_token:
+        return None
+    base = f"https://api.telegram.org/bot{settings.telegram_bot_token}"
+    async with httpx.AsyncClient(timeout=10) as client:
+        info = (await client.get(f"{base}/getWebhookInfo")).json().get("result") or {}
+        url = info.get("url")
+        allowed = info.get("allowed_updates") or []
+        # An empty list means Telegram's default, which already includes both.
+        if not url or not allowed or all(kind in allowed for kind in REQUIRED_UPDATES):
+            return None
+        updates = sorted(set(allowed) | set(REQUIRED_UPDATES))
+        payload: dict = {"url": url, "allowed_updates": updates}
+        if settings.telegram_webhook_secret:
+            payload["secret_token"] = settings.telegram_webhook_secret
+        await client.post(f"{base}/setWebhook", json=payload)
+    return updates
+
+
 async def _telegram_call(method: str, payload: dict) -> None:
     url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/{method}"
     async with httpx.AsyncClient() as client:
