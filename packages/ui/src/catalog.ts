@@ -196,16 +196,6 @@ const CATALOG_DEFS: Array<{
     available: true,
   },
   {
-    id: "whatsapp",
-    name: "WhatsApp",
-    description:
-      "WhatsApp Business Account only (not a personal number) — send messages, media, and templates.",
-    category: "communication",
-    authKind: "composio",
-    icon: "whatsapp",
-    available: true,
-  },
-  {
     id: "jira",
     name: "Jira",
     description: "Manage issues, projects, sprints, and workflows in Jira.",

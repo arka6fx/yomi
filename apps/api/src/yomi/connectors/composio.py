@@ -1,7 +1,7 @@
 """Composio-backed connectors.
 
 Composio hosts OAuth + tool execution for the long tail of integrations the
-first-class connectors don't implement in-repo (HubSpot, Salesforce, WhatsApp,
+first-class connectors don't implement in-repo (HubSpot, Salesforce,
 Discord, LinkedIn, Outlook, Teams, OneDrive, Dropbox, Figma, YouTube, Zoom,
 Stripe, Google Docs/Sheets/Slides, ...). We never see user tokens — connections
 are per end user (a Composio "entity") and resolve through `COMPOSIO_API_KEY`.

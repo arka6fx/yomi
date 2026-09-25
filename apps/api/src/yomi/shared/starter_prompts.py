@@ -70,10 +70,6 @@ STARTER_PROMPTS: dict[str, list[str]] = {
         "Summarize my meetings for tomorrow",
         "Tell me when I get an email from my manager",
     ],
-    "whatsapp": [
-        "Send today's order confirmation template to a customer",
-        "Notify me when a customer replies on WhatsApp",
-    ],
     "jira": ["Summarize what's in this sprint", "Tell me when a critical bug is filed"],
     "reddit": [
         "Find the top posts in r/technology today",

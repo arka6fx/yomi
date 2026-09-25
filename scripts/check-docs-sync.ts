@@ -51,7 +51,7 @@ const connectors = catalogConnectors()
   const expected = [
     "Gmail", "Calendar", "Drive", "GitHub", "Slack", "Notion", "Linear",
     "Docs", "Sheets", "Slides", "Maps", "Photos", "HubSpot", "Salesforce",
-    "Discord", "WhatsApp", "LinkedIn", "Outlook", "Teams", "OneDrive",
+    "Discord", "LinkedIn", "Outlook", "Teams", "OneDrive",
     "Dropbox", "Figma", "YouTube", "Zoom", "Stripe",
   ]
   for (const keyword of expected) {

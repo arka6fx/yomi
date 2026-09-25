@@ -59,10 +59,6 @@ export const STARTER_PROMPTS: Record<string, string[]> = {
   ],
   linkedin: ["Draft a post announcing our new feature", "Summarize the comments on my latest post"],
   outlook: ["Summarize my meetings for tomorrow", "Tell me when I get an email from my manager"],
-  whatsapp: [
-    "Send today's order confirmation template to a customer",
-    "Notify me when a customer replies on WhatsApp",
-  ],
   jira: ["Summarize what's in this sprint", "Tell me when a critical bug is filed"],
   reddit: ["Find the top posts in r/technology today", "Notify me when someone replies to my post"],
   todoist: ["Add 'call the dentist' to my personal list", "Tell me what's overdue on my task list"],
