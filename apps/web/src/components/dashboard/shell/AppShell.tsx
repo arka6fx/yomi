@@ -23,6 +23,7 @@ import {
   Puzzle,
   Shield,
   Sparkles,
+  Drama,
   User,
   Users,
   X,
@@ -35,6 +36,7 @@ import { cn } from "@/lib/utils"
 const PILLS: { tab: DashboardTab; label: string; icon: typeof Home }[] = [
   { tab: "home", label: "home", icon: Home },
   { tab: "skills", label: "skills", icon: Puzzle },
+  { tab: "characters", label: "characters", icon: Drama },
   { tab: "schedules", label: "routines", icon: Zap },
   { tab: "vault", label: "vault", icon: Lock },
 ]

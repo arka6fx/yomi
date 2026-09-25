@@ -38,8 +38,20 @@ async def _system_prompt(
     except Exception:  # A missing profile must never prevent an agent turn.
         logger.debug("could not load agent soul for %s", user_id, exc_info=True)
 
+    persona = ""
+    if d1 is not None:
+        try:
+            from yomi.services import characters_d1
+
+            character = await characters_d1.active(d1, user_id)
+            if character is not None:
+                persona = characters_d1.persona_prompt(character)
+        except Exception:  # a missing character must never block a turn
+            logger.debug("could not load active character for %s", user_id, exc_info=True)
+
     return "\n\n".join(
-        (
+        part
+        for part in (
             format_agent_soul(soul),
             """<yomi_operating_style>
 You are a personal AI with the feel of a thoughtful muse and sharp instinct. Notice
@@ -81,7 +93,9 @@ and email when available; use a weather tool/search only when a location is know
 the location or preferences are missing, ask one friendly setup question rather than
 inventing weather or appointments.
 </yomi_operating_style>""",
+            persona,
         )
+        if part
     )
 
 

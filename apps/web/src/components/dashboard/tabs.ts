@@ -2,6 +2,7 @@
 export type DashboardTab =
   | "home"
   | "skills"
+  | "characters"
   | "command-center"
   | "activity"
   | "approvals"

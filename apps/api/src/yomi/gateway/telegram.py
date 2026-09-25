@@ -421,6 +421,16 @@ async def _handle_update(
         except ValueError as exc:
             await send_message(chat_id, str(exc))
         return {"status": "ok"}
+    elif text in ("/yomi", "/back"):
+        if d1 is not None:
+            from yomi.services import characters_d1
+            from yomi.services import connectors_d1 as _connectors_d1
+
+            owner = await _connectors_d1.resolve_platform_user(d1, "telegram", tg_user_id, chat_id)
+            if owner is not None:
+                await characters_d1.deactivate(d1, owner)
+        await send_message(chat_id, "back to plain yomi 👋")
+        return {"status": "ok"}
     elif text == "/help":
         await send_message(chat_id, "I'm the Yomi agent. Send me a message or voice note!")
         return {"status": "ok"}

@@ -36,6 +36,7 @@ import { AppShell } from "@/components/dashboard/shell/AppShell"
 import { HomeView } from "@/components/dashboard/shell/HomeView"
 import { SkillsView } from "@/components/dashboard/shell/SkillsView"
 import { RoutinesView } from "@/components/dashboard/shell/RoutinesView"
+import { CharactersView } from "@/components/dashboard/shell/CharactersView"
 import { MemoryView } from "@/components/dashboard/shell/MemoryView"
 import { PageHeader } from "@/components/dashboard/shell/ui"
 import { AgentActivityManager } from "@/components/dashboard/AgentActivityManager"
@@ -894,6 +895,16 @@ function DashboardContent() {
               connectedProviders={connectedProviders}
               onNavigate={setActiveTab}
             />
+          </motion.div>
+        )}
+
+        {activeTab === "characters" && session && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <CharactersView token={session.session.token} />
           </motion.div>
         )}
 
